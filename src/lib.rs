@@ -16,5 +16,5 @@
 pub mod expression;
 pub mod instruction;
 mod macros;
-pub mod parser;
+pub(crate) mod parser;
 pub mod program;

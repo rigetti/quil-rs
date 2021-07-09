@@ -41,11 +41,9 @@ pub enum Token {
     LBracket,
     LParenthesis,
     NonBlocking,
-    MathematicalFunction(MathematicalFunction),
     Matrix,
     Modifier(Modifier),
     NewLine,
-    Offset,
     Operator(Operator),
     Permutation,
     RBracket,
@@ -119,15 +117,6 @@ pub enum DataType {
     Octet,
     Real,
     Integer,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum MathematicalFunction {
-    Cis,
-    Cos,
-    Exp,
-    Sin,
-    Sqrt,
 }
 
 #[derive(Debug, Clone, PartialEq)]

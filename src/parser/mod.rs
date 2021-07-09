@@ -17,16 +17,19 @@ mod command;
 mod gate;
 mod macros;
 
-pub mod common;
-pub mod error;
-pub mod expression;
-pub mod instruction;
-pub mod lexer;
+mod common;
+mod error;
+mod expression;
+mod instruction;
+mod lexer;
+
+pub(crate) use instruction::parse_instructions;
+pub(crate) use lexer::lex;
 
 use nom::IResult;
 
 use error::Error;
 use lexer::Token;
 
-pub type ParserInput<'a> = &'a [Token];
-pub type ParserResult<'a, R> = IResult<&'a [Token], R, Error<&'a [Token]>>;
+type ParserInput<'a> = &'a [Token];
+type ParserResult<'a, R> = IResult<&'a [Token], R, Error<&'a [Token]>>;

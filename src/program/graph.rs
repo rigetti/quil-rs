@@ -26,11 +26,12 @@ use indexmap::IndexMap;
 #[derive(Debug, Clone)]
 pub enum ScheduleErrorVariant {
     DuplicateLabel,
-    DurationNotRealConstant,
-    DurationNotApplicable,
-    InvalidFrame,
     UncalibratedInstruction,
-    UnscheduleableInstruction,
+    UnschedulableInstruction,
+    // Note: these may be restored once enforced
+    // DurationNotRealConstant,
+    // DurationNotApplicable,
+    // InvalidFrame,
 }
 
 #[derive(Debug, Clone)]
@@ -39,7 +40,7 @@ pub struct ScheduleError {
     variant: ScheduleErrorVariant,
 }
 
-type ScheduleResult<T> = Result<T, ScheduleError>;
+pub type ScheduleResult<T> = Result<T, ScheduleError>;
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Hash, Ord)]
 pub enum ScheduledGraphNode {
@@ -211,7 +212,7 @@ impl InstructionBlock {
                 InstructionRole::RFControl => {
                     let frames = Self::get_frames(instruction, program).ok_or(ScheduleError {
                         instruction: instruction.clone(),
-                        variant: ScheduleErrorVariant::UnscheduleableInstruction,
+                        variant: ScheduleErrorVariant::UnschedulableInstruction,
                     })?;
 
                     // Mark a dependency on
@@ -225,11 +226,11 @@ impl InstructionBlock {
                 }
                 InstructionRole::ControlFlow => Err(ScheduleError {
                     instruction: instruction.clone(),
-                    variant: ScheduleErrorVariant::UnscheduleableInstruction,
+                    variant: ScheduleErrorVariant::UnschedulableInstruction,
                 }),
                 InstructionRole::ProgramComposition => Err(ScheduleError {
                     instruction: instruction.clone(),
-                    variant: ScheduleErrorVariant::UnscheduleableInstruction,
+                    variant: ScheduleErrorVariant::UnschedulableInstruction,
                 }),
             }?;
 
@@ -413,7 +414,7 @@ impl ScheduledProgram {
                 | Instruction::MeasureCalibrationDefinition { .. }
                 | Instruction::WaveformDefinition { .. } => Err(ScheduleError {
                     instruction: instruction.clone(),
-                    variant: ScheduleErrorVariant::UnscheduleableInstruction,
+                    variant: ScheduleErrorVariant::UnschedulableInstruction,
                 }),
 
                 Instruction::Pragma { .. } => {

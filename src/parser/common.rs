@@ -201,8 +201,3 @@ pub fn skip_newlines_and_comments<'a>(input: ParserInput<'a>) -> ParserResult<'a
     )))(input)?;
     Ok((input, ()))
 }
-
-/// Parse ahead to the next non-newline token.
-pub fn skip_newlines<'a>(input: ParserInput<'a>) -> ParserResult<'a, ()> {
-    many0(token!(NewLine))(input).map(|(input, _)| (input, ()))
-}
