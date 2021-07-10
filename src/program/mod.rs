@@ -23,12 +23,11 @@ use crate::{
 
 mod calibration;
 mod frame;
-mod graph;
+pub mod graph;
 mod memory;
 
 pub use self::calibration::CalibrationSet;
 pub use self::frame::FrameSet;
-pub use self::graph::{InstructionBlock, ScheduleError, ScheduleResult, ScheduledProgram};
 pub use self::memory::MemoryRegion;
 
 /// A Quil Program instance describes a quantum program with metadata used in execution.
