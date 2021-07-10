@@ -1,3 +1,5 @@
+//! Utilities for analysis of the dependency graph of a Quil Program
+
 /**
  * Copyright 2021 Rigetti Computing
  *
