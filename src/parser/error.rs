@@ -43,17 +43,6 @@ pub enum ErrorKind {
         actual: Token,
         expected: String,
     },
-    /// An unknown identifier was encountered
-    UnknownIdentifier,
-
-    /// An invalid literal was encountered.
-    ///
-    /// When encountered, this generally means a bug exists in the data that
-    /// was passed in or the parsing logic.
-    InvalidLiteral,
-
-    /// A full parse was requested, but data was left over after parsing finished.
-    Partial,
 
     /// Tried to parse a kind of command and couldn't
     /// TODO: Wrap actual error, the string is a lifetime cop-out
@@ -61,9 +50,6 @@ pub enum ErrorKind {
         command: Command,
         error: String,
     },
-
-    /// Tried to parse a gate and couldn't
-    InvalidGate,
 
     /// Unexpected start of an instruction
     NotACommandOrGate,

@@ -16,20 +16,20 @@
 use std::collections::HashMap;
 use std::str::FromStr;
 
-use frame::FrameSet;
-
 use crate::{
     instruction::{FrameIdentifier, Instruction, Waveform},
-    parser::{instruction::parse_instructions, lexer},
+    parser::{lex, parse_instructions},
 };
 
-use self::calibration::CalibrationSet;
-use self::memory::MemoryRegion;
+mod calibration;
+mod frame;
+mod graph;
+mod memory;
 
-pub mod calibration;
-pub mod frame;
-pub mod graph;
-pub mod memory;
+pub use self::calibration::CalibrationSet;
+pub use self::frame::FrameSet;
+pub use self::graph::{InstructionBlock, ScheduleError, ScheduleResult, ScheduledProgram};
+pub use self::memory::MemoryRegion;
 
 /// A Quil Program instance describes a quantum program with metadata used in execution.
 ///
@@ -170,7 +170,7 @@ impl Program {
 impl FromStr for Program {
     type Err = nom::Err<String>;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let lexed = lexer::lex(s);
+        let lexed = lex(s);
         let (_, instructions) = parse_instructions(&lexed).map_err(|err| match err {
             nom::Err::Incomplete(_) => nom::Err::Error("incomplete".to_owned()),
             nom::Err::Error(error) => nom::Err::Error(format!("{:?}", error)),
