@@ -21,7 +21,7 @@ use crate::{
 };
 
 /// A collection of Quil calibrations (`DEFCAL` instructions) with utility methods.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct CalibrationSet {
     calibrations: Vec<Calibration>,
 }
@@ -265,5 +265,28 @@ mod tests {
             program.expand_calibrations();
             assert_eq!(program.to_string(false).as_str(), case.expected);
         }
+    }
+
+    #[test]
+    fn test_eq() {
+        let input = "DEFCAL X 0:
+    PULSE 0 \"xy\" gaussian(duration: 1, fwhm: 2, t0: 3)
+X 0";
+        let a = Program::from_str(input);
+        let b = Program::from_str(input);
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn test_ne() {
+        let input_a = "DEFCAL X 0:
+    PULSE 0 \"xy\" gaussian(duration: 1, fwhm: 2, t0: 3)
+X 0";
+        let input_b = "DEFCAL X 1:
+    PULSE 1 \"xy\" gaussian(duration: 1, fwhm: 2, t0: 3)
+X 1";
+        let a = Program::from_str(input_a);
+        let b = Program::from_str(input_b);
+        assert_ne!(a, b);
     }
 }
