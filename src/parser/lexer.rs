@@ -326,14 +326,13 @@ fn lex_operator(input: &str) -> LexResult {
 
 fn lex_punctuation(input: &str) -> LexResult {
     use Token::*;
-    // println!("'{}'", input);
     alt((
         value(Colon, tag(":")),
         value(Comma, tag(",")),
         value(Indentation, alt((tag("    "), tag("\t")))),
         value(LBracket, tag("[")),
         value(LParenthesis, tag("(")),
-        value(NewLine, is_a("\n")),
+        value(NewLine, alt((is_a("\n"), is_a("\r\n")))),
         value(RBracket, tag("]")),
         value(RParenthesis, tag(")")),
         value(Semicolon, tag(";")),
