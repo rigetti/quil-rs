@@ -35,7 +35,7 @@ pub use self::memory::MemoryRegion;
 /// This contains not only instructions which are executed in turn on the quantum processor, but
 /// also the "headers" used to describe and manipulate those instructions, such as calibrations
 /// and frame definitions.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct Program {
     pub calibrations: CalibrationSet,
     pub frames: FrameSet,
@@ -189,6 +189,65 @@ impl FromStr for Program {
 mod tests {
     use super::Program;
     use std::str::FromStr;
+
+    #[test]
+    fn program_eq() {
+        let input = "
+DECLARE ro BIT
+MEASURE q ro
+JUMP-UNLESS @end-reset ro
+X q
+LABEL @end-reset
+
+DEFCAL I 0:
+    DELAY 0 1.0
+DEFFRAME 0 \"rx\":
+    HARDWARE-OBJECT: \"hardware\"
+DEFWAVEFORM custom 6.0:
+    1,2
+I 0
+";
+        let a = Program::from_str(input);
+        let b = Program::from_str(input);
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn program_neq() {
+        let input_a = "
+DECLARE ro BIT
+MEASURE q ro
+JUMP-UNLESS @end-reset ro
+X q
+LABEL @end-reset
+
+DEFCAL I 0:
+    DELAY 0 1.0
+DEFFRAME 0 \"rx\":
+    HARDWARE-OBJECT: \"hardware\"
+DEFWAVEFORM custom 6.0:
+    1,2
+I 0
+";
+        let input_b = "
+DECLARE readout BIT
+MEASURE q readout
+JUMP-UNLESS @end-reset readout
+X q
+LABEL @end-reset
+
+DEFCAL I 1:
+    DELAY 1 1.0
+DEFFRAME 1 \"rx\":
+    HARDWARE-OBJECT: \"hardware\"
+DEFWAVEFORM custom 6.0:
+    1,2
+1 0
+";
+        let a = Program::from_str(input_a);
+        let b = Program::from_str(input_b);
+        assert_ne!(a, b);
+    }
 
     #[test]
     fn program_headers() {

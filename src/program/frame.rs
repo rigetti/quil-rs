@@ -18,7 +18,7 @@ use std::collections::{HashMap, HashSet};
 use crate::instruction::{FrameAttributes, FrameIdentifier, Instruction, Qubit};
 
 /// A collection of Quil frames (`DEFFRAME` instructions) with utility methods.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct FrameSet {
     frames: HashMap<FrameIdentifier, FrameAttributes>,
 }
