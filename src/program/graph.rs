@@ -21,6 +21,7 @@ use petgraph::graphmap::GraphMap;
 use petgraph::Directed;
 
 use crate::instruction::{FrameIdentifier, Instruction, MemoryReference};
+use crate::program::ApplicableFrames;
 use crate::{instruction::InstructionRole, program::Program};
 
 use indexmap::IndexMap;
@@ -165,7 +166,7 @@ impl MemoryAccessQueue {
     }
 }
 
-type DependencyGraph = GraphMap<ScheduledGraphNode, ExecutionDependency, Directed>;
+pub type DependencyGraph = GraphMap<ScheduledGraphNode, ExecutionDependency, Directed>;
 
 /// An InstructionBlock of a ScheduledProgram is a group of instructions, identified by a string label,
 /// which include no control flow instructions aside from an (optional) terminating control
@@ -212,10 +213,11 @@ impl InstructionBlock {
                     Ok(())
                 }
                 InstructionRole::RFControl => {
-                    let frames = Self::get_frames(instruction, program).ok_or(ScheduleError {
-                        instruction: instruction.clone(),
-                        variant: ScheduleErrorVariant::UnschedulableInstruction,
-                    })?;
+                    let frames = match program.get_frames_for_instruction(instruction, true) {
+                        ApplicableFrames::SelectedFrames(frames) => frames,
+                        ApplicableFrames::AllFrames => program.frames.get_keys(),
+                        ApplicableFrames::NoFrames => vec![],
+                    };
 
                     // Mark a dependency on
                     for frame in frames {
@@ -306,15 +308,6 @@ impl InstructionBlock {
     /// Return all memory accesses by the instruction - in expressions, captures, and memory manipulation
     fn get_memory_accesses(_instruction: &Instruction) -> Option<MemoryAccess> {
         None
-    }
-
-    /// Return the frames defined in the program which are blocked by this instruction.
-    pub fn get_frames<'a>(
-        instruction: &'a Instruction,
-        program: &'a Program,
-    ) -> Option<Vec<&'a FrameIdentifier>> {
-        // FIXME: pass through include_blocked
-        program.get_blocked_frames(instruction, true)
     }
 
     /// Return the count of executable instructions in this block.

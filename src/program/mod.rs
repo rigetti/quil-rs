@@ -104,43 +104,82 @@ impl Program {
         self.instructions = result;
     }
 
-    /// Return the frames which are either used or blocked by the given instruction.
-    /// A frame is "blocked" if the instruction prevents other instructions from playing
-    /// on that frame until complete; a frame is "used" if the instruction actively
-    /// executes on that sequencer.
-    pub fn get_blocked_frames<'a>(
+    /// Return the frames which are either "used" or "blocked" by the given instruction.
+    ///
+    /// An instruction "uses" a frame if it plays on that frame; it "blocks" a frame
+    /// if the instruction prevents other instructions from playing on that frame until complete.
+    pub fn get_frames_for_instruction<'a>(
         &'a self,
         instruction: &'a Instruction,
         include_blocked: bool,
-    ) -> Option<Vec<&'a FrameIdentifier>> {
+    ) -> ApplicableFrames<'a> {
         use Instruction::*;
         match &instruction {
             Pulse {
                 blocking, frame, ..
             } => {
                 if *blocking && include_blocked {
-                    Some(self.frames.get_keys())
+                    ApplicableFrames::AllFrames
                 } else {
-                    Some(vec![frame])
+                    ApplicableFrames::SelectedFrames(vec![frame])
                 }
             }
-            // FIXME: handle blocking
             Delay {
                 frame_names,
                 qubits,
                 ..
             } => {
                 let frame_ids = self.frames.get_matching_keys(qubits, frame_names);
-                Some(frame_ids)
+                ApplicableFrames::SelectedFrames(frame_ids)
             }
-            Capture { frame, .. }
-            | RawCapture { frame, .. }
-            | SetFrequency { frame, .. }
+            Fence { qubits } => {
+                if qubits.is_empty() {
+                    ApplicableFrames::AllFrames
+                } else {
+                    ApplicableFrames::SelectedFrames(self.frames.get_matching_keys(qubits, &[]))
+                }
+            }
+            Capture {
+                blocking, frame, ..
+            }
+            | RawCapture {
+                blocking, frame, ..
+            } => {
+                if *blocking && include_blocked {
+                    ApplicableFrames::AllFrames
+                } else {
+                    ApplicableFrames::SelectedFrames(vec![frame])
+                }
+            }
+            SetFrequency { frame, .. }
             | SetPhase { frame, .. }
             | SetScale { frame, .. }
             | ShiftFrequency { frame, .. }
-            | ShiftPhase { frame, .. } => Some(vec![frame]),
-            _ => None,
+            | ShiftPhase { frame, .. } => ApplicableFrames::SelectedFrames(vec![frame]),
+            SwapPhases { frame_1, frame_2 } => {
+                ApplicableFrames::SelectedFrames(vec![frame_1, frame_2])
+            }
+            Gate { .. }
+            | CircuitDefinition { .. }
+            | GateDefinition { .. }
+            | Declaration { .. }
+            | Measurement { .. }
+            | Reset { .. }
+            | CalibrationDefinition(_)
+            | FrameDefinition { .. }
+            | MeasureCalibrationDefinition { .. }
+            | Pragma { .. }
+            | WaveformDefinition { .. }
+            | Arithmetic { .. }
+            | Halt
+            | Label(_)
+            | Move { .. }
+            | Exchange { .. }
+            | Load { .. }
+            | Store { .. }
+            | Jump { .. }
+            | JumpWhen { .. }
+            | JumpUnless { .. } => ApplicableFrames::NoFrames,
         }
     }
 
@@ -183,6 +222,19 @@ impl FromStr for Program {
 
         Ok(program)
     }
+}
+
+/// ApplicableFrames describes which frames an instruction executes on.
+#[derive(Clone, Debug)]
+pub enum ApplicableFrames<'a> {
+    /// The instruction does not support execution on particular frames, such as classical control.
+    NoFrames,
+
+    /// The instruction executes only on the selected frames.
+    SelectedFrames(Vec<&'a FrameIdentifier>),
+
+    /// The instruction executes on all available frames.
+    AllFrames,
 }
 
 #[cfg(test)]

@@ -248,6 +248,7 @@ pub enum Instruction {
     },
     CalibrationDefinition(Box<Calibration>),
     Capture {
+        blocking: bool,
         frame: FrameIdentifier,
         memory_reference: MemoryReference,
         waveform: Box<WaveformInvocation>,
@@ -280,6 +281,7 @@ pub enum Instruction {
         waveform: Box<WaveformInvocation>,
     },
     RawCapture {
+        blocking: bool,
         frame: FrameIdentifier,
         duration: Expression,
         memory_reference: MemoryReference,
@@ -467,10 +469,16 @@ impl fmt::Display for Instruction {
                 writeln!(f)
             }
             Capture {
+                blocking,
                 frame,
                 waveform,
                 memory_reference,
-            } => write!(f, "CAPTURE {} {} {}", frame, waveform, memory_reference),
+            } => {
+                if !blocking {
+                    write!(f, "NONBLOCKING ")?;
+                }
+                write!(f, "CAPTURE {} {} {}", frame, waveform, memory_reference)
+            }
             CircuitDefinition {
                 name,
                 parameters,
@@ -630,10 +638,16 @@ impl fmt::Display for Instruction {
                 None => write!(f, "PRAGMA {} {}", name, arguments.join(" ")),
             },
             RawCapture {
+                blocking,
                 frame,
                 duration,
                 memory_reference,
-            } => write!(f, "RAW-CAPTURE {} {} {}", frame, duration, memory_reference),
+            } => {
+                if !blocking {
+                    write!(f, "NONBLOCKING ")?;
+                }
+                write!(f, "RAW-CAPTURE {} {} {}", frame, duration, memory_reference)
+            }
             Reset { qubit } => match qubit {
                 Some(qubit) => write!(f, "RESET {}", qubit),
                 None => write!(f, "RESET"),

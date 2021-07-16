@@ -69,7 +69,10 @@ pub fn parse_declare<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction
 }
 
 /// Parse the contents of a `CAPTURE` instruction.
-pub fn parse_capture(input: ParserInput) -> ParserResult<Instruction> {
+///
+/// Unlike most other instructions, this can be _prefixed_ with the NONBLOCKING keyword,
+/// and thus it expects and parses the CAPTURE token itself.
+pub fn parse_capture(input: ParserInput, blocking: bool) -> ParserResult<Instruction> {
     let (input, frame) = common::parse_frame_identifier(input)?;
     let (input, waveform) = common::parse_waveform_invocation(input)?;
     let (input, memory_reference) = common::parse_memory_reference(input)?;
@@ -77,6 +80,7 @@ pub fn parse_capture(input: ParserInput) -> ParserResult<Instruction> {
     Ok((
         input,
         Instruction::Capture {
+            blocking,
             frame,
             waveform: Box::new(waveform),
             memory_reference,
@@ -269,16 +273,7 @@ pub fn parse_pragma<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction>
 }
 
 /// Parse a pulse instruction, **including the PULSE keyword**.
-///
-/// Unlike most other instructions, this can be _prefixed_ with the NONBLOCKING keyword,
-/// and thus it expects and parses the PULSE token itself.
-pub fn parse_pulse<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
-    let (input, blocking) = match token!(NonBlocking)(input) {
-        Ok((input, _)) => (input, false),
-        Err(_) => (input, true),
-    };
-    // TODO (Kalan): Actually check that this is a pulse
-    let (input, _) = token!(Command(pulse))(input)?;
+pub fn parse_pulse<'a>(input: ParserInput<'a>, blocking: bool) -> ParserResult<'a, Instruction> {
     let (input, qubits) = parse_qubits(input)?;
     let (input, name) = token!(String(v))(input)?;
     let (input, waveform) = parse_waveform_invocation(input)?;
@@ -294,7 +289,10 @@ pub fn parse_pulse<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> 
 }
 
 /// Parse the contents of a `RAW-CAPTURE` instruction.
-pub fn parse_raw_capture(input: ParserInput) -> ParserResult<Instruction> {
+pub fn parse_raw_capture(
+    input: ParserInput,
+    blocking: bool,
+) -> ParserResult<Instruction> {
     let (input, frame) = parse_frame_identifier(input)?;
     let (input, duration) = parse_expression(input)?;
     let (input, memory_reference) = parse_memory_reference(input)?;
@@ -302,6 +300,7 @@ pub fn parse_raw_capture(input: ParserInput) -> ParserResult<Instruction> {
     Ok((
         input,
         Instruction::RawCapture {
+            blocking,
             frame,
             duration,
             memory_reference,
