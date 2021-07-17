@@ -450,20 +450,25 @@ pub struct ScheduledProgram {
 
 macro_rules! terminate_working_block {
     ($terminator:expr, $working_instructions:ident, $blocks:ident, $working_label:ident, $program: ident) => {{
-        let block = InstructionBlock::build(
-            $working_instructions.iter().map(|el| el.clone()).collect(),
-            $terminator,
-            $program,
-        )?;
-        match $blocks.insert($working_label.clone(), block) {
-            Some(_) => Err(ScheduleError {
-                instruction: Instruction::Label($working_label.clone()),
-                variant: ScheduleErrorVariant::DuplicateLabel,
-            }), // Duplicate label
-            None => Ok(()),
-        }?;
-        $working_instructions = vec![];
-        $working_label = Self::generate_autoincremented_label(&$blocks);
+        // If this "block" has no instructions and no terminator, it's not worth storing - skip it
+        if $working_instructions.is_empty() && $terminator.is_none() {
+            $working_label = Self::generate_autoincremented_label(&$blocks);
+        } else {
+            let block = InstructionBlock::build(
+                $working_instructions.iter().map(|el| el.clone()).collect(),
+                $terminator,
+                $program,
+            )?;
+            match $blocks.insert($working_label.clone(), block) {
+                Some(_) => Err(ScheduleError {
+                    instruction: Instruction::Label($working_label.clone()),
+                    variant: ScheduleErrorVariant::DuplicateLabel,
+                }), // Duplicate label
+                None => Ok(()),
+            }?;
+            $working_instructions = vec![];
+            $working_label = Self::generate_autoincremented_label(&$blocks);
+        }
         Ok(())
     }};
 }
@@ -523,7 +528,7 @@ impl ScheduledProgram {
                 // _ => Err(()), // Unimplemented
                 Instruction::Label(value) => {
                     terminate_working_block!(
-                        None,
+                        None as Option<BlockTerminator>,
                         working_instructions,
                         blocks,
                         working_label,
@@ -584,9 +589,13 @@ impl ScheduledProgram {
             }?;
         }
 
-        if !working_instructions.is_empty() {
-            terminate_working_block!(None, working_instructions, blocks, working_label, program)?;
-        }
+        terminate_working_block!(
+            None as Option<BlockTerminator>,
+            working_instructions,
+            blocks,
+            working_label,
+            program
+        )?;
 
         Ok(ScheduledProgram { blocks })
     }

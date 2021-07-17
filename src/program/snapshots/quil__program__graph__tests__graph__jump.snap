@@ -4,14 +4,6 @@ expression: "ProgramDebugWrapper{program: &scheduled_program,}"
 
 ---
 digraph {
-	subgraph "cluster_start" {
-		label="start"
-		node [ style="filled" ]
-		"start_start" [ label=start, shape=circle ]
-		"start_start" -> "start_end" [ label="immediate" ]
-		"start_end" [ label=end, shape=circle ]
-	}
-"start_end" -> "first-block_start" [label="always"]
 	subgraph "cluster_first-block" {
 		label="first-block"
 		node [ style="filled" ]
@@ -23,15 +15,7 @@ digraph {
 		"first-block_end" [ label=end, shape=circle ]
 	}
 "first-block_end" -> "third-block_start" [label="if ro[0] != 0"]
-"first-block_end" -> "auto-label-0_start" [label="if ro[0] == 0"]
-	subgraph "cluster_auto-label-0" {
-		label="auto-label-0"
-		node [ style="filled" ]
-		"auto-label-0_start" [ label=start, shape=circle ]
-		"auto-label-0_start" -> "auto-label-0_end" [ label="immediate" ]
-		"auto-label-0_end" [ label=end, shape=circle ]
-	}
-"auto-label-0_end" -> "second-block_start" [label="always"]
+"first-block_end" -> "second-block_start" [label="if ro[0] == 0"]
 	subgraph "cluster_second-block" {
 		label="second-block"
 		node [ style="filled" ]
