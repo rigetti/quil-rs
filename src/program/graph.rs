@@ -826,5 +826,13 @@ JUMP @measure
 LABEL @end
 "
         );
+
+        build_dot_format_snapshot_test_case!(
+            labels_only,
+            "LABEL @a
+LABEL @b
+LABEL @c
+"
+        );
     }
 }
