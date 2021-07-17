@@ -177,22 +177,17 @@ macro_rules! format_complex {
 
         if $value.im > 0f64 {
             operator = "+".to_owned();
-            imaginary_component = format!("{}i", pretty_float!($value.im))
+            imaginary_component = format!("{:.}i", $value.im)
         } else if $value.im < 0f64 {
-            imaginary_component = format!("-{}i", pretty_float!($value.im))
+            imaginary_component = format!("-{:.}i", $value.im)
         }
 
         if imaginary_component == "" {
-            pretty_float!($value.re)
+            format!("{:.}", $value.re)
         } else if $value.re == 0f64 {
             format!("{}", imaginary_component)
         } else {
-            format!(
-                "{}{}{}",
-                pretty_float!($value.re),
-                operator,
-                imaginary_component
-            )
+            format!("{:.}{}{}", $value.re, operator, imaginary_component)
         }
     }};
 }
