@@ -14,7 +14,8 @@
  * limitations under the License.
  **/
 use nom::{
-    combinator::opt,
+    branch::alt,
+    combinator::{map, opt},
     multi::{many0, many1, separated_list0, separated_list1},
     sequence::{delimited, tuple},
 };
@@ -138,7 +139,9 @@ pub fn parse_defwaveform<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruc
         token!(RParenthesis),
     ))(input)?;
     let parameters = parameters.unwrap_or_default();
-    let (input, sample_rate) = token!(Float(v))(input)?;
+    // NOTE: this cast will cause unexpected behavior for very large integers that cannot be accurately cast to f64.
+    let (input, sample_rate) =
+        alt((token!(Float(v)), map(token!(Integer(v)), |v| v as f64)))(input)?;
     let (input, _) = tuple((token!(Colon), token!(NewLine), token!(Indentation)))(input)?;
     let (input, matrix) = separated_list1(token!(Comma), parse_expression)(input)?;
 
@@ -296,10 +299,7 @@ pub fn parse_pulse<'a>(input: ParserInput<'a>, blocking: bool) -> ParserResult<'
 }
 
 /// Parse the contents of a `RAW-CAPTURE` instruction.
-pub fn parse_raw_capture(
-    input: ParserInput,
-    blocking: bool,
-) -> ParserResult<Instruction> {
+pub fn parse_raw_capture(input: ParserInput, blocking: bool) -> ParserResult<Instruction> {
     let (input, frame) = parse_frame_identifier(input)?;
     let (input, duration) = parse_expression(input)?;
     let (input, memory_reference) = parse_memory_reference(input)?;
