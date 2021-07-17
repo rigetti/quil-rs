@@ -185,6 +185,13 @@ pub fn parse_exchange(input: ParserInput) -> ParserResult<Instruction> {
     ))
 }
 
+/// Parse the contents of a `FENCE` instruction.
+pub fn parse_fence(input: ParserInput) -> ParserResult<Instruction> {
+    let (input, qubits) = parse_qubits(input)?;
+
+    Ok((input, Instruction::Fence { qubits }))
+}
+
 /// Parse the contents of a `JUMP` instruction.
 pub fn parse_jump<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
     let (input, target) = token!(Label(v))(input)?;

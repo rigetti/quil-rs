@@ -56,7 +56,7 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
                 Command::Div => command::parse_arithmetic(ArithmeticOperator::Divide, remainder),
                 // Command::Eq => {}
                 // Command::Exchange => {}
-                // Command::Fence => {}
+                Command::Fence => command::parse_fence(remainder),
                 // Command::GE => {}
                 // Command::GT => {}
                 Command::Halt => Ok((remainder, Instruction::Halt)),
