@@ -16,12 +16,12 @@
  * limitations under the License.
  **/
 use std::collections::{HashMap, HashSet};
+use std::fmt;
 
 use petgraph::graphmap::GraphMap;
 use petgraph::Directed;
 
 use crate::instruction::{FrameIdentifier, Instruction, MemoryReference};
-use crate::program::ApplicableFrames;
 use crate::{instruction::InstructionRole, program::Program};
 
 use indexmap::IndexMap;
@@ -167,6 +167,12 @@ impl MemoryAccessQueue {
 }
 
 pub type DependencyGraph = GraphMap<ScheduledGraphNode, ExecutionDependency, Directed>;
+pub type DependencyGraphEdgeRef<'a> = (
+    ScheduledGraphNode,
+    ScheduledGraphNode,
+    &'a ExecutionDependency,
+);
+pub type DependencyGraphNodeRef<'a> = (ScheduledGraphNode, &'a ScheduledGraphNode);
 
 /// An InstructionBlock of a ScheduledProgram is a group of instructions, identified by a string label,
 /// which include no control flow instructions aside from an (optional) terminating control
@@ -214,17 +220,17 @@ impl InstructionBlock {
                 }
                 InstructionRole::RFControl => {
                     let frames = match program.get_frames_for_instruction(instruction, true) {
-                        ApplicableFrames::SelectedFrames(frames) => frames,
-                        ApplicableFrames::AllFrames => program.frames.get_keys(),
-                        ApplicableFrames::NoFrames => vec![],
+                        Some(frames) => frames,
+                        None => vec![],
                     };
 
-                    // Mark a dependency on
+                    // Mark a dependency on the last instruction which executed in the context of each target frame
                     for frame in frames {
                         let previous_node_id = last_instruction_by_frame
                             .entry(frame.clone())
                             .or_insert(ScheduledGraphNode::BlockStart);
                         graph.add_edge(*previous_node_id, node, ExecutionDependency::Immediate);
+                        last_instruction_by_frame.insert(frame.clone(), node);
                     }
                     Ok(())
                 }
@@ -301,6 +307,83 @@ impl InstructionBlock {
         &self.graph
     }
 
+    /// Write a DOT-formatted string to the provided writer for use with GraphViz.
+    /// This output can be used within a `subgraph` or at the top level of a `digraph`.
+    ///
+    /// Parameters:
+    ///
+    /// * line_prefix: The prefix for each new line in the output. This can be used to indent this
+    ///   output for readability in a larger definition.
+    /// * element_prefix: The prefix for each graph element (node and edge). This can be used to
+    ///   namespace this block when used with other blocks which may have conflicting labels.
+    pub fn write_dot_format(
+        &self,
+        f: &mut fmt::Formatter,
+        line_prefix: &str,
+        element_prefix: &str,
+    ) -> fmt::Result {
+        self.graph.nodes().try_for_each(|node| {
+            match &node {
+                ScheduledGraphNode::BlockEnd => {
+                    writeln!(
+                        f,
+                        "{}\"{}end\" [ label=end, shape=circle ]",
+                        line_prefix, element_prefix
+                    )
+                }
+                ScheduledGraphNode::BlockStart => {
+                    writeln!(
+                        f,
+                        "{}\"{}start\" [ label=start, shape=circle ]",
+                        line_prefix, element_prefix
+                    )
+                }
+                ScheduledGraphNode::InstructionIndex(index) => {
+                    write!(
+                        f,
+                        "{}\"{}{}\" [label=\"",
+                        line_prefix, element_prefix, index
+                    )?;
+                    write_escaped(f, &format!("{}", self.instructions.get(*index).unwrap()))?;
+                    writeln!(f, "\"]")
+                }
+            }?;
+            self.graph.edges(node).try_for_each(|(src, dest, edge)| {
+                match &src {
+                    ScheduledGraphNode::BlockEnd => {
+                        write!(f, "{}\"{}end\"", line_prefix, element_prefix)
+                    }
+                    ScheduledGraphNode::BlockStart => {
+                        write!(f, "{}\"{}start\"", line_prefix, element_prefix)
+                    }
+                    ScheduledGraphNode::InstructionIndex(index) => {
+                        write!(f, "{}\"{}{}\"", line_prefix, element_prefix, index)
+                    }
+                }?;
+                write!(f, " -> ")?;
+                match &dest {
+                    ScheduledGraphNode::BlockEnd => write!(f, "\"{}end\"", element_prefix),
+                    ScheduledGraphNode::BlockStart => {
+                        write!(f, "\"{}start\"", element_prefix)
+                    }
+                    ScheduledGraphNode::InstructionIndex(index) => {
+                        write!(f, "\"{}{}\"", element_prefix, index)
+                    }
+                }?;
+                match edge {
+                    ExecutionDependency::AwaitCapture => {
+                        writeln!(f, " [ label=\"await capture\" ]")
+                    }
+                    ExecutionDependency::Immediate => {
+                        writeln!(f, " [ label=\"immediate\" ]")
+                    }
+                }
+            })
+        })?;
+        Ok(())
+    }
+
+    /// Return a particular-indexed instruction (if present).
     pub fn get_instruction(&self, node_id: usize) -> Option<&Instruction> {
         self.instructions.get(node_id)
     }
@@ -320,8 +403,8 @@ impl InstructionBlock {
         self.instructions.is_empty()
     }
 
-    pub fn set_exit_condition(&mut self, jump: BlockTerminator) {
-        self.terminator = jump
+    pub fn set_exit_condition(&mut self, terminator: BlockTerminator) {
+        self.terminator = terminator
     }
 }
 
@@ -337,6 +420,26 @@ pub enum BlockTerminator {
     },
     Continue,
     Halt,
+}
+
+/// Escape strings for use as DOT format quoted ID's
+fn write_escaped(f: &mut fmt::Formatter, s: &str) -> fmt::Result {
+    for c in s.chars() {
+        write_char(f, c)?;
+    }
+    Ok(())
+}
+
+/// Escape a single character for use within a DOT format quoted ID.
+fn write_char(f: &mut fmt::Formatter, c: char) -> fmt::Result {
+    use std::fmt::Write;
+    match c {
+        '"' | '\\' => f.write_char('\\')?,
+        // \l is for left justified linebreak
+        '\n' => return f.write_str("\\l"),
+        _ => {}
+    }
+    f.write_char(c)
 }
 
 #[derive(Clone, Debug)]
@@ -497,30 +600,103 @@ impl ScheduledProgram {
         }
         label
     }
+
+    /// Write a DOT format string to the provided writer for use with Graphviz.
+    ///
+    /// This outputs a `digraph` object with a `subgraph` for each block to inform the layout engine.
+    /// Each `subgraph` ID is prefixed with `cluster_` which instructs some supporting layout engines
+    /// to enclose the subgraph with a border. This improves readability of the graph.
+    ///
+    /// Lines on the graph indicate scheduling dependencies within blocks and control flow among blocks.
+    /// Each node representing an instruction is labeled with the contents of that instruction.
+    pub fn write_dot_format(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        writeln!(f, "digraph {{")?;
+
+        let mut iter = self.blocks.iter().peekable();
+        while let Some((label, block)) = iter.next() {
+            writeln!(f, "\tsubgraph \"cluster_{}\" {{", label)?;
+            writeln!(f, "\t\tlabel=\"{}\"", label)?;
+            writeln!(f, "\t\tnode [ style=\"filled\" ]")?;
+
+            let line_prefix = "\t\t";
+            // let element_prefix = format!("b{}_", index);
+            let element_prefix = format!("{}_", label);
+
+            block.write_dot_format(f, line_prefix, &element_prefix)?;
+            writeln!(f, "\t}}")?;
+
+            let next_block_label = iter.peek().map(|(next_label, _)| (*next_label).clone());
+            match &block.terminator {
+                BlockTerminator::Conditional {
+                    condition,
+                    target,
+                    jump_if_condition_true,
+                } => {
+                    let equality_operators = if *jump_if_condition_true {
+                        ("==", "!=")
+                    } else {
+                        ("!=", "==")
+                    };
+                    writeln!(
+                        f,
+                        "\"{}_end\" -> \"{}_start\" [label=\"if {} {} 0\"]",
+                        label, target, condition, equality_operators.0,
+                    )?;
+                    if let Some(next_label) = next_block_label {
+                        writeln!(
+                            f,
+                            "\"{}_end\" -> \"{}_start\" [label=\"if {} {} 0\"]",
+                            label, next_label, condition, equality_operators.1
+                        )?;
+                    };
+                }
+                BlockTerminator::Unconditional { target } => {
+                    writeln!(
+                        f,
+                        "\"{}_end\" -> \"{}_start\" [label=\"always\"]",
+                        label, target
+                    )?;
+                }
+                BlockTerminator::Continue => {
+                    if let Some(next_label) = next_block_label {
+                        writeln!(
+                            f,
+                            "\"{}_end\" -> \"{}_start\" [label=\"always\"]",
+                            label, next_label
+                        )?;
+                    };
+                }
+                BlockTerminator::Halt => {}
+            }
+        }
+        writeln!(f, "}}")
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::ScheduledProgram;
-    use crate::program::Program;
-    use std::str::FromStr;
+    mod blocks {
 
-    #[test]
-    fn without_control_flow() {
-        let input = "
+        use super::super::ScheduledProgram;
+        use crate::program::Program;
+        use std::str::FromStr;
+
+        #[test]
+        fn without_control_flow() {
+            let input = "
 DEFFRAME 0 \"rx\":
     INITIAL-FREQUENCY: 1e6
 PULSE 0 \"rx\" test(duration: 1e6)
 DELAY 0 1.0
 ";
-        let program = Program::from_str(input).unwrap();
-        let scheduled_program = ScheduledProgram::from_program(&program).unwrap();
-        assert_eq!(scheduled_program.blocks.len(), 1)
-    }
+            let program = Program::from_str(input).unwrap();
+            let scheduled_program = ScheduledProgram::from_program(&program).unwrap();
+            assert_eq!(scheduled_program.blocks.len(), 1)
+        }
 
-    #[test]
-    fn with_control_flow() {
-        let input = "
+        #[test]
+        fn with_control_flow() {
+            let input = "
 DEFFRAME 0 \"rx\":
     INITIAL-FREQUENCY: 1e6
 PULSE 0 \"rx\" test(duration: 1e-6)
@@ -539,9 +715,128 @@ LABEL @block5
 DELAY 0 5.0
 HALT
 ";
-        let program = Program::from_str(input).unwrap();
-        let scheduled_program = ScheduledProgram::from_program(&program).unwrap();
-        println!("{:?}", scheduled_program.blocks);
-        assert_eq!(scheduled_program.blocks.len(), 7);
+            let program = Program::from_str(input).unwrap();
+            let scheduled_program = ScheduledProgram::from_program(&program).unwrap();
+            println!("{:?}", scheduled_program.blocks);
+            assert_eq!(scheduled_program.blocks.len(), 7);
+        }
+    }
+
+    mod graph {
+        use super::super::ScheduledProgram;
+        use crate::program::Program;
+        use std::str::FromStr;
+
+        /// Build a test case which compiles the input program, builds the dot-format string from the program,
+        /// and then compares that to a "correct" snapshot of that dot format. This makes diffs easy to compare and
+        /// understand; if a test is failing, you can copy the snapshot contents out to your preferred Graphviz
+        /// viewer to help understand why.
+        ///
+        /// NOTE: because this relies on direct string comparison, it will be brittle against changes in the way
+        /// that the `write_dot_format` methods work. If _all_ or _most_ of these tests are failing, examine the
+        /// diffs closely to determine if it's only a matter of reformatting.
+        macro_rules! build_dot_format_snapshot_test_case {
+            ($name: ident, $input:expr) => {
+                #[test]
+                fn $name() {
+                    use std::fmt;
+                    const FRAME_DEFINITIONS: &'static str = "
+DEFFRAME 0 \"rx\":
+    INITIAL-FREQUENCY: 1e6
+DEFFRAME 1 \"rx\":
+    INITIAL-FREQUENCY: 1e6
+DEFFRAME 2 \"rx\":
+    INITIAL-FREQUENCY: 1e6
+DEFFRAME 0 \"ro_rx\":
+    INITIAL-FREQUENCY: 1e6
+";
+
+                    let program =
+                        Program::from_str(&format!("{}\n{}", FRAME_DEFINITIONS, $input)).unwrap();
+                    let scheduled_program = ScheduledProgram::from_program(&program).unwrap();
+
+                    struct ProgramDebugWrapper<'a> {
+                        pub program: &'a ScheduledProgram,
+                    }
+
+                    impl<'a> fmt::Debug for ProgramDebugWrapper<'a> {
+                        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                            self.program.write_dot_format(f)
+                        }
+                    }
+
+                    insta::assert_debug_snapshot!(ProgramDebugWrapper {
+                        program: &scheduled_program
+                    });
+                }
+            };
+        }
+
+        build_dot_format_snapshot_test_case!(
+            single_instruction,
+            "PULSE 0 \"rx\" test(duration: 1e6)"
+        );
+
+        build_dot_format_snapshot_test_case!(
+            single_dependency,
+            "
+PULSE 0 \"rx\" test(duration: 1e6)
+PULSE 0 \"rx\" test(duration: 1e6)
+"
+        );
+
+        build_dot_format_snapshot_test_case!(
+            chained_pulses,
+            "
+PULSE 0 \"rx\" test(duration: 1e6)
+PULSE 0 \"rx\" test(duration: 1e6)
+PULSE 0 \"rx\" test(duration: 1e6)
+PULSE 0 \"rx\" test(duration: 1e6)
+PULSE 0 \"rx\" test(duration: 1e6)
+"
+        );
+
+        build_dot_format_snapshot_test_case!(
+            different_frames_blocking,
+            "
+PULSE 0 \"rx\" test(duration: 1e6)
+PULSE 1 \"rx\" test(duration: 1e6)
+PULSE 2 \"rx\" test(duration: 1e6)
+"
+        );
+
+        build_dot_format_snapshot_test_case!(
+            different_frames_nonblocking,
+            "
+NONBLOCKING PULSE 0 \"rx\" test(duration: 1e6)
+NONBLOCKING PULSE 1 \"rx\" test(duration: 1e6)
+NONBLOCKING PULSE 2 \"rx\" test(duration: 1e6)
+"
+        );
+
+        build_dot_format_snapshot_test_case!(
+            fence_all_with_nonblocking_pulses,
+            "
+NONBLOCKING PULSE 0 \"rx\" test(duration: 1e6)
+NONBLOCKING PULSE 1 \"rx\" test(duration: 1e6)
+FENCE
+NONBLOCKING PULSE 0 \"rx\" test(duration: 1e6)
+NONBLOCKING PULSE 1 \"rx\" test(duration: 1e6)
+"
+        );
+        build_dot_format_snapshot_test_case!(fence_all, "FENCE");
+
+        build_dot_format_snapshot_test_case!(
+            jump,
+            "DECLARE ro BIT
+LABEL @first-block
+PULSE 0 \"rx\" test(duration: 1e6)
+JUMP-UNLESS @third-block ro[0]
+LABEL @second-block
+PULSE 0 \"rx\" test(duration: 1e6)
+LABEL @third-block
+PULSE 0 \"rx\" test(duration: 1e6)
+"
+        );
     }
 }
