@@ -16,7 +16,7 @@ digraph {
 		"measure_0" [label="NONBLOCKING PULSE 0 \"ro_tx\" test(duration: 1.00e6)"]
 		"measure_0" -> "measure_end" [ label="immediate" ]
 		"measure_1" [label="NONBLOCKING CAPTURE 0 \"ro_rx\" test(duration: 1.00e6) ro[0]"]
-		"measure_1" -> "measure_end" [ label="immediate" ]
+		"measure_1" -> "measure_end" [ label="await capture" ]
 		"measure_end" [ label=end, shape=circle ]
 	}
 "measure_end" -> "end_start" [label="if ro[0] == 0"]

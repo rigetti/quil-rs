@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  **/
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::fmt;
 
 use petgraph::graphmap::GraphMap;
@@ -25,6 +25,8 @@ use crate::instruction::{FrameIdentifier, Instruction, MemoryReference};
 use crate::{instruction::InstructionRole, program::Program};
 
 use indexmap::IndexMap;
+
+use super::memory::MemoryAccessType;
 
 #[derive(Debug, Clone)]
 pub enum ScheduleErrorVariant {
@@ -54,24 +56,6 @@ pub enum ScheduledGraphNode {
 
 impl Eq for ScheduledGraphNode {}
 
-struct MemoryAccess {
-    pub regions: HashSet<String>,
-    pub access_type: MemoryAccessType,
-}
-
-/// Express a mode of memory access.
-#[derive(Clone, Debug)]
-enum MemoryAccessType {
-    /// Write to a memory location using readout (`CAPTURE` and `RAW-CAPTURE` instructions)
-    Capture,
-
-    /// Read from a memory location
-    Read,
-
-    /// Write to a memory location using classical instructions
-    Write,
-}
-
 /// A MemoryAccessQueue expresses the current state of memory accessors at the time of
 /// an instruction's execution.
 ///
@@ -85,17 +69,20 @@ struct MemoryAccessQueue {
 
 /// A MemoryAccessDependency expresses a dependency that one node has on another to complete
 /// some type of memory access prior to the dependent node's execution.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
 struct MemoryAccessDependency {
-    pub node_id: ScheduledGraphNode,
-    // What type of memory access must complete prior to the downstream instruction
+    /// What type of memory access must complete prior to the downstream instruction.
+    // NOTE: This must remain the first field for ordering to work as expected.
     pub access_type: MemoryAccessType,
+
+    /// Which node is using the given `access_type`.
+    pub node_id: ScheduledGraphNode,
 }
 
 #[derive(Clone, Debug)]
 pub enum ExecutionDependency {
-    /// The downstream instruction must wait for the capture (asynchronous write) to complete.
-    AwaitCapture,
+    /// The downstream instruction must wait for the given operation to complete.
+    AwaitMemoryAccess(MemoryAccessType),
     /// The downstream instruction can execute as soon as the upstream completes.
     Immediate,
 }
@@ -107,6 +94,20 @@ impl MemoryAccessQueue {
         self.get_blocking_nodes(ScheduledGraphNode::BlockEnd, &MemoryAccessType::Capture)
     }
 
+    /// Register that a node wants access of the given type, while returning which accesses block
+    /// the requested access.
+    ///
+    /// Captures and writes may not happen concurrently with any other access; multiple reads may
+    /// occur concurrently.
+    ///
+    /// Thus, if the caller requests Read access, and there are no pending captures or writes, then
+    /// there will be no blocking nodes.
+    ///
+    /// However, if there is a pending capture or write, that dependency will be expressed in the
+    /// return value.
+    ///
+    /// If the caller requests a capture or a write, then all pending calls - reads, writes, and captures -
+    /// will be returned as "blocking" the capture or write.
     pub fn get_blocking_nodes(
         &mut self,
         node_id: ScheduledGraphNode,
@@ -140,14 +141,11 @@ impl MemoryAccessQueue {
             // Mark the given node as writing to this memory region. If there were any reads or another
             // write or capture pending, return those as a dependency list.
             Capture | Write => {
-                let mut result = vec![];
-                if !self.pending_reads.is_empty() {
-                    for upstream_node_id in self.pending_reads.iter() {
-                        result.push(MemoryAccessDependency {
-                            node_id: *upstream_node_id,
-                            access_type: Read,
-                        });
-                    }
+                for upstream_node_id in self.pending_reads.iter() {
+                    result.push(MemoryAccessDependency {
+                        node_id: *upstream_node_id,
+                        access_type: Read,
+                    });
                 }
 
                 match access {
@@ -209,6 +207,7 @@ impl InstructionBlock {
 
             let instruction_role = InstructionRole::from(instruction);
             match instruction_role {
+                // Classical instructions must be strongly ordered by appearance in the program
                 InstructionRole::ClassicalCompute => {
                     graph.add_edge(
                         last_classical_instruction,
@@ -244,20 +243,27 @@ impl InstructionBlock {
                 }),
             }?;
 
-            if let Some(memory_accesses) = Self::get_memory_accesses(instruction) {
-                for region in memory_accesses.regions {
+            // FIXME: This will handle reads, writes, and captures in arbitrary order, which is a bug.
+            // Must be handled as reads -> (writes / captures). Instructions read all values prior to any
+            // writes they make to those values.
+            let accesses = instruction.get_memory_accesses();
+            for (regions, access_type) in [
+                (accesses.reads, MemoryAccessType::Read),
+                (accesses.writes, MemoryAccessType::Write),
+                (accesses.captures, MemoryAccessType::Capture),
+            ] {
+                for region in regions {
                     let memory_dependencies = pending_memory_access
-                        .entry(region)
+                        .entry(region.clone())
                         .or_default()
-                        .get_blocking_nodes(node, &memory_accesses.access_type);
+                        .get_blocking_nodes(node, &access_type);
                     for memory_dependency in memory_dependencies {
                         // If this instruction follows one which performed a capture, we have to wait for the
                         // capture to complete before proceeding. Otherwise, this is just a simple ordering
                         // dependency.
-                        let execution_dependency = match memory_dependency.access_type {
-                            MemoryAccessType::Capture => ExecutionDependency::AwaitCapture,
-                            _ => ExecutionDependency::Immediate,
-                        };
+                        let execution_dependency = ExecutionDependency::AwaitMemoryAccess(
+                            memory_dependency.access_type.clone(),
+                        );
                         graph.add_edge(memory_dependency.node_id, node, execution_dependency);
                     }
                 }
@@ -281,19 +287,26 @@ impl InstructionBlock {
             );
         }
 
-        for (_, memory_access_queue) in pending_memory_access {
-            let remaining_dependencies = memory_access_queue.flush();
-            for dependency in remaining_dependencies {
-                let execution_dependency = match dependency.access_type {
-                    MemoryAccessType::Capture => ExecutionDependency::AwaitCapture,
-                    _ => ExecutionDependency::Immediate,
-                };
-                graph.add_edge(
-                    dependency.node_id,
-                    ScheduledGraphNode::BlockEnd,
-                    execution_dependency,
-                );
-            }
+        // Examine all "pending" memory operations for all regions
+        let mut remaining_dependencies = pending_memory_access
+            .drain()
+            .flat_map(|(_, queue)| queue.flush())
+            .collect::<Vec<MemoryAccessDependency>>();
+
+        // Sort them into the correct order of precedence. See [MemoryAccessDependency].
+        remaining_dependencies.sort();
+
+        // For each dependency, insert or overwrite an edge in the graph connecting the node pending that
+        // operation to the end of the graph.
+        for dependency in remaining_dependencies {
+            let execution_dependency =
+                ExecutionDependency::AwaitMemoryAccess(dependency.access_type);
+
+            graph.add_edge(
+                dependency.node_id,
+                ScheduledGraphNode::BlockEnd,
+                execution_dependency,
+            );
         }
 
         Ok(InstructionBlock {
@@ -371,9 +384,11 @@ impl InstructionBlock {
                     }
                 }?;
                 match edge {
-                    ExecutionDependency::AwaitCapture => {
-                        writeln!(f, " [ label=\"await capture\" ]")
-                    }
+                    ExecutionDependency::AwaitMemoryAccess(access_type) => match access_type {
+                        MemoryAccessType::Capture => writeln!(f, " [ label=\"await capture\" ]"),
+                        MemoryAccessType::Read => writeln!(f, " [ label=\"await read\" ]"),
+                        MemoryAccessType::Write => writeln!(f, " [ label=\"await write\" ]"),
+                    },
                     ExecutionDependency::Immediate => {
                         writeln!(f, " [ label=\"immediate\" ]")
                     }
@@ -386,11 +401,6 @@ impl InstructionBlock {
     /// Return a particular-indexed instruction (if present).
     pub fn get_instruction(&self, node_id: usize) -> Option<&Instruction> {
         self.instructions.get(node_id)
-    }
-
-    /// Return all memory accesses by the instruction - in expressions, captures, and memory manipulation
-    fn get_memory_accesses(_instruction: &Instruction) -> Option<MemoryAccess> {
-        None
     }
 
     /// Return the count of executable instructions in this block.
@@ -832,6 +842,23 @@ LABEL @end
             "LABEL @a
 LABEL @b
 LABEL @c
+"
+        );
+
+        build_dot_format_snapshot_test_case!(
+            simple_memory_access,
+            "DECLARE a INTEGER
+DECLARE b INTEGER
+MOVE a 1
+MOVE b 2
+ADD a b
+"
+        );
+
+        build_dot_format_snapshot_test_case!(
+            simple_capture,
+            "DECLARE ro BIT
+CAPTURE 0 \"ro_rx\" test ro
 "
         );
     }
