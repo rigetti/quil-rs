@@ -5,16 +5,16 @@ expression: "ProgramDebugWrapper{program: &scheduled_program,}"
 ---
 digraph {
 	entry [label="Entry Point"]
-	entry -> "start_start"
-	subgraph "cluster_start" {
-		label="start"
+	entry -> "block_0_start"
+	subgraph "cluster_block_0" {
+		label="block_0"
 		node [ style="filled" ]
-		"start_start" [ label=start, shape=circle ]
-		"start_start" -> "start_0" [ label="immediate" ]
-		"start_start" -> "start_end" [ label="immediate" ]
-		"start_0" [label="PULSE 0 \"rx\" test(duration: 1.00e6)"]
-		"start_0" -> "start_end" [ label="immediate" ]
-		"start_end" [ label=end, shape=circle ]
+		"block_0_start" [ label=start, shape=circle ]
+		"block_0_start" -> "block_0_0" [ label="immediate" ]
+		"block_0_start" -> "block_0_end" [ label="immediate" ]
+		"block_0_0" [label="PULSE 0 \"rf\" test(duration: 1.00e6)"]
+		"block_0_0" -> "block_0_end" [ label="immediate" ]
+		"block_0_end" [ label=end, shape=circle ]
 	}
 }
 

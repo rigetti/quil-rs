@@ -12,7 +12,7 @@ digraph {
 		"first-block_start" [ label=start, shape=circle ]
 		"first-block_start" -> "first-block_0" [ label="immediate" ]
 		"first-block_start" -> "first-block_end" [ label="immediate" ]
-		"first-block_0" [label="PULSE 0 \"rx\" test(duration: 1.00e6)"]
+		"first-block_0" [label="PULSE 0 \"rf\" test(duration: 1.00e6)"]
 		"first-block_0" -> "first-block_end" [ label="immediate" ]
 		"first-block_end" [ label=end, shape=circle ]
 	}
@@ -24,7 +24,7 @@ digraph {
 		"second-block_start" [ label=start, shape=circle ]
 		"second-block_start" -> "second-block_0" [ label="immediate" ]
 		"second-block_start" -> "second-block_end" [ label="immediate" ]
-		"second-block_0" [label="PULSE 0 \"rx\" test(duration: 1.00e6)"]
+		"second-block_0" [label="PULSE 0 \"rf\" test(duration: 1.00e6)"]
 		"second-block_0" -> "second-block_end" [ label="immediate" ]
 		"second-block_end" [ label=end, shape=circle ]
 	}
@@ -35,7 +35,7 @@ digraph {
 		"third-block_start" [ label=start, shape=circle ]
 		"third-block_start" -> "third-block_0" [ label="immediate" ]
 		"third-block_start" -> "third-block_end" [ label="immediate" ]
-		"third-block_0" [label="PULSE 0 \"rx\" test(duration: 1.00e6)"]
+		"third-block_0" [label="PULSE 0 \"rf\" test(duration: 1.00e6)"]
 		"third-block_0" -> "third-block_end" [ label="immediate" ]
 		"third-block_end" [ label=end, shape=circle ]
 	}

@@ -451,23 +451,26 @@ pub struct ScheduledProgram {
 macro_rules! terminate_working_block {
     ($terminator:expr, $working_instructions:ident, $blocks:ident, $working_label:ident, $program: ident) => {{
         // If this "block" has no instructions and no terminator, it's not worth storing - skip it
-        if $working_instructions.is_empty() && $terminator.is_none() {
-            $working_label = Self::generate_autoincremented_label(&$blocks);
+        if $working_instructions.is_empty() && $terminator.is_none() && $working_label.is_none() {
+            $working_label = None
         } else {
             let block = InstructionBlock::build(
                 $working_instructions.iter().map(|el| el.clone()).collect(),
                 $terminator,
                 $program,
             )?;
-            match $blocks.insert($working_label.clone(), block) {
+            let label =
+                $working_label.unwrap_or_else(|| Self::generate_autoincremented_label(&$blocks));
+
+            match $blocks.insert(label.clone(), block) {
                 Some(_) => Err(ScheduleError {
-                    instruction: Instruction::Label($working_label.clone()),
+                    instruction: Instruction::Label(label.clone()),
                     variant: ScheduleErrorVariant::DuplicateLabel,
                 }), // Duplicate label
                 None => Ok(()),
             }?;
             $working_instructions = vec![];
-            $working_label = Self::generate_autoincremented_label(&$blocks);
+            $working_label = None
         }
         Ok(())
     }};
@@ -477,7 +480,7 @@ impl ScheduledProgram {
     /// Structure a sequential program
     #[allow(unused_assignments)]
     pub fn from_program(program: &Program) -> ScheduleResult<Self> {
-        let mut working_label = "start".to_owned();
+        let mut working_label = None;
         let mut working_instructions: Vec<Instruction> = vec![];
         let mut blocks = IndexMap::new();
 
@@ -535,7 +538,7 @@ impl ScheduledProgram {
                         program
                     )?;
 
-                    working_label = value.clone();
+                    working_label = Some(value.clone());
                     Ok(())
                 }
                 Instruction::Jump { target } => {
@@ -602,10 +605,10 @@ impl ScheduledProgram {
 
     fn generate_autoincremented_label(block_labels: &IndexMap<String, InstructionBlock>) -> String {
         let mut suffix = 0;
-        let mut label = format!("auto-label-{}", suffix);
+        let mut label = format!("block_{}", suffix);
         while block_labels.get(&label).is_some() {
             suffix += 1;
-            label = format!("auto-label-{}", suffix);
+            label = format!("block_{}", suffix);
         }
         label
     }
@@ -691,53 +694,6 @@ impl ScheduledProgram {
 
 #[cfg(test)]
 mod tests {
-    mod blocks {
-
-        use super::super::ScheduledProgram;
-        use crate::program::Program;
-        use std::str::FromStr;
-
-        #[test]
-        fn without_control_flow() {
-            let input = "
-DEFFRAME 0 \"rx\":
-    INITIAL-FREQUENCY: 1e6
-PULSE 0 \"rx\" test(duration: 1e6)
-DELAY 0 1.0
-";
-            let program = Program::from_str(input).unwrap();
-            let scheduled_program = ScheduledProgram::from_program(&program).unwrap();
-            assert_eq!(scheduled_program.blocks.len(), 1)
-        }
-
-        #[test]
-        fn with_control_flow() {
-            let input = "
-DEFFRAME 0 \"rx\":
-    INITIAL-FREQUENCY: 1e6
-PULSE 0 \"rx\" test(duration: 1e-6)
-PULSE 0 \"rx\" test(duration: 1e-6)
-DELAY 0 1.0
-LABEL @part2
-PULSE 0 \"rx\" test(duration: 1e-6)
-DELAY 0 2.0
-LABEL @part3
-DELAY 0 3.0
-JUMP @part2
-DELAY 0 4.0
-JUMP @block5
-HALT
-LABEL @block5
-DELAY 0 5.0
-HALT
-";
-            let program = Program::from_str(input).unwrap();
-            let scheduled_program = ScheduledProgram::from_program(&program).unwrap();
-            println!("{:?}", scheduled_program.blocks);
-            assert_eq!(scheduled_program.blocks.len(), 7);
-        }
-    }
-
     mod graph {
         use super::super::ScheduledProgram;
         use crate::program::Program;
@@ -757,13 +713,15 @@ HALT
                 fn $name() {
                     use std::fmt;
                     const FRAME_DEFINITIONS: &'static str = "
-DEFFRAME 0 \"rx\":
+DEFFRAME 0 \"rf\":
     INITIAL-FREQUENCY: 1e6
-DEFFRAME 1 \"rx\":
+DEFFRAME 1 \"rf\":
     INITIAL-FREQUENCY: 1e6
-DEFFRAME 2 \"rx\":
+DEFFRAME 2 \"rf\":
     INITIAL-FREQUENCY: 1e6
 DEFFRAME 0 \"ro_rx\":
+    INITIAL-FREQUENCY: 1e6
+DEFFRAME 0 \"ro_tx\":
     INITIAL-FREQUENCY: 1e6
 ";
 
@@ -790,32 +748,32 @@ DEFFRAME 0 \"ro_rx\":
 
         build_dot_format_snapshot_test_case!(
             single_instruction,
-            "PULSE 0 \"rx\" test(duration: 1e6)"
+            "PULSE 0 \"rf\" test(duration: 1e6)"
         );
 
         build_dot_format_snapshot_test_case!(
             single_dependency,
             "
-PULSE 0 \"rx\" test(duration: 1e6)
-PULSE 0 \"rx\" test(duration: 1e6)
+PULSE 0 \"rf\" test(duration: 1e6)
+PULSE 0 \"rf\" test(duration: 1e6)
 "
         );
 
         build_dot_format_snapshot_test_case!(
             chained_pulses,
             "
-PULSE 0 \"rx\" test(duration: 1e6)
-PULSE 0 \"rx\" test(duration: 1e6)
-PULSE 0 \"rx\" test(duration: 1e6)
-PULSE 0 \"rx\" test(duration: 1e6)
-PULSE 0 \"rx\" test(duration: 1e6)
+PULSE 0 \"rf\" test(duration: 1e6)
+PULSE 0 \"rf\" test(duration: 1e6)
+PULSE 0 \"rf\" test(duration: 1e6)
+PULSE 0 \"rf\" test(duration: 1e6)
+PULSE 0 \"rf\" test(duration: 1e6)
 "
         );
 
         build_dot_format_snapshot_test_case!(
             different_frames_blocking,
             "
-PULSE 0 \"rx\" test(duration: 1e6)
+PULSE 0 \"rf\" test(duration: 1e6)
 PULSE 1 \"rx\" test(duration: 1e6)
 PULSE 2 \"rx\" test(duration: 1e6)
 "
@@ -824,7 +782,7 @@ PULSE 2 \"rx\" test(duration: 1e6)
         build_dot_format_snapshot_test_case!(
             different_frames_nonblocking,
             "
-NONBLOCKING PULSE 0 \"rx\" test(duration: 1e6)
+NONBLOCKING PULSE 0 \"rf\" test(duration: 1e6)
 NONBLOCKING PULSE 1 \"rx\" test(duration: 1e6)
 NONBLOCKING PULSE 2 \"rx\" test(duration: 1e6)
 "
@@ -833,10 +791,10 @@ NONBLOCKING PULSE 2 \"rx\" test(duration: 1e6)
         build_dot_format_snapshot_test_case!(
             fence_all_with_nonblocking_pulses,
             "
-NONBLOCKING PULSE 0 \"rx\" test(duration: 1e6)
+NONBLOCKING PULSE 0 \"rf\" test(duration: 1e6)
 NONBLOCKING PULSE 1 \"rx\" test(duration: 1e6)
 FENCE
-NONBLOCKING PULSE 0 \"rx\" test(duration: 1e6)
+NONBLOCKING PULSE 0 \"rf\" test(duration: 1e6)
 NONBLOCKING PULSE 1 \"rx\" test(duration: 1e6)
 "
         );
@@ -846,12 +804,26 @@ NONBLOCKING PULSE 1 \"rx\" test(duration: 1e6)
             jump,
             "DECLARE ro BIT
 LABEL @first-block
-PULSE 0 \"rx\" test(duration: 1e6)
+PULSE 0 \"rf\" test(duration: 1e6)
 JUMP-UNLESS @third-block ro[0]
 LABEL @second-block
-PULSE 0 \"rx\" test(duration: 1e6)
+PULSE 0 \"rf\" test(duration: 1e6)
 LABEL @third-block
-PULSE 0 \"rx\" test(duration: 1e6)
+PULSE 0 \"rf\" test(duration: 1e6)
+"
+        );
+
+        build_dot_format_snapshot_test_case!(
+            active_reset_single_frame,
+            "DECLARE ro BIT
+LABEL @measure
+NONBLOCKING PULSE 0 \"ro_tx\" test(duration: 1e6)
+NONBLOCKING CAPTURE 0 \"ro_rx\" test(duration: 1e6) ro
+JUMP-WHEN @end ro[0]
+LABEL @feedback
+PULSE 0 \"rf\" test(duration: 1e6)
+JUMP @measure
+LABEL @end
 "
         );
     }
