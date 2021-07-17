@@ -108,20 +108,23 @@ impl Program {
     ///
     /// An instruction "uses" a frame if it plays on that frame; it "blocks" a frame
     /// if the instruction prevents other instructions from playing on that frame until complete.
+    ///
+    /// Return `None` if the instruction does not execute in the context of a frame - such
+    /// as classical instructions.
     pub fn get_frames_for_instruction<'a>(
         &'a self,
         instruction: &'a Instruction,
         include_blocked: bool,
-    ) -> ApplicableFrames<'a> {
+    ) -> Option<Vec<&'a FrameIdentifier>> {
         use Instruction::*;
         match &instruction {
             Pulse {
                 blocking, frame, ..
             } => {
                 if *blocking && include_blocked {
-                    ApplicableFrames::AllFrames
+                    Some(&self.frames.get_keys())
                 } else {
-                    ApplicableFrames::SelectedFrames(vec![frame])
+                    Some(vec![frame])
                 }
             }
             Delay {
@@ -130,13 +133,13 @@ impl Program {
                 ..
             } => {
                 let frame_ids = self.frames.get_matching_keys(qubits, frame_names);
-                ApplicableFrames::SelectedFrames(frame_ids)
+                Some(frame_ids)
             }
             Fence { qubits } => {
                 if qubits.is_empty() {
-                    ApplicableFrames::AllFrames
+                    Some(self.frames.get_keys())
                 } else {
-                    ApplicableFrames::SelectedFrames(self.frames.get_matching_keys(qubits, &[]))
+                    Some(self.frames.get_matching_keys(qubits, &[]))
                 }
             }
             Capture {
@@ -146,19 +149,17 @@ impl Program {
                 blocking, frame, ..
             } => {
                 if *blocking && include_blocked {
-                    ApplicableFrames::AllFrames
+                    Some(self.frames.get_keys())
                 } else {
-                    ApplicableFrames::SelectedFrames(vec![frame])
+                    Some(vec![frame])
                 }
             }
             SetFrequency { frame, .. }
             | SetPhase { frame, .. }
             | SetScale { frame, .. }
             | ShiftFrequency { frame, .. }
-            | ShiftPhase { frame, .. } => ApplicableFrames::SelectedFrames(vec![frame]),
-            SwapPhases { frame_1, frame_2 } => {
-                ApplicableFrames::SelectedFrames(vec![frame_1, frame_2])
-            }
+            | ShiftPhase { frame, .. } => Some(vec![frame]),
+            SwapPhases { frame_1, frame_2 } => Some(vec![frame_1, frame_2]),
             Gate { .. }
             | CircuitDefinition { .. }
             | GateDefinition { .. }
@@ -179,7 +180,7 @@ impl Program {
             | Store { .. }
             | Jump { .. }
             | JumpWhen { .. }
-            | JumpUnless { .. } => ApplicableFrames::NoFrames,
+            | JumpUnless { .. } => None,
         }
     }
 
