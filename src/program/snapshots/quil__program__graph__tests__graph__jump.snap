@@ -4,6 +4,8 @@ expression: "ProgramDebugWrapper{program: &scheduled_program,}"
 
 ---
 digraph {
+	entry [label="Entry Point"]
+	entry -> "first-block_start"
 	subgraph "cluster_first-block" {
 		label="first-block"
 		node [ style="filled" ]

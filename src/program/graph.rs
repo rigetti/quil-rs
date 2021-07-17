@@ -622,6 +622,13 @@ impl ScheduledProgram {
         writeln!(f, "digraph {{")?;
 
         let mut iter = self.blocks.iter().peekable();
+
+        writeln!(f, "\tentry [label=\"Entry Point\"]")?;
+
+        if let Some((first_label, _)) = iter.peek() {
+            writeln!(f, "\tentry -> \"{}_start\"", first_label)?;
+        }
+
         while let Some((label, block)) = iter.next() {
             writeln!(f, "\tsubgraph \"cluster_{}\" {{", label)?;
             writeln!(f, "\t\tlabel=\"{}\"", label)?;
