@@ -122,7 +122,7 @@ impl Program {
                 blocking, frame, ..
             } => {
                 if *blocking && include_blocked {
-                    Some(&self.frames.get_keys())
+                    Some(self.frames.get_keys())
                 } else {
                     Some(vec![frame])
                 }
@@ -188,11 +188,23 @@ impl Program {
         let mut result = vec![];
 
         if include_headers {
+            result.extend(self.memory_regions.iter().map(|(name, descriptor)| {
+                Instruction::Declaration {
+                    name: name.clone(),
+                    size: descriptor.size.clone(),
+                    sharing: descriptor.sharing.clone(),
+                }
+            }));
             result.extend(self.frames.to_instructions());
+            result.extend(self.waveforms.iter().map(|(name, definition)| {
+                Instruction::WaveformDefinition {
+                    name: name.clone(),
+                    definition: definition.clone(),
+                }
+            }));
             result.extend(self.calibrations.to_instructions());
         }
 
-        // TODO: other headers/context like frames and waveforms
         result.extend(self.instructions.clone());
 
         result
@@ -223,19 +235,6 @@ impl FromStr for Program {
 
         Ok(program)
     }
-}
-
-/// ApplicableFrames describes which frames an instruction executes on.
-#[derive(Clone, Debug)]
-pub enum ApplicableFrames<'a> {
-    /// The instruction does not support execution on particular frames, such as classical control.
-    NoFrames,
-
-    /// The instruction executes only on the selected frames.
-    SelectedFrames(Vec<&'a FrameIdentifier>),
-
-    /// The instruction executes on all available frames.
-    AllFrames,
 }
 
 #[cfg(test)]
@@ -302,6 +301,8 @@ DEFWAVEFORM custom 6.0:
         assert_ne!(a, b);
     }
 
+    // Assert that headers are correctly parsed from program text, and
+    // also exported when the program is exported as a string.
     #[test]
     fn program_headers() {
         let input = "
@@ -310,8 +311,8 @@ DEFCAL I 0:
     DELAY 0 1.0
 DEFFRAME 0 \"rx\":
     HARDWARE-OBJECT: \"hardware\"
-DEFWAVEFORM custom 6.0:
-    1,2
+DEFWAVEFORM custom 1.0:
+    1, 2
 I 0
 ";
         let program = Program::from_str(input).unwrap();
@@ -320,5 +321,20 @@ I 0
         assert_eq!(program.frames.len(), 1);
         assert_eq!(program.waveforms.len(), 1);
         assert_eq!(program.instructions.len(), 1);
+
+        assert_eq!(program.to_string(false), "I 0\n");
+
+        assert_eq!(
+            program.to_string(true),
+            "DECLARE ro BIT[5]
+DEFFRAME 0 \"rx\":
+\tHARDWARE-OBJECT: \"hardware\"
+DEFWAVEFORM custom 1:
+\t1, 2
+DEFCAL I 0:
+\tDELAY 0 1
+I 0
+"
+        );
     }
 }

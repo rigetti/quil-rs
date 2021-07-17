@@ -108,13 +108,13 @@ impl Expression {
 
                 match (&left_evaluated, &right_evaluated) {
                     (Number(value_left), Number(value_right)) => {
-                        Number(calculate_infix(&value_left, &operator, &value_right))
+                        Number(calculate_infix(value_left, &operator, value_right))
                     }
                     (PiConstant, Number(value)) => {
-                        Number(calculate_infix(&real!(PI), &operator, &value))
+                        Number(calculate_infix(&real!(PI), &operator, value))
                     }
                     (Number(value), PiConstant) => {
-                        Number(calculate_infix(&value, &operator, &real!(PI)))
+                        Number(calculate_infix(value, &operator, &real!(PI)))
                     }
                     _ => Infix {
                         left: Box::new(left_evaluated),
