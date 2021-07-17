@@ -1,0 +1,30 @@
+---
+source: quil/src/program/graph.rs
+expression: "ProgramDebugWrapper{program: &scheduled_program,}"
+
+---
+digraph {
+	subgraph "cluster_start" {
+		label="start"
+		node [ style="filled" ]
+		"start_start" [ label=start, shape=circle ]
+		"start_start" -> "start_0" [ label="immediate" ]
+		"start_start" -> "start_1" [ label="immediate" ]
+		"start_start" -> "start_2" [ label="immediate" ]
+		"start_start" -> "start_end" [ label="immediate" ]
+		"start_0" [label="NONBLOCKING PULSE 0 \"rx\" test(duration: 1.00e6)"]
+		"start_0" -> "start_2" [ label="immediate" ]
+		"start_1" [label="NONBLOCKING PULSE 1 \"rx\" test(duration: 1.00e6)"]
+		"start_1" -> "start_2" [ label="immediate" ]
+		"start_2" [label="FENCE"]
+		"start_2" -> "start_3" [ label="immediate" ]
+		"start_2" -> "start_4" [ label="immediate" ]
+		"start_2" -> "start_end" [ label="immediate" ]
+		"start_3" [label="NONBLOCKING PULSE 0 \"rx\" test(duration: 1.00e6)"]
+		"start_3" -> "start_end" [ label="immediate" ]
+		"start_4" [label="NONBLOCKING PULSE 1 \"rx\" test(duration: 1.00e6)"]
+		"start_4" -> "start_end" [ label="immediate" ]
+		"start_end" [ label=end, shape=circle ]
+	}
+}
+

@@ -1,0 +1,57 @@
+---
+source: quil/src/program/graph.rs
+expression: "ProgramDebugWrapper{program: &scheduled_program,}"
+
+---
+digraph {
+	subgraph "cluster_start" {
+		label="start"
+		node [ style="filled" ]
+		"start_start" [ label=start, shape=circle ]
+		"start_start" -> "start_end" [ label="immediate" ]
+		"start_end" [ label=end, shape=circle ]
+	}
+"start_end" -> "first-block_start" [label="always"]
+	subgraph "cluster_first-block" {
+		label="first-block"
+		node [ style="filled" ]
+		"first-block_start" [ label=start, shape=circle ]
+		"first-block_start" -> "first-block_0" [ label="immediate" ]
+		"first-block_start" -> "first-block_end" [ label="immediate" ]
+		"first-block_0" [label="PULSE 0 \"rx\" test(duration: 1.00e6)"]
+		"first-block_0" -> "first-block_end" [ label="immediate" ]
+		"first-block_end" [ label=end, shape=circle ]
+	}
+"first-block_end" -> "third-block_start" [label="if ro[0] != 0"]
+"first-block_end" -> "auto-label-0_start" [label="if ro[0] == 0"]
+	subgraph "cluster_auto-label-0" {
+		label="auto-label-0"
+		node [ style="filled" ]
+		"auto-label-0_start" [ label=start, shape=circle ]
+		"auto-label-0_start" -> "auto-label-0_end" [ label="immediate" ]
+		"auto-label-0_end" [ label=end, shape=circle ]
+	}
+"auto-label-0_end" -> "second-block_start" [label="always"]
+	subgraph "cluster_second-block" {
+		label="second-block"
+		node [ style="filled" ]
+		"second-block_start" [ label=start, shape=circle ]
+		"second-block_start" -> "second-block_0" [ label="immediate" ]
+		"second-block_start" -> "second-block_end" [ label="immediate" ]
+		"second-block_0" [label="PULSE 0 \"rx\" test(duration: 1.00e6)"]
+		"second-block_0" -> "second-block_end" [ label="immediate" ]
+		"second-block_end" [ label=end, shape=circle ]
+	}
+"second-block_end" -> "third-block_start" [label="always"]
+	subgraph "cluster_third-block" {
+		label="third-block"
+		node [ style="filled" ]
+		"third-block_start" [ label=start, shape=circle ]
+		"third-block_start" -> "third-block_0" [ label="immediate" ]
+		"third-block_start" -> "third-block_end" [ label="immediate" ]
+		"third-block_0" [label="PULSE 0 \"rx\" test(duration: 1.00e6)"]
+		"third-block_0" -> "third-block_end" [ label="immediate" ]
+		"third-block_end" [ label=end, shape=circle ]
+	}
+}
+

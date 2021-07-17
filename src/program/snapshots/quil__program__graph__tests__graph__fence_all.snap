@@ -1,0 +1,18 @@
+---
+source: quil/src/program/graph.rs
+expression: "ProgramDebugWrapper{program: &scheduled_program,}"
+
+---
+digraph {
+	subgraph "cluster_start" {
+		label="start"
+		node [ style="filled" ]
+		"start_start" [ label=start, shape=circle ]
+		"start_start" -> "start_0" [ label="immediate" ]
+		"start_start" -> "start_end" [ label="immediate" ]
+		"start_0" [label="FENCE"]
+		"start_0" -> "start_end" [ label="immediate" ]
+		"start_end" [ label=end, shape=circle ]
+	}
+}
+
