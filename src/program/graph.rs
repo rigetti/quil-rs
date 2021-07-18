@@ -845,6 +845,7 @@ LABEL @c
 "
         );
 
+        // assert that read and write memory dependencies are expressed correctly
         build_dot_format_snapshot_test_case!(
             simple_memory_access,
             "DECLARE a INTEGER
@@ -855,11 +856,38 @@ ADD a b
 "
         );
 
+        // assert that a block "waits" for a capture to complete
         build_dot_format_snapshot_test_case!(
             simple_capture,
             "DECLARE ro BIT
+CAPTURE 0 \"ro_rx\" test ro"
+        );
+
+        // assert that a block "waits" for a capture to complete even with a pulse after it
+        build_dot_format_snapshot_test_case!(
+            pulse_after_capture,
+            "DECLARE ro BIT
 CAPTURE 0 \"ro_rx\" test ro
-"
+PULSE 0 \"rf\" test"
+        );
+
+        // assert that a block "waits" for a capture to complete
+        build_dot_format_snapshot_test_case!(
+            parametric_pulse,
+            "DECLARE ro BIT
+DECLARE param REAL
+PULSE 0 \"rf\" test(a: param[0])
+CAPTURE 0 \"ro_rx\" test(a: param[0]) ro"
+        );
+
+        // assert that a pulse waits for a capture to complete before using the readout value
+        // as a parameter
+        build_dot_format_snapshot_test_case!(
+            parametric_pulse_using_capture_results,
+            "DECLARE ro BIT
+DECLARE param REAL
+CAPTURE 0 \"ro_rx\" test(a: param[0]) ro
+PULSE 0 \"rf\" test(a: ro[0])"
         );
     }
 }

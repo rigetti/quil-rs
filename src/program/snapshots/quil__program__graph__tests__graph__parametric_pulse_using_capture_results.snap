@@ -1,0 +1,23 @@
+---
+source: quil/src/program/graph.rs
+expression: "ProgramDebugWrapper{program: &scheduled_program,}"
+
+---
+digraph {
+	entry [label="Entry Point"]
+	entry -> "block_0_start"
+	subgraph "cluster_block_0" {
+		label="block_0"
+		node [ style="filled" ]
+		"block_0_start" [ label=start, shape=circle ]
+		"block_0_start" -> "block_0_0" [ label="immediate" ]
+		"block_0_start" -> "block_0_end" [ label="immediate" ]
+		"block_0_0" [label="CAPTURE 0 \"ro_rx\" test(a: param[0]) ro[0]"]
+		"block_0_0" -> "block_0_1" [ label="await capture" ]
+		"block_0_0" -> "block_0_end" [ label="await read" ]
+		"block_0_1" [label="PULSE 0 \"rf\" test(a: ro[0])"]
+		"block_0_1" -> "block_0_end" [ label="await read" ]
+		"block_0_end" [ label=end, shape=circle ]
+	}
+}
+
