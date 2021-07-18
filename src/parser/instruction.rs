@@ -240,7 +240,7 @@ mod tests {
     make_test!(
         capture_instructions,
         parse_instructions,
-        "CAPTURE 0 \"rx\" my_custom_waveform ro\nRAW-CAPTURE 0 1 \"rx\" 2e9 ro\nNONBLOCKING CAPTURE 0 \"rx\" my_custom_waveform ro\nNONBLOCKING RAW-CAPTURE 0 1 \"rx\" 2e9 ro",
+        "CAPTURE 0 \"rx\" my_custom_waveform ro\nRAW-CAPTURE 0 1 \"rx\" 2e9 ro\nNONBLOCKING CAPTURE 0 \"rx\" my_custom_waveform(a: 1.0) ro\nNONBLOCKING RAW-CAPTURE 0 1 \"rx\" 2e9 ro",
         vec![
             Instruction::Capture {
                 blocking: true,
@@ -277,7 +277,7 @@ mod tests {
                 },
                 waveform: Box::new(WaveformInvocation {
                     name: "my_custom_waveform".to_owned(),
-                    parameters: HashMap::new()
+                    parameters: vec![("a".to_owned(), Expression::Number(real!(1f64)))].into_iter().collect()
                 }),
                 memory_reference: MemoryReference {
                     name: "ro".to_owned(),
@@ -411,9 +411,9 @@ mod tests {
     );
 
     make_test!(
-        pulse,
+        pulse_instructions,
         parse_instructions,
-        "PULSE 0 \"xy\" custom\nNONBLOCKING PULSE 0 \"xy\" custom",
+        "PULSE 0 \"xy\" custom\nNONBLOCKING PULSE 0 \"xy\" custom\nPULSE 0 \"xy\" custom(a: 1.0)",
         vec![
             Instruction::Pulse {
                 blocking: true,
@@ -436,7 +436,20 @@ mod tests {
                     name: "custom".to_owned(),
                     parameters: HashMap::new()
                 })
-            }
+            },
+            Instruction::Pulse {
+                blocking: true,
+                frame: FrameIdentifier {
+                    name: "xy".to_owned(),
+                    qubits: vec![Qubit::Fixed(0)]
+                },
+                waveform: Box::new(WaveformInvocation {
+                    name: "custom".to_owned(),
+                    parameters: vec![("a".to_owned(), Expression::Number(real!(1f64)))]
+                        .into_iter()
+                        .collect()
+                })
+            },
         ]
     );
 

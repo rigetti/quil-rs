@@ -17,7 +17,7 @@ use std::collections::HashMap;
 
 use nom::{
     branch::alt,
-    combinator::{map, opt, value},
+    combinator::{cut, map, opt, value},
     multi::many0,
     multi::{many1, separated_list0},
     sequence::{delimited, tuple},
@@ -110,7 +110,7 @@ pub fn parse_gate_modifier<'a>(input: ParserInput<'a>) -> ParserResult<'a, GateM
     ))
 }
 
-/// Parse a reference to a memory location, such as `ro[5]`.
+/// Parse a reference to a memory location, such as `ro[5]`, with optional brackets (i.e, `ro` allowed).
 pub fn parse_memory_reference<'a>(input: ParserInput<'a>) -> ParserResult<'a, MemoryReference> {
     let (input, name) = token!(Identifier(v))(input)?;
     let (input, index) = opt(delimited(
@@ -119,6 +119,15 @@ pub fn parse_memory_reference<'a>(input: ParserInput<'a>) -> ParserResult<'a, Me
         token!(RBracket),
     ))(input)?;
     let index = index.unwrap_or(0);
+    Ok((input, MemoryReference { name, index }))
+}
+
+/// Parse a reference to a memory location, such as `ro[5]` requiring the brackets (i.e, `ro` disallowed).
+pub fn parse_memory_reference_with_brackets<'a>(
+    input: ParserInput<'a>,
+) -> ParserResult<'a, MemoryReference> {
+    let (input, name) = token!(Identifier(v))(input)?;
+    let (input, index) = delimited(token!(LBracket), token!(Integer(v)), token!(RBracket))(input)?;
     Ok((input, MemoryReference { name, index }))
 }
 
@@ -136,7 +145,7 @@ pub fn parse_waveform_invocation<'a>(
     let (input, name) = token!(Identifier(v))(input)?;
     let (input, parameter_tuples) = opt(delimited(
         token!(LParenthesis),
-        separated_list0(token!(Comma), parse_named_argument),
+        cut(separated_list0(token!(Comma), parse_named_argument)),
         token!(RParenthesis),
     ))(input)?;
     let parameter_tuples = parameter_tuples.unwrap_or_default();
@@ -200,4 +209,35 @@ pub fn skip_newlines_and_comments<'a>(input: ParserInput<'a>) -> ParserResult<'a
         token!(Semicolon),
     )))(input)?;
     Ok((input, ()))
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{expression::Expression, instruction::MemoryReference, parser::lex, real};
+
+    use super::parse_waveform_invocation;
+
+    #[test]
+    fn waveform_invocation() {
+        let input = "wf(a: 1.0, b: %var, c: ro[0])";
+        let lexed = lex(input);
+        let (remainder, waveform) = parse_waveform_invocation(&lexed).unwrap();
+        assert_eq!(remainder, &[]);
+        assert_eq!(
+            waveform.parameters,
+            vec![
+                ("a".to_owned(), Expression::Number(real!(1f64))),
+                ("b".to_owned(), Expression::Variable("var".to_owned())),
+                (
+                    "c".to_owned(),
+                    Expression::Address(MemoryReference {
+                        name: "ro".to_owned(),
+                        index: 0
+                    })
+                )
+            ]
+            .into_iter()
+            .collect()
+        )
+    }
 }
