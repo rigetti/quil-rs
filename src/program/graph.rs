@@ -108,6 +108,8 @@ impl MemoryAccessQueue {
     ///
     /// If the caller requests a capture or a write, then all pending calls - reads, writes, and captures -
     /// will be returned as "blocking" the capture or write.
+    /// 
+    /// A capture or write remains blocking until the next capture or write.
     pub fn get_blocking_nodes(
         &mut self,
         node_id: ScheduledGraphNode,
@@ -122,14 +124,12 @@ impl MemoryAccessQueue {
                 access_type: Write,
             });
         }
-        self.pending_write = None;
         if let Some(node_id) = self.pending_capture {
             result.push(MemoryAccessDependency {
                 node_id,
                 access_type: Capture,
             });
         }
-        self.pending_capture = None;
 
         match access {
             // Mark the given node as reading from this memory region. If there was a write pending,
@@ -151,8 +151,10 @@ impl MemoryAccessQueue {
                 match access {
                     Capture => {
                         self.pending_capture = Some(node_id);
+                        self.pending_write = None;
                     }
                     Write => {
+                        self.pending_capture = None;
                         self.pending_write = Some(node_id);
                     }
                     _ => panic!("expected Capture or Write memory dependency"),
@@ -880,14 +882,17 @@ PULSE 0 \"rf\" test(a: param[0])
 CAPTURE 0 \"ro_rx\" test(a: param[0]) ro"
         );
 
-        // assert that a pulse waits for a capture to complete before using the readout value
-        // as a parameter
+        // Assert that all pulses following a capture block on that capture, until the next capture
         build_dot_format_snapshot_test_case!(
-            parametric_pulse_using_capture_results,
+            parametric_pulses_using_capture_results,
             "DECLARE ro BIT
 DECLARE param REAL
 CAPTURE 0 \"ro_rx\" test(a: param[0]) ro
-PULSE 0 \"rf\" test(a: ro[0])"
+NONBLOCKING PULSE 0 \"rf\" test(a: ro[0])
+NONBLOCKING PULSE 1 \"rf\" test(a: ro[0])
+CAPTURE 0 \"ro_rx\" test(a: param[0]) ro
+NONBLOCKING PULSE 0 \"rf\" test(a: ro[0])
+NONBLOCKING PULSE 1 \"rf\" test(a: ro[0])"
         );
     }
 }
