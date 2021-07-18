@@ -10,7 +10,7 @@ digraph {
 		label="a"
 		node [ style="filled" ]
 		"a_start" [ label=start, shape=circle ]
-		"a_start" -> "a_end" [ label="immediate" ]
+		"a_start" -> "a_end" [ label="ordering" ]
 		"a_end" [ label=end, shape=circle ]
 	}
 "a_end" -> "b_start" [label="always"]
@@ -18,7 +18,7 @@ digraph {
 		label="b"
 		node [ style="filled" ]
 		"b_start" [ label=start, shape=circle ]
-		"b_start" -> "b_end" [ label="immediate" ]
+		"b_start" -> "b_end" [ label="ordering" ]
 		"b_end" [ label=end, shape=circle ]
 	}
 "b_end" -> "c_start" [label="always"]
@@ -26,7 +26,7 @@ digraph {
 		label="c"
 		node [ style="filled" ]
 		"c_start" [ label=start, shape=circle ]
-		"c_start" -> "c_end" [ label="immediate" ]
+		"c_start" -> "c_end" [ label="ordering" ]
 		"c_end" [ label=end, shape=circle ]
 	}
 }

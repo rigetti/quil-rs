@@ -10,15 +10,18 @@ digraph {
 		label="block_0"
 		node [ style="filled" ]
 		"block_0_start" [ label=start, shape=circle ]
-		"block_0_start" -> "block_0_0" [ label="immediate" ]
+		"block_0_start" -> "block_0_0" [ label="ordering" ]
 		"block_0_0" [label="MOVE a[0] 1"]
-		"block_0_0" -> "block_0_1" [ label="immediate" ]
+		"block_0_0" -> "block_0_1" [ label="ordering" ]
 		"block_0_0" -> "block_0_2" [ label="await write" ]
 		"block_0_1" [label="MOVE b[0] 2"]
-		"block_0_1" -> "block_0_2" [ label="await write" ]
+		"block_0_1" -> "block_0_2" [ label="await write
+ordering" ]
 		"block_0_1" -> "block_0_end" [ label="await write" ]
 		"block_0_2" [label="ADD a[0] b[0]"]
-		"block_0_2" -> "block_0_end" [ label="await write" ]
+		"block_0_2" -> "block_0_end" [ label="await read
+await write
+ordering" ]
 		"block_0_end" [ label=end, shape=circle ]
 	}
 }

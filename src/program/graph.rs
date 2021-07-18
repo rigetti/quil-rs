@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  **/
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt;
 
 use petgraph::graphmap::GraphMap;
@@ -79,12 +79,16 @@ struct MemoryAccessDependency {
     pub node_id: ScheduledGraphNode,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub enum ExecutionDependency {
     /// The downstream instruction must wait for the given operation to complete.
     AwaitMemoryAccess(MemoryAccessType),
-    /// The downstream instruction can execute as soon as the upstream completes.
-    Immediate,
+
+    /// The instructions share a reference frame
+    ReferenceFrame,
+
+    /// The ordering between these two instructions must remain unchanged
+    StableOrdering,
 }
 
 /// A data structure to be used in the serializing of access to a memory region.
@@ -108,7 +112,7 @@ impl MemoryAccessQueue {
     ///
     /// If the caller requests a capture or a write, then all pending calls - reads, writes, and captures -
     /// will be returned as "blocking" the capture or write.
-    /// 
+    ///
     /// A capture or write remains blocking until the next capture or write.
     pub fn get_blocking_nodes(
         &mut self,
@@ -166,13 +170,23 @@ impl MemoryAccessQueue {
     }
 }
 
-pub type DependencyGraph = GraphMap<ScheduledGraphNode, ExecutionDependency, Directed>;
-pub type DependencyGraphEdgeRef<'a> = (
-    ScheduledGraphNode,
-    ScheduledGraphNode,
-    &'a ExecutionDependency,
-);
-pub type DependencyGraphNodeRef<'a> = (ScheduledGraphNode, &'a ScheduledGraphNode);
+/// Add a dependency to an edge on the graph, whether that edge currently exists or not.
+macro_rules! add_dependency {
+    ($graph:expr, $source:expr => $target:expr, $dependency:expr) => {
+        match $graph.edge_weight_mut($source, $target) {
+            Some(edge) => {
+                edge.insert($dependency);
+            }
+            None => {
+                let mut edge = HashSet::new();
+                edge.insert($dependency);
+                $graph.add_edge($source.clone(), $target.clone(), edge);
+            }
+        }
+    };
+}
+
+pub type DependencyGraph = GraphMap<ScheduledGraphNode, HashSet<ExecutionDependency>, Directed>;
 
 /// An InstructionBlock of a ScheduledProgram is a group of instructions, identified by a string label,
 /// which include no control flow instructions aside from an (optional) terminating control
@@ -190,7 +204,7 @@ impl InstructionBlock {
         terminator: Option<BlockTerminator>,
         program: &Program,
     ) -> ScheduleResult<Self> {
-        let mut graph = GraphMap::new();
+        let mut graph: DependencyGraph = GraphMap::new();
         // Root node
         graph.add_node(ScheduledGraphNode::BlockStart);
 
@@ -211,11 +225,8 @@ impl InstructionBlock {
             match instruction_role {
                 // Classical instructions must be strongly ordered by appearance in the program
                 InstructionRole::ClassicalCompute => {
-                    graph.add_edge(
-                        last_classical_instruction,
-                        node,
-                        ExecutionDependency::Immediate,
-                    );
+                    add_dependency!(graph, last_classical_instruction => node, ExecutionDependency::StableOrdering);
+
                     last_classical_instruction = node;
                     Ok(())
                 }
@@ -230,7 +241,7 @@ impl InstructionBlock {
                         let previous_node_id = last_instruction_by_frame
                             .entry(frame.clone())
                             .or_insert(ScheduledGraphNode::BlockStart);
-                        graph.add_edge(*previous_node_id, node, ExecutionDependency::Immediate);
+                        add_dependency!(graph, *previous_node_id => node, ExecutionDependency::ReferenceFrame);
                         last_instruction_by_frame.insert(frame.clone(), node);
                     }
                     Ok(())
@@ -260,13 +271,10 @@ impl InstructionBlock {
                         .or_default()
                         .get_blocking_nodes(node, &access_type);
                     for memory_dependency in memory_dependencies {
-                        // If this instruction follows one which performed a capture, we have to wait for the
-                        // capture to complete before proceeding. Otherwise, this is just a simple ordering
-                        // dependency.
                         let execution_dependency = ExecutionDependency::AwaitMemoryAccess(
                             memory_dependency.access_type.clone(),
                         );
-                        graph.add_edge(memory_dependency.node_id, node, execution_dependency);
+                        add_dependency!(graph, memory_dependency.node_id => node, execution_dependency);
                     }
                 }
             }
@@ -274,29 +282,17 @@ impl InstructionBlock {
 
         // Link all pending dependency nodes to the end of the block, to ensure that the block
         // does not terminate until these are complete
-
-        graph.add_edge(
-            last_classical_instruction,
-            ScheduledGraphNode::BlockEnd,
-            ExecutionDependency::Immediate,
-        );
+        add_dependency!(graph, last_classical_instruction => ScheduledGraphNode::BlockEnd, ExecutionDependency::StableOrdering);
 
         for (_, last_instruction) in last_instruction_by_frame {
-            graph.add_edge(
-                last_instruction,
-                ScheduledGraphNode::BlockEnd,
-                ExecutionDependency::Immediate,
-            );
+            add_dependency!(graph, last_instruction => ScheduledGraphNode::BlockEnd, ExecutionDependency::ReferenceFrame);
         }
 
         // Examine all "pending" memory operations for all regions
-        let mut remaining_dependencies = pending_memory_access
+        let remaining_dependencies = pending_memory_access
             .drain()
             .flat_map(|(_, queue)| queue.flush())
             .collect::<Vec<MemoryAccessDependency>>();
-
-        // Sort them into the correct order of precedence. See [MemoryAccessDependency].
-        remaining_dependencies.sort();
 
         // For each dependency, insert or overwrite an edge in the graph connecting the node pending that
         // operation to the end of the graph.
@@ -304,11 +300,7 @@ impl InstructionBlock {
             let execution_dependency =
                 ExecutionDependency::AwaitMemoryAccess(dependency.access_type);
 
-            graph.add_edge(
-                dependency.node_id,
-                ScheduledGraphNode::BlockEnd,
-                execution_dependency,
-            );
+            add_dependency!(graph, dependency.node_id => ScheduledGraphNode::BlockEnd, execution_dependency);
         }
 
         Ok(InstructionBlock {
@@ -385,16 +377,24 @@ impl InstructionBlock {
                         write!(f, "\"{}{}\"", element_prefix, index)
                     }
                 }?;
-                match edge {
-                    ExecutionDependency::AwaitMemoryAccess(access_type) => match access_type {
-                        MemoryAccessType::Capture => writeln!(f, " [ label=\"await capture\" ]"),
-                        MemoryAccessType::Read => writeln!(f, " [ label=\"await read\" ]"),
-                        MemoryAccessType::Write => writeln!(f, " [ label=\"await write\" ]"),
-                    },
-                    ExecutionDependency::Immediate => {
-                        writeln!(f, " [ label=\"immediate\" ]")
-                    }
-                }
+                let mut labels = edge
+                    .iter()
+                    .map(|dependency| match dependency {
+                        ExecutionDependency::AwaitMemoryAccess(access_type) => match access_type {
+                            MemoryAccessType::Read => "await read",
+                            MemoryAccessType::Write => "await write",
+                            MemoryAccessType::Capture => "await capture",
+                        },
+                        ExecutionDependency::ReferenceFrame => "frame",
+                        ExecutionDependency::StableOrdering => "ordering",
+                    })
+                    .collect::<Vec<&str>>();
+
+                // We sort them so that graph output is deterministic; iterating over the set
+                // without sorting would cause flaky tests.
+                labels.sort_unstable();
+                let label = labels.join("\n");
+                writeln!(f, " [ label=\"{}\" ]", label)
             })
         })?;
         Ok(())
@@ -786,8 +786,8 @@ PULSE 0 \"rf\" test(duration: 1e6)
             different_frames_blocking,
             "
 PULSE 0 \"rf\" test(duration: 1e6)
-PULSE 1 \"rx\" test(duration: 1e6)
-PULSE 2 \"rx\" test(duration: 1e6)
+PULSE 1 \"rf\" test(duration: 1e6)
+PULSE 2 \"rf\" test(duration: 1e6)
 "
         );
 
@@ -795,8 +795,8 @@ PULSE 2 \"rx\" test(duration: 1e6)
             different_frames_nonblocking,
             "
 NONBLOCKING PULSE 0 \"rf\" test(duration: 1e6)
-NONBLOCKING PULSE 1 \"rx\" test(duration: 1e6)
-NONBLOCKING PULSE 2 \"rx\" test(duration: 1e6)
+NONBLOCKING PULSE 1 \"rf\" test(duration: 1e6)
+NONBLOCKING PULSE 2 \"rf\" test(duration: 1e6)
 "
         );
 
@@ -804,10 +804,10 @@ NONBLOCKING PULSE 2 \"rx\" test(duration: 1e6)
             fence_all_with_nonblocking_pulses,
             "
 NONBLOCKING PULSE 0 \"rf\" test(duration: 1e6)
-NONBLOCKING PULSE 1 \"rx\" test(duration: 1e6)
+NONBLOCKING PULSE 1 \"rf\" test(duration: 1e6)
 FENCE
 NONBLOCKING PULSE 0 \"rf\" test(duration: 1e6)
-NONBLOCKING PULSE 1 \"rx\" test(duration: 1e6)
+NONBLOCKING PULSE 1 \"rf\" test(duration: 1e6)
 "
         );
         build_dot_format_snapshot_test_case!(fence_all, "FENCE");

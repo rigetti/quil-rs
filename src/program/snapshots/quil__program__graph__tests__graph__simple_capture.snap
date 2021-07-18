@@ -10,10 +10,11 @@ digraph {
 		label="block_0"
 		node [ style="filled" ]
 		"block_0_start" [ label=start, shape=circle ]
-		"block_0_start" -> "block_0_0" [ label="immediate" ]
-		"block_0_start" -> "block_0_end" [ label="immediate" ]
+		"block_0_start" -> "block_0_0" [ label="frame" ]
+		"block_0_start" -> "block_0_end" [ label="ordering" ]
 		"block_0_0" [label="CAPTURE 0 \"ro_rx\" test() ro[0]"]
-		"block_0_0" -> "block_0_end" [ label="await capture" ]
+		"block_0_0" -> "block_0_end" [ label="await capture
+frame" ]
 		"block_0_end" [ label=end, shape=circle ]
 	}
 }

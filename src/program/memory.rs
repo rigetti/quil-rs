@@ -43,7 +43,7 @@ pub struct MemoryAccesses {
 
 /// Express a mode of memory access.
 /// Ordered by precedence; reads should be requested first in memory access control.
-#[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub enum MemoryAccessType {
     /// Read from a memory location
     Read,
