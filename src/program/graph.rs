@@ -69,7 +69,7 @@ struct MemoryAccessQueue {
 
 /// A MemoryAccessDependency expresses a dependency that one node has on another to complete
 /// some type of memory access prior to the dependent node's execution.
-#[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Clone, Debug)]
 struct MemoryAccessDependency {
     /// What type of memory access must complete prior to the downstream instruction.
     // NOTE: This must remain the first field for ordering to work as expected.
