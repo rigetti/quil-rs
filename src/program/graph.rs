@@ -26,7 +26,7 @@ use crate::{instruction::InstructionRole, program::Program};
 
 use indexmap::IndexMap;
 
-use super::memory::MemoryAccessType;
+pub use super::memory::MemoryAccessType;
 
 #[derive(Debug, Clone)]
 pub enum ScheduleErrorVariant {
@@ -271,10 +271,13 @@ impl InstructionBlock {
                         .or_default()
                         .get_blocking_nodes(node, &access_type);
                     for memory_dependency in memory_dependencies {
-                        let execution_dependency = ExecutionDependency::AwaitMemoryAccess(
-                            memory_dependency.access_type.clone(),
-                        );
-                        add_dependency!(graph, memory_dependency.node_id => node, execution_dependency);
+                        // Test to make sure that no instructions depend directly on themselves
+                        if memory_dependency.node_id != node {
+                            let execution_dependency = ExecutionDependency::AwaitMemoryAccess(
+                                memory_dependency.access_type.clone(),
+                            );
+                            add_dependency!(graph, memory_dependency.node_id => node, execution_dependency);
+                        }
                     }
                 }
             }
@@ -741,6 +744,15 @@ DEFFRAME 0 \"ro_tx\":
                         Program::from_str(&format!("{}\n{}", FRAME_DEFINITIONS, $input)).unwrap();
                     let scheduled_program = ScheduledProgram::from_program(&program).unwrap();
 
+                    for block in scheduled_program.blocks.values() {
+                        let graph = block.get_dependency_graph();
+                        assert!(
+                            !petgraph::algo::is_cyclic_directed(graph),
+                            "cycle in graph: {:?}",
+                            graph
+                        );
+                    }
+
                     struct ProgramDebugWrapper<'a> {
                         pub program: &'a ScheduledProgram,
                     }
@@ -893,6 +905,11 @@ NONBLOCKING PULSE 1 \"rf\" test(a: ro[0])
 CAPTURE 0 \"ro_rx\" test(a: param[0]) ro
 NONBLOCKING PULSE 0 \"rf\" test(a: ro[0])
 NONBLOCKING PULSE 1 \"rf\" test(a: ro[0])"
+        );
+
+        build_dot_format_snapshot_test_case!(
+            multiple_classical_instructions,
+            "DECLARE ro INTEGER[2]\nMOVE ro[0] 1\nMOVE ro[1] 0\nADD ro[0] 5\nSUB ro[1] ro[0]"
         );
     }
 }
