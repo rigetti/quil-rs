@@ -23,17 +23,18 @@ use nom::{
 use super::{
     common::{
         self, parse_frame_attribute, parse_frame_identifier, parse_gate_modifier,
-        parse_memory_reference, parse_qubits, parse_waveform_invocation,
+        parse_memory_reference, parse_qubit, parse_waveform_invocation,
     },
     expression::parse_expression,
     instruction, ParserInput, ParserResult,
 };
+use crate::parser::common::parse_variable_qubit;
+use crate::parser::instruction::parse_block;
 use crate::{
     instruction::{
         ArithmeticOperand, ArithmeticOperator, Calibration, FrameIdentifier, Instruction, Waveform,
     },
     parser::{
-        common::parse_qubit,
         error::{Error, ErrorKind},
         lexer::Token,
     },
@@ -87,7 +88,7 @@ pub fn parse_capture(input: ParserInput, blocking: bool) -> ParserResult<Instruc
         Instruction::Capture {
             blocking,
             frame,
-            waveform: Box::new(waveform),
+            waveform,
             memory_reference,
         },
     ))
@@ -103,18 +104,18 @@ pub fn parse_defcal<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction>
         token!(RParenthesis),
     ))(input)?;
     let parameters = parameters.unwrap_or_default();
-    let (input, qubits) = parse_qubits(input)?;
+    let (input, qubits) = many0(parse_qubit)(input)?;
     let (input, _) = token!(Colon)(input)?;
     let (input, instructions) = instruction::parse_block(input)?;
     Ok((
         input,
-        Instruction::CalibrationDefinition(Box::new(Calibration {
+        Instruction::CalibrationDefinition(Calibration {
             instructions,
             modifiers,
             name,
             parameters,
             qubits,
-        })),
+        }),
     ))
 }
 
@@ -174,9 +175,32 @@ pub fn parse_defwaveform<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruc
     ))
 }
 
+pub fn parse_defcircuit<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
+    let (input, name) = token!(Identifier(v))(input)?;
+    let (input, parameters) = opt(delimited(
+        token!(LParenthesis),
+        separated_list0(token!(Comma), token!(Variable(v))),
+        token!(RParenthesis),
+    ))(input)?;
+    let parameters = parameters.unwrap_or_default();
+    let (input, qubit_variables) = many0(parse_variable_qubit)(input)?;
+    let (input, _) = token!(Colon)(input)?;
+    let (input, instructions) = parse_block(input)?;
+
+    Ok((
+        input,
+        Instruction::CircuitDefinition {
+            name,
+            parameters,
+            qubit_variables,
+            instructions,
+        },
+    ))
+}
+
 /// Parse the contents of a `DELAY` instruction.
 pub fn parse_delay<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
-    let (input, qubits) = parse_qubits(input)?;
+    let (input, qubits) = many0(parse_qubit)(input)?;
     let (input, frame_names) = many0(token!(String(v)))(input)?;
     let (input, duration) = parse_expression(input)?;
 
@@ -206,7 +230,7 @@ pub fn parse_exchange(input: ParserInput) -> ParserResult<Instruction> {
 
 /// Parse the contents of a `FENCE` instruction.
 pub fn parse_fence(input: ParserInput) -> ParserResult<Instruction> {
-    let (input, qubits) = parse_qubits(input)?;
+    let (input, qubits) = many0(parse_qubit)(input)?;
 
     Ok((input, Instruction::Fence { qubits }))
 }
@@ -300,7 +324,7 @@ pub fn parse_pragma<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction>
 
 /// Parse a pulse instruction, **including the PULSE keyword**.
 pub fn parse_pulse<'a>(input: ParserInput<'a>, blocking: bool) -> ParserResult<'a, Instruction> {
-    let (input, qubits) = parse_qubits(input)?;
+    let (input, qubits) = many0(parse_qubit)(input)?;
     let (input, name) = token!(String(v))(input)?;
     let (input, waveform) = parse_waveform_invocation(input)?;
 
@@ -309,7 +333,7 @@ pub fn parse_pulse<'a>(input: ParserInput<'a>, blocking: bool) -> ParserResult<'
         Instruction::Pulse {
             blocking,
             frame: FrameIdentifier { name, qubits },
-            waveform: Box::new(waveform),
+            waveform,
         },
     ))
 }
@@ -350,7 +374,8 @@ mod tests {
         make_test,
     };
 
-    use super::{parse_declare, parse_measurement, parse_pragma};
+    use super::{parse_declare, parse_defcircuit, parse_measurement, parse_pragma};
+    use crate::expression::Expression;
 
     make_test!(
         declare_instruction_length_1,
@@ -434,6 +459,80 @@ mod tests {
             name: "FILTER-NODE".to_owned(),
             arguments: vec!["q35_unclassified".to_owned()],
             data: Some("{'module':'lodgepole.filters.io','filter_type':'DataBuffer','source':'q35_ro_rx/filter','publish':true,'params':{},'_type':'FilterNode'}".to_owned())
+        }
+    );
+
+    make_test!(
+        defcircuit_no_params,
+        parse_defcircuit,
+        "BELL a b:
+    H a
+    CNOT a b",
+        Instruction::CircuitDefinition {
+            name: "BELL".to_owned(),
+            parameters: vec![],
+            qubit_variables: vec!["a".to_owned(), "b".to_owned()],
+            instructions: vec![
+                Instruction::Gate {
+                    name: "H".to_owned(),
+                    parameters: vec![],
+                    qubits: vec![Qubit::Variable("a".to_owned())],
+                    modifiers: vec![],
+                },
+                Instruction::Gate {
+                    name: "CNOT".to_owned(),
+                    parameters: vec![],
+                    qubits: vec![
+                        Qubit::Variable("a".to_owned()),
+                        Qubit::Variable("b".to_owned())
+                    ],
+                    modifiers: vec![],
+                }
+            ]
+        }
+    );
+
+    make_test!(
+        defcircuit_with_params,
+        parse_defcircuit,
+        "BELL(%a) a b:
+    RZ(%a) a
+    RX(%a) a
+    RZ(%a) a
+    CNOT a b",
+        Instruction::CircuitDefinition {
+            name: "BELL".to_owned(),
+            parameters: vec!["a".to_owned()],
+            qubit_variables: vec!["a".to_owned(), "b".to_owned()],
+            instructions: vec![
+                Instruction::Gate {
+                    name: "RZ".to_owned(),
+                    parameters: vec![Expression::Variable("a".to_owned())],
+                    qubits: vec![Qubit::Variable("a".to_owned())],
+                    modifiers: vec![],
+                },
+                Instruction::Gate {
+                    name: "RX".to_owned(),
+                    parameters: vec![Expression::Variable("a".to_owned())],
+                    qubits: vec![Qubit::Variable("a".to_owned())],
+                    modifiers: vec![],
+                },
+                Instruction::Gate {
+                    name: "RZ".to_owned(),
+                    parameters: vec![Expression::Variable("a".to_owned())],
+                    qubits: vec![Qubit::Variable("a".to_owned())],
+                    modifiers: vec![],
+                },
+                Instruction::Gate {
+                    name: "CNOT".to_owned(),
+                    parameters: vec![],
+                    qubits: vec![
+                        Qubit::Variable("a".to_owned()),
+                        Qubit::Variable("b".to_owned())
+                    ],
+                    modifiers: vec![],
+                }
+            ]
         }
     );
 }

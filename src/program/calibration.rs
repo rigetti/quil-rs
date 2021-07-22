@@ -213,7 +213,7 @@ impl CalibrationSet {
     pub fn to_instructions(&self) -> Vec<Instruction> {
         self.calibrations
             .iter()
-            .map(|c| Instruction::CalibrationDefinition(Box::new(c.clone())))
+            .map(|c| Instruction::CalibrationDefinition(c.clone()))
             .collect()
     }
 }

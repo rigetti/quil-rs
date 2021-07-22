@@ -161,7 +161,7 @@ pub fn parse_qubit(input: ParserInput) -> ParserResult<Qubit> {
     match input.split_first() {
         None => Err(nom::Err::Error(Error {
             input,
-            error: ErrorKind::UnexpectedEOF("something else".to_owned()),
+            error: ErrorKind::UnexpectedEOF("a qubit".to_owned()),
         })),
         Some((Token::Integer(value), remainder)) => Ok((remainder, Qubit::Fixed(*value))),
         Some((Token::Variable(name), remainder)) => Ok((remainder, Qubit::Variable(name.clone()))),
@@ -174,9 +174,19 @@ pub fn parse_qubit(input: ParserInput) -> ParserResult<Qubit> {
     }
 }
 
-/// Parse zero or more qubits in sequence.
-pub fn parse_qubits(input: ParserInput) -> ParserResult<Vec<Qubit>> {
-    many0(parse_qubit)(input)
+/// Parse a variable qubit (i.e. a named qubit)
+pub fn parse_variable_qubit(input: ParserInput) -> ParserResult<String> {
+    match input.split_first() {
+        None => Err(nom::Err::Error(Error {
+            input,
+            error: ErrorKind::UnexpectedEOF("a variable qubit".to_owned()),
+        })),
+        Some((Token::Variable(name), remainder)) => Ok((remainder, name.clone())),
+        Some((Token::Identifier(name), remainder)) => Ok((remainder, name.clone())),
+        Some((other_token, _)) => {
+            expected_token!(input, other_token, stringify!($expected_variant).to_owned())
+        }
+    }
 }
 
 /// Parse a "vector" which is an integer index, such as `[0]`

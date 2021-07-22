@@ -246,12 +246,12 @@ pub enum Instruction {
     Reset {
         qubit: Option<Qubit>,
     },
-    CalibrationDefinition(Box<Calibration>),
+    CalibrationDefinition(Calibration),
     Capture {
         blocking: bool,
         frame: FrameIdentifier,
         memory_reference: MemoryReference,
-        waveform: Box<WaveformInvocation>,
+        waveform: WaveformInvocation,
     },
     Delay {
         duration: Expression,
@@ -278,7 +278,7 @@ pub enum Instruction {
     Pulse {
         blocking: bool,
         frame: FrameIdentifier,
-        waveform: Box<WaveformInvocation>,
+        waveform: WaveformInvocation,
     },
     RawCapture {
         blocking: bool,
@@ -496,7 +496,7 @@ impl fmt::Display for Instruction {
             } => {
                 let mut parameter_str: String = parameters
                     .iter()
-                    .map(|p| p.to_string())
+                    .map(|p| format!("%{}", p))
                     .collect::<Vec<String>>()
                     .join(", ");
                 if !parameter_str.is_empty() {

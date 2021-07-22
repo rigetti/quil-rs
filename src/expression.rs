@@ -177,39 +177,18 @@ macro_rules! format_complex {
 
         if $value.im > 0f64 {
             operator = "+".to_owned();
-            imaginary_component = format!("{}i", pretty_float!($value.im))
+            imaginary_component = format!("{:.}i", $value.im)
         } else if $value.im < 0f64 {
-            imaginary_component = format!("-{}i", pretty_float!($value.im))
+            imaginary_component = format!("-{:.}i", $value.im)
         }
 
         if imaginary_component == "" {
-            pretty_float!($value.re)
+            format!("{:.}", $value.re)
         } else if $value.re == 0f64 {
             format!("{}", imaginary_component)
         } else {
-            format!(
-                "{}{}{}",
-                pretty_float!($value.re),
-                operator,
-                imaginary_component
-            )
+            format!("{:.}{}{}", $value.re, operator, imaginary_component)
         }
-    }};
-}
-
-// Display floats in a human-friendly way using scientific notation.
-// See https://internals.rust-lang.org/t/pre-rfc-draft-g-or-floating-points-for-humans/9110/8
-#[macro_export]
-macro_rules! pretty_float {
-    ($value: expr) => {{
-        let mut attempt = format!("{:.2e}", $value);
-        if attempt.ends_with("e0") {
-            attempt = format!("{:.2}", $value)
-        }
-        if attempt.ends_with(".00") {
-            attempt = format!("{:.0}", $value)
-        }
-        attempt
     }};
 }
 

@@ -61,7 +61,7 @@ impl Program {
 
         match instruction {
             CalibrationDefinition(calibration) => {
-                self.calibrations.push(*calibration);
+                self.calibrations.push(calibration);
             }
             FrameDefinition {
                 identifier,

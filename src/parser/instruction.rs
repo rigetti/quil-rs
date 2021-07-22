@@ -48,7 +48,7 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
                 // Command::Convert => {}
                 Command::Declare => command::parse_declare(remainder),
                 Command::DefCal => command::parse_defcal(remainder),
-                // Command::DefCircuit => {}
+                Command::DefCircuit => command::parse_defcircuit(remainder),
                 Command::DefFrame => command::parse_defframe(remainder),
                 // Command::DefGate => Ok((remainder, cut(parse_command_defgate))),
                 Command::DefWaveform => command::parse_defwaveform(remainder),
@@ -113,7 +113,7 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
             },
             _ => todo!(),
         },
-        Some((Token::Identifier(_), _)) => gate::parse_gate(input),
+        Some((Token::Identifier(_), _)) | Some((Token::Modifier(_), _)) => gate::parse_gate(input),
         Some((_, _)) => Err(nom::Err::Failure(Error {
             input: &input[..1],
             error: ErrorKind::NotACommandOrGate,
@@ -248,10 +248,10 @@ mod tests {
                     name: "rx".to_owned(),
                     qubits: vec![Qubit::Fixed(0)]
                 },
-                waveform: Box::new(WaveformInvocation {
+                waveform: WaveformInvocation {
                     name: "my_custom_waveform".to_owned(),
                     parameters: HashMap::new()
-                }),
+                },
                 memory_reference: MemoryReference {
                     name: "ro".to_owned(),
                     index: 0
@@ -275,10 +275,10 @@ mod tests {
                     name: "rx".to_owned(),
                     qubits: vec![Qubit::Fixed(0)]
                 },
-                waveform: Box::new(WaveformInvocation {
+                waveform: WaveformInvocation {
                     name: "my_custom_waveform".to_owned(),
                     parameters: vec![("a".to_owned(), Expression::Number(real!(1f64)))].into_iter().collect()
-                }),
+                },
                 memory_reference: MemoryReference {
                     name: "ro".to_owned(),
                     index: 0
@@ -350,7 +350,7 @@ mod tests {
         parametric_calibration,
         parse_instructions,
         "DEFCAL RX(%theta) %qubit:\n\tPULSE 1 \"xy\" custom_waveform(a: 1)",
-        vec![Instruction::CalibrationDefinition(Box::new(Calibration {
+        vec![Instruction::CalibrationDefinition(Calibration {
             name: "RX".to_owned(),
             parameters: vec![Expression::Variable("theta".to_owned())],
             qubits: vec![Qubit::Variable("qubit".to_owned())],
@@ -361,15 +361,15 @@ mod tests {
                     name: "xy".to_owned(),
                     qubits: vec![Qubit::Fixed(1)]
                 },
-                waveform: Box::new(WaveformInvocation {
+                waveform: WaveformInvocation {
                     name: "custom_waveform".to_owned(),
                     parameters: [("a".to_owned(), Expression::Number(crate::real![1f64]))]
                         .iter()
                         .cloned()
                         .collect()
-                })
+                }
             }]
-        }))]
+        })]
     );
 
     make_test!(
@@ -421,10 +421,10 @@ mod tests {
                     name: "xy".to_owned(),
                     qubits: vec![Qubit::Fixed(0)]
                 },
-                waveform: Box::new(WaveformInvocation {
+                waveform: WaveformInvocation {
                     name: "custom".to_owned(),
                     parameters: HashMap::new()
-                })
+                }
             },
             Instruction::Pulse {
                 blocking: false,
@@ -432,10 +432,10 @@ mod tests {
                     name: "xy".to_owned(),
                     qubits: vec![Qubit::Fixed(0)]
                 },
-                waveform: Box::new(WaveformInvocation {
+                waveform: WaveformInvocation {
                     name: "custom".to_owned(),
                     parameters: HashMap::new()
-                })
+                }
             },
             Instruction::Pulse {
                 blocking: true,
@@ -443,13 +443,13 @@ mod tests {
                     name: "xy".to_owned(),
                     qubits: vec![Qubit::Fixed(0)]
                 },
-                waveform: Box::new(WaveformInvocation {
+                waveform: WaveformInvocation {
                     name: "custom".to_owned(),
                     parameters: vec![("a".to_owned(), Expression::Number(real!(1f64)))]
                         .into_iter()
                         .collect()
-                })
-            },
+                }
+            }
         ]
     );
 

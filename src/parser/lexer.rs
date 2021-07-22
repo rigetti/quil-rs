@@ -19,7 +19,7 @@ use nom::{
     character::complete::{digit1, one_of},
     combinator::{all_consuming, map, recognize, value},
     multi::many0,
-    number::complete::float,
+    number::complete::double,
     sequence::{delimited, preceded, terminated, tuple},
     IResult,
 };
@@ -287,13 +287,13 @@ fn lex_non_blocking(input: &str) -> LexResult {
 }
 
 fn lex_number(input: &str) -> LexResult {
-    let (input, float_string): (&str, &str) = recognize(float)(input)?;
+    let (input, float_string): (&str, &str) = recognize(double)(input)?;
     let integer_parse_result: IResult<&str, _> = all_consuming(digit1)(float_string);
     Ok((
         input,
         match integer_parse_result {
             Ok(_) => Token::Integer(float_string.parse::<u64>().unwrap()),
-            Err(_) => Token::Float(float(float_string)?.1 as f64),
+            Err(_) => Token::Float(double(float_string)?.1 as f64),
         },
     ))
 }
