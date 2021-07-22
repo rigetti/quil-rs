@@ -105,7 +105,7 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
             })
         }
         Some((Token::NonBlocking, _)) => command::parse_pulse(input),
-        Some((Token::Identifier(_), _)) => gate::parse_gate(input),
+        Some((Token::Identifier(_), _)) | Some((Token::Modifier(_), _)) => gate::parse_gate(input),
         Some((_, _)) => Err(nom::Err::Failure(Error {
             input: &input[..1],
             error: ErrorKind::NotACommandOrGate,
