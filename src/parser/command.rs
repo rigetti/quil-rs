@@ -80,7 +80,7 @@ pub fn parse_capture(input: ParserInput) -> ParserResult<Instruction> {
         input,
         Instruction::Capture {
             frame,
-            waveform: Box::new(waveform),
+            waveform,
             memory_reference,
         },
     ))
@@ -101,13 +101,13 @@ pub fn parse_defcal<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction>
     let (input, instructions) = instruction::parse_block(input)?;
     Ok((
         input,
-        Instruction::CalibrationDefinition(Box::new(Calibration {
+        Instruction::CalibrationDefinition(Calibration {
             instructions,
             modifiers,
             name,
             parameters,
             qubits,
-        })),
+        }),
     ))
 }
 
@@ -313,7 +313,7 @@ pub fn parse_pulse<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> 
         Instruction::Pulse {
             blocking,
             frame: FrameIdentifier { name, qubits },
-            waveform: Box::new(waveform),
+            waveform,
         },
     ))
 }
