@@ -246,11 +246,11 @@ pub enum Instruction {
     Reset {
         qubit: Option<Qubit>,
     },
-    CalibrationDefinition(Box<Calibration>),
+    CalibrationDefinition(Calibration),
     Capture {
         frame: FrameIdentifier,
         memory_reference: MemoryReference,
-        waveform: Box<WaveformInvocation>,
+        waveform: WaveformInvocation,
     },
     Delay {
         duration: Expression,
@@ -277,7 +277,7 @@ pub enum Instruction {
     Pulse {
         blocking: bool,
         frame: FrameIdentifier,
-        waveform: Box<WaveformInvocation>,
+        waveform: WaveformInvocation,
     },
     RawCapture {
         frame: FrameIdentifier,
