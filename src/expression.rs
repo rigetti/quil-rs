@@ -192,22 +192,6 @@ macro_rules! format_complex {
     }};
 }
 
-// Display floats in a human-friendly way using scientific notation.
-// See https://internals.rust-lang.org/t/pre-rfc-draft-g-or-floating-points-for-humans/9110/8
-#[macro_export]
-macro_rules! pretty_float {
-    ($value: expr) => {{
-        let mut attempt = format!("{:.2e}", $value);
-        if attempt.ends_with("e0") {
-            attempt = format!("{:.2}", $value)
-        }
-        if attempt.ends_with(".00") {
-            attempt = format!("{:.0}", $value)
-        }
-        attempt
-    }};
-}
-
 impl fmt::Display for Expression {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use Expression::*;
