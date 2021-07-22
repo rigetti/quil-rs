@@ -1,6 +1,6 @@
 [package]
 name = "quil"
-version = "0.4.2"
+version = "0.5.0"
 authors = ["kalzoo <kalzoo@users.noreply.github.com>"]
 edition = "2018"
 license = "Apache-2.0"
