@@ -44,3 +44,24 @@ pub fn parse_gate<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
         },
     ))
 }
+
+#[cfg(test)]
+mod test {
+    use super::parse_gate;
+    use crate::expression::Expression;
+    use crate::instruction::{GateModifier, Instruction, Qubit};
+    use crate::make_test;
+    use crate::parser::lexer::lex;
+
+    make_test!(
+        test_modifiers,
+        parse_gate,
+        "DAGGER CONTROLLED RX(pi) 0 1",
+        Instruction::Gate {
+            name: "RX".to_string(),
+            parameters: vec![Expression::PiConstant],
+            qubits: vec![Qubit::Fixed(0), Qubit::Fixed(1)],
+            modifiers: vec![GateModifier::Dagger, GateModifier::Controlled],
+        }
+    );
+}
