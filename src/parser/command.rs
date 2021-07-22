@@ -27,6 +27,8 @@ use super::{
     expression::parse_expression,
     instruction, ParserInput, ParserResult,
 };
+use crate::parser::common::parse_variable_qubits;
+use crate::parser::instruction::parse_block;
 use crate::{
     instruction::{
         ArithmeticOperand, ArithmeticOperator, Calibration, FrameIdentifier, Instruction, Waveform,
@@ -147,6 +149,29 @@ pub fn parse_defwaveform<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruc
                 parameters,
                 sample_rate,
             },
+        },
+    ))
+}
+
+pub fn parse_defcircuit<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
+    let (input, name) = token!(Identifier(v))(input)?;
+    let (input, parameters) = opt(delimited(
+        token!(LParenthesis),
+        separated_list0(token!(Comma), token!(Variable(v))),
+        token!(RParenthesis),
+    ))(input)?;
+    let parameters = parameters.unwrap_or_default();
+    let (input, qubit_variables) = parse_variable_qubits(input)?;
+    let (input, _) = token!(Colon)(input)?;
+    let (input, instructions) = parse_block(input)?;
+
+    Ok((
+        input,
+        Instruction::CircuitDefinition {
+            name,
+            parameters,
+            qubit_variables,
+            instructions,
         },
     ))
 }
@@ -328,7 +353,8 @@ mod tests {
         make_test,
     };
 
-    use super::{parse_declare, parse_measurement, parse_pragma};
+    use super::{parse_declare, parse_defcircuit, parse_measurement, parse_pragma};
+    use crate::expression::Expression;
 
     make_test!(
         declare_instruction_length_1,
@@ -412,6 +438,80 @@ mod tests {
             name: "FILTER-NODE".to_owned(),
             arguments: vec!["q35_unclassified".to_owned()],
             data: Some("{'module':'lodgepole.filters.io','filter_type':'DataBuffer','source':'q35_ro_rx/filter','publish':true,'params':{},'_type':'FilterNode'}".to_owned())
+        }
+    );
+
+    make_test!(
+        defcircuit_no_params,
+        parse_defcircuit,
+        "BELL a b:
+    H a
+    CNOT a b",
+        Instruction::CircuitDefinition {
+            name: "BELL".to_owned(),
+            parameters: vec![],
+            qubit_variables: vec!["a".to_owned(), "b".to_owned()],
+            instructions: vec![
+                Instruction::Gate {
+                    name: "H".to_owned(),
+                    parameters: vec![],
+                    qubits: vec![Qubit::Variable("a".to_owned())],
+                    modifiers: vec![],
+                },
+                Instruction::Gate {
+                    name: "CNOT".to_owned(),
+                    parameters: vec![],
+                    qubits: vec![
+                        Qubit::Variable("a".to_owned()),
+                        Qubit::Variable("b".to_owned())
+                    ],
+                    modifiers: vec![],
+                }
+            ]
+        }
+    );
+
+    make_test!(
+        defcircuit_with_params,
+        parse_defcircuit,
+        "BELL(%a) a b:
+    RZ(%a) a
+    RX(%a) a
+    RZ(%a) a
+    CNOT a b",
+        Instruction::CircuitDefinition {
+            name: "BELL".to_owned(),
+            parameters: vec!["a".to_owned()],
+            qubit_variables: vec!["a".to_owned(), "b".to_owned()],
+            instructions: vec![
+                Instruction::Gate {
+                    name: "RZ".to_owned(),
+                    parameters: vec![Expression::Variable("a".to_owned())],
+                    qubits: vec![Qubit::Variable("a".to_owned())],
+                    modifiers: vec![],
+                },
+                Instruction::Gate {
+                    name: "RX".to_owned(),
+                    parameters: vec![Expression::Variable("a".to_owned())],
+                    qubits: vec![Qubit::Variable("a".to_owned())],
+                    modifiers: vec![],
+                },
+                Instruction::Gate {
+                    name: "RZ".to_owned(),
+                    parameters: vec![Expression::Variable("a".to_owned())],
+                    qubits: vec![Qubit::Variable("a".to_owned())],
+                    modifiers: vec![],
+                },
+                Instruction::Gate {
+                    name: "CNOT".to_owned(),
+                    parameters: vec![],
+                    qubits: vec![
+                        Qubit::Variable("a".to_owned()),
+                        Qubit::Variable("b".to_owned())
+                    ],
+                    modifiers: vec![],
+                }
+            ]
         }
     );
 }
