@@ -162,7 +162,7 @@ impl fmt::Display for ScalarType {
 #[derive(Clone, Debug, Hash, PartialEq)]
 pub struct Vector {
     pub data_type: ScalarType,
-    pub length: u64,
+    pub length: usize,
 }
 
 impl fmt::Display for Vector {
@@ -202,7 +202,7 @@ impl fmt::Display for WaveformInvocation {
 #[derive(Clone, Debug, Hash, PartialEq)]
 pub struct MemoryReference {
     pub name: String,
-    pub index: u64,
+    pub index: usize,
 }
 
 impl Eq for MemoryReference {}
@@ -669,7 +669,7 @@ impl fmt::Display for Instruction {
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
 pub enum Qubit {
-    Fixed(u64),
+    Fixed(usize),
     Variable(String),
 }
 

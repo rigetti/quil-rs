@@ -36,7 +36,7 @@ pub enum Token {
     Float(f64),
     Identifier(String),
     Indentation,
-    Integer(u64),
+    Integer(usize),
     Label(String),
     LBracket,
     LParenthesis,
@@ -292,7 +292,7 @@ fn lex_number(input: &str) -> LexResult {
     Ok((
         input,
         match integer_parse_result {
-            Ok(_) => Token::Integer(float_string.parse::<u64>().unwrap()),
+            Ok(_) => Token::Integer(float_string.parse::<usize>().unwrap()),
             Err(_) => Token::Float(double(float_string)?.1 as f64),
         },
     ))
