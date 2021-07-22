@@ -22,18 +22,17 @@ use nom::{
 use super::{
     common::{
         self, parse_frame_attribute, parse_frame_identifier, parse_gate_modifier,
-        parse_memory_reference, parse_qubits, parse_waveform_invocation,
+        parse_memory_reference, parse_qubit, parse_waveform_invocation,
     },
     expression::parse_expression,
     instruction, ParserInput, ParserResult,
 };
-use crate::parser::common::parse_variable_qubits;
+use crate::parser::common::parse_variable_qubit;
 use crate::parser::instruction::parse_block;
 use crate::{
     instruction::{
         ArithmeticOperand, ArithmeticOperator, Calibration, FrameIdentifier, Instruction, Waveform,
     },
-    parser::common::parse_qubit,
     token,
 };
 
@@ -96,7 +95,7 @@ pub fn parse_defcal<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction>
         token!(RParenthesis),
     ))(input)?;
     let parameters = parameters.unwrap_or_default();
-    let (input, qubits) = parse_qubits(input)?;
+    let (input, qubits) = many0(parse_qubit)(input)?;
     let (input, _) = token!(Colon)(input)?;
     let (input, instructions) = instruction::parse_block(input)?;
     Ok((
@@ -161,7 +160,7 @@ pub fn parse_defcircuit<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruct
         token!(RParenthesis),
     ))(input)?;
     let parameters = parameters.unwrap_or_default();
-    let (input, qubit_variables) = parse_variable_qubits(input)?;
+    let (input, qubit_variables) = many0(parse_variable_qubit)(input)?;
     let (input, _) = token!(Colon)(input)?;
     let (input, instructions) = parse_block(input)?;
 
@@ -178,7 +177,7 @@ pub fn parse_defcircuit<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruct
 
 /// Parse the contents of a `DELAY` instruction.
 pub fn parse_delay<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
-    let (input, qubits) = parse_qubits(input)?;
+    let (input, qubits) = many0(parse_qubit)(input)?;
     let (input, frame_names) = many0(token!(String(v)))(input)?;
     let (input, duration) = parse_expression(input)?;
 
@@ -304,7 +303,7 @@ pub fn parse_pulse<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> 
     };
     // TODO (Kalan): Actually check that this is a pulse
     let (input, _) = token!(Command(pulse))(input)?;
-    let (input, qubits) = parse_qubits(input)?;
+    let (input, qubits) = many0(parse_qubit)(input)?;
     let (input, name) = token!(String(v))(input)?;
     let (input, waveform) = parse_waveform_invocation(input)?;
 

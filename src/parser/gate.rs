@@ -33,7 +33,7 @@ pub fn parse_gate<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
         token!(RParenthesis),
     ))(input)?;
     let parameters = parameters.unwrap_or_default();
-    let (input, qubits) = common::parse_qubits(input)?;
+    let (input, qubits) = many0(common::parse_qubit)(input)?;
     Ok((
         input,
         Instruction::Gate {

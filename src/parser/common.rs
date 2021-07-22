@@ -165,11 +165,6 @@ pub fn parse_qubit(input: ParserInput) -> ParserResult<Qubit> {
     }
 }
 
-/// Parse zero or more qubits in sequence.
-pub fn parse_qubits(input: ParserInput) -> ParserResult<Vec<Qubit>> {
-    many0(parse_qubit)(input)
-}
-
 /// Parse a variable qubit (i.e. a named qubit)
 pub fn parse_variable_qubit(input: ParserInput) -> ParserResult<String> {
     match input.split_first() {
@@ -183,11 +178,6 @@ pub fn parse_variable_qubit(input: ParserInput) -> ParserResult<String> {
             expected_token!(input, other_token, stringify!($expected_variant).to_owned())
         }
     }
-}
-
-/// Parse zero or more variable qubits in sequence
-pub fn parse_variable_qubits(input: ParserInput) -> ParserResult<Vec<String>> {
-    many0(parse_variable_qubit)(input)
 }
 
 /// Parse a "vector" which is an integer index, such as `[0]`
