@@ -479,7 +479,7 @@ impl fmt::Display for Instruction {
             } => {
                 let mut parameter_str: String = parameters
                     .iter()
-                    .map(|p| format!("%{}", p.to_string()))
+                    .map(|p| format!("%{}", p))
                     .collect::<Vec<String>>()
                     .join(", ");
                 if !parameter_str.is_empty() {
