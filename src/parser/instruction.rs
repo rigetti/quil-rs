@@ -48,7 +48,7 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
                 // Command::Convert => {}
                 Command::Declare => command::parse_declare(remainder),
                 Command::DefCal => command::parse_defcal(remainder),
-                // Command::DefCircuit => {}
+                Command::DefCircuit => command::parse_defcircuit(remainder),
                 Command::DefFrame => command::parse_defframe(remainder),
                 // Command::DefGate => Ok((remainder, cut(parse_command_defgate))),
                 Command::DefWaveform => command::parse_defwaveform(remainder),
