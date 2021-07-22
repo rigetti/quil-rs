@@ -18,7 +18,10 @@ use nom::combinator::opt;
 use crate::{
     expected_token,
     expression::{Expression, ExpressionFunction, InfixOperator, PrefixOperator},
-    imag, token, unexpected_eof,
+    imag,
+    instruction::MemoryReference,
+    parser::common::parse_memory_reference_with_brackets,
+    token, unexpected_eof,
 };
 
 use super::lexer::{Operator, Token};
@@ -136,8 +139,19 @@ fn parse_function_call<'a>(
     ))
 }
 
-/// Identifiers have to be handled specially because some have special meaning
+/// Identifiers have to be handled specially because some have special meaning.
+///
+/// By order of precedence:
+///
+/// 1. Memory references with brackets
+/// 2. Special function and constant identifiers
+/// 3. Anything else is considered to be a memory reference without index brackets
 fn parse_expression_identifier(input: ParserInput) -> ParserResult<Expression> {
+    let (input, memory_reference) = opt(parse_memory_reference_with_brackets)(input)?;
+    if let Some(memory_reference) = memory_reference {
+        return Ok((input, Expression::Address(memory_reference)));
+    }
+
     match input.split_first() {
         None => unexpected_eof!(input),
         Some((Token::Identifier(ident), remainder)) => match ident.as_str() {
@@ -147,13 +161,15 @@ fn parse_expression_identifier(input: ParserInput) -> ParserResult<Expression> {
             "i" => Ok((remainder, Expression::Number(imag!(1f64)))),
             "pi" => Ok((remainder, Expression::PiConstant)),
             "sin" => parse_function_call(remainder, ExpressionFunction::Sine),
-            other => expected_token!(
-                input,
-                Token::Identifier(other.to_owned()),
-                "defined function".to_owned()
-            ),
+            name => Ok((
+                remainder,
+                Expression::Address(MemoryReference {
+                    name: name.to_owned(),
+                    index: 0,
+                }),
+            )),
         },
-        Some((other_token, _)) => expected_token!(input, other_token, "function call".to_owned()),
+        Some((other_token, _)) => expected_token!(input, other_token, "identifier".to_owned()),
     }
 }
 

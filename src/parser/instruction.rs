@@ -44,7 +44,7 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
             match command {
                 Command::Add => command::parse_arithmetic(ArithmeticOperator::Add, remainder),
                 // Command::And => {}
-                Command::Capture => command::parse_capture(remainder),
+                Command::Capture => command::parse_capture(remainder, true),
                 // Command::Convert => {}
                 Command::Declare => command::parse_declare(remainder),
                 Command::DefCal => command::parse_defcal(remainder),
@@ -56,7 +56,7 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
                 Command::Div => command::parse_arithmetic(ArithmeticOperator::Divide, remainder),
                 // Command::Eq => {}
                 // Command::Exchange => {}
-                // Command::Fence => {}
+                Command::Fence => command::parse_fence(remainder),
                 // Command::GE => {}
                 // Command::GT => {}
                 Command::Halt => Ok((remainder, Instruction::Halt)),
@@ -77,8 +77,8 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
                 // Command::Nop => {}
                 // Command::Not => {}
                 Command::Pragma => command::parse_pragma(remainder),
-                Command::Pulse => command::parse_pulse(input),
-                Command::RawCapture => command::parse_raw_capture(remainder),
+                Command::Pulse => command::parse_pulse(remainder, true),
+                Command::RawCapture => command::parse_raw_capture(remainder, true),
                 // Command::Reset => {}
                 // Command::SetFrequency => {}
                 // Command::SetPhase => {}
@@ -104,7 +104,15 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
                 })
             })
         }
-        Some((Token::NonBlocking, _)) => command::parse_pulse(input),
+        Some((Token::NonBlocking, remainder)) => match remainder.split_first() {
+            Some((Token::Command(command), remainder)) => match command {
+                Command::Pulse => command::parse_pulse(remainder, false),
+                Command::Capture => command::parse_capture(remainder, false),
+                Command::RawCapture => command::parse_raw_capture(remainder, false),
+                _ => todo!(),
+            },
+            _ => todo!(),
+        },
         Some((Token::Identifier(_), _)) | Some((Token::Modifier(_), _)) => gate::parse_gate(input),
         Some((_, _)) => Err(nom::Err::Failure(Error {
             input: &input[..1],
@@ -232,9 +240,10 @@ mod tests {
     make_test!(
         capture_instructions,
         parse_instructions,
-        "CAPTURE 0 \"rx\" my_custom_waveform ro\nRAW-CAPTURE 0 1 \"rx\" 2e9 ro",
+        "CAPTURE 0 \"rx\" my_custom_waveform ro\nRAW-CAPTURE 0 1 \"rx\" 2e9 ro\nNONBLOCKING CAPTURE 0 \"rx\" my_custom_waveform(a: 1.0) ro\nNONBLOCKING RAW-CAPTURE 0 1 \"rx\" 2e9 ro",
         vec![
             Instruction::Capture {
+                blocking: true,
                 frame: FrameIdentifier {
                     name: "rx".to_owned(),
                     qubits: vec![Qubit::Fixed(0)]
@@ -249,6 +258,34 @@ mod tests {
                 }
             },
             Instruction::RawCapture {
+                blocking: true,
+                frame: FrameIdentifier {
+                    name: "rx".to_owned(),
+                    qubits: vec![Qubit::Fixed(0), Qubit::Fixed(1)]
+                },
+                duration: Expression::Number(real![2e9]),
+                memory_reference: MemoryReference {
+                    name: "ro".to_owned(),
+                    index: 0
+                }
+            },
+            Instruction::Capture {
+                blocking: false,
+                frame: FrameIdentifier {
+                    name: "rx".to_owned(),
+                    qubits: vec![Qubit::Fixed(0)]
+                },
+                waveform: WaveformInvocation {
+                    name: "my_custom_waveform".to_owned(),
+                    parameters: vec![("a".to_owned(), Expression::Number(real!(1f64)))].into_iter().collect()
+                },
+                memory_reference: MemoryReference {
+                    name: "ro".to_owned(),
+                    index: 0
+                }
+            },
+            Instruction::RawCapture {
+                blocking: false,
                 frame: FrameIdentifier {
                     name: "rx".to_owned(),
                     qubits: vec![Qubit::Fixed(0), Qubit::Fixed(1)]
@@ -374,9 +411,9 @@ mod tests {
     );
 
     make_test!(
-        pulse,
+        pulse_instructions,
         parse_instructions,
-        "PULSE 0 \"xy\" custom\nNONBLOCKING PULSE 0 \"xy\" custom",
+        "PULSE 0 \"xy\" custom\nNONBLOCKING PULSE 0 \"xy\" custom\nPULSE 0 \"xy\" custom(a: 1.0)",
         vec![
             Instruction::Pulse {
                 blocking: true,
@@ -398,6 +435,19 @@ mod tests {
                 waveform: WaveformInvocation {
                     name: "custom".to_owned(),
                     parameters: HashMap::new()
+                }
+            },
+            Instruction::Pulse {
+                blocking: true,
+                frame: FrameIdentifier {
+                    name: "xy".to_owned(),
+                    qubits: vec![Qubit::Fixed(0)]
+                },
+                waveform: WaveformInvocation {
+                    name: "custom".to_owned(),
+                    parameters: vec![("a".to_owned(), Expression::Number(real!(1f64)))]
+                        .into_iter()
+                        .collect()
                 }
             }
         ]

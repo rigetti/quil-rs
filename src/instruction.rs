@@ -64,7 +64,7 @@ impl fmt::Display for AttributeValue {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use AttributeValue::*;
         match self {
-            String(value) => write!(f, "{}", value),
+            String(value) => write!(f, "\"{}\"", value),
             Expression(value) => write!(f, "{}", value),
         }
     }
@@ -184,7 +184,7 @@ impl fmt::Display for WaveformInvocation {
             .iter()
             .collect::<Vec<(&String, &Expression)>>();
 
-        key_value_pairs.sort_by(|(k1, _), (k2, _)| k1.cmp(&k2));
+        key_value_pairs.sort_by(|(k1, _), (k2, _)| k1.cmp(k2));
 
         write!(
             f,
@@ -248,6 +248,7 @@ pub enum Instruction {
     },
     CalibrationDefinition(Calibration),
     Capture {
+        blocking: bool,
         frame: FrameIdentifier,
         memory_reference: MemoryReference,
         waveform: WaveformInvocation,
@@ -280,6 +281,7 @@ pub enum Instruction {
         waveform: WaveformInvocation,
     },
     RawCapture {
+        blocking: bool,
         frame: FrameIdentifier,
         duration: Expression,
         memory_reference: MemoryReference,
@@ -434,12 +436,21 @@ pub fn format_qubits(qubits: &[Qubit]) -> String {
         .join(" ")
 }
 
-pub fn get_parameter_string(parameters: &[Expression]) -> String {
+pub fn get_expression_parameter_string(parameters: &[Expression]) -> String {
     if parameters.is_empty() {
         return String::from("");
     }
 
     let parameter_str: String = parameters.iter().map(|e| format!("{}", e)).collect();
+    format!("({})", parameter_str)
+}
+
+pub fn get_string_parameter_string(parameters: &[String]) -> String {
+    if parameters.is_empty() {
+        return String::from("");
+    }
+
+    let parameter_str: String = parameters.join(",");
     format!("({})", parameter_str)
 }
 
@@ -453,7 +464,7 @@ impl fmt::Display for Instruction {
                 source,
             } => write!(f, "{} {} {}", operator, destination, source),
             CalibrationDefinition(calibration) => {
-                let parameter_str = get_parameter_string(&calibration.parameters);
+                let parameter_str = get_expression_parameter_string(&calibration.parameters);
                 write!(
                     f,
                     "DEFCAL {}{} {}:",
@@ -464,13 +475,19 @@ impl fmt::Display for Instruction {
                 for instruction in &calibration.instructions {
                     write!(f, "\n\t{}", instruction)?;
                 }
-                writeln!(f)
+                Ok(())
             }
             Capture {
+                blocking,
                 frame,
                 waveform,
                 memory_reference,
-            } => write!(f, "CAPTURE {} {} {}", frame, waveform, memory_reference),
+            } => {
+                if !blocking {
+                    write!(f, "NONBLOCKING ")?;
+                }
+                write!(f, "CAPTURE {} {} {}", frame, waveform, memory_reference)
+            }
             CircuitDefinition {
                 name,
                 parameters,
@@ -512,19 +529,25 @@ impl fmt::Display for Instruction {
                 frame_names,
                 duration,
             } => {
-                write!(f, "DELAY {}", format_qubits(&qubits))?;
+                write!(f, "DELAY {}", format_qubits(qubits))?;
                 for frame_name in frame_names {
                     write!(f, " \"{}\"", frame_name)?;
                 }
                 write!(f, " {}", duration)
             }
-            Fence { qubits } => write!(f, "FENCE {}", format_qubits(&qubits)),
+            Fence { qubits } => {
+                if qubits.is_empty() {
+                    write!(f, "FENCE")
+                } else {
+                    write!(f, "FENCE {}", format_qubits(qubits))
+                }
+            }
             FrameDefinition {
                 identifier,
                 attributes,
             } => write!(
                 f,
-                "DEFFRAME {}:\n{}",
+                "DEFFRAME {}:{}",
                 identifier,
                 attributes
                     .iter()
@@ -537,9 +560,9 @@ impl fmt::Display for Instruction {
                 qubits,
                 modifiers,
             } => {
-                let parameter_str = get_parameter_string(parameters);
+                let parameter_str = get_expression_parameter_string(parameters);
 
-                let qubit_str = format_qubits(&qubits);
+                let qubit_str = format_qubits(qubits);
                 let modifier_str = modifiers
                     .iter()
                     .map(|m| format!("{} ", m))
@@ -630,10 +653,16 @@ impl fmt::Display for Instruction {
                 None => write!(f, "PRAGMA {} {}", name, arguments.join(" ")),
             },
             RawCapture {
+                blocking,
                 frame,
                 duration,
                 memory_reference,
-            } => write!(f, "RAW-CAPTURE {} {} {}", frame, duration, memory_reference),
+            } => {
+                if !blocking {
+                    write!(f, "NONBLOCKING ")?;
+                }
+                write!(f, "RAW-CAPTURE {} {} {}", frame, duration, memory_reference)
+            }
             Reset { qubit } => match qubit {
                 Some(qubit) => write!(f, "RESET {}", qubit),
                 None => write!(f, "RESET"),
@@ -648,15 +677,16 @@ impl fmt::Display for Instruction {
             SwapPhases { frame_1, frame_2 } => write!(f, "SWAP-PHASES {} {}", frame_1, frame_2),
             WaveformDefinition { name, definition } => write!(
                 f,
-                "DEFWAVEFORM {} {} {}:{}",
+                "DEFWAVEFORM {}{} {}:\n\t{}",
                 name,
-                definition.parameters.join(","),
+                get_string_parameter_string(&definition.parameters),
                 definition.sample_rate,
                 definition
                     .matrix
                     .iter()
                     .map(|e| format!("{}", e))
-                    .collect::<String>()
+                    .collect::<Vec<_>>()
+                    .join(", ")
             ),
             Halt => write!(f, "HALT"),
             Jump { target } => write!(f, "JUMP @{}", target),

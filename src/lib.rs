@@ -18,3 +18,5 @@ pub mod instruction;
 mod macros;
 pub(crate) mod parser;
 pub mod program;
+
+pub use program::Program;

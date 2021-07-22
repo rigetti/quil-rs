@@ -14,7 +14,8 @@
  * limitations under the License.
  **/
 use nom::{
-    combinator::opt,
+    branch::alt,
+    combinator::{map_res, opt},
     multi::{many0, many1, separated_list0, separated_list1},
     sequence::{delimited, tuple},
 };
@@ -32,6 +33,10 @@ use crate::parser::instruction::parse_block;
 use crate::{
     instruction::{
         ArithmeticOperand, ArithmeticOperator, Calibration, FrameIdentifier, Instruction, Waveform,
+    },
+    parser::{
+        error::{Error, ErrorKind},
+        lexer::Token,
     },
     token,
 };
@@ -70,7 +75,10 @@ pub fn parse_declare<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction
 }
 
 /// Parse the contents of a `CAPTURE` instruction.
-pub fn parse_capture(input: ParserInput) -> ParserResult<Instruction> {
+///
+/// Unlike most other instructions, this can be _prefixed_ with the NONBLOCKING keyword,
+/// and thus it expects and parses the CAPTURE token itself.
+pub fn parse_capture(input: ParserInput, blocking: bool) -> ParserResult<Instruction> {
     let (input, frame) = common::parse_frame_identifier(input)?;
     let (input, waveform) = common::parse_waveform_invocation(input)?;
     let (input, memory_reference) = common::parse_memory_reference(input)?;
@@ -78,6 +86,7 @@ pub fn parse_capture(input: ParserInput) -> ParserResult<Instruction> {
     Ok((
         input,
         Instruction::Capture {
+            blocking,
             frame,
             waveform,
             memory_reference,
@@ -135,7 +144,21 @@ pub fn parse_defwaveform<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruc
         token!(RParenthesis),
     ))(input)?;
     let parameters = parameters.unwrap_or_default();
-    let (input, sample_rate) = token!(Float(v))(input)?;
+
+    let (input, sample_rate) = alt((
+        map_res(token!(Float(v)), |v| Ok(v) as Result<f64, Error<&[Token]>>),
+        map_res(token!(Integer(v)), |v| {
+            let result = v as f64;
+            if result as u64 != v {
+                Err(Error {
+                    input,
+                    error: ErrorKind::UnsupportedPrecision,
+                })
+            } else {
+                Ok(result)
+            }
+        }),
+    ))(input)?;
     let (input, _) = tuple((token!(Colon), token!(NewLine), token!(Indentation)))(input)?;
     let (input, matrix) = separated_list1(token!(Comma), parse_expression)(input)?;
 
@@ -203,6 +226,13 @@ pub fn parse_exchange(input: ParserInput) -> ParserResult<Instruction> {
             right: ArithmeticOperand::MemoryReference(right),
         },
     ))
+}
+
+/// Parse the contents of a `FENCE` instruction.
+pub fn parse_fence(input: ParserInput) -> ParserResult<Instruction> {
+    let (input, qubits) = many0(parse_qubit)(input)?;
+
+    Ok((input, Instruction::Fence { qubits }))
 }
 
 /// Parse the contents of a `JUMP` instruction.
@@ -293,16 +323,7 @@ pub fn parse_pragma<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction>
 }
 
 /// Parse a pulse instruction, **including the PULSE keyword**.
-///
-/// Unlike most other instructions, this can be _prefixed_ with the NONBLOCKING keyword,
-/// and thus it expects and parses the PULSE token itself.
-pub fn parse_pulse<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
-    let (input, blocking) = match token!(NonBlocking)(input) {
-        Ok((input, _)) => (input, false),
-        Err(_) => (input, true),
-    };
-    // TODO (Kalan): Actually check that this is a pulse
-    let (input, _) = token!(Command(pulse))(input)?;
+pub fn parse_pulse<'a>(input: ParserInput<'a>, blocking: bool) -> ParserResult<'a, Instruction> {
     let (input, qubits) = many0(parse_qubit)(input)?;
     let (input, name) = token!(String(v))(input)?;
     let (input, waveform) = parse_waveform_invocation(input)?;
@@ -318,7 +339,7 @@ pub fn parse_pulse<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> 
 }
 
 /// Parse the contents of a `RAW-CAPTURE` instruction.
-pub fn parse_raw_capture(input: ParserInput) -> ParserResult<Instruction> {
+pub fn parse_raw_capture(input: ParserInput, blocking: bool) -> ParserResult<Instruction> {
     let (input, frame) = parse_frame_identifier(input)?;
     let (input, duration) = parse_expression(input)?;
     let (input, memory_reference) = parse_memory_reference(input)?;
@@ -326,6 +347,7 @@ pub fn parse_raw_capture(input: ParserInput) -> ParserResult<Instruction> {
     Ok((
         input,
         Instruction::RawCapture {
+            blocking,
             frame,
             duration,
             memory_reference,

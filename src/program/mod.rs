@@ -104,11 +104,14 @@ impl Program {
         self.instructions = result;
     }
 
-    /// Return the frames which are either used or blocked by the given instruction.
-    /// A frame is "blocked" if the instruction prevents other instructions from playing
-    /// on that frame until complete; a frame is "used" if the instruction actively
-    /// executes on that sequencer.
-    pub fn get_blocked_frames<'a>(
+    /// Return the frames which are either "used" or "blocked" by the given instruction.
+    ///
+    /// An instruction "uses" a frame if it plays on that frame; it "blocks" a frame
+    /// if the instruction prevents other instructions from playing on that frame until complete.
+    ///
+    /// Return `None` if the instruction does not execute in the context of a frame - such
+    /// as classical instructions.
+    pub fn get_frames_for_instruction<'a>(
         &'a self,
         instruction: &'a Instruction,
         include_blocked: bool,
@@ -124,7 +127,6 @@ impl Program {
                     Some(vec![frame])
                 }
             }
-            // FIXME: handle blocking
             Delay {
                 frame_names,
                 qubits,
@@ -133,14 +135,52 @@ impl Program {
                 let frame_ids = self.frames.get_matching_keys(qubits, frame_names);
                 Some(frame_ids)
             }
-            Capture { frame, .. }
-            | RawCapture { frame, .. }
-            | SetFrequency { frame, .. }
+            Fence { qubits } => {
+                if qubits.is_empty() {
+                    Some(self.frames.get_keys())
+                } else {
+                    Some(self.frames.get_matching_keys(qubits, &[]))
+                }
+            }
+            Capture {
+                blocking, frame, ..
+            }
+            | RawCapture {
+                blocking, frame, ..
+            } => {
+                if *blocking && include_blocked {
+                    Some(self.frames.get_keys())
+                } else {
+                    Some(vec![frame])
+                }
+            }
+            SetFrequency { frame, .. }
             | SetPhase { frame, .. }
             | SetScale { frame, .. }
             | ShiftFrequency { frame, .. }
             | ShiftPhase { frame, .. } => Some(vec![frame]),
-            _ => None,
+            SwapPhases { frame_1, frame_2 } => Some(vec![frame_1, frame_2]),
+            Gate { .. }
+            | CircuitDefinition { .. }
+            | GateDefinition { .. }
+            | Declaration { .. }
+            | Measurement { .. }
+            | Reset { .. }
+            | CalibrationDefinition(_)
+            | FrameDefinition { .. }
+            | MeasureCalibrationDefinition { .. }
+            | Pragma { .. }
+            | WaveformDefinition { .. }
+            | Arithmetic { .. }
+            | Halt
+            | Label(_)
+            | Move { .. }
+            | Exchange { .. }
+            | Load { .. }
+            | Store { .. }
+            | Jump { .. }
+            | JumpWhen { .. }
+            | JumpUnless { .. } => None,
         }
     }
 
@@ -148,11 +188,23 @@ impl Program {
         let mut result = vec![];
 
         if include_headers {
+            result.extend(self.memory_regions.iter().map(|(name, descriptor)| {
+                Instruction::Declaration {
+                    name: name.clone(),
+                    size: descriptor.size.clone(),
+                    sharing: descriptor.sharing.clone(),
+                }
+            }));
             result.extend(self.frames.to_instructions());
+            result.extend(self.waveforms.iter().map(|(name, definition)| {
+                Instruction::WaveformDefinition {
+                    name: name.clone(),
+                    definition: definition.clone(),
+                }
+            }));
             result.extend(self.calibrations.to_instructions());
         }
 
-        // TODO: other headers/context like frames and waveforms
         result.extend(self.instructions.clone());
 
         result
@@ -249,6 +301,8 @@ DEFWAVEFORM custom 6.0:
         assert_ne!(a, b);
     }
 
+    // Assert that headers are correctly parsed from program text, and
+    // also exported when the program is exported as a string.
     #[test]
     fn program_headers() {
         let input = "
@@ -257,8 +311,8 @@ DEFCAL I 0:
     DELAY 0 1.0
 DEFFRAME 0 \"rx\":
     HARDWARE-OBJECT: \"hardware\"
-DEFWAVEFORM custom 6.0:
-    1,2
+DEFWAVEFORM custom 1.0:
+    1, 2
 I 0
 ";
         let program = Program::from_str(input).unwrap();
@@ -267,5 +321,20 @@ I 0
         assert_eq!(program.frames.len(), 1);
         assert_eq!(program.waveforms.len(), 1);
         assert_eq!(program.instructions.len(), 1);
+
+        assert_eq!(program.to_string(false), "I 0\n");
+
+        assert_eq!(
+            program.to_string(true),
+            "DECLARE ro BIT[5]
+DEFFRAME 0 \"rx\":
+\tHARDWARE-OBJECT: \"hardware\"
+DEFWAVEFORM custom 1:
+\t1, 2
+DEFCAL I 0:
+\tDELAY 0 1
+I 0
+"
+        );
     }
 }
