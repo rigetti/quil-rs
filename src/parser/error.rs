@@ -62,6 +62,9 @@ pub enum ErrorKind {
 
     /// An error occurred in an underlying nom parser.
     Parser(nom::error::ErrorKind),
+
+    /// Literals specified in the input cannot be supported without loss of precision
+    UnsupportedPrecision,
 }
 
 impl From<nom::error::ErrorKind> for ErrorKind {
@@ -80,5 +83,13 @@ impl<I> ::nom::error::ParseError<I> for Error<I> {
 
     fn append(_: I, _: nom::error::ErrorKind, other: Self) -> Self {
         other
+    }
+}
+
+// `nom` requires this trait to be implemented to be able to use `map_res`, even if the input and output
+// types of the "conversion" are the same
+impl<I> nom::error::FromExternalError<I, Error<I>> for Error<I> {
+    fn from_external_error(_input: I, _kind: nom::error::ErrorKind, error: Error<I>) -> Self {
+        error
     }
 }

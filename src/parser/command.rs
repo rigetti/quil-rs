@@ -15,7 +15,7 @@
  **/
 use nom::{
     branch::alt,
-    combinator::{map, opt},
+    combinator::{map_res, opt},
     multi::{many0, many1, separated_list0, separated_list1},
     sequence::{delimited, tuple},
 };
@@ -32,7 +32,11 @@ use crate::{
     instruction::{
         ArithmeticOperand, ArithmeticOperator, Calibration, FrameIdentifier, Instruction, Waveform,
     },
-    parser::common::parse_qubit,
+    parser::{
+        common::parse_qubit,
+        error::{Error, ErrorKind},
+        lexer::Token,
+    },
     token,
 };
 
@@ -139,9 +143,21 @@ pub fn parse_defwaveform<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruc
         token!(RParenthesis),
     ))(input)?;
     let parameters = parameters.unwrap_or_default();
-    // NOTE: this cast will cause unexpected behavior for very large integers that cannot be accurately cast to f64.
-    let (input, sample_rate) =
-        alt((token!(Float(v)), map(token!(Integer(v)), |v| v as f64)))(input)?;
+
+    let (input, sample_rate) = alt((
+        map_res(token!(Float(v)), |v| Ok(v) as Result<f64, Error<&[Token]>>),
+        map_res(token!(Integer(v)), |v| {
+            let result = v as f64;
+            if result as u64 != v {
+                Err(Error {
+                    input,
+                    error: ErrorKind::UnsupportedPrecision,
+                })
+            } else {
+                Ok(result)
+            }
+        }),
+    ))(input)?;
     let (input, _) = tuple((token!(Colon), token!(NewLine), token!(Indentation)))(input)?;
     let (input, matrix) = separated_list1(token!(Comma), parse_expression)(input)?;
 
