@@ -31,3 +31,27 @@ macro_rules! imag {
         Complex64::new(0f64, $value)
     }};
 }
+
+/// Construct round-tripping test for Data -> String -> Parsed Data
+#[macro_export]
+macro_rules! roundtrip_proptest {
+    ($name:ident, $generator:expr, $parser:expr) => {
+        paste::paste! {
+            #[allow(unused_imports)]
+            mod [<$name _roundtrip>] {
+                use super::*;
+                use proptest::prelude::*;
+                proptest! {
+                    #[test]
+                    fn roundtrip(datum in $generator) {
+                        let string = datum.to_string();
+                        let lexed = lex(&string);
+                        let parsed = $parser(&lexed);
+                        prop_assert!(parsed.is_ok());
+                        prop_assert_eq!(datum, parsed.unwrap().1);
+                    }
+                }
+            }
+        }
+    };
+}

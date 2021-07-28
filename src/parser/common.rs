@@ -223,9 +223,10 @@ pub fn skip_newlines_and_comments<'a>(input: ParserInput<'a>) -> ParserResult<'a
 
 #[cfg(test)]
 mod tests {
-    use crate::{expression::Expression, instruction::MemoryReference, parser::lex, real};
-
-    use super::parse_waveform_invocation;
+    use super::*;
+    use crate::{
+        expression::Expression, instruction::MemoryReference, parser::lex, real, roundtrip_proptest,
+    };
 
     #[test]
     fn waveform_invocation() {
@@ -250,4 +251,14 @@ mod tests {
             .collect()
         )
     }
+
+    roundtrip_proptest!(
+        qubit,
+        prop_oneof![
+            any::<u64>().prop_map(Qubit::Fixed),
+            "[a-z][a-z0-9]+".prop_map(Qubit::Variable)
+        ],
+        parse_qubit
+    );
+    roundtrip_proptest!(variable_qubit, "[a-z][a-z0-9]+", parse_variable_qubit);
 }
