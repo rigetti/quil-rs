@@ -293,8 +293,7 @@ mod tests {
     parser_roundtrip!(parse_arithmetic_operand, arithmetic_operand());
     parser_roundtrip!(
         parse_frame_identifier,
-        (name(), vec(qubit(), 1..100))
-            .prop_map(|(name, qubits)| FrameIdentifier { name, qubits })
+        (name(), vec(qubit(), 1..100)).prop_map(|(name, qubits)| FrameIdentifier { name, qubits })
     );
     parser_roundtrip!(parse_gate_modifier, gate_modifier());
     parser_roundtrip!(parse_memory_reference, memory_reference());
