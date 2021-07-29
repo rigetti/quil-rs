@@ -154,7 +154,7 @@ pub fn parse_waveform_invocation<'a>(
     Ok((input, WaveformInvocation { name, parameters }))
 }
 
-/// Parse a single qubit, which may be an integer (`1`), variable (`%q1`), or identifier (`q1`).
+/// Parse a single qubit, which may be an integer (`1`) or identifier (`q1`).
 /// Per the specification, variable-named and identifier-named are valid in different locations,
 /// but this parser is tolerant and accepts both as equivalent.
 pub fn parse_qubit(input: ParserInput) -> ParserResult<Qubit> {
@@ -225,7 +225,7 @@ pub fn skip_newlines_and_comments<'a>(input: ParserInput<'a>) -> ParserResult<'a
 mod tests {
     use super::*;
     use crate::{
-        expression::Expression, instruction::MemoryReference, parser::lex, real, roundtrip_proptest,
+        expression::Expression, instruction::MemoryReference, parser::lex, parser_roundtrip, real,
     };
 
     #[test]
@@ -252,13 +252,54 @@ mod tests {
         )
     }
 
-    roundtrip_proptest!(
-        qubit,
+    use prop::collection::vec;
+    use proptest::prelude::*;
+
+    fn arithmetic_operand() -> impl Strategy<Value = ArithmeticOperand> {
+        use ArithmeticOperand::*;
         prop_oneof![
-            any::<u64>().prop_map(Qubit::Fixed),
-            "[a-z][a-z0-9]+".prop_map(Qubit::Variable)
-        ],
-        parse_qubit
+            any::<i64>().prop_map(LiteralInteger),
+            any::<f64>().prop_map(LiteralReal),
+            memory_reference().prop_map(MemoryReference)
+        ]
+    }
+    fn gate_modifier() -> impl Strategy<Value = GateModifier> {
+        use GateModifier::*;
+        prop_oneof![Just(Controlled), Just(Dagger), Just(Forked)]
+    }
+    fn memory_reference() -> impl Strategy<Value = MemoryReference> {
+        (name(), any::<u64>()).prop_map(|(name, index)| MemoryReference { name, index })
+    }
+    fn name() -> impl Strategy<Value = String> {
+        "[a-z][a-z0-9]+"
+    }
+    fn qubit_fixed() -> impl Strategy<Value = Qubit> {
+        any::<u64>().prop_map(Qubit::Fixed)
+    }
+    fn qubit_variable() -> impl Strategy<Value = Qubit> {
+        name().prop_map(Qubit::Variable)
+    }
+    fn qubit() -> impl Strategy<Value = Qubit> {
+        prop_oneof![qubit_fixed(), qubit_variable()]
+    }
+    fn scalar_type() -> impl Strategy<Value = ScalarType> {
+        use ScalarType::*;
+        prop_oneof![Just(Bit), Just(Integer), Just(Octet), Just(Real)]
+    }
+    fn vector() -> impl Strategy<Value = Vector> {
+        (scalar_type(), any::<u64>()).prop_map(|(data_type, length)| Vector { data_type, length })
+    }
+
+    parser_roundtrip!(parse_arithmetic_operand, arithmetic_operand());
+    parser_roundtrip!(
+        parse_frame_identifier,
+        (name(), vec(qubit(), 1..100))
+            .prop_map(|(name, qubits)| FrameIdentifier { name, qubits })
     );
-    roundtrip_proptest!(variable_qubit, "[a-z][a-z0-9]+", parse_variable_qubit);
+    parser_roundtrip!(parse_gate_modifier, gate_modifier());
+    parser_roundtrip!(parse_memory_reference, memory_reference());
+    parser_roundtrip!(parse_memory_reference_with_brackets, memory_reference());
+    parser_roundtrip!(parse_qubit, qubit());
+    parser_roundtrip!(parse_variable_qubit, name());
+    parser_roundtrip!(parse_vector, vector());
 }

@@ -34,16 +34,16 @@ macro_rules! imag {
 
 /// Construct round-tripping test for Data -> String -> Parsed Data
 #[macro_export]
-macro_rules! roundtrip_proptest {
-    ($name:ident, $generator:expr, $parser:expr) => {
+macro_rules! parser_roundtrip {
+    ($parser:ident, $generator:expr) => {
         paste::paste! {
             #[allow(unused_imports)]
-            mod [<$name _roundtrip>] {
+            mod [<$parser _roundtrip>] {
                 use super::*;
                 use proptest::prelude::*;
                 proptest! {
                     #[test]
-                    fn roundtrip(datum in $generator) {
+                    fn test(datum in $generator) {
                         let string = datum.to_string();
                         let lexed = lex(&string);
                         let parsed = $parser(&lexed);
