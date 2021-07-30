@@ -28,6 +28,11 @@ use super::{
     expression::parse_expression,
     instruction, ParserInput, ParserResult,
 };
+use crate::instruction::{
+    Arithmetic, CalibrationDefinition, Capture, CircuitDefinition, Declaration, Delay, Exchange,
+    Fence, FrameDefinition, Jump, JumpUnless, JumpWhen, Label, Load, Measurement, Move, Pragma,
+    Pulse, RawCapture, Store, WaveformDefinition,
+};
 use crate::parser::common::parse_variable_qubit;
 use crate::parser::instruction::parse_block;
 use crate::{
@@ -50,11 +55,11 @@ pub fn parse_arithmetic(
     let (input, source) = common::parse_arithmetic_operand(input)?;
     Ok((
         input,
-        Instruction::Arithmetic {
+        Instruction::Arithmetic(Arithmetic {
             operator,
             destination,
             source,
-        },
+        }),
     ))
 }
 
@@ -64,11 +69,11 @@ pub fn parse_declare<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction
     let (input, size) = common::parse_vector(input)?;
     Ok((
         input,
-        Instruction::Declaration {
+        Instruction::Declaration(Declaration {
             name,
             sharing: None,
             size,
-        },
+        }),
     ))
 }
 
@@ -83,12 +88,12 @@ pub fn parse_capture(input: ParserInput, blocking: bool) -> ParserResult<Instruc
 
     Ok((
         input,
-        Instruction::Capture {
+        Instruction::Capture(Capture {
             blocking,
             frame,
-            waveform,
             memory_reference,
-        },
+            waveform,
+        }),
     ))
 }
 
@@ -107,13 +112,13 @@ pub fn parse_defcal<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction>
     let (input, instructions) = instruction::parse_block(input)?;
     Ok((
         input,
-        Instruction::CalibrationDefinition(Calibration {
+        Instruction::CalibrationDefinition(CalibrationDefinition(Calibration {
             instructions,
             modifiers,
             name,
             parameters,
             qubits,
-        }),
+        })),
     ))
 }
 
@@ -126,10 +131,10 @@ pub fn parse_defframe<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instructio
 
     Ok((
         input,
-        Instruction::FrameDefinition {
+        Instruction::FrameDefinition(FrameDefinition {
             identifier,
             attributes,
-        },
+        }),
     ))
 }
 
@@ -162,14 +167,14 @@ pub fn parse_defwaveform<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruc
 
     Ok((
         input,
-        Instruction::WaveformDefinition {
+        Instruction::WaveformDefinition(WaveformDefinition {
             name,
             definition: Waveform {
                 matrix,
                 parameters,
                 sample_rate,
             },
-        },
+        }),
     ))
 }
 
@@ -187,12 +192,12 @@ pub fn parse_defcircuit<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruct
 
     Ok((
         input,
-        Instruction::CircuitDefinition {
+        Instruction::CircuitDefinition(CircuitDefinition {
             name,
             parameters,
             qubit_variables,
             instructions,
-        },
+        }),
     ))
 }
 
@@ -204,11 +209,11 @@ pub fn parse_delay<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> 
 
     Ok((
         input,
-        Instruction::Delay {
+        Instruction::Delay(Delay {
+            duration,
             frame_names,
             qubits,
-            duration,
-        },
+        }),
     ))
 }
 
@@ -219,10 +224,10 @@ pub fn parse_exchange(input: ParserInput) -> ParserResult<Instruction> {
 
     Ok((
         input,
-        Instruction::Exchange {
+        Instruction::Exchange(Exchange {
             left: ArithmeticOperand::MemoryReference(left),
             right: ArithmeticOperand::MemoryReference(right),
-        },
+        }),
     ))
 }
 
@@ -230,33 +235,36 @@ pub fn parse_exchange(input: ParserInput) -> ParserResult<Instruction> {
 pub fn parse_fence(input: ParserInput) -> ParserResult<Instruction> {
     let (input, qubits) = many0(parse_qubit)(input)?;
 
-    Ok((input, Instruction::Fence { qubits }))
+    Ok((input, Instruction::Fence(Fence { qubits })))
 }
 
 /// Parse the contents of a `JUMP` instruction.
 pub fn parse_jump<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
     let (input, target) = token!(Label(v))(input)?;
-    Ok((input, Instruction::Jump { target }))
+    Ok((input, Instruction::Jump(Jump { target })))
 }
 
 /// Parse the contents of a `JUMP-WHEN` instruction.
 pub fn parse_jump_when<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
     let (input, target) = token!(Label(v))(input)?;
     let (input, condition) = common::parse_memory_reference(input)?;
-    Ok((input, Instruction::JumpWhen { condition, target }))
+    Ok((input, Instruction::JumpWhen(JumpWhen { target, condition })))
 }
 
 /// Parse the contents of a `JUMP-UNLESS` instruction.
 pub fn parse_jump_unless<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
     let (input, target) = token!(Label(v))(input)?;
     let (input, condition) = common::parse_memory_reference(input)?;
-    Ok((input, Instruction::JumpUnless { condition, target }))
+    Ok((
+        input,
+        Instruction::JumpUnless(JumpUnless { target, condition }),
+    ))
 }
 
 /// Parse the contents of a `DECLARE` instruction.
 pub fn parse_label<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
     let (input, name) = token!(Label(v))(input)?;
-    Ok((input, Instruction::Label(name)))
+    Ok((input, Instruction::Label(Label(name))))
 }
 
 /// Parse the contents of a `MOVE` instruction.
@@ -265,10 +273,10 @@ pub fn parse_move(input: ParserInput) -> ParserResult<Instruction> {
     let (input, source) = common::parse_arithmetic_operand(input)?;
     Ok((
         input,
-        Instruction::Move {
+        Instruction::Move(Move {
             destination,
             source,
-        },
+        }),
     ))
 }
 
@@ -280,11 +288,11 @@ pub fn parse_load<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
 
     Ok((
         input,
-        Instruction::Load {
+        Instruction::Load(Load {
             destination,
             source,
             offset,
-        },
+        }),
     ))
 }
 
@@ -296,11 +304,11 @@ pub fn parse_store<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> 
 
     Ok((
         input,
-        Instruction::Store {
+        Instruction::Store(Store {
             destination,
-            source,
             offset,
-        },
+            source,
+        }),
     ))
 }
 
@@ -312,11 +320,11 @@ pub fn parse_pragma<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction>
     let (input, data) = opt(token!(String(v)))(input)?;
     Ok((
         input,
-        Instruction::Pragma {
+        Instruction::Pragma(Pragma {
             name: pragma_type,
             arguments,
             data,
-        },
+        }),
     ))
 }
 
@@ -327,11 +335,11 @@ pub fn parse_pulse(input: ParserInput, blocking: bool) -> ParserResult<Instructi
 
     Ok((
         input,
-        Instruction::Pulse {
+        Instruction::Pulse(Pulse {
             blocking,
             frame,
             waveform,
-        },
+        }),
     ))
 }
 
@@ -343,12 +351,12 @@ pub fn parse_raw_capture(input: ParserInput, blocking: bool) -> ParserResult<Ins
 
     Ok((
         input,
-        Instruction::RawCapture {
+        Instruction::RawCapture(RawCapture {
             blocking,
             frame,
             duration,
             memory_reference,
-        },
+        }),
     ))
 }
 
@@ -384,14 +392,20 @@ pub fn parse_measurement(input: ParserInput) -> ParserResult<Instruction> {
         Err(_) => (input, None),
     };
 
-    Ok((input, Instruction::Measurement { qubit, target }))
+    Ok((
+        input,
+        Instruction::Measurement(Measurement { qubit, target }),
+    ))
 }
 
 #[cfg(test)]
 mod tests {
     use crate::parser::lexer::lex;
     use crate::{
-        instruction::{Instruction, MemoryReference, Qubit, ScalarType, Vector},
+        instruction::{
+            CircuitDefinition, Declaration, Gate, Instruction, Measurement, MemoryReference,
+            Pragma, Qubit, ScalarType, Vector,
+        },
         make_test,
     };
 
@@ -402,85 +416,85 @@ mod tests {
         declare_instruction_length_1,
         parse_declare,
         "ro BIT",
-        Instruction::Declaration {
+        Instruction::Declaration(Declaration {
             name: "ro".to_owned(),
             sharing: None,
             size: Vector {
                 data_type: ScalarType::Bit,
                 length: 1
             }
-        }
+        })
     );
 
     make_test!(
         declare_instruction_length_n,
         parse_declare,
         "ro INTEGER[5]",
-        Instruction::Declaration {
+        Instruction::Declaration(Declaration {
             name: "ro".to_owned(),
             sharing: None,
             size: Vector {
                 data_type: ScalarType::Integer,
                 length: 5
             }
-        }
+        })
     );
 
     make_test!(
         measure_into_register,
         parse_measurement,
         "0 ro[0]",
-        Instruction::Measurement {
+        Instruction::Measurement(Measurement {
             qubit: Qubit::Fixed(0),
             target: Some(MemoryReference {
                 name: String::from("ro"),
                 index: 0
             })
-        }
+        })
     );
 
     make_test!(
         measure_discard,
         parse_measurement,
         "0",
-        Instruction::Measurement {
+        Instruction::Measurement(Measurement {
             qubit: Qubit::Fixed(0),
             target: None
-        }
+        })
     );
 
     make_test!(
         measure_named_qubit,
         parse_measurement,
         "q0 ro[0]",
-        Instruction::Measurement {
+        Instruction::Measurement(Measurement {
             qubit: Qubit::Variable(String::from("q0")),
             target: Some(MemoryReference {
                 name: String::from("ro"),
                 index: 0
             })
-        }
+        })
     );
 
     make_test!(
         measure_named_qubit_discard,
         parse_measurement,
         "q0",
-        Instruction::Measurement {
+        Instruction::Measurement(Measurement {
             qubit: Qubit::Variable(String::from("q0")),
             target: None
-        }
+        })
     );
 
     make_test!(
         pragma_inline_json,
         parse_pragma,
         "FILTER-NODE q35_unclassified \"{'module':'lodgepole.filters.io','filter_type':'DataBuffer','source':'q35_ro_rx/filter','publish':true,'params':{},'_type':'FilterNode'}\"",
-        Instruction::Pragma {
+        Instruction::Pragma(Pragma {
             name: "FILTER-NODE".to_owned(),
             arguments: vec!["q35_unclassified".to_owned()],
             data: Some("{'module':'lodgepole.filters.io','filter_type':'DataBuffer','source':'q35_ro_rx/filter','publish':true,'params':{},'_type':'FilterNode'}".to_owned())
-        }
+        })
     );
 
     make_test!(
@@ -489,18 +503,18 @@ mod tests {
         "BELL a b:
     H a
     CNOT a b",
-        Instruction::CircuitDefinition {
+        Instruction::CircuitDefinition(CircuitDefinition {
             name: "BELL".to_owned(),
             parameters: vec![],
             qubit_variables: vec!["a".to_owned(), "b".to_owned()],
             instructions: vec![
-                Instruction::Gate {
+                Instruction::Gate(Gate {
                     name: "H".to_owned(),
                     parameters: vec![],
                     qubits: vec![Qubit::Variable("a".to_owned())],
                     modifiers: vec![],
-                },
-                Instruction::Gate {
+                }),
+                Instruction::Gate(Gate {
                     name: "CNOT".to_owned(),
                     parameters: vec![],
                     qubits: vec![
@@ -508,9 +522,9 @@ mod tests {
                         Qubit::Variable("b".to_owned())
                     ],
                     modifiers: vec![],
-                }
+                })
             ]
-        }
+        })
     );
 
     make_test!(
@@ -521,30 +535,30 @@ mod tests {
     RX(%a) a
     RZ(%a) a
     CNOT a b",
-        Instruction::CircuitDefinition {
+        Instruction::CircuitDefinition(CircuitDefinition {
             name: "BELL".to_owned(),
             parameters: vec!["a".to_owned()],
             qubit_variables: vec!["a".to_owned(), "b".to_owned()],
             instructions: vec![
-                Instruction::Gate {
+                Instruction::Gate(Gate {
                     name: "RZ".to_owned(),
                     parameters: vec![Expression::Variable("a".to_owned())],
                     qubits: vec![Qubit::Variable("a".to_owned())],
                     modifiers: vec![],
-                },
-                Instruction::Gate {
+                }),
+                Instruction::Gate(Gate {
                     name: "RX".to_owned(),
                     parameters: vec![Expression::Variable("a".to_owned())],
                     qubits: vec![Qubit::Variable("a".to_owned())],
                     modifiers: vec![],
-                },
-                Instruction::Gate {
+                }),
+                Instruction::Gate(Gate {
                     name: "RZ".to_owned(),
                     parameters: vec![Expression::Variable("a".to_owned())],
                     qubits: vec![Qubit::Variable("a".to_owned())],
                     modifiers: vec![],
-                },
-                Instruction::Gate {
+                }),
+                Instruction::Gate(Gate {
                     name: "CNOT".to_owned(),
                     parameters: vec![],
                     qubits: vec![
@@ -552,8 +566,8 @@ mod tests {
                         Qubit::Variable("b".to_owned())
                     ],
                     modifiers: vec![],
-                }
+                })
             ]
-        }
+        })
     );
 }

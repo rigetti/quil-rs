@@ -31,6 +31,7 @@ use super::{
     lexer::{Command, Token},
     ParserInput, ParserResult,
 };
+use crate::instruction::Halt;
 
 /// Parse the next instructon from the input, skipping past leading newlines, comments, and semicolons.
 pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
@@ -59,7 +60,7 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
                 Command::Fence => command::parse_fence(remainder),
                 // Command::GE => {}
                 // Command::GT => {}
-                Command::Halt => Ok((remainder, Instruction::Halt)),
+                Command::Halt => Ok((remainder, Instruction::Halt(Halt {}))),
                 // Command::Include => {}
                 // Command::Ior => {}
                 Command::Jump => command::parse_jump(remainder),
@@ -151,38 +152,40 @@ mod tests {
     use crate::{
         expression::Expression,
         instruction::{
-            ArithmeticOperand, ArithmeticOperator, AttributeValue, FrameIdentifier, Instruction,
-            MemoryReference, Qubit, WaveformInvocation,
+            Arithmetic, ArithmeticOperand, ArithmeticOperator, AttributeValue,
+            CalibrationDefinition, Capture, FrameDefinition, FrameIdentifier, Gate, Instruction,
+            Jump, JumpWhen, MemoryReference, Move, Pulse, Qubit, RawCapture, WaveformInvocation,
         },
         make_test, real,
     };
     use crate::{instruction::Calibration, parser::lexer::lex};
 
     use super::parse_instructions;
+    use crate::instruction::Label;
 
     make_test!(
         semicolons_are_newlines,
         parse_instructions,
         "X 0; Y 1\nZ 2",
         vec![
-            Instruction::Gate {
+            Instruction::Gate(Gate {
                 name: "X".to_owned(),
                 parameters: vec![],
                 qubits: vec![Qubit::Fixed(0)],
                 modifiers: vec![],
-            },
-            Instruction::Gate {
+            }),
+            Instruction::Gate(Gate {
                 name: "Y".to_owned(),
                 parameters: vec![],
                 qubits: vec![Qubit::Fixed(1)],
                 modifiers: vec![],
-            },
-            Instruction::Gate {
+            }),
+            Instruction::Gate(Gate {
                 name: "Z".to_owned(),
                 parameters: vec![],
                 qubits: vec![Qubit::Fixed(2)],
                 modifiers: vec![],
-            },
+            }),
         ]
     );
 
@@ -191,39 +194,39 @@ mod tests {
         parse_instructions,
         "ADD ro 2\nMUL ro 1.0\nSUB ro[1] -3\nDIV ro[1] -1.0\nADD ro[1] ro[2]",
         vec![
-            Instruction::Arithmetic {
+            Instruction::Arithmetic(Arithmetic {
                 operator: ArithmeticOperator::Add,
                 destination: ArithmeticOperand::MemoryReference(MemoryReference {
                     name: "ro".to_owned(),
                     index: 0
                 }),
                 source: ArithmeticOperand::LiteralInteger(2),
-            },
-            Instruction::Arithmetic {
+            }),
+            Instruction::Arithmetic(Arithmetic {
                 operator: ArithmeticOperator::Multiply,
                 destination: ArithmeticOperand::MemoryReference(MemoryReference {
                     name: "ro".to_owned(),
                     index: 0
                 }),
                 source: ArithmeticOperand::LiteralReal(1.0),
-            },
-            Instruction::Arithmetic {
+            }),
+            Instruction::Arithmetic(Arithmetic {
                 operator: ArithmeticOperator::Subtract,
                 destination: ArithmeticOperand::MemoryReference(MemoryReference {
                     name: "ro".to_owned(),
                     index: 1
                 }),
                 source: ArithmeticOperand::LiteralInteger(-3),
-            },
-            Instruction::Arithmetic {
+            }),
+            Instruction::Arithmetic(Arithmetic {
                 operator: ArithmeticOperator::Divide,
                 destination: ArithmeticOperand::MemoryReference(MemoryReference {
                     name: "ro".to_owned(),
                     index: 1
                 }),
                 source: ArithmeticOperand::LiteralReal(-1f64),
-            },
-            Instruction::Arithmetic {
+            }),
+            Instruction::Arithmetic(Arithmetic {
                 operator: ArithmeticOperator::Add,
                 destination: ArithmeticOperand::MemoryReference(MemoryReference {
                     name: "ro".to_owned(),
@@ -233,7 +236,7 @@ mod tests {
                     name: "ro".to_owned(),
                     index: 2
                 }),
-            }
+            })
         ]
     );
 
@@ -242,7 +245,7 @@ mod tests {
         parse_instructions,
         "CAPTURE 0 \"rx\" my_custom_waveform ro\nRAW-CAPTURE 0 1 \"rx\" 2e9 ro\nNONBLOCKING CAPTURE 0 \"rx\" my_custom_waveform(a: 1.0) ro\nNONBLOCKING RAW-CAPTURE 0 1 \"rx\" 2e9 ro",
         vec![
-            Instruction::Capture {
+            Instruction::Capture(Capture {
                 blocking: true,
                 frame: FrameIdentifier {
                     name: "rx".to_owned(),
@@ -256,8 +259,8 @@ mod tests {
                     name: "ro".to_owned(),
                     index: 0
                 }
-            },
-            Instruction::RawCapture {
+            }),
+            Instruction::RawCapture(RawCapture {
                 blocking: true,
                 frame: FrameIdentifier {
                     name: "rx".to_owned(),
@@ -268,8 +271,8 @@ mod tests {
                     name: "ro".to_owned(),
                     index: 0
                 }
-            },
-            Instruction::Capture {
+            }),
+            Instruction::Capture(Capture {
                 blocking: false,
                 frame: FrameIdentifier {
                     name: "rx".to_owned(),
@@ -283,8 +286,8 @@ mod tests {
                     name: "ro".to_owned(),
                     index: 0
                 }
-            },
-            Instruction::RawCapture {
+            }),
+            Instruction::RawCapture(RawCapture {
                 blocking: false,
                 frame: FrameIdentifier {
                     name: "rx".to_owned(),
@@ -295,7 +298,7 @@ mod tests {
                     name: "ro".to_owned(),
                     index: 0
                 }
-            }
+            })
         ]
     );
 
@@ -305,78 +308,80 @@ mod tests {
         comment_and_gate,
         parse_instructions,
         "# Questions:\nX 0",
-        vec![Instruction::Gate {
+        vec![Instruction::Gate(Gate {
             name: "X".to_owned(),
             parameters: vec![],
             qubits: vec![Qubit::Fixed(0)],
             modifiers: vec![],
-        }]
+        })]
     );
 
     make_test!(
         comment_after_block,
         parse_instructions,
         "DEFFRAME 0 \"ro_rx\":\n\tDIRECTION: \"rx\"\n\n# (Pdb) settings.gates[GateID(name=\"x180\", targets=(0,))]\n\n",
-        vec![Instruction::FrameDefinition {
+        vec![Instruction::FrameDefinition(FrameDefinition {
             identifier: FrameIdentifier { name: "ro_rx".to_owned(), qubits: vec![Qubit::Fixed(0)] },
             attributes: [("DIRECTION".to_owned(), AttributeValue::String("rx".to_owned()))].iter().cloned().collect()
-        }]);
+        })]);
 
     make_test!(
         simple_gate,
         parse_instructions,
         "RX 0",
-        vec![Instruction::Gate {
+        vec![Instruction::Gate(Gate {
             name: "RX".to_owned(),
             parameters: vec![],
             qubits: vec![Qubit::Fixed(0)],
             modifiers: vec![],
-        }]
+        })]
     );
 
     make_test!(
         parametric_gate,
         parse_instructions,
         "RX(pi) 10",
-        vec![Instruction::Gate {
+        vec![Instruction::Gate(Gate {
             name: "RX".to_owned(),
             parameters: vec![Expression::PiConstant],
             qubits: vec![Qubit::Fixed(10)],
             modifiers: vec![],
-        }]
+        })]
     );
 
     make_test!(
         parametric_calibration,
         parse_instructions,
         "DEFCAL RX(%theta) %qubit:\n\tPULSE 1 \"xy\" custom_waveform(a: 1)",
-        vec![Instruction::CalibrationDefinition(Calibration {
-            name: "RX".to_owned(),
-            parameters: vec![Expression::Variable("theta".to_owned())],
-            qubits: vec![Qubit::Variable("qubit".to_owned())],
-            modifiers: vec![],
-            instructions: vec![Instruction::Pulse {
-                blocking: true,
-                frame: FrameIdentifier {
-                    name: "xy".to_owned(),
-                    qubits: vec![Qubit::Fixed(1)]
-                },
-                waveform: WaveformInvocation {
-                    name: "custom_waveform".to_owned(),
-                    parameters: [("a".to_owned(), Expression::Number(crate::real![1f64]))]
-                        .iter()
-                        .cloned()
-                        .collect()
-                }
-            }]
-        })]
+        vec![Instruction::CalibrationDefinition(CalibrationDefinition(
+            Calibration {
+                name: "RX".to_owned(),
+                parameters: vec![Expression::Variable("theta".to_owned())],
+                qubits: vec![Qubit::Variable("qubit".to_owned())],
+                modifiers: vec![],
+                instructions: vec![Instruction::Pulse(Pulse {
+                    blocking: true,
+                    frame: FrameIdentifier {
+                        name: "xy".to_owned(),
+                        qubits: vec![Qubit::Fixed(1)]
+                    },
+                    waveform: WaveformInvocation {
+                        name: "custom_waveform".to_owned(),
+                        parameters: [("a".to_owned(), Expression::Number(crate::real![1f64]))]
+                            .iter()
+                            .cloned()
+                            .collect()
+                    }
+                })]
+            }
+        ))]
     );
 
     make_test!(
         frame_definition,
         parse_instructions,
         "DEFFRAME 0 \"rx\":\n\tINITIAL-FREQUENCY: 2e9",
-        vec![Instruction::FrameDefinition {
+        vec![Instruction::FrameDefinition(FrameDefinition {
             identifier: FrameIdentifier {
                 name: "rx".to_owned(),
                 qubits: vec![Qubit::Fixed(0)]
@@ -388,7 +393,7 @@ mod tests {
             .iter()
             .cloned()
             .collect()
-        }]
+        })]
     );
 
     make_test!(
@@ -396,17 +401,17 @@ mod tests {
         parse_instructions,
         "LABEL @hello\nJUMP @hello\nJUMP-WHEN @hello ro",
         vec![
-            Instruction::Label("hello".to_owned()),
-            Instruction::Jump {
+            Instruction::Label(Label("hello".to_owned())),
+            Instruction::Jump(Jump {
                 target: "hello".to_owned()
-            },
-            Instruction::JumpWhen {
+            }),
+            Instruction::JumpWhen(JumpWhen {
                 target: "hello".to_owned(),
                 condition: MemoryReference {
                     name: "ro".to_owned(),
                     index: 0
                 }
-            }
+            })
         ]
     );
 
@@ -415,7 +420,7 @@ mod tests {
         parse_instructions,
         "PULSE 0 \"xy\" custom\nNONBLOCKING PULSE 0 \"xy\" custom\nPULSE 0 \"xy\" custom(a: 1.0)",
         vec![
-            Instruction::Pulse {
+            Instruction::Pulse(Pulse {
                 blocking: true,
                 frame: FrameIdentifier {
                     name: "xy".to_owned(),
@@ -425,8 +430,8 @@ mod tests {
                     name: "custom".to_owned(),
                     parameters: HashMap::new()
                 }
-            },
-            Instruction::Pulse {
+            }),
+            Instruction::Pulse(Pulse {
                 blocking: false,
                 frame: FrameIdentifier {
                     name: "xy".to_owned(),
@@ -436,8 +441,8 @@ mod tests {
                     name: "custom".to_owned(),
                     parameters: HashMap::new()
                 }
-            },
-            Instruction::Pulse {
+            }),
+            Instruction::Pulse(Pulse {
                 blocking: true,
                 frame: FrameIdentifier {
                     name: "xy".to_owned(),
@@ -449,7 +454,7 @@ mod tests {
                         .into_iter()
                         .collect()
                 }
-            }
+            })
         ]
     );
 
@@ -457,13 +462,13 @@ mod tests {
         moveit,
         parse_instructions,
         "MOVE a 1.0",
-        vec![Instruction::Move {
+        vec![Instruction::Move(Move {
             destination: ArithmeticOperand::MemoryReference(MemoryReference {
                 name: "a".to_owned(),
                 index: 0
             }),
             source: ArithmeticOperand::LiteralReal(1.0)
-        }]
+        })]
     );
 
     #[test]

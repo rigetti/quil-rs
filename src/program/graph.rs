@@ -21,7 +21,13 @@ use std::fmt;
 use petgraph::graphmap::GraphMap;
 use petgraph::Directed;
 
-use crate::instruction::{FrameIdentifier, Instruction, MemoryReference};
+use crate::instruction::{
+    Arithmetic, Capture, CircuitDefinition, Declaration, Delay, Exchange, Fence, FrameDefinition,
+    FrameIdentifier, Gate, GateDefinition, Instruction, Jump, JumpUnless, JumpWhen, Label, Load,
+    MeasureCalibrationDefinition, Measurement, MemoryReference, Move, Pragma, Pulse, RawCapture,
+    Reset, SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, SwapPhases,
+    WaveformDefinition,
+};
 use crate::{instruction::InstructionRole, program::Program};
 
 use indexmap::IndexMap;
@@ -479,7 +485,7 @@ macro_rules! terminate_working_block {
 
             match $blocks.insert(label.clone(), block) {
                 Some(_) => Err(ScheduleError {
-                    instruction: Instruction::Label(label.clone()),
+                    instruction: Instruction::Label(Label(label.clone())),
                     variant: ScheduleErrorVariant::DuplicateLabel,
                 }), // Duplicate label
                 None => Ok(()),
@@ -503,48 +509,54 @@ impl ScheduledProgram {
 
         for instruction in instructions {
             match instruction {
-                Instruction::Arithmetic { .. }
-                | Instruction::Capture { .. }
-                | Instruction::Delay { .. }
-                | Instruction::Fence { .. }
-                | Instruction::Move { .. }
-                | Instruction::Exchange { .. }
-                | Instruction::Load { .. }
+                Instruction::Arithmetic(Arithmetic { .. })
+                | Instruction::Capture(Capture { .. })
+                | Instruction::Delay(Delay { .. })
+                | Instruction::Fence(Fence { .. })
+                | Instruction::Move(Move { .. })
+                | Instruction::Exchange(Exchange { .. })
+                | Instruction::Load(Load { .. })
                 | Instruction::Store { .. }
-                | Instruction::Pulse { .. }
-                | Instruction::SetFrequency { .. }
-                | Instruction::SetPhase { .. }
-                | Instruction::SetScale { .. }
-                | Instruction::ShiftFrequency { .. }
-                | Instruction::ShiftPhase { .. }
-                | Instruction::SwapPhases { .. }
-                | Instruction::RawCapture { .. }
-                | Instruction::Reset { .. } => {
+                | Instruction::Pulse(Pulse { .. })
+                | Instruction::SetFrequency(SetFrequency { .. })
+                | Instruction::SetPhase(SetPhase { .. })
+                | Instruction::SetScale(SetScale { .. })
+                | Instruction::ShiftFrequency(ShiftFrequency { .. })
+                | Instruction::ShiftPhase(ShiftPhase { .. })
+                | Instruction::SwapPhases(SwapPhases { .. })
+                | Instruction::RawCapture(RawCapture { .. })
+                | Instruction::Reset(Reset { .. }) => {
                     working_instructions.push(instruction);
                     Ok(())
                 }
-                Instruction::Gate { .. } | Instruction::Measurement { .. } => Err(ScheduleError {
-                    instruction: instruction.clone(),
-                    variant: ScheduleErrorVariant::UncalibratedInstruction,
-                }),
+                Instruction::Gate(Gate { .. }) | Instruction::Measurement(Measurement { .. }) => {
+                    Err(ScheduleError {
+                        instruction: instruction.clone(),
+                        variant: ScheduleErrorVariant::UncalibratedInstruction,
+                    })
+                }
                 Instruction::CalibrationDefinition { .. }
-                | Instruction::CircuitDefinition { .. }
-                | Instruction::Declaration { .. }
-                | Instruction::GateDefinition { .. }
-                | Instruction::FrameDefinition { .. }
-                | Instruction::MeasureCalibrationDefinition { .. }
-                | Instruction::WaveformDefinition { .. } => Err(ScheduleError {
-                    instruction: instruction.clone(),
-                    variant: ScheduleErrorVariant::UnschedulableInstruction,
-                }),
+                | Instruction::CircuitDefinition(CircuitDefinition { .. })
+                | Instruction::Declaration(Declaration { .. })
+                | Instruction::GateDefinition(GateDefinition { .. })
+                | Instruction::FrameDefinition(FrameDefinition { .. })
+                | Instruction::MeasureCalibrationDefinition(MeasureCalibrationDefinition {
+                    ..
+                })
+                | Instruction::WaveformDefinition(WaveformDefinition { .. }) => {
+                    Err(ScheduleError {
+                        instruction: instruction.clone(),
+                        variant: ScheduleErrorVariant::UnschedulableInstruction,
+                    })
+                }
 
-                Instruction::Pragma { .. } => {
+                Instruction::Pragma(Pragma { .. }) => {
                     // TODO: Handle pragmas. Here, we just silently discard them, but certain
                     // pragmas must be supported.
                     Ok(())
                 }
                 // _ => Err(()), // Unimplemented
-                Instruction::Label(value) => {
+                Instruction::Label(Label(value)) => {
                     terminate_working_block!(
                         None as Option<BlockTerminator>,
                         working_instructions,
@@ -556,7 +568,7 @@ impl ScheduledProgram {
                     working_label = Some(value.clone());
                     Ok(())
                 }
-                Instruction::Jump { target } => {
+                Instruction::Jump(Jump { target }) => {
                     terminate_working_block!(
                         Some(BlockTerminator::Unconditional {
                             target: target.clone(),
@@ -568,7 +580,7 @@ impl ScheduledProgram {
                     )?;
                     Ok(())
                 }
-                Instruction::JumpWhen { target, condition } => {
+                Instruction::JumpWhen(JumpWhen { target, condition }) => {
                     terminate_working_block!(
                         Some(BlockTerminator::Conditional {
                             target: target.clone(),
@@ -582,7 +594,7 @@ impl ScheduledProgram {
                     )?;
                     Ok(())
                 }
-                Instruction::JumpUnless { target, condition } => {
+                Instruction::JumpUnless(JumpUnless { target, condition }) => {
                     terminate_working_block!(
                         Some(BlockTerminator::Conditional {
                             target: target.clone(),
@@ -595,7 +607,7 @@ impl ScheduledProgram {
                         program
                     )
                 }
-                Instruction::Halt => {
+                Instruction::Halt(_) => {
                     terminate_working_block!(
                         Some(BlockTerminator::Halt),
                         working_instructions,
