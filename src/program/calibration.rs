@@ -15,6 +15,7 @@
  **/
 use std::collections::HashMap;
 
+use crate::instruction::{CalibrationDefinition, Gate};
 use crate::{
     expression::Expression,
     instruction::{Calibration, GateModifier, Instruction, Qubit},
@@ -57,12 +58,12 @@ impl CalibrationSet {
     /// Given an instruction, return the instructions to which it is expanded if there is a match.
     pub fn expand(&self, instruction: &Instruction) -> Option<Vec<Instruction>> {
         match instruction {
-            Instruction::Gate {
+            Instruction::Gate(Gate {
                 name,
                 modifiers,
                 parameters,
                 qubits,
-            } => {
+            }) => {
                 let matching_calibration =
                     self.get_match_for_gate(modifiers, name, parameters, qubits);
 
@@ -78,7 +79,7 @@ impl CalibrationSet {
                         let mut instructions = calibration.instructions.clone();
 
                         for instruction in instructions.iter_mut() {
-                            if let Instruction::Gate { qubits, .. } = instruction {
+                            if let Instruction::Gate(Gate { qubits, .. }) = instruction {
                                 // Swap all qubits for their concrete implementations
                                 for qubit in qubits {
                                     match qubit {
@@ -213,7 +214,7 @@ impl CalibrationSet {
     pub fn to_instructions(&self) -> Vec<Instruction> {
         self.calibrations
             .iter()
-            .map(|c| Instruction::CalibrationDefinition(c.clone()))
+            .map(|c| Instruction::CalibrationDefinition(CalibrationDefinition(c.clone())))
             .collect()
     }
 }

@@ -218,142 +218,238 @@ impl fmt::Display for MemoryReference {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub struct Gate {
+    pub name: String,
+    pub parameters: Vec<Expression>,
+    pub qubits: Vec<Qubit>,
+    pub modifiers: Vec<GateModifier>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct CircuitDefinition {
+    pub name: String,
+    pub parameters: Vec<String>,
+    // These cannot be fixed qubits and thus are not typed as `Qubit`
+    pub qubit_variables: Vec<String>,
+    pub instructions: Vec<Instruction>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct GateDefinition {
+    pub name: String,
+    pub parameters: Vec<String>,
+    pub matrix: Vec<Vec<Expression>>,
+    pub r#type: GateType,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Declaration {
+    pub name: String,
+    pub size: Vector,
+    pub sharing: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Measurement {
+    pub qubit: Qubit,
+    pub target: Option<MemoryReference>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Reset {
+    pub qubit: Option<Qubit>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct CalibrationDefinition(pub Calibration);
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Capture {
+    pub blocking: bool,
+    pub frame: FrameIdentifier,
+    pub memory_reference: MemoryReference,
+    pub waveform: WaveformInvocation,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Delay {
+    pub duration: Expression,
+    pub frame_names: Vec<String>,
+    pub qubits: Vec<Qubit>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Fence {
+    pub qubits: Vec<Qubit>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct FrameDefinition {
+    pub identifier: FrameIdentifier,
+    pub attributes: HashMap<String, AttributeValue>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct MeasureCalibrationDefinition {
+    pub qubit: Option<Qubit>,
+    pub parameter: String,
+    pub instructions: Vec<Instruction>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Pragma {
+    pub name: String,
+    pub arguments: Vec<String>,
+    pub data: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Pulse {
+    pub blocking: bool,
+    pub frame: FrameIdentifier,
+    pub waveform: WaveformInvocation,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct RawCapture {
+    pub blocking: bool,
+    pub frame: FrameIdentifier,
+    pub duration: Expression,
+    pub memory_reference: MemoryReference,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct SetFrequency {
+    pub frame: FrameIdentifier,
+    pub frequency: Expression,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct SetPhase {
+    pub frame: FrameIdentifier,
+    pub phase: Expression,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct SetScale {
+    pub frame: FrameIdentifier,
+    pub scale: Expression,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ShiftFrequency {
+    pub frame: FrameIdentifier,
+    pub frequency: Expression,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ShiftPhase {
+    pub frame: FrameIdentifier,
+    pub phase: Expression,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct SwapPhases {
+    pub frame_1: FrameIdentifier,
+    pub frame_2: FrameIdentifier,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct WaveformDefinition {
+    pub name: String,
+    pub definition: Waveform,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Arithmetic {
+    pub operator: ArithmeticOperator,
+    pub destination: ArithmeticOperand,
+    pub source: ArithmeticOperand,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Halt;
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Label(pub String);
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Move {
+    pub destination: ArithmeticOperand,
+    pub source: ArithmeticOperand,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Exchange {
+    pub left: ArithmeticOperand,
+    pub right: ArithmeticOperand,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Load {
+    pub destination: MemoryReference,
+    pub source: String,
+    pub offset: MemoryReference,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Store {
+    pub destination: String,
+    pub offset: MemoryReference,
+    pub source: ArithmeticOperand,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Jump {
+    pub target: String,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct JumpWhen {
+    pub target: String,
+    pub condition: MemoryReference,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct JumpUnless {
+    pub target: String,
+    pub condition: MemoryReference,
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub enum Instruction {
-    Gate {
-        name: String,
-        parameters: Vec<Expression>,
-        qubits: Vec<Qubit>,
-        modifiers: Vec<GateModifier>,
-    },
-    CircuitDefinition {
-        name: String,
-        parameters: Vec<String>,
-        // These cannot be fixed qubits and thus are not typed as `Qubit`
-        qubit_variables: Vec<String>,
-        instructions: Vec<Instruction>,
-    },
-    GateDefinition {
-        name: String,
-        parameters: Vec<String>,
-        matrix: Vec<Vec<Expression>>,
-        r#type: GateType,
-    },
-    Declaration {
-        name: String,
-        size: Vector,
-        sharing: Option<String>,
-    },
-    Measurement {
-        qubit: Qubit,
-        target: Option<MemoryReference>,
-    },
-    Reset {
-        qubit: Option<Qubit>,
-    },
-    CalibrationDefinition(Calibration),
-    Capture {
-        blocking: bool,
-        frame: FrameIdentifier,
-        memory_reference: MemoryReference,
-        waveform: WaveformInvocation,
-    },
-    Delay {
-        duration: Expression,
-        frame_names: Vec<String>,
-        qubits: Vec<Qubit>,
-    },
-    Fence {
-        qubits: Vec<Qubit>,
-    },
-    FrameDefinition {
-        identifier: FrameIdentifier,
-        attributes: HashMap<String, AttributeValue>,
-    },
-    MeasureCalibrationDefinition {
-        qubit: Option<Qubit>,
-        parameter: String,
-        instructions: Vec<Instruction>,
-    },
-    Pragma {
-        name: String,
-        arguments: Vec<String>,
-        data: Option<String>,
-    },
-    Pulse {
-        blocking: bool,
-        frame: FrameIdentifier,
-        waveform: WaveformInvocation,
-    },
-    RawCapture {
-        blocking: bool,
-        frame: FrameIdentifier,
-        duration: Expression,
-        memory_reference: MemoryReference,
-    },
-    SetFrequency {
-        frame: FrameIdentifier,
-        frequency: Expression,
-    },
-    SetPhase {
-        frame: FrameIdentifier,
-        phase: Expression,
-    },
-    SetScale {
-        frame: FrameIdentifier,
-        scale: Expression,
-    },
-    ShiftFrequency {
-        frame: FrameIdentifier,
-        frequency: Expression,
-    },
-    ShiftPhase {
-        frame: FrameIdentifier,
-        phase: Expression,
-    },
-    SwapPhases {
-        frame_1: FrameIdentifier,
-        frame_2: FrameIdentifier,
-    },
-    WaveformDefinition {
-        name: String,
-        definition: Waveform,
-    },
-    Arithmetic {
-        operator: ArithmeticOperator,
-        destination: ArithmeticOperand,
-        source: ArithmeticOperand,
-    },
-    Halt,
-    Label(String),
-    Move {
-        destination: ArithmeticOperand,
-        source: ArithmeticOperand,
-    },
-    Exchange {
-        left: ArithmeticOperand,
-        right: ArithmeticOperand,
-    },
-    Load {
-        destination: MemoryReference,
-        source: String,
-        offset: MemoryReference,
-    },
-    Store {
-        destination: String,
-        offset: MemoryReference,
-        source: ArithmeticOperand,
-    },
-    Jump {
-        target: String,
-    },
-    JumpWhen {
-        target: String,
-        condition: MemoryReference,
-    },
-    JumpUnless {
-        target: String,
-        condition: MemoryReference,
-    },
+    Gate(Gate),
+    CircuitDefinition(CircuitDefinition),
+    GateDefinition(GateDefinition),
+    Declaration(Declaration),
+    Measurement(Measurement),
+    Reset(Reset),
+    CalibrationDefinition(CalibrationDefinition),
+    Capture(Capture),
+    Delay(Delay),
+    Fence(Fence),
+    FrameDefinition(FrameDefinition),
+    MeasureCalibrationDefinition(MeasureCalibrationDefinition),
+    Pragma(Pragma),
+    Pulse(Pulse),
+    RawCapture(RawCapture),
+    SetFrequency(SetFrequency),
+    SetPhase(SetPhase),
+    SetScale(SetScale),
+    ShiftFrequency(ShiftFrequency),
+    ShiftPhase(ShiftPhase),
+    SwapPhases(SwapPhases),
+    WaveformDefinition(WaveformDefinition),
+    Arithmetic(Arithmetic),
+    Halt(Halt),
+    Label(Label),
+    Move(Move),
+    Exchange(Exchange),
+    Load(Load),
+    Store(Store),
+    Jump(Jump),
+    JumpWhen(JumpWhen),
+    JumpUnless(JumpUnless),
 }
 
 #[derive(Clone, Debug)]
@@ -367,38 +463,40 @@ pub enum InstructionRole {
 impl From<&Instruction> for InstructionRole {
     fn from(instruction: &Instruction) -> Self {
         match instruction {
-            Instruction::CalibrationDefinition(_)
-            | Instruction::CircuitDefinition { .. }
-            | Instruction::Declaration { .. }
-            | Instruction::FrameDefinition { .. }
-            | Instruction::Gate { .. }
-            | Instruction::GateDefinition { .. }
-            | Instruction::Label(_)
-            | Instruction::MeasureCalibrationDefinition { .. }
-            | Instruction::Measurement { .. }
-            | Instruction::Pragma { .. }
-            | Instruction::WaveformDefinition { .. } => InstructionRole::ProgramComposition,
-            Instruction::Reset { .. }
-            | Instruction::Capture { .. }
-            | Instruction::Delay { .. }
-            | Instruction::Fence { .. }
-            | Instruction::Pulse { .. }
-            | Instruction::RawCapture { .. }
-            | Instruction::SetFrequency { .. }
-            | Instruction::SetPhase { .. }
-            | Instruction::SetScale { .. }
-            | Instruction::ShiftFrequency { .. }
-            | Instruction::ShiftPhase { .. }
-            | Instruction::SwapPhases { .. } => InstructionRole::RFControl,
-            Instruction::Arithmetic { .. }
-            | Instruction::Move { .. }
-            | Instruction::Exchange { .. }
-            | Instruction::Load { .. }
+            Instruction::CalibrationDefinition(CalibrationDefinition(_))
+            | Instruction::CircuitDefinition(CircuitDefinition { .. })
+            | Instruction::Declaration(Declaration { .. })
+            | Instruction::FrameDefinition(FrameDefinition { .. })
+            | Instruction::Gate(Gate { .. })
+            | Instruction::GateDefinition(GateDefinition { .. })
+            | Instruction::Label(Label(_))
+            | Instruction::MeasureCalibrationDefinition(MeasureCalibrationDefinition { .. })
+            | Instruction::Measurement(Measurement { .. })
+            | Instruction::Pragma(Pragma { .. })
+            | Instruction::WaveformDefinition(WaveformDefinition { .. }) => {
+                InstructionRole::ProgramComposition
+            }
+            Instruction::Reset(Reset { .. })
+            | Instruction::Capture(Capture { .. })
+            | Instruction::Delay(Delay { .. })
+            | Instruction::Fence(Fence { .. })
+            | Instruction::Pulse(Pulse { .. })
+            | Instruction::RawCapture(RawCapture { .. })
+            | Instruction::SetFrequency(SetFrequency { .. })
+            | Instruction::SetPhase(SetPhase { .. })
+            | Instruction::SetScale(SetScale { .. })
+            | Instruction::ShiftFrequency(ShiftFrequency { .. })
+            | Instruction::ShiftPhase(ShiftPhase { .. })
+            | Instruction::SwapPhases(SwapPhases { .. }) => InstructionRole::RFControl,
+            Instruction::Arithmetic(Arithmetic { .. })
+            | Instruction::Move(Move { .. })
+            | Instruction::Exchange(Exchange { .. })
+            | Instruction::Load(Load { .. })
             | Instruction::Store { .. } => InstructionRole::ClassicalCompute,
-            Instruction::Halt
-            | Instruction::Jump { .. }
-            | Instruction::JumpWhen { .. }
-            | Instruction::JumpUnless { .. } => InstructionRole::ControlFlow,
+            Instruction::Halt(_)
+            | Instruction::Jump(Jump { .. })
+            | Instruction::JumpWhen(JumpWhen { .. })
+            | Instruction::JumpUnless(JumpUnless { .. }) => InstructionRole::ControlFlow,
         }
     }
 }
@@ -460,14 +558,13 @@ pub fn get_string_parameter_string(parameters: &[String]) -> String {
 
 impl fmt::Display for Instruction {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use Instruction::*;
         match self {
-            Arithmetic {
+            Instruction::Arithmetic(Arithmetic {
                 operator,
                 destination,
                 source,
-            } => write!(f, "{} {} {}", operator, destination, source),
-            CalibrationDefinition(calibration) => {
+            }) => write!(f, "{} {} {}", operator, destination, source),
+            Instruction::CalibrationDefinition(CalibrationDefinition(calibration)) => {
                 let parameter_str = get_expression_parameter_string(&calibration.parameters);
                 write!(
                     f,
@@ -481,23 +578,23 @@ impl fmt::Display for Instruction {
                 }
                 Ok(())
             }
-            Capture {
+            Instruction::Capture(Capture {
                 blocking,
                 frame,
                 waveform,
                 memory_reference,
-            } => {
+            }) => {
                 if !blocking {
                     write!(f, "NONBLOCKING ")?;
                 }
                 write!(f, "CAPTURE {} {} {}", frame, waveform, memory_reference)
             }
-            CircuitDefinition {
+            Instruction::CircuitDefinition(CircuitDefinition {
                 name,
                 parameters,
                 qubit_variables,
                 instructions,
-            } => {
+            }) => {
                 let mut parameter_str: String = parameters
                     .iter()
                     .map(|p| format!("%{}", p))
@@ -516,11 +613,11 @@ impl fmt::Display for Instruction {
                 }
                 Ok(())
             }
-            Declaration {
+            Instruction::Declaration(Declaration {
                 name,
                 size,
                 sharing,
-            } => {
+            }) => {
                 write!(f, "DECLARE {} {}", name, size)?;
                 match sharing {
                     Some(shared) => write!(f, "SHARING {}", shared)?,
@@ -528,28 +625,28 @@ impl fmt::Display for Instruction {
                 }
                 Ok(())
             }
-            Delay {
+            Instruction::Delay(Delay {
                 qubits,
                 frame_names,
                 duration,
-            } => {
+            }) => {
                 write!(f, "DELAY {}", format_qubits(qubits))?;
                 for frame_name in frame_names {
                     write!(f, " \"{}\"", frame_name)?;
                 }
                 write!(f, " {}", duration)
             }
-            Fence { qubits } => {
+            Instruction::Fence(Fence { qubits }) => {
                 if qubits.is_empty() {
                     write!(f, "FENCE")
                 } else {
                     write!(f, "FENCE {}", format_qubits(qubits))
                 }
             }
-            FrameDefinition {
+            Instruction::FrameDefinition(FrameDefinition {
                 identifier,
                 attributes,
-            } => write!(
+            }) => write!(
                 f,
                 "DEFFRAME {}:{}",
                 identifier,
@@ -558,12 +655,12 @@ impl fmt::Display for Instruction {
                     .map(|(k, v)| format!("\n\t{}: {}", k, v))
                     .collect::<String>()
             ),
-            Gate {
+            Instruction::Gate(Gate {
                 name,
                 parameters,
                 qubits,
                 modifiers,
-            } => {
+            }) => {
                 let parameter_str = get_expression_parameter_string(parameters);
 
                 let qubit_str = format_qubits(qubits);
@@ -574,12 +671,12 @@ impl fmt::Display for Instruction {
                     .join("");
                 write!(f, "{}{}{} {}", modifier_str, name, parameter_str, qubit_str)
             }
-            GateDefinition {
+            Instruction::GateDefinition(GateDefinition {
                 name,
                 parameters,
                 matrix,
                 r#type,
-            } => {
+            }) => {
                 let parameter_str: String = parameters.iter().map(|p| p.to_string()).collect();
                 writeln!(f, "DEFGATE {}{} AS {}:", name, parameter_str, r#type)?;
                 for row in matrix {
@@ -594,11 +691,11 @@ impl fmt::Display for Instruction {
                 }
                 Ok(())
             }
-            MeasureCalibrationDefinition {
+            Instruction::MeasureCalibrationDefinition(MeasureCalibrationDefinition {
                 qubit,
                 parameter,
                 instructions,
-            } => {
+            }) => {
                 write!(f, "DEFCAL MEASURE")?;
                 match qubit {
                     Some(qubit) => {
@@ -614,72 +711,84 @@ impl fmt::Display for Instruction {
                     format_instructions(instructions)
                 )
             }
-            Measurement { qubit, target } => match target {
+            Instruction::Measurement(Measurement { qubit, target }) => match target {
                 Some(reference) => write!(f, "MEASURE {} {}", qubit, reference),
                 None => write!(f, "MEASURE {}", qubit),
             },
-            Move {
+            Instruction::Move(Move {
                 destination,
                 source,
-            } => write!(f, "MOVE {} {}", destination, source),
-            Exchange { left, right } => write!(f, "EXCHANGE {} {}", left, right),
-            Load {
+            }) => write!(f, "MOVE {} {}", destination, source),
+            Instruction::Exchange(Exchange { left, right }) => {
+                write!(f, "EXCHANGE {} {}", left, right)
+            }
+            Instruction::Load(Load {
                 destination,
                 source,
                 offset,
-            } => {
+            }) => {
                 write!(f, "LOAD {} {} {}", destination, source, offset)
             }
-            Store {
+            Instruction::Store(Store {
                 destination,
                 offset,
                 source,
-            } => {
+            }) => {
                 write!(f, "STORE {} {} {}", destination, offset, source)
             }
-            Pulse {
+            Instruction::Pulse(Pulse {
                 blocking,
                 frame,
                 waveform,
-            } => {
+            }) => {
                 if !blocking {
                     write!(f, "NONBLOCKING ")?;
                 }
                 write!(f, "PULSE {} {}", frame, waveform)
             }
-            Pragma {
+            Instruction::Pragma(Pragma {
                 name,
                 arguments,
                 data,
-            } => match data {
+            }) => match data {
                 // FIXME: Handle empty argument lists
                 Some(data) => write!(f, "PRAGMA {} {} {}", name, arguments.join(" "), data),
                 None => write!(f, "PRAGMA {} {}", name, arguments.join(" ")),
             },
-            RawCapture {
+            Instruction::RawCapture(RawCapture {
                 blocking,
                 frame,
                 duration,
                 memory_reference,
-            } => {
+            }) => {
                 if !blocking {
                     write!(f, "NONBLOCKING ")?;
                 }
                 write!(f, "RAW-CAPTURE {} {} {}", frame, duration, memory_reference)
             }
-            Reset { qubit } => match qubit {
+            Instruction::Reset(Reset { qubit }) => match qubit {
                 Some(qubit) => write!(f, "RESET {}", qubit),
                 None => write!(f, "RESET"),
             },
-            SetFrequency { frame, frequency } => write!(f, "SET-FREQUENCY {} {}", frame, frequency),
-            SetPhase { frame, phase } => write!(f, "SET-PHASE {} {}", frame, phase),
-            SetScale { frame, scale } => write!(f, "SET-SCALE {} {}", frame, scale),
-            ShiftFrequency { frame, frequency } => {
+            Instruction::SetFrequency(SetFrequency { frame, frequency }) => {
+                write!(f, "SET-FREQUENCY {} {}", frame, frequency)
+            }
+            Instruction::SetPhase(SetPhase { frame, phase }) => {
+                write!(f, "SET-PHASE {} {}", frame, phase)
+            }
+            Instruction::SetScale(SetScale { frame, scale }) => {
+                write!(f, "SET-SCALE {} {}", frame, scale)
+            }
+            Instruction::ShiftFrequency(ShiftFrequency { frame, frequency }) => {
                 write!(f, "SHIFT-FREQUENCY {} {}", frame, frequency)
             }
-            ShiftPhase { frame, phase } => write!(f, "SHIFT-PHASE {} {}", frame, phase),
-            SwapPhases { frame_1, frame_2 } => write!(f, "SWAP-PHASES {} {}", frame_1, frame_2),
-            WaveformDefinition { name, definition } => write!(
+            Instruction::ShiftPhase(ShiftPhase { frame, phase }) => {
+                write!(f, "SHIFT-PHASE {} {}", frame, phase)
+            }
+            Instruction::SwapPhases(SwapPhases { frame_1, frame_2 }) => {
+                write!(f, "SWAP-PHASES {} {}", frame_1, frame_2)
+            }
+            Instruction::WaveformDefinition(WaveformDefinition { name, definition }) => write!(
                 f,
                 "DEFWAVEFORM {}{} {}:\n\t{}",
                 name,
@@ -692,11 +801,15 @@ impl fmt::Display for Instruction {
                     .collect::<Vec<_>>()
                     .join(", ")
             ),
-            Halt => write!(f, "HALT"),
-            Jump { target } => write!(f, "JUMP @{}", target),
-            JumpUnless { condition, target } => write!(f, "JUMP-UNLESS @{} {}", target, condition),
-            JumpWhen { condition, target } => write!(f, "JUMP-WHEN @{} {}", target, condition),
-            Label(label) => write!(f, "LABEL @{}", label),
+            Instruction::Halt(Halt { .. }) => write!(f, "HALT"),
+            Instruction::Jump(Jump { target }) => write!(f, "JUMP @{}", target),
+            Instruction::JumpUnless(JumpUnless { condition, target }) => {
+                write!(f, "JUMP-UNLESS @{} {}", target, condition)
+            }
+            Instruction::JumpWhen(JumpWhen { condition, target }) => {
+                write!(f, "JUMP-WHEN @{} {}", target, condition)
+            }
+            Instruction::Label(Label(label)) => write!(f, "LABEL @{}", label),
         }
     }
 }
