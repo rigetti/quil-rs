@@ -9,7 +9,7 @@ license = "Apache-2.0"
 indexmap = "1.6.1"
 lexical = "5.2.0"
 nom = "6.1.0"
-num-complex = "0.3.0"
+num-complex = "0.4.0"
 petgraph = "0.5.1"
 serde = { version = "1.0.125", features = ["derive"] }
 
