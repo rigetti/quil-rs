@@ -267,17 +267,17 @@ mod tests {
         use GateModifier::*;
         prop_oneof![Just(Controlled), Just(Dagger), Just(Forked)]
     }
-    fn memory_reference() -> impl Strategy<Value = MemoryReference> {
-        (name(), any::<u64>()).prop_map(|(name, index)| MemoryReference { name, index })
-    }
-    fn name() -> impl Strategy<Value = String> {
+    fn identifier() -> impl Strategy<Value = String> {
         "[a-z][a-z0-9]+"
+    }
+    fn memory_reference() -> impl Strategy<Value = MemoryReference> {
+        (identifier(), any::<u64>()).prop_map(|(name, index)| MemoryReference { name, index })
     }
     fn qubit_fixed() -> impl Strategy<Value = Qubit> {
         any::<u64>().prop_map(Qubit::Fixed)
     }
     fn qubit_variable() -> impl Strategy<Value = Qubit> {
-        name().prop_map(Qubit::Variable)
+        identifier().prop_map(Qubit::Variable)
     }
     fn qubit() -> impl Strategy<Value = Qubit> {
         prop_oneof![qubit_fixed(), qubit_variable()]
@@ -293,12 +293,12 @@ mod tests {
     parser_roundtrip!(parse_arithmetic_operand, arithmetic_operand());
     parser_roundtrip!(
         parse_frame_identifier,
-        (name(), vec(qubit(), 1..100)).prop_map(|(name, qubits)| FrameIdentifier { name, qubits })
+        (identifier(), vec(qubit(), 1..100)).prop_map(|(name, qubits)| FrameIdentifier { name, qubits })
     );
     parser_roundtrip!(parse_gate_modifier, gate_modifier());
     parser_roundtrip!(parse_memory_reference, memory_reference());
     parser_roundtrip!(parse_memory_reference_with_brackets, memory_reference());
     parser_roundtrip!(parse_qubit, qubit());
-    parser_roundtrip!(parse_variable_qubit, name());
+    parser_roundtrip!(parse_variable_qubit, identifier());
     parser_roundtrip!(parse_vector, vector());
 }
