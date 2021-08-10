@@ -18,9 +18,8 @@ use std::collections::HashMap;
 use nom::{
     branch::alt,
     combinator::{cut, map, opt, value},
-    multi::many0,
-    multi::{many1, separated_list0},
-    sequence::{delimited, tuple},
+    multi::{many0, many1, separated_list0},
+    sequence::{delimited, preceded, tuple},
 };
 
 use crate::{
@@ -217,8 +216,52 @@ pub fn skip_newlines_and_comments<'a>(input: ParserInput<'a>) -> ParserResult<'a
         value((), token!(Comment(v))),
         token!(NewLine),
         token!(Semicolon),
+        preceded(many0(token!(Indentation)), value((), token!(Comment(v)))),
     )))(input)?;
     Ok((input, ()))
+}
+
+#[cfg(test)]
+mod describe_skip_newlines_and_comments {
+    use crate::parser::lex;
+
+    use super::skip_newlines_and_comments;
+
+    #[test]
+    fn it_skips_indented_comment() {
+        let program = "\t    # this is a comment X 0";
+        let tokens = lex(program);
+        let (token_slice, _) = skip_newlines_and_comments(&tokens).unwrap();
+        let (_, expected) = tokens.split_at(3);
+        assert_eq!(token_slice, expected);
+    }
+
+    #[test]
+    fn it_skips_comments() {
+        let program = "# this is a comment \n# and another\nX 0";
+        let tokens = lex(program);
+        let (token_slice, _) = skip_newlines_and_comments(&tokens).unwrap();
+        let (_, expected) = tokens.split_at(4);
+        assert_eq!(token_slice, expected);
+    }
+
+    #[test]
+    fn it_skips_new_lines() {
+        let program = "\nX 0";
+        let tokens = lex(program);
+        let (token_slice, _) = skip_newlines_and_comments(&tokens).unwrap();
+        let (_, expected) = tokens.split_at(1);
+        assert_eq!(token_slice, expected);
+    }
+
+    #[test]
+    fn it_skips_semicolons() {
+        let program = ";;;;;X 0";
+        let tokens = lex(program);
+        let (token_slice, _) = skip_newlines_and_comments(&tokens).unwrap();
+        let (_, expected) = tokens.split_at(5);
+        assert_eq!(token_slice, expected);
+    }
 }
 
 #[cfg(test)]
