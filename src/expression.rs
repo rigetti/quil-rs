@@ -17,6 +17,7 @@ use crate::{imag, instruction::MemoryReference, real};
 use std::collections::HashMap;
 use std::f64::consts::PI;
 use std::fmt;
+use std::hash::{Hash, Hasher};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum EvaluationError {
@@ -43,6 +44,15 @@ pub enum Expression {
     },
     Variable(String),
 }
+
+#[allow(clippy::derive_hash_xor_eq)]
+impl Hash for Expression {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.to_string().hash(state);
+    }
+}
+
+impl Eq for Expression {}
 
 /// Compute the result of an infix expression where both operands are complex.
 fn calculate_infix(
