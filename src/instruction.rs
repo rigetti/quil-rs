@@ -288,7 +288,7 @@ pub enum Instruction {
     },
     SetFrequency {
         frame: FrameIdentifier,
-        frequency: f64,
+        frequency: Expression,
     },
     SetPhase {
         frame: FrameIdentifier,
@@ -300,7 +300,7 @@ pub enum Instruction {
     },
     ShiftFrequency {
         frame: FrameIdentifier,
-        frequency: f64,
+        frequency: Expression,
     },
     ShiftPhase {
         frame: FrameIdentifier,
