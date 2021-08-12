@@ -80,10 +80,10 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
                 Command::Pulse => command::parse_pulse(remainder, true),
                 Command::RawCapture => command::parse_raw_capture(remainder, true),
                 // Command::Reset => {}
-                // Command::SetFrequency => {}
+                Command::SetFrequency => command::parse_set_frequency(remainder),
                 // Command::SetPhase => {}
-                // Command::SetScale => {}
-                // Command::ShiftFrequency => {}
+                Command::SetScale => command::parse_set_scale(remainder),
+                Command::ShiftFrequency => command::parse_shift_frequency(remainder),
                 // Command::ShiftPhase => {}
                 Command::Store => command::parse_store(remainder),
                 Command::Sub => command::parse_arithmetic(ArithmeticOperator::Subtract, remainder),
@@ -465,4 +465,85 @@ mod tests {
             source: ArithmeticOperand::LiteralReal(1.0)
         }]
     );
+
+    #[test]
+    fn parse_set_scale() {
+        let tokens = lex(r#"SET-SCALE 0 "rf" 1.0; SET-SCALE 0 1 "rf" theta"#);
+        let (remainder, parsed) = parse_instructions(&tokens).unwrap();
+        let expected = vec![
+            Instruction::SetScale {
+                frame: FrameIdentifier {
+                    name: String::from("rf"),
+                    qubits: vec![Qubit::Fixed(0)],
+                },
+                scale: Expression::Number(real!(1.0)),
+            },
+            Instruction::SetScale {
+                frame: FrameIdentifier {
+                    name: String::from("rf"),
+                    qubits: vec![Qubit::Fixed(0), Qubit::Fixed(1)],
+                },
+                scale: Expression::Address(MemoryReference {
+                    name: String::from("theta"),
+                    index: 0,
+                }),
+            },
+        ];
+        assert_eq!(remainder.len(), 0);
+        assert_eq!(parsed, expected);
+    }
+
+    #[test]
+    fn parse_set_frequency() {
+        let tokens = lex(r#"SET-FREQUENCY 0 "rf" 1.0; SET-FREQUENCY 0 1 "rf" theta"#);
+        let (remainder, parsed) = parse_instructions(&tokens).unwrap();
+        let expected = vec![
+            Instruction::SetFrequency {
+                frame: FrameIdentifier {
+                    name: String::from("rf"),
+                    qubits: vec![Qubit::Fixed(0)],
+                },
+                frequency: Expression::Number(real!(1.0)),
+            },
+            Instruction::SetFrequency {
+                frame: FrameIdentifier {
+                    name: String::from("rf"),
+                    qubits: vec![Qubit::Fixed(0), Qubit::Fixed(1)],
+                },
+                frequency: Expression::Address(MemoryReference {
+                    name: String::from("theta"),
+                    index: 0,
+                }),
+            },
+        ];
+        assert_eq!(remainder.len(), 0);
+        assert_eq!(parsed, expected);
+    }
+
+    #[test]
+    fn parse_shift_frequency() {
+        let tokens = lex(r#"SHIFT-FREQUENCY 0 "rf" 1.0; SHIFT-FREQUENCY 0 1 "rf" theta"#);
+        let (remainder, parsed) = parse_instructions(&tokens).unwrap();
+        let expected = vec![
+            Instruction::ShiftFrequency {
+                frame: FrameIdentifier {
+                    name: String::from("rf"),
+                    qubits: vec![Qubit::Fixed(0)],
+                },
+                frequency: Expression::Number(real!(1.0)),
+            },
+            Instruction::ShiftFrequency {
+                frame: FrameIdentifier {
+                    name: String::from("rf"),
+                    qubits: vec![Qubit::Fixed(0), Qubit::Fixed(1)],
+                },
+                frequency: Expression::Address(MemoryReference {
+                    name: String::from("theta"),
+                    index: 0,
+                }),
+            },
+        ];
+        assert_eq!(remainder.len(), 0);
+        assert_eq!(parsed, expected);
+    }
 }

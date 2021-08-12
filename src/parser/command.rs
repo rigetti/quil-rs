@@ -31,9 +31,7 @@ use super::{
 use crate::parser::common::parse_variable_qubit;
 use crate::parser::instruction::parse_block;
 use crate::{
-    instruction::{
-        ArithmeticOperand, ArithmeticOperator, Calibration, FrameIdentifier, Instruction, Waveform,
-    },
+    instruction::{ArithmeticOperand, ArithmeticOperator, Calibration, Instruction, Waveform},
     parser::{
         error::{Error, ErrorKind},
         lexer::Token,
@@ -322,17 +320,16 @@ pub fn parse_pragma<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction>
     ))
 }
 
-/// Parse a pulse instruction, **including the PULSE keyword**.
-pub fn parse_pulse<'a>(input: ParserInput<'a>, blocking: bool) -> ParserResult<'a, Instruction> {
-    let (input, qubits) = many0(parse_qubit)(input)?;
-    let (input, name) = token!(String(v))(input)?;
+/// Parse the contents of a `PULSE` instruction.
+pub fn parse_pulse(input: ParserInput, blocking: bool) -> ParserResult<Instruction> {
+    let (input, frame) = parse_frame_identifier(input)?;
     let (input, waveform) = parse_waveform_invocation(input)?;
 
     Ok((
         input,
         Instruction::Pulse {
             blocking,
-            frame: FrameIdentifier { name, qubits },
+            frame,
             waveform,
         },
     ))
@@ -353,6 +350,30 @@ pub fn parse_raw_capture(input: ParserInput, blocking: bool) -> ParserResult<Ins
             memory_reference,
         },
     ))
+}
+
+/// Parse the contents of a `SET-FREQUENCY` instruction.
+pub fn parse_set_frequency(input: ParserInput) -> ParserResult<Instruction> {
+    let (input, frame) = parse_frame_identifier(input)?;
+    let (input, frequency) = parse_expression(input)?;
+
+    Ok((input, Instruction::SetFrequency { frame, frequency }))
+}
+
+/// Parse the contents of a `SET-SCALE` instruction.
+pub fn parse_set_scale(input: ParserInput) -> ParserResult<Instruction> {
+    let (input, frame) = parse_frame_identifier(input)?;
+    let (input, scale) = parse_expression(input)?;
+
+    Ok((input, Instruction::SetScale { frame, scale }))
+}
+
+/// Parse the contents of a `SHIFT-FREQUENCY` instruction.
+pub fn parse_shift_frequency(input: ParserInput) -> ParserResult<Instruction> {
+    let (input, frame) = parse_frame_identifier(input)?;
+    let (input, frequency) = parse_expression(input)?;
+
+    Ok((input, Instruction::ShiftFrequency { frame, frequency }))
 }
 
 /// Parse the contents of a `MEASURE` instruction.
