@@ -308,6 +308,7 @@ mod tests {
         real,
     };
     use num_complex::Complex64;
+    use std::collections::HashSet;
     use std::{collections::HashMap, f64::consts::PI};
 
     #[test]
@@ -378,5 +379,43 @@ mod tests {
             let evaluated_complex = evaluated.evaluate_to_complex(&case.environment);
             assert_eq!(evaluated_complex, case.evaluated_complex)
         }
+    }
+
+    #[test]
+    fn hash() {
+        let first = Expression::Infix {
+            left: Box::new(Expression::Number(real!(1.0))),
+            operator: InfixOperator::Plus,
+            right: Box::new(Expression::Number(real!(2.0))),
+        };
+        let matching = first.clone();
+        let differing = Expression::Number(real!(3.0));
+
+        let mut set = HashSet::new();
+        set.insert(first);
+
+        assert!(set.contains(&matching));
+        assert!(!set.contains(&differing))
+    }
+
+    #[test]
+    #[should_panic]
+    /// Not implemented yet, see https://github.com/rigetti/quil-rust/issues/27
+    fn hash_commutative() {
+        let first = Expression::Infix {
+            left: Box::new(Expression::Number(real!(1.0))),
+            operator: InfixOperator::Plus,
+            right: Box::new(Expression::Number(real!(2.0))),
+        };
+        let second = Expression::Infix {
+            left: Box::new(Expression::Number(real!(2.0))),
+            operator: InfixOperator::Plus,
+            right: Box::new(Expression::Number(real!(1.0))),
+        };
+
+        let mut set = HashSet::new();
+        set.insert(first);
+
+        assert!(set.contains(&second));
     }
 }
