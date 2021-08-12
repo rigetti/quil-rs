@@ -213,10 +213,9 @@ pub fn parse_vector<'a>(input: ParserInput<'a>) -> ParserResult<'a, Vector> {
 /// once the first other token is encountered.
 pub fn skip_newlines_and_comments<'a>(input: ParserInput<'a>) -> ParserResult<'a, ()> {
     let (input, _) = many0(alt((
-        value((), token!(Comment(v))),
+        preceded(many0(token!(Indentation)), value((), token!(Comment(v)))),
         token!(NewLine),
         token!(Semicolon),
-        preceded(many0(token!(Indentation)), value((), token!(Comment(v)))),
     )))(input)?;
     Ok((input, ()))
 }
