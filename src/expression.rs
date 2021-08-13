@@ -65,8 +65,7 @@ impl Hash for Expression {
         match self {
             Address(m) => {
                 "Address".hash(state);
-                m.name.hash(state);
-                m.index.hash(state);
+                m.hash(state);
             }
             FunctionCall {
                 function,
