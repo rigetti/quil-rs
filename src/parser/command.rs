@@ -31,7 +31,8 @@ use super::{
 use crate::instruction::{
     Arithmetic, CalibrationDefinition, Capture, CircuitDefinition, Declaration, Delay, Exchange,
     Fence, FrameDefinition, Jump, JumpUnless, JumpWhen, Label, Load, Measurement, Move, Pragma,
-    Pulse, RawCapture, SetFrequency, SetScale, ShiftFrequency, Store, WaveformDefinition,
+    Pulse, RawCapture, SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, Store,
+    WaveformDefinition,
 };
 use crate::parser::common::parse_variable_qubit;
 use crate::parser::instruction::parse_block;
@@ -376,7 +377,7 @@ pub fn parse_set_phase(input: ParserInput) -> ParserResult<Instruction> {
     let (input, frame) = parse_frame_identifier(input)?;
     let (input, phase) = parse_expression(input)?;
 
-    Ok((input, Instruction::SetPhase { frame, phase }))
+    Ok((input, Instruction::SetPhase(SetPhase { frame, phase })))
 }
 
 /// Parse the contents of a `SET-SCALE` instruction.
@@ -403,7 +404,7 @@ pub fn parse_shift_phase(input: ParserInput) -> ParserResult<Instruction> {
     let (input, frame) = parse_frame_identifier(input)?;
     let (input, phase) = parse_expression(input)?;
 
-    Ok((input, Instruction::ShiftPhase { frame, phase }))
+    Ok((input, Instruction::ShiftPhase(ShiftPhase { frame, phase })))
 }
 
 /// Parse the contents of a `MEASURE` instruction.

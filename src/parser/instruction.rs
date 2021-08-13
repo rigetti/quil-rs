@@ -161,7 +161,7 @@ mod tests {
     use crate::{instruction::Calibration, parser::lexer::lex};
 
     use super::parse_instructions;
-    use crate::instruction::{Label, SetFrequency, SetScale, ShiftFrequency};
+    use crate::instruction::{Label, SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase};
 
     make_test!(
         semicolons_are_newlines,
@@ -476,14 +476,14 @@ mod tests {
         let tokens = lex(r#"SET-PHASE 0 "rf" 1.0; SET-PHASE 0 1 "rf" theta"#);
         let (remainder, parsed) = parse_instructions(&tokens).unwrap();
         let expected = vec![
-            Instruction::SetPhase {
+            Instruction::SetPhase(SetPhase {
                 frame: FrameIdentifier {
                     name: String::from("rf"),
                     qubits: vec![Qubit::Fixed(0)],
                 },
                 phase: Expression::Number(real!(1.0)),
-            },
-            Instruction::SetPhase {
+            }),
+            Instruction::SetPhase(SetPhase {
                 frame: FrameIdentifier {
                     name: String::from("rf"),
                     qubits: vec![Qubit::Fixed(0), Qubit::Fixed(1)],
@@ -492,7 +492,7 @@ mod tests {
                     name: String::from("theta"),
                     index: 0,
                 }),
-            },
+            }),
         ];
         assert_eq!(remainder.len(), 0);
         assert_eq!(parsed, expected);
@@ -584,14 +584,14 @@ mod tests {
         let tokens = lex(r#"SHIFT-PHASE 0 "rf" 1.0; SHIFT-PHASE 0 1 "rf" theta"#);
         let (remainder, parsed) = parse_instructions(&tokens).unwrap();
         let expected = vec![
-            Instruction::ShiftPhase {
+            Instruction::ShiftPhase(ShiftPhase {
                 frame: FrameIdentifier {
                     name: String::from("rf"),
                     qubits: vec![Qubit::Fixed(0)],
                 },
                 phase: Expression::Number(real!(1.0)),
-            },
-            Instruction::ShiftPhase {
+            }),
+            Instruction::ShiftPhase(ShiftPhase {
                 frame: FrameIdentifier {
                     name: String::from("rf"),
                     qubits: vec![Qubit::Fixed(0), Qubit::Fixed(1)],
@@ -600,7 +600,7 @@ mod tests {
                     name: String::from("theta"),
                     index: 0,
                 }),
-            },
+            }),
         ];
         assert_eq!(remainder.len(), 0);
         assert_eq!(parsed, expected);
