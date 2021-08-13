@@ -161,7 +161,7 @@ mod tests {
     use crate::{instruction::Calibration, parser::lexer::lex};
 
     use super::parse_instructions;
-    use crate::instruction::Label;
+    use crate::instruction::{Label, SetFrequency, SetScale, ShiftFrequency};
 
     make_test!(
         semicolons_are_newlines,
@@ -476,14 +476,14 @@ mod tests {
         let tokens = lex(r#"SET-SCALE 0 "rf" 1.0; SET-SCALE 0 1 "rf" theta"#);
         let (remainder, parsed) = parse_instructions(&tokens).unwrap();
         let expected = vec![
-            Instruction::SetScale {
+            Instruction::SetScale(SetScale {
                 frame: FrameIdentifier {
                     name: String::from("rf"),
                     qubits: vec![Qubit::Fixed(0)],
                 },
                 scale: Expression::Number(real!(1.0)),
-            },
-            Instruction::SetScale {
+            }),
+            Instruction::SetScale(SetScale {
                 frame: FrameIdentifier {
                     name: String::from("rf"),
                     qubits: vec![Qubit::Fixed(0), Qubit::Fixed(1)],
@@ -492,7 +492,7 @@ mod tests {
                     name: String::from("theta"),
                     index: 0,
                 }),
-            },
+            }),
         ];
         assert_eq!(remainder.len(), 0);
         assert_eq!(parsed, expected);
@@ -503,14 +503,14 @@ mod tests {
         let tokens = lex(r#"SET-FREQUENCY 0 "rf" 1.0; SET-FREQUENCY 0 1 "rf" theta"#);
         let (remainder, parsed) = parse_instructions(&tokens).unwrap();
         let expected = vec![
-            Instruction::SetFrequency {
+            Instruction::SetFrequency(SetFrequency {
                 frame: FrameIdentifier {
                     name: String::from("rf"),
                     qubits: vec![Qubit::Fixed(0)],
                 },
                 frequency: Expression::Number(real!(1.0)),
-            },
-            Instruction::SetFrequency {
+            }),
+            Instruction::SetFrequency(SetFrequency {
                 frame: FrameIdentifier {
                     name: String::from("rf"),
                     qubits: vec![Qubit::Fixed(0), Qubit::Fixed(1)],
@@ -519,7 +519,7 @@ mod tests {
                     name: String::from("theta"),
                     index: 0,
                 }),
-            },
+            }),
         ];
         assert_eq!(remainder.len(), 0);
         assert_eq!(parsed, expected);
@@ -530,14 +530,14 @@ mod tests {
         let tokens = lex(r#"SHIFT-FREQUENCY 0 "rf" 1.0; SHIFT-FREQUENCY 0 1 "rf" theta"#);
         let (remainder, parsed) = parse_instructions(&tokens).unwrap();
         let expected = vec![
-            Instruction::ShiftFrequency {
+            Instruction::ShiftFrequency(ShiftFrequency {
                 frame: FrameIdentifier {
                     name: String::from("rf"),
                     qubits: vec![Qubit::Fixed(0)],
                 },
                 frequency: Expression::Number(real!(1.0)),
-            },
-            Instruction::ShiftFrequency {
+            }),
+            Instruction::ShiftFrequency(ShiftFrequency {
                 frame: FrameIdentifier {
                     name: String::from("rf"),
                     qubits: vec![Qubit::Fixed(0), Qubit::Fixed(1)],
@@ -546,7 +546,7 @@ mod tests {
                     name: String::from("theta"),
                     index: 0,
                 }),
-            },
+            }),
         ];
         assert_eq!(remainder.len(), 0);
         assert_eq!(parsed, expected);

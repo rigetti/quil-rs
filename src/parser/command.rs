@@ -31,7 +31,7 @@ use super::{
 use crate::instruction::{
     Arithmetic, CalibrationDefinition, Capture, CircuitDefinition, Declaration, Delay, Exchange,
     Fence, FrameDefinition, Jump, JumpUnless, JumpWhen, Label, Load, Measurement, Move, Pragma,
-    Pulse, RawCapture, Store, WaveformDefinition,
+    Pulse, RawCapture, SetFrequency, SetScale, ShiftFrequency, Store, WaveformDefinition,
 };
 use crate::parser::common::parse_variable_qubit;
 use crate::parser::instruction::parse_block;
@@ -365,7 +365,10 @@ pub fn parse_set_frequency(input: ParserInput) -> ParserResult<Instruction> {
     let (input, frame) = parse_frame_identifier(input)?;
     let (input, frequency) = parse_expression(input)?;
 
-    Ok((input, Instruction::SetFrequency { frame, frequency }))
+    Ok((
+        input,
+        Instruction::SetFrequency(SetFrequency { frame, frequency }),
+    ))
 }
 
 /// Parse the contents of a `SET-SCALE` instruction.
@@ -373,7 +376,7 @@ pub fn parse_set_scale(input: ParserInput) -> ParserResult<Instruction> {
     let (input, frame) = parse_frame_identifier(input)?;
     let (input, scale) = parse_expression(input)?;
 
-    Ok((input, Instruction::SetScale { frame, scale }))
+    Ok((input, Instruction::SetScale(SetScale { frame, scale })))
 }
 
 /// Parse the contents of a `SHIFT-FREQUENCY` instruction.
@@ -381,7 +384,10 @@ pub fn parse_shift_frequency(input: ParserInput) -> ParserResult<Instruction> {
     let (input, frame) = parse_frame_identifier(input)?;
     let (input, frequency) = parse_expression(input)?;
 
-    Ok((input, Instruction::ShiftFrequency { frame, frequency }))
+    Ok((
+        input,
+        Instruction::ShiftFrequency(ShiftFrequency { frame, frequency }),
+    ))
 }
 
 /// Parse the contents of a `MEASURE` instruction.
