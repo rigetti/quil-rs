@@ -392,7 +392,6 @@ mod tests {
     use super::*;
     use crate::{instruction::MemoryReference, real};
     use num_complex::Complex64;
-    use proptest::num::f64::{NEGATIVE, NORMAL, POSITIVE, ZERO};
     use proptest::prelude::*;
     use std::collections::{hash_map::DefaultHasher, HashMap, HashSet};
     use std::f64::consts::PI;
@@ -471,10 +470,9 @@ mod tests {
     /// See https://docs.rs/proptest/1.0.0/proptest/prelude/trait.Strategy.html#method.prop_recursive
     fn arb_expr() -> impl Strategy<Value = Expression> {
         use Expression::*;
-        let num = NORMAL | POSITIVE | NEGATIVE | ZERO;
         let leaf = prop_oneof![
             any::<MemoryReference>().prop_map(Address),
-            (num, num).prop_map(|(re, im)| Number(num_complex::Complex64::new(re, im))),
+            (any::<f64>(), any::<f64>()).prop_map(|(re, im)| Number(num_complex::Complex64::new(re, im))),
             Just(PiConstant),
             ".*".prop_map(Variable),
         ];
@@ -509,7 +507,7 @@ mod tests {
     proptest! {
 
         #[test]
-        fn eq(a in NORMAL | POSITIVE | NEGATIVE | ZERO, b in NORMAL | POSITIVE | NEGATIVE | ZERO) {
+        fn eq(a in any::<f64>(), b in any::<f64>()) {
             let first = Expression::Infix {
                 left: Box::new(Expression::Number(real!(a))),
                 operator: InfixOperator::Plus,
@@ -522,7 +520,7 @@ mod tests {
         }
 
         #[test]
-        fn eq_commutative(a in NORMAL | POSITIVE | NEGATIVE | ZERO, b in NORMAL | POSITIVE | NEGATIVE | ZERO) {
+        fn eq_commutative(a in any::<f64>(), b in any::<f64>()) {
             let first = Expression::Infix{
                 left: Box::new(Expression::Number(real!(a))),
                 operator: InfixOperator::Plus,
@@ -537,7 +535,7 @@ mod tests {
         }
 
         #[test]
-        fn hash(a in NORMAL | POSITIVE | NEGATIVE | ZERO, b in NORMAL | POSITIVE | NEGATIVE | ZERO) {
+        fn hash(a in any::<f64>(), b in any::<f64>()) {
             let first = Expression::Infix {
                 left: Box::new(Expression::Number(real!(a))),
                 operator: InfixOperator::Plus,
@@ -552,7 +550,7 @@ mod tests {
         }
 
         #[test]
-        fn hash_commutative(a in NORMAL | POSITIVE | NEGATIVE | ZERO, b in NORMAL | POSITIVE | NEGATIVE | ZERO) {
+        fn hash_commutative(a in any::<f64>(), b in any::<f64>()) {
             let first = Expression::Infix{
                 left: Box::new(Expression::Number(real!(a))),
                 operator: InfixOperator::Plus,
