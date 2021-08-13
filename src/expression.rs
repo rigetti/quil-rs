@@ -14,6 +14,7 @@
  * limitations under the License.
  **/
 use crate::{imag, instruction::MemoryReference, real};
+use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
 use std::f64::consts::PI;
 use std::fmt;
@@ -24,7 +25,7 @@ pub enum EvaluationError {
     Incomplete,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug)]
 pub enum Expression {
     Address(MemoryReference),
     FunctionCall {
@@ -45,10 +46,92 @@ pub enum Expression {
     Variable(String),
 }
 
-#[allow(clippy::derive_hash_xor_eq)]
+/// Hash value helper: turn a hashable thing into a u64.
+fn _hash<T: Hash>(t: &T) -> u64 {
+    let mut s = DefaultHasher::new();
+    t.hash(&mut s);
+    s.finish()
+}
+
 impl Hash for Expression {
+    // Implemented by hand since we can't derive with f64s hidden inside.
+    // Also to understand when things should be the same, like with commutativity (`1 + 2 == 2 + 1`).
+    // See https://github.com/rigetti/quil-rust/issues/27
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.to_string().hash(state);
+        use std::cmp::{max_by_key, min_by_key};
+        use Expression::*;
+        match self {
+            Address(m) => {
+                "Address".hash(state);
+                m.name.hash(state);
+                m.index.hash(state);
+            }
+            FunctionCall {
+                function,
+                expression,
+            } => {
+                "FunctionCall".hash(state);
+                function.hash(state);
+                expression.hash(state);
+            }
+            Infix {
+                left,
+                operator,
+                right,
+            } => {
+                "Infix".hash(state);
+                operator.hash(state);
+                match operator {
+                    InfixOperator::Plus | InfixOperator::Star => {
+                        // commutative, so put left & right in decreasing order by hash value
+                        let (a, b) = (
+                            min_by_key(left, right, _hash),
+                            max_by_key(left, right, _hash),
+                        );
+                        a.hash(state);
+                        b.hash(state);
+                    }
+                    _ => {
+                        left.hash(state);
+                        right.hash(state);
+                    }
+                }
+            }
+            Number(n) => {
+                "Number".hash(state);
+                // Skip zero values (akin to `format_complex`).
+                // Also, since f64 isn't hashable, use the u64 binary representation.
+                // The docs claim this is rather portable: https://doc.rust-lang.org/std/primitive.f64.html#method.to_bits
+                if n.re.abs() > 0f64 {
+                    n.re.to_bits().hash(state)
+                }
+                if n.im.abs() > 0f64 {
+                    n.im.to_bits().hash(state)
+                }
+            }
+            PiConstant => {
+                "PiConstant".hash(state);
+            }
+            Prefix {
+                operator,
+                expression,
+            } => {
+                "Prefix".hash(state);
+                operator.hash(state);
+                expression.hash(state);
+            }
+            Variable(v) => {
+                "Variable".hash(state);
+                v.hash(state);
+            }
+        }
+    }
+}
+
+impl PartialEq for Expression {
+    // Partial equality by hash value
+    fn eq(&self, other: &Self) -> bool {
+        _hash(self) == _hash(other)
     }
 }
 
@@ -228,7 +311,7 @@ impl fmt::Display for Expression {
 }
 
 /// A function defined within Quil syntax.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum ExpressionFunction {
     Cis,
     Cosine,
@@ -254,7 +337,7 @@ impl fmt::Display for ExpressionFunction {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum PrefixOperator {
     Plus,
     Minus,
@@ -274,7 +357,7 @@ impl fmt::Display for PrefixOperator {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum InfixOperator {
     Caret,
     Plus,
@@ -308,6 +391,8 @@ mod tests {
         real,
     };
     use num_complex::Complex64;
+    use proptest::num::f64::{NEGATIVE, NORMAL, POSITIVE, ZERO};
+    use proptest::prelude::*;
     use std::collections::HashSet;
     use std::{collections::HashMap, f64::consts::PI};
 
@@ -381,41 +466,66 @@ mod tests {
         }
     }
 
-    #[test]
-    fn hash() {
-        let first = Expression::Infix {
-            left: Box::new(Expression::Number(real!(1.0))),
-            operator: InfixOperator::Plus,
-            right: Box::new(Expression::Number(real!(2.0))),
-        };
-        let matching = first.clone();
-        let differing = Expression::Number(real!(3.0));
+    proptest! {
 
-        let mut set = HashSet::new();
-        set.insert(first);
+        #[test]
+        fn eq(a in NORMAL | POSITIVE | NEGATIVE | ZERO, b in NORMAL | POSITIVE | NEGATIVE | ZERO) {
+            let first = Expression::Infix {
+                left: Box::new(Expression::Number(real!(a))),
+                operator: InfixOperator::Plus,
+                right: Box::new(Expression::Number(real!(b))),
+            };
+            let matching = first.clone();
+            let differing = Expression::Number(real!(a + b));
+            prop_assert_eq!(&first, &matching);
+            prop_assert_ne!(&first, &differing);
+        }
 
-        assert!(set.contains(&matching));
-        assert!(!set.contains(&differing))
-    }
+        #[test]
+        fn eq_commutative(a in NORMAL | POSITIVE | NEGATIVE | ZERO, b in NORMAL | POSITIVE | NEGATIVE | ZERO) {
+            let first = Expression::Infix{
+                left: Box::new(Expression::Number(real!(a))),
+                operator: InfixOperator::Plus,
+                right: Box::new(Expression::Number(real!(b))),
+            };
+            let second = Expression::Infix{
+                left: Box::new(Expression::Number(real!(b))),
+                operator: InfixOperator::Plus,
+                right: Box::new(Expression::Number(real!(a))),
+            };
+            prop_assert_eq!(first, second);
+        }
 
-    #[test]
-    #[should_panic]
-    /// Not implemented yet, see https://github.com/rigetti/quil-rust/issues/27
-    fn hash_commutative() {
-        let first = Expression::Infix {
-            left: Box::new(Expression::Number(real!(1.0))),
-            operator: InfixOperator::Plus,
-            right: Box::new(Expression::Number(real!(2.0))),
-        };
-        let second = Expression::Infix {
-            left: Box::new(Expression::Number(real!(2.0))),
-            operator: InfixOperator::Plus,
-            right: Box::new(Expression::Number(real!(1.0))),
-        };
+        #[test]
+        fn hash(a in NORMAL | POSITIVE | NEGATIVE | ZERO, b in NORMAL | POSITIVE | NEGATIVE | ZERO) {
+            let first = Expression::Infix {
+                left: Box::new(Expression::Number(real!(a))),
+                operator: InfixOperator::Plus,
+                right: Box::new(Expression::Number(real!(b))),
+            };
+            let matching = first.clone();
+            let differing = Expression::Number(real!(a + b));
+            let mut set = HashSet::new();
+            set.insert(first);
+            assert!(set.contains(&matching));
+            assert!(!set.contains(&differing))
+        }
 
-        let mut set = HashSet::new();
-        set.insert(first);
-
-        assert!(set.contains(&second));
+        #[test]
+        fn hash_commutative(a in NORMAL | POSITIVE | NEGATIVE | ZERO, b in NORMAL | POSITIVE | NEGATIVE | ZERO) {
+            let first = Expression::Infix{
+                left: Box::new(Expression::Number(real!(a))),
+                operator: InfixOperator::Plus,
+                right: Box::new(Expression::Number(real!(b))),
+            };
+            let second = Expression::Infix{
+                left: Box::new(Expression::Number(real!(b))),
+                operator: InfixOperator::Plus,
+                right: Box::new(Expression::Number(real!(a))),
+            };
+            let mut set = HashSet::new();
+            set.insert(first);
+            assert!(set.contains(&second));
+        }
     }
 }
