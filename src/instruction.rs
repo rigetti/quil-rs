@@ -18,6 +18,8 @@ use std::{collections::HashMap, fmt};
 
 use crate::expression::Expression;
 
+#[cfg(test)] use proptest_derive::Arbitrary;
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum ArithmeticOperand {
     LiteralInteger(i64),
@@ -200,6 +202,7 @@ impl fmt::Display for WaveformInvocation {
 }
 
 #[derive(Clone, Debug, Hash, PartialEq)]
+#[cfg_attr(test, derive(Arbitrary))]
 pub struct MemoryReference {
     pub name: String,
     pub index: u64,

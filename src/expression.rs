@@ -14,11 +14,13 @@
  * limitations under the License.
  **/
 use crate::{imag, instruction::MemoryReference, real};
-use std::collections::hash_map::DefaultHasher;
-use std::collections::HashMap;
+use std::collections::{hash_map::DefaultHasher, HashMap};
 use std::f64::consts::PI;
 use std::fmt;
 use std::hash::{Hash, Hasher};
+
+#[cfg(test)]
+use proptest_derive::Arbitrary;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum EvaluationError {
@@ -47,7 +49,7 @@ pub enum Expression {
 }
 
 /// Hash value helper: turn a hashable thing into a u64.
-fn _hash<T: Hash>(t: &T) -> u64 {
+fn _hash_to_u64<T: Hash>(t: &T) -> u64 {
     let mut s = DefaultHasher::new();
     t.hash(&mut s);
     s.finish()
@@ -85,8 +87,8 @@ impl Hash for Expression {
                     InfixOperator::Plus | InfixOperator::Star => {
                         // commutative, so put left & right in decreasing order by hash value
                         let (a, b) = (
-                            min_by_key(left, right, _hash),
-                            max_by_key(left, right, _hash),
+                            min_by_key(left, right, _hash_to_u64),
+                            max_by_key(left, right, _hash_to_u64),
                         );
                         a.hash(state);
                         b.hash(state);
@@ -131,7 +133,7 @@ impl Hash for Expression {
 impl PartialEq for Expression {
     // Partial equality by hash value
     fn eq(&self, other: &Self) -> bool {
-        _hash(self) == _hash(other)
+        _hash_to_u64(self) == _hash_to_u64(other)
     }
 }
 
@@ -312,6 +314,7 @@ impl fmt::Display for Expression {
 
 /// A function defined within Quil syntax.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(test, derive(Arbitrary))]
 pub enum ExpressionFunction {
     Cis,
     Cosine,
@@ -338,6 +341,7 @@ impl fmt::Display for ExpressionFunction {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(test, derive(Arbitrary))]
 pub enum PrefixOperator {
     Plus,
     Minus,
@@ -358,6 +362,7 @@ impl fmt::Display for PrefixOperator {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(test, derive(Arbitrary))]
 pub enum InfixOperator {
     Caret,
     Plus,
@@ -385,16 +390,13 @@ impl fmt::Display for InfixOperator {
 
 #[cfg(test)]
 mod tests {
-    use super::PrefixOperator;
-    use crate::{
-        expression::{EvaluationError, Expression, ExpressionFunction, InfixOperator},
-        real,
-    };
+    use super::*;
+    use crate::{instruction::MemoryReference, real};
     use num_complex::Complex64;
     use proptest::num::f64::{NEGATIVE, NORMAL, POSITIVE, ZERO};
     use proptest::prelude::*;
-    use std::collections::HashSet;
-    use std::{collections::HashMap, f64::consts::PI};
+    use std::collections::{hash_map::DefaultHasher, HashMap, HashSet};
+    use std::f64::consts::PI;
 
     #[test]
     fn evaluate() {
@@ -466,6 +468,45 @@ mod tests {
         }
     }
 
+    /// Generate an arbitrary Expression for a property test.
+    /// See https://docs.rs/proptest/1.0.0/proptest/prelude/trait.Strategy.html#method.prop_recursive
+    fn arb_expr() -> impl Strategy<Value = Expression> {
+        use Expression::*;
+        let num = NORMAL | POSITIVE | NEGATIVE | ZERO;
+        let leaf = prop_oneof![
+            any::<MemoryReference>().prop_map(Address),
+            (num, num).prop_map(|(re, im)| Number(num_complex::Complex64::new(re, im))),
+            Just(PiConstant),
+            ".*".prop_map(Variable),
+        ];
+        (leaf).prop_recursive(
+            4,  // No more than 4 branch levels deep
+            64, // Target around 64 total nodes
+            2,  // Each "collection" is up to 2 elements
+            |expr| {
+                prop_oneof![
+                    (any::<ExpressionFunction>(), expr.clone()).prop_map(|(function, e)| {
+                        FunctionCall {
+                            function,
+                            expression: Box::new(e),
+                        }
+                    }),
+                    (expr.clone(), any::<InfixOperator>(), expr.clone()).prop_map(
+                        |(l, operator, r)| Infix {
+                            left: Box::new(l),
+                            operator,
+                            right: Box::new(r)
+                        }
+                    ),
+                    (any::<PrefixOperator>(), expr).prop_map(|(operator, e)| Prefix {
+                        operator,
+                        expression: Box::new(e)
+                    })
+                ]
+            },
+        )
+    }
+
     proptest! {
 
         #[test]
@@ -527,5 +568,16 @@ mod tests {
             set.insert(first);
             assert!(set.contains(&second));
         }
+
+        #[test]
+        fn eq_implies_hash_eq(x in arb_expr(), y in arb_expr()) {
+            let mut s = DefaultHasher::new();
+            x.hash(&mut s);
+            let h_x = s.finish();
+            y.hash(&mut s);
+            let h_y = s.finish();
+            prop_assert_eq!(x == y, h_x == h_y);
+        }
+
     }
 }
