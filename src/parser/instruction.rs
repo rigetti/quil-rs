@@ -82,10 +82,10 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
                 Command::RawCapture => command::parse_raw_capture(remainder, true),
                 // Command::Reset => {}
                 Command::SetFrequency => command::parse_set_frequency(remainder),
-                // Command::SetPhase => {}
+                Command::SetPhase => command::parse_set_phase(remainder),
                 Command::SetScale => command::parse_set_scale(remainder),
                 Command::ShiftFrequency => command::parse_shift_frequency(remainder),
-                // Command::ShiftPhase => {}
+                Command::ShiftPhase => command::parse_shift_phase(remainder),
                 Command::Store => command::parse_store(remainder),
                 Command::Sub => command::parse_arithmetic(ArithmeticOperator::Subtract, remainder),
                 // Command::Wait => {}
@@ -472,6 +472,33 @@ mod tests {
     );
 
     #[test]
+    fn parse_set_phase() {
+        let tokens = lex(r#"SET-PHASE 0 "rf" 1.0; SET-PHASE 0 1 "rf" theta"#);
+        let (remainder, parsed) = parse_instructions(&tokens).unwrap();
+        let expected = vec![
+            Instruction::SetPhase {
+                frame: FrameIdentifier {
+                    name: String::from("rf"),
+                    qubits: vec![Qubit::Fixed(0)],
+                },
+                phase: Expression::Number(real!(1.0)),
+            },
+            Instruction::SetPhase {
+                frame: FrameIdentifier {
+                    name: String::from("rf"),
+                    qubits: vec![Qubit::Fixed(0), Qubit::Fixed(1)],
+                },
+                phase: Expression::Address(MemoryReference {
+                    name: String::from("theta"),
+                    index: 0,
+                }),
+            },
+        ];
+        assert_eq!(remainder.len(), 0);
+        assert_eq!(parsed, expected);
+    }
+
+    #[test]
     fn parse_set_scale() {
         let tokens = lex(r#"SET-SCALE 0 "rf" 1.0; SET-SCALE 0 1 "rf" theta"#);
         let (remainder, parsed) = parse_instructions(&tokens).unwrap();
@@ -547,6 +574,33 @@ mod tests {
                     index: 0,
                 }),
             }),
+        ];
+        assert_eq!(remainder.len(), 0);
+        assert_eq!(parsed, expected);
+    }
+
+    #[test]
+    fn parse_shift_phase() {
+        let tokens = lex(r#"SHIFT-PHASE 0 "rf" 1.0; SHIFT-PHASE 0 1 "rf" theta"#);
+        let (remainder, parsed) = parse_instructions(&tokens).unwrap();
+        let expected = vec![
+            Instruction::ShiftPhase {
+                frame: FrameIdentifier {
+                    name: String::from("rf"),
+                    qubits: vec![Qubit::Fixed(0)],
+                },
+                phase: Expression::Number(real!(1.0)),
+            },
+            Instruction::ShiftPhase {
+                frame: FrameIdentifier {
+                    name: String::from("rf"),
+                    qubits: vec![Qubit::Fixed(0), Qubit::Fixed(1)],
+                },
+                phase: Expression::Address(MemoryReference {
+                    name: String::from("theta"),
+                    index: 0,
+                }),
+            },
         ];
         assert_eq!(remainder.len(), 0);
         assert_eq!(parsed, expected);

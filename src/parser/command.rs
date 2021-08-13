@@ -371,6 +371,14 @@ pub fn parse_set_frequency(input: ParserInput) -> ParserResult<Instruction> {
     ))
 }
 
+/// Parse the contents of a `SET-PHASE` instruction.
+pub fn parse_set_phase(input: ParserInput) -> ParserResult<Instruction> {
+    let (input, frame) = parse_frame_identifier(input)?;
+    let (input, phase) = parse_expression(input)?;
+
+    Ok((input, Instruction::SetPhase { frame, phase }))
+}
+
 /// Parse the contents of a `SET-SCALE` instruction.
 pub fn parse_set_scale(input: ParserInput) -> ParserResult<Instruction> {
     let (input, frame) = parse_frame_identifier(input)?;
@@ -388,6 +396,14 @@ pub fn parse_shift_frequency(input: ParserInput) -> ParserResult<Instruction> {
         input,
         Instruction::ShiftFrequency(ShiftFrequency { frame, frequency }),
     ))
+}
+
+/// Parse the contents of a `SHIFT-PHASE` instruction.
+pub fn parse_shift_phase(input: ParserInput) -> ParserResult<Instruction> {
+    let (input, frame) = parse_frame_identifier(input)?;
+    let (input, phase) = parse_expression(input)?;
+
+    Ok((input, Instruction::ShiftPhase { frame, phase }))
 }
 
 /// Parse the contents of a `MEASURE` instruction.
