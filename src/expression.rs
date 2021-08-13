@@ -276,6 +276,25 @@ impl Expression {
     }
 }
 
+impl<'a> FromStr for Expression {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let tokens = lex(s);
+        let (extra, expression) =
+            parse_expression(&tokens).map_err(|_| String::from("Failed to parse expression"))?;
+        if extra.is_empty() {
+            Ok(expression)
+        } else {
+            Err(format!(
+                "Parsed valid expression {} but found {} extra tokens",
+                expression,
+                extra.len(),
+            ))
+        }
+    }
+}
+
 /// Format a num_complex::Complex64 value in a way that omits the real or imaginary part when
 /// reasonable. That is:
 ///
