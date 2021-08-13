@@ -18,7 +18,8 @@ use std::{collections::HashMap, fmt};
 
 use crate::expression::Expression;
 
-#[cfg(test)] use proptest_derive::Arbitrary;
+#[cfg(test)]
+use proptest_derive::Arbitrary;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum ArithmeticOperand {
