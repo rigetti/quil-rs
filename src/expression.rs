@@ -472,7 +472,8 @@ mod tests {
         use Expression::*;
         let leaf = prop_oneof![
             any::<MemoryReference>().prop_map(Address),
-            (any::<f64>(), any::<f64>()).prop_map(|(re, im)| Number(num_complex::Complex64::new(re, im))),
+            (any::<f64>(), any::<f64>())
+                .prop_map(|(re, im)| Number(num_complex::Complex64::new(re, im))),
             Just(PiConstant),
             ".*".prop_map(Variable),
         ];
