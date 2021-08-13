@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  **/
-use crate::{imag, instruction::MemoryReference, real};
 use std::collections::{hash_map::DefaultHasher, HashMap};
 use std::f64::consts::PI;
 use std::fmt;
@@ -21,6 +20,10 @@ use std::hash::{Hash, Hasher};
 
 #[cfg(test)]
 use proptest_derive::Arbitrary;
+use std::str::FromStr;
+
+use crate::parser::{lex, parse_expression};
+use crate::{imag, instruction::MemoryReference, real};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum EvaluationError {
@@ -175,14 +178,18 @@ impl Expression {
     /// Consume the expression, simplifying it as much as possible using the values provided in the environment.
     /// If variables are used in the expression which are not present in the environment, evaluation stops there,
     /// returning the possibly-simplified expression.
-    pub fn evaluate(self, environment: &EvaluationEnvironment) -> Self {
+    pub fn evaluate(
+        self,
+        environment: &EvaluationEnvironment,
+        patch_values: Option<&HashMap<&str, Vec<f64>>>,
+    ) -> Self {
         use Expression::*;
         match self {
             FunctionCall {
                 function,
                 expression,
             } => {
-                let evaluated = (*expression).evaluate(environment);
+                let evaluated = (*expression).evaluate(environment, patch_values);
                 match &evaluated {
                     Number(value) => Number(calculate_function(&function, value)),
                     PiConstant => Number(calculate_function(&function, &real!(PI))),
@@ -197,8 +204,8 @@ impl Expression {
                 operator,
                 right,
             } => {
-                let left_evaluated = (*left).evaluate(environment);
-                let right_evaluated = (*right).evaluate(environment);
+                let left_evaluated = (*left).evaluate(environment, patch_values);
+                let right_evaluated = (*right).evaluate(environment, patch_values);
 
                 match (&left_evaluated, &right_evaluated) {
                     (Number(value_left), Number(value_right)) => {
@@ -237,7 +244,17 @@ impl Expression {
                 Some(value) => Number(*value),
                 None => Variable(identifier),
             },
-            _ => self,
+            Address(memory_reference) => {
+                let number = patch_values.and_then(|patch_values| {
+                    let values = patch_values.get(memory_reference.name.as_str())?;
+                    let value = values.get(memory_reference.index as usize)?;
+                    Some(real!(*value))
+                });
+
+                number.map_or(Address(memory_reference), Number)
+            }
+            PiConstant => PiConstant,
+            Number(number) => Number(number),
         }
     }
 
@@ -246,10 +263,11 @@ impl Expression {
     pub fn evaluate_to_complex(
         self,
         environment: &EvaluationEnvironment,
+        patch_values: Option<&HashMap<&str, Vec<f64>>>,
     ) -> Result<num_complex::Complex64, EvaluationError> {
         use Expression::*;
 
-        let result = self.evaluate(environment);
+        let result = self.evaluate(environment, patch_values);
         match result {
             Number(value) => Ok(value),
             PiConstant => Ok(real!(PI)),
@@ -389,6 +407,16 @@ impl fmt::Display for InfixOperator {
 
 #[cfg(test)]
 mod tests {
+    use std::{collections::HashMap, f64::consts::PI};
+
+    use num_complex::Complex64;
+
+    use crate::{
+        expression::{EvaluationError, Expression, ExpressionFunction},
+        real,
+    };
+
+    use super::*;
     use super::*;
     use crate::{instruction::MemoryReference, real};
     use num_complex::Complex64;
@@ -400,16 +428,21 @@ mod tests {
     fn evaluate() {
         use Expression::*;
 
-        let one = Complex64::new(1f64, 0f64);
+        let one = real!(1.0);
         let empty_environment = HashMap::new();
 
         let mut environment = HashMap::new();
         environment.insert("foo".to_owned(), real!(10f64));
         environment.insert("bar".to_owned(), real!(100f64));
 
+        let mut patch_values = HashMap::new();
+        patch_values.insert("theta", vec![1.0, 2.0]);
+        patch_values.insert("beta", vec![3.0, 4.0]);
+
         struct TestCase<'a> {
             expression: Expression,
             environment: &'a HashMap<String, Complex64>,
+            patch_values: Option<&'a HashMap<&'a str, Vec<f64>>>,
             evaluated_expression: Expression,
             evaluated_complex: Result<Complex64, EvaluationError>,
         }
@@ -418,6 +451,7 @@ mod tests {
             TestCase {
                 expression: Number(one),
                 environment: &empty_environment,
+                patch_values: None,
                 evaluated_expression: Number(one),
                 evaluated_complex: Ok(one),
             },
@@ -427,22 +461,21 @@ mod tests {
                     expression: Box::new(Number(real!(1f64))),
                 },
                 environment: &empty_environment,
+                patch_values: None,
                 evaluated_expression: Number(real!(-1f64)),
                 evaluated_complex: Ok(real!(-1f64)),
             },
             TestCase {
                 expression: Expression::Variable("foo".to_owned()),
                 environment: &environment,
+                patch_values: None,
                 evaluated_expression: Number(real!(10f64)),
                 evaluated_complex: Ok(real!(10f64)),
             },
             TestCase {
-                expression: Expression::Infix {
-                    left: Box::new(Expression::Variable("foo".to_owned())),
-                    operator: InfixOperator::Plus,
-                    right: Box::new(Expression::Variable("bar".to_owned())),
-                },
+                expression: Expression::from_str("%foo + %bar").unwrap(),
                 environment: &environment,
+                patch_values: None,
                 evaluated_expression: Number(real!(110f64)),
                 evaluated_complex: Ok(real!(110f64)),
             },
@@ -452,16 +485,27 @@ mod tests {
                     expression: Box::new(Expression::Number(real!(PI / 2f64))),
                 },
                 environment: &environment,
+                patch_values: None,
                 evaluated_expression: Number(real!(1f64)),
                 evaluated_complex: Ok(real!(1f64)),
+            },
+            TestCase {
+                expression: Expression::from_str("theta[1] * beta[0]").unwrap(),
+                environment: &empty_environment,
+                patch_values: Some(&patch_values),
+                evaluated_expression: Expression::from_str("6.0").unwrap(),
+                evaluated_complex: Ok(real!(6.0)),
             },
         ];
 
         for case in cases {
-            let evaluated = case.expression.evaluate(&case.environment);
+            let evaluated = case
+                .expression
+                .evaluate(case.environment, case.patch_values);
             assert_eq!(evaluated, case.evaluated_expression);
 
-            let evaluated_complex = evaluated.evaluate_to_complex(&case.environment);
+            let evaluated_complex =
+                evaluated.evaluate_to_complex(case.environment, case.patch_values);
             assert_eq!(evaluated_complex, case.evaluated_complex)
         }
     }
