@@ -164,10 +164,10 @@ impl CalibrationSet {
                     .all(|(calibration_index, _)| {
                         let calibration_parameters = calibration.parameters[calibration_index]
                             .clone()
-                            .evaluate(&HashMap::new());
+                            .evaluate(&HashMap::new(), None);
                         let gate_parameters = gate_parameters[calibration_index]
                             .clone()
-                            .evaluate(&HashMap::new());
+                            .evaluate(&HashMap::new(), None);
                         match (calibration_parameters, gate_parameters) {
                             // If the calibration is variable, it matches any fixed qubit
                             (Expression::Variable(_), _) => true,

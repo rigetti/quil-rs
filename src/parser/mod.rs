@@ -13,6 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  **/
+use nom::IResult;
+
+use error::Error;
+pub(crate) use expression::parse_expression;
+pub(crate) use instruction::parse_instructions;
+pub(crate) use lexer::lex;
+use lexer::Token;
+
 mod command;
 mod gate;
 mod macros;
@@ -22,14 +30,6 @@ mod error;
 mod expression;
 mod instruction;
 mod lexer;
-
-pub(crate) use instruction::parse_instructions;
-pub(crate) use lexer::lex;
-
-use nom::IResult;
-
-use error::Error;
-use lexer::Token;
 
 type ParserInput<'a> = &'a [Token];
 type ParserResult<'a, R> = IResult<&'a [Token], R, Error<&'a [Token]>>;
