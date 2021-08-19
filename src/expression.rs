@@ -17,10 +17,10 @@ use std::collections::{hash_map::DefaultHasher, HashMap};
 use std::f64::consts::PI;
 use std::fmt;
 use std::hash::{Hash, Hasher};
+use std::str::FromStr;
 
 #[cfg(test)]
 use proptest_derive::Arbitrary;
-use std::str::FromStr;
 
 use crate::parser::{lex, parse_expression};
 use crate::{imag, instruction::MemoryReference, real};
@@ -173,7 +173,19 @@ fn calculate_function(
 }
 
 impl Expression {
-    /// Consume the expression, simplifying it as much as possible using the values provided in the environment.
+    /// Consume the expression, simplifying it as much as possible.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use quil::expression::Expression;
+    /// use std::str::FromStr;
+    /// use num_complex::Complex64;
+    ///
+    /// let expression = Expression::from_str("cos(2 * pi) + 2").unwrap().simplify();
+    ///
+    /// assert_eq!(expression, Expression::Number(Complex64::from(3.0)));
+    /// ```
     pub fn simplify(self) -> Self {
         use Expression::*;
 
@@ -181,10 +193,17 @@ impl Expression {
             FunctionCall {
                 function,
                 expression,
-            } => FunctionCall {
-                function,
-                expression: Box::new(expression.simplify()),
-            },
+            } => {
+                let simplified = expression.simplify();
+                if let Number(number) = simplified {
+                    Number(calculate_function(&function, &number))
+                } else {
+                    FunctionCall {
+                        function,
+                        expression: Box::new(simplified),
+                    }
+                }
+            }
             Infix {
                 left,
                 operator,
@@ -221,6 +240,27 @@ impl Expression {
 
     /// Evaluate an expression, expecting that it may be fully reduced to a single complex number.
     /// If it cannot be reduced to a complex number, return an error.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use quil::expression::Expression;
+    /// use std::str::FromStr;
+    /// use std::collections::HashMap;
+    /// use num_complex::Complex64;
+    ///
+    /// let expression = Expression::from_str("%beta + theta[0]").unwrap();
+    ///
+    /// let mut variables = HashMap::with_capacity(1);
+    /// variables.insert(String::from("beta"), Complex64::from(1.0));
+    ///
+    /// let mut memory_references = HashMap::with_capacity(1);
+    /// memory_references.insert("theta", vec![2.0]);
+    ///
+    /// let evaluated = expression.evaluate(&variables, &memory_references).unwrap();
+    ///
+    /// assert_eq!(evaluated, Complex64::from(3.0))
+    /// ```
     pub fn evaluate(
         &self,
         variables: &HashMap<String, num_complex::Complex64>,
@@ -424,9 +464,10 @@ impl fmt::Display for InfixOperator {
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::HashMap, f64::consts::PI};
+    use std::collections::HashSet;
 
     use num_complex::Complex64;
+    use proptest::prelude::*;
 
     use crate::{
         expression::{EvaluationError, Expression, ExpressionFunction},
@@ -434,12 +475,6 @@ mod tests {
     };
 
     use super::*;
-    use super::*;
-    use crate::{instruction::MemoryReference, real};
-    use num_complex::Complex64;
-    use proptest::prelude::*;
-    use std::collections::{hash_map::DefaultHasher, HashMap, HashSet};
-    use std::f64::consts::PI;
 
     #[test]
     fn simplify_and_evaluate() {
