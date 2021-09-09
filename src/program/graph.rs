@@ -18,19 +18,15 @@
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 
+use indexmap::IndexMap;
 use petgraph::graphmap::GraphMap;
 use petgraph::Directed;
 
 use crate::instruction::{
-    Arithmetic, Capture, CircuitDefinition, Declaration, Delay, Exchange, Fence, FrameDefinition,
-    FrameIdentifier, Gate, GateDefinition, Instruction, Jump, JumpUnless, JumpWhen, Label, Load,
-    MeasureCalibrationDefinition, Measurement, MemoryReference, Move, Pragma, Pulse, RawCapture,
-    Reset, SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, SwapPhases,
-    WaveformDefinition,
+    FrameIdentifier, Instruction, Jump, JumpUnless, JumpWhen, Label, MeasureCalibrationDefinition,
+    MemoryReference,
 };
 use crate::{instruction::InstructionRole, program::Program};
-
-use indexmap::IndexMap;
 
 pub use super::memory::MemoryAccessType;
 
@@ -509,48 +505,44 @@ impl ScheduledProgram {
 
         for instruction in instructions {
             match instruction {
-                Instruction::Arithmetic(Arithmetic { .. })
-                | Instruction::Capture(Capture { .. })
-                | Instruction::Delay(Delay { .. })
-                | Instruction::Fence(Fence { .. })
-                | Instruction::Move(Move { .. })
-                | Instruction::Exchange(Exchange { .. })
-                | Instruction::Load(Load { .. })
-                | Instruction::Store { .. }
-                | Instruction::Pulse(Pulse { .. })
-                | Instruction::SetFrequency(SetFrequency { .. })
-                | Instruction::SetPhase(SetPhase { .. })
-                | Instruction::SetScale(SetScale { .. })
-                | Instruction::ShiftFrequency(ShiftFrequency { .. })
-                | Instruction::ShiftPhase(ShiftPhase { .. })
-                | Instruction::SwapPhases(SwapPhases { .. })
-                | Instruction::RawCapture(RawCapture { .. })
-                | Instruction::Reset(Reset { .. }) => {
+                Instruction::Arithmetic(_)
+                | Instruction::Capture(_)
+                | Instruction::Delay(_)
+                | Instruction::Fence(_)
+                | Instruction::Move(_)
+                | Instruction::Exchange(_)
+                | Instruction::Load(_)
+                | Instruction::Store(_)
+                | Instruction::Pulse(_)
+                | Instruction::SetFrequency(_)
+                | Instruction::SetPhase(_)
+                | Instruction::SetScale(_)
+                | Instruction::ShiftFrequency(_)
+                | Instruction::ShiftPhase(_)
+                | Instruction::SwapPhases(_)
+                | Instruction::RawCapture(_)
+                | Instruction::Reset(_) => {
                     working_instructions.push(instruction);
                     Ok(())
                 }
-                Instruction::Gate(Gate { .. }) | Instruction::Measurement(Measurement { .. }) => {
-                    Err(ScheduleError {
-                        instruction: instruction.clone(),
-                        variant: ScheduleErrorVariant::UncalibratedInstruction,
-                    })
-                }
-                Instruction::CalibrationDefinition { .. }
-                | Instruction::CircuitDefinition(CircuitDefinition { .. })
-                | Instruction::Declaration(Declaration { .. })
-                | Instruction::GateDefinition(GateDefinition { .. })
-                | Instruction::FrameDefinition(FrameDefinition { .. })
+                Instruction::Gate(_) | Instruction::Measurement(_) => Err(ScheduleError {
+                    instruction: instruction.clone(),
+                    variant: ScheduleErrorVariant::UncalibratedInstruction,
+                }),
+                Instruction::CalibrationDefinition(_)
+                | Instruction::CircuitDefinition(_)
+                | Instruction::Declaration(_)
+                | Instruction::GateDefinition(_)
+                | Instruction::FrameDefinition(_)
                 | Instruction::MeasureCalibrationDefinition(MeasureCalibrationDefinition {
                     ..
                 })
-                | Instruction::WaveformDefinition(WaveformDefinition { .. }) => {
-                    Err(ScheduleError {
-                        instruction: instruction.clone(),
-                        variant: ScheduleErrorVariant::UnschedulableInstruction,
-                    })
-                }
+                | Instruction::WaveformDefinition(_) => Err(ScheduleError {
+                    instruction: instruction.clone(),
+                    variant: ScheduleErrorVariant::UnschedulableInstruction,
+                }),
 
-                Instruction::Pragma(Pragma { .. }) => {
+                Instruction::Pragma(_) => {
                     // TODO: Handle pragmas. Here, we just silently discard them, but certain
                     // pragmas must be supported.
                     Ok(())
@@ -607,7 +599,7 @@ impl ScheduledProgram {
                         program
                     )
                 }
-                Instruction::Halt(_) => {
+                Instruction::Halt => {
                     terminate_working_block!(
                         Some(BlockTerminator::Halt),
                         working_instructions,
@@ -722,9 +714,11 @@ impl ScheduledProgram {
 #[cfg(test)]
 mod tests {
     mod graph {
-        use super::super::ScheduledProgram;
-        use crate::program::Program;
         use std::str::FromStr;
+
+        use crate::program::Program;
+
+        use super::super::ScheduledProgram;
 
         /// Build a test case which compiles the input program, builds the dot-format string from the program,
         /// and then compares that to a "correct" snapshot of that dot format. This makes diffs easy to compare and

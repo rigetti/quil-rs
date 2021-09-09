@@ -365,9 +365,6 @@ pub struct Arithmetic {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct Halt;
-
-#[derive(Clone, Debug, PartialEq)]
 pub struct Label(pub String);
 
 #[derive(Clone, Debug, PartialEq)]
@@ -438,7 +435,7 @@ pub enum Instruction {
     SwapPhases(SwapPhases),
     WaveformDefinition(WaveformDefinition),
     Arithmetic(Arithmetic),
-    Halt(Halt),
+    Halt,
     Label(Label),
     Move(Move),
     Exchange(Exchange),
@@ -461,39 +458,37 @@ impl From<&Instruction> for InstructionRole {
     fn from(instruction: &Instruction) -> Self {
         match instruction {
             Instruction::CalibrationDefinition(_)
-            | Instruction::CircuitDefinition(CircuitDefinition { .. })
-            | Instruction::Declaration(Declaration { .. })
-            | Instruction::FrameDefinition(FrameDefinition { .. })
-            | Instruction::Gate(Gate { .. })
-            | Instruction::GateDefinition(GateDefinition { .. })
-            | Instruction::Label(Label(_))
-            | Instruction::MeasureCalibrationDefinition(MeasureCalibrationDefinition { .. })
-            | Instruction::Measurement(Measurement { .. })
-            | Instruction::Pragma(Pragma { .. })
-            | Instruction::WaveformDefinition(WaveformDefinition { .. }) => {
-                InstructionRole::ProgramComposition
-            }
-            Instruction::Reset(Reset { .. })
-            | Instruction::Capture(Capture { .. })
-            | Instruction::Delay(Delay { .. })
-            | Instruction::Fence(Fence { .. })
-            | Instruction::Pulse(Pulse { .. })
-            | Instruction::RawCapture(RawCapture { .. })
-            | Instruction::SetFrequency(SetFrequency { .. })
-            | Instruction::SetPhase(SetPhase { .. })
-            | Instruction::SetScale(SetScale { .. })
-            | Instruction::ShiftFrequency(ShiftFrequency { .. })
-            | Instruction::ShiftPhase(ShiftPhase { .. })
-            | Instruction::SwapPhases(SwapPhases { .. }) => InstructionRole::RFControl,
-            Instruction::Arithmetic(Arithmetic { .. })
-            | Instruction::Move(Move { .. })
-            | Instruction::Exchange(Exchange { .. })
-            | Instruction::Load(Load { .. })
-            | Instruction::Store { .. } => InstructionRole::ClassicalCompute,
-            Instruction::Halt(_)
-            | Instruction::Jump(Jump { .. })
-            | Instruction::JumpWhen(JumpWhen { .. })
-            | Instruction::JumpUnless(JumpUnless { .. }) => InstructionRole::ControlFlow,
+            | Instruction::CircuitDefinition(_)
+            | Instruction::Declaration(_)
+            | Instruction::FrameDefinition(_)
+            | Instruction::Gate(_)
+            | Instruction::GateDefinition(_)
+            | Instruction::Label(_)
+            | Instruction::MeasureCalibrationDefinition(_)
+            | Instruction::Measurement(_)
+            | Instruction::Pragma(_)
+            | Instruction::WaveformDefinition(_) => InstructionRole::ProgramComposition,
+            Instruction::Reset(_)
+            | Instruction::Capture(_)
+            | Instruction::Delay(_)
+            | Instruction::Fence(_)
+            | Instruction::Pulse(_)
+            | Instruction::RawCapture(_)
+            | Instruction::SetFrequency(_)
+            | Instruction::SetPhase(_)
+            | Instruction::SetScale(_)
+            | Instruction::ShiftFrequency(_)
+            | Instruction::ShiftPhase(_)
+            | Instruction::SwapPhases(_) => InstructionRole::RFControl,
+            Instruction::Arithmetic(_)
+            | Instruction::Move(_)
+            | Instruction::Exchange(_)
+            | Instruction::Load(_)
+            | Instruction::Store(_) => InstructionRole::ClassicalCompute,
+            Instruction::Halt
+            | Instruction::Jump(_)
+            | Instruction::JumpWhen(_)
+            | Instruction::JumpUnless(_) => InstructionRole::ControlFlow,
         }
     }
 }
@@ -798,7 +793,7 @@ impl fmt::Display for Instruction {
                     .collect::<Vec<_>>()
                     .join(", ")
             ),
-            Instruction::Halt(Halt { .. }) => write!(f, "HALT"),
+            Instruction::Halt => write!(f, "HALT"),
             Instruction::Jump(Jump { target }) => write!(f, "JUMP @{}", target),
             Instruction::JumpUnless(JumpUnless { condition, target }) => {
                 write!(f, "JUMP-UNLESS @{} {}", target, condition)

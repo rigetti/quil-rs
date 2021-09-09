@@ -17,10 +17,8 @@ use std::collections::HashMap;
 use std::str::FromStr;
 
 use crate::instruction::{
-    Arithmetic, Capture, CircuitDefinition, Declaration, Delay, Exchange, Fence, FrameDefinition,
-    FrameIdentifier, Gate, GateDefinition, Halt, Instruction, Jump, JumpUnless, JumpWhen, Label,
-    Load, MeasureCalibrationDefinition, Measurement, Move, Pragma, Pulse, RawCapture, Reset,
-    SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, Store, SwapPhases, Waveform,
+    Capture, Declaration, Delay, Fence, FrameDefinition, FrameIdentifier, Instruction, Pulse,
+    RawCapture, SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, SwapPhases, Waveform,
     WaveformDefinition,
 };
 use crate::parser::{lex, parse_instructions};
@@ -163,27 +161,27 @@ impl Program {
             Instruction::SwapPhases(SwapPhases { frame_1, frame_2 }) => {
                 Some(vec![frame_1, frame_2])
             }
-            Instruction::Gate(Gate { .. })
-            | Instruction::CircuitDefinition(CircuitDefinition { .. })
-            | Instruction::GateDefinition(GateDefinition { .. })
-            | Instruction::Declaration(Declaration { .. })
-            | Instruction::Measurement(Measurement { .. })
-            | Instruction::Reset(Reset { .. })
+            Instruction::Gate(_)
+            | Instruction::CircuitDefinition(_)
+            | Instruction::GateDefinition(_)
+            | Instruction::Declaration(_)
+            | Instruction::Measurement(_)
+            | Instruction::Reset(_)
             | Instruction::CalibrationDefinition(_)
-            | Instruction::FrameDefinition(FrameDefinition { .. })
-            | Instruction::MeasureCalibrationDefinition(MeasureCalibrationDefinition { .. })
-            | Instruction::Pragma(Pragma { .. })
-            | Instruction::WaveformDefinition(WaveformDefinition { .. })
-            | Instruction::Arithmetic(Arithmetic { .. })
-            | Instruction::Halt(Halt { .. })
-            | Instruction::Label(Label(_))
-            | Instruction::Move(Move { .. })
-            | Instruction::Exchange(Exchange { .. })
-            | Instruction::Load(Load { .. })
-            | Instruction::Store(Store { .. })
-            | Instruction::Jump(Jump { .. })
-            | Instruction::JumpWhen(JumpWhen { .. })
-            | Instruction::JumpUnless(JumpUnless { .. }) => None,
+            | Instruction::FrameDefinition(_)
+            | Instruction::MeasureCalibrationDefinition(_)
+            | Instruction::Pragma(_)
+            | Instruction::WaveformDefinition(_)
+            | Instruction::Arithmetic(_)
+            | Instruction::Halt
+            | Instruction::Label(_)
+            | Instruction::Move(_)
+            | Instruction::Exchange(_)
+            | Instruction::Load(_)
+            | Instruction::Store(_)
+            | Instruction::Jump(_)
+            | Instruction::JumpWhen(_)
+            | Instruction::JumpUnless(_) => None,
         }
     }
 

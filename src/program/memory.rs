@@ -17,11 +17,10 @@ use std::collections::HashSet;
 
 use crate::expression::Expression;
 use crate::instruction::{
-    Arithmetic, ArithmeticOperand, Capture, CircuitDefinition, Declaration, Delay, Exchange, Fence,
-    FrameDefinition, Gate, GateDefinition, Instruction, Jump, JumpUnless, JumpWhen, Label, Load,
-    MeasureCalibrationDefinition, Measurement, MemoryReference, Move, Pragma, Pulse, RawCapture,
-    Reset, SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, Store, SwapPhases, Vector,
-    WaveformDefinition, WaveformInvocation,
+    Arithmetic, ArithmeticOperand, Capture, CircuitDefinition, Delay, Exchange, Gate,
+    GateDefinition, Instruction, Jump, JumpUnless, JumpWhen, Label, Load,
+    MeasureCalibrationDefinition, Measurement, MemoryReference, Move, Pulse, RawCapture, SetPhase,
+    SetScale, ShiftPhase, Store, Vector, WaveformInvocation,
 };
 
 #[derive(Clone, Debug, Hash, PartialEq)]
@@ -136,7 +135,7 @@ impl Instruction {
                     captures: merge_sets!(acc.captures, el_accesses.captures),
                 }
             }),
-            Instruction::Declaration(Declaration { .. }) => Default::default(),
+            Instruction::Declaration(_) => Default::default(),
             Instruction::Delay(Delay { duration, .. }) => MemoryAccesses {
                 reads: set_from_memory_references!(duration.get_memory_references()),
                 ..Default::default()
@@ -148,8 +147,8 @@ impl Instruction {
                 ],
                 ..Default::default()
             },
-            Instruction::Fence(Fence { .. }) => Default::default(),
-            Instruction::FrameDefinition(FrameDefinition { .. }) => Default::default(),
+            Instruction::Fence(_) => Default::default(),
+            Instruction::FrameDefinition(_) => Default::default(),
             Instruction::Gate(Gate { parameters, .. }) => MemoryAccesses {
                 reads: set_from_memory_references!(parameters
                     .iter()
@@ -167,7 +166,7 @@ impl Instruction {
                     ..Default::default()
                 }
             }
-            Instruction::Halt(_) => Default::default(),
+            Instruction::Halt => Default::default(),
             Instruction::Jump(Jump { target: _ }) => Default::default(),
             Instruction::JumpWhen(JumpWhen {
                 target: _,
@@ -194,7 +193,7 @@ impl Instruction {
                 captures: set_from_optional_memory_reference!(target.as_ref()),
                 ..Default::default()
             },
-            Instruction::Pragma(Pragma { .. }) => Default::default(),
+            Instruction::Pragma(_) => Default::default(),
             Instruction::Pulse(Pulse { waveform, .. }) => MemoryAccesses {
                 reads: set_from_memory_references![waveform.get_memory_references()],
                 ..Default::default()
@@ -208,15 +207,15 @@ impl Instruction {
                 captures: set_from_memory_references![vec![memory_reference]],
                 ..Default::default()
             },
-            Instruction::Reset(Reset { .. }) => Default::default(),
-            Instruction::SetFrequency(SetFrequency { .. }) => Default::default(),
+            Instruction::Reset(_) => Default::default(),
+            Instruction::SetFrequency(_) => Default::default(),
             Instruction::SetPhase(SetPhase { phase: expr, .. })
             | Instruction::SetScale(SetScale { scale: expr, .. })
             | Instruction::ShiftPhase(ShiftPhase { phase: expr, .. }) => MemoryAccesses {
                 reads: set_from_memory_references!(expr.get_memory_references()),
                 ..Default::default()
             },
-            Instruction::ShiftFrequency(ShiftFrequency { .. }) => Default::default(),
+            Instruction::ShiftFrequency(_) => Default::default(),
             Instruction::Store(Store {
                 destination,
                 offset,
@@ -229,8 +228,8 @@ impl Instruction {
                 writes: set_from_reference_vec![vec![destination]],
                 ..Default::default()
             },
-            Instruction::SwapPhases(SwapPhases { .. }) => Default::default(),
-            Instruction::WaveformDefinition(WaveformDefinition { .. }) => Default::default(),
+            Instruction::SwapPhases(_) => Default::default(),
+            Instruction::WaveformDefinition(_) => Default::default(),
         }
     }
 }

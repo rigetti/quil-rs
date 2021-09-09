@@ -19,7 +19,6 @@ use nom::{
     sequence::{delimited, preceded},
 };
 
-use crate::instruction::Halt;
 use crate::{
     instruction::{ArithmeticOperator, Instruction},
     token,
@@ -60,7 +59,7 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
                 Command::Fence => command::parse_fence(remainder),
                 // Command::GE => {}
                 // Command::GT => {}
-                Command::Halt => Ok((remainder, Instruction::Halt(Halt {}))),
+                Command::Halt => Ok((remainder, Instruction::Halt)),
                 // Command::Include => {}
                 // Command::Ior => {}
                 Command::Jump => command::parse_jump(remainder),
