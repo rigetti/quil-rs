@@ -19,6 +19,7 @@ use nom::{
     sequence::{delimited, preceded},
 };
 
+use crate::instruction::Halt;
 use crate::{
     instruction::{ArithmeticOperator, Instruction},
     token,
@@ -31,7 +32,6 @@ use super::{
     lexer::{Command, Token},
     ParserInput, ParserResult,
 };
-use crate::instruction::Halt;
 
 /// Parse the next instructon from the input, skipping past leading newlines, comments, and semicolons.
 pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
@@ -149,19 +149,19 @@ pub fn parse_block_instruction<'a>(input: ParserInput<'a>) -> ParserResult<'a, I
 mod tests {
     use std::collections::HashMap;
 
+    use crate::instruction::{Label, SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase};
+    use crate::parser::lexer::lex;
     use crate::{
         expression::Expression,
         instruction::{
-            Arithmetic, ArithmeticOperand, ArithmeticOperator, AttributeValue,
-            CalibrationDefinition, Capture, FrameDefinition, FrameIdentifier, Gate, Instruction,
-            Jump, JumpWhen, MemoryReference, Move, Pulse, Qubit, RawCapture, WaveformInvocation,
+            Arithmetic, ArithmeticOperand, ArithmeticOperator, AttributeValue, Calibration,
+            Capture, FrameDefinition, FrameIdentifier, Gate, Instruction, Jump, JumpWhen,
+            MemoryReference, Move, Pulse, Qubit, RawCapture, WaveformInvocation,
         },
         make_test, real,
     };
-    use crate::{instruction::Calibration, parser::lexer::lex};
 
     use super::parse_instructions;
-    use crate::instruction::{Label, SetFrequency, SetScale, ShiftFrequency};
 
     make_test!(
         semicolons_are_newlines,
@@ -353,28 +353,26 @@ mod tests {
         parametric_calibration,
         parse_instructions,
         "DEFCAL RX(%theta) %qubit:\n\tPULSE 1 \"xy\" custom_waveform(a: 1)",
-        vec![Instruction::CalibrationDefinition(CalibrationDefinition(
-            Calibration {
-                name: "RX".to_owned(),
-                parameters: vec![Expression::Variable("theta".to_owned())],
-                qubits: vec![Qubit::Variable("qubit".to_owned())],
-                modifiers: vec![],
-                instructions: vec![Instruction::Pulse(Pulse {
-                    blocking: true,
-                    frame: FrameIdentifier {
-                        name: "xy".to_owned(),
-                        qubits: vec![Qubit::Fixed(1)]
-                    },
-                    waveform: WaveformInvocation {
-                        name: "custom_waveform".to_owned(),
-                        parameters: [("a".to_owned(), Expression::Number(crate::real![1f64]))]
-                            .iter()
-                            .cloned()
-                            .collect()
-                    }
-                })]
-            }
-        ))]
+        vec![Instruction::CalibrationDefinition(Calibration {
+            name: "RX".to_owned(),
+            parameters: vec![Expression::Variable("theta".to_owned())],
+            qubits: vec![Qubit::Variable("qubit".to_owned())],
+            modifiers: vec![],
+            instructions: vec![Instruction::Pulse(Pulse {
+                blocking: true,
+                frame: FrameIdentifier {
+                    name: "xy".to_owned(),
+                    qubits: vec![Qubit::Fixed(1)]
+                },
+                waveform: WaveformInvocation {
+                    name: "custom_waveform".to_owned(),
+                    parameters: [("a".to_owned(), Expression::Number(crate::real![1f64]))]
+                        .iter()
+                        .cloned()
+                        .collect()
+                }
+            })]
+        })]
     );
 
     make_test!(
@@ -476,14 +474,14 @@ mod tests {
         let tokens = lex(r#"SET-PHASE 0 "rf" 1.0; SET-PHASE 0 1 "rf" theta"#);
         let (remainder, parsed) = parse_instructions(&tokens).unwrap();
         let expected = vec![
-            Instruction::SetPhase {
+            Instruction::SetPhase(SetPhase {
                 frame: FrameIdentifier {
                     name: String::from("rf"),
                     qubits: vec![Qubit::Fixed(0)],
                 },
                 phase: Expression::Number(real!(1.0)),
-            },
-            Instruction::SetPhase {
+            }),
+            Instruction::SetPhase(SetPhase {
                 frame: FrameIdentifier {
                     name: String::from("rf"),
                     qubits: vec![Qubit::Fixed(0), Qubit::Fixed(1)],
@@ -492,7 +490,7 @@ mod tests {
                     name: String::from("theta"),
                     index: 0,
                 }),
-            },
+            }),
         ];
         assert_eq!(remainder.len(), 0);
         assert_eq!(parsed, expected);
@@ -584,14 +582,14 @@ mod tests {
         let tokens = lex(r#"SHIFT-PHASE 0 "rf" 1.0; SHIFT-PHASE 0 1 "rf" theta"#);
         let (remainder, parsed) = parse_instructions(&tokens).unwrap();
         let expected = vec![
-            Instruction::ShiftPhase {
+            Instruction::ShiftPhase(ShiftPhase {
                 frame: FrameIdentifier {
                     name: String::from("rf"),
                     qubits: vec![Qubit::Fixed(0)],
                 },
                 phase: Expression::Number(real!(1.0)),
-            },
-            Instruction::ShiftPhase {
+            }),
+            Instruction::ShiftPhase(ShiftPhase {
                 frame: FrameIdentifier {
                     name: String::from("rf"),
                     qubits: vec![Qubit::Fixed(0), Qubit::Fixed(1)],
@@ -600,7 +598,7 @@ mod tests {
                     name: String::from("theta"),
                     index: 0,
                 }),
-            },
+            }),
         ];
         assert_eq!(remainder.len(), 0);
         assert_eq!(parsed, expected);

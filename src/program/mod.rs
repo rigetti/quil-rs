@@ -16,23 +16,23 @@
 use std::collections::HashMap;
 use std::str::FromStr;
 
+use crate::instruction::{
+    Arithmetic, Capture, CircuitDefinition, Declaration, Delay, Exchange, Fence, FrameDefinition,
+    FrameIdentifier, Gate, GateDefinition, Halt, Instruction, Jump, JumpUnless, JumpWhen, Label,
+    Load, MeasureCalibrationDefinition, Measurement, Move, Pragma, Pulse, RawCapture, Reset,
+    SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, Store, SwapPhases, Waveform,
+    WaveformDefinition,
+};
 use crate::parser::{lex, parse_instructions};
+
+pub use self::calibration::CalibrationSet;
+pub use self::frame::FrameSet;
+pub use self::memory::MemoryRegion;
 
 mod calibration;
 mod frame;
 pub mod graph;
 mod memory;
-
-pub use self::calibration::CalibrationSet;
-pub use self::frame::FrameSet;
-pub use self::memory::MemoryRegion;
-use crate::instruction::{
-    Arithmetic, CalibrationDefinition, Capture, CircuitDefinition, Declaration, Delay, Exchange,
-    Fence, FrameDefinition, FrameIdentifier, Gate, GateDefinition, Halt, Instruction, Jump,
-    JumpUnless, JumpWhen, Label, Load, MeasureCalibrationDefinition, Measurement, Move, Pragma,
-    Pulse, RawCapture, Reset, SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, Store,
-    SwapPhases, Waveform, WaveformDefinition,
-};
 
 /// A Quil Program instance describes a quantum program with metadata used in execution.
 ///
@@ -62,7 +62,7 @@ impl Program {
     /// Add an instruction to the end of the program.
     pub fn add_instruction(&mut self, instruction: Instruction) {
         match instruction {
-            Instruction::CalibrationDefinition(CalibrationDefinition(calibration)) => {
+            Instruction::CalibrationDefinition(calibration) => {
                 self.calibrations.push(calibration);
             }
             Instruction::FrameDefinition(FrameDefinition {
@@ -169,7 +169,7 @@ impl Program {
             | Instruction::Declaration(Declaration { .. })
             | Instruction::Measurement(Measurement { .. })
             | Instruction::Reset(Reset { .. })
-            | Instruction::CalibrationDefinition(CalibrationDefinition(_))
+            | Instruction::CalibrationDefinition(_)
             | Instruction::FrameDefinition(FrameDefinition { .. })
             | Instruction::MeasureCalibrationDefinition(MeasureCalibrationDefinition { .. })
             | Instruction::Pragma(Pragma { .. })
@@ -242,8 +242,9 @@ impl FromStr for Program {
 
 #[cfg(test)]
 mod tests {
-    use super::Program;
     use std::str::FromStr;
+
+    use super::Program;
 
     #[test]
     fn program_eq() {

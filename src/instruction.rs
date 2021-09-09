@@ -261,9 +261,6 @@ pub struct Reset {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct CalibrationDefinition(pub Calibration);
-
-#[derive(Clone, Debug, PartialEq)]
 pub struct Capture {
     pub blocking: bool,
     pub frame: FrameIdentifier,
@@ -424,7 +421,7 @@ pub enum Instruction {
     Declaration(Declaration),
     Measurement(Measurement),
     Reset(Reset),
-    CalibrationDefinition(CalibrationDefinition),
+    CalibrationDefinition(Calibration),
     Capture(Capture),
     Delay(Delay),
     Fence(Fence),
@@ -463,7 +460,7 @@ pub enum InstructionRole {
 impl From<&Instruction> for InstructionRole {
     fn from(instruction: &Instruction) -> Self {
         match instruction {
-            Instruction::CalibrationDefinition(CalibrationDefinition(_))
+            Instruction::CalibrationDefinition(_)
             | Instruction::CircuitDefinition(CircuitDefinition { .. })
             | Instruction::Declaration(Declaration { .. })
             | Instruction::FrameDefinition(FrameDefinition { .. })
@@ -564,7 +561,7 @@ impl fmt::Display for Instruction {
                 destination,
                 source,
             }) => write!(f, "{} {} {}", operator, destination, source),
-            Instruction::CalibrationDefinition(CalibrationDefinition(calibration)) => {
+            Instruction::CalibrationDefinition(calibration) => {
                 let parameter_str = get_expression_parameter_string(&calibration.parameters);
                 write!(
                     f,

@@ -1,12 +1,3 @@
-use std::collections::HashSet;
-
-use crate::instruction::{
-    Arithmetic, CalibrationDefinition, Capture, CircuitDefinition, Declaration, Delay, Exchange,
-    Fence, FrameDefinition, Gate, GateDefinition, Jump, JumpUnless, JumpWhen, Label, Load,
-    MeasureCalibrationDefinition, Measurement, Move, Pragma, Pulse, RawCapture, Reset,
-    SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, Store, SwapPhases,
-    WaveformDefinition,
-};
 /**
  * Copyright 2021 Rigetti Computing
  *
@@ -22,9 +13,15 @@ use crate::instruction::{
  * See the License for the specific language governing permissions and
  * limitations under the License.
  **/
-use crate::{
-    expression::Expression,
-    instruction::{ArithmeticOperand, Instruction, MemoryReference, Vector, WaveformInvocation},
+use std::collections::HashSet;
+
+use crate::expression::Expression;
+use crate::instruction::{
+    Arithmetic, ArithmeticOperand, Capture, CircuitDefinition, Declaration, Delay, Exchange, Fence,
+    FrameDefinition, Gate, GateDefinition, Instruction, Jump, JumpUnless, JumpWhen, Label, Load,
+    MeasureCalibrationDefinition, Measurement, MemoryReference, Move, Pragma, Pulse, RawCapture,
+    Reset, SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, Store, SwapPhases, Vector,
+    WaveformDefinition, WaveformInvocation,
 };
 
 #[derive(Clone, Debug, Hash, PartialEq)]
@@ -107,7 +104,7 @@ impl Instruction {
                 reads: set_from_optional_memory_reference![source.get_memory_reference()],
                 ..Default::default()
             },
-            Instruction::CalibrationDefinition(CalibrationDefinition(definition)) => {
+            Instruction::CalibrationDefinition(definition) => {
                 let references: Vec<&MemoryReference> = definition
                     .parameters
                     .iter()

@@ -20,6 +20,22 @@ use nom::{
     sequence::{delimited, tuple},
 };
 
+use crate::instruction::{
+    Arithmetic, ArithmeticOperand, ArithmeticOperator, Calibration, Capture, CircuitDefinition,
+    Declaration, Delay, Exchange, Fence, FrameDefinition, Instruction, Jump, JumpUnless, JumpWhen,
+    Label, Load, Measurement, Move, Pragma, Pulse, RawCapture, SetFrequency, SetPhase, SetScale,
+    ShiftFrequency, ShiftPhase, Store, Waveform, WaveformDefinition,
+};
+use crate::parser::common::parse_variable_qubit;
+use crate::parser::instruction::parse_block;
+use crate::{
+    parser::{
+        error::{Error, ErrorKind},
+        lexer::Token,
+    },
+    token,
+};
+
 use super::{
     common::{
         self, parse_frame_attribute, parse_frame_identifier, parse_gate_modifier,
@@ -27,21 +43,6 @@ use super::{
     },
     expression::parse_expression,
     instruction, ParserInput, ParserResult,
-};
-use crate::instruction::{
-    Arithmetic, CalibrationDefinition, Capture, CircuitDefinition, Declaration, Delay, Exchange,
-    Fence, FrameDefinition, Jump, JumpUnless, JumpWhen, Label, Load, Measurement, Move, Pragma,
-    Pulse, RawCapture, SetFrequency, SetScale, ShiftFrequency, Store, WaveformDefinition,
-};
-use crate::parser::common::parse_variable_qubit;
-use crate::parser::instruction::parse_block;
-use crate::{
-    instruction::{ArithmeticOperand, ArithmeticOperator, Calibration, Instruction, Waveform},
-    parser::{
-        error::{Error, ErrorKind},
-        lexer::Token,
-    },
-    token,
 };
 
 /// Parse an arithmetic instruction of the form `destination source`.
@@ -112,13 +113,13 @@ pub fn parse_defcal<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction>
     let (input, instructions) = instruction::parse_block(input)?;
     Ok((
         input,
-        Instruction::CalibrationDefinition(CalibrationDefinition(Calibration {
+        Instruction::CalibrationDefinition(Calibration {
             instructions,
             modifiers,
             name,
             parameters,
             qubits,
-        })),
+        }),
     ))
 }
 
@@ -376,7 +377,7 @@ pub fn parse_set_phase(input: ParserInput) -> ParserResult<Instruction> {
     let (input, frame) = parse_frame_identifier(input)?;
     let (input, phase) = parse_expression(input)?;
 
-    Ok((input, Instruction::SetPhase { frame, phase }))
+    Ok((input, Instruction::SetPhase(SetPhase { frame, phase })))
 }
 
 /// Parse the contents of a `SET-SCALE` instruction.
@@ -403,7 +404,7 @@ pub fn parse_shift_phase(input: ParserInput) -> ParserResult<Instruction> {
     let (input, frame) = parse_frame_identifier(input)?;
     let (input, phase) = parse_expression(input)?;
 
-    Ok((input, Instruction::ShiftPhase { frame, phase }))
+    Ok((input, Instruction::ShiftPhase(ShiftPhase { frame, phase })))
 }
 
 /// Parse the contents of a `MEASURE` instruction.
@@ -422,6 +423,7 @@ pub fn parse_measurement(input: ParserInput) -> ParserResult<Instruction> {
 
 #[cfg(test)]
 mod tests {
+    use crate::expression::Expression;
     use crate::parser::lexer::lex;
     use crate::{
         instruction::{
@@ -432,7 +434,6 @@ mod tests {
     };
 
     use super::{parse_declare, parse_defcircuit, parse_measurement, parse_pragma};
-    use crate::expression::Expression;
 
     make_test!(
         declare_instruction_length_1,

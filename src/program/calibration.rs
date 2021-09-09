@@ -15,10 +15,9 @@
  **/
 use std::collections::HashMap;
 
-use crate::instruction::{CalibrationDefinition, Gate};
 use crate::{
     expression::Expression,
-    instruction::{Calibration, GateModifier, Instruction, Qubit},
+    instruction::{Calibration, Gate, GateModifier, Instruction, Qubit},
 };
 
 /// A collection of Quil calibrations (`DEFCAL` instructions) with utility methods.
@@ -214,15 +213,16 @@ impl CalibrationSet {
     pub fn to_instructions(&self) -> Vec<Instruction> {
         self.calibrations
             .iter()
-            .map(|c| Instruction::CalibrationDefinition(CalibrationDefinition(c.clone())))
+            .map(|c| Instruction::CalibrationDefinition(c.clone()))
             .collect()
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::program::Program;
     use std::str::FromStr;
+
+    use crate::program::Program;
 
     #[test]
     fn test_expansion() {
