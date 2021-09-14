@@ -15,7 +15,7 @@
  **/
 use std::collections::{HashMap, HashSet};
 
-use crate::instruction::{FrameAttributes, FrameIdentifier, Instruction, Qubit};
+use crate::instruction::{FrameAttributes, FrameDefinition, FrameIdentifier, Instruction, Qubit};
 
 /// A collection of Quil frames (`DEFFRAME` instructions) with utility methods.
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -78,9 +78,11 @@ impl FrameSet {
     pub fn to_instructions(&self) -> Vec<Instruction> {
         self.frames
             .iter()
-            .map(|(identifier, attributes)| Instruction::FrameDefinition {
-                identifier: identifier.clone(),
-                attributes: attributes.clone(),
+            .map(|(identifier, attributes)| {
+                Instruction::FrameDefinition(FrameDefinition {
+                    identifier: identifier.clone(),
+                    attributes: attributes.clone(),
+                })
             })
             .collect()
     }

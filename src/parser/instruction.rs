@@ -148,15 +148,17 @@ pub fn parse_block_instruction<'a>(input: ParserInput<'a>) -> ParserResult<'a, I
 mod tests {
     use std::collections::HashMap;
 
+    use crate::instruction::{Label, SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase};
+    use crate::parser::lexer::lex;
     use crate::{
         expression::Expression,
         instruction::{
-            ArithmeticOperand, ArithmeticOperator, AttributeValue, FrameIdentifier, Instruction,
-            MemoryReference, Qubit, WaveformInvocation,
+            Arithmetic, ArithmeticOperand, ArithmeticOperator, AttributeValue, Calibration,
+            Capture, FrameDefinition, FrameIdentifier, Gate, Instruction, Jump, JumpWhen,
+            MemoryReference, Move, Pulse, Qubit, RawCapture, WaveformInvocation,
         },
         make_test, real,
     };
-    use crate::{instruction::Calibration, parser::lexer::lex};
 
     use super::parse_instructions;
 
@@ -165,24 +167,24 @@ mod tests {
         parse_instructions,
         "X 0; Y 1\nZ 2",
         vec![
-            Instruction::Gate {
+            Instruction::Gate(Gate {
                 name: "X".to_owned(),
                 parameters: vec![],
                 qubits: vec![Qubit::Fixed(0)],
                 modifiers: vec![],
-            },
-            Instruction::Gate {
+            }),
+            Instruction::Gate(Gate {
                 name: "Y".to_owned(),
                 parameters: vec![],
                 qubits: vec![Qubit::Fixed(1)],
                 modifiers: vec![],
-            },
-            Instruction::Gate {
+            }),
+            Instruction::Gate(Gate {
                 name: "Z".to_owned(),
                 parameters: vec![],
                 qubits: vec![Qubit::Fixed(2)],
                 modifiers: vec![],
-            },
+            }),
         ]
     );
 
@@ -191,39 +193,39 @@ mod tests {
         parse_instructions,
         "ADD ro 2\nMUL ro 1.0\nSUB ro[1] -3\nDIV ro[1] -1.0\nADD ro[1] ro[2]",
         vec![
-            Instruction::Arithmetic {
+            Instruction::Arithmetic(Arithmetic {
                 operator: ArithmeticOperator::Add,
                 destination: ArithmeticOperand::MemoryReference(MemoryReference {
                     name: "ro".to_owned(),
                     index: 0
                 }),
                 source: ArithmeticOperand::LiteralInteger(2),
-            },
-            Instruction::Arithmetic {
+            }),
+            Instruction::Arithmetic(Arithmetic {
                 operator: ArithmeticOperator::Multiply,
                 destination: ArithmeticOperand::MemoryReference(MemoryReference {
                     name: "ro".to_owned(),
                     index: 0
                 }),
                 source: ArithmeticOperand::LiteralReal(1.0),
-            },
-            Instruction::Arithmetic {
+            }),
+            Instruction::Arithmetic(Arithmetic {
                 operator: ArithmeticOperator::Subtract,
                 destination: ArithmeticOperand::MemoryReference(MemoryReference {
                     name: "ro".to_owned(),
                     index: 1
                 }),
                 source: ArithmeticOperand::LiteralInteger(-3),
-            },
-            Instruction::Arithmetic {
+            }),
+            Instruction::Arithmetic(Arithmetic {
                 operator: ArithmeticOperator::Divide,
                 destination: ArithmeticOperand::MemoryReference(MemoryReference {
                     name: "ro".to_owned(),
                     index: 1
                 }),
                 source: ArithmeticOperand::LiteralReal(-1f64),
-            },
-            Instruction::Arithmetic {
+            }),
+            Instruction::Arithmetic(Arithmetic {
                 operator: ArithmeticOperator::Add,
                 destination: ArithmeticOperand::MemoryReference(MemoryReference {
                     name: "ro".to_owned(),
@@ -233,7 +235,7 @@ mod tests {
                     name: "ro".to_owned(),
                     index: 2
                 }),
-            }
+            })
         ]
     );
 
@@ -242,7 +244,7 @@ mod tests {
         parse_instructions,
         "CAPTURE 0 \"rx\" my_custom_waveform ro\nRAW-CAPTURE 0 1 \"rx\" 2e9 ro\nNONBLOCKING CAPTURE 0 \"rx\" my_custom_waveform(a: 1.0) ro\nNONBLOCKING RAW-CAPTURE 0 1 \"rx\" 2e9 ro",
         vec![
-            Instruction::Capture {
+            Instruction::Capture(Capture {
                 blocking: true,
                 frame: FrameIdentifier {
                     name: "rx".to_owned(),
@@ -256,8 +258,8 @@ mod tests {
                     name: "ro".to_owned(),
                     index: 0
                 }
-            },
-            Instruction::RawCapture {
+            }),
+            Instruction::RawCapture(RawCapture {
                 blocking: true,
                 frame: FrameIdentifier {
                     name: "rx".to_owned(),
@@ -268,8 +270,8 @@ mod tests {
                     name: "ro".to_owned(),
                     index: 0
                 }
-            },
-            Instruction::Capture {
+            }),
+            Instruction::Capture(Capture {
                 blocking: false,
                 frame: FrameIdentifier {
                     name: "rx".to_owned(),
@@ -283,8 +285,8 @@ mod tests {
                     name: "ro".to_owned(),
                     index: 0
                 }
-            },
-            Instruction::RawCapture {
+            }),
+            Instruction::RawCapture(RawCapture {
                 blocking: false,
                 frame: FrameIdentifier {
                     name: "rx".to_owned(),
@@ -295,7 +297,7 @@ mod tests {
                     name: "ro".to_owned(),
                     index: 0
                 }
-            }
+            })
         ]
     );
 
@@ -305,45 +307,45 @@ mod tests {
         comment_and_gate,
         parse_instructions,
         "# Questions:\nX 0",
-        vec![Instruction::Gate {
+        vec![Instruction::Gate(Gate {
             name: "X".to_owned(),
             parameters: vec![],
             qubits: vec![Qubit::Fixed(0)],
             modifiers: vec![],
-        }]
+        })]
     );
 
     make_test!(
         comment_after_block,
         parse_instructions,
         "DEFFRAME 0 \"ro_rx\":\n\tDIRECTION: \"rx\"\n\n# (Pdb) settings.gates[GateID(name=\"x180\", targets=(0,))]\n\n",
-        vec![Instruction::FrameDefinition {
+        vec![Instruction::FrameDefinition(FrameDefinition {
             identifier: FrameIdentifier { name: "ro_rx".to_owned(), qubits: vec![Qubit::Fixed(0)] },
             attributes: [("DIRECTION".to_owned(), AttributeValue::String("rx".to_owned()))].iter().cloned().collect()
-        }]);
+        })]);
 
     make_test!(
         simple_gate,
         parse_instructions,
         "RX 0",
-        vec![Instruction::Gate {
+        vec![Instruction::Gate(Gate {
             name: "RX".to_owned(),
             parameters: vec![],
             qubits: vec![Qubit::Fixed(0)],
             modifiers: vec![],
-        }]
+        })]
     );
 
     make_test!(
         parametric_gate,
         parse_instructions,
         "RX(pi) 10",
-        vec![Instruction::Gate {
+        vec![Instruction::Gate(Gate {
             name: "RX".to_owned(),
             parameters: vec![Expression::PiConstant],
             qubits: vec![Qubit::Fixed(10)],
             modifiers: vec![],
-        }]
+        })]
     );
 
     make_test!(
@@ -355,7 +357,7 @@ mod tests {
             parameters: vec![Expression::Variable("theta".to_owned())],
             qubits: vec![Qubit::Variable("qubit".to_owned())],
             modifiers: vec![],
-            instructions: vec![Instruction::Pulse {
+            instructions: vec![Instruction::Pulse(Pulse {
                 blocking: true,
                 frame: FrameIdentifier {
                     name: "xy".to_owned(),
@@ -368,7 +370,7 @@ mod tests {
                         .cloned()
                         .collect()
                 }
-            }]
+            })]
         })]
     );
 
@@ -376,7 +378,7 @@ mod tests {
         frame_definition,
         parse_instructions,
         "DEFFRAME 0 \"rx\":\n\tINITIAL-FREQUENCY: 2e9",
-        vec![Instruction::FrameDefinition {
+        vec![Instruction::FrameDefinition(FrameDefinition {
             identifier: FrameIdentifier {
                 name: "rx".to_owned(),
                 qubits: vec![Qubit::Fixed(0)]
@@ -388,7 +390,7 @@ mod tests {
             .iter()
             .cloned()
             .collect()
-        }]
+        })]
     );
 
     make_test!(
@@ -396,17 +398,17 @@ mod tests {
         parse_instructions,
         "LABEL @hello\nJUMP @hello\nJUMP-WHEN @hello ro",
         vec![
-            Instruction::Label("hello".to_owned()),
-            Instruction::Jump {
+            Instruction::Label(Label("hello".to_owned())),
+            Instruction::Jump(Jump {
                 target: "hello".to_owned()
-            },
-            Instruction::JumpWhen {
+            }),
+            Instruction::JumpWhen(JumpWhen {
                 target: "hello".to_owned(),
                 condition: MemoryReference {
                     name: "ro".to_owned(),
                     index: 0
                 }
-            }
+            })
         ]
     );
 
@@ -415,7 +417,7 @@ mod tests {
         parse_instructions,
         "PULSE 0 \"xy\" custom\nNONBLOCKING PULSE 0 \"xy\" custom\nPULSE 0 \"xy\" custom(a: 1.0)",
         vec![
-            Instruction::Pulse {
+            Instruction::Pulse(Pulse {
                 blocking: true,
                 frame: FrameIdentifier {
                     name: "xy".to_owned(),
@@ -425,8 +427,8 @@ mod tests {
                     name: "custom".to_owned(),
                     parameters: HashMap::new()
                 }
-            },
-            Instruction::Pulse {
+            }),
+            Instruction::Pulse(Pulse {
                 blocking: false,
                 frame: FrameIdentifier {
                     name: "xy".to_owned(),
@@ -436,8 +438,8 @@ mod tests {
                     name: "custom".to_owned(),
                     parameters: HashMap::new()
                 }
-            },
-            Instruction::Pulse {
+            }),
+            Instruction::Pulse(Pulse {
                 blocking: true,
                 frame: FrameIdentifier {
                     name: "xy".to_owned(),
@@ -449,7 +451,7 @@ mod tests {
                         .into_iter()
                         .collect()
                 }
-            }
+            })
         ]
     );
 
@@ -457,13 +459,13 @@ mod tests {
         moveit,
         parse_instructions,
         "MOVE a 1.0",
-        vec![Instruction::Move {
+        vec![Instruction::Move(Move {
             destination: ArithmeticOperand::MemoryReference(MemoryReference {
                 name: "a".to_owned(),
                 index: 0
             }),
             source: ArithmeticOperand::LiteralReal(1.0)
-        }]
+        })]
     );
 
     #[test]
@@ -471,14 +473,14 @@ mod tests {
         let tokens = lex(r#"SET-PHASE 0 "rf" 1.0; SET-PHASE 0 1 "rf" theta"#);
         let (remainder, parsed) = parse_instructions(&tokens).unwrap();
         let expected = vec![
-            Instruction::SetPhase {
+            Instruction::SetPhase(SetPhase {
                 frame: FrameIdentifier {
                     name: String::from("rf"),
                     qubits: vec![Qubit::Fixed(0)],
                 },
                 phase: Expression::Number(real!(1.0)),
-            },
-            Instruction::SetPhase {
+            }),
+            Instruction::SetPhase(SetPhase {
                 frame: FrameIdentifier {
                     name: String::from("rf"),
                     qubits: vec![Qubit::Fixed(0), Qubit::Fixed(1)],
@@ -487,7 +489,7 @@ mod tests {
                     name: String::from("theta"),
                     index: 0,
                 }),
-            },
+            }),
         ];
         assert_eq!(remainder.len(), 0);
         assert_eq!(parsed, expected);
@@ -498,14 +500,14 @@ mod tests {
         let tokens = lex(r#"SET-SCALE 0 "rf" 1.0; SET-SCALE 0 1 "rf" theta"#);
         let (remainder, parsed) = parse_instructions(&tokens).unwrap();
         let expected = vec![
-            Instruction::SetScale {
+            Instruction::SetScale(SetScale {
                 frame: FrameIdentifier {
                     name: String::from("rf"),
                     qubits: vec![Qubit::Fixed(0)],
                 },
                 scale: Expression::Number(real!(1.0)),
-            },
-            Instruction::SetScale {
+            }),
+            Instruction::SetScale(SetScale {
                 frame: FrameIdentifier {
                     name: String::from("rf"),
                     qubits: vec![Qubit::Fixed(0), Qubit::Fixed(1)],
@@ -514,7 +516,7 @@ mod tests {
                     name: String::from("theta"),
                     index: 0,
                 }),
-            },
+            }),
         ];
         assert_eq!(remainder.len(), 0);
         assert_eq!(parsed, expected);
@@ -525,14 +527,14 @@ mod tests {
         let tokens = lex(r#"SET-FREQUENCY 0 "rf" 1.0; SET-FREQUENCY 0 1 "rf" theta"#);
         let (remainder, parsed) = parse_instructions(&tokens).unwrap();
         let expected = vec![
-            Instruction::SetFrequency {
+            Instruction::SetFrequency(SetFrequency {
                 frame: FrameIdentifier {
                     name: String::from("rf"),
                     qubits: vec![Qubit::Fixed(0)],
                 },
                 frequency: Expression::Number(real!(1.0)),
-            },
-            Instruction::SetFrequency {
+            }),
+            Instruction::SetFrequency(SetFrequency {
                 frame: FrameIdentifier {
                     name: String::from("rf"),
                     qubits: vec![Qubit::Fixed(0), Qubit::Fixed(1)],
@@ -541,7 +543,7 @@ mod tests {
                     name: String::from("theta"),
                     index: 0,
                 }),
-            },
+            }),
         ];
         assert_eq!(remainder.len(), 0);
         assert_eq!(parsed, expected);
@@ -552,14 +554,14 @@ mod tests {
         let tokens = lex(r#"SHIFT-FREQUENCY 0 "rf" 1.0; SHIFT-FREQUENCY 0 1 "rf" theta"#);
         let (remainder, parsed) = parse_instructions(&tokens).unwrap();
         let expected = vec![
-            Instruction::ShiftFrequency {
+            Instruction::ShiftFrequency(ShiftFrequency {
                 frame: FrameIdentifier {
                     name: String::from("rf"),
                     qubits: vec![Qubit::Fixed(0)],
                 },
                 frequency: Expression::Number(real!(1.0)),
-            },
-            Instruction::ShiftFrequency {
+            }),
+            Instruction::ShiftFrequency(ShiftFrequency {
                 frame: FrameIdentifier {
                     name: String::from("rf"),
                     qubits: vec![Qubit::Fixed(0), Qubit::Fixed(1)],
@@ -568,7 +570,7 @@ mod tests {
                     name: String::from("theta"),
                     index: 0,
                 }),
-            },
+            }),
         ];
         assert_eq!(remainder.len(), 0);
         assert_eq!(parsed, expected);
@@ -579,14 +581,14 @@ mod tests {
         let tokens = lex(r#"SHIFT-PHASE 0 "rf" 1.0; SHIFT-PHASE 0 1 "rf" theta"#);
         let (remainder, parsed) = parse_instructions(&tokens).unwrap();
         let expected = vec![
-            Instruction::ShiftPhase {
+            Instruction::ShiftPhase(ShiftPhase {
                 frame: FrameIdentifier {
                     name: String::from("rf"),
                     qubits: vec![Qubit::Fixed(0)],
                 },
                 phase: Expression::Number(real!(1.0)),
-            },
-            Instruction::ShiftPhase {
+            }),
+            Instruction::ShiftPhase(ShiftPhase {
                 frame: FrameIdentifier {
                     name: String::from("rf"),
                     qubits: vec![Qubit::Fixed(0), Qubit::Fixed(1)],
@@ -595,7 +597,7 @@ mod tests {
                     name: String::from("theta"),
                     index: 0,
                 }),
-            },
+            }),
         ];
         assert_eq!(remainder.len(), 0);
         assert_eq!(parsed, expected);

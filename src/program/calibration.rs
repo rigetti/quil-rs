@@ -17,7 +17,7 @@ use std::collections::HashMap;
 
 use crate::{
     expression::Expression,
-    instruction::{Calibration, GateModifier, Instruction, Qubit},
+    instruction::{Calibration, Gate, GateModifier, Instruction, Qubit},
 };
 
 /// A collection of Quil calibrations (`DEFCAL` instructions) with utility methods.
@@ -57,12 +57,12 @@ impl CalibrationSet {
     /// Given an instruction, return the instructions to which it is expanded if there is a match.
     pub fn expand(&self, instruction: &Instruction) -> Option<Vec<Instruction>> {
         match instruction {
-            Instruction::Gate {
+            Instruction::Gate(Gate {
                 name,
                 modifiers,
                 parameters,
                 qubits,
-            } => {
+            }) => {
                 let matching_calibration =
                     self.get_match_for_gate(modifiers, name, parameters, qubits);
 
@@ -78,7 +78,7 @@ impl CalibrationSet {
                         let mut instructions = calibration.instructions.clone();
 
                         for instruction in instructions.iter_mut() {
-                            if let Instruction::Gate { qubits, .. } = instruction {
+                            if let Instruction::Gate(Gate { qubits, .. }) = instruction {
                                 // Swap all qubits for their concrete implementations
                                 for qubit in qubits {
                                     match qubit {
@@ -220,8 +220,9 @@ impl CalibrationSet {
 
 #[cfg(test)]
 mod tests {
-    use crate::program::Program;
     use std::str::FromStr;
+
+    use crate::program::Program;
 
     #[test]
     fn test_expansion() {

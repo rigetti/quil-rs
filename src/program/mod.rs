@@ -16,19 +16,21 @@
 use std::collections::HashMap;
 use std::str::FromStr;
 
-use crate::{
-    instruction::{FrameIdentifier, Instruction, Waveform},
-    parser::{lex, parse_instructions},
+use crate::instruction::{
+    Capture, Declaration, Delay, Fence, FrameDefinition, FrameIdentifier, Instruction, Pulse,
+    RawCapture, SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, SwapPhases, Waveform,
+    WaveformDefinition,
 };
+use crate::parser::{lex, parse_instructions};
+
+pub use self::calibration::CalibrationSet;
+pub use self::frame::FrameSet;
+pub use self::memory::MemoryRegion;
 
 mod calibration;
 mod frame;
 pub mod graph;
 mod memory;
-
-pub use self::calibration::CalibrationSet;
-pub use self::frame::FrameSet;
-pub use self::memory::MemoryRegion;
 
 /// A Quil Program instance describes a quantum program with metadata used in execution.
 ///
@@ -57,27 +59,25 @@ impl Program {
 
     /// Add an instruction to the end of the program.
     pub fn add_instruction(&mut self, instruction: Instruction) {
-        use Instruction::*;
-
         match instruction {
-            CalibrationDefinition(calibration) => {
+            Instruction::CalibrationDefinition(calibration) => {
                 self.calibrations.push(calibration);
             }
-            FrameDefinition {
+            Instruction::FrameDefinition(FrameDefinition {
                 identifier,
                 attributes,
-            } => {
+            }) => {
                 self.frames.insert(identifier, attributes);
             }
-            Instruction::Declaration {
+            Instruction::Declaration(Declaration {
                 name,
                 size,
                 sharing,
-            } => {
+            }) => {
                 self.memory_regions
                     .insert(name, MemoryRegion { size, sharing });
             }
-            WaveformDefinition { name, definition } => {
+            Instruction::WaveformDefinition(WaveformDefinition { name, definition }) => {
                 self.waveforms.insert(name, definition);
             }
             other => self.instructions.push(other),
@@ -116,71 +116,72 @@ impl Program {
         instruction: &'a Instruction,
         include_blocked: bool,
     ) -> Option<Vec<&'a FrameIdentifier>> {
-        use Instruction::*;
         match &instruction {
-            Pulse {
+            Instruction::Pulse(Pulse {
                 blocking, frame, ..
-            } => {
+            }) => {
                 if *blocking && include_blocked {
                     Some(self.frames.get_keys())
                 } else {
                     Some(vec![frame])
                 }
             }
-            Delay {
+            Instruction::Delay(Delay {
                 frame_names,
                 qubits,
                 ..
-            } => {
+            }) => {
                 let frame_ids = self.frames.get_matching_keys(qubits, frame_names);
                 Some(frame_ids)
             }
-            Fence { qubits } => {
+            Instruction::Fence(Fence { qubits }) => {
                 if qubits.is_empty() {
                     Some(self.frames.get_keys())
                 } else {
                     Some(self.frames.get_matching_keys(qubits, &[]))
                 }
             }
-            Capture {
+            Instruction::Capture(Capture {
                 blocking, frame, ..
-            }
-            | RawCapture {
+            })
+            | Instruction::RawCapture(RawCapture {
                 blocking, frame, ..
-            } => {
+            }) => {
                 if *blocking && include_blocked {
                     Some(self.frames.get_keys())
                 } else {
                     Some(vec![frame])
                 }
             }
-            SetFrequency { frame, .. }
-            | SetPhase { frame, .. }
-            | SetScale { frame, .. }
-            | ShiftFrequency { frame, .. }
-            | ShiftPhase { frame, .. } => Some(vec![frame]),
-            SwapPhases { frame_1, frame_2 } => Some(vec![frame_1, frame_2]),
-            Gate { .. }
-            | CircuitDefinition { .. }
-            | GateDefinition { .. }
-            | Declaration { .. }
-            | Measurement { .. }
-            | Reset { .. }
-            | CalibrationDefinition(_)
-            | FrameDefinition { .. }
-            | MeasureCalibrationDefinition { .. }
-            | Pragma { .. }
-            | WaveformDefinition { .. }
-            | Arithmetic { .. }
-            | Halt
-            | Label(_)
-            | Move { .. }
-            | Exchange { .. }
-            | Load { .. }
-            | Store { .. }
-            | Jump { .. }
-            | JumpWhen { .. }
-            | JumpUnless { .. } => None,
+            Instruction::SetFrequency(SetFrequency { frame, .. })
+            | Instruction::SetPhase(SetPhase { frame, .. })
+            | Instruction::SetScale(SetScale { frame, .. })
+            | Instruction::ShiftFrequency(ShiftFrequency { frame, .. })
+            | Instruction::ShiftPhase(ShiftPhase { frame, .. }) => Some(vec![frame]),
+            Instruction::SwapPhases(SwapPhases { frame_1, frame_2 }) => {
+                Some(vec![frame_1, frame_2])
+            }
+            Instruction::Gate(_)
+            | Instruction::CircuitDefinition(_)
+            | Instruction::GateDefinition(_)
+            | Instruction::Declaration(_)
+            | Instruction::Measurement(_)
+            | Instruction::Reset(_)
+            | Instruction::CalibrationDefinition(_)
+            | Instruction::FrameDefinition(_)
+            | Instruction::MeasureCalibrationDefinition(_)
+            | Instruction::Pragma(_)
+            | Instruction::WaveformDefinition(_)
+            | Instruction::Arithmetic(_)
+            | Instruction::Halt
+            | Instruction::Label(_)
+            | Instruction::Move(_)
+            | Instruction::Exchange(_)
+            | Instruction::Load(_)
+            | Instruction::Store(_)
+            | Instruction::Jump(_)
+            | Instruction::JumpWhen(_)
+            | Instruction::JumpUnless(_) => None,
         }
     }
 
@@ -189,18 +190,18 @@ impl Program {
 
         if include_headers {
             result.extend(self.memory_regions.iter().map(|(name, descriptor)| {
-                Instruction::Declaration {
+                Instruction::Declaration(Declaration {
                     name: name.clone(),
                     size: descriptor.size.clone(),
                     sharing: descriptor.sharing.clone(),
-                }
+                })
             }));
             result.extend(self.frames.to_instructions());
             result.extend(self.waveforms.iter().map(|(name, definition)| {
-                Instruction::WaveformDefinition {
+                Instruction::WaveformDefinition(WaveformDefinition {
                     name: name.clone(),
                     definition: definition.clone(),
-                }
+                })
             }));
             result.extend(self.calibrations.to_instructions());
         }
@@ -239,8 +240,9 @@ impl FromStr for Program {
 
 #[cfg(test)]
 mod tests {
-    use super::Program;
     use std::str::FromStr;
+
+    use super::Program;
 
     #[test]
     fn program_eq() {
