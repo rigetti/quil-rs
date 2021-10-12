@@ -13,14 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  **/
-use crate::{imag, instruction::MemoryReference, real};
 use std::collections::{hash_map::DefaultHasher, HashMap};
 use std::f64::consts::PI;
 use std::fmt;
 use std::hash::{Hash, Hasher};
+use std::str::FromStr;
 
 #[cfg(test)]
 use proptest_derive::Arbitrary;
+
+use crate::parser::{lex, parse_expression};
+use crate::{imag, instruction::MemoryReference, real};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum EvaluationError {
@@ -169,91 +172,163 @@ fn calculate_function(
     }
 }
 
-pub type EvaluationEnvironment = HashMap<String, num_complex::Complex64>;
-
 impl Expression {
-    /// Consume the expression, simplifying it as much as possible using the values provided in the environment.
-    /// If variables are used in the expression which are not present in the environment, evaluation stops there,
-    /// returning the possibly-simplified expression.
-    pub fn evaluate(self, environment: &EvaluationEnvironment) -> Self {
+    /// Consume the expression, simplifying it as much as possible.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use quil::expression::Expression;
+    /// use std::str::FromStr;
+    /// use num_complex::Complex64;
+    ///
+    /// let expression = Expression::from_str("cos(2 * pi) + 2").unwrap().simplify();
+    ///
+    /// assert_eq!(expression, Expression::Number(Complex64::from(3.0)));
+    /// ```
+    pub fn simplify(self) -> Self {
         use Expression::*;
-        match self {
+
+        let simplified = match self {
             FunctionCall {
                 function,
                 expression,
             } => {
-                let evaluated = (*expression).evaluate(environment);
-                match &evaluated {
-                    Number(value) => Number(calculate_function(&function, value)),
-                    PiConstant => Number(calculate_function(&function, &real!(PI))),
-                    _ => FunctionCall {
+                let simplified = expression.simplify();
+                if let Number(number) = simplified {
+                    Number(calculate_function(&function, &number))
+                } else {
+                    FunctionCall {
                         function,
-                        expression: Box::new(evaluated),
-                    },
+                        expression: Box::new(simplified),
+                    }
                 }
             }
             Infix {
                 left,
                 operator,
                 right,
+            } => Infix {
+                left: Box::new(left.simplify()),
+                operator,
+                right: Box::new(right.simplify()),
+            },
+            Prefix {
+                operator,
+                expression,
             } => {
-                let left_evaluated = (*left).evaluate(environment);
-                let right_evaluated = (*right).evaluate(environment);
-
-                match (&left_evaluated, &right_evaluated) {
-                    (Number(value_left), Number(value_right)) => {
-                        Number(calculate_infix(value_left, &operator, value_right))
-                    }
-                    (PiConstant, Number(value)) => {
-                        Number(calculate_infix(&real!(PI), &operator, value))
-                    }
-                    (Number(value), PiConstant) => {
-                        Number(calculate_infix(value, &operator, &real!(PI)))
-                    }
-                    _ => Infix {
-                        left: Box::new(left_evaluated),
+                use PrefixOperator::*;
+                match (&operator, expression) {
+                    (Minus, expr) => Prefix {
                         operator,
-                        right: Box::new(right_evaluated),
+                        expression: Box::new(expr.simplify()),
                     },
+                    (Plus, expr) => expr.simplify(),
                 }
+            }
+            Variable(identifier) => Variable(identifier),
+            Address(memory_reference) => Address(memory_reference),
+            PiConstant => PiConstant,
+            Number(number) => Number(number),
+        };
+        if let Ok(number) = simplified.evaluate(&HashMap::new(), &HashMap::new()) {
+            Number(number)
+        } else {
+            simplified
+        }
+    }
+
+    /// Evaluate an expression, expecting that it may be fully reduced to a single complex number.
+    /// If it cannot be reduced to a complex number, return an error.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use quil::expression::Expression;
+    /// use std::str::FromStr;
+    /// use std::collections::HashMap;
+    /// use num_complex::Complex64;
+    ///
+    /// let expression = Expression::from_str("%beta + theta[0]").unwrap();
+    ///
+    /// let mut variables = HashMap::with_capacity(1);
+    /// variables.insert(String::from("beta"), Complex64::from(1.0));
+    ///
+    /// let mut memory_references = HashMap::with_capacity(1);
+    /// memory_references.insert("theta", vec![2.0]);
+    ///
+    /// let evaluated = expression.evaluate(&variables, &memory_references).unwrap();
+    ///
+    /// assert_eq!(evaluated, Complex64::from(3.0))
+    /// ```
+    pub fn evaluate(
+        &self,
+        variables: &HashMap<String, num_complex::Complex64>,
+        memory_references: &HashMap<&str, Vec<f64>>,
+    ) -> Result<num_complex::Complex64, EvaluationError> {
+        use Expression::*;
+
+        match self {
+            FunctionCall {
+                function,
+                expression,
+            } => {
+                let evaluated = expression.evaluate(variables, memory_references)?;
+                Ok(calculate_function(function, &evaluated))
+            }
+            Infix {
+                left,
+                operator,
+                right,
+            } => {
+                let left_evaluated = left.evaluate(variables, memory_references)?;
+                let right_evaluated = right.evaluate(variables, memory_references)?;
+                Ok(calculate_infix(&left_evaluated, operator, &right_evaluated))
             }
             Prefix {
                 operator,
                 expression,
             } => {
                 use PrefixOperator::*;
-                let prefixed_expression = *expression;
-                match (&operator, prefixed_expression) {
-                    (Minus, Number(value)) => Number(-value),
-                    (Minus, PiConstant) => Number(real!(-PI)),
-                    (Minus, expr) => Prefix {
-                        operator,
-                        expression: Box::new(expr),
-                    },
-                    (Plus, expr) => expr,
+                let value = expression.evaluate(variables, memory_references)?;
+                if matches!(operator, Minus) {
+                    Ok(-value)
+                } else {
+                    Ok(value)
                 }
             }
-            Variable(identifier) => match environment.get(&identifier) {
-                Some(value) => Number(*value),
-                None => Variable(identifier),
+            Variable(identifier) => match variables.get(identifier.as_str()) {
+                Some(value) => Ok(*value),
+                None => Err(EvaluationError::Incomplete),
             },
-            _ => self,
+            Address(memory_reference) => memory_references
+                .get(memory_reference.name.as_str())
+                .and_then(|values| {
+                    let value = values.get(memory_reference.index as usize)?;
+                    Some(real!(*value))
+                })
+                .ok_or(EvaluationError::Incomplete),
+            PiConstant => Ok(real!(PI)),
+            Number(number) => Ok(*number),
         }
     }
+}
 
-    /// Evaluate an expression, expecting that it may be fully reduced to a single complex number.
-    /// If it cannot be reduced to a complex number, return an error.
-    pub fn evaluate_to_complex(
-        self,
-        environment: &EvaluationEnvironment,
-    ) -> Result<num_complex::Complex64, EvaluationError> {
-        use Expression::*;
+impl<'a> FromStr for Expression {
+    type Err = String;
 
-        let result = self.evaluate(environment);
-        match result {
-            Number(value) => Ok(value),
-            PiConstant => Ok(real!(PI)),
-            _ => Err(EvaluationError::Incomplete),
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let tokens = lex(s);
+        let (extra, expression) =
+            parse_expression(&tokens).map_err(|_| String::from("Failed to parse expression"))?;
+        if extra.is_empty() {
+            Ok(expression)
+        } else {
+            Err(format!(
+                "Parsed valid expression {} but found {} extra tokens",
+                expression,
+                extra.len(),
+            ))
         }
     }
 }
@@ -389,80 +464,102 @@ impl fmt::Display for InfixOperator {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::{instruction::MemoryReference, real};
+    use std::collections::HashSet;
+
     use num_complex::Complex64;
     use proptest::prelude::*;
-    use std::collections::{hash_map::DefaultHasher, HashMap, HashSet};
-    use std::f64::consts::PI;
+
+    use crate::{
+        expression::{EvaluationError, Expression, ExpressionFunction},
+        real,
+    };
+
+    use super::*;
 
     #[test]
-    fn evaluate() {
+    fn simplify_and_evaluate() {
         use Expression::*;
 
-        let one = Complex64::new(1f64, 0f64);
-        let empty_environment = HashMap::new();
+        let one = real!(1.0);
+        let empty_variables = HashMap::new();
 
-        let mut environment = HashMap::new();
-        environment.insert("foo".to_owned(), real!(10f64));
-        environment.insert("bar".to_owned(), real!(100f64));
+        let mut variables = HashMap::new();
+        variables.insert("foo".to_owned(), real!(10f64));
+        variables.insert("bar".to_owned(), real!(100f64));
+
+        let empty_memory = HashMap::new();
+
+        let mut memory_references = HashMap::new();
+        memory_references.insert("theta", vec![1.0, 2.0]);
+        memory_references.insert("beta", vec![3.0, 4.0]);
 
         struct TestCase<'a> {
             expression: Expression,
-            environment: &'a HashMap<String, Complex64>,
-            evaluated_expression: Expression,
-            evaluated_complex: Result<Complex64, EvaluationError>,
+            variables: &'a HashMap<String, Complex64>,
+            memory_references: &'a HashMap<&'a str, Vec<f64>>,
+            simplified: Expression,
+            evaluated: Result<Complex64, EvaluationError>,
         }
 
         let cases: Vec<TestCase> = vec![
             TestCase {
                 expression: Number(one),
-                environment: &empty_environment,
-                evaluated_expression: Number(one),
-                evaluated_complex: Ok(one),
+                variables: &empty_variables,
+                memory_references: &empty_memory,
+                simplified: Number(one),
+                evaluated: Ok(one),
             },
             TestCase {
                 expression: Expression::Prefix {
                     operator: PrefixOperator::Minus,
                     expression: Box::new(Number(real!(1f64))),
                 },
-                environment: &empty_environment,
-                evaluated_expression: Number(real!(-1f64)),
-                evaluated_complex: Ok(real!(-1f64)),
+                variables: &empty_variables,
+                memory_references: &empty_memory,
+                simplified: Number(real!(-1f64)),
+                evaluated: Ok(real!(-1f64)),
             },
             TestCase {
                 expression: Expression::Variable("foo".to_owned()),
-                environment: &environment,
-                evaluated_expression: Number(real!(10f64)),
-                evaluated_complex: Ok(real!(10f64)),
+                variables: &variables,
+                memory_references: &empty_memory,
+                simplified: Expression::Variable("foo".to_owned()),
+                evaluated: Ok(real!(10f64)),
             },
             TestCase {
-                expression: Expression::Infix {
-                    left: Box::new(Expression::Variable("foo".to_owned())),
-                    operator: InfixOperator::Plus,
-                    right: Box::new(Expression::Variable("bar".to_owned())),
-                },
-                environment: &environment,
-                evaluated_expression: Number(real!(110f64)),
-                evaluated_complex: Ok(real!(110f64)),
+                expression: Expression::from_str("%foo + %bar").unwrap(),
+                variables: &variables,
+                memory_references: &empty_memory,
+                simplified: Expression::from_str("%foo + %bar").unwrap(),
+                evaluated: Ok(real!(110f64)),
             },
             TestCase {
                 expression: Expression::FunctionCall {
                     function: ExpressionFunction::Sine,
                     expression: Box::new(Expression::Number(real!(PI / 2f64))),
                 },
-                environment: &environment,
-                evaluated_expression: Number(real!(1f64)),
-                evaluated_complex: Ok(real!(1f64)),
+                variables: &variables,
+                memory_references: &empty_memory,
+                simplified: Number(real!(1f64)),
+                evaluated: Ok(real!(1f64)),
+            },
+            TestCase {
+                expression: Expression::from_str("theta[1] * beta[0]").unwrap(),
+                variables: &empty_variables,
+                memory_references: &memory_references,
+                simplified: Expression::from_str("theta[1] * beta[0]").unwrap(),
+                evaluated: Ok(real!(6.0)),
             },
         ];
 
         for case in cases {
-            let evaluated = case.expression.evaluate(&case.environment);
-            assert_eq!(evaluated, case.evaluated_expression);
+            let evaluated = case
+                .expression
+                .evaluate(case.variables, case.memory_references);
+            assert_eq!(evaluated, case.evaluated);
 
-            let evaluated_complex = evaluated.evaluate_to_complex(&case.environment);
-            assert_eq!(evaluated_complex, case.evaluated_complex)
+            let simplified = case.expression.simplify();
+            assert_eq!(simplified, case.simplified);
         }
     }
 
