@@ -105,22 +105,5 @@ jobs:
     name: Deny
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout sources
-        uses: actions/checkout@v2
-
-      - name: Install toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-
-      - name: Install cargo-deny
-        uses: actions-rs/cargo@v1
-        with:
-          command: install
-          args: cargo-deny
-
-      - name: Run cargo deny
-        uses: actions-rs/cargo@v1
-        with:
-          command: deny --all-features check
+      - uses: actions/checkout@v2
+      - uses: EmbarkStudios/cargo-deny-action@v1
