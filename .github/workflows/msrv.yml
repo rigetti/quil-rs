@@ -120,7 +120,7 @@ jobs:
           command: install
           args: cargo-deny
 
-      - name: Run cargo clippy
+      - name: Run cargo deny
         uses: actions-rs/cargo@v1
         with:
           command: deny --all-features check
