@@ -26,7 +26,9 @@
         "preset": "eslint"
       }],
       ["@semantic-release/exec",{
-        "prepareCmd": "sh prepare_release.sh ${nextRelease.version}"
+        "verifyConditionsCmd": "semantic-release-rust verify-conditions",
+        "prepareCmd": "semantic-release-rust prepare ${nextRelease.version}",
+        "publishCmd": "semantic-release-rust publish"
       }],
       "@semantic-release/github",
       ["@semantic-release/git", {
