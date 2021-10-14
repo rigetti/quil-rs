@@ -1,9 +1,12 @@
 [package]
-name = "quil"
+name = "quil-rs"
+description = "Rust tooling for Quil (Quantum Instruction Language)"
 version = "0.7.0"
-authors = ["kalzoo <kalzoo@users.noreply.github.com>"]
 edition = "2018"
 license = "Apache-2.0"
+repository = "https://github.com/rigetti/quil-rust"
+keywords = ["Quil", "Quantum", "Rigetti"]
+categories = ["parser-implementations", "science", "compilers", "emulators"]
 
 [dependencies]
 indexmap = "1.6.1"
