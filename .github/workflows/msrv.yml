@@ -100,3 +100,27 @@ jobs:
         with:
           command: clippy
           args: -- -D warnings
+
+  deny:
+    name: Deny
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Install cargo-deny
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: cargo-deny
+
+      - name: Run cargo clippy
+        uses: actions-rs/cargo@v1
+        with:
+          command: deny --all-features check
