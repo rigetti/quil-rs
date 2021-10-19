@@ -178,7 +178,7 @@ impl Expression {
     /// # Example
     ///
     /// ```rust
-    /// use quil::expression::Expression;
+    /// use quil_rs::expression::Expression;
     /// use std::str::FromStr;
     /// use num_complex::Complex64;
     ///
@@ -244,7 +244,7 @@ impl Expression {
     /// # Example
     ///
     /// ```rust
-    /// use quil::expression::Expression;
+    /// use quil_rs::expression::Expression;
     /// use std::str::FromStr;
     /// use std::collections::HashMap;
     /// use num_complex::Complex64;
