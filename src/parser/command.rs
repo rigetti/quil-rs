@@ -23,8 +23,8 @@ use nom::{
 use crate::instruction::{
     Arithmetic, ArithmeticOperand, ArithmeticOperator, Calibration, Capture, CircuitDefinition,
     Declaration, Delay, Exchange, Fence, FrameDefinition, Instruction, Jump, JumpUnless, JumpWhen,
-    Label, Load, Measurement, Move, Pragma, Pulse, RawCapture, SetFrequency, SetPhase, SetScale,
-    ShiftFrequency, ShiftPhase, Store, Waveform, WaveformDefinition,
+    Label, Load, Measurement, Move, Pragma, Pulse, RawCapture, Reset, SetFrequency, SetPhase,
+    SetScale, ShiftFrequency, ShiftPhase, Store, Waveform, WaveformDefinition,
 };
 use crate::parser::common::parse_variable_qubit;
 use crate::parser::instruction::parse_block;
@@ -359,6 +359,13 @@ pub fn parse_raw_capture(input: ParserInput, blocking: bool) -> ParserResult<Ins
             memory_reference,
         }),
     ))
+}
+
+/// Parse the contents of a `RESET` instruction.
+pub fn parse_reset(input: ParserInput) -> ParserResult<Instruction> {
+    let (input, qubit) = opt(parse_qubit)(input)?;
+
+    Ok((input, Instruction::Reset(Reset { qubit })))
 }
 
 /// Parse the contents of a `SET-FREQUENCY` instruction.

@@ -79,7 +79,7 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
                 Command::Pragma => command::parse_pragma(remainder),
                 Command::Pulse => command::parse_pulse(remainder, true),
                 Command::RawCapture => command::parse_raw_capture(remainder, true),
-                // Command::Reset => {}
+                Command::Reset => command::parse_reset(remainder),
                 Command::SetFrequency => command::parse_set_frequency(remainder),
                 Command::SetPhase => command::parse_set_phase(remainder),
                 Command::SetScale => command::parse_set_scale(remainder),
@@ -148,7 +148,9 @@ pub fn parse_block_instruction<'a>(input: ParserInput<'a>) -> ParserResult<'a, I
 mod tests {
     use std::collections::HashMap;
 
-    use crate::instruction::{Label, SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase};
+    use crate::instruction::{
+        Label, Reset, SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase,
+    };
     use crate::parser::lexer::lex;
     use crate::{
         expression::Expression,
@@ -466,6 +468,18 @@ mod tests {
             }),
             source: ArithmeticOperand::LiteralReal(1.0)
         })]
+    );
+
+    make_test!(
+        parse_reset,
+        parse_instructions,
+        "RESET\nRESET 0",
+        vec![
+            Instruction::Reset(Reset { qubit: None }),
+            Instruction::Reset(Reset {
+                qubit: Some(Qubit::Fixed(0))
+            })
+        ]
     );
 
     #[test]
