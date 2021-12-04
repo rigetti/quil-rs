@@ -43,8 +43,8 @@ pub enum ScheduleErrorVariant {
 
 #[derive(Debug, Clone)]
 pub struct ScheduleError {
-    instruction: Instruction,
-    variant: ScheduleErrorVariant,
+    pub instruction: Instruction,
+    pub variant: ScheduleErrorVariant,
 }
 
 pub type ScheduleResult<T> = Result<T, ScheduleError>;
