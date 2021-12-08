@@ -312,6 +312,20 @@ impl Expression {
             Number(number) => Ok(*number),
         }
     }
+
+    /// Returns whether or not the expression is constant. In other words, returns true if there are
+    /// no variables or addresses anywhere in the parsed expression.
+    pub fn is_constant(&self) -> bool {
+        match self {
+            Expression::Address(_) => false,
+            Expression::FunctionCall { expression, .. } => expression.is_constant(),
+            Expression::Infix { left, right, .. } => left.is_constant() && right.is_constant(),
+            Expression::Number(_) => true,
+            Expression::PiConstant => true,
+            Expression::Prefix { expression, .. } => expression.is_constant(),
+            Expression::Variable(_) => false,
+        }
+    }
 }
 
 impl<'a> FromStr for Expression {
@@ -560,6 +574,20 @@ mod tests {
 
             let simplified = case.expression.simplify();
             assert_eq!(simplified, case.simplified);
+        }
+    }
+
+    #[test]
+    fn test_is_constant() {
+        let true_cases = ["pi", "pi/2", "-pi", "-pi/2", "2"];
+        let false_cases = ["theta", "-theta", "theta/2"];
+
+        for case in true_cases {
+            assert!(Expression::from_str(case).unwrap().is_constant())
+        }
+
+        for case in false_cases {
+            assert!(!Expression::from_str(case).unwrap().is_constant())
         }
     }
 
