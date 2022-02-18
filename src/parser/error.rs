@@ -36,6 +36,7 @@ impl fmt::Debug for Error<&[Token]> {
 }
 
 /// Parsing errors specific to Quil parsing
+#[allow(dead_code)]
 #[derive(Debug)]
 pub enum ErrorKind {
     UnexpectedEOF(String),

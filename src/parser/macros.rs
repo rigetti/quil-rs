@@ -30,16 +30,17 @@ macro_rules! expected_token {
 
 #[macro_export]
 macro_rules! token {
-    ($expected_variant: ident) => {{
+    ($expected_variant: ident($enm:ident::$variant:ident)) => {{
         use crate::expected_token;
         use crate::parser::error::{Error, ErrorKind};
+        use crate::parser::lexer::$enm;
         use crate::parser::lexer::Token;
         move |input: ParserInput<'a>| match input.split_first() {
             None => Err(nom::Err::Error(Error {
                 input,
                 error: ErrorKind::UnexpectedEOF("something else".to_owned()),
             })),
-            Some((Token::$expected_variant, remainder)) => Ok((remainder, ())),
+            Some((Token::$expected_variant($enm::$variant), remainder)) => Ok((remainder, ())),
             Some((other_token, _)) => {
                 expected_token!(input, other_token, stringify!($expected_variant).to_owned())
             }
@@ -62,17 +63,16 @@ macro_rules! token {
             }
         }
     }};
-    ($expected_variant: ident($enm:ident::$variant:ident)) => {{
+    ($expected_variant: ident) => {{
         use crate::expected_token;
         use crate::parser::error::{Error, ErrorKind};
-        use crate::parser::lexer::$enm;
         use crate::parser::lexer::Token;
         move |input: ParserInput<'a>| match input.split_first() {
             None => Err(nom::Err::Error(Error {
                 input,
                 error: ErrorKind::UnexpectedEOF("something else".to_owned()),
             })),
-            Some((Token::$expected_variant($enm::$variant), remainder)) => Ok((remainder, ())),
+            Some((Token::$expected_variant, remainder)) => Ok((remainder, ())),
             Some((other_token, _)) => {
                 expected_token!(input, other_token, stringify!($expected_variant).to_owned())
             }
