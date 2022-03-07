@@ -312,6 +312,65 @@ impl Expression {
             Number(number) => Ok(*number),
         }
     }
+
+    /// Substitute an expression in the place of each matching variable.
+    /// Consumes the expression and returns a new one.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use quil_rs::expression::Expression;
+    /// use std::str::FromStr;
+    /// use std::collections::HashMap;
+    /// use num_complex::Complex64;
+    ///
+    /// let expression = Expression::from_str("%x + %y").unwrap();
+    ///
+    /// let mut variables = HashMap::with_capacity(1);
+    /// variables.insert(String::from("x"), Expression::Number(Complex64::from(1.0)));
+    ///
+    /// let evaluated = expression.substitute_variables(&variables);
+    ///
+    /// assert_eq!(evaluated, Expression::from_str("1.0 + %y").unwrap())
+    /// ```
+    pub fn substitute_variables(self, variable_values: &HashMap<String, Expression>) -> Self {
+        use Expression::*;
+
+        match self {
+            FunctionCall {
+                function,
+                expression,
+            } => FunctionCall {
+                function,
+                expression: expression.substitute_variables(&variable_values).into(),
+            },
+            Infix {
+                left,
+                operator,
+                right,
+            } => {
+                let left = left.substitute_variables(&variable_values).into();
+                let right = right.substitute_variables(&variable_values).into();
+                Infix {
+                    left,
+                    operator,
+                    right,
+                }
+            }
+            Prefix {
+                operator,
+                expression,
+            } => Prefix {
+                operator,
+                expression: expression.substitute_variables(&variable_values).into(),
+            },
+            Variable(identifier) => match variable_values.get(identifier.as_str()) {
+                Some(value) => value.clone(),
+                None => Variable(identifier),
+            },
+            other => other,
+        }
+    }
 }
 
 impl<'a> FromStr for Expression {
