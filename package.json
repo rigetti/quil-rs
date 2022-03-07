@@ -10,31 +10,67 @@
     "semantic-release": "^17.1.1"
   },
   "release": {
-    "branches": ["main", {"name": "rc", "prerelease":  true}],
+    "branches": [
+      "main",
+      {
+        "name": "rc",
+        "prerelease": true
+      }
+    ],
     "plugins": [
-      ["@semantic-release/commit-analyzer",{
-        "preset": "eslint",
-        "releaseRules": [
-          {"tag": "Breaking", "release": "minor"},
-          {"tag": "Update", "release": "patch"},
-          {"tag": "Fix", "release": "patch"},
-          {"tag": "New", "release": "patch"},
-          {"tag": "Upgrade", "release": "patch"}
-        ]
-      }],
-      ["@semantic-release/release-notes-generator", {
-        "preset": "eslint"
-      }],
-      ["@semantic-release/exec",{
-        "verifyConditionsCmd": "semantic-release-rust verify-conditions",
-        "prepareCmd": "semantic-release-rust prepare ${nextRelease.version}",
-        "publishCmd": "semantic-release-rust publish"
-      }],
+      [
+        "@semantic-release/commit-analyzer",
+        {
+          "preset": "eslint",
+          "releaseRules": [
+            {
+              "tag": "Breaking",
+              "release": "minor"
+            },
+            {
+              "tag": "Update",
+              "release": "patch"
+            },
+            {
+              "tag": "Fix",
+              "release": "patch"
+            },
+            {
+              "tag": "New",
+              "release": "patch"
+            },
+            {
+              "tag": "Upgrade",
+              "release": "patch"
+            }
+          ]
+        }
+      ],
+      [
+        "@semantic-release/release-notes-generator",
+        {
+          "preset": "eslint"
+        }
+      ],
+      [
+        "@semantic-release/exec",
+        {
+          "verifyConditionsCmd": "semantic-release-rust verify-conditions",
+          "prepareCmd": "semantic-release-rust prepare ${nextRelease.version}",
+          "publishCmd": "semantic-release-rust publish"
+        }
+      ],
       "@semantic-release/github",
-      ["@semantic-release/git", {
-        "assets": ["Cargo.toml"],
-        "message": "Release v${nextRelease.version} [skip ci]"
-      }]
+      [
+        "@semantic-release/git",
+        {
+          "assets": [
+            "Cargo.lock",
+            "Cargo.toml"
+          ],
+          "message": "Release v${nextRelease.version} [skip ci]"
+        }
+      ]
     ],
     "repositoryUrl": "ssh://git@github.com/rigetti/quil-rust.git"
   }
