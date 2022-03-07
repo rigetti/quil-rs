@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  **/
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::str::FromStr;
 
 use crate::instruction::{
@@ -42,8 +42,8 @@ mod memory;
 pub struct Program {
     pub calibrations: CalibrationSet,
     pub frames: FrameSet,
-    pub memory_regions: HashMap<String, MemoryRegion>,
-    pub waveforms: HashMap<String, Waveform>,
+    pub memory_regions: BTreeMap<String, MemoryRegion>,
+    pub waveforms: BTreeMap<String, Waveform>,
     pub instructions: Vec<Instruction>,
 }
 
@@ -52,8 +52,8 @@ impl Program {
         Program {
             calibrations: CalibrationSet::default(),
             frames: FrameSet::new(),
-            memory_regions: HashMap::new(),
-            waveforms: HashMap::new(),
+            memory_regions: BTreeMap::new(),
+            waveforms: BTreeMap::new(),
             instructions: vec![],
         }
     }
@@ -252,7 +252,7 @@ impl FromStr for Program {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
+    use std::{collections::BTreeMap, iter::FromIterator, str::FromStr};
 
     use super::Program;
 
@@ -350,5 +350,17 @@ DEFCAL I 0:
 I 0
 "
         );
+    }
+
+    #[test]
+    fn program_deterministic_ordering() {
+        const MEMORIES: &[&str; 3] = &["DECLARE ro BIT;", "DECLARE anc BIT;", "DECLARE ec BIT;"];
+        let input = &MEMORIES.concat();
+        let program1 = Program::from_str(input).unwrap().to_string(true);
+        let program2 = Program::from_str(input).unwrap().to_string(true);
+
+        // verify that each memory declaration in the program is in the same index as the same
+        // program after being re-parsed and serialized.
+        assert!(program1.lines().eq(program2.lines()));
     }
 }
