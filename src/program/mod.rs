@@ -252,7 +252,7 @@ impl FromStr for Program {
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::BTreeMap, iter::FromIterator, str::FromStr};
+    use std::str::FromStr;
 
     use super::Program;
 
