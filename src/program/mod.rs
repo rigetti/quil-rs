@@ -342,8 +342,11 @@ I 0
 
     #[test]
     fn program_deterministic_ordering() {
-        const MEMORIES: &[&str; 3] = &["DECLARE ro BIT;", "DECLARE anc BIT;", "DECLARE ec BIT;"];
-        let input = &MEMORIES.concat();
+        let input = "
+DECLARE ro BIT
+DECLARE anc BIT
+DECLARE ec BIT
+";
         let program1 = Program::from_str(input).unwrap().to_string(true);
         let program2 = Program::from_str(input).unwrap().to_string(true);
 
