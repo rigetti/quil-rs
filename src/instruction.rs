@@ -466,7 +466,6 @@ impl From<&Instruction> for InstructionRole {
             | Instruction::Label(_)
             | Instruction::MeasureCalibrationDefinition(_)
             | Instruction::Measurement(_)
-            | Instruction::Pragma(_)
             | Instruction::WaveformDefinition(_) => InstructionRole::ProgramComposition,
             Instruction::Reset(_)
             | Instruction::Capture(_)
@@ -484,6 +483,7 @@ impl From<&Instruction> for InstructionRole {
             | Instruction::Move(_)
             | Instruction::Exchange(_)
             | Instruction::Load(_)
+            | Instruction::Pragma(_)
             | Instruction::Store(_) => InstructionRole::ClassicalCompute,
             Instruction::Halt
             | Instruction::Jump(_)
