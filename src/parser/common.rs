@@ -242,7 +242,7 @@ mod describe_skip_newlines_and_comments {
     #[test]
     fn it_skips_indented_comment() {
         let program = "\t    # this is a comment X 0";
-        let tokens = lex(program);
+        let tokens = lex(program).unwrap();
         let (token_slice, _) = skip_newlines_and_comments(&tokens).unwrap();
         let (_, expected) = tokens.split_at(3);
         assert_eq!(token_slice, expected);
@@ -251,7 +251,7 @@ mod describe_skip_newlines_and_comments {
     #[test]
     fn it_skips_comments() {
         let program = "# this is a comment \n# and another\nX 0";
-        let tokens = lex(program);
+        let tokens = lex(program).unwrap();
         let (token_slice, _) = skip_newlines_and_comments(&tokens).unwrap();
         let (_, expected) = tokens.split_at(4);
         assert_eq!(token_slice, expected);
@@ -260,7 +260,7 @@ mod describe_skip_newlines_and_comments {
     #[test]
     fn it_skips_new_lines() {
         let program = "\nX 0";
-        let tokens = lex(program);
+        let tokens = lex(program).unwrap();
         let (token_slice, _) = skip_newlines_and_comments(&tokens).unwrap();
         let (_, expected) = tokens.split_at(1);
         assert_eq!(token_slice, expected);
@@ -269,7 +269,7 @@ mod describe_skip_newlines_and_comments {
     #[test]
     fn it_skips_semicolons() {
         let program = ";;;;;X 0";
-        let tokens = lex(program);
+        let tokens = lex(program).unwrap();
         let (token_slice, _) = skip_newlines_and_comments(&tokens).unwrap();
         let (_, expected) = tokens.split_at(5);
         assert_eq!(token_slice, expected);
@@ -285,7 +285,7 @@ mod tests {
     #[test]
     fn waveform_invocation() {
         let input = "wf(a: 1.0, b: %var, c: ro[0])";
-        let lexed = lex(input);
+        let lexed = lex(input).unwrap();
         let (remainder, waveform) = parse_waveform_invocation(&lexed).unwrap();
         assert_eq!(remainder, &[]);
         assert_eq!(

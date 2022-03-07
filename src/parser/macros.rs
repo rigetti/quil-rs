@@ -96,7 +96,7 @@ macro_rules! make_test {
     ($name: ident, $parser: ident, $input: expr, $expected: expr) => {
         #[test]
         fn $name() {
-            let tokens = lex($input);
+            let tokens = lex($input).unwrap();
             let (remainder, parsed) = $parser(&tokens).unwrap();
             assert_eq!(remainder.len(), 0, "tokens left over");
             assert_eq!(parsed, $expected);

@@ -237,7 +237,7 @@ mod tests {
         ($name: ident, $parser: ident, $input: expr, $expected: expr) => {
             #[test]
             fn $name() {
-                let tokens = lex($input);
+                let tokens = lex($input).unwrap();
                 let (remainder, parsed) = $parser(&tokens).unwrap();
                 assert_eq!(remainder.len(), 0);
                 assert_eq!(parsed, $expected);
@@ -249,7 +249,7 @@ mod tests {
     // panic on the first mismatch
     fn compare(cases: Vec<(&str, Expression)>) {
         for case in cases {
-            let tokens = lex(case.0);
+            let tokens = lex(case.0).unwrap();
             let (remainder, parsed) = parse_expression(&tokens).unwrap();
             assert_eq!(remainder.len(), 0);
             assert_eq!(case.1, parsed);
@@ -270,7 +270,7 @@ mod tests {
         ];
 
         for case in cases {
-            let tokens = lex(case);
+            let tokens = lex(case).unwrap();
             let (remainder, parsed) = parse_expression(&tokens).unwrap();
             assert_eq!(remainder.len(), 0);
             assert_eq!(format!("{}", parsed), case);
