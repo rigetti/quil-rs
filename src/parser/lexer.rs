@@ -138,10 +138,10 @@ pub enum Operator {
 pub type LexResult<'a> = IResult<&'a str, Token>;
 
 /// Completely lex a string, returning the tokens within. Panics if the string cannot be completely read.
-pub fn lex(input: &str) -> Vec<Token> {
-    let result: Result<(&str, Vec<Token>), String> =
-        all_consuming(_lex)(input).map_err(|err| format!("Error remains: {:?}", err));
-    result.unwrap().1
+pub(crate) fn lex(input: &str) -> Result<Vec<Token>, String> {
+    all_consuming(_lex)(input)
+        .map_err(|err| format!("Error remains: {:?}", err))
+        .map(|(_, tokens)| tokens)
 }
 
 fn _lex(input: &str) -> IResult<&str, Vec<Token>> {
@@ -359,7 +359,7 @@ mod tests {
     #[test]
     fn comment() {
         let input = "# hello\n#world";
-        let tokens = lex(input);
+        let tokens = lex(input).unwrap();
         assert_eq!(
             tokens,
             vec![
@@ -373,7 +373,7 @@ mod tests {
     #[test]
     fn keywords() {
         let input = "DEFGATE DEFCIRCUIT JUMP-WHEN MATRIX";
-        let tokens = lex(input);
+        let tokens = lex(input).unwrap();
         assert_eq!(
             tokens,
             vec![
@@ -388,7 +388,7 @@ mod tests {
     #[test]
     fn number() {
         let input = "2 2i 2.0 2e3 2.0e3 (1+2i)";
-        let tokens = lex(input);
+        let tokens = lex(input).unwrap();
         assert_eq!(
             tokens,
             vec![
@@ -411,7 +411,7 @@ mod tests {
     #[test]
     fn string() {
         let input = "\"hello\"\n\"world\"";
-        let tokens = lex(input);
+        let tokens = lex(input).unwrap();
         assert_eq!(
             tokens,
             vec![
@@ -425,7 +425,7 @@ mod tests {
     #[test]
     fn gate_operation() {
         let input = "I 0; RX 1\nCZ 0 1";
-        let tokens = lex(input);
+        let tokens = lex(input).unwrap();
         assert_eq!(
             tokens,
             vec![
@@ -445,7 +445,7 @@ mod tests {
     #[test]
     fn label() {
         let input = "@hello\n@world";
-        let tokens = lex(input);
+        let tokens = lex(input).unwrap();
         assert_eq!(
             tokens,
             vec![
@@ -459,14 +459,14 @@ mod tests {
     #[test]
     fn indentation() {
         let input = "    ";
-        let tokens = lex(input);
+        let tokens = lex(input).unwrap();
         assert_eq!(tokens, vec![Token::Indentation,])
     }
 
     #[test]
     fn indented_block() {
         let input = "DEFGATE Name AS PERMUTATION:\n\t1,0\n    0,1";
-        let tokens = lex(input);
+        let tokens = lex(input).unwrap();
         assert_eq!(
             tokens,
             vec![
@@ -492,7 +492,7 @@ mod tests {
     #[test]
     fn surrounding_whitespace() {
         let input = "\nI 0\n    \n";
-        let tokens = lex(input);
+        let tokens = lex(input).unwrap();
         assert_eq!(
             tokens,
             vec![
@@ -567,6 +567,6 @@ mod tests {
       SHIFT-PHASE 0 \"xy\" (%theta*(2/pi))
       SWAP-PHASES 2 3 \"xy\" 3 4 \"xy\"";
 
-        lex(input);
+        lex(input).unwrap();
     }
 }
