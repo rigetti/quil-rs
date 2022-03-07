@@ -23,8 +23,9 @@ use nom::{
 use crate::instruction::{
     Arithmetic, ArithmeticOperand, ArithmeticOperator, Calibration, Capture, CircuitDefinition,
     Declaration, Delay, Exchange, Fence, FrameDefinition, Instruction, Jump, JumpUnless, JumpWhen,
-    Label, Load, Measurement, Move, Pragma, Pulse, RawCapture, Reset, SetFrequency, SetPhase,
-    SetScale, ShiftFrequency, ShiftPhase, Store, Waveform, WaveformDefinition,
+    Label, Load, MeasureCalibrationDefinition, Measurement, Move, Pragma, Pulse, RawCapture, Reset,
+    SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, Store, Waveform,
+    WaveformDefinition,
 };
 use crate::parser::common::parse_variable_qubit;
 use crate::parser::instruction::parse_block;
