@@ -550,11 +550,9 @@ impl ScheduledProgram {
                 }),
 
                 Instruction::Pragma(_) => {
-                    // TODO: Handle pragmas. Here, we just silently discard them, but certain
-                    // pragmas must be supported.
+                    working_instructions.push(instruction);
                     Ok(())
                 }
-                // _ => Err(()), // Unimplemented
                 Instruction::Label(Label(value)) => {
                     terminate_working_block!(
                         None as Option<BlockTerminator>,
