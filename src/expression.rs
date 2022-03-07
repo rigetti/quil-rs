@@ -318,7 +318,7 @@ impl<'a> FromStr for Expression {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let tokens = lex(s);
+        let tokens = lex(s)?;
         let (extra, expression) =
             parse_expression(&tokens).map_err(|_| String::from("Failed to parse expression"))?;
         if extra.is_empty() {
