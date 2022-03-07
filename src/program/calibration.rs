@@ -184,7 +184,7 @@ impl CalibrationSet {
 
         // Add this instruction to the breadcrumb trail before recursion
         let mut downstream_previous_calibrations = vec![instruction.clone()];
-        downstream_previous_calibrations.extend_from_slice(&previous_calibrations);
+        downstream_previous_calibrations.extend_from_slice(previous_calibrations);
 
         Ok(match expanded_once_instructions {
             Some(instructions) => {

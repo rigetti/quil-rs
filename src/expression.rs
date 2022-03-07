@@ -342,15 +342,15 @@ impl Expression {
                 expression,
             } => FunctionCall {
                 function,
-                expression: expression.substitute_variables(&variable_values).into(),
+                expression: expression.substitute_variables(variable_values).into(),
             },
             Infix {
                 left,
                 operator,
                 right,
             } => {
-                let left = left.substitute_variables(&variable_values).into();
-                let right = right.substitute_variables(&variable_values).into();
+                let left = left.substitute_variables(variable_values).into();
+                let right = right.substitute_variables(variable_values).into();
                 Infix {
                     left,
                     operator,
@@ -362,7 +362,7 @@ impl Expression {
                 expression,
             } => Prefix {
                 operator,
-                expression: expression.substitute_variables(&variable_values).into(),
+                expression: expression.substitute_variables(variable_values).into(),
             },
             Variable(identifier) => match variable_values.get(identifier.as_str()) {
                 Some(value) => value.clone(),
