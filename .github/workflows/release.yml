@@ -28,12 +28,6 @@ jobs:
           profile: minimal
           override: true
 
-      - name: Update Cargo.lock
-        uses: actions-rs/cargo@v1
-        with:
-          command: update
-          args: -w
-
       - name: Install semantic-release-rust
         uses: actions-rs/cargo@v1
         with:
