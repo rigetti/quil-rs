@@ -742,11 +742,16 @@ impl fmt::Display for Instruction {
                 name,
                 arguments,
                 data,
-            }) => match data {
-                // FIXME: Handle empty argument lists
-                Some(data) => write!(f, "PRAGMA {} {} {}", name, arguments.join(" "), data),
-                None => write!(f, "PRAGMA {} {}", name, arguments.join(" ")),
-            },
+            }) => {
+                write!(f, "PRAGMA {}", name)?;
+                if !arguments.is_empty() {
+                    write!(f, " {}", arguments.join(" "))?;
+                }
+                if let Some(data) = data {
+                    write!(f, "{}", data)?;
+                }
+                Ok(())
+            }
             Instruction::RawCapture(RawCapture {
                 blocking,
                 frame,
