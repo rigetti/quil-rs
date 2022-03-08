@@ -157,8 +157,6 @@ fn _lex(input: &str) -> IResult<&str, Vec<Token>> {
 fn lex_token(input: &str) -> LexResult {
     alt((
         lex_comment,
-        // Instruction must come before identifier
-        lex_instruction,
         lex_data_type,
         lex_modifier,
         lex_punctuation,
@@ -170,7 +168,7 @@ fn lex_token(input: &str) -> LexResult {
         lex_variable,
         lex_non_blocking,
         // This should come last because it's sort of a catch all
-        lex_identifier,
+        lex_command_or_identifier,
     ))(input)
 }
 
@@ -189,69 +187,60 @@ fn lex_comment(input: &str) -> LexResult {
     Ok((input, Token::Comment(content.to_owned())))
 }
 
-fn lex_instruction(input: &str) -> LexResult {
+/// If the given identifier string matches a command keyword, return the keyword;
+/// otherwise, return the original identifier as a token.
+fn recognize_command_or_identifier(identifier: String) -> Token {
     use Command::*;
 
-    // TODO: Switch these `map`s over to `value`s
-
-    // The `alt`s are nested because there is a limit to how many branches are allowed in one of them
-    // https://github.com/Geal/nom/issues/1144
-    let result = alt((
-        alt((
-            map(tag("DEFGATE"), |_| DefGate),
-            map(tag("DEFCIRCUIT"), |_| DefCircuit),
-            map(tag("MEASURE"), |_| Measure),
-            map(tag("HALT"), |_| Halt),
-            map(tag("JUMP-WHEN"), |_| JumpWhen),
-            map(tag("JUMP-UNLESS"), |_| JumpUnless),
-            // Note: this must follow the other jump commands
-            map(tag("JUMP"), |_| Jump),
-            map(tag("RESET"), |_| Reset),
-            map(tag("WAIT"), |_| Wait),
-            map(tag("NOP"), |_| Nop),
-            map(tag("INCLUDE"), |_| Include),
-            map(tag("PRAGMA"), |_| Pragma),
-            map(tag("DECLARE"), |_| Declare),
-            value(Label, tag("LABEL")),
-        )),
-        alt((
-            map(tag("ADD"), |_| Add),
-            map(tag("AND"), |_| And),
-            map(tag("CONVERT"), |_| Convert),
-            map(tag("DIV"), |_| Div),
-            map(tag("EQ"), |_| Eq),
-            map(tag("EXCHANGE"), |_| Exchange),
-            map(tag("GE"), |_| GE),
-            map(tag("GT"), |_| GT),
-            map(tag("IOR"), |_| Ior),
-            map(tag("LE"), |_| LE),
-            map(tag("LOAD"), |_| Load),
-            map(tag("LT"), |_| LT),
-            map(tag("MOVE"), |_| Move),
-            map(tag("MUL"), |_| Mul),
-            map(tag("NEG"), |_| Neg),
-            map(tag("NOT"), |_| Not),
-            map(tag("STORE"), |_| Store),
-            map(tag("SUB"), |_| Sub),
-            map(tag("XOR"), |_| Xor),
-        )),
-        alt((
-            value(Capture, tag("CAPTURE")),
-            value(DefCal, tag("DEFCAL")),
-            value(DefFrame, tag("DEFFRAME")),
-            value(DefWaveform, tag("DEFWAVEFORM")),
-            value(Delay, tag("DELAY")),
-            value(Fence, tag("FENCE")),
-            value(Pulse, tag("PULSE")),
-            value(RawCapture, tag("RAW-CAPTURE")),
-            value(SetFrequency, tag("SET-FREQUENCY")),
-            value(SetPhase, tag("SET-PHASE")),
-            value(SetScale, tag("SET-SCALE")),
-            value(ShiftFrequency, tag("SHIFT-FREQUENCY")),
-            value(ShiftPhase, tag("SHIFT-PHASE")),
-        )),
-    ))(input)?;
-    Ok((result.0, Token::Command(result.1)))
+    match identifier.as_str() {
+        "DEFGATE" => Token::Command(DefGate),
+        "ADD" => Token::Command(Add),
+        "AND" => Token::Command(And),
+        "CONVERT" => Token::Command(Convert),
+        "DIV" => Token::Command(Div),
+        "EQ" => Token::Command(Eq),
+        "EXCHANGE" => Token::Command(Exchange),
+        "GE" => Token::Command(GE),
+        "GT" => Token::Command(GT),
+        "IOR" => Token::Command(Ior),
+        "LE" => Token::Command(LE),
+        "LOAD" => Token::Command(Load),
+        "LT" => Token::Command(LT),
+        "MOVE" => Token::Command(Move),
+        "MUL" => Token::Command(Mul),
+        "NEG" => Token::Command(Neg),
+        "NOT" => Token::Command(Not),
+        "STORE" => Token::Command(Store),
+        "SUB" => Token::Command(Sub),
+        "XOR" => Token::Command(Xor),
+        "DEFCIRCUIT" => Token::Command(DefCircuit),
+        "MEASURE" => Token::Command(Measure),
+        "HALT" => Token::Command(Halt),
+        "JUMP-WHEN" => Token::Command(JumpWhen),
+        "JUMP-UNLESS" => Token::Command(JumpUnless),
+        "JUMP" => Token::Command(Jump),
+        "RESET" => Token::Command(Reset),
+        "WAIT" => Token::Command(Wait),
+        "NOP" => Token::Command(Nop),
+        "INCLUDE" => Token::Command(Include),
+        "PRAGMA" => Token::Command(Pragma),
+        "DECLARE" => Token::Command(Declare),
+        "CAPTURE" => Token::Command(Capture),
+        "DEFCAL" => Token::Command(DefCal),
+        "DEFFRAME" => Token::Command(DefFrame),
+        "DEFWAVEFORM" => Token::Command(DefWaveform),
+        "DELAY" => Token::Command(Delay),
+        "FENCE" => Token::Command(Fence),
+        "PULSE" => Token::Command(Pulse),
+        "RAW-CAPTURE" => Token::Command(RawCapture),
+        "SET-FREQUENCY" => Token::Command(SetFrequency),
+        "SET-PHASE" => Token::Command(SetPhase),
+        "SET-SCALE" => Token::Command(SetScale),
+        "SHIFT-FREQUENCY" => Token::Command(ShiftFrequency),
+        "SHIFT-PHASE" => Token::Command(ShiftPhase),
+        "LABEL" => Token::Command(Label),
+        _ => Token::Identifier(identifier),
+    }
 }
 
 fn is_valid_identifier_character(chr: char) -> bool {
@@ -272,8 +261,10 @@ fn lex_identifier_raw(input: &str) -> IResult<&str, String> {
     )(input)
 }
 
-fn lex_identifier(input: &str) -> LexResult {
-    lex_identifier_raw(input).map(|(input, ident)| (input, Token::Identifier(ident)))
+fn lex_command_or_identifier(input: &str) -> LexResult {
+    let (input, identifier) = lex_identifier_raw(input)?;
+    let token = recognize_command_or_identifier(identifier);
+    Ok((input, token))
 }
 
 fn lex_label(input: &str) -> LexResult {
@@ -372,7 +363,7 @@ mod tests {
 
     #[test]
     fn keywords() {
-        let input = "DEFGATE DEFCIRCUIT JUMP-WHEN MATRIX";
+        let input = "DEFGATE DEFCIRCUIT JUMP-WHEN MATRIX LOAD load LOAD-MEMORY";
         let tokens = lex(input).unwrap();
         assert_eq!(
             tokens,
@@ -381,6 +372,9 @@ mod tests {
                 Token::Command(Command::DefCircuit),
                 Token::Command(Command::JumpWhen),
                 Token::Matrix,
+                Token::Command(Command::Load),
+                Token::Identifier(String::from("load")),
+                Token::Identifier(String::from("LOAD-MEMORY"))
             ]
         )
     }
