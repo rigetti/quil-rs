@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  **/
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::str::FromStr;
 
 use crate::instruction::{
@@ -41,8 +41,8 @@ mod memory;
 pub struct Program {
     pub calibrations: CalibrationSet,
     pub frames: FrameSet,
-    pub memory_regions: HashMap<String, MemoryRegion>,
-    pub waveforms: HashMap<String, Waveform>,
+    pub memory_regions: BTreeMap<String, MemoryRegion>,
+    pub waveforms: BTreeMap<String, Waveform>,
     pub instructions: Vec<Instruction>,
 }
 
@@ -51,8 +51,8 @@ impl Program {
         Program {
             calibrations: CalibrationSet::new(),
             frames: FrameSet::new(),
-            memory_regions: HashMap::new(),
-            waveforms: HashMap::new(),
+            memory_regions: BTreeMap::new(),
+            waveforms: BTreeMap::new(),
             instructions: vec![],
         }
     }
@@ -338,5 +338,20 @@ DEFCAL I 0:
 I 0
 "
         );
+    }
+
+    #[test]
+    fn program_deterministic_ordering() {
+        let input = "
+DECLARE ro BIT
+DECLARE anc BIT
+DECLARE ec BIT
+";
+        let program1 = Program::from_str(input).unwrap().to_string(true);
+        let program2 = Program::from_str(input).unwrap().to_string(true);
+
+        // verify that each memory declaration in the program is in the same index as the same
+        // program after being re-parsed and serialized.
+        assert!(program1.lines().eq(program2.lines()));
     }
 }
