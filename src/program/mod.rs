@@ -50,7 +50,7 @@ pub struct Program {
 impl Program {
     pub fn new() -> Self {
         Program {
-            calibrations: CalibrationSet::new(),
+            calibrations: CalibrationSet::default(),
             frames: FrameSet::new(),
             memory_regions: BTreeMap::new(),
             waveforms: BTreeMap::new(),
