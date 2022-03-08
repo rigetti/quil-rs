@@ -89,7 +89,7 @@ impl Program {
     }
 
     /// Expand any instructions in the program which have a matching calibration, leaving the others
-    /// unchanged. Recurses though each instruction whil ensuring there is no cycle in the expansion
+    /// unchanged. Recurses though each instruction while ensuring there is no cycle in the expansion
     /// graph (i.e. no calibration expands directly or indirectly into itself)
     pub fn expand_calibrations(&self) -> error::ProgramResult<Self> {
         let mut expanded_instructions: Vec<Instruction> = vec![];
