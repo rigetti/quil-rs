@@ -843,12 +843,14 @@ impl Instruction {
     /// use quil_rs::{expression::Expression, Program};
     ///
     ///
-    /// let program = Program::from_str("SHIFT-PHASE 0 \"rf\" 1*%theta").unwrap();
+    /// let program = Program::from_str("SHIFT-PHASE 0 \"rf\" 2*2").unwrap();
     /// let mut instructions = program.to_instructions(true);
     /// instructions.iter_mut().for_each(|inst| inst.apply_to_expressions(|expr| {
     ///     let previous = replace(expr, Expression::PiConstant);
     ///     *expr = previous.simplify();
     /// }));
+    ///
+    /// assert_eq!(instructions[0].to_string(), String::from("SHIFT-PHASE 0 \"rf\" 4"))
     ///
     /// ```
     pub fn apply_to_expressions(&mut self, mut closure: impl FnMut(&mut Expression)) {
