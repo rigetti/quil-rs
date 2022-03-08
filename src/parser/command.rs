@@ -14,8 +14,7 @@
  * limitations under the License.
  **/
 use nom::{
-    branch::alt,
-    combinator::{map_res, opt},
+    combinator::opt,
     multi::{many0, many1, separated_list0, separated_list1},
     sequence::{delimited, tuple},
 };
@@ -28,13 +27,7 @@ use crate::instruction::{
 };
 use crate::parser::common::parse_variable_qubit;
 use crate::parser::instruction::parse_block;
-use crate::{
-    parser::{
-        error::{Error, ErrorKind},
-        lexer::Token,
-    },
-    token,
-};
+use crate::token;
 
 use super::{
     common::{
@@ -141,7 +134,7 @@ pub fn parse_defframe<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instructio
 
 /// Parse the contents of a `DEFWAVEFORM` instruction.
 pub fn parse_defwaveform<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
-    let (input, name) = token!(Identifier(v))(input)?;
+    let (input, name) = common::parse_waveform_name(input)?;
     let (input, parameters) = opt(delimited(
         token!(LParenthesis),
         separated_list0(token!(Comma), token!(Variable(v))),
@@ -149,20 +142,6 @@ pub fn parse_defwaveform<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruc
     ))(input)?;
     let parameters = parameters.unwrap_or_default();
 
-    let (input, sample_rate) = alt((
-        map_res(token!(Float(v)), |v| Ok(v) as Result<f64, Error<&[Token]>>),
-        map_res(token!(Integer(v)), |v| {
-            let result = v as f64;
-            if result as u64 != v {
-                Err(Error {
-                    input,
-                    error: ErrorKind::UnsupportedPrecision,
-                })
-            } else {
-                Ok(result)
-            }
-        }),
-    ))(input)?;
     let (input, _) = tuple((token!(Colon), token!(NewLine), token!(Indentation)))(input)?;
     let (input, matrix) = separated_list1(token!(Comma), parse_expression)(input)?;
 
@@ -170,11 +149,7 @@ pub fn parse_defwaveform<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruc
         input,
         Instruction::WaveformDefinition(WaveformDefinition {
             name,
-            definition: Waveform {
-                matrix,
-                parameters,
-                sample_rate,
-            },
+            definition: Waveform { matrix, parameters },
         }),
     ))
 }

@@ -141,7 +141,7 @@ pub fn parse_named_argument<'a>(input: ParserInput<'a>) -> ParserResult<'a, (Str
 pub fn parse_waveform_invocation<'a>(
     input: ParserInput<'a>,
 ) -> ParserResult<'a, WaveformInvocation> {
-    let (input, name) = token!(Identifier(v))(input)?;
+    let (input, name) = parse_waveform_name(input)?;
     let (input, parameter_tuples) = opt(delimited(
         token!(LParenthesis),
         cut(separated_list0(token!(Comma), parse_named_argument)),
@@ -207,6 +207,19 @@ pub fn parse_vector<'a>(input: ParserInput<'a>) -> ParserResult<'a, Vector> {
     let length = length.unwrap_or(1);
 
     Ok((input, Vector { data_type, length }))
+}
+
+/// Parse a waveform name which may look like `custom` or `q20_q27_xy/sqrtiSWAP`
+pub fn parse_waveform_name<'a>(input: ParserInput<'a>) -> ParserResult<'a, String> {
+    use crate::parser::lexer::Operator::Slash;
+
+    let (input, mut name) = token!(Identifier(v))(input)?;
+    let (input, name_extension) =
+        opt(tuple((token!(Operator(Slash)), token!(Identifier(v)))))(input)?;
+    if let Some((_, extension)) = name_extension {
+        name = format!("{}/{}", name, extension);
+    }
+    Ok((input, name))
 }
 
 /// Parse ahead past any sequence of newlines, comments, and semicolons, returning
