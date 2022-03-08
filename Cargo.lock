@@ -324,7 +324,7 @@ checksum = "a993555f31e5a609f617c12db6250dedcac1b0a85076912c436e6fc9b2c8e6a3"
 
 [[package]]
 name = "quil-rs"
-version = "0.8.2"
+version = "0.8.4"
 dependencies = [
  "indexmap",
  "insta",
