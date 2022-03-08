@@ -137,7 +137,7 @@ impl CalibrationSet {
                     if let Some(cal_qubit) = &cal.qubit {
                         if cal_qubit == qubit {
                             matching_calibration = Some(cal);
-                            break
+                            break;
                         }
                     } else if !found_matching_calibration_without_qubit {
                         matching_calibration = Some(cal);
