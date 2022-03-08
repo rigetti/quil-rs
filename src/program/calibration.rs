@@ -306,7 +306,8 @@ impl CalibrationSet {
     }
 
     /// Add another gate calibration to the set.
-    #[deprecated]
+    /// Deprecated in favor of [`push_calibration`]
+    #[deprecated = "use ScheduledProgram#push_calibration instead"]
     pub fn push(&mut self, calibration: Calibration) {
         self.push_calibration(calibration)
     }
