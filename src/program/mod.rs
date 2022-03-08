@@ -306,7 +306,7 @@ DEFCAL I 1:
     DELAY 1 1.0
 DEFFRAME 1 \"rx\":
     HARDWARE-OBJECT: \"hardware\"
-DEFWAVEFORM custom 6.0:
+DEFWAVEFORM custom:
     1,2
 1 0
 ";
@@ -325,7 +325,7 @@ DEFCAL I 0:
     DELAY 0 1.0
 DEFFRAME 0 \"rx\":
     HARDWARE-OBJECT: \"hardware\"
-DEFWAVEFORM custom 1.0:
+DEFWAVEFORM custom:
     1, 2
 I 0
 ";
@@ -343,7 +343,7 @@ I 0
             "DECLARE ro BIT[5]
 DEFFRAME 0 \"rx\":
 \tHARDWARE-OBJECT: \"hardware\"
-DEFWAVEFORM custom 1:
+DEFWAVEFORM custom:
 \t1, 2
 DEFCAL I 0:
 \tDELAY 0 1

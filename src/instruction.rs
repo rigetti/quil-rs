@@ -787,10 +787,9 @@ impl fmt::Display for Instruction {
             }
             Instruction::WaveformDefinition(WaveformDefinition { name, definition }) => write!(
                 f,
-                "DEFWAVEFORM {}{} {}:\n\t{}",
+                "DEFWAVEFORM {}{}:\n\t{}",
                 name,
                 get_string_parameter_string(&definition.parameters),
-                definition.sample_rate,
                 definition
                     .matrix
                     .iter()
@@ -831,7 +830,6 @@ impl fmt::Display for Qubit {
 pub struct Waveform {
     pub matrix: Vec<Expression>,
     pub parameters: Vec<String>,
-    pub sample_rate: f64,
 }
 
 impl Instruction {

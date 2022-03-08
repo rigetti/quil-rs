@@ -149,7 +149,8 @@ mod tests {
     use std::collections::HashMap;
 
     use crate::instruction::{
-        Label, Reset, SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase,
+        Label, Reset, SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, Waveform,
+        WaveformDefinition,
     };
     use crate::parser::lexer::lex;
     use crate::{
@@ -480,6 +481,23 @@ mod tests {
                 qubit: Some(Qubit::Fixed(0))
             })
         ]
+    );
+
+    make_test!(
+        waveform_definition,
+        parse_instructions,
+        "DEFWAVEFORM q44_q45_cphase/sqrtCPHASE:\n\t0.0, 0.0, 0.00027685415721916584",
+        vec![Instruction::WaveformDefinition(WaveformDefinition {
+            name: "q44_q45_cphase/sqrtCPHASE".to_owned(),
+            definition: Waveform {
+                matrix: vec![
+                    Expression::Number(real!(0.0)),
+                    Expression::Number(real!(0.0)),
+                    Expression::Number(real!(0.00027685415721916584))
+                ],
+                parameters: vec![],
+            }
+        })]
     );
 
     #[test]

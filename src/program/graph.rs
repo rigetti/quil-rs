@@ -43,6 +43,7 @@ pub enum ScheduleErrorVariant {
 
 #[derive(Debug, Clone)]
 pub struct ScheduleError {
+    pub instruction_index: Option<usize>,
     pub instruction: Instruction,
     pub variant: ScheduleErrorVariant,
 }
@@ -249,10 +250,12 @@ impl InstructionBlock {
                     Ok(())
                 }
                 InstructionRole::ControlFlow => Err(ScheduleError {
+                    instruction_index: Some(index),
                     instruction: instruction.clone(),
                     variant: ScheduleErrorVariant::UnschedulableInstruction,
                 }),
                 InstructionRole::ProgramComposition => Err(ScheduleError {
+                    instruction_index: Some(index),
                     instruction: instruction.clone(),
                     variant: ScheduleErrorVariant::UnschedulableInstruction,
                 }),
@@ -466,7 +469,7 @@ pub struct ScheduledProgram {
 }
 
 macro_rules! terminate_working_block {
-    ($terminator:expr, $working_instructions:ident, $blocks:ident, $working_label:ident, $program: ident) => {{
+    ($terminator:expr, $working_instructions:ident, $blocks:ident, $working_label:ident, $program: ident, $instruction_index: ident) => {{
         // If this "block" has no instructions and no terminator, it's not worth storing - skip it
         if $working_instructions.is_empty() && $terminator.is_none() && $working_label.is_none() {
             $working_label = None
@@ -481,6 +484,7 @@ macro_rules! terminate_working_block {
 
             match $blocks.insert(label.clone(), block) {
                 Some(_) => Err(ScheduleError {
+                    instruction_index: $instruction_index,
                     instruction: Instruction::Label(Label(label.clone())),
                     variant: ScheduleErrorVariant::DuplicateLabel,
                 }), // Duplicate label
@@ -503,7 +507,8 @@ impl ScheduledProgram {
 
         let instructions = program.to_instructions(false);
 
-        for instruction in instructions {
+        for (index, instruction) in instructions.into_iter().enumerate() {
+            let instruction_index = Some(index);
             match instruction {
                 Instruction::Arithmetic(_)
                 | Instruction::Capture(_)
@@ -526,6 +531,7 @@ impl ScheduledProgram {
                     Ok(())
                 }
                 Instruction::Gate(_) | Instruction::Measurement(_) => Err(ScheduleError {
+                    instruction_index,
                     instruction: instruction.clone(),
                     variant: ScheduleErrorVariant::UncalibratedInstruction,
                 }),
@@ -548,7 +554,8 @@ impl ScheduledProgram {
                         working_instructions,
                         blocks,
                         working_label,
-                        program
+                        program,
+                        instruction_index
                     )?;
 
                     working_label = Some(value.clone());
@@ -562,7 +569,8 @@ impl ScheduledProgram {
                         working_instructions,
                         blocks,
                         working_label,
-                        program
+                        program,
+                        instruction_index
                     )?;
                     Ok(())
                 }
@@ -576,7 +584,8 @@ impl ScheduledProgram {
                         working_instructions,
                         blocks,
                         working_label,
-                        program
+                        program,
+                        instruction_index
                     )?;
                     Ok(())
                 }
@@ -590,7 +599,8 @@ impl ScheduledProgram {
                         working_instructions,
                         blocks,
                         working_label,
-                        program
+                        program,
+                        instruction_index
                     )
                 }
                 Instruction::Halt => {
@@ -599,7 +609,8 @@ impl ScheduledProgram {
                         working_instructions,
                         blocks,
                         working_label,
-                        program
+                        program,
+                        instruction_index
                     )
                 }
             }?;
@@ -610,7 +621,8 @@ impl ScheduledProgram {
             working_instructions,
             blocks,
             working_label,
-            program
+            program,
+            None
         )?;
 
         Ok(ScheduledProgram { blocks })
