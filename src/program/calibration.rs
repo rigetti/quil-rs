@@ -54,10 +54,6 @@ impl<'a> MatchedCalibration<'a> {
 }
 
 impl CalibrationSet {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
     /// Given an instruction, return the instructions to which it is expanded if there is a match.
     /// Recursively calibrate instructions, returning an error if a calibration directly or indirectly
     /// expands into itself.
@@ -133,30 +129,27 @@ impl CalibrationSet {
                 }
             }
             Instruction::Measurement(Measurement { qubit, target }) => {
-                let mut matching_calibrations_with_precedence: Vec<(
-                    u32,
-                    &MeasureCalibrationDefinition,
-                )> = self
-                    .measure_calibrations
-                    .iter()
-                    .filter_map(|cal| match &cal.qubit {
-                        Some(cal_qubit) if qubit == cal_qubit => Some((1, cal)),
-                        None => Some((0, cal)),
-                        _ => None,
-                    })
-                    .collect();
-
                 // The matching calibration is the last-specified one that matched the target qubit (if any),
                 // or otherwise the last-specified one that specified no qubit.
-                matching_calibrations_with_precedence.sort_by_key(|(precedence, _)| *precedence);
-                let matching_calibration = matching_calibrations_with_precedence.last();
+                let mut matching_calibration = None;
+                let mut found_matching_calibration_without_qubit = false;
+                for cal in self.measure_calibrations.iter().rev() {
+                    if let Some(cal_qubit) = &cal.qubit {
+                        if cal_qubit == qubit {
+                            matching_calibration = Some(cal);
+                            break
+                        }
+                    } else if !found_matching_calibration_without_qubit {
+                        matching_calibration = Some(cal);
+                        found_matching_calibration_without_qubit = true;
+                    }
+                }
+
                 match matching_calibration {
-                    Some((_, calibration)) => {
+                    Some(calibration) => {
                         let mut instructions = calibration.instructions.clone();
                         for instruction in instructions.iter_mut() {
                             match instruction {
-                                // This special-casing is an unfortunate hack to support the current use pattern
-                                // of measurement calibrations.
                                 Instruction::Pragma(pragma) => {
                                     if pragma.name == "LOAD-MEMORY"
                                         && pragma.data.as_ref() == Some(&calibration.parameter)
@@ -338,7 +331,7 @@ mod tests {
     use crate::program::Program;
 
     #[test]
-    fn test_expansion() {
+    fn expansion() {
         struct TestCase<'a> {
             input: &'a str,
             expected: &'a str,
@@ -381,6 +374,20 @@ mod tests {
                     "X 0\n"
                 ),
                 expected: "PULSE 0 \"xy\" gaussian(duration: 1, fwhm: 2, t0: 3)\n",
+            },
+            TestCase {
+                input: concat!(
+                    "DEFCAL MEASURE 0 addr:\n",
+                    "    PRAGMA INCORRECT_ORDERING\n",
+                    "DEFCAL MEASURE 0 addr:\n",
+                    "    PRAGMA CORRECT\n",
+                    "DEFCAL MEASURE 1 addr:\n",
+                    "    PRAGMA INCORRECT_QUBIT\n",
+                    "DEFCAL MEASURE addr:\n",
+                    "    PRAGMA INCORRECT_PRECEDENCE\n",
+                    "MEASURE 0 ro\n"
+                ),
+                expected: "PRAGMA CORRECT\n",
             },
         ];
 
