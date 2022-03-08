@@ -92,36 +92,41 @@ pub fn parse_capture(input: ParserInput, blocking: bool) -> ParserResult<Instruc
     ))
 }
 
-/// Parse the contents of a `DEFCAL` instruction.
+/// Parse the contents of a `DEFCAL` instruction (including `DEFCAL MEASURE`),
+/// following the `DEFCAL` token.
 pub fn parse_defcal<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
     use crate::parser::lexer::Command::Measure;
     let (input, defcal_measure) = opt(token!(Command(Measure)))(input)?;
     match defcal_measure {
         Some(_) => parse_defcal_measure(input),
-        None => {
-            let (input, modifiers) = many0(parse_gate_modifier)(input)?;
-            let (input, name) = token!(Identifier(v))(input)?;
-            let (input, parameters) = opt(delimited(
-                token!(LParenthesis),
-                separated_list0(token!(Comma), parse_expression),
-                token!(RParenthesis),
-            ))(input)?;
-            let parameters = parameters.unwrap_or_default();
-            let (input, qubits) = many0(parse_qubit)(input)?;
-            let (input, _) = token!(Colon)(input)?;
-            let (input, instructions) = instruction::parse_block(input)?;
-            Ok((
-                input,
-                Instruction::CalibrationDefinition(Calibration {
-                    instructions,
-                    modifiers,
-                    name,
-                    parameters,
-                    qubits,
-                }),
-            ))
-        }
+        None => parse_defcal_gate(input),
     }
+}
+
+/// Parse the contents of a `DEFCAL` instruction (but not `DEFCAL MEASURE`),
+/// following the `DEFCAL` token.
+pub fn parse_defcal_gate<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
+    let (input, modifiers) = many0(parse_gate_modifier)(input)?;
+    let (input, name) = token!(Identifier(v))(input)?;
+    let (input, parameters) = opt(delimited(
+        token!(LParenthesis),
+        separated_list0(token!(Comma), parse_expression),
+        token!(RParenthesis),
+    ))(input)?;
+    let parameters = parameters.unwrap_or_default();
+    let (input, qubits) = many0(parse_qubit)(input)?;
+    let (input, _) = token!(Colon)(input)?;
+    let (input, instructions) = instruction::parse_block(input)?;
+    Ok((
+        input,
+        Instruction::CalibrationDefinition(Calibration {
+            instructions,
+            modifiers,
+            name,
+            parameters,
+            qubits,
+        }),
+    ))
 }
 
 /// Parse the contents of a `DEFCAL MEASURE` instruction, following the `MEASURE` token.
