@@ -22,9 +22,9 @@ use nom::{
 use crate::instruction::{
     Arithmetic, ArithmeticOperand, ArithmeticOperator, Calibration, Capture, CircuitDefinition,
     Declaration, Delay, Exchange, Fence, FrameDefinition, Instruction, Jump, JumpUnless, JumpWhen,
-    Label, Load, MeasureCalibrationDefinition, Measurement, Move, Pragma, Pulse, RawCapture, Reset,
-    SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, Store, Waveform,
-    WaveformDefinition, Qubit,
+    Label, Load, MeasureCalibrationDefinition, Measurement, Move, Pragma, Pulse, Qubit, RawCapture,
+    Reset, SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, Store, Waveform,
+    WaveformDefinition,
 };
 use crate::parser::common::parse_variable_qubit;
 use crate::parser::instruction::parse_block;
@@ -132,7 +132,7 @@ pub fn parse_defcal_gate<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruc
 /// Parse the contents of a `DEFCAL MEASURE` instruction, following the `MEASURE` token.
 pub fn parse_defcal_measure<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
     let (input, qubit_index) = opt(token!(Integer(v)))(input)?;
-    let qubit = qubit_index.map(|q| Qubit::Fixed(q));
+    let qubit = qubit_index.map(Qubit::Fixed);
     let (input, destination) = token!(Identifier(v))(input)?;
     let (input, _) = token!(Colon)(input)?;
     let (input, instructions) = instruction::parse_block(input)?;
