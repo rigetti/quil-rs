@@ -849,10 +849,7 @@ impl Instruction {
     /// }));
     ///
     /// ```
-    pub fn apply_to_expressions<F>(&mut self, mut closure: F)
-    where
-        F: FnMut(&mut Expression),
-    {
+    pub fn apply_to_expressions(&mut self, mut closure: impl FnMut(&mut Expression)) {
         match self {
             Instruction::CalibrationDefinition(Calibration { parameters, .. })
             | Instruction::Gate(Gate { parameters, .. }) => {
