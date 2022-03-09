@@ -21,17 +21,17 @@ fn from_corpus() -> Vec<QuilBenchConfig> {
 
     // collect valid quil programs
     let mut programs = vec![];
-    let mut corpus_dir = PathBuf::new();
-    PATH_SRC.split('/').for_each(|p| corpus_dir.push(p));
+    let corpus_dir = PathBuf::from(PATH_SRC);
     let dir = fs::read_dir(corpus_dir).expect("failed to locate quil corpus directory");
 
     dir.filter_map(Result::ok)
-    .for_each(|entry| {
-        if entry
-            .metadata()
-            .expect("failed to read file metadata")
-            .is_file()
-        {
+        .filter(|entry| {
+            entry
+                .metadata()
+                .expect("failed to read file metadata")
+                .is_file()
+        })
+        .for_each(|entry| {
             let program =
                 fs::read_to_string(entry.path()).expect("failed to read quil program file");
             let name = entry
@@ -44,8 +44,7 @@ fn from_corpus() -> Vec<QuilBenchConfig> {
             if quil_rs::Program::from_str(&program).is_ok() {
                 programs.push(QuilBenchConfig { name, program });
             }
-        }
-    });
+        });
 
     programs
 }
