@@ -25,13 +25,7 @@ fn from_corpus() -> Vec<QuilBenchConfig> {
     PATH_SRC.split('/').for_each(|p| corpus_dir.push(p));
     let dir = fs::read_dir(corpus_dir).expect("failed to locate quil corpus directory");
 
-    dir.filter_map(|res| {
-        if res.is_ok() {
-            Some(res.unwrap())
-        } else {
-            None
-        }
-    })
+    dir.filter_map(Result::ok)
     .for_each(|entry| {
         if entry
             .metadata()
