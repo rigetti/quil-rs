@@ -4,11 +4,6 @@ on: [ pull_request ]
 
 name: Benchmark
 
-env:
-  MAIN_SHA: $(git rev-parse main)
-  MAIN_BENCH: ${{ env.MAIN_SHA:0:7 }}.bench
-  THIS_BENCH: ${{ GITHUB_SHA:0:7 }}.bench
-
 jobs:
   benchmark:
     name: Run benchmarks
@@ -18,6 +13,11 @@ jobs:
         rust:
           - stable
     steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
       - name: Set env vars
         run: |
           THIS_SHA=$(echo $GITHUB_SHA | cut -c 1-7)
@@ -25,16 +25,6 @@ jobs:
 
           echo "THIS_BENCH=${THIS_SHA}.bench" >> $GITHUB_ENV
           echo "MAIN_BENCH=${MAIN_SHA}.bench" >> $GITHUB_ENV
-
-      - name: Test env vars
-        run: |
-          echo "MAIN_BENCH=${MAIN_BENCH}"
-          echo "THIS_BENCH=${THIS_BENCH}"
-
-      - name: Checkout sources
-        uses: actions/checkout@v2
-        with:
-          submodules: recursive
 
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
