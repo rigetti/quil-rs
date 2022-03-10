@@ -38,21 +38,16 @@ jobs:
       - name: Install critcmp
         run: cargo install critcmp
 
-      - name: Run cargo check
-        uses: actions-rs/cargo@v1
+      - name: Download benchmark artifacts
+        uses: actions/download-artifact@v3
         with:
-          command: check
-
-      # - name: Download benchmark artifacts
-      #   uses: actions/download-artifact@v3
-      #   with:
-      #     name: benchmarks
+          name: benchmarks
       
       - name: Run cargo benchmark
         uses: actions-rs/cargo@v1
         with: 
           command: bench
-          args: --bench parser -- --save-baseline $THIS_SHA
+          args: --bench parser -- --save-baseline $THIS_BENCH
       
       - name: Archive benchmark results
         uses: actions/upload-artifact@v3
@@ -60,7 +55,7 @@ jobs:
           name: benchmarks
           path: target/criterion
       
-      # - name: Compare benchmark to main
-      #   run: |
-      #     echo "comparing this benchmark to $MAIN_BENCH (main)"
-      #     critcmp $MAIN_BENCH $THIS_BENCH
+      - name: Compare benchmark to main
+        run: |
+          echo "comparing this benchmark ($THIS_BENCH) to main ($MAIN_BENCH)"
+          critcmp $MAIN_BENCH $THIS_BENCH
