@@ -21,7 +21,8 @@ fn from_corpus() -> Vec<QuilBenchConfig> {
 
     // collect valid quil programs
     let mut programs = vec![];
-    let corpus_dir = PathBuf::from(PATH_SRC);
+    let mut corpus_dir = PathBuf::new();
+    PATH_SRC.split('/').for_each(|p| corpus_dir.push(p));
     let dir = fs::read_dir(corpus_dir).expect("failed to locate quil corpus directory");
 
     dir.filter_map(Result::ok)
