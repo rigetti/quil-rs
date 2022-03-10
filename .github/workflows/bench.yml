@@ -1,5 +1,3 @@
-# Based on https://github.com/actions-rs/meta/blob/master/recipes/msrv.md
-
 on: [ push, pull_request ]
 
 name: Benchmark
@@ -7,11 +5,13 @@ name: Benchmark
 jobs:
   benchmark:
     name: Run benchmarks
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
         rust:
           - stable
+
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
@@ -30,7 +30,7 @@ jobs:
         uses: dawidd6/action-download-artifact@v2
         with:
           workflow: bench.yml
-          name: benchmarks
+          name: benchmarks-${{ matrix.os }}
           path: target/criterion
         continue-on-error: true
       
@@ -38,12 +38,12 @@ jobs:
         uses: actions-rs/cargo@v1
         with: 
           command: bench
-          args: --bench parser -- --warm-up-time=2 --measurement-time=2 --sample-size=500 --color=always
+          args: --bench parser -- --warm-up-time=2 --measurement-time=3 --sample-size=500 --color=always
       
       - name: Archive benchmark results
-        if: ${{ github.ref == 'refs/heads/main' }}
+        if: ${{ github.ref == 'refs/heads/main'}}
         uses: actions/upload-artifact@v3
         with:
-          name: benchmarks
+          name: benchmarks-${{ matrix.os }}
           path: target/criterion
     
