@@ -25,7 +25,7 @@ notice = "deny"
 # A list of advisory IDs to ignore. Note that ignored advisories will still
 # output a note when they are encountered.
 ignore = [
-    #"RUSTSEC-0000-0000",
+    "RUSTSEC-2021-0127", # `serde_cbor` is unmaintained
 ]
 
 # This section is considered when running `cargo deny check licenses`
@@ -33,18 +33,11 @@ ignore = [
 # https://embarkstudios.github.io/cargo-deny/checks/licenses/cfg.html
 [licenses]
 unlicensed = "deny"
-allow = [
-    "Apache-2.0",
-    "BSD-2-Clause",
-    "BSD-3-Clause",
-    "MIT",
-]
+allow = ["Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "MIT"]
 # List of explictly disallowed licenses
 # See https://spdx.org/licenses/ for list of possible licenses
 # [possible values: any SPDX 3.11 short identifier (+ optional exception)].
-deny = [
-    #"Nokia",
-]
+deny = []
 # Lint level for licenses considered copyleft
 copyleft = "deny"
 # Blanket approval or denial for OSI-approved or FSF Free/Libre licenses
@@ -78,8 +71,9 @@ multiple-versions = "deny"
 wildcards = "deny"
 highlight = "all"
 skip-tree = [
-    { name = "syn", version = "*", depth = 5 },  # Used in both serde_derive and proptest-derive
-    { name = "quick-error", version = "*" },  # proptest relies on two versions of this
+    { name = "syn", version = "*", depth = 5 }, # Used in both serde_derive and proptest-derive
+    { name = "quick-error", version = "*" },    # proptest relies on two versions of this
+    { name = "itoa", version = "*" },           # various dependencies rely on two versions of this
 ]
 
 # This section is considered when running `cargo deny check sources`.
