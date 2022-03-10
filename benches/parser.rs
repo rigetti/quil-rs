@@ -1,5 +1,5 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use std::{fs, path::PathBuf, str::FromStr};
+use std::{fs, path::Path, process::Command, str::FromStr};
 
 fn benchmark_quil_corpus(c: &mut Criterion) {
     from_corpus().iter().for_each(|cfg| {
@@ -21,8 +21,11 @@ fn from_corpus() -> Vec<QuilBenchConfig> {
 
     // collect valid quil programs
     let mut programs = vec![];
-    let mut corpus_dir = PathBuf::new();
-    PATH_SRC.split('/').for_each(|p| corpus_dir.push(p));
+    let corpus_dir = Path::new(PATH_SRC);
+    if !corpus_dir.exists() {
+        init_submodules()
+    }
+
     let dir = fs::read_dir(corpus_dir).expect("failed to locate quil corpus directory");
 
     dir.filter_map(Result::ok)
@@ -48,6 +51,16 @@ fn from_corpus() -> Vec<QuilBenchConfig> {
         });
 
     programs
+}
+
+// in the event someone wants to run the benchmarks locally, this will download the corpus of quil used
+fn init_submodules() {
+    Command::new("git")
+        .args(["submodule", "update", "--init", "--recursive"])
+        .spawn()
+        .expect("failed to spawn git process")
+        .wait_with_output()
+        .expect("failed to init submodules, verify `git` is installed");
 }
 
 criterion_group!(benches, benchmark_quil_corpus);
