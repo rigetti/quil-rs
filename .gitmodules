@@ -1,3 +1,3 @@
 [submodule "benches/quilc"]
 	path = benches/quilc
-	url = git@github.com:quil-lang/quilc.git
+	url = https://github.com/quil-lang/quilc.git
