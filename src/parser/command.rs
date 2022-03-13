@@ -21,12 +21,12 @@ use nom::{
 
 use crate::instruction::{
     Arithmetic, ArithmeticOperand, ArithmeticOperator, Calibration, Capture, CircuitDefinition,
-    Declaration, Delay, Exchange, Fence, FrameDefinition, Instruction, Jump, JumpUnless, JumpWhen,
-    Label, Load, MeasureCalibrationDefinition, Measurement, Move, Pragma, Pulse, Qubit, RawCapture,
-    Reset, SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, Store, Waveform,
-    WaveformDefinition,
+    Declaration, Delay, Exchange, Fence, FrameDefinition, GreaterThan, Instruction, Jump,
+    JumpUnless, JumpWhen, Label, Load, MeasureCalibrationDefinition, Measurement, MemoryReference,
+    Move, Pragma, Pulse, Qubit, RawCapture, Reset, SetFrequency, SetPhase, SetScale,
+    ShiftFrequency, ShiftPhase, Store, Waveform, WaveformDefinition,
 };
-use crate::parser::common::parse_variable_qubit;
+use crate::parser::common::{parse_arithmetic_operand, parse_variable_qubit};
 use crate::parser::instruction::parse_block;
 use crate::token;
 
@@ -430,6 +430,30 @@ pub fn parse_measurement(input: ParserInput) -> ParserResult<Instruction> {
     Ok((
         input,
         Instruction::Measurement(Measurement { qubit, target }),
+    ))
+}
+
+fn parse_comparison_operands(
+    input: ParserInput,
+) -> ParserResult<(MemoryReference, MemoryReference, ArithmeticOperand)> {
+    let (input, dest) = parse_memory_reference(input)?;
+    let (input, lhs) = parse_memory_reference(input)?;
+    let (input, rhs) = parse_arithmetic_operand(input)?;
+
+    Ok((input, (dest, lhs, rhs)))
+}
+
+/// Parse GT <destination-bit-register> <LHS> <RHS>
+pub fn parse_gt(input: ParserInput) -> ParserResult<Instruction> {
+    let (input, (destination, lhs, rhs)) = parse_comparison_operands(input)?;
+
+    Ok((
+        input,
+        Instruction::GreaterThan(GreaterThan {
+            destination,
+            lhs,
+            rhs,
+        }),
     ))
 }
 

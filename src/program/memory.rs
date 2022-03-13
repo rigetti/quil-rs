@@ -18,7 +18,7 @@ use std::collections::HashSet;
 use crate::expression::Expression;
 use crate::instruction::{
     Arithmetic, ArithmeticOperand, Capture, CircuitDefinition, Delay, Exchange, Gate,
-    GateDefinition, Instruction, Jump, JumpUnless, JumpWhen, Label, Load,
+    GateDefinition, GreaterThan, Instruction, Jump, JumpUnless, JumpWhen, Label, Load,
     MeasureCalibrationDefinition, Measurement, MemoryReference, Move, Pulse, RawCapture, SetPhase,
     SetScale, ShiftPhase, Store, Vector, WaveformInvocation,
 };
@@ -226,6 +226,18 @@ impl Instruction {
                     set_from_optional_memory_reference!(source.get_memory_reference())
                 ],
                 writes: set_from_reference_vec![vec![destination]],
+                ..Default::default()
+            },
+            Instruction::GreaterThan(GreaterThan {
+                destination,
+                lhs,
+                rhs,
+            }) => MemoryAccesses {
+                reads: merge_sets![
+                    set_from_memory_references!(vec![lhs]),
+                    set_from_optional_memory_reference!(rhs.get_memory_reference())
+                ],
+                writes: set_from_memory_references!(vec![destination]),
                 ..Default::default()
             },
             Instruction::SwapPhases(_) => Default::default(),

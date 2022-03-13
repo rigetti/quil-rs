@@ -58,7 +58,7 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
                 // Command::Exchange => {}
                 Command::Fence => command::parse_fence(remainder),
                 // Command::GE => {}
-                // Command::GT => {}
+                Command::GT => command::parse_gt(remainder),
                 Command::Halt => Ok((remainder, Instruction::Halt)),
                 // Command::Include => {}
                 // Command::Ior => {}

@@ -514,6 +514,7 @@ impl ScheduledProgram {
                 | Instruction::Capture(_)
                 | Instruction::Delay(_)
                 | Instruction::Fence(_)
+                | Instruction::GreaterThan(_)
                 | Instruction::Move(_)
                 | Instruction::Exchange(_)
                 | Instruction::Load(_)

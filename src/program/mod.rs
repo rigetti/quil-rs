@@ -193,7 +193,8 @@ impl Program {
             | Instruction::Store(_)
             | Instruction::Jump(_)
             | Instruction::JumpWhen(_)
-            | Instruction::JumpUnless(_) => None,
+            | Instruction::JumpUnless(_)
+            | Instruction::GreaterThan(_) => None,
         }
     }
 

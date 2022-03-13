@@ -411,6 +411,13 @@ pub struct JumpUnless {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub struct GreaterThan {
+    pub destination: MemoryReference,
+    pub lhs: MemoryReference,
+    pub rhs: ArithmeticOperand,
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub enum Instruction {
     Gate(Gate),
     CircuitDefinition(CircuitDefinition),
@@ -444,6 +451,7 @@ pub enum Instruction {
     Jump(Jump),
     JumpWhen(JumpWhen),
     JumpUnless(JumpUnless),
+    GreaterThan(GreaterThan),
 }
 
 #[derive(Clone, Debug)]
@@ -482,6 +490,7 @@ impl From<&Instruction> for InstructionRole {
             Instruction::Arithmetic(_)
             | Instruction::Move(_)
             | Instruction::Exchange(_)
+            | Instruction::GreaterThan(_)
             | Instruction::Load(_)
             | Instruction::Pragma(_)
             | Instruction::Store(_) => InstructionRole::ClassicalCompute,
@@ -682,6 +691,13 @@ impl fmt::Display for Instruction {
                     )?;
                 }
                 Ok(())
+            }
+            Instruction::GreaterThan(GreaterThan {
+                destination,
+                lhs,
+                rhs,
+            }) => {
+                write!(f, "GT {} {} {}", destination, lhs, rhs)
             }
             Instruction::MeasureCalibrationDefinition(MeasureCalibrationDefinition {
                 qubit,
