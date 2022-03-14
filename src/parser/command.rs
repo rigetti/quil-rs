@@ -22,8 +22,9 @@ use nom::{
 use crate::instruction::{
     Arithmetic, ArithmeticOperand, ArithmeticOperator, Calibration, Capture, CircuitDefinition,
     Declaration, Delay, Exchange, Fence, FrameDefinition, Instruction, Jump, JumpUnless, JumpWhen,
-    Label, Load, Measurement, Move, Pragma, Pulse, RawCapture, Reset, SetFrequency, SetPhase,
-    SetScale, ShiftFrequency, ShiftPhase, Store, Waveform, WaveformDefinition,
+    Label, Load, Logic, LogicalOperator, Measurement, Move, Pragma, Pulse, RawCapture, Reset,
+    SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, Store, Waveform,
+    WaveformDefinition,
 };
 use crate::parser::common::parse_variable_qubit;
 use crate::parser::instruction::parse_block;
@@ -53,6 +54,24 @@ pub fn parse_arithmetic(
             operator,
             destination,
             source,
+        }),
+    ))
+}
+
+/// Parse a logical binary instruction of the form `addr ( addr | INT )`.
+/// Called using the logical operator itself (such as `AND`) which should be previously parsed.
+pub fn parse_logical_binary(
+    operator: LogicalOperator,
+    input: ParserInput,
+) -> ParserResult<Instruction> {
+    let (input, left) = common::parse_memory_reference(input)?;
+    let (input, right) = common::parse_binary_logic_operand(input)?;
+
+    Ok((
+        input,
+        Instruction::Logic(Logic {
+            operator,
+            operands: (left, right),
         }),
     ))
 }

@@ -58,6 +58,62 @@ impl fmt::Display for ArithmeticOperator {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub enum LogicalOperand {
+    LiteralInteger(i64),
+    MemoryReference(MemoryReference),
+}
+
+impl fmt::Display for LogicalOperand {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match &self {
+            LogicalOperand::LiteralInteger(value) => write!(f, "{}", value),
+            LogicalOperand::MemoryReference(value) => write!(f, "{}", value),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum LogicalOperator {
+    Binary(BinaryLogic),
+    Unary(UnaryLogic),
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum BinaryLogic {
+    And,
+    Or,
+    Ior,
+    Xor,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum UnaryLogic {
+    Neg,
+    Not,
+    True,
+    False,
+}
+
+impl fmt::Display for LogicalOperator {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match &self {
+            LogicalOperator::Binary(logic) => match logic {
+                BinaryLogic::And => write!(f, "AND"),
+                BinaryLogic::Or => write!(f, "OR"),
+                BinaryLogic::Ior => write!(f, "IOR"),
+                BinaryLogic::Xor => write!(f, "XOR"),
+            },
+            LogicalOperator::Unary(logic) => match logic {
+                UnaryLogic::Neg => write!(f, "NEG"),
+                UnaryLogic::Not => write!(f, "NOT"),
+                UnaryLogic::True => write!(f, "TRUE"),
+                UnaryLogic::False => write!(f, "FALSE"),
+            },
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub enum AttributeValue {
     String(String),
     Expression(Expression),
@@ -365,6 +421,12 @@ pub struct Arithmetic {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub struct Logic {
+    pub operator: LogicalOperator,
+    pub operands: (MemoryReference, LogicalOperand),
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub struct Label(pub String);
 
 #[derive(Clone, Debug, PartialEq)]
@@ -435,6 +497,7 @@ pub enum Instruction {
     SwapPhases(SwapPhases),
     WaveformDefinition(WaveformDefinition),
     Arithmetic(Arithmetic),
+    Logic(Logic),
     Halt,
     Label(Label),
     Move(Move),
@@ -481,6 +544,7 @@ impl From<&Instruction> for InstructionRole {
             | Instruction::ShiftPhase(_)
             | Instruction::SwapPhases(_) => InstructionRole::RFControl,
             Instruction::Arithmetic(_)
+            | Instruction::Logic(_)
             | Instruction::Move(_)
             | Instruction::Exchange(_)
             | Instruction::Load(_)
@@ -801,6 +865,9 @@ impl fmt::Display for Instruction {
                 write!(f, "JUMP-WHEN @{} {}", target, condition)
             }
             Instruction::Label(Label(label)) => write!(f, "LABEL @{}", label),
+            Instruction::Logic(Logic { operator, operands }) => {
+                write!(f, "{} {} {}", operator, operands.0, operands.1)
+            }
         }
     }
 }

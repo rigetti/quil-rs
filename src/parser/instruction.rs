@@ -20,7 +20,7 @@ use nom::{
 };
 
 use crate::{
-    instruction::{ArithmeticOperator, Instruction},
+    instruction::{ArithmeticOperator, BinaryLogic, Instruction, LogicalOperator},
     token,
 };
 
@@ -43,7 +43,10 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
         Some((Token::Command(command), remainder)) => {
             match command {
                 Command::Add => command::parse_arithmetic(ArithmeticOperator::Add, remainder),
-                // Command::And => {}
+                Command::And => command::parse_logical_binary(
+                    LogicalOperator::Binary(BinaryLogic::And),
+                    remainder,
+                ),
                 Command::Capture => command::parse_capture(remainder, true),
                 // Command::Convert => {}
                 Command::Declare => command::parse_declare(remainder),
@@ -61,7 +64,10 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
                 // Command::GT => {}
                 Command::Halt => Ok((remainder, Instruction::Halt)),
                 // Command::Include => {}
-                // Command::Ior => {}
+                Command::Ior => command::parse_logical_binary(
+                    LogicalOperator::Binary(BinaryLogic::Ior),
+                    remainder,
+                ),
                 Command::Jump => command::parse_jump(remainder),
                 Command::JumpUnless => command::parse_jump_unless(remainder),
                 Command::JumpWhen => command::parse_jump_when(remainder),
@@ -76,6 +82,10 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
                 // Command::Neg => {}
                 // Command::Nop => {}
                 // Command::Not => {}
+                Command::Or => command::parse_logical_binary(
+                    LogicalOperator::Binary(BinaryLogic::Or),
+                    remainder,
+                ),
                 Command::Pragma => command::parse_pragma(remainder),
                 Command::Pulse => command::parse_pulse(remainder, true),
                 Command::RawCapture => command::parse_raw_capture(remainder, true),
@@ -88,7 +98,10 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
                 Command::Store => command::parse_store(remainder),
                 Command::Sub => command::parse_arithmetic(ArithmeticOperator::Subtract, remainder),
                 // Command::Wait => {}
-                // Command::Xor => {}
+                Command::Xor => command::parse_logical_binary(
+                    LogicalOperator::Binary(BinaryLogic::Xor),
+                    remainder,
+                ),
                 _ => Err(nom::Err::Failure(Error {
                     input: &input[..1],
                     error: ErrorKind::UnsupportedInstruction,
@@ -149,8 +162,8 @@ mod tests {
     use std::collections::HashMap;
 
     use crate::instruction::{
-        Label, Reset, SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, Waveform,
-        WaveformDefinition,
+        BinaryLogic, Label, Logic, LogicalOperand, LogicalOperator, Reset, SetFrequency, SetPhase,
+        SetScale, ShiftFrequency, ShiftPhase, Waveform, WaveformDefinition,
     };
     use crate::parser::lexer::lex;
     use crate::{
@@ -241,6 +254,83 @@ mod tests {
             })
         ]
     );
+
+    make_test!(
+        logic,
+        parse_instructions,
+        "AND ro 1\nOR ro ro[1]\nIOR ro[1] ro[2]\nXOR ro[1] 0\nAND ro[1] ro[2]",
+        vec![
+            Instruction::Logic(Logic {
+                operator: LogicalOperator::Binary(BinaryLogic::And),
+                operands: (
+                    MemoryReference {
+                        name: "ro".to_owned(),
+                        index: 0
+                    },
+                    LogicalOperand::LiteralInteger(1)
+                )
+            }),
+            Instruction::Logic(Logic {
+                operator: LogicalOperator::Binary(BinaryLogic::Or),
+                operands: (
+                    MemoryReference {
+                        name: "ro".to_owned(),
+                        index: 0
+                    },
+                    LogicalOperand::MemoryReference(MemoryReference {
+                        name: "ro".to_owned(),
+                        index: 1
+                    })
+                )
+            }),
+            Instruction::Logic(Logic {
+                operator: LogicalOperator::Binary(BinaryLogic::Ior),
+                operands: (
+                    MemoryReference {
+                        name: "ro".to_owned(),
+                        index: 1
+                    },
+                    LogicalOperand::MemoryReference(MemoryReference {
+                        name: "ro".to_owned(),
+                        index: 2
+                    })
+                )
+            }),
+            Instruction::Logic(Logic {
+                operator: LogicalOperator::Binary(BinaryLogic::Xor),
+                operands: (
+                    MemoryReference {
+                        name: "ro".to_owned(),
+                        index: 1
+                    },
+                    LogicalOperand::LiteralInteger(0)
+                )
+            }),
+            Instruction::Logic(Logic {
+                operator: LogicalOperator::Binary(BinaryLogic::And),
+                operands: (
+                    MemoryReference {
+                        name: "ro".to_owned(),
+                        index: 1
+                    },
+                    LogicalOperand::MemoryReference(MemoryReference {
+                        name: "ro".to_owned(),
+                        index: 2
+                    })
+                )
+            }),
+        ]
+    );
+
+    #[test]
+    fn test_binary_logic_error() {
+        ["AND ro", "XOR 1 1", "IOR 1", "OR 1 ro"]
+            .iter()
+            .for_each(|input| {
+                let tokens = lex(input).unwrap();
+                assert!(parse_instructions(&tokens).is_err())
+            })
+    }
 
     make_test!(
         capture_instructions,

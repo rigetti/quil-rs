@@ -18,9 +18,9 @@ use std::collections::HashSet;
 use crate::expression::Expression;
 use crate::instruction::{
     Arithmetic, ArithmeticOperand, Capture, CircuitDefinition, Delay, Exchange, Gate,
-    GateDefinition, Instruction, Jump, JumpUnless, JumpWhen, Label, Load,
-    MeasureCalibrationDefinition, Measurement, MemoryReference, Move, Pulse, RawCapture, SetPhase,
-    SetScale, ShiftPhase, Store, Vector, WaveformInvocation,
+    GateDefinition, Instruction, Jump, JumpUnless, JumpWhen, Label, Load, Logic, LogicalOperand,
+    LogicalOperator, MeasureCalibrationDefinition, Measurement, MemoryReference, Move, Pulse,
+    RawCapture, SetPhase, SetScale, ShiftPhase, Store, Vector, WaveformInvocation,
 };
 
 #[derive(Clone, Debug, Hash, PartialEq)]
@@ -90,6 +90,21 @@ impl Instruction {
     /// Return all memory accesses by the instruction - in expressions, captures, and memory manipulation
     pub fn get_memory_accesses(&self) -> MemoryAccesses {
         match self {
+            Instruction::Logic(Logic { operands, operator }) => match operator {
+                LogicalOperator::Binary(_) => {
+                    let mut memories = HashSet::new();
+                    memories.insert(operands.0.name.clone());
+                    if let LogicalOperand::MemoryReference(mem) = &operands.1 {
+                        memories.insert(mem.name.clone());
+                    }
+
+                    MemoryAccesses {
+                        reads: memories,
+                        ..Default::default()
+                    }
+                }
+                LogicalOperator::Unary(_) => todo!("implement memory access for unary logic"),
+            },
             Instruction::Arithmetic(Arithmetic {
                 destination,
                 source,
