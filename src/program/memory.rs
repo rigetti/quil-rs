@@ -17,10 +17,10 @@ use std::collections::HashSet;
 
 use crate::expression::Expression;
 use crate::instruction::{
-    Arithmetic, ArithmeticOperand, Capture, CircuitDefinition, Delay, Exchange, Gate,
-    GateDefinition, Instruction, Jump, JumpUnless, JumpWhen, Label, Load, Logic, LogicalOperand,
-    LogicalOperator, MeasureCalibrationDefinition, Measurement, MemoryReference, Move, Pulse,
-    RawCapture, SetPhase, SetScale, ShiftPhase, Store, Vector, WaveformInvocation,
+    Arithmetic, ArithmeticOperand, BinaryLogic, Capture, CircuitDefinition, Delay, Exchange, Gate,
+    GateDefinition, Instruction, Jump, JumpUnless, JumpWhen, Label, Load, LogicalOperand,
+    MeasureCalibrationDefinition, Measurement, MemoryReference, Move, Pulse, RawCapture, SetPhase,
+    SetScale, ShiftPhase, Store, UnaryLogic, Vector, WaveformInvocation,
 };
 
 #[derive(Clone, Debug, Hash, PartialEq)]
@@ -90,20 +90,21 @@ impl Instruction {
     /// Return all memory accesses by the instruction - in expressions, captures, and memory manipulation
     pub fn get_memory_accesses(&self) -> MemoryAccesses {
         match self {
-            Instruction::Logic(Logic { operands, operator }) => match operator {
-                LogicalOperator::Binary(_) => {
-                    let mut memories = HashSet::new();
-                    memories.insert(operands.0.name.clone());
-                    if let LogicalOperand::MemoryReference(mem) = &operands.1 {
-                        memories.insert(mem.name.clone());
-                    }
-
-                    MemoryAccesses {
-                        reads: memories,
-                        ..Default::default()
-                    }
+            Instruction::BinaryLogic(BinaryLogic { operands, .. }) => {
+                let mut memories = HashSet::new();
+                memories.insert(operands.0.name.clone());
+                if let LogicalOperand::MemoryReference(mem) = &operands.1 {
+                    memories.insert(mem.name.clone());
                 }
-                LogicalOperator::Unary(_) => todo!("implement memory access for unary logic"),
+
+                MemoryAccesses {
+                    reads: memories,
+                    ..Default::default()
+                }
+            }
+            Instruction::UnaryLogic(UnaryLogic { operand, .. }) => MemoryAccesses {
+                reads: HashSet::from([operand.name.clone()]),
+                ..Default::default()
             },
             Instruction::Arithmetic(Arithmetic {
                 destination,

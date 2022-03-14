@@ -73,42 +73,34 @@ impl fmt::Display for LogicalOperand {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum LogicalOperator {
-    Binary(BinaryLogic),
-    Unary(UnaryLogic),
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum BinaryLogic {
+pub enum BinaryOp {
     And,
     Or,
     Ior,
     Xor,
 }
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum UnaryLogic {
-    Neg,
-    Not,
-    True,
-    False,
-}
-
-impl fmt::Display for LogicalOperator {
+impl fmt::Display for BinaryOp {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self {
-            LogicalOperator::Binary(logic) => match logic {
-                BinaryLogic::And => write!(f, "AND"),
-                BinaryLogic::Or => write!(f, "OR"),
-                BinaryLogic::Ior => write!(f, "IOR"),
-                BinaryLogic::Xor => write!(f, "XOR"),
-            },
-            LogicalOperator::Unary(logic) => match logic {
-                UnaryLogic::Neg => write!(f, "NEG"),
-                UnaryLogic::Not => write!(f, "NOT"),
-                UnaryLogic::True => write!(f, "TRUE"),
-                UnaryLogic::False => write!(f, "FALSE"),
-            },
+            BinaryOp::And => write!(f, "AND"),
+            BinaryOp::Or => write!(f, "OR"),
+            BinaryOp::Ior => write!(f, "IOR"),
+            BinaryOp::Xor => write!(f, "XOR"),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum UnaryOp {
+    Neg,
+    Not,
+}
+
+impl fmt::Display for UnaryOp {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match &self {
+            UnaryOp::Neg => write!(f, "NEG"),
+            UnaryOp::Not => write!(f, "NOT"),
         }
     }
 }
@@ -421,9 +413,15 @@ pub struct Arithmetic {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct Logic {
-    pub operator: LogicalOperator,
+pub struct BinaryLogic {
+    pub operator: BinaryOp,
     pub operands: (MemoryReference, LogicalOperand),
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct UnaryLogic {
+    pub operator: UnaryOp,
+    pub operand: MemoryReference,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -497,7 +495,8 @@ pub enum Instruction {
     SwapPhases(SwapPhases),
     WaveformDefinition(WaveformDefinition),
     Arithmetic(Arithmetic),
-    Logic(Logic),
+    BinaryLogic(BinaryLogic),
+    UnaryLogic(UnaryLogic),
     Halt,
     Label(Label),
     Move(Move),
@@ -544,7 +543,8 @@ impl From<&Instruction> for InstructionRole {
             | Instruction::ShiftPhase(_)
             | Instruction::SwapPhases(_) => InstructionRole::RFControl,
             Instruction::Arithmetic(_)
-            | Instruction::Logic(_)
+            | Instruction::BinaryLogic(_)
+            | Instruction::UnaryLogic(_)
             | Instruction::Move(_)
             | Instruction::Exchange(_)
             | Instruction::Load(_)
@@ -657,7 +657,7 @@ impl fmt::Display for Instruction {
                     .collect::<Vec<String>>()
                     .join(", ");
                 if !parameter_str.is_empty() {
-                    parameter_str = format!("({})", parameter_str)
+                    parameter_str = format!("({})", parameter_str);
                 }
                 write!(f, "DEFCIRCUIT {}{}", name, parameter_str)?;
                 for qubit_variable in qubit_variables {
@@ -798,7 +798,7 @@ impl fmt::Display for Instruction {
                 waveform,
             }) => {
                 if !blocking {
-                    write!(f, "NONBLOCKING ")?;
+                    write!(f, "NONBLOCKING ")?
                 }
                 write!(f, "PULSE {} {}", frame, waveform)
             }
@@ -818,7 +818,7 @@ impl fmt::Display for Instruction {
                 memory_reference,
             }) => {
                 if !blocking {
-                    write!(f, "NONBLOCKING ")?;
+                    write!(f, "NONBLOCKING ")?
                 }
                 write!(f, "RAW-CAPTURE {} {} {}", frame, duration, memory_reference)
             }
@@ -865,8 +865,11 @@ impl fmt::Display for Instruction {
                 write!(f, "JUMP-WHEN @{} {}", target, condition)
             }
             Instruction::Label(Label(label)) => write!(f, "LABEL @{}", label),
-            Instruction::Logic(Logic { operator, operands }) => {
+            Instruction::BinaryLogic(BinaryLogic { operator, operands }) => {
                 write!(f, "{} {} {}", operator, operands.0, operands.1)
+            }
+            Instruction::UnaryLogic(UnaryLogic { operator, operand }) => {
+                write!(f, "{} {}", operator, operand)
             }
         }
     }
