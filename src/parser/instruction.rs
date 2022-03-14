@@ -75,7 +75,6 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
                 Command::Neg => command::parse_logical_unary(UnaryOp::Neg, remainder),
                 // Command::Nop => {}
                 Command::Not => command::parse_logical_unary(UnaryOp::Not, remainder),
-                Command::Or => command::parse_logical_binary(BinaryOp::Or, remainder),
                 Command::Pragma => command::parse_pragma(remainder),
                 Command::Pulse => command::parse_pulse(remainder, true),
                 Command::RawCapture => command::parse_raw_capture(remainder, true),
@@ -241,7 +240,7 @@ mod tests {
     make_test!(
         binary_logic,
         parse_instructions,
-        "AND ro 1\nOR ro ro[1]\nIOR ro[1] ro[2]\nXOR ro[1] 0\nAND ro[1] ro[2]",
+        "AND ro 1\nIOR ro[1] ro[2]\nXOR ro[1] 0\nAND ro[1] ro[2]",
         vec![
             Instruction::BinaryLogic(BinaryLogic {
                 operator: BinaryOp::And,
@@ -251,19 +250,6 @@ mod tests {
                         index: 0
                     },
                     LogicalOperand::LiteralInteger(1)
-                )
-            }),
-            Instruction::BinaryLogic(BinaryLogic {
-                operator: BinaryOp::Or,
-                operands: (
-                    MemoryReference {
-                        name: "ro".to_owned(),
-                        index: 0
-                    },
-                    LogicalOperand::MemoryReference(MemoryReference {
-                        name: "ro".to_owned(),
-                        index: 1
-                    })
                 )
             }),
             Instruction::BinaryLogic(BinaryLogic {
@@ -307,12 +293,10 @@ mod tests {
 
     #[test]
     fn test_binary_logic_error() {
-        ["AND ro", "XOR 1 1", "IOR 1", "OR 1 ro"]
-            .iter()
-            .for_each(|input| {
-                let tokens = lex(input).unwrap();
-                assert!(parse_instructions(&tokens).is_err())
-            })
+        ["AND ro", "XOR 1 1", "IOR 1"].iter().for_each(|input| {
+            let tokens = lex(input).unwrap();
+            assert!(parse_instructions(&tokens).is_err())
+        })
     }
 
     make_test!(

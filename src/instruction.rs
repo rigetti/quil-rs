@@ -75,7 +75,6 @@ impl fmt::Display for LogicalOperand {
 #[derive(Clone, Debug, PartialEq)]
 pub enum BinaryOp {
     And,
-    Or,
     Ior,
     Xor,
 }
@@ -83,7 +82,6 @@ impl fmt::Display for BinaryOp {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self {
             BinaryOp::And => write!(f, "AND"),
-            BinaryOp::Or => write!(f, "OR"),
             BinaryOp::Ior => write!(f, "IOR"),
             BinaryOp::Xor => write!(f, "XOR"),
         }
