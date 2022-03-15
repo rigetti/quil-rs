@@ -20,7 +20,8 @@ use crate::instruction::{
     Arithmetic, ArithmeticOperand, BinaryLogic, BinaryOperand, Capture, CircuitDefinition, Delay,
     Exchange, Gate, GateDefinition, Instruction, Jump, JumpUnless, JumpWhen, Label, Load,
     MeasureCalibrationDefinition, Measurement, MemoryReference, Move, Pulse, RawCapture, SetPhase,
-    SetScale, ShiftPhase, Store, UnaryLogic, Vector, WaveformInvocation,
+    SetScale, ShiftPhase, Store, TernaryLogic, TernaryOperand, UnaryLogic, Vector,
+    WaveformInvocation,
 };
 
 #[derive(Clone, Debug, Hash, PartialEq)]
@@ -90,18 +91,31 @@ impl Instruction {
     /// Return all memory accesses by the instruction - in expressions, captures, and memory manipulation
     pub fn get_memory_accesses(&self) -> MemoryAccesses {
         match self {
-            Instruction::BinaryLogic(BinaryLogic { operands, .. }) => {
-                let mut r_memories = HashSet::new();
-                let mut w_memories = HashSet::new();
-                r_memories.insert(operands.0.name.clone());
-                w_memories.insert(operands.0.name.clone());
-                if let BinaryOperand::MemoryReference(mem) = &operands.1 {
-                    r_memories.insert(mem.name.clone());
+            Instruction::TernaryLogic(TernaryLogic { operands, .. }) => {
+                let mut reads = HashSet::from([operands.1.name.clone()]);
+                let writes = HashSet::from([operands.0.name.clone()]);
+                if let TernaryOperand::MemoryReference(mem) = &operands.2 {
+                    reads.insert(mem.name.clone());
                 }
 
                 MemoryAccesses {
-                    reads: r_memories,
-                    writes: w_memories,
+                    reads,
+                    writes,
+                    ..Default::default()
+                }
+            }
+            Instruction::BinaryLogic(BinaryLogic { operands, .. }) => {
+                let mut reads = HashSet::new();
+                let mut writes = HashSet::new();
+                reads.insert(operands.0.name.clone());
+                writes.insert(operands.0.name.clone());
+                if let BinaryOperand::MemoryReference(mem) = &operands.1 {
+                    reads.insert(mem.name.clone());
+                }
+
+                MemoryAccesses {
+                    reads,
+                    writes,
                     ..Default::default()
                 }
             }

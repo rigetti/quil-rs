@@ -104,6 +104,44 @@ impl fmt::Display for UnaryOperator {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub enum TernaryOperand {
+    LiteralInteger(i64),
+    LiteralReal(f64),
+    MemoryReference(MemoryReference),
+}
+
+impl fmt::Display for TernaryOperand {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match &self {
+            TernaryOperand::LiteralInteger(value) => write!(f, "{}", value),
+            TernaryOperand::LiteralReal(value) => write!(f, "{}", value),
+            TernaryOperand::MemoryReference(value) => write!(f, "{}", value),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum TernaryOperator {
+    Equal,
+    GreaterThanOrEqual,
+    GreaterThan,
+    LessThanOrEqual,
+    LessThan,
+}
+
+impl fmt::Display for TernaryOperator {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match &self {
+            TernaryOperator::Equal => write!(f, "EQ"),
+            TernaryOperator::GreaterThanOrEqual => write!(f, "GE"),
+            TernaryOperator::GreaterThan => write!(f, "GT"),
+            TernaryOperator::LessThanOrEqual => write!(f, "LE"),
+            TernaryOperator::LessThan => write!(f, "LT"),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub enum AttributeValue {
     String(String),
     Expression(Expression),
@@ -411,6 +449,12 @@ pub struct Arithmetic {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub struct TernaryLogic {
+    pub operator: TernaryOperator,
+    pub operands: (MemoryReference, MemoryReference, TernaryOperand),
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub struct BinaryLogic {
     pub operator: BinaryOperator,
     pub operands: (MemoryReference, BinaryOperand),
@@ -493,6 +537,7 @@ pub enum Instruction {
     SwapPhases(SwapPhases),
     WaveformDefinition(WaveformDefinition),
     Arithmetic(Arithmetic),
+    TernaryLogic(TernaryLogic),
     BinaryLogic(BinaryLogic),
     UnaryLogic(UnaryLogic),
     Halt,
@@ -541,6 +586,7 @@ impl From<&Instruction> for InstructionRole {
             | Instruction::ShiftPhase(_)
             | Instruction::SwapPhases(_) => InstructionRole::RFControl,
             Instruction::Arithmetic(_)
+            | Instruction::TernaryLogic(_)
             | Instruction::BinaryLogic(_)
             | Instruction::UnaryLogic(_)
             | Instruction::Move(_)
@@ -863,6 +909,13 @@ impl fmt::Display for Instruction {
                 write!(f, "JUMP-WHEN @{} {}", target, condition)
             }
             Instruction::Label(Label(label)) => write!(f, "LABEL @{}", label),
+            Instruction::TernaryLogic(TernaryLogic { operator, operands }) => {
+                write!(
+                    f,
+                    "{} {} {} {}",
+                    operator, operands.0, operands.1, operands.2
+                )
+            }
             Instruction::BinaryLogic(BinaryLogic { operator, operands }) => {
                 write!(f, "{} {} {}", operator, operands.0, operands.1)
             }

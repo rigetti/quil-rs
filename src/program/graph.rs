@@ -511,6 +511,7 @@ impl ScheduledProgram {
             let instruction_index = Some(index);
             match instruction {
                 Instruction::Arithmetic(_)
+                | Instruction::TernaryLogic(_)
                 | Instruction::BinaryLogic(_)
                 | Instruction::UnaryLogic(_)
                 | Instruction::Capture(_)

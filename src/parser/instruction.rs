@@ -20,7 +20,9 @@ use nom::{
 };
 
 use crate::{
-    instruction::{ArithmeticOperator, BinaryOperator, Instruction, UnaryOperator},
+    instruction::{
+        ArithmeticOperator, BinaryOperator, Instruction, TernaryOperator, UnaryOperator,
+    },
     token,
 };
 
@@ -54,10 +56,18 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
                 Command::DefWaveform => command::parse_defwaveform(remainder),
                 Command::Delay => command::parse_delay(remainder),
                 Command::Div => command::parse_arithmetic(ArithmeticOperator::Divide, remainder),
-                // Command::Eq => {}
+                Command::Eq => command::parse_logical_ternary(TernaryOperator::Equal, remainder),
+                Command::GE => {
+                    command::parse_logical_ternary(TernaryOperator::GreaterThanOrEqual, remainder)
+                }
+                Command::GT => {
+                    command::parse_logical_ternary(TernaryOperator::GreaterThan, remainder)
+                }
+                Command::LE => {
+                    command::parse_logical_ternary(TernaryOperator::LessThanOrEqual, remainder)
+                }
+                Command::LT => command::parse_logical_ternary(TernaryOperator::LessThan, remainder),
                 Command::Fence => command::parse_fence(remainder),
-                // Command::GE => {}
-                // Command::GT => {}
                 Command::Halt => Ok((remainder, Instruction::Halt)),
                 // Command::Include => {}
                 Command::Ior => command::parse_logical_binary(BinaryOperator::Ior, remainder),
@@ -65,9 +75,7 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
                 Command::JumpUnless => command::parse_jump_unless(remainder),
                 Command::JumpWhen => command::parse_jump_when(remainder),
                 Command::Label => command::parse_label(remainder),
-                // Command::LE => {}
                 Command::Load => command::parse_load(remainder),
-                // Command::LT => {}
                 Command::Measure => command::parse_measurement(remainder),
                 Command::Move => command::parse_move(remainder),
                 Command::Exchange => command::parse_exchange(remainder),
@@ -152,8 +160,9 @@ mod tests {
         Arithmetic, ArithmeticOperand, ArithmeticOperator, AttributeValue, BinaryLogic,
         BinaryOperand, BinaryOperator, Calibration, Capture, FrameDefinition, FrameIdentifier,
         Gate, Instruction, Jump, JumpWhen, Label, MemoryReference, Move, Pulse, Qubit, RawCapture,
-        Reset, SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, UnaryLogic,
-        UnaryOperator, Waveform, WaveformDefinition, WaveformInvocation,
+        Reset, SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, TernaryLogic,
+        TernaryOperand, TernaryOperator, UnaryLogic, UnaryOperator, Waveform, WaveformDefinition,
+        WaveformInvocation,
     };
     use crate::parser::lexer::lex;
     use crate::{make_test, real};
@@ -236,6 +245,103 @@ mod tests {
             })
         ]
     );
+
+    make_test!(
+        ternary_logic,
+        parse_instructions,
+        "EQ dest ro 0\nLT dest ro[1] -1\nLE dest ro 1.2\nGT dest ro[2] 1e-6\nGE dest ro x",
+        vec![
+            Instruction::TernaryLogic(TernaryLogic {
+                operator: TernaryOperator::Equal,
+                operands: (
+                    MemoryReference {
+                        name: "dest".to_owned(),
+                        index: 0
+                    },
+                    MemoryReference {
+                        name: "ro".to_owned(),
+                        index: 0
+                    },
+                    TernaryOperand::LiteralInteger(0)
+                )
+            }),
+            Instruction::TernaryLogic(TernaryLogic {
+                operator: TernaryOperator::LessThan,
+                operands: (
+                    MemoryReference {
+                        name: "dest".to_owned(),
+                        index: 0
+                    },
+                    MemoryReference {
+                        name: "ro".to_owned(),
+                        index: 1
+                    },
+                    TernaryOperand::LiteralInteger(-1)
+                )
+            }),
+            Instruction::TernaryLogic(TernaryLogic {
+                operator: TernaryOperator::LessThanOrEqual,
+                operands: (
+                    MemoryReference {
+                        name: "dest".to_owned(),
+                        index: 0
+                    },
+                    MemoryReference {
+                        name: "ro".to_owned(),
+                        index: 0
+                    },
+                    TernaryOperand::LiteralReal(1.2)
+                )
+            }),
+            Instruction::TernaryLogic(TernaryLogic {
+                operator: TernaryOperator::GreaterThan,
+                operands: (
+                    MemoryReference {
+                        name: "dest".to_owned(),
+                        index: 0
+                    },
+                    MemoryReference {
+                        name: "ro".to_owned(),
+                        index: 2
+                    },
+                    TernaryOperand::LiteralReal(0.000001)
+                )
+            }),
+            Instruction::TernaryLogic(TernaryLogic {
+                operator: TernaryOperator::GreaterThanOrEqual,
+                operands: (
+                    MemoryReference {
+                        name: "dest".to_owned(),
+                        index: 0
+                    },
+                    MemoryReference {
+                        name: "ro".to_owned(),
+                        index: 0
+                    },
+                    TernaryOperand::MemoryReference(MemoryReference {
+                        name: "x".to_owned(),
+                        index: 0
+                    }),
+                )
+            })
+        ]
+    );
+
+    #[test]
+    fn test_ternary_logic_error() {
+        [
+            "EQ ro 1 1",
+            "LT 1 1 1",
+            "LE 1 x ro",
+            "GT 1 ro x",
+            "GE dest 0.3 4",
+        ]
+        .iter()
+        .for_each(|input| {
+            let tokens = lex(input).unwrap();
+            assert!(parse_instructions(&tokens).is_err())
+        })
+    }
 
     make_test!(
         binary_logic,
