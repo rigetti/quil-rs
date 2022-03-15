@@ -20,10 +20,10 @@ use nom::{
 };
 
 use crate::instruction::{
-    Arithmetic, ArithmeticOperand, ArithmeticOperator, BinaryLogic, BinaryOp, Calibration, Capture,
-    CircuitDefinition, Declaration, Delay, Exchange, Fence, FrameDefinition, Instruction, Jump,
-    JumpUnless, JumpWhen, Label, Load, Measurement, Move, Pragma, Pulse, RawCapture, Reset,
-    SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, Store, UnaryLogic, UnaryOp,
+    Arithmetic, ArithmeticOperand, ArithmeticOperator, BinaryLogic, BinaryOperator, Calibration,
+    Capture, CircuitDefinition, Declaration, Delay, Exchange, Fence, FrameDefinition, Instruction,
+    Jump, JumpUnless, JumpWhen, Label, Load, Measurement, Move, Pragma, Pulse, RawCapture, Reset,
+    SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, Store, UnaryLogic, UnaryOperator,
     Waveform, WaveformDefinition,
 };
 use crate::parser::common::parse_variable_qubit;
@@ -60,7 +60,10 @@ pub fn parse_arithmetic(
 
 /// Parse a logical binary instruction of the form `addr ( addr | INT )`.
 /// Called using the logical operator itself (such as `AND`) which should be previously parsed.
-pub fn parse_logical_binary(operator: BinaryOp, input: ParserInput) -> ParserResult<Instruction> {
+pub fn parse_logical_binary(
+    operator: BinaryOperator,
+    input: ParserInput,
+) -> ParserResult<Instruction> {
     let (input, left) = common::parse_memory_reference(input)?;
     let (input, right) = common::parse_binary_logic_operand(input)?;
 
@@ -75,7 +78,10 @@ pub fn parse_logical_binary(operator: BinaryOp, input: ParserInput) -> ParserRes
 
 /// Parse a logical unary instruction of the form `addr`.
 /// Called using the logical operator itself (such as `NOT`) which should be previously parsed.
-pub fn parse_logical_unary(operator: UnaryOp, input: ParserInput) -> ParserResult<Instruction> {
+pub fn parse_logical_unary(
+    operator: UnaryOperator,
+    input: ParserInput,
+) -> ParserResult<Instruction> {
     let (input, operand) = common::parse_memory_reference(input)?;
 
     Ok((

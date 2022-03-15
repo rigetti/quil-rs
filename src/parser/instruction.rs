@@ -20,7 +20,7 @@ use nom::{
 };
 
 use crate::{
-    instruction::{ArithmeticOperator, BinaryOp, Instruction, UnaryOp},
+    instruction::{ArithmeticOperator, BinaryOperator, Instruction, UnaryOperator},
     token,
 };
 
@@ -43,7 +43,7 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
         Some((Token::Command(command), remainder)) => {
             match command {
                 Command::Add => command::parse_arithmetic(ArithmeticOperator::Add, remainder),
-                Command::And => command::parse_logical_binary(BinaryOp::And, remainder),
+                Command::And => command::parse_logical_binary(BinaryOperator::And, remainder),
                 Command::Capture => command::parse_capture(remainder, true),
                 // Command::Convert => {}
                 Command::Declare => command::parse_declare(remainder),
@@ -60,7 +60,7 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
                 // Command::GT => {}
                 Command::Halt => Ok((remainder, Instruction::Halt)),
                 // Command::Include => {}
-                Command::Ior => command::parse_logical_binary(BinaryOp::Ior, remainder),
+                Command::Ior => command::parse_logical_binary(BinaryOperator::Ior, remainder),
                 Command::Jump => command::parse_jump(remainder),
                 Command::JumpUnless => command::parse_jump_unless(remainder),
                 Command::JumpWhen => command::parse_jump_when(remainder),
@@ -72,9 +72,9 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
                 Command::Move => command::parse_move(remainder),
                 Command::Exchange => command::parse_exchange(remainder),
                 Command::Mul => command::parse_arithmetic(ArithmeticOperator::Multiply, remainder),
-                Command::Neg => command::parse_logical_unary(UnaryOp::Neg, remainder),
+                Command::Neg => command::parse_logical_unary(UnaryOperator::Neg, remainder),
                 // Command::Nop => {}
-                Command::Not => command::parse_logical_unary(UnaryOp::Not, remainder),
+                Command::Not => command::parse_logical_unary(UnaryOperator::Not, remainder),
                 Command::Pragma => command::parse_pragma(remainder),
                 Command::Pulse => command::parse_pulse(remainder, true),
                 Command::RawCapture => command::parse_raw_capture(remainder, true),
@@ -87,7 +87,7 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
                 Command::Store => command::parse_store(remainder),
                 Command::Sub => command::parse_arithmetic(ArithmeticOperator::Subtract, remainder),
                 // Command::Wait => {}
-                Command::Xor => command::parse_logical_binary(BinaryOp::Xor, remainder),
+                Command::Xor => command::parse_logical_binary(BinaryOperator::Xor, remainder),
                 _ => Err(nom::Err::Failure(Error {
                     input: &input[..1],
                     error: ErrorKind::UnsupportedInstruction,
@@ -149,11 +149,11 @@ mod tests {
 
     use crate::expression::Expression;
     use crate::instruction::{
-        Arithmetic, ArithmeticOperand, ArithmeticOperator, AttributeValue, BinaryLogic, BinaryOp,
-        Calibration, Capture, FrameDefinition, FrameIdentifier, Gate, Instruction, Jump, JumpWhen,
-        Label, LogicalOperand, MemoryReference, Move, Pulse, Qubit, RawCapture, Reset,
-        SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, UnaryLogic, UnaryOp,
-        Waveform, WaveformDefinition, WaveformInvocation,
+        Arithmetic, ArithmeticOperand, ArithmeticOperator, AttributeValue, BinaryLogic,
+        BinaryOperator, Calibration, Capture, FrameDefinition, FrameIdentifier, Gate, Instruction,
+        Jump, JumpWhen, Label, LogicalOperand, MemoryReference, Move, Pulse, Qubit, RawCapture,
+        Reset, SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, UnaryLogic,
+        UnaryOperator, Waveform, WaveformDefinition, WaveformInvocation,
     };
     use crate::parser::lexer::lex;
     use crate::{make_test, real};
@@ -243,7 +243,7 @@ mod tests {
         "AND ro 1\nIOR ro[1] ro[2]\nXOR ro[1] 0\nAND ro[1] ro[2]",
         vec![
             Instruction::BinaryLogic(BinaryLogic {
-                operator: BinaryOp::And,
+                operator: BinaryOperator::And,
                 operands: (
                     MemoryReference {
                         name: "ro".to_owned(),
@@ -253,7 +253,7 @@ mod tests {
                 )
             }),
             Instruction::BinaryLogic(BinaryLogic {
-                operator: BinaryOp::Ior,
+                operator: BinaryOperator::Ior,
                 operands: (
                     MemoryReference {
                         name: "ro".to_owned(),
@@ -266,7 +266,7 @@ mod tests {
                 )
             }),
             Instruction::BinaryLogic(BinaryLogic {
-                operator: BinaryOp::Xor,
+                operator: BinaryOperator::Xor,
                 operands: (
                     MemoryReference {
                         name: "ro".to_owned(),
@@ -276,7 +276,7 @@ mod tests {
                 )
             }),
             Instruction::BinaryLogic(BinaryLogic {
-                operator: BinaryOp::And,
+                operator: BinaryOperator::And,
                 operands: (
                     MemoryReference {
                         name: "ro".to_owned(),
@@ -305,28 +305,28 @@ mod tests {
         "NOT ro\nNEG ro\nNOT ro[1]\nNEG ro[1]",
         vec![
             Instruction::UnaryLogic(UnaryLogic {
-                operator: UnaryOp::Not,
+                operator: UnaryOperator::Not,
                 operand: MemoryReference {
                     name: "ro".to_owned(),
                     index: 0,
                 }
             }),
             Instruction::UnaryLogic(UnaryLogic {
-                operator: UnaryOp::Neg,
+                operator: UnaryOperator::Neg,
                 operand: MemoryReference {
                     name: "ro".to_owned(),
                     index: 0,
                 }
             }),
             Instruction::UnaryLogic(UnaryLogic {
-                operator: UnaryOp::Not,
+                operator: UnaryOperator::Not,
                 operand: MemoryReference {
                     name: "ro".to_owned(),
                     index: 1,
                 }
             }),
             Instruction::UnaryLogic(UnaryLogic {
-                operator: UnaryOp::Neg,
+                operator: UnaryOperator::Neg,
                 operand: MemoryReference {
                     name: "ro".to_owned(),
                     index: 1,

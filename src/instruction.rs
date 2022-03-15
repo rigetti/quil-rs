@@ -73,32 +73,32 @@ impl fmt::Display for LogicalOperand {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum BinaryOp {
+pub enum BinaryOperator {
     And,
     Ior,
     Xor,
 }
-impl fmt::Display for BinaryOp {
+impl fmt::Display for BinaryOperator {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self {
-            BinaryOp::And => write!(f, "AND"),
-            BinaryOp::Ior => write!(f, "IOR"),
-            BinaryOp::Xor => write!(f, "XOR"),
+            BinaryOperator::And => write!(f, "AND"),
+            BinaryOperator::Ior => write!(f, "IOR"),
+            BinaryOperator::Xor => write!(f, "XOR"),
         }
     }
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum UnaryOp {
+pub enum UnaryOperator {
     Neg,
     Not,
 }
 
-impl fmt::Display for UnaryOp {
+impl fmt::Display for UnaryOperator {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self {
-            UnaryOp::Neg => write!(f, "NEG"),
-            UnaryOp::Not => write!(f, "NOT"),
+            UnaryOperator::Neg => write!(f, "NEG"),
+            UnaryOperator::Not => write!(f, "NOT"),
         }
     }
 }
@@ -412,13 +412,13 @@ pub struct Arithmetic {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct BinaryLogic {
-    pub operator: BinaryOp,
+    pub operator: BinaryOperator,
     pub operands: (MemoryReference, LogicalOperand),
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct UnaryLogic {
-    pub operator: UnaryOp,
+    pub operator: UnaryOperator,
     pub operand: MemoryReference,
 }
 
