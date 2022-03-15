@@ -58,16 +58,16 @@ impl fmt::Display for ArithmeticOperator {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum LogicalOperand {
+pub enum BinaryOperand {
     LiteralInteger(i64),
     MemoryReference(MemoryReference),
 }
 
-impl fmt::Display for LogicalOperand {
+impl fmt::Display for BinaryOperand {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self {
-            LogicalOperand::LiteralInteger(value) => write!(f, "{}", value),
-            LogicalOperand::MemoryReference(value) => write!(f, "{}", value),
+            BinaryOperand::LiteralInteger(value) => write!(f, "{}", value),
+            BinaryOperand::MemoryReference(value) => write!(f, "{}", value),
         }
     }
 }
@@ -413,7 +413,7 @@ pub struct Arithmetic {
 #[derive(Clone, Debug, PartialEq)]
 pub struct BinaryLogic {
     pub operator: BinaryOperator,
-    pub operands: (MemoryReference, LogicalOperand),
+    pub operands: (MemoryReference, BinaryOperand),
 }
 
 #[derive(Clone, Debug, PartialEq)]

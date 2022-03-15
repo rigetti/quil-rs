@@ -150,8 +150,8 @@ mod tests {
     use crate::expression::Expression;
     use crate::instruction::{
         Arithmetic, ArithmeticOperand, ArithmeticOperator, AttributeValue, BinaryLogic,
-        BinaryOperator, Calibration, Capture, FrameDefinition, FrameIdentifier, Gate, Instruction,
-        Jump, JumpWhen, Label, LogicalOperand, MemoryReference, Move, Pulse, Qubit, RawCapture,
+        BinaryOperand, BinaryOperator, Calibration, Capture, FrameDefinition, FrameIdentifier,
+        Gate, Instruction, Jump, JumpWhen, Label, MemoryReference, Move, Pulse, Qubit, RawCapture,
         Reset, SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, UnaryLogic,
         UnaryOperator, Waveform, WaveformDefinition, WaveformInvocation,
     };
@@ -249,7 +249,7 @@ mod tests {
                         name: "ro".to_owned(),
                         index: 0
                     },
-                    LogicalOperand::LiteralInteger(1)
+                    BinaryOperand::LiteralInteger(1)
                 )
             }),
             Instruction::BinaryLogic(BinaryLogic {
@@ -259,7 +259,7 @@ mod tests {
                         name: "ro".to_owned(),
                         index: 1
                     },
-                    LogicalOperand::MemoryReference(MemoryReference {
+                    BinaryOperand::MemoryReference(MemoryReference {
                         name: "ro".to_owned(),
                         index: 2
                     })
@@ -272,7 +272,7 @@ mod tests {
                         name: "ro".to_owned(),
                         index: 1
                     },
-                    LogicalOperand::LiteralInteger(0)
+                    BinaryOperand::LiteralInteger(0)
                 )
             }),
             Instruction::BinaryLogic(BinaryLogic {
@@ -282,7 +282,7 @@ mod tests {
                         name: "ro".to_owned(),
                         index: 1
                     },
-                    LogicalOperand::MemoryReference(MemoryReference {
+                    BinaryOperand::MemoryReference(MemoryReference {
                         name: "ro".to_owned(),
                         index: 2
                     })

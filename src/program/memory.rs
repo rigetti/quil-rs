@@ -17,8 +17,8 @@ use std::collections::HashSet;
 
 use crate::expression::Expression;
 use crate::instruction::{
-    Arithmetic, ArithmeticOperand, BinaryLogic, Capture, CircuitDefinition, Delay, Exchange, Gate,
-    GateDefinition, Instruction, Jump, JumpUnless, JumpWhen, Label, Load, LogicalOperand,
+    Arithmetic, ArithmeticOperand, BinaryLogic, BinaryOperand, Capture, CircuitDefinition, Delay,
+    Exchange, Gate, GateDefinition, Instruction, Jump, JumpUnless, JumpWhen, Label, Load,
     MeasureCalibrationDefinition, Measurement, MemoryReference, Move, Pulse, RawCapture, SetPhase,
     SetScale, ShiftPhase, Store, UnaryLogic, Vector, WaveformInvocation,
 };
@@ -95,7 +95,7 @@ impl Instruction {
                 let mut w_memories = HashSet::new();
                 r_memories.insert(operands.0.name.clone());
                 w_memories.insert(operands.0.name.clone());
-                if let LogicalOperand::MemoryReference(mem) = &operands.1 {
+                if let BinaryOperand::MemoryReference(mem) = &operands.1 {
                     r_memories.insert(mem.name.clone());
                 }
 

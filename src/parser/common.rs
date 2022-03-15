@@ -26,7 +26,7 @@ use crate::{
     expected_token,
     expression::Expression,
     instruction::{
-        ArithmeticOperand, AttributeValue, FrameIdentifier, GateModifier, LogicalOperand,
+        ArithmeticOperand, AttributeValue, BinaryOperand, FrameIdentifier, GateModifier,
         MemoryReference, Qubit, ScalarType, Vector, WaveformInvocation,
     },
     parser::lexer::Operator,
@@ -72,7 +72,7 @@ pub fn parse_arithmetic_operand<'a>(input: ParserInput<'a>) -> ParserResult<'a, 
 }
 
 /// Parse the operand of a binary logic instruction, which may be a literal integer or memory reference.
-pub fn parse_binary_logic_operand<'a>(input: ParserInput<'a>) -> ParserResult<'a, LogicalOperand> {
+pub fn parse_binary_logic_operand<'a>(input: ParserInput<'a>) -> ParserResult<'a, BinaryOperand> {
     alt((
         map(
             tuple((opt(token!(Operator(o))), token!(Integer(v)))),
@@ -82,11 +82,11 @@ pub fn parse_binary_logic_operand<'a>(input: ParserInput<'a>) -> ParserResult<'a
                     Some(Operator::Minus) => -1,
                     _ => panic!("Implement this error"), // TODO
                 };
-                LogicalOperand::LiteralInteger(sign * (v as i64))
+                BinaryOperand::LiteralInteger(sign * (v as i64))
             },
         ),
         map(parse_memory_reference, |f| {
-            LogicalOperand::MemoryReference(f)
+            BinaryOperand::MemoryReference(f)
         }),
     ))(input)
 }
