@@ -91,19 +91,23 @@ impl Instruction {
     pub fn get_memory_accesses(&self) -> MemoryAccesses {
         match self {
             Instruction::BinaryLogic(BinaryLogic { operands, .. }) => {
-                let mut memories = HashSet::new();
-                memories.insert(operands.0.name.clone());
+                let mut r_memories = HashSet::new();
+                let mut w_memories = HashSet::new();
+                r_memories.insert(operands.0.name.clone());
+                w_memories.insert(operands.0.name.clone());
                 if let LogicalOperand::MemoryReference(mem) = &operands.1 {
-                    memories.insert(mem.name.clone());
+                    r_memories.insert(mem.name.clone());
                 }
 
                 MemoryAccesses {
-                    reads: memories,
+                    reads: r_memories,
+                    writes: w_memories,
                     ..Default::default()
                 }
             }
             Instruction::UnaryLogic(UnaryLogic { operand, .. }) => MemoryAccesses {
                 reads: HashSet::from([operand.name.clone()]),
+                writes: HashSet::from([operand.name.clone()]),
                 ..Default::default()
             },
             Instruction::Arithmetic(Arithmetic {
