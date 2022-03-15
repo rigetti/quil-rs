@@ -23,8 +23,8 @@ use crate::instruction::{
     Arithmetic, ArithmeticOperand, ArithmeticOperator, BinaryLogic, BinaryOperator, Calibration,
     Capture, CircuitDefinition, Declaration, Delay, Exchange, Fence, FrameDefinition, Instruction,
     Jump, JumpUnless, JumpWhen, Label, Load, Measurement, Move, Pragma, Pulse, RawCapture, Reset,
-    SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, Store, UnaryLogic, UnaryOperator,
-    Waveform, WaveformDefinition,
+    SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, Store, TernaryLogic,
+    TernaryOperator, UnaryLogic, UnaryOperator, Waveform, WaveformDefinition,
 };
 use crate::parser::common::parse_variable_qubit;
 use crate::parser::instruction::parse_block;
@@ -54,6 +54,25 @@ pub fn parse_arithmetic(
             operator,
             destination,
             source,
+        }),
+    ))
+}
+
+/// Parse a logical ternary instruction of the form `addr addr ( addr | INT | REAL )`.
+/// Called using the logical operator itself (such as `EQ`) which should be previously parsed.
+pub fn parse_logical_ternary(
+    operator: TernaryOperator,
+    input: ParserInput,
+) -> ParserResult<Instruction> {
+    let (input, destination) = common::parse_memory_reference(input)?;
+    let (input, left) = common::parse_memory_reference(input)?;
+    let (input, right) = common::parse_ternary_logic_operand(input)?;
+
+    Ok((
+        input,
+        Instruction::TernaryLogic(TernaryLogic {
+            operator,
+            operands: (destination, left, right),
         }),
     ))
 }

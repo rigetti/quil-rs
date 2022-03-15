@@ -27,7 +27,7 @@ use crate::{
     expression::Expression,
     instruction::{
         ArithmeticOperand, AttributeValue, BinaryOperand, FrameIdentifier, GateModifier,
-        MemoryReference, Qubit, ScalarType, Vector, WaveformInvocation,
+        MemoryReference, Qubit, ScalarType, TernaryOperand, Vector, WaveformInvocation,
     },
     parser::lexer::Operator,
     token,
@@ -65,9 +65,36 @@ pub fn parse_arithmetic_operand<'a>(input: ParserInput<'a>) -> ParserResult<'a, 
                 ArithmeticOperand::LiteralInteger(sign * (v as i64))
             },
         ),
-        map(parse_memory_reference, |f| {
-            ArithmeticOperand::MemoryReference(f)
-        }),
+        map(parse_memory_reference, ArithmeticOperand::MemoryReference),
+    ))(input)
+}
+
+/// Parse the operand of a ternary instruction, which may be a literal integer, literal real number, or memory reference.
+pub fn parse_ternary_logic_operand<'a>(input: ParserInput<'a>) -> ParserResult<'a, TernaryOperand> {
+    alt((
+        map(
+            tuple((opt(token!(Operator(o))), token!(Float(v)))),
+            |(op, v)| {
+                let sign = match op {
+                    None => 1f64,
+                    Some(Operator::Minus) => -1f64,
+                    _ => panic!("Implement this error"), // TODO
+                };
+                TernaryOperand::LiteralReal(sign * v)
+            },
+        ),
+        map(
+            tuple((opt(token!(Operator(o))), token!(Integer(v)))),
+            |(op, v)| {
+                let sign = match op {
+                    None => 1,
+                    Some(Operator::Minus) => -1,
+                    _ => panic!("Implement this error"), // TODO
+                };
+                TernaryOperand::LiteralInteger(sign * (v as i64))
+            },
+        ),
+        map(parse_memory_reference, TernaryOperand::MemoryReference),
     ))(input)
 }
 
@@ -85,9 +112,7 @@ pub fn parse_binary_logic_operand<'a>(input: ParserInput<'a>) -> ParserResult<'a
                 BinaryOperand::LiteralInteger(sign * (v as i64))
             },
         ),
-        map(parse_memory_reference, |f| {
-            BinaryOperand::MemoryReference(f)
-        }),
+        map(parse_memory_reference, BinaryOperand::MemoryReference),
     ))(input)
 }
 
