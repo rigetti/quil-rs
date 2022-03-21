@@ -104,7 +104,7 @@ impl CalibrationSet {
 
     /// Return the final calibration which matches the gate per the QuilT specification:
     ///
-    /// A calibration matches a gate iff:
+    /// A calibration matches a gate if:
     /// 1. It has the same name
     /// 2. It has the same modifiers
     /// 3. It has the same qubit count (any mix of fixed & variable)
