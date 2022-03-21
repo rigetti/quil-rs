@@ -21,7 +21,7 @@ use nom::{
 
 use crate::{
     instruction::{
-        ArithmeticOperator, BinaryOperator, Instruction, TernaryOperator, UnaryOperator,
+        ArithmeticOperator, BinaryOperator, ComparisonOperator, Instruction, UnaryOperator,
     },
     token,
 };
@@ -56,17 +56,17 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
                 Command::DefWaveform => command::parse_defwaveform(remainder),
                 Command::Delay => command::parse_delay(remainder),
                 Command::Div => command::parse_arithmetic(ArithmeticOperator::Divide, remainder),
-                Command::Eq => command::parse_logical_ternary(TernaryOperator::Equal, remainder),
+                Command::Eq => command::parse_comparison(ComparisonOperator::Equal, remainder),
                 Command::GE => {
-                    command::parse_logical_ternary(TernaryOperator::GreaterThanOrEqual, remainder)
+                    command::parse_comparison(ComparisonOperator::GreaterThanOrEqual, remainder)
                 }
                 Command::GT => {
-                    command::parse_logical_ternary(TernaryOperator::GreaterThan, remainder)
+                    command::parse_comparison(ComparisonOperator::GreaterThan, remainder)
                 }
                 Command::LE => {
-                    command::parse_logical_ternary(TernaryOperator::LessThanOrEqual, remainder)
+                    command::parse_comparison(ComparisonOperator::LessThanOrEqual, remainder)
                 }
-                Command::LT => command::parse_logical_ternary(TernaryOperator::LessThan, remainder),
+                Command::LT => command::parse_comparison(ComparisonOperator::LessThan, remainder),
                 Command::Fence => command::parse_fence(remainder),
                 Command::Halt => Ok((remainder, Instruction::Halt)),
                 // Command::Include => {}
@@ -158,11 +158,11 @@ mod tests {
     use crate::expression::Expression;
     use crate::instruction::{
         Arithmetic, ArithmeticOperand, ArithmeticOperator, AttributeValue, BinaryLogic,
-        BinaryOperand, BinaryOperator, Calibration, Capture, FrameDefinition, FrameIdentifier,
-        Gate, Instruction, Jump, JumpWhen, Label, MemoryReference, Move, Pulse, Qubit, RawCapture,
-        Reset, SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, TernaryLogic,
-        TernaryOperand, TernaryOperator, UnaryLogic, UnaryOperator, Waveform, WaveformDefinition,
-        WaveformInvocation,
+        BinaryOperand, BinaryOperator, Calibration, Capture, Comparison, ComparisonOperator,
+        FrameDefinition, FrameIdentifier, Gate, Instruction, Jump, JumpWhen, Label,
+        MemoryReference, Move, Pulse, Qubit, RawCapture, Reset, SetFrequency, SetPhase, SetScale,
+        ShiftFrequency, ShiftPhase, TernaryOperand, UnaryLogic, UnaryOperator, Waveform,
+        WaveformDefinition, WaveformInvocation,
     };
     use crate::parser::lexer::lex;
     use crate::{make_test, real};
@@ -251,8 +251,8 @@ mod tests {
         parse_instructions,
         "EQ dest ro 0\nLT dest ro[1] -1\nLE dest ro 1.2\nGT dest ro[2] 1e-6\nGE dest ro x",
         vec![
-            Instruction::TernaryLogic(TernaryLogic {
-                operator: TernaryOperator::Equal,
+            Instruction::Comparison(Comparison {
+                operator: ComparisonOperator::Equal,
                 operands: (
                     MemoryReference {
                         name: "dest".to_owned(),
@@ -265,8 +265,8 @@ mod tests {
                     TernaryOperand::LiteralInteger(0)
                 )
             }),
-            Instruction::TernaryLogic(TernaryLogic {
-                operator: TernaryOperator::LessThan,
+            Instruction::Comparison(Comparison {
+                operator: ComparisonOperator::LessThan,
                 operands: (
                     MemoryReference {
                         name: "dest".to_owned(),
@@ -279,8 +279,8 @@ mod tests {
                     TernaryOperand::LiteralInteger(-1)
                 )
             }),
-            Instruction::TernaryLogic(TernaryLogic {
-                operator: TernaryOperator::LessThanOrEqual,
+            Instruction::Comparison(Comparison {
+                operator: ComparisonOperator::LessThanOrEqual,
                 operands: (
                     MemoryReference {
                         name: "dest".to_owned(),
@@ -293,8 +293,8 @@ mod tests {
                     TernaryOperand::LiteralReal(1.2)
                 )
             }),
-            Instruction::TernaryLogic(TernaryLogic {
-                operator: TernaryOperator::GreaterThan,
+            Instruction::Comparison(Comparison {
+                operator: ComparisonOperator::GreaterThan,
                 operands: (
                     MemoryReference {
                         name: "dest".to_owned(),
@@ -307,8 +307,8 @@ mod tests {
                     TernaryOperand::LiteralReal(0.000001)
                 )
             }),
-            Instruction::TernaryLogic(TernaryLogic {
-                operator: TernaryOperator::GreaterThanOrEqual,
+            Instruction::Comparison(Comparison {
+                operator: ComparisonOperator::GreaterThanOrEqual,
                 operands: (
                     MemoryReference {
                         name: "dest".to_owned(),

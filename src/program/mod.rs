@@ -173,7 +173,7 @@ impl Program {
             | Instruction::Pragma(_)
             | Instruction::WaveformDefinition(_)
             | Instruction::Arithmetic(_)
-            | Instruction::TernaryLogic(_)
+            | Instruction::Comparison(_)
             | Instruction::BinaryLogic(_)
             | Instruction::UnaryLogic(_)
             | Instruction::Halt

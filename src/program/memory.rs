@@ -17,10 +17,10 @@ use std::collections::HashSet;
 
 use crate::expression::Expression;
 use crate::instruction::{
-    Arithmetic, ArithmeticOperand, BinaryLogic, BinaryOperand, Capture, CircuitDefinition, Delay,
-    Exchange, Gate, GateDefinition, Instruction, Jump, JumpUnless, JumpWhen, Label, Load,
-    MeasureCalibrationDefinition, Measurement, MemoryReference, Move, Pulse, RawCapture, SetPhase,
-    SetScale, ShiftPhase, Store, TernaryLogic, TernaryOperand, UnaryLogic, Vector,
+    Arithmetic, ArithmeticOperand, BinaryLogic, BinaryOperand, Capture, CircuitDefinition,
+    Comparison, Delay, Exchange, Gate, GateDefinition, Instruction, Jump, JumpUnless, JumpWhen,
+    Label, Load, MeasureCalibrationDefinition, Measurement, MemoryReference, Move, Pulse,
+    RawCapture, SetPhase, SetScale, ShiftPhase, Store, TernaryOperand, UnaryLogic, Vector,
     WaveformInvocation,
 };
 
@@ -91,7 +91,7 @@ impl Instruction {
     /// Return all memory accesses by the instruction - in expressions, captures, and memory manipulation
     pub fn get_memory_accesses(&self) -> MemoryAccesses {
         match self {
-            Instruction::TernaryLogic(TernaryLogic { operands, .. }) => {
+            Instruction::Comparison(Comparison { operands, .. }) => {
                 let mut reads = HashSet::from([operands.1.name.clone()]);
                 let writes = HashSet::from([operands.0.name.clone()]);
                 if let TernaryOperand::MemoryReference(mem) = &operands.2 {

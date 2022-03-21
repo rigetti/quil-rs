@@ -21,10 +21,10 @@ use nom::{
 
 use crate::instruction::{
     Arithmetic, ArithmeticOperand, ArithmeticOperator, BinaryLogic, BinaryOperator, Calibration,
-    Capture, CircuitDefinition, Declaration, Delay, Exchange, Fence, FrameDefinition, Instruction,
-    Jump, JumpUnless, JumpWhen, Label, Load, Measurement, Move, Pragma, Pulse, RawCapture, Reset,
-    SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, Store, TernaryLogic,
-    TernaryOperator, UnaryLogic, UnaryOperator, Waveform, WaveformDefinition,
+    Capture, CircuitDefinition, Comparison, ComparisonOperator, Declaration, Delay, Exchange,
+    Fence, FrameDefinition, Instruction, Jump, JumpUnless, JumpWhen, Label, Load, Measurement,
+    Move, Pragma, Pulse, RawCapture, Reset, SetFrequency, SetPhase, SetScale, ShiftFrequency,
+    ShiftPhase, Store, UnaryLogic, UnaryOperator, Waveform, WaveformDefinition,
 };
 use crate::parser::common::parse_variable_qubit;
 use crate::parser::instruction::parse_block;
@@ -58,10 +58,10 @@ pub fn parse_arithmetic(
     ))
 }
 
-/// Parse a logical ternary instruction of the form `addr addr ( addr | number )`.
-/// Called using the logical operator itself (such as `EQ`) which should be previously parsed.
-pub fn parse_logical_ternary(
-    operator: TernaryOperator,
+/// Parse a comparison instruction of the form `addr addr ( addr | number )`.
+/// Called using the comparison operator itself (such as `EQ`) which should be previously parsed.
+pub fn parse_comparison(
+    operator: ComparisonOperator,
     input: ParserInput,
 ) -> ParserResult<Instruction> {
     let (input, destination) = common::parse_memory_reference(input)?;
@@ -70,7 +70,7 @@ pub fn parse_logical_ternary(
 
     Ok((
         input,
-        Instruction::TernaryLogic(TernaryLogic {
+        Instruction::Comparison(Comparison {
             operator,
             operands: (destination, left, right),
         }),

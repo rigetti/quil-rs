@@ -121,7 +121,7 @@ impl fmt::Display for TernaryOperand {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum TernaryOperator {
+pub enum ComparisonOperator {
     Equal,
     GreaterThanOrEqual,
     GreaterThan,
@@ -129,14 +129,14 @@ pub enum TernaryOperator {
     LessThan,
 }
 
-impl fmt::Display for TernaryOperator {
+impl fmt::Display for ComparisonOperator {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self {
-            TernaryOperator::Equal => write!(f, "EQ"),
-            TernaryOperator::GreaterThanOrEqual => write!(f, "GE"),
-            TernaryOperator::GreaterThan => write!(f, "GT"),
-            TernaryOperator::LessThanOrEqual => write!(f, "LE"),
-            TernaryOperator::LessThan => write!(f, "LT"),
+            ComparisonOperator::Equal => write!(f, "EQ"),
+            ComparisonOperator::GreaterThanOrEqual => write!(f, "GE"),
+            ComparisonOperator::GreaterThan => write!(f, "GT"),
+            ComparisonOperator::LessThanOrEqual => write!(f, "LE"),
+            ComparisonOperator::LessThan => write!(f, "LT"),
         }
     }
 }
@@ -449,8 +449,8 @@ pub struct Arithmetic {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct TernaryLogic {
-    pub operator: TernaryOperator,
+pub struct Comparison {
+    pub operator: ComparisonOperator,
     pub operands: (MemoryReference, MemoryReference, TernaryOperand),
 }
 
@@ -537,7 +537,7 @@ pub enum Instruction {
     SwapPhases(SwapPhases),
     WaveformDefinition(WaveformDefinition),
     Arithmetic(Arithmetic),
-    TernaryLogic(TernaryLogic),
+    Comparison(Comparison),
     BinaryLogic(BinaryLogic),
     UnaryLogic(UnaryLogic),
     Halt,
@@ -586,7 +586,7 @@ impl From<&Instruction> for InstructionRole {
             | Instruction::ShiftPhase(_)
             | Instruction::SwapPhases(_) => InstructionRole::RFControl,
             Instruction::Arithmetic(_)
-            | Instruction::TernaryLogic(_)
+            | Instruction::Comparison(_)
             | Instruction::BinaryLogic(_)
             | Instruction::UnaryLogic(_)
             | Instruction::Move(_)
@@ -909,7 +909,7 @@ impl fmt::Display for Instruction {
                 write!(f, "JUMP-WHEN @{} {}", target, condition)
             }
             Instruction::Label(Label(label)) => write!(f, "LABEL @{}", label),
-            Instruction::TernaryLogic(TernaryLogic { operator, operands }) => {
+            Instruction::Comparison(Comparison { operator, operands }) => {
                 write!(
                     f,
                     "{} {} {} {}",
