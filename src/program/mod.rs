@@ -29,6 +29,7 @@ pub use self::memory::MemoryRegion;
 
 mod calibration;
 mod error;
+pub mod dot;
 mod frame;
 pub mod graph;
 mod memory;
