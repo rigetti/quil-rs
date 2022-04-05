@@ -16,7 +16,6 @@
  * limitations under the License.
  **/
 use std::collections::{HashMap, HashSet};
-use std::fmt;
 
 use indexmap::IndexMap;
 use petgraph::graphmap::GraphMap;
@@ -554,7 +553,6 @@ mod tests {
             ($name: ident, $input:expr) => {
                 #[test]
                 fn $name() {
-                    use std::fmt;
                     const FRAME_DEFINITIONS: &'static str = "
 DEFFRAME 0 \"rf\":
     INITIAL-FREQUENCY: 1e6
@@ -581,19 +579,10 @@ DEFFRAME 0 \"ro_tx\":
                         );
                     }
 
-                    struct ProgramDebugWrapper<'a> {
-                        pub program: &'a ScheduledProgram,
-                    }
+                    let dot_format_bytes = scheduled_program.get_dot_format();
+                    let dot_format = String::from_utf8_lossy(&dot_format_bytes);
 
-                    impl<'a> fmt::Debug for ProgramDebugWrapper<'a> {
-                        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-                            self.program.write_dot_format(f)
-                        }
-                    }
-
-                    insta::assert_debug_snapshot!(ProgramDebugWrapper {
-                        program: &scheduled_program
-                    });
+                    insta::assert_snapshot!(dot_format);
                 }
             };
         }

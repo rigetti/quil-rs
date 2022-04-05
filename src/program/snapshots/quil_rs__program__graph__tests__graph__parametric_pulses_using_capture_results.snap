@@ -1,48 +1,47 @@
 ---
-source: quil/src/program/graph.rs
-expression: "ProgramDebugWrapper{program: &scheduled_program,}"
-
+source: src/program/graph.rs
+expression: dot_format
 ---
 digraph {
-	entry [label="Entry Point"]
-	entry -> "block_0_start"
-	subgraph "cluster_block_0" {
-		label="block_0"
-		node [ style="filled" ]
-		"block_0_start" [ label=start, shape=circle ]
-		"block_0_start" -> "block_0_0" [ label="frame" ]
-		"block_0_start" -> "block_0_end" [ label="ordering" ]
-		"block_0_0" [label="CAPTURE 0 \"ro_rx\" test(a: param[0]) ro[0]"]
-		"block_0_0" -> "block_0_1" [ label="await capture
-frame" ]
-		"block_0_0" -> "block_0_2" [ label="await capture
-frame" ]
-		"block_0_0" -> "block_0_3" [ label="await capture
-frame" ]
-		"block_0_0" -> "block_0_end" [ label="await read" ]
-		"block_0_1" [label="NONBLOCKING PULSE 0 \"rf\" test(a: ro[0])"]
-		"block_0_1" -> "block_0_3" [ label="await read
-frame" ]
-		"block_0_1" -> "block_0_end" [ label="await read" ]
-		"block_0_2" [label="NONBLOCKING PULSE 1 \"rf\" test(a: ro[0])"]
-		"block_0_2" -> "block_0_3" [ label="await read
-frame" ]
-		"block_0_2" -> "block_0_end" [ label="await read" ]
-		"block_0_3" [label="CAPTURE 0 \"ro_rx\" test(a: param[0]) ro[0]"]
-		"block_0_3" -> "block_0_4" [ label="await capture
-frame" ]
-		"block_0_3" -> "block_0_5" [ label="await capture
-frame" ]
-		"block_0_3" -> "block_0_end" [ label="await capture
+  entry -> "block_0_start";
+  entry [label="Entry Point"];
+  subgraph cluster_0 {
+    label="block_0";
+    node [style="filled"];
+    "block_0_start" [shape=circle, label="start"];
+    "block_0_start" -> "block_0_0" [label="frame"];
+    "block_0_start" -> "block_0_end" [label="ordering"];
+    "block_0_0" [label="CAPTURE 0 \"ro_rx\" test(a: param[0]) ro[0]"];
+    "block_0_0" -> "block_0_1" [label="await capture
+frame"];
+    "block_0_0" -> "block_0_2" [label="await capture
+frame"];
+    "block_0_0" -> "block_0_3" [label="await capture
+frame"];
+    "block_0_0" -> "block_0_end" [label="await read"];
+    "block_0_1" [label="NONBLOCKING PULSE 0 \"rf\" test(a: ro[0])"];
+    "block_0_1" -> "block_0_3" [label="await read
+frame"];
+    "block_0_1" -> "block_0_end" [label="await read"];
+    "block_0_2" [label="NONBLOCKING PULSE 1 \"rf\" test(a: ro[0])"];
+    "block_0_2" -> "block_0_3" [label="await read
+frame"];
+    "block_0_2" -> "block_0_end" [label="await read"];
+    "block_0_3" [label="CAPTURE 0 \"ro_rx\" test(a: param[0]) ro[0]"];
+    "block_0_3" -> "block_0_4" [label="await capture
+frame"];
+    "block_0_3" -> "block_0_5" [label="await capture
+frame"];
+    "block_0_3" -> "block_0_end" [label="await capture
 await read
-frame" ]
-		"block_0_4" [label="NONBLOCKING PULSE 0 \"rf\" test(a: ro[0])"]
-		"block_0_4" -> "block_0_end" [ label="await read
-frame" ]
-		"block_0_5" [label="NONBLOCKING PULSE 1 \"rf\" test(a: ro[0])"]
-		"block_0_5" -> "block_0_end" [ label="await read
-frame" ]
-		"block_0_end" [ label=end, shape=circle ]
-	}
+frame"];
+    "block_0_4" [label="NONBLOCKING PULSE 0 \"rf\" test(a: ro[0])"];
+    "block_0_4" -> "block_0_end" [label="await read
+frame"];
+    "block_0_5" [label="NONBLOCKING PULSE 1 \"rf\" test(a: ro[0])"];
+    "block_0_5" -> "block_0_end" [label="await read
+frame"];
+    "block_0_end" [shape=circle, label="end"];
+  }
 }
 

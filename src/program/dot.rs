@@ -1,75 +1,59 @@
-// Utilities for working with Graphviz dot format files
+//! Utilities for working with Graphviz dot format files
+
+/**
+ * Copyright 2021 Rigetti Computing
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ **/
+use dot_writer::{Attributes, DotWriter, Shape, Style};
 
 use crate::program::graph::{
-    BlockTerminator, ExecutionDependency, MemoryAccessType, ScheduledGraphNode,
+    BlockTerminator, ExecutionDependency, InstructionBlock, MemoryAccessType, ScheduledGraphNode,
+    ScheduledProgram,
 };
 
-use super::graph::{InstructionBlock, ScheduledProgram};
-
 impl InstructionBlock {
-    /// Write a DOT-formatted string to the provided writer for use with GraphViz.
-    /// This output can be used within a `subgraph` or at the top level of a `digraph`.
-    ///
-    /// Parameters:
-    ///
-    /// * line_prefix: The prefix for each new line in the output. This can be used to indent this
-    ///   output for readability in a larger definition.
-    /// * element_prefix: The prefix for each graph element (node and edge). This can be used to
-    ///   namespace this block when used with other blocks which may have conflicting labels.
-    pub fn write_dot_format(
-        &self,
-        f: &mut std::fmt::Formatter,
-        line_prefix: &str,
-        element_prefix: &str,
-    ) -> std::fmt::Result {
-        self.graph.nodes().try_for_each(|node| {
+    /// Given a [dot_writer::Scope] representing a subgraph/cluster, write the timing graph for this block into it.
+    /// Uses the `node_prefix` argument for namespacing so that node IDs remain unique within the overall graph.
+    fn write_dot_format(&self, cluster: &mut dot_writer::Scope, node_prefix: &str) {
+        self.graph.nodes().for_each(|node| {
+            let node_id = get_node_id(&node, node_prefix);
             match &node {
                 ScheduledGraphNode::BlockEnd => {
-                    writeln!(
-                        f,
-                        "{}\"{}end\" [ label=end, shape=circle ]",
-                        line_prefix, element_prefix
-                    )
+                    // cluster.node_named(format!("{}end"))
+                    cluster
+                        .node_named(node_id)
+                        .set_shape(Shape::Circle)
+                        .set_label("end");
                 }
                 ScheduledGraphNode::BlockStart => {
-                    writeln!(
-                        f,
-                        "{}\"{}start\" [ label=start, shape=circle ]",
-                        line_prefix, element_prefix
-                    )
+                    cluster
+                        .node_named(node_id)
+                        .set_shape(Shape::Circle)
+                        .set_label("start");
                 }
                 ScheduledGraphNode::InstructionIndex(index) => {
-                    write!(
-                        f,
-                        "{}\"{}{}\" [label=\"",
-                        line_prefix, element_prefix, index
-                    )?;
-                    write_escaped(f, &format!("{}", self.instructions.get(*index).unwrap()))?;
-                    writeln!(f, "\"]")
+                    cluster
+                        .node_named(node_id)
+                        .set_label(&escape_label(&format!(
+                            "{}",
+                            self.instructions.get(*index).unwrap()
+                        )));
                 }
-            }?;
-            self.graph.edges(node).try_for_each(|(src, dest, edge)| {
-                match &src {
-                    ScheduledGraphNode::BlockEnd => {
-                        write!(f, "{}\"{}end\"", line_prefix, element_prefix)
-                    }
-                    ScheduledGraphNode::BlockStart => {
-                        write!(f, "{}\"{}start\"", line_prefix, element_prefix)
-                    }
-                    ScheduledGraphNode::InstructionIndex(index) => {
-                        write!(f, "{}\"{}{}\"", line_prefix, element_prefix, index)
-                    }
-                }?;
-                write!(f, " -> ")?;
-                match &dest {
-                    ScheduledGraphNode::BlockEnd => write!(f, "\"{}end\"", element_prefix),
-                    ScheduledGraphNode::BlockStart => {
-                        write!(f, "\"{}start\"", element_prefix)
-                    }
-                    ScheduledGraphNode::InstructionIndex(index) => {
-                        write!(f, "\"{}{}\"", element_prefix, index)
-                    }
-                }?;
+            };
+            self.graph.edges(node).for_each(|(src, dest, edge)| {
+                let source = get_node_id(&src, node_prefix);
+                let target = get_node_id(&dest, node_prefix);
                 let mut labels = edge
                     .iter()
                     .map(|dependency| match dependency {
@@ -87,15 +71,17 @@ impl InstructionBlock {
                 // without sorting would cause flaky tests.
                 labels.sort_unstable();
                 let label = labels.join("\n");
-                writeln!(f, " [ label=\"{}\" ]", label)
+                cluster
+                    .edge(source, target)
+                    .attributes()
+                    .set_label(label.as_str());
             })
-        })?;
-        Ok(())
+        });
     }
 }
 
 impl ScheduledProgram {
-    /// Write a DOT format string to the provided writer for use with Graphviz.
+    /// Return a DOT format string (as bytes) for use with Graphviz.
     ///
     /// This outputs a `digraph` object with a `subgraph` for each block to inform the layout engine.
     /// Each `subgraph` ID is prefixed with `cluster_` which instructs some supporting layout engines
@@ -103,93 +89,114 @@ impl ScheduledProgram {
     ///
     /// Lines on the graph indicate scheduling dependencies within blocks and control flow among blocks.
     /// Each node representing an instruction is labeled with the contents of that instruction.
-    pub fn write_dot_format(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        writeln!(f, "digraph {{")?;
+    pub fn get_dot_format(&self) -> Vec<u8> {
+        let mut output_bytes = Vec::new();
 
-        let mut iter = self.blocks.iter().peekable();
+        {
+            let mut writer = DotWriter::from(&mut output_bytes);
+            writer.set_pretty_print(true);
+            let mut digraph = writer.digraph();
 
-        writeln!(f, "\tentry [label=\"Entry Point\"]")?;
+            let mut iter = self.blocks.iter().peekable();
+            if let Some((first_label, _)) = iter.peek() {
+                digraph.edge(
+                    "entry",
+                    get_node_id(&ScheduledGraphNode::BlockStart, first_label),
+                );
+            }
+            digraph.node_named("entry").set_label("Entry Point");
 
-        if let Some((first_label, _)) = iter.peek() {
-            writeln!(f, "\tentry -> \"{}_start\"", first_label)?;
-        }
+            while let Some((label, block)) = iter.next() {
+                let node_prefix = label;
+                {
+                    let mut cluster = digraph.cluster();
+                    cluster.set_label(label);
+                    cluster.node_attributes().set_style(Style::Filled);
 
-        while let Some((label, block)) = iter.next() {
-            writeln!(f, "\tsubgraph \"cluster_{}\" {{", label)?;
-            writeln!(f, "\t\tlabel=\"{}\"", label)?;
-            writeln!(f, "\t\tnode [ style=\"filled\" ]")?;
-
-            let line_prefix = "\t\t";
-            // let element_prefix = format!("b{}_", index);
-            let element_prefix = format!("{}_", label);
-
-            block.write_dot_format(f, line_prefix, &element_prefix)?;
-            writeln!(f, "\t}}")?;
-
-            let next_block_label = iter.peek().map(|(next_label, _)| (*next_label).clone());
-            match &block.terminator {
-                BlockTerminator::Conditional {
-                    condition,
-                    target,
-                    jump_if_condition_true,
-                } => {
-                    let equality_operators = if *jump_if_condition_true {
-                        ("==", "!=")
-                    } else {
-                        ("!=", "==")
-                    };
-                    writeln!(
-                        f,
-                        "\"{}_end\" -> \"{}_start\" [label=\"if {} {} 0\"]",
-                        label, target, condition, equality_operators.0,
-                    )?;
-                    if let Some(next_label) = next_block_label {
-                        writeln!(
-                            f,
-                            "\"{}_end\" -> \"{}_start\" [label=\"if {} {} 0\"]",
-                            label, next_label, condition, equality_operators.1
-                        )?;
-                    };
+                    block.write_dot_format(&mut cluster, node_prefix);
                 }
-                BlockTerminator::Unconditional { target } => {
-                    writeln!(
-                        f,
-                        "\"{}_end\" -> \"{}_start\" [label=\"always\"]",
-                        label, target
-                    )?;
+
+                let next_block_label = iter.peek().map(|(next_label, _)| (*next_label).clone());
+                let terminator_source_label =
+                    get_node_id(&ScheduledGraphNode::BlockEnd, node_prefix);
+                match &block.terminator {
+                    BlockTerminator::Conditional {
+                        condition,
+                        target,
+                        jump_if_condition_true,
+                    } => {
+                        let equality_operators = if *jump_if_condition_true {
+                            ("==", "!=")
+                        } else {
+                            ("!=", "==")
+                        };
+                        digraph
+                            .edge(
+                                &terminator_source_label,
+                                get_node_id(&ScheduledGraphNode::BlockStart, target),
+                            )
+                            .attributes()
+                            .set_label(
+                                format!("if {} {} 0", condition, equality_operators.0).as_str(),
+                            );
+                        if let Some(next_label) = next_block_label {
+                            digraph
+                                .edge(
+                                    &terminator_source_label,
+                                    get_node_id(&ScheduledGraphNode::BlockStart, &next_label),
+                                )
+                                .attributes()
+                                .set_label(
+                                    format!("if {} {} 0", condition, equality_operators.1).as_str(),
+                                );
+                        };
+                    }
+                    BlockTerminator::Unconditional { target } => {
+                        digraph
+                            .edge(
+                                &terminator_source_label,
+                                get_node_id(&ScheduledGraphNode::BlockStart, target),
+                            )
+                            .attributes()
+                            .set_label("always");
+                    }
+                    BlockTerminator::Continue => {
+                        if let Some(next_label) = next_block_label {
+                            digraph
+                                .edge(
+                                    &terminator_source_label,
+                                    get_node_id(&ScheduledGraphNode::BlockStart, &next_label),
+                                )
+                                .attributes()
+                                .set_label("always");
+                        };
+                    }
+                    BlockTerminator::Halt => {}
                 }
-                BlockTerminator::Continue => {
-                    if let Some(next_label) = next_block_label {
-                        writeln!(
-                            f,
-                            "\"{}_end\" -> \"{}_start\" [label=\"always\"]",
-                            label, next_label
-                        )?;
-                    };
-                }
-                BlockTerminator::Halt => {}
             }
         }
-        writeln!(f, "}}")
+
+        output_bytes
     }
 }
 
-/// Escape strings for use as DOT format quoted ID's
-fn write_escaped(f: &mut std::fmt::Formatter, s: &str) -> std::fmt::Result {
-    for c in s.chars() {
-        write_char(f, c)?;
-    }
-    Ok(())
+/// Escape a string for safe use as a Graphviz node ID or label
+fn escape_label(original: &str) -> String {
+    original.replace("\"", "\\\"")
 }
 
-/// Escape a single character for use within a DOT format quoted ID.
-fn write_char(f: &mut std::fmt::Formatter, c: char) -> std::fmt::Result {
-    use std::fmt::Write;
-    match c {
-        '"' | '\\' => f.write_char('\\')?,
-        // \l is for left justified linebreak
-        '\n' => return f.write_str("\\l"),
-        _ => {}
+/// Return a string to be used as the node ID within the graph text.
+/// `prefix` parameter allows namespacing for uniqueness.
+fn get_node_id(node: &ScheduledGraphNode, prefix: &str) -> String {
+    match node {
+        ScheduledGraphNode::BlockEnd => {
+            format!("\"{}_end\"", prefix)
+        }
+        ScheduledGraphNode::BlockStart => {
+            format!("\"{}_start\"", prefix)
+        }
+        ScheduledGraphNode::InstructionIndex(index) => {
+            format!("\"{}_{}\"", prefix, index)
+        }
     }
-    f.write_char(c)
 }

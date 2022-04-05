@@ -1,28 +1,27 @@
 ---
-source: quil/src/program/graph.rs
-expression: "ProgramDebugWrapper{program: &scheduled_program,}"
-
+source: src/program/graph.rs
+expression: dot_format
 ---
 digraph {
-	entry [label="Entry Point"]
-	entry -> "block_0_start"
-	subgraph "cluster_block_0" {
-		label="block_0"
-		node [ style="filled" ]
-		"block_0_start" [ label=start, shape=circle ]
-		"block_0_start" -> "block_0_0" [ label="ordering" ]
-		"block_0_0" [label="MOVE a[0] 1"]
-		"block_0_0" -> "block_0_1" [ label="ordering" ]
-		"block_0_0" -> "block_0_2" [ label="await write" ]
-		"block_0_1" [label="MOVE b[0] 2"]
-		"block_0_1" -> "block_0_2" [ label="await write
-ordering" ]
-		"block_0_1" -> "block_0_end" [ label="await write" ]
-		"block_0_2" [label="ADD a[0] b[0]"]
-		"block_0_2" -> "block_0_end" [ label="await read
+  entry -> "block_0_start";
+  entry [label="Entry Point"];
+  subgraph cluster_0 {
+    label="block_0";
+    node [style="filled"];
+    "block_0_start" [shape=circle, label="start"];
+    "block_0_start" -> "block_0_0" [label="ordering"];
+    "block_0_0" [label="MOVE a[0] 1"];
+    "block_0_0" -> "block_0_1" [label="ordering"];
+    "block_0_0" -> "block_0_2" [label="await write"];
+    "block_0_1" [label="MOVE b[0] 2"];
+    "block_0_1" -> "block_0_2" [label="await write
+ordering"];
+    "block_0_1" -> "block_0_end" [label="await write"];
+    "block_0_2" [label="ADD a[0] b[0]"];
+    "block_0_2" -> "block_0_end" [label="await read
 await write
-ordering" ]
-		"block_0_end" [ label=end, shape=circle ]
-	}
+ordering"];
+    "block_0_end" [shape=circle, label="end"];
+  }
 }
 

@@ -1,33 +1,32 @@
 ---
-source: quil/src/program/graph.rs
-expression: "ProgramDebugWrapper{program: &scheduled_program,}"
-
+source: src/program/graph.rs
+expression: dot_format
 ---
 digraph {
-	entry [label="Entry Point"]
-	entry -> "a_start"
-	subgraph "cluster_a" {
-		label="a"
-		node [ style="filled" ]
-		"a_start" [ label=start, shape=circle ]
-		"a_start" -> "a_end" [ label="ordering" ]
-		"a_end" [ label=end, shape=circle ]
-	}
-"a_end" -> "b_start" [label="always"]
-	subgraph "cluster_b" {
-		label="b"
-		node [ style="filled" ]
-		"b_start" [ label=start, shape=circle ]
-		"b_start" -> "b_end" [ label="ordering" ]
-		"b_end" [ label=end, shape=circle ]
-	}
-"b_end" -> "c_start" [label="always"]
-	subgraph "cluster_c" {
-		label="c"
-		node [ style="filled" ]
-		"c_start" [ label=start, shape=circle ]
-		"c_start" -> "c_end" [ label="ordering" ]
-		"c_end" [ label=end, shape=circle ]
-	}
+  entry -> "a_start";
+  entry [label="Entry Point"];
+  subgraph cluster_0 {
+    label="a";
+    node [style="filled"];
+    "a_start" [shape=circle, label="start"];
+    "a_start" -> "a_end" [label="ordering"];
+    "a_end" [shape=circle, label="end"];
+  }
+  "a_end" -> "b_start" [label="always"];
+  subgraph cluster_1 {
+    label="b";
+    node [style="filled"];
+    "b_start" [shape=circle, label="start"];
+    "b_start" -> "b_end" [label="ordering"];
+    "b_end" [shape=circle, label="end"];
+  }
+  "b_end" -> "c_start" [label="always"];
+  subgraph cluster_2 {
+    label="c";
+    node [style="filled"];
+    "c_start" [shape=circle, label="start"];
+    "c_start" -> "c_end" [label="ordering"];
+    "c_end" [shape=circle, label="end"];
+  }
 }
 
