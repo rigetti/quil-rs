@@ -20,11 +20,9 @@ frame"];
     "block_0_1" [shape=rectangle, label="NONBLOCKING PULSE 0 \"rf\" test(a: ro[0])"];
     "block_0_1" -> "block_0_3" [label="await read
 frame"];
-    "block_0_1" -> "block_0_end" [label="await read"];
     "block_0_2" [shape=rectangle, label="NONBLOCKING PULSE 1 \"rf\" test(a: ro[0])"];
     "block_0_2" -> "block_0_3" [label="await read
 frame"];
-    "block_0_2" -> "block_0_end" [label="await read"];
     "block_0_3" [shape=rectangle, label="CAPTURE 0 \"ro_rx\" test(a: param[0]) ro[0]"];
     "block_0_3" -> "block_0_4" [label="await capture
 frame"];

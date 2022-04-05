@@ -20,8 +20,7 @@ ordering"];
     "block_0_2" -> "block_0_3" [label="await write
 ordering"];
     "block_0_3" [shape=rectangle, label="SUB ro[1] ro[0]"];
-    "block_0_3" -> "block_0_end" [label="await read
-await write
+    "block_0_3" -> "block_0_end" [label="await write
 ordering"];
     "block_0_end" [shape=circle, label="end"];
   }

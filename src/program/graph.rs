@@ -137,16 +137,14 @@ impl MemoryAccessQueue {
             });
         }
 
+        self.pending_capture = None;
+        self.pending_write = None;
+
         match access {
-            // Mark the given node as reading from this memory region. If there was a write pending,
-            // return it to be used as a dependency.
             Read => {
                 self.pending_reads.push(node_id);
-                result
             }
-            // Mark the given node as writing to this memory region. If there were any reads or another
-            // write or capture pending, return those as a dependency list.
-            Capture | Write => {
+            Capture => {
                 for upstream_node_id in self.pending_reads.iter() {
                     result.push(MemoryAccessDependency {
                         node_id: *upstream_node_id,
@@ -154,21 +152,24 @@ impl MemoryAccessQueue {
                     });
                 }
 
-                match access {
-                    Capture => {
-                        self.pending_capture = Some(node_id);
-                        self.pending_write = None;
-                    }
-                    Write => {
-                        self.pending_capture = None;
-                        self.pending_write = Some(node_id);
-                    }
-                    _ => panic!("expected Capture or Write memory dependency"),
+                self.pending_reads = vec![];
+                self.pending_capture = Some(node_id);
+            }
+
+            Write => {
+                for upstream_node_id in self.pending_reads.iter() {
+                    result.push(MemoryAccessDependency {
+                        node_id: *upstream_node_id,
+                        access_type: Read,
+                    });
                 }
 
-                result
+                self.pending_reads = vec![];
+                self.pending_write = Some(node_id);
             }
         }
+
+        result
     }
 }
 
@@ -260,9 +261,6 @@ impl InstructionBlock {
                 }),
             }?;
 
-            // FIXME: This will handle reads, writes, and captures in arbitrary order, which is a bug.
-            // Must be handled as reads -> (writes / captures). Instructions read all values prior to any
-            // writes they make to those values.
             let accesses = instruction.get_memory_accesses();
             for (regions, access_type) in [
                 (accesses.reads, MemoryAccessType::Read),
