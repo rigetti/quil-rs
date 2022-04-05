@@ -10,16 +10,16 @@ digraph {
     node [style="filled"];
     "block_0_start" [shape=circle, label="start"];
     "block_0_start" -> "block_0_0" [label="ordering"];
-    "block_0_0" [label="MOVE ro[0] 1"];
+    "block_0_0" [shape=rectangle, label="MOVE ro[0] 1"];
     "block_0_0" -> "block_0_1" [label="await write
 ordering"];
-    "block_0_1" [label="MOVE ro[1] 0"];
+    "block_0_1" [shape=rectangle, label="MOVE ro[1] 0"];
     "block_0_1" -> "block_0_2" [label="await write
 ordering"];
-    "block_0_2" [label="ADD ro[0] 5"];
+    "block_0_2" [shape=rectangle, label="ADD ro[0] 5"];
     "block_0_2" -> "block_0_3" [label="await write
 ordering"];
-    "block_0_3" [label="SUB ro[1] ro[0]"];
+    "block_0_3" [shape=rectangle, label="SUB ro[1] ro[0]"];
     "block_0_3" -> "block_0_end" [label="await read
 await write
 ordering"];

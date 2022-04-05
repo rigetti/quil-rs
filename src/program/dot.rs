@@ -45,6 +45,7 @@ impl InstructionBlock {
                 ScheduledGraphNode::InstructionIndex(index) => {
                     cluster
                         .node_named(node_id)
+                        .set_shape(Shape::Rectangle)
                         .set_label(&escape_label(&format!(
                             "{}",
                             self.instructions.get(*index).unwrap()

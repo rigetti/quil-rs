@@ -28,8 +28,8 @@ pub use self::frame::FrameSet;
 pub use self::memory::MemoryRegion;
 
 mod calibration;
-mod error;
 pub mod dot;
+mod error;
 mod frame;
 pub mod graph;
 mod memory;
