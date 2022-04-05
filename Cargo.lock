@@ -224,6 +224,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "dot-writer"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1defb949b123415131ecae40ab5dca70e9f39eedda3de2cebb03a8a98fdf5894"
+
+[[package]]
 name = "either"
 version = "1.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -585,6 +591,7 @@ name = "quil-rs"
 version = "0.8.7"
 dependencies = [
  "criterion",
+ "dot-writer",
  "indexmap",
  "insta",
  "lexical",
