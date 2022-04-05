@@ -183,7 +183,7 @@ impl ScheduledProgram {
 
 /// Escape a string for safe use as a Graphviz node ID or label
 fn escape_label(original: &str) -> String {
-    original.replace("\"", "\\\"")
+    original.replace('\"', "\\\"")
 }
 
 /// Return a string to be used as the node ID within the graph text.
