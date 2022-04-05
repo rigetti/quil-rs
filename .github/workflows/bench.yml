@@ -1,0 +1,49 @@
+on: [ push, pull_request ]
+
+name: Benchmark
+
+jobs:
+  benchmark:
+    name: Run benchmarks
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+        rust:
+          - stable
+
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.rust }}
+          override: true
+        
+      - uses: Swatinem/rust-cache@v1
+    
+      - name: Download benchmark artifacts
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          workflow: bench.yml
+          name: benchmarks-${{ matrix.os }}
+          path: target/criterion
+        continue-on-error: true
+      
+      - name: Run cargo benchmark
+        uses: actions-rs/cargo@v1
+        with: 
+          command: bench
+          args: --bench parser -- --warm-up-time=2 --measurement-time=3 --sample-size=500 --color=always
+      
+      - name: Archive benchmark results
+        if: ${{ github.ref == 'refs/heads/main'}}
+        uses: actions/upload-artifact@v3
+        with:
+          name: benchmarks-${{ matrix.os }}
+          path: target/criterion
+    
