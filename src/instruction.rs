@@ -742,11 +742,16 @@ impl fmt::Display for Instruction {
                 name,
                 arguments,
                 data,
-            }) => match data {
-                // FIXME: Handle empty argument lists
-                Some(data) => write!(f, "PRAGMA {} {} {}", name, arguments.join(" "), data),
-                None => write!(f, "PRAGMA {} {}", name, arguments.join(" ")),
-            },
+            }) => {
+                write!(f, "PRAGMA {}", name)?;
+                if !arguments.is_empty() {
+                    write!(f, " {}", arguments.join(" "))?;
+                }
+                if let Some(data) = data {
+                    write!(f, " \"{}\"", data)?;
+                }
+                Ok(())
+            }
             Instruction::RawCapture(RawCapture {
                 blocking,
                 frame,
@@ -802,6 +807,42 @@ impl fmt::Display for Instruction {
             }
             Instruction::Label(Label(label)) => write!(f, "LABEL @{}", label),
         }
+    }
+}
+
+#[cfg(test)]
+mod test_instruction_display {
+    use super::{Instruction, Pragma};
+
+    #[test]
+    fn pragma() {
+        assert_eq!(
+            Instruction::Pragma(Pragma {
+                name: String::from("INITIAL_REWIRING"),
+                arguments: vec![],
+                data: Some(String::from("PARTIAL")),
+            })
+            .to_string(),
+            "PRAGMA INITIAL_REWIRING \"PARTIAL\""
+        );
+        assert_eq!(
+            Instruction::Pragma(Pragma {
+                name: String::from("LOAD-MEMORY"),
+                arguments: vec![String::from("q0")],
+                data: Some(String::from("addr")),
+            })
+            .to_string(),
+            "PRAGMA LOAD-MEMORY q0 \"addr\""
+        );
+        assert_eq!(
+            Instruction::Pragma(Pragma {
+                name: String::from("PRESERVE_BLOCK"),
+                arguments: vec![],
+                data: None,
+            })
+            .to_string(),
+            "PRAGMA PRESERVE_BLOCK"
+        );
     }
 }
 
