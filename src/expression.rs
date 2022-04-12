@@ -28,6 +28,8 @@ use crate::{imag, instruction::MemoryReference, real};
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum EvaluationError {
     Incomplete,
+    NumberNotReal,
+    NotANumber,
 }
 
 #[derive(Clone, Debug)]
@@ -172,6 +174,12 @@ fn calculate_function(
     }
 }
 
+/// Is this a small floating point number?
+#[inline(always)]
+fn _is_small(x: f64) -> bool {
+    x.abs() < 1e-16
+}
+
 impl Expression {
     /// Consume the expression, simplifying it as much as possible.
     ///
@@ -310,6 +318,16 @@ impl Expression {
                 .ok_or(EvaluationError::Incomplete),
             PiConstant => Ok(real!(PI)),
             Number(number) => Ok(*number),
+        }
+    }
+
+    /// If this is a number with imaginary part "equal to" zero (of _small_ absolute value), return
+    /// that number. Otherwise, error with an evaluation error of a descriptive type.
+    pub fn to_real(self) -> Result<f64, EvaluationError> {
+        match self {
+            Expression::Number(x) if _is_small(x.im) => Ok(x.re),
+            Expression::Number(_) => Err(EvaluationError::NumberNotReal),
+            _ => Err(EvaluationError::NotANumber),
         }
     }
 }
@@ -672,6 +690,30 @@ mod tests {
             y.hash(&mut s);
             let h_y = s.finish();
             prop_assert_eq!(x == y, h_x == h_y);
+        }
+
+        #[test]
+        fn reals_are_real(x in any::<f64>()) {
+            prop_assert_eq!(Expression::Number(real!(x)).to_real(), Ok(x))
+        }
+
+        #[test]
+        fn some_nums_are_real(re in any::<f64>(), im in any::<f64>()) {
+            let result = Expression::Number(Complex64{re, im}).to_real();
+            if _is_small(im) {
+                prop_assert_eq!(result, Ok(re))
+            } else {
+                prop_assert_eq!(result, Err(EvaluationError::NumberNotReal))
+            }
+        }
+
+        #[test]
+        fn no_other_exps_are_real(expr in arb_expr().prop_filter("Not numbers", |e| match e {
+            Expression::Number(_) => false,
+            _ => true,
+        }
+            )) {
+            prop_assert_eq!(expr.to_real(), Err(EvaluationError::NotANumber))
         }
 
     }
