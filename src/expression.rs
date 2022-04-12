@@ -325,6 +325,7 @@ impl Expression {
     /// that number. Otherwise, error with an evaluation error of a descriptive type.
     pub fn to_real(self) -> Result<f64, EvaluationError> {
         match self {
+            Expression::PiConstant => Ok(PI),
             Expression::Number(x) if is_small(x.im) => Ok(x.re),
             Expression::Number(_) => Err(EvaluationError::NumberNotReal),
             _ => Err(EvaluationError::NotANumber),
@@ -709,12 +710,30 @@ mod tests {
 
         #[test]
         fn no_other_exps_are_real(expr in arb_expr().prop_filter("Not numbers", |e| match e {
-            Expression::Number(_) => false,
+            Expression::Number(_) | Expression::PiConstant => false,
             _ => true,
         }
             )) {
             prop_assert_eq!(expr.to_real(), Err(EvaluationError::NotANumber))
         }
 
+    }
+
+    #[test]
+    fn specific_to_real_tests() {
+        for (input, expected) in vec![
+            (Expression::PiConstant, Ok(PI)),
+            (Expression::Number(Complex64 { re: 1.0, im: 0.0 }), Ok(1.0)),
+            (
+                Expression::Number(Complex64 { re: 1.0, im: 1.0 }),
+                Err(EvaluationError::NumberNotReal),
+            ),
+            (
+                Expression::Variable("Not a number".into()),
+                Err(EvaluationError::NotANumber),
+            ),
+        ] {
+            assert_eq!(input.to_real(), expected)
+        }
     }
 }
