@@ -54,7 +54,7 @@ pub enum Expression {
 }
 
 /// Hash value helper: turn a hashable thing into a u64.
-fn _hash_to_u64<T: Hash>(t: &T) -> u64 {
+fn hash_to_u64<T: Hash>(t: &T) -> u64 {
     let mut s = DefaultHasher::new();
     t.hash(&mut s);
     s.finish()
@@ -91,8 +91,8 @@ impl Hash for Expression {
                     InfixOperator::Plus | InfixOperator::Star => {
                         // commutative, so put left & right in decreasing order by hash value
                         let (a, b) = (
-                            min_by_key(left, right, _hash_to_u64),
-                            max_by_key(left, right, _hash_to_u64),
+                            min_by_key(left, right, hash_to_u64),
+                            max_by_key(left, right, hash_to_u64),
                         );
                         a.hash(state);
                         b.hash(state);
@@ -137,7 +137,7 @@ impl Hash for Expression {
 impl PartialEq for Expression {
     // Partial equality by hash value
     fn eq(&self, other: &Self) -> bool {
-        _hash_to_u64(self) == _hash_to_u64(other)
+        hash_to_u64(self) == hash_to_u64(other)
     }
 }
 
@@ -176,7 +176,7 @@ fn calculate_function(
 
 /// Is this a small floating point number?
 #[inline(always)]
-fn _is_small(x: f64) -> bool {
+fn is_small(x: f64) -> bool {
     x.abs() < 1e-16
 }
 
@@ -325,7 +325,7 @@ impl Expression {
     /// that number. Otherwise, error with an evaluation error of a descriptive type.
     pub fn to_real(self) -> Result<f64, EvaluationError> {
         match self {
-            Expression::Number(x) if _is_small(x.im) => Ok(x.re),
+            Expression::Number(x) if is_small(x.im) => Ok(x.re),
             Expression::Number(_) => Err(EvaluationError::NumberNotReal),
             _ => Err(EvaluationError::NotANumber),
         }
@@ -700,7 +700,7 @@ mod tests {
         #[test]
         fn some_nums_are_real(re in any::<f64>(), im in any::<f64>()) {
             let result = Expression::Number(Complex64{re, im}).to_real();
-            if _is_small(im) {
+            if is_small(im) {
                 prop_assert_eq!(result, Ok(re))
             } else {
                 prop_assert_eq!(result, Err(EvaluationError::NumberNotReal))
