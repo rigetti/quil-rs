@@ -14,6 +14,7 @@
  * limitations under the License.
  **/
 use std::collections::{hash_map::DefaultHasher, HashMap};
+use std::convert::TryInto;
 use std::f64::consts::PI;
 use std::fmt;
 use std::hash::{Hash, Hasher};
@@ -330,6 +331,15 @@ impl Expression {
             Expression::Number(_) => Err(EvaluationError::NumberNotReal),
             _ => Err(EvaluationError::NotANumber),
         }
+    }
+}
+
+/// If this is a number with imaginary part "equal to" zero (of _small_ absolute value), return
+/// that number. Otherwise, error with an evaluation error of a descriptive type.
+impl TryInto<f64> for Expression {
+    type Error = EvaluationError;
+    fn try_into(self) -> Result<f64, Self::Error> {
+        self.to_real()
     }
 }
 
