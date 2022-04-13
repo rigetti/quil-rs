@@ -14,7 +14,6 @@
  * limitations under the License.
  **/
 use std::collections::{hash_map::DefaultHasher, HashMap};
-use std::convert::TryInto;
 use std::f64::consts::PI;
 use std::fmt;
 use std::hash::{Hash, Hasher};
@@ -26,10 +25,14 @@ use proptest_derive::Arbitrary;
 use crate::parser::{lex, parse_expression};
 use crate::{imag, instruction::MemoryReference, real};
 
+/// The different possible types of errors that could occur during expression evaluation.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum EvaluationError {
+    /// There wasn't enough information to completely evaluate an expression.
     Incomplete,
+    /// An operation expected a real number but received a complex one.
     NumberNotReal,
+    /// An operation expected a number but received a different type of expression.
     NotANumber,
 }
 
@@ -331,15 +334,6 @@ impl Expression {
             Expression::Number(_) => Err(EvaluationError::NumberNotReal),
             _ => Err(EvaluationError::NotANumber),
         }
-    }
-}
-
-/// If this is a number with imaginary part "equal to" zero (of _small_ absolute value), return
-/// that number. Otherwise, error with an evaluation error of a descriptive type.
-impl TryInto<f64> for Expression {
-    type Error = EvaluationError;
-    fn try_into(self) -> Result<f64, Self::Error> {
-        self.to_real()
     }
 }
 
