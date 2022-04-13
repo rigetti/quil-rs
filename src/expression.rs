@@ -688,12 +688,17 @@ mod tests {
         }
 
         #[test]
-        fn eq_implies_hash_eq(x in arb_expr(), y in arb_expr()) {
-            let mut s = DefaultHasher::new();
-            x.hash(&mut s);
-            let h_x = s.finish();
-            y.hash(&mut s);
-            let h_y = s.finish();
+        fn eq_iff_hash_eq(x in arb_expr(), y in arb_expr()) {
+            let h_x = {
+                let mut s = DefaultHasher::new();
+                x.hash(&mut s);
+                s.finish()
+            };
+            let h_y = {
+                let mut s = DefaultHasher::new();
+                y.hash(&mut s);
+                s.finish()
+            };
             prop_assert_eq!(x == y, h_x == h_y);
         }
 
