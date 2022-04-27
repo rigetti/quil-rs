@@ -25,9 +25,15 @@ use proptest_derive::Arbitrary;
 use crate::parser::{lex, parse_expression};
 use crate::{imag, instruction::MemoryReference, real};
 
+/// The different possible types of errors that could occur during expression evaluation.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum EvaluationError {
+    /// There wasn't enough information to completely evaluate an expression.
     Incomplete,
+    /// An operation expected a real number but received a complex one.
+    NumberNotReal,
+    /// An operation expected a number but received a different type of expression.
+    NotANumber,
 }
 
 #[derive(Clone, Debug)]
@@ -52,7 +58,7 @@ pub enum Expression {
 }
 
 /// Hash value helper: turn a hashable thing into a u64.
-fn _hash_to_u64<T: Hash>(t: &T) -> u64 {
+fn hash_to_u64<T: Hash>(t: &T) -> u64 {
     let mut s = DefaultHasher::new();
     t.hash(&mut s);
     s.finish()
@@ -89,8 +95,8 @@ impl Hash for Expression {
                     InfixOperator::Plus | InfixOperator::Star => {
                         // commutative, so put left & right in decreasing order by hash value
                         let (a, b) = (
-                            min_by_key(left, right, _hash_to_u64),
-                            max_by_key(left, right, _hash_to_u64),
+                            min_by_key(left, right, hash_to_u64),
+                            max_by_key(left, right, hash_to_u64),
                         );
                         a.hash(state);
                         b.hash(state);
@@ -135,7 +141,7 @@ impl Hash for Expression {
 impl PartialEq for Expression {
     // Partial equality by hash value
     fn eq(&self, other: &Self) -> bool {
-        _hash_to_u64(self) == _hash_to_u64(other)
+        hash_to_u64(self) == hash_to_u64(other)
     }
 }
 
@@ -170,6 +176,12 @@ fn calculate_function(
         Exponent => argument.exp(),
         SquareRoot => argument.sqrt(),
     }
+}
+
+/// Is this a small floating point number?
+#[inline(always)]
+fn is_small(x: f64) -> bool {
+    x.abs() < 1e-16
 }
 
 impl Expression {
@@ -369,6 +381,17 @@ impl Expression {
                 None => Variable(identifier),
             },
             other => other,
+        }
+    }
+
+    /// If this is a number with imaginary part "equal to" zero (of _small_ absolute value), return
+    /// that number. Otherwise, error with an evaluation error of a descriptive type.
+    pub fn to_real(self) -> Result<f64, EvaluationError> {
+        match self {
+            Expression::PiConstant => Ok(PI),
+            Expression::Number(x) if is_small(x.im) => Ok(x.re),
+            Expression::Number(_) => Err(EvaluationError::NumberNotReal),
+            _ => Err(EvaluationError::NotANumber),
         }
     }
 }
@@ -724,14 +747,61 @@ mod tests {
         }
 
         #[test]
-        fn eq_implies_hash_eq(x in arb_expr(), y in arb_expr()) {
-            let mut s = DefaultHasher::new();
-            x.hash(&mut s);
-            let h_x = s.finish();
-            y.hash(&mut s);
-            let h_y = s.finish();
+        fn eq_iff_hash_eq(x in arb_expr(), y in arb_expr()) {
+            let h_x = {
+                let mut s = DefaultHasher::new();
+                x.hash(&mut s);
+                s.finish()
+            };
+            let h_y = {
+                let mut s = DefaultHasher::new();
+                y.hash(&mut s);
+                s.finish()
+            };
             prop_assert_eq!(x == y, h_x == h_y);
         }
 
+        #[test]
+        fn reals_are_real(x in any::<f64>()) {
+            prop_assert_eq!(Expression::Number(real!(x)).to_real(), Ok(x))
+        }
+
+        #[test]
+        fn some_nums_are_real(re in any::<f64>(), im in any::<f64>()) {
+            let result = Expression::Number(Complex64{re, im}).to_real();
+            if is_small(im) {
+                prop_assert_eq!(result, Ok(re))
+            } else {
+                prop_assert_eq!(result, Err(EvaluationError::NumberNotReal))
+            }
+        }
+
+        #[test]
+        fn no_other_exps_are_real(expr in arb_expr().prop_filter("Not numbers", |e| match e {
+            Expression::Number(_) | Expression::PiConstant => false,
+            _ => true,
+        }
+            )) {
+            prop_assert_eq!(expr.to_real(), Err(EvaluationError::NotANumber))
+        }
+
+    }
+
+    #[test]
+    fn specific_to_real_tests() {
+        for (input, expected) in vec![
+            (Expression::PiConstant, Ok(PI)),
+            (Expression::Number(Complex64 { re: 1.0, im: 0.0 }), Ok(1.0)),
+            (
+                Expression::Number(Complex64 { re: 1.0, im: 1.0 }),
+                Err(EvaluationError::NumberNotReal),
+            ),
+            (
+                Expression::Variable("Not a number".into()),
+                Err(EvaluationError::NotANumber),
+            ),
+        ] {
+            assert_eq!(input.to_real(), expected)
+        }
     }
 }
