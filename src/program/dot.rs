@@ -30,7 +30,6 @@ impl InstructionBlock {
             let node_id = get_node_id(&node, node_prefix);
             match &node {
                 ScheduledGraphNode::BlockEnd => {
-                    // cluster.node_named(format!("{}end"))
                     cluster
                         .node_named(node_id)
                         .set_shape(Shape::Circle)
