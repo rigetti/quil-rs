@@ -46,7 +46,8 @@ impl InstructionBlock {
                         .node_named(node_id)
                         .set_shape(Shape::Rectangle)
                         .set_label(&escape_label(&format!(
-                            "{}",
+                            "[{}] {}",
+                            index,
                             self.instructions.get(*index).unwrap()
                         )));
                 }
