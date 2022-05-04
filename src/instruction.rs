@@ -884,13 +884,7 @@ impl Instruction {
     ///
     /// let program = Program::from_str("SHIFT-PHASE 0 \"rf\" 2*2").unwrap();
     /// let mut instructions = program.to_instructions(true);
-    /// instructions.iter_mut().for_each(|inst| inst.apply_to_expressions(|expr| {
-    ///     // Here, `Expression::PiConstant` is used simply as a placeholder value
-    ///     // allowing the closure to take ownership of the subject expression.
-    ///     // Its value is ignored.
-    ///     let previous = replace(expr, Expression::PiConstant);
-    ///     *expr = previous.simplify();
-    /// }));
+    /// instructions.iter_mut().for_each(|inst| inst.apply_to_expressions(Expression::simplify));
     ///
     /// assert_eq!(instructions[0].to_string(), String::from("SHIFT-PHASE 0 \"rf\" 4"))
     ///

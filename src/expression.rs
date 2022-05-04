@@ -185,7 +185,7 @@ fn is_small(x: f64) -> bool {
 }
 
 impl Expression {
-    /// Consume the expression, simplifying it as much as possible.
+    /// Simplify the expression as much as possible, in-place.
     ///
     /// # Example
     ///
@@ -194,59 +194,53 @@ impl Expression {
     /// use std::str::FromStr;
     /// use num_complex::Complex64;
     ///
-    /// let expression = Expression::from_str("cos(2 * pi) + 2").unwrap().simplify();
+    /// let mut expression = Expression::from_str("cos(2 * pi) + 2").unwrap();
+    /// expression.simplify();
     ///
     /// assert_eq!(expression, Expression::Number(Complex64::from(3.0)));
     /// ```
-    pub fn simplify(self) -> Self {
+    pub fn simplify(&mut self) {
         use Expression::*;
 
-        let simplified = match self {
+        match self {
             FunctionCall {
                 function,
                 expression,
             } => {
-                let simplified = expression.simplify();
-                if let Number(number) = simplified {
-                    Number(calculate_function(&function, &number))
-                } else {
-                    FunctionCall {
-                        function,
-                        expression: Box::new(simplified),
-                    }
+                expression.simplify();
+                if let Number(number) = expression.as_ref() {
+                    *self = Number(calculate_function(function, number));
                 }
             }
             Infix {
                 left,
-                operator,
+                operator: _,
                 right,
-            } => Infix {
-                left: Box::new(left.simplify()),
-                operator,
-                right: Box::new(right.simplify()),
-            },
+            } => {
+                left.simplify();
+                right.simplify();
+            }
             Prefix {
                 operator,
                 expression,
             } => {
                 use PrefixOperator::*;
-                match (&operator, expression) {
-                    (Minus, expr) => Prefix {
-                        operator,
-                        expression: Box::new(expr.simplify()),
-                    },
-                    (Plus, expr) => expr.simplify(),
+                expression.simplify();
+
+                // Avoid potentially expensive clone
+                // Cannot directly swap `expression` with `self` because that causes
+                // a double mutable borrow.
+                if let Plus = operator {
+                    let mut temp = Expression::PiConstant;
+                    std::mem::swap(expression.as_mut(), &mut temp);
+                    std::mem::swap(self, &mut temp);
                 }
             }
-            Variable(identifier) => Variable(identifier),
-            Address(memory_reference) => Address(memory_reference),
-            PiConstant => PiConstant,
-            Number(number) => Number(number),
+            Variable(_) | Address(_) | PiConstant | Number(_) => {},
         };
-        if let Ok(number) = simplified.evaluate(&HashMap::new(), &HashMap::new()) {
-            Number(number)
-        } else {
-            simplified
+
+        if let Ok(number) = self.evaluate(&HashMap::new(), &HashMap::new()) {
+            *self = Number(number);
         }
     }
 
@@ -634,14 +628,14 @@ mod tests {
             },
         ];
 
-        for case in cases {
+        for mut case in cases {
             let evaluated = case
                 .expression
                 .evaluate(case.variables, case.memory_references);
             assert_eq!(evaluated, case.evaluated);
 
-            let simplified = case.expression.simplify();
-            assert_eq!(simplified, case.simplified);
+            case.expression.simplify();
+            assert_eq!(case.expression, case.simplified);
         }
     }
 
