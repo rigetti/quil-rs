@@ -327,7 +327,7 @@ impl Expression {
 
     /// If this is a number with imaginary part "equal to" zero (of _small_ absolute value), return
     /// that number. Otherwise, error with an evaluation error of a descriptive type.
-    pub fn to_real(self) -> Result<f64, EvaluationError> {
+    pub fn to_real(&self) -> Result<f64, EvaluationError> {
         match self {
             Expression::PiConstant => Ok(PI),
             Expression::Number(x) if is_small(x.im) => Ok(x.re),
