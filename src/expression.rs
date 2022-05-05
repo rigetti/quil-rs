@@ -236,7 +236,7 @@ impl Expression {
                     std::mem::swap(self, &mut temp);
                 }
             }
-            Variable(_) | Address(_) | PiConstant | Number(_) => {},
+            Variable(_) | Address(_) | PiConstant | Number(_) => {}
         };
 
         if let Ok(number) = self.evaluate(&HashMap::new(), &HashMap::new()) {
