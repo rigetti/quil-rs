@@ -244,6 +244,24 @@ impl Expression {
         }
     }
 
+    /// Consume the expression, simplifying it as much as possible.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use quil_rs::expression::Expression;
+    /// use std::str::FromStr;
+    /// use num_complex::Complex64;
+    ///
+    /// let simplified = Expression::from_str("cos(2 * pi) + 2").unwrap().into_simplified();
+    ///
+    /// assert_eq!(simplified, Expression::Number(Complex64::from(3.0)));
+    /// ```
+    pub fn into_simplified(mut self) -> Self {
+        self.simplify();
+        self
+    }
+
     /// Evaluate an expression, expecting that it may be fully reduced to a single complex number.
     /// If it cannot be reduced to a complex number, return an error.
     ///
