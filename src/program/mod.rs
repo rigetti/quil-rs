@@ -13,13 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  **/
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::str::FromStr;
 
 use crate::instruction::{
     Capture, Declaration, Delay, Fence, FrameDefinition, FrameIdentifier, Instruction, Pulse,
-    RawCapture, SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, SwapPhases, Waveform,
-    WaveformDefinition,
+    Qubit, RawCapture, SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, SwapPhases,
+    Waveform, WaveformDefinition,
 };
 use crate::parser::{lex, parse_instructions};
 
@@ -57,6 +57,24 @@ impl Program {
             waveforms: BTreeMap::new(),
             instructions: vec![],
         }
+    }
+
+    // TODO Return references?
+    pub fn get_used_qubits(&self) -> HashSet<Qubit> {
+        self.instructions
+            .iter()
+            .flat_map(|i| match i {
+                Instruction::Gate(gate) => gate.qubits.clone(),
+                Instruction::Measurement(measurement) => vec![measurement.qubit.clone()],
+                Instruction::Reset(reset) => match &reset.qubit {
+                    Some(qubit) => vec![qubit.clone()],
+                    None => vec![],
+                },
+                Instruction::Delay(delay) => delay.qubits.clone(),
+                Instruction::Fence(fence) => fence.qubits.clone(),
+                _ => vec![],
+            })
+            .collect::<HashSet<_>>()
     }
 
     /// Add an instruction to the end of the program.
@@ -253,7 +271,9 @@ impl FromStr for Program {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
+    use std::{collections::HashSet, str::FromStr};
+
+    use crate::instruction::Qubit;
 
     use super::Program;
 
@@ -366,5 +386,30 @@ DECLARE ec BIT
         // verify that each memory declaration in the program is in the same index as the same
         // program after being re-parsed and serialized.
         assert!(program1.lines().eq(program2.lines()));
+    }
+
+    #[test]
+    fn test_get_qubits() {
+        let input = "
+DECLARE ro BIT
+MEASURE q ro
+JUMP-UNLESS @end-reset ro
+X q
+LABEL @end-reset
+
+DEFCAL I 0:
+    DELAY 0 1.0
+DEFFRAME 0 \"rx\":
+    HARDWARE-OBJECT: \"hardware\"
+DEFWAVEFORM custom:
+    1,2
+I 0
+";
+        let program = Program::from_str(input).unwrap();
+        let expected = vec![Qubit::Fixed(0), Qubit::Variable("q".to_string())]
+            .into_iter()
+            .collect::<HashSet<_>>();
+        let actual = program.get_used_qubits();
+        assert_eq!(expected, actual);
     }
 }
