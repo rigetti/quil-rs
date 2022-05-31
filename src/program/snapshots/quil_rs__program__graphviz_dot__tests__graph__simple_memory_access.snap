@@ -1,5 +1,5 @@
 ---
-source: src/program/graph.rs
+source: src/program/graphviz_dot.rs
 expression: dot_format
 ---
 digraph {

@@ -1,5 +1,5 @@
 ---
-source: src/program/graph.rs
+source: src/program/graphviz_dot.rs
 expression: dot_format
 ---
 digraph {
@@ -11,8 +11,9 @@ digraph {
     "block_0_start" [shape=circle, label="start"];
     "block_0_start" -> "block_0_0" [label="frame"];
     "block_0_start" -> "block_0_end" [label="ordering"];
-    "block_0_0" [shape=rectangle, label="PULSE 0 \"rf\" test(duration: 1000000)"];
-    "block_0_0" -> "block_0_end" [label="frame"];
+    "block_0_0" [shape=rectangle, label="CAPTURE 0 \"ro_rx\" test() ro[0]"];
+    "block_0_0" -> "block_0_end" [label="await capture
+frame"];
     "block_0_end" [shape=circle, label="end"];
   }
 }

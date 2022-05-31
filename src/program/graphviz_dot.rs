@@ -201,3 +201,203 @@ fn get_node_id(node: &ScheduledGraphNode, prefix: &str) -> String {
         }
     }
 }
+
+
+#[cfg(test)]
+mod tests {
+    mod graph {
+        use std::str::FromStr;
+
+        use crate::program::Program;
+
+        use super::super::ScheduledProgram;
+
+        /// Build a test case which compiles the input program, builds the dot-format string from the program,
+        /// and then compares that to a "correct" snapshot of that dot format. This makes diffs easy to compare and
+        /// understand; if a test is failing, you can copy the snapshot contents out to your preferred Graphviz
+        /// viewer to help understand why.
+        ///
+        /// NOTE: because this relies on direct string comparison, it will be brittle against changes in the way
+        /// that the `get_dot_format` method works. If _all_ or _most_ of these tests are failing, examine the
+        /// diffs closely to determine if it's only a matter of reformatting.
+        macro_rules! build_dot_format_snapshot_test_case {
+            ($name: ident, $input:expr) => {
+                #[test]
+                fn $name() {
+                    const FRAME_DEFINITIONS: &'static str = "
+DEFFRAME 0 \"rf\":
+    INITIAL-FREQUENCY: 1e6
+DEFFRAME 1 \"rf\":
+    INITIAL-FREQUENCY: 1e6
+DEFFRAME 2 \"rf\":
+    INITIAL-FREQUENCY: 1e6
+DEFFRAME 0 \"ro_rx\":
+    INITIAL-FREQUENCY: 1e6
+DEFFRAME 0 \"ro_tx\":
+    INITIAL-FREQUENCY: 1e6
+";
+
+                    let program =
+                        Program::from_str(&format!("{}\n{}", FRAME_DEFINITIONS, $input)).unwrap();
+                    let scheduled_program = ScheduledProgram::from_program(&program).unwrap();
+
+                    for block in scheduled_program.blocks.values() {
+                        let graph = block.get_dependency_graph();
+                        assert!(
+                            !petgraph::algo::is_cyclic_directed(graph),
+                            "cycle in graph: {:?}",
+                            graph
+                        );
+                    }
+
+                    let dot_format_bytes = scheduled_program.get_dot_format();
+                    let dot_format = String::from_utf8_lossy(&dot_format_bytes);
+
+                    insta::assert_snapshot!(dot_format);
+                }
+            };
+        }
+
+        build_dot_format_snapshot_test_case!(
+            single_instruction,
+            "PULSE 0 \"rf\" test(duration: 1e6)"
+        );
+
+        build_dot_format_snapshot_test_case!(
+            single_dependency,
+            "
+PULSE 0 \"rf\" test(duration: 1e6)
+PULSE 0 \"rf\" test(duration: 1e6)
+"
+        );
+
+        build_dot_format_snapshot_test_case!(
+            chained_pulses,
+            "
+PULSE 0 \"rf\" test(duration: 1e6)
+PULSE 0 \"rf\" test(duration: 1e6)
+PULSE 0 \"rf\" test(duration: 1e6)
+PULSE 0 \"rf\" test(duration: 1e6)
+PULSE 0 \"rf\" test(duration: 1e6)
+"
+        );
+
+        build_dot_format_snapshot_test_case!(
+            different_frames_blocking,
+            "
+PULSE 0 \"rf\" test(duration: 1e6)
+PULSE 1 \"rf\" test(duration: 1e6)
+PULSE 2 \"rf\" test(duration: 1e6)
+"
+        );
+
+        build_dot_format_snapshot_test_case!(
+            different_frames_nonblocking,
+            "
+NONBLOCKING PULSE 0 \"rf\" test(duration: 1e6)
+NONBLOCKING PULSE 1 \"rf\" test(duration: 1e6)
+NONBLOCKING PULSE 2 \"rf\" test(duration: 1e6)
+"
+        );
+
+        build_dot_format_snapshot_test_case!(
+            fence_all_with_nonblocking_pulses,
+            "
+NONBLOCKING PULSE 0 \"rf\" test(duration: 1e6)
+NONBLOCKING PULSE 1 \"rf\" test(duration: 1e6)
+FENCE
+NONBLOCKING PULSE 0 \"rf\" test(duration: 1e6)
+NONBLOCKING PULSE 1 \"rf\" test(duration: 1e6)
+"
+        );
+        build_dot_format_snapshot_test_case!(fence_all, "FENCE");
+
+        build_dot_format_snapshot_test_case!(
+            jump,
+            "DECLARE ro BIT
+LABEL @first-block
+PULSE 0 \"rf\" test(duration: 1e6)
+JUMP-UNLESS @third-block ro[0]
+LABEL @second-block
+PULSE 0 \"rf\" test(duration: 1e6)
+LABEL @third-block
+PULSE 0 \"rf\" test(duration: 1e6)
+"
+        );
+
+        build_dot_format_snapshot_test_case!(
+            active_reset_single_frame,
+            "DECLARE ro BIT
+LABEL @measure
+NONBLOCKING PULSE 0 \"ro_tx\" test(duration: 1e6)
+NONBLOCKING CAPTURE 0 \"ro_rx\" test(duration: 1e6) ro
+JUMP-WHEN @end ro[0]
+LABEL @feedback
+PULSE 0 \"rf\" test(duration: 1e6)
+JUMP @measure
+LABEL @end
+"
+        );
+
+        build_dot_format_snapshot_test_case!(
+            labels_only,
+            "LABEL @a
+LABEL @b
+LABEL @c
+"
+        );
+
+        // assert that read and write memory dependencies are expressed correctly
+        build_dot_format_snapshot_test_case!(
+            simple_memory_access,
+            "DECLARE a INTEGER
+DECLARE b INTEGER
+MOVE a 1
+MOVE b 2
+ADD a b
+"
+        );
+
+        // assert that a block "waits" for a capture to complete
+        build_dot_format_snapshot_test_case!(
+            simple_capture,
+            "DECLARE ro BIT
+CAPTURE 0 \"ro_rx\" test ro"
+        );
+
+        // assert that a block "waits" for a capture to complete even with a pulse after it
+        build_dot_format_snapshot_test_case!(
+            pulse_after_capture,
+            "DECLARE ro BIT
+CAPTURE 0 \"ro_rx\" test ro
+PULSE 0 \"rf\" test"
+        );
+
+        // assert that a block "waits" for a capture to complete
+        build_dot_format_snapshot_test_case!(
+            parametric_pulse,
+            "DECLARE ro BIT
+DECLARE param REAL
+PULSE 0 \"rf\" test(a: param[0])
+CAPTURE 0 \"ro_rx\" test(a: param[0]) ro"
+        );
+
+        // Assert that all pulses following a capture block on that capture, until the next capture
+        build_dot_format_snapshot_test_case!(
+            parametric_pulses_using_capture_results,
+            "DECLARE ro BIT
+DECLARE param REAL
+CAPTURE 0 \"ro_rx\" test(a: param[0]) ro
+NONBLOCKING PULSE 0 \"rf\" test(a: ro[0])
+NONBLOCKING PULSE 1 \"rf\" test(a: ro[0])
+CAPTURE 0 \"ro_rx\" test(a: param[0]) ro
+NONBLOCKING PULSE 0 \"rf\" test(a: ro[0])
+NONBLOCKING PULSE 1 \"rf\" test(a: ro[0])"
+        );
+
+        build_dot_format_snapshot_test_case!(
+            multiple_classical_instructions,
+            "DECLARE ro INTEGER[2]\nMOVE ro[0] 1\nMOVE ro[1] 0\nADD ro[0] 5\nSUB ro[1] ro[0]"
+        );
+    }
+}

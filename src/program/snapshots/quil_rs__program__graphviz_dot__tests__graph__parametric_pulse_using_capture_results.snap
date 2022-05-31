@@ -1,5 +1,5 @@
 ---
-source: quil/src/program/graph.rs
+source: quil/src/program/graphviz_dot.rs
 expression: "ProgramDebugWrapper{program: &scheduled_program,}"
 
 ---
