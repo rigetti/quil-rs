@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  **/
+use num_complex::Complex64;
 use std::collections::{hash_map::DefaultHasher, HashMap};
 use std::f64::consts::PI;
 use std::fmt;
@@ -362,26 +363,21 @@ impl<'a> FromStr for Expression {
 /// - When imaginary is set but real is 0, show only imaginary
 /// - When imaginary is 0, show real only
 /// - When both are non-zero, show with the correct operator in between
-macro_rules! format_complex {
-    ($value:expr) => {{
-        let mut operator = String::new();
-        let mut imaginary_component = String::new();
-
-        if $value.im > 0f64 {
-            operator = "+".to_owned();
-            imaginary_component = format!("{:.}i", $value.im)
-        } else if $value.im < 0f64 {
-            imaginary_component = format!("-{:.}i", $value.im)
-        }
-
-        if imaginary_component == "" {
-            format!("{:.}", $value.re)
-        } else if $value.re == 0f64 {
-            format!("{}", imaginary_component)
-        } else {
-            format!("{:.}{}{}", $value.re, operator, imaginary_component)
-        }
-    }};
+#[inline(always)]
+fn format_complex(value: &Complex64) -> String {
+    if value.re == 0f64 && value.im == 0f64 {
+        "0".to_owned()
+    } else if value.im == 0f64 {
+        ryu::Buffer::new().format_finite(value.re).to_owned()
+    } else if value.re == 0f64 {
+        ryu::Buffer::new().format_finite(value.im).to_owned() + "i"
+    } else {
+        let op = if value.im > 0f64 { "+" } else { "" };
+        ryu::Buffer::new().format_finite(value.re).to_owned()
+            + op
+            + ryu::Buffer::new().format(value.im)
+            + "i"
+    }
 }
 
 impl fmt::Display for Expression {
@@ -398,7 +394,7 @@ impl fmt::Display for Expression {
                 operator,
                 right,
             } => write!(f, "({}{}{})", left, operator, right),
-            Number(value) => write!(f, "{}", format_complex!(value)),
+            Number(value) => write!(f, "{}", format_complex(value)),
             PiConstant => write!(f, "pi"),
             Prefix {
                 operator,
@@ -625,6 +621,10 @@ mod tests {
         )
     }
 
+    fn arb_complex64() -> impl Strategy<Value = Complex64> {
+        any::<(f64, f64)>().prop_map(|(re, im)| Complex64::new(re, im))
+    }
+
     proptest! {
 
         #[test]
@@ -726,6 +726,13 @@ mod tests {
             prop_assert_eq!(expr.to_real(), Err(EvaluationError::NotANumber))
         }
 
+        #[test]
+        fn complexes_are_parseable_as_expressions(value in arb_complex64()) {
+            let parsed = Expression::from_str(&format_complex(&value));
+            assert!(parsed.is_ok());
+            assert_eq!(Expression::Number(value), parsed.unwrap().simplify());
+        }
+
     }
 
     #[test]
@@ -745,4 +752,25 @@ mod tests {
             assert_eq!(input.to_real(), expected)
         }
     }
+
+    #[test]
+    fn specific_format_complex_tests() {
+        for (x, s) in &[
+            (Complex64::new(0.0, 0.0), "0"),
+            (Complex64::new(-0.0, 0.0), "0"),
+            (Complex64::new(-0.0, -0.0), "0"),
+            (Complex64::new(1.234, 0.0), "1.234"),
+            (Complex64::new(0.0, 1.234), "1.234i"),
+            (Complex64::new(-1.234, 0.0), "-1.234"),
+            (Complex64::new(0.0, -1.234), "-1.234i"),
+            (Complex64::new(1.234, 5.678), "1.234+5.678i"),
+            (Complex64::new(-1.234, 5.678), "-1.234+5.678i"),
+            (Complex64::new(1.234, -5.678), "1.234-5.678i"),
+            (Complex64::new(-1.234, -5.678), "-1.234-5.678i"),
+            (Complex64::new(1e100, 2e-100), "1e100+2e-100i"),
+        ] {
+            assert_eq!(format_complex(x), *s);
+        }
+    }
+
 }
