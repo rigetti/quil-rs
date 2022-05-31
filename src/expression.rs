@@ -185,6 +185,65 @@ fn is_small(x: f64) -> bool {
 }
 
 impl Expression {
+    /// Simplify the expression as much as possible, in-place.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use quil_rs::expression::Expression;
+    /// use std::str::FromStr;
+    /// use num_complex::Complex64;
+    ///
+    /// let mut expression = Expression::from_str("cos(2 * pi) + 2").unwrap();
+    /// expression.simplify();
+    ///
+    /// assert_eq!(expression, Expression::Number(Complex64::from(3.0)));
+    /// ```
+    pub fn simplify(&mut self) {
+        use Expression::*;
+
+        match self {
+            FunctionCall {
+                function,
+                expression,
+            } => {
+                expression.simplify();
+                if let Number(number) = expression.as_ref() {
+                    *self = Number(calculate_function(function, number));
+                }
+            }
+            Infix {
+                left,
+                operator: _,
+                right,
+            } => {
+                left.simplify();
+                right.simplify();
+            }
+            Prefix {
+                operator,
+                expression,
+            } => {
+                use PrefixOperator::*;
+                expression.simplify();
+
+                // Avoid potentially expensive clone
+                // Cannot directly swap `expression` with `self` because that causes
+                // a double mutable borrow.
+                if let Plus = operator {
+                    let mut temp = Expression::PiConstant;
+                    std::mem::swap(expression.as_mut(), &mut temp);
+                    std::mem::swap(self, &mut temp);
+                }
+            }
+            Variable(_) | Address(_) | PiConstant | Number(_) => {}
+        };
+
+        if let Ok(number) = self.evaluate(&HashMap::new(), &HashMap::new()) {
+            *self = Number(number);
+        }
+    }
+
     /// Consume the expression, simplifying it as much as possible.
     ///
     /// # Example
@@ -194,60 +253,13 @@ impl Expression {
     /// use std::str::FromStr;
     /// use num_complex::Complex64;
     ///
-    /// let expression = Expression::from_str("cos(2 * pi) + 2").unwrap().simplify();
+    /// let simplified = Expression::from_str("cos(2 * pi) + 2").unwrap().into_simplified();
     ///
-    /// assert_eq!(expression, Expression::Number(Complex64::from(3.0)));
+    /// assert_eq!(simplified, Expression::Number(Complex64::from(3.0)));
     /// ```
-    pub fn simplify(self) -> Self {
-        use Expression::*;
-
-        let simplified = match self {
-            FunctionCall {
-                function,
-                expression,
-            } => {
-                let simplified = expression.simplify();
-                if let Number(number) = simplified {
-                    Number(calculate_function(&function, &number))
-                } else {
-                    FunctionCall {
-                        function,
-                        expression: Box::new(simplified),
-                    }
-                }
-            }
-            Infix {
-                left,
-                operator,
-                right,
-            } => Infix {
-                left: Box::new(left.simplify()),
-                operator,
-                right: Box::new(right.simplify()),
-            },
-            Prefix {
-                operator,
-                expression,
-            } => {
-                use PrefixOperator::*;
-                match (&operator, expression) {
-                    (Minus, expr) => Prefix {
-                        operator,
-                        expression: Box::new(expr.simplify()),
-                    },
-                    (Plus, expr) => expr.simplify(),
-                }
-            }
-            Variable(identifier) => Variable(identifier),
-            Address(memory_reference) => Address(memory_reference),
-            PiConstant => PiConstant,
-            Number(number) => Number(number),
-        };
-        if let Ok(number) = simplified.evaluate(&HashMap::new(), &HashMap::new()) {
-            Number(number)
-        } else {
-            simplified
-        }
+    pub fn into_simplified(mut self) -> Self {
+        self.simplify();
+        self
     }
 
     /// Evaluate an expression, expecting that it may be fully reduced to a single complex number.
@@ -322,6 +334,65 @@ impl Expression {
                 .ok_or(EvaluationError::Incomplete),
             PiConstant => Ok(real!(PI)),
             Number(number) => Ok(*number),
+        }
+    }
+
+    /// Substitute an expression in the place of each matching variable.
+    /// Consumes the expression and returns a new one.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use quil_rs::expression::Expression;
+    /// use std::str::FromStr;
+    /// use std::collections::HashMap;
+    /// use num_complex::Complex64;
+    ///
+    /// let expression = Expression::from_str("%x + %y").unwrap();
+    ///
+    /// let mut variables = HashMap::with_capacity(1);
+    /// variables.insert(String::from("x"), Expression::Number(Complex64::from(1.0)));
+    ///
+    /// let evaluated = expression.substitute_variables(&variables);
+    ///
+    /// assert_eq!(evaluated, Expression::from_str("1.0 + %y").unwrap())
+    /// ```
+    pub fn substitute_variables(self, variable_values: &HashMap<String, Expression>) -> Self {
+        use Expression::*;
+
+        match self {
+            FunctionCall {
+                function,
+                expression,
+            } => FunctionCall {
+                function,
+                expression: expression.substitute_variables(variable_values).into(),
+            },
+            Infix {
+                left,
+                operator,
+                right,
+            } => {
+                let left = left.substitute_variables(variable_values).into();
+                let right = right.substitute_variables(variable_values).into();
+                Infix {
+                    left,
+                    operator,
+                    right,
+                }
+            }
+            Prefix {
+                operator,
+                expression,
+            } => Prefix {
+                operator,
+                expression: expression.substitute_variables(variable_values).into(),
+            },
+            Variable(identifier) => match variable_values.get(identifier.as_str()) {
+                Some(value) => value.clone(),
+                None => Variable(identifier),
+            },
+            other => other,
         }
     }
 
@@ -575,14 +646,14 @@ mod tests {
             },
         ];
 
-        for case in cases {
+        for mut case in cases {
             let evaluated = case
                 .expression
                 .evaluate(case.variables, case.memory_references);
             assert_eq!(evaluated, case.evaluated);
 
-            let simplified = case.expression.simplify();
-            assert_eq!(simplified, case.simplified);
+            case.expression.simplify();
+            assert_eq!(case.expression, case.simplified);
         }
     }
 

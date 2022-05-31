@@ -466,7 +466,6 @@ impl From<&Instruction> for InstructionRole {
             | Instruction::Label(_)
             | Instruction::MeasureCalibrationDefinition(_)
             | Instruction::Measurement(_)
-            | Instruction::Pragma(_)
             | Instruction::WaveformDefinition(_) => InstructionRole::ProgramComposition,
             Instruction::Reset(_)
             | Instruction::Capture(_)
@@ -484,6 +483,7 @@ impl From<&Instruction> for InstructionRole {
             | Instruction::Move(_)
             | Instruction::Exchange(_)
             | Instruction::Load(_)
+            | Instruction::Pragma(_)
             | Instruction::Store(_) => InstructionRole::ClassicalCompute,
             Instruction::Halt
             | Instruction::Jump(_)
@@ -866,4 +866,110 @@ impl fmt::Display for Qubit {
 pub struct Waveform {
     pub matrix: Vec<Expression>,
     pub parameters: Vec<String>,
+}
+
+impl Instruction {
+    /// Apply the provided closure to this instruction, mutating any `Expression`s within.
+    /// Does not affect instructions without `Expression`s within.
+    /// Does not traverse or mutate instructions nested within blocks (such as
+    /// within `DEFCAL`).
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use std::mem::replace;
+    /// use std::str::FromStr;
+    /// use quil_rs::{expression::Expression, Program};
+    ///
+    ///
+    /// let program = Program::from_str("SHIFT-PHASE 0 \"rf\" 2*2").unwrap();
+    /// let mut instructions = program.to_instructions(true);
+    /// instructions.iter_mut().for_each(|inst| inst.apply_to_expressions(Expression::simplify));
+    ///
+    /// assert_eq!(instructions[0].to_string(), String::from("SHIFT-PHASE 0 \"rf\" 4"))
+    ///
+    /// ```
+    pub fn apply_to_expressions(&mut self, mut closure: impl FnMut(&mut Expression)) {
+        match self {
+            Instruction::CalibrationDefinition(Calibration { parameters, .. })
+            | Instruction::Gate(Gate { parameters, .. }) => {
+                parameters.iter_mut().for_each(closure);
+            }
+            Instruction::Capture(Capture { waveform, .. })
+            | Instruction::Pulse(Pulse { waveform, .. }) => {
+                waveform.parameters.values_mut().for_each(closure);
+            }
+            Instruction::Delay(Delay { duration, .. })
+            | Instruction::RawCapture(RawCapture { duration, .. }) => {
+                closure(duration);
+            }
+            Instruction::FrameDefinition(FrameDefinition { attributes, .. }) => {
+                for value in attributes.values_mut() {
+                    if let AttributeValue::Expression(expression) = value {
+                        closure(expression);
+                    }
+                }
+            }
+            Instruction::SetFrequency(SetFrequency {
+                frequency: expression,
+                ..
+            })
+            | Instruction::SetPhase(SetPhase {
+                phase: expression, ..
+            })
+            | Instruction::SetScale(SetScale {
+                scale: expression, ..
+            })
+            | Instruction::ShiftFrequency(ShiftFrequency {
+                frequency: expression,
+                ..
+            })
+            | Instruction::ShiftPhase(ShiftPhase {
+                phase: expression, ..
+            }) => {
+                closure(expression);
+            }
+            Instruction::WaveformDefinition(WaveformDefinition { definition, .. }) => {
+                definition.matrix.iter_mut().for_each(closure);
+            }
+            Instruction::GateDefinition(GateDefinition { matrix, .. }) => {
+                for row in matrix {
+                    for cell in row {
+                        closure(cell);
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr;
+
+    use crate::{expression::Expression, Program};
+
+    #[test]
+    fn apply_to_expressions() {
+        let mut program = Program::from_str(
+            "DECLARE ro BIT
+SET-PHASE 0 \"rf\" pi/2
+RX(2) 0",
+        )
+        .unwrap();
+        let closure = |expr: &mut Expression| *expr = Expression::Variable(String::from("a"));
+        for instruction in program.instructions.iter_mut() {
+            instruction.apply_to_expressions(closure);
+        }
+
+        let expected_program = Program::from_str(
+            "DECLARE ro BIT
+SET-PHASE 0 \"rf\" %a
+RX(%a) 0",
+        )
+        .unwrap();
+
+        assert_eq!(expected_program, program);
+    }
 }

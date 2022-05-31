@@ -28,6 +28,7 @@ pub use self::frame::FrameSet;
 pub use self::memory::MemoryRegion;
 
 mod calibration;
+mod error;
 mod frame;
 pub mod graph;
 mod memory;
@@ -49,7 +50,7 @@ pub struct Program {
 impl Program {
     pub fn new() -> Self {
         Program {
-            calibrations: CalibrationSet::new(),
+            calibrations: CalibrationSet::default(),
             frames: FrameSet::new(),
             memory_regions: BTreeMap::new(),
             waveforms: BTreeMap::new(),
@@ -61,7 +62,7 @@ impl Program {
     pub fn add_instruction(&mut self, instruction: Instruction) {
         match instruction {
             Instruction::CalibrationDefinition(calibration) => {
-                self.calibrations.push(calibration);
+                self.calibrations.push_calibration(calibration);
             }
             Instruction::FrameDefinition(FrameDefinition {
                 identifier,
@@ -77,6 +78,9 @@ impl Program {
                 self.memory_regions
                     .insert(name, MemoryRegion { size, sharing });
             }
+            Instruction::MeasureCalibrationDefinition(calibration) => {
+                self.calibrations.push_measurement_calibration(calibration);
+            }
             Instruction::WaveformDefinition(WaveformDefinition { name, definition }) => {
                 self.waveforms.insert(name, definition);
             }
@@ -85,23 +89,31 @@ impl Program {
     }
 
     /// Expand any instructions in the program which have a matching calibration, leaving the others
-    /// unchanged.
-    pub fn expand_calibrations(&mut self) {
-        let mut result: Vec<Instruction> = vec![];
+    /// unchanged. Recurses though each instruction while ensuring there is no cycle in the expansion
+    /// graph (i.e. no calibration expands directly or indirectly into itself)
+    pub fn expand_calibrations(&self) -> error::ProgramResult<Self> {
+        let mut expanded_instructions: Vec<Instruction> = vec![];
 
         // TODO: Do this more efficiently, possibly with Vec::splice
         for instruction in &self.instructions {
-            match self.calibrations.expand(instruction) {
+            match self.calibrations.expand(instruction, &[])? {
                 Some(expanded) => {
-                    result.extend(expanded.into_iter());
+                    expanded_instructions.extend(expanded.into_iter());
                 }
                 None => {
-                    result.push(instruction.clone());
+                    expanded_instructions.push(instruction.clone());
                 }
             }
         }
 
-        self.instructions = result;
+        let mut new_program = self.clone();
+        new_program.instructions = vec![];
+
+        for instruction in expanded_instructions {
+            new_program.add_instruction(instruction);
+        }
+
+        Ok(new_program)
     }
 
     /// Return the frames which are either "used" or "blocked" by the given instruction.
