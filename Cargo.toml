@@ -9,7 +9,7 @@ keywords = ["Quil", "Quantum", "Rigetti"]
 categories = ["parser-implementations", "science", "compilers", "emulators"]
 
 [dependencies]
-dot-writer = "0.1.2"
+dot-writer = { version = "0.1.2", optional = true }
 indexmap = "1.6.1"
 lexical = "5.2.0"
 nom = "6.1.0"
@@ -23,6 +23,9 @@ insta = "1.7.1"
 proptest = "1.0.0"
 proptest-derive = "0.3.0"
 criterion = { version = "0.3.5", features = ["html_reports"] }
+
+[features]
+graphviz-dot = ["dot-writer"]
 
 [[bench]]
 name = "parser"

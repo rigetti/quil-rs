@@ -28,11 +28,13 @@ pub use self::frame::FrameSet;
 pub use self::memory::MemoryRegion;
 
 mod calibration;
-pub mod dot;
 mod error;
 mod frame;
 pub mod graph;
 mod memory;
+
+#[cfg(feature = "graphviz-dot")]
+pub mod graphviz_dot;
 
 /// A Quil Program instance describes a quantum program with metadata used in execution.
 ///
