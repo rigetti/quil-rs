@@ -368,15 +368,13 @@ fn format_complex(value: &Complex64) -> String {
     if value.re == 0f64 && value.im == 0f64 {
         "0".to_owned()
     } else if value.im == 0f64 {
-        ryu::Buffer::new().format_finite(value.re).to_owned()
+        ryu::Buffer::new().format(value.re).to_owned()
     } else if value.re == 0f64 {
-        ryu::Buffer::new().format_finite(value.im).to_owned() + "i"
+        ryu::Buffer::new().format(value.im).to_owned() + "i"
     } else {
+        let mut buf = ryu::Buffer::new();
         let op = if value.im > 0f64 { "+" } else { "" };
-        ryu::Buffer::new().format_finite(value.re).to_owned()
-            + op
-            + ryu::Buffer::new().format(value.im)
-            + "i"
+        buf.format(value.re).to_owned() + op + buf.format(value.im) + "i"
     }
 }
 
