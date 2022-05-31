@@ -23,7 +23,7 @@ use crate::program::graph::{
 };
 
 impl InstructionBlock {
-    /// Given a [dot_writer::Scope] representing a subgraph/cluster, write the timing graph for this block into it.
+    /// Given a [`dot_writer::Scope`] representing a subgraph/cluster, write the timing graph for this block into it.
     /// Uses the `node_prefix` argument for namespacing so that node IDs remain unique within the overall graph.
     fn write_dot_format(&self, cluster: &mut dot_writer::Scope, node_prefix: &str) {
         self.graph.nodes().for_each(|node| {
