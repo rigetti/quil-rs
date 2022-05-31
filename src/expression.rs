@@ -772,5 +772,4 @@ mod tests {
             assert_eq!(format_complex(x), *s);
         }
     }
-
 }
