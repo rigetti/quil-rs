@@ -1,0 +1,19 @@
+---
+source: src/program/graph.rs
+expression: "ProgramDebugWrapper { program: &scheduled_program }"
+---
+digraph {
+	entry [label="Entry Point"]
+	entry -> "block_0_start"
+	subgraph "cluster_block_0" {
+		label="block_0"
+		node [ style="filled" ]
+		"block_0_start" [ label=start, shape=circle ]
+		"block_0_start" -> "block_0_0" [ label="frame" ]
+		"block_0_start" -> "block_0_end" [ label="ordering" ]
+		"block_0_0" [label="PULSE 0 \"rf\" test(duration: 1000000.0)"]
+		"block_0_0" -> "block_0_end" [ label="frame" ]
+		"block_0_end" [ label=end, shape=circle ]
+	}
+}
+
