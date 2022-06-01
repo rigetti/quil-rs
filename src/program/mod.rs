@@ -166,14 +166,10 @@ impl Program {
                 }
             }
             Instruction::Fence(Fence { qubits }) => {
-                if include_blocked {
-                    if qubits.is_empty() {
-                        FrameMatchCondition::All
-                    } else {
-                        FrameMatchCondition::AnyOfQubits(qubits)
-                    }
+                if qubits.is_empty() {
+                    FrameMatchCondition::All
                 } else {
-                    return None;
+                    FrameMatchCondition::AnyOfQubits(qubits)
                 }
             }
             Instruction::SetFrequency(SetFrequency { frame, .. })
