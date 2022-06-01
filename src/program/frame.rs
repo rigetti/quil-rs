@@ -35,18 +35,60 @@ impl FrameSet {
         self.frames.keys().collect()
     }
 
-    /// Return all contained FrameIdentifiers which include **exactly** these qubits (in any order)
-    /// and - if names are provided - match one of the names.
-    pub fn get_matching_keys(&self, qubits: &[Qubit], names: &[String]) -> Vec<&FrameIdentifier> {
-        let qubit_set: HashSet<&Qubit> = qubits.iter().collect();
-        self.frames
-            .iter()
-            .filter(|(identifier, _)| {
-                (names.is_empty() || names.contains(&identifier.name))
-                    && qubit_set == identifier.qubits.iter().collect()
-            })
-            .map(|(id, _)| id)
-            .collect::<Vec<_>>()
+    /// Return all frames in the set which match all of these conditions. If a frame _would_ match, but is
+    /// not present in this [FrameSet], then it is not returned (notably, the [FrameMatchCondition::Specific] 
+    /// match condition).
+    pub fn get_matching_keys(&self, condition: FrameMatchCondition) -> HashSet<&FrameIdentifier> {
+        let keys = self.frames.keys();
+
+        match condition {
+            FrameMatchCondition::All => keys.collect(),
+            FrameMatchCondition::AnyOfNames(names) => {
+                keys.filter(|&f| names.contains(&f.name)).collect()
+            }
+            FrameMatchCondition::AnyOfQubits(qubits) => {
+                let any_of_set: HashSet<_> = qubits.iter().collect();
+
+                keys.filter(|&f| f.qubits.iter().any(|q| any_of_set.contains(q)))
+                    .collect()
+            }
+            FrameMatchCondition::ExactQubits(qubits) => {
+                let all_of_set: HashSet<_> = qubits.iter().collect();
+
+                keys.filter(|&f| f.qubits.iter().all(|q| all_of_set.contains(q)))
+                    .collect()
+            }
+            FrameMatchCondition::Specific(frame) => {
+                if let Some(frame) = self.frames.get_key(&frame) {
+                    vec![frame].into_iter().collect()
+                } else {
+                    HashSet::new()
+                }
+            }
+            FrameMatchCondition::And(conditions) => {
+                let individual_sets: Vec<HashSet<&FrameIdentifier>> = conditions
+                    .into_iter()
+                    .map(|c| self.get_matching_keys(c))
+                    .collect();
+                individual_sets
+                    .into_iter()
+                    .reduce(|acc, el| acc.into_iter().filter(|&v| el.contains(v)).collect())
+                    .unwrap_or_default()
+            }
+            FrameMatchCondition::Or(conditions) => {
+                let individual_sets: Vec<HashSet<&FrameIdentifier>> = conditions
+                    .into_iter()
+                    .map(|c| self.get_matching_keys(c))
+                    .collect();
+                individual_sets
+                    .into_iter()
+                    .reduce(|acc, el| {
+                        el.into_iter().for_each(|v| { acc.insert(v); });
+                        acc
+                    })
+                    .unwrap_or_default()
+            }
+        }
     }
 
     /// Retrieve the attributes of a frame by its identifier.
@@ -86,4 +128,27 @@ impl FrameSet {
             })
             .collect()
     }
+}
+
+pub(crate) enum FrameMatchCondition {
+    /// Match all frames in the set
+    All,
+
+    /// Match all frames which shares any one of these names
+    AnyOfNames(Vec<String>),
+
+    /// Match all frames which contain any of these qubits
+    AnyOfQubits(Vec<Qubit>),
+
+    /// Match all frames which contain exactly these qubits
+    ExactQubits(Vec<Qubit>),
+
+    /// Return these specific frames, if present in the set
+    Specific(FrameIdentifier),
+
+    /// Return all frames which match all of these conditions
+    And(Vec<FrameMatchCondition>),
+
+    /// Return all frames which match any of these conditions
+    Or(Vec<FrameMatchCondition>),
 }
