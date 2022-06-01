@@ -354,9 +354,9 @@ mod tests {
                     "RX(pi/2) 0\n"
                 ),
                 expected: concat!(
-                    "PULSE 1 \"xy\" gaussian(duration: 1, fwhm: 2, t0: 3)\n",
-                    "PULSE 2 \"xy\" gaussian(duration: 1, fwhm: 2, t0: 3)\n",
-                    "PULSE 3 \"xy\" gaussian(duration: 1, fwhm: 2, t0: 3)\n"
+                    "PULSE 1 \"xy\" gaussian(duration: 1.0, fwhm: 2.0, t0: 3.0)\n",
+                    "PULSE 2 \"xy\" gaussian(duration: 1.0, fwhm: 2.0, t0: 3.0)\n",
+                    "PULSE 3 \"xy\" gaussian(duration: 1.0, fwhm: 2.0, t0: 3.0)\n"
                 ),
             },
             TestCase {
@@ -365,7 +365,7 @@ mod tests {
                     "    PULSE 0 \"xy\" gaussian(duration: 1, fwhm: 2, t0: 3)\n",
                     "X 0\n"
                 ),
-                expected: "PULSE 0 \"xy\" gaussian(duration: 1, fwhm: 2, t0: 3)\n",
+                expected: "PULSE 0 \"xy\" gaussian(duration: 1.0, fwhm: 2.0, t0: 3.0)\n",
             },
             TestCase {
                 input: concat!(
