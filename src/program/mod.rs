@@ -326,7 +326,7 @@ DEFCAL I 0:
 DEFFRAME 0 \"rx\":
     HARDWARE-OBJECT: \"hardware\"
 DEFWAVEFORM custom:
-    1, 2
+    1.0, 2.0
 I 0
 ";
         let program = Program::from_str(input).unwrap();
@@ -344,9 +344,9 @@ I 0
 DEFFRAME 0 \"rx\":
 \tHARDWARE-OBJECT: \"hardware\"
 DEFWAVEFORM custom:
-\t1, 2
+\t1.0, 2.0
 DEFCAL I 0:
-\tDELAY 0 1
+\tDELAY 0 1.0
 I 0
 "
         );
