@@ -155,5 +155,6 @@ pub(crate) enum FrameMatchCondition<'a> {
     And(Vec<FrameMatchCondition<'a>>),
 
     /// Return all frames which match any of these conditions
+    #[allow(dead_code)]
     Or(Vec<FrameMatchCondition<'a>>),
 }
