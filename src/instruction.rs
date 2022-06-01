@@ -17,7 +17,10 @@ use nom::combinator::all_consuming;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fmt};
 
-use crate::{expression::Expression, parser::{instruction::parse_instruction, lex}};
+use crate::{
+    expression::Expression,
+    parser::{instruction::parse_instruction, lex},
+};
 
 #[cfg(test)]
 use proptest_derive::Arbitrary;
@@ -948,7 +951,8 @@ impl Instruction {
     /// or if there is input left over after parsing.
     pub fn parse(input: &str) -> Result<Self, String> {
         let lexed = lex(input)?;
-        let (_, instruction) = all_consuming(parse_instruction)(&lexed).map_err(|e| e.to_string())?;
+        let (_, instruction) =
+            all_consuming(parse_instruction)(&lexed).map_err(|e| e.to_string())?;
         Ok(instruction)
     }
 }

@@ -275,7 +275,7 @@ impl FromStr for Program {
 
 #[cfg(test)]
 mod tests {
-    use std::{str::FromStr, collections::HashSet};
+    use std::{collections::HashSet, str::FromStr};
 
     use crate::instruction::Instruction;
 
@@ -451,11 +451,7 @@ DEFFRAME 0 1 \"2q\":
                 vec!["0 1 \"2q\""],
                 vec!["0 1 \"2q\""],
             ),
-            (
-                "FENCE 1",
-                vec![],
-                vec!["1 \"c\"", "0 1 \"2q\""],
-            ),
+            ("FENCE 1", vec![], vec!["1 \"c\"", "0 1 \"2q\""]),
             (
                 "FENCE",
                 vec![],
@@ -466,16 +462,8 @@ DEFFRAME 0 1 \"2q\":
                 vec!["0 \"a\"", "0 \"b\""],
                 vec!["0 \"a\"", "0 \"b\""],
             ),
-            (
-                "DELAY 1 1.0",
-                vec!["1 \"c\""],
-                vec!["1 \"c\""],
-            ),
-            (
-                "DELAY 1 \"c\" 1.0",
-                vec!["1 \"c\""],
-                vec!["1 \"c\""],
-            ),
+            ("DELAY 1 1.0", vec!["1 \"c\""], vec!["1 \"c\""]),
+            ("DELAY 1 \"c\" 1.0", vec!["1 \"c\""], vec!["1 \"c\""]),
         ] {
             let instruction = Instruction::parse(instruction_string).unwrap();
             let used_frames: HashSet<String> = program
@@ -484,7 +472,10 @@ DEFFRAME 0 1 \"2q\":
                 .into_iter()
                 .map(|f| f.to_string())
                 .collect();
-            let expected_used_frames: HashSet<String> = expected_used_frames.into_iter().map(|el| el.to_owned()).collect();
+            let expected_used_frames: HashSet<String> = expected_used_frames
+                .into_iter()
+                .map(|el| el.to_owned())
+                .collect();
             assert_eq!(
                 used_frames, expected_used_frames,
                 "Instruction {} *used* frames `{:?}` but we expected `{:?}",
@@ -497,7 +488,10 @@ DEFFRAME 0 1 \"2q\":
                 .into_iter()
                 .map(|f| f.to_string())
                 .collect();
-            let expected_blocked_frames: HashSet<String> = expected_blocked_frames.into_iter().map(|el| el.to_owned()).collect();
+            let expected_blocked_frames: HashSet<String> = expected_blocked_frames
+                .into_iter()
+                .map(|el| el.to_owned())
+                .collect();
             assert_eq!(
                 blocked_frames, expected_blocked_frames,
                 "Instruction {} *blocked* frames `{:?}` but we expected `{:?}",
