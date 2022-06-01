@@ -233,15 +233,12 @@ impl InstructionBlock {
                     Ok(())
                 }
                 InstructionRole::RFControl => {
-                    let used_frames = match program.get_frames_for_instruction(instruction, false) {
-                        Some(frames) => frames,
-                        None => vec![],
-                    };
-                    let blocked_frames = match program.get_frames_for_instruction(instruction, true)
-                    {
-                        Some(frames) => frames,
-                        None => vec![],
-                    };
+                    let used_frames = program
+                        .get_frames_for_instruction(instruction, false)
+                        .unwrap_or_default();
+                    let blocked_frames = program
+                        .get_frames_for_instruction(instruction, true)
+                        .unwrap_or_default();
 
                     // Take a dependency on any previous instructions to _block_ or _use_ a frame which this instruction _uses_.
                     for frame in used_frames {
