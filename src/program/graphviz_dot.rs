@@ -202,7 +202,6 @@ fn get_node_id(node: &ScheduledGraphNode, prefix: &str) -> String {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     mod graph {
