@@ -62,37 +62,29 @@ impl FrameSet {
                     .collect()
             }
             FrameMatchCondition::Specific(frame) => {
-                if let Some((frame, _)) = self.frames.get_key_value(&frame) {
+                // This unusual pattern (fetch key & value by key, discard value) allows us to return
+                // a reference to `self` rather than `condition`, keeping lifetimes simpler.
+                if let Some((frame, _)) = self.frames.get_key_value(frame) {
                     vec![frame].into_iter().collect()
                 } else {
                     HashSet::new()
                 }
             }
-            FrameMatchCondition::And(conditions) => {
-                let individual_sets: Vec<HashSet<&FrameIdentifier>> = conditions
-                    .into_iter()
-                    .map(|c| self.get_matching_keys(c))
-                    .collect();
-                individual_sets
-                    .into_iter()
-                    .reduce(|acc, el| acc.into_iter().filter(|&v| el.contains(v)).collect())
-                    .unwrap_or_default()
-            }
-            FrameMatchCondition::Or(conditions) => {
-                let individual_sets: Vec<HashSet<&FrameIdentifier>> = conditions
-                    .into_iter()
-                    .map(|c| self.get_matching_keys(c))
-                    .collect();
-                individual_sets
-                    .into_iter()
-                    .reduce(|mut acc, el| {
-                        el.into_iter().for_each(|v| {
-                            acc.insert(v);
-                        });
-                        acc
-                    })
-                    .unwrap_or_default()
-            }
+            FrameMatchCondition::And(conditions) => conditions
+                .into_iter()
+                .map(|c| self.get_matching_keys(c))
+                .reduce(|acc, el| acc.into_iter().filter(|&v| el.contains(v)).collect())
+                .unwrap_or_default(),
+            FrameMatchCondition::Or(conditions) => conditions
+                .into_iter()
+                .map(|c| self.get_matching_keys(c))
+                .reduce(|mut acc, el| {
+                    el.into_iter().for_each(|v| {
+                        acc.insert(v);
+                    });
+                    acc
+                })
+                .unwrap_or_default(),
         }
     }
 
