@@ -948,7 +948,6 @@ impl Instruction {
     /// or if there is input left over after parsing.
     pub fn parse(input: &str) -> Result<Self, String> {
         let lexed = lex(input)?;
-        println!("{:?}", lexed);
         let (_, instruction) = all_consuming(parse_instruction)(&lexed).map_err(|e| e.to_string())?;
         Ok(instruction)
     }
