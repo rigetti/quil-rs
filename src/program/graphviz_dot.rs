@@ -234,6 +234,8 @@ DEFFRAME 0 \"ro_rx\":
     INITIAL-FREQUENCY: 1e6
 DEFFRAME 0 \"ro_tx\":
     INITIAL-FREQUENCY: 1e6
+DEFFRAME 0 1 \"cz\":
+    INITIAL-FREQUENCY: 1e6
 ";
 
                     let program =
@@ -309,7 +311,15 @@ NONBLOCKING PULSE 0 \"rf\" test(duration: 1e6)
 NONBLOCKING PULSE 1 \"rf\" test(duration: 1e6)
 "
         );
+
         build_dot_format_snapshot_test_case!(fence_all, "FENCE");
+
+        build_dot_format_snapshot_test_case!(fence_wrapper, "
+FENCE
+NONBLOCKING PULSE 0 1 \"cz\" test(duration: 1e-6)
+NONBLOCKING PULSE 1 \"rf\" test(duration: 1e-6)
+FENCE 1
+");
 
         build_dot_format_snapshot_test_case!(
             jump,
