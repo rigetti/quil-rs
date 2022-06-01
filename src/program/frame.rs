@@ -120,7 +120,7 @@ pub(crate) enum FrameMatchCondition<'a> {
     /// Match all frames in the set
     All,
 
-    /// Match all frames which shares any one of these names
+    /// Match all frames which share any one of these names
     AnyOfNames(&'a [String]),
 
     /// Match all frames which contain any of these qubits
