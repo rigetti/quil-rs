@@ -13,10 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  **/
+use nom::combinator::all_consuming;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fmt};
 
-use crate::expression::Expression;
+use crate::{expression::Expression, parser::{instruction::parse_instruction, lex}};
 
 #[cfg(test)]
 use proptest_derive::Arbitrary;
@@ -941,6 +942,15 @@ impl Instruction {
             }
             _ => {}
         }
+    }
+
+    /// Parse a single instruction from an input string. Returns an error if the input fails to parse,
+    /// or if there is input left over after parsing.
+    pub fn parse(input: &str) -> Result<Self, String> {
+        let lexed = lex(input)?;
+        println!("{:?}", lexed);
+        let (_, instruction) = all_consuming(parse_instruction)(&lexed).map_err(|e| e.to_string())?;
+        Ok(instruction)
     }
 }
 
