@@ -947,9 +947,10 @@ impl Instruction {
         }
     }
 
+    #[cfg(test)]
     /// Parse a single instruction from an input string. Returns an error if the input fails to parse,
     /// or if there is input left over after parsing.
-    pub fn parse(input: &str) -> Result<Self, String> {
+    pub(crate) fn parse(input: &str) -> Result<Self, String> {
         let lexed = lex(input)?;
         let (_, instruction) =
             all_consuming(parse_instruction)(&lexed).map_err(|e| e.to_string())?;
