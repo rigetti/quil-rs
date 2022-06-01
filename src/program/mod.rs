@@ -16,20 +16,17 @@ use std::collections::BTreeMap;
 use std::str::FromStr;
 
 use crate::instruction::{
-    Capture, Declaration, Delay, Fence, FrameDefinition, FrameIdentifier, Instruction, Pulse,
-    RawCapture, SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, SwapPhases, Waveform,
-    WaveformDefinition,
+    Declaration, FrameDefinition, FrameIdentifier, Instruction, Waveform, WaveformDefinition,
 };
 use crate::parser::{lex, parse_instructions};
 
 pub use self::calibration::CalibrationSet;
-use self::frame::FrameMatchCondition;
 pub use self::frame::FrameSet;
 pub use self::memory::MemoryRegion;
 
 mod calibration;
 mod error;
-mod frame;
+pub(crate) mod frame;
 pub mod graph;
 mod memory;
 
@@ -134,85 +131,14 @@ impl Program {
         instruction: &'a Instruction,
         include_blocked: bool,
     ) -> Option<Vec<&'a FrameIdentifier>> {
-        let condition = match &instruction {
-            Instruction::Pulse(Pulse {
-                blocking, frame, ..
+        instruction
+            .get_frame_match_condition(include_blocked)
+            .map(|condition| {
+                self.frames
+                    .get_matching_keys(condition)
+                    .into_iter()
+                    .collect()
             })
-            | Instruction::Capture(Capture {
-                blocking, frame, ..
-            })
-            | Instruction::RawCapture(RawCapture {
-                blocking, frame, ..
-            }) => {
-                if *blocking && include_blocked {
-                    FrameMatchCondition::AnyOfQubits(&frame.qubits)
-                } else {
-                    FrameMatchCondition::Specific(frame)
-                }
-            }
-            Instruction::Delay(Delay {
-                frame_names,
-                qubits,
-                ..
-            }) => {
-                if frame_names.is_empty() {
-                    FrameMatchCondition::ExactQubits(qubits)
-                } else {
-                    FrameMatchCondition::And(vec![
-                        FrameMatchCondition::ExactQubits(qubits),
-                        FrameMatchCondition::AnyOfNames(frame_names),
-                    ])
-                }
-            }
-            Instruction::Fence(Fence { qubits }) => {
-                if qubits.is_empty() {
-                    FrameMatchCondition::All
-                } else {
-                    FrameMatchCondition::AnyOfQubits(qubits)
-                }
-            }
-            Instruction::SetFrequency(SetFrequency { frame, .. })
-            | Instruction::SetPhase(SetPhase { frame, .. })
-            | Instruction::SetScale(SetScale { frame, .. })
-            | Instruction::ShiftFrequency(ShiftFrequency { frame, .. })
-            | Instruction::ShiftPhase(ShiftPhase { frame, .. }) => {
-                FrameMatchCondition::Specific(frame)
-            }
-            Instruction::SwapPhases(SwapPhases { frame_1, frame_2 }) => {
-                FrameMatchCondition::And(vec![
-                    FrameMatchCondition::Specific(frame_1),
-                    FrameMatchCondition::Specific(frame_2),
-                ])
-            }
-            Instruction::Gate(_)
-            | Instruction::CircuitDefinition(_)
-            | Instruction::GateDefinition(_)
-            | Instruction::Declaration(_)
-            | Instruction::Measurement(_)
-            | Instruction::Reset(_)
-            | Instruction::CalibrationDefinition(_)
-            | Instruction::FrameDefinition(_)
-            | Instruction::MeasureCalibrationDefinition(_)
-            | Instruction::Pragma(_)
-            | Instruction::WaveformDefinition(_)
-            | Instruction::Arithmetic(_)
-            | Instruction::Halt
-            | Instruction::Label(_)
-            | Instruction::Move(_)
-            | Instruction::Exchange(_)
-            | Instruction::Load(_)
-            | Instruction::Store(_)
-            | Instruction::Jump(_)
-            | Instruction::JumpWhen(_)
-            | Instruction::JumpUnless(_) => return None,
-        };
-
-        Some(
-            self.frames
-                .get_matching_keys(condition)
-                .into_iter()
-                .collect(),
-        )
     }
 
     pub fn to_instructions(&self, include_headers: bool) -> Vec<Instruction> {
