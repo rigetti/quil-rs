@@ -1,5 +1,6 @@
 /target
 node_modules
+Cargo.lock
 
 # JetBrains Editors
 .idea/
