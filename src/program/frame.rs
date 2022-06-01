@@ -36,9 +36,12 @@ impl FrameSet {
     }
 
     /// Return all frames in the set which match all of these conditions. If a frame _would_ match, but is
-    /// not present in this [FrameSet], then it is not returned (notably, the [FrameMatchCondition::Specific] 
+    /// not present in this [FrameSet], then it is not returned (notably, the [FrameMatchCondition::Specific]
     /// match condition).
-    pub fn get_matching_keys(&self, condition: FrameMatchCondition) -> HashSet<&FrameIdentifier> {
+    pub(crate) fn get_matching_keys<'s, 'a>(
+        &'s self,
+        condition: FrameMatchCondition<'a>,
+    ) -> HashSet<&'s FrameIdentifier> {
         let keys = self.frames.keys();
 
         match condition {
@@ -59,7 +62,7 @@ impl FrameSet {
                     .collect()
             }
             FrameMatchCondition::Specific(frame) => {
-                if let Some(frame) = self.frames.get_key(&frame) {
+                if let Some((frame, _)) = self.frames.get_key_value(&frame) {
                     vec![frame].into_iter().collect()
                 } else {
                     HashSet::new()
@@ -82,8 +85,10 @@ impl FrameSet {
                     .collect();
                 individual_sets
                     .into_iter()
-                    .reduce(|acc, el| {
-                        el.into_iter().for_each(|v| { acc.insert(v); });
+                    .reduce(|mut acc, el| {
+                        el.into_iter().for_each(|v| {
+                            acc.insert(v);
+                        });
                         acc
                     })
                     .unwrap_or_default()
@@ -130,25 +135,25 @@ impl FrameSet {
     }
 }
 
-pub(crate) enum FrameMatchCondition {
+pub(crate) enum FrameMatchCondition<'a> {
     /// Match all frames in the set
     All,
 
     /// Match all frames which shares any one of these names
-    AnyOfNames(Vec<String>),
+    AnyOfNames(&'a [String]),
 
     /// Match all frames which contain any of these qubits
-    AnyOfQubits(Vec<Qubit>),
+    AnyOfQubits(&'a [Qubit]),
 
     /// Match all frames which contain exactly these qubits
-    ExactQubits(Vec<Qubit>),
+    ExactQubits(&'a [Qubit]),
 
     /// Return these specific frames, if present in the set
-    Specific(FrameIdentifier),
+    Specific(&'a FrameIdentifier),
 
     /// Return all frames which match all of these conditions
-    And(Vec<FrameMatchCondition>),
+    And(Vec<FrameMatchCondition<'a>>),
 
     /// Return all frames which match any of these conditions
-    Or(Vec<FrameMatchCondition>),
+    Or(Vec<FrameMatchCondition<'a>>),
 }

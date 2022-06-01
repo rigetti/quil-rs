@@ -14,7 +14,6 @@
  * limitations under the License.
  **/
 use std::collections::BTreeMap;
-use std::error::Error;
 use std::str::FromStr;
 
 use crate::instruction::{
@@ -147,9 +146,9 @@ impl Program {
                 blocking, frame, ..
             }) => {
                 if *blocking && include_blocked {
-                    FrameMatchCondition::AnyOfQubits(frame.qubits)
+                    FrameMatchCondition::AnyOfQubits(&frame.qubits)
                 } else {
-                    FrameMatchCondition::Specific(frame.clone())
+                    FrameMatchCondition::Specific(frame)
                 }
             }
             Instruction::Delay(Delay {
@@ -158,17 +157,21 @@ impl Program {
                 ..
             }) => {
                 if frame_names.is_empty() {
-                    FrameMatchCondition::ExactQubits(qubits.clone())
+                    FrameMatchCondition::ExactQubits(qubits)
                 } else {
                     FrameMatchCondition::And(vec![
-                        FrameMatchCondition::ExactQubits(qubits.clone()),
-                        FrameMatchCondition::AnyOfNames(frame_names.clone()),
+                        FrameMatchCondition::ExactQubits(qubits),
+                        FrameMatchCondition::AnyOfNames(frame_names),
                     ])
                 }
             }
             Instruction::Fence(Fence { qubits }) => {
                 if include_blocked {
-                    FrameMatchCondition::AnyOfQubits(qubits.clone())
+                    if qubits.is_empty() {
+                        FrameMatchCondition::All
+                    } else {
+                        FrameMatchCondition::AnyOfQubits(qubits)
+                    }
                 } else {
                     return None;
                 }
@@ -178,12 +181,12 @@ impl Program {
             | Instruction::SetScale(SetScale { frame, .. })
             | Instruction::ShiftFrequency(ShiftFrequency { frame, .. })
             | Instruction::ShiftPhase(ShiftPhase { frame, .. }) => {
-                FrameMatchCondition::Specific(frame.clone())
+                FrameMatchCondition::Specific(frame)
             }
             Instruction::SwapPhases(SwapPhases { frame_1, frame_2 }) => {
                 FrameMatchCondition::And(vec![
-                    FrameMatchCondition::Specific(frame_1.clone()),
-                    FrameMatchCondition::Specific(frame_2.clone()),
+                    FrameMatchCondition::Specific(frame_1),
+                    FrameMatchCondition::Specific(frame_2),
                 ])
             }
             Instruction::Gate(_)
@@ -209,7 +212,12 @@ impl Program {
             | Instruction::JumpUnless(_) => return None,
         };
 
-        Some(self.frames.get_matching_keys(condition).into_iter().collect())
+        Some(
+            self.frames
+                .get_matching_keys(condition)
+                .into_iter()
+                .collect(),
+        )
     }
 
     pub fn to_instructions(&self, include_headers: bool) -> Vec<Instruction> {
@@ -267,7 +275,7 @@ impl FromStr for Program {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
+    use std::{str::FromStr, collections::HashSet};
 
     use crate::instruction::Instruction;
 
@@ -417,16 +425,16 @@ DEFFRAME 0 1 \"2q\":
             ("PULSE 2 \"a\" custom_waveform", vec![], vec![]),
             // Captures work identically to Pulses
             (
-                "CAPTURE 0 \"a\" custom_waveform",
+                "CAPTURE 0 \"a\" custom_waveform ro[0]",
                 vec!["0 \"a\""],
                 vec!["0 \"a\"", "0 \"b\"", "0 1 \"2q\""],
             ),
             (
-                "CAPTURE 1 \"c\" custom_waveform",
+                "CAPTURE 1 \"c\" custom_waveform ro[0]",
                 vec!["1 \"c\""],
                 vec!["1 \"c\"", "0 1 \"2q\""],
             ),
-            ("CAPTURE 2 \"a\" custom_waveform", vec![], vec![]),
+            ("CAPTURE 2 \"a\" custom_waveform ro[0]", vec![], vec![]),
             // A non-blocking pulse blocks only its precise frame, not other frames on the same qubits
             (
                 "NONBLOCKING PULSE 0 \"a\" custom_waveform",
@@ -443,25 +451,53 @@ DEFFRAME 0 1 \"2q\":
                 vec!["0 1 \"2q\""],
                 vec!["0 1 \"2q\""],
             ),
+            (
+                "FENCE 1",
+                vec![],
+                vec!["1 \"c\"", "0 1 \"2q\""],
+            ),
+            (
+                "FENCE",
+                vec![],
+                vec!["0 \"a\"", "0 \"b\"", "1 \"c\"", "0 1 \"2q\""],
+            ),
+            (
+                "DELAY 0 1.0",
+                vec!["0 \"a\"", "0 \"b\""],
+                vec!["0 \"a\"", "0 \"b\""],
+            ),
+            (
+                "DELAY 1 1.0",
+                vec!["1 \"c\""],
+                vec!["1 \"c\""],
+            ),
+            (
+                "DELAY 1 \"c\" 1.0",
+                vec!["1 \"c\""],
+                vec!["1 \"c\""],
+            ),
         ] {
             let instruction = Instruction::parse(instruction_string).unwrap();
-            let used_frames: Vec<String> = program
+            let used_frames: HashSet<String> = program
                 .get_frames_for_instruction(&instruction, false)
-                .unwrap()
+                .unwrap_or_default()
                 .into_iter()
                 .map(|f| f.to_string())
                 .collect();
+            let expected_used_frames: HashSet<String> = expected_used_frames.into_iter().map(|el| el.to_owned()).collect();
             assert_eq!(
                 used_frames, expected_used_frames,
                 "Instruction {} *used* frames `{:?}` but we expected `{:?}",
                 instruction, used_frames, expected_used_frames
             );
-            let blocked_frames: Vec<String> = program
+
+            let blocked_frames: HashSet<String> = program
                 .get_frames_for_instruction(&instruction, true)
                 .unwrap()
                 .into_iter()
                 .map(|f| f.to_string())
                 .collect();
+            let expected_blocked_frames: HashSet<String> = expected_blocked_frames.into_iter().map(|el| el.to_owned()).collect();
             assert_eq!(
                 blocked_frames, expected_blocked_frames,
                 "Instruction {} *blocked* frames `{:?}` but we expected `{:?}",
