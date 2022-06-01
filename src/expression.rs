@@ -798,7 +798,7 @@ mod tests {
         fn complexes_are_parseable_as_expressions(value in arb_complex64()) {
             let parsed = Expression::from_str(&format_complex(&value));
             assert!(parsed.is_ok());
-            assert_eq!(Expression::Number(value), parsed.unwrap().simplify());
+            assert_eq!(Expression::Number(value), parsed.unwrap().into_simplified());
         }
 
     }
