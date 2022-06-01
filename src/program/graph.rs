@@ -238,7 +238,8 @@ impl InstructionBlock {
                         Some(frames) => frames,
                         None => vec![],
                     };
-                    let blocked_frames = match program.get_frames_for_instruction(instruction, true) {
+                    let blocked_frames = match program.get_frames_for_instruction(instruction, true)
+                    {
                         Some(frames) => frames,
                         None => vec![],
                     };
