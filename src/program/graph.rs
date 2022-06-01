@@ -234,19 +234,29 @@ impl InstructionBlock {
                     Ok(())
                 }
                 InstructionRole::RFControl => {
-                    let frames = match program.get_frames_for_instruction(instruction, true) {
+                    let used_frames = match program.get_frames_for_instruction(instruction, false) {
+                        Some(frames) => frames,
+                        None => vec![],
+                    };
+                    let blocked_frames = match program.get_frames_for_instruction(instruction, true) {
                         Some(frames) => frames,
                         None => vec![],
                     };
 
-                    // Mark a dependency on the last instruction which executed in the context of each target frame
-                    for frame in frames {
+                    // Take a dependency on any previous instructions to _block_ or _use_ a frame which this instruction _uses_.
+                    for frame in used_frames {
                         let previous_node_id = last_instruction_by_frame
                             .entry(frame.clone())
                             .or_insert(ScheduledGraphNode::BlockStart);
                         add_dependency!(graph, *previous_node_id => node, ExecutionDependency::ReferenceFrame);
                         last_instruction_by_frame.insert(frame.clone(), node);
                     }
+
+                    // We mark all "blocked" frames as such for later instructions to take a dependency on
+                    for frame in blocked_frames {
+                        last_instruction_by_frame.insert(frame.clone(), node);
+                    }
+
                     Ok(())
                 }
                 InstructionRole::ControlFlow => Err(ScheduleError {
