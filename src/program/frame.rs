@@ -74,16 +74,6 @@ impl FrameSet {
                 .map(|c| self.get_matching_keys(c))
                 .reduce(|acc, el| acc.into_iter().filter(|&v| el.contains(v)).collect())
                 .unwrap_or_default(),
-            FrameMatchCondition::Or(conditions) => conditions
-                .into_iter()
-                .map(|c| self.get_matching_keys(c))
-                .reduce(|mut acc, el| {
-                    el.into_iter().for_each(|v| {
-                        acc.insert(v);
-                    });
-                    acc
-                })
-                .unwrap_or_default(),
         }
     }
 
@@ -144,8 +134,4 @@ pub(crate) enum FrameMatchCondition<'a> {
 
     /// Return all frames which match all of these conditions
     And(Vec<FrameMatchCondition<'a>>),
-
-    /// Return all frames which match any of these conditions
-    #[allow(dead_code)]
-    Or(Vec<FrameMatchCondition<'a>>),
 }
