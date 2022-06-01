@@ -374,7 +374,7 @@ mod tests {
                     "    PULSE 0 \"xy\" gaussian(duration: 1, fwhm: 2, t0: 3)\n",
                     "X 0\n"
                 ),
-                expected: "PULSE 0 \"xy\" gaussian(duration: 1, fwhm: 2, t0: 3)\n",
+                expected: "PULSE 0 \"xy\" gaussian(duration: 1.0, fwhm: 2.0, t0: 3.0)\n",
             },
             TestCase {
                 input: concat!(
