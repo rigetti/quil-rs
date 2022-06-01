@@ -461,8 +461,7 @@ DEFFRAME 0 1 \"2q\":
                 vec!["0 \"a\"", "0 \"b\""],
                 vec!["0 \"a\"", "0 \"b\""],
             ),
-            ("DELAY 1 1.0", vec!["1 \"c\""], vec!["1 \"c\""]),
-            ("DELAY 1 \"c\" 1.0", vec!["1 \"c\""], vec!["1 \"c\""]),
+            (r#"DELAY 0 1 1.0"#, vec![r#"0 1 "2q""#], vec![r#"0 1 "2q""#]),
         ] {
             let instruction = Instruction::parse(instruction_string).unwrap();
             let used_frames: HashSet<String> = program

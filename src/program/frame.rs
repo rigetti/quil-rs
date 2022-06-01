@@ -55,9 +55,9 @@ impl FrameSet {
                     .collect()
             }
             FrameMatchCondition::ExactQubits(qubits) => {
-                let all_of_set: HashSet<_> = qubits.iter().collect();
+                let exact_set: HashSet<_> = qubits.iter().collect();
 
-                keys.filter(|&f| f.qubits.iter().all(|q| all_of_set.contains(q)))
+                keys.filter(|&f| f.qubits.iter().collect::<HashSet<_>>() == exact_set)
                     .collect()
             }
             FrameMatchCondition::Specific(frame) => {
