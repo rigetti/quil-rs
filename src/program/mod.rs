@@ -405,62 +405,79 @@ DEFFRAME 0 1 \"2q\":
         let program = Program::from_str(input).unwrap();
 
         for (instruction_string, expected_used_frames, expected_blocked_frames) in vec![
-            // Blocking pulses block their qubits
+            // Blocking pulses use only the specified frame but block frames intersecting the frame's qubits
             (
-                "PULSE 0 \"a\" custom_waveform",
-                vec!["0 \"a\""],
-                vec!["0 \"a\"", "0 \"b\"", "0 1 \"2q\""],
+                r#"PULSE 0 "a" custom_waveform"#,
+                vec![r#"0 "a""#],
+                vec![r#"0 "a""#, r#"0 "b""#, r#"0 1 "2q""#],
             ),
             (
-                "PULSE 1 \"c\" custom_waveform",
-                vec!["1 \"c\""],
-                vec!["1 \"c\"", "0 1 \"2q\""],
+                r#"PULSE 1 "c" custom_waveform"#,
+                vec![r#"1 "c""#],
+                vec![r#"1 "c""#, r#"0 1 "2q""#],
             ),
             // Pulses on non-declared frames and unused qubits do not use or block any frames in the program
-            ("PULSE 2 \"a\" custom_waveform", vec![], vec![]),
+            (r#"PULSE 2 "a" custom_waveform"#, vec![], vec![]),
             // Captures work identically to Pulses
             (
-                "CAPTURE 0 \"a\" custom_waveform ro[0]",
-                vec!["0 \"a\""],
-                vec!["0 \"a\"", "0 \"b\"", "0 1 \"2q\""],
+                r#"CAPTURE 0 "a" custom_waveform ro[0]"#,
+                vec![r#"0 "a""#],
+                vec![r#"0 "a""#, r#"0 "b""#, r#"0 1 "2q""#],
             ),
             (
-                "CAPTURE 1 \"c\" custom_waveform ro[0]",
-                vec!["1 \"c\""],
-                vec!["1 \"c\"", "0 1 \"2q\""],
+                r#"CAPTURE 1 "c" custom_waveform ro[0]"#,
+                vec![r#"1 "c""#],
+                vec![r#"1 "c""#, r#"0 1 "2q""#],
             ),
-            ("CAPTURE 2 \"a\" custom_waveform ro[0]", vec![], vec![]),
+            (r#"CAPTURE 2 "a" custom_waveform ro[0]"#, vec![], vec![]),
+            // Raw Captures work identically to Pulses
+            (
+                r#"RAW-CAPTURE 0 "a" 1e-6 ro[0]"#,
+                vec![r#"0 "a""#],
+                vec![r#"0 "a""#, r#"0 "b""#, r#"0 1 "2q""#],
+            ),
+            (
+                r#"RAW-CAPTURE 1 "c" 1e-6 ro[0]"#,
+                vec![r#"1 "c""#],
+                vec![r#"1 "c""#, r#"0 1 "2q""#],
+            ),
+            (r#"RAW-CAPTURE 2 "a" 1e-6 ro[0]"#, vec![], vec![]),
             // A non-blocking pulse blocks only its precise frame, not other frames on the same qubits
             (
-                "NONBLOCKING PULSE 0 \"a\" custom_waveform",
-                vec!["0 \"a\""],
-                vec!["0 \"a\""],
+                r#"NONBLOCKING PULSE 0 "a" custom_waveform"#,
+                vec![r#"0 "a""#],
+                vec![r#"0 "a""#],
             ),
             (
-                "NONBLOCKING PULSE 1 \"c\" custom_waveform",
-                vec!["1 \"c\""],
-                vec!["1 \"c\""],
+                r#"NONBLOCKING PULSE 1 "c" custom_waveform"#,
+                vec![r#"1 "c""#],
+                vec![r#"1 "c""#],
             ),
             (
-                "NONBLOCKING PULSE 0 1 \"2q\" custom_waveform",
-                vec!["0 1 \"2q\""],
-                vec!["0 1 \"2q\""],
+                r#"NONBLOCKING PULSE 0 1 "2q" custom_waveform"#,
+                vec![r#"0 1 "2q""#],
+                vec![r#"0 1 "2q""#],
             ),
+            // A Fence with qubits specified uses and blocks all frames intersecting that qubit
             (
-                "FENCE 1",
-                vec!["1 \"c\"", "0 1 \"2q\""],
-                vec!["1 \"c\"", "0 1 \"2q\""],
+                r#"FENCE 1"#,
+                vec![r#"1 "c""#, r#"0 1 "2q""#],
+                vec![r#"1 "c""#, r#"0 1 "2q""#],
             ),
+            // Fence-all uses and blocks all frames declared in the program
             (
-                "FENCE",
-                vec!["0 \"a\"", "0 \"b\"", "1 \"c\"", "0 1 \"2q\""],
-                vec!["0 \"a\"", "0 \"b\"", "1 \"c\"", "0 1 \"2q\""],
+                r#"FENCE"#,
+                vec![r#"0 "a""#, r#"0 "b""#, r#"1 "c""#, r#"0 1 "2q""#],
+                vec![r#"0 "a""#, r#"0 "b""#, r#"1 "c""#, r#"0 1 "2q""#],
             ),
+            // Delay uses and blocks frames on exactly the given qubits and with any of the given names
             (
-                "DELAY 0 1.0",
-                vec!["0 \"a\"", "0 \"b\""],
-                vec!["0 \"a\"", "0 \"b\""],
+                r#"DELAY 0 1.0"#,
+                vec![r#"0 "a""#, r#"0 "b""#],
+                vec![r#"0 "a""#, r#"0 "b""#],
             ),
+            (r#"DELAY 1 1.0"#, vec![r#"1 "c""#], vec![r#"1 "c""#]),
+            (r#"DELAY 1 "c" 1.0"#, vec![r#"1 "c""#], vec![r#"1 "c""#]),
             (r#"DELAY 0 1 1.0"#, vec![r#"0 1 "2q""#], vec![r#"0 1 "2q""#]),
         ] {
             let instruction = Instruction::parse(instruction_string).unwrap();
@@ -476,7 +493,7 @@ DEFFRAME 0 1 \"2q\":
                 .collect();
             assert_eq!(
                 used_frames, expected_used_frames,
-                "Instruction {} *used* frames `{:?}` but we expected `{:?}",
+                "Instruction {} *used* frames `{:?}` but we expected `{:?}`",
                 instruction, used_frames, expected_used_frames
             );
 
@@ -492,7 +509,7 @@ DEFFRAME 0 1 \"2q\":
                 .collect();
             assert_eq!(
                 blocked_frames, expected_blocked_frames,
-                "Instruction {} *blocked* frames `{:?}` but we expected `{:?}",
+                "Instruction {} *blocked* frames `{:?}` but we expected `{:?}`",
                 instruction, blocked_frames, expected_blocked_frames
             );
         }
