@@ -301,6 +301,35 @@ NONBLOCKING PULSE 2 \"rf\" test(duration: 1e6)
         );
 
         build_dot_format_snapshot_test_case!(
+            blocking_pulses_wrap_nonblocking,
+            "
+PULSE 0 \"rf\" test(duration: 1e6)
+NONBLOCKING PULSE 0 \"ro_tx\" test(duration: 1e6)
+PULSE 0 \"rf\" test(duration: 1e6)
+FENCE 0
+FENCE 0
+"
+        );
+
+        build_dot_format_snapshot_test_case!(
+            blocking_pulses_after_nonblocking,
+            "
+NONBLOCKING PULSE 0 \"ro_tx\" test(duration: 1e6)
+PULSE 0 \"rf\" test(duration: 1e6)
+PULSE 0 \"ro_rx\" test(duration: 1e6)
+"
+        );
+
+        build_dot_format_snapshot_test_case!(
+            blocking_2q_pulse,
+            "
+PULSE 0 \"rf\" test(duration: 1e-6)
+PULSE 1 \"rf\" test(duration: 1e-6)
+PULSE 0 1 \"cz\" test(duration: 1e-6)
+"
+        );
+
+        build_dot_format_snapshot_test_case!(
             fence_all_with_nonblocking_pulses,
             "
 NONBLOCKING PULSE 0 \"rf\" test(duration: 1e6)

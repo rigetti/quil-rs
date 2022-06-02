@@ -200,6 +200,75 @@ pub struct InstructionBlock {
     pub terminator: BlockTerminator,
 }
 
+/// PreviousNodes is a structure which helps maintain ordering among instructions which operate on a given frame.
+/// It works similarly to a multiple-reader-single-writer queue, where an instruction which "uses" a frame is like
+/// a writer and an instruction which blocks that frame is like a reader. Multiple instructions may concurrently
+/// block a frame, but an instruction may not use a frame while it is concurrently used or blocked.
+///
+/// ## Examples
+///
+/// Note that "depends on" is equivalent to "must execute after completion of".
+///
+/// ```text
+/// user --> user # a second user takes a dependency on the first
+///
+/// user --> blocker # multiple blockers take a dependency on the most recent user
+///      \-> blocker
+///      \-> blocker
+///
+/// blocker --> user --> blocker # users and blockers take dependencies on one another,
+///                              # but blockers do not depend on other blocking instructions
+/// ```
+struct PreviousNodes {
+    using: Option<ScheduledGraphNode>,
+    blocking: HashSet<ScheduledGraphNode>,
+}
+
+impl Default for PreviousNodes {
+    /// The default value for [PreviousNodes] is useful in that, if no previous nodes have been recorded
+    /// as using a frame, we should consider that the start of the instruction block "blocks" use of that frame
+    /// (in other words, this instruction cannot be scheduled prior to the start of the instruction block).
+    fn default() -> Self {
+        Self {
+            using: None,
+            blocking: vec![ScheduledGraphNode::BlockStart].into_iter().collect(),
+        }
+    }
+}
+
+impl PreviousNodes {
+    /// Register a node as using a frame, and return the instructions on which it should depend/wait for scheduling (if any).
+    ///
+    /// A node which uses a frame will block on any previous user or blocker of the frame, much like a writer in a read-write lock.
+    pub fn register_user(&mut self, node: ScheduledGraphNode) -> HashSet<ScheduledGraphNode> {
+        let mut result = std::mem::take(&mut self.blocking);
+        if let Some(previous_user) = self.using.replace(node) {
+            result.insert(previous_user);
+        }
+
+        result
+    }
+
+    /// Register a node as blocking a frame, and return the instructions on which it should depend/wait for scheduling (if any).
+    ///
+    /// A node which blocks a frame will block on any previous user of the frame, but not concurrent blockers.
+    ///
+    /// If the frame is currently blocked by other nodes, it will add itself to the list of blockers,
+    /// much like a reader in a read-write lock.
+    pub fn register_blocker(&mut self, node: ScheduledGraphNode) -> Option<ScheduledGraphNode> {
+        self.blocking.insert(node);
+        self.using
+    }
+
+    /// Consume the [PreviousNodes] and return all nodes within.
+    pub fn drain(mut self) -> HashSet<ScheduledGraphNode> {
+        if let Some(using) = self.using {
+            self.blocking.insert(using);
+        }
+        self.blocking
+    }
+}
+
 impl InstructionBlock {
     pub fn build(
         instructions: Vec<Instruction>,
@@ -213,8 +282,7 @@ impl InstructionBlock {
         let mut last_classical_instruction = ScheduledGraphNode::BlockStart;
 
         // Store the instruction index of the last instruction to block that frame
-        let mut last_instruction_by_frame: HashMap<FrameIdentifier, ScheduledGraphNode> =
-            HashMap::new();
+        let mut last_instruction_by_frame: HashMap<FrameIdentifier, PreviousNodes> = HashMap::new();
 
         // Store memory access reads and writes. Key is memory region name.
         // NOTE: this may be refined to serialize by memory region offset rather than by entire region.
@@ -233,24 +301,47 @@ impl InstructionBlock {
                     Ok(())
                 }
                 InstructionRole::RFControl => {
-                    let used_frames = program
+                    let used_frames: HashSet<&FrameIdentifier> = program
                         .get_frames_for_instruction(instruction, false)
-                        .unwrap_or_default();
-                    let blocked_frames = program
+                        .unwrap_or_default()
+                        .into_iter()
+                        .collect();
+                    let blocked_frames: HashSet<&FrameIdentifier> = program
                         .get_frames_for_instruction(instruction, true)
-                        .unwrap_or_default();
+                        .unwrap_or_default()
+                        .into_iter()
+                        .filter(|f| !used_frames.contains(f))
+                        .collect();
 
-                    // Take a dependency on any previous instructions to _block_ a frame which this instruction _uses_.
                     for frame in used_frames {
-                        let previous_node_id = last_instruction_by_frame
-                            .get(frame)
-                            .unwrap_or(&ScheduledGraphNode::BlockStart);
-                        add_dependency!(graph, *previous_node_id => node, ExecutionDependency::ReferenceFrame);
+                        let previous_node_ids = last_instruction_by_frame
+                            .entry(frame.clone())
+                            .or_insert(PreviousNodes {
+                                using: None,
+                                blocking: vec![ScheduledGraphNode::BlockStart]
+                                    .into_iter()
+                                    .collect(),
+                            })
+                            .register_user(node);
+
+                        for previous_node_id in previous_node_ids {
+                            add_dependency!(graph, previous_node_id => node, ExecutionDependency::ReferenceFrame);
+                        }
                     }
 
-                    // We mark all "blocked" frames as such for later instructions to take a dependency on
                     for frame in blocked_frames {
-                        last_instruction_by_frame.insert(frame.clone(), node);
+                        if let Some(previous_node_id) = last_instruction_by_frame
+                            .entry(frame.clone())
+                            .or_insert(PreviousNodes {
+                                using: None,
+                                blocking: vec![ScheduledGraphNode::BlockStart]
+                                    .into_iter()
+                                    .collect(),
+                            })
+                            .register_blocker(node)
+                        {
+                            add_dependency!(graph, previous_node_id => node, ExecutionDependency::ReferenceFrame);
+                        }
                     }
 
                     Ok(())
@@ -295,8 +386,10 @@ impl InstructionBlock {
         // does not terminate until these are complete
         add_dependency!(graph, last_classical_instruction => ScheduledGraphNode::BlockEnd, ExecutionDependency::StableOrdering);
 
-        for (_, last_instruction) in last_instruction_by_frame {
-            add_dependency!(graph, last_instruction => ScheduledGraphNode::BlockEnd, ExecutionDependency::ReferenceFrame);
+        for (_, last_instructions) in last_instruction_by_frame {
+            for node in last_instructions.drain() {
+                add_dependency!(graph, node => ScheduledGraphNode::BlockEnd, ExecutionDependency::ReferenceFrame);
+            }
         }
 
         // Examine all "pending" memory operations for all regions

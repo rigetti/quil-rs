@@ -10,7 +10,8 @@ digraph {
     node [style="filled"];
     "first-block_start" [shape=circle, label="start"];
     "first-block_start" -> "first-block_0" [label="frame"];
-    "first-block_start" -> "first-block_end" [label="ordering"];
+    "first-block_start" -> "first-block_end" [label="frame
+ordering"];
     "first-block_0" [shape=rectangle, label="[0] PULSE 0 \"rf\" test(duration: 1000000.0)"];
     "first-block_0" -> "first-block_end" [label="frame"];
     "first-block_end" [shape=circle, label="end"];
@@ -22,7 +23,8 @@ digraph {
     node [style="filled"];
     "second-block_start" [shape=circle, label="start"];
     "second-block_start" -> "second-block_0" [label="frame"];
-    "second-block_start" -> "second-block_end" [label="ordering"];
+    "second-block_start" -> "second-block_end" [label="frame
+ordering"];
     "second-block_0" [shape=rectangle, label="[0] PULSE 0 \"rf\" test(duration: 1000000.0)"];
     "second-block_0" -> "second-block_end" [label="frame"];
     "second-block_end" [shape=circle, label="end"];
@@ -33,7 +35,8 @@ digraph {
     node [style="filled"];
     "third-block_start" [shape=circle, label="start"];
     "third-block_start" -> "third-block_0" [label="frame"];
-    "third-block_start" -> "third-block_end" [label="ordering"];
+    "third-block_start" -> "third-block_end" [label="frame
+ordering"];
     "third-block_0" [shape=rectangle, label="[0] PULSE 0 \"rf\" test(duration: 1000000.0)"];
     "third-block_0" -> "third-block_end" [label="frame"];
     "third-block_end" [shape=circle, label="end"];

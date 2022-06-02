@@ -12,7 +12,8 @@ digraph {
     "block_0_start" -> "block_0_0" [label="frame"];
     "block_0_start" -> "block_0_1" [label="frame"];
     "block_0_start" -> "block_0_2" [label="frame"];
-    "block_0_start" -> "block_0_end" [label="ordering"];
+    "block_0_start" -> "block_0_end" [label="frame
+ordering"];
     "block_0_0" [shape=rectangle, label="[0] PULSE 0 \"rf\" test(duration: 1000000.0)"];
     "block_0_0" -> "block_0_end" [label="frame"];
     "block_0_1" [shape=rectangle, label="[1] PULSE 1 \"rf\" test(duration: 1000000.0)"];
