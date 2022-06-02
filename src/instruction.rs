@@ -16,6 +16,7 @@ use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fmt};
 
 use crate::expression::Expression;
+use crate::program::frame::FrameMatchCondition;
 
 #[cfg(test)]
 use proptest_derive::Arbitrary;
@@ -940,6 +941,90 @@ impl Instruction {
             }
             _ => {}
         }
+    }
+
+    pub(crate) fn get_frame_match_condition(
+        &self,
+        include_blocked: bool,
+    ) -> Option<FrameMatchCondition> {
+        match self {
+            Instruction::Pulse(Pulse {
+                blocking, frame, ..
+            })
+            | Instruction::Capture(Capture {
+                blocking, frame, ..
+            })
+            | Instruction::RawCapture(RawCapture {
+                blocking, frame, ..
+            }) => Some(if *blocking && include_blocked {
+                FrameMatchCondition::AnyOfQubits(&frame.qubits)
+            } else {
+                FrameMatchCondition::Specific(frame)
+            }),
+            Instruction::Delay(Delay {
+                frame_names,
+                qubits,
+                ..
+            }) => Some(if frame_names.is_empty() {
+                FrameMatchCondition::ExactQubits(qubits)
+            } else {
+                FrameMatchCondition::And(vec![
+                    FrameMatchCondition::ExactQubits(qubits),
+                    FrameMatchCondition::AnyOfNames(frame_names),
+                ])
+            }),
+            Instruction::Fence(Fence { qubits }) => Some(if qubits.is_empty() {
+                FrameMatchCondition::All
+            } else {
+                FrameMatchCondition::AnyOfQubits(qubits)
+            }),
+            Instruction::SetFrequency(SetFrequency { frame, .. })
+            | Instruction::SetPhase(SetPhase { frame, .. })
+            | Instruction::SetScale(SetScale { frame, .. })
+            | Instruction::ShiftFrequency(ShiftFrequency { frame, .. })
+            | Instruction::ShiftPhase(ShiftPhase { frame, .. }) => {
+                Some(FrameMatchCondition::Specific(frame))
+            }
+            Instruction::SwapPhases(SwapPhases { frame_1, frame_2 }) => {
+                Some(FrameMatchCondition::And(vec![
+                    FrameMatchCondition::Specific(frame_1),
+                    FrameMatchCondition::Specific(frame_2),
+                ]))
+            }
+            Instruction::Gate(_)
+            | Instruction::CircuitDefinition(_)
+            | Instruction::GateDefinition(_)
+            | Instruction::Declaration(_)
+            | Instruction::Measurement(_)
+            | Instruction::Reset(_)
+            | Instruction::CalibrationDefinition(_)
+            | Instruction::FrameDefinition(_)
+            | Instruction::MeasureCalibrationDefinition(_)
+            | Instruction::Pragma(_)
+            | Instruction::WaveformDefinition(_)
+            | Instruction::Arithmetic(_)
+            | Instruction::Halt
+            | Instruction::Label(_)
+            | Instruction::Move(_)
+            | Instruction::Exchange(_)
+            | Instruction::Load(_)
+            | Instruction::Store(_)
+            | Instruction::Jump(_)
+            | Instruction::JumpWhen(_)
+            | Instruction::JumpUnless(_) => None,
+        }
+    }
+
+    #[cfg(test)]
+    /// Parse a single instruction from an input string. Returns an error if the input fails to parse,
+    /// or if there is input left over after parsing.
+    pub(crate) fn parse(input: &str) -> Result<Self, String> {
+        use crate::parser::{instruction::parse_instruction, lex};
+
+        let lexed = lex(input)?;
+        let (_, instruction) =
+            nom::combinator::all_consuming(parse_instruction)(&lexed).map_err(|e| e.to_string())?;
+        Ok(instruction)
     }
 }
 

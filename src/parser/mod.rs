@@ -27,7 +27,7 @@ mod macros;
 mod common;
 mod error;
 mod expression;
-mod instruction;
+pub(crate) mod instruction;
 mod lexer;
 
 type ParserInput<'a> = &'a [Token];
