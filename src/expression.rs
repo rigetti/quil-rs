@@ -17,6 +17,7 @@ use std::collections::{hash_map::DefaultHasher, HashMap};
 use std::f64::consts::PI;
 use std::fmt;
 use std::hash::{Hash, Hasher};
+use std::num::NonZeroI32;
 use std::str::FromStr;
 
 #[cfg(test)]
@@ -435,16 +436,29 @@ impl<'a> FromStr for Expression {
 /// - When both are non-zero, show with the correct operator in between
 #[inline(always)]
 fn format_complex(value: &Complex64) -> String {
+    const FORMAT: u128 = lexical::format::STANDARD;
+    let options = lexical::WriteFloatOptions::builder()
+        .negative_exponent_break(NonZeroI32::new(-5))
+        .positive_exponent_break(NonZeroI32::new(15))
+        .trim_floats(true)
+        .build()
+        .unwrap();
     if value.re == 0f64 && value.im == 0f64 {
         "0".to_owned()
     } else if value.im == 0f64 {
-        ryu::Buffer::new().format(value.re).to_owned()
+        lexical::to_string_with_options::<_, FORMAT>(value.re, &options)
     } else if value.re == 0f64 {
-        ryu::Buffer::new().format(value.im).to_owned() + "i"
+        lexical::to_string_with_options::<_, FORMAT>(value.im, &options) + "i"
     } else {
-        let mut buf = ryu::Buffer::new();
-        let op = if value.im > 0f64 { "+" } else { "" };
-        buf.format(value.re).to_owned() + op + buf.format(value.im) + "i"
+        let mut out = lexical::to_string_with_options::<_, FORMAT>(value.re, &options);
+        if value.im > 0f64 {
+            out.push_str("+")
+        }
+        out.push_str(&lexical::to_string_with_options::<_, FORMAT>(
+            value.im, &options,
+        ));
+        out.push_str("i");
+        out
     }
 }
 

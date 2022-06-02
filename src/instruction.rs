@@ -886,7 +886,7 @@ impl Instruction {
     /// let mut instructions = program.to_instructions(true);
     /// instructions.iter_mut().for_each(|inst| inst.apply_to_expressions(Expression::simplify));
     ///
-    /// assert_eq!(instructions[0].to_string(), String::from("SHIFT-PHASE 0 \"rf\" 4.0"))
+    /// assert_eq!(instructions[0].to_string(), String::from("SHIFT-PHASE 0 \"rf\" 4"))
     ///
     /// ```
     pub fn apply_to_expressions(&mut self, mut closure: impl FnMut(&mut Expression)) {
