@@ -452,12 +452,12 @@ fn format_complex(value: &Complex64) -> String {
     } else {
         let mut out = lexical::to_string_with_options::<_, FORMAT>(value.re, &options);
         if value.im > 0f64 {
-            out.push_str("+")
+            out.push('+')
         }
         out.push_str(&lexical::to_string_with_options::<_, FORMAT>(
             value.im, &options,
         ));
-        out.push_str("i");
+        out.push('i');
         out
     }
 }
