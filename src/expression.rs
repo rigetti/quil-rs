@@ -447,9 +447,9 @@ fn format_complex(value: &Complex64) -> String {
     //   - the ∞ string,
     //   - or the minimum or maximum significant digits.
     // Of what we _do_ change:
-    //   - negative_exponent_break is < 0
-    //   - positive_exponent_break is > 0
-    //   - trim floats can only take a bool and both branches are safe.
+    //   - negative_exponent_break is < 0,
+    //   - positive_exponent_break is > 0,
+    //   - and trim floats can only take a bool and both branches are safe.
     // As of version 6.1.1 of lexical, this means `OPTIONS.is_valid()` must be true. However, we
     // still `assert!` it just to be "safe."
     const OPTIONS: WriteFloatOptions = unsafe {
