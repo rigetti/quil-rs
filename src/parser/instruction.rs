@@ -338,7 +338,7 @@ mod tests {
         .iter()
         .for_each(|input| {
             let tokens = lex(input).unwrap();
-            assert!(parse_instructions(&tokens).is_err())
+            assert!(parse_instructions(&tokens).is_err(), "{}", input);
         })
     }
 
@@ -400,7 +400,7 @@ mod tests {
     fn test_binary_logic_error() {
         ["AND ro", "XOR 1 1", "IOR 1"].iter().for_each(|input| {
             let tokens = lex(input).unwrap();
-            assert!(parse_instructions(&tokens).is_err())
+            assert!(parse_instructions(&tokens).is_err(), "{}", input);
         })
     }
 
@@ -446,7 +446,7 @@ mod tests {
             .iter()
             .for_each(|input| {
                 let tokens = lex(input).unwrap();
-                assert!(parse_instructions(&tokens).is_err())
+                assert!(parse_instructions(&tokens).is_err(), "{}", input);
             })
     }
 
