@@ -240,7 +240,10 @@ impl PreviousNodes {
     /// Register a node as using a frame, and return the instructions on which it should depend/wait for scheduling (if any).
     ///
     /// A node which uses a frame will block on any previous user or blocker of the frame, much like a writer in a read-write lock.
-    pub fn register_user(&mut self, node: ScheduledGraphNode) -> HashSet<ScheduledGraphNode> {
+    pub fn get_dependencies_for_next_user(
+        &mut self,
+        node: ScheduledGraphNode,
+    ) -> HashSet<ScheduledGraphNode> {
         let mut result = std::mem::take(&mut self.blocking);
         if let Some(previous_user) = self.using.replace(node) {
             result.insert(previous_user);
@@ -255,7 +258,10 @@ impl PreviousNodes {
     ///
     /// If the frame is currently blocked by other nodes, it will add itself to the list of blockers,
     /// much like a reader in a read-write lock.
-    pub fn register_blocker(&mut self, node: ScheduledGraphNode) -> Option<ScheduledGraphNode> {
+    pub fn get_dependency_for_next_blocker(
+        &mut self,
+        node: ScheduledGraphNode,
+    ) -> Option<ScheduledGraphNode> {
         self.blocking.insert(node);
         self.using
     }
@@ -313,14 +319,9 @@ impl InstructionBlock {
 
                     for frame in &used_frames {
                         let previous_node_ids = last_instruction_by_frame
-                            .entry(frame.clone())
-                            .or_insert(PreviousNodes {
-                                using: None,
-                                blocking: vec![ScheduledGraphNode::BlockStart]
-                                    .into_iter()
-                                    .collect(),
-                            })
-                            .register_user(node);
+                            .entry((*frame).clone())
+                            .or_default()
+                            .get_dependencies_for_next_user(node);
 
                         for previous_node_id in previous_node_ids {
                             add_dependency!(graph, previous_node_id => node, ExecutionDependency::ReferenceFrame);
@@ -329,14 +330,9 @@ impl InstructionBlock {
 
                     for frame in blocked_but_not_used_frames {
                         if let Some(previous_node_id) = last_instruction_by_frame
-                            .entry(frame.clone())
-                            .or_insert(PreviousNodes {
-                                using: None,
-                                blocking: vec![ScheduledGraphNode::BlockStart]
-                                    .into_iter()
-                                    .collect(),
-                            })
-                            .register_blocker(node)
+                            .entry((*frame).clone())
+                            .or_default()
+                            .get_dependency_for_next_blocker(node)
                         {
                             add_dependency!(graph, previous_node_id => node, ExecutionDependency::ReferenceFrame);
                         }
@@ -384,8 +380,8 @@ impl InstructionBlock {
         // does not terminate until these are complete
         add_dependency!(graph, last_classical_instruction => ScheduledGraphNode::BlockEnd, ExecutionDependency::StableOrdering);
 
-        for (_, last_instructions) in last_instruction_by_frame {
-            for node in last_instructions.drain() {
+        for previous_nodes in last_instruction_by_frame.into_values() {
+            for node in previous_nodes.drain() {
                 add_dependency!(graph, node => ScheduledGraphNode::BlockEnd, ExecutionDependency::ReferenceFrame);
             }
         }
