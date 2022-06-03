@@ -301,19 +301,17 @@ impl InstructionBlock {
                     Ok(())
                 }
                 InstructionRole::RFControl => {
-                    let used_frames: HashSet<&FrameIdentifier> = program
+                    let used_frames = program
                         .get_frames_for_instruction(instruction, false)
-                        .unwrap_or_default()
-                        .into_iter()
-                        .collect();
-                    let blocked_frames: HashSet<&FrameIdentifier> = program
-                        .get_frames_for_instruction(instruction, true)
-                        .unwrap_or_default()
-                        .into_iter()
-                        .filter(|f| !used_frames.contains(f))
-                        .collect();
+                        .unwrap_or_default();
 
-                    for frame in used_frames {
+                    let blocked_frames = program
+                        .get_frames_for_instruction(instruction, true)
+                        .unwrap_or_default();
+
+                    let blocked_but_not_used_frames = blocked_frames.difference(&used_frames);
+
+                    for frame in &used_frames {
                         let previous_node_ids = last_instruction_by_frame
                             .entry(frame.clone())
                             .or_insert(PreviousNodes {
@@ -329,7 +327,7 @@ impl InstructionBlock {
                         }
                     }
 
-                    for frame in blocked_frames {
+                    for frame in blocked_but_not_used_frames {
                         if let Some(previous_node_id) = last_instruction_by_frame
                             .entry(frame.clone())
                             .or_insert(PreviousNodes {

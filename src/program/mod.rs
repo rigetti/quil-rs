@@ -130,15 +130,10 @@ impl Program {
         &'a self,
         instruction: &'a Instruction,
         include_blocked: bool,
-    ) -> Option<Vec<&'a FrameIdentifier>> {
+    ) -> Option<HashSet<&'a FrameIdentifier>> {
         instruction
             .get_frame_match_condition(include_blocked)
-            .map(|condition| {
-                self.frames
-                    .get_matching_keys(condition)
-                    .into_iter()
-                    .collect()
-            })
+            .map(|condition| self.frames.get_matching_keys(condition))
     }
 
     pub fn to_instructions(&self, include_headers: bool) -> Vec<Instruction> {
