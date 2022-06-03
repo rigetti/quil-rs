@@ -25,8 +25,8 @@ use crate::{
     expected_token,
     expression::Expression,
     instruction::{
-        ArithmeticOperand, AttributeValue, BinaryOperand, FrameIdentifier, GateModifier,
-        MemoryReference, Qubit, ScalarType, TernaryOperand, Vector, WaveformInvocation,
+        ArithmeticOperand, AttributeValue, BinaryOperand, ComparisonOperand, FrameIdentifier,
+        GateModifier, MemoryReference, Qubit, ScalarType, Vector, WaveformInvocation,
     },
     parser::lexer::Operator,
     token,
@@ -39,7 +39,8 @@ use super::{
     ParserInput, ParserResult,
 };
 
-/// Parse the operand of an arithmetic instruction, which may be a literal integer, literal real number, or memory reference.
+/// Parse the operand of an arithmetic instruction, which may be a literal integer, literal real
+/// number, or memory reference.
 pub fn parse_arithmetic_operand<'a>(input: ParserInput<'a>) -> ParserResult<'a, ArithmeticOperand> {
     alt((
         map(
@@ -68,8 +69,9 @@ pub fn parse_arithmetic_operand<'a>(input: ParserInput<'a>) -> ParserResult<'a, 
     ))(input)
 }
 
-/// Parse the operand of a ternary instruction, which may be a literal integer, literal real number, or memory reference.
-pub fn parse_ternary_logic_operand<'a>(input: ParserInput<'a>) -> ParserResult<'a, TernaryOperand> {
+/// Parse the operand of a comparison instruction, which may be a literal integer, literal real
+/// number, or memory reference.
+pub fn parse_comparison_operand<'a>(input: ParserInput<'a>) -> ParserResult<'a, ComparisonOperand> {
     alt((
         map(
             tuple((opt(token!(Operator(o))), token!(Float(v)))),
@@ -79,7 +81,7 @@ pub fn parse_ternary_logic_operand<'a>(input: ParserInput<'a>) -> ParserResult<'
                     Some(Operator::Minus) => -1f64,
                     _ => panic!("Implement this error"), // TODO
                 };
-                TernaryOperand::LiteralReal(sign * v)
+                ComparisonOperand::LiteralReal(sign * v)
             },
         ),
         map(
@@ -90,10 +92,10 @@ pub fn parse_ternary_logic_operand<'a>(input: ParserInput<'a>) -> ParserResult<'
                     Some(Operator::Minus) => -1,
                     _ => panic!("Implement this error"), // TODO
                 };
-                TernaryOperand::LiteralInteger(sign * (v as i64))
+                ComparisonOperand::LiteralInteger(sign * (v as i64))
             },
         ),
-        map(parse_memory_reference, TernaryOperand::MemoryReference),
+        map(parse_memory_reference, ComparisonOperand::MemoryReference),
     ))(input)
 }
 
@@ -153,7 +155,8 @@ pub fn parse_gate_modifier<'a>(input: ParserInput<'a>) -> ParserResult<'a, GateM
     ))
 }
 
-/// Parse a reference to a memory location, such as `ro[5]`, with optional brackets (i.e, `ro` allowed).
+/// Parse a reference to a memory location, such as `ro[5]`, with optional brackets
+/// (i.e, `ro` allowed).
 pub fn parse_memory_reference<'a>(input: ParserInput<'a>) -> ParserResult<'a, MemoryReference> {
     let (input, name) = token!(Identifier(v))(input)?;
     let (input, index) = opt(delimited(
@@ -165,7 +168,8 @@ pub fn parse_memory_reference<'a>(input: ParserInput<'a>) -> ParserResult<'a, Me
     Ok((input, MemoryReference { name, index }))
 }
 
-/// Parse a reference to a memory location, such as `ro[5]` requiring the brackets (i.e, `ro` disallowed).
+/// Parse a reference to a memory location, such as `ro[5]` requiring the brackets
+/// (i.e, `ro` disallowed).
 pub fn parse_memory_reference_with_brackets<'a>(
     input: ParserInput<'a>,
 ) -> ParserResult<'a, MemoryReference> {

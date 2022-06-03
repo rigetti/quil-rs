@@ -157,10 +157,10 @@ mod tests {
     use crate::expression::Expression;
     use crate::instruction::{
         Arithmetic, ArithmeticOperand, ArithmeticOperator, AttributeValue, BinaryLogic,
-        BinaryOperand, BinaryOperator, Calibration, Capture, Comparison, ComparisonOperator,
-        FrameDefinition, FrameIdentifier, Gate, Instruction, Jump, JumpWhen, Label,
-        MemoryReference, Move, Pulse, Qubit, RawCapture, Reset, SetFrequency, SetPhase, SetScale,
-        ShiftFrequency, ShiftPhase, TernaryOperand, UnaryLogic, UnaryOperator, Waveform,
+        BinaryOperand, BinaryOperator, Calibration, Capture, Comparison, ComparisonOperand,
+        ComparisonOperator, FrameDefinition, FrameIdentifier, Gate, Instruction, Jump, JumpWhen,
+        Label, MemoryReference, Move, Pulse, Qubit, RawCapture, Reset, SetFrequency, SetPhase,
+        SetScale, ShiftFrequency, ShiftPhase, UnaryLogic, UnaryOperator, Waveform,
         WaveformDefinition, WaveformInvocation,
     };
     use crate::parser::lexer::lex;
@@ -246,7 +246,7 @@ mod tests {
     );
 
     make_test!(
-        ternary_logic,
+        comparison_logic,
         parse_instructions,
         "EQ dest ro 0\nLT dest ro[1] -1\nLE dest ro 1.2\nGT dest ro[2] 1e-6\nGE dest ro x",
         vec![
@@ -261,7 +261,7 @@ mod tests {
                         name: "ro".to_owned(),
                         index: 0
                     },
-                    TernaryOperand::LiteralInteger(0)
+                    ComparisonOperand::LiteralInteger(0)
                 )
             }),
             Instruction::Comparison(Comparison {
@@ -275,7 +275,7 @@ mod tests {
                         name: "ro".to_owned(),
                         index: 1
                     },
-                    TernaryOperand::LiteralInteger(-1)
+                    ComparisonOperand::LiteralInteger(-1)
                 )
             }),
             Instruction::Comparison(Comparison {
@@ -289,7 +289,7 @@ mod tests {
                         name: "ro".to_owned(),
                         index: 0
                     },
-                    TernaryOperand::LiteralReal(1.2)
+                    ComparisonOperand::LiteralReal(1.2)
                 )
             }),
             Instruction::Comparison(Comparison {
@@ -303,7 +303,7 @@ mod tests {
                         name: "ro".to_owned(),
                         index: 2
                     },
-                    TernaryOperand::LiteralReal(0.000001)
+                    ComparisonOperand::LiteralReal(0.000001)
                 )
             }),
             Instruction::Comparison(Comparison {
@@ -317,7 +317,7 @@ mod tests {
                         name: "ro".to_owned(),
                         index: 0
                     },
-                    TernaryOperand::MemoryReference(MemoryReference {
+                    ComparisonOperand::MemoryReference(MemoryReference {
                         name: "x".to_owned(),
                         index: 0
                     }),
@@ -327,7 +327,7 @@ mod tests {
     );
 
     #[test]
-    fn test_ternary_logic_error() {
+    fn test_comparison_logic_error() {
         [
             "EQ ro 1 1",
             "LT 1 1 1",

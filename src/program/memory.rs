@@ -17,9 +17,9 @@ use std::collections::HashSet;
 use crate::expression::Expression;
 use crate::instruction::{
     Arithmetic, ArithmeticOperand, BinaryLogic, BinaryOperand, Capture, CircuitDefinition,
-    Comparison, Delay, Exchange, Gate, GateDefinition, Instruction, Jump, JumpUnless, JumpWhen,
-    Label, Load, MeasureCalibrationDefinition, Measurement, MemoryReference, Move, Pulse,
-    RawCapture, SetPhase, SetScale, ShiftPhase, Store, TernaryOperand, UnaryLogic, Vector,
+    Comparison, ComparisonOperand, Delay, Exchange, Gate, GateDefinition, Instruction, Jump,
+    JumpUnless, JumpWhen, Label, Load, MeasureCalibrationDefinition, Measurement, MemoryReference,
+    Move, Pulse, RawCapture, SetPhase, SetScale, ShiftPhase, Store, UnaryLogic, Vector,
     WaveformInvocation,
 };
 
@@ -93,7 +93,7 @@ impl Instruction {
             Instruction::Comparison(Comparison { operands, .. }) => {
                 let mut reads = HashSet::from([operands.1.name.clone()]);
                 let writes = HashSet::from([operands.0.name.clone()]);
-                if let TernaryOperand::MemoryReference(mem) = &operands.2 {
+                if let ComparisonOperand::MemoryReference(mem) = &operands.2 {
                     reads.insert(mem.name.clone());
                 }
 

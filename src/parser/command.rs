@@ -66,7 +66,7 @@ pub fn parse_comparison(
 ) -> ParserResult<Instruction> {
     let (input, destination) = common::parse_memory_reference(input)?;
     let (input, left) = common::parse_memory_reference(input)?;
-    let (input, right) = common::parse_ternary_logic_operand(input)?;
+    let (input, right) = common::parse_comparison_operand(input)?;
 
     Ok((
         input,

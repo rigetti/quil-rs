@@ -104,18 +104,18 @@ impl fmt::Display for UnaryOperator {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum TernaryOperand {
+pub enum ComparisonOperand {
     LiteralInteger(i64),
     LiteralReal(f64),
     MemoryReference(MemoryReference),
 }
 
-impl fmt::Display for TernaryOperand {
+impl fmt::Display for ComparisonOperand {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self {
-            TernaryOperand::LiteralInteger(value) => write!(f, "{}", value),
-            TernaryOperand::LiteralReal(value) => write!(f, "{}", value),
-            TernaryOperand::MemoryReference(value) => write!(f, "{}", value),
+            ComparisonOperand::LiteralInteger(value) => write!(f, "{}", value),
+            ComparisonOperand::LiteralReal(value) => write!(f, "{}", value),
+            ComparisonOperand::MemoryReference(value) => write!(f, "{}", value),
         }
     }
 }
@@ -451,7 +451,7 @@ pub struct Arithmetic {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Comparison {
     pub operator: ComparisonOperator,
-    pub operands: (MemoryReference, MemoryReference, TernaryOperand),
+    pub operands: (MemoryReference, MemoryReference, ComparisonOperand),
 }
 
 #[derive(Clone, Debug, PartialEq)]
