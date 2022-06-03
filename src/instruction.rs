@@ -1,22 +1,22 @@
-/**
- * Copyright 2021 Rigetti Computing
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- **/
+// Copyright 2021 Rigetti Computing
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fmt};
 
 use crate::expression::Expression;
+use crate::program::frame::FrameMatchCondition;
 
 #[cfg(test)]
 use proptest_derive::Arbitrary;
@@ -571,7 +571,6 @@ impl From<&Instruction> for InstructionRole {
             | Instruction::Label(_)
             | Instruction::MeasureCalibrationDefinition(_)
             | Instruction::Measurement(_)
-            | Instruction::Pragma(_)
             | Instruction::WaveformDefinition(_) => InstructionRole::ProgramComposition,
             Instruction::Reset(_)
             | Instruction::Capture(_)
@@ -592,6 +591,7 @@ impl From<&Instruction> for InstructionRole {
             | Instruction::Move(_)
             | Instruction::Exchange(_)
             | Instruction::Load(_)
+            | Instruction::Pragma(_)
             | Instruction::Store(_) => InstructionRole::ClassicalCompute,
             Instruction::Halt
             | Instruction::Jump(_)
@@ -850,11 +850,16 @@ impl fmt::Display for Instruction {
                 name,
                 arguments,
                 data,
-            }) => match data {
-                // FIXME: Handle empty argument lists
-                Some(data) => write!(f, "PRAGMA {} {} {}", name, arguments.join(" "), data),
-                None => write!(f, "PRAGMA {} {}", name, arguments.join(" ")),
-            },
+            }) => {
+                write!(f, "PRAGMA {}", name)?;
+                if !arguments.is_empty() {
+                    write!(f, " {}", arguments.join(" "))?;
+                }
+                if let Some(data) = data {
+                    write!(f, " \"{}\"", data)?;
+                }
+                Ok(())
+            }
             Instruction::RawCapture(RawCapture {
                 blocking,
                 frame,
@@ -926,6 +931,42 @@ impl fmt::Display for Instruction {
     }
 }
 
+#[cfg(test)]
+mod test_instruction_display {
+    use super::{Instruction, Pragma};
+
+    #[test]
+    fn pragma() {
+        assert_eq!(
+            Instruction::Pragma(Pragma {
+                name: String::from("INITIAL_REWIRING"),
+                arguments: vec![],
+                data: Some(String::from("PARTIAL")),
+            })
+            .to_string(),
+            "PRAGMA INITIAL_REWIRING \"PARTIAL\""
+        );
+        assert_eq!(
+            Instruction::Pragma(Pragma {
+                name: String::from("LOAD-MEMORY"),
+                arguments: vec![String::from("q0")],
+                data: Some(String::from("addr")),
+            })
+            .to_string(),
+            "PRAGMA LOAD-MEMORY q0 \"addr\""
+        );
+        assert_eq!(
+            Instruction::Pragma(Pragma {
+                name: String::from("PRESERVE_BLOCK"),
+                arguments: vec![],
+                data: None,
+            })
+            .to_string(),
+            "PRAGMA PRESERVE_BLOCK"
+        );
+    }
+}
+
 #[derive(Clone, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
 pub enum Qubit {
     Fixed(u64),
@@ -946,4 +987,197 @@ impl fmt::Display for Qubit {
 pub struct Waveform {
     pub matrix: Vec<Expression>,
     pub parameters: Vec<String>,
+}
+
+impl Instruction {
+    /// Apply the provided closure to this instruction, mutating any `Expression`s within.
+    /// Does not affect instructions without `Expression`s within.
+    /// Does not traverse or mutate instructions nested within blocks (such as
+    /// within `DEFCAL`).
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use std::mem::replace;
+    /// use std::str::FromStr;
+    /// use quil_rs::{expression::Expression, Program};
+    ///
+    ///
+    /// let program = Program::from_str("SHIFT-PHASE 0 \"rf\" 2*2").unwrap();
+    /// let mut instructions = program.to_instructions(true);
+    /// instructions.iter_mut().for_each(|inst| inst.apply_to_expressions(Expression::simplify));
+    ///
+    /// assert_eq!(instructions[0].to_string(), String::from("SHIFT-PHASE 0 \"rf\" 4.0"))
+    ///
+    /// ```
+    pub fn apply_to_expressions(&mut self, mut closure: impl FnMut(&mut Expression)) {
+        match self {
+            Instruction::CalibrationDefinition(Calibration { parameters, .. })
+            | Instruction::Gate(Gate { parameters, .. }) => {
+                parameters.iter_mut().for_each(closure);
+            }
+            Instruction::Capture(Capture { waveform, .. })
+            | Instruction::Pulse(Pulse { waveform, .. }) => {
+                waveform.parameters.values_mut().for_each(closure);
+            }
+            Instruction::Delay(Delay { duration, .. })
+            | Instruction::RawCapture(RawCapture { duration, .. }) => {
+                closure(duration);
+            }
+            Instruction::FrameDefinition(FrameDefinition { attributes, .. }) => {
+                for value in attributes.values_mut() {
+                    if let AttributeValue::Expression(expression) = value {
+                        closure(expression);
+                    }
+                }
+            }
+            Instruction::SetFrequency(SetFrequency {
+                frequency: expression,
+                ..
+            })
+            | Instruction::SetPhase(SetPhase {
+                phase: expression, ..
+            })
+            | Instruction::SetScale(SetScale {
+                scale: expression, ..
+            })
+            | Instruction::ShiftFrequency(ShiftFrequency {
+                frequency: expression,
+                ..
+            })
+            | Instruction::ShiftPhase(ShiftPhase {
+                phase: expression, ..
+            }) => {
+                closure(expression);
+            }
+            Instruction::WaveformDefinition(WaveformDefinition { definition, .. }) => {
+                definition.matrix.iter_mut().for_each(closure);
+            }
+            Instruction::GateDefinition(GateDefinition { matrix, .. }) => {
+                for row in matrix {
+                    for cell in row {
+                        closure(cell);
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
+    pub(crate) fn get_frame_match_condition(
+        &self,
+        include_blocked: bool,
+    ) -> Option<FrameMatchCondition> {
+        match self {
+            Instruction::Pulse(Pulse {
+                blocking, frame, ..
+            })
+            | Instruction::Capture(Capture {
+                blocking, frame, ..
+            })
+            | Instruction::RawCapture(RawCapture {
+                blocking, frame, ..
+            }) => Some(if *blocking && include_blocked {
+                FrameMatchCondition::AnyOfQubits(&frame.qubits)
+            } else {
+                FrameMatchCondition::Specific(frame)
+            }),
+            Instruction::Delay(Delay {
+                frame_names,
+                qubits,
+                ..
+            }) => Some(if frame_names.is_empty() {
+                FrameMatchCondition::ExactQubits(qubits)
+            } else {
+                FrameMatchCondition::And(vec![
+                    FrameMatchCondition::ExactQubits(qubits),
+                    FrameMatchCondition::AnyOfNames(frame_names),
+                ])
+            }),
+            Instruction::Fence(Fence { qubits }) => Some(if qubits.is_empty() {
+                FrameMatchCondition::All
+            } else {
+                FrameMatchCondition::AnyOfQubits(qubits)
+            }),
+            Instruction::SetFrequency(SetFrequency { frame, .. })
+            | Instruction::SetPhase(SetPhase { frame, .. })
+            | Instruction::SetScale(SetScale { frame, .. })
+            | Instruction::ShiftFrequency(ShiftFrequency { frame, .. })
+            | Instruction::ShiftPhase(ShiftPhase { frame, .. }) => {
+                Some(FrameMatchCondition::Specific(frame))
+            }
+            Instruction::SwapPhases(SwapPhases { frame_1, frame_2 }) => {
+                Some(FrameMatchCondition::And(vec![
+                    FrameMatchCondition::Specific(frame_1),
+                    FrameMatchCondition::Specific(frame_2),
+                ]))
+            }
+            Instruction::Gate(_)
+            | Instruction::CircuitDefinition(_)
+            | Instruction::GateDefinition(_)
+            | Instruction::Declaration(_)
+            | Instruction::Measurement(_)
+            | Instruction::Reset(_)
+            | Instruction::CalibrationDefinition(_)
+            | Instruction::FrameDefinition(_)
+            | Instruction::MeasureCalibrationDefinition(_)
+            | Instruction::Pragma(_)
+            | Instruction::WaveformDefinition(_)
+            | Instruction::Arithmetic(_)
+            | Instruction::BinaryLogic(_)
+            | Instruction::UnaryLogic(_)
+            | Instruction::Comparison(_)
+            | Instruction::Halt
+            | Instruction::Label(_)
+            | Instruction::Move(_)
+            | Instruction::Exchange(_)
+            | Instruction::Load(_)
+            | Instruction::Store(_)
+            | Instruction::Jump(_)
+            | Instruction::JumpWhen(_)
+            | Instruction::JumpUnless(_) => None,
+        }
+    }
+
+    #[cfg(test)]
+    /// Parse a single instruction from an input string. Returns an error if the input fails to parse,
+    /// or if there is input left over after parsing.
+    pub(crate) fn parse(input: &str) -> Result<Self, String> {
+        use crate::parser::{instruction::parse_instruction, lex};
+
+        let lexed = lex(input)?;
+        let (_, instruction) =
+            nom::combinator::all_consuming(parse_instruction)(&lexed).map_err(|e| e.to_string())?;
+        Ok(instruction)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr;
+
+    use crate::{expression::Expression, Program};
+
+    #[test]
+    fn apply_to_expressions() {
+        let mut program = Program::from_str(
+            "DECLARE ro BIT
+SET-PHASE 0 \"rf\" pi/2
+RX(2) 0",
+        )
+        .unwrap();
+        let closure = |expr: &mut Expression| *expr = Expression::Variable(String::from("a"));
+        for instruction in program.instructions.iter_mut() {
+            instruction.apply_to_expressions(closure);
+        }
+
+        let expected_program = Program::from_str(
+            "DECLARE ro BIT
+SET-PHASE 0 \"rf\" %a
+RX(%a) 0",
+        )
+        .unwrap();
+
+        assert_eq!(expected_program, program);
+    }
 }

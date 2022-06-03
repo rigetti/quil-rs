@@ -1,25 +1,22 @@
-/**
- * Copyright 2021 Rigetti Computing
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- **/
+// Copyright 2021 Rigetti Computing
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use std::collections::BTreeMap;
 use std::str::FromStr;
 
 use crate::instruction::{
-    Capture, Declaration, Delay, Fence, FrameDefinition, FrameIdentifier, Instruction, Pulse,
-    RawCapture, SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, SwapPhases, Waveform,
-    WaveformDefinition,
+    Declaration, FrameDefinition, FrameIdentifier, Instruction, Waveform, WaveformDefinition,
 };
 use crate::parser::{lex, parse_instructions};
 
@@ -28,9 +25,13 @@ pub use self::frame::FrameSet;
 pub use self::memory::MemoryRegion;
 
 mod calibration;
-mod frame;
+mod error;
+pub(crate) mod frame;
 pub mod graph;
 mod memory;
+
+#[cfg(feature = "graphviz-dot")]
+pub mod graphviz_dot;
 
 /// A Quil Program instance describes a quantum program with metadata used in execution.
 ///
@@ -49,7 +50,7 @@ pub struct Program {
 impl Program {
     pub fn new() -> Self {
         Program {
-            calibrations: CalibrationSet::new(),
+            calibrations: CalibrationSet::default(),
             frames: FrameSet::new(),
             memory_regions: BTreeMap::new(),
             waveforms: BTreeMap::new(),
@@ -61,7 +62,7 @@ impl Program {
     pub fn add_instruction(&mut self, instruction: Instruction) {
         match instruction {
             Instruction::CalibrationDefinition(calibration) => {
-                self.calibrations.push(calibration);
+                self.calibrations.push_calibration(calibration);
             }
             Instruction::FrameDefinition(FrameDefinition {
                 identifier,
@@ -77,6 +78,9 @@ impl Program {
                 self.memory_regions
                     .insert(name, MemoryRegion { size, sharing });
             }
+            Instruction::MeasureCalibrationDefinition(calibration) => {
+                self.calibrations.push_measurement_calibration(calibration);
+            }
             Instruction::WaveformDefinition(WaveformDefinition { name, definition }) => {
                 self.waveforms.insert(name, definition);
             }
@@ -85,23 +89,31 @@ impl Program {
     }
 
     /// Expand any instructions in the program which have a matching calibration, leaving the others
-    /// unchanged.
-    pub fn expand_calibrations(&mut self) {
-        let mut result: Vec<Instruction> = vec![];
+    /// unchanged. Recurses though each instruction while ensuring there is no cycle in the expansion
+    /// graph (i.e. no calibration expands directly or indirectly into itself)
+    pub fn expand_calibrations(&self) -> error::ProgramResult<Self> {
+        let mut expanded_instructions: Vec<Instruction> = vec![];
 
         // TODO: Do this more efficiently, possibly with Vec::splice
         for instruction in &self.instructions {
-            match self.calibrations.expand(instruction) {
+            match self.calibrations.expand(instruction, &[])? {
                 Some(expanded) => {
-                    result.extend(expanded.into_iter());
+                    expanded_instructions.extend(expanded.into_iter());
                 }
                 None => {
-                    result.push(instruction.clone());
+                    expanded_instructions.push(instruction.clone());
                 }
             }
         }
 
-        self.instructions = result;
+        let mut new_program = self.clone();
+        new_program.instructions = vec![];
+
+        for instruction in expanded_instructions {
+            new_program.add_instruction(instruction);
+        }
+
+        Ok(new_program)
     }
 
     /// Return the frames which are either "used" or "blocked" by the given instruction.
@@ -111,81 +123,22 @@ impl Program {
     ///
     /// Return `None` if the instruction does not execute in the context of a frame - such
     /// as classical instructions.
+    ///
+    /// See the [Quil-T spec](https://github.com/quil-lang/quil/blob/master/rfcs/analog/proposal.md)
+    /// for more information.
     pub fn get_frames_for_instruction<'a>(
         &'a self,
         instruction: &'a Instruction,
         include_blocked: bool,
     ) -> Option<Vec<&'a FrameIdentifier>> {
-        match &instruction {
-            Instruction::Pulse(Pulse {
-                blocking, frame, ..
-            }) => {
-                if *blocking && include_blocked {
-                    Some(self.frames.get_keys())
-                } else {
-                    Some(vec![frame])
-                }
-            }
-            Instruction::Delay(Delay {
-                frame_names,
-                qubits,
-                ..
-            }) => {
-                let frame_ids = self.frames.get_matching_keys(qubits, frame_names);
-                Some(frame_ids)
-            }
-            Instruction::Fence(Fence { qubits }) => {
-                if qubits.is_empty() {
-                    Some(self.frames.get_keys())
-                } else {
-                    Some(self.frames.get_matching_keys(qubits, &[]))
-                }
-            }
-            Instruction::Capture(Capture {
-                blocking, frame, ..
+        instruction
+            .get_frame_match_condition(include_blocked)
+            .map(|condition| {
+                self.frames
+                    .get_matching_keys(condition)
+                    .into_iter()
+                    .collect()
             })
-            | Instruction::RawCapture(RawCapture {
-                blocking, frame, ..
-            }) => {
-                if *blocking && include_blocked {
-                    Some(self.frames.get_keys())
-                } else {
-                    Some(vec![frame])
-                }
-            }
-            Instruction::SetFrequency(SetFrequency { frame, .. })
-            | Instruction::SetPhase(SetPhase { frame, .. })
-            | Instruction::SetScale(SetScale { frame, .. })
-            | Instruction::ShiftFrequency(ShiftFrequency { frame, .. })
-            | Instruction::ShiftPhase(ShiftPhase { frame, .. }) => Some(vec![frame]),
-            Instruction::SwapPhases(SwapPhases { frame_1, frame_2 }) => {
-                Some(vec![frame_1, frame_2])
-            }
-            Instruction::Gate(_)
-            | Instruction::CircuitDefinition(_)
-            | Instruction::GateDefinition(_)
-            | Instruction::Declaration(_)
-            | Instruction::Measurement(_)
-            | Instruction::Reset(_)
-            | Instruction::CalibrationDefinition(_)
-            | Instruction::FrameDefinition(_)
-            | Instruction::MeasureCalibrationDefinition(_)
-            | Instruction::Pragma(_)
-            | Instruction::WaveformDefinition(_)
-            | Instruction::Arithmetic(_)
-            | Instruction::Comparison(_)
-            | Instruction::BinaryLogic(_)
-            | Instruction::UnaryLogic(_)
-            | Instruction::Halt
-            | Instruction::Label(_)
-            | Instruction::Move(_)
-            | Instruction::Exchange(_)
-            | Instruction::Load(_)
-            | Instruction::Store(_)
-            | Instruction::Jump(_)
-            | Instruction::JumpWhen(_)
-            | Instruction::JumpUnless(_) => None,
-        }
     }
 
     pub fn to_instructions(&self, include_headers: bool) -> Vec<Instruction> {
@@ -243,7 +196,9 @@ impl FromStr for Program {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
+    use std::{collections::HashSet, str::FromStr};
+
+    use crate::instruction::Instruction;
 
     use super::Program;
 
@@ -317,7 +272,7 @@ DEFCAL I 0:
 DEFFRAME 0 \"rx\":
     HARDWARE-OBJECT: \"hardware\"
 DEFWAVEFORM custom:
-    1, 2
+    1.0, 2.0
 I 0
 ";
         let program = Program::from_str(input).unwrap();
@@ -335,9 +290,9 @@ I 0
 DEFFRAME 0 \"rx\":
 \tHARDWARE-OBJECT: \"hardware\"
 DEFWAVEFORM custom:
-\t1, 2
+\t1.0, 2.0
 DEFCAL I 0:
-\tDELAY 0 1
+\tDELAY 0 1.0
 I 0
 "
         );
@@ -356,5 +311,133 @@ DECLARE ec BIT
         // verify that each memory declaration in the program is in the same index as the same
         // program after being re-parsed and serialized.
         assert!(program1.lines().eq(program2.lines()));
+    }
+
+    #[test]
+    fn frame_blocking() {
+        let input = "DEFFRAME 0 \"a\":
+\tHARDWARE-OBJECT: \"hardware\"
+
+DEFFRAME 0 \"b\":
+\tHARDWARE-OBJECT: \"hardware\"
+
+DEFFRAME 1 \"c\":
+\tHARDWARE-OBJECT: \"hardware\"
+
+DEFFRAME 0 1 \"2q\":
+\tHARDWARE-OBJECT: \"hardware\"
+";
+
+        let program = Program::from_str(input).unwrap();
+
+        for (instruction_string, expected_used_frames, expected_blocked_frames) in vec![
+            // Blocking pulses use only the specified frame but block frames intersecting the frame's qubits
+            (
+                r#"PULSE 0 "a" custom_waveform"#,
+                vec![r#"0 "a""#],
+                vec![r#"0 "a""#, r#"0 "b""#, r#"0 1 "2q""#],
+            ),
+            (
+                r#"PULSE 1 "c" custom_waveform"#,
+                vec![r#"1 "c""#],
+                vec![r#"1 "c""#, r#"0 1 "2q""#],
+            ),
+            // Pulses on non-declared frames and unused qubits do not use or block any frames in the program
+            (r#"PULSE 2 "a" custom_waveform"#, vec![], vec![]),
+            // Captures work identically to Pulses
+            (
+                r#"CAPTURE 0 "a" custom_waveform ro[0]"#,
+                vec![r#"0 "a""#],
+                vec![r#"0 "a""#, r#"0 "b""#, r#"0 1 "2q""#],
+            ),
+            (
+                r#"CAPTURE 1 "c" custom_waveform ro[0]"#,
+                vec![r#"1 "c""#],
+                vec![r#"1 "c""#, r#"0 1 "2q""#],
+            ),
+            (r#"CAPTURE 2 "a" custom_waveform ro[0]"#, vec![], vec![]),
+            // Raw Captures work identically to Pulses
+            (
+                r#"RAW-CAPTURE 0 "a" 1e-6 ro[0]"#,
+                vec![r#"0 "a""#],
+                vec![r#"0 "a""#, r#"0 "b""#, r#"0 1 "2q""#],
+            ),
+            (
+                r#"RAW-CAPTURE 1 "c" 1e-6 ro[0]"#,
+                vec![r#"1 "c""#],
+                vec![r#"1 "c""#, r#"0 1 "2q""#],
+            ),
+            (r#"RAW-CAPTURE 2 "a" 1e-6 ro[0]"#, vec![], vec![]),
+            // A non-blocking pulse blocks only its precise frame, not other frames on the same qubits
+            (
+                r#"NONBLOCKING PULSE 0 "a" custom_waveform"#,
+                vec![r#"0 "a""#],
+                vec![r#"0 "a""#],
+            ),
+            (
+                r#"NONBLOCKING PULSE 1 "c" custom_waveform"#,
+                vec![r#"1 "c""#],
+                vec![r#"1 "c""#],
+            ),
+            (
+                r#"NONBLOCKING PULSE 0 1 "2q" custom_waveform"#,
+                vec![r#"0 1 "2q""#],
+                vec![r#"0 1 "2q""#],
+            ),
+            // A Fence with qubits specified uses and blocks all frames intersecting that qubit
+            (
+                r#"FENCE 1"#,
+                vec![r#"1 "c""#, r#"0 1 "2q""#],
+                vec![r#"1 "c""#, r#"0 1 "2q""#],
+            ),
+            // Fence-all uses and blocks all frames declared in the program
+            (
+                r#"FENCE"#,
+                vec![r#"0 "a""#, r#"0 "b""#, r#"1 "c""#, r#"0 1 "2q""#],
+                vec![r#"0 "a""#, r#"0 "b""#, r#"1 "c""#, r#"0 1 "2q""#],
+            ),
+            // Delay uses and blocks frames on exactly the given qubits and with any of the given names
+            (
+                r#"DELAY 0 1.0"#,
+                vec![r#"0 "a""#, r#"0 "b""#],
+                vec![r#"0 "a""#, r#"0 "b""#],
+            ),
+            (r#"DELAY 1 1.0"#, vec![r#"1 "c""#], vec![r#"1 "c""#]),
+            (r#"DELAY 1 "c" 1.0"#, vec![r#"1 "c""#], vec![r#"1 "c""#]),
+            (r#"DELAY 0 1 1.0"#, vec![r#"0 1 "2q""#], vec![r#"0 1 "2q""#]),
+        ] {
+            let instruction = Instruction::parse(instruction_string).unwrap();
+            let used_frames: HashSet<String> = program
+                .get_frames_for_instruction(&instruction, false)
+                .unwrap_or_default()
+                .into_iter()
+                .map(|f| f.to_string())
+                .collect();
+            let expected_used_frames: HashSet<String> = expected_used_frames
+                .into_iter()
+                .map(|el| el.to_owned())
+                .collect();
+            assert_eq!(
+                used_frames, expected_used_frames,
+                "Instruction {} *used* frames `{:?}` but we expected `{:?}`",
+                instruction, used_frames, expected_used_frames
+            );
+
+            let blocked_frames: HashSet<String> = program
+                .get_frames_for_instruction(&instruction, true)
+                .unwrap()
+                .into_iter()
+                .map(|f| f.to_string())
+                .collect();
+            let expected_blocked_frames: HashSet<String> = expected_blocked_frames
+                .into_iter()
+                .map(|el| el.to_owned())
+                .collect();
+            assert_eq!(
+                blocked_frames, expected_blocked_frames,
+                "Instruction {} *blocked* frames `{:?}` but we expected `{:?}`",
+                instruction, blocked_frames, expected_blocked_frames
+            );
+        }
     }
 }

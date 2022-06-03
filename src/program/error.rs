@@ -12,20 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/// Construct a complex number with the provided real component.
-#[macro_export]
-macro_rules! real {
-    ($value:expr) => {{
-        use num_complex::Complex64;
-        Complex64::new($value, 0f64)
-    }};
+use thiserror::Error;
+
+use crate::instruction::Instruction;
+
+#[derive(Debug, Error)]
+pub enum ProgramError {
+    #[error("invalid calibration `{0}`: {message}")]
+    InvalidCalibration {
+        instruction: Instruction,
+        message: String,
+    },
+
+    #[error("instruction {0} expands into itself")]
+    RecursiveCalibration(Instruction),
 }
 
-/// Construct a complex number with the provided imaginary component.
-#[macro_export]
-macro_rules! imag {
-    ($value:expr) => {{
-        use num_complex::Complex64;
-        Complex64::new(0f64, $value)
-    }};
-}
+pub type ProgramResult<T> = Result<T, ProgramError>;

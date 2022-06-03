@@ -1,18 +1,17 @@
-/**
- * Copyright 2021 Rigetti Computing
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- **/
+// Copyright 2021 Rigetti Computing
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use nom::{
     combinator::opt,
     multi::{many0, many1, separated_list0, separated_list1},
@@ -22,9 +21,10 @@ use nom::{
 use crate::instruction::{
     Arithmetic, ArithmeticOperand, ArithmeticOperator, BinaryLogic, BinaryOperator, Calibration,
     Capture, CircuitDefinition, Comparison, ComparisonOperator, Declaration, Delay, Exchange,
-    Fence, FrameDefinition, Instruction, Jump, JumpUnless, JumpWhen, Label, Load, Measurement,
-    Move, Pragma, Pulse, RawCapture, Reset, SetFrequency, SetPhase, SetScale, ShiftFrequency,
-    ShiftPhase, Store, UnaryLogic, UnaryOperator, Waveform, WaveformDefinition,
+    Fence, FrameDefinition, Instruction, Jump, JumpUnless, JumpWhen, Label, Load,
+    MeasureCalibrationDefinition, Measurement, Move, Pragma, Pulse, Qubit, RawCapture, Reset,
+    SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, Store, UnaryLogic, UnaryOperator,
+    Waveform, WaveformDefinition,
 };
 use crate::parser::common::parse_variable_qubit;
 use crate::parser::instruction::parse_block;
@@ -143,8 +143,20 @@ pub fn parse_capture(input: ParserInput, blocking: bool) -> ParserResult<Instruc
     ))
 }
 
-/// Parse the contents of a `DEFCAL` instruction.
+/// Parse the contents of a `DEFCAL` instruction (including `DEFCAL MEASURE`),
+/// following the `DEFCAL` token.
 pub fn parse_defcal<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
+    use crate::parser::lexer::Command::Measure;
+    let (input, defcal_measure) = opt(token!(Command(Measure)))(input)?;
+    match defcal_measure {
+        Some(_) => parse_defcal_measure(input),
+        None => parse_defcal_gate(input),
+    }
+}
+
+/// Parse the contents of a `DEFCAL` instruction (but not `DEFCAL MEASURE`),
+/// following the `DEFCAL` token.
+pub fn parse_defcal_gate<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
     let (input, modifiers) = many0(parse_gate_modifier)(input)?;
     let (input, name) = token!(Identifier(v))(input)?;
     let (input, parameters) = opt(delimited(
@@ -164,6 +176,23 @@ pub fn parse_defcal<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction>
             name,
             parameters,
             qubits,
+        }),
+    ))
+}
+
+/// Parse the contents of a `DEFCAL MEASURE` instruction, following the `MEASURE` token.
+pub fn parse_defcal_measure<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
+    let (input, qubit_index) = opt(token!(Integer(v)))(input)?;
+    let qubit = qubit_index.map(Qubit::Fixed);
+    let (input, destination) = token!(Identifier(v))(input)?;
+    let (input, _) = token!(Colon)(input)?;
+    let (input, instructions) = instruction::parse_block(input)?;
+    Ok((
+        input,
+        Instruction::MeasureCalibrationDefinition(MeasureCalibrationDefinition {
+            instructions,
+            parameter: destination,
+            qubit,
         }),
     ))
 }

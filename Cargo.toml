@@ -1,7 +1,7 @@
 [package]
 name = "quil-rs"
 description = "Rust tooling for Quil (Quantum Instruction Language)"
-version = "0.8.7"
+version = "0.10.1"
 edition = "2018"
 license = "Apache-2.0"
 repository = "https://github.com/rigetti/quil-rust"
@@ -9,18 +9,24 @@ keywords = ["Quil", "Quantum", "Rigetti"]
 categories = ["parser-implementations", "science", "compilers", "emulators"]
 
 [dependencies]
+dot-writer = { version = "0.1.2", optional = true }
 indexmap = "1.6.1"
 lexical = "5.2.0"
 nom = "6.1.0"
 num-complex = "0.4.0"
 petgraph = "0.5.1"
+ryu = "1.0.10"
 serde = { version = "1.0.125", features = ["derive"] }
+thiserror = "1.0.30"
 
 [dev-dependencies]
 insta = "1.7.1"
 proptest = "1.0.0"
 proptest-derive = "0.3.0"
 criterion = { version = "0.3.5", features = ["html_reports"] }
+
+[features]
+graphviz-dot = ["dot-writer"]
 
 [[bench]]
 name = "parser"

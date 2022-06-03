@@ -1,18 +1,18 @@
-/**
- * Copyright 2021 Rigetti Computing
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- **/
+// Copyright 2021 Rigetti Computing
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+use num_complex::Complex64;
 use std::collections::{hash_map::DefaultHasher, HashMap};
 use std::f64::consts::PI;
 use std::fmt;
@@ -25,9 +25,15 @@ use proptest_derive::Arbitrary;
 use crate::parser::{lex, parse_expression};
 use crate::{imag, instruction::MemoryReference, real};
 
+/// The different possible types of errors that could occur during expression evaluation.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum EvaluationError {
+    /// There wasn't enough information to completely evaluate an expression.
     Incomplete,
+    /// An operation expected a real number but received a complex one.
+    NumberNotReal,
+    /// An operation expected a number but received a different type of expression.
+    NotANumber,
 }
 
 #[derive(Clone, Debug)]
@@ -52,7 +58,7 @@ pub enum Expression {
 }
 
 /// Hash value helper: turn a hashable thing into a u64.
-fn _hash_to_u64<T: Hash>(t: &T) -> u64 {
+fn hash_to_u64<T: Hash>(t: &T) -> u64 {
     let mut s = DefaultHasher::new();
     t.hash(&mut s);
     s.finish()
@@ -89,8 +95,8 @@ impl Hash for Expression {
                     InfixOperator::Plus | InfixOperator::Star => {
                         // commutative, so put left & right in decreasing order by hash value
                         let (a, b) = (
-                            min_by_key(left, right, _hash_to_u64),
-                            max_by_key(left, right, _hash_to_u64),
+                            min_by_key(left, right, hash_to_u64),
+                            max_by_key(left, right, hash_to_u64),
                         );
                         a.hash(state);
                         b.hash(state);
@@ -135,7 +141,7 @@ impl Hash for Expression {
 impl PartialEq for Expression {
     // Partial equality by hash value
     fn eq(&self, other: &Self) -> bool {
-        _hash_to_u64(self) == _hash_to_u64(other)
+        hash_to_u64(self) == hash_to_u64(other)
     }
 }
 
@@ -172,7 +178,72 @@ fn calculate_function(
     }
 }
 
+/// Is this a small floating point number?
+#[inline(always)]
+fn is_small(x: f64) -> bool {
+    x.abs() < 1e-16
+}
+
 impl Expression {
+    /// Simplify the expression as much as possible, in-place.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use quil_rs::expression::Expression;
+    /// use std::str::FromStr;
+    /// use num_complex::Complex64;
+    ///
+    /// let mut expression = Expression::from_str("cos(2 * pi) + 2").unwrap();
+    /// expression.simplify();
+    ///
+    /// assert_eq!(expression, Expression::Number(Complex64::from(3.0)));
+    /// ```
+    pub fn simplify(&mut self) {
+        use Expression::*;
+
+        match self {
+            FunctionCall {
+                function,
+                expression,
+            } => {
+                expression.simplify();
+                if let Number(number) = expression.as_ref() {
+                    *self = Number(calculate_function(function, number));
+                }
+            }
+            Infix {
+                left,
+                operator: _,
+                right,
+            } => {
+                left.simplify();
+                right.simplify();
+            }
+            Prefix {
+                operator,
+                expression,
+            } => {
+                use PrefixOperator::*;
+                expression.simplify();
+
+                // Avoid potentially expensive clone
+                // Cannot directly swap `expression` with `self` because that causes
+                // a double mutable borrow.
+                if let Plus = operator {
+                    let mut temp = Expression::PiConstant;
+                    std::mem::swap(expression.as_mut(), &mut temp);
+                    std::mem::swap(self, &mut temp);
+                }
+            }
+            Variable(_) | Address(_) | PiConstant | Number(_) => {}
+        };
+
+        if let Ok(number) = self.evaluate(&HashMap::new(), &HashMap::new()) {
+            *self = Number(number);
+        }
+    }
+
     /// Consume the expression, simplifying it as much as possible.
     ///
     /// # Example
@@ -182,60 +253,13 @@ impl Expression {
     /// use std::str::FromStr;
     /// use num_complex::Complex64;
     ///
-    /// let expression = Expression::from_str("cos(2 * pi) + 2").unwrap().simplify();
+    /// let simplified = Expression::from_str("cos(2 * pi) + 2").unwrap().into_simplified();
     ///
-    /// assert_eq!(expression, Expression::Number(Complex64::from(3.0)));
+    /// assert_eq!(simplified, Expression::Number(Complex64::from(3.0)));
     /// ```
-    pub fn simplify(self) -> Self {
-        use Expression::*;
-
-        let simplified = match self {
-            FunctionCall {
-                function,
-                expression,
-            } => {
-                let simplified = expression.simplify();
-                if let Number(number) = simplified {
-                    Number(calculate_function(&function, &number))
-                } else {
-                    FunctionCall {
-                        function,
-                        expression: Box::new(simplified),
-                    }
-                }
-            }
-            Infix {
-                left,
-                operator,
-                right,
-            } => Infix {
-                left: Box::new(left.simplify()),
-                operator,
-                right: Box::new(right.simplify()),
-            },
-            Prefix {
-                operator,
-                expression,
-            } => {
-                use PrefixOperator::*;
-                match (&operator, expression) {
-                    (Minus, expr) => Prefix {
-                        operator,
-                        expression: Box::new(expr.simplify()),
-                    },
-                    (Plus, expr) => expr.simplify(),
-                }
-            }
-            Variable(identifier) => Variable(identifier),
-            Address(memory_reference) => Address(memory_reference),
-            PiConstant => PiConstant,
-            Number(number) => Number(number),
-        };
-        if let Ok(number) = simplified.evaluate(&HashMap::new(), &HashMap::new()) {
-            Number(number)
-        } else {
-            simplified
-        }
+    pub fn into_simplified(mut self) -> Self {
+        self.simplify();
+        self
     }
 
     /// Evaluate an expression, expecting that it may be fully reduced to a single complex number.
@@ -312,6 +336,76 @@ impl Expression {
             Number(number) => Ok(*number),
         }
     }
+
+    /// Substitute an expression in the place of each matching variable.
+    /// Consumes the expression and returns a new one.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use quil_rs::expression::Expression;
+    /// use std::str::FromStr;
+    /// use std::collections::HashMap;
+    /// use num_complex::Complex64;
+    ///
+    /// let expression = Expression::from_str("%x + %y").unwrap();
+    ///
+    /// let mut variables = HashMap::with_capacity(1);
+    /// variables.insert(String::from("x"), Expression::Number(Complex64::from(1.0)));
+    ///
+    /// let evaluated = expression.substitute_variables(&variables);
+    ///
+    /// assert_eq!(evaluated, Expression::from_str("1.0 + %y").unwrap())
+    /// ```
+    pub fn substitute_variables(self, variable_values: &HashMap<String, Expression>) -> Self {
+        use Expression::*;
+
+        match self {
+            FunctionCall {
+                function,
+                expression,
+            } => FunctionCall {
+                function,
+                expression: expression.substitute_variables(variable_values).into(),
+            },
+            Infix {
+                left,
+                operator,
+                right,
+            } => {
+                let left = left.substitute_variables(variable_values).into();
+                let right = right.substitute_variables(variable_values).into();
+                Infix {
+                    left,
+                    operator,
+                    right,
+                }
+            }
+            Prefix {
+                operator,
+                expression,
+            } => Prefix {
+                operator,
+                expression: expression.substitute_variables(variable_values).into(),
+            },
+            Variable(identifier) => match variable_values.get(identifier.as_str()) {
+                Some(value) => value.clone(),
+                None => Variable(identifier),
+            },
+            other => other,
+        }
+    }
+
+    /// If this is a number with imaginary part "equal to" zero (of _small_ absolute value), return
+    /// that number. Otherwise, error with an evaluation error of a descriptive type.
+    pub fn to_real(&self) -> Result<f64, EvaluationError> {
+        match self {
+            Expression::PiConstant => Ok(PI),
+            Expression::Number(x) if is_small(x.im) => Ok(x.re),
+            Expression::Number(_) => Err(EvaluationError::NumberNotReal),
+            _ => Err(EvaluationError::NotANumber),
+        }
+    }
 }
 
 impl<'a> FromStr for Expression {
@@ -339,26 +433,19 @@ impl<'a> FromStr for Expression {
 /// - When imaginary is set but real is 0, show only imaginary
 /// - When imaginary is 0, show real only
 /// - When both are non-zero, show with the correct operator in between
-macro_rules! format_complex {
-    ($value:expr) => {{
-        let mut operator = String::new();
-        let mut imaginary_component = String::new();
-
-        if $value.im > 0f64 {
-            operator = "+".to_owned();
-            imaginary_component = format!("{:.}i", $value.im)
-        } else if $value.im < 0f64 {
-            imaginary_component = format!("-{:.}i", $value.im)
-        }
-
-        if imaginary_component == "" {
-            format!("{:.}", $value.re)
-        } else if $value.re == 0f64 {
-            format!("{}", imaginary_component)
-        } else {
-            format!("{:.}{}{}", $value.re, operator, imaginary_component)
-        }
-    }};
+#[inline(always)]
+fn format_complex(value: &Complex64) -> String {
+    if value.re == 0f64 && value.im == 0f64 {
+        "0".to_owned()
+    } else if value.im == 0f64 {
+        ryu::Buffer::new().format(value.re).to_owned()
+    } else if value.re == 0f64 {
+        ryu::Buffer::new().format(value.im).to_owned() + "i"
+    } else {
+        let mut buf = ryu::Buffer::new();
+        let op = if value.im > 0f64 { "+" } else { "" };
+        buf.format(value.re).to_owned() + op + buf.format(value.im) + "i"
+    }
 }
 
 impl fmt::Display for Expression {
@@ -375,7 +462,7 @@ impl fmt::Display for Expression {
                 operator,
                 right,
             } => write!(f, "({}{}{})", left, operator, right),
-            Number(value) => write!(f, "{}", format_complex!(value)),
+            Number(value) => write!(f, "{}", format_complex(value)),
             PiConstant => write!(f, "pi"),
             Prefix {
                 operator,
@@ -552,14 +639,14 @@ mod tests {
             },
         ];
 
-        for case in cases {
+        for mut case in cases {
             let evaluated = case
                 .expression
                 .evaluate(case.variables, case.memory_references);
             assert_eq!(evaluated, case.evaluated);
 
-            let simplified = case.expression.simplify();
-            assert_eq!(simplified, case.simplified);
+            case.expression.simplify();
+            assert_eq!(case.expression, case.simplified);
         }
     }
 
@@ -600,6 +687,10 @@ mod tests {
                 ]
             },
         )
+    }
+
+    fn arb_complex64() -> impl Strategy<Value = Complex64> {
+        any::<(f64, f64)>().prop_map(|(re, im)| Complex64::new(re, im))
     }
 
     proptest! {
@@ -665,14 +756,88 @@ mod tests {
         }
 
         #[test]
-        fn eq_implies_hash_eq(x in arb_expr(), y in arb_expr()) {
-            let mut s = DefaultHasher::new();
-            x.hash(&mut s);
-            let h_x = s.finish();
-            y.hash(&mut s);
-            let h_y = s.finish();
+        fn eq_iff_hash_eq(x in arb_expr(), y in arb_expr()) {
+            let h_x = {
+                let mut s = DefaultHasher::new();
+                x.hash(&mut s);
+                s.finish()
+            };
+            let h_y = {
+                let mut s = DefaultHasher::new();
+                y.hash(&mut s);
+                s.finish()
+            };
             prop_assert_eq!(x == y, h_x == h_y);
         }
 
+        #[test]
+        fn reals_are_real(x in any::<f64>()) {
+            prop_assert_eq!(Expression::Number(real!(x)).to_real(), Ok(x))
+        }
+
+        #[test]
+        fn some_nums_are_real(re in any::<f64>(), im in any::<f64>()) {
+            let result = Expression::Number(Complex64{re, im}).to_real();
+            if is_small(im) {
+                prop_assert_eq!(result, Ok(re))
+            } else {
+                prop_assert_eq!(result, Err(EvaluationError::NumberNotReal))
+            }
+        }
+
+        #[test]
+        fn no_other_exps_are_real(expr in arb_expr().prop_filter("Not numbers", |e| match e {
+            Expression::Number(_) | Expression::PiConstant => false,
+            _ => true,
+        }
+            )) {
+            prop_assert_eq!(expr.to_real(), Err(EvaluationError::NotANumber))
+        }
+
+        #[test]
+        fn complexes_are_parseable_as_expressions(value in arb_complex64()) {
+            let parsed = Expression::from_str(&format_complex(&value));
+            assert!(parsed.is_ok());
+            assert_eq!(Expression::Number(value), parsed.unwrap().into_simplified());
+        }
+
+    }
+
+    #[test]
+    fn specific_to_real_tests() {
+        for (input, expected) in vec![
+            (Expression::PiConstant, Ok(PI)),
+            (Expression::Number(Complex64 { re: 1.0, im: 0.0 }), Ok(1.0)),
+            (
+                Expression::Number(Complex64 { re: 1.0, im: 1.0 }),
+                Err(EvaluationError::NumberNotReal),
+            ),
+            (
+                Expression::Variable("Not a number".into()),
+                Err(EvaluationError::NotANumber),
+            ),
+        ] {
+            assert_eq!(input.to_real(), expected)
+        }
+    }
+
+    #[test]
+    fn specific_format_complex_tests() {
+        for (x, s) in &[
+            (Complex64::new(0.0, 0.0), "0"),
+            (Complex64::new(-0.0, 0.0), "0"),
+            (Complex64::new(-0.0, -0.0), "0"),
+            (Complex64::new(1.234, 0.0), "1.234"),
+            (Complex64::new(0.0, 1.234), "1.234i"),
+            (Complex64::new(-1.234, 0.0), "-1.234"),
+            (Complex64::new(0.0, -1.234), "-1.234i"),
+            (Complex64::new(1.234, 5.678), "1.234+5.678i"),
+            (Complex64::new(-1.234, 5.678), "-1.234+5.678i"),
+            (Complex64::new(1.234, -5.678), "1.234-5.678i"),
+            (Complex64::new(-1.234, -5.678), "-1.234-5.678i"),
+            (Complex64::new(1e100, 2e-100), "1e100+2e-100i"),
+        ] {
+            assert_eq!(format_complex(x), *s);
+        }
     }
 }
