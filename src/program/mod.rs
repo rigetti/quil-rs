@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::str::FromStr;
 
 use crate::instruction::{
-    Declaration, FrameDefinition, FrameIdentifier, Instruction, Waveform, WaveformDefinition,
+    Declaration, FrameDefinition, FrameIdentifier, Instruction, Qubit, Waveform, WaveformDefinition,
 };
 use crate::parser::{lex, parse_instructions};
 
@@ -141,6 +141,24 @@ impl Program {
             })
     }
 
+    /// Returns a HashSet consisting of every Qubit that is used in the program.
+    pub fn get_used_qubits(&self) -> HashSet<Qubit> {
+        self.instructions
+            .iter()
+            .flat_map(|i| match i {
+                Instruction::Gate(gate) => gate.qubits.clone(),
+                Instruction::Measurement(measurement) => vec![measurement.qubit.clone()],
+                Instruction::Reset(reset) => match &reset.qubit {
+                    Some(qubit) => vec![qubit.to_owned()],
+                    None => vec![],
+                },
+                Instruction::Delay(delay) => delay.qubits.clone(),
+                Instruction::Fence(fence) => fence.qubits.clone(),
+                _ => vec![],
+            })
+            .collect::<HashSet<_>>()
+    }
+
     pub fn to_instructions(&self, include_headers: bool) -> Vec<Instruction> {
         let mut result = vec![];
 
@@ -199,6 +217,7 @@ mod tests {
     use std::{collections::HashSet, str::FromStr};
 
     use crate::instruction::Instruction;
+    use crate::instruction::Qubit;
 
     use super::Program;
 
@@ -439,5 +458,29 @@ DEFFRAME 0 1 \"2q\":
                 instruction, blocked_frames, expected_blocked_frames
             );
         }
+    }
+
+    #[test]
+    fn test_get_qubits() {
+        let input = "
+DECLARE ro BIT
+MEASURE q ro
+JUMP-UNLESS @end-reset ro
+X q
+LABEL @end-reset
+DEFCAL I 0:
+    DELAY 0 1.0
+DEFFRAME 0 \"rx\":
+    HARDWARE-OBJECT: \"hardware\"
+DEFWAVEFORM custom:
+    1,2
+I 0
+";
+        let program = Program::from_str(input).unwrap();
+        let expected = vec![Qubit::Fixed(0), Qubit::Variable("q".to_string())]
+            .into_iter()
+            .collect::<HashSet<_>>();
+        let actual = program.get_used_qubits();
+        assert_eq!(expected, actual);
     }
 }
