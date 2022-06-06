@@ -457,13 +457,13 @@ fn terminate_working_block(
     terminator: Option<BlockTerminator>,
     working_instructions: &mut Vec<Instruction>,
     blocks: &mut IndexMap<String, InstructionBlock>,
-    mut working_label: &Option<String>,
+    working_label: &mut Option<String>,
     program: &Program,
     instruction_index: Option<usize>,
 ) -> ScheduleResult<()> {
     // If this "block" has no instructions and no terminator, it's not worth storing - skip it
     if working_instructions.is_empty() && terminator.is_none() && working_label.is_none() {
-        working_label = &None;
+        *working_label = None;
     } else {
         let block = InstructionBlock::build(working_instructions.to_vec(), terminator, program)?;
         let label = working_label
@@ -479,7 +479,7 @@ fn terminate_working_block(
             None => Ok(()),
         }?;
         working_instructions.drain(..);
-        working_label = &None
+        *working_label = None;
     }
     Ok(())
 }
@@ -540,7 +540,7 @@ impl ScheduledProgram {
                         None as Option<BlockTerminator>,
                         &mut working_instructions,
                         &mut blocks,
-                        &working_label,
+                        &mut working_label,
                         program,
                         instruction_index,
                     )?;
@@ -555,7 +555,7 @@ impl ScheduledProgram {
                         }),
                         &mut working_instructions,
                         &mut blocks,
-                        &working_label,
+                        &mut working_label,
                         program,
                         instruction_index,
                     )?;
@@ -570,7 +570,7 @@ impl ScheduledProgram {
                         }),
                         &mut working_instructions,
                         &mut blocks,
-                        &working_label,
+                        &mut working_label,
                         program,
                         instruction_index,
                     )?;
@@ -585,7 +585,7 @@ impl ScheduledProgram {
                         }),
                         &mut working_instructions,
                         &mut blocks,
-                        &working_label,
+                        &mut working_label,
                         program,
                         instruction_index,
                     )
@@ -594,7 +594,7 @@ impl ScheduledProgram {
                     Some(BlockTerminator::Halt),
                     &mut working_instructions,
                     &mut blocks,
-                    &working_label,
+                    &mut working_label,
                     program,
                     instruction_index,
                 ),
@@ -605,7 +605,7 @@ impl ScheduledProgram {
             None as Option<BlockTerminator>,
             &mut working_instructions,
             &mut blocks,
-            &working_label,
+            &mut working_label,
             program,
             None,
         )?;
