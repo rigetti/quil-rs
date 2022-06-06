@@ -465,19 +465,15 @@ fn terminate_working_block(
     if working_instructions.is_empty() && terminator.is_none() && working_label.is_none() {
         working_label = &None;
     } else {
-        let block = InstructionBlock::build(
-            working_instructions.iter().map(|el| el.clone()).collect(),
-            terminator,
-            program,
-        )?;
+        let block = InstructionBlock::build(working_instructions.to_vec(), terminator, program)?;
         let label = working_label
             .clone()
-            .unwrap_or_else(|| ScheduledProgram::generate_autoincremented_label(&blocks));
+            .unwrap_or_else(|| ScheduledProgram::generate_autoincremented_label(blocks));
 
         match blocks.insert(label.clone(), block) {
             Some(_) => Err(ScheduleError {
-                instruction_index: instruction_index,
-                instruction: Instruction::Label(Label(label.clone())),
+                instruction_index,
+                instruction: Instruction::Label(Label(label)),
                 variant: ScheduleErrorVariant::DuplicateLabel,
             }), // Duplicate label
             None => Ok(()),
