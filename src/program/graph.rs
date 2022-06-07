@@ -464,7 +464,6 @@ fn terminate_working_block(
 ) -> ScheduleResult<()> {
     // If this "block" has no instructions and no terminator, it's not worth storing - skip it
     if working_instructions.is_empty() && terminator.is_none() && working_label.is_none() {
-        *working_label = None;
         return Ok(());
     }
 
