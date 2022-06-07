@@ -452,7 +452,8 @@ pub struct ScheduledProgram {
     pub blocks: IndexMap<String, InstructionBlock>,
 }
 
-#[allow(unused_assignments)]
+/// Builds an [`InstructionBlock`] from provided instructions, terminator, and program, then tracks
+/// the block and its label, and resets the instruction list and label for a future block to use.
 fn terminate_working_block(
     terminator: Option<BlockTerminator>,
     working_instructions: &mut Vec<Instruction>,
@@ -464,23 +465,26 @@ fn terminate_working_block(
     // If this "block" has no instructions and no terminator, it's not worth storing - skip it
     if working_instructions.is_empty() && terminator.is_none() && working_label.is_none() {
         *working_label = None;
-    } else {
-        let block = InstructionBlock::build(working_instructions.to_vec(), terminator, program)?;
-        let label = working_label
-            .clone()
-            .unwrap_or_else(|| ScheduledProgram::generate_autoincremented_label(blocks));
-
-        match blocks.insert(label.clone(), block) {
-            Some(_) => Err(ScheduleError {
-                instruction_index,
-                instruction: Instruction::Label(Label(label)),
-                variant: ScheduleErrorVariant::DuplicateLabel,
-            }), // Duplicate label
-            None => Ok(()),
-        }?;
-        working_instructions.drain(..);
-        *working_label = None;
+        return Ok(());
     }
+
+    let block = InstructionBlock::build(working_instructions.to_vec(), terminator, program)?;
+    let label = working_label
+        .clone()
+        .unwrap_or_else(|| ScheduledProgram::generate_autoincremented_label(blocks));
+
+    match blocks.insert(label.clone(), block) {
+        Some(_) => Err(ScheduleError {
+            instruction_index,
+            instruction: Instruction::Label(Label(label)),
+            variant: ScheduleErrorVariant::DuplicateLabel,
+        }),
+        None => Ok(()),
+    }?;
+
+    working_instructions.drain(..);
+    *working_label = None;
+
     Ok(())
 }
 
