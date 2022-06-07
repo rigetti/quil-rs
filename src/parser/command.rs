@@ -19,11 +19,12 @@ use nom::{
 };
 
 use crate::instruction::{
-    Arithmetic, ArithmeticOperand, ArithmeticOperator, Calibration, Capture, CircuitDefinition,
-    Declaration, Delay, Exchange, Fence, FrameDefinition, Instruction, Jump, JumpUnless, JumpWhen,
-    Label, Load, MeasureCalibrationDefinition, Measurement, Move, Pragma, Pulse, Qubit, RawCapture,
-    Reset, SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, Store, Waveform,
-    WaveformDefinition,
+    Arithmetic, ArithmeticOperand, ArithmeticOperator, BinaryLogic, BinaryOperator, Calibration,
+    Capture, CircuitDefinition, Comparison, ComparisonOperator, Declaration, Delay, Exchange,
+    Fence, FrameDefinition, Instruction, Jump, JumpUnless, JumpWhen, Label, Load,
+    MeasureCalibrationDefinition, Measurement, Move, Pragma, Pulse, Qubit, RawCapture, Reset,
+    SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, Store, UnaryLogic, UnaryOperator,
+    Waveform, WaveformDefinition,
 };
 use crate::parser::common::parse_variable_qubit;
 use crate::parser::instruction::parse_block;
@@ -54,6 +55,57 @@ pub fn parse_arithmetic(
             destination,
             source,
         }),
+    ))
+}
+
+/// Parse a comparison instruction of the form `addr addr ( addr | number )`.
+/// Called using the comparison operator itself (such as `EQ`) which should be previously parsed.
+pub fn parse_comparison(
+    operator: ComparisonOperator,
+    input: ParserInput,
+) -> ParserResult<Instruction> {
+    let (input, destination) = common::parse_memory_reference(input)?;
+    let (input, left) = common::parse_memory_reference(input)?;
+    let (input, right) = common::parse_comparison_operand(input)?;
+
+    Ok((
+        input,
+        Instruction::Comparison(Comparison {
+            operator,
+            operands: (destination, left, right),
+        }),
+    ))
+}
+
+/// Parse a logical binary instruction of the form `addr ( addr | INT )`.
+/// Called using the logical operator itself (such as `AND`) which should be previously parsed.
+pub fn parse_logical_binary(
+    operator: BinaryOperator,
+    input: ParserInput,
+) -> ParserResult<Instruction> {
+    let (input, left) = common::parse_memory_reference(input)?;
+    let (input, right) = common::parse_binary_logic_operand(input)?;
+
+    Ok((
+        input,
+        Instruction::BinaryLogic(BinaryLogic {
+            operator,
+            operands: (left, right),
+        }),
+    ))
+}
+
+/// Parse a logical unary instruction of the form `addr`.
+/// Called using the logical operator itself (such as `NOT`) which should be previously parsed.
+pub fn parse_logical_unary(
+    operator: UnaryOperator,
+    input: ParserInput,
+) -> ParserResult<Instruction> {
+    let (input, operand) = common::parse_memory_reference(input)?;
+
+    Ok((
+        input,
+        Instruction::UnaryLogic(UnaryLogic { operator, operand }),
     ))
 }
 

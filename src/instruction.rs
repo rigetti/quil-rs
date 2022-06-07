@@ -58,6 +58,90 @@ impl fmt::Display for ArithmeticOperator {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub enum BinaryOperand {
+    LiteralInteger(i64),
+    MemoryReference(MemoryReference),
+}
+
+impl fmt::Display for BinaryOperand {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match &self {
+            BinaryOperand::LiteralInteger(value) => write!(f, "{}", value),
+            BinaryOperand::MemoryReference(value) => write!(f, "{}", value),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum BinaryOperator {
+    And,
+    Ior,
+    Xor,
+}
+impl fmt::Display for BinaryOperator {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match &self {
+            BinaryOperator::And => write!(f, "AND"),
+            BinaryOperator::Ior => write!(f, "IOR"),
+            BinaryOperator::Xor => write!(f, "XOR"),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum UnaryOperator {
+    Neg,
+    Not,
+}
+
+impl fmt::Display for UnaryOperator {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match &self {
+            UnaryOperator::Neg => write!(f, "NEG"),
+            UnaryOperator::Not => write!(f, "NOT"),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum ComparisonOperand {
+    LiteralInteger(i64),
+    LiteralReal(f64),
+    MemoryReference(MemoryReference),
+}
+
+impl fmt::Display for ComparisonOperand {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match &self {
+            ComparisonOperand::LiteralInteger(value) => write!(f, "{}", value),
+            ComparisonOperand::LiteralReal(value) => write!(f, "{}", value),
+            ComparisonOperand::MemoryReference(value) => write!(f, "{}", value),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum ComparisonOperator {
+    Equal,
+    GreaterThanOrEqual,
+    GreaterThan,
+    LessThanOrEqual,
+    LessThan,
+}
+
+impl fmt::Display for ComparisonOperator {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match &self {
+            ComparisonOperator::Equal => write!(f, "EQ"),
+            ComparisonOperator::GreaterThanOrEqual => write!(f, "GE"),
+            ComparisonOperator::GreaterThan => write!(f, "GT"),
+            ComparisonOperator::LessThanOrEqual => write!(f, "LE"),
+            ComparisonOperator::LessThan => write!(f, "LT"),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub enum AttributeValue {
     String(String),
     Expression(Expression),
@@ -365,6 +449,24 @@ pub struct Arithmetic {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub struct Comparison {
+    pub operator: ComparisonOperator,
+    pub operands: (MemoryReference, MemoryReference, ComparisonOperand),
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct BinaryLogic {
+    pub operator: BinaryOperator,
+    pub operands: (MemoryReference, BinaryOperand),
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct UnaryLogic {
+    pub operator: UnaryOperator,
+    pub operand: MemoryReference,
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub struct Label(pub String);
 
 #[derive(Clone, Debug, PartialEq)]
@@ -435,6 +537,9 @@ pub enum Instruction {
     SwapPhases(SwapPhases),
     WaveformDefinition(WaveformDefinition),
     Arithmetic(Arithmetic),
+    Comparison(Comparison),
+    BinaryLogic(BinaryLogic),
+    UnaryLogic(UnaryLogic),
     Halt,
     Label(Label),
     Move(Move),
@@ -480,6 +585,9 @@ impl From<&Instruction> for InstructionRole {
             | Instruction::ShiftPhase(_)
             | Instruction::SwapPhases(_) => InstructionRole::RFControl,
             Instruction::Arithmetic(_)
+            | Instruction::Comparison(_)
+            | Instruction::BinaryLogic(_)
+            | Instruction::UnaryLogic(_)
             | Instruction::Move(_)
             | Instruction::Exchange(_)
             | Instruction::Load(_)
@@ -593,7 +701,7 @@ impl fmt::Display for Instruction {
                     .collect::<Vec<String>>()
                     .join(", ");
                 if !parameter_str.is_empty() {
-                    parameter_str = format!("({})", parameter_str)
+                    parameter_str = format!("({})", parameter_str);
                 }
                 write!(f, "DEFCIRCUIT {}{}", name, parameter_str)?;
                 for qubit_variable in qubit_variables {
@@ -734,7 +842,7 @@ impl fmt::Display for Instruction {
                 waveform,
             }) => {
                 if !blocking {
-                    write!(f, "NONBLOCKING ")?;
+                    write!(f, "NONBLOCKING ")?
                 }
                 write!(f, "PULSE {} {}", frame, waveform)
             }
@@ -759,7 +867,7 @@ impl fmt::Display for Instruction {
                 memory_reference,
             }) => {
                 if !blocking {
-                    write!(f, "NONBLOCKING ")?;
+                    write!(f, "NONBLOCKING ")?
                 }
                 write!(f, "RAW-CAPTURE {} {} {}", frame, duration, memory_reference)
             }
@@ -806,6 +914,19 @@ impl fmt::Display for Instruction {
                 write!(f, "JUMP-WHEN @{} {}", target, condition)
             }
             Instruction::Label(Label(label)) => write!(f, "LABEL @{}", label),
+            Instruction::Comparison(Comparison { operator, operands }) => {
+                write!(
+                    f,
+                    "{} {} {} {}",
+                    operator, operands.0, operands.1, operands.2
+                )
+            }
+            Instruction::BinaryLogic(BinaryLogic { operator, operands }) => {
+                write!(f, "{} {} {}", operator, operands.0, operands.1)
+            }
+            Instruction::UnaryLogic(UnaryLogic { operator, operand }) => {
+                write!(f, "{} {}", operator, operand)
+            }
         }
     }
 }
@@ -1003,6 +1124,9 @@ impl Instruction {
             | Instruction::Pragma(_)
             | Instruction::WaveformDefinition(_)
             | Instruction::Arithmetic(_)
+            | Instruction::BinaryLogic(_)
+            | Instruction::UnaryLogic(_)
+            | Instruction::Comparison(_)
             | Instruction::Halt
             | Instruction::Label(_)
             | Instruction::Move(_)

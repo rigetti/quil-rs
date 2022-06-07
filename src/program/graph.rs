@@ -408,6 +408,9 @@ impl ScheduledProgram {
             let instruction_index = Some(index);
             match instruction {
                 Instruction::Arithmetic(_)
+                | Instruction::Comparison(_)
+                | Instruction::BinaryLogic(_)
+                | Instruction::UnaryLogic(_)
                 | Instruction::Capture(_)
                 | Instruction::Delay(_)
                 | Instruction::Fence(_)
