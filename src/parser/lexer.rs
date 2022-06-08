@@ -533,7 +533,7 @@ mod tests {
       DEFCAL RX(%theta) 0:
       \tPULSE 0 \"xy\" my_waveform()
       
-      DEFCAL MEASURE 0 %dest:
+      DEFCAL MEASURE 0 dest:
       \tDECLARE iq REAL[2]
       \tCAPTURE 0 \"out\" flat(duration: 1000000, iqs: (2+3i)) iq[0]
       
