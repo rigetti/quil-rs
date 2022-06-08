@@ -129,7 +129,7 @@ pub(crate) enum FrameMatchCondition<'a> {
     /// Match all frames which contain exactly these qubits
     ExactQubits(&'a [Qubit]),
 
-    /// Return these specific frames, if present in the set
+    /// Return this specific frame, if present in the set
     Specific(&'a FrameIdentifier),
 
     /// Return all frames which match all of these conditions
