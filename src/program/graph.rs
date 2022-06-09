@@ -454,6 +454,11 @@ pub struct ScheduledProgram {
 
 /// Builds an [`InstructionBlock`] from provided instructions, terminator, and program, then tracks
 /// the block and its label, and resets the instruction list and label for a future block to use.
+///
+/// The "working block" is that being traversed within the program, accumulating instructions located
+/// between control instructions (such as `LABEL` and 'JUMP`). When such a control instruction is reached,
+/// this function performs the work to close out and store the instructions in the current "working block"
+/// and then reset the state to prepare for the next block.
 fn terminate_working_block(
     terminator: Option<BlockTerminator>,
     working_instructions: &mut Vec<Instruction>,
