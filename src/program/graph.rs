@@ -452,33 +452,44 @@ pub struct ScheduledProgram {
     pub blocks: IndexMap<String, InstructionBlock>,
 }
 
-macro_rules! terminate_working_block {
-    ($terminator:expr, $working_instructions:ident, $blocks:ident, $working_label:ident, $program: ident, $instruction_index: ident) => {{
-        // If this "block" has no instructions and no terminator, it's not worth storing - skip it
-        if $working_instructions.is_empty() && $terminator.is_none() && $working_label.is_none() {
-            $working_label = None
-        } else {
-            let block = InstructionBlock::build(
-                $working_instructions.iter().map(|el| el.clone()).collect(),
-                $terminator,
-                $program,
-            )?;
-            let label =
-                $working_label.unwrap_or_else(|| Self::generate_autoincremented_label(&$blocks));
+/// Builds an [`InstructionBlock`] from provided instructions, terminator, and program, then tracks
+/// the block and its label, and resets the instruction list and label for a future block to use.
+///
+/// The "working block" is that being traversed within the program, accumulating instructions located
+/// between control instructions (such as `LABEL` and 'JUMP`). When such a control instruction is reached,
+/// this function performs the work to close out and store the instructions in the current "working block"
+/// and then reset the state to prepare for the next block.
+fn terminate_working_block(
+    terminator: Option<BlockTerminator>,
+    working_instructions: &mut Vec<Instruction>,
+    blocks: &mut IndexMap<String, InstructionBlock>,
+    working_label: &mut Option<String>,
+    program: &Program,
+    instruction_index: Option<usize>,
+) -> ScheduleResult<()> {
+    // If this "block" has no instructions and no terminator, it's not worth storing - skip it
+    if working_instructions.is_empty() && terminator.is_none() && working_label.is_none() {
+        return Ok(());
+    }
 
-            match $blocks.insert(label.clone(), block) {
-                Some(_) => Err(ScheduleError {
-                    instruction_index: $instruction_index,
-                    instruction: Instruction::Label(Label(label.clone())),
-                    variant: ScheduleErrorVariant::DuplicateLabel,
-                }), // Duplicate label
-                None => Ok(()),
-            }?;
-            $working_instructions = vec![];
-            $working_label = None
-        }
-        Ok(())
-    }};
+    let block = InstructionBlock::build(working_instructions.to_vec(), terminator, program)?;
+    let label = working_label
+        .clone()
+        .unwrap_or_else(|| ScheduledProgram::generate_autoincremented_label(blocks));
+
+    match blocks.insert(label.clone(), block) {
+        Some(_) => Err(ScheduleError {
+            instruction_index,
+            instruction: Instruction::Label(Label(label)),
+            variant: ScheduleErrorVariant::DuplicateLabel,
+        }),
+        None => Ok(()),
+    }?;
+
+    working_instructions.drain(..);
+    *working_label = None;
+
+    Ok(())
 }
 
 impl ScheduledProgram {
@@ -536,80 +547,78 @@ impl ScheduledProgram {
                     Ok(())
                 }
                 Instruction::Label(Label(value)) => {
-                    terminate_working_block!(
+                    terminate_working_block(
                         None as Option<BlockTerminator>,
-                        working_instructions,
-                        blocks,
-                        working_label,
+                        &mut working_instructions,
+                        &mut blocks,
+                        &mut working_label,
                         program,
-                        instruction_index
+                        instruction_index,
                     )?;
 
                     working_label = Some(value.clone());
                     Ok(())
                 }
                 Instruction::Jump(Jump { target }) => {
-                    terminate_working_block!(
+                    terminate_working_block(
                         Some(BlockTerminator::Unconditional {
                             target: target.clone(),
                         }),
-                        working_instructions,
-                        blocks,
-                        working_label,
+                        &mut working_instructions,
+                        &mut blocks,
+                        &mut working_label,
                         program,
-                        instruction_index
+                        instruction_index,
                     )?;
                     Ok(())
                 }
                 Instruction::JumpWhen(JumpWhen { target, condition }) => {
-                    terminate_working_block!(
+                    terminate_working_block(
                         Some(BlockTerminator::Conditional {
                             target: target.clone(),
                             condition: condition.clone(),
                             jump_if_condition_true: true,
                         }),
-                        working_instructions,
-                        blocks,
-                        working_label,
+                        &mut working_instructions,
+                        &mut blocks,
+                        &mut working_label,
                         program,
-                        instruction_index
+                        instruction_index,
                     )?;
                     Ok(())
                 }
                 Instruction::JumpUnless(JumpUnless { target, condition }) => {
-                    terminate_working_block!(
+                    terminate_working_block(
                         Some(BlockTerminator::Conditional {
                             target: target.clone(),
                             condition: condition.clone(),
                             jump_if_condition_true: false,
                         }),
-                        working_instructions,
-                        blocks,
-                        working_label,
+                        &mut working_instructions,
+                        &mut blocks,
+                        &mut working_label,
                         program,
-                        instruction_index
+                        instruction_index,
                     )
                 }
-                Instruction::Halt => {
-                    terminate_working_block!(
-                        Some(BlockTerminator::Halt),
-                        working_instructions,
-                        blocks,
-                        working_label,
-                        program,
-                        instruction_index
-                    )
-                }
+                Instruction::Halt => terminate_working_block(
+                    Some(BlockTerminator::Halt),
+                    &mut working_instructions,
+                    &mut blocks,
+                    &mut working_label,
+                    program,
+                    instruction_index,
+                ),
             }?;
         }
 
-        terminate_working_block!(
+        terminate_working_block(
             None as Option<BlockTerminator>,
-            working_instructions,
-            blocks,
-            working_label,
+            &mut working_instructions,
+            &mut blocks,
+            &mut working_label,
             program,
-            None
+            None,
         )?;
 
         Ok(ScheduledProgram { blocks })
