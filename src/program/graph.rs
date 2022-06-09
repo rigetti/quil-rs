@@ -240,7 +240,7 @@ impl PreviousNodes {
     /// Register a node as using a frame, and return the instructions on which it should depend/wait for scheduling (if any).
     ///
     /// A node which uses a frame will block on any previous user or blocker of the frame, much like a writer in a read-write lock.
-    pub fn get_dependencies_for_next_user(
+    fn get_dependencies_for_next_user(
         &mut self,
         node: ScheduledGraphNode,
     ) -> HashSet<ScheduledGraphNode> {
@@ -258,7 +258,7 @@ impl PreviousNodes {
     ///
     /// If the frame is currently blocked by other nodes, it will add itself to the list of blockers,
     /// much like a reader in a read-write lock.
-    pub fn get_dependency_for_next_blocker(
+    fn get_dependency_for_next_blocker(
         &mut self,
         node: ScheduledGraphNode,
     ) -> Option<ScheduledGraphNode> {
@@ -506,6 +506,9 @@ impl ScheduledProgram {
             let instruction_index = Some(index);
             match instruction {
                 Instruction::Arithmetic(_)
+                | Instruction::Comparison(_)
+                | Instruction::BinaryLogic(_)
+                | Instruction::UnaryLogic(_)
                 | Instruction::Capture(_)
                 | Instruction::Delay(_)
                 | Instruction::Fence(_)
