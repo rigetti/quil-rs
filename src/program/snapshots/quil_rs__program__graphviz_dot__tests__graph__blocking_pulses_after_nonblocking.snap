@@ -11,14 +11,18 @@ digraph {
     "block_0_start" [shape=circle, label="start"];
     "block_0_start" -> "block_0_0" [label="frame"];
     "block_0_start" -> "block_0_1" [label="frame"];
+    "block_0_start" -> "block_0_2" [label="frame"];
     "block_0_start" -> "block_0_end" [label="frame
 ordering"];
-    "block_0_0" [shape=rectangle, label="[0] CAPTURE 0 \"ro_rx\" test() ro[0]"];
+    "block_0_0" [shape=rectangle, label="[0] NONBLOCKING PULSE 0 \"ro_tx\" test(duration: 1000000)"];
     "block_0_0" -> "block_0_1" [label="frame"];
-    "block_0_0" -> "block_0_end" [label="await capture
-frame"];
-    "block_0_1" [shape=rectangle, label="[1] PULSE 0 \"rf\" test()"];
+    "block_0_0" -> "block_0_2" [label="frame"];
+    "block_0_0" -> "block_0_end" [label="frame"];
+    "block_0_1" [shape=rectangle, label="[1] PULSE 0 \"rf\" test(duration: 1000000)"];
+    "block_0_1" -> "block_0_2" [label="frame"];
     "block_0_1" -> "block_0_end" [label="frame"];
+    "block_0_2" [shape=rectangle, label="[2] PULSE 0 \"ro_rx\" test(duration: 1000000)"];
+    "block_0_2" -> "block_0_end" [label="frame"];
     "block_0_end" [shape=circle, label="end"];
   }
 }

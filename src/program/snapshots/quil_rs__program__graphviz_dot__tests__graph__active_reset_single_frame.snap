@@ -26,7 +26,8 @@ frame"];
     node [style="filled"];
     "feedback_start" [shape=circle, label="start"];
     "feedback_start" -> "feedback_0" [label="frame"];
-    "feedback_start" -> "feedback_end" [label="ordering"];
+    "feedback_start" -> "feedback_end" [label="frame
+ordering"];
     "feedback_0" [shape=rectangle, label="[0] PULSE 0 \"rf\" test(duration: 1000000)"];
     "feedback_0" -> "feedback_end" [label="frame"];
     "feedback_end" [shape=circle, label="end"];

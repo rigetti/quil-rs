@@ -19,7 +19,9 @@ use nom::{
 };
 
 use crate::{
-    instruction::{ArithmeticOperator, Instruction},
+    instruction::{
+        ArithmeticOperator, BinaryOperator, ComparisonOperator, Instruction, UnaryOperator,
+    },
     token,
 };
 
@@ -42,7 +44,7 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
         Some((Token::Command(command), remainder)) => {
             match command {
                 Command::Add => command::parse_arithmetic(ArithmeticOperator::Add, remainder),
-                // Command::And => {}
+                Command::And => command::parse_logical_binary(BinaryOperator::And, remainder),
                 Command::Capture => command::parse_capture(remainder, true),
                 // Command::Convert => {}
                 Command::Declare => command::parse_declare(remainder),
@@ -53,28 +55,33 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
                 Command::DefWaveform => command::parse_defwaveform(remainder),
                 Command::Delay => command::parse_delay(remainder),
                 Command::Div => command::parse_arithmetic(ArithmeticOperator::Divide, remainder),
-                // Command::Eq => {}
-                // Command::Exchange => {}
+                Command::Eq => command::parse_comparison(ComparisonOperator::Equal, remainder),
+                Command::GE => {
+                    command::parse_comparison(ComparisonOperator::GreaterThanOrEqual, remainder)
+                }
+                Command::GT => {
+                    command::parse_comparison(ComparisonOperator::GreaterThan, remainder)
+                }
+                Command::LE => {
+                    command::parse_comparison(ComparisonOperator::LessThanOrEqual, remainder)
+                }
+                Command::LT => command::parse_comparison(ComparisonOperator::LessThan, remainder),
                 Command::Fence => command::parse_fence(remainder),
-                // Command::GE => {}
-                // Command::GT => {}
                 Command::Halt => Ok((remainder, Instruction::Halt)),
                 // Command::Include => {}
-                // Command::Ior => {}
+                Command::Ior => command::parse_logical_binary(BinaryOperator::Ior, remainder),
                 Command::Jump => command::parse_jump(remainder),
                 Command::JumpUnless => command::parse_jump_unless(remainder),
                 Command::JumpWhen => command::parse_jump_when(remainder),
                 Command::Label => command::parse_label(remainder),
-                // Command::LE => {}
                 Command::Load => command::parse_load(remainder),
-                // Command::LT => {}
                 Command::Measure => command::parse_measurement(remainder),
                 Command::Move => command::parse_move(remainder),
                 Command::Exchange => command::parse_exchange(remainder),
                 Command::Mul => command::parse_arithmetic(ArithmeticOperator::Multiply, remainder),
-                // Command::Neg => {}
+                Command::Neg => command::parse_logical_unary(UnaryOperator::Neg, remainder),
                 // Command::Nop => {}
-                // Command::Not => {}
+                Command::Not => command::parse_logical_unary(UnaryOperator::Not, remainder),
                 Command::Pragma => command::parse_pragma(remainder),
                 Command::Pulse => command::parse_pulse(remainder, true),
                 Command::RawCapture => command::parse_raw_capture(remainder, true),
@@ -87,7 +94,7 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
                 Command::Store => command::parse_store(remainder),
                 Command::Sub => command::parse_arithmetic(ArithmeticOperator::Subtract, remainder),
                 // Command::Wait => {}
-                // Command::Xor => {}
+                Command::Xor => command::parse_logical_binary(BinaryOperator::Xor, remainder),
                 _ => Err(nom::Err::Failure(Error {
                     input: &input[..1],
                     error: ErrorKind::UnsupportedInstruction,
@@ -147,20 +154,17 @@ pub fn parse_block_instruction<'a>(input: ParserInput<'a>) -> ParserResult<'a, I
 mod tests {
     use std::collections::HashMap;
 
+    use crate::expression::Expression;
     use crate::instruction::{
-        Label, Reset, SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, Waveform,
-        WaveformDefinition,
+        Arithmetic, ArithmeticOperand, ArithmeticOperator, AttributeValue, BinaryLogic,
+        BinaryOperand, BinaryOperator, Calibration, Capture, Comparison, ComparisonOperand,
+        ComparisonOperator, FrameDefinition, FrameIdentifier, Gate, Instruction, Jump, JumpWhen,
+        Label, MemoryReference, Move, Pulse, Qubit, RawCapture, Reset, SetFrequency, SetPhase,
+        SetScale, ShiftFrequency, ShiftPhase, UnaryLogic, UnaryOperator, Waveform,
+        WaveformDefinition, WaveformInvocation,
     };
     use crate::parser::lexer::lex;
-    use crate::{
-        expression::Expression,
-        instruction::{
-            Arithmetic, ArithmeticOperand, ArithmeticOperator, AttributeValue, Calibration,
-            Capture, FrameDefinition, FrameIdentifier, Gate, Instruction, Jump, JumpWhen,
-            MemoryReference, Move, Pulse, Qubit, RawCapture, WaveformInvocation,
-        },
-        make_test, real,
-    };
+    use crate::{make_test, real};
 
     use super::parse_instructions;
 
@@ -240,6 +244,211 @@ mod tests {
             })
         ]
     );
+
+    make_test!(
+        comparison_logic,
+        parse_instructions,
+        "EQ dest ro 0\nLT dest ro[1] -1\nLE dest ro 1.2\nGT dest ro[2] 1e-6\nGE dest ro x",
+        vec![
+            Instruction::Comparison(Comparison {
+                operator: ComparisonOperator::Equal,
+                operands: (
+                    MemoryReference {
+                        name: "dest".to_owned(),
+                        index: 0
+                    },
+                    MemoryReference {
+                        name: "ro".to_owned(),
+                        index: 0
+                    },
+                    ComparisonOperand::LiteralInteger(0)
+                )
+            }),
+            Instruction::Comparison(Comparison {
+                operator: ComparisonOperator::LessThan,
+                operands: (
+                    MemoryReference {
+                        name: "dest".to_owned(),
+                        index: 0
+                    },
+                    MemoryReference {
+                        name: "ro".to_owned(),
+                        index: 1
+                    },
+                    ComparisonOperand::LiteralInteger(-1)
+                )
+            }),
+            Instruction::Comparison(Comparison {
+                operator: ComparisonOperator::LessThanOrEqual,
+                operands: (
+                    MemoryReference {
+                        name: "dest".to_owned(),
+                        index: 0
+                    },
+                    MemoryReference {
+                        name: "ro".to_owned(),
+                        index: 0
+                    },
+                    ComparisonOperand::LiteralReal(1.2)
+                )
+            }),
+            Instruction::Comparison(Comparison {
+                operator: ComparisonOperator::GreaterThan,
+                operands: (
+                    MemoryReference {
+                        name: "dest".to_owned(),
+                        index: 0
+                    },
+                    MemoryReference {
+                        name: "ro".to_owned(),
+                        index: 2
+                    },
+                    ComparisonOperand::LiteralReal(0.000001)
+                )
+            }),
+            Instruction::Comparison(Comparison {
+                operator: ComparisonOperator::GreaterThanOrEqual,
+                operands: (
+                    MemoryReference {
+                        name: "dest".to_owned(),
+                        index: 0
+                    },
+                    MemoryReference {
+                        name: "ro".to_owned(),
+                        index: 0
+                    },
+                    ComparisonOperand::MemoryReference(MemoryReference {
+                        name: "x".to_owned(),
+                        index: 0
+                    }),
+                )
+            })
+        ]
+    );
+
+    #[test]
+    fn test_comparison_logic_error() {
+        [
+            "EQ ro 1 1",
+            "LT 1 1 1",
+            "LE 1 x ro",
+            "GT 1 ro x",
+            "GE dest 0.3 4",
+        ]
+        .iter()
+        .for_each(|input| {
+            let tokens = lex(input).unwrap();
+            assert!(parse_instructions(&tokens).is_err(), "{}", input);
+        })
+    }
+
+    make_test!(
+        binary_logic,
+        parse_instructions,
+        "AND ro 1\nIOR ro[1] ro[2]\nXOR ro[1] 0\nAND ro[1] ro[2]",
+        vec![
+            Instruction::BinaryLogic(BinaryLogic {
+                operator: BinaryOperator::And,
+                operands: (
+                    MemoryReference {
+                        name: "ro".to_owned(),
+                        index: 0
+                    },
+                    BinaryOperand::LiteralInteger(1)
+                )
+            }),
+            Instruction::BinaryLogic(BinaryLogic {
+                operator: BinaryOperator::Ior,
+                operands: (
+                    MemoryReference {
+                        name: "ro".to_owned(),
+                        index: 1
+                    },
+                    BinaryOperand::MemoryReference(MemoryReference {
+                        name: "ro".to_owned(),
+                        index: 2
+                    })
+                )
+            }),
+            Instruction::BinaryLogic(BinaryLogic {
+                operator: BinaryOperator::Xor,
+                operands: (
+                    MemoryReference {
+                        name: "ro".to_owned(),
+                        index: 1
+                    },
+                    BinaryOperand::LiteralInteger(0)
+                )
+            }),
+            Instruction::BinaryLogic(BinaryLogic {
+                operator: BinaryOperator::And,
+                operands: (
+                    MemoryReference {
+                        name: "ro".to_owned(),
+                        index: 1
+                    },
+                    BinaryOperand::MemoryReference(MemoryReference {
+                        name: "ro".to_owned(),
+                        index: 2
+                    })
+                )
+            }),
+        ]
+    );
+
+    #[test]
+    fn test_binary_logic_error() {
+        ["AND ro", "XOR 1 1", "IOR 1"].iter().for_each(|input| {
+            let tokens = lex(input).unwrap();
+            assert!(parse_instructions(&tokens).is_err(), "{}", input);
+        })
+    }
+
+    make_test!(
+        unary_logic,
+        parse_instructions,
+        "NOT ro\nNEG ro\nNOT ro[1]\nNEG ro[1]",
+        vec![
+            Instruction::UnaryLogic(UnaryLogic {
+                operator: UnaryOperator::Not,
+                operand: MemoryReference {
+                    name: "ro".to_owned(),
+                    index: 0,
+                }
+            }),
+            Instruction::UnaryLogic(UnaryLogic {
+                operator: UnaryOperator::Neg,
+                operand: MemoryReference {
+                    name: "ro".to_owned(),
+                    index: 0,
+                }
+            }),
+            Instruction::UnaryLogic(UnaryLogic {
+                operator: UnaryOperator::Not,
+                operand: MemoryReference {
+                    name: "ro".to_owned(),
+                    index: 1,
+                }
+            }),
+            Instruction::UnaryLogic(UnaryLogic {
+                operator: UnaryOperator::Neg,
+                operand: MemoryReference {
+                    name: "ro".to_owned(),
+                    index: 1,
+                }
+            }),
+        ]
+    );
+
+    #[test]
+    fn test_unary_logic_error() {
+        ["NEG 1", "NOT 1", "NEG 0", "NOT 0"]
+            .iter()
+            .for_each(|input| {
+                let tokens = lex(input).unwrap();
+                assert!(parse_instructions(&tokens).is_err(), "{}", input);
+            })
+    }
 
     make_test!(
         capture_instructions,

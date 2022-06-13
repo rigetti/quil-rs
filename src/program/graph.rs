@@ -200,6 +200,81 @@ pub struct InstructionBlock {
     pub terminator: BlockTerminator,
 }
 
+/// PreviousNodes is a structure which helps maintain ordering among instructions which operate on a given frame.
+/// It works similarly to a multiple-reader-single-writer queue, where an instruction which "uses" a frame is like
+/// a writer and an instruction which blocks that frame is like a reader. Multiple instructions may concurrently
+/// block a frame, but an instruction may not use a frame while it is concurrently used or blocked.
+///
+/// ## Examples
+///
+/// Note that "depends on" is equivalent to "must execute after completion of".
+///
+/// ```text
+/// user --> user # a second user takes a dependency on the first
+///
+/// user --> blocker # multiple blockers take a dependency on the most recent user
+///      \-> blocker
+///      \-> blocker
+///
+/// blocker --> user --> blocker # users and blockers take dependencies on one another,
+///                              # but blockers do not depend on other blocking instructions
+/// ```
+struct PreviousNodes {
+    using: Option<ScheduledGraphNode>,
+    blocking: HashSet<ScheduledGraphNode>,
+}
+
+impl Default for PreviousNodes {
+    /// The default value for [PreviousNodes] is useful in that, if no previous nodes have been recorded
+    /// as using a frame, we should consider that the start of the instruction block "blocks" use of that frame
+    /// (in other words, this instruction cannot be scheduled prior to the start of the instruction block).
+    fn default() -> Self {
+        Self {
+            using: None,
+            blocking: vec![ScheduledGraphNode::BlockStart].into_iter().collect(),
+        }
+    }
+}
+
+impl PreviousNodes {
+    /// Register a node as using a frame, and return the instructions on which it should depend/wait for scheduling (if any).
+    ///
+    /// A node which uses a frame will block on any previous user or blocker of the frame, much like a writer in a read-write lock.
+    fn get_dependencies_for_next_user(
+        &mut self,
+        node: ScheduledGraphNode,
+    ) -> HashSet<ScheduledGraphNode> {
+        let mut result = std::mem::take(&mut self.blocking);
+        if let Some(previous_user) = self.using.replace(node) {
+            result.insert(previous_user);
+        }
+
+        result
+    }
+
+    /// Register a node as blocking a frame, and return the instructions on which it should depend/wait for scheduling (if any).
+    ///
+    /// A node which blocks a frame will block on any previous user of the frame, but not concurrent blockers.
+    ///
+    /// If the frame is currently blocked by other nodes, it will add itself to the list of blockers,
+    /// much like a reader in a read-write lock.
+    fn get_dependency_for_next_blocker(
+        &mut self,
+        node: ScheduledGraphNode,
+    ) -> Option<ScheduledGraphNode> {
+        self.blocking.insert(node);
+        self.using
+    }
+
+    /// Consume the [PreviousNodes] and return all nodes within.
+    pub fn drain(mut self) -> HashSet<ScheduledGraphNode> {
+        if let Some(using) = self.using {
+            self.blocking.insert(using);
+        }
+        self.blocking
+    }
+}
+
 impl InstructionBlock {
     pub fn build(
         instructions: Vec<Instruction>,
@@ -213,8 +288,7 @@ impl InstructionBlock {
         let mut last_classical_instruction = ScheduledGraphNode::BlockStart;
 
         // Store the instruction index of the last instruction to block that frame
-        let mut last_instruction_by_frame: HashMap<FrameIdentifier, ScheduledGraphNode> =
-            HashMap::new();
+        let mut last_instruction_by_frame: HashMap<FrameIdentifier, PreviousNodes> = HashMap::new();
 
         // Store memory access reads and writes. Key is memory region name.
         // NOTE: this may be refined to serialize by memory region offset rather than by entire region.
@@ -236,21 +310,32 @@ impl InstructionBlock {
                     let used_frames = program
                         .get_frames_for_instruction(instruction, false)
                         .unwrap_or_default();
+
                     let blocked_frames = program
                         .get_frames_for_instruction(instruction, true)
                         .unwrap_or_default();
 
-                    // Take a dependency on any previous instructions to _block_ a frame which this instruction _uses_.
-                    for frame in used_frames {
-                        let previous_node_id = last_instruction_by_frame
-                            .get(frame)
-                            .unwrap_or(&ScheduledGraphNode::BlockStart);
-                        add_dependency!(graph, *previous_node_id => node, ExecutionDependency::ReferenceFrame);
+                    let blocked_but_not_used_frames = blocked_frames.difference(&used_frames);
+
+                    for frame in &used_frames {
+                        let previous_node_ids = last_instruction_by_frame
+                            .entry((*frame).clone())
+                            .or_default()
+                            .get_dependencies_for_next_user(node);
+
+                        for previous_node_id in previous_node_ids {
+                            add_dependency!(graph, previous_node_id => node, ExecutionDependency::ReferenceFrame);
+                        }
                     }
 
-                    // We mark all "blocked" frames as such for later instructions to take a dependency on
-                    for frame in blocked_frames {
-                        last_instruction_by_frame.insert(frame.clone(), node);
+                    for frame in blocked_but_not_used_frames {
+                        if let Some(previous_node_id) = last_instruction_by_frame
+                            .entry((*frame).clone())
+                            .or_default()
+                            .get_dependency_for_next_blocker(node)
+                        {
+                            add_dependency!(graph, previous_node_id => node, ExecutionDependency::ReferenceFrame);
+                        }
                     }
 
                     Ok(())
@@ -295,8 +380,10 @@ impl InstructionBlock {
         // does not terminate until these are complete
         add_dependency!(graph, last_classical_instruction => ScheduledGraphNode::BlockEnd, ExecutionDependency::StableOrdering);
 
-        for (_, last_instruction) in last_instruction_by_frame {
-            add_dependency!(graph, last_instruction => ScheduledGraphNode::BlockEnd, ExecutionDependency::ReferenceFrame);
+        for previous_nodes in last_instruction_by_frame.into_values() {
+            for node in previous_nodes.drain() {
+                add_dependency!(graph, node => ScheduledGraphNode::BlockEnd, ExecutionDependency::ReferenceFrame);
+            }
         }
 
         // Examine all "pending" memory operations for all regions
@@ -365,33 +452,44 @@ pub struct ScheduledProgram {
     pub blocks: IndexMap<String, InstructionBlock>,
 }
 
-macro_rules! terminate_working_block {
-    ($terminator:expr, $working_instructions:ident, $blocks:ident, $working_label:ident, $program: ident, $instruction_index: ident) => {{
-        // If this "block" has no instructions and no terminator, it's not worth storing - skip it
-        if $working_instructions.is_empty() && $terminator.is_none() && $working_label.is_none() {
-            $working_label = None
-        } else {
-            let block = InstructionBlock::build(
-                $working_instructions.iter().map(|el| el.clone()).collect(),
-                $terminator,
-                $program,
-            )?;
-            let label =
-                $working_label.unwrap_or_else(|| Self::generate_autoincremented_label(&$blocks));
+/// Builds an [`InstructionBlock`] from provided instructions, terminator, and program, then tracks
+/// the block and its label, and resets the instruction list and label for a future block to use.
+///
+/// The "working block" is that being traversed within the program, accumulating instructions located
+/// between control instructions (such as `LABEL` and 'JUMP`). When such a control instruction is reached,
+/// this function performs the work to close out and store the instructions in the current "working block"
+/// and then reset the state to prepare for the next block.
+fn terminate_working_block(
+    terminator: Option<BlockTerminator>,
+    working_instructions: &mut Vec<Instruction>,
+    blocks: &mut IndexMap<String, InstructionBlock>,
+    working_label: &mut Option<String>,
+    program: &Program,
+    instruction_index: Option<usize>,
+) -> ScheduleResult<()> {
+    // If this "block" has no instructions and no terminator, it's not worth storing - skip it
+    if working_instructions.is_empty() && terminator.is_none() && working_label.is_none() {
+        return Ok(());
+    }
 
-            match $blocks.insert(label.clone(), block) {
-                Some(_) => Err(ScheduleError {
-                    instruction_index: $instruction_index,
-                    instruction: Instruction::Label(Label(label.clone())),
-                    variant: ScheduleErrorVariant::DuplicateLabel,
-                }), // Duplicate label
-                None => Ok(()),
-            }?;
-            $working_instructions = vec![];
-            $working_label = None
-        }
-        Ok(())
-    }};
+    let block = InstructionBlock::build(working_instructions.to_vec(), terminator, program)?;
+    let label = working_label
+        .clone()
+        .unwrap_or_else(|| ScheduledProgram::generate_autoincremented_label(blocks));
+
+    match blocks.insert(label.clone(), block) {
+        Some(_) => Err(ScheduleError {
+            instruction_index,
+            instruction: Instruction::Label(Label(label)),
+            variant: ScheduleErrorVariant::DuplicateLabel,
+        }),
+        None => Ok(()),
+    }?;
+
+    working_instructions.drain(..);
+    *working_label = None;
+
+    Ok(())
 }
 
 impl ScheduledProgram {
@@ -408,6 +506,9 @@ impl ScheduledProgram {
             let instruction_index = Some(index);
             match instruction {
                 Instruction::Arithmetic(_)
+                | Instruction::Comparison(_)
+                | Instruction::BinaryLogic(_)
+                | Instruction::UnaryLogic(_)
                 | Instruction::Capture(_)
                 | Instruction::Delay(_)
                 | Instruction::Fence(_)
@@ -446,80 +547,78 @@ impl ScheduledProgram {
                     Ok(())
                 }
                 Instruction::Label(Label(value)) => {
-                    terminate_working_block!(
+                    terminate_working_block(
                         None as Option<BlockTerminator>,
-                        working_instructions,
-                        blocks,
-                        working_label,
+                        &mut working_instructions,
+                        &mut blocks,
+                        &mut working_label,
                         program,
-                        instruction_index
+                        instruction_index,
                     )?;
 
                     working_label = Some(value.clone());
                     Ok(())
                 }
                 Instruction::Jump(Jump { target }) => {
-                    terminate_working_block!(
+                    terminate_working_block(
                         Some(BlockTerminator::Unconditional {
                             target: target.clone(),
                         }),
-                        working_instructions,
-                        blocks,
-                        working_label,
+                        &mut working_instructions,
+                        &mut blocks,
+                        &mut working_label,
                         program,
-                        instruction_index
+                        instruction_index,
                     )?;
                     Ok(())
                 }
                 Instruction::JumpWhen(JumpWhen { target, condition }) => {
-                    terminate_working_block!(
+                    terminate_working_block(
                         Some(BlockTerminator::Conditional {
                             target: target.clone(),
                             condition: condition.clone(),
                             jump_if_condition_true: true,
                         }),
-                        working_instructions,
-                        blocks,
-                        working_label,
+                        &mut working_instructions,
+                        &mut blocks,
+                        &mut working_label,
                         program,
-                        instruction_index
+                        instruction_index,
                     )?;
                     Ok(())
                 }
                 Instruction::JumpUnless(JumpUnless { target, condition }) => {
-                    terminate_working_block!(
+                    terminate_working_block(
                         Some(BlockTerminator::Conditional {
                             target: target.clone(),
                             condition: condition.clone(),
                             jump_if_condition_true: false,
                         }),
-                        working_instructions,
-                        blocks,
-                        working_label,
+                        &mut working_instructions,
+                        &mut blocks,
+                        &mut working_label,
                         program,
-                        instruction_index
+                        instruction_index,
                     )
                 }
-                Instruction::Halt => {
-                    terminate_working_block!(
-                        Some(BlockTerminator::Halt),
-                        working_instructions,
-                        blocks,
-                        working_label,
-                        program,
-                        instruction_index
-                    )
-                }
+                Instruction::Halt => terminate_working_block(
+                    Some(BlockTerminator::Halt),
+                    &mut working_instructions,
+                    &mut blocks,
+                    &mut working_label,
+                    program,
+                    instruction_index,
+                ),
             }?;
         }
 
-        terminate_working_block!(
+        terminate_working_block(
             None as Option<BlockTerminator>,
-            working_instructions,
-            blocks,
-            working_label,
+            &mut working_instructions,
+            &mut blocks,
+            &mut working_label,
             program,
-            None
+            None,
         )?;
 
         Ok(ScheduledProgram { blocks })
