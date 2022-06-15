@@ -189,13 +189,13 @@ impl Program {
 }
 
 impl FromStr for Program {
-    type Err = nom::Err<String>;
+    type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let lexed = lex(s).map_err(nom::Err::Error)?;
+        let lexed = lex(s)?;
         let (_, instructions) = parse_instructions(&lexed).map_err(|err| match err {
-            nom::Err::Incomplete(_) => nom::Err::Error("incomplete".to_owned()),
-            nom::Err::Error(error) => nom::Err::Error(format!("{:?}", error)),
-            nom::Err::Failure(failure) => nom::Err::Error(format!("{:?}", failure)),
+            nom::Err::Incomplete(_) => "incomplete".to_owned(),
+            nom::Err::Error(error) => format!("{:?}", error),
+            nom::Err::Failure(failure) => format!("{:?}", failure),
         })?;
         let mut program = Self::new();
 
