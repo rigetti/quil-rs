@@ -11,11 +11,10 @@ categories = ["parser-implementations", "science", "compilers", "emulators"]
 [dependencies]
 dot-writer = { version = "0.1.2", optional = true }
 indexmap = "1.6.1"
-lexical = "5.2.0"
-nom = "6.1.0"
+lexical = "6.1.1" 
+nom = "7.1.1"
 num-complex = "0.4.0"
 petgraph = "0.5.1"
-ryu = "1.0.10"
 serde = { version = "1.0.125", features = ["derive"] }
 thiserror = "1.0.30"
 

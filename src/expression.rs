@@ -12,11 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use lexical::{format, to_string_with_options, WriteFloatOptions};
 use num_complex::Complex64;
 use std::collections::{hash_map::DefaultHasher, HashMap};
 use std::f64::consts::PI;
 use std::fmt;
 use std::hash::{Hash, Hasher};
+use std::num::NonZeroI32;
 use std::str::FromStr;
 
 #[cfg(test)]
@@ -435,16 +437,44 @@ impl<'a> FromStr for Expression {
 /// - When both are non-zero, show with the correct operator in between
 #[inline(always)]
 fn format_complex(value: &Complex64) -> String {
+    const FORMAT: u128 = format::STANDARD;
+    // Safety:
+    // This uses `build_unchecked`, which is safe as long as `is_valid` is true, and
+    // `is_valid` must be true because we don't change the default values for:
+    //   - the exponent string,
+    //   - the decimal point,
+    //   - the NaN string,
+    //   - the ∞ string,
+    //   - or the minimum or maximum significant digits.
+    // Of what we _do_ change:
+    //   - negative_exponent_break is < 0,
+    //   - positive_exponent_break is > 0,
+    //   - and trim floats can only take a bool and both branches are safe.
+    // As of version 6.1.1 of lexical, this means `OPTIONS.is_valid()` must be true. However, we
+    // still `assert!` it just to be "safe."
+    const OPTIONS: WriteFloatOptions = unsafe {
+        let options = WriteFloatOptions::builder()
+            .negative_exponent_break(NonZeroI32::new(-5))
+            .positive_exponent_break(NonZeroI32::new(15))
+            .trim_floats(true)
+            .build_unchecked();
+        assert!(options.is_valid());
+        options
+    };
     if value.re == 0f64 && value.im == 0f64 {
         "0".to_owned()
     } else if value.im == 0f64 {
-        ryu::Buffer::new().format(value.re).to_owned()
+        to_string_with_options::<_, FORMAT>(value.re, &OPTIONS)
     } else if value.re == 0f64 {
-        ryu::Buffer::new().format(value.im).to_owned() + "i"
+        to_string_with_options::<_, FORMAT>(value.im, &OPTIONS) + "i"
     } else {
-        let mut buf = ryu::Buffer::new();
-        let op = if value.im > 0f64 { "+" } else { "" };
-        buf.format(value.re).to_owned() + op + buf.format(value.im) + "i"
+        let mut out = to_string_with_options::<_, FORMAT>(value.re, &OPTIONS);
+        if value.im > 0f64 {
+            out.push('+')
+        }
+        out.push_str(&to_string_with_options::<_, FORMAT>(value.im, &OPTIONS));
+        out.push('i');
+        out
     }
 }
 
