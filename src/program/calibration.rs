@@ -321,6 +321,11 @@ impl CalibrationSet {
         self.calibrations
             .iter()
             .map(|c| Instruction::CalibrationDefinition(c.clone()))
+            .chain(
+                self.measure_calibrations
+                    .iter()
+                    .map(|c| Instruction::MeasureCalibrationDefinition(c.clone())),
+            )
             .collect()
     }
 }

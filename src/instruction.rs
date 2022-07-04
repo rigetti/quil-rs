@@ -806,7 +806,7 @@ impl fmt::Display for Instruction {
 
                 writeln!(
                     f,
-                    " %{}:\n\t{}",
+                    " {}:\n\t{}",
                     parameter,
                     format_instructions(instructions)
                 )
