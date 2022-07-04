@@ -38,7 +38,7 @@ impl fmt::Display for ArithmeticOperand {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ArithmeticOperator {
     Add,
     Subtract,
@@ -57,7 +57,7 @@ impl fmt::Display for ArithmeticOperator {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum BinaryOperand {
     LiteralInteger(i64),
     MemoryReference(MemoryReference),
@@ -72,7 +72,7 @@ impl fmt::Display for BinaryOperand {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum BinaryOperator {
     And,
     Ior,
@@ -88,7 +88,7 @@ impl fmt::Display for BinaryOperator {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum UnaryOperator {
     Neg,
     Not,
@@ -120,7 +120,7 @@ impl fmt::Display for ComparisonOperand {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ComparisonOperator {
     Equal,
     GreaterThanOrEqual,
@@ -141,7 +141,7 @@ impl fmt::Display for ComparisonOperator {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum AttributeValue {
     String(String),
     Expression(Expression),
@@ -180,7 +180,7 @@ impl fmt::Display for FrameIdentifier {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum GateModifier {
     Controlled,
     Dagger,
@@ -202,7 +202,7 @@ impl fmt::Display for GateModifier {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum GateType {
     Matrix,
     Permutation,
@@ -222,7 +222,7 @@ impl fmt::Display for GateType {
     }
 }
 
-#[derive(Clone, Debug, Hash, PartialEq)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub enum ScalarType {
     Bit,
     Integer,
@@ -246,7 +246,7 @@ impl fmt::Display for ScalarType {
     }
 }
 
-#[derive(Clone, Debug, Hash, PartialEq)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct Vector {
     pub data_type: ScalarType,
     pub length: u64,
@@ -258,7 +258,7 @@ impl fmt::Display for Vector {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct WaveformInvocation {
     pub name: String,
     pub parameters: HashMap<String, Expression>,
@@ -301,7 +301,7 @@ impl fmt::Display for MemoryReference {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Gate {
     pub name: String,
     pub parameters: Vec<Expression>,
@@ -318,7 +318,7 @@ pub struct CircuitDefinition {
     pub instructions: Vec<Instruction>,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct GateDefinition {
     pub name: String,
     pub parameters: Vec<String>,
@@ -326,25 +326,25 @@ pub struct GateDefinition {
     pub r#type: GateType,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Declaration {
     pub name: String,
     pub size: Vector,
     pub sharing: Option<String>,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Measurement {
     pub qubit: Qubit,
     pub target: Option<MemoryReference>,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Reset {
     pub qubit: Option<Qubit>,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Capture {
     pub blocking: bool,
     pub frame: FrameIdentifier,
@@ -352,19 +352,19 @@ pub struct Capture {
     pub waveform: WaveformInvocation,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Delay {
     pub duration: Expression,
     pub frame_names: Vec<String>,
     pub qubits: Vec<Qubit>,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Fence {
     pub qubits: Vec<Qubit>,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FrameDefinition {
     pub identifier: FrameIdentifier,
     pub attributes: HashMap<String, AttributeValue>,
@@ -377,21 +377,21 @@ pub struct MeasureCalibrationDefinition {
     pub instructions: Vec<Instruction>,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Pragma {
     pub name: String,
     pub arguments: Vec<String>,
     pub data: Option<String>,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Pulse {
     pub blocking: bool,
     pub frame: FrameIdentifier,
     pub waveform: WaveformInvocation,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RawCapture {
     pub blocking: bool,
     pub frame: FrameIdentifier,
@@ -399,43 +399,43 @@ pub struct RawCapture {
     pub memory_reference: MemoryReference,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SetFrequency {
     pub frame: FrameIdentifier,
     pub frequency: Expression,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SetPhase {
     pub frame: FrameIdentifier,
     pub phase: Expression,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SetScale {
     pub frame: FrameIdentifier,
     pub scale: Expression,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ShiftFrequency {
     pub frame: FrameIdentifier,
     pub frequency: Expression,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ShiftPhase {
     pub frame: FrameIdentifier,
     pub phase: Expression,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SwapPhases {
     pub frame_1: FrameIdentifier,
     pub frame_2: FrameIdentifier,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct WaveformDefinition {
     pub name: String,
     pub definition: Waveform,
@@ -454,19 +454,19 @@ pub struct Comparison {
     pub operands: (MemoryReference, MemoryReference, ComparisonOperand),
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct BinaryLogic {
     pub operator: BinaryOperator,
     pub operands: (MemoryReference, BinaryOperand),
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct UnaryLogic {
     pub operator: UnaryOperator,
     pub operand: MemoryReference,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Label(pub String);
 
 #[derive(Clone, Debug, PartialEq)]
@@ -481,7 +481,7 @@ pub struct Exchange {
     pub right: ArithmeticOperand,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Load {
     pub destination: MemoryReference,
     pub source: String,
@@ -495,18 +495,18 @@ pub struct Store {
     pub source: ArithmeticOperand,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Jump {
     pub target: String,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct JumpWhen {
     pub target: String,
     pub condition: MemoryReference,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct JumpUnless {
     pub target: String,
     pub condition: MemoryReference,
@@ -983,7 +983,7 @@ impl fmt::Display for Qubit {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Waveform {
     pub matrix: Vec<Expression>,
     pub parameters: Vec<String>,
