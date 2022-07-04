@@ -844,9 +844,11 @@ mod tests {
         assert_eq!(parsed, expected);
     }
 
-    /// Assert that an instruction can be parsed and then identically re-serialized to string.
+    /// Assert that when a program is converted to a string, the conversion of
+    /// that string into a program produces a program identical to the original
+    /// program.
     #[test]
-    fn parse_and_serialize() {
+    fn parse_roundtrip() {
         let inputs = vec![
             r#"DEFCAL MEASURE 0 dest:
 	DECLARE iq REAL[2]
@@ -856,8 +858,9 @@ mod tests {
         for input in inputs {
             let program = Program::from_str(input).unwrap();
             let output = program.to_string(true);
+            let roundtrip = Program::from_str(&output).unwrap();
 
-            assert_eq!(input.trim(), output.trim());
+            assert_eq!(program, roundtrip);
         }
     }
 }

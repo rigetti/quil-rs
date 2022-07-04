@@ -60,7 +60,7 @@ impl nom::InputLength for Token {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Command {
     Add,
     And,
@@ -111,7 +111,7 @@ pub enum Command {
     Xor,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DataType {
     Bit,
     Octet,
@@ -119,14 +119,14 @@ pub enum DataType {
     Integer,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Modifier {
     Controlled,
     Dagger,
     Forked, // Not in the Quil grammar
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Operator {
     Caret,
     Minus,
