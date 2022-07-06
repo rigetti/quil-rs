@@ -410,7 +410,7 @@ impl Expression {
     }
 }
 
-impl<'a> FromStr for Expression {
+impl FromStr for Expression {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
