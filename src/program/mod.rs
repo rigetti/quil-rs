@@ -21,6 +21,7 @@ use crate::instruction::{
 use crate::parser::{lex, parse_instructions};
 
 pub use self::calibration::CalibrationSet;
+pub use self::error::ProgramError;
 pub use self::frame::FrameSet;
 pub use self::memory::MemoryRegion;
 
@@ -189,13 +190,15 @@ impl Program {
 }
 
 impl FromStr for Program {
-    type Err = String;
+    type Err = ProgramError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let lexed = lex(s)?;
+        let lexed = lex(s).map_err(ProgramError::LeftoverInputAfterLexing)?;
         let (_, instructions) = parse_instructions(&lexed).map_err(|err| match err {
-            nom::Err::Incomplete(_) => "incomplete".to_owned(),
-            nom::Err::Error(error) => format!("{:?}", error),
-            nom::Err::Failure(failure) => format!("{:?}", failure),
+            nom::Err::Incomplete(needed) => ProgramError::IncompleteParse(format!("{:?}", needed)),
+            nom::Err::Error(error) => ProgramError::RecoverableParsingError(format!("{:?}", error)),
+            nom::Err::Failure(failure) => {
+                ProgramError::UnrecoverableParsingError(format!("{:?}", failure))
+            }
         })?;
         let mut program = Self::new();
 

@@ -16,7 +16,7 @@ use thiserror::Error;
 
 use crate::instruction::Instruction;
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq)]
 pub enum ProgramError {
     #[error("invalid calibration `{0}`: {message}")]
     InvalidCalibration {
@@ -26,6 +26,18 @@ pub enum ProgramError {
 
     #[error("instruction {0} expands into itself")]
     RecursiveCalibration(Instruction),
+
+    #[error("There was leftover input after lexing: {0}")]
+    LeftoverInputAfterLexing(String),
+
+    #[error("Incomplete parse: {0}")]
+    IncompleteParse(String),
+
+    #[error("Recoverable error while parsing: {0}")]
+    RecoverableParsingError(String),
+
+    #[error("Unrecoverable error while parsing: {0}")]
+    UnrecoverableParsingError(String),
 }
 
 pub type ProgramResult<T> = Result<T, ProgramError>;
