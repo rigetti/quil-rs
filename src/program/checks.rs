@@ -1,4 +1,6 @@
 //! Checks for consistency and validity of Quil programs.
+//!
+//! See the [Quil spec](https://quil-lang.github.io/).
 use crate::{
     expression::Expression,
     instruction::{
@@ -18,24 +20,24 @@ use std::fmt::Debug;
 
 /// Check that the instructions of the given program obey the spec with regards to data types.
 ///
-/// See https://quil-lang.github.io/
+/// See the [Quil spec](https://quil-lang.github.io/).
 pub fn type_check(program: &Program) -> ProgramResult<()> {
     for instruction in &program.instructions {
         match instruction {
             Instruction::SetFrequency(SetFrequency { frequency, .. }) => {
-                should_be_real_float(instruction, frequency, &program.memory_regions)?
+                should_be_real(instruction, frequency, &program.memory_regions)?
             }
             Instruction::SetPhase(SetPhase { phase, .. }) => {
-                should_be_real_float(instruction, phase, &program.memory_regions)?
+                should_be_real(instruction, phase, &program.memory_regions)?
             }
             Instruction::SetScale(SetScale { scale, .. }) => {
-                should_be_real_float(instruction, scale, &program.memory_regions)?
+                should_be_real(instruction, scale, &program.memory_regions)?
             }
             Instruction::ShiftFrequency(ShiftFrequency { frequency, .. }) => {
-                should_be_real_float(instruction, frequency, &program.memory_regions)?
+                should_be_real(instruction, frequency, &program.memory_regions)?
             }
             Instruction::ShiftPhase(ShiftPhase { phase, .. }) => {
-                should_be_real_float(instruction, phase, &program.memory_regions)?
+                should_be_real(instruction, phase, &program.memory_regions)?
             }
             Instruction::Arithmetic(Arithmetic {
                 operator,
@@ -146,7 +148,7 @@ fn operator_operand_mismatch(
     })
 }
 
-fn should_be_real_float(
+fn should_be_real(
     instruction: &Instruction,
     this_expression: &Expression,
     memory_regions: &BTreeMap<String, MemoryRegion>,
@@ -165,14 +167,10 @@ fn should_be_real_float(
             }
         }
         Expression::FunctionCall { expression, .. } => {
-            should_be_real_float(instruction, expression, memory_regions)
+            should_be_real(instruction, expression, memory_regions)
         }
-        Expression::Infix { left, right, .. } => should_be_real_float(
-            instruction,
-            left,
-            memory_regions,
-        )
-        .and(should_be_real_float(instruction, right, memory_regions)),
+        Expression::Infix { left, right, .. } => should_be_real(instruction, left, memory_regions)
+            .and(should_be_real(instruction, right, memory_regions)),
         Expression::Number(value) => {
             if value.im.abs() > f64::EPSILON {
                 real_value_required(instruction, this_expression, "`imaginary`")
@@ -182,7 +180,7 @@ fn should_be_real_float(
         }
         Expression::PiConstant => Ok(()),
         Expression::Prefix { expression, .. } => {
-            should_be_real_float(instruction, expression, memory_regions)
+            should_be_real(instruction, expression, memory_regions)
         }
         Expression::Variable(_) => real_value_required(instruction, this_expression, "`variable`"),
     }
