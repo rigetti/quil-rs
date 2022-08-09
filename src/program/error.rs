@@ -38,6 +38,43 @@ pub enum ProgramError {
 
     #[error("Unrecoverable error while parsing: {0}")]
     UnrecoverableParsingError(String),
+
+    #[error("In instruction {instruction}: undefined memory reference {reference}")]
+    UndefinedMemoryReference {
+        instruction: Instruction,
+        reference: String,
+    },
+
+    #[error(
+        "In instruction {instruction}: data type mismatch; {dst} is of type {dst_type}, while {src} is of type {src_type}"
+    )]
+    DataTypeMismatch {
+        instruction: Instruction,
+        dst: String,
+        dst_type: String,
+        src: String,
+        src_type: String,
+    },
+
+    #[error(
+        "In instruction {instruction}: required a real value, but {value} has type {data_type}"
+    )]
+    RealValueRequired {
+        instruction: Instruction,
+        value: String,
+        data_type: String,
+    },
+
+    #[error(
+        "In instruction {instruction}: {operator} can only work with {correct_type} data, but operand {operand} has type {data_type}"
+    )]
+    OperatorOperandMismatch {
+        instruction: Instruction,
+        operator: String,
+        correct_type: String,
+        operand: String,
+        data_type: String,
+    },
 }
 
 pub type ProgramResult<T> = Result<T, ProgramError>;

@@ -26,6 +26,7 @@ pub use self::frame::FrameSet;
 pub use self::memory::MemoryRegion;
 
 mod calibration;
+pub mod checks;
 mod error;
 pub(crate) mod frame;
 pub mod graph;
