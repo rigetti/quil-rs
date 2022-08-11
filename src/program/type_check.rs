@@ -294,7 +294,6 @@ fn type_check_arithmetic(
     }
 }
 
-
 /// Type check an [Instruction::Comparison].
 fn type_check_comparison(
     instruction: &Instruction,
