@@ -1,4 +1,4 @@
-//! Checks for consistency and validity of Quil programs.
+//! Type check Quil programs.
 //!
 //! See the [Quil spec](https://quil-lang.github.io/).
 use crate::{
@@ -9,19 +9,60 @@ use crate::{
         Load, MemoryReference, Move, ScalarType, SetFrequency, SetPhase, SetScale, ShiftFrequency,
         ShiftPhase, Store, UnaryLogic, UnaryOperator,
     },
-    program::{
-        error::{ProgramError, ProgramResult},
-        MemoryRegion,
-    },
+    program::MemoryRegion,
     Program,
 };
 use std::collections::BTreeMap;
 use std::fmt::Debug;
+use thiserror::Error;
+
+/// Different types of errors that can occur during type checking.
+#[derive(Debug, Error)]
+pub enum TypeError {
+    #[error("In instruction {instruction}: undefined memory reference {reference}.")]
+    UndefinedMemoryReference {
+        instruction: Instruction,
+        reference: String,
+    },
+
+    #[error(
+        "In instruction {instruction}: data type mismatch; {dst} is of type {dst_type}, while {src} is of type {src_type}."
+    )]
+    DataTypeMismatch {
+        instruction: Instruction,
+        dst: String,
+        dst_type: String,
+        src: String,
+        src_type: String,
+    },
+
+    #[error(
+        "In instruction {instruction}: required a real value, but {value} has type {data_type}."
+    )]
+    RealValueRequired {
+        instruction: Instruction,
+        value: String,
+        data_type: String,
+    },
+
+    #[error(
+        "In instruction {instruction}: {operator} can only work with {correct_type} data, but operand {operand} has type {data_type}."
+    )]
+    OperatorOperandMismatch {
+        instruction: Instruction,
+        operator: String,
+        correct_type: String,
+        operand: String,
+        data_type: String,
+    },
+}
+
+pub type TypeResult<T> = Result<T, TypeError>;
 
 /// Check that the instructions of the given program obey the spec with regards to data types.
 ///
 /// See the [Quil spec](https://quil-lang.github.io/).
-pub fn type_check(program: &Program) -> ProgramResult<()> {
+pub fn type_check(program: &Program) -> TypeResult<()> {
     for instruction in &program.instructions {
         match instruction {
             Instruction::SetFrequency(SetFrequency { frequency, .. }) => {
@@ -94,24 +135,23 @@ pub fn type_check(program: &Program) -> ProgramResult<()> {
     Ok(())
 }
 
-fn undefined_memory_reference(
-    instruction: &Instruction,
-    reference: impl Debug,
-) -> ProgramResult<()> {
-    Err(ProgramError::UndefinedMemoryReference {
+/// A convenient way to construct a TypeError.
+fn undefined_memory_reference(instruction: &Instruction, reference: impl Debug) -> TypeResult<()> {
+    Err(TypeError::UndefinedMemoryReference {
         instruction: instruction.clone(),
         reference: format!("{reference:#?}"),
     })
 }
 
+/// A convenient way to construct a TypeError.
 fn data_type_mismatch(
     instruction: &Instruction,
     dst: impl Debug,
     dst_type: impl Debug,
     src: impl Debug,
     src_type: impl Debug,
-) -> ProgramResult<()> {
-    Err(ProgramError::DataTypeMismatch {
+) -> TypeResult<()> {
+    Err(TypeError::DataTypeMismatch {
         instruction: instruction.clone(),
         dst: format!("{dst:#?}"),
         dst_type: format!("{dst_type:#?}"),
@@ -120,26 +160,28 @@ fn data_type_mismatch(
     })
 }
 
+/// A convenient way to construct a TypeError.
 fn real_value_required(
     instruction: &Instruction,
     value: impl Debug,
     data_type: impl Debug,
-) -> ProgramResult<()> {
-    Err(ProgramError::RealValueRequired {
+) -> TypeResult<()> {
+    Err(TypeError::RealValueRequired {
         instruction: instruction.clone(),
         value: format!("{value:#?}"),
         data_type: format!("#{data_type:#?}"),
     })
 }
 
+/// A convenient way to construct a TypeError.
 fn operator_operand_mismatch(
     instruction: &Instruction,
     operator: impl Debug,
     correct_type: impl Debug,
     operand: impl Debug,
     data_type: impl Debug,
-) -> ProgramResult<()> {
-    Err(ProgramError::OperatorOperandMismatch {
+) -> TypeResult<()> {
+    Err(TypeError::OperatorOperandMismatch {
         instruction: instruction.clone(),
         operator: format!("{operator:#?}"),
         correct_type: format!("{correct_type:#?}"),
@@ -148,11 +190,12 @@ fn operator_operand_mismatch(
     })
 }
 
+/// In the [Instruction], the given [Expression] should be real-valued.
 fn should_be_real(
     instruction: &Instruction,
     this_expression: &Expression,
     memory_regions: &BTreeMap<String, MemoryRegion>,
-) -> ProgramResult<()> {
+) -> TypeResult<()> {
     match this_expression {
         Expression::Address(reference) => {
             if let Some(MemoryRegion { size, .. }) = memory_regions.get(&reference.name) {
@@ -186,13 +229,14 @@ fn should_be_real(
     }
 }
 
+/// Type check an [Instruction::Arithmetic].
 fn type_check_arithmetic(
     instruction: &Instruction,
     operator: &ArithmeticOperator,
     destination: &ArithmeticOperand,
     source: &ArithmeticOperand,
     memory_regions: &BTreeMap<String, MemoryRegion>,
-) -> ProgramResult<()> {
+) -> TypeResult<()> {
     match destination {
         ArithmeticOperand::LiteralInteger(_) | ArithmeticOperand::LiteralReal(_) => {
             operator_operand_mismatch(
@@ -200,7 +244,7 @@ fn type_check_arithmetic(
                 "operation",
                 "memory reference",
                 destination,
-                "literal value",
+                "`literal value`",
             )
         }
         ArithmeticOperand::MemoryReference(dest_ref) => {
@@ -250,12 +294,14 @@ fn type_check_arithmetic(
     }
 }
 
+
+/// Type check an [Instruction::Comparison].
 fn type_check_comparison(
     instruction: &Instruction,
     operator: &ComparisonOperator,
     operands: &(MemoryReference, MemoryReference, ComparisonOperand),
     memory_regions: &BTreeMap<String, MemoryRegion>,
-) -> ProgramResult<()> {
+) -> TypeResult<()> {
     let (x, y, z) = operands;
     match (memory_regions.get(&x.name), memory_regions.get(&y.name)) {
         (None, _) => undefined_memory_reference(instruction, x),
@@ -291,12 +337,13 @@ fn type_check_comparison(
     }
 }
 
+/// Type check an [Instruction::BinaryLogic].
 fn type_check_binary_logic(
     instruction: &Instruction,
     operator: &BinaryOperator,
     operands: &(MemoryReference, BinaryOperand),
     memory_regions: &BTreeMap<String, MemoryRegion>,
-) -> ProgramResult<()> {
+) -> TypeResult<()> {
     let (x, y) = operands;
     if let Some(x_region) = memory_regions.get(&x.name) {
         let xt = &x_region.size.data_type;
@@ -324,12 +371,13 @@ fn type_check_binary_logic(
     }
 }
 
+/// Type check an [Instruction::UnaryLogic].
 fn type_check_unary_logic(
     instruction: &Instruction,
     operator: &UnaryOperator,
     operand: &MemoryReference,
     memory_regions: &BTreeMap<String, MemoryRegion>,
-) -> ProgramResult<()> {
+) -> TypeResult<()> {
     if let Some(MemoryRegion { size, .. }) = memory_regions.get(&operand.name) {
         let dt = &size.data_type;
         match (dt, operator) {
@@ -357,12 +405,13 @@ fn type_check_unary_logic(
     }
 }
 
+/// Type check an [Instruction::Move].
 fn type_check_move(
     instruction: &Instruction,
     destination: &ArithmeticOperand,
     source: &ArithmeticOperand,
     memory_regions: &BTreeMap<String, MemoryRegion>,
-) -> ProgramResult<()> {
+) -> TypeResult<()> {
     match destination {
         ArithmeticOperand::LiteralInteger(_) | ArithmeticOperand::LiteralReal(_) => {
             operator_operand_mismatch(
@@ -370,7 +419,7 @@ fn type_check_move(
                 "MOVE",
                 "memory reference",
                 destination,
-                "literal value",
+                "`literal value`",
             )
         }
         ArithmeticOperand::MemoryReference(dest_ref) => {
@@ -408,12 +457,13 @@ fn type_check_move(
     }
 }
 
+/// Type check an [Instruction::Exchange].
 fn type_check_exchange(
     instruction: &Instruction,
     left: &ArithmeticOperand,
     right: &ArithmeticOperand,
     memory_regions: &BTreeMap<String, MemoryRegion>,
-) -> ProgramResult<()> {
+) -> TypeResult<()> {
     match (left, right) {
         (
             ArithmeticOperand::MemoryReference(left_ref),
@@ -441,7 +491,7 @@ fn type_check_exchange(
                 "EXCHANGE",
                 "memory reference",
                 left,
-                "literal value",
+                "`literal value`",
             )
         }
         (_, ArithmeticOperand::LiteralInteger(_)) | (_, ArithmeticOperand::LiteralReal(_)) => {
@@ -450,19 +500,20 @@ fn type_check_exchange(
                 "EXCHANGE",
                 "memory reference",
                 right,
-                "literal value",
+                "`literal value`",
             )
         }
     }
 }
 
+/// Type check an [Instruction::Load].
 fn type_check_load(
     instruction: &Instruction,
     destination: &MemoryReference,
     source: &str,
     offset: &MemoryReference,
     memory_regions: &BTreeMap<String, MemoryRegion>,
-) -> ProgramResult<()> {
+) -> TypeResult<()> {
     match (
         memory_regions.get(&destination.name),
         memory_regions.get(source),
@@ -488,13 +539,14 @@ fn type_check_load(
     }
 }
 
+/// type check an [Instruction::Store].
 fn type_check_store(
     instruction: &Instruction,
     destination: &str,
     offset: &MemoryReference,
     source: &ArithmeticOperand,
     memory_regions: &BTreeMap<String, MemoryRegion>,
-) -> ProgramResult<()> {
+) -> TypeResult<()> {
     match (
         memory_regions.get(destination),
         memory_regions.get(&offset.name),
