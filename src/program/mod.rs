@@ -30,6 +30,7 @@ mod error;
 pub(crate) mod frame;
 pub mod graph;
 mod memory;
+pub mod type_check;
 
 #[cfg(feature = "graphviz-dot")]
 pub mod graphviz_dot;
