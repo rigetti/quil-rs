@@ -196,9 +196,9 @@ impl FromStr for Program {
         let lexed = lex(s).map_err(ProgramError::LeftoverInputAfterLexing)?;
         let (_, instructions) = parse_instructions(&lexed).map_err(|err| match err {
             nom::Err::Incomplete(needed) => ProgramError::IncompleteParse(format!("{:?}", needed)),
-            nom::Err::Error(error) => ProgramError::RecoverableParsingError(format!("{:?}", error)),
+            nom::Err::Error(error) => ProgramError::RecoverableParsingError(format!("{}", error)),
             nom::Err::Failure(failure) => {
-                ProgramError::UnrecoverableParsingError(format!("{:?}", failure))
+                ProgramError::UnrecoverableParsingError(format!("{}", failure))
             }
         })?;
         let mut program = Self::new();

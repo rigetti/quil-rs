@@ -19,6 +19,7 @@ pub(crate) use expression::parse_expression;
 pub(crate) use instruction::parse_instructions;
 pub(crate) use lexer::lex;
 use lexer::Token;
+use crate::parser::lexer::TokenWithLocation;
 
 mod command;
 mod gate;
@@ -30,5 +31,21 @@ mod expression;
 pub(crate) mod instruction;
 mod lexer;
 
-type ParserInput<'a> = &'a [Token];
-type ParserResult<'a, R> = IResult<&'a [Token], R, Error<&'a [Token]>>;
+type ParserInput<'a> = &'a [TokenWithLocation];
+type ParserResult<'a, R> = IResult<&'a [TokenWithLocation], R, Error<&'a [TokenWithLocation]>>;
+
+pub(crate) fn split_first_token(input: ParserInput) -> Option<(&Token, &[TokenWithLocation])> {
+    input.split_first().map(|(first, rest)| (first.as_token(), rest))
+}
+
+pub(crate) fn first_token(input: ParserInput) -> Option<&Token> {
+    input.first().map(TokenWithLocation::as_token)
+}
+
+pub(crate) fn nom_err_to_string<E: std::error::Error>(err: nom::Err<E>) -> String {
+    match &err {
+        nom::Err::Incomplete(_) => err.to_string(),
+        nom::Err::Error(err) => format!("Parsing error: {}", err),
+        nom::Err::Failure(err) => format!("Parsing failure: {}", err),
+    }
+}

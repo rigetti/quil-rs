@@ -33,7 +33,7 @@ macro_rules! token {
         use $crate::parser::error::{Error, ErrorKind};
         use $crate::parser::lexer::$enm;
         use $crate::parser::lexer::Token;
-        move |input: ParserInput<'a>| match input.split_first() {
+        move |input: ParserInput<'a>| match $crate::parser::split_first_token(input) {
             None => Err(nom::Err::Error(Error {
                 input,
                 error: ErrorKind::UnexpectedEOF("something else".to_owned()),
@@ -48,7 +48,7 @@ macro_rules! token {
         use $crate::expected_token;
         use $crate::parser::error::{Error, ErrorKind};
         use $crate::parser::lexer::Token;
-        move |input: ParserInput<'a>| match input.split_first() {
+        move |input: ParserInput<'a>| match $crate::parser::split_first_token(input) {
             None => Err(nom::Err::Error(Error {
                 input,
                 error: ErrorKind::UnexpectedEOF("something else".to_owned()),
@@ -65,7 +65,7 @@ macro_rules! token {
         use $crate::expected_token;
         use $crate::parser::error::{Error, ErrorKind};
         use $crate::parser::lexer::Token;
-        move |input: ParserInput<'a>| match input.split_first() {
+        move |input: ParserInput<'a>| match $crate::parser::split_first_token(input) {
             None => Err(nom::Err::Error(Error {
                 input,
                 error: ErrorKind::UnexpectedEOF("something else".to_owned()),

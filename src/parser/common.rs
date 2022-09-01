@@ -205,7 +205,7 @@ pub fn parse_waveform_invocation<'a>(
 /// Per the specification, variable-named and identifier-named are valid in different locations,
 /// but this parser is tolerant and accepts both as equivalent.
 pub fn parse_qubit(input: ParserInput) -> ParserResult<Qubit> {
-    match input.split_first() {
+    match super::split_first_token(input) {
         None => Err(nom::Err::Error(Error {
             input,
             error: ErrorKind::UnexpectedEOF("a qubit".to_owned()),
@@ -223,7 +223,7 @@ pub fn parse_qubit(input: ParserInput) -> ParserResult<Qubit> {
 
 /// Parse a variable qubit (i.e. a named qubit)
 pub fn parse_variable_qubit(input: ParserInput) -> ParserResult<String> {
-    match input.split_first() {
+    match super::split_first_token(input) {
         None => Err(nom::Err::Error(Error {
             input,
             error: ErrorKind::UnexpectedEOF("a variable qubit".to_owned()),
@@ -327,6 +327,7 @@ mod describe_skip_newlines_and_comments {
 #[cfg(test)]
 mod tests {
     use crate::{expression::Expression, instruction::MemoryReference, parser::lex, real};
+    use crate::parser::lexer::Token;
 
     use super::parse_waveform_invocation;
 
@@ -335,7 +336,7 @@ mod tests {
         let input = "wf(a: 1.0, b: %var, c: ro[0])";
         let lexed = lex(input).unwrap();
         let (remainder, waveform) = parse_waveform_invocation(&lexed).unwrap();
-        assert_eq!(remainder, &[]);
+        assert!(remainder.is_empty(), "expected remainder to be empty, got {:?}", remainder);
         assert_eq!(
             waveform.parameters,
             vec![

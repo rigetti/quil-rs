@@ -13,11 +13,16 @@
 // limitations under the License.
 
 use std::fmt;
+use std::fmt::Formatter;
 
 use super::lexer::{Command, Token};
+use nom::error::VerboseErrorKind as NomErrorKind;
+use crate::parser::lexer::{LexInput, TokenWithLocation};
+use crate::parser::ParserInput;
 
 /// This is a superset of `(I, nom::ErrorKind)` that includes the additional errors specified by
 /// [`ErrorKind`].
+#[derive(Debug)]
 pub struct Error<I> {
     /// The remainder of the input stream at the time of the error.
     pub input: I,
@@ -25,20 +30,50 @@ pub struct Error<I> {
     pub error: ErrorKind,
 }
 
-impl fmt::Debug for Error<&[Token]> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl fmt::Display for Error<LexInput<'_>> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let line = self.input.location_line();
+        let column = self.input.get_utf8_column();
+        let snippet = std::str::from_utf8(self.input.get_line_beginning());
+
+        write!(f, "Error at line {line}, column {column}")?;
+        if let Ok(snippet) = snippet {
+            write!(f, " (\"{snippet}")?;
+            if snippet.len() < self.input.len() {
+                write!(f, "...")?;
+            }
+            write!(f, "\")")?;
+        }
+        write!(f, ": {}", self.error)
+    }
+}
+
+impl fmt::Display for Error<ParserInput<'_>> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self.input.first() {
-            Some(token) => write!(f, "{:?} (at {:?})", self.error, token),
-            None => write!(f, "{:?} (at EOF)", self.error),
+            None => write!(f, "Error while parsing tokens: {}", self.error),
+            Some(token) => write!(
+                f,
+                "Error while parsing tokens at line {}, column {} ({:?}): {}",
+                token.line(),
+                token.column(),
+                token.as_token(),
+                self.error,
+            )
         }
     }
 }
 
+impl std::error::Error for Error<LexInput<'_>> {}
+impl std::error::Error for Error<ParserInput<'_>> {}
+
 /// Parsing errors specific to Quil parsing
 #[allow(dead_code)]
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum ErrorKind {
+    #[error("expected {0}, found EOF")]
     UnexpectedEOF(String),
+    #[error("expected {expected}, found {actual:?}")]
     ExpectedToken {
         actual: Token,
         expected: String,
@@ -46,30 +81,42 @@ pub enum ErrorKind {
 
     /// Tried to parse a kind of command and couldn't
     /// TODO: Wrap actual error, the string is a lifetime cop-out
+    #[error("failed to parse arguments for {command}: {error}")]
     InvalidCommand {
         command: Command,
         error: String,
     },
 
     /// Unexpected start of an instruction
+    #[error("expected a command or a gate")]
     NotACommandOrGate,
 
     /// The end of input was reached
+    #[error("reached end of input")]
     EndOfInput,
 
     /// An instruction was encountered which is not yet supported for parsing by this library
+    #[error("unsupported instruction")]
     UnsupportedInstruction,
 
     /// An error occurred in an underlying nom parser.
-    Parser(nom::error::ErrorKind),
+    #[error("internal parsing error: {0:?}")]
+    Parser(NomErrorKind),
 
     /// Literals specified in the input cannot be supported without loss of precision
+    #[error("using this literal will result in loss of precision")]
     UnsupportedPrecision,
+}
+
+impl From<NomErrorKind> for ErrorKind {
+    fn from(k: NomErrorKind) -> Self {
+        ErrorKind::Parser(k)
+    }
 }
 
 impl From<nom::error::ErrorKind> for ErrorKind {
     fn from(k: nom::error::ErrorKind) -> Self {
-        ErrorKind::Parser(k)
+        Self::Parser(NomErrorKind::Nom(k))
     }
 }
 

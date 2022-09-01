@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::fmt;
+use std::fmt::Formatter;
 use nom::{
     branch::alt,
     bytes::complete::{is_a, is_not, tag, take_until, take_while, take_while1},
@@ -22,6 +24,45 @@ use nom::{
     sequence::{delimited, preceded, terminated, tuple},
     IResult,
 };
+use nom_locate::LocatedSpan;
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TokenWithLocation {
+    token: Token,
+    line: u32,
+    column: usize,
+}
+
+impl PartialEq<Token> for TokenWithLocation {
+    fn eq(&self, other: &Token) -> bool {
+        &self.token == other
+    }
+}
+
+impl TokenWithLocation {
+    pub fn as_token(&self) -> &Token {
+        &self.token
+    }
+
+    pub fn into_token(self) -> Token {
+        self.token
+    }
+
+    pub fn line(&self) -> u32 {
+        self.line
+    }
+
+    pub fn column(&self) -> usize {
+        self.column
+    }
+}
+
+impl nom::InputLength for TokenWithLocation {
+    fn input_len(&self) -> usize {
+        // All tokens take up exactly one place in the input token stream
+        self.as_token().input_len()
+    }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Token {
@@ -60,17 +101,24 @@ impl nom::InputLength for Token {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+// TODO: replace manual parsing with strum::EnumString (FromStr)?
+#[derive(Debug, Clone, PartialEq, Eq, strum::Display)]
+#[strum(serialize_all = "SCREAMING-KEBAB-CASE")]
 pub enum Command {
     Add,
     And,
     Capture,
     Convert,
     Declare,
+    #[strum(to_string = "DEFCAL")]
     DefCal,
+    #[strum(to_string = "DEFCIRCUIT")]
     DefCircuit,
+    #[strum(to_string = "DEFFRAME")]
     DefFrame,
+    #[strum(to_string = "DEFGATE")]
     DefGate,
+    #[strum(to_string = "DEFWAVEFORM")]
     DefWaveform,
     Delay,
     Div,
@@ -111,7 +159,8 @@ pub enum Command {
     Xor,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, strum::Display)]
+#[strum(serialize_all = "UPPERCASE")]
 pub enum DataType {
     Bit,
     Octet,
@@ -119,7 +168,8 @@ pub enum DataType {
     Integer,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, strum::Display)]
+#[strum(serialize_all = "UPPERCASE")]
 pub enum Modifier {
     Controlled,
     Dagger,
@@ -135,44 +185,59 @@ pub enum Operator {
     Star,
 }
 
-pub type LexResult<'a> = IResult<&'a str, Token>;
+pub type LexInput<'a> = LocatedSpan<&'a str>;
+pub type LexResult<'a, T=Token, E=nom::error::Error<LexInput<'a>>> = IResult<LexInput<'a>, T, E>;
+
+fn token_with_location<'i, E, P>(mut parser: P) -> impl FnMut(LexInput<'i>) -> LexResult<'i, TokenWithLocation, E>
+    where P: nom::Parser<LexInput<'i>, Token, E>,
+          E: nom::error::ParseError<LexInput<'i>>,
+{
+    move |input| {
+        let line = input.location_line();
+        // TODO: naive_get_utf8_column might be faster for shorter lines
+        let column = input.get_utf8_column();
+        // Using this syntax because map(parser, || ...)(input) has lifetime issues for parser.
+        parser.parse(input).map(|(leftover, token)| (leftover, TokenWithLocation { token, line, column }))
+    }
+}
 
 /// Completely lex a string, returning the tokens within. Panics if the string cannot be completely read.
-pub(crate) fn lex(input: &str) -> Result<Vec<Token>, String> {
+pub(crate) fn lex(input: &str) -> Result<Vec<TokenWithLocation>, String> {
+    let input = LocatedSpan::new(input);
     all_consuming(_lex)(input)
-        .map_err(|err| format!("Error remains: {:?}", err))
+        .map_err(|err| format!("Error remains: {}", super::nom_err_to_string(err)))
         .map(|(_, tokens)| tokens)
 }
 
-fn _lex(input: &str) -> IResult<&str, Vec<Token>> {
+fn _lex(input: LexInput) -> IResult<LexInput, Vec<TokenWithLocation>> {
     terminated(
         many0(alt((
-            value(Token::Indentation, tag("    ")),
+            token_with_location(value(Token::Indentation, tag("    "))),
             preceded(many0(tag(" ")), lex_token),
         ))),
         many0(one_of("\n\t ")),
     )(input)
 }
 
-fn lex_token(input: &str) -> LexResult {
+fn lex_token(input: LexInput) -> LexResult<TokenWithLocation> {
     alt((
-        lex_comment,
-        lex_data_type,
-        lex_modifier,
-        lex_punctuation,
-        lex_label,
-        lex_string,
+        token_with_location(lex_comment),
+        token_with_location(lex_data_type),
+        token_with_location(lex_modifier),
+        token_with_location(lex_punctuation),
+        token_with_location(lex_label),
+        token_with_location(lex_string),
         // Operator must come before number (or it may be parsed as a prefix)
-        lex_operator,
-        lex_number,
-        lex_variable,
-        lex_non_blocking,
+        token_with_location(lex_operator),
+        token_with_location(lex_number),
+        token_with_location(lex_variable),
+        token_with_location(lex_non_blocking),
         // This should come last because it's sort of a catch all
-        lex_command_or_identifier,
+        token_with_location(lex_command_or_identifier),
     ))(input)
 }
 
-fn lex_data_type(input: &str) -> LexResult {
+fn lex_data_type(input: LexInput) -> LexResult {
     alt((
         value(Token::DataType(DataType::Bit), tag("BIT")),
         value(Token::DataType(DataType::Integer), tag("INTEGER")),
@@ -181,10 +246,10 @@ fn lex_data_type(input: &str) -> LexResult {
     ))(input)
 }
 
-fn lex_comment(input: &str) -> LexResult {
+fn lex_comment(input: LexInput) -> LexResult {
     let (input, _) = tag("#")(input)?;
     let (input, content) = is_not("\n")(input)?;
-    Ok((input, Token::Comment(content.to_owned())))
+    Ok((input, Token::Comment(content.to_string())))
 }
 
 /// If the given identifier string matches a command keyword, return the keyword;
@@ -252,35 +317,35 @@ fn is_valid_identifier_leading_character(chr: char) -> bool {
     chr.is_ascii_alphabetic() || chr == '_'
 }
 
-fn lex_identifier_raw(input: &str) -> IResult<&str, String> {
+fn lex_identifier_raw(input: LexInput) -> IResult<LexInput, String> {
     map(
         tuple((
             take_while1(is_valid_identifier_leading_character),
             take_while(is_valid_identifier_character),
         )),
-        |result| [result.0, result.1].concat(),
+        |(left, right)| format!("{}{}", left, right),
     )(input)
 }
 
-fn lex_command_or_identifier(input: &str) -> LexResult {
+fn lex_command_or_identifier(input: LexInput) -> LexResult {
     let (input, identifier) = lex_identifier_raw(input)?;
     let token = recognize_command_or_identifier(identifier);
     Ok((input, token))
 }
 
-fn lex_label(input: &str) -> LexResult {
+fn lex_label(input: LexInput) -> LexResult {
     let (input, _) = tag("@")(input)?;
     let (input, label) = lex_identifier_raw(input)?;
     Ok((input, Token::Label(label)))
 }
 
-fn lex_non_blocking(input: &str) -> LexResult {
+fn lex_non_blocking(input: LexInput) -> LexResult {
     value(Token::NonBlocking, tag("NONBLOCKING"))(input)
 }
 
-fn lex_number(input: &str) -> LexResult {
-    let (input, float_string): (&str, &str) = recognize(double)(input)?;
-    let integer_parse_result: IResult<&str, _> = all_consuming(digit1)(float_string);
+fn lex_number(input: LexInput) -> LexResult {
+    let (input, float_string): (LexInput, LexInput) = recognize(double)(input)?;
+    let integer_parse_result: IResult<LexInput, _> = all_consuming(digit1)(float_string);
     Ok((
         input,
         match integer_parse_result {
@@ -290,7 +355,7 @@ fn lex_number(input: &str) -> LexResult {
     ))
 }
 
-fn lex_modifier(input: &str) -> LexResult {
+fn lex_modifier(input: LexInput) -> LexResult {
     alt((
         value(Token::As, tag("AS")),
         value(Token::Matrix, tag("MATRIX")),
@@ -302,7 +367,7 @@ fn lex_modifier(input: &str) -> LexResult {
     ))(input)
 }
 
-fn lex_operator(input: &str) -> LexResult {
+fn lex_operator(input: LexInput) -> LexResult {
     use Operator::*;
     map(
         alt((
@@ -316,7 +381,7 @@ fn lex_operator(input: &str) -> LexResult {
     )(input)
 }
 
-fn lex_punctuation(input: &str) -> LexResult {
+fn lex_punctuation(input: LexInput) -> LexResult {
     use Token::*;
     alt((
         value(Colon, tag(":")),
@@ -331,14 +396,14 @@ fn lex_punctuation(input: &str) -> LexResult {
     ))(input)
 }
 
-fn lex_string(input: &str) -> LexResult {
+fn lex_string(input: LexInput) -> LexResult {
     map(
         delimited(tag("\""), take_until("\""), tag("\"")),
-        |v: &str| Token::String(v.to_owned()),
+        |v: LexInput| Token::String(v.to_string()),
     )(input)
 }
 
-fn lex_variable(input: &str) -> LexResult {
+fn lex_variable(input: LexInput) -> LexResult {
     map(preceded(tag("%"), lex_identifier_raw), |ident| {
         Token::Variable(ident)
     })(input)

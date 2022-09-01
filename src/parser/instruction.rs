@@ -24,6 +24,7 @@ use crate::{
     },
     token,
 };
+use crate::parser::nom_err_to_string;
 
 use super::{
     command, common,
@@ -36,7 +37,7 @@ use super::{
 /// Parse the next instructon from the input, skipping past leading newlines, comments, and semicolons.
 pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
     let (input, _) = common::skip_newlines_and_comments(input)?;
-    match input.split_first() {
+    match super::split_first_token(input) {
         None => Err(nom::Err::Error(Error {
             input,
             error: ErrorKind::EndOfInput,
@@ -105,12 +106,12 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
                     input: &input[..1],
                     error: ErrorKind::InvalidCommand {
                         command: command.clone(),
-                        error: format!("{}", err),
+                        error: nom_err_to_string(err),
                     },
                 })
             })
         }
-        Some((Token::NonBlocking, remainder)) => match remainder.split_first() {
+        Some((Token::NonBlocking, remainder)) => match super::split_first_token(remainder) {
             Some((Token::Command(command), remainder)) => match command {
                 Command::Pulse => command::parse_pulse(remainder, false),
                 Command::Capture => command::parse_capture(remainder, false),

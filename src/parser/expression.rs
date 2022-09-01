@@ -49,7 +49,7 @@ impl From<&Token> for Precedence {
 }
 
 fn get_precedence(input: ParserInput) -> Precedence {
-    match input.first() {
+    match super::first_token(input) {
         Some(v) => Precedence::from(v),
         None => Precedence::Lowest,
     }
@@ -64,7 +64,7 @@ pub fn parse_expression(input: ParserInput) -> ParserResult<Expression> {
 /// Recursively parse an expression as long as operator precedence is satisfied.
 fn parse(input: ParserInput, precedence: Precedence) -> ParserResult<Expression> {
     let (input, prefix) = opt(parse_prefix)(input)?;
-    let (mut input, mut left) = match input.split_first() {
+    let (mut input, mut left) = match super::split_first_token(input) {
         None => unexpected_eof!(input),
         Some((Token::Integer(value), remainder)) => {
             let (remainder, imaginary) = opt(parse_i)(remainder)?;
@@ -98,7 +98,7 @@ fn parse(input: ParserInput, precedence: Precedence) -> ParserResult<Expression>
     }
 
     while get_precedence(input) > precedence {
-        match input.first() {
+        match super::first_token(input) {
             None => return Ok((input, left)),
             Some(Token::Operator(_)) => {
                 let (remainder, expression) = parse_infix(input, left)?;
@@ -114,7 +114,7 @@ fn parse(input: ParserInput, precedence: Precedence) -> ParserResult<Expression>
 
 /// Returns successfully if the head of input is the identifier `i`, returns error otherwise.
 fn parse_i(input: ParserInput) -> ParserResult<()> {
-    match input.split_first() {
+    match super::split_first_token(input) {
         None => unexpected_eof!(input),
         Some((Token::Identifier(v), remainder)) if v == "i" => Ok((remainder, ())),
         Some((other_token, _)) => expected_token!(input, other_token, "i".to_owned()),
@@ -151,7 +151,7 @@ fn parse_expression_identifier(input: ParserInput) -> ParserResult<Expression> {
         return Ok((input, Expression::Address(memory_reference)));
     }
 
-    match input.split_first() {
+    match super::split_first_token(input) {
         None => unexpected_eof!(input),
         Some((Token::Identifier(ident), remainder)) => match ident.as_str() {
             "cis" => parse_function_call(remainder, ExpressionFunction::Cis),
@@ -176,7 +176,7 @@ fn parse_expression_identifier(input: ParserInput) -> ParserResult<Expression> {
 /// and then expect a closing right parenthesis.
 fn parse_grouped_expression(input: ParserInput) -> ParserResult<Expression> {
     let (input, expression) = parse(input, Precedence::Lowest)?;
-    match input.split_first() {
+    match super::split_first_token(input) {
         None => unexpected_eof!(input),
         Some((Token::RParenthesis, remainder)) => Ok((remainder, expression)),
         Some((other_token, _)) => {
@@ -188,7 +188,7 @@ fn parse_grouped_expression(input: ParserInput) -> ParserResult<Expression> {
 /// Parse an infix operator and then the expression to the right of the operator, and return the
 /// resulting infixed expression.
 fn parse_infix(input: ParserInput, left: Expression) -> ParserResult<Expression> {
-    match input.split_first() {
+    match super::split_first_token(input) {
         None => unexpected_eof!(input),
         Some((Token::Operator(token_operator), remainder)) => {
             let expression_operator = match token_operator {
@@ -213,7 +213,7 @@ fn parse_infix(input: ParserInput, left: Expression) -> ParserResult<Expression>
 
 /// Return the prefix operator at the beginning of the input, if any.
 fn parse_prefix(input: ParserInput) -> ParserResult<PrefixOperator> {
-    match input.split_first() {
+    match super::split_first_token(input) {
         None => unexpected_eof!(input),
         Some((Token::Operator(Operator::Minus), remainder)) => {
             Ok((remainder, PrefixOperator::Minus))
@@ -272,7 +272,7 @@ mod tests {
             let tokens = lex(case).unwrap();
             let (remainder, parsed) = parse_expression(&tokens).unwrap();
             assert_eq!(remainder.len(), 0);
-            assert_eq!(format!("{}", parsed), case);
+            assert_eq!(parsed.to_string(), case);
         }
     }
 
