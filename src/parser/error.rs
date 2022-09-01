@@ -16,7 +16,6 @@ use std::fmt;
 use std::fmt::Formatter;
 
 use super::lexer::{Command, Token};
-use nom::error::VerboseErrorKind as NomErrorKind;
 use crate::parser::lexer::{LexInput, TokenWithLocation};
 use crate::parser::ParserInput;
 
@@ -101,22 +100,16 @@ pub enum ErrorKind {
 
     /// An error occurred in an underlying nom parser.
     #[error("internal parsing error: {0:?}")]
-    Parser(NomErrorKind),
+    Parser(nom::error::ErrorKind),
 
     /// Literals specified in the input cannot be supported without loss of precision
     #[error("using this literal will result in loss of precision")]
     UnsupportedPrecision,
 }
 
-impl From<NomErrorKind> for ErrorKind {
-    fn from(k: NomErrorKind) -> Self {
-        ErrorKind::Parser(k)
-    }
-}
-
 impl From<nom::error::ErrorKind> for ErrorKind {
     fn from(k: nom::error::ErrorKind) -> Self {
-        Self::Parser(NomErrorKind::Nom(k))
+        ErrorKind::Parser(k)
     }
 }
 
