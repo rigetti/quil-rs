@@ -16,7 +16,7 @@ use std::fmt;
 use std::fmt::Formatter;
 
 use super::lexer::{Command, Token};
-use crate::parser::lexer::{LexInput, TokenWithLocation};
+use crate::parser::lexer::LexInput;
 use crate::parser::ParserInput;
 
 /// This is a superset of `(I, nom::ErrorKind)` that includes the additional errors specified by

@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::fmt;
-use std::fmt::Formatter;
 use nom::{
     branch::alt,
     bytes::complete::{is_a, is_not, tag, take_until, take_while, take_while1},
@@ -573,19 +571,19 @@ mod tests {
       DEFGATE HADAMARD AS MATRIX:
       \t(1/sqrt(2)),(1/sqrt(2))
       \t(1/sqrt(2)),((-1)/sqrt(2))
-      
+
       DEFGATE RX(%theta) AS MATRIX:
       \tcos((%theta/2)),((-1i)*sin((%theta/2)))
       \t((-1i)*sin((%theta/2))),cos((%theta/2))
-      
+
       DEFGATE Name AS PERMUTATION:
       \t1,0
       \t0,1
-      
+
       DEFCIRCUIT SIMPLE:
       \tX 0
       \tX 1
-      
+
       RX 0
       CZ 0 1
       MEASURE 0 ro[0]
@@ -594,24 +592,24 @@ mod tests {
       CAPTURE 0 \"out\" my_waveform() iq[0]
       DEFCAL X 0:
       \tPULSE 0 \"xy\" my_waveform()
-      
+
       DEFCAL RX(%theta) 0:
       \tPULSE 0 \"xy\" my_waveform()
-      
+
       DEFCAL MEASURE 0 dest:
       \tDECLARE iq REAL[2]
       \tCAPTURE 0 \"out\" flat(duration: 1000000, iqs: (2+3i)) iq[0]
-      
+
       DEFFRAME 0 \"xy\":
       \tSAMPLE-RATE: 3000
-      
+
       DEFFRAME 0 \"xy\":
       \tDIRECTION: \"rx\"
       \tCENTER-FREQUENCY: 1000
       \tHARDWARE-OBJECT: \"some object\"
       \tINITIAL-FREQUENCY: 2000
       \tSAMPLE-RATE: 3000
-      
+
       DELAY 0 100
       DELAY 0 \"xy\" 100000000
       FENCE 0
