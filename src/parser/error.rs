@@ -58,7 +58,7 @@ impl fmt::Display for Error<ParserInput<'_>> {
                 token.column(),
                 token.as_token(),
                 self.error,
-            )
+            ),
         }
     }
 }
@@ -73,18 +73,12 @@ pub enum ErrorKind {
     #[error("expected {0}, found EOF")]
     UnexpectedEOF(String),
     #[error("expected {expected}, found {actual:?}")]
-    ExpectedToken {
-        actual: Token,
-        expected: String,
-    },
+    ExpectedToken { actual: Token, expected: String },
 
     /// Tried to parse a kind of command and couldn't
     /// TODO: Wrap actual error, the string is a lifetime cop-out
     #[error("failed to parse arguments for {command}: {error}")]
-    InvalidCommand {
-        command: Command,
-        error: String,
-    },
+    InvalidCommand { command: Command, error: String },
 
     /// Unexpected start of an instruction
     #[error("expected a command or a gate")]

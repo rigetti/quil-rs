@@ -184,18 +184,31 @@ pub enum Operator {
 }
 
 pub type LexInput<'a> = LocatedSpan<&'a str>;
-pub type LexResult<'a, T=Token, E=nom::error::Error<LexInput<'a>>> = IResult<LexInput<'a>, T, E>;
+pub type LexResult<'a, T = Token, E = nom::error::Error<LexInput<'a>>> =
+    IResult<LexInput<'a>, T, E>;
 
-fn token_with_location<'i, E, P>(mut parser: P) -> impl FnMut(LexInput<'i>) -> LexResult<'i, TokenWithLocation, E>
-    where P: nom::Parser<LexInput<'i>, Token, E>,
-          E: nom::error::ParseError<LexInput<'i>>,
+fn token_with_location<'i, E, P>(
+    mut parser: P,
+) -> impl FnMut(LexInput<'i>) -> LexResult<'i, TokenWithLocation, E>
+where
+    P: nom::Parser<LexInput<'i>, Token, E>,
+    E: nom::error::ParseError<LexInput<'i>>,
 {
     move |input| {
         let line = input.location_line();
         // TODO: naive_get_utf8_column might be faster for shorter lines
         let column = input.get_utf8_column();
         // Using this syntax because map(parser, || ...)(input) has lifetime issues for parser.
-        parser.parse(input).map(|(leftover, token)| (leftover, TokenWithLocation { token, line, column }))
+        parser.parse(input).map(|(leftover, token)| {
+            (
+                leftover,
+                TokenWithLocation {
+                    token,
+                    line,
+                    column,
+                },
+            )
+        })
     }
 }
 

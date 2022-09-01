@@ -18,13 +18,13 @@ use nom::{
     sequence::{delimited, preceded},
 };
 
+use crate::parser::nom_err_to_string;
 use crate::{
     instruction::{
         ArithmeticOperator, BinaryOperator, ComparisonOperator, Instruction, UnaryOperator,
     },
     token,
 };
-use crate::parser::nom_err_to_string;
 
 use super::{
     command, common,

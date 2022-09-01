@@ -326,8 +326,8 @@ mod describe_skip_newlines_and_comments {
 
 #[cfg(test)]
 mod tests {
-    use crate::{expression::Expression, instruction::MemoryReference, parser::lex, real};
     use crate::parser::lexer::Token;
+    use crate::{expression::Expression, instruction::MemoryReference, parser::lex, real};
 
     use super::parse_waveform_invocation;
 
@@ -336,7 +336,11 @@ mod tests {
         let input = "wf(a: 1.0, b: %var, c: ro[0])";
         let lexed = lex(input).unwrap();
         let (remainder, waveform) = parse_waveform_invocation(&lexed).unwrap();
-        assert!(remainder.is_empty(), "expected remainder to be empty, got {:?}", remainder);
+        assert!(
+            remainder.is_empty(),
+            "expected remainder to be empty, got {:?}",
+            remainder
+        );
         assert_eq!(
             waveform.parameters,
             vec![

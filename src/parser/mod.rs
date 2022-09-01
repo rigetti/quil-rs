@@ -14,12 +14,12 @@
 
 use nom::IResult;
 
+use crate::parser::lexer::TokenWithLocation;
 use error::Error;
 pub(crate) use expression::parse_expression;
 pub(crate) use instruction::parse_instructions;
 pub(crate) use lexer::lex;
 use lexer::Token;
-use crate::parser::lexer::TokenWithLocation;
 
 mod command;
 mod gate;
@@ -35,7 +35,9 @@ type ParserInput<'a> = &'a [TokenWithLocation];
 type ParserResult<'a, R> = IResult<&'a [TokenWithLocation], R, Error<&'a [TokenWithLocation]>>;
 
 pub(crate) fn split_first_token(input: ParserInput) -> Option<(&Token, &[TokenWithLocation])> {
-    input.split_first().map(|(first, rest)| (first.as_token(), rest))
+    input
+        .split_first()
+        .map(|(first, rest)| (first.as_token(), rest))
 }
 
 pub(crate) fn first_token(input: ParserInput) -> Option<&Token> {
