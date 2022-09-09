@@ -14,12 +14,9 @@
 
 use nom::IResult;
 
-use crate::parser::lexer::TokenWithLocation;
-use error::Error;
 pub(crate) use expression::parse_expression;
 pub(crate) use instruction::parse_instructions;
 pub(crate) use lexer::lex;
-use lexer::Token;
 
 mod command;
 mod gate;
@@ -30,9 +27,14 @@ mod error;
 mod expression;
 pub(crate) mod instruction;
 mod lexer;
+mod token;
+
+pub use lexer::{LexError, LexErrorKind};
+pub use error::ParseError;
+pub use token::{Token, TokenWithLocation};
 
 type ParserInput<'a> = &'a [TokenWithLocation];
-type ParserResult<'a, R> = IResult<&'a [TokenWithLocation], R, Error<&'a [TokenWithLocation]>>;
+type ParserResult<'a, R> = IResult<&'a [TokenWithLocation], R, ParseError<R>>;
 
 pub(crate) fn split_first_token(input: ParserInput) -> Option<(&Token, &[TokenWithLocation])> {
     input
@@ -44,10 +46,11 @@ pub(crate) fn first_token(input: ParserInput) -> Option<&Token> {
     input.first().map(TokenWithLocation::as_token)
 }
 
-pub(crate) fn nom_err_to_string<E: std::error::Error>(err: nom::Err<E>) -> String {
-    match &err {
-        nom::Err::Incomplete(_) => err.to_string(),
-        nom::Err::Error(err) => format!("Parsing error: {}", err),
-        nom::Err::Failure(err) => format!("Parsing failure: {}", err),
+pub(crate) fn extract_nom_err<E: std::error::Error>(err: nom::Err<E>) -> E {
+    // If this ever panics, switch to returning an Option
+    match err {
+        nom::Err::Incomplete(_) => unreachable!("can't be incomplete if all parsers are complete variants"),
+        nom::Err::Error(inner) => inner,
+        nom::Err::Failure(inner) => inner,
     }
 }

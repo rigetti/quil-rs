@@ -12,32 +12,66 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::error::Error;
+use std::fmt;
+use std::fmt::Formatter;
 use thiserror::Error;
 
 use crate::instruction::Instruction;
+use crate::parser::{LexError, ParseError, Token, TokenWithLocation};
+use crate::Program;
 
-#[derive(Debug, Error, PartialEq)]
+#[derive(Debug)]
 pub enum ProgramError {
-    #[error("invalid calibration `{0}`: {message}")]
     InvalidCalibration {
         instruction: Instruction,
         message: String,
     },
-
-    #[error("instruction {0} expands into itself")]
     RecursiveCalibration(Instruction),
+    LexError(LexError<Vec<TokenWithLocation>>),
+    ParsingError(ParseError<Program>),
+}
 
-    #[error("There was leftover input after lexing: {0}")]
-    LeftoverInputAfterLexing(String),
+impl From<LexError<Vec<TokenWithLocation>>> for ProgramError {
+    fn from(e: LexError<Vec<TokenWithLocation>>) -> Self {
+        Self::LexError(e)
+    }
+}
 
-    #[error("Incomplete parse: {0}")]
-    IncompleteParse(String),
+impl From<ParseError<Program>> for ProgramError {
+    fn from(e: ParseError<Program>) -> Self {
+        Self::ParsingError(e)
+    }
+}
 
-    #[error("Recoverable error while parsing: {0}")]
-    RecoverableParsingError(String),
+impl fmt::Display for ProgramError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::InvalidCalibration { instruction, message } => write!(f, "invalid calibration `{}`: {}", instruction, message),
+            Self::RecursiveCalibration(instruction) => write!(f, "instruction {} expands into itself", instruction),
+            Self::LexError(error) => if f.alternate() {
+                write!(f, "error while lexing: {:#}", error)
+            } else {
+                write!(f, "error while lexing: {}", error)
+            },
+            Self::ParsingError(error) => if f.alternate() {
+                write!(f, "error while parsing: {:#}", error)
+            } else {
+                write!(f, "error while parsing: {}", error)
+            },
+        }
+    }
+}
 
-    #[error("Unrecoverable error while parsing: {0}")]
-    UnrecoverableParsingError(String),
+impl std::error::Error for ProgramError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            Self::InvalidCalibration { .. } => None,
+            Self::RecursiveCalibration(_) => None,
+            Self::LexError(err) => Some(err),
+            Self::ParsingError(err) => Some(err),
+        }
+    }
 }
 
 pub type ProgramResult<T> = Result<T, ProgramError>;

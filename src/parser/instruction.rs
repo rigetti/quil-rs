@@ -18,17 +18,18 @@ use nom::{
     sequence::{delimited, preceded},
 };
 
-use crate::parser::nom_err_to_string;
+use crate::parser::extract_nom_err;
 use crate::{
     instruction::{
         ArithmeticOperator, BinaryOperator, ComparisonOperator, Instruction, UnaryOperator,
     },
     token,
 };
+use crate::parser::error::ErrorKind;
 
 use super::{
     command, common,
-    error::{Error, ErrorKind},
+    error::{ParseError, ParserErrorKind},
     gate,
     lexer::{Command, Token},
     ParserInput, ParserResult,
@@ -38,10 +39,9 @@ use super::{
 pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
     let (input, _) = common::skip_newlines_and_comments(input)?;
     match super::split_first_token(input) {
-        None => Err(nom::Err::Error(Error {
-            input,
-            error: ErrorKind::EndOfInput,
-        })),
+        None => Err(nom::Err::Error(ParseError::new(
+            input,ErrorKind::Other(ParserErrorKind::EndOfInput),
+        ))),
         Some((Token::Command(command), remainder)) => {
             match command {
                 Command::Add => command::parse_arithmetic(ArithmeticOperator::Add, remainder),
@@ -96,19 +96,20 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
                 Command::Sub => command::parse_arithmetic(ArithmeticOperator::Subtract, remainder),
                 // Command::Wait => {}
                 Command::Xor => command::parse_logical_binary(BinaryOperator::Xor, remainder),
-                _ => Err(nom::Err::Failure(Error {
-                    input: &input[..1],
-                    error: ErrorKind::UnsupportedInstruction,
-                })),
+                other => Err(nom::Err::Failure(ParseError::new(
+                    &input[..1],
+                    ParserErrorKind::UnsupportedInstruction(*other),
+                ))),
             }
             .map_err(|err| {
-                nom::Err::Failure(Error {
-                    input: &input[..1],
-                    error: ErrorKind::InvalidCommand {
-                        command: command.clone(),
-                        error: nom_err_to_string(err),
-                    },
-                })
+                nom::Err::Failure(
+                    ParseError::from_other(
+                        &input[..1],
+                        ParserErrorKind::InvalidCommand {
+                            command: command.clone(),
+                        }
+                    ).with_previous(extract_nom_err(err))
+                )
             })
         }
         Some((Token::NonBlocking, remainder)) => match super::split_first_token(remainder) {
@@ -121,10 +122,10 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
             _ => todo!(),
         },
         Some((Token::Identifier(_), _)) | Some((Token::Modifier(_), _)) => gate::parse_gate(input),
-        Some((_, _)) => Err(nom::Err::Failure(Error {
-            input: &input[..1],
-            error: ErrorKind::NotACommandOrGate,
-        })),
+        Some((_, _)) => Err(nom::Err::Failure(ParseError::new(
+            &input[..1],
+            ParserErrorKind::NotACommandOrGate,
+        ))),
     }
 }
 

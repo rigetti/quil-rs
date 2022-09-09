@@ -14,11 +14,13 @@
 
 use std::collections::{BTreeMap, HashSet};
 use std::str::FromStr;
+use nom::Finish;
 
 use crate::instruction::{
     Declaration, FrameDefinition, FrameIdentifier, Instruction, Qubit, Waveform, WaveformDefinition,
 };
-use crate::parser::{lex, parse_instructions};
+use crate::parser::{lex, parse_instructions, ParseError};
+use crate::program::ProgramError::ParsingError;
 
 pub use self::calibration::CalibrationSet;
 pub use self::error::ProgramError;
@@ -193,21 +195,22 @@ impl Program {
 impl FromStr for Program {
     type Err = ProgramError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let lexed = lex(s).map_err(ProgramError::LeftoverInputAfterLexing)?;
-        let (_, instructions) = parse_instructions(&lexed).map_err(|err| match err {
-            nom::Err::Incomplete(needed) => ProgramError::IncompleteParse(format!("{:?}", needed)),
-            nom::Err::Error(error) => ProgramError::RecoverableParsingError(format!("{}", error)),
-            nom::Err::Failure(failure) => {
-                ProgramError::UnrecoverableParsingError(format!("{}", failure))
+        let lexed = lex(s).map_err(ProgramError::LexError)?;
+        let map = |instructions| {
+            let mut program = Self::new();
+            for instruction in instructions {
+                program.add_instruction(instruction)
             }
-        })?;
-        let mut program = Self::new();
+            program
+        };
+        let (leftover, instructions) = parse_instructions(&lexed)
+            // Will panic if error is Err::Incomplete, which only happens if using streaming variants of
+            // parsers. We do not currently do this (as of 2022-09-08).
+            .finish()
+            .map_err(|err| err.map_parsed(map))?;
 
-        for instruction in instructions {
-            program.add_instruction(instruction)
-        }
-
-        Ok(program)
+        ParseError::from_leftover(lexed.as_slice(), leftover, map(instructions))
+            .map_err(ProgramError::from)
     }
 }
 
