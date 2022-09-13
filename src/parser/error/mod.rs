@@ -57,4 +57,3 @@ pub enum ParserErrorKind {
     #[error("using this literal will result in loss of precision")]
     UnsupportedPrecision,
 }
-

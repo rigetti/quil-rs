@@ -27,6 +27,7 @@ use crate::instruction::{
     Waveform, WaveformDefinition,
 };
 use crate::parser::common::parse_variable_qubit;
+
 use crate::parser::instruction::parse_block;
 use crate::token;
 
