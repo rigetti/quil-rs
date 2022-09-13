@@ -19,11 +19,14 @@ impl ErrorInput for LexInput<'_> {
 
     fn snippet(&self) -> String {
         std::str::from_utf8(self.get_line_beginning())
-            .map(|s| if s.len() == self.len() {
-                format!("\"{}\"", s)
-            } else {
-                format!("\"{}\"...", s)
-            }).unwrap_or_default()
+            .map(|s| {
+                if s.len() == self.len() {
+                    format!("\"{}\"", s)
+                } else {
+                    format!("\"{}\"...", s)
+                }
+            })
+            .unwrap_or_default()
     }
 
     fn is_empty(&self) -> bool {
@@ -52,6 +55,24 @@ impl ErrorInput for ParserInput<'_> {
     }
 }
 
+impl ErrorInput for &Vec<TokenWithLocation> {
+    fn line(&self) -> u32 {
+        self.as_slice().line()
+    }
+
+    fn column(&self) -> usize {
+        self.as_slice().column()
+    }
+
+    fn snippet(&self) -> String {
+        self.as_slice().snippet()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.as_slice().is_empty()
+    }
+}
+
 impl ErrorInput for Vec<TokenWithLocation> {
     fn line(&self) -> u32 {
         self.as_slice().line()
@@ -69,3 +90,4 @@ impl ErrorInput for Vec<TokenWithLocation> {
         self.as_slice().is_empty()
     }
 }
+
