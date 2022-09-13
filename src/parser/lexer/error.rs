@@ -6,7 +6,7 @@ pub type LexError = Error<LexErrorKind>;
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub enum LexErrorKind {
     #[error("general error: {0:?}")]
-    InternalError(nom::error::ErrorKind),
+    InternalError(ErrorKind),
     #[error("expected {0:?}")]
     ExpectedString(&'static str),
     #[error("expected {0}")]
