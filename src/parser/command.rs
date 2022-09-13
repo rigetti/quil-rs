@@ -49,6 +49,7 @@ pub fn parse_arithmetic(
     let (input, destination_memory_reference) = common::parse_memory_reference(input)?;
     let destination = ArithmeticOperand::MemoryReference(destination_memory_reference);
     let (input, source) = common::parse_arithmetic_operand(input)?;
+
     Ok((
         input,
         Instruction::Arithmetic(Arithmetic {

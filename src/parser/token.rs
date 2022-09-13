@@ -1,6 +1,6 @@
+use crate::parser::lexer::{Command, DataType, LexInput, LexResult, Modifier, Operator};
 use std::fmt;
 use std::fmt::Formatter;
-use crate::parser::lexer::{Command, DataType, LexInput, LexResult, Modifier, Operator};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TokenWithLocation {
@@ -43,9 +43,9 @@ impl nom::InputLength for TokenWithLocation {
 pub(crate) fn token_with_location<'i, E, P>(
     mut parser: P,
 ) -> impl FnMut(LexInput<'i>) -> LexResult<'i, TokenWithLocation, E>
-    where
-        P: nom::Parser<LexInput<'i>, Token, E>,
-        E: nom::error::ParseError<LexInput<'i>>,
+where
+    P: nom::Parser<LexInput<'i>, Token, E>,
+    E: nom::error::ParseError<LexInput<'i>>,
 {
     move |input| {
         let line = input.location_line();

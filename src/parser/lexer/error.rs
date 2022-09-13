@@ -1,4 +1,5 @@
 use crate::parser::error::Error;
+
 use nom::error::ErrorKind;
 
 pub type LexError = Error<LexErrorKind>;
@@ -18,4 +19,3 @@ impl From<ErrorKind> for LexErrorKind {
         Self::InternalError(kind)
     }
 }
-
