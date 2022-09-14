@@ -22,7 +22,7 @@ use crate::{
     },
 };
 
-use super::error::{ProgramError, ProgramResult};
+use super::error::{ProgramError};
 
 /// A collection of Quil calibrations (`DEFCAL` instructions) with utility methods.
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -60,7 +60,7 @@ impl CalibrationSet {
         &self,
         instruction: &Instruction,
         previous_calibrations: &[Instruction],
-    ) -> ProgramResult<Option<Vec<Instruction>>> {
+    ) -> super::Result<Option<Vec<Instruction>>> {
         if previous_calibrations.contains(instruction) {
             return Err(ProgramError::RecursiveCalibration(instruction.clone()));
         }

@@ -29,12 +29,16 @@ pub(crate) mod instruction;
 mod lexer;
 mod token;
 
+pub use error::{
+    InternalParseError, ParseError,
+    ParserErrorKind
+};
 pub use lexer::{LexError, LexErrorKind};
-pub use error::ParseError;
 pub use token::{Token, TokenWithLocation};
+pub(crate) use error::ErrorInput;
 
 type ParserInput<'a> = &'a [TokenWithLocation];
-type ParserResult<'a, R> = IResult<&'a [TokenWithLocation], R, ParseError<R>>;
+type ParserResult<'a, R> = IResult<&'a [TokenWithLocation], R, ParseError>;
 
 pub(crate) fn split_first_token(input: ParserInput) -> Option<(&Token, &[TokenWithLocation])> {
     input

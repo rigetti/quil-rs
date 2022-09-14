@@ -26,7 +26,7 @@ use proptest_derive::Arbitrary;
 
 use crate::parser::{lex, parse_expression};
 use crate::{imag, instruction::MemoryReference, real};
-use crate::program::ProgramError;
+use crate::program::{ProgramError, disallow_leftover};
 
 /// The different possible types of errors that could occur during expression evaluation.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -412,12 +412,11 @@ impl Expression {
 }
 
 impl FromStr for Expression {
-    type Err = ProgramError;
+    type Err = ProgramError<Self>;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let tokens = lex(s)?;
-        let (extra, expression) = parse_expression(&tokens)?;
-        ProgramError::check_complete(extra).map(|_| expression)
+        disallow_leftover(parse_expression(&tokens))
     }
 }
 

@@ -14,16 +14,14 @@
 
 use std::collections::{BTreeMap, HashSet};
 use std::str::FromStr;
-use nom::Finish;
 
 use crate::instruction::{
     Declaration, FrameDefinition, FrameIdentifier, Instruction, Qubit, Waveform, WaveformDefinition,
 };
-use crate::parser::{lex, parse_instructions, ParseError};
-use crate::program::ProgramError::ParsingError;
+use crate::parser::{lex, parse_instructions};
 
 pub use self::calibration::CalibrationSet;
-pub use self::error::ProgramError;
+pub use self::error::{ProgramError, disallow_leftover, map_parsed, recover, convert_leftover};
 pub use self::frame::FrameSet;
 pub use self::memory::MemoryRegion;
 
@@ -33,6 +31,8 @@ pub(crate) mod frame;
 pub mod graph;
 mod memory;
 pub mod type_check;
+
+pub type Result<O> = std::result::Result<O, ProgramError<O>>;
 
 #[cfg(feature = "graphviz-dot")]
 pub mod graphviz_dot;
@@ -95,12 +95,12 @@ impl Program {
     /// Expand any instructions in the program which have a matching calibration, leaving the others
     /// unchanged. Recurses though each instruction while ensuring there is no cycle in the expansion
     /// graph (i.e. no calibration expands directly or indirectly into itself)
-    pub fn expand_calibrations(&self) -> error::ProgramResult<Self> {
+    pub fn expand_calibrations(&self) -> Result<Self> {
         let mut expanded_instructions: Vec<Instruction> = vec![];
 
         // TODO: Do this more efficiently, possibly with Vec::splice
         for instruction in &self.instructions {
-            match self.calibrations.expand(instruction, &[])? {
+            match convert_leftover(self.calibrations.expand(instruction, &[]))? {
                 Some(expanded) => {
                     expanded_instructions.extend(expanded.into_iter());
                 }
@@ -193,24 +193,18 @@ impl Program {
 }
 
 impl FromStr for Program {
-    type Err = ProgramError;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    type Err = ProgramError<Self>;
+    fn from_str(s: &str) -> Result<Self> {
         let lexed = lex(s).map_err(ProgramError::LexError)?;
-        let map = |instructions| {
-            let mut program = Self::new();
-            for instruction in instructions {
-                program.add_instruction(instruction)
-            }
-            program
-        };
-        let (leftover, instructions) = parse_instructions(&lexed)
-            // Will panic if error is Err::Incomplete, which only happens if using streaming variants of
-            // parsers. We do not currently do this (as of 2022-09-08).
-            .finish()
-            .map_err(|err| err.map_parsed(map))?;
-
-        ParseError::from_leftover(lexed.as_slice(), leftover, map(instructions))
-            .map_err(ProgramError::from)
+        map_parsed(
+            disallow_leftover(parse_instructions(&lexed)),
+            |instructions| {
+                let mut program = Self::new();
+                for instruction in instructions {
+                    program.add_instruction(instruction)
+                }
+                program
+            })
     }
 }
 

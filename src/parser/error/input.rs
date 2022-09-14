@@ -1,22 +1,14 @@
-use nom_locate::LocatedSpan;
 use crate::parser::lexer::LexInput;
 use crate::parser::{ParserInput, TokenWithLocation};
 
-pub(crate) trait ErrorInput {
-    type OwnedInput: OwnedErrorInput;
+pub trait ErrorInput {
     fn line(&self) -> u32;
     fn column(&self) -> usize;
     fn snippet(&self) -> String;
     fn is_empty(&self) -> bool;
-    fn into_owned(self) -> Self::OwnedInput;
 }
 
-pub(crate) trait OwnedErrorInput: ErrorInput + 'static {}
-impl<I> OwnedErrorInput for I where I: ErrorInput + 'static {}
-
 impl ErrorInput for LexInput<'_> {
-    type OwnedInput = OwnedStringInput;
-
     fn line(&self) -> u32 {
         self.location_line()
     }
@@ -37,14 +29,9 @@ impl ErrorInput for LexInput<'_> {
     fn is_empty(&self) -> bool {
         self.len() == 0
     }
-
-    fn into_owned(self) -> Self::OwnedInput {
-        Self::OwnedInput::from(self)
-    }
 }
 
 impl ErrorInput for ParserInput<'_> {
-    type OwnedInput = Vec<TokenWithLocation>;
     fn line(&self) -> u32 {
         self.iter().map(|token| token.line()).next().unwrap_or(1)
     }
@@ -63,15 +50,9 @@ impl ErrorInput for ParserInput<'_> {
     fn is_empty(&self) -> bool {
         self.len() == 0
     }
-
-    fn into_owned(self) -> Self::OwnedInput {
-        self.to_vec()
-    }
 }
 
 impl ErrorInput for Vec<TokenWithLocation> {
-    type OwnedInput = Self;
-
     fn line(&self) -> u32 {
         self.as_slice().line()
     }
@@ -86,67 +67,5 @@ impl ErrorInput for Vec<TokenWithLocation> {
 
     fn is_empty(&self) -> bool {
         self.as_slice().is_empty()
-    }
-
-    fn into_owned(self) -> Self::OwnedInput {
-        self
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct OwnedStringInput {
-    input: String,
-    line: u32,
-    column: usize,
-    offset: usize,
-}
-
-impl From<LexInput<'_>> for OwnedStringInput {
-    fn from(input: LexInput<'_>) -> Self {
-        Self {
-            input: input.fragment().to_string(),
-            line: input.line(),
-            column: input.column(),
-            offset: input.location_offset(),
-        }
-    }
-}
-
-impl OwnedStringInput {
-    pub fn as_lex_input(&self) -> LexInput {
-        // We reused values from a LocatedSpan, with the one difference of
-        // converting a &str to a String. So this should be safe to do.
-        unsafe {
-            LocatedSpan::new_from_raw_offset(
-                self.offset,
-                self.line,
-                &self.input,
-                ()
-            )
-        }
-    }
-}
-
-impl ErrorInput for OwnedStringInput {
-    type OwnedInput = Self;
-
-    fn line(&self) -> u32 {
-        self.line
-    }
-
-    fn column(&self) -> usize {
-        self.column
-    }
-
-    fn snippet(&self) -> String {
-        self.as_lex_input().snippet()
-    }
-
-    fn is_empty(&self) -> bool {
-        self.input.is_empty()
-    }
-
-    fn into_owned(self) -> Self::OwnedInput {
-        self
     }
 }

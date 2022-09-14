@@ -15,8 +15,6 @@
 mod error;
 mod wrapped_parsers;
 
-use std::fmt;
-use std::fmt::Formatter;
 use nom::{bytes::complete::{is_a, is_not, take_until, take_while, take_while1}, character::complete::{digit1, one_of}, combinator::{all_consuming, map, recognize, value}, multi::many0, number::complete::double, sequence::{delimited, preceded, terminated, tuple}, IResult, Finish};
 use nom_locate::LocatedSpan;
 use wrapped_parsers::{alt, tag};
@@ -117,11 +115,11 @@ pub enum Operator {
 
 type InternalLexError<'a> = nom::error::Error<LexInput<'a>>;
 pub type LexInput<'a> = LocatedSpan<&'a str>;
-pub type LexResult<'a, T = Token, E = LexError<T>> =
+pub type LexResult<'a, T = Token, E = LexError> =
     IResult<LexInput<'a>, T, E>;
 
 /// Completely lex a string, returning the tokens within. Panics if the string cannot be completely read.
-pub(crate) fn lex(input: &str) -> Result<Vec<TokenWithLocation>, LexError<Vec<TokenWithLocation>>> {
+pub(crate) fn lex(input: &str) -> Result<Vec<TokenWithLocation>, LexError> {
     let input = LocatedSpan::new(input);
     all_consuming(_lex)(input)
         .finish()

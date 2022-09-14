@@ -1,8 +1,7 @@
 use nom::error::ErrorKind;
-use crate::parser::error::{Error, OwnedStringInput};
-use super::LexInput;
+use crate::parser::error::Error;
 
-pub type LexError<O> = Error<OwnedStringInput, O, LexErrorKind>;
+pub type LexError = Error<LexErrorKind>;
 
 #[derive(Debug, thiserror::Error, PartialEq)]
 pub enum LexErrorKind {

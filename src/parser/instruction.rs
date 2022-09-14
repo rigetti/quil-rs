@@ -25,7 +25,6 @@ use crate::{
     },
     token,
 };
-use crate::parser::error::ErrorKind;
 
 use super::{
     command, common,
@@ -39,8 +38,8 @@ use super::{
 pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
     let (input, _) = common::skip_newlines_and_comments(input)?;
     match super::split_first_token(input) {
-        None => Err(nom::Err::Error(ParseError::new(
-            input,ErrorKind::Other(ParserErrorKind::EndOfInput),
+        None => Err(nom::Err::Error(ParseError::from_other(
+            input,ParserErrorKind::EndOfInput,
         ))),
         Some((Token::Command(command), remainder)) => {
             match command {
@@ -96,7 +95,7 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
                 Command::Sub => command::parse_arithmetic(ArithmeticOperator::Subtract, remainder),
                 // Command::Wait => {}
                 Command::Xor => command::parse_logical_binary(BinaryOperator::Xor, remainder),
-                other => Err(nom::Err::Failure(ParseError::new(
+                other => Err(nom::Err::Failure(ParseError::from_other(
                     &input[..1],
                     ParserErrorKind::UnsupportedInstruction(*other),
                 ))),
@@ -122,7 +121,7 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
             _ => todo!(),
         },
         Some((Token::Identifier(_), _)) | Some((Token::Modifier(_), _)) => gate::parse_gate(input),
-        Some((_, _)) => Err(nom::Err::Failure(ParseError::new(
+        Some((_, _)) => Err(nom::Err::Failure(ParseError::from_other(
             &input[..1],
             ParserErrorKind::NotACommandOrGate,
         ))),

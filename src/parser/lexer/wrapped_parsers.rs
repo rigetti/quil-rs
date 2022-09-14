@@ -1,12 +1,10 @@
 use std::fmt;
-use nom::{IResult, Parser};
+use nom::Parser;
 use nom::branch::{alt as nom_alt, Alt};
 use nom::bytes::complete::tag as nom_tag;
 use nom::error::ParseError;
 use crate::parser::error::ErrorKind;
 use super::{LexError, LexErrorKind, LexInput, LexResult};
-
-type NomError<'a> = nom::error::Error<LexInput<'a>>;
 
 pub(crate) fn map_err<'a, P, F, O, E1, E2>(mut parser: P, mapper: F) -> impl FnMut(LexInput<'a>) -> LexResult<'a, O, E2>
     where P: Parser<LexInput<'a>, O, E1>,

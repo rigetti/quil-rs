@@ -14,49 +14,21 @@
 
 mod error;
 mod kind;
-mod leftover;
 mod internal;
-mod result;
 mod input;
 
-use std::convert::Infallible;
-use std::fmt;
-use std::fmt::Formatter;
-use nom::error::Error as NomError;
-use nom::{IResult, Parser};
-use serde::Serializer;
-use thiserror::private::AsDynError;
-
 use super::lexer::{Command, Token};
-use crate::parser::lexer::LexInput;
-use crate::parser::{ParserInput, TokenWithLocation};
 
 pub use error::Error;
 pub use kind::ErrorKind;
-pub use leftover::LeftoverError;
 pub use internal::InternalParseError;
-//pub use result::ParserResult;
 pub(crate) use input::ErrorInput;
-pub use input::OwnedStringInput;
 
-pub type ParseError<O> = Error<Vec<TokenWithLocation>, O, ParserErrorKind>;
-
-pub(crate) fn ignore_leftover_error<P, I, O, O2, E>(mut parser: P) -> impl FnMut(I) -> IResult<I, O, Error<I::OwnedInput, O2, E>>
-    where P: Parser<I, O, Error<I::OwnedInput, O, E>>,
-          I: ErrorInput,
-          O: fmt::Debug,
-          E: std::error::Error,
-{
-    move |input| {
-        parser.parse(input).map_err(|err| err.map(|err| err.convert_not_leftover()))
-    }
-}
-
-
+pub type ParseError = Error<ParserErrorKind>;
 
 /// Parsing errors specific to Quil parsing
 #[allow(dead_code)]
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, PartialEq)]
 pub enum ParserErrorKind {
     // TODO: can this be static str?
     #[error("expected {0}, found EOF")]
