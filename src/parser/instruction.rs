@@ -105,7 +105,7 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
                     ParseError::from_other(
                         &input[..1],
                         ParserErrorKind::InvalidCommand {
-                            command: command.clone(),
+                            command: *command,
                         }
                     ).with_previous(extract_nom_err(err))
                 )

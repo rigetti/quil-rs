@@ -29,7 +29,7 @@ pub(crate) fn expecting<'a, O, E, P>(context: &'static str, mut parser: P) -> im
 {
     move |input| {
         parser.parse(input).map_err(|err| {
-            let new_err = LexError::from_other(input.clone(), LexErrorKind::ExpectedContext(context));
+            let new_err = LexError::from_other(input, LexErrorKind::ExpectedContext(context));
             match err {
                 nom::Err::Incomplete(needed) => nom::Err::Incomplete(needed),
                 nom::Err::Error(_) => nom::Err::Error(new_err),

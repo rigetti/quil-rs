@@ -326,7 +326,6 @@ mod describe_skip_newlines_and_comments {
 
 #[cfg(test)]
 mod tests {
-    use crate::parser::lexer::Token;
     use crate::{expression::Expression, instruction::MemoryReference, parser::lex, real};
 
     use super::parse_waveform_invocation;
