@@ -173,7 +173,7 @@ pub fn parse_permutation<'a>(input: ParserInput<'a>) -> ParserResult<'a, Vec<Vec
         many1(token!(Indentation)),
         separated_list0(token!(Comma), parse_expression),
     )(input)?;
-    let matrix: Vec<Expression> = matrix
+    let matrix = matrix
         .into_iter()
         .map(|expr| {
             if let Expression::Number(_) = expr {
@@ -458,6 +458,9 @@ mod tests {
         let input = "\t1/sqrt(2), 1/sqrt(2)\n\t1/sqrt(2), -1/sqrt(2)";
         let lexed = lex(input).unwrap();
         let res = parse_permutation(&lexed);
-        assert!(res.is_err(), "complex expressions are invalid for permutation");
+        assert!(
+            res.is_err(),
+            "complex expressions are invalid for permutation"
+        );
     }
 }

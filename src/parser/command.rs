@@ -702,9 +702,11 @@ mod tests {
     make_test!(
         defgate,
         parse_defgate,
-        "HADAMARD:\n\t1/sqrt(2), 1/sqrt(2)\n\t1/sqrt(2), -1/sqrt(2)",
+        r#"H:
+            1/sqrt(2), 1/sqrt(2)
+            1/sqrt(2), -1/sqrt(2)"#,
         Instruction::GateDefinition(GateDefinition {
-            name: "HADAMARD".to_string(),
+            name: "H".to_string(),
             parameters: vec![],
             matrix: vec![
                 vec![
@@ -754,7 +756,9 @@ mod tests {
     make_test!(
         defgate_parameterized,
         parse_defgate,
-        "RX(%theta):\n\tcos(%theta/2), -i*sin(%theta/2)\n\t-i*sin(%theta/2), cos(%theta/2)",
+        r#"RX(%theta):
+            cos(%theta/2), -i*sin(%theta/2)
+            -i*sin(%theta/2), cos(%theta/2)"#,
         Instruction::GateDefinition(GateDefinition {
             name: "RX".to_string(),
             parameters: vec!["theta".to_string()],
@@ -817,7 +821,8 @@ mod tests {
     make_test!(
         defgate_permutation,
         parse_defgate,
-        "CCNOT AS PERMUTATION:\n\t0, 1, 2, 3, 4, 5, 7, 6",
+        r#"CCNOT AS PERMUTATION:
+            0, 1, 2, 3, 4, 5, 7, 6"#,
         Instruction::GateDefinition(GateDefinition {
             name: "CCNOT".to_string(),
             parameters: vec![],
