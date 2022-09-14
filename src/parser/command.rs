@@ -13,27 +13,32 @@
 // limitations under the License.
 
 use nom::{
-    combinator::opt,
+    branch::alt,
+    combinator::{map, opt},
     multi::{many0, many1, separated_list0, separated_list1},
-    sequence::{delimited, tuple},
+    sequence::{delimited, preceded, tuple},
 };
 
-use crate::instruction::{
-    Arithmetic, ArithmeticOperand, ArithmeticOperator, BinaryLogic, BinaryOperator, Calibration,
-    Capture, CircuitDefinition, Comparison, ComparisonOperator, Declaration, Delay, Exchange,
-    Fence, FrameDefinition, Instruction, Jump, JumpUnless, JumpWhen, Label, Load,
-    MeasureCalibrationDefinition, Measurement, Move, Pragma, Pulse, Qubit, RawCapture, Reset,
-    SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, Store, UnaryLogic, UnaryOperator,
-    Waveform, WaveformDefinition,
-};
 use crate::parser::common::parse_variable_qubit;
 
+use crate::parser::common::parse_permutation;
 use crate::parser::instruction::parse_block;
 use crate::token;
+use crate::{
+    instruction::{
+        Arithmetic, ArithmeticOperand, ArithmeticOperator, BinaryLogic, BinaryOperator,
+        Calibration, Capture, CircuitDefinition, Comparison, ComparisonOperator, Declaration,
+        Delay, Exchange, Fence, FrameDefinition, GateDefinition, GateType, Instruction, Jump,
+        JumpUnless, JumpWhen, Label, Load, MeasureCalibrationDefinition, Measurement, Move, Pragma,
+        Pulse, Qubit, RawCapture, Reset, SetFrequency, SetPhase, SetScale, ShiftFrequency,
+        ShiftPhase, Store, UnaryLogic, UnaryOperator, Waveform, WaveformDefinition,
+    },
+    parser::common::skip_newlines_and_comments,
+};
 
 use super::{
     common::{
-        self, parse_frame_attribute, parse_frame_identifier, parse_gate_modifier,
+        self, parse_frame_attribute, parse_frame_identifier, parse_gate_modifier, parse_matrix,
         parse_memory_reference, parse_qubit, parse_waveform_invocation,
     },
     expression::parse_expression,
@@ -211,6 +216,39 @@ pub fn parse_defframe<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instructio
         Instruction::FrameDefinition(FrameDefinition {
             identifier,
             attributes,
+        }),
+    ))
+}
+
+/// Parse the contents of a `DEFGATE` instruction.
+pub fn parse_defgate<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
+    let (input, name) = token!(Identifier(v))(input)?;
+    let (input, parameters) = opt(delimited(
+        token!(LParenthesis),
+        separated_list1(token!(Comma), token!(Variable(v))),
+        token!(RParenthesis),
+    ))(input)?;
+    let (input, gate_type) = opt(preceded(
+        token!(As),
+        alt((
+            map(token!(Matrix), |()| GateType::Matrix),
+            map(token!(Permutation), |()| GateType::Permutation),
+        )),
+    ))(input)?;
+    let gate_type = gate_type.unwrap_or(GateType::Matrix);
+    let (input, _) = tuple((token!(Colon), skip_newlines_and_comments))(input)?;
+    let (input, matrix) = match gate_type {
+        GateType::Matrix => parse_matrix,
+        GateType::Permutation => parse_permutation,
+    }(input)?;
+
+    Ok((
+        input,
+        Instruction::GateDefinition(GateDefinition {
+            name,
+            parameters: parameters.unwrap_or_default(),
+            matrix,
+            r#type: gate_type,
         }),
     ))
 }
@@ -488,8 +526,10 @@ pub fn parse_measurement(input: ParserInput) -> ParserResult<Instruction> {
 
 #[cfg(test)]
 mod tests {
-    use crate::expression::Expression;
+    use crate::expression::{Expression, ExpressionFunction, InfixOperator, PrefixOperator};
+    use crate::instruction::{GateDefinition, GateType};
     use crate::parser::lexer::lex;
+    use crate::{imag, real};
     use crate::{
         instruction::{
             CircuitDefinition, Declaration, Gate, Instruction, Measurement, MemoryReference,
@@ -498,7 +538,7 @@ mod tests {
         make_test,
     };
 
-    use super::{parse_declare, parse_defcircuit, parse_measurement, parse_pragma};
+    use super::{parse_declare, parse_defcircuit, parse_defgate, parse_measurement, parse_pragma};
 
     make_test!(
         declare_instruction_length_1,
@@ -656,6 +696,142 @@ mod tests {
                     modifiers: vec![],
                 })
             ]
+        })
+    );
+
+    make_test!(
+        defgate,
+        parse_defgate,
+        "HADAMARD:\n\t1/sqrt(2), 1/sqrt(2)\n\t1/sqrt(2), -1/sqrt(2)",
+        Instruction::GateDefinition(GateDefinition {
+            name: "HADAMARD".to_string(),
+            parameters: vec![],
+            matrix: vec![
+                vec![
+                    Expression::Infix {
+                        left: Box::new(Expression::Number(real!(1.0))),
+                        operator: InfixOperator::Slash,
+                        right: Box::new(Expression::FunctionCall {
+                            function: crate::expression::ExpressionFunction::SquareRoot,
+                            expression: Box::new(Expression::Number(real!(2.0))),
+                        }),
+                    },
+                    Expression::Infix {
+                        left: Box::new(Expression::Number(real!(1.0))),
+                        operator: InfixOperator::Slash,
+                        right: Box::new(Expression::FunctionCall {
+                            function: crate::expression::ExpressionFunction::SquareRoot,
+                            expression: Box::new(Expression::Number(real!(2.0))),
+                        }),
+                    },
+                ],
+                vec![
+                    Expression::Infix {
+                        left: Box::new(Expression::Number(real!(1.0))),
+                        operator: InfixOperator::Slash,
+                        right: Box::new(Expression::FunctionCall {
+                            function: crate::expression::ExpressionFunction::SquareRoot,
+                            expression: Box::new(Expression::Number(real!(2.0))),
+                        }),
+                    },
+                    Expression::Infix {
+                        left: Box::new(Expression::Prefix {
+                            operator: PrefixOperator::Minus,
+                            expression: Box::new(Expression::Number(real!(1.0))),
+                        }),
+                        operator: InfixOperator::Slash,
+                        right: Box::new(Expression::FunctionCall {
+                            function: crate::expression::ExpressionFunction::SquareRoot,
+                            expression: Box::new(Expression::Number(real!(2.0))),
+                        }),
+                    },
+                ],
+            ],
+            r#type: GateType::Matrix,
+        })
+    );
+
+    make_test!(
+        defgate_parameterized,
+        parse_defgate,
+        "RX(%theta):\n\tcos(%theta/2), -i*sin(%theta/2)\n\t-i*sin(%theta/2), cos(%theta/2)",
+        Instruction::GateDefinition(GateDefinition {
+            name: "RX".to_string(),
+            parameters: vec!["theta".to_string()],
+            matrix: vec![
+                vec![
+                    Expression::FunctionCall {
+                        function: crate::expression::ExpressionFunction::Cosine,
+                        expression: Box::new(Expression::Infix {
+                            left: Box::new(Expression::Variable("theta".to_string())),
+                            operator: InfixOperator::Slash,
+                            right: Box::new(Expression::Number(real!(2.0))),
+                        }),
+                    },
+                    Expression::Infix {
+                        left: Box::new(Expression::Prefix {
+                            operator: PrefixOperator::Minus,
+                            expression: Box::new(Expression::Number(imag!(1f64)))
+                        }),
+                        operator: InfixOperator::Star,
+                        right: Box::new(Expression::FunctionCall {
+                            function: ExpressionFunction::Sine,
+                            expression: Box::new(Expression::Infix {
+                                left: Box::new(Expression::Variable("theta".to_string())),
+                                operator: InfixOperator::Slash,
+                                right: Box::new(Expression::Number(real!(2.0))),
+                            }),
+                        }),
+                    }
+                ],
+                vec![
+                    Expression::Infix {
+                        left: Box::new(Expression::Prefix {
+                            operator: PrefixOperator::Minus,
+                            expression: Box::new(Expression::Number(imag!(1f64)))
+                        }),
+                        operator: InfixOperator::Star,
+                        right: Box::new(Expression::FunctionCall {
+                            function: ExpressionFunction::Sine,
+                            expression: Box::new(Expression::Infix {
+                                left: Box::new(Expression::Variable("theta".to_string())),
+                                operator: InfixOperator::Slash,
+                                right: Box::new(Expression::Number(real!(2.0))),
+                            }),
+                        }),
+                    },
+                    Expression::FunctionCall {
+                        function: crate::expression::ExpressionFunction::Cosine,
+                        expression: Box::new(Expression::Infix {
+                            left: Box::new(Expression::Variable("theta".to_string())),
+                            operator: InfixOperator::Slash,
+                            right: Box::new(Expression::Number(real!(2.0))),
+                        }),
+                    },
+                ],
+            ],
+            r#type: GateType::Matrix,
+        })
+    );
+
+    make_test!(
+        defgate_permutation,
+        parse_defgate,
+        "CCNOT AS PERMUTATION:\n\t0, 1, 2, 3, 4, 5, 7, 6",
+        Instruction::GateDefinition(GateDefinition {
+            name: "CCNOT".to_string(),
+            parameters: vec![],
+            matrix: vec![vec![
+                Expression::Number(real!(0.0)),
+                Expression::Number(real!(1.0)),
+                Expression::Number(real!(2.0)),
+                Expression::Number(real!(3.0)),
+                Expression::Number(real!(4.0)),
+                Expression::Number(real!(5.0)),
+                Expression::Number(real!(7.0)),
+                Expression::Number(real!(6.0)),
+            ],],
+            r#type: GateType::Permutation,
         })
     );
 }
