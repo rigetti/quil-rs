@@ -684,7 +684,6 @@ DECLARE destination {dst_type}
             "Bad ARITHMETIC program with (command, dst_type, value) = ({command}, {dst_type}, {value})."
         ));
         let (f, i) = (f64::from_str(value), i64::from_str(value));
-        dbg!((&p, &f, &i));
         assert_eq!(
             type_check(&p).is_ok(),
             (dst_type == "REAL" && f.is_ok() && i.is_err()) || (dst_type == "INTEGER" && i.is_ok())
