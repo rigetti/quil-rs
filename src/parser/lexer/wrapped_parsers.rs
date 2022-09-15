@@ -6,6 +6,7 @@ use nom::error::ParseError;
 use crate::parser::error::ErrorKind;
 use super::{LexError, LexErrorKind, LexInput, LexResult};
 
+/// Returns a parser that runs the given one and converts its returned error using `mapper`.
 pub(crate) fn map_err<'a, P, F, O, E1, E2>(mut parser: P, mapper: F) -> impl FnMut(LexInput<'a>) -> LexResult<'a, O, E2>
     where P: Parser<LexInput<'a>, O, E1>,
           O: fmt::Debug,
@@ -23,13 +24,14 @@ pub(crate) fn map_err<'a, P, F, O, E1, E2>(mut parser: P, mapper: F) -> impl FnM
     }
 }
 
+/// Returns a lexing parser that runs the given one and replaces its error with [`LexErrorKind::ExpectedContext`] with the given string.
 pub(crate) fn expecting<'a, O, E, P>(context: &'static str, mut parser: P) -> impl FnMut(LexInput<'a>) -> LexResult<'a, O>
     where P: Parser<LexInput<'a>, O, E>,
           O: fmt::Debug,
 {
     move |input| {
         parser.parse(input).map_err(|err| {
-            let new_err = LexError::from_other(input, LexErrorKind::ExpectedContext(context));
+            let new_err = LexError::from_kind(input, LexErrorKind::ExpectedContext(context));
             match err {
                 nom::Err::Incomplete(needed) => nom::Err::Incomplete(needed),
                 nom::Err::Error(_) => nom::Err::Error(new_err),
@@ -39,6 +41,10 @@ pub(crate) fn expecting<'a, O, E, P>(context: &'static str, mut parser: P) -> im
     }
 }
 
+/// A wrapper for [`nom::branch::alt`] that returns [`LexErrorKind::ExpectedContext`] on error.
+///
+/// This works around the fact that [`nom::branch::alt`] does not return any errors from any of the
+/// alternatives, and is more user-friendly than returning all of those errors anyways.
 pub(crate) fn alt<'a, O, E, List>(context: &'static str, alts: List) -> impl FnMut(LexInput<'a>) -> LexResult<'a, O>
     where E: ParseError<LexInput<'a>>,
           List: Alt<LexInput<'a>, O, E>,
@@ -48,6 +54,8 @@ pub(crate) fn alt<'a, O, E, List>(context: &'static str, alts: List) -> impl FnM
     expecting(context, parser)
 }
 
+/// A wrapper for [`nom::bytes::complete::tag`] that replaces the error with one that indicates
+/// what tag string was expected.
 pub(crate) fn tag(lit: &'static str) -> impl FnMut(LexInput) -> LexResult<LexInput> {
     move |input| {
         map_err(

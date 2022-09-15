@@ -206,7 +206,7 @@ pub fn parse_waveform_invocation<'a>(
 /// but this parser is tolerant and accepts both as equivalent.
 pub fn parse_qubit(input: ParserInput) -> ParserResult<Qubit> {
     match super::split_first_token(input) {
-        None => Err(nom::Err::Error(ParseError::from_other(
+        None => Err(nom::Err::Error(ParseError::from_kind(
             input,
             ParserErrorKind::UnexpectedEOF("a qubit"),
         ))),
@@ -224,7 +224,7 @@ pub fn parse_qubit(input: ParserInput) -> ParserResult<Qubit> {
 /// Parse a variable qubit (i.e. a named qubit)
 pub fn parse_variable_qubit(input: ParserInput) -> ParserResult<String> {
     match super::split_first_token(input) {
-        None => Err(nom::Err::Error(ParseError::from_other(
+        None => Err(nom::Err::Error(ParseError::from_kind(
             input,
             ParserErrorKind::UnexpectedEOF("a variable qubit"),
         ))),

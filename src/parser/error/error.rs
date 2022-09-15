@@ -5,6 +5,21 @@ use thiserror::private::AsDynError;
 use crate::parser::error::{ErrorInput, InternalParseError};
 use crate::parser::error::kind::ErrorKind;
 
+/// An error that may occur while parsing.
+///
+/// This error contains file location information, to assist with debugging.
+///
+/// # Display
+///
+/// The [`Display`](fmt::Display) impl for this error allows for alternate outputs.
+///
+/// The standard output (i.e., with `format!("{}", err)`) outputs just this error, including file
+/// location information.
+///
+/// The alternate output (i.e., with `format!("{:#}", err)`) outputs this error as well a
+/// user-readable backtrace of the errors that caused this one.
+///
+/// When displaying errors to end-users, prefer the alternate format for easier debugging.
 #[derive(Debug)]
 pub struct Error<E = Infallible>
     where E: std::error::Error,
@@ -36,14 +51,16 @@ impl<E> PartialEq for Error<E>
 impl<E> Error<E>
 where E: std::error::Error,
 {
-    pub(crate) fn from_other<I>(input: I, other: E) -> Self
+    /// Create a new `Error` from the given error kind.
+    pub(crate) fn from_kind<I>(input: I, other: E) -> Self
     where
         I: ErrorInput,
     {
         let kind = ErrorKind::Other(other);
-        Self::internal_new::<>(input, kind)
+        Self::internal_new(input, kind)
     }
 
+    /// Attach a previous error to this one.
     pub(crate) fn with_previous<E2>(mut self, previous: E2) -> Self
         where E2: std::error::Error + 'static,
     {
@@ -61,6 +78,7 @@ where E: std::error::Error,
         Self { line, column, snippet, kind, previous: None }
     }
 
+    /// Create an `Error` from a nom error.
     pub(crate) fn from_nom_err<I>(err: NomError<I>) -> Self
         where I: ErrorInput
     {
@@ -68,6 +86,8 @@ where E: std::error::Error,
         Self::from_nom_err_with_kind(err, kind)
     }
 
+    /// Create an `Error` by getting the input from a nom error, but set the error kind to the
+    /// provided one.
     pub(crate) fn from_nom_err_with_kind<I>(
         err: NomError<I>,
         kind: ErrorKind<E>,

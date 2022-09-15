@@ -38,7 +38,7 @@ use super::{
 pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
     let (input, _) = common::skip_newlines_and_comments(input)?;
     match super::split_first_token(input) {
-        None => Err(nom::Err::Error(ParseError::from_other(
+        None => Err(nom::Err::Error(ParseError::from_kind(
             input,ParserErrorKind::EndOfInput,
         ))),
         Some((Token::Command(command), remainder)) => {
@@ -95,14 +95,14 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
                 Command::Sub => command::parse_arithmetic(ArithmeticOperator::Subtract, remainder),
                 // Command::Wait => {}
                 Command::Xor => command::parse_logical_binary(BinaryOperator::Xor, remainder),
-                other => Err(nom::Err::Failure(ParseError::from_other(
+                other => Err(nom::Err::Failure(ParseError::from_kind(
                     &input[..1],
                     ParserErrorKind::UnsupportedInstruction(*other),
                 ))),
             }
             .map_err(|err| {
                 nom::Err::Failure(
-                    ParseError::from_other(
+                    ParseError::from_kind(
                         &input[..1],
                         ParserErrorKind::InvalidCommand {
                             command: *command,
@@ -121,7 +121,7 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
             _ => todo!(),
         },
         Some((Token::Identifier(_), _)) | Some((Token::Modifier(_), _)) => gate::parse_gate(input),
-        Some((_, _)) => Err(nom::Err::Failure(ParseError::from_other(
+        Some((_, _)) => Err(nom::Err::Failure(ParseError::from_kind(
             &input[..1],
             ParserErrorKind::NotACommandOrGate,
         ))),

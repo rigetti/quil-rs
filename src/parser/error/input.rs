@@ -1,10 +1,15 @@
 use crate::parser::lexer::LexInput;
 use crate::parser::{ParserInput, TokenWithLocation};
 
+/// Trait for parser input that contains location information.
 pub trait ErrorInput {
+    /// The line where the error occurred.
     fn line(&self) -> u32;
+    /// The column where the error occurred.
     fn column(&self) -> usize;
+    /// A snippet of text showing the beginning of where the error occurred.
     fn snippet(&self) -> String;
+    /// Whether there is anything left in the input.
     fn is_empty(&self) -> bool;
 }
 

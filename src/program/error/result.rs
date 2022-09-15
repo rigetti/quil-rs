@@ -3,6 +3,9 @@ use crate::parser::{ErrorInput, ParseError};
 use crate::program::error::LeftoverError;
 use crate::program::ProgramError;
 
+/// If parsing was successful but there is leftover input, returns a [`ProgramError::Leftover`] containing the output.
+///
+/// See also [`LeftoverError`].
 pub fn disallow_leftover<I, O>(result: nom::IResult<I, O, ParseError>) -> Result<O, ProgramError<O>>
     where I: ErrorInput,
 {
@@ -16,6 +19,10 @@ pub fn disallow_leftover<I, O>(result: nom::IResult<I, O, ParseError>) -> Result
     }
 }
 
+/// Map the parsed output into another value.
+///
+/// This should be preferred over [`Result::map`], as this will map both the `Ok` case and when
+/// there is a [`LeftoverError`].
 pub fn map_parsed<O, O2>(result: Result<O, ProgramError<O>>, map: impl Fn(O) -> O2) -> Result<O2, ProgramError<O2>> {
     match result {
         Ok(parsed) => Ok(map(parsed)),
@@ -23,6 +30,8 @@ pub fn map_parsed<O, O2>(result: Result<O, ProgramError<O>>, map: impl Fn(O) -> 
     }
 }
 
+/// If this `result` is `Err(ProgramError::Leftover)`, converts it to `Ok(_)` with the parsed
+/// output.
 pub fn recover<O>(result: Result<O, ProgramError<O>>) -> Result<O, ProgramError<O>> {
     match result {
         Ok(parsed) => Ok(parsed),
@@ -31,6 +40,12 @@ pub fn recover<O>(result: Result<O, ProgramError<O>>) -> Result<O, ProgramError<
     }
 }
 
+/// Changes the type signature of `result` in cases where the error *is guaranteed not to be*
+/// [`ProgramError::Leftover`].
+///
+/// # Panics
+///
+/// If the `result` is `Err(ProgramError::Leftover(_))`.
 pub fn convert_leftover<O, O2>(result: Result<O, ProgramError<O>>) -> Result<O, ProgramError<O2>> {
     match result {
         Ok(parsed) => Ok(parsed),

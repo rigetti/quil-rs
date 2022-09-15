@@ -26,6 +26,7 @@ pub use leftover::LeftoverError;
 pub use result::{disallow_leftover, map_parsed, recover, convert_leftover};
 pub use syntax::SyntaxError;
 
+/// Errors that may occur while parsing a [`Program`](crate::program::Program).
 #[derive(Debug, PartialEq)]
 pub enum ProgramError<T> {
     InvalidCalibration {
@@ -59,6 +60,10 @@ impl<T> From<LeftoverError<T>> for ProgramError<T> {
 }
 
 impl<T> ProgramError<T> {
+    /// Convert the parsed output into another type.
+    ///
+    /// This delegates to [`LeftoverError::map_parsed`] when a [`ProgramError::Leftover`] and does
+    /// nothing but change the type signature otherwise.
     pub fn map_parsed<T2>(self, map: impl Fn(T) -> T2) -> ProgramError<T2> {
         match self {
             Self::InvalidCalibration { instruction, message } => ProgramError::InvalidCalibration { instruction, message },
