@@ -14,6 +14,7 @@
 
 mod leftover;
 mod result;
+mod syntax;
 
 use std::error::Error;
 use std::fmt;
@@ -23,6 +24,7 @@ use crate::instruction::Instruction;
 use crate::parser::{LexError, ParseError};
 pub use leftover::LeftoverError;
 pub use result::{disallow_leftover, map_parsed, recover, convert_leftover};
+pub use syntax::SyntaxError;
 
 #[derive(Debug, PartialEq)]
 pub enum ProgramError<T> {
@@ -31,9 +33,8 @@ pub enum ProgramError<T> {
         message: String,
     },
     RecursiveCalibration(Instruction),
-    LexError(LexError),
-    ParsingError(ParseError),
-    Leftover(LeftoverError<T>)
+    Syntax(SyntaxError),
+    Leftover(LeftoverError<T>),
 }
 
 impl<T> From<LexError> for ProgramError<T>
@@ -41,13 +42,13 @@ where
     T: fmt::Debug,
 {
     fn from(e: LexError) -> Self {
-        Self::LexError(e)
+        Self::Syntax(SyntaxError::from(e))
     }
 }
 
 impl<T> From<ParseError> for ProgramError<T> {
     fn from(e: ParseError) -> Self {
-        Self::ParsingError(e)
+        Self::Syntax(SyntaxError::from(e))
     }
 }
 
@@ -62,8 +63,7 @@ impl<T> ProgramError<T> {
         match self {
             Self::InvalidCalibration { instruction, message } => ProgramError::InvalidCalibration { instruction, message },
             Self::RecursiveCalibration(inst) => ProgramError::RecursiveCalibration(inst),
-            Self::LexError(err) => ProgramError::LexError(err),
-            Self::ParsingError(err) => ProgramError::ParsingError(err),
+            Self::Syntax(err) => ProgramError::Syntax(err),
             Self::Leftover(err) => ProgramError::Leftover(err.map_parsed(map)),
         }
     }
@@ -82,20 +82,7 @@ where
             Self::RecursiveCalibration(instruction) => {
                 write!(f, "instruction {} expands into itself", instruction)
             }
-            Self::LexError(error) => {
-                if f.alternate() {
-                    write!(f, "error while lexing: {:#}", error)
-                } else {
-                    write!(f, "error while lexing: {}", error)
-                }
-            }
-            Self::ParsingError(error) => {
-                if f.alternate() {
-                    write!(f, "error while parsing: {:#}", error)
-                } else {
-                    write!(f, "error while parsing: {}", error)
-                }
-            }
+            Self::Syntax(err) => fmt::Display::fmt(err, f),
             Self::Leftover(err) => fmt::Display::fmt(err, f),
         }
     }
@@ -109,8 +96,7 @@ where
         match self {
             Self::InvalidCalibration { .. } => None,
             Self::RecursiveCalibration(_) => None,
-            Self::LexError(err) => Some(err),
-            Self::ParsingError(err) => Some(err),
+            Self::Syntax(err) => Some(err),
             Self::Leftover(err) => Some(err),
         }
     }

@@ -37,8 +37,7 @@ pub fn convert_leftover<O, O2>(result: Result<O, ProgramError<O>>) -> Result<O, 
         Err(err) => match err {
             ProgramError::InvalidCalibration { instruction, message } => Err(ProgramError::InvalidCalibration { instruction, message }),
             ProgramError::RecursiveCalibration(inst) => Err(ProgramError::RecursiveCalibration(inst)),
-            ProgramError::LexError(err) => Err(ProgramError::LexError(err)),
-            ProgramError::ParsingError(err) => Err(ProgramError::ParsingError(err)),
+            ProgramError::Syntax(err) => Err(ProgramError::Syntax(err)),
             ProgramError::Leftover(err) => panic!("expected no LeftoverError, got {}", err),
         }
     }

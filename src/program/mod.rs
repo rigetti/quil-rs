@@ -195,7 +195,7 @@ impl Program {
 impl FromStr for Program {
     type Err = ProgramError<Self>;
     fn from_str(s: &str) -> Result<Self> {
-        let lexed = lex(s).map_err(ProgramError::LexError)?;
+        let lexed = lex(s).map_err(ProgramError::from)?;
         map_parsed(
             disallow_leftover(parse_instructions(&lexed)),
             |instructions| {
