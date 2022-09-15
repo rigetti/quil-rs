@@ -22,7 +22,7 @@ use std::fmt::Formatter;
 use crate::instruction::Instruction;
 use crate::parser::{LexError, ParseError};
 pub use leftover::LeftoverError;
-pub use result::{disallow_leftover, map_parsed, recover, convert_leftover};
+pub use result::{convert_leftover, disallow_leftover, map_parsed, recover};
 
 #[derive(Debug, PartialEq)]
 pub enum ProgramError<T> {
@@ -33,7 +33,7 @@ pub enum ProgramError<T> {
     RecursiveCalibration(Instruction),
     LexError(LexError),
     ParsingError(ParseError),
-    Leftover(LeftoverError<T>)
+    Leftover(LeftoverError<T>),
 }
 
 impl<T> From<LexError> for ProgramError<T>
@@ -60,7 +60,13 @@ impl<T> From<LeftoverError<T>> for ProgramError<T> {
 impl<T> ProgramError<T> {
     pub fn map_parsed<T2>(self, map: impl Fn(T) -> T2) -> ProgramError<T2> {
         match self {
-            Self::InvalidCalibration { instruction, message } => ProgramError::InvalidCalibration { instruction, message },
+            Self::InvalidCalibration {
+                instruction,
+                message,
+            } => ProgramError::InvalidCalibration {
+                instruction,
+                message,
+            },
             Self::RecursiveCalibration(inst) => ProgramError::RecursiveCalibration(inst),
             Self::LexError(err) => ProgramError::LexError(err),
             Self::ParsingError(err) => ProgramError::ParsingError(err),

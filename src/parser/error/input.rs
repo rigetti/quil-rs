@@ -90,4 +90,3 @@ impl ErrorInput for Vec<TokenWithLocation> {
         self.as_slice().is_empty()
     }
 }
-

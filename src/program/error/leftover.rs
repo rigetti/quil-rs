@@ -1,5 +1,5 @@
-use std::fmt;
 use crate::parser::ErrorInput;
+use std::fmt;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct LeftoverError<O> {
@@ -22,17 +22,19 @@ impl<O> fmt::Display for LeftoverError<O> {
     }
 }
 
-impl<O> std::error::Error for LeftoverError<O>
-where
-    Self: fmt::Debug,
-{
-}
+impl<O> std::error::Error for LeftoverError<O> where Self: fmt::Debug {}
 
 impl<O> LeftoverError<O> {
     pub(crate) fn new<I>(leftover: I, parsed: O) -> Self
-        where I: ErrorInput,
+    where
+        I: ErrorInput,
     {
-        Self { line: leftover.line(), column: leftover.column(), snippet: leftover.snippet(), parsed }
+        Self {
+            line: leftover.line(),
+            column: leftover.column(),
+            snippet: leftover.snippet(),
+            parsed,
+        }
     }
 
     pub fn recover(self) -> O {
@@ -40,8 +42,18 @@ impl<O> LeftoverError<O> {
     }
 
     pub fn map_parsed<O2>(self, map: impl FnOnce(O) -> O2) -> LeftoverError<O2> {
-        let Self { line, column, snippet, parsed } = self;
+        let Self {
+            line,
+            column,
+            snippet,
+            parsed,
+        } = self;
         let parsed = map(parsed);
-        LeftoverError { line, column, snippet, parsed }
+        LeftoverError {
+            line,
+            column,
+            snippet,
+            parsed,
+        }
     }
 }
