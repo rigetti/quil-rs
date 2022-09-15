@@ -208,7 +208,7 @@ pub fn parse_qubit(input: ParserInput) -> ParserResult<Qubit> {
     match super::split_first_token(input) {
         None => Err(nom::Err::Error(ParseError::from_other(
             input,
-            ParserErrorKind::UnexpectedEOF("a qubit".to_owned()),
+            ParserErrorKind::UnexpectedEOF("a qubit"),
         ))),
         Some((Token::Integer(value), remainder)) => Ok((remainder, Qubit::Fixed(*value))),
         Some((Token::Variable(name), remainder)) => Ok((remainder, Qubit::Variable(name.clone()))),
@@ -226,7 +226,7 @@ pub fn parse_variable_qubit(input: ParserInput) -> ParserResult<String> {
     match super::split_first_token(input) {
         None => Err(nom::Err::Error(ParseError::from_other(
             input,
-            ParserErrorKind::UnexpectedEOF("a variable qubit".to_owned()),
+            ParserErrorKind::UnexpectedEOF("a variable qubit"),
         ))),
         Some((Token::Variable(name), remainder)) => Ok((remainder, name.clone())),
         Some((Token::Identifier(name), remainder)) => Ok((remainder, name.clone())),

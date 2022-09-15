@@ -36,7 +36,7 @@ macro_rules! token {
         move |input: ParserInput<'a>| match $crate::parser::split_first_token(input) {
             None => Err(nom::Err::Error(Error::from_other(
                 input,
-                ParserErrorKind::UnexpectedEOF("something else".to_owned()),
+                ParserErrorKind::UnexpectedEOF("something else"),
             ))),
             Some((Token::$expected_variant($enm::$variant), remainder)) => Ok((remainder, ())),
             Some((other_token, _)) => {
@@ -51,7 +51,7 @@ macro_rules! token {
         move |input: ParserInput<'a>| match $crate::parser::split_first_token(input) {
             None => Err(nom::Err::Error(Error::from_other(
                 input,
-                ParserErrorKind::UnexpectedEOF("something else".to_owned()),
+                ParserErrorKind::UnexpectedEOF("something else"),
             ))),
             Some((Token::$expected_variant($contents), remainder)) => {
                 Ok((remainder, $contents.clone()))
@@ -68,7 +68,7 @@ macro_rules! token {
         move |input: ParserInput<'a>| match $crate::parser::split_first_token(input) {
             None => Err(nom::Err::Error(Error::from_other(
                 input,
-                ParserErrorKind::UnexpectedEOF("something else".to_owned()),
+                ParserErrorKind::UnexpectedEOF("something else"),
             ))),
             Some((Token::$expected_variant, remainder)) => Ok((remainder, ())),
             Some((other_token, _)) => {
@@ -84,7 +84,7 @@ macro_rules! unexpected_eof {
         use $crate::parser::error::{Error, ParserErrorKind};
         Err(nom::Err::Error(Error::from_other(
             $input,
-            ParserErrorKind::UnexpectedEOF("something else".to_owned()),
+            ParserErrorKind::UnexpectedEOF("something else"),
         )))
     }};
 }

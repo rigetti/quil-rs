@@ -31,9 +31,8 @@ pub type ParseError = Error<ParserErrorKind>;
 #[allow(dead_code)]
 #[derive(Debug, thiserror::Error, PartialEq)]
 pub enum ParserErrorKind {
-    // TODO: can this be static str?
     #[error("expected {0}, found EOF")]
-    UnexpectedEOF(String),
+    UnexpectedEOF(&'static str),
     #[error("expected {expected}, found {actual:?}")]
     ExpectedToken { actual: Token, expected: String },
 
