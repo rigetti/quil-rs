@@ -73,7 +73,6 @@ pub enum Token {
     Comma,
     Command(Command),
     Comment(String),
-    // Constant(Constant),
     DataType(DataType),
     Float(f64),
     Identifier(String),
