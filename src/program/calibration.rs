@@ -22,7 +22,7 @@ use crate::{
     },
 };
 
-use super::error::{ProgramError};
+use super::error::ProgramError;
 
 /// A collection of Quil calibrations (`DEFCAL` instructions) with utility methods.
 #[derive(Clone, Debug, Default, PartialEq)]

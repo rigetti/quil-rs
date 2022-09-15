@@ -1,5 +1,5 @@
-use std::fmt;
 use crate::parser::ErrorInput;
+use std::fmt;
 
 /// The parser returned success, but there was unexpected leftover input.
 ///
@@ -25,18 +25,20 @@ impl<O> fmt::Display for LeftoverError<O> {
     }
 }
 
-impl<O> std::error::Error for LeftoverError<O>
-where
-    Self: fmt::Debug,
-{
-}
+impl<O> std::error::Error for LeftoverError<O> where Self: fmt::Debug {}
 
 impl<O> LeftoverError<O> {
     /// Create a new `LeftoverError` from the given leftover input and parsed item.
     pub(crate) fn new<I>(leftover: I, parsed: O) -> Self
-        where I: ErrorInput,
+    where
+        I: ErrorInput,
     {
-        Self { line: leftover.line(), column: leftover.column(), snippet: leftover.snippet(), parsed }
+        Self {
+            line: leftover.line(),
+            column: leftover.column(),
+            snippet: leftover.snippet(),
+            parsed,
+        }
     }
 
     /// Consumes this error and returns the parsed output.
@@ -46,8 +48,18 @@ impl<O> LeftoverError<O> {
 
     /// Map the parsed output into some other type.
     pub fn map_parsed<O2>(self, map: impl FnOnce(O) -> O2) -> LeftoverError<O2> {
-        let Self { line, column, snippet, parsed } = self;
+        let Self {
+            line,
+            column,
+            snippet,
+            parsed,
+        } = self;
         let parsed = map(parsed);
-        LeftoverError { line, column, snippet, parsed }
+        LeftoverError {
+            line,
+            column,
+            snippet,
+            parsed,
+        }
     }
 }

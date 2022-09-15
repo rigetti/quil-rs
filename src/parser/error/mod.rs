@@ -14,16 +14,16 @@
 
 #[allow(clippy::module_inception)]
 mod error;
-mod kind;
-mod internal;
 mod input;
+mod internal;
+mod kind;
 
 use super::lexer::{Command, Token};
 
 pub use error::Error;
-pub use kind::ErrorKind;
-pub use internal::InternalParseError;
 pub(crate) use input::ErrorInput;
+pub use internal::InternalParseError;
+pub use kind::ErrorKind;
 
 /// An error specific to parsing tokens.
 pub type ParseError = Error<ParserErrorKind>;

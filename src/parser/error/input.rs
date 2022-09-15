@@ -24,11 +24,14 @@ impl ErrorInput for LexInput<'_> {
 
     fn snippet(&self) -> String {
         std::str::from_utf8(self.get_line_beginning())
-            .map(|s| if s.len() == self.len() {
-                format!("\"{}\"", s)
-            } else {
-                format!("\"{}\"...", s)
-            }).unwrap_or_default()
+            .map(|s| {
+                if s.len() == self.len() {
+                    format!("\"{}\"", s)
+                } else {
+                    format!("\"{}\"...", s)
+                }
+            })
+            .unwrap_or_default()
     }
 
     fn is_empty(&self) -> bool {

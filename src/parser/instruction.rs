@@ -39,7 +39,8 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
     let (input, _) = common::skip_newlines_and_comments(input)?;
     match super::split_first_token(input) {
         None => Err(nom::Err::Error(ParseError::from_kind(
-            input,ParserErrorKind::EndOfInput,
+            input,
+            ParserErrorKind::EndOfInput,
         ))),
         Some((Token::Command(command), remainder)) => {
             match command {
@@ -104,10 +105,9 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
                 nom::Err::Failure(
                     ParseError::from_kind(
                         &input[..1],
-                        ParserErrorKind::InvalidCommand {
-                            command: *command,
-                        }
-                    ).with_previous(extract_nom_err(err))
+                        ParserErrorKind::InvalidCommand { command: *command },
+                    )
+                    .with_previous(extract_nom_err(err)),
                 )
             })
         }

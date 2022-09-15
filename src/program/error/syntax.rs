@@ -1,4 +1,4 @@
-use std::{fmt, error::Error};
+use std::{error::Error, fmt};
 
 use crate::parser::{LexError, ParseError};
 

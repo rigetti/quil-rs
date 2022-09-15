@@ -1,9 +1,9 @@
+use crate::parser::error::kind::ErrorKind;
+use crate::parser::error::{ErrorInput, InternalParseError};
+use nom::error::{Error as NomError, ParseError};
 use std::convert::Infallible;
 use std::fmt;
-use nom::error::{ParseError, Error as NomError};
 use thiserror::private::AsDynError;
-use crate::parser::error::{ErrorInput, InternalParseError};
-use crate::parser::error::kind::ErrorKind;
 
 /// An error that may occur while parsing.
 ///
@@ -22,7 +22,8 @@ use crate::parser::error::kind::ErrorKind;
 /// When displaying errors to end-users, prefer the alternate format for easier debugging.
 #[derive(Debug)]
 pub struct Error<E = Infallible>
-    where E: std::error::Error,
+where
+    E: std::error::Error,
 {
     line: u32,
     column: usize,
@@ -32,7 +33,8 @@ pub struct Error<E = Infallible>
 }
 
 impl<E> PartialEq for Error<E>
-    where E: std::error::Error + PartialEq,
+where
+    E: std::error::Error + PartialEq,
 {
     fn eq(&self, other: &Self) -> bool {
         self.line == other.line
@@ -49,7 +51,8 @@ impl<E> PartialEq for Error<E>
 }
 
 impl<E> Error<E>
-where E: std::error::Error,
+where
+    E: std::error::Error,
 {
     /// Create a new `Error` from the given error kind.
     pub(crate) fn from_kind<I>(input: I, other: E) -> Self
@@ -62,7 +65,8 @@ where E: std::error::Error,
 
     /// Attach a previous error to this one.
     pub(crate) fn with_previous<E2>(mut self, previous: E2) -> Self
-        where E2: std::error::Error + 'static,
+    where
+        E2: std::error::Error + 'static,
     {
         self.previous = Some(Box::new(previous));
         self
@@ -75,12 +79,19 @@ where E: std::error::Error,
         let line = input.line();
         let column = input.column();
         let snippet = input.snippet();
-        Self { line, column, snippet, kind, previous: None }
+        Self {
+            line,
+            column,
+            snippet,
+            kind,
+            previous: None,
+        }
     }
 
     /// Create an `Error` from a nom error.
     pub(crate) fn from_nom_err<I>(err: NomError<I>) -> Self
-        where I: ErrorInput
+    where
+        I: ErrorInput,
     {
         let kind = ErrorKind::Internal(InternalParseError::new(err.code));
         Self::from_nom_err_with_kind(err, kind)
@@ -88,10 +99,7 @@ where E: std::error::Error,
 
     /// Create an `Error` by getting the input from a nom error, but set the error kind to the
     /// provided one.
-    pub(crate) fn from_nom_err_with_kind<I>(
-        err: NomError<I>,
-        kind: ErrorKind<E>,
-    ) -> Self
+    pub(crate) fn from_nom_err_with_kind<I>(err: NomError<I>, kind: ErrorKind<E>) -> Self
     where
         I: ErrorInput,
     {
@@ -102,10 +110,14 @@ where E: std::error::Error,
 impl<E> fmt::Display for Error<E>
 where
     ErrorKind<E>: fmt::Display,
-    E: std::error::Error
+    E: std::error::Error,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "at line {}, column {} ({}): {}", self.line, self.column, self.snippet, self.kind)?;
+        write!(
+            f,
+            "at line {}, column {} ({}): {}",
+            self.line, self.column, self.snippet, self.kind
+        )?;
         if f.alternate() {
             if let Some(previous) = &self.previous {
                 write!(f, "\n\tcause: {}", previous)?;

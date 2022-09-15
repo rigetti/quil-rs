@@ -15,14 +15,22 @@
 mod error;
 mod wrapped_parsers;
 
-use nom::{bytes::complete::{is_a, is_not, take_until, take_while, take_while1}, character::complete::{digit1, one_of}, combinator::{all_consuming, map, recognize, value}, multi::many0, number::complete::double, sequence::{delimited, preceded, terminated, tuple}, IResult, Finish};
+use nom::{
+    bytes::complete::{is_a, is_not, take_until, take_while, take_while1},
+    character::complete::{digit1, one_of},
+    combinator::{all_consuming, map, recognize, value},
+    multi::many0,
+    number::complete::double,
+    sequence::{delimited, preceded, terminated, tuple},
+    Finish, IResult,
+};
 use nom_locate::LocatedSpan;
 use wrapped_parsers::{alt, tag};
 
-pub use error::{LexError, LexErrorKind};
+pub use super::token::{Token, TokenWithLocation};
 use crate::parser::lexer::wrapped_parsers::expecting;
 use crate::parser::token::token_with_location;
-pub use super::token::{Token, TokenWithLocation};
+pub use error::{LexError, LexErrorKind};
 
 // TODO: replace manual parsing with strum::EnumString (FromStr)?
 // See: https://github.com/rigetti/quil-rs/issues/94
@@ -116,8 +124,7 @@ pub enum Operator {
 
 type InternalLexError<'a> = nom::error::Error<LexInput<'a>>;
 pub type LexInput<'a> = LocatedSpan<&'a str>;
-pub type LexResult<'a, T = Token, E = LexError> =
-    IResult<LexInput<'a>, T, E>;
+pub type LexResult<'a, T = Token, E = LexError> = IResult<LexInput<'a>, T, E>;
 
 /// Completely lex a string, returning the tokens within. Panics if the string cannot be completely read.
 pub(crate) fn lex(input: &str) -> Result<Vec<TokenWithLocation>, LexError> {
@@ -130,13 +137,12 @@ pub(crate) fn lex(input: &str) -> Result<Vec<TokenWithLocation>, LexError> {
 fn _lex(input: LexInput) -> LexResult<Vec<TokenWithLocation>> {
     terminated(
         many0(alt(
-                "indentation or a token preceded by whitespace",
-                (
-                    token_with_location(value(Token::Indentation, tag("    "))),
-                    preceded(many0(tag(" ")), lex_token),
-                )
-            )
-        ),
+            "indentation or a token preceded by whitespace",
+            (
+                token_with_location(value(Token::Indentation, tag("    "))),
+                preceded(many0(tag(" ")), lex_token),
+            ),
+        )),
         many0(one_of("\n\t ")),
     )(input)
 }
@@ -158,7 +164,7 @@ fn lex_token(input: LexInput) -> LexResult<TokenWithLocation> {
             token_with_location(lex_non_blocking),
             // This should come last because it's sort of a catch all
             token_with_location(lex_command_or_identifier),
-        )
+        ),
     )(input)
 }
 
@@ -170,7 +176,7 @@ fn lex_data_type(input: LexInput) -> LexResult {
             value(Token::DataType(DataType::Integer), tag("INTEGER")),
             value(Token::DataType(DataType::Octet), tag("OCTET")),
             value(Token::DataType(DataType::Real), tag("REAL")),
-        )
+        ),
     )(input)
 }
 
@@ -249,12 +255,12 @@ fn lex_identifier_raw(input: LexInput) -> LexResult<String> {
     expecting(
         "a valid identifier",
         map(
-        tuple::<_, _, InternalLexError, _>((
-            take_while1(is_valid_identifier_leading_character),
-            take_while(is_valid_identifier_character),
-        )),
-        |(left, right)| format!("{}{}", left, right),
-        )
+            tuple::<_, _, InternalLexError, _>((
+                take_while1(is_valid_identifier_leading_character),
+                take_while(is_valid_identifier_character),
+            )),
+            |(left, right)| format!("{}{}", left, right),
+        ),
     )(input)
 }
 
@@ -297,7 +303,7 @@ fn lex_modifier(input: LexInput) -> LexResult {
             value(Token::Modifier(Modifier::Forked), tag("FORKED")),
             value(Token::Permutation, tag("PERMUTATION")),
             value(Token::Sharing, tag("SHARING")),
-        )
+        ),
     )(input)
 }
 
@@ -306,13 +312,13 @@ fn lex_operator(input: LexInput) -> LexResult {
     map(
         alt(
             "an operator",
-                (
+            (
                 value(Caret, tag("^")),
                 value(Minus, tag("-")),
                 value(Plus, tag("+")),
                 value(Slash, tag("/")),
                 value(Star, tag("*")),
-            )
+            ),
         ),
         Token::Operator,
     )(input)
@@ -323,8 +329,8 @@ fn recognize_newlines(input: LexInput) -> LexResult<LexInput> {
         "one or more newlines",
         (
             is_a::<_, _, InternalLexError>("\n"),
-            is_a::<_, _, InternalLexError>("\r\n")
-        )
+            is_a::<_, _, InternalLexError>("\r\n"),
+        ),
     )(input)
 }
 
@@ -335,14 +341,17 @@ fn lex_punctuation(input: LexInput) -> LexResult {
         (
             value(Colon, tag(":")),
             value(Comma, tag(",")),
-            value(Indentation, alt("four spaces or a tab character", (tag("    "), tag("\t")))),
+            value(
+                Indentation,
+                alt("four spaces or a tab character", (tag("    "), tag("\t"))),
+            ),
             value(LBracket, tag("[")),
             value(LParenthesis, tag("(")),
             value(NewLine, recognize_newlines),
             value(RBracket, tag("]")),
             value(RParenthesis, tag(")")),
             value(Semicolon, tag(";")),
-        )
+        ),
     )(input)
 }
 

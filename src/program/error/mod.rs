@@ -23,7 +23,7 @@ use std::fmt::Formatter;
 use crate::instruction::Instruction;
 use crate::parser::{LexError, ParseError};
 pub use leftover::LeftoverError;
-pub use result::{disallow_leftover, map_parsed, recover, convert_leftover};
+pub use result::{convert_leftover, disallow_leftover, map_parsed, recover};
 pub use syntax::SyntaxError;
 
 /// Errors that may occur while parsing a [`Program`](crate::program::Program).
@@ -66,7 +66,13 @@ impl<T> ProgramError<T> {
     /// nothing but change the type signature otherwise.
     pub fn map_parsed<T2>(self, map: impl Fn(T) -> T2) -> ProgramError<T2> {
         match self {
-            Self::InvalidCalibration { instruction, message } => ProgramError::InvalidCalibration { instruction, message },
+            Self::InvalidCalibration {
+                instruction,
+                message,
+            } => ProgramError::InvalidCalibration {
+                instruction,
+                message,
+            },
             Self::RecursiveCalibration(inst) => ProgramError::RecursiveCalibration(inst),
             Self::Syntax(err) => ProgramError::Syntax(err),
             Self::Leftover(err) => ProgramError::Leftover(err.map_parsed(map)),

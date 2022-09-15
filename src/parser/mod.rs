@@ -29,13 +29,10 @@ pub(crate) mod instruction;
 mod lexer;
 mod token;
 
-pub use error::{
-    InternalParseError, ParseError,
-    ParserErrorKind
-};
+pub(crate) use error::ErrorInput;
+pub use error::{InternalParseError, ParseError, ParserErrorKind};
 pub use lexer::{LexError, LexErrorKind};
 pub use token::{Token, TokenWithLocation};
-pub(crate) use error::ErrorInput;
 
 type ParserInput<'a> = &'a [TokenWithLocation];
 type ParserResult<'a, R> = IResult<&'a [TokenWithLocation], R, ParseError>;
@@ -66,7 +63,9 @@ pub(crate) fn first_token(input: ParserInput) -> Option<&Token> {
 pub(crate) fn extract_nom_err<E: std::error::Error>(err: nom::Err<E>) -> E {
     // If this ever panics, switch to returning an Option
     match err {
-        nom::Err::Incomplete(_) => unreachable!("can't be incomplete if all parsers are complete variants"),
+        nom::Err::Incomplete(_) => {
+            unreachable!("can't be incomplete if all parsers are complete variants")
+        }
         nom::Err::Error(inner) => inner,
         nom::Err::Failure(inner) => inner,
     }

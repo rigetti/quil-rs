@@ -21,7 +21,7 @@ use crate::instruction::{
 use crate::parser::{lex, parse_instructions};
 
 pub use self::calibration::CalibrationSet;
-pub use self::error::{ProgramError, disallow_leftover, map_parsed, recover, convert_leftover};
+pub use self::error::{convert_leftover, disallow_leftover, map_parsed, recover, ProgramError};
 pub use self::frame::FrameSet;
 pub use self::memory::MemoryRegion;
 
@@ -204,7 +204,8 @@ impl FromStr for Program {
                     program.add_instruction(instruction)
                 }
                 program
-            })
+            },
+        )
     }
 }
 
