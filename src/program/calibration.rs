@@ -60,7 +60,7 @@ impl CalibrationSet {
         &self,
         instruction: &Instruction,
         previous_calibrations: &[Instruction],
-    ) -> super::Result<Option<Vec<Instruction>>> {
+    ) -> Result<Option<Vec<Instruction>>, ProgramError<super::Program>> {
         if previous_calibrations.contains(instruction) {
             return Err(ProgramError::RecursiveCalibration(instruction.clone()));
         }
