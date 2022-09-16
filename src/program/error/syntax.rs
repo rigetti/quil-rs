@@ -16,6 +16,8 @@ use std::{error::Error, fmt};
 
 use crate::parser::{LexError, ParseError};
 
+use super::LeftoverError;
+
 /// Failed to deserialize a Quil program for some reason.
 ///
 /// # Display
@@ -26,12 +28,30 @@ use crate::parser::{LexError, ParseError};
 ///
 /// See also [`Error`](crate::parser::Error).
 #[derive(Debug, PartialEq)]
-pub enum SyntaxError {
+pub enum SyntaxError<T> {
     LexError(LexError),
     ParseError(ParseError),
+    Leftover(LeftoverError<T>),
 }
 
-impl fmt::Display for SyntaxError {
+impl<T> SyntaxError<T> {
+    pub fn map_parsed<T2>(self, map: impl Fn(T) -> T2) -> SyntaxError<T2> {
+        match self {
+            Self::LexError(err) => SyntaxError::LexError(err),
+            Self::ParseError(err) => SyntaxError::ParseError(err),
+            Self::Leftover(err) => SyntaxError::Leftover(err.map_parsed(map)),
+        }
+    }
+
+    pub fn recover(self) -> Result<T, Self> {
+        match self {
+            Self::Leftover(err) => Ok(err.recover()),
+            err => Err(err),
+        }
+    }
+}
+
+impl<T: fmt::Debug + 'static> fmt::Display for SyntaxError<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if f.alternate() {
             write!(f, "error while parsing: {:#}", self.source().unwrap())
@@ -41,23 +61,30 @@ impl fmt::Display for SyntaxError {
     }
 }
 
-impl From<LexError> for SyntaxError {
+impl<T> From<LexError> for SyntaxError<T> {
     fn from(err: LexError) -> Self {
-        SyntaxError::LexError(err)
+        Self::LexError(err)
     }
 }
 
-impl From<ParseError> for SyntaxError {
+impl<T> From<ParseError> for SyntaxError<T> {
     fn from(err: ParseError) -> Self {
-        SyntaxError::ParsingError(err)
+        Self::ParseError(err)
     }
 }
 
-impl Error for SyntaxError {
+impl<T> From<LeftoverError<T>> for SyntaxError<T> {
+    fn from(err: LeftoverError<T>) -> Self {
+        Self::Leftover(err)
+    }
+}
+
+impl<T: fmt::Debug + 'static> Error for SyntaxError<T> {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             Self::LexError(err) => Some(err),
-            Self::ParsingError(err) => Some(err),
+            Self::ParseError(err) => Some(err),
+            Self::Leftover(err) => Some(err),
         }
     }
 }

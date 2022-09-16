@@ -23,7 +23,7 @@ use std::fmt::Formatter;
 use crate::instruction::Instruction;
 use crate::parser::{LexError, ParseError};
 pub use leftover::LeftoverError;
-pub use result::{convert_leftover, disallow_leftover, map_parsed, recover};
+pub use result::{disallow_leftover, map_parsed, recover};
 pub use syntax::SyntaxError;
 
 /// Errors that may occur while parsing a [`Program`](crate::program::Program).
@@ -34,8 +34,7 @@ pub enum ProgramError<T> {
         message: String,
     },
     RecursiveCalibration(Instruction),
-    Syntax(SyntaxError),
-    Leftover(LeftoverError<T>),
+    Syntax(SyntaxError<T>),
 }
 
 impl<T> From<LexError> for ProgramError<T>
@@ -55,7 +54,13 @@ impl<T> From<ParseError> for ProgramError<T> {
 
 impl<T> From<LeftoverError<T>> for ProgramError<T> {
     fn from(err: LeftoverError<T>) -> Self {
-        Self::Leftover(err)
+        Self::Syntax(SyntaxError::from(err))
+    }
+}
+
+impl<T> From<SyntaxError<T>> for ProgramError<T> {
+    fn from(err: SyntaxError<T>) -> Self {
+        Self::Syntax(err)
     }
 }
 
@@ -74,15 +79,14 @@ impl<T> ProgramError<T> {
                 message,
             },
             Self::RecursiveCalibration(inst) => ProgramError::RecursiveCalibration(inst),
-            Self::Syntax(err) => ProgramError::Syntax(err),
-            Self::Leftover(err) => ProgramError::Leftover(err.map_parsed(map)),
+            Self::Syntax(err) => ProgramError::Syntax(err.map_parsed(map)),
         }
     }
 }
 
 impl<T> fmt::Display for ProgramError<T>
 where
-    T: fmt::Debug,
+    T: fmt::Debug + 'static,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
@@ -94,7 +98,6 @@ where
                 write!(f, "instruction {} expands into itself", instruction)
             }
             Self::Syntax(err) => fmt::Display::fmt(err, f),
-            Self::Leftover(err) => fmt::Display::fmt(err, f),
         }
     }
 }
@@ -108,7 +111,6 @@ where
             Self::InvalidCalibration { .. } => None,
             Self::RecursiveCalibration(_) => None,
             Self::Syntax(err) => Some(err),
-            Self::Leftover(err) => Some(err),
         }
     }
 }
