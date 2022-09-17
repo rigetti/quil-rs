@@ -12,65 +12,45 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+mod error;
+mod wrapped_parsers;
+
 use nom::{
-    branch::alt,
-    bytes::complete::{is_a, is_not, tag, take_until, take_while, take_while1},
+    bytes::complete::{is_a, is_not, take_until, take_while, take_while1},
     character::complete::{digit1, one_of},
     combinator::{all_consuming, map, recognize, value},
     multi::many0,
     number::complete::double,
     sequence::{delimited, preceded, terminated, tuple},
-    IResult,
+    Finish, IResult,
 };
+use nom_locate::LocatedSpan;
+use wrapped_parsers::{alt, tag};
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum Token {
-    As,
-    Colon,
-    Comma,
-    Command(Command),
-    Comment(String),
-    // Constant(Constant),
-    DataType(DataType),
-    Float(f64),
-    Identifier(String),
-    Indentation,
-    Integer(u64),
-    Label(String),
-    LBracket,
-    LParenthesis,
-    NonBlocking,
-    Matrix,
-    Modifier(Modifier),
-    NewLine,
-    Operator(Operator),
-    Permutation,
-    RBracket,
-    RParenthesis,
-    Semicolon,
-    Sharing,
-    String(String),
-    Variable(String),
-}
+pub use super::token::{Token, TokenWithLocation};
+use crate::parser::lexer::wrapped_parsers::expecting;
+use crate::parser::token::token_with_location;
+pub use error::{LexError, LexErrorKind};
 
-impl nom::InputLength for Token {
-    fn input_len(&self) -> usize {
-        // All tokens take up exactly one place in the input token stream
-        1
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
+// TODO: replace manual parsing with strum::EnumString (FromStr)?
+// See: https://github.com/rigetti/quil-rs/issues/94
+#[derive(Debug, Copy, Clone, PartialEq, Eq, strum::Display)]
+#[strum(serialize_all = "SCREAMING-KEBAB-CASE")]
 pub enum Command {
     Add,
     And,
     Capture,
     Convert,
     Declare,
+    #[strum(to_string = "DEFCAL")]
     DefCal,
+    #[strum(to_string = "DEFCIRCUIT")]
     DefCircuit,
+    #[strum(to_string = "DEFFRAME")]
     DefFrame,
+    #[strum(to_string = "DEFGATE")]
     DefGate,
+    #[strum(to_string = "DEFWAVEFORM")]
     DefWaveform,
     Delay,
     Div,
@@ -111,7 +91,8 @@ pub enum Command {
     Xor,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, strum::Display)]
+#[strum(serialize_all = "UPPERCASE")]
 pub enum DataType {
     Bit,
     Octet,
@@ -119,72 +100,90 @@ pub enum DataType {
     Integer,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, strum::Display)]
+#[strum(serialize_all = "UPPERCASE")]
 pub enum Modifier {
     Controlled,
     Dagger,
     Forked, // Not in the Quil grammar
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, strum::Display)]
 pub enum Operator {
+    #[strum(serialize = "^")]
     Caret,
+    #[strum(serialize = "-")]
     Minus,
+    #[strum(serialize = "+")]
     Plus,
+    #[strum(serialize = "/")]
     Slash,
+    #[strum(serialize = "*")]
     Star,
 }
 
-pub type LexResult<'a> = IResult<&'a str, Token>;
+type InternalLexError<'a> = nom::error::Error<LexInput<'a>>;
+pub type LexInput<'a> = LocatedSpan<&'a str>;
+pub type LexResult<'a, T = Token, E = LexError> = IResult<LexInput<'a>, T, E>;
 
 /// Completely lex a string, returning the tokens within. Panics if the string cannot be completely read.
-pub(crate) fn lex(input: &str) -> Result<Vec<Token>, String> {
+pub(crate) fn lex(input: &str) -> Result<Vec<TokenWithLocation>, LexError> {
+    let input = LocatedSpan::new(input);
     all_consuming(_lex)(input)
-        .map_err(|err| format!("Error remains: {:?}", err))
+        .finish()
         .map(|(_, tokens)| tokens)
 }
 
-fn _lex(input: &str) -> IResult<&str, Vec<Token>> {
+fn _lex(input: LexInput) -> LexResult<Vec<TokenWithLocation>> {
     terminated(
-        many0(alt((
-            value(Token::Indentation, tag("    ")),
-            preceded(many0(tag(" ")), lex_token),
-        ))),
+        many0(alt(
+            "indentation or a token preceded by whitespace",
+            (
+                token_with_location(value(Token::Indentation, tag("    "))),
+                preceded(many0(tag(" ")), lex_token),
+            ),
+        )),
         many0(one_of("\n\t ")),
     )(input)
 }
 
-fn lex_token(input: &str) -> LexResult {
-    alt((
-        lex_comment,
-        lex_data_type,
-        lex_modifier,
-        lex_punctuation,
-        lex_label,
-        lex_string,
-        // Operator must come before number (or it may be parsed as a prefix)
-        lex_operator,
-        lex_number,
-        lex_variable,
-        lex_non_blocking,
-        // This should come last because it's sort of a catch all
-        lex_command_or_identifier,
-    ))(input)
+fn lex_token(input: LexInput) -> LexResult<TokenWithLocation> {
+    alt(
+        "a token",
+        (
+            token_with_location(lex_comment),
+            token_with_location(lex_data_type),
+            token_with_location(lex_modifier),
+            token_with_location(lex_punctuation),
+            token_with_location(lex_label),
+            token_with_location(lex_string),
+            // Operator must come before number (or it may be parsed as a prefix)
+            token_with_location(lex_operator),
+            token_with_location(lex_number),
+            token_with_location(lex_variable),
+            token_with_location(lex_non_blocking),
+            // This should come last because it's sort of a catch all
+            token_with_location(lex_command_or_identifier),
+        ),
+    )(input)
 }
 
-fn lex_data_type(input: &str) -> LexResult {
-    alt((
-        value(Token::DataType(DataType::Bit), tag("BIT")),
-        value(Token::DataType(DataType::Integer), tag("INTEGER")),
-        value(Token::DataType(DataType::Octet), tag("OCTET")),
-        value(Token::DataType(DataType::Real), tag("REAL")),
-    ))(input)
+fn lex_data_type(input: LexInput) -> LexResult {
+    alt(
+        "a data type",
+        (
+            value(Token::DataType(DataType::Bit), tag("BIT")),
+            value(Token::DataType(DataType::Integer), tag("INTEGER")),
+            value(Token::DataType(DataType::Octet), tag("OCTET")),
+            value(Token::DataType(DataType::Real), tag("REAL")),
+        ),
+    )(input)
 }
 
-fn lex_comment(input: &str) -> LexResult {
+fn lex_comment(input: LexInput) -> LexResult {
     let (input, _) = tag("#")(input)?;
     let (input, content) = is_not("\n")(input)?;
-    Ok((input, Token::Comment(content.to_owned())))
+    Ok((input, Token::Comment(content.to_string())))
 }
 
 /// If the given identifier string matches a command keyword, return the keyword;
@@ -252,35 +251,38 @@ fn is_valid_identifier_leading_character(chr: char) -> bool {
     chr.is_ascii_alphabetic() || chr == '_'
 }
 
-fn lex_identifier_raw(input: &str) -> IResult<&str, String> {
-    map(
-        tuple((
-            take_while1(is_valid_identifier_leading_character),
-            take_while(is_valid_identifier_character),
-        )),
-        |result| [result.0, result.1].concat(),
+fn lex_identifier_raw(input: LexInput) -> LexResult<String> {
+    expecting(
+        "a valid identifier",
+        map(
+            tuple::<_, _, InternalLexError, _>((
+                take_while1(is_valid_identifier_leading_character),
+                take_while(is_valid_identifier_character),
+            )),
+            |(left, right)| format!("{}{}", left, right),
+        ),
     )(input)
 }
 
-fn lex_command_or_identifier(input: &str) -> LexResult {
+fn lex_command_or_identifier(input: LexInput) -> LexResult {
     let (input, identifier) = lex_identifier_raw(input)?;
     let token = recognize_command_or_identifier(identifier);
     Ok((input, token))
 }
 
-fn lex_label(input: &str) -> LexResult {
+fn lex_label(input: LexInput) -> LexResult {
     let (input, _) = tag("@")(input)?;
     let (input, label) = lex_identifier_raw(input)?;
     Ok((input, Token::Label(label)))
 }
 
-fn lex_non_blocking(input: &str) -> LexResult {
+fn lex_non_blocking(input: LexInput) -> LexResult {
     value(Token::NonBlocking, tag("NONBLOCKING"))(input)
 }
 
-fn lex_number(input: &str) -> LexResult {
-    let (input, float_string): (&str, &str) = recognize(double)(input)?;
-    let integer_parse_result: IResult<&str, _> = all_consuming(digit1)(float_string);
+fn lex_number(input: LexInput) -> LexResult {
+    let (input, float_string): (LexInput, LexInput) = recognize(double)(input)?;
+    let integer_parse_result: IResult<LexInput, _> = all_consuming(digit1)(float_string);
     Ok((
         input,
         match integer_parse_result {
@@ -290,55 +292,77 @@ fn lex_number(input: &str) -> LexResult {
     ))
 }
 
-fn lex_modifier(input: &str) -> LexResult {
-    alt((
-        value(Token::As, tag("AS")),
-        value(Token::Matrix, tag("MATRIX")),
-        value(Token::Modifier(Modifier::Controlled), tag("CONTROLLED")),
-        value(Token::Modifier(Modifier::Dagger), tag("DAGGER")),
-        value(Token::Modifier(Modifier::Forked), tag("FORKED")),
-        value(Token::Permutation, tag("PERMUTATION")),
-        value(Token::Sharing, tag("SHARING")),
-    ))(input)
+fn lex_modifier(input: LexInput) -> LexResult {
+    alt(
+        "a modifier token",
+        (
+            value(Token::As, tag("AS")),
+            value(Token::Matrix, tag("MATRIX")),
+            value(Token::Modifier(Modifier::Controlled), tag("CONTROLLED")),
+            value(Token::Modifier(Modifier::Dagger), tag("DAGGER")),
+            value(Token::Modifier(Modifier::Forked), tag("FORKED")),
+            value(Token::Permutation, tag("PERMUTATION")),
+            value(Token::Sharing, tag("SHARING")),
+        ),
+    )(input)
 }
 
-fn lex_operator(input: &str) -> LexResult {
+fn lex_operator(input: LexInput) -> LexResult {
     use Operator::*;
     map(
-        alt((
-            value(Caret, tag("^")),
-            value(Minus, tag("-")),
-            value(Plus, tag("+")),
-            value(Slash, tag("/")),
-            value(Star, tag("*")),
-        )),
+        alt(
+            "an operator",
+            (
+                value(Caret, tag("^")),
+                value(Minus, tag("-")),
+                value(Plus, tag("+")),
+                value(Slash, tag("/")),
+                value(Star, tag("*")),
+            ),
+        ),
         Token::Operator,
     )(input)
 }
 
-fn lex_punctuation(input: &str) -> LexResult {
-    use Token::*;
-    alt((
-        value(Colon, tag(":")),
-        value(Comma, tag(",")),
-        value(Indentation, alt((tag("    "), tag("\t")))),
-        value(LBracket, tag("[")),
-        value(LParenthesis, tag("(")),
-        value(NewLine, alt((is_a("\n"), is_a("\r\n")))),
-        value(RBracket, tag("]")),
-        value(RParenthesis, tag(")")),
-        value(Semicolon, tag(";")),
-    ))(input)
-}
-
-fn lex_string(input: &str) -> LexResult {
-    map(
-        delimited(tag("\""), take_until("\""), tag("\"")),
-        |v: &str| Token::String(v.to_owned()),
+fn recognize_newlines(input: LexInput) -> LexResult<LexInput> {
+    alt(
+        "one or more newlines",
+        (
+            is_a::<_, _, InternalLexError>("\n"),
+            is_a::<_, _, InternalLexError>("\r\n"),
+        ),
     )(input)
 }
 
-fn lex_variable(input: &str) -> LexResult {
+fn lex_punctuation(input: LexInput) -> LexResult {
+    use Token::*;
+    alt(
+        "punctuation",
+        (
+            value(Colon, tag(":")),
+            value(Comma, tag(",")),
+            value(
+                Indentation,
+                alt("four spaces or a tab character", (tag("    "), tag("\t"))),
+            ),
+            value(LBracket, tag("[")),
+            value(LParenthesis, tag("(")),
+            value(NewLine, recognize_newlines),
+            value(RBracket, tag("]")),
+            value(RParenthesis, tag(")")),
+            value(Semicolon, tag(";")),
+        ),
+    )(input)
+}
+
+fn lex_string(input: LexInput) -> LexResult {
+    map(
+        delimited(tag("\""), take_until("\""), tag("\"")),
+        |v: LexInput| Token::String(v.to_string()),
+    )(input)
+}
+
+fn lex_variable(input: LexInput) -> LexResult {
     map(preceded(tag("%"), lex_identifier_raw), |ident| {
         Token::Variable(ident)
     })(input)
@@ -508,19 +532,19 @@ mod tests {
       DEFGATE HADAMARD AS MATRIX:
       \t(1/sqrt(2)),(1/sqrt(2))
       \t(1/sqrt(2)),((-1)/sqrt(2))
-      
+
       DEFGATE RX(%theta) AS MATRIX:
       \tcos((%theta/2)),((-1i)*sin((%theta/2)))
       \t((-1i)*sin((%theta/2))),cos((%theta/2))
-      
+
       DEFGATE Name AS PERMUTATION:
       \t1,0
       \t0,1
-      
+
       DEFCIRCUIT SIMPLE:
       \tX 0
       \tX 1
-      
+
       RX 0
       CZ 0 1
       MEASURE 0 ro[0]
@@ -529,24 +553,24 @@ mod tests {
       CAPTURE 0 \"out\" my_waveform() iq[0]
       DEFCAL X 0:
       \tPULSE 0 \"xy\" my_waveform()
-      
+
       DEFCAL RX(%theta) 0:
       \tPULSE 0 \"xy\" my_waveform()
-      
+
       DEFCAL MEASURE 0 dest:
       \tDECLARE iq REAL[2]
       \tCAPTURE 0 \"out\" flat(duration: 1000000, iqs: (2+3i)) iq[0]
-      
+
       DEFFRAME 0 \"xy\":
       \tSAMPLE-RATE: 3000
-      
+
       DEFFRAME 0 \"xy\":
       \tDIRECTION: \"rx\"
       \tCENTER-FREQUENCY: 1000
       \tHARDWARE-OBJECT: \"some object\"
       \tINITIAL-FREQUENCY: 2000
       \tSAMPLE-RATE: 3000
-      
+
       DELAY 0 100
       DELAY 0 \"xy\" 100000000
       FENCE 0

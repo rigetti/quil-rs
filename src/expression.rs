@@ -25,6 +25,7 @@ use std::str::FromStr;
 use proptest_derive::Arbitrary;
 
 use crate::parser::{lex, parse_expression};
+use crate::program::{disallow_leftover, ProgramError};
 use crate::{imag, instruction::MemoryReference, real};
 
 /// The different possible types of errors that could occur during expression evaluation.
@@ -411,21 +412,11 @@ impl Expression {
 }
 
 impl FromStr for Expression {
-    type Err = String;
+    type Err = ProgramError<Self>;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let tokens = lex(s)?;
-        let (extra, expression) =
-            parse_expression(&tokens).map_err(|_| String::from("Failed to parse expression"))?;
-        if extra.is_empty() {
-            Ok(expression)
-        } else {
-            Err(format!(
-                "Parsed valid expression {} but found {} extra tokens",
-                expression,
-                extra.len(),
-            ))
-        }
+        disallow_leftover(parse_expression(&tokens))
     }
 }
 

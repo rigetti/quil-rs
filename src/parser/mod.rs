@@ -14,11 +14,9 @@
 
 use nom::IResult;
 
-use error::Error;
 pub(crate) use expression::parse_expression;
 pub(crate) use instruction::parse_instructions;
 pub(crate) use lexer::lex;
-use lexer::Token;
 
 mod command;
 mod gate;
@@ -29,6 +27,46 @@ mod error;
 mod expression;
 pub(crate) mod instruction;
 mod lexer;
+mod token;
 
-type ParserInput<'a> = &'a [Token];
-type ParserResult<'a, R> = IResult<&'a [Token], R, Error<&'a [Token]>>;
+pub(crate) use error::ErrorInput;
+pub use error::{InternalParseError, ParseError, ParserErrorKind};
+pub use lexer::{LexError, LexErrorKind};
+pub use token::{Token, TokenWithLocation};
+
+type ParserInput<'a> = &'a [TokenWithLocation];
+type ParserResult<'a, R> = IResult<&'a [TokenWithLocation], R, ParseError>;
+
+/// Pops the first token off of the `input` and returns it and the remaining input.
+///
+/// This also converts the first item from [`TokenWithLocation`] to [`Token`], which makes match
+/// statements more straightforward.
+pub(crate) fn split_first_token(input: ParserInput) -> Option<(&Token, ParserInput)> {
+    input
+        .split_first()
+        .map(|(first, rest)| (first.as_token(), rest))
+}
+
+/// Returns the first token of the input as [`Token`] instead of [`TokenWithLocation`].
+pub(crate) fn first_token(input: ParserInput) -> Option<&Token> {
+    input.first().map(TokenWithLocation::as_token)
+}
+
+/// Extracts the actual error from [`nom::Err`].
+///
+/// Instead of using this with [`Result::map_err`], use [`nom::Finish::finish`].
+///
+/// # Panics
+///
+/// Will panic if the error is [`nom::Err::Incomplete`]. This only happens for streaming parsers,
+/// which we do not use as of 2022-09-14.
+pub(crate) fn extract_nom_err<E: std::error::Error>(err: nom::Err<E>) -> E {
+    // If this ever panics, switch to returning an Option
+    match err {
+        nom::Err::Incomplete(_) => {
+            unreachable!("can't be incomplete if all parsers are complete variants")
+        }
+        nom::Err::Error(inner) => inner,
+        nom::Err::Failure(inner) => inner,
+    }
+}

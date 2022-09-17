@@ -21,7 +21,7 @@ use crate::instruction::{
 use crate::parser::{lex, parse_instructions};
 
 pub use self::calibration::CalibrationSet;
-pub use self::error::ProgramError;
+pub use self::error::{disallow_leftover, map_parsed, recover, ProgramError};
 pub use self::frame::FrameSet;
 pub use self::memory::MemoryRegion;
 
@@ -31,6 +31,8 @@ pub(crate) mod frame;
 pub mod graph;
 mod memory;
 pub mod type_check;
+
+pub type Result<O> = std::result::Result<O, ProgramError<O>>;
 
 #[cfg(feature = "graphviz-dot")]
 pub mod graphviz_dot;
@@ -93,7 +95,7 @@ impl Program {
     /// Expand any instructions in the program which have a matching calibration, leaving the others
     /// unchanged. Recurses though each instruction while ensuring there is no cycle in the expansion
     /// graph (i.e. no calibration expands directly or indirectly into itself)
-    pub fn expand_calibrations(&self) -> error::ProgramResult<Self> {
+    pub fn expand_calibrations(&self) -> Result<Self> {
         let mut expanded_instructions: Vec<Instruction> = vec![];
 
         // TODO: Do this more efficiently, possibly with Vec::splice
@@ -191,23 +193,19 @@ impl Program {
 }
 
 impl FromStr for Program {
-    type Err = ProgramError;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let lexed = lex(s).map_err(ProgramError::LeftoverInputAfterLexing)?;
-        let (_, instructions) = parse_instructions(&lexed).map_err(|err| match err {
-            nom::Err::Incomplete(needed) => ProgramError::IncompleteParse(format!("{:?}", needed)),
-            nom::Err::Error(error) => ProgramError::RecoverableParsingError(format!("{:?}", error)),
-            nom::Err::Failure(failure) => {
-                ProgramError::UnrecoverableParsingError(format!("{:?}", failure))
-            }
-        })?;
-        let mut program = Self::new();
-
-        for instruction in instructions {
-            program.add_instruction(instruction)
-        }
-
-        Ok(program)
+    type Err = ProgramError<Self>;
+    fn from_str(s: &str) -> Result<Self> {
+        let lexed = lex(s).map_err(ProgramError::from)?;
+        map_parsed(
+            disallow_leftover(parse_instructions(&lexed)),
+            |instructions| {
+                let mut program = Self::new();
+                for instruction in instructions {
+                    program.add_instruction(instruction)
+                }
+                program
+            },
+        )
     }
 }
 

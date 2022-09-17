@@ -13,9 +13,11 @@ dot-writer = { version = "0.1.2", optional = true }
 indexmap = "1.6.1"
 lexical = "6.1.1" 
 nom = "7.1.1"
+nom_locate = "4.0.0"
 num-complex = "0.4.0"
 petgraph = "0.5.1"
 serde = { version = "1.0.125", features = ["derive"] }
+strum = { version = "0.24.1", features = ["derive"] }
 thiserror = "1.0.30"
 
 [dev-dependencies]

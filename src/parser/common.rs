@@ -33,7 +33,7 @@ use crate::{
 };
 
 use super::{
-    error::{Error, ErrorKind},
+    error::{ParseError, ParserErrorKind},
     expression::parse_expression,
     lexer::{DataType, Modifier, Token},
     ParserInput, ParserResult,
@@ -205,11 +205,11 @@ pub fn parse_waveform_invocation<'a>(
 /// Per the specification, variable-named and identifier-named are valid in different locations,
 /// but this parser is tolerant and accepts both as equivalent.
 pub fn parse_qubit(input: ParserInput) -> ParserResult<Qubit> {
-    match input.split_first() {
-        None => Err(nom::Err::Error(Error {
+    match super::split_first_token(input) {
+        None => Err(nom::Err::Error(ParseError::from_kind(
             input,
-            error: ErrorKind::UnexpectedEOF("a qubit".to_owned()),
-        })),
+            ParserErrorKind::UnexpectedEOF("a qubit"),
+        ))),
         Some((Token::Integer(value), remainder)) => Ok((remainder, Qubit::Fixed(*value))),
         Some((Token::Variable(name), remainder)) => Ok((remainder, Qubit::Variable(name.clone()))),
         Some((Token::Identifier(name), remainder)) => {
@@ -223,11 +223,11 @@ pub fn parse_qubit(input: ParserInput) -> ParserResult<Qubit> {
 
 /// Parse a variable qubit (i.e. a named qubit)
 pub fn parse_variable_qubit(input: ParserInput) -> ParserResult<String> {
-    match input.split_first() {
-        None => Err(nom::Err::Error(Error {
+    match super::split_first_token(input) {
+        None => Err(nom::Err::Error(ParseError::from_kind(
             input,
-            error: ErrorKind::UnexpectedEOF("a variable qubit".to_owned()),
-        })),
+            ParserErrorKind::UnexpectedEOF("a variable qubit"),
+        ))),
         Some((Token::Variable(name), remainder)) => Ok((remainder, name.clone())),
         Some((Token::Identifier(name), remainder)) => Ok((remainder, name.clone())),
         Some((other_token, _)) => {
@@ -335,7 +335,11 @@ mod tests {
         let input = "wf(a: 1.0, b: %var, c: ro[0])";
         let lexed = lex(input).unwrap();
         let (remainder, waveform) = parse_waveform_invocation(&lexed).unwrap();
-        assert_eq!(remainder, &[]);
+        assert!(
+            remainder.is_empty(),
+            "expected remainder to be empty, got {:?}",
+            remainder
+        );
         assert_eq!(
             waveform.parameters,
             vec![

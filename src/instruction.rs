@@ -1145,7 +1145,7 @@ impl Instruction {
     pub(crate) fn parse(input: &str) -> Result<Self, String> {
         use crate::parser::{instruction::parse_instruction, lex};
 
-        let lexed = lex(input)?;
+        let lexed = lex(input).map_err(|err| err.to_string())?;
         let (_, instruction) =
             nom::combinator::all_consuming(parse_instruction)(&lexed).map_err(|e| e.to_string())?;
         Ok(instruction)
