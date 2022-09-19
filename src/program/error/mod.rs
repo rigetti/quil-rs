@@ -14,6 +14,7 @@
 
 mod leftover;
 mod result;
+mod syntax;
 
 use std::error::Error;
 use std::fmt;
@@ -22,8 +23,10 @@ use std::fmt::Formatter;
 use crate::instruction::Instruction;
 use crate::parser::{LexError, ParseError};
 pub use leftover::LeftoverError;
-pub use result::{convert_leftover, disallow_leftover, map_parsed, recover};
+pub use result::{disallow_leftover, map_parsed, recover};
+pub use syntax::SyntaxError;
 
+/// Errors that may occur while parsing a [`Program`](crate::program::Program).
 #[derive(Debug, PartialEq)]
 pub enum ProgramError<T> {
     InvalidCalibration {
@@ -31,9 +34,7 @@ pub enum ProgramError<T> {
         message: String,
     },
     RecursiveCalibration(Instruction),
-    LexError(LexError),
-    ParsingError(ParseError),
-    Leftover(LeftoverError<T>),
+    Syntax(SyntaxError<T>),
 }
 
 impl<T> From<LexError> for ProgramError<T>
@@ -41,23 +42,33 @@ where
     T: fmt::Debug,
 {
     fn from(e: LexError) -> Self {
-        Self::LexError(e)
+        Self::Syntax(SyntaxError::from(e))
     }
 }
 
 impl<T> From<ParseError> for ProgramError<T> {
     fn from(e: ParseError) -> Self {
-        Self::ParsingError(e)
+        Self::Syntax(SyntaxError::from(e))
     }
 }
 
 impl<T> From<LeftoverError<T>> for ProgramError<T> {
     fn from(err: LeftoverError<T>) -> Self {
-        Self::Leftover(err)
+        Self::Syntax(SyntaxError::from(err))
+    }
+}
+
+impl<T> From<SyntaxError<T>> for ProgramError<T> {
+    fn from(err: SyntaxError<T>) -> Self {
+        Self::Syntax(err)
     }
 }
 
 impl<T> ProgramError<T> {
+    /// Convert the parsed output into another type.
+    ///
+    /// This delegates to [`LeftoverError::map_parsed`] when a [`ProgramError::Leftover`] and does
+    /// nothing but change the type signature otherwise.
     pub fn map_parsed<T2>(self, map: impl Fn(T) -> T2) -> ProgramError<T2> {
         match self {
             Self::InvalidCalibration {
@@ -68,16 +79,14 @@ impl<T> ProgramError<T> {
                 message,
             },
             Self::RecursiveCalibration(inst) => ProgramError::RecursiveCalibration(inst),
-            Self::LexError(err) => ProgramError::LexError(err),
-            Self::ParsingError(err) => ProgramError::ParsingError(err),
-            Self::Leftover(err) => ProgramError::Leftover(err.map_parsed(map)),
+            Self::Syntax(err) => ProgramError::Syntax(err.map_parsed(map)),
         }
     }
 }
 
 impl<T> fmt::Display for ProgramError<T>
 where
-    T: fmt::Debug,
+    T: fmt::Debug + 'static,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
@@ -88,21 +97,7 @@ where
             Self::RecursiveCalibration(instruction) => {
                 write!(f, "instruction {} expands into itself", instruction)
             }
-            Self::LexError(error) => {
-                if f.alternate() {
-                    write!(f, "error while lexing: {:#}", error)
-                } else {
-                    write!(f, "error while lexing: {}", error)
-                }
-            }
-            Self::ParsingError(error) => {
-                if f.alternate() {
-                    write!(f, "error while parsing: {:#}", error)
-                } else {
-                    write!(f, "error while parsing: {}", error)
-                }
-            }
-            Self::Leftover(err) => fmt::Display::fmt(err, f),
+            Self::Syntax(err) => fmt::Display::fmt(err, f),
         }
     }
 }
@@ -115,9 +110,7 @@ where
         match self {
             Self::InvalidCalibration { .. } => None,
             Self::RecursiveCalibration(_) => None,
-            Self::LexError(err) => Some(err),
-            Self::ParsingError(err) => Some(err),
-            Self::Leftover(err) => Some(err),
+            Self::Syntax(err) => Some(err),
         }
     }
 }

@@ -21,7 +21,7 @@ use crate::instruction::{
 use crate::parser::{lex, parse_instructions};
 
 pub use self::calibration::CalibrationSet;
-pub use self::error::{convert_leftover, disallow_leftover, map_parsed, recover, ProgramError};
+pub use self::error::{disallow_leftover, map_parsed, recover, ProgramError};
 pub use self::frame::FrameSet;
 pub use self::memory::MemoryRegion;
 
@@ -100,7 +100,7 @@ impl Program {
 
         // TODO: Do this more efficiently, possibly with Vec::splice
         for instruction in &self.instructions {
-            match convert_leftover(self.calibrations.expand(instruction, &[]))? {
+            match self.calibrations.expand(instruction, &[])? {
                 Some(expanded) => {
                     expanded_instructions.extend(expanded.into_iter());
                 }
@@ -195,7 +195,7 @@ impl Program {
 impl FromStr for Program {
     type Err = ProgramError<Self>;
     fn from_str(s: &str) -> Result<Self> {
-        let lexed = lex(s).map_err(ProgramError::LexError)?;
+        let lexed = lex(s).map_err(ProgramError::from)?;
         map_parsed(
             disallow_leftover(parse_instructions(&lexed)),
             |instructions| {

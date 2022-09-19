@@ -37,16 +37,29 @@ pub use token::{Token, TokenWithLocation};
 type ParserInput<'a> = &'a [TokenWithLocation];
 type ParserResult<'a, R> = IResult<&'a [TokenWithLocation], R, ParseError>;
 
-pub(crate) fn split_first_token(input: ParserInput) -> Option<(&Token, &[TokenWithLocation])> {
+/// Pops the first token off of the `input` and returns it and the remaining input.
+///
+/// This also converts the first item from [`TokenWithLocation`] to [`Token`], which makes match
+/// statements more straightforward.
+pub(crate) fn split_first_token(input: ParserInput) -> Option<(&Token, ParserInput)> {
     input
         .split_first()
         .map(|(first, rest)| (first.as_token(), rest))
 }
 
+/// Returns the first token of the input as [`Token`] instead of [`TokenWithLocation`].
 pub(crate) fn first_token(input: ParserInput) -> Option<&Token> {
     input.first().map(TokenWithLocation::as_token)
 }
 
+/// Extracts the actual error from [`nom::Err`].
+///
+/// Instead of using this with [`Result::map_err`], use [`nom::Finish::finish`].
+///
+/// # Panics
+///
+/// Will panic if the error is [`nom::Err::Incomplete`]. This only happens for streaming parsers,
+/// which we do not use as of 2022-09-14.
 pub(crate) fn extract_nom_err<E: std::error::Error>(err: nom::Err<E>) -> E {
     // If this ever panics, switch to returning an Option
     match err {

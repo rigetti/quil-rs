@@ -25,7 +25,6 @@ use std::str::FromStr;
 use proptest_derive::Arbitrary;
 
 use crate::parser::{lex, parse_expression};
-
 use crate::program::{disallow_leftover, ProgramError};
 use crate::{imag, instruction::MemoryReference, real};
 

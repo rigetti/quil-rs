@@ -1,11 +1,39 @@
-use crate::parser::error::kind::ErrorKind;
+// Copyright 2022 Rigetti Computing
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
+use crate::parser::error::kind::ErrorKind;
 use crate::parser::error::{ErrorInput, InternalParseError};
 use nom::error::{Error as NomError, ParseError};
 use std::convert::Infallible;
 use std::fmt;
 use thiserror::private::AsDynError;
 
+/// An error that may occur while parsing.
+///
+/// This error contains file location information, to assist with debugging.
+///
+/// # Display
+///
+/// The [`Display`](fmt::Display) impl for this error allows for alternate outputs.
+///
+/// The standard output (i.e., with `format!("{}", err)`) outputs just this error, including file
+/// location information.
+///
+/// The alternate output (i.e., with `format!("{:#}", err)`) outputs this error as well a
+/// user-readable backtrace of the errors that caused this one.
+///
+/// When displaying errors to end-users, prefer the alternate format for easier debugging.
 #[derive(Debug)]
 pub struct Error<E = Infallible>
 where
@@ -40,7 +68,8 @@ impl<E> Error<E>
 where
     E: std::error::Error,
 {
-    pub(crate) fn from_other<I>(input: I, other: E) -> Self
+    /// Create a new `Error` from the given error kind.
+    pub(crate) fn from_kind<I>(input: I, other: E) -> Self
     where
         I: ErrorInput,
     {
@@ -48,6 +77,7 @@ where
         Self::internal_new(input, kind)
     }
 
+    /// Attach a previous error to this one.
     pub(crate) fn with_previous<E2>(mut self, previous: E2) -> Self
     where
         E2: std::error::Error + 'static,
@@ -72,6 +102,7 @@ where
         }
     }
 
+    /// Create an `Error` from a nom error.
     pub(crate) fn from_nom_err<I>(err: NomError<I>) -> Self
     where
         I: ErrorInput,
@@ -80,6 +111,8 @@ where
         Self::from_nom_err_with_kind(err, kind)
     }
 
+    /// Create an `Error` by getting the input from a nom error, but set the error kind to the
+    /// provided one.
     pub(crate) fn from_nom_err_with_kind<I>(err: NomError<I>, kind: ErrorKind<E>) -> Self
     where
         I: ErrorInput,

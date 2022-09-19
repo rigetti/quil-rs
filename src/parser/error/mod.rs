@@ -25,15 +25,18 @@ pub(crate) use input::ErrorInput;
 pub use internal::InternalParseError;
 pub use kind::ErrorKind;
 
+/// An error specific to parsing tokens.
 pub type ParseError = Error<ParserErrorKind>;
 
-/// Parsing errors specific to Quil parsing
+/// Parsing errors specific to Quil parsing.
 #[allow(dead_code)]
 #[derive(Debug, thiserror::Error, PartialEq)]
 pub enum ParserErrorKind {
-    // TODO: can this be static str?
+    /// Reached end of input, but expected something else.
     #[error("expected {0}, found EOF")]
-    UnexpectedEOF(String),
+    UnexpectedEOF(&'static str),
+
+    /// Got an unexpected token and expected something else.
     #[error("expected {expected}, found {actual:?}")]
     ExpectedToken { actual: Token, expected: String },
 

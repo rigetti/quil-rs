@@ -2,6 +2,7 @@ use crate::parser::lexer::{Command, DataType, LexInput, LexResult, Modifier, Ope
 use std::fmt;
 use std::fmt::Formatter;
 
+/// Wrapper for [`Token`] that includes file location information.
 #[derive(Debug, Clone, PartialEq)]
 pub struct TokenWithLocation {
     token: Token,
@@ -16,18 +17,22 @@ impl PartialEq<Token> for TokenWithLocation {
 }
 
 impl TokenWithLocation {
+    /// Returns a reference to the contained token.
     pub fn as_token(&self) -> &Token {
         &self.token
     }
 
+    /// Converts this `TokenWithLocation` into the contained [`Token`].
     pub fn into_token(self) -> Token {
         self.token
     }
 
+    /// The line that this token appears on.
     pub fn line(&self) -> u32 {
         self.line
     }
 
+    /// The column of the line this token appears on.
     pub fn column(&self) -> usize {
         self.column
     }
@@ -40,6 +45,7 @@ impl nom::InputLength for TokenWithLocation {
     }
 }
 
+/// Wraps a parser that returns a [`Token`] and combines it with file location information.
 pub(crate) fn token_with_location<'i, E, P>(
     mut parser: P,
 ) -> impl FnMut(LexInput<'i>) -> LexResult<'i, TokenWithLocation, E>
@@ -50,6 +56,7 @@ where
     move |input| {
         let line = input.location_line();
         // TODO: naive_get_utf8_column might be faster for shorter lines
+        // See: https://github.com/rigetti/quil-rs/issues/93
         let column = input.get_utf8_column();
         // Using this syntax because map(parser, || ...)(input) has lifetime issues for parser.
         parser.parse(input).map(|(leftover, token)| {
@@ -72,7 +79,6 @@ pub enum Token {
     Comma,
     Command(Command),
     Comment(String),
-    // Constant(Constant),
     DataType(DataType),
     Float(f64),
     Identifier(String),
