@@ -323,6 +323,7 @@ pub struct GateDefinition {
     pub name: String,
     pub parameters: Vec<String>,
     pub matrix: Vec<Vec<Expression>>,
+    pub permutation: Vec<u64>,
     pub r#type: GateType,
 }
 
@@ -775,19 +776,35 @@ impl fmt::Display for Instruction {
                 name,
                 parameters,
                 matrix,
+                permutation,
                 r#type,
             }) => {
                 let parameter_str: String = parameters.iter().map(|p| p.to_string()).collect();
                 writeln!(f, "DEFGATE {}{} AS {}:", name, parameter_str, r#type)?;
-                for row in matrix {
-                    writeln!(
-                        f,
-                        "\t{}",
-                        row.iter()
-                            .map(|cell| format!("{}", cell))
-                            .collect::<Vec<String>>()
-                            .join(",")
-                    )?;
+                match r#type {
+                    GateType::Matrix => {
+                        for row in matrix {
+                            writeln!(
+                                f,
+                                "\t{}",
+                                row.iter()
+                                    .map(|cell| format!("{}", cell))
+                                    .collect::<Vec<String>>()
+                                    .join(",")
+                            )?;
+                        }
+                    }
+                    GateType::Permutation => {
+                        writeln!(
+                            f,
+                            "\t{}",
+                            permutation
+                                .iter()
+                                .map(|i| i.to_string())
+                                .collect::<Vec<String>>()
+                                .join(", ")
+                        )?;
+                    }
                 }
                 Ok(())
             }

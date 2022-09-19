@@ -758,6 +758,7 @@ mod tests {
                     },
                 ],
             ],
+            permutation: Default::default(),
             r#type: GateType::Matrix,
         })]
     );

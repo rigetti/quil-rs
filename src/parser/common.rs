@@ -17,7 +17,7 @@ use std::collections::HashMap;
 use nom::{
     branch::alt,
     combinator::{cut, map, opt, value},
-    multi::{many0, many1, separated_list0},
+    multi::{many0, many1, separated_list0, separated_list1},
     sequence::{delimited, preceded, tuple},
 };
 
@@ -35,7 +35,7 @@ use crate::{
 use super::{
     error::{ParseError, ParserErrorKind},
     expression::parse_expression,
-    lexer::{Command, DataType, Modifier, Token},
+    lexer::{DataType, Modifier, Token},
     ParserInput, ParserResult,
 };
 
@@ -157,39 +157,27 @@ pub fn parse_gate_modifier<'a>(input: ParserInput<'a>) -> ParserResult<'a, GateM
 
 /// Parse matrix used to define gate with `DEFGATE`.
 pub fn parse_matrix<'a>(input: ParserInput<'a>) -> ParserResult<'a, Vec<Vec<Expression>>> {
-    let (input, matrix) = separated_list0(
+    preceded(
         token!(NewLine),
-        preceded(
-            many1(token!(Indentation)),
-            separated_list0(token!(Comma), parse_expression),
+        separated_list1(
+            token!(NewLine),
+            preceded(
+                token!(Indentation),
+                separated_list0(token!(Comma), parse_expression),
+            ),
         ),
-    )(input)?;
-    Ok((input, matrix))
+    )(input)
 }
 
 /// Parse permutation representation of a `DEFGATE` matrix.
-pub fn parse_permutation<'a>(input: ParserInput<'a>) -> ParserResult<'a, Vec<Vec<Expression>>> {
-    let (input, matrix) = preceded(
-        many1(token!(Indentation)),
-        separated_list0(token!(Comma), parse_expression),
-    )(input)?;
-    let matrix = matrix
-        .into_iter()
-        .map(|expr| {
-            if let Expression::Number(_) = expr {
-                Ok(expr)
-            } else {
-                // permutations can only be a one-dimensional list of indices
-                Err(nom::Err::Error(ParseError::from_other(
-                    input,
-                    ParserErrorKind::InvalidCommand {
-                        command: Command::DefGate,
-                    },
-                )))
-            }
-        })
-        .collect::<Result<Vec<_>, _>>()?;
-    Ok((input, vec![matrix]))
+pub fn parse_permutation<'a>(input: ParserInput<'a>) -> ParserResult<'a, Vec<u64>> {
+    preceded(
+        token!(NewLine),
+        preceded(
+            token!(Indentation),
+            separated_list1(token!(Comma), token!(Integer(value))),
+        ),
+    )(input)
 }
 
 /// Parse a reference to a memory location, such as `ro[5]`, with optional brackets
@@ -402,7 +390,7 @@ mod tests {
 
     #[test]
     fn test_parse_matrix() {
-        let input = "\t1/sqrt(2), 1/sqrt(2)\n\t1/sqrt(2), -1/sqrt(2)";
+        let input = "\n\t1/sqrt(2), 1/sqrt(2)\n\t1/sqrt(2), -1/sqrt(2)";
         let lexed = lex(input).unwrap();
         let (remainder, matrix) = parse_matrix(&lexed).unwrap();
         assert!(
@@ -415,52 +403,20 @@ mod tests {
 
     #[test]
     fn test_parse_permutation() {
-        let input = "\t0, 1, 2, 3, 4, 5, 7, 6";
+        let input = "\n\t0, 1, 2, 3, 4, 5, 7, 6";
         let lexed = lex(input).unwrap();
-        let (remainder, matrix) = parse_permutation(&lexed).unwrap();
+        let (remainder, permutation) = parse_permutation(&lexed).unwrap();
         assert!(
             remainder.is_empty(),
             "expected remainder to be empty, got {:?}",
             remainder
         );
-        assert_eq!(
-            matrix,
-            vec![vec![
-                Expression::Number(real!(0.0)),
-                Expression::Number(real!(1.0)),
-                Expression::Number(real!(2.0)),
-                Expression::Number(real!(3.0)),
-                Expression::Number(real!(4.0)),
-                Expression::Number(real!(5.0)),
-                Expression::Number(real!(7.0)),
-                Expression::Number(real!(6.0)),
-            ]]
-        );
+        assert_eq!(permutation, vec![0, 1, 2, 3, 4, 5, 7, 6]);
 
-        let input = "\t0, 1, 2, 3, 4, 5, 7, 6\n\t0, 1, 2, 3, 4, 5, 6, 7";
+        let input = "\n\t0, 1, 2, 3, 4, 5, 7, 6\n\t0, 1, 2, 3, 4, 5, 6, 7";
         let lexed = lex(input).unwrap();
-        let (remainder, matrix) = parse_permutation(&lexed).unwrap();
+        let (remainder, permutation) = parse_permutation(&lexed).unwrap();
         assert!(!remainder.is_empty(), "multiline permutations are invalid");
-        assert_eq!(
-            matrix,
-            vec![vec![
-                Expression::Number(real!(0.0)),
-                Expression::Number(real!(1.0)),
-                Expression::Number(real!(2.0)),
-                Expression::Number(real!(3.0)),
-                Expression::Number(real!(4.0)),
-                Expression::Number(real!(5.0)),
-                Expression::Number(real!(7.0)),
-                Expression::Number(real!(6.0)),
-            ]]
-        );
-
-        let input = "\t1/sqrt(2), 1/sqrt(2)\n\t1/sqrt(2), -1/sqrt(2)";
-        let lexed = lex(input).unwrap();
-        let res = parse_permutation(&lexed);
-        assert!(
-            res.is_err(),
-            "complex expressions are invalid for permutation"
-        );
+        assert_eq!(permutation, vec![0, 1, 2, 3, 4, 5, 7, 6]);
     }
 }

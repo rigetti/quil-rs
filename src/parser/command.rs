@@ -21,20 +21,17 @@ use nom::{
 
 use crate::parser::common::parse_variable_qubit;
 
+use crate::instruction::{
+    Arithmetic, ArithmeticOperand, ArithmeticOperator, BinaryLogic, BinaryOperator, Calibration,
+    Capture, CircuitDefinition, Comparison, ComparisonOperator, Declaration, Delay, Exchange,
+    Fence, FrameDefinition, GateDefinition, GateType, Instruction, Jump, JumpUnless, JumpWhen,
+    Label, Load, MeasureCalibrationDefinition, Measurement, Move, Pragma, Pulse, Qubit, RawCapture,
+    Reset, SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, Store, UnaryLogic,
+    UnaryOperator, Waveform, WaveformDefinition,
+};
 use crate::parser::common::parse_permutation;
 use crate::parser::instruction::parse_block;
 use crate::token;
-use crate::{
-    instruction::{
-        Arithmetic, ArithmeticOperand, ArithmeticOperator, BinaryLogic, BinaryOperator,
-        Calibration, Capture, CircuitDefinition, Comparison, ComparisonOperator, Declaration,
-        Delay, Exchange, Fence, FrameDefinition, GateDefinition, GateType, Instruction, Jump,
-        JumpUnless, JumpWhen, Label, Load, MeasureCalibrationDefinition, Measurement, Move, Pragma,
-        Pulse, Qubit, RawCapture, Reset, SetFrequency, SetPhase, SetScale, ShiftFrequency,
-        ShiftPhase, Store, UnaryLogic, UnaryOperator, Waveform, WaveformDefinition,
-    },
-    parser::common::skip_newlines_and_comments,
-};
 
 use super::{
     common::{
@@ -235,12 +232,26 @@ pub fn parse_defgate<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction
             map(token!(Permutation), |()| GateType::Permutation),
         )),
     ))(input)?;
+    let (input, _) = token!(Colon)(input)?;
+
     let gate_type = gate_type.unwrap_or(GateType::Matrix);
-    let (input, _) = tuple((token!(Colon), skip_newlines_and_comments))(input)?;
-    let (input, matrix) = match gate_type {
-        GateType::Matrix => parse_matrix,
-        GateType::Permutation => parse_permutation,
-    }(input)?;
+
+    let matrix;
+    let permutation;
+    let input = match gate_type {
+        GateType::Matrix => {
+            let (input, m) = parse_matrix(input)?;
+            matrix = m;
+            permutation = Vec::new();
+            input
+        }
+        GateType::Permutation => {
+            let (input, p) = parse_permutation(input)?;
+            permutation = p;
+            matrix = Vec::new();
+            input
+        }
+    };
 
     Ok((
         input,
@@ -248,6 +259,7 @@ pub fn parse_defgate<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction
             name,
             parameters: parameters.unwrap_or_default(),
             matrix,
+            permutation,
             r#type: gate_type,
         }),
     ))
@@ -703,8 +715,8 @@ mod tests {
         defgate,
         parse_defgate,
         r#"H:
-            1/sqrt(2), 1/sqrt(2)
-            1/sqrt(2), -1/sqrt(2)"#,
+    1/sqrt(2), 1/sqrt(2)
+    1/sqrt(2), -1/sqrt(2)"#,
         Instruction::GateDefinition(GateDefinition {
             name: "H".to_string(),
             parameters: vec![],
@@ -749,6 +761,7 @@ mod tests {
                     },
                 ],
             ],
+            permutation: Default::default(),
             r#type: GateType::Matrix,
         })
     );
@@ -757,8 +770,8 @@ mod tests {
         defgate_parameterized,
         parse_defgate,
         r#"RX(%theta):
-            cos(%theta/2), -i*sin(%theta/2)
-            -i*sin(%theta/2), cos(%theta/2)"#,
+    cos(%theta/2), -i*sin(%theta/2)
+    -i*sin(%theta/2), cos(%theta/2)"#,
         Instruction::GateDefinition(GateDefinition {
             name: "RX".to_string(),
             parameters: vec!["theta".to_string()],
@@ -814,6 +827,7 @@ mod tests {
                     },
                 ],
             ],
+            permutation: Default::default(),
             r#type: GateType::Matrix,
         })
     );
@@ -822,20 +836,12 @@ mod tests {
         defgate_permutation,
         parse_defgate,
         r#"CCNOT AS PERMUTATION:
-            0, 1, 2, 3, 4, 5, 7, 6"#,
+    0, 1, 2, 3, 4, 5, 7, 6"#,
         Instruction::GateDefinition(GateDefinition {
             name: "CCNOT".to_string(),
             parameters: vec![],
-            matrix: vec![vec![
-                Expression::Number(real!(0.0)),
-                Expression::Number(real!(1.0)),
-                Expression::Number(real!(2.0)),
-                Expression::Number(real!(3.0)),
-                Expression::Number(real!(4.0)),
-                Expression::Number(real!(5.0)),
-                Expression::Number(real!(7.0)),
-                Expression::Number(real!(6.0)),
-            ],],
+            matrix: Default::default(),
+            permutation: vec![0, 1, 2, 3, 4, 5, 7, 6],
             r#type: GateType::Permutation,
         })
     );
