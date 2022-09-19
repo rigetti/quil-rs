@@ -236,19 +236,17 @@ pub fn parse_defgate<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction
 
     let gate_type = gate_type.unwrap_or(GateType::Matrix);
 
-    let matrix;
-    let permutation;
+    let mut matrix = None;
+    let mut permutation = None;
     let input = match gate_type {
         GateType::Matrix => {
             let (input, m) = parse_matrix(input)?;
-            matrix = m;
-            permutation = Vec::new();
+            matrix = Some(m);
             input
         }
         GateType::Permutation => {
             let (input, p) = parse_permutation(input)?;
-            permutation = p;
-            matrix = Vec::new();
+            permutation = Some(p);
             input
         }
     };
@@ -720,7 +718,7 @@ mod tests {
         Instruction::GateDefinition(GateDefinition {
             name: "H".to_string(),
             parameters: vec![],
-            matrix: vec![
+            matrix: Some(vec![
                 vec![
                     Expression::Infix {
                         left: Box::new(Expression::Number(real!(1.0))),
@@ -760,7 +758,7 @@ mod tests {
                         }),
                     },
                 ],
-            ],
+            ]),
             permutation: Default::default(),
             r#type: GateType::Matrix,
         })
@@ -775,7 +773,7 @@ mod tests {
         Instruction::GateDefinition(GateDefinition {
             name: "RX".to_string(),
             parameters: vec!["theta".to_string()],
-            matrix: vec![
+            matrix: Some(vec![
                 vec![
                     Expression::FunctionCall {
                         function: crate::expression::ExpressionFunction::Cosine,
@@ -826,7 +824,7 @@ mod tests {
                         }),
                     },
                 ],
-            ],
+            ]),
             permutation: Default::default(),
             r#type: GateType::Matrix,
         })
@@ -841,7 +839,7 @@ mod tests {
             name: "CCNOT".to_string(),
             parameters: vec![],
             matrix: Default::default(),
-            permutation: vec![0, 1, 2, 3, 4, 5, 7, 6],
+            permutation: Some(vec![0, 1, 2, 3, 4, 5, 7, 6]),
             r#type: GateType::Permutation,
         })
     );

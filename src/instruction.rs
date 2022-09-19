@@ -322,8 +322,8 @@ pub struct CircuitDefinition {
 pub struct GateDefinition {
     pub name: String,
     pub parameters: Vec<String>,
-    pub matrix: Vec<Vec<Expression>>,
-    pub permutation: Vec<u64>,
+    pub matrix: Option<Vec<Vec<Expression>>>,
+    pub permutation: Option<Vec<u64>>,
     pub r#type: GateType,
 }
 
@@ -783,27 +783,31 @@ impl fmt::Display for Instruction {
                 writeln!(f, "DEFGATE {}{} AS {}:", name, parameter_str, r#type)?;
                 match r#type {
                     GateType::Matrix => {
-                        for row in matrix {
-                            writeln!(
-                                f,
-                                "\t{}",
-                                row.iter()
-                                    .map(|cell| format!("{}", cell))
-                                    .collect::<Vec<String>>()
-                                    .join(",")
-                            )?;
+                        if let Some(matrix) = matrix {
+                            for row in matrix {
+                                writeln!(
+                                    f,
+                                    "\t{}",
+                                    row.iter()
+                                        .map(|cell| format!("{}", cell))
+                                        .collect::<Vec<String>>()
+                                        .join(",")
+                                )?;
+                            }
                         }
                     }
                     GateType::Permutation => {
-                        writeln!(
-                            f,
-                            "\t{}",
-                            permutation
-                                .iter()
-                                .map(|i| i.to_string())
-                                .collect::<Vec<String>>()
-                                .join(", ")
-                        )?;
+                        if let Some(permutation) = permutation {
+                            writeln!(
+                                f,
+                                "\t{}",
+                                permutation
+                                    .iter()
+                                    .map(|i| i.to_string())
+                                    .collect::<Vec<String>>()
+                                    .join(", ")
+                            )?;
+                        }
                     }
                 }
                 Ok(())
@@ -1071,9 +1075,11 @@ impl Instruction {
                 definition.matrix.iter_mut().for_each(closure);
             }
             Instruction::GateDefinition(GateDefinition { matrix, .. }) => {
-                for row in matrix {
-                    for cell in row {
-                        closure(cell);
+                if let Some(matrix) = matrix {
+                    for row in matrix {
+                        for cell in row {
+                            closure(cell);
+                        }
                     }
                 }
             }

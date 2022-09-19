@@ -717,7 +717,7 @@ mod tests {
         vec![Instruction::GateDefinition(GateDefinition {
             name: "H".to_string(),
             parameters: vec![],
-            matrix: vec![
+            matrix: Some(vec![
                 vec![
                     Expression::Infix {
                         left: Box::new(Expression::Number(real!(1.0))),
@@ -757,7 +757,7 @@ mod tests {
                         }),
                     },
                 ],
-            ],
+            ]),
             permutation: Default::default(),
             r#type: GateType::Matrix,
         })]

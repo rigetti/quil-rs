@@ -190,13 +190,17 @@ impl Instruction {
                 ..Default::default()
             },
             Instruction::GateDefinition(GateDefinition { matrix, .. }) => {
-                let references = matrix
-                    .iter()
-                    .flat_map(|row| row.iter().flat_map(|cell| cell.get_memory_references()))
-                    .collect::<Vec<&MemoryReference>>();
-                MemoryAccesses {
-                    reads: set_from_memory_references!(references),
-                    ..Default::default()
+                if let Some(matrix) = matrix {
+                    let references = matrix
+                        .iter()
+                        .flat_map(|row| row.iter().flat_map(|cell| cell.get_memory_references()))
+                        .collect::<Vec<&MemoryReference>>();
+                    MemoryAccesses {
+                        reads: set_from_memory_references!(references),
+                        ..Default::default()
+                    }
+                } else {
+                    Default::default()
                 }
             }
             Instruction::Halt => Default::default(),
