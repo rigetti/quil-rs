@@ -161,9 +161,9 @@ mod tests {
         Arithmetic, ArithmeticOperand, ArithmeticOperator, AttributeValue, BinaryLogic,
         BinaryOperand, BinaryOperator, Calibration, Capture, Comparison, ComparisonOperand,
         ComparisonOperator, FrameDefinition, FrameIdentifier, Gate, GateDefinition,
-        GateSpecification, GateType, Instruction, Jump, JumpWhen, Label, MemoryReference, Move,
-        Pulse, Qubit, RawCapture, Reset, SetFrequency, SetPhase, SetScale, ShiftFrequency,
-        ShiftPhase, UnaryLogic, UnaryOperator, Waveform, WaveformDefinition, WaveformInvocation,
+        GateSpecification, Instruction, Jump, JumpWhen, Label, MemoryReference, Move, Pulse, Qubit,
+        RawCapture, Reset, SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase,
+        UnaryLogic, UnaryOperator, Waveform, WaveformDefinition, WaveformInvocation,
     };
     use crate::parser::lexer::lex;
     use crate::{make_test, real, Program};

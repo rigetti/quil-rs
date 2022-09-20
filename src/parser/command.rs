@@ -530,7 +530,7 @@ pub fn parse_measurement(input: ParserInput) -> ParserResult<Instruction> {
 #[cfg(test)]
 mod tests {
     use crate::expression::{Expression, ExpressionFunction, InfixOperator, PrefixOperator};
-    use crate::instruction::{GateDefinition, GateSpecification, GateType};
+    use crate::instruction::{GateDefinition, GateSpecification};
     use crate::parser::lexer::lex;
     use crate::{imag, real};
     use crate::{

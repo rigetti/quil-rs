@@ -74,24 +74,6 @@ impl ErrorInput for ParserInput<'_> {
     }
 }
 
-impl ErrorInput for &Vec<TokenWithLocation> {
-    fn line(&self) -> u32 {
-        self.as_slice().line()
-    }
-
-    fn column(&self) -> usize {
-        self.as_slice().column()
-    }
-
-    fn snippet(&self) -> String {
-        self.as_slice().snippet()
-    }
-
-    fn is_empty(&self) -> bool {
-        self.as_slice().is_empty()
-    }
-}
-
 impl ErrorInput for Vec<TokenWithLocation> {
     fn line(&self) -> u32 {
         self.as_slice().line()
