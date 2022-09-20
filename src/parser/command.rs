@@ -19,7 +19,7 @@ use nom::{
     sequence::{delimited, preceded, tuple},
 };
 
-use crate::parser::common::parse_variable_qubit;
+use crate::{instruction::GateSpecification, parser::common::parse_variable_qubit};
 
 use crate::instruction::{
     Arithmetic, ArithmeticOperand, ArithmeticOperator, BinaryLogic, BinaryOperator, Calibration,
@@ -236,15 +236,12 @@ pub fn parse_defgate<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction
 
     let gate_type = gate_type.unwrap_or(GateType::Matrix);
 
-    let (input, matrix, permutation) = match gate_type {
+    let (input, specification) = match gate_type {
         GateType::Matrix => {
-            let (input, m) = parse_matrix(input)?;
-            (input, Some(m), None)
+            parse_matrix(input).map(|(input, matrix)| (input, GateSpecification::Matrix(matrix)))?
         }
-        GateType::Permutation => {
-            let (input, p) = parse_permutation(input)?;
-            (input, None, Some(p))
-        }
+        GateType::Permutation => parse_permutation(input)
+            .map(|(input, permutation)| (input, GateSpecification::Permutation(permutation)))?,
     };
 
     Ok((
@@ -252,8 +249,7 @@ pub fn parse_defgate<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction
         Instruction::GateDefinition(GateDefinition {
             name,
             parameters: parameters.unwrap_or_default(),
-            matrix,
-            permutation,
+            specification,
             r#type: gate_type,
         }),
     ))
@@ -533,7 +529,7 @@ pub fn parse_measurement(input: ParserInput) -> ParserResult<Instruction> {
 #[cfg(test)]
 mod tests {
     use crate::expression::{Expression, ExpressionFunction, InfixOperator, PrefixOperator};
-    use crate::instruction::{GateDefinition, GateType};
+    use crate::instruction::{GateDefinition, GateSpecification, GateType};
     use crate::parser::lexer::lex;
     use crate::{imag, real};
     use crate::{
@@ -738,11 +734,10 @@ mod tests {
             Instruction::GateDefinition(GateDefinition {
                 name: "H".to_string(),
                 parameters: vec![],
-                matrix: Some(vec![
+                specification: GateSpecification::Matrix(vec![
                     vec![expression.clone(), expression.clone()],
                     vec![expression.clone(), negative_expression],
                 ]),
-                permutation: Default::default(),
                 r#type: GateType::Matrix,
             })
         }
@@ -757,7 +752,7 @@ mod tests {
         Instruction::GateDefinition(GateDefinition {
             name: "RX".to_string(),
             parameters: vec!["theta".to_string()],
-            matrix: Some(vec![
+            specification: GateSpecification::Matrix(vec![
                 vec![
                     Expression::FunctionCall {
                         function: crate::expression::ExpressionFunction::Cosine,
@@ -809,7 +804,6 @@ mod tests {
                     },
                 ],
             ]),
-            permutation: Default::default(),
             r#type: GateType::Matrix,
         })
     );
@@ -822,8 +816,7 @@ mod tests {
         Instruction::GateDefinition(GateDefinition {
             name: "CCNOT".to_string(),
             parameters: vec![],
-            matrix: Default::default(),
-            permutation: Some(vec![0, 1, 2, 3, 4, 5, 7, 6]),
+            specification: GateSpecification::Permutation(vec![0, 1, 2, 3, 4, 5, 7, 6]),
             r#type: GateType::Permutation,
         })
     );

@@ -163,7 +163,7 @@ mod tests {
         ComparisonOperator, FrameDefinition, FrameIdentifier, Gate, GateDefinition, GateType,
         Instruction, Jump, JumpWhen, Label, MemoryReference, Move, Pulse, Qubit, RawCapture, Reset,
         SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, UnaryLogic, UnaryOperator,
-        Waveform, WaveformDefinition, WaveformInvocation,
+        Waveform, WaveformDefinition, WaveformInvocation, GateSpecification,
     };
     use crate::parser::lexer::lex;
     use crate::{make_test, real, Program};
@@ -717,7 +717,7 @@ mod tests {
         vec![Instruction::GateDefinition(GateDefinition {
             name: "H".to_string(),
             parameters: vec![],
-            matrix: Some(vec![
+            specification: GateSpecification::Matrix(vec![
                 vec![
                     Expression::Infix {
                         left: Box::new(Expression::Number(real!(1.0))),
@@ -758,7 +758,6 @@ mod tests {
                     },
                 ],
             ]),
-            permutation: Default::default(),
             r#type: GateType::Matrix,
         })]
     );
