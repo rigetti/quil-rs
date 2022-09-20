@@ -329,7 +329,6 @@ pub struct GateDefinition {
     pub name: String,
     pub parameters: Vec<String>,
     pub specification: GateSpecification,
-    pub r#type: GateType,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -781,10 +780,18 @@ impl fmt::Display for Instruction {
                 name,
                 parameters,
                 specification,
-                r#type,
             }) => {
                 let parameter_str: String = parameters.iter().map(|p| p.to_string()).collect();
-                writeln!(f, "DEFGATE {}{} AS {}:", name, parameter_str, r#type)?;
+                writeln!(
+                    f,
+                    "DEFGATE {}{} AS {}:",
+                    name,
+                    parameter_str,
+                    match specification {
+                        GateSpecification::Matrix(_) => "MATRIX",
+                        GateSpecification::Permutation(_) => "PERMUTATION",
+                    }
+                )?;
                 match specification {
                     GateSpecification::Matrix(matrix) => {
                         for row in matrix {

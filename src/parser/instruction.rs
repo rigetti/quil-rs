@@ -758,7 +758,6 @@ mod tests {
                     },
                 ],
             ]),
-            r#type: GateType::Matrix,
         })]
     );
 

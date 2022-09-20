@@ -19,15 +19,18 @@ use nom::{
     sequence::{delimited, preceded, tuple},
 };
 
-use crate::{instruction::GateSpecification, parser::common::parse_variable_qubit};
+use crate::{
+    instruction::{GateSpecification, GateType},
+    parser::common::parse_variable_qubit,
+};
 
 use crate::instruction::{
     Arithmetic, ArithmeticOperand, ArithmeticOperator, BinaryLogic, BinaryOperator, Calibration,
     Capture, CircuitDefinition, Comparison, ComparisonOperator, Declaration, Delay, Exchange,
-    Fence, FrameDefinition, GateDefinition, GateType, Instruction, Jump, JumpUnless, JumpWhen,
-    Label, Load, MeasureCalibrationDefinition, Measurement, Move, Pragma, Pulse, Qubit, RawCapture,
-    Reset, SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, Store, UnaryLogic,
-    UnaryOperator, Waveform, WaveformDefinition,
+    Fence, FrameDefinition, GateDefinition, Instruction, Jump, JumpUnless, JumpWhen, Label, Load,
+    MeasureCalibrationDefinition, Measurement, Move, Pragma, Pulse, Qubit, RawCapture, Reset,
+    SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, Store, UnaryLogic, UnaryOperator,
+    Waveform, WaveformDefinition,
 };
 use crate::parser::common::parse_permutation;
 use crate::parser::instruction::parse_block;
@@ -235,7 +238,6 @@ pub fn parse_defgate<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction
     let (input, _) = token!(Colon)(input)?;
 
     let gate_type = gate_type.unwrap_or(GateType::Matrix);
-
     let (input, specification) = match gate_type {
         GateType::Matrix => {
             parse_matrix(input).map(|(input, matrix)| (input, GateSpecification::Matrix(matrix)))?
@@ -250,7 +252,6 @@ pub fn parse_defgate<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction
             name,
             parameters: parameters.unwrap_or_default(),
             specification,
-            r#type: gate_type,
         }),
     ))
 }
@@ -738,7 +739,6 @@ mod tests {
                     vec![expression.clone(), expression.clone()],
                     vec![expression.clone(), negative_expression],
                 ]),
-                r#type: GateType::Matrix,
             })
         }
     );
@@ -804,7 +804,6 @@ mod tests {
                     },
                 ],
             ]),
-            r#type: GateType::Matrix,
         })
     );
 
@@ -817,7 +816,6 @@ mod tests {
             name: "CCNOT".to_string(),
             parameters: vec![],
             specification: GateSpecification::Permutation(vec![0, 1, 2, 3, 4, 5, 7, 6]),
-            r#type: GateType::Permutation,
         })
     );
 }
