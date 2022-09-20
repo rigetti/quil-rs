@@ -804,7 +804,7 @@ impl fmt::Display for Instruction {
                             "\t{}",
                             permutation
                                 .iter()
-                                .map(|i| i.to_string())
+                                .map(|i| format!("{}", i))
                                 .collect::<Vec<String>>()
                                 .join(", ")
                         )?;
