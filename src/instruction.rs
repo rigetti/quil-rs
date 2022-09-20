@@ -1074,12 +1074,13 @@ impl Instruction {
             Instruction::WaveformDefinition(WaveformDefinition { definition, .. }) => {
                 definition.matrix.iter_mut().for_each(closure);
             }
-            Instruction::GateDefinition(GateDefinition { specification, .. }) => {
-                if let GateSpecification::Matrix(matrix) = specification {
-                    for row in matrix {
-                        for cell in row {
-                            closure(cell);
-                        }
+            Instruction::GateDefinition(GateDefinition {
+                specification: GateSpecification::Matrix(matrix),
+                ..
+            }) => {
+                for row in matrix {
+                    for cell in row {
+                        closure(cell);
                     }
                 }
             }
