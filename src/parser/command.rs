@@ -711,53 +711,41 @@ mod tests {
         r#"H:
     1/sqrt(2), 1/sqrt(2)
     1/sqrt(2), -1/sqrt(2)"#,
-        Instruction::GateDefinition(GateDefinition {
-            name: "H".to_string(),
-            parameters: vec![],
-            matrix: Some(vec![
-                vec![
-                    Expression::Infix {
-                        left: Box::new(Expression::Number(real!(1.0))),
-                        operator: InfixOperator::Slash,
-                        right: Box::new(Expression::FunctionCall {
-                            function: crate::expression::ExpressionFunction::SquareRoot,
-                            expression: Box::new(Expression::Number(real!(2.0))),
-                        }),
-                    },
-                    Expression::Infix {
-                        left: Box::new(Expression::Number(real!(1.0))),
-                        operator: InfixOperator::Slash,
-                        right: Box::new(Expression::FunctionCall {
-                            function: crate::expression::ExpressionFunction::SquareRoot,
-                            expression: Box::new(Expression::Number(real!(2.0))),
-                        }),
-                    },
-                ],
-                vec![
-                    Expression::Infix {
-                        left: Box::new(Expression::Number(real!(1.0))),
-                        operator: InfixOperator::Slash,
-                        right: Box::new(Expression::FunctionCall {
-                            function: crate::expression::ExpressionFunction::SquareRoot,
-                            expression: Box::new(Expression::Number(real!(2.0))),
-                        }),
-                    },
-                    Expression::Infix {
-                        left: Box::new(Expression::Prefix {
-                            operator: PrefixOperator::Minus,
-                            expression: Box::new(Expression::Number(real!(1.0))),
-                        }),
-                        operator: InfixOperator::Slash,
-                        right: Box::new(Expression::FunctionCall {
-                            function: crate::expression::ExpressionFunction::SquareRoot,
-                            expression: Box::new(Expression::Number(real!(2.0))),
-                        }),
-                    },
-                ],
-            ]),
-            permutation: Default::default(),
-            r#type: GateType::Matrix,
-        })
+        {
+            // 1/sqrt(2)
+            let expression = Expression::Infix {
+                left: Box::new(Expression::Number(real!(1.0))),
+                operator: InfixOperator::Slash,
+                right: Box::new(Expression::FunctionCall {
+                    function: crate::expression::ExpressionFunction::SquareRoot,
+                    expression: Box::new(Expression::Number(real!(2.0))),
+                }),
+            };
+
+            // -1/sqrt(2)
+            let negative_expression = Expression::Infix {
+                left: Box::new(Expression::Prefix {
+                    operator: PrefixOperator::Minus,
+                    expression: Box::new(Expression::Number(real!(1.0))),
+                }),
+                operator: InfixOperator::Slash,
+                right: Box::new(Expression::FunctionCall {
+                    function: crate::expression::ExpressionFunction::SquareRoot,
+                    expression: Box::new(Expression::Number(real!(2.0))),
+                }),
+            };
+
+            Instruction::GateDefinition(GateDefinition {
+                name: "H".to_string(),
+                parameters: vec![],
+                matrix: Some(vec![
+                    vec![expression.clone(), expression.clone()],
+                    vec![expression.clone(), negative_expression],
+                ]),
+                permutation: Default::default(),
+                r#type: GateType::Matrix,
+            })
+        }
     );
 
     make_test!(
