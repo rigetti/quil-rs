@@ -13,9 +13,12 @@
 // limitations under the License.
 
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 use std::{collections::HashMap, fmt};
 
 use crate::expression::Expression;
+use crate::parser::common::parse_memory_reference_with_brackets;
+use crate::parser::lex;
 use crate::program::frame::FrameMatchCondition;
 
 #[cfg(test)]
@@ -298,6 +301,17 @@ impl Eq for MemoryReference {}
 impl fmt::Display for MemoryReference {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}[{}]", self.name, self.index)
+    }
+}
+
+impl FromStr for MemoryReference {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let tokens = lex(s).map_err(|err| err.to_string())?;
+        let (_, memory_reference) =
+            parse_memory_reference_with_brackets(&tokens).map_err(|err| err.to_string())?;
+        Ok(memory_reference)
     }
 }
 
@@ -1143,7 +1157,7 @@ impl Instruction {
     /// Parse a single instruction from an input string. Returns an error if the input fails to parse,
     /// or if there is input left over after parsing.
     pub(crate) fn parse(input: &str) -> Result<Self, String> {
-        use crate::parser::{instruction::parse_instruction, lex};
+        use crate::parser::instruction::parse_instruction;
 
         let lexed = lex(input).map_err(|err| err.to_string())?;
         let (_, instruction) =
@@ -1157,6 +1171,8 @@ mod tests {
     use std::str::FromStr;
 
     use crate::{expression::Expression, Program};
+
+    use super::MemoryReference;
 
     #[test]
     fn apply_to_expressions() {
@@ -1179,5 +1195,28 @@ RX(%a) 0",
         .unwrap();
 
         assert_eq!(expected_program, program);
+    }
+
+    #[test]
+    fn it_parses_memory_reference_from_str() {
+        ["a[0]", "a-b[1]", "a_b[2]", "a2b[3]"]
+            .iter()
+            .for_each(|&s| {
+                let memory_reference = MemoryReference::from_str(s);
+                memory_reference
+                    .expect(format!("should have parsed into a MemoryReference: {}", s).as_str());
+            });
+    }
+
+    #[test]
+    fn it_fails_to_parse_memory_reference_from_str() {
+        ["", "a", "[0]", "a[-1]", "2a[2]", "a3"]
+            .iter()
+            .for_each(|&s| {
+                let memory_reference = MemoryReference::from_str(s);
+                memory_reference.expect_err(
+                    format!("should have failed to parse into a MemoryReference: {}", s).as_str(),
+                );
+            });
     }
 }
