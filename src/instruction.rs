@@ -1210,7 +1210,7 @@ RX(%a) 0",
 
     #[test]
     fn it_fails_to_parse_memory_reference_from_str() {
-        ["", "a", "[0]", "a[-1]", "2a[2]", "a3"]
+        ["", "a", "[0]", "a[-1]", "2a[2]", "a3", "NOT[4]"]
             .iter()
             .for_each(|&s| {
                 let memory_reference = MemoryReference::from_str(s);
