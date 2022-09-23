@@ -17,22 +17,27 @@ use crate::program::error::LeftoverError;
 use crate::program::ProgramError;
 use nom::Finish;
 
+use super::SyntaxError;
+
 /// If parsing was successful but there is leftover input, returns a [`ProgramError::Leftover`] containing the output.
 ///
 /// See also [`LeftoverError`].
-pub fn disallow_leftover<I, O>(result: nom::IResult<I, O, ParseError>) -> Result<O, ProgramError<O>>
+pub fn disallow_leftover<I, O, E>(result: nom::IResult<I, O, ParseError>) -> Result<O, E>
 where
     I: ErrorInput,
+    E: From<SyntaxError<O>>,
 {
     match result.finish() {
         Ok((leftover, parsed)) => {
             if leftover.is_empty() {
                 Ok(parsed)
             } else {
-                Err(ProgramError::from(LeftoverError::new(leftover, parsed)))
+                Err(E::from(SyntaxError::from(LeftoverError::new(
+                    leftover, parsed,
+                ))))
             }
         }
-        Err(err) => Err(ProgramError::from(err)),
+        Err(err) => Err(E::from(SyntaxError::from(err))),
     }
 }
 
