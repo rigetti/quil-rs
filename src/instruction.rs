@@ -17,10 +17,7 @@ use std::str::FromStr;
 use std::{collections::HashMap, fmt};
 
 use crate::expression::Expression;
-use crate::parser::{
-    common::{parse_memory_reference, parse_memory_reference_with_brackets},
-    lex,
-};
+use crate::parser::{common::parse_memory_reference, lex};
 use crate::program::{disallow_leftover, frame::FrameMatchCondition, SyntaxError};
 
 #[cfg(test)]
@@ -312,18 +309,6 @@ impl FromStr for MemoryReference {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let tokens = lex(s)?;
         disallow_leftover(parse_memory_reference(&tokens))
-    }
-}
-
-impl MemoryReference {
-    /// Like [`MemoryReference::from_str`] but requires the index to be specified -
-    /// `a[0]` is valid while `a` is not.
-    ///
-    /// This is in contrast to [`MemoryReference::from_str`] which considers
-    /// `a[0]` and `a` to be valid and equivalent.
-    pub fn from_str_with_index(s: &str) -> Result<Self, SyntaxError<Self>> {
-        let tokens = lex(s)?;
-        disallow_leftover(parse_memory_reference_with_brackets(&tokens))
     }
 }
 
@@ -1234,18 +1219,6 @@ RX(%a) 0",
     }
 
     #[test]
-    fn it_parses_memory_reference_from_str_with_index() {
-        ["_\\-[0]", "a[1]", "a--b--[2]", "_a_b_[3]", "a2b2[4]"]
-            .iter()
-            .for_each(|&s| {
-                let mr_i = MemoryReference::from_str_with_index(s);
-
-                assert!(mr_i.is_ok(), "MemoryReference should have parsed: {}", s);
-                assert_eq!(mr_i, MemoryReference::from_str(s));
-            });
-    }
-
-    #[test]
     fn it_fails_to_parse_memory_reference_from_str() {
         [
             "",
@@ -1261,32 +1234,8 @@ RX(%a) 0",
         .iter()
         .for_each(|&s| {
             assert!(
-                MemoryReference::from_str(s).is_ok(),
-                "MemoryReference should have parsed: {}",
-                s
-            )
-        });
-    }
-
-    #[test]
-    fn it_fails_to_parse_memory_reference_from_str_with_index() {
-        [
-            "",
-            "a",
-            "[0]",
-            "a[-1]",
-            "2a[2]",
-            "-a",
-            "NOT[3]",
-            "a a",
-            "a[5] a[5]",
-            "DECLARE a[6]",
-        ]
-        .iter()
-        .for_each(|&s| {
-            assert!(
-                MemoryReference::from_str(s).is_ok(),
-                "MemoryReference should have parsed: {}",
+                MemoryReference::from_str(s).is_err(),
+                "MemoryReference should not have parsed: {}",
                 s
             )
         });
