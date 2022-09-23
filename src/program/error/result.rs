@@ -19,7 +19,7 @@ use nom::Finish;
 
 use super::SyntaxError;
 
-/// If parsing was successful but there is leftover input, returns a [`ProgramError::Leftover`] containing the output.
+/// If parsing was successful but there is leftover input, returns a [`SyntaxError::Leftover`] containing the output.
 ///
 /// See also [`LeftoverError`].
 pub fn disallow_leftover<I, O, E>(result: nom::IResult<I, O, ParseError>) -> Result<O, E>
