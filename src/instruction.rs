@@ -309,9 +309,7 @@ impl FromStr for MemoryReference {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let tokens = lex(s)?;
-        let (_, memory_reference) = all_consuming(parse_memory_reference_with_brackets)(&tokens)
-            .map_err(extract_nom_err)?;
-        Ok(memory_reference)
+        disallow_leftover(parse_memory_reference_with_brackets(&tokens))
     }
 }
 
