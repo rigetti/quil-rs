@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use nom::combinator::all_consuming;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use std::{collections::HashMap, fmt};
 
 use crate::expression::Expression;
-use crate::parser::common::parse_memory_reference_with_brackets;
-use crate::parser::lex;
-use crate::program::frame::FrameMatchCondition;
+use crate::parser::{common::parse_memory_reference_with_brackets, extract_nom_err, lex};
+use crate::program::{frame::FrameMatchCondition, SyntaxError};
 
 #[cfg(test)]
 use proptest_derive::Arbitrary;
@@ -305,12 +305,12 @@ impl fmt::Display for MemoryReference {
 }
 
 impl FromStr for MemoryReference {
-    type Err = String;
+    type Err = SyntaxError<Self>;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let tokens = lex(s).map_err(|err| err.to_string())?;
-        let (_, memory_reference) =
-            parse_memory_reference_with_brackets(&tokens).map_err(|err| err.to_string())?;
+        let tokens = lex(s)?;
+        let (_, memory_reference) = all_consuming(parse_memory_reference_with_brackets)(&tokens)
+            .map_err(extract_nom_err)?;
         Ok(memory_reference)
     }
 }
@@ -1210,13 +1210,23 @@ RX(%a) 0",
 
     #[test]
     fn it_fails_to_parse_memory_reference_from_str() {
-        ["", "a", "[0]", "a[-1]", "2a[2]", "a3", "NOT[4]"]
-            .iter()
-            .for_each(|&s| {
-                let memory_reference = MemoryReference::from_str(s);
-                memory_reference.expect_err(
-                    format!("should have failed to parse into a MemoryReference: {}", s).as_str(),
-                );
-            });
+        [
+            "",
+            "a",
+            "[0]",
+            "a[-1]",
+            "2a[2]",
+            "a3",
+            "NOT[4]",
+            "a[5] a[5]",
+            "DECLARE a[6]",
+        ]
+        .iter()
+        .for_each(|&s| {
+            let memory_reference = MemoryReference::from_str(s);
+            memory_reference.expect_err(
+                format!("should have failed to parse into a MemoryReference: {}", s).as_str(),
+            );
+        });
     }
 }
