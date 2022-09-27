@@ -243,12 +243,16 @@ fn recognize_command_or_identifier(identifier: String) -> Token {
     }
 }
 
-fn is_valid_identifier_character(chr: char) -> bool {
-    is_valid_identifier_leading_character(chr) || chr.is_ascii_digit() || chr == '\\' || chr == '-'
-}
-
 fn is_valid_identifier_leading_character(chr: char) -> bool {
     chr.is_ascii_alphabetic() || chr == '_'
+}
+
+fn is_valid_identifier_end_character(chr: char) -> bool {
+    is_valid_identifier_leading_character(chr) || chr.is_ascii_digit()
+}
+
+fn is_valid_identifier_middle_character(chr: char) -> bool {
+    is_valid_identifier_end_character(chr) || chr == '-'
 }
 
 fn lex_identifier_raw(input: LexInput) -> LexResult<String> {
@@ -257,11 +261,21 @@ fn lex_identifier_raw(input: LexInput) -> LexResult<String> {
         map(
             tuple::<_, _, InternalLexError, _>((
                 take_while1(is_valid_identifier_leading_character),
-                take_while(is_valid_identifier_character),
+                take_while(is_valid_identifier_middle_character),
             )),
             |(left, right)| format!("{}{}", left, right),
         ),
     )(input)
+    .and_then(|(remaining, result)| {
+        if !result.ends_with(is_valid_identifier_end_character) {
+            Err(nom::Err::Failure(LexError::from_kind(
+                input,
+                LexErrorKind::ExpectedContext("valid identifier ending character"),
+            )))
+        } else {
+            Ok((remaining, result))
+        }
+    })
 }
 
 fn lex_command_or_identifier(input: LexInput) -> LexResult {
@@ -587,5 +601,22 @@ mod tests {
       SWAP-PHASES 2 3 \"xy\" 3 4 \"xy\"";
 
         lex(input).unwrap();
+    }
+
+    #[test]
+    fn it_lexes_identifier() {
+        ["_", "a", "a-b", "_a_b_"].iter().for_each(|&input| {
+            let tokens = lex(input).unwrap();
+            assert_eq!(tokens, vec![Token::Identifier(input.to_owned())]);
+        });
+    }
+
+    #[test]
+    fn it_fails_to_lex_identifier() {
+        ["_-", "-a", "a-b-", "_a\\b_"].iter().for_each(|&input| {
+            if let Ok(tokens) = lex(input) {
+                assert_ne!(tokens, vec![Token::Identifier(input.to_owned())]);
+            }
+        });
     }
 }
