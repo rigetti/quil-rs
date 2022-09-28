@@ -270,7 +270,7 @@ fn lex_identifier_raw(input: LexInput) -> LexResult<String> {
         if !result.ends_with(is_valid_identifier_end_character) {
             Err(nom::Err::Failure(LexError::from_kind(
                 input,
-                LexErrorKind::ExpectedContext("valid identifier ending character"),
+                LexErrorKind::ExpectedContext("valid identifier"),
             )))
         } else {
             Ok((remaining, result))
