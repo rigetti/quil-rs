@@ -1165,6 +1165,7 @@ impl Instruction {
 
 #[cfg(test)]
 mod tests {
+    use rstest::*;
     use std::str::FromStr;
 
     use crate::{expression::Expression, Program};
@@ -1194,50 +1195,35 @@ RX(%a) 0",
         assert_eq!(expected_program, program);
     }
 
-    #[test]
-    fn it_parses_memory_reference_from_str() {
-        [
-            "_",
-            "a",
-            "a---b",
-            "_a_b_",
-            "a-2_b-2",
-            "_[0]",
-            "a[1]",
-            "a---b[2]",
-            "_a_b_[3]",
-            "a-2_b-2[4]",
-        ]
-        .iter()
-        .for_each(|&s| {
-            assert!(
-                MemoryReference::from_str(s).is_ok(),
-                "MemoryReference should have parsed: {}",
-                s
-            )
-        });
+    #[rstest(input, expected,
+        case("_", MemoryReference { name: "_".to_string(), index: 0 }),
+        case("a", MemoryReference { name: "a".to_string(), index: 0 }),
+        case("a---b", MemoryReference { name: "a---b".to_string(), index: 0 }),
+        case("_a_b_", MemoryReference { name: "_a_b_".to_string(), index: 0 }),
+        case("a-2_b-2", MemoryReference { name: "a-2_b-2".to_string(), index: 0 }),
+        case("_[0]", MemoryReference { name: "_".to_string(), index: 0 }),
+        case("a[1]", MemoryReference { name: "a".to_string(), index: 1 }),
+        case("a---b[2]", MemoryReference { name: "a---b".to_string(), index: 2 }),
+        case("_a_b_[3]", MemoryReference { name: "_a_b_".to_string(), index: 3 }),
+        case("a-2_b-2[4]", MemoryReference { name: "a-2_b-2".to_string(), index: 4 }),
+    )]
+    fn it_parses_memory_reference_from_str(input: &str, expected: MemoryReference) {
+        assert_eq!(MemoryReference::from_str(input), Ok(expected));
     }
 
-    #[test]
-    fn it_fails_to_parse_memory_reference_from_str() {
-        [
-            "",
-            "[0]",
-            "a[-1]",
-            "2a[2]",
-            "-a",
-            "NOT[3]",
-            "a a",
-            "a[5] a[5]",
-            "DECLARE a[6]",
-        ]
-        .iter()
-        .for_each(|&s| {
-            assert!(
-                MemoryReference::from_str(s).is_err(),
-                "MemoryReference should not have parsed: {}",
-                s
-            )
-        });
+    #[rstest(
+        input,
+        case(""),
+        case("[0]"),
+        case("a[-1]"),
+        case("2a[2]"),
+        case("-a"),
+        case("NOT[3]"),
+        case("a a"),
+        case("a[5] a[5]"),
+        case("DECLARE a[6]")
+    )]
+    fn it_fails_to_parse_memory_reference_from_str(input: &str) {
+        assert!(MemoryReference::from_str(input).is_err());
     }
 }
