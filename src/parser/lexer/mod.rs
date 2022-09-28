@@ -384,6 +384,8 @@ fn lex_variable(input: LexInput) -> LexResult {
 
 #[cfg(test)]
 mod tests {
+    use rstest::*;
+
     use super::{lex, Command, Operator, Token};
 
     #[test]
@@ -539,6 +541,27 @@ mod tests {
         )
     }
 
+    #[rstest(input, expected,
+        case("_", vec![Token::Identifier("_".to_string())]),
+        case("a", vec![Token::Identifier("a".to_string())]),
+        case("_a-2_b-2_", vec![Token::Identifier("_a-2_b-2_".to_string())]),
+    )]
+    fn it_lexes_identifier(input: &str, expected: Vec<Token>) {
+        let tokens = lex(input).unwrap();
+        assert_eq!(tokens, expected);
+    }
+
+    #[rstest(input, not_expected,
+        case("a-", vec![Token::Identifier("_-".to_string())]),
+        case("-a", vec![Token::Identifier("-a".to_string())]),
+        case("a\\", vec![Token::Identifier("_\\".to_string())]),
+    )]
+    fn it_fails_to_lex_identifier(input: &str, not_expected: Vec<Token>) {
+        if let Ok(tokens) = lex(input) {
+            assert_ne!(tokens, not_expected);
+        }
+    }
+
     /// Test that an entire sample program can be lexed without failure.
     #[test]
     fn whole_program() {
@@ -601,22 +624,5 @@ mod tests {
       SWAP-PHASES 2 3 \"xy\" 3 4 \"xy\"";
 
         lex(input).unwrap();
-    }
-
-    #[test]
-    fn it_lexes_identifier() {
-        ["_", "a", "a-b", "_a_b_"].iter().for_each(|&input| {
-            let tokens = lex(input).unwrap();
-            assert_eq!(tokens, vec![Token::Identifier(input.to_owned())]);
-        });
-    }
-
-    #[test]
-    fn it_fails_to_lex_identifier() {
-        ["_-", "-a", "a-b-", "_a\\b_"].iter().for_each(|&input| {
-            if let Ok(tokens) = lex(input) {
-                assert_ne!(tokens, vec![Token::Identifier(input.to_owned())]);
-            }
-        });
     }
 }
