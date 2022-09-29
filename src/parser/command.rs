@@ -239,11 +239,8 @@ pub fn parse_defgate<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction
 
     let gate_type = gate_type.unwrap_or(GateType::Matrix);
     let (input, specification) = match gate_type {
-        GateType::Matrix => {
-            parse_matrix(input).map(|(input, matrix)| (input, GateSpecification::Matrix(matrix)))?
-        }
-        GateType::Permutation => parse_permutation(input)
-            .map(|(input, permutation)| (input, GateSpecification::Permutation(permutation)))?,
+        GateType::Matrix => map(parse_matrix, GateSpecification::Matrix)(input)?,
+        GateType::Permutation => map(parse_permutation, GateSpecification::Permutation)(input)?,
     };
 
     Ok((
