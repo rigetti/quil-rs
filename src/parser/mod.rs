@@ -22,7 +22,7 @@ mod command;
 mod gate;
 mod macros;
 
-mod common;
+pub(crate) mod common;
 mod error;
 mod expression;
 pub(crate) mod instruction;

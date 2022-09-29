@@ -13,10 +13,12 @@
 // limitations under the License.
 
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 use std::{collections::HashMap, fmt};
 
 use crate::expression::Expression;
-use crate::program::frame::FrameMatchCondition;
+use crate::parser::{common::parse_memory_reference, lex};
+use crate::program::{disallow_leftover, frame::FrameMatchCondition, SyntaxError};
 
 #[cfg(test)]
 use proptest_derive::Arbitrary;
@@ -298,6 +300,15 @@ impl Eq for MemoryReference {}
 impl fmt::Display for MemoryReference {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}[{}]", self.name, self.index)
+    }
+}
+
+impl FromStr for MemoryReference {
+    type Err = SyntaxError<Self>;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let tokens = lex(s)?;
+        disallow_leftover(parse_memory_reference(&tokens))
     }
 }
 
@@ -1174,7 +1185,7 @@ impl Instruction {
     /// Parse a single instruction from an input string. Returns an error if the input fails to parse,
     /// or if there is input left over after parsing.
     pub(crate) fn parse(input: &str) -> Result<Self, String> {
-        use crate::parser::{instruction::parse_instruction, lex};
+        use crate::parser::instruction::parse_instruction;
 
         let lexed = lex(input).map_err(|err| err.to_string())?;
         let (_, instruction) =
@@ -1185,9 +1196,12 @@ impl Instruction {
 
 #[cfg(test)]
 mod tests {
+    use rstest::*;
     use std::str::FromStr;
 
     use crate::{expression::Expression, Program};
+
+    use super::MemoryReference;
 
     #[test]
     fn apply_to_expressions() {
@@ -1210,5 +1224,37 @@ RX(%a) 0",
         .unwrap();
 
         assert_eq!(expected_program, program);
+    }
+
+    #[rstest(input, expected,
+        case("_", MemoryReference { name: "_".to_string(), index: 0 }),
+        case("a", MemoryReference { name: "a".to_string(), index: 0 }),
+        case("a---b", MemoryReference { name: "a---b".to_string(), index: 0 }),
+        case("_a_b_", MemoryReference { name: "_a_b_".to_string(), index: 0 }),
+        case("a-2_b-2", MemoryReference { name: "a-2_b-2".to_string(), index: 0 }),
+        case("_[0]", MemoryReference { name: "_".to_string(), index: 0 }),
+        case("a[1]", MemoryReference { name: "a".to_string(), index: 1 }),
+        case("a---b[2]", MemoryReference { name: "a---b".to_string(), index: 2 }),
+        case("_a_b_[3]", MemoryReference { name: "_a_b_".to_string(), index: 3 }),
+        case("a-2_b-2[4]", MemoryReference { name: "a-2_b-2".to_string(), index: 4 }),
+    )]
+    fn it_parses_memory_reference_from_str(input: &str, expected: MemoryReference) {
+        assert_eq!(MemoryReference::from_str(input), Ok(expected));
+    }
+
+    #[rstest(
+        input,
+        case(""),
+        case("[0]"),
+        case("a[-1]"),
+        case("2a[2]"),
+        case("-a"),
+        case("NOT[3]"),
+        case("a a"),
+        case("a[5] a[5]"),
+        case("DECLARE a[6]")
+    )]
+    fn it_fails_to_parse_memory_reference_from_str(input: &str) {
+        assert!(MemoryReference::from_str(input).is_err());
     }
 }
