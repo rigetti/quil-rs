@@ -243,12 +243,16 @@ fn recognize_command_or_identifier(identifier: String) -> Token {
     }
 }
 
-fn is_valid_identifier_character(chr: char) -> bool {
-    is_valid_identifier_leading_character(chr) || chr.is_ascii_digit() || chr == '\\' || chr == '-'
-}
-
 fn is_valid_identifier_leading_character(chr: char) -> bool {
     chr.is_ascii_alphabetic() || chr == '_'
+}
+
+fn is_valid_identifier_end_character(chr: char) -> bool {
+    is_valid_identifier_leading_character(chr) || chr.is_ascii_digit()
+}
+
+fn is_valid_identifier_middle_character(chr: char) -> bool {
+    is_valid_identifier_end_character(chr) || chr == '-'
 }
 
 fn lex_identifier_raw(input: LexInput) -> LexResult<String> {
@@ -257,11 +261,21 @@ fn lex_identifier_raw(input: LexInput) -> LexResult<String> {
         map(
             tuple::<_, _, InternalLexError, _>((
                 take_while1(is_valid_identifier_leading_character),
-                take_while(is_valid_identifier_character),
+                take_while(is_valid_identifier_middle_character),
             )),
             |(left, right)| format!("{}{}", left, right),
         ),
     )(input)
+    .and_then(|(remaining, result)| {
+        if !result.ends_with(is_valid_identifier_end_character) {
+            Err(nom::Err::Failure(LexError::from_kind(
+                input,
+                LexErrorKind::ExpectedContext("valid identifier"),
+            )))
+        } else {
+            Ok((remaining, result))
+        }
+    })
 }
 
 fn lex_command_or_identifier(input: LexInput) -> LexResult {
@@ -370,6 +384,8 @@ fn lex_variable(input: LexInput) -> LexResult {
 
 #[cfg(test)]
 mod tests {
+    use rstest::*;
+
     use super::{lex, Command, Operator, Token};
 
     #[test]
@@ -523,6 +539,27 @@ mod tests {
                 Token::NewLine
             ]
         )
+    }
+
+    #[rstest(input, expected,
+        case("_", vec![Token::Identifier("_".to_string())]),
+        case("a", vec![Token::Identifier("a".to_string())]),
+        case("_a-2_b-2_", vec![Token::Identifier("_a-2_b-2_".to_string())]),
+    )]
+    fn it_lexes_identifier(input: &str, expected: Vec<Token>) {
+        let tokens = lex(input).unwrap();
+        assert_eq!(tokens, expected);
+    }
+
+    #[rstest(input, not_expected,
+        case("a-", vec![Token::Identifier("_-".to_string())]),
+        case("-a", vec![Token::Identifier("-a".to_string())]),
+        case("a\\", vec![Token::Identifier("_\\".to_string())]),
+    )]
+    fn it_fails_to_lex_identifier(input: &str, not_expected: Vec<Token>) {
+        if let Ok(tokens) = lex(input) {
+            assert_ne!(tokens, not_expected);
+        }
     }
 
     /// Test that an entire sample program can be lexed without failure.
