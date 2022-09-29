@@ -144,6 +144,7 @@ where
 impl<E> std::error::Error for Error<E>
 where
     E: std::error::Error,
+
     Self: fmt::Display + fmt::Debug,
 {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
@@ -154,6 +155,7 @@ where
 impl<I, E> ParseError<I> for Error<E>
 where
     I: ErrorInput,
+
     E: std::error::Error,
 {
     fn from_error_kind(input: I, kind: nom::error::ErrorKind) -> Self {

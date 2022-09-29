@@ -17,7 +17,7 @@ use std::collections::HashMap;
 use nom::{
     branch::alt,
     combinator::{cut, map, opt, value},
-    multi::{many0, many1, separated_list0},
+    multi::{many0, many1, separated_list0, separated_list1},
     sequence::{delimited, preceded, tuple},
 };
 
@@ -153,6 +153,31 @@ pub fn parse_gate_modifier<'a>(input: ParserInput<'a>) -> ParserResult<'a, GateM
             Modifier::Forked => GateModifier::Forked,
         },
     ))
+}
+
+/// Parse matrix used to define gate with `DEFGATE`.
+pub fn parse_matrix<'a>(input: ParserInput<'a>) -> ParserResult<'a, Vec<Vec<Expression>>> {
+    preceded(
+        token!(NewLine),
+        separated_list1(
+            token!(NewLine),
+            preceded(
+                token!(Indentation),
+                separated_list0(token!(Comma), parse_expression),
+            ),
+        ),
+    )(input)
+}
+
+/// Parse permutation representation of a `DEFGATE` matrix.
+pub fn parse_permutation<'a>(input: ParserInput<'a>) -> ParserResult<'a, Vec<u64>> {
+    preceded(
+        token!(NewLine),
+        preceded(
+            token!(Indentation),
+            separated_list1(token!(Comma), token!(Integer(value))),
+        ),
+    )(input)
 }
 
 /// Parse a reference to a memory location, such as `ro[5]`, with optional brackets
@@ -326,9 +351,14 @@ mod describe_skip_newlines_and_comments {
 
 #[cfg(test)]
 mod tests {
-    use crate::{expression::Expression, instruction::MemoryReference, parser::lex, real};
+    use crate::{
+        expression::Expression,
+        instruction::MemoryReference,
+        parser::{common::parse_permutation, lex},
+        real,
+    };
 
-    use super::parse_waveform_invocation;
+    use super::{parse_matrix, parse_waveform_invocation};
 
     #[test]
     fn waveform_invocation() {
@@ -356,5 +386,37 @@ mod tests {
             .into_iter()
             .collect()
         )
+    }
+
+    #[test]
+    fn test_parse_matrix() {
+        let input = "\n\t1/sqrt(2), 1/sqrt(2)\n\t1/sqrt(2), -1/sqrt(2)";
+        let lexed = lex(input).unwrap();
+        let (remainder, matrix) = parse_matrix(&lexed).unwrap();
+        assert!(
+            remainder.is_empty(),
+            "expected remainder to be empty, got {:?}",
+            remainder
+        );
+        assert_eq!(matrix.len(), 2);
+    }
+
+    #[test]
+    fn test_parse_permutation() {
+        let input = "\n\t0, 1, 2, 3, 4, 5, 7, 6";
+        let lexed = lex(input).unwrap();
+        let (remainder, permutation) = parse_permutation(&lexed).unwrap();
+        assert!(
+            remainder.is_empty(),
+            "expected remainder to be empty, got {:?}",
+            remainder
+        );
+        assert_eq!(permutation, vec![0, 1, 2, 3, 4, 5, 7, 6]);
+
+        let input = "\n\t0, 1, 2, 3, 4, 5, 7, 6\n\t0, 1, 2, 3, 4, 5, 6, 7";
+        let lexed = lex(input).unwrap();
+        let (remainder, permutation) = parse_permutation(&lexed).unwrap();
+        assert!(!remainder.is_empty(), "multiline permutations are invalid");
+        assert_eq!(permutation, vec![0, 1, 2, 3, 4, 5, 7, 6]);
     }
 }

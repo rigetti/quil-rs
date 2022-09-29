@@ -17,10 +17,10 @@ use std::collections::HashSet;
 use crate::expression::Expression;
 use crate::instruction::{
     Arithmetic, ArithmeticOperand, BinaryLogic, BinaryOperand, Capture, CircuitDefinition,
-    Comparison, ComparisonOperand, Delay, Exchange, Gate, GateDefinition, Instruction, Jump,
-    JumpUnless, JumpWhen, Label, Load, MeasureCalibrationDefinition, Measurement, MemoryReference,
-    Move, Pulse, RawCapture, SetPhase, SetScale, ShiftPhase, Store, UnaryLogic, Vector,
-    WaveformInvocation,
+    Comparison, ComparisonOperand, Delay, Exchange, Gate, GateDefinition, GateSpecification,
+    Instruction, Jump, JumpUnless, JumpWhen, Label, Load, MeasureCalibrationDefinition,
+    Measurement, MemoryReference, Move, Pulse, RawCapture, SetPhase, SetScale, ShiftPhase, Store,
+    UnaryLogic, Vector, WaveformInvocation,
 };
 
 #[derive(Clone, Debug, Hash, PartialEq)]
@@ -189,14 +189,18 @@ impl Instruction {
                     .collect::<Vec<&MemoryReference>>()),
                 ..Default::default()
             },
-            Instruction::GateDefinition(GateDefinition { matrix, .. }) => {
-                let references = matrix
-                    .iter()
-                    .flat_map(|row| row.iter().flat_map(|cell| cell.get_memory_references()))
-                    .collect::<Vec<&MemoryReference>>();
-                MemoryAccesses {
-                    reads: set_from_memory_references!(references),
-                    ..Default::default()
+            Instruction::GateDefinition(GateDefinition { specification, .. }) => {
+                if let GateSpecification::Matrix(matrix) = specification {
+                    let references = matrix
+                        .iter()
+                        .flat_map(|row| row.iter().flat_map(|cell| cell.get_memory_references()))
+                        .collect::<Vec<&MemoryReference>>();
+                    MemoryAccesses {
+                        reads: set_from_memory_references!(references),
+                        ..Default::default()
+                    }
+                } else {
+                    Default::default()
                 }
             }
             Instruction::Halt => Default::default(),

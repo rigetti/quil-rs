@@ -330,11 +330,16 @@ pub struct CircuitDefinition {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+pub enum GateSpecification {
+    Matrix(Vec<Vec<Expression>>),
+    Permutation(Vec<u64>),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct GateDefinition {
     pub name: String,
     pub parameters: Vec<String>,
-    pub matrix: Vec<Vec<Expression>>,
-    pub r#type: GateType,
+    pub specification: GateSpecification,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -785,20 +790,43 @@ impl fmt::Display for Instruction {
             Instruction::GateDefinition(GateDefinition {
                 name,
                 parameters,
-                matrix,
-                r#type,
+                specification,
             }) => {
                 let parameter_str: String = parameters.iter().map(|p| p.to_string()).collect();
-                writeln!(f, "DEFGATE {}{} AS {}:", name, parameter_str, r#type)?;
-                for row in matrix {
-                    writeln!(
-                        f,
-                        "\t{}",
-                        row.iter()
-                            .map(|cell| format!("{}", cell))
-                            .collect::<Vec<String>>()
-                            .join(",")
-                    )?;
+                writeln!(
+                    f,
+                    "DEFGATE {}{} AS {}:",
+                    name,
+                    parameter_str,
+                    match specification {
+                        GateSpecification::Matrix(_) => "MATRIX",
+                        GateSpecification::Permutation(_) => "PERMUTATION",
+                    }
+                )?;
+                match specification {
+                    GateSpecification::Matrix(matrix) => {
+                        for row in matrix {
+                            writeln!(
+                                f,
+                                "\t{}",
+                                row.iter()
+                                    .map(|cell| format!("{}", cell))
+                                    .collect::<Vec<String>>()
+                                    .join(",")
+                            )?;
+                        }
+                    }
+                    GateSpecification::Permutation(permutation) => {
+                        writeln!(
+                            f,
+                            "\t{}",
+                            permutation
+                                .iter()
+                                .map(|i| format!("{}", i))
+                                .collect::<Vec<String>>()
+                                .join(", ")
+                        )?;
+                    }
                 }
                 Ok(())
             }
@@ -1064,7 +1092,10 @@ impl Instruction {
             Instruction::WaveformDefinition(WaveformDefinition { definition, .. }) => {
                 definition.matrix.iter_mut().for_each(closure);
             }
-            Instruction::GateDefinition(GateDefinition { matrix, .. }) => {
+            Instruction::GateDefinition(GateDefinition {
+                specification: GateSpecification::Matrix(matrix),
+                ..
+            }) => {
                 for row in matrix {
                     for cell in row {
                         closure(cell);

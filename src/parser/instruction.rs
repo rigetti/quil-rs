@@ -52,7 +52,7 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
                 Command::DefCal => command::parse_defcal(remainder),
                 Command::DefCircuit => command::parse_defcircuit(remainder),
                 Command::DefFrame => command::parse_defframe(remainder),
-                // Command::DefGate => Ok((remainder, cut(parse_command_defgate))),
+                Command::DefGate => command::parse_defgate(remainder),
                 Command::DefWaveform => command::parse_defwaveform(remainder),
                 Command::Delay => command::parse_delay(remainder),
                 Command::Div => command::parse_arithmetic(ArithmeticOperator::Divide, remainder),
@@ -156,14 +156,14 @@ mod tests {
     use std::collections::HashMap;
     use std::str::FromStr;
 
-    use crate::expression::Expression;
+    use crate::expression::{Expression, InfixOperator, PrefixOperator};
     use crate::instruction::{
         Arithmetic, ArithmeticOperand, ArithmeticOperator, AttributeValue, BinaryLogic,
         BinaryOperand, BinaryOperator, Calibration, Capture, Comparison, ComparisonOperand,
-        ComparisonOperator, FrameDefinition, FrameIdentifier, Gate, Instruction, Jump, JumpWhen,
-        Label, MemoryReference, Move, Pulse, Qubit, RawCapture, Reset, SetFrequency, SetPhase,
-        SetScale, ShiftFrequency, ShiftPhase, UnaryLogic, UnaryOperator, Waveform,
-        WaveformDefinition, WaveformInvocation,
+        ComparisonOperator, FrameDefinition, FrameIdentifier, Gate, GateDefinition,
+        GateSpecification, Instruction, Jump, JumpWhen, Label, MemoryReference, Move, Pulse, Qubit,
+        RawCapture, Reset, SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase,
+        UnaryLogic, UnaryOperator, Waveform, WaveformDefinition, WaveformInvocation,
     };
     use crate::parser::lexer::lex;
     use crate::{make_test, real, Program};
@@ -707,6 +707,57 @@ mod tests {
                 ],
                 parameters: vec![],
             }
+        })]
+    );
+
+    make_test!(
+        gate_definition,
+        parse_instructions,
+        "DEFGATE H:\n\t1/sqrt(2), 1/sqrt(2)\n\t1/sqrt(2), -1/sqrt(2)\n",
+        vec![Instruction::GateDefinition(GateDefinition {
+            name: "H".to_string(),
+            parameters: vec![],
+            specification: GateSpecification::Matrix(vec![
+                vec![
+                    Expression::Infix {
+                        left: Box::new(Expression::Number(real!(1.0))),
+                        operator: InfixOperator::Slash,
+                        right: Box::new(Expression::FunctionCall {
+                            function: crate::expression::ExpressionFunction::SquareRoot,
+                            expression: Box::new(Expression::Number(real!(2.0))),
+                        }),
+                    },
+                    Expression::Infix {
+                        left: Box::new(Expression::Number(real!(1.0))),
+                        operator: InfixOperator::Slash,
+                        right: Box::new(Expression::FunctionCall {
+                            function: crate::expression::ExpressionFunction::SquareRoot,
+                            expression: Box::new(Expression::Number(real!(2.0))),
+                        }),
+                    },
+                ],
+                vec![
+                    Expression::Infix {
+                        left: Box::new(Expression::Number(real!(1.0))),
+                        operator: InfixOperator::Slash,
+                        right: Box::new(Expression::FunctionCall {
+                            function: crate::expression::ExpressionFunction::SquareRoot,
+                            expression: Box::new(Expression::Number(real!(2.0))),
+                        }),
+                    },
+                    Expression::Infix {
+                        left: Box::new(Expression::Prefix {
+                            operator: PrefixOperator::Minus,
+                            expression: Box::new(Expression::Number(real!(1.0))),
+                        }),
+                        operator: InfixOperator::Slash,
+                        right: Box::new(Expression::FunctionCall {
+                            function: crate::expression::ExpressionFunction::SquareRoot,
+                            expression: Box::new(Expression::Number(real!(2.0))),
+                        }),
+                    },
+                ],
+            ]),
         })]
     );
 

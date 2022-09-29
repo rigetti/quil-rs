@@ -160,6 +160,7 @@ fn parse_expression_identifier(input: ParserInput) -> ParserResult<Expression> {
             "i" => Ok((remainder, Expression::Number(imag!(1f64)))),
             "pi" => Ok((remainder, Expression::PiConstant)),
             "sin" => parse_function_call(remainder, ExpressionFunction::Sine),
+            "sqrt" => parse_function_call(remainder, ExpressionFunction::SquareRoot),
             name => Ok((
                 remainder,
                 Expression::Address(MemoryReference {
