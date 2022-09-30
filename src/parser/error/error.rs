@@ -17,7 +17,7 @@ use crate::parser::error::{ErrorInput, InternalParseError};
 use nom::error::{Error as NomError, ParseError};
 use std::convert::Infallible;
 use std::fmt;
-use thiserror::private::AsDynError;
+use thiserror::__private::AsDynError;
 
 /// An error that may occur while parsing.
 ///
