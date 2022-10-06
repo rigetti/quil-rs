@@ -43,7 +43,7 @@ where
     column: usize,
     snippet: String,
     kind: ErrorKind<E>,
-    previous: Option<Box<dyn std::error::Error + 'static>>,
+    previous: Option<Box<dyn std::error::Error + 'static + Send>>,
 }
 
 impl<E> PartialEq for Error<E>
@@ -80,7 +80,7 @@ where
     /// Attach a previous error to this one.
     pub(crate) fn with_previous<E2>(mut self, previous: E2) -> Self
     where
-        E2: std::error::Error + 'static,
+        E2: std::error::Error + 'static + Send,
     {
         self.previous = Some(Box::new(previous));
         self
