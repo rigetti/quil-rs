@@ -20,7 +20,7 @@ use nom::{
 };
 
 use crate::{
-    instruction::{GateSpecification, GateType},
+    instruction::{GateSpecification, GateType, PragmaArgument},
     parser::common::parse_variable_qubit,
 };
 
@@ -412,8 +412,10 @@ pub fn parse_store<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> 
 /// Parse the contents of a `PRAGMA` instruction.
 pub fn parse_pragma<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
     let (input, pragma_type) = token!(Identifier(v))(input)?;
-    // FIXME: Also allow Int (not just Identifier)
-    let (input, arguments) = many0(token!(Identifier(v)))(input)?;
+    let (input, arguments) = many0(alt((
+        map(token!(Identifier(v)), PragmaArgument::Identifier),
+        map(token!(Integer(i)), PragmaArgument::Integer),
+    )))(input)?;
     let (input, data) = opt(token!(String(v)))(input)?;
     Ok((
         input,
@@ -527,7 +529,7 @@ pub fn parse_measurement(input: ParserInput) -> ParserResult<Instruction> {
 #[cfg(test)]
 mod tests {
     use crate::expression::{Expression, ExpressionFunction, InfixOperator, PrefixOperator};
-    use crate::instruction::{GateDefinition, GateSpecification};
+    use crate::instruction::{GateDefinition, GateSpecification, PragmaArgument};
     use crate::parser::lexer::lex;
     use crate::{imag, real};
     use crate::{
@@ -620,8 +622,33 @@ mod tests {
         "FILTER-NODE q35_unclassified \"{'module':'lodgepole.filters.io','filter_type':'DataBuffer','source':'q35_ro_rx/filter','publish':true,'params':{},'_type':'FilterNode'}\"",
         Instruction::Pragma(Pragma {
             name: "FILTER-NODE".to_owned(),
-            arguments: vec!["q35_unclassified".to_owned()],
+            arguments: vec![PragmaArgument::Identifier("q35_unclassified".to_string())],
             data: Some("{'module':'lodgepole.filters.io','filter_type':'DataBuffer','source':'q35_ro_rx/filter','publish':true,'params':{},'_type':'FilterNode'}".to_owned())
+        })
+    );
+
+    make_test!(
+        pragma_integer_argument,
+        parse_pragma,
+        "READOUT-POVM 0 \"(0.9 0.19999999999999996 0.09999999999999998 0.8)\"",
+        Instruction::Pragma(Pragma {
+            name: "READOUT-POVM".to_string(),
+            arguments: vec![PragmaArgument::Integer(0)],
+            data: Some("(0.9 0.19999999999999996 0.09999999999999998 0.8)".to_string()),
+        })
+    );
+
+    make_test!(
+        pragma_identifier_and_integer_argument,
+        parse_pragma,
+        "NAME identifier 0 \"data\"",
+        Instruction::Pragma(Pragma {
+            name: "NAME".to_string(),
+            arguments: vec![
+                PragmaArgument::Identifier("identifier".to_string()),
+                PragmaArgument::Integer(0)
+            ],
+            data: Some("data".to_string()),
         })
     );
 
