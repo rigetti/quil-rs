@@ -406,6 +406,15 @@ pub enum PragmaArgument {
     Integer(u64),
 }
 
+impl fmt::Display for PragmaArgument {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PragmaArgument::Identifier(i) => write!(f, "{}", i),
+            PragmaArgument::Integer(i) => write!(f, "{}", i),
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Pulse {
     pub blocking: bool,
@@ -898,15 +907,9 @@ impl fmt::Display for Instruction {
             }) => {
                 write!(f, "PRAGMA {}", name)?;
                 if !arguments.is_empty() {
-                    let arguments = arguments
-                        .iter()
-                        .map(|arg| match arg {
-                            PragmaArgument::Identifier(i) => i.clone(),
-                            PragmaArgument::Integer(i) => format!("{}", i),
-                        })
-                        .collect::<Vec<_>>()
-                        .join(" ");
-                    write!(f, " {}", arguments)?;
+                    for arg in arguments {
+                        write!(f, " {}", arg)?;
+                    }
                 }
                 if let Some(data) = data {
                     write!(f, " \"{}\"", data)?;
