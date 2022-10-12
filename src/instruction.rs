@@ -396,8 +396,14 @@ pub struct MeasureCalibrationDefinition {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Pragma {
     pub name: String,
-    pub arguments: Vec<String>,
+    pub arguments: Vec<PragmaArgument>,
     pub data: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum PragmaArgument {
+    Identifier(String),
+    Integer(u64),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -892,7 +898,15 @@ impl fmt::Display for Instruction {
             }) => {
                 write!(f, "PRAGMA {}", name)?;
                 if !arguments.is_empty() {
-                    write!(f, " {}", arguments.join(" "))?;
+                    let arguments = arguments
+                        .iter()
+                        .map(|arg| match arg {
+                            PragmaArgument::Identifier(i) => i.clone(),
+                            PragmaArgument::Integer(i) => format!("{}", i),
+                        })
+                        .collect::<Vec<_>>()
+                        .join(" ");
+                    write!(f, " {}", arguments)?;
                 }
                 if let Some(data) = data {
                     write!(f, " \"{}\"", data)?;
@@ -972,6 +986,8 @@ impl fmt::Display for Instruction {
 
 #[cfg(test)]
 mod test_instruction_display {
+    use crate::instruction::PragmaArgument;
+
     use super::{Instruction, Pragma};
 
     #[test]
@@ -988,7 +1004,7 @@ mod test_instruction_display {
         assert_eq!(
             Instruction::Pragma(Pragma {
                 name: String::from("LOAD-MEMORY"),
-                arguments: vec![String::from("q0")],
+                arguments: vec![PragmaArgument::Identifier("q0".to_string())],
                 data: Some(String::from("addr")),
             })
             .to_string(),
