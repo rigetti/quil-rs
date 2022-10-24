@@ -14,14 +14,9 @@
 
 use nom::combinator::opt;
 
-use crate::{
-    expected_token,
-    expression::{Expression, ExpressionFunction, InfixOperator, PrefixOperator},
-    imag,
-    instruction::MemoryReference,
-    parser::common::parse_memory_reference_with_brackets,
-    token, unexpected_eof,
-};
+use crate::{expression::{Expression, ExpressionFunction, InfixOperator, PrefixOperator}, imag, instruction::MemoryReference, expected_token, parser::common::parse_memory_reference_with_brackets, token, unexpected_eof};
+use crate::parser::{InternalParserResult, ParseError};
+use crate::parser::error::Error;
 
 use super::lexer::{Operator, Token};
 use super::{ParserInput, ParserResult};
@@ -57,12 +52,12 @@ fn get_precedence(input: ParserInput) -> Precedence {
 
 /// Parse an expression at the head of the current input, for as long as the expression continues.
 /// Return an error only if the first token(s) do not form an expression.
-pub fn parse_expression(input: ParserInput) -> ParserResult<Expression> {
+pub(crate) fn parse_expression(input: ParserInput) -> InternalParserResult<Expression> {
     parse(input, Precedence::Lowest)
 }
 
 /// Recursively parse an expression as long as operator precedence is satisfied.
-fn parse(input: ParserInput, precedence: Precedence) -> ParserResult<Expression> {
+fn parse<'a>(input: ParserInput<'a>, precedence: Precedence) -> InternalParserResult<'a, Expression> {
     let (input, prefix) = opt(parse_prefix)(input)?;
     let (mut input, mut left) = match super::split_first_token(input) {
         None => unexpected_eof!(input),
@@ -113,7 +108,7 @@ fn parse(input: ParserInput, precedence: Precedence) -> ParserResult<Expression>
 }
 
 /// Returns successfully if the head of input is the identifier `i`, returns error otherwise.
-fn parse_i(input: ParserInput) -> ParserResult<()> {
+fn parse_i<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, ()> {
     match super::split_first_token(input) {
         None => unexpected_eof!(input),
         Some((Token::Identifier(v), remainder)) if v == "i" => Ok((remainder, ())),
@@ -125,7 +120,7 @@ fn parse_i(input: ParserInput) -> ParserResult<()> {
 fn parse_function_call<'a>(
     input: ParserInput<'a>,
     function: ExpressionFunction,
-) -> ParserResult<'a, Expression> {
+) -> InternalParserResult<'a, Expression> {
     let (input, _) = token!(LParenthesis)(input)?;
     let (input, expression) = parse(input, Precedence::Lowest)?; // TODO: different precedence?
     let (input, _) = token!(RParenthesis)(input)?;
@@ -145,7 +140,7 @@ fn parse_function_call<'a>(
 /// 1. Memory references with brackets
 /// 2. Special function and constant identifiers
 /// 3. Anything else is considered to be a memory reference without index brackets
-fn parse_expression_identifier(input: ParserInput) -> ParserResult<Expression> {
+fn parse_expression_identifier<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Expression> {
     let (input, memory_reference) = opt(parse_memory_reference_with_brackets)(input)?;
     if let Some(memory_reference) = memory_reference {
         return Ok((input, Expression::Address(memory_reference)));
@@ -175,7 +170,7 @@ fn parse_expression_identifier(input: ParserInput) -> ParserResult<Expression> {
 
 /// To be called following an opening parenthesis, this will parse the expression to its end
 /// and then expect a closing right parenthesis.
-fn parse_grouped_expression(input: ParserInput) -> ParserResult<Expression> {
+fn parse_grouped_expression<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Expression> {
     let (input, expression) = parse(input, Precedence::Lowest)?;
     match super::split_first_token(input) {
         None => unexpected_eof!(input),
@@ -188,7 +183,7 @@ fn parse_grouped_expression(input: ParserInput) -> ParserResult<Expression> {
 
 /// Parse an infix operator and then the expression to the right of the operator, and return the
 /// resulting infixed expression.
-fn parse_infix(input: ParserInput, left: Expression) -> ParserResult<Expression> {
+fn parse_infix<'a>(input: ParserInput<'a>, left: Expression) -> InternalParserResult<'a, Expression> {
     match super::split_first_token(input) {
         None => unexpected_eof!(input),
         Some((Token::Operator(token_operator), remainder)) => {
@@ -213,7 +208,7 @@ fn parse_infix(input: ParserInput, left: Expression) -> ParserResult<Expression>
 }
 
 /// Return the prefix operator at the beginning of the input, if any.
-fn parse_prefix(input: ParserInput) -> ParserResult<PrefixOperator> {
+fn parse_prefix<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, PrefixOperator> {
     match super::split_first_token(input) {
         None => unexpected_eof!(input),
         Some((Token::Operator(Operator::Minus), remainder)) => {

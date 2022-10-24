@@ -17,7 +17,7 @@ use std::str::FromStr;
 use std::{collections::HashMap, fmt};
 
 use crate::expression::Expression;
-use crate::parser::{common::parse_memory_reference, lex};
+use crate::parser::{common::parse_memory_reference, lex, ParseError};
 use crate::program::{disallow_leftover, frame::FrameMatchCondition, SyntaxError};
 
 #[cfg(test)]
@@ -308,7 +308,7 @@ impl FromStr for MemoryReference {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let tokens = lex(s)?;
-        disallow_leftover(parse_memory_reference(&tokens))
+        disallow_leftover(parse_memory_reference(&tokens).map_err(ParseError::from_nom_internal_err))
     }
 }
 

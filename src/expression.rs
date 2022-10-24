@@ -24,7 +24,7 @@ use std::str::FromStr;
 #[cfg(test)]
 use proptest_derive::Arbitrary;
 
-use crate::parser::{lex, parse_expression};
+use crate::parser::{lex, parse_expression, ParseError};
 use crate::program::{disallow_leftover, ProgramError};
 use crate::{imag, instruction::MemoryReference, real};
 
@@ -416,7 +416,7 @@ impl FromStr for Expression {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let tokens = lex(s)?;
-        disallow_leftover(parse_expression(&tokens))
+        disallow_leftover(parse_expression(&tokens).map_err(ParseError::from_nom_internal_err))
     }
 }
 

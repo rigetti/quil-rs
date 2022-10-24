@@ -29,13 +29,14 @@ pub(crate) mod instruction;
 mod lexer;
 mod token;
 
-pub(crate) use error::ErrorInput;
-pub use error::{InternalParseError, ParseError, ParserErrorKind};
+pub(crate) use error::{ErrorInput, InternalParseError};
+pub use error::{ParseError, ParserErrorKind};
 pub use lexer::{LexError, LexErrorKind};
 pub use token::{Token, TokenWithLocation};
 
 type ParserInput<'a> = &'a [TokenWithLocation];
-type ParserResult<'a, R> = IResult<&'a [TokenWithLocation], R, ParseError>;
+type ParserResult<'a, R, E = ParseError> = IResult<ParserInput<'a>, R, E>;
+type InternalParserResult<'a, R, E = InternalParseError<'a>> = IResult<ParserInput<'a>, R, E>;
 
 /// Pops the first token off of the `input` and returns it and the remaining input.
 ///
@@ -60,7 +61,7 @@ pub(crate) fn first_token(input: ParserInput) -> Option<&Token> {
 ///
 /// Will panic if the error is [`nom::Err::Incomplete`]. This only happens for streaming parsers,
 /// which we do not use as of 2022-09-14.
-pub(crate) fn extract_nom_err<E: std::error::Error>(err: nom::Err<E>) -> E {
+pub(crate) fn extract_nom_err<E>(err: nom::Err<E>) -> E {
     // If this ever panics, switch to returning an Option
     match err {
         nom::Err::Incomplete(_) => {

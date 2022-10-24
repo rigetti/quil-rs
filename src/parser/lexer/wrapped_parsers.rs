@@ -19,6 +19,7 @@ use nom::bytes::complete::tag as nom_tag;
 use nom::error::ParseError;
 use nom::Parser;
 use std::fmt;
+use crate::parser::lexer::{InternalLexError, InternalLexResult};
 
 /// Returns a parser that runs the given one and converts its returned error using `mapper`.
 pub(crate) fn map_err<'a, P, F, O, E1, E2>(
@@ -44,14 +45,14 @@ where
 pub(crate) fn expecting<'a, O, E, P>(
     context: &'static str,
     mut parser: P,
-) -> impl FnMut(LexInput<'a>) -> LexResult<'a, O>
+) -> impl FnMut(LexInput<'a>) -> InternalLexResult<'a, O>
 where
     P: Parser<LexInput<'a>, O, E>,
     O: fmt::Debug,
 {
     move |input| {
         parser.parse(input).map_err(|err| {
-            let new_err = LexError::from_kind(input, LexErrorKind::ExpectedContext(context));
+            let new_err = InternalLexError::from_kind(input, LexErrorKind::ExpectedContext(context));
             match err {
                 nom::Err::Incomplete(needed) => nom::Err::Incomplete(needed),
                 nom::Err::Error(_) => nom::Err::Error(new_err),
@@ -68,7 +69,7 @@ where
 pub(crate) fn alt<'a, O, E, List>(
     context: &'static str,
     alts: List,
-) -> impl FnMut(LexInput<'a>) -> LexResult<'a, O>
+) -> impl FnMut(LexInput<'a>) -> InternalLexResult<'a, O>
 where
     E: ParseError<LexInput<'a>>,
     List: Alt<LexInput<'a>, O, E>,
@@ -80,12 +81,12 @@ where
 
 /// A wrapper for [`nom::bytes::complete::tag`] that replaces the error with one that indicates
 /// what tag string was expected.
-pub(crate) fn tag(lit: &'static str) -> impl FnMut(LexInput) -> LexResult<LexInput> {
+pub(crate) fn tag<'a>(lit: &'static str) -> impl FnMut(LexInput<'a>) -> InternalLexResult<LexInput<'a>> {
     move |input| {
-        map_err(nom_tag(lit), |err| {
-            LexError::from_nom_err_with_kind(
-                err,
-                ErrorKind::Other(LexErrorKind::ExpectedString(lit)),
+        map_err(nom_tag(lit), |err: nom::error::Error<LexInput<'a>>| {
+            InternalLexError::from_kind(
+                err.input,
+                LexErrorKind::ExpectedString(lit),
             )
         })(input)
     }

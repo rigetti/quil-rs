@@ -22,8 +22,11 @@ use super::lexer::{Command, Token};
 
 pub use error::Error;
 pub(crate) use input::ErrorInput;
-pub use internal::InternalParseError;
+pub(crate) use internal::InternalError;
+pub use internal::GenericParseError;
 pub use kind::ErrorKind;
+
+pub(crate) type InternalParseError<'a> = InternalError<super::ParserInput<'a>, ParserErrorKind>;
 
 /// An error specific to parsing tokens.
 pub type ParseError = Error<ParserErrorKind>;
