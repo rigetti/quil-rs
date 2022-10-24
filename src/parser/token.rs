@@ -55,8 +55,6 @@ where
 {
     move |input| {
         let line = input.location_line();
-        // TODO: naive_get_utf8_column might be faster for shorter lines
-        // See: https://github.com/rigetti/quil-rs/issues/93
         let column = input.get_utf8_column();
         // Using this syntax because map(parser, || ...)(input) has lifetime issues for parser.
         parser.parse(input).map(|(leftover, token)| {
