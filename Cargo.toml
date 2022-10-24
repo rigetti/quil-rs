@@ -31,5 +31,9 @@ rstest = "0.15.0"
 graphviz-dot = ["dot-writer"]
 
 [[bench]]
+name = "calibration"
+harness = false
+
+[[bench]]
 name = "parser"
 harness = false
