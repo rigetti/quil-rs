@@ -639,9 +639,7 @@ mod tests {
 DECLARE {declared} {datatype}
 {command} 0 "xy" {referenced}
 "#
-        )).expect(&format!(
-            "Bad program with (declared, datatype, command, referenced) = ({declared}, {datatype}, {command}, {referenced})."
-        ));
+        )).unwrap_or_else(|_| panic!("Bad program with (declared, datatype, command, referenced) = ({declared}, {datatype}, {command}, {referenced})."));
         assert_eq!(
             type_check(&p).is_ok(),
             declared == referenced && datatype == "REAL"
@@ -660,9 +658,7 @@ DECLARE destination {dst_type}
 DECLARE source {src_type}
 {command} destination source
 "#
-        )).expect(&format!(
-            "Bad arithmetic program with (command, dst_type, src_type) = ({command}, {dst_type}, {src_type})."
-        ));
+        )).unwrap_or_else(|_| panic!("Bad arithmetic program with (command, dst_type, src_type) = ({command}, {dst_type}, {src_type})."));
         assert_eq!(
             type_check(&p).is_ok(),
             dst_type == src_type && ["REAL", "INTEGER"].contains(&dst_type)
@@ -680,9 +676,7 @@ DECLARE source {src_type}
 DECLARE destination {dst_type}
 {command} destination {value}
 "#
-        )).expect(&format!(
-            "Bad ARITHMETIC program with (command, dst_type, value) = ({command}, {dst_type}, {value})."
-        ));
+        )).unwrap_or_else(|_| panic!("Bad ARITHMETIC program with (command, dst_type, value) = ({command}, {dst_type}, {value})."));
         let (f, i) = (f64::from_str(value), i64::from_str(value));
         assert_eq!(
             type_check(&p).is_ok(),
@@ -704,9 +698,7 @@ DECLARE left {left_type}
 DECLARE right {right_type}
 {comparison} destination left right
 "#
-        )).expect(&format!(
-            "Bad comparison program with (dst_type, left_type, right_type, comparison) = ({dst_type}, {left_type}, {right_type}, {comparison})."
-        ));
+        )).unwrap_or_else(|_| panic!("Bad comparison program with (dst_type, left_type, right_type, comparison) = ({dst_type}, {left_type}, {right_type}, {comparison})."));
         assert_eq!(
             type_check(&p).is_ok(),
             dst_type == "BIT" && left_type == right_type
@@ -726,9 +718,7 @@ DECLARE destination {dst_type}
 DECLARE left {left_type}
 {comparison} destination left {value}
 "#
-        )).expect(&format!(
-            "Bad comparison program with (dst_type, left_type, comparison, value) = ({dst_type}, {left_type}, {comparison}, {value})."
-        ));
+        )).unwrap_or_else(|_| panic!("Bad comparison program with (dst_type, left_type, comparison, value) = ({dst_type}, {left_type}, {comparison}, {value})."));
         let (f, i) = (f64::from_str(value), i64::from_str(value));
         assert_eq!(
             type_check(&p).is_ok(),
@@ -754,9 +744,7 @@ DECLARE {dst_decl} {dst_type}
 DECLARE {src_decl} {src_type}
 {operator} {dst_ref} {src_ref}
 "#
-        )).expect(&format!(
-            "Bad bianry logic program with (dst_decl, dst_type, src_decl, src_type, operator, dst_ref, src_ref) = ({dst_decl}, {dst_type}, {src_decl}, {src_type}, {operator}, {dst_ref}, {src_ref})."
-        ));
+        )).unwrap_or_else(|_| panic!("Bad bianry logic program with (dst_decl, dst_type, src_decl, src_type, operator, dst_ref, src_ref) = ({dst_decl}, {dst_type}, {src_decl}, {src_type}, {operator}, {dst_ref}, {src_ref})."));
         assert_eq!(
             type_check(&p).is_ok(),
             dst_type != "REAL" && src_type != "REAL" && dst_decl == dst_ref && src_decl == src_ref
@@ -775,9 +763,7 @@ DECLARE {src_decl} {src_type}
 DECLARE {dst_decl} {dst_type}
 {operator} {dst_ref} 1
 "#
-            )).expect(&format!(
-            "Bad binary logic program with (dst_decl, dst_type, operator, dst_ref) = ({dst_decl}, {dst_type}, {operator}, {dst_ref})."
-            ));
+            )).unwrap_or_else(|_| panic!("Bad binary logic program with (dst_decl, dst_type, operator, dst_ref) = ({dst_decl}, {dst_type}, {operator}, {dst_ref})."));
         assert_eq!(
             type_check(&p).is_ok(),
             dst_type != "REAL" && dst_ref == dst_decl
@@ -796,9 +782,7 @@ DECLARE {dst_decl} {dst_type}
 DECLARE {destination} {datatype}
 {operator} {reference}
 "#
-        )).expect(&format!(
-            "Bad unary program with (destination, datatype, operator, reference) = ({destination}, {datatype}, {operator}, {reference}"
-        ));
+        )).unwrap_or_else(|_| panic!("Bad unary program with (destination, datatype, operator, reference) = ({destination}, {datatype}, {operator}, {reference}"));
         assert_eq!(
             type_check(&p).is_ok(),
             destination == reference
@@ -822,9 +806,7 @@ DECLARE {dst_decl} {dst_type}
 DECLARE {src_decl} {src_type}
 MOVE {dst_ref} {src_ref}
 "#
-        )).expect(&format!(
-            "Bad MOVE program with (dst_decl, dst_type, src_decl, src_type, dst_ref, src_ref) = ({dst_decl}, {dst_type}, {src_decl}, {src_type}, {dst_ref}, {src_ref})."
-        ));
+        )).unwrap_or_else(|_| panic!("Bad MOVE program with (dst_decl, dst_type, src_decl, src_type, dst_ref, src_ref) = ({dst_decl}, {dst_type}, {src_decl}, {src_type}, {dst_ref}, {src_ref})."));
         assert_eq!(
             type_check(&p).is_ok(),
             dst_type == src_type && dst_decl == dst_ref && src_decl == src_ref
@@ -842,9 +824,7 @@ DECLARE destination {dst_type}
 MOVE destination {value}
 "#
         ))
-        .expect(&format!(
-            "Bad MOVE program with (dst_type, source) = ({dst_type}, {value})."
-        ));
+        .unwrap_or_else(|_| panic!("Bad MOVE program with (dst_type, source) = ({dst_type}, {value})."));
         let (f, i) = (f64::from_str(value), i64::from_str(value));
         assert_eq!(
             type_check(&p).is_ok(),
@@ -867,9 +847,7 @@ DECLARE {left_decl} {left_type}
 DECLARE {right_decl} {right_type}
 EXCHANGE {left_ref} {right_ref}
 "#
-        )).expect(&format!(
-            "Bad EXCHANGE program with (left_decl, left_type, right_decl, right_type, left_ref, right_ref) = ({left_decl}, {left_type}, {right_decl}, {right_type}, {left_ref}, {right_ref})."
-        ));
+        )).unwrap_or_else(|_| panic!("Bad EXCHANGE program with (left_decl, left_type, right_decl, right_type, left_ref, right_ref) = ({left_decl}, {left_type}, {right_decl}, {right_type}, {left_ref}, {right_ref})."));
         assert_eq!(
             type_check(&p).is_ok(),
             left_decl == left_ref && right_decl == right_ref && left_type == right_type
@@ -877,6 +855,7 @@ EXCHANGE {left_ref} {right_ref}
     }
 
     #[rstest]
+    #[allow(clippy::too_many_arguments)]
     fn test_load(
         #[values("x")] dst_decl: &str,
         #[values("REAL", "INTEGER", "BIT", "OCTET")] dst_type: &str,
@@ -895,9 +874,7 @@ DECLARE {src_decl} {src_type}
 DECLARE {offset_decl} {offset_type}
 LOAD {dst_ref} {src_ref} {offset_ref}
 "#
-        )).expect(&format!(
-            "Bad LOAD program with (dst_decl, dst_type, src_decl, src_type, offset_decl, offset_type, dst_ref, src_ref, offset_ref) = ({dst_decl}, {dst_type}, {src_decl}, {src_type}, {offset_decl}, {offset_type}, {dst_ref}, {src_ref}, {offset_ref})."
-        ));
+        )).unwrap_or_else(|_| panic!("Bad LOAD program with (dst_decl, dst_type, src_decl, src_type, offset_decl, offset_type, dst_ref, src_ref, offset_ref) = ({dst_decl}, {dst_type}, {src_decl}, {src_type}, {offset_decl}, {offset_type}, {dst_ref}, {src_ref}, {offset_ref})."));
         assert_eq!(
             type_check(&p).is_ok(),
             (dst_decl == dst_ref && src_decl == src_ref && offset_decl == offset_ref)
@@ -925,9 +902,7 @@ DECLARE {src_decl} {src_type}
 DECLARE {offset_decl} {offset_type}
 STORE {dst_ref} {offset_ref} {src_ref}
 "#
-        )).expect(&format!(
-            "Bad STORE program with (dst_decl, dst_type, src_decl, src_type, offset_decl, offset_type, dst_ref, src_ref, offset_ref) = ({dst_decl}, {dst_type}, {src_decl}, {src_type}, {offset_decl}, {offset_type}, {dst_ref}, {src_ref}, {offset_ref})."
-        ));
+        )).unwrap_or_else(|_| panic!("Bad STORE program with (dst_decl, dst_type, src_decl, src_type, offset_decl, offset_type, dst_ref, src_ref, offset_ref) = ({dst_decl}, {dst_type}, {src_decl}, {src_type}, {offset_decl}, {offset_type}, {dst_ref}, {src_ref}, {offset_ref})."));
         assert_eq!(
             type_check(&p).is_ok(),
             (dst_decl == dst_ref && src_decl == src_ref && offset_decl == offset_ref)
@@ -952,9 +927,7 @@ DECLARE {dst_decl} {dst_type}
 DECLARE {offset_decl} {offset_type}
 STORE {dst_ref} {offset_ref} {value}
 "#
-        )).expect(&format!(
-            "Bad STORE program with (dst_decl, dst_type, value, offset_decl, offset_type, dst_ref, offset_ref) = ({dst_decl}, {dst_type}, {value}, {offset_decl}, {offset_type}, {dst_ref}, {offset_ref})."
-        ));
+        )).unwrap_or_else(|_| panic!("Bad STORE program with (dst_decl, dst_type, value, offset_decl, offset_type, dst_ref, offset_ref) = ({dst_decl}, {dst_type}, {value}, {offset_decl}, {offset_type}, {dst_ref}, {offset_ref})."));
         let (f, i) = (f64::from_str(value), i64::from_str(value));
         assert_eq!(
             type_check(&p).is_ok(),

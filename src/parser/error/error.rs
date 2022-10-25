@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use crate::parser::error::kind::ErrorKind;
-use crate::parser::error::{ErrorInput, GenericParseError, InternalError, InternalParseError};
+use crate::parser::error::{ErrorInput, GenericParseError, InternalError};
 use nom::error::{Error as NomError, ParseError};
 use std::convert::Infallible;
 use std::fmt;
@@ -82,15 +82,6 @@ impl<E> Error<E>
 where
     E: std::error::Error + Send + 'static,
 {
-    /// Create a new `Error` from the given error kind.
-    pub(crate) fn from_kind<I>(input: I, other: E) -> Self
-    where
-        I: ErrorInput,
-    {
-        let kind = ErrorKind::Other(other);
-        Self::internal_new(input, kind)
-    }
-
     pub(crate) fn from_nom_internal_err<I>(error: nom::Err<InternalError<I, E>>) -> nom::Err<Self>
         where I: ErrorInput,
     {

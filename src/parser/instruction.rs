@@ -28,10 +28,10 @@ use crate::{
 
 use super::{
     command, common,
-    error::{ParseError, ParserErrorKind},
+    error::{ParserErrorKind},
     gate,
     lexer::{Command, Token},
-    ParserInput, ParserResult,
+    ParserInput,
 };
 
 /// Parse the next instructon from the input, skipping past leading newlines, comments, and semicolons.

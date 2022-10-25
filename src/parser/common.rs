@@ -25,14 +25,14 @@ use crate::{expected_token, expression::Expression, instruction::{
     ArithmeticOperand, AttributeValue, BinaryOperand, ComparisonOperand, FrameIdentifier,
     GateModifier, MemoryReference, Qubit, ScalarType, Vector, WaveformInvocation,
 }, parser::lexer::Operator, token};
-use crate::parser::error::Error;
+
 use crate::parser::{InternalParseError, InternalParserResult};
 
 use super::{
-    error::{ParseError, ParserErrorKind},
+    error::{ParserErrorKind},
     expression::parse_expression,
     lexer::{DataType, Modifier, Token},
-    ParserInput, ParserResult,
+    ParserInput,
 };
 
 /// Parse the operand of an arithmetic instruction, which may be a literal integer, literal real

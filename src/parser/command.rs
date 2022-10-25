@@ -43,7 +43,7 @@ use super::{
         parse_memory_reference, parse_qubit, parse_waveform_invocation,
     },
     expression::parse_expression,
-    instruction, ParserInput, ParserResult,
+    instruction, ParserInput,
 };
 
 /// Parse an arithmetic instruction of the form `destination source`.
@@ -762,7 +762,7 @@ mod tests {
                 parameters: vec![],
                 specification: GateSpecification::Matrix(vec![
                     vec![expression.clone(), expression.clone()],
-                    vec![expression.clone(), negative_expression],
+                    vec![expression, negative_expression],
                 ]),
             })
         }

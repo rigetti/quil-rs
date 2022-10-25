@@ -136,7 +136,7 @@ pub(crate) fn lex(input: &str) -> Result<Vec<TokenWithLocation>, LexError> {
         .map_err(LexError::from)
 }
 
-fn _lex<'a>(input: LexInput<'a>) -> InternalLexResult<'a, Vec<TokenWithLocation>> {
+fn _lex(input: LexInput) -> InternalLexResult<Vec<TokenWithLocation>> {
     terminated(
         many0(alt(
             "indentation or a token preceded by whitespace",
@@ -149,7 +149,7 @@ fn _lex<'a>(input: LexInput<'a>) -> InternalLexResult<'a, Vec<TokenWithLocation>
     )(input)
 }
 
-fn lex_token<'a>(input: LexInput<'a>) -> InternalLexResult<'a, TokenWithLocation> {
+fn lex_token(input: LexInput) -> InternalLexResult<TokenWithLocation> {
     alt(
         "a token",
         (
@@ -170,7 +170,7 @@ fn lex_token<'a>(input: LexInput<'a>) -> InternalLexResult<'a, TokenWithLocation
     )(input)
 }
 
-fn lex_data_type<'a>(input: LexInput<'a>) -> InternalLexResult<'a> {
+fn lex_data_type(input: LexInput) -> InternalLexResult {
     alt(
         "a data type",
         (
@@ -182,7 +182,7 @@ fn lex_data_type<'a>(input: LexInput<'a>) -> InternalLexResult<'a> {
     )(input)
 }
 
-fn lex_comment<'a>(input: LexInput<'a>) -> InternalLexResult<'a> {
+fn lex_comment(input: LexInput) -> InternalLexResult {
     let (input, _) = tag("#")(input)?;
     let (input, content) = is_not("\n")(input)?;
     Ok((input, Token::Comment(content.to_string())))
@@ -257,7 +257,7 @@ fn is_valid_identifier_middle_character(chr: char) -> bool {
     is_valid_identifier_end_character(chr) || chr == '-'
 }
 
-fn lex_identifier_raw<'a>(input: LexInput<'a>) -> InternalLexResult<'a, String> {
+fn lex_identifier_raw(input: LexInput) -> InternalLexResult<String> {
     expecting(
         "a valid identifier",
         map(
@@ -280,23 +280,23 @@ fn lex_identifier_raw<'a>(input: LexInput<'a>) -> InternalLexResult<'a, String> 
     })
 }
 
-fn lex_command_or_identifier<'a>(input: LexInput<'a>) -> InternalLexResult<'a> {
+fn lex_command_or_identifier(input: LexInput) -> InternalLexResult {
     let (input, identifier) = lex_identifier_raw(input)?;
     let token = recognize_command_or_identifier(identifier);
     Ok((input, token))
 }
 
-fn lex_label<'a>(input: LexInput<'a>) -> InternalLexResult<'a> {
+fn lex_label(input: LexInput) -> InternalLexResult {
     let (input, _) = tag("@")(input)?;
     let (input, label) = lex_identifier_raw(input)?;
     Ok((input, Token::Label(label)))
 }
 
-fn lex_non_blocking<'a>(input: LexInput<'a>) -> InternalLexResult<'a> {
+fn lex_non_blocking(input: LexInput) -> InternalLexResult {
     value(Token::NonBlocking, tag("NONBLOCKING"))(input)
 }
 
-fn lex_number<'a>(input: LexInput<'a>) -> InternalLexResult {
+fn lex_number(input: LexInput) -> InternalLexResult {
     let (input, float_string): (LexInput, LexInput) = recognize(double)(input)?;
     let integer_parse_result: IResult<LexInput, _> = all_consuming(digit1)(float_string);
     Ok((
@@ -308,7 +308,7 @@ fn lex_number<'a>(input: LexInput<'a>) -> InternalLexResult {
     ))
 }
 
-fn lex_modifier<'a>(input: LexInput<'a>) -> InternalLexResult<'a> {
+fn lex_modifier(input: LexInput) -> InternalLexResult {
     alt(
         "a modifier token",
         (
@@ -323,7 +323,7 @@ fn lex_modifier<'a>(input: LexInput<'a>) -> InternalLexResult<'a> {
     )(input)
 }
 
-fn lex_operator<'a>(input: LexInput<'a>) -> InternalLexResult<'a> {
+fn lex_operator(input: LexInput) -> InternalLexResult {
     use Operator::*;
     map(
         alt(
@@ -340,7 +340,7 @@ fn lex_operator<'a>(input: LexInput<'a>) -> InternalLexResult<'a> {
     )(input)
 }
 
-fn recognize_newlines<'a>(input: LexInput<'a>) -> InternalLexResult<'a, LexInput<'a>> {
+fn recognize_newlines(input: LexInput) -> InternalLexResult<LexInput> {
     alt(
         "one or more newlines",
         (
@@ -350,7 +350,7 @@ fn recognize_newlines<'a>(input: LexInput<'a>) -> InternalLexResult<'a, LexInput
     )(input)
 }
 
-fn lex_punctuation<'a>(input: LexInput<'a>) -> InternalLexResult<'a> {
+fn lex_punctuation(input: LexInput) -> InternalLexResult {
     use Token::*;
     alt(
         "punctuation",
@@ -371,14 +371,14 @@ fn lex_punctuation<'a>(input: LexInput<'a>) -> InternalLexResult<'a> {
     )(input)
 }
 
-fn lex_string<'a>(input: LexInput<'a>) -> InternalLexResult<'a> {
+fn lex_string(input: LexInput) -> InternalLexResult {
     map(
         delimited(tag("\""), take_until("\""), tag("\"")),
         |v: LexInput| Token::String(v.to_string()),
     )(input)
 }
 
-fn lex_variable<'a>(input: LexInput<'a>) -> InternalLexResult<'a> {
+fn lex_variable(input: LexInput) -> InternalLexResult {
     map(preceded(tag("%"), lex_identifier_raw), |ident| {
         Token::Variable(ident)
     })(input)

@@ -19,7 +19,7 @@ use crate::{instruction::Instruction, token};
 use super::{
     common::{self, parse_gate_modifier},
     expression::parse_expression,
-    ParserInput, ParserResult,
+    ParserInput,
 };
 use crate::instruction::Gate;
 use crate::parser::InternalParserResult;

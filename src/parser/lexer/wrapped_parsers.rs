@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use super::{LexError, LexErrorKind, LexInput, LexResult};
-use crate::parser::error::ErrorKind;
+use super::{LexErrorKind, LexInput, LexResult};
+
 use nom::branch::{alt as nom_alt, Alt};
 use nom::bytes::complete::tag as nom_tag;
 use nom::error::ParseError;

@@ -807,11 +807,7 @@ mod tests {
         }
 
         #[test]
-        fn no_other_exps_are_real(expr in arb_expr().prop_filter("Not numbers", |e| match e {
-            Expression::Number(_) | Expression::PiConstant => false,
-            _ => true,
-        }
-            )) {
+        fn no_other_exps_are_real(expr in arb_expr().prop_filter("Not numbers", |e| !matches!(e, Expression::Number(_) | Expression::PiConstant))) {
             prop_assert_eq!(expr.to_real(), Err(EvaluationError::NotANumber))
         }
 
