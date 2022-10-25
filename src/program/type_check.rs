@@ -614,6 +614,7 @@ fn type_check_store(
 }
 
 #[cfg(test)]
+#[allow(clippy::too_many_arguments)]
 mod tests {
     use super::*;
     use crate::Program;
@@ -855,7 +856,6 @@ EXCHANGE {left_ref} {right_ref}
     }
 
     #[rstest]
-    #[allow(clippy::too_many_arguments)]
     fn test_load(
         #[values("x")] dst_decl: &str,
         #[values("REAL", "INTEGER", "BIT", "OCTET")] dst_type: &str,
