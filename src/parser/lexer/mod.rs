@@ -30,8 +30,8 @@ use wrapped_parsers::{alt, tag};
 pub use super::token::{Token, TokenWithLocation};
 use crate::parser::lexer::wrapped_parsers::expecting;
 use crate::parser::token::token_with_location;
-pub use error::{LexError, LexErrorKind};
 pub(crate) use error::InternalLexError;
+pub use error::{LexError, LexErrorKind};
 
 // TODO: replace manual parsing with strum::EnumString (FromStr)?
 // See: https://github.com/rigetti/quil-rs/issues/94
@@ -124,7 +124,8 @@ pub enum Operator {
 }
 
 pub type LexInput<'a> = LocatedSpan<&'a str>;
-pub(crate) type InternalLexResult<'a, T = Token, E = InternalLexError<'a>> = IResult<LexInput<'a>, T, E>;
+pub(crate) type InternalLexResult<'a, T = Token, E = InternalLexError<'a>> =
+    IResult<LexInput<'a>, T, E>;
 pub type LexResult<'a, T = Token, E = LexError> = IResult<LexInput<'a>, T, E>;
 
 /// Completely lex a string, returning the tokens within. Panics if the string cannot be completely read.

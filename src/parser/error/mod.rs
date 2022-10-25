@@ -22,8 +22,8 @@ use super::lexer::{Command, Token};
 
 pub use error::Error;
 pub(crate) use input::ErrorInput;
-pub(crate) use internal::InternalError;
 pub use internal::GenericParseError;
+pub(crate) use internal::InternalError;
 pub use kind::ErrorKind;
 
 pub(crate) type InternalParseError<'a> = InternalError<super::ParserInput<'a>, ParserErrorKind>;

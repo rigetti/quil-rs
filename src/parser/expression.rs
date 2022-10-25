@@ -14,12 +14,18 @@
 
 use nom::combinator::opt;
 
-use crate::{expression::{Expression, ExpressionFunction, InfixOperator, PrefixOperator}, imag, instruction::MemoryReference, expected_token, parser::common::parse_memory_reference_with_brackets, token, unexpected_eof};
-use crate::parser::{InternalParserResult};
-
+use crate::parser::InternalParserResult;
+use crate::{
+    expected_token,
+    expression::{Expression, ExpressionFunction, InfixOperator, PrefixOperator},
+    imag,
+    instruction::MemoryReference,
+    parser::common::parse_memory_reference_with_brackets,
+    token, unexpected_eof,
+};
 
 use super::lexer::{Operator, Token};
-use super::{ParserInput};
+use super::ParserInput;
 
 #[derive(Debug, PartialEq, PartialOrd)]
 enum Precedence {

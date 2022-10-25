@@ -135,7 +135,10 @@ pub(crate) fn parse_declare<'a>(input: ParserInput<'a>) -> InternalParserResult<
 ///
 /// Unlike most other instructions, this can be _prefixed_ with the NONBLOCKING keyword,
 /// and thus it expects and parses the CAPTURE token itself.
-pub(crate) fn parse_capture(input: ParserInput, blocking: bool) -> InternalParserResult<Instruction> {
+pub(crate) fn parse_capture(
+    input: ParserInput,
+    blocking: bool,
+) -> InternalParserResult<Instruction> {
     let (input, frame) = common::parse_frame_identifier(input)?;
     let (input, waveform) = common::parse_waveform_invocation(input)?;
     let (input, memory_reference) = common::parse_memory_reference(input)?;
@@ -164,7 +167,9 @@ pub(crate) fn parse_defcal<'a>(input: ParserInput<'a>) -> InternalParserResult<'
 
 /// Parse the contents of a `DEFCAL` instruction (but not `DEFCAL MEASURE`),
 /// following the `DEFCAL` token.
-pub(crate) fn parse_defcal_gate<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Instruction> {
+pub(crate) fn parse_defcal_gate<'a>(
+    input: ParserInput<'a>,
+) -> InternalParserResult<'a, Instruction> {
     let (input, modifiers) = many0(parse_gate_modifier)(input)?;
     let (input, name) = token!(Identifier(v))(input)?;
     let (input, parameters) = opt(delimited(
@@ -189,7 +194,9 @@ pub(crate) fn parse_defcal_gate<'a>(input: ParserInput<'a>) -> InternalParserRes
 }
 
 /// Parse the contents of a `DEFCAL MEASURE` instruction, following the `MEASURE` token.
-pub(crate) fn parse_defcal_measure<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Instruction> {
+pub(crate) fn parse_defcal_measure<'a>(
+    input: ParserInput<'a>,
+) -> InternalParserResult<'a, Instruction> {
     let (input, qubit_index) = opt(token!(Integer(v)))(input)?;
     let qubit = qubit_index.map(Qubit::Fixed);
     let (input, destination) = token!(Identifier(v))(input)?;
@@ -255,7 +262,9 @@ pub(crate) fn parse_defgate<'a>(input: ParserInput<'a>) -> InternalParserResult<
 }
 
 /// Parse the contents of a `DEFWAVEFORM` instruction.
-pub(crate) fn parse_defwaveform<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Instruction> {
+pub(crate) fn parse_defwaveform<'a>(
+    input: ParserInput<'a>,
+) -> InternalParserResult<'a, Instruction> {
     let (input, name) = common::parse_waveform_name(input)?;
     let (input, parameters) = opt(delimited(
         token!(LParenthesis),
@@ -276,7 +285,9 @@ pub(crate) fn parse_defwaveform<'a>(input: ParserInput<'a>) -> InternalParserRes
     ))
 }
 
-pub(crate) fn parse_defcircuit<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Instruction> {
+pub(crate) fn parse_defcircuit<'a>(
+    input: ParserInput<'a>,
+) -> InternalParserResult<'a, Instruction> {
     let (input, name) = token!(Identifier(v))(input)?;
     let (input, parameters) = opt(delimited(
         token!(LParenthesis),
@@ -350,7 +361,9 @@ pub(crate) fn parse_jump_when<'a>(input: ParserInput<'a>) -> InternalParserResul
 }
 
 /// Parse the contents of a `JUMP-UNLESS` instruction.
-pub(crate) fn parse_jump_unless<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Instruction> {
+pub(crate) fn parse_jump_unless<'a>(
+    input: ParserInput<'a>,
+) -> InternalParserResult<'a, Instruction> {
     let (input, target) = token!(Label(v))(input)?;
     let (input, condition) = common::parse_memory_reference(input)?;
     Ok((
@@ -444,7 +457,10 @@ pub(crate) fn parse_pulse(input: ParserInput, blocking: bool) -> InternalParserR
 }
 
 /// Parse the contents of a `RAW-CAPTURE` instruction.
-pub(crate) fn parse_raw_capture(input: ParserInput, blocking: bool) -> InternalParserResult<Instruction> {
+pub(crate) fn parse_raw_capture(
+    input: ParserInput,
+    blocking: bool,
+) -> InternalParserResult<Instruction> {
     let (input, frame) = parse_frame_identifier(input)?;
     let (input, duration) = parse_expression(input)?;
     let (input, memory_reference) = parse_memory_reference(input)?;

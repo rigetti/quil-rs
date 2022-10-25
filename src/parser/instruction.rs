@@ -28,7 +28,7 @@ use crate::{
 
 use super::{
     command, common,
-    error::{ParserErrorKind},
+    error::ParserErrorKind,
     gate,
     lexer::{Command, Token},
     ParserInput,
@@ -144,7 +144,9 @@ pub(crate) fn parse_block(input: ParserInput) -> InternalParserResult<Vec<Instru
 }
 
 /// Parse a single indented "block instruction."
-pub(crate) fn parse_block_instruction<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Instruction> {
+pub(crate) fn parse_block_instruction<'a>(
+    input: ParserInput<'a>,
+) -> InternalParserResult<'a, Instruction> {
     preceded(
         token!(NewLine),
         preceded(token!(Indentation), parse_instruction),

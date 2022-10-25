@@ -197,7 +197,9 @@ impl FromStr for Program {
     fn from_str(s: &str) -> Result<Self> {
         let lexed = lex(s).map_err(ProgramError::from)?;
         map_parsed(
-            disallow_leftover(parse_instructions(&lexed).map_err(ParseError::from_nom_internal_err)),
+            disallow_leftover(
+                parse_instructions(&lexed).map_err(ParseError::from_nom_internal_err),
+            ),
             |instructions| {
                 let mut program = Self::new();
                 for instruction in instructions {

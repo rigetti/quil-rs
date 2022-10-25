@@ -21,15 +21,21 @@ use nom::{
     sequence::{delimited, preceded, tuple},
 };
 
-use crate::{expected_token, expression::Expression, instruction::{
-    ArithmeticOperand, AttributeValue, BinaryOperand, ComparisonOperand, FrameIdentifier,
-    GateModifier, MemoryReference, Qubit, ScalarType, Vector, WaveformInvocation,
-}, parser::lexer::Operator, token};
+use crate::{
+    expected_token,
+    expression::Expression,
+    instruction::{
+        ArithmeticOperand, AttributeValue, BinaryOperand, ComparisonOperand, FrameIdentifier,
+        GateModifier, MemoryReference, Qubit, ScalarType, Vector, WaveformInvocation,
+    },
+    parser::lexer::Operator,
+    token,
+};
 
 use crate::parser::{InternalParseError, InternalParserResult};
 
 use super::{
-    error::{ParserErrorKind},
+    error::ParserErrorKind,
     expression::parse_expression,
     lexer::{DataType, Modifier, Token},
     ParserInput,
@@ -37,7 +43,9 @@ use super::{
 
 /// Parse the operand of an arithmetic instruction, which may be a literal integer, literal real
 /// number, or memory reference.
-pub(crate) fn parse_arithmetic_operand<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, ArithmeticOperand> {
+pub(crate) fn parse_arithmetic_operand<'a>(
+    input: ParserInput<'a>,
+) -> InternalParserResult<'a, ArithmeticOperand> {
     alt((
         map(
             tuple((opt(token!(Operator(o))), token!(Float(v)))),
@@ -67,7 +75,9 @@ pub(crate) fn parse_arithmetic_operand<'a>(input: ParserInput<'a>) -> InternalPa
 
 /// Parse the operand of a comparison instruction, which may be a literal integer, literal real
 /// number, or memory reference.
-pub(crate) fn parse_comparison_operand<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, ComparisonOperand> {
+pub(crate) fn parse_comparison_operand<'a>(
+    input: ParserInput<'a>,
+) -> InternalParserResult<'a, ComparisonOperand> {
     alt((
         map(
             tuple((opt(token!(Operator(o))), token!(Float(v)))),
@@ -96,7 +106,9 @@ pub(crate) fn parse_comparison_operand<'a>(input: ParserInput<'a>) -> InternalPa
 }
 
 /// Parse the operand of a binary logic instruction, which may be a literal integer or memory reference.
-pub(crate) fn parse_binary_logic_operand<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, BinaryOperand> {
+pub(crate) fn parse_binary_logic_operand<'a>(
+    input: ParserInput<'a>,
+) -> InternalParserResult<'a, BinaryOperand> {
     alt((
         map(
             tuple((opt(token!(Operator(o))), token!(Integer(v)))),
@@ -131,7 +143,9 @@ pub(crate) fn parse_frame_attribute<'a>(
 }
 
 /// Parse a frame identifier, such as `0 "rf"`.
-pub(crate) fn parse_frame_identifier<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, FrameIdentifier> {
+pub(crate) fn parse_frame_identifier<'a>(
+    input: ParserInput<'a>,
+) -> InternalParserResult<'a, FrameIdentifier> {
     let (input, qubits) = many1(parse_qubit)(input)?;
     let (input, name) = token!(String(v))(input)?;
 
@@ -139,7 +153,9 @@ pub(crate) fn parse_frame_identifier<'a>(input: ParserInput<'a>) -> InternalPars
 }
 
 /// Parse a gate modifier prefix, such as `CONTROLLED`.
-pub(crate) fn parse_gate_modifier<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, GateModifier> {
+pub(crate) fn parse_gate_modifier<'a>(
+    input: ParserInput<'a>,
+) -> InternalParserResult<'a, GateModifier> {
     let (input, token) = token!(Modifier(v))(input)?;
     Ok((
         input,
@@ -152,7 +168,9 @@ pub(crate) fn parse_gate_modifier<'a>(input: ParserInput<'a>) -> InternalParserR
 }
 
 /// Parse matrix used to define gate with `DEFGATE`.
-pub(crate) fn parse_matrix<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Vec<Vec<Expression>>> {
+pub(crate) fn parse_matrix<'a>(
+    input: ParserInput<'a>,
+) -> InternalParserResult<'a, Vec<Vec<Expression>>> {
     preceded(
         token!(NewLine),
         separated_list1(
@@ -178,7 +196,9 @@ pub(crate) fn parse_permutation<'a>(input: ParserInput<'a>) -> InternalParserRes
 
 /// Parse a reference to a memory location, such as `ro[5]`, with optional brackets
 /// (i.e, `ro` allowed).
-pub(crate) fn parse_memory_reference<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, MemoryReference> {
+pub(crate) fn parse_memory_reference<'a>(
+    input: ParserInput<'a>,
+) -> InternalParserResult<'a, MemoryReference> {
     let (input, name) = token!(Identifier(v))(input)?;
     let (input, index) = opt(delimited(
         token!(LBracket),
@@ -199,9 +219,10 @@ pub(crate) fn parse_memory_reference_with_brackets<'a>(
     Ok((input, MemoryReference { name, index }))
 }
 
-
 /// Parse a named argument key-value pair, such as `foo: 42`.
-pub(crate) fn parse_named_argument<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, (String, Expression)> {
+pub(crate) fn parse_named_argument<'a>(
+    input: ParserInput<'a>,
+) -> InternalParserResult<'a, (String, Expression)> {
     let (input, (name, _, value)) =
         tuple((token!(Identifier(v)), token!(Colon), parse_expression))(input)?;
     Ok((input, (name, value)))
@@ -294,7 +315,9 @@ pub(crate) fn parse_waveform_name<'a>(input: ParserInput<'a>) -> InternalParserR
 
 /// Parse ahead past any sequence of newlines, comments, and semicolons, returning
 /// once the first other token is encountered.
-pub(crate) fn skip_newlines_and_comments<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, ()> {
+pub(crate) fn skip_newlines_and_comments<'a>(
+    input: ParserInput<'a>,
+) -> InternalParserResult<'a, ()> {
     let (input, _) = many0(alt((
         preceded(many0(token!(Indentation)), value((), token!(Comment(v)))),
         token!(NewLine),

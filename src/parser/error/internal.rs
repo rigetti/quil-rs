@@ -12,16 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use nom::error::{ErrorKind as NomErrorKind, ParseError};
-use crate::parser::ErrorInput;
 use super::ErrorKind;
+use crate::parser::ErrorInput;
+use nom::error::{ErrorKind as NomErrorKind, ParseError};
 
 /// Internal-only error that should be converted to an [`Error`](super::Error)
 /// before being returned in a public API.
 #[derive(Debug)]
 pub(crate) struct InternalError<I, E>
-    where I: ErrorInput,
-          E: std::error::Error + Send,
+where
+    I: ErrorInput,
+    E: std::error::Error + Send,
 {
     pub(crate) input: I,
     pub(crate) error: ErrorKind<E>,
@@ -29,11 +30,16 @@ pub(crate) struct InternalError<I, E>
 }
 
 impl<I, E> InternalError<I, E>
-    where I: ErrorInput,
-          E: std::error::Error + Send,
+where
+    I: ErrorInput,
+    E: std::error::Error + Send,
 {
     pub(crate) fn new(input: I, error: ErrorKind<E>) -> Self {
-        Self { input, error, prev: None }
+        Self {
+            input,
+            error,
+            prev: None,
+        }
     }
 
     pub(crate) fn from_kind(input: I, error: E) -> Self {
@@ -47,10 +53,10 @@ impl<I, E> InternalError<I, E>
 }
 
 impl<I, E> ParseError<I> for InternalError<I, E>
-    where
-        I: ErrorInput,
+where
+    I: ErrorInput,
 
-        E: std::error::Error + Send,
+    E: std::error::Error + Send,
 {
     fn from_error_kind(input: I, kind: nom::error::ErrorKind) -> Self {
         Self::new(input, ErrorKind::Internal(GenericParseError(kind)))
@@ -65,9 +71,9 @@ impl<I, E> ParseError<I> for InternalError<I, E>
 // `nom` requires this trait to be implemented to be able to use `map_res`, even if the input and output
 // types of the "conversion" are the same
 impl<I, E> nom::error::FromExternalError<I, Self> for InternalError<I, E>
-    where
-        I: ErrorInput,
-        E: std::error::Error + Send,
+where
+    I: ErrorInput,
+    E: std::error::Error + Send,
 {
     fn from_external_error(_input: I, _kind: nom::error::ErrorKind, error: Self) -> Self {
         error

@@ -308,7 +308,9 @@ impl FromStr for MemoryReference {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let tokens = lex(s)?;
-        disallow_leftover(parse_memory_reference(&tokens).map_err(ParseError::from_nom_internal_err))
+        disallow_leftover(
+            parse_memory_reference(&tokens).map_err(ParseError::from_nom_internal_err),
+        )
     }
 }
 

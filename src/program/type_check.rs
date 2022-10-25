@@ -825,7 +825,9 @@ DECLARE destination {dst_type}
 MOVE destination {value}
 "#
         ))
-        .unwrap_or_else(|_| panic!("Bad MOVE program with (dst_type, source) = ({dst_type}, {value})."));
+        .unwrap_or_else(|_| {
+            panic!("Bad MOVE program with (dst_type, source) = ({dst_type}, {value}).")
+        });
         let (f, i) = (f64::from_str(value), i64::from_str(value));
         assert_eq!(
             type_check(&p).is_ok(),

@@ -47,8 +47,9 @@ where
 }
 
 impl<I, E> From<InternalError<I, E>> for Error<E>
-    where I: ErrorInput,
-          E: std::error::Error + Send + 'static,
+where
+    I: ErrorInput,
+    E: std::error::Error + Send + 'static,
 {
     fn from(internal: InternalError<I, E>) -> Self {
         let mut new = Self::internal_new(internal.input, internal.error);
@@ -83,7 +84,8 @@ where
     E: std::error::Error + Send + 'static,
 {
     pub(crate) fn from_nom_internal_err<I>(error: nom::Err<InternalError<I, E>>) -> nom::Err<Self>
-        where I: ErrorInput,
+    where
+        I: ErrorInput,
     {
         error.map(Self::from)
     }
@@ -196,7 +198,11 @@ where
     I: ErrorInput,
     E: std::error::Error + Send + 'static,
 {
-    fn from_external_error(_input: I, _kind: nom::error::ErrorKind, error: InternalError<I, E>) -> Self {
+    fn from_external_error(
+        _input: I,
+        _kind: nom::error::ErrorKind,
+        error: InternalError<I, E>,
+    ) -> Self {
         Self::from(error)
     }
 }

@@ -41,7 +41,11 @@ macro_rules! token {
             ))),
             Some((Token::$expected_variant($enm::$variant), remainder)) => Ok((remainder, ())),
             Some((other_token, _)) => {
-                $crate::expected_token!(input, other_token, stringify!($expected_variant).to_owned())
+                $crate::expected_token!(
+                    input,
+                    other_token,
+                    stringify!($expected_variant).to_owned()
+                )
             }
         }
     }};
@@ -57,7 +61,11 @@ macro_rules! token {
                 Ok((remainder, $contents.clone()))
             }
             Some((other_token, _)) => {
-                $crate::expected_token!(input, other_token, stringify!($expected_variant).to_owned())
+                $crate::expected_token!(
+                    input,
+                    other_token,
+                    stringify!($expected_variant).to_owned()
+                )
             }
         }
     }};
@@ -71,7 +79,11 @@ macro_rules! token {
             ))),
             Some((Token::$expected_variant, remainder)) => Ok((remainder, ())),
             Some((other_token, _)) => {
-                $crate::expected_token!(input, other_token, stringify!($expected_variant).to_owned())
+                $crate::expected_token!(
+                    input,
+                    other_token,
+                    stringify!($expected_variant).to_owned()
+                )
             }
         }
     }};
