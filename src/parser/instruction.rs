@@ -158,6 +158,8 @@ mod tests {
     use std::collections::HashMap;
     use std::str::FromStr;
 
+    use nom_locate::LocatedSpan;
+
     use crate::expression::{Expression, InfixOperator, PrefixOperator};
     use crate::instruction::{
         Arithmetic, ArithmeticOperand, ArithmeticOperator, AttributeValue, BinaryLogic,
@@ -341,6 +343,7 @@ mod tests {
         ]
         .iter()
         .for_each(|input| {
+            let input = LocatedSpan::new(*input);
             let tokens = lex(input).unwrap();
             assert!(parse_instructions(&tokens).is_err(), "{}", input);
         })
@@ -403,6 +406,7 @@ mod tests {
     #[test]
     fn test_binary_logic_error() {
         ["AND ro", "XOR 1 1", "IOR 1"].iter().for_each(|input| {
+            let input = LocatedSpan::new(*input);
             let tokens = lex(input).unwrap();
             assert!(parse_instructions(&tokens).is_err(), "{}", input);
         })
@@ -449,6 +453,7 @@ mod tests {
         ["NEG 1", "NOT 1", "NEG 0", "NOT 0"]
             .iter()
             .for_each(|input| {
+                let input = LocatedSpan::new(*input);
                 let tokens = lex(input).unwrap();
                 assert!(parse_instructions(&tokens).is_err(), "{}", input);
             })
@@ -765,7 +770,8 @@ mod tests {
 
     #[test]
     fn parse_set_phase() {
-        let tokens = lex(r#"SET-PHASE 0 "rf" 1.0; SET-PHASE 0 1 "rf" theta"#).unwrap();
+        let input = LocatedSpan::new(r#"SET-PHASE 0 "rf" 1.0; SET-PHASE 0 1 "rf" theta"#);
+        let tokens = lex(input).unwrap();
         let (remainder, parsed) = parse_instructions(&tokens).unwrap();
         let expected = vec![
             Instruction::SetPhase(SetPhase {
@@ -792,7 +798,8 @@ mod tests {
 
     #[test]
     fn parse_set_scale() {
-        let tokens = lex(r#"SET-SCALE 0 "rf" 1.0; SET-SCALE 0 1 "rf" theta"#).unwrap();
+        let input = LocatedSpan::new(r#"SET-SCALE 0 "rf" 1.0; SET-SCALE 0 1 "rf" theta"#);
+        let tokens = lex(input).unwrap();
         let (remainder, parsed) = parse_instructions(&tokens).unwrap();
         let expected = vec![
             Instruction::SetScale(SetScale {
@@ -819,7 +826,8 @@ mod tests {
 
     #[test]
     fn parse_set_frequency() {
-        let tokens = lex(r#"SET-FREQUENCY 0 "rf" 1.0; SET-FREQUENCY 0 1 "rf" theta"#).unwrap();
+        let input = LocatedSpan::new(r#"SET-FREQUENCY 0 "rf" 1.0; SET-FREQUENCY 0 1 "rf" theta"#);
+        let tokens = lex(input).unwrap();
         let (remainder, parsed) = parse_instructions(&tokens).unwrap();
         let expected = vec![
             Instruction::SetFrequency(SetFrequency {
@@ -846,7 +854,9 @@ mod tests {
 
     #[test]
     fn parse_shift_frequency() {
-        let tokens = lex(r#"SHIFT-FREQUENCY 0 "rf" 1.0; SHIFT-FREQUENCY 0 1 "rf" theta"#).unwrap();
+        let input =
+            LocatedSpan::new(r#"SHIFT-FREQUENCY 0 "rf" 1.0; SHIFT-FREQUENCY 0 1 "rf" theta"#);
+        let tokens = lex(input).unwrap();
         let (remainder, parsed) = parse_instructions(&tokens).unwrap();
         let expected = vec![
             Instruction::ShiftFrequency(ShiftFrequency {
@@ -873,7 +883,8 @@ mod tests {
 
     #[test]
     fn parse_shift_phase() {
-        let tokens = lex(r#"SHIFT-PHASE 0 "rf" 1.0; SHIFT-PHASE 0 1 "rf" theta"#).unwrap();
+        let input = LocatedSpan::new(r#"SHIFT-PHASE 0 "rf" 1.0; SHIFT-PHASE 0 1 "rf" theta"#);
+        let tokens = lex(input).unwrap();
         let (remainder, parsed) = parse_instructions(&tokens).unwrap();
         let expected = vec![
             Instruction::ShiftPhase(ShiftPhase {

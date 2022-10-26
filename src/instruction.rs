@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use nom_locate::LocatedSpan;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use std::{collections::HashMap, fmt};
@@ -307,7 +308,8 @@ impl FromStr for MemoryReference {
     type Err = SyntaxError<Self>;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let tokens = lex(s)?;
+        let input = LocatedSpan::new(s);
+        let tokens = lex(input)?;
         disallow_leftover(
             parse_memory_reference(&tokens).map_err(ParseError::from_nom_internal_err),
         )
@@ -1208,6 +1210,7 @@ impl Instruction {
     pub(crate) fn parse(input: &str) -> Result<Self, String> {
         use crate::parser::instruction::parse_instruction;
 
+        let input = LocatedSpan::new(input);
         let lexed = lex(input).map_err(|err| err.to_string())?;
         let (_, instruction) =
             nom::combinator::all_consuming(parse_instruction)(&lexed).map_err(|e| e.to_string())?;

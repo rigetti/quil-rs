@@ -330,11 +330,13 @@ pub(crate) fn skip_newlines_and_comments<'a>(
 mod describe_skip_newlines_and_comments {
     use crate::parser::lex;
 
+    use nom_locate::LocatedSpan;
+
     use super::skip_newlines_and_comments;
 
     #[test]
     fn it_skips_indented_comment() {
-        let program = "\t    # this is a comment X 0";
+        let program = LocatedSpan::new("\t    # this is a comment X 0");
         let tokens = lex(program).unwrap();
         let (token_slice, _) = skip_newlines_and_comments(&tokens).unwrap();
         let (_, expected) = tokens.split_at(3);
@@ -343,7 +345,7 @@ mod describe_skip_newlines_and_comments {
 
     #[test]
     fn it_skips_comments() {
-        let program = "# this is a comment \n# and another\nX 0";
+        let program = LocatedSpan::new("# this is a comment \n# and another\nX 0");
         let tokens = lex(program).unwrap();
         let (token_slice, _) = skip_newlines_and_comments(&tokens).unwrap();
         let (_, expected) = tokens.split_at(4);
@@ -352,7 +354,7 @@ mod describe_skip_newlines_and_comments {
 
     #[test]
     fn it_skips_new_lines() {
-        let program = "\nX 0";
+        let program = LocatedSpan::new("\nX 0");
         let tokens = lex(program).unwrap();
         let (token_slice, _) = skip_newlines_and_comments(&tokens).unwrap();
         let (_, expected) = tokens.split_at(1);
@@ -361,7 +363,7 @@ mod describe_skip_newlines_and_comments {
 
     #[test]
     fn it_skips_semicolons() {
-        let program = ";;;;;X 0";
+        let program = LocatedSpan::new(";;;;;X 0");
         let tokens = lex(program).unwrap();
         let (token_slice, _) = skip_newlines_and_comments(&tokens).unwrap();
         let (_, expected) = tokens.split_at(5);
@@ -378,11 +380,13 @@ mod tests {
         real,
     };
 
+    use nom_locate::LocatedSpan;
+
     use super::{parse_matrix, parse_waveform_invocation};
 
     #[test]
     fn waveform_invocation() {
-        let input = "wf(a: 1.0, b: %var, c: ro[0])";
+        let input = LocatedSpan::new("wf(a: 1.0, b: %var, c: ro[0])");
         let lexed = lex(input).unwrap();
         let (remainder, waveform) = parse_waveform_invocation(&lexed).unwrap();
         assert!(
@@ -410,7 +414,7 @@ mod tests {
 
     #[test]
     fn test_parse_matrix() {
-        let input = "\n\t1/sqrt(2), 1/sqrt(2)\n\t1/sqrt(2), -1/sqrt(2)";
+        let input = LocatedSpan::new("\n\t1/sqrt(2), 1/sqrt(2)\n\t1/sqrt(2), -1/sqrt(2)");
         let lexed = lex(input).unwrap();
         let (remainder, matrix) = parse_matrix(&lexed).unwrap();
         assert!(
@@ -423,7 +427,7 @@ mod tests {
 
     #[test]
     fn test_parse_permutation() {
-        let input = "\n\t0, 1, 2, 3, 4, 5, 7, 6";
+        let input = LocatedSpan::new("\n\t0, 1, 2, 3, 4, 5, 7, 6");
         let lexed = lex(input).unwrap();
         let (remainder, permutation) = parse_permutation(&lexed).unwrap();
         assert!(
@@ -433,7 +437,7 @@ mod tests {
         );
         assert_eq!(permutation, vec![0, 1, 2, 3, 4, 5, 7, 6]);
 
-        let input = "\n\t0, 1, 2, 3, 4, 5, 7, 6\n\t0, 1, 2, 3, 4, 5, 6, 7";
+        let input = LocatedSpan::new("\n\t0, 1, 2, 3, 4, 5, 7, 6\n\t0, 1, 2, 3, 4, 5, 6, 7");
         let lexed = lex(input).unwrap();
         let (remainder, permutation) = parse_permutation(&lexed).unwrap();
         assert!(!remainder.is_empty(), "multiline permutations are invalid");

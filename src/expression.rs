@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use lexical::{format, to_string_with_options, WriteFloatOptions};
+use nom_locate::LocatedSpan;
 use num_complex::Complex64;
 use std::collections::{hash_map::DefaultHasher, HashMap};
 use std::f64::consts::PI;
@@ -415,7 +416,8 @@ impl FromStr for Expression {
     type Err = ProgramError<Self>;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let tokens = lex(s)?;
+        let input = LocatedSpan::new(s);
+        let tokens = lex(input)?;
         disallow_leftover(parse_expression(&tokens).map_err(ParseError::from_nom_internal_err))
     }
 }
