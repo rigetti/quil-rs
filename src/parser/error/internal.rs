@@ -18,6 +18,15 @@ use nom::error::{ErrorKind as NomErrorKind, ParseError};
 
 /// Internal-only error that should be converted to an [`Error`](super::Error)
 /// before being returned in a public API.
+///
+/// `InternalError` is an itermediate error that contains a reference to the failed input
+/// along with the lower-level error `E` that describes the parsing failure. This allows us
+/// to generate the more user friendly [`Error`](super::Error) once parsing completes, while
+/// avoiding the performance losses of generating the user-friendly information
+/// (i.e. [`line`](super::Error::line), [`column`](super::Error::column), and
+/// [`snippet`](super::Error::snippet)).
+///
+/// Because this is an intermediate error format, it is crate-private.
 #[derive(Debug)]
 pub(crate) struct InternalError<I, E>
 where
@@ -62,9 +71,8 @@ where
         Self::new(input, ErrorKind::Internal(GenericParseError(kind)))
     }
 
-    fn append(input: I, kind: nom::error::ErrorKind, _other: Self) -> Self {
-        // TODO: track previous error?
-        Self::new(input, ErrorKind::Internal(GenericParseError(kind)))
+    fn append(input: I, kind: nom::error::ErrorKind, other: Self) -> Self {
+        Self::new(input, ErrorKind::Internal(GenericParseError(kind))).with_previous(other)
     }
 }
 
