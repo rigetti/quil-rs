@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use crate::parser::error::kind::ErrorKind;
-use crate::parser::error::{ErrorInput, InternalParseError};
+use crate::parser::error::{ErrorInput, GenericParseError, InternalError};
 use nom::error::{Error as NomError, ParseError};
 use std::convert::Infallible;
 use std::fmt;
@@ -37,7 +37,7 @@ use thiserror::__private::AsDynError;
 #[derive(Debug)]
 pub struct Error<E = Infallible>
 where
-    E: std::error::Error,
+    E: std::error::Error + Send,
 {
     line: u32,
     column: usize,
@@ -46,9 +46,24 @@ where
     previous: Option<Box<dyn std::error::Error + 'static + Send>>,
 }
 
+impl<I, E> From<InternalError<I, E>> for Error<E>
+where
+    I: ErrorInput,
+    E: std::error::Error + Send + 'static,
+{
+    fn from(internal: InternalError<I, E>) -> Self {
+        let mut new = Self::internal_new(internal.input, internal.error);
+        if let Some(prev) = internal.prev {
+            let prev = Self::from(*prev);
+            new = new.with_previous(prev);
+        }
+        new
+    }
+}
+
 impl<E> PartialEq for Error<E>
 where
-    E: std::error::Error + PartialEq,
+    E: std::error::Error + PartialEq + Send,
 {
     fn eq(&self, other: &Self) -> bool {
         self.line == other.line
@@ -66,15 +81,13 @@ where
 
 impl<E> Error<E>
 where
-    E: std::error::Error,
+    E: std::error::Error + Send + 'static,
 {
-    /// Create a new `Error` from the given error kind.
-    pub(crate) fn from_kind<I>(input: I, other: E) -> Self
+    pub(crate) fn from_nom_internal_err<I>(error: nom::Err<InternalError<I, E>>) -> nom::Err<Self>
     where
         I: ErrorInput,
     {
-        let kind = ErrorKind::Other(other);
-        Self::internal_new(input, kind)
+        error.map(Self::from)
     }
 
     /// Attach a previous error to this one.
@@ -107,7 +120,7 @@ where
     where
         I: ErrorInput,
     {
-        let kind = ErrorKind::Internal(InternalParseError::new(err.code));
+        let kind = ErrorKind::Internal(GenericParseError::new(err.code));
         Self::from_nom_err_with_kind(err, kind)
     }
 
@@ -124,7 +137,7 @@ where
 impl<E> fmt::Display for Error<E>
 where
     ErrorKind<E>: fmt::Display,
-    E: std::error::Error,
+    E: std::error::Error + Send,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
@@ -143,7 +156,7 @@ where
 
 impl<E> std::error::Error for Error<E>
 where
-    E: std::error::Error,
+    E: std::error::Error + Send,
 
     Self: fmt::Display + fmt::Debug,
 {
@@ -156,7 +169,7 @@ impl<I, E> ParseError<I> for Error<E>
 where
     I: ErrorInput,
 
-    E: std::error::Error,
+    E: std::error::Error + Send + 'static,
 {
     fn from_error_kind(input: I, kind: nom::error::ErrorKind) -> Self {
         let nom_err = nom::error::Error::new(input, kind);
@@ -173,9 +186,23 @@ where
 impl<I, E> nom::error::FromExternalError<I, Self> for Error<E>
 where
     I: ErrorInput,
-    E: std::error::Error,
+    E: std::error::Error + Send,
 {
     fn from_external_error(_input: I, _kind: nom::error::ErrorKind, error: Self) -> Self {
         error
+    }
+}
+
+impl<I, E> nom::error::FromExternalError<I, InternalError<I, E>> for Error<E>
+where
+    I: ErrorInput,
+    E: std::error::Error + Send + 'static,
+{
+    fn from_external_error(
+        _input: I,
+        _kind: nom::error::ErrorKind,
+        error: InternalError<I, E>,
+    ) -> Self {
+        Self::from(error)
     }
 }

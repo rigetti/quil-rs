@@ -18,7 +18,7 @@ use nom::{
     sequence::{delimited, preceded},
 };
 
-use crate::parser::extract_nom_err;
+use crate::parser::{extract_nom_err, InternalParseError, InternalParserResult};
 use crate::{
     instruction::{
         ArithmeticOperator, BinaryOperator, ComparisonOperator, Instruction, UnaryOperator,
@@ -28,17 +28,17 @@ use crate::{
 
 use super::{
     command, common,
-    error::{ParseError, ParserErrorKind},
+    error::ParserErrorKind,
     gate,
     lexer::{Command, Token},
-    ParserInput, ParserResult,
+    ParserInput,
 };
 
 /// Parse the next instructon from the input, skipping past leading newlines, comments, and semicolons.
-pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
+pub(crate) fn parse_instruction(input: ParserInput) -> InternalParserResult<Instruction> {
     let (input, _) = common::skip_newlines_and_comments(input)?;
     match super::split_first_token(input) {
-        None => Err(nom::Err::Error(ParseError::from_kind(
+        None => Err(nom::Err::Error(InternalParseError::from_kind(
             input,
             ParserErrorKind::EndOfInput,
         ))),
@@ -96,14 +96,14 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
                 Command::Sub => command::parse_arithmetic(ArithmeticOperator::Subtract, remainder),
                 // Command::Wait => {}
                 Command::Xor => command::parse_logical_binary(BinaryOperator::Xor, remainder),
-                other => Err(nom::Err::Failure(ParseError::from_kind(
+                other => Err(nom::Err::Failure(InternalParseError::from_kind(
                     &input[..1],
                     ParserErrorKind::UnsupportedInstruction(*other),
                 ))),
             }
             .map_err(|err| {
                 nom::Err::Failure(
-                    ParseError::from_kind(
+                    InternalParseError::from_kind(
                         &input[..1],
                         ParserErrorKind::InvalidCommand { command: *command },
                     )
@@ -121,7 +121,7 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
             _ => todo!(),
         },
         Some((Token::Identifier(_), _)) | Some((Token::Modifier(_), _)) => gate::parse_gate(input),
-        Some((_, _)) => Err(nom::Err::Failure(ParseError::from_kind(
+        Some((_, _)) => Err(nom::Err::Failure(InternalParseError::from_kind(
             &input[..1],
             ParserErrorKind::NotACommandOrGate,
         ))),
@@ -130,7 +130,7 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
 
 /// Parse all instructions from the input, trimming leading and trailing newlines and comments.
 /// Returns an error if it does not reach the end of input.
-pub fn parse_instructions(input: ParserInput) -> ParserResult<Vec<Instruction>> {
+pub(crate) fn parse_instructions(input: ParserInput) -> InternalParserResult<Vec<Instruction>> {
     all_consuming(delimited(
         common::skip_newlines_and_comments,
         many0(parse_instruction),
@@ -139,12 +139,14 @@ pub fn parse_instructions(input: ParserInput) -> ParserResult<Vec<Instruction>> 
 }
 
 /// Parse a block of indented "block instructions."
-pub fn parse_block(input: ParserInput) -> ParserResult<Vec<Instruction>> {
+pub(crate) fn parse_block(input: ParserInput) -> InternalParserResult<Vec<Instruction>> {
     many1(parse_block_instruction)(input)
 }
 
 /// Parse a single indented "block instruction."
-pub fn parse_block_instruction<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
+pub(crate) fn parse_block_instruction<'a>(
+    input: ParserInput<'a>,
+) -> InternalParserResult<'a, Instruction> {
     preceded(
         token!(NewLine),
         preceded(token!(Indentation), parse_instruction),

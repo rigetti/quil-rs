@@ -12,8 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::parser::error::Error;
+use crate::parser::error::{Error, InternalError};
 
+pub(crate) type InternalLexError<'a> = InternalError<super::LexInput<'a>, LexErrorKind>;
 /// An error that may occur while lexing Quil input.
 pub type LexError = Error<LexErrorKind>;
 
