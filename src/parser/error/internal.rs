@@ -19,7 +19,7 @@ use nom::error::{ErrorKind as NomErrorKind, ParseError};
 /// Internal-only error that should be converted to an [`Error`](super::Error)
 /// before being returned in a public API.
 ///
-/// `InternalError` is an itermediate error that contains a reference to the failed input
+/// `InternalError` is an intermediate error that contains a reference to the failed input
 /// along with the lower-level error `E` that describes the parsing failure. This allows us
 /// to generate the more user friendly [`Error`](super::Error) once parsing completes, while
 /// avoiding the performance losses of generating the user-friendly information
