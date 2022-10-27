@@ -1,0 +1,1 @@
+include!(concat!(env!("OUT_DIR"), "/quilc_corpus_tests.rs"));

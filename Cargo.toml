@@ -20,6 +20,9 @@ serde = { version = "1.0.125", features = ["derive"] }
 strum = { version = "0.24.1", features = ["derive"] }
 thiserror = "1.0.37"
 
+[build-dependencies]
+heck = "0.4"
+
 [dev-dependencies]
 criterion = { version = "0.4.0", features = ["html_reports"] }
 insta = "1.7.1"
