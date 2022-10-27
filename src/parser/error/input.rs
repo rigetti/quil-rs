@@ -74,7 +74,7 @@ impl ErrorInput for ParserInput<'_> {
     }
 }
 
-impl ErrorInput for Vec<TokenWithLocation> {
+impl ErrorInput for Vec<TokenWithLocation<'_>> {
     fn line(&self) -> u32 {
         self.as_slice().line()
     }

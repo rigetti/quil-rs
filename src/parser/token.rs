@@ -4,19 +4,18 @@ use std::fmt::Formatter;
 
 /// Wrapper for [`Token`] that includes file location information.
 #[derive(Debug, Clone, PartialEq)]
-pub struct TokenWithLocation {
+pub struct TokenWithLocation<'a> {
     token: Token,
-    line: u32,
-    column: usize,
+    original_input: LexInput<'a>,
 }
 
-impl PartialEq<Token> for TokenWithLocation {
+impl PartialEq<Token> for TokenWithLocation<'_> {
     fn eq(&self, other: &Token) -> bool {
         &self.token == other
     }
 }
 
-impl TokenWithLocation {
+impl TokenWithLocation<'_> {
     /// Returns a reference to the contained token.
     pub fn as_token(&self) -> &Token {
         &self.token
@@ -29,16 +28,16 @@ impl TokenWithLocation {
 
     /// The line that this token appears on.
     pub fn line(&self) -> u32 {
-        self.line
+        self.original_input.location_line()
     }
 
     /// The column of the line this token appears on.
     pub fn column(&self) -> usize {
-        self.column
+        self.original_input.get_utf8_column()
     }
 }
 
-impl nom::InputLength for TokenWithLocation {
+impl nom::InputLength for TokenWithLocation<'_> {
     fn input_len(&self) -> usize {
         // All tokens take up exactly one place in the input token stream
         self.as_token().input_len()
@@ -56,14 +55,11 @@ where
     move |input| {
         // Using this syntax because map(parser, || ...)(input) has lifetime issues for parser.
         parser.parse(input).map(|(leftover, token)| {
-            let line = input.location_line();
-            let column = input.get_utf8_column();
             (
                 leftover,
                 TokenWithLocation {
                     token,
-                    line,
-                    column,
+                    original_input: input,
                 },
             )
         })

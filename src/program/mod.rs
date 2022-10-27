@@ -15,6 +15,8 @@
 use std::collections::{BTreeMap, HashSet};
 use std::str::FromStr;
 
+use nom_locate::LocatedSpan;
+
 use crate::instruction::{
     Declaration, FrameDefinition, FrameIdentifier, Instruction, Qubit, Waveform, WaveformDefinition,
 };
@@ -195,7 +197,8 @@ impl Program {
 impl FromStr for Program {
     type Err = ProgramError<Self>;
     fn from_str(s: &str) -> Result<Self> {
-        let lexed = lex(s).map_err(ProgramError::from)?;
+        let input = LocatedSpan::new(s);
+        let lexed = lex(input).map_err(ProgramError::from)?;
         map_parsed(
             disallow_leftover(
                 parse_instructions(&lexed).map_err(ParseError::from_nom_internal_err),

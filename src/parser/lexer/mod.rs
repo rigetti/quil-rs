@@ -129,8 +129,7 @@ pub(crate) type InternalLexResult<'a, T = Token, E = InternalLexError<'a>> =
 pub type LexResult<'a, T = Token, E = LexError> = IResult<LexInput<'a>, T, E>;
 
 /// Completely lex a string, returning the tokens within. Panics if the string cannot be completely read.
-pub(crate) fn lex(input: &str) -> Result<Vec<TokenWithLocation>, LexError> {
-    let input = LocatedSpan::new(input);
+pub(crate) fn lex(input: LexInput) -> Result<Vec<TokenWithLocation>, LexError> {
     all_consuming(_lex)(input)
         .finish()
         .map(|(_, tokens)| tokens)
@@ -387,13 +386,14 @@ fn lex_variable(input: LexInput) -> InternalLexResult {
 
 #[cfg(test)]
 mod tests {
+    use nom_locate::LocatedSpan;
     use rstest::*;
 
     use super::{lex, Command, Operator, Token};
 
     #[test]
     fn comment() {
-        let input = "# hello\n#world";
+        let input = LocatedSpan::new("# hello\n#world");
         let tokens = lex(input).unwrap();
         assert_eq!(
             tokens,
@@ -407,7 +407,7 @@ mod tests {
 
     #[test]
     fn keywords() {
-        let input = "DEFGATE DEFCIRCUIT JUMP-WHEN MATRIX LOAD load LOAD-MEMORY";
+        let input = LocatedSpan::new("DEFGATE DEFCIRCUIT JUMP-WHEN MATRIX LOAD load LOAD-MEMORY");
         let tokens = lex(input).unwrap();
         assert_eq!(
             tokens,
@@ -425,7 +425,7 @@ mod tests {
 
     #[test]
     fn number() {
-        let input = "2 2i 2.0 2e3 2.0e3 (1+2i)";
+        let input = LocatedSpan::new("2 2i 2.0 2e3 2.0e3 (1+2i)");
         let tokens = lex(input).unwrap();
         assert_eq!(
             tokens,
@@ -448,7 +448,7 @@ mod tests {
 
     #[test]
     fn string() {
-        let input = "\"hello\"\n\"world\"";
+        let input = LocatedSpan::new("\"hello\"\n\"world\"");
         let tokens = lex(input).unwrap();
         assert_eq!(
             tokens,
@@ -462,7 +462,7 @@ mod tests {
 
     #[test]
     fn gate_operation() {
-        let input = "I 0; RX 1\nCZ 0 1";
+        let input = LocatedSpan::new("I 0; RX 1\nCZ 0 1");
         let tokens = lex(input).unwrap();
         assert_eq!(
             tokens,
@@ -482,7 +482,7 @@ mod tests {
 
     #[test]
     fn label() {
-        let input = "@hello\n@world";
+        let input = LocatedSpan::new("@hello\n@world");
         let tokens = lex(input).unwrap();
         assert_eq!(
             tokens,
@@ -496,14 +496,14 @@ mod tests {
 
     #[test]
     fn indentation() {
-        let input = "    ";
+        let input = LocatedSpan::new("    ");
         let tokens = lex(input).unwrap();
         assert_eq!(tokens, vec![Token::Indentation,])
     }
 
     #[test]
     fn indented_block() {
-        let input = "DEFGATE Name AS PERMUTATION:\n\t1,0\n    0,1";
+        let input = LocatedSpan::new("DEFGATE Name AS PERMUTATION:\n\t1,0\n    0,1");
         let tokens = lex(input).unwrap();
         assert_eq!(
             tokens,
@@ -529,7 +529,7 @@ mod tests {
 
     #[test]
     fn surrounding_whitespace() {
-        let input = "\nI 0\n    \n";
+        let input = LocatedSpan::new("\nI 0\n    \n");
         let tokens = lex(input).unwrap();
         assert_eq!(
             tokens,
@@ -550,6 +550,7 @@ mod tests {
         case("_a-2_b-2_", vec![Token::Identifier("_a-2_b-2_".to_string())]),
     )]
     fn it_lexes_identifier(input: &str, expected: Vec<Token>) {
+        let input = LocatedSpan::new(input);
         let tokens = lex(input).unwrap();
         assert_eq!(tokens, expected);
     }
@@ -560,6 +561,7 @@ mod tests {
         case("a\\", vec![Token::Identifier("_\\".to_string())]),
     )]
     fn it_fails_to_lex_identifier(input: &str, not_expected: Vec<Token>) {
+        let input = LocatedSpan::new(input);
         if let Ok(tokens) = lex(input) {
             assert_ne!(tokens, not_expected);
         }
@@ -625,6 +627,8 @@ mod tests {
       SHIFT-PHASE 0 \"xy\" (-pi)
       SHIFT-PHASE 0 \"xy\" (%theta*(2/pi))
       SWAP-PHASES 2 3 \"xy\" 3 4 \"xy\"";
+
+        let input = LocatedSpan::new(input);
 
         lex(input).unwrap();
     }

@@ -34,7 +34,7 @@ pub use error::{ParseError, ParserErrorKind};
 pub use lexer::{LexError, LexErrorKind};
 pub use token::{Token, TokenWithLocation};
 
-type ParserInput<'a> = &'a [TokenWithLocation];
+type ParserInput<'a> = &'a [TokenWithLocation<'a>];
 type InternalParserResult<'a, R, E = InternalParseError<'a>> = IResult<ParserInput<'a>, R, E>;
 
 /// Pops the first token off of the `input` and returns it and the remaining input.
