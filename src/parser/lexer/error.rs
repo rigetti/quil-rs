@@ -27,4 +27,10 @@ pub enum LexErrorKind {
     /// Expected something specific.
     #[error("expected {0}")]
     ExpectedContext(&'static str),
+    /// Expected a specific character.
+    #[error("expected character: '{0}'")]
+    ExpectedChar(char),
+    /// Encountered an unexpected EOF
+    #[error("unexpected EOF while parsing")]
+    UnexpectedEOF,
 }

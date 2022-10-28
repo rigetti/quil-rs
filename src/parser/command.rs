@@ -634,13 +634,24 @@ mod tests {
     );
 
     make_test!(
-        pragma_inline_json,
+        pragma_inline_json_single_quotes,
         parse_pragma,
         "FILTER-NODE q35_unclassified \"{'module':'lodgepole.filters.io','filter_type':'DataBuffer','source':'q35_ro_rx/filter','publish':true,'params':{},'_type':'FilterNode'}\"",
         Instruction::Pragma(Pragma {
             name: "FILTER-NODE".to_owned(),
             arguments: vec![PragmaArgument::Identifier("q35_unclassified".to_string())],
             data: Some("{'module':'lodgepole.filters.io','filter_type':'DataBuffer','source':'q35_ro_rx/filter','publish':true,'params':{},'_type':'FilterNode'}".to_owned())
+        })
+    );
+
+    make_test!(
+        pragma_inline_json_double_quotes,
+        parse_pragma,
+        r#"FILTER-NODE q35_unclassified "{\"module\":\"lodgepole.filters.io\",\"filter_type\":\"DataBuffer\",\"source\":\"q35_ro_rx/filter\",\"publish\":true,\"params\":{},\"_type\":\"FilterNode\"}""#,
+        Instruction::Pragma(Pragma {
+            name: "FILTER-NODE".to_owned(),
+            arguments: vec![PragmaArgument::Identifier("q35_unclassified".to_string())],
+            data: Some(r#"{"module":"lodgepole.filters.io","filter_type":"DataBuffer","source":"q35_ro_rx/filter","publish":true,"params":{},"_type":"FilterNode"}"#.to_owned())
         })
     );
 
