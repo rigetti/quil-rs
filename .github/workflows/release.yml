@@ -1,41 +1,21 @@
 name: Release
 
 on:
-  push:
-    branches:
-      - main
-      - rc
-
+  release:
+    types: [published]
+    
 jobs:
   release:
-    name: Semantic Release
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - name: Setup Node.js
-        uses: actions/setup-node@v1
-        with:
-          node-version: 16
-      - name: Install Semantic Release Dependencies
-        run: npm install
-
-      - name: Install toolchain
-        uses: actions-rs/toolchain@v1
+          token: ${{ secrets.PAT }}
+      - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
-          profile: minimal
           override: true
-
-      - name: Install semantic-release-rust
-        uses: actions-rs/cargo@v1
+      - uses: katyo/publish-crates@v1
         with:
-          command: install
-          args: semantic-release-rust --version 1.0.0-alpha.8
-
-      - name: Release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
-        run: npx semantic-release
+          registry-token: ${{ secrets.CRATES_IO_TOKEN }}
