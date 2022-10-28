@@ -1,7 +1,6 @@
 use nom::{combinator::map, Slice};
 
-use super::{LexInput, InternalLexError, LexErrorKind, InternalLexResult};
-
+use super::{InternalLexError, InternalLexResult, LexErrorKind, LexInput};
 
 /// Like [`quoted_string`], but unescapes any escaped backslashes or quotes matching those wrapping
 /// the string.
@@ -13,12 +12,9 @@ use super::{LexInput, InternalLexError, LexErrorKind, InternalLexResult};
 ///
 /// See [`surrounded`]
 pub(crate) fn unescaped_quoted_string(input: LexInput) -> InternalLexResult<String> {
-    map(
-        surrounded('"', '"', true),
-        |parsed| {
-            parsed.replace("\\\"", "\"").replace("\\\\", "\\")
-        }
-    )(input)
+    map(surrounded('"', '"', true), |parsed| {
+        parsed.replace("\\\"", "\"").replace("\\\\", "\\")
+    })(input)
 }
 
 /// A parser that consumes the surrounding characters and returns the inner string.
@@ -49,11 +45,17 @@ fn surrounded(
 ) -> impl Fn(LexInput) -> InternalLexResult<LexInput> {
     move |input: LexInput| {
         let mut iter = input.char_indices();
-        let first_char = iter
-            .next()
-            .ok_or_else(|| nom::Err::Error(InternalLexError::from_kind(input, LexErrorKind::UnexpectedEOF)))?;
+        let first_char = iter.next().ok_or_else(|| {
+            nom::Err::Error(InternalLexError::from_kind(
+                input,
+                LexErrorKind::UnexpectedEOF,
+            ))
+        })?;
         if first_char != (0, first) {
-            return Err(nom::Err::Error(InternalLexError::from_kind(input, LexErrorKind::ExpectedChar(first))));
+            return Err(nom::Err::Error(InternalLexError::from_kind(
+                input,
+                LexErrorKind::ExpectedChar(first),
+            )));
         }
 
         let mut is_escaped: bool = false;
@@ -65,11 +67,14 @@ fn surrounded(
             } else if is_escaped && allow_escaping {
                 is_escaped = false;
             } else if c == last {
-                return Ok((input.slice(i+1..), input.slice(1..i)));
+                return Ok((input.slice(i + 1..), input.slice(1..i)));
             }
         }
 
-        Err(nom::Err::Error(InternalLexError::from_kind(input, LexErrorKind::UnexpectedEOF)))
+        Err(nom::Err::Error(InternalLexError::from_kind(
+            input,
+            LexErrorKind::UnexpectedEOF,
+        )))
     }
 }
 
