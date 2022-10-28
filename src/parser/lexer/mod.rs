@@ -13,15 +13,16 @@
 // limitations under the License.
 
 mod error;
+mod quoted_strings;
 mod wrapped_parsers;
 
 use nom::{
-    bytes::complete::{is_a, is_not, take_until, take_while, take_while1},
+    bytes::complete::{is_a, is_not, take_while, take_while1},
     character::complete::{digit1, one_of},
     combinator::{all_consuming, map, recognize, value},
     multi::many0,
     number::complete::double,
-    sequence::{delimited, preceded, terminated, tuple},
+    sequence::{preceded, terminated, tuple},
     Finish, IResult,
 };
 use nom_locate::LocatedSpan;
@@ -372,10 +373,7 @@ fn lex_punctuation(input: LexInput) -> InternalLexResult {
 }
 
 fn lex_string(input: LexInput) -> InternalLexResult {
-    map(
-        delimited(tag("\""), take_until("\""), tag("\"")),
-        |v: LexInput| Token::String(v.to_string()),
-    )(input)
+    map(quoted_strings::unescaped_quoted_string, Token::String)(input)
 }
 
 fn lex_variable(input: LexInput) -> InternalLexResult {
