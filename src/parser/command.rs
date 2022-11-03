@@ -20,7 +20,7 @@ use nom::{
 };
 
 use crate::{
-    instruction::{GateSpecification, GateType, Convert, Include},
+    instruction::{Convert, GateSpecification, GateType, Include},
     parser::common::parse_variable_qubit,
 };
 
@@ -32,14 +32,15 @@ use crate::instruction::{
     SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, Store, UnaryLogic, UnaryOperator,
     Waveform, WaveformDefinition,
 };
-use crate::parser::common::parse_permutation;
 use crate::parser::instruction::parse_block;
 use crate::token;
 
 use super::{
     common::{
-        self, parse_frame_attribute, parse_frame_identifier, parse_gate_modifier, parse_matrix,
-        parse_memory_reference, parse_qubit, parse_waveform_invocation,
+        self, parse_arithmetic_operand, parse_binary_logic_operand, parse_comparison_operand,
+        parse_frame_attribute, parse_frame_identifier, parse_gate_modifier, parse_matrix,
+        parse_memory_reference, parse_permutation, parse_qubit, parse_vector,
+        parse_waveform_invocation, parse_waveform_name,
     },
     expression::parse_expression,
     instruction, ParserInput, ParserResult,
@@ -51,9 +52,9 @@ pub fn parse_arithmetic(
     operator: ArithmeticOperator,
     input: ParserInput,
 ) -> ParserResult<Instruction> {
-    let (input, destination_memory_reference) = common::parse_memory_reference(input)?;
+    let (input, destination_memory_reference) = parse_memory_reference(input)?;
     let destination = ArithmeticOperand::MemoryReference(destination_memory_reference);
-    let (input, source) = common::parse_arithmetic_operand(input)?;
+    let (input, source) = parse_arithmetic_operand(input)?;
 
     Ok((
         input,
@@ -71,9 +72,9 @@ pub fn parse_comparison(
     operator: ComparisonOperator,
     input: ParserInput,
 ) -> ParserResult<Instruction> {
-    let (input, destination) = common::parse_memory_reference(input)?;
-    let (input, left) = common::parse_memory_reference(input)?;
-    let (input, right) = common::parse_comparison_operand(input)?;
+    let (input, destination) = parse_memory_reference(input)?;
+    let (input, left) = parse_memory_reference(input)?;
+    let (input, right) = parse_comparison_operand(input)?;
 
     Ok((
         input,
@@ -90,8 +91,8 @@ pub fn parse_logical_binary(
     operator: BinaryOperator,
     input: ParserInput,
 ) -> ParserResult<Instruction> {
-    let (input, left) = common::parse_memory_reference(input)?;
-    let (input, right) = common::parse_binary_logic_operand(input)?;
+    let (input, left) = parse_memory_reference(input)?;
+    let (input, right) = parse_binary_logic_operand(input)?;
 
     Ok((
         input,
@@ -108,7 +109,7 @@ pub fn parse_logical_unary(
     operator: UnaryOperator,
     input: ParserInput,
 ) -> ParserResult<Instruction> {
-    let (input, operand) = common::parse_memory_reference(input)?;
+    let (input, operand) = parse_memory_reference(input)?;
 
     Ok((
         input,
@@ -119,7 +120,7 @@ pub fn parse_logical_unary(
 /// Parse the contents of a `DECLARE` instruction.
 pub fn parse_declare<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
     let (input, name) = token!(Identifier(v))(input)?;
-    let (input, size) = common::parse_vector(input)?;
+    let (input, size) = parse_vector(input)?;
     Ok((
         input,
         Instruction::Declaration(Declaration {
@@ -135,9 +136,9 @@ pub fn parse_declare<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction
 /// Unlike most other instructions, this can be _prefixed_ with the NONBLOCKING keyword,
 /// and thus it expects and parses the CAPTURE token itself.
 pub fn parse_capture(input: ParserInput, blocking: bool) -> ParserResult<Instruction> {
-    let (input, frame) = common::parse_frame_identifier(input)?;
-    let (input, waveform) = common::parse_waveform_invocation(input)?;
-    let (input, memory_reference) = common::parse_memory_reference(input)?;
+    let (input, frame) = parse_frame_identifier(input)?;
+    let (input, waveform) = parse_waveform_invocation(input)?;
+    let (input, memory_reference) = parse_memory_reference(input)?;
 
     Ok((
         input,
@@ -154,7 +155,7 @@ pub fn parse_capture(input: ParserInput, blocking: bool) -> ParserResult<Instruc
 pub fn parse_convert<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
     let (input, to) = token!(Identifier(v))(input)?;
     let (input, from) = token!(Identifier(v))(input)?;
-    Ok((input, Instruction::Convert(Convert{ from, to })))
+    Ok((input, Instruction::Convert(Convert { from, to })))
 }
 
 /// Parse the contents of a `DEFCAL` instruction (including `DEFCAL MEASURE`),
@@ -181,7 +182,7 @@ pub fn parse_defcal_gate<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruc
     let parameters = parameters.unwrap_or_default();
     let (input, qubits) = many0(parse_qubit)(input)?;
     let (input, _) = token!(Colon)(input)?;
-    let (input, instructions) = instruction::parse_block(input)?;
+    let (input, instructions) = parse_block(input)?;
     Ok((
         input,
         Instruction::CalibrationDefinition(Calibration {
@@ -200,7 +201,7 @@ pub fn parse_defcal_measure<'a>(input: ParserInput<'a>) -> ParserResult<'a, Inst
     let qubit = qubit_index.map(Qubit::Fixed);
     let (input, destination) = token!(Identifier(v))(input)?;
     let (input, _) = token!(Colon)(input)?;
-    let (input, instructions) = instruction::parse_block(input)?;
+    let (input, instructions) = parse_block(input)?;
     Ok((
         input,
         Instruction::MeasureCalibrationDefinition(MeasureCalibrationDefinition {
@@ -262,7 +263,7 @@ pub fn parse_defgate<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction
 
 /// Parse the contents of a `DEFWAVEFORM` instruction.
 pub fn parse_defwaveform<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
-    let (input, name) = common::parse_waveform_name(input)?;
+    let (input, name) = parse_waveform_name(input)?;
     let (input, parameters) = opt(delimited(
         token!(LParenthesis),
         separated_list0(token!(Comma), token!(Variable(v))),
@@ -323,8 +324,8 @@ pub fn parse_delay<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> 
 
 /// Parse the contents of an `EXCHANGE` instruction.
 pub fn parse_exchange(input: ParserInput) -> ParserResult<Instruction> {
-    let (input, left) = common::parse_memory_reference(input)?;
-    let (input, right) = common::parse_memory_reference(input)?;
+    let (input, left) = parse_memory_reference(input)?;
+    let (input, right) = parse_memory_reference(input)?;
 
     Ok((
         input,
@@ -351,14 +352,14 @@ pub fn parse_jump<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
 /// Parse the contents of a `JUMP-WHEN` instruction.
 pub fn parse_jump_when<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
     let (input, target) = token!(Label(v))(input)?;
-    let (input, condition) = common::parse_memory_reference(input)?;
+    let (input, condition) = parse_memory_reference(input)?;
     Ok((input, Instruction::JumpWhen(JumpWhen { target, condition })))
 }
 
 /// Parse the contents of a `JUMP-UNLESS` instruction.
 pub fn parse_jump_unless<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
     let (input, target) = token!(Label(v))(input)?;
-    let (input, condition) = common::parse_memory_reference(input)?;
+    let (input, condition) = parse_memory_reference(input)?;
     Ok((
         input,
         Instruction::JumpUnless(JumpUnless { target, condition }),
@@ -373,8 +374,8 @@ pub fn parse_label<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> 
 
 /// Parse the contents of a `MOVE` instruction.
 pub fn parse_move(input: ParserInput) -> ParserResult<Instruction> {
-    let (input, destination) = common::parse_arithmetic_operand(input)?;
-    let (input, source) = common::parse_arithmetic_operand(input)?;
+    let (input, destination) = parse_arithmetic_operand(input)?;
+    let (input, source) = parse_arithmetic_operand(input)?;
     Ok((
         input,
         Instruction::Move(Move {
@@ -386,9 +387,9 @@ pub fn parse_move(input: ParserInput) -> ParserResult<Instruction> {
 
 /// Parse the contents of a `LOAD` instruction.
 pub fn parse_load<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
-    let (input, destination) = common::parse_memory_reference(input)?;
+    let (input, destination) = parse_memory_reference(input)?;
     let (input, source) = token!(Identifier(v))(input)?;
-    let (input, offset) = common::parse_memory_reference(input)?;
+    let (input, offset) = parse_memory_reference(input)?;
 
     Ok((
         input,
@@ -403,8 +404,8 @@ pub fn parse_load<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
 /// Parse the contents of a `STORE` instruction.
 pub fn parse_store<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
     let (input, destination) = token!(Identifier(v))(input)?;
-    let (input, offset) = common::parse_memory_reference(input)?;
-    let (input, source) = common::parse_arithmetic_operand(input)?;
+    let (input, offset) = parse_memory_reference(input)?;
+    let (input, source) = parse_arithmetic_operand(input)?;
 
     Ok((
         input,
@@ -534,7 +535,7 @@ pub fn parse_measurement(input: ParserInput) -> ParserResult<Instruction> {
 /// Parse the contents of an `INCLUDE` instruction.
 pub fn parse_include<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
     let (input, filename) = token!(String(v))(input)?;
-    Ok((input, Instruction::Include(Include{ filename })))
+    Ok((input, Instruction::Include(Include { filename })))
 }
 
 #[cfg(test)]

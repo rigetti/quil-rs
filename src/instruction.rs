@@ -173,7 +173,7 @@ pub struct Calibration {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Convert {
     pub from: String,
-    pub to: String
+    pub to: String,
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
@@ -187,7 +187,6 @@ impl fmt::Display for FrameIdentifier {
         write!(f, "{} \"{}\"", format_qubits(&self.qubits), self.name)
     }
 }
-
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Include {
@@ -852,7 +851,7 @@ impl fmt::Display for Instruction {
                 }
                 Ok(())
             }
-            Instruction::Include(Include{ filename }) => {
+            Instruction::Include(Include { filename }) => {
                 write!(f, r#"INCLUDE "{}""#, filename)?;
                 Ok(())
             }
