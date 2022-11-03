@@ -81,7 +81,7 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
                 Command::Exchange => command::parse_exchange(remainder),
                 Command::Mul => command::parse_arithmetic(ArithmeticOperator::Multiply, remainder),
                 Command::Neg => command::parse_logical_unary(UnaryOperator::Neg, remainder),
-                // Command::Nop => {}
+                Command::Nop => Ok((remainder, Instruction::Nop)),
                 Command::Not => command::parse_logical_unary(UnaryOperator::Not, remainder),
                 Command::Pragma => command::parse_pragma(remainder),
                 Command::Pulse => command::parse_pulse(remainder, true),
@@ -94,7 +94,6 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
                 Command::ShiftPhase => command::parse_shift_phase(remainder),
                 Command::Store => command::parse_store(remainder),
                 Command::Sub => command::parse_arithmetic(ArithmeticOperator::Subtract, remainder),
-                // Command::Wait => {}
                 Command::Xor => command::parse_logical_binary(BinaryOperator::Xor, remainder),
                 other => Err(nom::Err::Failure(ParseError::from_kind(
                     &input[..1],

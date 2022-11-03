@@ -530,41 +530,42 @@ pub struct JumpUnless {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Instruction {
-    Gate(Gate),
-    CircuitDefinition(CircuitDefinition),
-    GateDefinition(GateDefinition),
-    Declaration(Declaration),
-    Measurement(Measurement),
-    Reset(Reset),
+    Arithmetic(Arithmetic),
+    BinaryLogic(BinaryLogic),
     CalibrationDefinition(Calibration),
     Capture(Capture),
+    CircuitDefinition(CircuitDefinition),
+    Comparison(Comparison),
+    Declaration(Declaration),
     Delay(Delay),
+    Exchange(Exchange),
     Fence(Fence),
     FrameDefinition(FrameDefinition),
+    Gate(Gate),
+    GateDefinition(GateDefinition),
+    Halt,
+    Jump(Jump),
+    JumpUnless(JumpUnless),
+    JumpWhen(JumpWhen),
+    Label(Label),
+    Load(Load),
     MeasureCalibrationDefinition(MeasureCalibrationDefinition),
+    Measurement(Measurement),
+    Move(Move),
+    Nop,
     Pragma(Pragma),
     Pulse(Pulse),
     RawCapture(RawCapture),
+    Reset(Reset),
     SetFrequency(SetFrequency),
     SetPhase(SetPhase),
     SetScale(SetScale),
     ShiftFrequency(ShiftFrequency),
     ShiftPhase(ShiftPhase),
-    SwapPhases(SwapPhases),
-    WaveformDefinition(WaveformDefinition),
-    Arithmetic(Arithmetic),
-    Comparison(Comparison),
-    BinaryLogic(BinaryLogic),
-    UnaryLogic(UnaryLogic),
-    Halt,
-    Label(Label),
-    Move(Move),
-    Exchange(Exchange),
-    Load(Load),
     Store(Store),
-    Jump(Jump),
-    JumpWhen(JumpWhen),
-    JumpUnless(JumpUnless),
+    SwapPhases(SwapPhases),
+    UnaryLogic(UnaryLogic),
+    WaveformDefinition(WaveformDefinition),
 }
 
 #[derive(Clone, Debug)]
@@ -607,6 +608,7 @@ impl From<&Instruction> for InstructionRole {
             | Instruction::Move(_)
             | Instruction::Exchange(_)
             | Instruction::Load(_)
+            | Instruction::Nop
             | Instruction::Pragma(_)
             | Instruction::Store(_) => InstructionRole::ClassicalCompute,
             Instruction::Halt
@@ -945,6 +947,7 @@ impl fmt::Display for Instruction {
                     .join(", ")
             ),
             Instruction::Halt => write!(f, "HALT"),
+            Instruction::Nop => write!(f, "NOP"),
             Instruction::Jump(Jump { target }) => write!(f, "JUMP @{}", target),
             Instruction::JumpUnless(JumpUnless { condition, target }) => {
                 write!(f, "JUMP-UNLESS @{} {}", target, condition)
@@ -1170,6 +1173,7 @@ impl Instruction {
             | Instruction::UnaryLogic(_)
             | Instruction::Comparison(_)
             | Instruction::Halt
+            | Instruction::Nop
             | Instruction::Label(_)
             | Instruction::Move(_)
             | Instruction::Exchange(_)
