@@ -188,6 +188,12 @@ impl fmt::Display for FrameIdentifier {
     }
 }
 
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Include {
+    pub filename: String,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum GateModifier {
     Controlled,
@@ -551,6 +557,7 @@ pub enum Instruction {
     Gate(Gate),
     GateDefinition(GateDefinition),
     Halt,
+    Include(Include),
     Jump(Jump),
     JumpUnless(JumpUnless),
     JumpWhen(JumpWhen),
@@ -592,6 +599,7 @@ impl From<&Instruction> for InstructionRole {
             | Instruction::FrameDefinition(_)
             | Instruction::Gate(_)
             | Instruction::GateDefinition(_)
+            | Instruction::Include(_)
             | Instruction::Label(_)
             | Instruction::MeasureCalibrationDefinition(_)
             | Instruction::Measurement(_)
@@ -842,6 +850,10 @@ impl fmt::Display for Instruction {
                         )?;
                     }
                 }
+                Ok(())
+            }
+            Instruction::Include(Include{ filename }) => {
+                write!(f, r#"INCLUDE "{}""#, filename)?;
                 Ok(())
             }
             Instruction::MeasureCalibrationDefinition(MeasureCalibrationDefinition {
@@ -1169,32 +1181,33 @@ impl Instruction {
                     FrameMatchCondition::Specific(frame_2),
                 ]))
             }
-            Instruction::Gate(_)
-            | Instruction::CircuitDefinition(_)
-            | Instruction::Convert(_)
-            | Instruction::GateDefinition(_)
-            | Instruction::Declaration(_)
-            | Instruction::Measurement(_)
-            | Instruction::Reset(_)
-            | Instruction::CalibrationDefinition(_)
-            | Instruction::FrameDefinition(_)
-            | Instruction::MeasureCalibrationDefinition(_)
-            | Instruction::Pragma(_)
-            | Instruction::WaveformDefinition(_)
-            | Instruction::Arithmetic(_)
+            Instruction::Arithmetic(_)
             | Instruction::BinaryLogic(_)
-            | Instruction::UnaryLogic(_)
+            | Instruction::CalibrationDefinition(_)
+            | Instruction::CircuitDefinition(_)
             | Instruction::Comparison(_)
-            | Instruction::Halt
-            | Instruction::Nop
-            | Instruction::Label(_)
-            | Instruction::Move(_)
+            | Instruction::Convert(_)
+            | Instruction::Declaration(_)
             | Instruction::Exchange(_)
-            | Instruction::Load(_)
-            | Instruction::Store(_)
+            | Instruction::FrameDefinition(_)
+            | Instruction::Gate(_)
+            | Instruction::GateDefinition(_)
+            | Instruction::Halt
+            | Instruction::Include(_)
             | Instruction::Jump(_)
+            | Instruction::JumpUnless(_)
             | Instruction::JumpWhen(_)
-            | Instruction::JumpUnless(_) => None,
+            | Instruction::Label(_)
+            | Instruction::Load(_)
+            | Instruction::MeasureCalibrationDefinition(_)
+            | Instruction::Measurement(_)
+            | Instruction::Move(_)
+            | Instruction::Nop
+            | Instruction::Pragma(_)
+            | Instruction::Reset(_)
+            | Instruction::Store(_)
+            | Instruction::UnaryLogic(_)
+            | Instruction::WaveformDefinition(_) => None,
         }
     }
 

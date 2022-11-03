@@ -20,7 +20,7 @@ use nom::{
 };
 
 use crate::{
-    instruction::{GateSpecification, GateType, Convert},
+    instruction::{GateSpecification, GateType, Convert, Include},
     parser::common::parse_variable_qubit,
 };
 
@@ -529,6 +529,12 @@ pub fn parse_measurement(input: ParserInput) -> ParserResult<Instruction> {
         input,
         Instruction::Measurement(Measurement { qubit, target }),
     ))
+}
+
+/// Parse the contents of an `INCLUDE` instruction.
+pub fn parse_include<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
+    let (input, filename) = token!(String(v))(input)?;
+    Ok((input, Instruction::Include(Include{ filename })))
 }
 
 #[cfg(test)]

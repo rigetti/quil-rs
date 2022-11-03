@@ -69,7 +69,7 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
                 Command::LT => command::parse_comparison(ComparisonOperator::LessThan, remainder),
                 Command::Fence => command::parse_fence(remainder),
                 Command::Halt => Ok((remainder, Instruction::Halt)),
-                // Command::Include => {}
+                Command::Include => command::parse_include(remainder),
                 Command::Ior => command::parse_logical_binary(BinaryOperator::Ior, remainder),
                 Command::Jump => command::parse_jump(remainder),
                 Command::JumpUnless => command::parse_jump_unless(remainder),
@@ -162,7 +162,7 @@ mod tests {
         ComparisonOperator, FrameDefinition, FrameIdentifier, Gate, GateDefinition,
         GateSpecification, Instruction, Jump, JumpWhen, Label, MemoryReference, Move, Pulse, Qubit,
         RawCapture, Reset, SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase,
-        UnaryLogic, UnaryOperator, Waveform, WaveformDefinition, WaveformInvocation, Convert,
+        UnaryLogic, UnaryOperator, Waveform, WaveformDefinition, WaveformInvocation, Convert, Include,
     };
     use crate::parser::lexer::lex;
     use crate::{make_test, real, Program};
@@ -765,6 +765,13 @@ mod tests {
         parse_instructions,
         "CONVERT theta unadjusted-theta",
         vec![Instruction::Convert(Convert{ from: "unadjusted-theta".to_string(), to: "theta".to_string()})]
+    );
+
+    make_test!(
+        include,
+        parse_instructions,
+        r#"INCLUDE "another/quil/file.quil""#,
+        vec![Instruction::Include(Include{ filename: "another/quil/file.quil".to_string()})]
     );
 
     #[test]

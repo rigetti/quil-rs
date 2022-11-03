@@ -260,6 +260,7 @@ impl Instruction {
             | Instruction::Fence(_)
             | Instruction::FrameDefinition(_)
             | Instruction::Halt
+            | Instruction::Include(_)
             | Instruction::Jump(Jump { target: _ })
             | Instruction::Label(Label(_))
             | Instruction::Nop
