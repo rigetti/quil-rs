@@ -37,13 +37,13 @@ use crate::token;
 
 use super::{
     common::{
-        self, parse_arithmetic_operand, parse_binary_logic_operand, parse_comparison_operand,
+        parse_arithmetic_operand, parse_binary_logic_operand, parse_comparison_operand,
         parse_frame_attribute, parse_frame_identifier, parse_gate_modifier, parse_matrix,
         parse_memory_reference, parse_permutation, parse_qubit, parse_vector,
         parse_waveform_invocation, parse_waveform_name,
     },
     expression::parse_expression,
-    instruction, ParserInput, ParserResult,
+    ParserInput, ParserResult,
 };
 
 /// Parse an arithmetic instruction of the form `destination source`.
