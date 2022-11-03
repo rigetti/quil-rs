@@ -20,7 +20,7 @@ use nom::{
 };
 
 use crate::{
-    instruction::{GateSpecification, GateType},
+    instruction::{GateSpecification, GateType, Convert},
     parser::common::parse_variable_qubit,
 };
 
@@ -148,6 +148,13 @@ pub fn parse_capture(input: ParserInput, blocking: bool) -> ParserResult<Instruc
             waveform,
         }),
     ))
+}
+
+/// Parse the contents of a `CONVERT` instruction.
+pub fn parse_convert<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
+    let (input, to) = token!(Identifier(v))(input)?;
+    let (input, from) = token!(Identifier(v))(input)?;
+    Ok((input, Instruction::Convert(Convert{ from, to })))
 }
 
 /// Parse the contents of a `DEFCAL` instruction (including `DEFCAL MEASURE`),

@@ -170,6 +170,12 @@ pub struct Calibration {
     pub qubits: Vec<Qubit>,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Convert {
+    pub from: String,
+    pub to: String
+}
+
 #[derive(Clone, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
 pub struct FrameIdentifier {
     pub name: String,
@@ -535,6 +541,7 @@ pub enum Instruction {
     CalibrationDefinition(Calibration),
     Capture(Capture),
     CircuitDefinition(CircuitDefinition),
+    Convert(Convert),
     Comparison(Comparison),
     Declaration(Declaration),
     Delay(Delay),
@@ -603,6 +610,7 @@ impl From<&Instruction> for InstructionRole {
             | Instruction::SwapPhases(_) => InstructionRole::RFControl,
             Instruction::Arithmetic(_)
             | Instruction::Comparison(_)
+            | Instruction::Convert(_)
             | Instruction::BinaryLogic(_)
             | Instruction::UnaryLogic(_)
             | Instruction::Move(_)
@@ -729,6 +737,10 @@ impl fmt::Display for Instruction {
                 for instruction in &**instructions {
                     writeln!(f, "\t{}", instruction)?;
                 }
+                Ok(())
+            }
+            Instruction::Convert(Convert { from, to }) => {
+                write!(f, "CONVERT {} {}", to, from)?;
                 Ok(())
             }
             Instruction::Declaration(Declaration {
@@ -1159,6 +1171,7 @@ impl Instruction {
             }
             Instruction::Gate(_)
             | Instruction::CircuitDefinition(_)
+            | Instruction::Convert(_)
             | Instruction::GateDefinition(_)
             | Instruction::Declaration(_)
             | Instruction::Measurement(_)

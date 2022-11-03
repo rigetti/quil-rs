@@ -513,6 +513,7 @@ impl ScheduledProgram {
                 | Instruction::Delay(_)
                 | Instruction::Fence(_)
                 | Instruction::Move(_)
+                | Instruction::Nop
                 | Instruction::Exchange(_)
                 | Instruction::Load(_)
                 | Instruction::Store(_)
@@ -528,6 +529,7 @@ impl ScheduledProgram {
                     working_instructions.push(instruction);
                     Ok(())
                 }
+                Instruction::Convert(_) => todo!(),
                 Instruction::Gate(_) | Instruction::Measurement(_) => Err(ScheduleError {
                     instruction_index,
                     instruction: instruction.clone(),

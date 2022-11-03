@@ -47,7 +47,7 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
                 Command::Add => command::parse_arithmetic(ArithmeticOperator::Add, remainder),
                 Command::And => command::parse_logical_binary(BinaryOperator::And, remainder),
                 Command::Capture => command::parse_capture(remainder, true),
-                // Command::Convert => {}
+                Command::Convert => command::parse_convert(remainder),
                 Command::Declare => command::parse_declare(remainder),
                 Command::DefCal => command::parse_defcal(remainder),
                 Command::DefCircuit => command::parse_defcircuit(remainder),
@@ -162,7 +162,7 @@ mod tests {
         ComparisonOperator, FrameDefinition, FrameIdentifier, Gate, GateDefinition,
         GateSpecification, Instruction, Jump, JumpWhen, Label, MemoryReference, Move, Pulse, Qubit,
         RawCapture, Reset, SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase,
-        UnaryLogic, UnaryOperator, Waveform, WaveformDefinition, WaveformInvocation,
+        UnaryLogic, UnaryOperator, Waveform, WaveformDefinition, WaveformInvocation, Convert,
     };
     use crate::parser::lexer::lex;
     use crate::{make_test, real, Program};
@@ -758,6 +758,13 @@ mod tests {
                 ],
             ]),
         })]
+    );
+
+    make_test!(
+        convert,
+        parse_instructions,
+        "CONVERT theta unadjusted-theta",
+        vec![Instruction::Convert(Convert{ from: "unadjusted-theta".to_string(), to: "theta".to_string()})]
     );
 
     #[test]
