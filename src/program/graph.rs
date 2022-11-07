@@ -508,6 +508,7 @@ impl ScheduledProgram {
                 Instruction::Arithmetic(_)
                 | Instruction::Comparison(_)
                 | Instruction::BinaryLogic(_)
+                | Instruction::Convert(_)
                 | Instruction::UnaryLogic(_)
                 | Instruction::Capture(_)
                 | Instruction::Delay(_)
@@ -530,7 +531,6 @@ impl ScheduledProgram {
                     working_instructions.push(instruction);
                     Ok(())
                 }
-                Instruction::Convert(_) => todo!(),
                 Instruction::Gate(_) | Instruction::Measurement(_) => Err(ScheduleError {
                     instruction_index,
                     instruction: instruction.clone(),
