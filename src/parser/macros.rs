@@ -15,8 +15,8 @@
 #[macro_export]
 macro_rules! expected_token {
     ($input: expr, $actual:expr, $expected:expr) => {{
-        use $crate::parser::error::{Error, ParserErrorKind};
-        Err(nom::Err::Error(Error::from_kind(
+        use $crate::parser::error::{InternalError, ParserErrorKind};
+        Err(nom::Err::Error(InternalError::from_kind(
             $input,
             ParserErrorKind::ExpectedToken {
                 actual: $actual.clone(),
@@ -29,27 +29,29 @@ macro_rules! expected_token {
 #[macro_export]
 macro_rules! token {
     ($expected_variant: ident($enm:ident::$variant:ident)) => {{
-        use $crate::expected_token;
-        use $crate::parser::error::{Error, ParserErrorKind};
+        use $crate::parser::error::{InternalError, ParserErrorKind};
         use $crate::parser::lexer::$enm;
         use $crate::parser::lexer::Token;
         move |input: ParserInput<'a>| match $crate::parser::split_first_token(input) {
-            None => Err(nom::Err::Error(Error::from_kind(
+            None => Err(nom::Err::Error(InternalError::from_kind(
                 input,
                 ParserErrorKind::UnexpectedEOF("something else"),
             ))),
             Some((Token::$expected_variant($enm::$variant), remainder)) => Ok((remainder, ())),
             Some((other_token, _)) => {
-                expected_token!(input, other_token, stringify!($expected_variant).to_owned())
+                $crate::expected_token!(
+                    input,
+                    other_token,
+                    stringify!($expected_variant).to_owned()
+                )
             }
         }
     }};
     ($expected_variant: ident($contents: ident)) => {{
-        use $crate::expected_token;
-        use $crate::parser::error::{Error, ParserErrorKind};
+        use $crate::parser::error::{InternalError, ParserErrorKind};
         use $crate::parser::lexer::Token;
         move |input: ParserInput<'a>| match $crate::parser::split_first_token(input) {
-            None => Err(nom::Err::Error(Error::from_kind(
+            None => Err(nom::Err::Error(InternalError::from_kind(
                 input,
                 ParserErrorKind::UnexpectedEOF("something else"),
             ))),
@@ -57,22 +59,29 @@ macro_rules! token {
                 Ok((remainder, $contents.clone()))
             }
             Some((other_token, _)) => {
-                expected_token!(input, other_token, stringify!($expected_variant).to_owned())
+                $crate::expected_token!(
+                    input,
+                    other_token,
+                    stringify!($expected_variant).to_owned()
+                )
             }
         }
     }};
     ($expected_variant: ident) => {{
-        use $crate::expected_token;
-        use $crate::parser::error::{Error, ParserErrorKind};
+        use $crate::parser::error::{InternalError, ParserErrorKind};
         use $crate::parser::lexer::Token;
         move |input: ParserInput<'a>| match $crate::parser::split_first_token(input) {
-            None => Err(nom::Err::Error(Error::from_kind(
+            None => Err(nom::Err::Error(InternalError::from_kind(
                 input,
                 ParserErrorKind::UnexpectedEOF("something else"),
             ))),
             Some((Token::$expected_variant, remainder)) => Ok((remainder, ())),
             Some((other_token, _)) => {
-                expected_token!(input, other_token, stringify!($expected_variant).to_owned())
+                $crate::expected_token!(
+                    input,
+                    other_token,
+                    stringify!($expected_variant).to_owned()
+                )
             }
         }
     }};
@@ -81,8 +90,8 @@ macro_rules! token {
 #[macro_export]
 macro_rules! unexpected_eof {
     ($input: expr) => {{
-        use $crate::parser::error::{Error, ParserErrorKind};
-        Err(nom::Err::Error(Error::from_kind(
+        use $crate::parser::error::{InternalError, ParserErrorKind};
+        Err(nom::Err::Error(InternalError::from_kind(
             $input,
             ParserErrorKind::UnexpectedEOF("something else"),
         )))
@@ -94,7 +103,8 @@ macro_rules! make_test {
     ($name: ident, $parser: ident, $input: expr, $expected: expr) => {
         #[test]
         fn $name() {
-            let tokens = lex($input).unwrap();
+            let input = ::nom_locate::LocatedSpan::new($input);
+            let tokens = lex(input).unwrap();
             let (remainder, parsed) = $parser(&tokens).unwrap();
             assert_eq!(remainder.len(), 0, "tokens left over");
             assert_eq!(parsed, $expected);

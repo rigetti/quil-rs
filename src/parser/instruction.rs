@@ -18,7 +18,7 @@ use nom::{
     sequence::{delimited, preceded},
 };
 
-use crate::parser::extract_nom_err;
+use crate::parser::{extract_nom_err, InternalParseError, InternalParserResult};
 use crate::{
     instruction::{
         ArithmeticOperator, BinaryOperator, ComparisonOperator, Instruction, UnaryOperator,
@@ -28,17 +28,17 @@ use crate::{
 
 use super::{
     command, common,
-    error::{ParseError, ParserErrorKind},
+    error::ParserErrorKind,
     gate,
     lexer::{Command, Token},
-    ParserInput, ParserResult,
+    ParserInput,
 };
 
 /// Parse the next instructon from the input, skipping past leading newlines, comments, and semicolons.
-pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
+pub(crate) fn parse_instruction(input: ParserInput) -> InternalParserResult<Instruction> {
     let (input, _) = common::skip_newlines_and_comments(input)?;
     match super::split_first_token(input) {
-        None => Err(nom::Err::Error(ParseError::from_kind(
+        None => Err(nom::Err::Error(InternalParseError::from_kind(
             input,
             ParserErrorKind::EndOfInput,
         ))),
@@ -92,14 +92,14 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
             Command::Store => command::parse_store(remainder),
             Command::Sub => command::parse_arithmetic(ArithmeticOperator::Subtract, remainder),
             Command::Xor => command::parse_logical_binary(BinaryOperator::Xor, remainder),
-            other => Err(nom::Err::Failure(ParseError::from_kind(
+            other => Err(nom::Err::Failure(InternalParseError::from_kind(
                 &input[..1],
                 ParserErrorKind::UnsupportedInstruction(*other),
             ))),
         }
         .map_err(|err| {
             nom::Err::Failure(
-                ParseError::from_kind(
+                InternalParseError::from_kind(
                     &input[..1],
                     ParserErrorKind::InvalidCommand { command: *command },
                 )
@@ -116,7 +116,7 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
             _ => todo!(),
         },
         Some((Token::Identifier(_), _)) | Some((Token::Modifier(_), _)) => gate::parse_gate(input),
-        Some((_, _)) => Err(nom::Err::Failure(ParseError::from_kind(
+        Some((_, _)) => Err(nom::Err::Failure(InternalParseError::from_kind(
             &input[..1],
             ParserErrorKind::NotACommandOrGate,
         ))),
@@ -125,7 +125,7 @@ pub fn parse_instruction(input: ParserInput) -> ParserResult<Instruction> {
 
 /// Parse all instructions from the input, trimming leading and trailing newlines and comments.
 /// Returns an error if it does not reach the end of input.
-pub fn parse_instructions(input: ParserInput) -> ParserResult<Vec<Instruction>> {
+pub(crate) fn parse_instructions(input: ParserInput) -> InternalParserResult<Vec<Instruction>> {
     all_consuming(delimited(
         common::skip_newlines_and_comments,
         many0(parse_instruction),
@@ -134,12 +134,14 @@ pub fn parse_instructions(input: ParserInput) -> ParserResult<Vec<Instruction>> 
 }
 
 /// Parse a block of indented "block instructions."
-pub fn parse_block(input: ParserInput) -> ParserResult<Vec<Instruction>> {
+pub(crate) fn parse_block(input: ParserInput) -> InternalParserResult<Vec<Instruction>> {
     many1(parse_block_instruction)(input)
 }
 
 /// Parse a single indented "block instruction."
-pub fn parse_block_instruction<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
+pub(crate) fn parse_block_instruction<'a>(
+    input: ParserInput<'a>,
+) -> InternalParserResult<'a, Instruction> {
     preceded(
         token!(NewLine),
         preceded(token!(Indentation), parse_instruction),
@@ -150,6 +152,8 @@ pub fn parse_block_instruction<'a>(input: ParserInput<'a>) -> ParserResult<'a, I
 mod tests {
     use std::collections::HashMap;
     use std::str::FromStr;
+
+    use nom_locate::LocatedSpan;
 
     use crate::expression::{Expression, InfixOperator, PrefixOperator};
     use crate::instruction::{
@@ -334,6 +338,7 @@ mod tests {
         ]
         .iter()
         .for_each(|input| {
+            let input = LocatedSpan::new(*input);
             let tokens = lex(input).unwrap();
             assert!(parse_instructions(&tokens).is_err(), "{}", input);
         })
@@ -396,6 +401,7 @@ mod tests {
     #[test]
     fn test_binary_logic_error() {
         ["AND ro", "XOR 1 1", "IOR 1"].iter().for_each(|input| {
+            let input = LocatedSpan::new(*input);
             let tokens = lex(input).unwrap();
             assert!(parse_instructions(&tokens).is_err(), "{}", input);
         })
@@ -442,6 +448,7 @@ mod tests {
         ["NEG 1", "NOT 1", "NEG 0", "NOT 0"]
             .iter()
             .for_each(|input| {
+                let input = LocatedSpan::new(*input);
                 let tokens = lex(input).unwrap();
                 assert!(parse_instructions(&tokens).is_err(), "{}", input);
             })
@@ -777,7 +784,8 @@ mod tests {
 
     #[test]
     fn parse_set_phase() {
-        let tokens = lex(r#"SET-PHASE 0 "rf" 1.0; SET-PHASE 0 1 "rf" theta"#).unwrap();
+        let input = LocatedSpan::new(r#"SET-PHASE 0 "rf" 1.0; SET-PHASE 0 1 "rf" theta"#);
+        let tokens = lex(input).unwrap();
         let (remainder, parsed) = parse_instructions(&tokens).unwrap();
         let expected = vec![
             Instruction::SetPhase(SetPhase {
@@ -804,7 +812,8 @@ mod tests {
 
     #[test]
     fn parse_set_scale() {
-        let tokens = lex(r#"SET-SCALE 0 "rf" 1.0; SET-SCALE 0 1 "rf" theta"#).unwrap();
+        let input = LocatedSpan::new(r#"SET-SCALE 0 "rf" 1.0; SET-SCALE 0 1 "rf" theta"#);
+        let tokens = lex(input).unwrap();
         let (remainder, parsed) = parse_instructions(&tokens).unwrap();
         let expected = vec![
             Instruction::SetScale(SetScale {
@@ -831,7 +840,8 @@ mod tests {
 
     #[test]
     fn parse_set_frequency() {
-        let tokens = lex(r#"SET-FREQUENCY 0 "rf" 1.0; SET-FREQUENCY 0 1 "rf" theta"#).unwrap();
+        let input = LocatedSpan::new(r#"SET-FREQUENCY 0 "rf" 1.0; SET-FREQUENCY 0 1 "rf" theta"#);
+        let tokens = lex(input).unwrap();
         let (remainder, parsed) = parse_instructions(&tokens).unwrap();
         let expected = vec![
             Instruction::SetFrequency(SetFrequency {
@@ -858,7 +868,9 @@ mod tests {
 
     #[test]
     fn parse_shift_frequency() {
-        let tokens = lex(r#"SHIFT-FREQUENCY 0 "rf" 1.0; SHIFT-FREQUENCY 0 1 "rf" theta"#).unwrap();
+        let input =
+            LocatedSpan::new(r#"SHIFT-FREQUENCY 0 "rf" 1.0; SHIFT-FREQUENCY 0 1 "rf" theta"#);
+        let tokens = lex(input).unwrap();
         let (remainder, parsed) = parse_instructions(&tokens).unwrap();
         let expected = vec![
             Instruction::ShiftFrequency(ShiftFrequency {
@@ -885,7 +897,8 @@ mod tests {
 
     #[test]
     fn parse_shift_phase() {
-        let tokens = lex(r#"SHIFT-PHASE 0 "rf" 1.0; SHIFT-PHASE 0 1 "rf" theta"#).unwrap();
+        let input = LocatedSpan::new(r#"SHIFT-PHASE 0 "rf" 1.0; SHIFT-PHASE 0 1 "rf" theta"#);
+        let tokens = lex(input).unwrap();
         let (remainder, parsed) = parse_instructions(&tokens).unwrap();
         let expected = vec![
             Instruction::ShiftPhase(ShiftPhase {

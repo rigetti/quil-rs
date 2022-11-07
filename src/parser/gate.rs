@@ -19,12 +19,13 @@ use crate::{instruction::Instruction, token};
 use super::{
     common::{self, parse_gate_modifier},
     expression::parse_expression,
-    ParserInput, ParserResult,
+    ParserInput,
 };
 use crate::instruction::Gate;
+use crate::parser::InternalParserResult;
 
 /// Parse a gate instruction.
-pub fn parse_gate<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
+pub(crate) fn parse_gate<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Instruction> {
     let (input, modifiers) = many0(parse_gate_modifier)(input)?;
     let (input, name) = token!(Identifier(v))(input)?;
     let (input, parameters) = opt(delimited(

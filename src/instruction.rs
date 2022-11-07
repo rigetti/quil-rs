@@ -12,12 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use nom_locate::LocatedSpan;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use std::{collections::HashMap, fmt};
 
 use crate::expression::Expression;
-use crate::parser::{common::parse_memory_reference, lex};
+use crate::parser::{common::parse_memory_reference, lex, ParseError};
 use crate::program::{disallow_leftover, frame::FrameMatchCondition, SyntaxError};
 
 #[cfg(test)]
@@ -318,8 +319,11 @@ impl FromStr for MemoryReference {
     type Err = SyntaxError<Self>;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let tokens = lex(s)?;
-        disallow_leftover(parse_memory_reference(&tokens))
+        let input = LocatedSpan::new(s);
+        let tokens = lex(input)?;
+        disallow_leftover(
+            parse_memory_reference(&tokens).map_err(ParseError::from_nom_internal_err),
+        )
     }
 }
 
@@ -407,8 +411,23 @@ pub struct MeasureCalibrationDefinition {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Pragma {
     pub name: String,
-    pub arguments: Vec<String>,
+    pub arguments: Vec<PragmaArgument>,
     pub data: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum PragmaArgument {
+    Identifier(String),
+    Integer(u64),
+}
+
+impl fmt::Display for PragmaArgument {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PragmaArgument::Identifier(i) => write!(f, "{}", i),
+            PragmaArgument::Integer(i) => write!(f, "{}", i),
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -917,7 +936,9 @@ impl fmt::Display for Instruction {
             }) => {
                 write!(f, "PRAGMA {}", name)?;
                 if !arguments.is_empty() {
-                    write!(f, " {}", arguments.join(" "))?;
+                    for arg in arguments {
+                        write!(f, " {}", arg)?;
+                    }
                 }
                 if let Some(data) = data {
                     write!(f, " \"{}\"", data)?;
@@ -998,6 +1019,8 @@ impl fmt::Display for Instruction {
 
 #[cfg(test)]
 mod test_instruction_display {
+    use crate::instruction::PragmaArgument;
+
     use super::{Instruction, Pragma};
 
     #[test]
@@ -1014,7 +1037,7 @@ mod test_instruction_display {
         assert_eq!(
             Instruction::Pragma(Pragma {
                 name: String::from("LOAD-MEMORY"),
-                arguments: vec![String::from("q0")],
+                arguments: vec![PragmaArgument::Identifier("q0".to_string())],
                 data: Some(String::from("addr")),
             })
             .to_string(),
@@ -1216,6 +1239,7 @@ impl Instruction {
     pub(crate) fn parse(input: &str) -> Result<Self, String> {
         use crate::parser::instruction::parse_instruction;
 
+        let input = LocatedSpan::new(input);
         let lexed = lex(input).map_err(|err| err.to_string())?;
         let (_, instruction) =
             nom::combinator::all_consuming(parse_instruction)(&lexed).map_err(|e| e.to_string())?;

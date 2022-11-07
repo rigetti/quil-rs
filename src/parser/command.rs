@@ -20,7 +20,7 @@ use nom::{
 };
 
 use crate::{
-    instruction::{Convert, GateSpecification, GateType, Include},
+    instruction::{Convert, GateSpecification, GateType, Include, PragmaArgument},
     parser::common::parse_variable_qubit,
 };
 
@@ -33,6 +33,7 @@ use crate::instruction::{
     Waveform, WaveformDefinition,
 };
 use crate::parser::instruction::parse_block;
+use crate::parser::InternalParserResult;
 use crate::token;
 
 use super::{
@@ -43,15 +44,15 @@ use super::{
         parse_waveform_invocation, parse_waveform_name,
     },
     expression::parse_expression,
-    ParserInput, ParserResult,
+    ParserInput,
 };
 
 /// Parse an arithmetic instruction of the form `destination source`.
 /// Called using the arithmetic operator itself (such as `ADD`) which should be previously parsed.
-pub fn parse_arithmetic(
+pub(crate) fn parse_arithmetic(
     operator: ArithmeticOperator,
     input: ParserInput,
-) -> ParserResult<Instruction> {
+) -> InternalParserResult<Instruction> {
     let (input, destination_memory_reference) = parse_memory_reference(input)?;
     let destination = ArithmeticOperand::MemoryReference(destination_memory_reference);
     let (input, source) = parse_arithmetic_operand(input)?;
@@ -68,10 +69,10 @@ pub fn parse_arithmetic(
 
 /// Parse a comparison instruction of the form `addr addr ( addr | number )`.
 /// Called using the comparison operator itself (such as `EQ`) which should be previously parsed.
-pub fn parse_comparison(
+pub(crate) fn parse_comparison(
     operator: ComparisonOperator,
     input: ParserInput,
-) -> ParserResult<Instruction> {
+) -> InternalParserResult<Instruction> {
     let (input, destination) = parse_memory_reference(input)?;
     let (input, left) = parse_memory_reference(input)?;
     let (input, right) = parse_comparison_operand(input)?;
@@ -87,10 +88,10 @@ pub fn parse_comparison(
 
 /// Parse a logical binary instruction of the form `addr ( addr | INT )`.
 /// Called using the logical operator itself (such as `AND`) which should be previously parsed.
-pub fn parse_logical_binary(
+pub(crate) fn parse_logical_binary(
     operator: BinaryOperator,
     input: ParserInput,
-) -> ParserResult<Instruction> {
+) -> InternalParserResult<Instruction> {
     let (input, left) = parse_memory_reference(input)?;
     let (input, right) = parse_binary_logic_operand(input)?;
 
@@ -105,10 +106,10 @@ pub fn parse_logical_binary(
 
 /// Parse a logical unary instruction of the form `addr`.
 /// Called using the logical operator itself (such as `NOT`) which should be previously parsed.
-pub fn parse_logical_unary(
+pub(crate) fn parse_logical_unary(
     operator: UnaryOperator,
     input: ParserInput,
-) -> ParserResult<Instruction> {
+) -> InternalParserResult<Instruction> {
     let (input, operand) = parse_memory_reference(input)?;
 
     Ok((
@@ -118,7 +119,7 @@ pub fn parse_logical_unary(
 }
 
 /// Parse the contents of a `DECLARE` instruction.
-pub fn parse_declare<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
+pub(crate) fn parse_declare<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Instruction> {
     let (input, name) = token!(Identifier(v))(input)?;
     let (input, size) = parse_vector(input)?;
     Ok((
@@ -135,7 +136,10 @@ pub fn parse_declare<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction
 ///
 /// Unlike most other instructions, this can be _prefixed_ with the NONBLOCKING keyword,
 /// and thus it expects and parses the CAPTURE token itself.
-pub fn parse_capture(input: ParserInput, blocking: bool) -> ParserResult<Instruction> {
+pub(crate) fn parse_capture(
+    input: ParserInput,
+    blocking: bool,
+) -> InternalParserResult<Instruction> {
     let (input, frame) = parse_frame_identifier(input)?;
     let (input, waveform) = parse_waveform_invocation(input)?;
     let (input, memory_reference) = parse_memory_reference(input)?;
@@ -152,7 +156,7 @@ pub fn parse_capture(input: ParserInput, blocking: bool) -> ParserResult<Instruc
 }
 
 /// Parse the contents of a `CONVERT` instruction.
-pub fn parse_convert<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
+pub(crate) fn parse_convert<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Instruction> {
     let (input, to) = token!(Identifier(v))(input)?;
     let (input, from) = token!(Identifier(v))(input)?;
     Ok((input, Instruction::Convert(Convert { from, to })))
@@ -160,7 +164,7 @@ pub fn parse_convert<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction
 
 /// Parse the contents of a `DEFCAL` instruction (including `DEFCAL MEASURE`),
 /// following the `DEFCAL` token.
-pub fn parse_defcal<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
+pub(crate) fn parse_defcal<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Instruction> {
     use crate::parser::lexer::Command::Measure;
     let (input, defcal_measure) = opt(token!(Command(Measure)))(input)?;
     match defcal_measure {
@@ -171,7 +175,9 @@ pub fn parse_defcal<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction>
 
 /// Parse the contents of a `DEFCAL` instruction (but not `DEFCAL MEASURE`),
 /// following the `DEFCAL` token.
-pub fn parse_defcal_gate<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
+pub(crate) fn parse_defcal_gate<'a>(
+    input: ParserInput<'a>,
+) -> InternalParserResult<'a, Instruction> {
     let (input, modifiers) = many0(parse_gate_modifier)(input)?;
     let (input, name) = token!(Identifier(v))(input)?;
     let (input, parameters) = opt(delimited(
@@ -196,7 +202,9 @@ pub fn parse_defcal_gate<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruc
 }
 
 /// Parse the contents of a `DEFCAL MEASURE` instruction, following the `MEASURE` token.
-pub fn parse_defcal_measure<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
+pub(crate) fn parse_defcal_measure<'a>(
+    input: ParserInput<'a>,
+) -> InternalParserResult<'a, Instruction> {
     let (input, qubit_index) = opt(token!(Integer(v)))(input)?;
     let qubit = qubit_index.map(Qubit::Fixed);
     let (input, destination) = token!(Identifier(v))(input)?;
@@ -213,7 +221,7 @@ pub fn parse_defcal_measure<'a>(input: ParserInput<'a>) -> ParserResult<'a, Inst
 }
 
 /// Parse the contents of a `DEFFRAME` instruction.
-pub fn parse_defframe<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
+pub(crate) fn parse_defframe<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Instruction> {
     let (input, identifier) = parse_frame_identifier(input)?;
     let (input, _) = token!(Colon)(input)?;
     let (input, attribute_pairs) = many1(parse_frame_attribute)(input)?;
@@ -229,7 +237,7 @@ pub fn parse_defframe<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instructio
 }
 
 /// Parse the contents of a `DEFGATE` instruction.
-pub fn parse_defgate<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
+pub(crate) fn parse_defgate<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Instruction> {
     let (input, name) = token!(Identifier(v))(input)?;
     let (input, parameters) = opt(delimited(
         token!(LParenthesis),
@@ -262,7 +270,9 @@ pub fn parse_defgate<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction
 }
 
 /// Parse the contents of a `DEFWAVEFORM` instruction.
-pub fn parse_defwaveform<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
+pub(crate) fn parse_defwaveform<'a>(
+    input: ParserInput<'a>,
+) -> InternalParserResult<'a, Instruction> {
     let (input, name) = parse_waveform_name(input)?;
     let (input, parameters) = opt(delimited(
         token!(LParenthesis),
@@ -283,7 +293,9 @@ pub fn parse_defwaveform<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruc
     ))
 }
 
-pub fn parse_defcircuit<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
+pub(crate) fn parse_defcircuit<'a>(
+    input: ParserInput<'a>,
+) -> InternalParserResult<'a, Instruction> {
     let (input, name) = token!(Identifier(v))(input)?;
     let (input, parameters) = opt(delimited(
         token!(LParenthesis),
@@ -307,7 +319,7 @@ pub fn parse_defcircuit<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruct
 }
 
 /// Parse the contents of a `DELAY` instruction.
-pub fn parse_delay<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
+pub(crate) fn parse_delay<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Instruction> {
     let (input, qubits) = many0(parse_qubit)(input)?;
     let (input, frame_names) = many0(token!(String(v)))(input)?;
     let (input, duration) = parse_expression(input)?;
@@ -323,7 +335,7 @@ pub fn parse_delay<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> 
 }
 
 /// Parse the contents of an `EXCHANGE` instruction.
-pub fn parse_exchange(input: ParserInput) -> ParserResult<Instruction> {
+pub(crate) fn parse_exchange(input: ParserInput) -> InternalParserResult<Instruction> {
     let (input, left) = parse_memory_reference(input)?;
     let (input, right) = parse_memory_reference(input)?;
 
@@ -337,27 +349,29 @@ pub fn parse_exchange(input: ParserInput) -> ParserResult<Instruction> {
 }
 
 /// Parse the contents of a `FENCE` instruction.
-pub fn parse_fence(input: ParserInput) -> ParserResult<Instruction> {
+pub(crate) fn parse_fence(input: ParserInput) -> InternalParserResult<Instruction> {
     let (input, qubits) = many0(parse_qubit)(input)?;
 
     Ok((input, Instruction::Fence(Fence { qubits })))
 }
 
 /// Parse the contents of a `JUMP` instruction.
-pub fn parse_jump<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
+pub(crate) fn parse_jump<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Instruction> {
     let (input, target) = token!(Label(v))(input)?;
     Ok((input, Instruction::Jump(Jump { target })))
 }
 
 /// Parse the contents of a `JUMP-WHEN` instruction.
-pub fn parse_jump_when<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
+pub(crate) fn parse_jump_when<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Instruction> {
     let (input, target) = token!(Label(v))(input)?;
     let (input, condition) = parse_memory_reference(input)?;
     Ok((input, Instruction::JumpWhen(JumpWhen { target, condition })))
 }
 
 /// Parse the contents of a `JUMP-UNLESS` instruction.
-pub fn parse_jump_unless<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
+pub(crate) fn parse_jump_unless<'a>(
+    input: ParserInput<'a>,
+) -> InternalParserResult<'a, Instruction> {
     let (input, target) = token!(Label(v))(input)?;
     let (input, condition) = parse_memory_reference(input)?;
     Ok((
@@ -367,13 +381,13 @@ pub fn parse_jump_unless<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruc
 }
 
 /// Parse the contents of a `DECLARE` instruction.
-pub fn parse_label<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
+pub(crate) fn parse_label<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Instruction> {
     let (input, name) = token!(Label(v))(input)?;
     Ok((input, Instruction::Label(Label(name))))
 }
 
 /// Parse the contents of a `MOVE` instruction.
-pub fn parse_move(input: ParserInput) -> ParserResult<Instruction> {
+pub(crate) fn parse_move(input: ParserInput) -> InternalParserResult<Instruction> {
     let (input, destination) = parse_arithmetic_operand(input)?;
     let (input, source) = parse_arithmetic_operand(input)?;
     Ok((
@@ -386,7 +400,7 @@ pub fn parse_move(input: ParserInput) -> ParserResult<Instruction> {
 }
 
 /// Parse the contents of a `LOAD` instruction.
-pub fn parse_load<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
+pub(crate) fn parse_load<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Instruction> {
     let (input, destination) = parse_memory_reference(input)?;
     let (input, source) = token!(Identifier(v))(input)?;
     let (input, offset) = parse_memory_reference(input)?;
@@ -402,7 +416,7 @@ pub fn parse_load<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
 }
 
 /// Parse the contents of a `STORE` instruction.
-pub fn parse_store<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
+pub(crate) fn parse_store<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Instruction> {
     let (input, destination) = token!(Identifier(v))(input)?;
     let (input, offset) = parse_memory_reference(input)?;
     let (input, source) = parse_arithmetic_operand(input)?;
@@ -418,10 +432,12 @@ pub fn parse_store<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> 
 }
 
 /// Parse the contents of a `PRAGMA` instruction.
-pub fn parse_pragma<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
+pub(crate) fn parse_pragma<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Instruction> {
     let (input, pragma_type) = token!(Identifier(v))(input)?;
-    // FIXME: Also allow Int (not just Identifier)
-    let (input, arguments) = many0(token!(Identifier(v)))(input)?;
+    let (input, arguments) = many0(alt((
+        map(token!(Identifier(v)), PragmaArgument::Identifier),
+        map(token!(Integer(i)), PragmaArgument::Integer),
+    )))(input)?;
     let (input, data) = opt(token!(String(v)))(input)?;
     Ok((
         input,
@@ -434,7 +450,7 @@ pub fn parse_pragma<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction>
 }
 
 /// Parse the contents of a `PULSE` instruction.
-pub fn parse_pulse(input: ParserInput, blocking: bool) -> ParserResult<Instruction> {
+pub(crate) fn parse_pulse(input: ParserInput, blocking: bool) -> InternalParserResult<Instruction> {
     let (input, frame) = parse_frame_identifier(input)?;
     let (input, waveform) = parse_waveform_invocation(input)?;
 
@@ -449,7 +465,10 @@ pub fn parse_pulse(input: ParserInput, blocking: bool) -> ParserResult<Instructi
 }
 
 /// Parse the contents of a `RAW-CAPTURE` instruction.
-pub fn parse_raw_capture(input: ParserInput, blocking: bool) -> ParserResult<Instruction> {
+pub(crate) fn parse_raw_capture(
+    input: ParserInput,
+    blocking: bool,
+) -> InternalParserResult<Instruction> {
     let (input, frame) = parse_frame_identifier(input)?;
     let (input, duration) = parse_expression(input)?;
     let (input, memory_reference) = parse_memory_reference(input)?;
@@ -466,14 +485,14 @@ pub fn parse_raw_capture(input: ParserInput, blocking: bool) -> ParserResult<Ins
 }
 
 /// Parse the contents of a `RESET` instruction.
-pub fn parse_reset(input: ParserInput) -> ParserResult<Instruction> {
+pub(crate) fn parse_reset(input: ParserInput) -> InternalParserResult<Instruction> {
     let (input, qubit) = opt(parse_qubit)(input)?;
 
     Ok((input, Instruction::Reset(Reset { qubit })))
 }
 
 /// Parse the contents of a `SET-FREQUENCY` instruction.
-pub fn parse_set_frequency(input: ParserInput) -> ParserResult<Instruction> {
+pub(crate) fn parse_set_frequency(input: ParserInput) -> InternalParserResult<Instruction> {
     let (input, frame) = parse_frame_identifier(input)?;
     let (input, frequency) = parse_expression(input)?;
 
@@ -484,7 +503,7 @@ pub fn parse_set_frequency(input: ParserInput) -> ParserResult<Instruction> {
 }
 
 /// Parse the contents of a `SET-PHASE` instruction.
-pub fn parse_set_phase(input: ParserInput) -> ParserResult<Instruction> {
+pub(crate) fn parse_set_phase(input: ParserInput) -> InternalParserResult<Instruction> {
     let (input, frame) = parse_frame_identifier(input)?;
     let (input, phase) = parse_expression(input)?;
 
@@ -492,7 +511,7 @@ pub fn parse_set_phase(input: ParserInput) -> ParserResult<Instruction> {
 }
 
 /// Parse the contents of a `SET-SCALE` instruction.
-pub fn parse_set_scale(input: ParserInput) -> ParserResult<Instruction> {
+pub(crate) fn parse_set_scale(input: ParserInput) -> InternalParserResult<Instruction> {
     let (input, frame) = parse_frame_identifier(input)?;
     let (input, scale) = parse_expression(input)?;
 
@@ -500,7 +519,7 @@ pub fn parse_set_scale(input: ParserInput) -> ParserResult<Instruction> {
 }
 
 /// Parse the contents of a `SHIFT-FREQUENCY` instruction.
-pub fn parse_shift_frequency(input: ParserInput) -> ParserResult<Instruction> {
+pub(crate) fn parse_shift_frequency(input: ParserInput) -> InternalParserResult<Instruction> {
     let (input, frame) = parse_frame_identifier(input)?;
     let (input, frequency) = parse_expression(input)?;
 
@@ -511,7 +530,7 @@ pub fn parse_shift_frequency(input: ParserInput) -> ParserResult<Instruction> {
 }
 
 /// Parse the contents of a `SHIFT-PHASE` instruction.
-pub fn parse_shift_phase(input: ParserInput) -> ParserResult<Instruction> {
+pub(crate) fn parse_shift_phase(input: ParserInput) -> InternalParserResult<Instruction> {
     let (input, frame) = parse_frame_identifier(input)?;
     let (input, phase) = parse_expression(input)?;
 
@@ -519,7 +538,7 @@ pub fn parse_shift_phase(input: ParserInput) -> ParserResult<Instruction> {
 }
 
 /// Parse the contents of a `MEASURE` instruction.
-pub fn parse_measurement(input: ParserInput) -> ParserResult<Instruction> {
+pub(crate) fn parse_measurement(input: ParserInput) -> InternalParserResult<Instruction> {
     let (input, qubit) = parse_qubit(input)?;
     let (input, target) = match parse_memory_reference(input) {
         Ok((input, target)) => (input, Some(target)),
@@ -533,7 +552,7 @@ pub fn parse_measurement(input: ParserInput) -> ParserResult<Instruction> {
 }
 
 /// Parse the contents of an `INCLUDE` instruction.
-pub fn parse_include<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction> {
+pub(crate) fn parse_include<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Instruction> {
     let (input, filename) = token!(String(v))(input)?;
     Ok((input, Instruction::Include(Include { filename })))
 }
@@ -541,7 +560,7 @@ pub fn parse_include<'a>(input: ParserInput<'a>) -> ParserResult<'a, Instruction
 #[cfg(test)]
 mod tests {
     use crate::expression::{Expression, ExpressionFunction, InfixOperator, PrefixOperator};
-    use crate::instruction::{GateDefinition, GateSpecification};
+    use crate::instruction::{GateDefinition, GateSpecification, PragmaArgument};
     use crate::parser::lexer::lex;
     use crate::{imag, real};
     use crate::{
@@ -629,13 +648,49 @@ mod tests {
     );
 
     make_test!(
-        pragma_inline_json,
+        pragma_inline_json_single_quotes,
         parse_pragma,
         "FILTER-NODE q35_unclassified \"{'module':'lodgepole.filters.io','filter_type':'DataBuffer','source':'q35_ro_rx/filter','publish':true,'params':{},'_type':'FilterNode'}\"",
         Instruction::Pragma(Pragma {
             name: "FILTER-NODE".to_owned(),
-            arguments: vec!["q35_unclassified".to_owned()],
+            arguments: vec![PragmaArgument::Identifier("q35_unclassified".to_string())],
             data: Some("{'module':'lodgepole.filters.io','filter_type':'DataBuffer','source':'q35_ro_rx/filter','publish':true,'params':{},'_type':'FilterNode'}".to_owned())
+        })
+    );
+
+    make_test!(
+        pragma_inline_json_double_quotes,
+        parse_pragma,
+        r#"FILTER-NODE q35_unclassified "{\"module\":\"lodgepole.filters.io\",\"filter_type\":\"DataBuffer\",\"source\":\"q35_ro_rx/filter\",\"publish\":true,\"params\":{},\"_type\":\"FilterNode\"}""#,
+        Instruction::Pragma(Pragma {
+            name: "FILTER-NODE".to_owned(),
+            arguments: vec![PragmaArgument::Identifier("q35_unclassified".to_string())],
+            data: Some(r#"{"module":"lodgepole.filters.io","filter_type":"DataBuffer","source":"q35_ro_rx/filter","publish":true,"params":{},"_type":"FilterNode"}"#.to_owned())
+        })
+    );
+
+    make_test!(
+        pragma_integer_argument,
+        parse_pragma,
+        "READOUT-POVM 0 \"(0.9 0.19999999999999996 0.09999999999999998 0.8)\"",
+        Instruction::Pragma(Pragma {
+            name: "READOUT-POVM".to_string(),
+            arguments: vec![PragmaArgument::Integer(0)],
+            data: Some("(0.9 0.19999999999999996 0.09999999999999998 0.8)".to_string()),
+        })
+    );
+
+    make_test!(
+        pragma_identifier_and_integer_argument,
+        parse_pragma,
+        "NAME identifier 0 \"data\"",
+        Instruction::Pragma(Pragma {
+            name: "NAME".to_string(),
+            arguments: vec![
+                PragmaArgument::Identifier("identifier".to_string()),
+                PragmaArgument::Integer(0)
+            ],
+            data: Some("data".to_string()),
         })
     );
 
@@ -748,7 +803,7 @@ mod tests {
                 parameters: vec![],
                 specification: GateSpecification::Matrix(vec![
                     vec![expression.clone(), expression.clone()],
-                    vec![expression.clone(), negative_expression],
+                    vec![expression, negative_expression],
                 ]),
             })
         }

@@ -1,0 +1,41 @@
+[package]
+versioned_files = ["Cargo.toml"]
+changelog = "CHANGELOG.md"
+
+[[workflows]]
+name = "prerelease"
+
+[[workflows.steps]]
+type = "PrepareRelease"
+prerelease_label = "rc"
+
+[[workflows.steps]]
+type = "Command"
+command = "cargo update -w && git add Cargo.lock && git commit -m \"chore: prepare pre-release $version [skip ci]\""
+variables = { "$version" = "Version" }
+
+[[workflows.steps]]
+type = "Command"
+command = "git push"
+
+[[workflows.steps]]
+type = "Release"
+
+[[workflows]]
+name = "release"
+
+[[workflows.steps]]
+type = "PrepareRelease"
+
+[[workflows.steps]]
+type = "Command"
+command = "git add Cargo.lock && git commit -m \"chore: prepare release $version [skip ci]\""
+variables = { "$version" = "Version" }
+
+[[workflows.steps]]
+type = "Command"
+command = "git push"
+
+[github]
+owner = "rigetti"
+repo = "quil-rs"
