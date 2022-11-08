@@ -762,11 +762,11 @@ mod tests {
     make_test!(
         convert,
         parse_instructions,
-        "CONVERT theta unadjusted-theta",
+        "CONVERT theta unadjusted-theta[1]",
         vec![Instruction::Convert(Convert {
             from: MemoryReference {
                 name: "unadjusted-theta".to_string(),
-                index: 0
+                index: 1
             },
             to: MemoryReference {
                 name: "theta".to_string(),
