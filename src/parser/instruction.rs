@@ -42,75 +42,66 @@ pub(crate) fn parse_instruction(input: ParserInput) -> InternalParserResult<Inst
             input,
             ParserErrorKind::EndOfInput,
         ))),
-        Some((Token::Command(command), remainder)) => {
-            match command {
-                Command::Add => command::parse_arithmetic(ArithmeticOperator::Add, remainder),
-                Command::And => command::parse_logical_binary(BinaryOperator::And, remainder),
-                Command::Capture => command::parse_capture(remainder, true),
-                // Command::Convert => {}
-                Command::Declare => command::parse_declare(remainder),
-                Command::DefCal => command::parse_defcal(remainder),
-                Command::DefCircuit => command::parse_defcircuit(remainder),
-                Command::DefFrame => command::parse_defframe(remainder),
-                Command::DefGate => command::parse_defgate(remainder),
-                Command::DefWaveform => command::parse_defwaveform(remainder),
-                Command::Delay => command::parse_delay(remainder),
-                Command::Div => command::parse_arithmetic(ArithmeticOperator::Divide, remainder),
-                Command::Eq => command::parse_comparison(ComparisonOperator::Equal, remainder),
-                Command::GE => {
-                    command::parse_comparison(ComparisonOperator::GreaterThanOrEqual, remainder)
-                }
-                Command::GT => {
-                    command::parse_comparison(ComparisonOperator::GreaterThan, remainder)
-                }
-                Command::LE => {
-                    command::parse_comparison(ComparisonOperator::LessThanOrEqual, remainder)
-                }
-                Command::LT => command::parse_comparison(ComparisonOperator::LessThan, remainder),
-                Command::Fence => command::parse_fence(remainder),
-                Command::Halt => Ok((remainder, Instruction::Halt)),
-                // Command::Include => {}
-                Command::Ior => command::parse_logical_binary(BinaryOperator::Ior, remainder),
-                Command::Jump => command::parse_jump(remainder),
-                Command::JumpUnless => command::parse_jump_unless(remainder),
-                Command::JumpWhen => command::parse_jump_when(remainder),
-                Command::Label => command::parse_label(remainder),
-                Command::Load => command::parse_load(remainder),
-                Command::Measure => command::parse_measurement(remainder),
-                Command::Move => command::parse_move(remainder),
-                Command::Exchange => command::parse_exchange(remainder),
-                Command::Mul => command::parse_arithmetic(ArithmeticOperator::Multiply, remainder),
-                Command::Neg => command::parse_logical_unary(UnaryOperator::Neg, remainder),
-                // Command::Nop => {}
-                Command::Not => command::parse_logical_unary(UnaryOperator::Not, remainder),
-                Command::Pragma => command::parse_pragma(remainder),
-                Command::Pulse => command::parse_pulse(remainder, true),
-                Command::RawCapture => command::parse_raw_capture(remainder, true),
-                Command::Reset => command::parse_reset(remainder),
-                Command::SetFrequency => command::parse_set_frequency(remainder),
-                Command::SetPhase => command::parse_set_phase(remainder),
-                Command::SetScale => command::parse_set_scale(remainder),
-                Command::ShiftFrequency => command::parse_shift_frequency(remainder),
-                Command::ShiftPhase => command::parse_shift_phase(remainder),
-                Command::Store => command::parse_store(remainder),
-                Command::Sub => command::parse_arithmetic(ArithmeticOperator::Subtract, remainder),
-                // Command::Wait => {}
-                Command::Xor => command::parse_logical_binary(BinaryOperator::Xor, remainder),
-                other => Err(nom::Err::Failure(InternalParseError::from_kind(
-                    &input[..1],
-                    ParserErrorKind::UnsupportedInstruction(*other),
-                ))),
+        Some((Token::Command(command), remainder)) => match command {
+            Command::Add => command::parse_arithmetic(ArithmeticOperator::Add, remainder),
+            Command::And => command::parse_logical_binary(BinaryOperator::And, remainder),
+            Command::Capture => command::parse_capture(remainder, true),
+            Command::Convert => command::parse_convert(remainder),
+            Command::Declare => command::parse_declare(remainder),
+            Command::DefCal => command::parse_defcal(remainder),
+            Command::DefCircuit => command::parse_defcircuit(remainder),
+            Command::DefFrame => command::parse_defframe(remainder),
+            Command::DefGate => command::parse_defgate(remainder),
+            Command::DefWaveform => command::parse_defwaveform(remainder),
+            Command::Delay => command::parse_delay(remainder),
+            Command::Div => command::parse_arithmetic(ArithmeticOperator::Divide, remainder),
+            Command::Eq => command::parse_comparison(ComparisonOperator::Equal, remainder),
+            Command::GE => {
+                command::parse_comparison(ComparisonOperator::GreaterThanOrEqual, remainder)
             }
-            .map_err(|err| {
-                nom::Err::Failure(
-                    InternalParseError::from_kind(
-                        &input[..1],
-                        ParserErrorKind::InvalidCommand { command: *command },
-                    )
-                    .with_previous(extract_nom_err(err)),
-                )
-            })
+            Command::GT => command::parse_comparison(ComparisonOperator::GreaterThan, remainder),
+            Command::LE => {
+                command::parse_comparison(ComparisonOperator::LessThanOrEqual, remainder)
+            }
+            Command::LT => command::parse_comparison(ComparisonOperator::LessThan, remainder),
+            Command::Fence => command::parse_fence(remainder),
+            Command::Halt => Ok((remainder, Instruction::Halt)),
+            Command::Include => command::parse_include(remainder),
+            Command::Ior => command::parse_logical_binary(BinaryOperator::Ior, remainder),
+            Command::Jump => command::parse_jump(remainder),
+            Command::JumpUnless => command::parse_jump_unless(remainder),
+            Command::JumpWhen => command::parse_jump_when(remainder),
+            Command::Label => command::parse_label(remainder),
+            Command::Load => command::parse_load(remainder),
+            Command::Measure => command::parse_measurement(remainder),
+            Command::Move => command::parse_move(remainder),
+            Command::Exchange => command::parse_exchange(remainder),
+            Command::Mul => command::parse_arithmetic(ArithmeticOperator::Multiply, remainder),
+            Command::Neg => command::parse_logical_unary(UnaryOperator::Neg, remainder),
+            Command::Nop => Ok((remainder, Instruction::Nop)),
+            Command::Not => command::parse_logical_unary(UnaryOperator::Not, remainder),
+            Command::Pragma => command::parse_pragma(remainder),
+            Command::Pulse => command::parse_pulse(remainder, true),
+            Command::RawCapture => command::parse_raw_capture(remainder, true),
+            Command::Reset => command::parse_reset(remainder),
+            Command::SetFrequency => command::parse_set_frequency(remainder),
+            Command::SetPhase => command::parse_set_phase(remainder),
+            Command::SetScale => command::parse_set_scale(remainder),
+            Command::ShiftFrequency => command::parse_shift_frequency(remainder),
+            Command::ShiftPhase => command::parse_shift_phase(remainder),
+            Command::Store => command::parse_store(remainder),
+            Command::Sub => command::parse_arithmetic(ArithmeticOperator::Subtract, remainder),
+            Command::Xor => command::parse_logical_binary(BinaryOperator::Xor, remainder),
         }
+        .map_err(|err| {
+            nom::Err::Failure(
+                InternalParseError::from_kind(
+                    &input[..1],
+                    ParserErrorKind::InvalidCommand { command: *command },
+                )
+                .with_previous(extract_nom_err(err)),
+            )
+        }),
         Some((Token::NonBlocking, remainder)) => match super::split_first_token(remainder) {
             Some((Token::Command(command), remainder)) => match command {
                 Command::Pulse => command::parse_pulse(remainder, false),
@@ -164,10 +155,10 @@ mod tests {
     use crate::instruction::{
         Arithmetic, ArithmeticOperand, ArithmeticOperator, AttributeValue, BinaryLogic,
         BinaryOperand, BinaryOperator, Calibration, Capture, Comparison, ComparisonOperand,
-        ComparisonOperator, FrameDefinition, FrameIdentifier, Gate, GateDefinition,
-        GateSpecification, Instruction, Jump, JumpWhen, Label, MemoryReference, Move, Pulse, Qubit,
-        RawCapture, Reset, SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase,
-        UnaryLogic, UnaryOperator, Waveform, WaveformDefinition, WaveformInvocation,
+        ComparisonOperator, Convert, FrameDefinition, FrameIdentifier, Gate, GateDefinition,
+        GateSpecification, Include, Instruction, Jump, JumpWhen, Label, MemoryReference, Move,
+        Pulse, Qubit, RawCapture, Reset, SetFrequency, SetPhase, SetScale, ShiftFrequency,
+        ShiftPhase, UnaryLogic, UnaryOperator, Waveform, WaveformDefinition, WaveformInvocation,
     };
     use crate::parser::lexer::lex;
     use crate::{make_test, real, Program};
@@ -767,6 +758,33 @@ mod tests {
             ]),
         })]
     );
+
+    make_test!(
+        convert,
+        parse_instructions,
+        "CONVERT theta unadjusted-theta[1]",
+        vec![Instruction::Convert(Convert {
+            from: MemoryReference {
+                name: "unadjusted-theta".to_string(),
+                index: 1
+            },
+            to: MemoryReference {
+                name: "theta".to_string(),
+                index: 0
+            },
+        })]
+    );
+
+    make_test!(
+        include,
+        parse_instructions,
+        r#"INCLUDE "another/quil/file.quil""#,
+        vec![Instruction::Include(Include {
+            filename: "another/quil/file.quil".to_string()
+        })]
+    );
+
+    make_test!(nop, parse_instructions, r#"NOP"#, vec![Instruction::Nop]);
 
     #[test]
     fn parse_set_phase() {

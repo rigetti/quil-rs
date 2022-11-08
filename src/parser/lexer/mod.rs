@@ -77,7 +77,6 @@ pub enum Command {
     Neg,
     Nop,
     Not,
-    Or,
     Pragma,
     Pulse,
     RawCapture,
@@ -89,7 +88,6 @@ pub enum Command {
     ShiftPhase,
     Store,
     Sub,
-    Wait,
     Xor,
 }
 
@@ -198,7 +196,6 @@ fn recognize_command_or_identifier(identifier: String) -> Token {
         "DEFGATE" => Token::Command(DefGate),
         "ADD" => Token::Command(Add),
         "AND" => Token::Command(And),
-        "OR" => Token::Command(Or),
         "CONVERT" => Token::Command(Convert),
         "DIV" => Token::Command(Div),
         "EQ" => Token::Command(Eq),
@@ -223,7 +220,6 @@ fn recognize_command_or_identifier(identifier: String) -> Token {
         "JUMP-UNLESS" => Token::Command(JumpUnless),
         "JUMP" => Token::Command(Jump),
         "RESET" => Token::Command(Reset),
-        "WAIT" => Token::Command(Wait),
         "NOP" => Token::Command(Nop),
         "INCLUDE" => Token::Command(Include),
         "PRAGMA" => Token::Command(Pragma),

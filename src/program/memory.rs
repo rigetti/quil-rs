@@ -168,7 +168,6 @@ impl Instruction {
                     captures: merge_sets!(acc.captures, el_accesses.captures),
                 }
             }),
-            Instruction::Declaration(_) => Default::default(),
             Instruction::Delay(Delay { duration, .. }) => MemoryAccesses {
                 reads: set_from_memory_references!(duration.get_memory_references()),
                 ..Default::default()
@@ -180,8 +179,6 @@ impl Instruction {
                 ],
                 ..Default::default()
             },
-            Instruction::Fence(_) => Default::default(),
-            Instruction::FrameDefinition(_) => Default::default(),
             Instruction::Gate(Gate { parameters, .. }) => MemoryAccesses {
                 reads: set_from_memory_references!(parameters
                     .iter()
@@ -203,8 +200,6 @@ impl Instruction {
                     Default::default()
                 }
             }
-            Instruction::Halt => Default::default(),
-            Instruction::Jump(Jump { target: _ }) => Default::default(),
             Instruction::JumpWhen(JumpWhen {
                 target: _,
                 condition,
@@ -216,7 +211,6 @@ impl Instruction {
                 reads: set_from_memory_references!(vec![condition]),
                 ..Default::default()
             },
-            Instruction::Label(Label(_)) => Default::default(),
             Instruction::Load(Load {
                 destination,
                 source,
@@ -230,7 +224,6 @@ impl Instruction {
                 captures: set_from_optional_memory_reference!(target.as_ref()),
                 ..Default::default()
             },
-            Instruction::Pragma(_) => Default::default(),
             Instruction::Pulse(Pulse { waveform, .. }) => MemoryAccesses {
                 reads: set_from_memory_references![waveform.get_memory_references()],
                 ..Default::default()
@@ -244,15 +237,12 @@ impl Instruction {
                 captures: set_from_memory_references![vec![memory_reference]],
                 ..Default::default()
             },
-            Instruction::Reset(_) => Default::default(),
-            Instruction::SetFrequency(_) => Default::default(),
             Instruction::SetPhase(SetPhase { phase: expr, .. })
             | Instruction::SetScale(SetScale { scale: expr, .. })
             | Instruction::ShiftPhase(ShiftPhase { phase: expr, .. }) => MemoryAccesses {
                 reads: set_from_memory_references!(expr.get_memory_references()),
                 ..Default::default()
             },
-            Instruction::ShiftFrequency(_) => Default::default(),
             Instruction::Store(Store {
                 destination,
                 offset,
@@ -265,8 +255,21 @@ impl Instruction {
                 writes: set_from_reference_vec![vec![destination]],
                 ..Default::default()
             },
-            Instruction::SwapPhases(_) => Default::default(),
-            Instruction::WaveformDefinition(_) => Default::default(),
+            Instruction::Convert(_)
+            | Instruction::Declaration(_)
+            | Instruction::Fence(_)
+            | Instruction::FrameDefinition(_)
+            | Instruction::Halt
+            | Instruction::Include(_)
+            | Instruction::Jump(Jump { target: _ })
+            | Instruction::Label(Label(_))
+            | Instruction::Nop
+            | Instruction::Pragma(_)
+            | Instruction::Reset(_)
+            | Instruction::SetFrequency(_)
+            | Instruction::ShiftFrequency(_)
+            | Instruction::SwapPhases(_)
+            | Instruction::WaveformDefinition(_) => Default::default(),
         }
     }
 }

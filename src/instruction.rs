@@ -171,6 +171,12 @@ pub struct Calibration {
     pub qubits: Vec<Qubit>,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Convert {
+    pub from: MemoryReference,
+    pub to: MemoryReference,
+}
+
 #[derive(Clone, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
 pub struct FrameIdentifier {
     pub name: String,
@@ -181,6 +187,11 @@ impl fmt::Display for FrameIdentifier {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{} \"{}\"", format_qubits(&self.qubits), self.name)
     }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Include {
+    pub filename: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -549,41 +560,44 @@ pub struct JumpUnless {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Instruction {
-    Gate(Gate),
-    CircuitDefinition(CircuitDefinition),
-    GateDefinition(GateDefinition),
-    Declaration(Declaration),
-    Measurement(Measurement),
-    Reset(Reset),
+    Arithmetic(Arithmetic),
+    BinaryLogic(BinaryLogic),
     CalibrationDefinition(Calibration),
     Capture(Capture),
+    CircuitDefinition(CircuitDefinition),
+    Convert(Convert),
+    Comparison(Comparison),
+    Declaration(Declaration),
     Delay(Delay),
+    Exchange(Exchange),
     Fence(Fence),
     FrameDefinition(FrameDefinition),
+    Gate(Gate),
+    GateDefinition(GateDefinition),
+    Halt,
+    Include(Include),
+    Jump(Jump),
+    JumpUnless(JumpUnless),
+    JumpWhen(JumpWhen),
+    Label(Label),
+    Load(Load),
     MeasureCalibrationDefinition(MeasureCalibrationDefinition),
+    Measurement(Measurement),
+    Move(Move),
+    Nop,
     Pragma(Pragma),
     Pulse(Pulse),
     RawCapture(RawCapture),
+    Reset(Reset),
     SetFrequency(SetFrequency),
     SetPhase(SetPhase),
     SetScale(SetScale),
     ShiftFrequency(ShiftFrequency),
     ShiftPhase(ShiftPhase),
-    SwapPhases(SwapPhases),
-    WaveformDefinition(WaveformDefinition),
-    Arithmetic(Arithmetic),
-    Comparison(Comparison),
-    BinaryLogic(BinaryLogic),
-    UnaryLogic(UnaryLogic),
-    Halt,
-    Label(Label),
-    Move(Move),
-    Exchange(Exchange),
-    Load(Load),
     Store(Store),
-    Jump(Jump),
-    JumpWhen(JumpWhen),
-    JumpUnless(JumpUnless),
+    SwapPhases(SwapPhases),
+    UnaryLogic(UnaryLogic),
+    WaveformDefinition(WaveformDefinition),
 }
 
 #[derive(Clone, Debug)]
@@ -603,6 +617,7 @@ impl From<&Instruction> for InstructionRole {
             | Instruction::FrameDefinition(_)
             | Instruction::Gate(_)
             | Instruction::GateDefinition(_)
+            | Instruction::Include(_)
             | Instruction::Label(_)
             | Instruction::MeasureCalibrationDefinition(_)
             | Instruction::Measurement(_)
@@ -621,11 +636,13 @@ impl From<&Instruction> for InstructionRole {
             | Instruction::SwapPhases(_) => InstructionRole::RFControl,
             Instruction::Arithmetic(_)
             | Instruction::Comparison(_)
+            | Instruction::Convert(_)
             | Instruction::BinaryLogic(_)
             | Instruction::UnaryLogic(_)
             | Instruction::Move(_)
             | Instruction::Exchange(_)
             | Instruction::Load(_)
+            | Instruction::Nop
             | Instruction::Pragma(_)
             | Instruction::Store(_) => InstructionRole::ClassicalCompute,
             Instruction::Halt
@@ -748,6 +765,10 @@ impl fmt::Display for Instruction {
                 }
                 Ok(())
             }
+            Instruction::Convert(Convert { from, to }) => {
+                write!(f, "CONVERT {} {}", to, from)?;
+                Ok(())
+            }
             Instruction::Declaration(Declaration {
                 name,
                 size,
@@ -847,6 +868,10 @@ impl fmt::Display for Instruction {
                         )?;
                     }
                 }
+                Ok(())
+            }
+            Instruction::Include(Include { filename }) => {
+                write!(f, r#"INCLUDE {:?}"#, filename)?;
                 Ok(())
             }
             Instruction::MeasureCalibrationDefinition(MeasureCalibrationDefinition {
@@ -966,6 +991,7 @@ impl fmt::Display for Instruction {
                     .join(", ")
             ),
             Instruction::Halt => write!(f, "HALT"),
+            Instruction::Nop => write!(f, "NOP"),
             Instruction::Jump(Jump { target }) => write!(f, "JUMP @{}", target),
             Instruction::JumpUnless(JumpUnless { condition, target }) => {
                 write!(f, "JUMP-UNLESS @{} {}", target, condition)
@@ -1177,30 +1203,33 @@ impl Instruction {
                     FrameMatchCondition::Specific(frame_2),
                 ]))
             }
-            Instruction::Gate(_)
-            | Instruction::CircuitDefinition(_)
-            | Instruction::GateDefinition(_)
-            | Instruction::Declaration(_)
-            | Instruction::Measurement(_)
-            | Instruction::Reset(_)
-            | Instruction::CalibrationDefinition(_)
-            | Instruction::FrameDefinition(_)
-            | Instruction::MeasureCalibrationDefinition(_)
-            | Instruction::Pragma(_)
-            | Instruction::WaveformDefinition(_)
-            | Instruction::Arithmetic(_)
+            Instruction::Arithmetic(_)
             | Instruction::BinaryLogic(_)
-            | Instruction::UnaryLogic(_)
+            | Instruction::CalibrationDefinition(_)
+            | Instruction::CircuitDefinition(_)
             | Instruction::Comparison(_)
-            | Instruction::Halt
-            | Instruction::Label(_)
-            | Instruction::Move(_)
+            | Instruction::Convert(_)
+            | Instruction::Declaration(_)
             | Instruction::Exchange(_)
-            | Instruction::Load(_)
-            | Instruction::Store(_)
+            | Instruction::FrameDefinition(_)
+            | Instruction::Gate(_)
+            | Instruction::GateDefinition(_)
+            | Instruction::Halt
+            | Instruction::Include(_)
             | Instruction::Jump(_)
+            | Instruction::JumpUnless(_)
             | Instruction::JumpWhen(_)
-            | Instruction::JumpUnless(_) => None,
+            | Instruction::Label(_)
+            | Instruction::Load(_)
+            | Instruction::MeasureCalibrationDefinition(_)
+            | Instruction::Measurement(_)
+            | Instruction::Move(_)
+            | Instruction::Nop
+            | Instruction::Pragma(_)
+            | Instruction::Reset(_)
+            | Instruction::Store(_)
+            | Instruction::UnaryLogic(_)
+            | Instruction::WaveformDefinition(_) => None,
         }
     }
 
