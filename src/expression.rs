@@ -20,6 +20,7 @@ use std::f64::consts::PI;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::num::NonZeroI32;
+use std::ops::{Add, Div, Mul, Sub};
 use std::str::FromStr;
 
 #[cfg(test)]
@@ -150,6 +151,26 @@ impl PartialEq for Expression {
 }
 
 impl Eq for Expression {}
+
+macro_rules! impl_expr_op {
+    ($name: ident, $function: ident, $operator: ident) => {
+        impl $name for Expression {
+            type Output = Self;
+            fn $function(self, other: Self) -> Self {
+                Expression::Infix {
+                    left: Box::new(self),
+                    operator: InfixOperator::$operator,
+                    right: Box::new(other),
+                }
+            }
+        }
+    };
+}
+
+impl_expr_op!(Add, add, Plus);
+impl_expr_op!(Sub, sub, Minus);
+impl_expr_op!(Mul, mul, Star);
+impl_expr_op!(Div, div, Slash);
 
 /// Compute the result of an infix expression where both operands are complex.
 fn calculate_infix(
@@ -819,6 +840,28 @@ mod tests {
             assert!(parsed.is_ok());
             assert_eq!(Expression::Number(value), parsed.unwrap().into_simplified());
         }
+
+
+        #[test]
+        fn addition_works_as_expected(left in arb_expr(), right in arb_expr()) {
+            prop_assert_eq!(left.clone() + right.clone(), Expression::Infix { left: Box::new(left), operator: InfixOperator::Plus, right: Box::new(right) });
+        }
+
+        #[test]
+        fn subtraction_works_as_expected(left in arb_expr(), right in arb_expr()) {
+            prop_assert_eq!(left.clone() - right.clone(), Expression::Infix { left: Box::new(left), operator: InfixOperator::Minus, right: Box::new(right) });
+        }
+
+        #[test]
+        fn multiplication_works_as_expected(left in arb_expr(), right in arb_expr()) {
+            prop_assert_eq!(left.clone() * right.clone(), Expression::Infix { left: Box::new(left), operator: InfixOperator::Star, right: Box::new(right) });
+        }
+
+        #[test]
+        fn division_works_as_expected(left in arb_expr(), right in arb_expr()) {
+            prop_assert_eq!(left.clone() / right.clone(), Expression::Infix { left: Box::new(left), operator: InfixOperator::Slash, right: Box::new(right) });
+        }
+
 
     }
 
