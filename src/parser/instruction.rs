@@ -92,10 +92,6 @@ pub(crate) fn parse_instruction(input: ParserInput) -> InternalParserResult<Inst
             Command::Store => command::parse_store(remainder),
             Command::Sub => command::parse_arithmetic(ArithmeticOperator::Subtract, remainder),
             Command::Xor => command::parse_logical_binary(BinaryOperator::Xor, remainder),
-            other => Err(nom::Err::Failure(InternalParseError::from_kind(
-                &input[..1],
-                ParserErrorKind::UnsupportedInstruction(*other),
-            ))),
         }
         .map_err(|err| {
             nom::Err::Failure(
