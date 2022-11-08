@@ -157,8 +157,8 @@ pub(crate) fn parse_capture(
 
 /// Parse the contents of a `CONVERT` instruction.
 pub(crate) fn parse_convert<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Instruction> {
-    let (input, to) = token!(Identifier(v))(input)?;
-    let (input, from) = token!(Identifier(v))(input)?;
+    let (input, to) = parse_memory_reference(input)?;
+    let (input, from) = parse_memory_reference(input)?;
     Ok((input, Instruction::Convert(Convert { from, to })))
 }
 

@@ -173,8 +173,8 @@ pub struct Calibration {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Convert {
-    pub from: String,
-    pub to: String,
+    pub from: MemoryReference,
+    pub to: MemoryReference,
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
@@ -871,7 +871,7 @@ impl fmt::Display for Instruction {
                 Ok(())
             }
             Instruction::Include(Include { filename }) => {
-                write!(f, r#"INCLUDE "{}""#, filename)?;
+                write!(f, r#"INCLUDE {:?}"#, filename)?;
                 Ok(())
             }
             Instruction::MeasureCalibrationDefinition(MeasureCalibrationDefinition {
