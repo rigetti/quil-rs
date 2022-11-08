@@ -784,6 +784,8 @@ mod tests {
         })]
     );
 
+    make_test!(nop, parse_instructions, r#"NOP"#, vec![Instruction::Nop]);
+
     #[test]
     fn parse_set_phase() {
         let input = LocatedSpan::new(r#"SET-PHASE 0 "rf" 1.0; SET-PHASE 0 1 "rf" theta"#);
