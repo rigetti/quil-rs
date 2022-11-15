@@ -146,10 +146,8 @@ impl Program {
         instruction: &'a Instruction,
         include_blocked: bool,
     ) -> Option<HashSet<&'a FrameIdentifier>> {
-        let qubits_used_in_program = self.get_used_qubits();
-
         instruction
-            .get_frame_match_condition(include_blocked, qubits_used_in_program)
+            .get_frame_match_condition(include_blocked)
             .map(|condition| self.frames.get_matching_keys(condition))
     }
 
