@@ -519,6 +519,12 @@ DEFCAL MEASURE 0 addr:
 DEFCAL MEASURE 1 addr:
     CAPTURE 1 \"ro_rx\" custom addr
 
+DEFFRAME 0 \"ro_rx\":
+    ATTRIBUTE: \"value\"
+
+DEFFRAME 1 \"ro_rx\":
+    ATTRIBUTE: \"other\"
+
 DEFWAVEFORM custom:
     0.0, 1.0
 
@@ -531,6 +537,9 @@ MEASURE 0 ro
 
         let expected = "
 DECLARE ro BIT
+
+DEFFRAME 0 \"ro_rx\":
+    ATTRIBUTE: \"value\"
 
 DEFWAVEFORM custom:
     0.0, 1.0
