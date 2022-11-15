@@ -1233,6 +1233,18 @@ impl Instruction {
         }
     }
 
+    /// Return the waveform _directly_ invoked by the instruction, if any.
+    ///
+    /// Note: this does not expand calibrations or other instructions which may
+    /// indirectly cause a waveform to be invoked.
+    pub(crate) fn get_waveform_invocation(&self) -> Option<&WaveformInvocation> {
+        match self {
+            Instruction::Capture(Capture { waveform, .. }) => Some(waveform),
+            Instruction::Pulse(Pulse { waveform, .. }) => Some(waveform),
+            _ => None,
+        }
+    }
+
     #[cfg(test)]
     /// Parse a single instruction from an input string. Returns an error if the input fails to parse,
     /// or if there is input left over after parsing.

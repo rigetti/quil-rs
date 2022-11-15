@@ -87,6 +87,19 @@ impl FrameSet {
         self.frames.insert(identifier, attributes);
     }
 
+    /// Return a new [FrameSet] which describes only the given [FrameIdentifier]s.
+    pub fn intersection(&self, identifiers: &HashSet<&FrameIdentifier>) -> Self {
+        let mut new_frameset = Self::new();
+
+        for (identifier, definition) in &self.frames {
+            if identifiers.contains(&identifier) {
+                new_frameset.insert(identifier.clone(), definition.clone())
+            }
+        }
+
+        new_frameset
+    }
+
     /// Iterate through the contained frames.
     pub fn iter(&self) -> std::collections::hash_map::Iter<'_, FrameIdentifier, FrameAttributes> {
         self.frames.iter()
