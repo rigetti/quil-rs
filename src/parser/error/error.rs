@@ -43,13 +43,13 @@ where
     column: usize,
     snippet: String,
     kind: ErrorKind<E>,
-    previous: Option<Box<dyn std::error::Error + 'static + Send>>,
+    previous: Option<Box<dyn std::error::Error + 'static + Send + Sync>>,
 }
 
 impl<I, E> From<InternalError<I, E>> for Error<E>
 where
     I: ErrorInput,
-    E: std::error::Error + Send + 'static,
+    E: std::error::Error + Send + Sync + 'static,
 {
     fn from(internal: InternalError<I, E>) -> Self {
         let mut new = Self::internal_new(internal.input, internal.error);
@@ -81,7 +81,7 @@ where
 
 impl<E> Error<E>
 where
-    E: std::error::Error + Send + 'static,
+    E: std::error::Error + Send + Sync + 'static,
 {
     pub(crate) fn from_nom_internal_err<I>(error: nom::Err<InternalError<I, E>>) -> nom::Err<Self>
     where
@@ -93,7 +93,7 @@ where
     /// Attach a previous error to this one.
     pub(crate) fn with_previous<E2>(mut self, previous: E2) -> Self
     where
-        E2: std::error::Error + 'static + Send,
+        E2: std::error::Error + 'static + Send + Sync,
     {
         self.previous = Some(Box::new(previous));
         self
@@ -169,7 +169,7 @@ impl<I, E> ParseError<I> for Error<E>
 where
     I: ErrorInput,
 
-    E: std::error::Error + Send + 'static,
+    E: std::error::Error + Send + Sync + 'static,
 {
     fn from_error_kind(input: I, kind: nom::error::ErrorKind) -> Self {
         let nom_err = nom::error::Error::new(input, kind);
@@ -186,7 +186,7 @@ where
 impl<I, E> nom::error::FromExternalError<I, Self> for Error<E>
 where
     I: ErrorInput,
-    E: std::error::Error + Send,
+    E: std::error::Error + Send + Sync,
 {
     fn from_external_error(_input: I, _kind: nom::error::ErrorKind, error: Self) -> Self {
         error
@@ -196,7 +196,7 @@ where
 impl<I, E> nom::error::FromExternalError<I, InternalError<I, E>> for Error<E>
 where
     I: ErrorInput,
-    E: std::error::Error + Send + 'static,
+    E: std::error::Error + Send + Sync + 'static,
 {
     fn from_external_error(
         _input: I,
