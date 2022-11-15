@@ -122,6 +122,15 @@ impl Program {
         Ok(new_program)
     }
 
+    /// Build a program from a list of instructions
+    pub fn from_instructions(instructions: Vec<Instruction>) -> Self {
+        let mut program = Self::default();
+        for instruction in instructions {
+            program.add_instruction(instruction);
+        }
+        program
+    }
+
     /// Return the frames which are either "used" or "blocked" by the given instruction.
     ///
     /// An instruction "uses" a frame if it plays on that frame; it "blocks" a frame
@@ -137,8 +146,10 @@ impl Program {
         instruction: &'a Instruction,
         include_blocked: bool,
     ) -> Option<HashSet<&'a FrameIdentifier>> {
+        let qubits_used_in_program = self.get_used_qubits();
+
         instruction
-            .get_frame_match_condition(include_blocked)
+            .get_frame_match_condition(include_blocked, qubits_used_in_program)
             .map(|condition| self.frames.get_matching_keys(condition))
     }
 
@@ -155,9 +166,46 @@ impl Program {
                 },
                 Instruction::Delay(delay) => delay.qubits.clone(),
                 Instruction::Fence(fence) => fence.qubits.clone(),
+                Instruction::Capture(capture) => capture.frame.qubits.clone(),
+                Instruction::Pulse(pulse) => pulse.frame.qubits.clone(),
+                Instruction::RawCapture(raw_capture) => raw_capture.frame.qubits.clone(),
                 _ => vec![],
             })
             .collect::<HashSet<_>>()
+    }
+
+    /// Simplify this program into a new [Program] which contains only instructions
+    /// and definitions which are executed; effectively, perform dead code removal.
+    ///
+    /// Removes:
+    /// - All calibrations, following calibration expansion
+    /// - Frame definitions which are not used by any instruction such as `PULSE` or `CAPTURE`
+    /// - Waveform definitions which are not used by any instruction
+    ///
+    /// When a valid program is simplified, it remains valid.
+    pub fn into_simplified(&self) -> Result<Self> {
+        let mut expanded_program = self.expand_calibrations()?;
+        expanded_program.calibrations = CalibrationSet::default();
+
+        let mut frames_used: HashSet<&FrameIdentifier> = HashSet::new();
+        let mut waveforms_used: HashSet<&String> = HashSet::new();
+
+        for instruction in &expanded_program.instructions {
+            if let Some(frames) = expanded_program.get_frames_for_instruction(instruction, false) {
+                frames_used.extend(frames.into_iter())
+            }
+
+            if let Some(waveform) = instruction.get_waveform_invocation() {
+                waveforms_used.insert(&waveform.name);
+            }
+        }
+
+        expanded_program.frames = self.frames.intersection(&frames_used);
+        expanded_program
+            .waveforms
+            .retain(|name, _definition| waveforms_used.contains(name));
+
+        Ok(expanded_program)
     }
 
     pub fn to_instructions(&self, include_headers: bool) -> Vec<Instruction> {
@@ -460,6 +508,38 @@ DEFFRAME 0 1 \"2q\":
                 instruction, blocked_frames, expected_blocked_frames
             );
         }
+    }
+
+    #[test]
+    fn into_simplified() {
+        let input = "
+DEFCAL MEASURE 0 addr:
+    CAPTURE 0 \"ro_rx\" custom addr
+
+DEFCAL MEASURE 1 addr:
+    CAPTURE 1 \"ro_rx\" custom addr
+
+DEFWAVEFORM custom:
+    0.0, 1.0
+
+DEFWAVEFORM other_custom:
+    2.0, 3.0
+
+DECLARE ro BIT
+MEASURE 0 ro
+";
+
+        let expected = "
+DECLARE ro BIT
+
+DEFWAVEFORM custom:
+    0.0, 1.0
+
+CAPTURE 0 \"ro_rx\" custom ro
+";
+        let program = Program::from_str(input).map_err(|e| e.to_string()).unwrap();
+        let program = program.into_simplified().unwrap();
+        assert_eq!(program, Program::from_str(expected).unwrap());
     }
 
     #[test]
