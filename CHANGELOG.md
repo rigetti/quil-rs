@@ -1,3 +1,14 @@
+## 0.14.2-rc.0
+
+### Features
+
+- Support Expression arithmetic operations (#126)
+
+### Fixes
+
+- make dynamic error Sync as well (#131)
+- support escaped double quotes and backslashes in strings (#120)
+
 ## 0.10.0-rc.1
 
 ### Breaking Changes
