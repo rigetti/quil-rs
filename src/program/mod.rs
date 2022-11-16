@@ -220,6 +220,14 @@ impl FromStr for Program {
     }
 }
 
+impl From<Vec<Instruction>> for Program {
+    fn from(instructions: Vec<Instruction>) -> Self {
+        let mut p = Program::new();
+        p.add_instructions(instructions);
+        p
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::{collections::HashSet, str::FromStr};
@@ -498,5 +506,12 @@ I 0
         let instrs = vec![Instruction::Nop, Instruction::Nop];
         p.add_instructions(instrs.clone());
         assert_eq!(p.instructions, instrs);
+    }
+
+    #[test]
+    fn test_from_vec_instructions() {
+        let expected: Program = "NOP\nNOP".parse().expect("Should parse NOPs");
+        let p: Program = expected.instructions.clone().into();
+        assert_eq!(expected, p);
     }
 }
