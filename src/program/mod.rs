@@ -94,6 +94,12 @@ impl Program {
         }
     }
 
+    pub fn add_instructions(&mut self, instructions: Vec<Instruction>) {
+        instructions
+            .into_iter()
+            .for_each(|i| self.add_instruction(i));
+    }
+
     /// Expand any instructions in the program which have a matching calibration, leaving the others
     /// unchanged. Recurses though each instruction while ensuring there is no cycle in the expansion
     /// graph (i.e. no calibration expands directly or indirectly into itself)
@@ -484,5 +490,13 @@ I 0
             .collect::<HashSet<_>>();
         let actual = program.get_used_qubits();
         assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_add_instructions() {
+        let mut p = Program::new();
+        let instrs = vec![Instruction::Nop, Instruction::Nop];
+        p.add_instructions(instrs.clone());
+        assert_eq!(p.instructions, instrs);
     }
 }
