@@ -20,6 +20,9 @@ use std::f64::consts::PI;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::num::NonZeroI32;
+use std::ops::{
+    Add, AddAssign, BitXor, BitXorAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign,
+};
 use std::str::FromStr;
 
 #[cfg(test)]
@@ -150,6 +153,33 @@ impl PartialEq for Expression {
 }
 
 impl Eq for Expression {}
+
+macro_rules! impl_expr_op {
+    ($name:ident, $name_assign:ident, $function:ident, $function_assign:ident, $operator:ident) => {
+        impl $name for Expression {
+            type Output = Self;
+            fn $function(self, other: Self) -> Self {
+                Expression::Infix {
+                    left: Box::new(self),
+                    operator: InfixOperator::$operator,
+                    right: Box::new(other),
+                }
+            }
+        }
+        impl $name_assign for Expression {
+            fn $function_assign(&mut self, other: Self) {
+                let result = self.clone().$function(other);
+                *self = result;
+            }
+        }
+    };
+}
+
+impl_expr_op!(BitXor, BitXorAssign, bitxor, bitxor_assign, Caret);
+impl_expr_op!(Add, AddAssign, add, add_assign, Plus);
+impl_expr_op!(Sub, SubAssign, sub, sub_assign, Minus);
+impl_expr_op!(Mul, MulAssign, mul, mul_assign, Star);
+impl_expr_op!(Div, DivAssign, div, div_assign, Slash);
 
 /// Compute the result of an infix expression where both operands are complex.
 fn calculate_infix(
@@ -819,6 +849,52 @@ mod tests {
             assert!(parsed.is_ok());
             assert_eq!(Expression::Number(value), parsed.unwrap().into_simplified());
         }
+
+        #[test]
+        fn exponentiation_works_as_expected(left in arb_expr(), right in arb_expr()) {
+            let expected = Expression::Infix { left: Box::new(left.clone()), operator: InfixOperator::Caret, right: Box::new(right.clone()) };
+            prop_assert_eq!(left.clone() ^ right.clone(), expected.clone());
+            let mut x = left.clone();
+            x ^= right.clone();
+            prop_assert_eq!(x, expected);
+        }
+
+        #[test]
+        fn addition_works_as_expected(left in arb_expr(), right in arb_expr()) {
+            let expected = Expression::Infix { left: Box::new(left.clone()), operator: InfixOperator::Plus, right: Box::new(right.clone()) };
+            prop_assert_eq!(left.clone() + right.clone(), expected.clone());
+            let mut x = left.clone();
+            x += right.clone();
+            prop_assert_eq!(x, expected);
+        }
+
+        #[test]
+        fn subtraction_works_as_expected(left in arb_expr(), right in arb_expr()) {
+            let expected = Expression::Infix { left: Box::new(left.clone()), operator: InfixOperator::Minus, right: Box::new(right.clone()) };
+            prop_assert_eq!(left.clone() - right.clone(), expected.clone());
+            let mut x = left.clone();
+            x -= right.clone();
+            prop_assert_eq!(x, expected);
+        }
+
+        #[test]
+        fn multiplication_works_as_expected(left in arb_expr(), right in arb_expr()) {
+            let expected = Expression::Infix { left: Box::new(left.clone()), operator: InfixOperator::Star, right: Box::new(right.clone()) };
+            prop_assert_eq!(left.clone() * right.clone(), expected.clone());
+            let mut x = left.clone();
+            x *= right.clone();
+            prop_assert_eq!(x, expected);
+        }
+
+        #[test]
+        fn division_works_as_expected(left in arb_expr(), right in arb_expr()) {
+            let expected = Expression::Infix { left: Box::new(left.clone()), operator: InfixOperator::Slash, right: Box::new(right.clone()) };
+            prop_assert_eq!(left.clone() / right.clone(), expected.clone());
+            let mut x = left.clone();
+            x /= right.clone();
+            prop_assert_eq!(x, expected);
+        }
+
 
     }
 
