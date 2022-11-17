@@ -200,16 +200,6 @@ pub struct InstructionBlock {
     pub terminator: BlockTerminator,
 }
 
-impl Default for InstructionBlock {
-    fn default() -> Self {
-        Self {
-            instructions: Default::default(),
-            graph: Default::default(),
-            terminator: BlockTerminator::Continue,
-        }
-    }
-}
-
 /// PreviousNodes is a structure which helps maintain ordering among instructions which operate on a given frame.
 /// It works similarly to a multiple-reader-single-writer queue, where an instruction which "uses" a frame is like
 /// a writer and an instruction which blocks that frame is like a reader. Multiple instructions may concurrently

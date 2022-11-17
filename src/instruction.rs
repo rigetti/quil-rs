@@ -14,8 +14,6 @@
 
 use nom_locate::LocatedSpan;
 use serde::{Deserialize, Serialize};
-use std::borrow::Cow;
-use std::collections::HashSet;
 use std::str::FromStr;
 use std::{collections::HashMap, fmt};
 
@@ -1160,7 +1158,6 @@ impl Instruction {
     pub(crate) fn get_frame_match_condition(
         &self,
         include_blocked: bool,
-        qubits_available: HashSet<Qubit>,
     ) -> Option<FrameMatchCondition> {
         match self {
             Instruction::Pulse(Pulse {
@@ -1172,7 +1169,7 @@ impl Instruction {
             | Instruction::RawCapture(RawCapture {
                 blocking, frame, ..
             }) => Some(if *blocking && include_blocked {
-                FrameMatchCondition::AnyOfQubits(Cow::Borrowed(&frame.qubits))
+                FrameMatchCondition::AnyOfQubits(&frame.qubits)
             } else {
                 FrameMatchCondition::Specific(frame)
             }),
@@ -1181,35 +1178,18 @@ impl Instruction {
                 qubits,
                 ..
             }) => Some(if frame_names.is_empty() {
-                FrameMatchCondition::ExactQubits(Cow::Borrowed(qubits))
+                FrameMatchCondition::ExactQubits(qubits)
             } else {
                 FrameMatchCondition::And(vec![
-                    FrameMatchCondition::ExactQubits(Cow::Borrowed(qubits)),
+                    FrameMatchCondition::ExactQubits(qubits),
                     FrameMatchCondition::AnyOfNames(frame_names),
                 ])
             }),
             Instruction::Fence(Fence { qubits }) => Some(if qubits.is_empty() {
                 FrameMatchCondition::All
             } else {
-                FrameMatchCondition::AnyOfQubits(Cow::Borrowed(qubits))
+                FrameMatchCondition::AnyOfQubits(qubits)
             }),
-            Instruction::Reset(Reset { qubit }) => {
-                let qubits = match qubit {
-                    Some(qubit) => {
-                        let mut set = HashSet::new();
-                        set.insert(qubit.clone());
-                        set
-                    }
-                    None => qubits_available,
-                };
-                let qubits = qubits.into_iter().collect();
-
-                if include_blocked {
-                    Some(FrameMatchCondition::AnyOfQubits(qubits))
-                } else {
-                    Some(FrameMatchCondition::ExactQubits(qubits))
-                }
-            }
             Instruction::SetFrequency(SetFrequency { frame, .. })
             | Instruction::SetPhase(SetPhase { frame, .. })
             | Instruction::SetScale(SetScale { frame, .. })
@@ -1246,6 +1226,7 @@ impl Instruction {
             | Instruction::Move(_)
             | Instruction::Nop
             | Instruction::Pragma(_)
+            | Instruction::Reset(_)
             | Instruction::Store(_)
             | Instruction::UnaryLogic(_)
             | Instruction::WaveformDefinition(_) => None,
