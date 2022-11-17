@@ -183,6 +183,9 @@ impl Program {
     /// When a valid program is simplified, it remains valid.
     pub fn into_simplified(&self) -> Result<Self> {
         let mut expanded_program = self.expand_calibrations()?;
+        // Remove calibrations such that the resulting program contains
+        // only instructions. Calibrations have already been expanded, so
+        // technically there is no need to keep them around anyway.
         expanded_program.calibrations = CalibrationSet::default();
 
         let mut frames_used: HashSet<&FrameIdentifier> = HashSet::new();
