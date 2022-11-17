@@ -172,7 +172,7 @@ impl Program {
             .collect::<HashSet<_>>()
     }
 
-    /// Simplify this program into a new [Program] which contains only instructions
+    /// Simplify this program into a new [`Program`] which contains only instructions
     /// and definitions which are executed; effectively, perform dead code removal.
     ///
     /// Removes:
