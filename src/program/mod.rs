@@ -190,7 +190,7 @@ impl Program {
 
         for instruction in &expanded_program.instructions {
             if let Some(frames) = expanded_program.get_frames_for_instruction(instruction, false) {
-                frames_used.extend(frames.into_iter())
+                frames_used.extend(frames)
             }
 
             if let Some(waveform) = instruction.get_waveform_invocation() {
