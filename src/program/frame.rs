@@ -12,7 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::{HashMap, HashSet};
+use std::{
+    borrow::Cow,
+    collections::{HashMap, HashSet},
+};
 
 use crate::instruction::{FrameAttributes, FrameDefinition, FrameIdentifier, Instruction, Qubit};
 
@@ -137,10 +140,10 @@ pub(crate) enum FrameMatchCondition<'a> {
     AnyOfNames(&'a [String]),
 
     /// Match all frames which contain any of these qubits
-    AnyOfQubits(&'a [Qubit]),
+    AnyOfQubits(Cow<'a, [Qubit]>),
 
     /// Match all frames which contain exactly these qubits
-    ExactQubits(&'a [Qubit]),
+    ExactQubits(Cow<'a, [Qubit]>),
 
     /// Return this specific frame, if present in the set
     Specific(&'a FrameIdentifier),
