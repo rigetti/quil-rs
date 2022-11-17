@@ -19,6 +19,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GITHUB_TOKEN: ${{ secrets.PAT }}
+      # Knope uses KNOPE_PRELEASE_LABEL, so use this instead to avoid unintended behavior
+      PRERELEASE_LABEL: rc
     steps:
     - uses: actions/checkout@v3
       with:
@@ -27,13 +29,13 @@ jobs:
     - name: Install Knope
       uses: knope-dev/action@v1
       with:
-        version: 0.6.1 # Test before updating, breaking changes likely: https://github.com/knope-dev/action#install-latest-version
+        version: 0.6.3 # Test before updating, breaking changes likely: https://github.com/knope-dev/action#install-latest-version
     - run: |
         git config --global user.name "${{ github.triggering_actor }}"
         git config --global user.email "${{ github.triggering_actor}}@users.noreply.github.com"
     - name: Prepare Prerelease
-      run: knope prerelease
-      if: github.event_name == 'push'
+      run: knope release --prerelease-label "${PRERELEASE_LABEL}"
+      if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.type == 'prerelease')
     - name: Prepare Release
-      run: knope ${{ inputs.type }}
-      if: github.event_name == 'workflow_dispatch'
+      run: knope release
+      if: github.event_name == 'workflow_dispatch' && inputs.type == 'release'
