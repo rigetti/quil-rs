@@ -289,16 +289,36 @@ impl fmt::Display for WaveformInvocation {
 
         key_value_pairs.sort_by(|(k1, _), (k2, _)| k1.cmp(k2));
 
-        write!(
-            f,
-            "{}({})",
-            self.name,
-            key_value_pairs
-                .iter()
-                .map(|(k, v)| format!("{}: {}", k, v))
-                .collect::<Vec<String>>()
-                .join(", ")
-        )
+        if key_value_pairs.is_empty() {
+            write!(f, "{}", self.name,)
+        } else {
+            write!(
+                f,
+                "{}({})",
+                self.name,
+                key_value_pairs
+                    .iter()
+                    .map(|(k, v)| format!("{}: {}", k, v))
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            )
+        }
+    }
+}
+
+#[cfg(test)]
+mod waveform_invocation_tests {
+    use std::collections::HashMap;
+
+    use crate::instruction::WaveformInvocation;
+
+    #[test]
+    fn format_no_parameters() {
+        let wfi = WaveformInvocation {
+            name: "CZ".into(),
+            parameters: HashMap::new(),
+        };
+        assert_eq!(format!("{}", wfi), "CZ".to_string());
     }
 }
 
