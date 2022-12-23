@@ -2,8 +2,12 @@ use pyo3::{create_exception, exceptions::PyRuntimeError, prelude::*, types::PySt
 use quil_rs::Program;
 use rigetti_pyo3::{create_init_submodule, impl_repr, py_wrap_struct, PyWrapper, ToPython};
 
+pub mod instruction;
+
 create_exception!(quil, ParseError, PyRuntimeError);
 
+// may need to define constructors "by hand", instead of imported macro
+// gives full control
 py_wrap_struct! {
     PyProgram(Program) as "Program" {
         py -> rs {
@@ -20,21 +24,6 @@ py_wrap_struct! {
         }
     }
 }
-
-// py_wrap_struct! {
-//     PyInstruction(Instruction) as "Instruction" {
-//         py -> rs {
-//             string: PyString => Instruction {
-//                 Instruction
-//             }
-//
-//         },
-//         rs -> py {
-//             instruction: Instruction => Py<PyString> { instruction.to_string().to_python(py) }
-//         }
-//     }
-// }
-
 impl_repr!(PyProgram);
 
 #[pymethods]

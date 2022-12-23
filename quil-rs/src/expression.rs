@@ -46,10 +46,7 @@ pub enum EvaluationError {
 #[derive(Clone, Debug)]
 pub enum Expression {
     Address(MemoryReference),
-    FunctionCall {
-        function: ExpressionFunction,
-        expression: Box<Expression>,
-    },
+    FunctionCall(FunctionCallExpression),
     Infix {
         left: Box<Expression>,
         operator: InfixOperator,
@@ -62,6 +59,12 @@ pub enum Expression {
         expression: Box<Expression>,
     },
     Variable(String),
+}
+
+#[derive(Clone, Debug)]
+pub struct FunctionCallExpression {
+    pub function: ExpressionFunction,
+    pub expression: Box<Expression>,
 }
 
 /// Hash value helper: turn a hashable thing into a u64.
@@ -83,13 +86,10 @@ impl Hash for Expression {
                 "Address".hash(state);
                 m.hash(state);
             }
-            FunctionCall {
-                function,
-                expression,
-            } => {
+            FunctionCall(fc) => {
                 "FunctionCall".hash(state);
-                function.hash(state);
-                expression.hash(state);
+                fc.function.hash(state);
+                fc.expression.hash(state);
             }
             Infix {
                 left,
@@ -237,13 +237,10 @@ impl Expression {
         use Expression::*;
 
         match self {
-            FunctionCall {
-                function,
-                expression,
-            } => {
-                expression.simplify();
-                if let Number(number) = expression.as_ref() {
-                    *self = Number(calculate_function(function, number));
+            FunctionCall(fc) => {
+                fc.expression.simplify();
+                if let Number(number) = fc.expression.as_ref() {
+                    *self = Number(calculate_function(&fc.function, number));
                 }
             }
             Infix {
@@ -327,12 +324,9 @@ impl Expression {
         use Expression::*;
 
         match self {
-            FunctionCall {
-                function,
-                expression,
-            } => {
-                let evaluated = expression.evaluate(variables, memory_references)?;
-                Ok(calculate_function(function, &evaluated))
+            FunctionCall(fc) => {
+                let evaluated = fc.expression.evaluate(variables, memory_references)?;
+                Ok(calculate_function(&fc.function, &evaluated))
             }
             Infix {
                 left,
@@ -395,13 +389,10 @@ impl Expression {
         use Expression::*;
 
         match self {
-            FunctionCall {
-                function,
-                expression,
-            } => FunctionCall {
-                function,
-                expression: expression.substitute_variables(variable_values).into(),
-            },
+            FunctionCall(fc) => Expression::FunctionCall(FunctionCallExpression {
+                function: fc.function,
+                expression: fc.expression.substitute_variables(variable_values).into(),
+            }),
             Infix {
                 left,
                 operator,
@@ -506,10 +497,7 @@ impl fmt::Display for Expression {
         use Expression::*;
         match self {
             Address(memory_reference) => write!(f, "{}", memory_reference),
-            FunctionCall {
-                function,
-                expression,
-            } => write!(f, "{}({})", function, expression),
+            FunctionCall(fc) => write!(f, "{}({})", fc.function, fc.expression),
             Infix {
                 left,
                 operator,
@@ -674,10 +662,10 @@ mod tests {
                 evaluated: Ok(real!(110f64)),
             },
             TestCase {
-                expression: Expression::FunctionCall {
+                expression: Expression::FunctionCall(FunctionCallExpression {
                     function: ExpressionFunction::Sine,
                     expression: Box::new(Expression::Number(real!(PI / 2f64))),
-                },
+                }),
                 variables: &variables,
                 memory_references: &empty_memory,
                 simplified: Number(real!(1f64)),
@@ -721,10 +709,10 @@ mod tests {
             |expr| {
                 prop_oneof![
                     (any::<ExpressionFunction>(), expr.clone()).prop_map(|(function, e)| {
-                        FunctionCall {
+                        Expression::FunctionCall(FunctionCallExpression {
                             function,
                             expression: Box::new(e),
-                        }
+                        })
                     }),
                     (expr.clone(), any::<InfixOperator>(), expr.clone()).prop_map(
                         |(l, operator, r)| Infix {

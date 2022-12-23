@@ -14,6 +14,7 @@
 
 use nom::combinator::opt;
 
+use crate::expression::FunctionCallExpression;
 use crate::parser::InternalParserResult;
 use crate::{
     expected_token,
@@ -132,10 +133,10 @@ fn parse_function_call<'a>(
     let (input, _) = token!(RParenthesis)(input)?;
     Ok((
         input,
-        Expression::FunctionCall {
+        Expression::FunctionCall(FunctionCallExpression {
             function,
             expression: Box::new(expression),
-        },
+        }),
     ))
 }
 
@@ -287,23 +288,23 @@ mod tests {
         function_call,
         parse_expression,
         "sin(1)",
-        Expression::FunctionCall {
+        Expression::FunctionCall(FunctionCallExpression {
             function: ExpressionFunction::Sine,
             expression: Box::new(Expression::Number(real!(1f64))),
-        }
+        })
     );
 
     test!(
         nested_function_call,
         parse_expression,
         "sin(sin(1))",
-        Expression::FunctionCall {
+        Expression::FunctionCall(FunctionCallExpression {
             function: ExpressionFunction::Sine,
-            expression: Box::new(Expression::FunctionCall {
+            expression: Box::new(Expression::FunctionCall(FunctionCallExpression {
                 function: ExpressionFunction::Sine,
                 expression: Box::new(Expression::Number(real!(1f64))),
-            }),
-        }
+            })),
+        })
     );
 
     test!(
@@ -327,14 +328,14 @@ mod tests {
                 expression: Box::new(Expression::Number(imag!(1f64))),
             }),
             operator: InfixOperator::Star,
-            right: Box::new(Expression::FunctionCall {
+            right: Box::new(Expression::FunctionCall(FunctionCallExpression {
                 function: ExpressionFunction::Sine,
                 expression: Box::new(Expression::Infix {
                     left: Box::new(Expression::Variable("theta".to_owned())),
                     operator: InfixOperator::Slash,
                     right: Box::new(Expression::Number(real!(2f64))),
                 }),
-            }),
+            })),
         }
     );
 
@@ -394,10 +395,10 @@ mod tests {
             ),
             (
                 "(((cos(((pi))))))",
-                Expression::FunctionCall {
+                Expression::FunctionCall(FunctionCallExpression {
                     function: ExpressionFunction::Cosine,
                     expression: Box::new(Expression::PiConstant),
-                },
+                }),
             ),
         ];
 

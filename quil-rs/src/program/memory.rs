@@ -14,7 +14,7 @@
 
 use std::collections::HashSet;
 
-use crate::expression::Expression;
+use crate::expression::{Expression, FunctionCallExpression};
 use crate::instruction::{
     Arithmetic, ArithmeticOperand, BinaryLogic, BinaryOperand, Capture, CircuitDefinition,
     Comparison, ComparisonOperand, Delay, Exchange, Gate, GateDefinition, GateSpecification,
@@ -289,7 +289,9 @@ impl Expression {
     pub fn get_memory_references(&self) -> Vec<&MemoryReference> {
         match self {
             Expression::Address(reference) => vec![reference],
-            Expression::FunctionCall { expression, .. } => expression.get_memory_references(),
+            Expression::FunctionCall(FunctionCallExpression { expression, .. }) => {
+                expression.get_memory_references()
+            }
             Expression::Infix { left, right, .. } => {
                 let mut result = left.get_memory_references();
                 result.extend(right.get_memory_references());

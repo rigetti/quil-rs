@@ -2,7 +2,7 @@
 //!
 //! See the [Quil spec](https://quil-lang.github.io/).
 use crate::{
-    expression::Expression,
+    expression::{Expression, FunctionCallExpression},
     instruction::{
         Arithmetic, ArithmeticOperand, ArithmeticOperator, BinaryLogic, BinaryOperand,
         BinaryOperator, Comparison, ComparisonOperand, ComparisonOperator, Exchange, Instruction,
@@ -209,7 +209,7 @@ fn should_be_real(
                 undefined_memory_reference(instruction, reference)
             }
         }
-        Expression::FunctionCall { expression, .. } => {
+        Expression::FunctionCall(FunctionCallExpression { expression, .. }) => {
             should_be_real(instruction, expression, memory_regions)
         }
         Expression::Infix { left, right, .. } => should_be_real(instruction, left, memory_regions)

@@ -1049,8 +1049,7 @@ dependencies = [
 
 [[package]]
 name = "rigetti-pyo3"
-version = "0.1.0"
-source = "git+ssh://git@github.com/rigetti/rigetti-pyo3.git?branch=1-initial-impl#a42f346b6afb04be11f5663f03f2b61c1a167560"
+version = "0.0.1"
 dependencies = [
  "num-complex",
  "paste",
