@@ -27,8 +27,8 @@ use super::error::ProgramError;
 /// A collection of Quil calibrations (`DEFCAL` instructions) with utility methods.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct CalibrationSet {
-    calibrations: Vec<Calibration>,
-    measure_calibrations: Vec<MeasureCalibrationDefinition>,
+    pub calibrations: Vec<Calibration>,
+    pub measure_calibrations: Vec<MeasureCalibrationDefinition>,
 }
 
 struct MatchedCalibration<'a> {

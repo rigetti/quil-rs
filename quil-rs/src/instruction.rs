@@ -20,6 +20,7 @@ use std::str::FromStr;
 use std::{collections::HashMap, fmt};
 
 use crate::expression::Expression;
+use crate::parser::parse_instructions;
 use crate::parser::{common::parse_memory_reference, lex, ParseError};
 use crate::program::{disallow_leftover, frame::FrameMatchCondition, SyntaxError};
 
@@ -522,10 +523,12 @@ pub struct Comparison {
     pub operands: (MemoryReference, MemoryReference, ComparisonOperand),
 }
 
+pub type BinaryOperands = (MemoryReference, BinaryOperand);
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct BinaryLogic {
     pub operator: BinaryOperator,
-    pub operands: (MemoryReference, BinaryOperand),
+    pub operands: BinaryOperands,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -728,6 +731,31 @@ pub fn get_string_parameter_string(parameters: &[String]) -> String {
 
     let parameter_str: String = parameters.join(",");
     format!("({})", parameter_str)
+}
+
+impl FromStr for Instruction {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let span = LocatedSpan::new(s);
+        let input = lex(span).unwrap();
+        let instructions = parse_instructions(&input).unwrap();
+        Ok(instructions.1[0].clone())
+    }
+}
+
+// TODO: Error handling
+pub struct Instructions(pub Vec<Instruction>);
+
+impl FromStr for Instructions {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let span = LocatedSpan::new(s);
+        let input = lex(span).unwrap();
+        let instructions = parse_instructions(&input).unwrap();
+        Ok(Self(instructions.1))
+    }
 }
 
 impl fmt::Display for Instruction {

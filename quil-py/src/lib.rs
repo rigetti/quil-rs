@@ -1,8 +1,24 @@
-use pyo3::{create_exception, exceptions::PyRuntimeError, prelude::*, types::PyString};
+use instruction::{
+    declaration::{PyDeclaration, PyScalarType, PyVector},
+    expression::{PyExpressionFunction, PyFunctionCallExpression},
+    PyInstruction,
+};
+use program::calibration_set::PyCalibrationSet;
+use pyo3::{
+    create_exception,
+    exceptions::PyRuntimeError,
+    prelude::*,
+    types::{PyList, PyString},
+};
 use quil_rs::Program;
-use rigetti_pyo3::{create_init_submodule, impl_repr, py_wrap_struct, PyWrapper, ToPython};
+use rigetti_pyo3::{
+    create_init_submodule, impl_repr, py_wrap_struct, PyWrapper, PyWrapperMut, ToPython,
+};
+
+use crate::instruction::parse_instructions;
 
 pub mod instruction;
+pub mod program;
 
 create_exception!(quil, ParseError, PyRuntimeError);
 
@@ -28,6 +44,23 @@ impl_repr!(PyProgram);
 
 #[pymethods]
 impl PyProgram {
+    #[getter]
+    pub fn instructions<'a>(&self, py: Python<'a>) -> PyResult<&'a PyList> {
+        Ok(PyList::new(
+            py,
+            self.as_inner()
+                .instructions
+                .iter()
+                .map(|i| i.to_python(py))
+                .collect::<PyResult<Vec<Py<PyInstruction>>>>()?,
+        ))
+    }
+
+    #[getter]
+    pub fn calibrations(&self, py: Python<'_>) -> PyResult<Py<PyCalibrationSet>> {
+        self.as_inner().calibrations.to_python(py)
+    }
+
     pub fn expand_calibrations(&self) -> PyResult<Self> {
         self.as_inner()
             .expand_calibrations()
@@ -42,13 +75,18 @@ impl PyProgram {
             .map(PyProgram::from)
     }
 
+    pub fn add_instruction(&mut self, instruction: PyInstruction) {
+        self.as_inner_mut().add_instruction(instruction.into())
+    }
+
     pub fn __str__(&self) -> PyResult<Py<PyString>> {
         self.clone().try_into()
     }
 }
 
 create_init_submodule! {
-    classes: [ PyProgram ],
+    classes: [ PyProgram, PyFunctionCallExpression, PyExpressionFunction, PyVector, PyScalarType, PyDeclaration, PyInstruction ],
+    funcs: [ parse_instructions ],
 }
 
 #[pymodule]
