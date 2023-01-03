@@ -561,7 +561,7 @@ pub(crate) fn parse_include<'a>(input: ParserInput<'a>) -> InternalParserResult<
 mod tests {
     use crate::expression::{
         Expression, ExpressionFunction, FunctionCallExpression, InfixExpression, InfixOperator,
-        PrefixOperator,
+        PrefixExpression, PrefixOperator,
     };
     use crate::instruction::{GateDefinition, GateSpecification, PragmaArgument};
     use crate::parser::lexer::lex;
@@ -790,10 +790,10 @@ mod tests {
 
             // -1/sqrt(2)
             let negative_expression = Expression::Infix(InfixExpression {
-                left: Box::new(Expression::Prefix {
+                left: Box::new(Expression::Prefix(PrefixExpression {
                     operator: PrefixOperator::Minus,
                     expression: Box::new(Expression::Number(real!(1.0))),
-                }),
+                })),
                 operator: InfixOperator::Slash,
                 right: Box::new(Expression::FunctionCall(FunctionCallExpression {
                     function: crate::expression::ExpressionFunction::SquareRoot,
@@ -832,10 +832,10 @@ mod tests {
                         })),
                     }),
                     Expression::Infix(InfixExpression {
-                        left: Box::new(Expression::Prefix {
+                        left: Box::new(Expression::Prefix(PrefixExpression {
                             operator: PrefixOperator::Minus,
                             expression: Box::new(Expression::Number(imag!(1f64)))
-                        }),
+                        })),
                         operator: InfixOperator::Star,
                         right: Box::new(Expression::FunctionCall(FunctionCallExpression {
                             function: ExpressionFunction::Sine,
@@ -849,10 +849,10 @@ mod tests {
                 ],
                 vec![
                     Expression::Infix(InfixExpression {
-                        left: Box::new(Expression::Prefix {
+                        left: Box::new(Expression::Prefix(PrefixExpression {
                             operator: PrefixOperator::Minus,
                             expression: Box::new(Expression::Number(imag!(1f64)))
-                        }),
+                        })),
                         operator: InfixOperator::Star,
                         right: Box::new(Expression::FunctionCall(FunctionCallExpression {
                             function: ExpressionFunction::Sine,

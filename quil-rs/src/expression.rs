@@ -50,10 +50,7 @@ pub enum Expression {
     Infix(InfixExpression),
     Number(num_complex::Complex64),
     PiConstant,
-    Prefix {
-        operator: PrefixOperator,
-        expression: Box<Expression>,
-    },
+    Prefix(PrefixExpression),
     Variable(String),
 }
 
@@ -68,6 +65,12 @@ pub struct InfixExpression {
     pub left: Box<Expression>,
     pub operator: InfixOperator,
     pub right: Box<Expression>,
+}
+
+#[derive(Clone, Debug)]
+pub struct PrefixExpression {
+    pub operator: PrefixOperator,
+    pub expression: Box<Expression>,
 }
 
 /// Hash value helper: turn a hashable thing into a u64.
@@ -128,13 +131,10 @@ impl Hash for Expression {
             PiConstant => {
                 "PiConstant".hash(state);
             }
-            Prefix {
-                operator,
-                expression,
-            } => {
+            Prefix(p) => {
                 "Prefix".hash(state);
-                operator.hash(state);
-                expression.hash(state);
+                p.operator.hash(state);
+                p.expression.hash(state);
             }
             Variable(v) => {
                 "Variable".hash(state);
@@ -246,19 +246,16 @@ impl Expression {
                 i.left.simplify();
                 i.right.simplify();
             }
-            Prefix {
-                operator,
-                expression,
-            } => {
+            Prefix(p) => {
                 use PrefixOperator::*;
-                expression.simplify();
+                p.expression.simplify();
 
                 // Avoid potentially expensive clone
                 // Cannot directly swap `expression` with `self` because that causes
                 // a double mutable borrow.
-                if let Plus = operator {
+                if let Plus = p.operator {
                     let mut temp = Expression::PiConstant;
-                    std::mem::swap(expression.as_mut(), &mut temp);
+                    std::mem::swap(p.expression.as_mut(), &mut temp);
                     std::mem::swap(self, &mut temp);
                 }
             }
@@ -332,13 +329,10 @@ impl Expression {
                     &right_evaluated,
                 ))
             }
-            Prefix {
-                operator,
-                expression,
-            } => {
+            Prefix(p) => {
                 use PrefixOperator::*;
-                let value = expression.evaluate(variables, memory_references)?;
-                if matches!(operator, Minus) {
+                let value = p.expression.evaluate(variables, memory_references)?;
+                if matches!(p.operator, Minus) {
                     Ok(-value)
                 } else {
                     Ok(value)
@@ -397,13 +391,10 @@ impl Expression {
                     right,
                 })
             }
-            Prefix {
-                operator,
-                expression,
-            } => Prefix {
-                operator,
-                expression: expression.substitute_variables(variable_values).into(),
-            },
+            Prefix(p) => Prefix(PrefixExpression {
+                operator: p.operator,
+                expression: p.expression.substitute_variables(variable_values).into(),
+            }),
             Variable(identifier) => match variable_values.get(identifier.as_str()) {
                 Some(value) => value.clone(),
                 None => Variable(identifier),
@@ -492,10 +483,7 @@ impl fmt::Display for Expression {
             Infix(i) => write!(f, "({}{}{})", i.left, i.operator, i.right),
             Number(value) => write!(f, "{}", format_complex(value)),
             PiConstant => write!(f, "pi"),
-            Prefix {
-                operator,
-                expression,
-            } => write!(f, "({}{})", operator, expression),
+            Prefix(p) => write!(f, "({}{})", p.operator, p.expression),
             Variable(identifier) => write!(f, "%{}", identifier),
         }
     }
@@ -625,10 +613,10 @@ mod tests {
                 evaluated: Ok(one),
             },
             TestCase {
-                expression: Expression::Prefix {
+                expression: Expression::Prefix(PrefixExpression {
                     operator: PrefixOperator::Minus,
                     expression: Box::new(Number(real!(1f64))),
-                },
+                }),
                 variables: &empty_variables,
                 memory_references: &empty_memory,
                 simplified: Number(real!(-1f64)),
@@ -708,10 +696,12 @@ mod tests {
                             right: Box::new(r)
                         })
                     ),
-                    (any::<PrefixOperator>(), expr).prop_map(|(operator, e)| Prefix {
-                        operator,
-                        expression: Box::new(e)
-                    })
+                    (any::<PrefixOperator>(), expr).prop_map(|(operator, e)| Prefix(
+                        PrefixExpression {
+                            operator,
+                            expression: Box::new(e)
+                        }
+                    ))
                 ]
             },
         )

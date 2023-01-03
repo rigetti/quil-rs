@@ -152,7 +152,8 @@ mod tests {
     use nom_locate::LocatedSpan;
 
     use crate::expression::{
-        Expression, FunctionCallExpression, InfixExpression, InfixOperator, PrefixOperator,
+        Expression, FunctionCallExpression, InfixExpression, InfixOperator, PrefixExpression,
+        PrefixOperator,
     };
     use crate::instruction::{
         Arithmetic, ArithmeticOperand, ArithmeticOperator, AttributeValue, BinaryLogic,
@@ -746,10 +747,10 @@ mod tests {
                         })),
                     }),
                     Expression::Infix(InfixExpression {
-                        left: Box::new(Expression::Prefix {
+                        left: Box::new(Expression::Prefix(PrefixExpression {
                             operator: PrefixOperator::Minus,
                             expression: Box::new(Expression::Number(real!(1.0))),
-                        }),
+                        })),
                         operator: InfixOperator::Slash,
                         right: Box::new(Expression::FunctionCall(FunctionCallExpression {
                             function: crate::expression::ExpressionFunction::SquareRoot,

@@ -2,7 +2,7 @@
 //!
 //! See the [Quil spec](https://quil-lang.github.io/).
 use crate::{
-    expression::{Expression, FunctionCallExpression},
+    expression::{Expression, FunctionCallExpression, InfixExpression, PrefixExpression},
     instruction::{
         Arithmetic, ArithmeticOperand, ArithmeticOperator, BinaryLogic, BinaryOperand,
         BinaryOperator, Comparison, ComparisonOperand, ComparisonOperator, Exchange, Instruction,
@@ -212,8 +212,12 @@ fn should_be_real(
         Expression::FunctionCall(FunctionCallExpression { expression, .. }) => {
             should_be_real(instruction, expression, memory_regions)
         }
-        Expression::Infix(i) => should_be_real(instruction, &i.left, memory_regions)
-            .and(should_be_real(instruction, &i.right, memory_regions)),
+        Expression::Infix(InfixExpression { left, right, .. }) => should_be_real(
+            instruction,
+            left,
+            memory_regions,
+        )
+        .and(should_be_real(instruction, right, memory_regions)),
         Expression::Number(value) => {
             if value.im.abs() > f64::EPSILON {
                 real_value_required(instruction, this_expression, "`imaginary`")
@@ -222,7 +226,7 @@ fn should_be_real(
             }
         }
         Expression::PiConstant => Ok(()),
-        Expression::Prefix { expression, .. } => {
+        Expression::Prefix(PrefixExpression { expression, .. }) => {
             should_be_real(instruction, expression, memory_regions)
         }
         Expression::Variable(_) => real_value_required(instruction, this_expression, "`variable`"),

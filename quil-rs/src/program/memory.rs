@@ -14,7 +14,7 @@
 
 use std::collections::HashSet;
 
-use crate::expression::{Expression, FunctionCallExpression};
+use crate::expression::{Expression, FunctionCallExpression, InfixExpression, PrefixExpression};
 use crate::instruction::{
     Arithmetic, ArithmeticOperand, BinaryLogic, BinaryOperand, Capture, CircuitDefinition,
     Comparison, ComparisonOperand, Delay, Exchange, Gate, GateDefinition, GateSpecification,
@@ -292,14 +292,16 @@ impl Expression {
             Expression::FunctionCall(FunctionCallExpression { expression, .. }) => {
                 expression.get_memory_references()
             }
-            Expression::Infix(i) => {
-                let mut result = i.left.get_memory_references();
-                result.extend(i.right.get_memory_references());
+            Expression::Infix(InfixExpression { left, right, .. }) => {
+                let mut result = left.get_memory_references();
+                result.extend(right.get_memory_references());
                 result
             }
             Expression::Number(_) => vec![],
             Expression::PiConstant => vec![],
-            Expression::Prefix { expression, .. } => expression.get_memory_references(),
+            Expression::Prefix(PrefixExpression { expression, .. }) => {
+                expression.get_memory_references()
+            }
             Expression::Variable(_) => vec![],
         }
     }

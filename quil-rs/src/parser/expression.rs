@@ -14,7 +14,7 @@
 
 use nom::combinator::opt;
 
-use crate::expression::{FunctionCallExpression, InfixExpression};
+use crate::expression::{FunctionCallExpression, InfixExpression, PrefixExpression};
 use crate::parser::InternalParserResult;
 use crate::{
     expected_token,
@@ -93,10 +93,10 @@ fn parse(input: ParserInput, precedence: Precedence) -> InternalParserResult<Exp
     }?;
 
     if let Some(prefix) = prefix {
-        left = Expression::Prefix {
+        left = Expression::Prefix(PrefixExpression {
             operator: prefix,
             expression: Box::new(left),
-        };
+        });
     }
 
     while get_precedence(input) > precedence {
@@ -227,7 +227,7 @@ fn parse_prefix(input: ParserInput) -> InternalParserResult<PrefixOperator> {
 
 #[cfg(test)]
 mod tests {
-    use crate::expression::{FunctionCallExpression, InfixExpression};
+    use crate::expression::{FunctionCallExpression, InfixExpression, PrefixExpression};
     use crate::{expression::PrefixOperator, parser::lexer::lex};
     use crate::{
         expression::{Expression, ExpressionFunction, InfixOperator},
@@ -324,10 +324,10 @@ mod tests {
         parse_expression,
         "-i*sin(%theta/2)",
         Expression::Infix(InfixExpression {
-            left: Box::new(Expression::Prefix {
+            left: Box::new(Expression::Prefix(PrefixExpression {
                 operator: PrefixOperator::Minus,
                 expression: Box::new(Expression::Number(imag!(1f64))),
-            }),
+            })),
             operator: InfixOperator::Star,
             right: Box::new(Expression::FunctionCall(FunctionCallExpression {
                 function: ExpressionFunction::Sine,
