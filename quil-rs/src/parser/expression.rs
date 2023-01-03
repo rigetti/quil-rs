@@ -227,6 +227,7 @@ fn parse_prefix(input: ParserInput) -> InternalParserResult<PrefixOperator> {
 
 #[cfg(test)]
 mod tests {
+    use crate::expression::FunctionCallExpression;
     use crate::{expression::PrefixOperator, parser::lexer::lex};
     use crate::{
         expression::{Expression, ExpressionFunction, InfixOperator},
