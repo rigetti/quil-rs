@@ -560,7 +560,8 @@ pub(crate) fn parse_include<'a>(input: ParserInput<'a>) -> InternalParserResult<
 #[cfg(test)]
 mod tests {
     use crate::expression::{
-        Expression, ExpressionFunction, FunctionCallExpression, InfixOperator, PrefixOperator,
+        Expression, ExpressionFunction, FunctionCallExpression, InfixExpression, InfixOperator,
+        PrefixOperator,
     };
     use crate::instruction::{GateDefinition, GateSpecification, PragmaArgument};
     use crate::parser::lexer::lex;
@@ -778,17 +779,17 @@ mod tests {
     1/sqrt(2), -1/sqrt(2)"#,
         {
             // 1/sqrt(2)
-            let expression = Expression::Infix {
+            let expression = Expression::Infix(InfixExpression {
                 left: Box::new(Expression::Number(real!(1.0))),
                 operator: InfixOperator::Slash,
                 right: Box::new(Expression::FunctionCall(FunctionCallExpression {
                     function: crate::expression::ExpressionFunction::SquareRoot,
                     expression: Box::new(Expression::Number(real!(2.0))),
                 })),
-            };
+            });
 
             // -1/sqrt(2)
-            let negative_expression = Expression::Infix {
+            let negative_expression = Expression::Infix(InfixExpression {
                 left: Box::new(Expression::Prefix {
                     operator: PrefixOperator::Minus,
                     expression: Box::new(Expression::Number(real!(1.0))),
@@ -798,7 +799,7 @@ mod tests {
                     function: crate::expression::ExpressionFunction::SquareRoot,
                     expression: Box::new(Expression::Number(real!(2.0))),
                 })),
-            };
+            });
 
             Instruction::GateDefinition(GateDefinition {
                 name: "H".to_string(),
@@ -824,13 +825,13 @@ mod tests {
                 vec![
                     Expression::FunctionCall(FunctionCallExpression {
                         function: crate::expression::ExpressionFunction::Cosine,
-                        expression: Box::new(Expression::Infix {
+                        expression: Box::new(Expression::Infix(InfixExpression {
                             left: Box::new(Expression::Variable("theta".to_string())),
                             operator: InfixOperator::Slash,
                             right: Box::new(Expression::Number(real!(2.0))),
-                        }),
+                        })),
                     }),
-                    Expression::Infix {
+                    Expression::Infix(InfixExpression {
                         left: Box::new(Expression::Prefix {
                             operator: PrefixOperator::Minus,
                             expression: Box::new(Expression::Number(imag!(1f64)))
@@ -838,16 +839,16 @@ mod tests {
                         operator: InfixOperator::Star,
                         right: Box::new(Expression::FunctionCall(FunctionCallExpression {
                             function: ExpressionFunction::Sine,
-                            expression: Box::new(Expression::Infix {
+                            expression: Box::new(Expression::Infix(InfixExpression {
                                 left: Box::new(Expression::Variable("theta".to_string())),
                                 operator: InfixOperator::Slash,
                                 right: Box::new(Expression::Number(real!(2.0))),
-                            }),
+                            })),
                         })),
-                    }
+                    })
                 ],
                 vec![
-                    Expression::Infix {
+                    Expression::Infix(InfixExpression {
                         left: Box::new(Expression::Prefix {
                             operator: PrefixOperator::Minus,
                             expression: Box::new(Expression::Number(imag!(1f64)))
@@ -855,20 +856,20 @@ mod tests {
                         operator: InfixOperator::Star,
                         right: Box::new(Expression::FunctionCall(FunctionCallExpression {
                             function: ExpressionFunction::Sine,
-                            expression: Box::new(Expression::Infix {
+                            expression: Box::new(Expression::Infix(InfixExpression {
                                 left: Box::new(Expression::Variable("theta".to_string())),
                                 operator: InfixOperator::Slash,
                                 right: Box::new(Expression::Number(real!(2.0))),
-                            }),
+                            })),
                         })),
-                    },
+                    }),
                     Expression::FunctionCall(FunctionCallExpression {
                         function: crate::expression::ExpressionFunction::Cosine,
-                        expression: Box::new(Expression::Infix {
+                        expression: Box::new(Expression::Infix(InfixExpression {
                             left: Box::new(Expression::Variable("theta".to_string())),
                             operator: InfixOperator::Slash,
                             right: Box::new(Expression::Number(real!(2.0))),
-                        }),
+                        })),
                     }),
                 ],
             ]),

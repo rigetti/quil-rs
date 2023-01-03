@@ -292,9 +292,9 @@ impl Expression {
             Expression::FunctionCall(FunctionCallExpression { expression, .. }) => {
                 expression.get_memory_references()
             }
-            Expression::Infix { left, right, .. } => {
-                let mut result = left.get_memory_references();
-                result.extend(right.get_memory_references());
+            Expression::Infix(i) => {
+                let mut result = i.left.get_memory_references();
+                result.extend(i.right.get_memory_references());
                 result
             }
             Expression::Number(_) => vec![],

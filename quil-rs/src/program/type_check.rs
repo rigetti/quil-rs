@@ -212,8 +212,8 @@ fn should_be_real(
         Expression::FunctionCall(FunctionCallExpression { expression, .. }) => {
             should_be_real(instruction, expression, memory_regions)
         }
-        Expression::Infix { left, right, .. } => should_be_real(instruction, left, memory_regions)
-            .and(should_be_real(instruction, right, memory_regions)),
+        Expression::Infix(i) => should_be_real(instruction, &i.left, memory_regions)
+            .and(should_be_real(instruction, &i.right, memory_regions)),
         Expression::Number(value) => {
             if value.im.abs() > f64::EPSILON {
                 real_value_required(instruction, this_expression, "`imaginary`")

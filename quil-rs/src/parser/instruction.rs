@@ -151,7 +151,9 @@ mod tests {
 
     use nom_locate::LocatedSpan;
 
-    use crate::expression::{Expression, FunctionCallExpression, InfixOperator, PrefixOperator};
+    use crate::expression::{
+        Expression, FunctionCallExpression, InfixExpression, InfixOperator, PrefixOperator,
+    };
     use crate::instruction::{
         Arithmetic, ArithmeticOperand, ArithmeticOperator, AttributeValue, BinaryLogic,
         BinaryOperand, BinaryOperator, Calibration, Capture, Comparison, ComparisonOperand,
@@ -717,33 +719,33 @@ mod tests {
             parameters: vec![],
             specification: GateSpecification::Matrix(vec![
                 vec![
-                    Expression::Infix {
+                    Expression::Infix(InfixExpression {
                         left: Box::new(Expression::Number(real!(1.0))),
                         operator: InfixOperator::Slash,
                         right: Box::new(Expression::FunctionCall(FunctionCallExpression {
                             function: crate::expression::ExpressionFunction::SquareRoot,
                             expression: Box::new(Expression::Number(real!(2.0))),
                         })),
-                    },
-                    Expression::Infix {
+                    }),
+                    Expression::Infix(InfixExpression {
                         left: Box::new(Expression::Number(real!(1.0))),
                         operator: InfixOperator::Slash,
                         right: Box::new(Expression::FunctionCall(FunctionCallExpression {
                             function: crate::expression::ExpressionFunction::SquareRoot,
                             expression: Box::new(Expression::Number(real!(2.0))),
                         })),
-                    },
+                    }),
                 ],
                 vec![
-                    Expression::Infix {
+                    Expression::Infix(InfixExpression {
                         left: Box::new(Expression::Number(real!(1.0))),
                         operator: InfixOperator::Slash,
                         right: Box::new(Expression::FunctionCall(FunctionCallExpression {
                             function: crate::expression::ExpressionFunction::SquareRoot,
                             expression: Box::new(Expression::Number(real!(2.0))),
                         })),
-                    },
-                    Expression::Infix {
+                    }),
+                    Expression::Infix(InfixExpression {
                         left: Box::new(Expression::Prefix {
                             operator: PrefixOperator::Minus,
                             expression: Box::new(Expression::Number(real!(1.0))),
@@ -753,7 +755,7 @@ mod tests {
                             function: crate::expression::ExpressionFunction::SquareRoot,
                             expression: Box::new(Expression::Number(real!(2.0))),
                         })),
-                    },
+                    }),
                 ],
             ]),
         })]

@@ -14,7 +14,7 @@
 
 use nom::combinator::opt;
 
-use crate::expression::FunctionCallExpression;
+use crate::expression::{FunctionCallExpression, InfixExpression};
 use crate::parser::InternalParserResult;
 use crate::{
     expected_token,
@@ -203,11 +203,11 @@ fn parse_infix(input: ParserInput, left: Expression) -> InternalParserResult<Exp
             };
             let precedence = get_precedence(remainder);
             let (remainder, right) = parse(remainder, precedence)?;
-            let infix_expression = Expression::Infix {
+            let infix_expression = Expression::Infix(InfixExpression {
                 left: Box::new(left),
                 operator: expression_operator,
                 right: Box::new(right),
-            };
+            });
             Ok((remainder, infix_expression))
         }
         Some((other_token, _)) => expected_token!(input, other_token, "infix operator".to_owned()),
@@ -227,7 +227,7 @@ fn parse_prefix(input: ParserInput) -> InternalParserResult<PrefixOperator> {
 
 #[cfg(test)]
 mod tests {
-    use crate::expression::FunctionCallExpression;
+    use crate::expression::{FunctionCallExpression, InfixExpression};
     use crate::{expression::PrefixOperator, parser::lexer::lex};
     use crate::{
         expression::{Expression, ExpressionFunction, InfixOperator},
@@ -312,18 +312,18 @@ mod tests {
         simple_infix,
         parse_expression,
         "1+2",
-        Expression::Infix {
+        Expression::Infix(InfixExpression {
             left: Box::new(Expression::Number(real!(1f64))),
             operator: InfixOperator::Plus,
             right: Box::new(Expression::Number(real!(2f64))),
-        }
+        })
     );
 
     test!(
         infix_with_function_call,
         parse_expression,
         "-i*sin(%theta/2)",
-        Expression::Infix {
+        Expression::Infix(InfixExpression {
             left: Box::new(Expression::Prefix {
                 operator: PrefixOperator::Minus,
                 expression: Box::new(Expression::Number(imag!(1f64))),
@@ -331,28 +331,28 @@ mod tests {
             operator: InfixOperator::Star,
             right: Box::new(Expression::FunctionCall(FunctionCallExpression {
                 function: ExpressionFunction::Sine,
-                expression: Box::new(Expression::Infix {
+                expression: Box::new(Expression::Infix(InfixExpression {
                     left: Box::new(Expression::Variable("theta".to_owned())),
                     operator: InfixOperator::Slash,
                     right: Box::new(Expression::Number(real!(2f64))),
-                }),
+                })),
             })),
-        }
+        })
     );
 
     test!(
         infix_parenthesized,
         parse_expression,
         "(1+2i)*%a",
-        Expression::Infix {
-            left: Box::new(Expression::Infix {
+        Expression::Infix(InfixExpression {
+            left: Box::new(Expression::Infix(InfixExpression {
                 left: Box::new(Expression::Number(real!(1f64))),
                 operator: InfixOperator::Plus,
                 right: Box::new(Expression::Number(imag!(2f64))),
-            }),
+            })),
             operator: InfixOperator::Star,
             right: Box::new(Expression::Variable("a".to_owned())),
-        }
+        })
     );
 
     #[test]
@@ -360,39 +360,39 @@ mod tests {
         let cases = vec![
             (
                 "1 + ( 2 + 3 )",
-                Expression::Infix {
+                Expression::Infix(InfixExpression {
                     left: Box::new(Expression::Number(real!(1f64))),
                     operator: InfixOperator::Plus,
-                    right: Box::new(Expression::Infix {
+                    right: Box::new(Expression::Infix(InfixExpression {
                         left: Box::new(Expression::Number(real!(2f64))),
                         operator: InfixOperator::Plus,
                         right: Box::new(Expression::Number(real!(3f64))),
-                    }),
-                },
+                    })),
+                }),
             ),
             (
                 "1+(2+3)",
-                Expression::Infix {
+                Expression::Infix(InfixExpression {
                     left: Box::new(Expression::Number(real!(1f64))),
                     operator: InfixOperator::Plus,
-                    right: Box::new(Expression::Infix {
+                    right: Box::new(Expression::Infix(InfixExpression {
                         left: Box::new(Expression::Number(real!(2f64))),
                         operator: InfixOperator::Plus,
                         right: Box::new(Expression::Number(real!(3f64))),
-                    }),
-                },
+                    })),
+                }),
             ),
             (
                 "(1+2)+3",
-                Expression::Infix {
-                    left: Box::new(Expression::Infix {
+                Expression::Infix(InfixExpression {
+                    left: Box::new(Expression::Infix(InfixExpression {
                         left: Box::new(Expression::Number(real!(1f64))),
                         operator: InfixOperator::Plus,
                         right: Box::new(Expression::Number(real!(2f64))),
-                    }),
+                    })),
                     operator: InfixOperator::Plus,
                     right: Box::new(Expression::Number(real!(3f64))),
-                },
+                }),
             ),
             (
                 "(((cos(((pi))))))",

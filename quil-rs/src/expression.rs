@@ -47,11 +47,7 @@ pub enum EvaluationError {
 pub enum Expression {
     Address(MemoryReference),
     FunctionCall(FunctionCallExpression),
-    Infix {
-        left: Box<Expression>,
-        operator: InfixOperator,
-        right: Box<Expression>,
-    },
+    Infix(InfixExpression),
     Number(num_complex::Complex64),
     PiConstant,
     Prefix {
@@ -65,6 +61,13 @@ pub enum Expression {
 pub struct FunctionCallExpression {
     pub function: ExpressionFunction,
     pub expression: Box<Expression>,
+}
+
+#[derive(Clone, Debug)]
+pub struct InfixExpression {
+    pub left: Box<Expression>,
+    pub operator: InfixOperator,
+    pub right: Box<Expression>,
 }
 
 /// Hash value helper: turn a hashable thing into a u64.
@@ -91,26 +94,22 @@ impl Hash for Expression {
                 fc.function.hash(state);
                 fc.expression.hash(state);
             }
-            Infix {
-                left,
-                operator,
-                right,
-            } => {
+            Infix(i) => {
                 "Infix".hash(state);
-                operator.hash(state);
-                match operator {
+                i.operator.hash(state);
+                match i.operator {
                     InfixOperator::Plus | InfixOperator::Star => {
                         // commutative, so put left & right in decreasing order by hash value
                         let (a, b) = (
-                            min_by_key(left, right, hash_to_u64),
-                            max_by_key(left, right, hash_to_u64),
+                            min_by_key(&i.left, &i.right, hash_to_u64),
+                            max_by_key(&i.left, &i.right, hash_to_u64),
                         );
                         a.hash(state);
                         b.hash(state);
                     }
                     _ => {
-                        left.hash(state);
-                        right.hash(state);
+                        i.left.hash(state);
+                        i.right.hash(state);
                     }
                 }
             }
@@ -159,11 +158,11 @@ macro_rules! impl_expr_op {
         impl $name for Expression {
             type Output = Self;
             fn $function(self, other: Self) -> Self {
-                Expression::Infix {
+                Expression::Infix(InfixExpression {
                     left: Box::new(self),
                     operator: InfixOperator::$operator,
                     right: Box::new(other),
-                }
+                })
             }
         }
         impl $name_assign for Expression {
@@ -243,13 +242,9 @@ impl Expression {
                     *self = Number(calculate_function(&fc.function, number));
                 }
             }
-            Infix {
-                left,
-                operator: _,
-                right,
-            } => {
-                left.simplify();
-                right.simplify();
+            Infix(i) => {
+                i.left.simplify();
+                i.right.simplify();
             }
             Prefix {
                 operator,
@@ -328,14 +323,14 @@ impl Expression {
                 let evaluated = fc.expression.evaluate(variables, memory_references)?;
                 Ok(calculate_function(&fc.function, &evaluated))
             }
-            Infix {
-                left,
-                operator,
-                right,
-            } => {
-                let left_evaluated = left.evaluate(variables, memory_references)?;
-                let right_evaluated = right.evaluate(variables, memory_references)?;
-                Ok(calculate_infix(&left_evaluated, operator, &right_evaluated))
+            Infix(i) => {
+                let left_evaluated = i.left.evaluate(variables, memory_references)?;
+                let right_evaluated = i.right.evaluate(variables, memory_references)?;
+                Ok(calculate_infix(
+                    &left_evaluated,
+                    &i.operator,
+                    &right_evaluated,
+                ))
             }
             Prefix {
                 operator,
@@ -393,18 +388,14 @@ impl Expression {
                 function: fc.function,
                 expression: fc.expression.substitute_variables(variable_values).into(),
             }),
-            Infix {
-                left,
-                operator,
-                right,
-            } => {
-                let left = left.substitute_variables(variable_values).into();
-                let right = right.substitute_variables(variable_values).into();
-                Infix {
+            Infix(i) => {
+                let left = i.left.substitute_variables(variable_values).into();
+                let right = i.right.substitute_variables(variable_values).into();
+                Infix(InfixExpression {
                     left,
-                    operator,
+                    operator: i.operator,
                     right,
-                }
+                })
             }
             Prefix {
                 operator,
@@ -498,11 +489,7 @@ impl fmt::Display for Expression {
         match self {
             Address(memory_reference) => write!(f, "{}", memory_reference),
             FunctionCall(fc) => write!(f, "{}({})", fc.function, fc.expression),
-            Infix {
-                left,
-                operator,
-                right,
-            } => write!(f, "({}{}{})", left, operator, right),
+            Infix(i) => write!(f, "({}{}{})", i.left, i.operator, i.right),
             Number(value) => write!(f, "{}", format_complex(value)),
             PiConstant => write!(f, "pi"),
             Prefix {
@@ -715,11 +702,11 @@ mod tests {
                         })
                     }),
                     (expr.clone(), any::<InfixOperator>(), expr.clone()).prop_map(
-                        |(l, operator, r)| Infix {
+                        |(l, operator, r)| Infix(InfixExpression {
                             left: Box::new(l),
                             operator,
                             right: Box::new(r)
-                        }
+                        })
                     ),
                     (any::<PrefixOperator>(), expr).prop_map(|(operator, e)| Prefix {
                         operator,
@@ -738,11 +725,11 @@ mod tests {
 
         #[test]
         fn eq(a in any::<f64>(), b in any::<f64>()) {
-            let first = Expression::Infix {
+            let first = Expression::Infix (InfixExpression {
                 left: Box::new(Expression::Number(real!(a))),
                 operator: InfixOperator::Plus,
                 right: Box::new(Expression::Number(real!(b))),
-            };
+            } );
             let matching = first.clone();
             let differing = Expression::Number(real!(a + b));
             prop_assert_eq!(&first, &matching);
@@ -751,26 +738,26 @@ mod tests {
 
         #[test]
         fn eq_commutative(a in any::<f64>(), b in any::<f64>()) {
-            let first = Expression::Infix{
+            let first = Expression::Infix(InfixExpression {
                 left: Box::new(Expression::Number(real!(a))),
                 operator: InfixOperator::Plus,
                 right: Box::new(Expression::Number(real!(b))),
-            };
-            let second = Expression::Infix{
+            } );
+            let second = Expression::Infix(InfixExpression {
                 left: Box::new(Expression::Number(real!(b))),
                 operator: InfixOperator::Plus,
                 right: Box::new(Expression::Number(real!(a))),
-            };
+            });
             prop_assert_eq!(first, second);
         }
 
         #[test]
         fn hash(a in any::<f64>(), b in any::<f64>()) {
-            let first = Expression::Infix {
+            let first = Expression::Infix (InfixExpression {
                 left: Box::new(Expression::Number(real!(a))),
                 operator: InfixOperator::Plus,
                 right: Box::new(Expression::Number(real!(b))),
-            };
+            });
             let matching = first.clone();
             let differing = Expression::Number(real!(a + b));
             let mut set = HashSet::new();
@@ -781,16 +768,16 @@ mod tests {
 
         #[test]
         fn hash_commutative(a in any::<f64>(), b in any::<f64>()) {
-            let first = Expression::Infix{
+            let first = Expression::Infix(InfixExpression {
                 left: Box::new(Expression::Number(real!(a))),
                 operator: InfixOperator::Plus,
                 right: Box::new(Expression::Number(real!(b))),
-            };
-            let second = Expression::Infix{
+            } );
+            let second = Expression::Infix(InfixExpression {
                 left: Box::new(Expression::Number(real!(b))),
                 operator: InfixOperator::Plus,
                 right: Box::new(Expression::Number(real!(a))),
-            };
+            } );
             let mut set = HashSet::new();
             set.insert(first);
             assert!(set.contains(&second));
@@ -840,7 +827,7 @@ mod tests {
 
         #[test]
         fn exponentiation_works_as_expected(left in arb_expr(), right in arb_expr()) {
-            let expected = Expression::Infix { left: Box::new(left.clone()), operator: InfixOperator::Caret, right: Box::new(right.clone()) };
+            let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Caret, right: Box::new(right.clone()) } );
             prop_assert_eq!(left.clone() ^ right.clone(), expected.clone());
             let mut x = left.clone();
             x ^= right.clone();
@@ -849,7 +836,7 @@ mod tests {
 
         #[test]
         fn addition_works_as_expected(left in arb_expr(), right in arb_expr()) {
-            let expected = Expression::Infix { left: Box::new(left.clone()), operator: InfixOperator::Plus, right: Box::new(right.clone()) };
+            let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Plus, right: Box::new(right.clone()) } );
             prop_assert_eq!(left.clone() + right.clone(), expected.clone());
             let mut x = left.clone();
             x += right.clone();
@@ -858,7 +845,7 @@ mod tests {
 
         #[test]
         fn subtraction_works_as_expected(left in arb_expr(), right in arb_expr()) {
-            let expected = Expression::Infix { left: Box::new(left.clone()), operator: InfixOperator::Minus, right: Box::new(right.clone()) };
+            let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Minus, right: Box::new(right.clone()) } );
             prop_assert_eq!(left.clone() - right.clone(), expected.clone());
             let mut x = left.clone();
             x -= right.clone();
@@ -867,7 +854,7 @@ mod tests {
 
         #[test]
         fn multiplication_works_as_expected(left in arb_expr(), right in arb_expr()) {
-            let expected = Expression::Infix { left: Box::new(left.clone()), operator: InfixOperator::Star, right: Box::new(right.clone()) };
+            let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Star, right: Box::new(right.clone()) } );
             prop_assert_eq!(left.clone() * right.clone(), expected.clone());
             let mut x = left.clone();
             x *= right.clone();
@@ -876,7 +863,7 @@ mod tests {
 
         #[test]
         fn division_works_as_expected(left in arb_expr(), right in arb_expr()) {
-            let expected = Expression::Infix { left: Box::new(left.clone()), operator: InfixOperator::Slash, right: Box::new(right.clone()) };
+            let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Slash, right: Box::new(right.clone()) } );
             prop_assert_eq!(left.clone() / right.clone(), expected.clone());
             let mut x = left.clone();
             x /= right.clone();
