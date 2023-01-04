@@ -316,6 +316,12 @@ impl CalibrationSet {
         self.measure_calibrations.push(calibration)
     }
 
+    /// Append another [CalibrationSet] onto this one
+    pub fn extend(&mut self, other: CalibrationSet) {
+        self.calibrations.extend(other.calibrations);
+        self.measure_calibrations.extend(other.measure_calibrations);
+    }
+
     /// Return the Quil instructions which describe the contained calibrations.
     pub fn to_instructions(&self) -> Vec<Instruction> {
         self.calibrations

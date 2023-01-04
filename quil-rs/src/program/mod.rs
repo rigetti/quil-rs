@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use std::collections::{BTreeMap, HashSet};
+use std::ops;
 use std::str::FromStr;
 
 use nom_locate::LocatedSpan;
@@ -276,6 +277,20 @@ impl From<Vec<Instruction>> for Program {
         let mut p = Program::new();
         p.add_instructions(instructions);
         p
+    }
+}
+
+impl<'a, 'b> ops::Add<&'b Program> for &'a Program {
+    type Output = Program;
+
+    fn add(self, rhs: &'b Program) -> Program {
+        let mut new = self.clone();
+        new.calibrations.extend(rhs.calibrations.clone());
+        new.frames.merge(rhs.frames.clone());
+        new.memory_regions.extend(rhs.memory_regions.clone());
+        new.waveforms.extend(rhs.waveforms.clone());
+        new.instructions.extend(rhs.instructions.clone());
+        new
     }
 }
 

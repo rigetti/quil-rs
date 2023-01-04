@@ -90,6 +90,11 @@ impl FrameSet {
         self.frames.insert(identifier, attributes);
     }
 
+    /// Merge another [FrameSet] with this one, overwriting any existing keys
+    pub fn merge(&mut self, other: FrameSet) {
+        self.frames.extend(other.frames);
+    }
+
     /// Return a new [FrameSet] which describes only the given [FrameIdentifier]s.
     pub fn intersection(&self, identifiers: &HashSet<&FrameIdentifier>) -> Self {
         let mut new_frameset = Self::new();

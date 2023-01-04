@@ -7,7 +7,7 @@
 
 use pyo3::types::PyString;
 use quil_rs::instruction::{Calibration, Instruction};
-use rigetti_pyo3::{py_wrap_data_struct, py_wrap_type};
+use rigetti_pyo3::{impl_repr, py_wrap_data_struct, py_wrap_type};
 
 use crate::instruction::{expression::Expressions, gate::GateModifiers, qubit::Qubits};
 
@@ -23,7 +23,11 @@ py_wrap_data_struct! {
     }
 }
 
+impl_repr!(PyCalibration);
+
 py_wrap_type! {
     #[derive(Debug)]
     PyCalibrations(Vec<Calibration>) as "Calibrations";
 }
+
+impl_repr!(PyCalibrations);

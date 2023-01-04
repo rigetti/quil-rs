@@ -1,5 +1,5 @@
 use quil_rs::{instruction::Calibration, program::CalibrationSet};
-use rigetti_pyo3::py_wrap_data_struct;
+use rigetti_pyo3::{impl_repr, py_wrap_data_struct};
 
 use crate::instruction::calibration::PyCalibrations;
 
@@ -10,3 +10,5 @@ py_wrap_data_struct! {
         // PyMeasureCalibrationDefinitions
     }
 }
+
+impl_repr!(PyCalibrationSet);

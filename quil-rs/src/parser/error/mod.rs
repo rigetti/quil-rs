@@ -29,6 +29,7 @@ pub use kind::ErrorKind;
 pub(crate) type InternalParseError<'a> = InternalError<super::ParserInput<'a>, ParserErrorKind>;
 
 /// An error specific to parsing tokens.
+/// TODO: Bubble up this error for parsing instr.
 pub type ParseError = Error<ParserErrorKind>;
 
 /// Parsing errors specific to Quil parsing.

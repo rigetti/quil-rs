@@ -16,7 +16,7 @@ py_wrap_union_enum! {
 py_wrap_data_struct! {
    PyFunctionCallExpression(FunctionCallExpression) as "FunctionCallExpression" {
         function: ExpressionFunction => PyExpressionFunction
-        // expression: Box<Expression> => PyExpression,
+        // expression: Box::<Expression> => PyExpression
     }
 }
 
@@ -26,6 +26,14 @@ py_wrap_union_enum! {
         function_call: FunctionCall => PyFunctionCallExpression
     }
 }
+
+// py_wrap_data_struct! {
+//     PyInfixExpression(InfixExpression) as "InfixExpression" {
+//         // left: Box::<Expression> => PyExpression,
+//         // operator: InfixOperator => PyInfixOperator
+//         // right: Box::<Expression> => PyExpression
+//     }
+// }
 
 pub type Expressions = Vec<Expression>;
 py_wrap_type! {
