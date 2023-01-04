@@ -1,4 +1,4 @@
-use pyo3::types::PyString;
+use pyo3::{types::PyString, Py};
 use quil_rs::instruction::{Gate, GateModifier};
 
 use rigetti_pyo3::{py_wrap_data_struct, py_wrap_type, py_wrap_union_enum};
@@ -24,7 +24,7 @@ py_wrap_type! {
 
 py_wrap_data_struct! {
     PyGate(Gate) as "Gate" {
-        name: String => PyString,
+        name: String => Py<PyString>,
         parameters: Expressions => PyExpressions,
         qubits: Qubits => PyQubits,
         modifiers: GateModifiers => PyGateModifiers

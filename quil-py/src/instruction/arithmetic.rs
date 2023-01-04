@@ -1,4 +1,7 @@
-use pyo3::types::{PyFloat, PyLong};
+use pyo3::{
+    types::{PyFloat, PyInt},
+    Py,
+};
 use quil_rs::instruction::{Arithmetic, ArithmeticOperand, ArithmeticOperator};
 use rigetti_pyo3::{py_wrap_data_struct, py_wrap_union_enum};
 
@@ -15,8 +18,8 @@ py_wrap_union_enum! {
 
 py_wrap_union_enum! {
     PyArithmeticOperand(ArithmeticOperand) as "ArithmeticOperand" {
-        literal_integer: LiteralInteger => PyLong,
-        literal_real: LiteralReal => PyFloat,
+        literal_integer: LiteralInteger => Py<PyInt>,
+        literal_real: LiteralReal => Py<PyFloat>,
         memory_reference: MemoryReference => PyMemoryReference
     }
 }

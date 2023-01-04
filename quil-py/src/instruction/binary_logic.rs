@@ -1,4 +1,4 @@
-use pyo3::types::PyLong;
+use pyo3::{types::PyLong, Py};
 use quil_rs::instruction::{BinaryLogic, BinaryOperand, BinaryOperands, BinaryOperator};
 use rigetti_pyo3::{py_wrap_data_struct, py_wrap_type, py_wrap_union_enum};
 
@@ -14,7 +14,7 @@ py_wrap_union_enum! {
 
 py_wrap_union_enum! {
     PyBinaryOperand(BinaryOperand) as "BinaryOperand" {
-        literal_integer: LiteralInteger => PyLong,
+        literal_integer: LiteralInteger => Py<PyLong>,
         memory_reference: MemoryReference => PyMemoryReference
     }
 }

@@ -21,8 +21,9 @@ create_exception!(quil, ParseError, PyRuntimeError);
 py_wrap_struct! {
     PyProgram(Program) as "Program" {
         py -> rs {
-            string: PyString => Program {
+            string: Py<PyString> => Program {
                 let native_program = string
+                    .as_ref(py)
                     .to_str()?
                     .parse::<quil_rs::Program>()
                     .map_err(|e| ParseError::new_err(e.to_string()))?;
@@ -46,12 +47,12 @@ impl PyProgram {
                 .instructions
                 .iter()
                 .map(|i| i.to_python(py))
-                .collect::<PyResult<Vec<Py<PyInstruction>>>>()?,
+                .collect::<PyResult<Vec<PyInstruction>>>()?,
         ))
     }
 
     #[getter]
-    pub fn calibrations(&self, py: Python<'_>) -> PyResult<Py<PyCalibrationSet>> {
+    pub fn calibrations(&self, py: Python<'_>) -> PyResult<PyCalibrationSet> {
         self.as_inner().calibrations.to_python(py)
     }
 
@@ -77,7 +78,7 @@ impl PyProgram {
         self.clone().try_into()
     }
 
-    pub fn __add__(&self, py: Python<'_>, rhs: Self) -> PyResult<Py<Self>> {
+    pub fn __add__(&self, py: Python<'_>, rhs: Self) -> PyResult<Self> {
         let new = self.as_inner() + rhs.as_inner();
         new.to_python(py)
     }

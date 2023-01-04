@@ -5,7 +5,7 @@
 // [X] Qubit is defined
 //
 
-use pyo3::types::PyString;
+use pyo3::{types::PyString, Py};
 use quil_rs::instruction::{Calibration, Instruction};
 use rigetti_pyo3::{impl_repr, py_wrap_data_struct, py_wrap_type};
 
@@ -17,7 +17,7 @@ py_wrap_data_struct! {
     PyCalibration(Calibration) as "Calibration" {
         instructions: Vec::<Instruction> => PyInstructions,
         modifiers: GateModifiers => PyGateModifiers,
-        name: String => PyString,
+        name: String => Py<PyString>,
         parameters: Expressions => PyExpressions,
         qubits: Qubits => PyQubits
     }

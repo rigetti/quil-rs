@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use pyo3::{pyfunction, types::PyList, Py, PyResult, Python};
+use pyo3::{pyfunction, types::PyList, PyResult, Python};
 use quil_rs::instruction::{Instruction, Instructions};
 use rigetti_pyo3::{impl_repr, py_wrap_type, py_wrap_union_enum, ToPython};
 
@@ -30,7 +30,7 @@ pub fn parse_instructions<'a>(py: Python<'a>, input: &str) -> PyResult<&'a PyLis
             .0
             .iter()
             .map(|i| i.to_python(py))
-            .collect::<PyResult<Vec<Py<PyInstruction>>>>()?,
+            .collect::<PyResult<Vec<PyInstruction>>>()?,
     ))
 }
 
