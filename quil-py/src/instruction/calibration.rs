@@ -6,20 +6,20 @@
 //
 
 use pyo3::{types::PyString, Py};
-use quil_rs::instruction::{Calibration, Instruction};
+use quil_rs::{instruction::{Calibration, Instruction, GateModifier, Qubit}, expression::Expression};
 use rigetti_pyo3::{impl_repr, py_wrap_data_struct, py_wrap_type};
 
-use crate::instruction::{expression::Expressions, gate::GateModifiers, qubit::Qubits};
+use crate::instruction::{expression::PyExpression, qubit::PyQubit};
 
-use super::{expression::PyExpressions, gate::PyGateModifiers, qubit::PyQubits, PyInstructions};
+use super::{gate::PyGateModifier, PyInstructions};
 
 py_wrap_data_struct! {
     PyCalibration(Calibration) as "Calibration" {
         instructions: Vec::<Instruction> => PyInstructions,
-        modifiers: GateModifiers => PyGateModifiers,
+        modifiers: Vec<GateModifier> => Vec<PyGateModifier>,
         name: String => Py<PyString>,
-        parameters: Expressions => PyExpressions,
-        qubits: Qubits => PyQubits
+        parameters: Vec<Expression> => Vec<PyExpression>,
+        qubits: Vec<Qubit> => Vec<PyQubit>
     }
 }
 
