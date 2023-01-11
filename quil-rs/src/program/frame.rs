@@ -22,7 +22,7 @@ use crate::instruction::{FrameAttributes, FrameDefinition, FrameIdentifier, Inst
 /// A collection of Quil frames (`DEFFRAME` instructions) with utility methods.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct FrameSet {
-    frames: HashMap<FrameIdentifier, FrameAttributes>,
+    pub frames: HashMap<FrameIdentifier, FrameAttributes>,
 }
 
 impl FrameSet {

@@ -12,9 +12,10 @@ use rigetti_pyo3::{impl_repr, py_wrap_struct, PyWrapper, PyWrapperMut, ToPython}
 
 use crate::instruction::{waveform::PyWaveform, PyInstruction};
 
-use self::calibration_set::PyCalibrationSet;
+use self::{calibration_set::PyCalibrationSet, frame::PyFrameSet};
 
 pub mod calibration_set;
+pub mod frame;
 
 create_exception!(quil, ParseError, PyRuntimeError);
 
@@ -61,6 +62,11 @@ impl PyProgram {
     #[getter]
     pub fn waveforms(&self, py: Python<'_>) -> PyResult<BTreeMap<String, PyWaveform>> {
         self.as_inner().waveforms.to_python(py)
+    }
+
+    #[getter]
+    pub fn frames(&self, py: Python<'_>) -> PyResult<PyFrameSet> {
+        self.as_inner().frames.to_python(py)
     }
 
     pub fn expand_calibrations(&self) -> PyResult<Self> {

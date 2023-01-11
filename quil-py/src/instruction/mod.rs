@@ -11,6 +11,7 @@ pub mod binary_logic;
 pub mod calibration;
 pub mod declaration;
 pub mod expression;
+pub mod frame;
 pub mod gate;
 pub mod memory_reference;
 pub mod qubit;
