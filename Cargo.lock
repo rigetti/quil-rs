@@ -1052,6 +1052,7 @@ name = "rigetti-pyo3"
 version = "0.0.1"
 dependencies = [
  "num-complex",
+ "num-traits",
  "paste",
  "pyo3",
  "time",

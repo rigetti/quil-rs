@@ -1,12 +1,12 @@
 use pyo3::{types::PyString, Py};
-use quil_rs::instruction::{Gate, GateModifier};
-
-use rigetti_pyo3::{py_wrap_data_struct, py_wrap_type, py_wrap_union_enum};
-
-use crate::instruction::{
-    expression::{Expressions, PyExpressions},
-    qubit::{PyQubits, Qubits},
+use quil_rs::{
+    expression::Expression,
+    instruction::{Gate, GateModifier, Qubit},
 };
+
+use rigetti_pyo3::{py_wrap_data_struct, py_wrap_union_enum};
+
+use crate::instruction::{expression::PyExpression, qubit::PyQubit};
 
 py_wrap_union_enum! {
     PyGateModifier(GateModifier) as "GateModifier" {
@@ -16,17 +16,11 @@ py_wrap_union_enum! {
     }
 }
 
-pub type GateModifiers = Vec<GateModifier>;
-py_wrap_type! {
-    #[derive(Debug)]
-    PyGateModifiers(GateModifiers) as "GateModifiers";
-}
-
 py_wrap_data_struct! {
     PyGate(Gate) as "Gate" {
         name: String => Py<PyString>,
-        parameters: Expressions => PyExpressions,
-        qubits: Qubits => PyQubits,
-        modifiers: GateModifiers => PyGateModifiers
+        parameters: Vec<Expression> => Vec<PyExpression>,
+        qubits: Vec<Qubit> => Vec<PyQubit>,
+        modifiers: Vec<GateModifier> => Vec<PyGateModifier>
     }
 }

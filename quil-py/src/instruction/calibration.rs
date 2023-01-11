@@ -6,28 +6,36 @@
 //
 
 use pyo3::{types::PyString, Py};
-use quil_rs::instruction::{Calibration, Instruction};
-use rigetti_pyo3::{impl_repr, py_wrap_data_struct, py_wrap_type};
+use quil_rs::{
+    expression::Expression,
+    instruction::{Calibration, GateModifier, Instruction, MeasureCalibrationDefinition, Qubit},
+};
+use rigetti_pyo3::{impl_repr, impl_str, py_wrap_data_struct};
 
-use crate::instruction::{expression::Expressions, gate::GateModifiers, qubit::Qubits};
+use crate::instruction::{expression::PyExpression, gate::PyGateModifier, PyInstruction};
 
-use super::{expression::PyExpressions, gate::PyGateModifiers, qubit::PyQubits, PyInstructions};
+use super::qubit::PyQubit;
 
 py_wrap_data_struct! {
     PyCalibration(Calibration) as "Calibration" {
-        instructions: Vec::<Instruction> => PyInstructions,
-        modifiers: GateModifiers => PyGateModifiers,
+        instructions: Vec<Instruction> => Vec<PyInstruction>,
+        modifiers: Vec<GateModifier> => Vec<PyGateModifier>,
         name: String => Py<PyString>,
-        parameters: Expressions => PyExpressions,
-        qubits: Qubits => PyQubits
+        parameters: Vec<Expression> => Vec<PyExpression>,
+        qubits: Vec<Qubit> => Vec<PyQubit>
     }
 }
 
 impl_repr!(PyCalibration);
+impl_str!(PyCalibration);
 
-py_wrap_type! {
-    #[derive(Debug)]
-    PyCalibrations(Vec<Calibration>) as "Calibrations";
+py_wrap_data_struct! {
+    PyMeasureCalibrationDefinition(MeasureCalibrationDefinition) as "MeasureCalibrationDefinition" {
+        qubit: Option<Qubit> => Option<PyQubit>,
+        parameter: String => Py<PyString>,
+        instructions: Vec<Instruction> => Vec<PyInstruction>
+    }
 }
 
-impl_repr!(PyCalibrations);
+impl_repr!(PyMeasureCalibrationDefinition);
+impl_str!(PyMeasureCalibrationDefinition);

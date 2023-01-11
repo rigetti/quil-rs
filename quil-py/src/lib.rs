@@ -6,13 +6,13 @@ use instruction::{
     expression::{PyExpressionFunction, PyFunctionCallExpression},
     parse_instructions, PyInstruction,
 };
-use program::PyProgram;
+use program::{calibration_set::PyCalibrationSet, PyProgram};
 
 pub mod instruction;
 pub mod program;
 
 create_init_submodule! {
-    classes: [ PyProgram, PyFunctionCallExpression, PyExpressionFunction, PyVector, PyScalarType, PyDeclaration, PyInstruction ],
+    classes: [ PyProgram, PyCalibrationSet, PyFunctionCallExpression, PyExpressionFunction, PyVector, PyScalarType, PyDeclaration, PyInstruction ],
     funcs: [ parse_instructions ],
 }
 

@@ -3,7 +3,7 @@ use pyo3::{
     Py,
 };
 use quil_rs::instruction::{Declaration, ScalarType, Vector};
-use rigetti_pyo3::{py_wrap_data_struct, py_wrap_type, py_wrap_union_enum};
+use rigetti_pyo3::{py_wrap_data_struct, py_wrap_union_enum};
 
 py_wrap_union_enum! {
     PyScalarType(ScalarType) as "ScalarType" {
@@ -21,15 +21,10 @@ py_wrap_data_struct! {
     }
 }
 
-py_wrap_type! {
-    #[derive(Debug)]
-    PySharing(Option<String>) as "Sharing"
-}
-
 py_wrap_data_struct! {
     PyDeclaration(Declaration) as "Declaration" {
         name: String => Py<PyString>,
         size: Vector => PyVector,
-        sharing: Option<String> => PySharing
+        sharing: Option<String> => Option<Py<PyString>>
     }
 }

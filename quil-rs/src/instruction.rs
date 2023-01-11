@@ -174,6 +174,23 @@ pub struct Calibration {
     pub qubits: Vec<Qubit>,
 }
 
+impl fmt::Display for Calibration {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let parameter_str = get_expression_parameter_string(&self.parameters);
+        write!(
+            f,
+            "DEFCAL {}{} {}:",
+            self.name,
+            parameter_str,
+            format_qubits(&self.qubits)
+        )?;
+        for instruction in &self.instructions {
+            write!(f, "\n\t{instruction}")?;
+        }
+        Ok(())
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Convert {
     pub from: MemoryReference,
@@ -429,6 +446,22 @@ pub struct MeasureCalibrationDefinition {
     pub qubit: Option<Qubit>,
     pub parameter: String,
     pub instructions: Vec<Instruction>,
+}
+
+impl fmt::Display for MeasureCalibrationDefinition {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "DEFCAL MEASURE")?;
+        if let Some(qubit) = &self.qubit {
+            write!(f, " {qubit}")?;
+        }
+
+        writeln!(
+            f,
+            " {}:\n\t{}",
+            self.parameter,
+            format_instructions(&self.instructions)
+        )
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -767,18 +800,7 @@ impl fmt::Display for Instruction {
                 source,
             }) => write!(f, "{} {} {}", operator, destination, source),
             Instruction::CalibrationDefinition(calibration) => {
-                let parameter_str = get_expression_parameter_string(&calibration.parameters);
-                write!(
-                    f,
-                    "DEFCAL {}{} {}:",
-                    calibration.name,
-                    parameter_str,
-                    format_qubits(&calibration.qubits)
-                )?;
-                for instruction in &calibration.instructions {
-                    write!(f, "\n\t{}", instruction)?;
-                }
-                Ok(())
+                write!(f, "{calibration}")
             }
             Instruction::Capture(Capture {
                 blocking,
@@ -924,25 +946,8 @@ impl fmt::Display for Instruction {
                 write!(f, r#"INCLUDE {:?}"#, filename)?;
                 Ok(())
             }
-            Instruction::MeasureCalibrationDefinition(MeasureCalibrationDefinition {
-                qubit,
-                parameter,
-                instructions,
-            }) => {
-                write!(f, "DEFCAL MEASURE")?;
-                match qubit {
-                    Some(qubit) => {
-                        write!(f, " {}", qubit)?;
-                    }
-                    None => {}
-                }
-
-                writeln!(
-                    f,
-                    " {}:\n\t{}",
-                    parameter,
-                    format_instructions(instructions)
-                )
+            Instruction::MeasureCalibrationDefinition(measure_calibration) => {
+                write!(f, "{measure_calibration}")
             }
             Instruction::Measurement(Measurement { qubit, target }) => match target {
                 Some(reference) => write!(f, "MEASURE {} {}", qubit, reference),
