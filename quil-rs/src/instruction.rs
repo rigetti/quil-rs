@@ -543,6 +543,23 @@ pub struct WaveformDefinition {
     pub definition: Waveform,
 }
 
+impl fmt::Display for WaveformDefinition {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "DEFWAVEFORM {}{}:\n\t{}",
+            self.name,
+            get_string_parameter_string(&self.definition.parameters),
+            self.definition
+                .matrix
+                .iter()
+                .map(|e| format!("{}", e))
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct Arithmetic {
     pub operator: ArithmeticOperator,
@@ -1033,18 +1050,9 @@ impl fmt::Display for Instruction {
             Instruction::SwapPhases(SwapPhases { frame_1, frame_2 }) => {
                 write!(f, "SWAP-PHASES {} {}", frame_1, frame_2)
             }
-            Instruction::WaveformDefinition(WaveformDefinition { name, definition }) => write!(
-                f,
-                "DEFWAVEFORM {}{}:\n\t{}",
-                name,
-                get_string_parameter_string(&definition.parameters),
-                definition
-                    .matrix
-                    .iter()
-                    .map(|e| format!("{}", e))
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            ),
+            Instruction::WaveformDefinition(waveform_definition) => {
+                write!(f, "{waveform_definition}")
+            }
             Instruction::Halt => write!(f, "HALT"),
             Instruction::Nop => write!(f, "NOP"),
             Instruction::Jump(Jump { target }) => write!(f, "JUMP @{}", target),

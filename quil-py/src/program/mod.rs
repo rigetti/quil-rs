@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use pyo3::{
     create_exception,
     exceptions::PyRuntimeError,
@@ -8,7 +10,7 @@ use pyo3::{
 use quil_rs::Program;
 use rigetti_pyo3::{impl_repr, py_wrap_struct, PyWrapper, PyWrapperMut, ToPython};
 
-use crate::instruction::PyInstruction;
+use crate::instruction::{waveform::PyWaveform, PyInstruction};
 
 use self::calibration_set::PyCalibrationSet;
 
@@ -54,6 +56,11 @@ impl PyProgram {
     #[getter]
     pub fn calibrations(&self, py: Python<'_>) -> PyResult<PyCalibrationSet> {
         self.as_inner().calibrations.to_python(py)
+    }
+
+    #[getter]
+    pub fn waveforms(&self, py: Python<'_>) -> PyResult<BTreeMap<String, PyWaveform>> {
+        self.as_inner().waveforms.to_python(py)
     }
 
     pub fn expand_calibrations(&self) -> PyResult<Self> {

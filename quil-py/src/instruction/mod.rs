@@ -14,6 +14,7 @@ pub mod expression;
 pub mod gate;
 pub mod memory_reference;
 pub mod qubit;
+pub mod waveform;
 
 py_wrap_type! {
     #[derive(Debug)]
