@@ -404,6 +404,16 @@ pub struct Declaration {
     pub sharing: Option<String>,
 }
 
+impl fmt::Display for Declaration {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "DECLARE {} {}", self.name, self.size)?;
+        if let Some(shared) = &self.sharing {
+            write!(f, "SHARING {shared}")?
+        }
+        Ok(())
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Measurement {
     pub qubit: Qubit,
@@ -858,17 +868,8 @@ impl fmt::Display for Instruction {
                 write!(f, "CONVERT {} {}", to, from)?;
                 Ok(())
             }
-            Instruction::Declaration(Declaration {
-                name,
-                size,
-                sharing,
-            }) => {
-                write!(f, "DECLARE {} {}", name, size)?;
-                match sharing {
-                    Some(shared) => write!(f, "SHARING {}", shared)?,
-                    None => {}
-                }
-                Ok(())
+            Instruction::Declaration(declaration) => {
+                write!(f, "{declaration}")
             }
             Instruction::Delay(Delay {
                 qubits,

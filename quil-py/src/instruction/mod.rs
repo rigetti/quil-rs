@@ -14,6 +14,7 @@ pub mod expression;
 pub mod frame;
 pub mod gate;
 pub mod memory_reference;
+pub mod memory_region;
 pub mod qubit;
 pub mod waveform;
 

@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 
 use pyo3::{
     create_exception,
@@ -7,10 +7,12 @@ use pyo3::{
     types::{PyList, PyString},
 };
 
-use quil_rs::Program;
+use quil_rs::{instruction::Instruction, Program};
 use rigetti_pyo3::{impl_repr, py_wrap_struct, PyWrapper, PyWrapperMut, ToPython};
 
-use crate::instruction::{waveform::PyWaveform, PyInstruction};
+use crate::instruction::{
+    declaration::PyDeclaration, memory_region::PyMemoryRegion, waveform::PyWaveform, PyInstruction,
+};
 
 use self::{calibration_set::PyCalibrationSet, frame::PyFrameSet};
 
@@ -67,6 +69,31 @@ impl PyProgram {
     #[getter]
     pub fn frames(&self, py: Python<'_>) -> PyResult<PyFrameSet> {
         self.as_inner().frames.to_python(py)
+    }
+
+    #[getter]
+    pub fn memory_regions(&self, py: Python<'_>) -> PyResult<BTreeMap<String, PyMemoryRegion>> {
+        self.as_inner()
+            .memory_regions
+            .iter()
+            .map(|(name, memory_region)| Ok((name.to_python(py)?, memory_region.to_python(py)?)))
+            .collect()
+    }
+
+    #[getter]
+    // TODO: Should this filtering move to Program? Should we assume memory_regions will always make up all
+    // declarations and simplify this?
+    pub fn declarations(&self, py: Python<'_>) -> PyResult<HashMap<String, PyDeclaration>> {
+        self.as_inner()
+            .to_instructions(true)
+            .iter()
+            // TODO: Is there some clever and still readable way to consolidate ths into one filter map?
+            .filter_map(|inst| match inst {
+                Instruction::Declaration(declaration) => Some(declaration),
+                _ => None,
+            })
+            .map(|declaration| Ok((declaration.name.clone(), declaration.to_python(py)?)))
+            .collect()
     }
 
     pub fn expand_calibrations(&self) -> PyResult<Self> {
