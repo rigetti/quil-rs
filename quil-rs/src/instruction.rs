@@ -440,6 +440,7 @@ impl fmt::Display for GateSpecification {
     }
 }
 
+// TODO: There is a bug with parameter parsing for this type. DEFGATE(%theta) gets returned as DEFGATE(theta)
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct GateDefinition {
     pub name: String,
@@ -447,7 +448,6 @@ pub struct GateDefinition {
     pub specification: GateSpecification,
 }
 
-// TODO: There is a bug with parameter parsing. DEFGATE(%theta) gets returned as DEFGATE(theta)
 impl fmt::Display for GateDefinition {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let parameter_str = match self.parameters.is_empty() {
@@ -868,31 +868,6 @@ pub fn get_string_parameter_string(parameters: &[String]) -> String {
 
     let parameter_str: String = parameters.join(",");
     format!("({})", parameter_str)
-}
-
-impl FromStr for Instruction {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let span = LocatedSpan::new(s);
-        let input = lex(span).unwrap();
-        let instructions = parse_instructions(&input).unwrap();
-        Ok(instructions.1[0].clone())
-    }
-}
-
-// TODO: Error handling
-pub struct Instructions(pub Vec<Instruction>);
-
-impl FromStr for Instructions {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let span = LocatedSpan::new(s);
-        let input = lex(span).unwrap();
-        let instructions = parse_instructions(&input).unwrap();
-        Ok(Self(instructions.1))
-    }
 }
 
 impl fmt::Display for Instruction {

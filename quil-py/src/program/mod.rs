@@ -127,6 +127,26 @@ impl PyProgram {
         self.as_inner_mut().add_instruction(instruction.into())
     }
 
+    pub fn to_instructions(
+        &self,
+        include_headers: bool,
+        py: Python<'_>,
+    ) -> PyResult<Vec<PyInstruction>> {
+        self.as_inner()
+            .to_instructions(include_headers)
+            .iter()
+            .map(|i| i.to_python(py))
+            .collect()
+    }
+
+    pub fn to_headers(&self, py: Python<'_>) -> PyResult<Vec<PyInstruction>> {
+        self.as_inner()
+            .to_headers()
+            .iter()
+            .map(|h| h.to_python(py))
+            .collect()
+    }
+
     pub fn __str__(&self) -> PyResult<Py<PyString>> {
         self.clone().try_into()
     }

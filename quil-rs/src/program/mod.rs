@@ -222,25 +222,31 @@ impl Program {
         let mut result = vec![];
 
         if include_headers {
-            result.extend(self.memory_regions.iter().map(|(name, descriptor)| {
-                Instruction::Declaration(Declaration {
-                    name: name.clone(),
-                    size: descriptor.size.clone(),
-                    sharing: descriptor.sharing.clone(),
-                })
-            }));
-            result.extend(self.frames.to_instructions());
-            result.extend(self.waveforms.iter().map(|(name, definition)| {
-                Instruction::WaveformDefinition(WaveformDefinition {
-                    name: name.clone(),
-                    definition: definition.clone(),
-                })
-            }));
-            result.extend(self.calibrations.to_instructions());
+            result.extend(self.to_headers())
         }
 
         result.extend(self.instructions.clone());
 
+        result
+    }
+
+    pub fn to_headers(&self) -> Vec<Instruction> {
+        let mut result = vec![];
+        result.extend(self.memory_regions.iter().map(|(name, descriptor)| {
+            Instruction::Declaration(Declaration {
+                name: name.clone(),
+                size: descriptor.size.clone(),
+                sharing: descriptor.sharing.clone(),
+            })
+        }));
+        result.extend(self.frames.to_instructions());
+        result.extend(self.waveforms.iter().map(|(name, definition)| {
+            Instruction::WaveformDefinition(WaveformDefinition {
+                name: name.clone(),
+                definition: definition.clone(),
+            })
+        }));
+        result.extend(self.calibrations.to_instructions());
         result
     }
 
