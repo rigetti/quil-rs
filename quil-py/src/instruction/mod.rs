@@ -1,8 +1,5 @@
-use std::str::FromStr;
-
-use pyo3::{pyfunction, types::PyList, PyResult, Python};
-use quil_rs::instruction::{Instruction, Instructions};
-use rigetti_pyo3::{impl_repr, impl_str, py_wrap_type, py_wrap_union_enum, ToPython};
+use quil_rs::instruction::Instruction;
+use rigetti_pyo3::{impl_repr, impl_str, py_wrap_type, py_wrap_union_enum};
 
 use self::{arithmetic::PyArithmetic, declaration::PyDeclaration, gate::PyGate};
 

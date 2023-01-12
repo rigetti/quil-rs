@@ -4,7 +4,7 @@ use rigetti_pyo3::create_init_submodule;
 use instruction::{
     declaration::{PyDeclaration, PyScalarType, PyVector},
     expression::{PyExpressionFunction, PyFunctionCallExpression},
-    parse_instructions, PyInstruction,
+    PyInstruction,
 };
 use program::{calibration_set::PyCalibrationSet, PyProgram};
 
@@ -13,7 +13,6 @@ pub mod program;
 
 create_init_submodule! {
     classes: [ PyProgram, PyCalibrationSet, PyFunctionCallExpression, PyExpressionFunction, PyVector, PyScalarType, PyDeclaration, PyInstruction ],
-    funcs: [ parse_instructions ],
 }
 
 #[pymodule]

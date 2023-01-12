@@ -218,6 +218,28 @@ impl Program {
         Ok(expanded_program)
     }
 
+    pub fn is_protoquil(&self) -> Result<()> {
+        self.to_instructions(true)
+            .iter()
+            .find(|i| !i.is_valid_protoquil())
+            .map_or(Ok(()), |invalid_instruction| {
+                Err(ProgramError::InvalidProtoQuilInstruction(
+                    invalid_instruction.clone(),
+                ))
+            })
+    }
+
+    pub fn is_quilt(&self) -> Result<()> {
+        self.to_instructions(true)
+            .iter()
+            .find(|i| !i.is_valid_quilt())
+            .map_or(Ok(()), |invalid_instruction| {
+                Err(ProgramError::InvalidQuiltInstruction(
+                    invalid_instruction.clone(),
+                ))
+            })
+    }
+
     pub fn to_instructions(&self, include_headers: bool) -> Vec<Instruction> {
         let mut result = vec![];
 

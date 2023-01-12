@@ -26,6 +26,7 @@ pub use leftover::LeftoverError;
 pub use result::{disallow_leftover, map_parsed, recover};
 pub use syntax::SyntaxError;
 
+// TODO: This should use rigetti-nom?
 /// Errors that may occur while parsing a [`Program`](crate::program::Program).
 #[derive(Debug, PartialEq)]
 pub enum ProgramError<T> {
@@ -35,6 +36,8 @@ pub enum ProgramError<T> {
     },
     RecursiveCalibration(Instruction),
     Syntax(SyntaxError<T>),
+    InvalidQuiltInstruction(Instruction),
+    InvalidProtoQuilInstruction(Instruction),
 }
 
 impl<T> From<LexError> for ProgramError<T>
@@ -80,6 +83,10 @@ impl<T> ProgramError<T> {
             },
             Self::RecursiveCalibration(inst) => ProgramError::RecursiveCalibration(inst),
             Self::Syntax(err) => ProgramError::Syntax(err.map_parsed(map)),
+            Self::InvalidQuiltInstruction(inst) => ProgramError::InvalidQuiltInstruction(inst),
+            Self::InvalidProtoQuilInstruction(inst) => {
+                ProgramError::InvalidProtoQuilInstruction(inst)
+            }
         }
     }
 }
@@ -98,6 +105,10 @@ where
                 write!(f, "instruction {} expands into itself", instruction)
             }
             Self::Syntax(err) => fmt::Display::fmt(err, f),
+            Self::InvalidQuiltInstruction(inst) => write!(f, "invalid quilt instruction: {inst}"),
+            Self::InvalidProtoQuilInstruction(inst) => {
+                write!(f, "invalid protoquil instruction: {inst}")
+            }
         }
     }
 }
@@ -111,6 +122,8 @@ where
             Self::InvalidCalibration { .. } => None,
             Self::RecursiveCalibration(_) => None,
             Self::Syntax(err) => Some(err),
+            Self::InvalidQuiltInstruction(_) => None,
+            Self::InvalidProtoQuilInstruction(_) => None,
         }
     }
 }

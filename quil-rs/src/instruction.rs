@@ -20,7 +20,6 @@ use std::str::FromStr;
 use std::{collections::HashMap, fmt};
 
 use crate::expression::Expression;
-use crate::parser::parse_instructions;
 use crate::parser::{common::parse_memory_reference, lex, ParseError};
 use crate::program::{disallow_leftover, frame::FrameMatchCondition, SyntaxError};
 
@@ -1322,6 +1321,44 @@ impl Instruction {
             Instruction::Pulse(Pulse { waveform, .. }) => Some(waveform),
             _ => None,
         }
+    }
+
+    pub fn is_valid_protoquil(&self) -> bool {
+        matches!(
+            self,
+            Instruction::Declaration(_)
+                | Instruction::Gate(_)
+                | Instruction::Pragma(_)
+                | Instruction::Reset(_)
+                | Instruction::Measurement(_)
+        )
+    }
+
+    pub fn is_valid_quilt(&self) -> bool {
+        matches!(
+            self,
+            Instruction::CalibrationDefinition(_)
+                | Instruction::Capture(_)
+                | Instruction::Declaration(_)
+                | Instruction::Delay(_)
+                | Instruction::Fence(_)
+                | Instruction::FrameDefinition(_)
+                | Instruction::Gate(_)
+                | Instruction::Halt
+                | Instruction::Measurement(_)
+                | Instruction::MeasureCalibrationDefinition(_)
+                | Instruction::Pragma(_)
+                | Instruction::Pulse(_)
+                | Instruction::RawCapture(_)
+                | Instruction::Reset(_)
+                | Instruction::SetFrequency(_)
+                | Instruction::SetPhase(_)
+                | Instruction::SetScale(_)
+                | Instruction::ShiftFrequency(_)
+                | Instruction::ShiftPhase(_)
+                | Instruction::SwapPhases(_)
+                | Instruction::WaveformDefinition(_)
+        )
     }
 
     #[cfg(test)]

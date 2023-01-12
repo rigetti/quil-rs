@@ -1,8 +1,8 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use pyo3::{
     create_exception,
-    exceptions::PyRuntimeError,
+    exceptions::{PyRuntimeError, PyValueError},
     prelude::*,
     types::{PyList, PyString},
 };
@@ -12,7 +12,7 @@ use rigetti_pyo3::{impl_repr, py_wrap_struct, PyWrapper, PyWrapperMut, ToPython}
 
 use crate::instruction::{
     declaration::PyDeclaration, gate::PyGateDefinition, memory_region::PyMemoryRegion,
-    waveform::PyWaveform, PyInstruction,
+    qubit::PyQubit, waveform::PyWaveform, PyInstruction,
 };
 
 use self::{calibration_set::PyCalibrationSet, frame::PyFrameSet};
@@ -21,6 +21,7 @@ pub mod calibration_set;
 pub mod frame;
 
 create_exception!(quil, ParseError, PyRuntimeError);
+create_exception!(quil, ProgramError, PyValueError);
 
 // may need to define constructors "by hand", instead of imported macro
 // gives full control
@@ -123,6 +124,14 @@ impl PyProgram {
             .map(PyProgram::from)
     }
 
+    pub fn get_used_qubits(&self, py: Python<'_>) -> PyResult<HashSet<PyQubit>> {
+        self.as_inner()
+            .get_used_qubits()
+            .iter()
+            .map(|q| q.to_python(py))
+            .collect()
+    }
+
     pub fn add_instruction(&mut self, instruction: PyInstruction) {
         self.as_inner_mut().add_instruction(instruction.into())
     }
@@ -145,6 +154,18 @@ impl PyProgram {
             .iter()
             .map(|h| h.to_python(py))
             .collect()
+    }
+
+    pub fn validate_protoquil(&self, _py: Python<'_>) -> PyResult<()> {
+        self.as_inner()
+            .is_protoquil()
+            .map_err(|e| ProgramError::new_err(e.to_string()))
+    }
+
+    pub fn validate_quilt(&self, _py: Python<'_>) -> PyResult<()> {
+        self.as_inner()
+            .is_quilt()
+            .map_err(|e| ProgramError::new_err(e.to_string()))
     }
 
     pub fn __str__(&self) -> PyResult<Py<PyString>> {
