@@ -375,6 +375,25 @@ pub struct Gate {
     pub modifiers: Vec<GateModifier>,
 }
 
+impl fmt::Display for Gate {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let parameter_str = get_expression_parameter_string(&self.parameters);
+
+        let qubit_str = format_qubits(&self.qubits);
+        let modifier_str = &self
+            .modifiers
+            .iter()
+            .map(|m| format!("{m} "))
+            .collect::<Vec<String>>()
+            .join("");
+        write!(
+            f,
+            "{}{}{} {}",
+            modifier_str, self.name, parameter_str, qubit_str
+        )
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct CircuitDefinition {
     pub name: String,
@@ -390,11 +409,69 @@ pub enum GateSpecification {
     Permutation(Vec<u64>),
 }
 
+impl fmt::Display for GateSpecification {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            GateSpecification::Matrix(matrix) => {
+                for row in matrix {
+                    writeln!(
+                        f,
+                        "\t{}",
+                        row.iter()
+                            .map(|cell| format!("{}", cell))
+                            .collect::<Vec<String>>()
+                            .join(",")
+                    )?;
+                }
+            }
+            GateSpecification::Permutation(permutation) => {
+                writeln!(
+                    f,
+                    "\t{}",
+                    permutation
+                        .iter()
+                        .map(|i| format!("{}", i))
+                        .collect::<Vec<String>>()
+                        .join(", ")
+                )?;
+            }
+        }
+        Ok(())
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct GateDefinition {
     pub name: String,
     pub parameters: Vec<String>,
     pub specification: GateSpecification,
+}
+
+// TODO: There is a bug with parameter parsing. DEFGATE(%theta) gets returned as DEFGATE(theta)
+impl fmt::Display for GateDefinition {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let parameter_str = match self.parameters.is_empty() {
+            true => String::new(),
+            false => format!(
+                "({})",
+                self.parameters
+                    .iter()
+                    .map(|p| p.to_string())
+                    .collect::<String>()
+            ),
+        };
+        writeln!(
+            f,
+            "DEFGATE {}{} AS {}:",
+            self.name,
+            parameter_str,
+            match self.specification {
+                GateSpecification::Matrix(_) => "MATRIX",
+                GateSpecification::Permutation(_) => "PERMUTATION",
+            }
+        )?;
+        write!(f, "{}", self.specification)
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -901,68 +978,14 @@ impl fmt::Display for Instruction {
                     .map(|(k, v)| format!("\n\t{}: {}", k, v))
                     .collect::<String>()
             ),
-            Instruction::Gate(Gate {
-                name,
-                parameters,
-                qubits,
-                modifiers,
-            }) => {
-                let parameter_str = get_expression_parameter_string(parameters);
-
-                let qubit_str = format_qubits(qubits);
-                let modifier_str = modifiers
-                    .iter()
-                    .map(|m| format!("{} ", m))
-                    .collect::<Vec<String>>()
-                    .join("");
-                write!(f, "{}{}{} {}", modifier_str, name, parameter_str, qubit_str)
+            Instruction::Gate(gate) => {
+                write!(f, "{gate}")
             }
-            Instruction::GateDefinition(GateDefinition {
-                name,
-                parameters,
-                specification,
-            }) => {
-                let parameter_str: String = parameters.iter().map(|p| p.to_string()).collect();
-                writeln!(
-                    f,
-                    "DEFGATE {}{} AS {}:",
-                    name,
-                    parameter_str,
-                    match specification {
-                        GateSpecification::Matrix(_) => "MATRIX",
-                        GateSpecification::Permutation(_) => "PERMUTATION",
-                    }
-                )?;
-                match specification {
-                    GateSpecification::Matrix(matrix) => {
-                        for row in matrix {
-                            writeln!(
-                                f,
-                                "\t{}",
-                                row.iter()
-                                    .map(|cell| format!("{}", cell))
-                                    .collect::<Vec<String>>()
-                                    .join(",")
-                            )?;
-                        }
-                    }
-                    GateSpecification::Permutation(permutation) => {
-                        writeln!(
-                            f,
-                            "\t{}",
-                            permutation
-                                .iter()
-                                .map(|i| format!("{}", i))
-                                .collect::<Vec<String>>()
-                                .join(", ")
-                        )?;
-                    }
-                }
-                Ok(())
+            Instruction::GateDefinition(gate_definition) => {
+                write!(f, "{gate_definition}")
             }
             Instruction::Include(Include { filename }) => {
-                write!(f, r#"INCLUDE {:?}"#, filename)?;
-                Ok(())
+                write!(f, r#"INCLUDE {:?}"#, filename)
             }
             Instruction::MeasureCalibrationDefinition(measure_calibration) => {
                 write!(f, "{measure_calibration}")

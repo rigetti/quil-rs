@@ -11,7 +11,8 @@ use quil_rs::{instruction::Instruction, Program};
 use rigetti_pyo3::{impl_repr, py_wrap_struct, PyWrapper, PyWrapperMut, ToPython};
 
 use crate::instruction::{
-    declaration::PyDeclaration, memory_region::PyMemoryRegion, waveform::PyWaveform, PyInstruction,
+    declaration::PyDeclaration, gate::PyGateDefinition, memory_region::PyMemoryRegion,
+    waveform::PyWaveform, PyInstruction,
 };
 
 use self::{calibration_set::PyCalibrationSet, frame::PyFrameSet};
@@ -93,6 +94,18 @@ impl PyProgram {
                 _ => None,
             })
             .map(|declaration| Ok((declaration.name.clone(), declaration.to_python(py)?)))
+            .collect()
+    }
+
+    #[getter]
+    pub fn defined_gates(&self, py: Python<'_>) -> PyResult<Vec<PyGateDefinition>> {
+        self.as_inner()
+            .to_instructions(true)
+            .iter()
+            .filter_map(|inst| match inst {
+                Instruction::GateDefinition(gate_def) => Some(gate_def.to_python(py)),
+                _ => None,
+            })
             .collect()
     }
 
