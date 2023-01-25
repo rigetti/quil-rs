@@ -13,10 +13,12 @@ digraph {
     "measure_start" -> "measure_1" [label="frame"];
     "measure_start" -> "measure_end" [label="ordering"];
     "measure_0" [shape=rectangle, label="[0] NONBLOCKING PULSE 0 \"ro_tx\" test(duration: 1000000)"];
-    "measure_0" -> "measure_end" [label="frame"];
+    "measure_0" -> "measure_end" [label="frame
+ordering"];
     "measure_1" [shape=rectangle, label="[1] NONBLOCKING CAPTURE 0 \"ro_rx\" test(duration: 1000000) ro[0]"];
     "measure_1" -> "measure_end" [label="await capture
-frame"];
+frame
+ordering"];
     "measure_end" [shape=circle, label="end"];
   }
   "measure_end" -> "end_start" [label="if ro[0] == 0"];
@@ -29,7 +31,8 @@ frame"];
     "feedback_start" -> "feedback_end" [label="frame
 ordering"];
     "feedback_0" [shape=rectangle, label="[0] PULSE 0 \"rf\" test(duration: 1000000)"];
-    "feedback_0" -> "feedback_end" [label="frame"];
+    "feedback_0" -> "feedback_end" [label="frame
+ordering"];
     "feedback_end" [shape=circle, label="end"];
   }
   "feedback_end" -> "measure_start" [label="always"];

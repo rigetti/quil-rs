@@ -16,9 +16,11 @@ ordering"];
     "block_0_0" [shape=rectangle, label="[0] CAPTURE 0 \"ro_rx\" test ro[0]"];
     "block_0_0" -> "block_0_1" [label="frame"];
     "block_0_0" -> "block_0_end" [label="await capture
-frame"];
+frame
+ordering"];
     "block_0_1" [shape=rectangle, label="[1] PULSE 0 \"rf\" test"];
-    "block_0_1" -> "block_0_end" [label="frame"];
+    "block_0_1" -> "block_0_end" [label="frame
+ordering"];
     "block_0_end" [shape=circle, label="end"];
   }
 }
