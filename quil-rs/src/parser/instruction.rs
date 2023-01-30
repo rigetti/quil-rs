@@ -91,6 +91,7 @@ pub(crate) fn parse_instruction(input: ParserInput) -> InternalParserResult<Inst
             Command::ShiftPhase => command::parse_shift_phase(remainder),
             Command::Store => command::parse_store(remainder),
             Command::Sub => command::parse_arithmetic(ArithmeticOperator::Subtract, remainder),
+            Command::Wait => Ok((remainder, Instruction::Wait)),
             Command::Xor => command::parse_logical_binary(BinaryOperator::Xor, remainder),
         }
         .map_err(|err| {

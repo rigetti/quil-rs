@@ -292,6 +292,7 @@ impl FromStr for Program {
             |instructions| {
                 let mut program = Self::new();
                 for instruction in instructions {
+                    dbg!(&instruction);
                     program.add_instruction(instruction)
                 }
                 program

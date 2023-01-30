@@ -537,7 +537,8 @@ impl ScheduledProgram {
                 | Instruction::ShiftPhase(_)
                 | Instruction::SwapPhases(_)
                 | Instruction::RawCapture(_)
-                | Instruction::Reset(_) => {
+                | Instruction::Reset(_)
+                | Instruction::Wait => {
                     working_instructions.push(instruction);
                     Ok(())
                 }

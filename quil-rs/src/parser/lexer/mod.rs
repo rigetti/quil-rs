@@ -88,6 +88,7 @@ pub enum Command {
     ShiftPhase,
     Store,
     Sub,
+    Wait,
     Xor,
 }
 
@@ -216,6 +217,7 @@ fn recognize_command_or_identifier(identifier: String) -> Token {
         "DEFCIRCUIT" => Token::Command(DefCircuit),
         "MEASURE" => Token::Command(Measure),
         "HALT" => Token::Command(Halt),
+        "WAIT" => Token::Command(Wait),
         "JUMP-WHEN" => Token::Command(JumpWhen),
         "JUMP-UNLESS" => Token::Command(JumpUnless),
         "JUMP" => Token::Command(Jump),

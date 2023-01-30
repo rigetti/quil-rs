@@ -759,6 +759,7 @@ pub enum Instruction {
     SwapPhases(SwapPhases),
     UnaryLogic(UnaryLogic),
     WaveformDefinition(WaveformDefinition),
+    Wait,
 }
 
 #[derive(Clone, Debug)]
@@ -809,7 +810,8 @@ impl From<&Instruction> for InstructionRole {
             Instruction::Halt
             | Instruction::Jump(_)
             | Instruction::JumpWhen(_)
-            | Instruction::JumpUnless(_) => InstructionRole::ControlFlow,
+            | Instruction::JumpUnless(_)
+            | Instruction::Wait => InstructionRole::ControlFlow,
         }
     }
 }
@@ -1053,6 +1055,7 @@ impl fmt::Display for Instruction {
             }
             Instruction::Halt => write!(f, "HALT"),
             Instruction::Nop => write!(f, "NOP"),
+            Instruction::Wait => write!(f, "WAIT"),
             Instruction::Jump(Jump { target }) => write!(f, "JUMP @{}", target),
             Instruction::JumpUnless(JumpUnless { condition, target }) => {
                 write!(f, "JUMP-UNLESS @{} {}", target, condition)
@@ -1294,6 +1297,7 @@ impl Instruction {
             | Instruction::Gate(_)
             | Instruction::GateDefinition(_)
             | Instruction::Halt
+            | Instruction::Wait
             | Instruction::Include(_)
             | Instruction::Jump(_)
             | Instruction::JumpUnless(_)
@@ -1345,6 +1349,7 @@ impl Instruction {
                 | Instruction::FrameDefinition(_)
                 | Instruction::Gate(_)
                 | Instruction::Halt
+                | Instruction::Wait
                 | Instruction::Measurement(_)
                 | Instruction::MeasureCalibrationDefinition(_)
                 | Instruction::Pragma(_)
