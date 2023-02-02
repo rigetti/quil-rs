@@ -40,9 +40,9 @@ impl ErrorInput for LexInput<'_> {
         std::str::from_utf8(self.get_line_beginning())
             .map(|s| {
                 if s.len() == self.len() {
-                    format!("\"{}\"", s)
+                    format!("\"{s}\"")
                 } else {
-                    format!("\"{}\"...", s)
+                    format!("\"{s}\"...")
                 }
             })
             .unwrap_or_default()

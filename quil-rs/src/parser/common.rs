@@ -308,7 +308,7 @@ pub(crate) fn parse_waveform_name<'a>(input: ParserInput<'a>) -> InternalParserR
     let (input, name_extension) =
         opt(tuple((token!(Operator(Slash)), token!(Identifier(v)))))(input)?;
     if let Some((_, extension)) = name_extension {
-        name = format!("{}/{}", name, extension);
+        name = format!("{name}/{extension}");
     }
     Ok((input, name))
 }
@@ -391,8 +391,7 @@ mod tests {
         let (remainder, waveform) = parse_waveform_invocation(&lexed).unwrap();
         assert!(
             remainder.is_empty(),
-            "expected remainder to be empty, got {:?}",
-            remainder
+            "expected remainder to be empty, got {remainder:?}"
         );
         assert_eq!(
             waveform.parameters,
@@ -419,8 +418,7 @@ mod tests {
         let (remainder, matrix) = parse_matrix(&lexed).unwrap();
         assert!(
             remainder.is_empty(),
-            "expected remainder to be empty, got {:?}",
-            remainder
+            "expected remainder to be empty, got {remainder:?}"
         );
         assert_eq!(matrix.len(), 2);
     }
@@ -432,8 +430,7 @@ mod tests {
         let (remainder, permutation) = parse_permutation(&lexed).unwrap();
         assert!(
             remainder.is_empty(),
-            "expected remainder to be empty, got {:?}",
-            remainder
+            "expected remainder to be empty, got {remainder:?}"
         );
         assert_eq!(permutation, vec![0, 1, 2, 3, 4, 5, 7, 6]);
 

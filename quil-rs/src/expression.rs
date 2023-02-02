@@ -239,7 +239,7 @@ impl Expression {
             FunctionCall(fc) => {
                 fc.expression.simplify();
                 if let Number(number) = fc.expression.as_ref() {
-                    *self = Number(calculate_function(&fc.function, &number));
+                    *self = Number(calculate_function(&fc.function, number));
                 }
             }
             Infix(i) => {
@@ -478,13 +478,13 @@ impl fmt::Display for Expression {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use Expression::*;
         match self {
-            Address(memory_reference) => write!(f, "{}", memory_reference),
+            Address(memory_reference) => write!(f, "{memory_reference}"),
             FunctionCall(fc) => write!(f, "{}({})", fc.function, fc.expression),
             Infix(i) => write!(f, "({}{}{})", i.left, i.operator, i.right),
             Number(value) => write!(f, "{}", format_complex(value)),
             PiConstant => write!(f, "pi"),
             Prefix(p) => write!(f, "({}{})", p.operator, p.expression),
-            Variable(identifier) => write!(f, "%{}", identifier),
+            Variable(identifier) => write!(f, "%{identifier}"),
         }
     }
 }

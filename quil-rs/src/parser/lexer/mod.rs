@@ -262,7 +262,7 @@ fn lex_identifier_raw(input: LexInput) -> InternalLexResult<String> {
                 take_while1(is_valid_identifier_leading_character),
                 take_while(is_valid_identifier_middle_character),
             )),
-            |(left, right)| format!("{}{}", left, right),
+            |(left, right)| format!("{left}{right}"),
         ),
     )(input)
     .and_then(|(remaining, result)| {
@@ -300,7 +300,7 @@ fn lex_number(input: LexInput) -> InternalLexResult {
         input,
         match integer_parse_result {
             Ok(_) => Token::Integer(float_string.parse::<u64>().unwrap()),
-            Err(_) => Token::Float(double(float_string)?.1 as f64),
+            Err(_) => Token::Float(double(float_string)?.1),
         },
     ))
 }

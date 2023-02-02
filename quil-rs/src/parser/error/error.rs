@@ -147,7 +147,7 @@ where
         )?;
         if f.alternate() {
             if let Some(previous) = &self.previous {
-                write!(f, "\n\tcause: {}", previous)?;
+                write!(f, "\n\tcause: {previous}")?;
             }
         }
         Ok(())

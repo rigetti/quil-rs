@@ -78,8 +78,8 @@ fn parse(input: ParserInput, precedence: Precedence) -> InternalParserResult<Exp
         Some((Token::Float(value), remainder)) => {
             let (remainder, imaginary) = opt(parse_i)(remainder)?;
             match imaginary {
-                None => Ok((remainder, Expression::Number(crate::real!(*value as f64)))),
-                Some(_) => Ok((remainder, Expression::Number(crate::imag!(*value as f64)))),
+                None => Ok((remainder, Expression::Number(crate::real!(*value)))),
+                Some(_) => Ok((remainder, Expression::Number(crate::imag!(*value)))),
             }
         }
         Some((Token::Variable(name), remainder)) => {
