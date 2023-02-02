@@ -20,6 +20,7 @@ use std::str::FromStr;
 use std::{collections::HashMap, fmt};
 
 use crate::expression::Expression;
+use crate::parser::Token;
 use crate::parser::{common::parse_memory_reference, lex, ParseError};
 use crate::program::{disallow_leftover, frame::FrameMatchCondition, SyntaxError};
 
@@ -374,6 +375,56 @@ pub struct Gate {
     pub modifiers: Vec<GateModifier>,
 }
 
+fn is_reserved(word: &str) -> bool {
+    let input = LocatedSpan::new(word);
+    let tokens = lex(input).unwrap();
+    return tokens.len() == 1 && matches!(tokens[0].as_token(), Token::Identifier(_));
+}
+
+impl Gate {
+    pub fn new(
+        name: &str,
+        parameters: Vec<Expression>,
+        qubits: Vec<Qubit>,
+        modifiers: Vec<GateModifier>,
+    ) -> Result<Self, ()> {
+        if qubits.is_empty() {
+            return Err(());
+        }
+        if is_reserved(name) {
+            return Err(());
+        }
+
+        Ok(Self {
+            name: name.to_string(),
+            parameters,
+            qubits,
+            modifiers,
+        })
+    }
+
+    pub fn dagger(mut self) -> Self {
+        self.modifiers.insert(0, GateModifier::Dagger);
+        self
+    }
+
+    pub fn controlled(mut self, control_qubit: Qubit) -> Self {
+        self.qubits.insert(0, control_qubit);
+        self.modifiers.insert(0, GateModifier::Controlled);
+        self
+    }
+
+    pub fn forked(mut self, fork_qubit: Qubit, params: Vec<Expression>) -> Result<Self, ()> {
+        if params.len() != self.parameters.len() {
+            return Err(());
+        }
+        self.modifiers.insert(0, GateModifier::Forked);
+        self.qubits.insert(0, fork_qubit);
+        self.parameters.extend(params);
+        Ok(self)
+    }
+}
+
 impl fmt::Display for Gate {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let parameter_str = get_expression_parameter_string(&self.parameters);
@@ -419,7 +470,7 @@ impl fmt::Display for GateSpecification {
                         row.iter()
                             .map(|cell| format!("{}", cell))
                             .collect::<Vec<String>>()
-                            .join(",")
+                            .join(", ")
                     )?;
                 }
             }

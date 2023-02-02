@@ -239,7 +239,7 @@ impl Expression {
             FunctionCall(fc) => {
                 fc.expression.simplify();
                 if let Number(number) = fc.expression.as_ref() {
-                    *self = Number(calculate_function(&fc.function, number));
+                    *self = Number(calculate_function(&fc.function, &number));
                 }
             }
             Infix(i) => {

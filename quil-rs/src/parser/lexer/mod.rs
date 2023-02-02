@@ -34,9 +34,7 @@ use crate::parser::token::token_with_location;
 pub(crate) use error::InternalLexError;
 pub use error::{LexError, LexErrorKind};
 
-// TODO: replace manual parsing with strum::EnumString (FromStr)?
-// See: https://github.com/rigetti/quil-rs/issues/94
-#[derive(Debug, Copy, Clone, PartialEq, Eq, strum::Display)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, strum::Display, strum::EnumString)]
 #[strum(serialize_all = "SCREAMING-KEBAB-CASE")]
 pub enum Command {
     Add,

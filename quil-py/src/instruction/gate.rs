@@ -30,6 +30,12 @@ py_wrap_data_struct! {
 impl_repr!(PyGate);
 impl_str!(PyGate);
 
+/* #[pymethods] */
+/* impl PyGate { */
+/*     #[new] */
+/*     fn new(py: Python<'_>, name, params, qubits) */
+/* } */
+
 py_wrap_union_enum! {
     PyGateSpecification(GateSpecification) as "GateSpecification" {
         matrix: Matrix => Vec<Vec<PyExpression>>,
