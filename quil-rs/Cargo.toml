@@ -10,6 +10,7 @@ categories = ["parser-implementations", "science", "compilers", "emulators"]
 
 [dependencies]
 dot-writer = { version = "0.1.2", optional = true }
+fancy-regex = "0.11.0"
 indexmap = "1.6.1"
 lexical = "6.1.1" 
 nom = "7.1.1"

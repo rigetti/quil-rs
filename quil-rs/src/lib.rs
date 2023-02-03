@@ -40,5 +40,6 @@ pub mod instruction;
 mod macros;
 pub(crate) mod parser;
 pub mod program;
+pub mod reserved;
 
 pub use program::Program;

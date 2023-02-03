@@ -23,6 +23,7 @@ use crate::expression::Expression;
 use crate::parser::Token;
 use crate::parser::{common::parse_memory_reference, lex, ParseError};
 use crate::program::{disallow_leftover, frame::FrameMatchCondition, SyntaxError};
+use crate::reserved;
 
 #[cfg(test)]
 use proptest_derive::Arbitrary;
