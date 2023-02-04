@@ -190,13 +190,13 @@ fn escape_label(original: &str) -> String {
 fn get_node_id(node: &ScheduledGraphNode, prefix: &str) -> String {
     match node {
         ScheduledGraphNode::BlockEnd => {
-            format!("\"{}_end\"", prefix)
+            format!("\"{prefix}_end\"")
         }
         ScheduledGraphNode::BlockStart => {
-            format!("\"{}_start\"", prefix)
+            format!("\"{prefix}_start\"")
         }
         ScheduledGraphNode::InstructionIndex(index) => {
-            format!("\"{}_{}\"", prefix, index)
+            format!("\"{prefix}_{index}\"")
         }
     }
 }

@@ -1,3 +1,4 @@
+//! Types and functions related to validating Quil identifiers
 use std::str::FromStr;
 
 use fancy_regex::Regex;
@@ -5,7 +6,7 @@ use thiserror;
 
 use crate::reserved::ReservedToken;
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, PartialEq, thiserror::Error)]
 pub enum IdentifierValidationError {
     #[error("{0} is a reserved token")]
     Reserved(ReservedToken),
@@ -14,8 +15,10 @@ pub enum IdentifierValidationError {
     Invalid(String),
 }
 
-const IDENTIFIER_REGEX: &str = "";
+/// A regex that matches only valid Quil identifiers
+const IDENTIFIER_REGEX: &str = r"^[A-Za-z_]+[A-Za-z0-9\-_]*.*(?<!\-)$";
 
+/// Returns an error if the given identifier is not a valid Quil Identifier
 pub fn validate_identifier(ident: &str) -> Result<bool, IdentifierValidationError> {
     let re = Regex::new(IDENTIFIER_REGEX).expect("regex should be valid");
 
@@ -23,6 +26,7 @@ pub fn validate_identifier(ident: &str) -> Result<bool, IdentifierValidationErro
         .map_err(|_| IdentifierValidationError::Invalid(ident.to_string()))
 }
 
+/// Returns an error if the given identifier is reserved, or if it is not a valid Quil identifier
 pub fn validate_user_identifier(ident: &str) -> Result<bool, IdentifierValidationError> {
     ReservedToken::from_str(ident).map_or(validate_identifier(ident), |t| {
         Err(IdentifierValidationError::Reserved(t))

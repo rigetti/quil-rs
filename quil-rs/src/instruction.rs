@@ -20,10 +20,9 @@ use std::str::FromStr;
 use std::{collections::HashMap, fmt};
 
 use crate::expression::Expression;
-use crate::parser::Token;
 use crate::parser::{common::parse_memory_reference, lex, ParseError};
 use crate::program::{disallow_leftover, frame::FrameMatchCondition, SyntaxError};
-use crate::reserved;
+use crate::validation::identifier::{validate_identifier, IdentifierValidationError};
 
 #[cfg(test)]
 use proptest_derive::Arbitrary;
@@ -376,10 +375,16 @@ pub struct Gate {
     pub modifiers: Vec<GateModifier>,
 }
 
-fn is_reserved(word: &str) -> bool {
-    let input = LocatedSpan::new(word);
-    let tokens = lex(input).unwrap();
-    return tokens.len() == 1 && matches!(tokens[0].as_token(), Token::Identifier(_));
+#[derive(Debug, thiserror::Error)]
+pub enum GateError {
+    #[error("invalid name: {0}")]
+    InvalidIdentifier(#[from] IdentifierValidationError),
+
+    #[error("a gate must operate on 1 or more qubits")]
+    EmptyQubits,
+
+    #[error("expected {expected} parameters, but got {actual}")]
+    ForkedParameterLength { expected: usize, actual: usize },
 }
 
 impl Gate {
@@ -388,13 +393,12 @@ impl Gate {
         parameters: Vec<Expression>,
         qubits: Vec<Qubit>,
         modifiers: Vec<GateModifier>,
-    ) -> Result<Self, ()> {
+    ) -> Result<Self, GateError> {
         if qubits.is_empty() {
-            return Err(());
+            return Err(GateError::EmptyQubits);
         }
-        if is_reserved(name) {
-            return Err(());
-        }
+
+        validate_identifier(name).map_err(GateError::InvalidIdentifier)?;
 
         Ok(Self {
             name: name.to_string(),
@@ -415,9 +419,12 @@ impl Gate {
         self
     }
 
-    pub fn forked(mut self, fork_qubit: Qubit, params: Vec<Expression>) -> Result<Self, ()> {
+    pub fn forked(mut self, fork_qubit: Qubit, params: Vec<Expression>) -> Result<Self, GateError> {
         if params.len() != self.parameters.len() {
-            return Err(());
+            return Err(GateError::ForkedParameterLength {
+                expected: self.parameters.len(),
+                actual: params.len(),
+            });
         }
         self.modifiers.insert(0, GateModifier::Forked);
         self.qubits.insert(0, fork_qubit);
