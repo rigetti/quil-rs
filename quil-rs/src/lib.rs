@@ -41,5 +41,6 @@ mod macros;
 pub(crate) mod parser;
 pub mod program;
 pub mod reserved;
+pub mod validation;
 
 pub use program::Program;

@@ -5,6 +5,7 @@ use std::{fmt::Display, str::FromStr};
 use strum;
 
 /// An enum that can represent any reserved token in quil.
+#[derive(Debug)]
 pub enum ReservedToken {
     Keyword(ReservedKeyword),
     Gate(ReservedGate),
