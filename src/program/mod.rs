@@ -246,7 +246,7 @@ impl Program {
     pub fn to_string(&self, include_headers: bool) -> String {
         self.to_instructions(include_headers)
             .iter()
-            .map(|inst| format!("{}\n", inst))
+            .map(|inst| format!("{inst}\n"))
             .collect()
     }
 }
@@ -505,8 +505,7 @@ DEFFRAME 0 1 \"2q\":
                 .collect();
             assert_eq!(
                 used_frames, expected_used_frames,
-                "Instruction {} *used* frames `{:?}` but we expected `{:?}`",
-                instruction, used_frames, expected_used_frames
+                "Instruction {instruction} *used* frames `{used_frames:?}` but we expected `{expected_used_frames:?}`"
             );
 
             let blocked_frames: HashSet<String> = program
@@ -521,8 +520,7 @@ DEFFRAME 0 1 \"2q\":
                 .collect();
             assert_eq!(
                 blocked_frames, expected_blocked_frames,
-                "Instruction {} *blocked* frames `{:?}` but we expected `{:?}`",
-                instruction, blocked_frames, expected_blocked_frames
+                "Instruction {instruction} *blocked* frames `{blocked_frames:?}` but we expected `{expected_blocked_frames:?}`"
             );
         }
     }

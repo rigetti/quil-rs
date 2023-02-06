@@ -262,7 +262,7 @@ fn lex_identifier_raw(input: LexInput) -> InternalLexResult<String> {
                 take_while1(is_valid_identifier_leading_character),
                 take_while(is_valid_identifier_middle_character),
             )),
-            |(left, right)| format!("{}{}", left, right),
+            |(left, right)| format!("{left}{right}"),
         ),
     )(input)
     .and_then(|(remaining, result)| {

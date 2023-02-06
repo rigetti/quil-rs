@@ -505,23 +505,23 @@ impl fmt::Display for Expression {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use Expression::*;
         match self {
-            Address(memory_reference) => write!(f, "{}", memory_reference),
+            Address(memory_reference) => write!(f, "{memory_reference}"),
             FunctionCall {
                 function,
                 expression,
-            } => write!(f, "{}({})", function, expression),
+            } => write!(f, "{function}({expression})"),
             Infix {
                 left,
                 operator,
                 right,
-            } => write!(f, "({}{}{})", left, operator, right),
+            } => write!(f, "({left}{operator}{right})"),
             Number(value) => write!(f, "{}", format_complex(value)),
             PiConstant => write!(f, "pi"),
             Prefix {
                 operator,
                 expression,
-            } => write!(f, "({}{})", operator, expression),
-            Variable(identifier) => write!(f, "%{}", identifier),
+            } => write!(f, "({operator}{expression})"),
+            Variable(identifier) => write!(f, "%{identifier}"),
         }
     }
 }
@@ -854,8 +854,8 @@ mod tests {
         fn exponentiation_works_as_expected(left in arb_expr(), right in arb_expr()) {
             let expected = Expression::Infix { left: Box::new(left.clone()), operator: InfixOperator::Caret, right: Box::new(right.clone()) };
             prop_assert_eq!(left.clone() ^ right.clone(), expected.clone());
-            let mut x = left.clone();
-            x ^= right.clone();
+            let mut x = left;
+            x ^= right;
             prop_assert_eq!(x, expected);
         }
 
@@ -863,8 +863,8 @@ mod tests {
         fn addition_works_as_expected(left in arb_expr(), right in arb_expr()) {
             let expected = Expression::Infix { left: Box::new(left.clone()), operator: InfixOperator::Plus, right: Box::new(right.clone()) };
             prop_assert_eq!(left.clone() + right.clone(), expected.clone());
-            let mut x = left.clone();
-            x += right.clone();
+            let mut x = left;
+            x += right;
             prop_assert_eq!(x, expected);
         }
 
@@ -872,8 +872,8 @@ mod tests {
         fn subtraction_works_as_expected(left in arb_expr(), right in arb_expr()) {
             let expected = Expression::Infix { left: Box::new(left.clone()), operator: InfixOperator::Minus, right: Box::new(right.clone()) };
             prop_assert_eq!(left.clone() - right.clone(), expected.clone());
-            let mut x = left.clone();
-            x -= right.clone();
+            let mut x = left;
+            x -= right;
             prop_assert_eq!(x, expected);
         }
 
@@ -881,8 +881,8 @@ mod tests {
         fn multiplication_works_as_expected(left in arb_expr(), right in arb_expr()) {
             let expected = Expression::Infix { left: Box::new(left.clone()), operator: InfixOperator::Star, right: Box::new(right.clone()) };
             prop_assert_eq!(left.clone() * right.clone(), expected.clone());
-            let mut x = left.clone();
-            x *= right.clone();
+            let mut x = left;
+            x *= right;
             prop_assert_eq!(x, expected);
         }
 
@@ -890,8 +890,8 @@ mod tests {
         fn division_works_as_expected(left in arb_expr(), right in arb_expr()) {
             let expected = Expression::Infix { left: Box::new(left.clone()), operator: InfixOperator::Slash, right: Box::new(right.clone()) };
             prop_assert_eq!(left.clone() / right.clone(), expected.clone());
-            let mut x = left.clone();
-            x /= right.clone();
+            let mut x = left;
+            x /= right;
             prop_assert_eq!(x, expected);
         }
 

@@ -93,9 +93,9 @@ where
             Self::InvalidCalibration {
                 instruction,
                 message,
-            } => write!(f, "invalid calibration `{}`: {}", instruction, message),
+            } => write!(f, "invalid calibration `{instruction}`: {message}"),
             Self::RecursiveCalibration(instruction) => {
-                write!(f, "instruction {} expands into itself", instruction)
+                write!(f, "instruction {instruction} expands into itself")
             }
             Self::Syntax(err) => fmt::Display::fmt(err, f),
         }

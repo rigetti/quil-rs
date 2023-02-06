@@ -36,9 +36,9 @@ pub enum ArithmeticOperand {
 impl fmt::Display for ArithmeticOperand {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self {
-            ArithmeticOperand::LiteralInteger(value) => write!(f, "{}", value),
-            ArithmeticOperand::LiteralReal(value) => write!(f, "{}", value),
-            ArithmeticOperand::MemoryReference(value) => write!(f, "{}", value),
+            ArithmeticOperand::LiteralInteger(value) => write!(f, "{value}"),
+            ArithmeticOperand::LiteralReal(value) => write!(f, "{value}"),
+            ArithmeticOperand::MemoryReference(value) => write!(f, "{value}"),
         }
     }
 }
@@ -71,8 +71,8 @@ pub enum BinaryOperand {
 impl fmt::Display for BinaryOperand {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self {
-            BinaryOperand::LiteralInteger(value) => write!(f, "{}", value),
-            BinaryOperand::MemoryReference(value) => write!(f, "{}", value),
+            BinaryOperand::LiteralInteger(value) => write!(f, "{value}"),
+            BinaryOperand::MemoryReference(value) => write!(f, "{value}"),
         }
     }
 }
@@ -118,9 +118,9 @@ pub enum ComparisonOperand {
 impl fmt::Display for ComparisonOperand {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self {
-            ComparisonOperand::LiteralInteger(value) => write!(f, "{}", value),
-            ComparisonOperand::LiteralReal(value) => write!(f, "{}", value),
-            ComparisonOperand::MemoryReference(value) => write!(f, "{}", value),
+            ComparisonOperand::LiteralInteger(value) => write!(f, "{value}"),
+            ComparisonOperand::LiteralReal(value) => write!(f, "{value}"),
+            ComparisonOperand::MemoryReference(value) => write!(f, "{value}"),
         }
     }
 }
@@ -156,8 +156,8 @@ impl fmt::Display for AttributeValue {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use AttributeValue::*;
         match self {
-            String(value) => write!(f, "\"{}\"", value),
-            Expression(value) => write!(f, "{}", value),
+            String(value) => write!(f, "\"{value}\""),
+            Expression(value) => write!(f, "{value}"),
         }
     }
 }
@@ -298,7 +298,7 @@ impl fmt::Display for WaveformInvocation {
                 self.name,
                 key_value_pairs
                     .iter()
-                    .map(|(k, v)| format!("{}: {}", k, v))
+                    .map(|(k, v)| format!("{k}: {v}"))
                     .collect::<Vec<String>>()
                     .join(", ")
             )
@@ -318,7 +318,7 @@ mod waveform_invocation_tests {
             name: "CZ".into(),
             parameters: HashMap::new(),
         };
-        assert_eq!(format!("{}", wfi), "CZ".to_string());
+        assert_eq!(format!("{wfi}"), "CZ".to_string());
     }
 }
 
@@ -446,8 +446,8 @@ pub enum PragmaArgument {
 impl fmt::Display for PragmaArgument {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            PragmaArgument::Identifier(i) => write!(f, "{}", i),
-            PragmaArgument::Integer(i) => write!(f, "{}", i),
+            PragmaArgument::Identifier(i) => write!(f, "{i}"),
+            PragmaArgument::Integer(i) => write!(f, "{i}"),
         }
     }
 }
@@ -678,7 +678,7 @@ impl From<&Instruction> for InstructionRole {
 pub fn format_instructions(values: &[Instruction]) -> String {
     values
         .iter()
-        .map(|i| format!("{}", i))
+        .map(|i| format!("{i}"))
         .collect::<Vec<String>>()
         .join("\n\t")
 }
@@ -686,7 +686,7 @@ pub fn format_instructions(values: &[Instruction]) -> String {
 pub fn format_integer_vector(values: &[u64]) -> String {
     values
         .iter()
-        .map(|q| format!("{}", q))
+        .map(|q| format!("{q}"))
         .collect::<Vec<String>>()
         .join(" ")
 }
@@ -696,7 +696,7 @@ pub fn format_matrix(matrix: &[Vec<Expression>]) -> String {
         .iter()
         .map(|row| {
             row.iter()
-                .map(|cell| format!("{}", cell))
+                .map(|cell| format!("{cell}"))
                 .collect::<Vec<String>>()
                 .join(", ")
         })
@@ -707,7 +707,7 @@ pub fn format_matrix(matrix: &[Vec<Expression>]) -> String {
 pub fn format_qubits(qubits: &[Qubit]) -> String {
     qubits
         .iter()
-        .map(|q| format!("{}", q))
+        .map(|q| format!("{q}"))
         .collect::<Vec<String>>()
         .join(" ")
 }
@@ -717,8 +717,8 @@ pub fn get_expression_parameter_string(parameters: &[Expression]) -> String {
         return String::from("");
     }
 
-    let parameter_str: String = parameters.iter().map(|e| format!("{}", e)).collect();
-    format!("({})", parameter_str)
+    let parameter_str: String = parameters.iter().map(|e| format!("{e}")).collect();
+    format!("({parameter_str})")
 }
 
 pub fn get_string_parameter_string(parameters: &[String]) -> String {
@@ -727,7 +727,7 @@ pub fn get_string_parameter_string(parameters: &[String]) -> String {
     }
 
     let parameter_str: String = parameters.join(",");
-    format!("({})", parameter_str)
+    format!("({parameter_str})")
 }
 
 impl fmt::Display for Instruction {
@@ -737,7 +737,7 @@ impl fmt::Display for Instruction {
                 operator,
                 destination,
                 source,
-            }) => write!(f, "{} {} {}", operator, destination, source),
+            }) => write!(f, "{operator} {destination} {source}"),
             Instruction::CalibrationDefinition(calibration) => {
                 let parameter_str = get_expression_parameter_string(&calibration.parameters);
                 write!(
@@ -748,7 +748,7 @@ impl fmt::Display for Instruction {
                     format_qubits(&calibration.qubits)
                 )?;
                 for instruction in &calibration.instructions {
-                    write!(f, "\n\t{}", instruction)?;
+                    write!(f, "\n\t{instruction}")?;
                 }
                 Ok(())
             }
@@ -761,7 +761,7 @@ impl fmt::Display for Instruction {
                 if !blocking {
                     write!(f, "NONBLOCKING ")?;
                 }
-                write!(f, "CAPTURE {} {} {}", frame, waveform, memory_reference)
+                write!(f, "CAPTURE {frame} {waveform} {memory_reference}")
             }
             Instruction::CircuitDefinition(CircuitDefinition {
                 name,
@@ -771,24 +771,24 @@ impl fmt::Display for Instruction {
             }) => {
                 let mut parameter_str: String = parameters
                     .iter()
-                    .map(|p| format!("%{}", p))
+                    .map(|p| format!("%{p}"))
                     .collect::<Vec<String>>()
                     .join(", ");
                 if !parameter_str.is_empty() {
-                    parameter_str = format!("({})", parameter_str);
+                    parameter_str = format!("({parameter_str})");
                 }
-                write!(f, "DEFCIRCUIT {}{}", name, parameter_str)?;
+                write!(f, "DEFCIRCUIT {name}{parameter_str}")?;
                 for qubit_variable in qubit_variables {
-                    write!(f, " {}", qubit_variable)?;
+                    write!(f, " {qubit_variable}")?;
                 }
                 writeln!(f, ":")?;
                 for instruction in &**instructions {
-                    writeln!(f, "\t{}", instruction)?;
+                    writeln!(f, "\t{instruction}")?;
                 }
                 Ok(())
             }
             Instruction::Convert(Convert { from, to }) => {
-                write!(f, "CONVERT {} {}", to, from)?;
+                write!(f, "CONVERT {to} {from}")?;
                 Ok(())
             }
             Instruction::Declaration(Declaration {
@@ -796,9 +796,9 @@ impl fmt::Display for Instruction {
                 size,
                 sharing,
             }) => {
-                write!(f, "DECLARE {} {}", name, size)?;
+                write!(f, "DECLARE {name} {size}")?;
                 match sharing {
-                    Some(shared) => write!(f, "SHARING {}", shared)?,
+                    Some(shared) => write!(f, "SHARING {shared}")?,
                     None => {}
                 }
                 Ok(())
@@ -810,9 +810,9 @@ impl fmt::Display for Instruction {
             }) => {
                 write!(f, "DELAY {}", format_qubits(qubits))?;
                 for frame_name in frame_names {
-                    write!(f, " \"{}\"", frame_name)?;
+                    write!(f, " \"{frame_name}\"")?;
                 }
-                write!(f, " {}", duration)
+                write!(f, " {duration}")
             }
             Instruction::Fence(Fence { qubits }) => {
                 if qubits.is_empty() {
@@ -830,7 +830,7 @@ impl fmt::Display for Instruction {
                 identifier,
                 attributes
                     .iter()
-                    .map(|(k, v)| format!("\n\t{}: {}", k, v))
+                    .map(|(k, v)| format!("\n\t{k}: {v}"))
                     .collect::<String>()
             ),
             Instruction::Gate(Gate {
@@ -844,10 +844,10 @@ impl fmt::Display for Instruction {
                 let qubit_str = format_qubits(qubits);
                 let modifier_str = modifiers
                     .iter()
-                    .map(|m| format!("{} ", m))
+                    .map(|m| format!("{m} "))
                     .collect::<Vec<String>>()
                     .join("");
-                write!(f, "{}{}{} {}", modifier_str, name, parameter_str, qubit_str)
+                write!(f, "{modifier_str}{name}{parameter_str} {qubit_str}")
             }
             Instruction::GateDefinition(GateDefinition {
                 name,
@@ -872,7 +872,7 @@ impl fmt::Display for Instruction {
                                 f,
                                 "\t{}",
                                 row.iter()
-                                    .map(|cell| format!("{}", cell))
+                                    .map(|cell| format!("{cell}"))
                                     .collect::<Vec<String>>()
                                     .join(",")
                             )?;
@@ -884,7 +884,7 @@ impl fmt::Display for Instruction {
                             "\t{}",
                             permutation
                                 .iter()
-                                .map(|i| format!("{}", i))
+                                .map(|i| format!("{i}"))
                                 .collect::<Vec<String>>()
                                 .join(", ")
                         )?;
@@ -893,7 +893,7 @@ impl fmt::Display for Instruction {
                 Ok(())
             }
             Instruction::Include(Include { filename }) => {
-                write!(f, r#"INCLUDE {:?}"#, filename)?;
+                write!(f, r#"INCLUDE {filename:?}"#)?;
                 Ok(())
             }
             Instruction::MeasureCalibrationDefinition(MeasureCalibrationDefinition {
@@ -904,7 +904,7 @@ impl fmt::Display for Instruction {
                 write!(f, "DEFCAL MEASURE")?;
                 match qubit {
                     Some(qubit) => {
-                        write!(f, " {}", qubit)?;
+                        write!(f, " {qubit}")?;
                     }
                     None => {}
                 }
@@ -917,29 +917,29 @@ impl fmt::Display for Instruction {
                 )
             }
             Instruction::Measurement(Measurement { qubit, target }) => match target {
-                Some(reference) => write!(f, "MEASURE {} {}", qubit, reference),
-                None => write!(f, "MEASURE {}", qubit),
+                Some(reference) => write!(f, "MEASURE {qubit} {reference}"),
+                None => write!(f, "MEASURE {qubit}"),
             },
             Instruction::Move(Move {
                 destination,
                 source,
-            }) => write!(f, "MOVE {} {}", destination, source),
+            }) => write!(f, "MOVE {destination} {source}"),
             Instruction::Exchange(Exchange { left, right }) => {
-                write!(f, "EXCHANGE {} {}", left, right)
+                write!(f, "EXCHANGE {left} {right}")
             }
             Instruction::Load(Load {
                 destination,
                 source,
                 offset,
             }) => {
-                write!(f, "LOAD {} {} {}", destination, source, offset)
+                write!(f, "LOAD {destination} {source} {offset}")
             }
             Instruction::Store(Store {
                 destination,
                 offset,
                 source,
             }) => {
-                write!(f, "STORE {} {} {}", destination, offset, source)
+                write!(f, "STORE {destination} {offset} {source}")
             }
             Instruction::Pulse(Pulse {
                 blocking,
@@ -949,21 +949,21 @@ impl fmt::Display for Instruction {
                 if !blocking {
                     write!(f, "NONBLOCKING ")?
                 }
-                write!(f, "PULSE {} {}", frame, waveform)
+                write!(f, "PULSE {frame} {waveform}")
             }
             Instruction::Pragma(Pragma {
                 name,
                 arguments,
                 data,
             }) => {
-                write!(f, "PRAGMA {}", name)?;
+                write!(f, "PRAGMA {name}")?;
                 if !arguments.is_empty() {
                     for arg in arguments {
-                        write!(f, " {}", arg)?;
+                        write!(f, " {arg}")?;
                     }
                 }
                 if let Some(data) = data {
-                    write!(f, " \"{}\"", data)?;
+                    write!(f, " \"{data}\"")?;
                 }
                 Ok(())
             }
@@ -976,29 +976,29 @@ impl fmt::Display for Instruction {
                 if !blocking {
                     write!(f, "NONBLOCKING ")?
                 }
-                write!(f, "RAW-CAPTURE {} {} {}", frame, duration, memory_reference)
+                write!(f, "RAW-CAPTURE {frame} {duration} {memory_reference}")
             }
             Instruction::Reset(Reset { qubit }) => match qubit {
-                Some(qubit) => write!(f, "RESET {}", qubit),
+                Some(qubit) => write!(f, "RESET {qubit}"),
                 None => write!(f, "RESET"),
             },
             Instruction::SetFrequency(SetFrequency { frame, frequency }) => {
-                write!(f, "SET-FREQUENCY {} {}", frame, frequency)
+                write!(f, "SET-FREQUENCY {frame} {frequency}")
             }
             Instruction::SetPhase(SetPhase { frame, phase }) => {
-                write!(f, "SET-PHASE {} {}", frame, phase)
+                write!(f, "SET-PHASE {frame} {phase}")
             }
             Instruction::SetScale(SetScale { frame, scale }) => {
-                write!(f, "SET-SCALE {} {}", frame, scale)
+                write!(f, "SET-SCALE {frame} {scale}")
             }
             Instruction::ShiftFrequency(ShiftFrequency { frame, frequency }) => {
-                write!(f, "SHIFT-FREQUENCY {} {}", frame, frequency)
+                write!(f, "SHIFT-FREQUENCY {frame} {frequency}")
             }
             Instruction::ShiftPhase(ShiftPhase { frame, phase }) => {
-                write!(f, "SHIFT-PHASE {} {}", frame, phase)
+                write!(f, "SHIFT-PHASE {frame} {phase}")
             }
             Instruction::SwapPhases(SwapPhases { frame_1, frame_2 }) => {
-                write!(f, "SWAP-PHASES {} {}", frame_1, frame_2)
+                write!(f, "SWAP-PHASES {frame_1} {frame_2}")
             }
             Instruction::WaveformDefinition(WaveformDefinition { name, definition }) => write!(
                 f,
@@ -1008,20 +1008,20 @@ impl fmt::Display for Instruction {
                 definition
                     .matrix
                     .iter()
-                    .map(|e| format!("{}", e))
+                    .map(|e| format!("{e}"))
                     .collect::<Vec<_>>()
                     .join(", ")
             ),
             Instruction::Halt => write!(f, "HALT"),
             Instruction::Nop => write!(f, "NOP"),
-            Instruction::Jump(Jump { target }) => write!(f, "JUMP @{}", target),
+            Instruction::Jump(Jump { target }) => write!(f, "JUMP @{target}"),
             Instruction::JumpUnless(JumpUnless { condition, target }) => {
-                write!(f, "JUMP-UNLESS @{} {}", target, condition)
+                write!(f, "JUMP-UNLESS @{target} {condition}")
             }
             Instruction::JumpWhen(JumpWhen { condition, target }) => {
-                write!(f, "JUMP-WHEN @{} {}", target, condition)
+                write!(f, "JUMP-WHEN @{target} {condition}")
             }
-            Instruction::Label(Label(label)) => write!(f, "LABEL @{}", label),
+            Instruction::Label(Label(label)) => write!(f, "LABEL @{label}"),
             Instruction::Comparison(Comparison { operator, operands }) => {
                 write!(
                     f,
@@ -1033,7 +1033,7 @@ impl fmt::Display for Instruction {
                 write!(f, "{} {} {}", operator, operands.0, operands.1)
             }
             Instruction::UnaryLogic(UnaryLogic { operator, operand }) => {
-                write!(f, "{} {}", operator, operand)
+                write!(f, "{operator} {operand}")
             }
         }
     }
@@ -1087,8 +1087,8 @@ impl fmt::Display for Qubit {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use Qubit::*;
         match self {
-            Fixed(value) => write!(f, "{}", value),
-            Variable(value) => write!(f, "{}", value),
+            Fixed(value) => write!(f, "{value}"),
+            Variable(value) => write!(f, "{value}"),
         }
     }
 }

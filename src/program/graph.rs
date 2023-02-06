@@ -639,10 +639,10 @@ impl ScheduledProgram {
 
     fn generate_autoincremented_label(block_labels: &IndexMap<String, InstructionBlock>) -> String {
         let mut suffix = 0;
-        let mut label = format!("block_{}", suffix);
+        let mut label = format!("block_{suffix}");
         while block_labels.get(&label).is_some() {
             suffix += 1;
-            label = format!("block_{}", suffix);
+            label = format!("block_{suffix}");
         }
         label
     }

@@ -40,9 +40,9 @@ impl FrameSet {
     /// Return all frames in the set which match all of these conditions. If a frame _would_ match, but is
     /// not present in this [FrameSet], then it is not returned (notably, the [FrameMatchCondition::Specific]
     /// match condition).
-    pub(crate) fn get_matching_keys<'s, 'a>(
+    pub(crate) fn get_matching_keys<'s>(
         &'s self,
-        condition: FrameMatchCondition<'a>,
+        condition: FrameMatchCondition<'_>,
     ) -> HashSet<&'s FrameIdentifier> {
         let keys = self.frames.keys();
 
