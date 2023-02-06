@@ -1,0 +1,15 @@
+---
+source: src/program/latex.rs
+assertion_line: 104
+expression: latex
+---
+\[convert={density=300,outext=.png}]{standalone}
+\usepackage[margin=1in]{geometry}
+\usepackage{tikz}
+\usetikzlibrary{quantikz}
+\begin{document}
+\begin{tikzcd}
+\lstick{\ket{q_{2}}} & \gate{H} & \qw \\
+\lstick{\ket{q_{3}}} & \ctrl{-1} & \qw
+\end{tikzcd}
+\end{document}

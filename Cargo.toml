@@ -29,6 +29,7 @@ rstest = "0.15.0"
 
 [features]
 graphviz-dot = ["dot-writer"]
+latex = []
 
 [[bench]]
 name = "parser"
