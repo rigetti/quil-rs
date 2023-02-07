@@ -65,10 +65,24 @@ mod tests {
     use crate::Program;
     use super::{ToLatex, DiagramSettings};
 
+    /// Take an instruction and return the LaTeX using the to_latex method.
+    fn get_latex(instructions: &str) -> String {
+        let program = Program::from_str(instructions).expect("Program should be returned.");
+        program.to_latex(DiagramSettings::default()).expect("LaTeX should generate without error.")
+    }
+
+    #[test]
+    fn test_x_gate() {
+        insta::assert_snapshot!(get_latex("X 0"));
+    }
+
+    #[test]
+    fn test_y_gate() {
+        insta::assert_snapshot!(get_latex("Y 1"));
+    }
+
     #[test]
     fn test_controlled_gate() {
-        let program = Program::from_str("CONTROLLED H 3 2").expect("Program should be returned.");
-        let latex = program.to_latex(DiagramSettings::default()).expect("LaTeX should generate without error.");
-        insta::assert_snapshot!(latex);
+        insta::assert_snapshot!(get_latex("CONTROLLED H 3 2"));
     }
 }
