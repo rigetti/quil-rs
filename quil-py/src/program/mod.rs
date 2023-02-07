@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 
 use pyo3::{
     create_exception,
-    exceptions::{PyRuntimeError, PyValueError},
+    exceptions::PyValueError,
     prelude::*,
     types::{PyList, PyString},
 };
@@ -20,8 +20,9 @@ use self::{calibration_set::PyCalibrationSet, frame::PyFrameSet};
 pub mod calibration_set;
 pub mod frame;
 
-create_exception!(quil, ParseError, PyRuntimeError);
+// The generics these error types are incompatible with the rigetti_pyo3 macros
 create_exception!(quil, ProgramError, PyValueError);
+create_exception!(quil, ParseError, PyValueError);
 
 // may need to define constructors "by hand", instead of imported macro
 // gives full control
@@ -42,6 +43,7 @@ py_wrap_struct! {
         }
     }
 }
+
 impl_repr!(PyProgram);
 
 #[pymethods]
@@ -108,6 +110,13 @@ impl PyProgram {
                 _ => None,
             })
             .collect()
+    }
+
+    fn dagger(&self) -> PyResult<Self> {
+        self.as_inner()
+            .dagger()
+            .map_err(|e| ProgramError::new_err(e.to_string()))
+            .map(PyProgram::from)
     }
 
     pub fn expand_calibrations(&self) -> PyResult<Self> {

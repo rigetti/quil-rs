@@ -26,7 +26,8 @@ pub use leftover::LeftoverError;
 pub use result::{disallow_leftover, map_parsed, recover};
 pub use syntax::SyntaxError;
 
-// TODO: This should use rigetti-nom?
+// TODO: Should this be refactored as a enum for any error that can occur while working with a
+// `Program`?
 /// Errors that may occur while parsing a [`Program`](crate::program::Program).
 #[derive(Debug, PartialEq)]
 pub enum ProgramError<T> {
@@ -38,6 +39,7 @@ pub enum ProgramError<T> {
     Syntax(SyntaxError<T>),
     InvalidQuiltInstruction(Instruction),
     InvalidProtoQuilInstruction(Instruction),
+    UnsupportedOperation(Instruction),
 }
 
 impl<T> From<LexError> for ProgramError<T>
@@ -87,6 +89,7 @@ impl<T> ProgramError<T> {
             Self::InvalidProtoQuilInstruction(inst) => {
                 ProgramError::InvalidProtoQuilInstruction(inst)
             }
+            Self::UnsupportedOperation(inst) => ProgramError::UnsupportedOperation(inst),
         }
     }
 }
@@ -109,6 +112,9 @@ where
             Self::InvalidProtoQuilInstruction(inst) => {
                 write!(f, "invalid protoquil instruction: {inst}")
             }
+            Self::UnsupportedOperation(inst) => {
+                write!(f, "operation is not supported on instruction: {inst}")
+            }
         }
     }
 }
@@ -124,6 +130,7 @@ where
             Self::Syntax(err) => Some(err),
             Self::InvalidQuiltInstruction(_) => None,
             Self::InvalidProtoQuilInstruction(_) => None,
+            Self::UnsupportedOperation(_) => None,
         }
     }
 }

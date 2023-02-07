@@ -101,6 +101,26 @@ impl Program {
             .for_each(|i| self.add_instruction(i));
     }
 
+    /// Creates a new conjugate transpose of the [`Program`] by reversing the order of gate
+    /// instructions and applying the DAGGER modifier to each.
+    ///
+    ///
+    /// # Errors
+    ///
+    /// Errors if any of the instructions in the program are not [`Instruction::Gate`]
+    pub fn dagger(&self) -> Result<Self> {
+        self.to_instructions(true).into_iter().try_rfold(
+            Program::new(),
+            |mut new_program, instruction| match instruction {
+                Instruction::Gate(gate) => {
+                    new_program.add_instruction(Instruction::Gate(gate.dagger()));
+                    Ok(new_program)
+                }
+                _ => Err(ProgramError::<Self>::UnsupportedOperation(instruction)),
+            },
+        )
+    }
+
     /// Expand any instructions in the program which have a matching calibration, leaving the others
     /// unchanged. Recurses though each instruction while ensuring there is no cycle in the expansion
     /// graph (i.e. no calibration expands directly or indirectly into itself)
