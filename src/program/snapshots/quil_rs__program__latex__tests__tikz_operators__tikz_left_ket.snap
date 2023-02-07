@@ -1,0 +1,6 @@
+---
+source: src/program/latex.rs
+assertion_line: 143
+expression: "TikzOperators::get_tikz_operator(TikzOperators::tikz_left_ket(0))"
+---
+\lstick{\ket{q_{0}}}

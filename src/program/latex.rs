@@ -1,3 +1,5 @@
+use std::fmt::format;
+
 use crate::Program;
 
 #[derive(Debug)]
@@ -35,6 +37,34 @@ impl Default for DiagramSettings {
             abbreviate_controlled_rotations: false, 
             qubit_line_open_wire_length: 1, 
             right_align_terminal_measurements: true,
+        }
+    }
+}
+
+pub enum TikzOperators {
+    tikz_left_ket(u32),
+    tikz_control(i32),
+    tikz_cnot_target,
+    tikz_cphase_target,
+    tikz_swap(i32),
+    tikz_swap_target,
+    tikz_nop,
+    tikz_measure,
+}
+
+impl TikzOperators {
+    fn get_tikz_operator(tikz_operator: TikzOperators) -> String {
+        match tikz_operator {
+            TikzOperators::tikz_left_ket(qubit) => {
+                format(format_args!(r#"\lstick{{\ket{{q_{{{qubit}}}}}}}"#))
+            } // \lstick{\ket{q_{qubit}}}
+            TikzOperators::tikz_control(offset) => format(format_args!(r#"\ctrl{{{offset}}}"#)), // \ctrl{offset}
+            TikzOperators::tikz_cnot_target => r"\targ{}".to_string(), // \targ{}
+            TikzOperators::tikz_cphase_target => r"\control{}".to_string(), // \control{}
+            TikzOperators::tikz_swap(offset) => format(format_args!(r"\swap{{{offset}}}")), // \swap{offset}
+            TikzOperators::tikz_swap_target => r"\targX{}".to_string(), // \targX{}
+            TikzOperators::tikz_nop => r"\qw".to_string(),              // \qw
+            TikzOperators::tikz_measure => r"\meter{}".to_string(),     // \meter{}
         }
     }
 }
@@ -99,8 +129,47 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_controlled_gate() {
-        insta::assert_snapshot!(get_latex("CONTROLLED H 3 2"));
+    mod tikz_operators {
+        use crate::program::latex::TikzOperators;
+
+        #[test]
+        fn test_tikz_left_ket() {
+            insta::assert_snapshot!(TikzOperators::get_tikz_operator(TikzOperators::tikz_left_ket(0)));
+        }
+
+        #[test]
+        fn test_tikz_control() {
+            insta::assert_snapshot!(TikzOperators::get_tikz_operator(TikzOperators::tikz_control(2)));
+        }
+
+        #[test]
+        fn test_tikz_cnot_target() {
+            insta::assert_snapshot!(TikzOperators::get_tikz_operator(TikzOperators::tikz_cnot_target));
+        }
+
+        #[test]
+        fn test_tikz_cphase_target() {
+            insta::assert_snapshot!(TikzOperators::get_tikz_operator(TikzOperators::tikz_cphase_target));
+        }
+
+        #[test]
+        fn test_tikz_swap() {
+            insta::assert_snapshot!(TikzOperators::get_tikz_operator(TikzOperators::tikz_swap(4)));
+        }
+
+        #[test]
+        fn test_tikz_swap_target() {
+            insta::assert_snapshot!(TikzOperators::get_tikz_operator(TikzOperators::tikz_swap_target));
+        }
+
+        #[test]
+        fn test_tikz_nop() {
+            insta::assert_snapshot!(TikzOperators::get_tikz_operator(TikzOperators::tikz_nop));
+        }
+
+        #[test]
+        fn test_tikz_measure() {
+            insta::assert_snapshot!(TikzOperators::get_tikz_operator(TikzOperators::tikz_measure));
+        }
     }
 }
