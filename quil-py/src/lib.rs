@@ -1,18 +1,14 @@
 use pyo3::prelude::*;
 use rigetti_pyo3::create_init_submodule;
 
-use instruction::{
-    declaration::{PyDeclaration, PyScalarType, PyVector},
-    expression::{PyExpressionFunction, PyFunctionCallExpression},
-    PyInstruction,
-};
 use program::{calibration_set::PyCalibrationSet, PyProgram};
 
 pub mod instruction;
 pub mod program;
 
 create_init_submodule! {
-    classes: [ PyProgram, PyCalibrationSet, PyFunctionCallExpression, PyExpressionFunction, PyVector, PyScalarType, PyDeclaration, PyInstruction ],
+    classes: [ PyProgram, PyCalibrationSet ],
+    submodules: [ "instructions": instruction::init_submodule ],
 }
 
 #[pymodule]

@@ -8,4 +8,4 @@ edition = "2021"
 [dependencies]
 pyo3 = { version = "0.17", features = ["extension-module"] }
 quil-rs = { path = "../quil-rs" }
-rigetti-pyo3 = { path = "../../rigetti-pyo3" } # { git = "https://github.com/rigetti/rigetti-pyo3", branch = "support-fieldless-enums-data-structs" }
+rigetti-pyo3 = { git = "https://github.com/rigetti/rigetti-pyo3" }

@@ -1,7 +1,14 @@
 use quil_rs::instruction::Instruction;
-use rigetti_pyo3::{impl_repr, impl_str, py_wrap_type, py_wrap_union_enum};
+use rigetti_pyo3::{create_init_submodule, impl_repr, impl_str, py_wrap_type, py_wrap_union_enum};
 
-use self::{arithmetic::PyArithmetic, declaration::PyDeclaration, gate::PyGate};
+use self::{
+    arithmetic::PyArithmetic,
+    declaration::{PyDeclaration, PyScalarType, PyVector},
+    expression::{PyExpression, PyExpressionFunction, PyFunctionCallExpression},
+    gate::PyGate,
+    memory_reference::PyMemoryReference,
+    qubit::PyQubit,
+};
 
 pub mod arithmetic;
 pub mod binary_logic;
@@ -32,3 +39,7 @@ py_wrap_union_enum! {
 
 impl_repr!(PyInstruction);
 impl_str!(PyInstruction);
+
+create_init_submodule! {
+    classes: [PyInstruction, PyGate, PyDeclaration, PyScalarType, PyVector, PyExpression, PyExpressionFunction, PyFunctionCallExpression, PyQubit, PyMemoryReference],
+}
