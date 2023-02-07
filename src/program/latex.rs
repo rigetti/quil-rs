@@ -61,24 +61,42 @@ impl ToLatex for Program {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
+    use super::{DiagramSettings, ToLatex};
     use crate::Program;
-    use super::{ToLatex, DiagramSettings};
+    use std::str::FromStr;
 
     /// Take an instruction and return the LaTeX using the to_latex method.
-    fn get_latex(instructions: &str) -> String {
+    pub fn get_latex(instructions: &str) -> String {
         let program = Program::from_str(instructions).expect("Program should be returned.");
-        program.to_latex(DiagramSettings::default()).expect("LaTeX should generate without error.")
+        program
+            .to_latex(DiagramSettings::default())
+            .expect("LaTeX should generate without error.")
     }
 
     #[test]
-    fn test_x_gate() {
-        insta::assert_snapshot!(get_latex("X 0"));
+    /// Test functionality of to_latex using default settings.
+    fn test_to_latex() {
+        let program = Program::from_str("").expect("");
+        program.to_latex(DiagramSettings::default()).expect("");
     }
 
-    #[test]
-    fn test_y_gate() {
-        insta::assert_snapshot!(get_latex("Y 1"));
+    mod gates {
+        use crate::program::latex::tests::get_latex;
+
+        #[test]
+        fn test_gate_x() {
+            insta::assert_snapshot!(get_latex("X 0"));
+        }
+
+        #[test]
+        fn test_gate_y() {
+            insta::assert_snapshot!(get_latex("Y 1"));
+        }
+
+        #[test]
+        fn test_gate_controlled() {
+            insta::assert_snapshot!(get_latex("CONTROLLED H 3 2"));
+        }
     }
 
     #[test]
