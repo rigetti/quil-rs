@@ -157,12 +157,13 @@ mod tests {
         PrefixOperator,
     };
     use crate::instruction::{
+        gate::{Gate, GateDefinition, GateSpecification},
         Arithmetic, ArithmeticOperand, ArithmeticOperator, AttributeValue, BinaryLogic,
         BinaryOperand, BinaryOperator, Calibration, Capture, Comparison, ComparisonOperand,
-        ComparisonOperator, Convert, FrameDefinition, FrameIdentifier, Gate, GateDefinition,
-        GateSpecification, Include, Instruction, Jump, JumpWhen, Label, MemoryReference, Move,
-        Pulse, Qubit, RawCapture, Reset, SetFrequency, SetPhase, SetScale, ShiftFrequency,
-        ShiftPhase, UnaryLogic, UnaryOperator, Waveform, WaveformDefinition, WaveformInvocation,
+        ComparisonOperator, Convert, FrameDefinition, FrameIdentifier, Include, Instruction, Jump,
+        JumpWhen, Label, MemoryReference, Move, Pulse, Qubit, RawCapture, Reset, SetFrequency,
+        SetPhase, SetScale, ShiftFrequency, ShiftPhase, UnaryLogic, UnaryOperator, Waveform,
+        WaveformDefinition, WaveformInvocation,
     };
     use crate::parser::lexer::lex;
     use crate::{make_test, real, Program};

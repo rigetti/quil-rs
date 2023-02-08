@@ -16,11 +16,11 @@ use std::collections::HashSet;
 
 use crate::expression::{Expression, FunctionCallExpression, InfixExpression, PrefixExpression};
 use crate::instruction::{
+    gate::{Gate, GateDefinition, GateSpecification},
     Arithmetic, ArithmeticOperand, BinaryLogic, BinaryOperand, Capture, CircuitDefinition,
-    Comparison, ComparisonOperand, Delay, Exchange, Gate, GateDefinition, GateSpecification,
-    Instruction, Jump, JumpUnless, JumpWhen, Label, Load, MeasureCalibrationDefinition,
-    Measurement, MemoryReference, Move, Pulse, RawCapture, SetPhase, SetScale, ShiftPhase, Store,
-    UnaryLogic, Vector, WaveformInvocation,
+    Comparison, ComparisonOperand, Delay, Exchange, Instruction, Jump, JumpUnless, JumpWhen, Label,
+    Load, MeasureCalibrationDefinition, Measurement, MemoryReference, Move, Pulse, RawCapture,
+    SetPhase, SetScale, ShiftPhase, Store, UnaryLogic, Vector, WaveformInvocation,
 };
 
 #[derive(Clone, Debug, Hash, PartialEq)]

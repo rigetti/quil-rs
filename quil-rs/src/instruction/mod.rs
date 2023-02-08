@@ -22,10 +22,13 @@ use std::{collections::HashMap, fmt};
 use crate::expression::Expression;
 use crate::parser::{common::parse_memory_reference, lex, ParseError};
 use crate::program::{disallow_leftover, frame::FrameMatchCondition, SyntaxError};
-use crate::validation::identifier::{validate_identifier, IdentifierValidationError};
+
+pub mod gate;
 
 #[cfg(test)]
 use proptest_derive::Arbitrary;
+
+use self::gate::{Gate, GateDefinition, GateModifier, GateSpecification};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum ArithmeticOperand {
@@ -214,48 +217,6 @@ pub struct Include {
     pub filename: String,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum GateModifier {
-    Controlled,
-    Dagger,
-    Forked,
-}
-
-impl fmt::Display for GateModifier {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use GateModifier::*;
-        write!(
-            f,
-            "{}",
-            match self {
-                Controlled => "CONTROLLED",
-                Dagger => "DAGGER",
-                Forked => "FORKED",
-            }
-        )
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum GateType {
-    Matrix,
-    Permutation,
-}
-
-impl fmt::Display for GateType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use GateType::*;
-        write!(
-            f,
-            "{}",
-            match self {
-                Matrix => "MATRIX",
-                Permutation => "PERMUTATION",
-            }
-        )
-    }
-}
-
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub enum ScalarType {
     Bit,
@@ -367,91 +328,6 @@ impl FromStr for MemoryReference {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Gate {
-    pub name: String,
-    pub parameters: Vec<Expression>,
-    pub qubits: Vec<Qubit>,
-    pub modifiers: Vec<GateModifier>,
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum GateError {
-    #[error("invalid name: {0}")]
-    InvalidIdentifier(#[from] IdentifierValidationError),
-
-    #[error("a gate must operate on 1 or more qubits")]
-    EmptyQubits,
-
-    #[error("expected {expected} parameters, but got {actual}")]
-    ForkedParameterLength { expected: usize, actual: usize },
-}
-
-impl Gate {
-    pub fn new(
-        name: &str,
-        parameters: Vec<Expression>,
-        qubits: Vec<Qubit>,
-        modifiers: Vec<GateModifier>,
-    ) -> Result<Self, GateError> {
-        if qubits.is_empty() {
-            return Err(GateError::EmptyQubits);
-        }
-
-        validate_identifier(name).map_err(GateError::InvalidIdentifier)?;
-
-        Ok(Self {
-            name: name.to_string(),
-            parameters,
-            qubits,
-            modifiers,
-        })
-    }
-
-    pub fn dagger(mut self) -> Self {
-        self.modifiers.insert(0, GateModifier::Dagger);
-        self
-    }
-
-    pub fn controlled(mut self, control_qubit: Qubit) -> Self {
-        self.qubits.insert(0, control_qubit);
-        self.modifiers.insert(0, GateModifier::Controlled);
-        self
-    }
-
-    pub fn forked(mut self, fork_qubit: Qubit, params: Vec<Expression>) -> Result<Self, GateError> {
-        if params.len() != self.parameters.len() {
-            return Err(GateError::ForkedParameterLength {
-                expected: self.parameters.len(),
-                actual: params.len(),
-            });
-        }
-        self.modifiers.insert(0, GateModifier::Forked);
-        self.qubits.insert(0, fork_qubit);
-        self.parameters.extend(params);
-        Ok(self)
-    }
-}
-
-impl fmt::Display for Gate {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let parameter_str = get_expression_parameter_string(&self.parameters);
-
-        let qubit_str = format_qubits(&self.qubits);
-        let modifier_str = &self
-            .modifiers
-            .iter()
-            .map(|m| format!("{m} "))
-            .collect::<Vec<String>>()
-            .join("");
-        write!(
-            f,
-            "{}{}{} {}",
-            modifier_str, self.name, parameter_str, qubit_str
-        )
-    }
-}
-
 #[derive(Clone, Debug, PartialEq)]
 pub struct CircuitDefinition {
     pub name: String,
@@ -459,77 +335,6 @@ pub struct CircuitDefinition {
     // These cannot be fixed qubits and thus are not typed as `Qubit`
     pub qubit_variables: Vec<String>,
     pub instructions: Vec<Instruction>,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum GateSpecification {
-    Matrix(Vec<Vec<Expression>>),
-    Permutation(Vec<u64>),
-}
-
-impl fmt::Display for GateSpecification {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            GateSpecification::Matrix(matrix) => {
-                for row in matrix {
-                    writeln!(
-                        f,
-                        "\t{}",
-                        row.iter()
-                            .map(|cell| format!("{cell}"))
-                            .collect::<Vec<String>>()
-                            .join(", ")
-                    )?;
-                }
-            }
-            GateSpecification::Permutation(permutation) => {
-                writeln!(
-                    f,
-                    "\t{}",
-                    permutation
-                        .iter()
-                        .map(|i| format!("{i}"))
-                        .collect::<Vec<String>>()
-                        .join(", ")
-                )?;
-            }
-        }
-        Ok(())
-    }
-}
-
-// TODO: There is a bug with parameter parsing for this type. DEFGATE(%theta) gets returned as DEFGATE(theta)
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct GateDefinition {
-    pub name: String,
-    pub parameters: Vec<String>,
-    pub specification: GateSpecification,
-}
-
-impl fmt::Display for GateDefinition {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let parameter_str = match self.parameters.is_empty() {
-            true => String::new(),
-            false => format!(
-                "({})",
-                self.parameters
-                    .iter()
-                    .map(|p| p.to_string())
-                    .collect::<String>()
-            ),
-        };
-        writeln!(
-            f,
-            "DEFGATE {}{} AS {}:",
-            self.name,
-            parameter_str,
-            match self.specification {
-                GateSpecification::Matrix(_) => "MATRIX",
-                GateSpecification::Permutation(_) => "PERMUTATION",
-            }
-        )?;
-        write!(f, "{}", self.specification)
-    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

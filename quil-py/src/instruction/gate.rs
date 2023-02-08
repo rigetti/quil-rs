@@ -6,7 +6,10 @@ use pyo3::{
 };
 use quil_rs::{
     expression::Expression,
-    instruction::{Gate, GateDefinition, GateModifier, GateSpecification, Qubit},
+    instruction::{
+        gate::{Gate, GateDefinition, GateModifier, GateSpecification},
+        Qubit,
+    },
 };
 
 use rigetti_pyo3::{
@@ -16,7 +19,7 @@ use rigetti_pyo3::{
 
 use crate::instruction::{expression::PyExpression, qubit::PyQubit};
 
-wrap_error!(GateError(quil_rs::instruction::GateError));
+wrap_error!(GateError(quil_rs::instruction::gate::GateError));
 py_wrap_error!(quil, GateError, PyGateError, PyValueError);
 
 py_wrap_union_enum! {
