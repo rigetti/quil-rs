@@ -23,7 +23,7 @@ pub struct DiagramSettings {
     /// The default of 1 is the natural choice. The main reason for including this option
     /// is that it may be appropriate for this to be 0 in subdiagrams.
     qubit_line_open_wire_length: u32,
-    
+
     /// Align measurement operations which appear at the end of the program.
     right_align_terminal_measurements: bool,
 }
@@ -41,30 +41,28 @@ impl Default for DiagramSettings {
     }
 }
 
-pub enum TikzOperators {
-    tikz_left_ket(u32),
-    tikz_control(i32),
-    tikz_cnot_target,
-    tikz_cphase_target,
-    tikz_swap(i32),
-    tikz_swap_target,
-    tikz_nop,
-    tikz_measure,
+pub enum TikzOperator {
+    TikzLeftKet(u32),
+    TikzControl(i32),
+    TikzCnotTarget,
+    TikzCphaseTarget,
+    TikzSwap(i32),
+    TikzSwapTarget,
+    TikzNop,
+    TikzMeasure,
 }
 
-impl TikzOperators {
-    fn get_tikz_operator(tikz_operator: TikzOperators) -> String {
+impl TikzOperator {
+    fn get_tikz_operator(tikz_operator: Self) -> String {
         match tikz_operator {
-            TikzOperators::tikz_left_ket(qubit) => {
-                format(format_args!(r#"\lstick{{\ket{{q_{{{qubit}}}}}}}"#))
-            } // \lstick{\ket{q_{qubit}}}
-            TikzOperators::tikz_control(offset) => format(format_args!(r#"\ctrl{{{offset}}}"#)), // \ctrl{offset}
-            TikzOperators::tikz_cnot_target => r"\targ{}".to_string(), // \targ{}
-            TikzOperators::tikz_cphase_target => r"\control{}".to_string(), // \control{}
-            TikzOperators::tikz_swap(offset) => format(format_args!(r"\swap{{{offset}}}")), // \swap{offset}
-            TikzOperators::tikz_swap_target => r"\targX{}".to_string(), // \targX{}
-            TikzOperators::tikz_nop => r"\qw".to_string(),              // \qw
-            TikzOperators::tikz_measure => r"\meter{}".to_string(),     // \meter{}
+            Self::TikzLeftKet(qubit) => format(format_args!(r#"\lstick{{\ket{{q_{{{qubit}}}}}}}"#)), // \lstick{\ket{q_{qubit}}}
+            Self::TikzControl(offset) => format(format_args!(r#"\ctrl{{{offset}}}"#)), // \ctrl{offset}
+            Self::TikzCnotTarget => r"\targ{}".to_string(), // \targ{}
+            Self::TikzCphaseTarget => r"\control{}".to_string(), // \control{}
+            Self::TikzSwap(offset) => format(format_args!(r"\swap{{{offset}}}")), // \swap{offset}
+            Self::TikzSwapTarget => r"\targX{}".to_string(), // \targX{}
+            Self::TikzNop => r"\qw".to_string(),              // \qw
+            Self::TikzMeasure => r"\meter{}".to_string(),     // \meter{}
         }
     }
 }
@@ -130,46 +128,46 @@ mod tests {
     }
 
     mod tikz_operators {
-        use crate::program::latex::TikzOperators;
+        use crate::program::latex::TikzOperator;
 
         #[test]
         fn test_tikz_left_ket() {
-            insta::assert_snapshot!(TikzOperators::get_tikz_operator(TikzOperators::tikz_left_ket(0)));
+            insta::assert_snapshot!(TikzOperator::get_tikz_operator(TikzOperator::TikzLeftKet(0)));
         }
 
         #[test]
         fn test_tikz_control() {
-            insta::assert_snapshot!(TikzOperators::get_tikz_operator(TikzOperators::tikz_control(2)));
+            insta::assert_snapshot!(TikzOperator::get_tikz_operator(TikzOperator::TikzControl(2)));
         }
 
         #[test]
         fn test_tikz_cnot_target() {
-            insta::assert_snapshot!(TikzOperators::get_tikz_operator(TikzOperators::tikz_cnot_target));
+            insta::assert_snapshot!(TikzOperator::get_tikz_operator(TikzOperator::TikzCnotTarget));
         }
 
         #[test]
         fn test_tikz_cphase_target() {
-            insta::assert_snapshot!(TikzOperators::get_tikz_operator(TikzOperators::tikz_cphase_target));
+            insta::assert_snapshot!(TikzOperator::get_tikz_operator(TikzOperator::TikzCphaseTarget));
         }
 
         #[test]
         fn test_tikz_swap() {
-            insta::assert_snapshot!(TikzOperators::get_tikz_operator(TikzOperators::tikz_swap(4)));
+            insta::assert_snapshot!(TikzOperator::get_tikz_operator(TikzOperator::TikzSwap(4)));
         }
 
         #[test]
         fn test_tikz_swap_target() {
-            insta::assert_snapshot!(TikzOperators::get_tikz_operator(TikzOperators::tikz_swap_target));
+            insta::assert_snapshot!(TikzOperator::get_tikz_operator(TikzOperator::TikzSwapTarget));
         }
 
         #[test]
         fn test_tikz_nop() {
-            insta::assert_snapshot!(TikzOperators::get_tikz_operator(TikzOperators::tikz_nop));
+            insta::assert_snapshot!(TikzOperator::get_tikz_operator(TikzOperator::TikzNop));
         }
 
         #[test]
         fn test_tikz_measure() {
-            insta::assert_snapshot!(TikzOperators::get_tikz_operator(TikzOperators::tikz_measure));
+            insta::assert_snapshot!(TikzOperator::get_tikz_operator(TikzOperator::TikzMeasure));
         }
     }
 }
