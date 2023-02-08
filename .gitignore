@@ -1,6 +1,8 @@
 /target
 node_modules
 Cargo.lock
+.venv
+.DS_Store
 
 # JetBrains Editors
 .idea/
