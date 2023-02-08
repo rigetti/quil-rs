@@ -10,6 +10,7 @@ categories = ["parser-implementations", "science", "compilers", "emulators"]
 
 [dependencies]
 dot-writer = { version = "0.1.2", optional = true }
+latex = { version = "0.3.1", optional = true }
 indexmap = "1.6.1"
 lexical = "6.1.1" 
 nom = "7.1.1"
@@ -29,7 +30,7 @@ rstest = "0.15.0"
 
 [features]
 graphviz-dot = ["dot-writer"]
-latex = []
+to-latex = ["latex"]
 
 [[bench]]
 name = "parser"
