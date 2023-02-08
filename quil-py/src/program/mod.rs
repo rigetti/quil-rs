@@ -4,6 +4,7 @@ use pyo3::{
     create_exception,
     exceptions::PyValueError,
     prelude::*,
+    pyclass::CompareOp,
     types::{PyList, PyString},
 };
 
@@ -184,5 +185,12 @@ impl PyProgram {
     pub fn __add__(&self, py: Python<'_>, rhs: Self) -> PyResult<Self> {
         let new = self.as_inner() + rhs.as_inner();
         new.to_python(py)
+    }
+
+    fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
+        match op {
+            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
+            _ => py.NotImplemented(),
+        }
     }
 }
