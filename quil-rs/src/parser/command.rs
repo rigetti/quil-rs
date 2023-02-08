@@ -20,20 +20,17 @@ use nom::{
 };
 
 use crate::{
-    instruction::{
-        gate::{GateSpecification, GateType},
-        Convert, Include, PragmaArgument,
-    },
+    instruction::{Convert, GateSpecification, GateType, Include, PragmaArgument},
     parser::common::parse_variable_qubit,
 };
 
 use crate::instruction::{
-    gate::GateDefinition, Arithmetic, ArithmeticOperand, ArithmeticOperator, BinaryLogic,
-    BinaryOperator, Calibration, Capture, CircuitDefinition, Comparison, ComparisonOperator,
-    Declaration, Delay, Exchange, Fence, FrameDefinition, Instruction, Jump, JumpUnless, JumpWhen,
-    Label, Load, MeasureCalibrationDefinition, Measurement, Move, Pragma, Pulse, Qubit, RawCapture,
-    Reset, SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, Store, UnaryLogic,
-    UnaryOperator, Waveform, WaveformDefinition,
+    Arithmetic, ArithmeticOperand, ArithmeticOperator, BinaryLogic, BinaryOperator, Calibration,
+    Capture, CircuitDefinition, Comparison, ComparisonOperator, Declaration, Delay, Exchange,
+    Fence, FrameDefinition, GateDefinition, Instruction, Jump, JumpUnless, JumpWhen, Label, Load,
+    MeasureCalibrationDefinition, Measurement, Move, Pragma, Pulse, Qubit, RawCapture, Reset,
+    SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, Store, UnaryLogic, UnaryOperator,
+    Waveform, WaveformDefinition,
 };
 use crate::parser::instruction::parse_block;
 use crate::parser::InternalParserResult;
@@ -566,15 +563,12 @@ mod tests {
         Expression, ExpressionFunction, FunctionCallExpression, InfixExpression, InfixOperator,
         PrefixExpression, PrefixOperator,
     };
-    use crate::instruction::{
-        gate::{GateDefinition, GateSpecification},
-        PragmaArgument,
-    };
+    use crate::instruction::{GateDefinition, GateSpecification, PragmaArgument};
     use crate::parser::lexer::lex;
     use crate::{imag, real};
     use crate::{
         instruction::{
-            gate::Gate, CircuitDefinition, Declaration, Instruction, Measurement, MemoryReference,
+            CircuitDefinition, Declaration, Gate, Instruction, Measurement, MemoryReference,
             Pragma, Qubit, ScalarType, Vector,
         },
         make_test,

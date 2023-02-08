@@ -23,12 +23,12 @@ use crate::expression::Expression;
 use crate::parser::{common::parse_memory_reference, lex, ParseError};
 use crate::program::{disallow_leftover, frame::FrameMatchCondition, SyntaxError};
 
-pub mod gate;
+mod gate;
 
 #[cfg(test)]
 use proptest_derive::Arbitrary;
 
-use self::gate::{Gate, GateDefinition, GateModifier, GateSpecification};
+pub use self::gate::{Gate, GateDefinition, GateError, GateModifier, GateSpecification, GateType};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum ArithmeticOperand {

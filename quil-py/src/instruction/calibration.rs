@@ -1,9 +1,7 @@
 use pyo3::{types::PyString, Py};
 use quil_rs::{
     expression::Expression,
-    instruction::{
-        gate::GateModifier, Calibration, Instruction, MeasureCalibrationDefinition, Qubit,
-    },
+    instruction::{Calibration, GateModifier, Instruction, MeasureCalibrationDefinition, Qubit},
 };
 use rigetti_pyo3::{impl_repr, impl_str, py_wrap_data_struct};
 

@@ -25,8 +25,8 @@ use crate::{
     expected_token,
     expression::Expression,
     instruction::{
-        gate::GateModifier, ArithmeticOperand, AttributeValue, BinaryOperand, ComparisonOperand,
-        FrameIdentifier, MemoryReference, Qubit, ScalarType, Vector, WaveformInvocation,
+        ArithmeticOperand, AttributeValue, BinaryOperand, ComparisonOperand, FrameIdentifier,
+        GateModifier, MemoryReference, Qubit, ScalarType, Vector, WaveformInvocation,
     },
     parser::lexer::Operator,
     token,

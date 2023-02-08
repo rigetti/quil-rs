@@ -17,8 +17,8 @@ use std::collections::HashMap;
 use crate::{
     expression::Expression,
     instruction::{
-        gate::{Gate, GateModifier},
-        Calibration, Instruction, MeasureCalibrationDefinition, Measurement, Qubit,
+        Calibration, Gate, GateModifier, Instruction, MeasureCalibrationDefinition, Measurement,
+        Qubit,
     },
 };
 
