@@ -1,15 +1,13 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 use pyo3::{
-    create_exception,
-    exceptions::PyValueError,
-    prelude::*,
-    pyclass::CompareOp,
-    types::{PyList, PyString},
+    create_exception, exceptions::PyValueError, prelude::*, pyclass::CompareOp, types::PyList,
 };
 
 use quil_rs::{instruction::Instruction, Program};
-use rigetti_pyo3::{impl_repr, py_wrap_struct, PyWrapper, PyWrapperMut, ToPython};
+use rigetti_pyo3::{
+    impl_as_mut_for_wrapper, impl_repr, py_wrap_type, PyWrapper, PyWrapperMut, ToPython,
+};
 
 use crate::instruction::{
     declaration::PyDeclaration, gate::PyGateDefinition, memory_region::PyMemoryRegion,
@@ -25,30 +23,26 @@ pub mod frame;
 create_exception!(quil, ProgramError, PyValueError);
 create_exception!(quil, ParseError, PyValueError);
 
-// may need to define constructors "by hand", instead of imported macro
-// gives full control
-py_wrap_struct! {
-    PyProgram(Program) as "Program" {
-        py -> rs {
-            string: Py<PyString> => Program {
-                let native_program = string
-                    .as_ref(py)
-                    .to_str()?
-                    .parse::<quil_rs::Program>()
-                    .map_err(|e| ParseError::new_err(e.to_string()))?;
-                Ok::<_, PyErr>(native_program)
-            }
-        },
-        rs -> py {
-            program: Program => Py<PyString> { program.to_string(true).to_python(py) }
-        }
+py_wrap_type! {
+    #[derive(Debug, PartialEq)]
+    PyProgram(Program) as "Program"
+}
+impl_as_mut_for_wrapper!(PyProgram);
+impl_repr!(PyProgram);
+
+impl Default for PyProgram {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
-impl_repr!(PyProgram);
-
 #[pymethods]
 impl PyProgram {
+    #[new]
+    pub fn new() -> Self {
+        PyProgram(Program::default())
+    }
+
     #[getter]
     pub fn instructions<'a>(&self, py: Python<'a>) -> PyResult<&'a PyList> {
         Ok(PyList::new(
@@ -178,8 +172,8 @@ impl PyProgram {
             .map_err(|e| ProgramError::new_err(e.to_string()))
     }
 
-    pub fn __str__(&self) -> PyResult<Py<PyString>> {
-        self.clone().try_into()
+    pub fn __str__(&self) -> String {
+        self.as_inner().to_string(true)
     }
 
     pub fn __add__(&self, py: Python<'_>, rhs: Self) -> PyResult<Self> {
