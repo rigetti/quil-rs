@@ -1,23 +1,23 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 
-use pyo3::{
-    create_exception, exceptions::PyValueError, prelude::*, pyclass::CompareOp, types::PyList,
-};
-
 use quil_rs::{instruction::Instruction, Program};
+
 use rigetti_pyo3::{
-    impl_as_mut_for_wrapper, impl_repr, py_wrap_type, PyWrapper, PyWrapperMut, ToPython,
+    create_init_submodule, impl_as_mut_for_wrapper, impl_repr, py_wrap_type,
+    pyo3::{
+        create_exception, exceptions::PyValueError, prelude::*, pyclass::CompareOp, types::PyList,
+    },
+    PyWrapper, PyWrapperMut, ToPython,
 };
 
 use crate::instruction::{
-    declaration::PyDeclaration, gate::PyGateDefinition, memory_region::PyMemoryRegion,
-    qubit::PyQubit, waveform::PyWaveform, PyInstruction,
+    PyDeclaration, PyGateDefinition, PyInstruction, PyMemoryRegion, PyQubit, PyWaveform,
 };
 
-use self::{calibration_set::PyCalibrationSet, frame::PyFrameSet};
+pub use self::{calibration_set::PyCalibrationSet, frame::PyFrameSet};
 
-pub mod calibration_set;
-pub mod frame;
+mod calibration_set;
+mod frame;
 
 // The generics these error types are incompatible with the rigetti_pyo3 macros
 create_exception!(quil, ProgramError, PyValueError);
@@ -187,4 +187,8 @@ impl PyProgram {
             _ => py.NotImplemented(),
         }
     }
+}
+
+create_init_submodule! {
+    classes: [ PyFrameSet, PyProgram, PyCalibrationSet ],
 }

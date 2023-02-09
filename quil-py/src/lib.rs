@@ -1,14 +1,11 @@
 use pyo3::prelude::*;
 use rigetti_pyo3::create_init_submodule;
 
-use program::{calibration_set::PyCalibrationSet, PyProgram};
-
 pub mod instruction;
 pub mod program;
 
 create_init_submodule! {
-    classes: [ PyProgram, PyCalibrationSet ],
-    submodules: [ "instructions": instruction::init_submodule ],
+    submodules: [ "instructions": instruction::init_submodule, "program": program::init_submodule ],
 }
 
 #[pymodule]

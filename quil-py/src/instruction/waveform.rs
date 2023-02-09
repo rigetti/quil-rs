@@ -13,7 +13,6 @@ py_wrap_data_struct! {
         parameters: Vec<String> => Vec<Py<PyString>>
     }
 }
-
 impl_repr!(PyWaveform);
 
 py_wrap_data_struct! {
@@ -22,6 +21,5 @@ py_wrap_data_struct! {
         definition: Waveform => PyWaveform
     }
 }
-
 impl_repr!(PyWaveformDefinition);
 impl_str!(PyWaveformDefinition);

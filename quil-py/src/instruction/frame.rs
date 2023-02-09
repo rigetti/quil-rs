@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 use std::hash::Hash;
 
-use pyo3::{types::PyString, Py};
 use quil_rs::instruction::{AttributeValue, FrameDefinition, FrameIdentifier, Qubit};
-use rigetti_pyo3::{impl_hash, impl_repr, impl_str, py_wrap_data_struct, py_wrap_union_enum};
+use rigetti_pyo3::{
+    impl_hash, impl_repr, impl_str, py_wrap_data_struct, py_wrap_union_enum,
+    pyo3::{types::PyString, Py},
+};
 
-use crate::instruction::qubit::PyQubit;
-
-use super::expression::PyExpression;
+use super::{PyExpression, PyQubit};
 
 py_wrap_data_struct! {
     #[derive(PartialEq, Eq, Hash)]
@@ -16,7 +16,6 @@ py_wrap_data_struct! {
         qubits: Vec<Qubit> => Vec<PyQubit>
     }
 }
-
 impl_repr!(PyFrameIdentifier);
 impl_str!(PyFrameIdentifier);
 impl_hash!(PyFrameIdentifier);
@@ -36,3 +35,4 @@ py_wrap_data_struct! {
         attributes: HashMap<String, AttributeValue> => PyFrameAttributes
     }
 }
+impl_repr!(PyFrameDefinition);

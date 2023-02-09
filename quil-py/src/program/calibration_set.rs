@@ -5,7 +5,7 @@ use quil_rs::{
 };
 use rigetti_pyo3::{impl_repr, py_wrap_data_struct, PyTryFrom};
 
-use crate::instruction::calibration::{PyCalibration, PyMeasureCalibrationDefinition};
+use crate::instruction::{PyCalibration, PyMeasureCalibrationDefinition};
 
 py_wrap_data_struct! {
     PyCalibrationSet(CalibrationSet) as "CalibrationSet" {

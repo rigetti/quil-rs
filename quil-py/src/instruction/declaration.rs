@@ -1,9 +1,12 @@
-use pyo3::{
-    types::{PyInt, PyString},
-    Py,
-};
 use quil_rs::instruction::{Declaration, ScalarType, Vector};
-use rigetti_pyo3::{py_wrap_data_struct, py_wrap_union_enum};
+
+use rigetti_pyo3::{
+    impl_repr, impl_str, py_wrap_data_struct, py_wrap_union_enum,
+    pyo3::{
+        types::{PyInt, PyString},
+        Py,
+    },
+};
 
 py_wrap_union_enum! {
     PyScalarType(ScalarType) as "ScalarType" {
@@ -13,6 +16,8 @@ py_wrap_union_enum! {
         real: Real
     }
 }
+impl_repr!(PyScalarType);
+impl_str!(PyScalarType);
 
 py_wrap_data_struct! {
     PyVector(Vector) as "Vector" {
@@ -20,6 +25,8 @@ py_wrap_data_struct! {
         length: u64 => Py<PyInt>
     }
 }
+impl_repr!(PyVector);
+impl_str!(PyVector);
 
 py_wrap_data_struct! {
     PyDeclaration(Declaration) as "Declaration" {
@@ -28,3 +35,5 @@ py_wrap_data_struct! {
         sharing: Option<String> => Option<Py<PyString>>
     }
 }
+impl_repr!(PyDeclaration);
+impl_str!(PyDeclaration);

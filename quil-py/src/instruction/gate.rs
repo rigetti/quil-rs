@@ -1,31 +1,23 @@
-use pyo3::{
-    exceptions::PyValueError,
-    pymethods,
-    types::{PyInt, PyString},
-    Py, PyResult, Python,
-};
 use quil_rs::{
     expression::Expression,
     instruction::{Gate, GateDefinition, GateModifier, GateSpecification, Qubit},
 };
 
 use rigetti_pyo3::{
-    impl_repr, impl_str, py_wrap_data_struct, py_wrap_error, py_wrap_union_enum, wrap_error,
-    PyTryFrom, PyWrapper, ToPython, ToPythonError,
+    impl_repr, impl_str, py_wrap_data_struct, py_wrap_error, py_wrap_union_enum,
+    pyo3::{
+        exceptions::PyValueError,
+        pymethods,
+        types::{PyInt, PyString},
+        Py, PyResult, Python,
+    },
+    wrap_error, PyTryFrom, PyWrapper, ToPython, ToPythonError,
 };
 
-use crate::instruction::{expression::PyExpression, qubit::PyQubit};
+use super::{PyExpression, PyQubit};
 
 wrap_error!(GateError(quil_rs::instruction::GateError));
 py_wrap_error!(quil, GateError, PyGateError, PyValueError);
-
-py_wrap_union_enum! {
-    PyGateModifier(GateModifier) as "GateModifier" {
-        controlled: Controlled,
-        dagger: Dagger,
-        forked: Forked
-    }
-}
 
 py_wrap_data_struct! {
     PyGate(Gate) as "Gate" {
@@ -106,3 +98,13 @@ py_wrap_data_struct! {
 }
 impl_repr!(PyGateDefinition);
 impl_str!(PyGateDefinition);
+
+py_wrap_union_enum! {
+    PyGateModifier(GateModifier) as "GateModifier" {
+        controlled: Controlled,
+        dagger: Dagger,
+        forked: Forked
+    }
+}
+impl_repr!(PyGateModifier);
+impl_str!(PyGateModifier);

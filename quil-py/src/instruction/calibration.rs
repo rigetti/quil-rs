@@ -1,13 +1,14 @@
-use pyo3::{types::PyString, Py};
 use quil_rs::{
     expression::Expression,
     instruction::{Calibration, GateModifier, Instruction, MeasureCalibrationDefinition, Qubit},
 };
-use rigetti_pyo3::{impl_repr, impl_str, py_wrap_data_struct};
 
-use crate::instruction::{expression::PyExpression, gate::PyGateModifier, PyInstruction};
+use rigetti_pyo3::{
+    impl_repr, impl_str, py_wrap_data_struct,
+    pyo3::{types::PyString, Py},
+};
 
-use super::qubit::PyQubit;
+use crate::instruction::{PyExpression, PyGateModifier, PyInstruction, PyQubit};
 
 py_wrap_data_struct! {
     PyCalibration(Calibration) as "Calibration" {
@@ -18,7 +19,6 @@ py_wrap_data_struct! {
         qubits: Vec<Qubit> => Vec<PyQubit>
     }
 }
-
 impl_repr!(PyCalibration);
 impl_str!(PyCalibration);
 
@@ -29,6 +29,5 @@ py_wrap_data_struct! {
         instructions: Vec<Instruction> => Vec<PyInstruction>
     }
 }
-
 impl_repr!(PyMeasureCalibrationDefinition);
 impl_str!(PyMeasureCalibrationDefinition);

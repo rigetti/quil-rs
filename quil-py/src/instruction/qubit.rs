@@ -1,11 +1,15 @@
-use pyo3::{
-    pyclass::CompareOp,
-    pymethods,
-    types::{PyLong, PyString},
-    IntoPy, Py, PyObject, Python,
-};
 use quil_rs::instruction::Qubit;
-use rigetti_pyo3::{impl_hash, py_wrap_union_enum, PyWrapper};
+
+use rigetti_pyo3::{
+    impl_hash, impl_repr, impl_str, py_wrap_union_enum,
+    pyo3::{
+        pyclass::CompareOp,
+        pymethods,
+        types::{PyLong, PyString},
+        IntoPy, Py, PyObject, Python,
+    },
+    PyWrapper,
+};
 
 py_wrap_union_enum! {
     #[derive(Eq, Hash, PartialEq)]
@@ -14,6 +18,9 @@ py_wrap_union_enum! {
         variable: Variable => Py<PyString>
     }
 }
+impl_repr!(PyQubit);
+impl_str!(PyQubit);
+impl_hash!(PyQubit);
 
 #[pymethods]
 impl PyQubit {
@@ -24,5 +31,3 @@ impl PyQubit {
         }
     }
 }
-
-impl_hash!(PyQubit);

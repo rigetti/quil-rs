@@ -1,12 +1,15 @@
-use pyo3::{
-    types::{PyInt, PyString},
-    Py,
-};
 use quil_rs::{
-    instruction::{ScalarType, Vector},
+    instruction::{MemoryReference, ScalarType, Vector},
     program::MemoryRegion,
 };
-use rigetti_pyo3::{impl_repr, impl_str, py_wrap_data_struct, py_wrap_union_enum};
+
+use rigetti_pyo3::{
+    impl_repr, impl_str, py_wrap_data_struct, py_wrap_union_enum,
+    pyo3::{
+        types::{PyInt, PyString},
+        Py,
+    },
+};
 
 py_wrap_union_enum! {
     PyScalarType(ScalarType) as "ScalarType" {
@@ -25,7 +28,6 @@ py_wrap_data_struct! {
         length: u64 => Py<PyInt>
     }
 }
-
 impl_repr!(PyVector);
 impl_str!(PyVector);
 
@@ -35,5 +37,13 @@ py_wrap_data_struct! {
         sharing: Option<String> => Option<Py<PyString>>
     }
 }
-
 impl_repr!(PyMemoryRegion);
+
+py_wrap_data_struct! {
+    PyMemoryReference(MemoryReference) as "MemoryReference" {
+        name: String => Py<PyString>,
+        index: u64 => Py<PyInt>
+    }
+}
+impl_repr!(PyMemoryReference);
+impl_str!(PyMemoryReference);
