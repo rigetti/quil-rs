@@ -86,7 +86,6 @@ impl PyProgram {
         self.as_inner()
             .to_instructions(true)
             .iter()
-            // TODO: Is there some clever and still readable way to consolidate ths into one filter map?
             .filter_map(|inst| match inst {
                 Instruction::Declaration(declaration) => Some(declaration),
                 _ => None,
