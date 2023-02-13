@@ -19,7 +19,8 @@ pub use self::{calibration_set::PyCalibrationSet, frame::PyFrameSet};
 mod calibration_set;
 mod frame;
 
-// The generics these error types are incompatible with the rigetti_pyo3 macros
+// The quil-rs counterparts to these errors use generics which cause complications trying to map
+// them directly to an error type here.
 create_exception!(quil, ProgramError, PyValueError);
 create_exception!(quil, ParseError, PyValueError);
 

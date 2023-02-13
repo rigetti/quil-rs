@@ -2,13 +2,14 @@ use pyo3::{pymethods, PyResult, Python};
 use std::collections::HashMap;
 
 use quil_rs::program::FrameSet;
-use rigetti_pyo3::{py_wrap_type, PyWrapper, ToPython};
+use rigetti_pyo3::{impl_repr, py_wrap_type, PyWrapper, ToPython};
 
 use crate::instruction::{PyFrameAttributes, PyFrameIdentifier};
 
 py_wrap_type! {
     PyFrameSet(FrameSet) as "FrameSet"
 }
+impl_repr!(PyFrameSet);
 
 #[pymethods]
 impl PyFrameSet {
