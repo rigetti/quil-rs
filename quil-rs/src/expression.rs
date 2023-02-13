@@ -92,27 +92,34 @@ impl Hash for Expression {
                 "Address".hash(state);
                 m.hash(state);
             }
-            FunctionCall(fc) => {
+            FunctionCall(FunctionCallExpression {
+                function,
+                expression,
+            }) => {
                 "FunctionCall".hash(state);
-                fc.function.hash(state);
-                fc.expression.hash(state);
+                function.hash(state);
+                expression.hash(state);
             }
-            Infix(i) => {
+            Infix(InfixExpression {
+                left,
+                operator,
+                right,
+            }) => {
                 "Infix".hash(state);
-                i.operator.hash(state);
-                match i.operator {
+                operator.hash(state);
+                match operator {
                     InfixOperator::Plus | InfixOperator::Star => {
                         // commutative, so put left & right in decreasing order by hash value
                         let (a, b) = (
-                            min_by_key(&i.left, &i.right, hash_to_u64),
-                            max_by_key(&i.left, &i.right, hash_to_u64),
+                            min_by_key(&left, &right, hash_to_u64),
+                            max_by_key(&left, &right, hash_to_u64),
                         );
                         a.hash(state);
                         b.hash(state);
                     }
                     _ => {
-                        i.left.hash(state);
-                        i.right.hash(state);
+                        left.hash(state);
+                        right.hash(state);
                     }
                 }
             }
@@ -236,26 +243,36 @@ impl Expression {
         use Expression::*;
 
         match self {
-            FunctionCall(fc) => {
-                fc.expression.simplify();
-                if let Number(number) = fc.expression.as_ref() {
-                    *self = Number(calculate_function(&fc.function, number));
+            FunctionCall(FunctionCallExpression {
+                function,
+                expression,
+            }) => {
+                expression.simplify();
+                if let Number(number) = expression.as_ref() {
+                    *self = Number(calculate_function(function, number));
                 }
             }
-            Infix(i) => {
-                i.left.simplify();
-                i.right.simplify();
+            Infix(InfixExpression {
+                left,
+                operator: _,
+                right,
+            }) => {
+                left.simplify();
+                right.simplify();
             }
-            Prefix(p) => {
+            Prefix(PrefixExpression {
+                operator,
+                expression,
+            }) => {
                 use PrefixOperator::*;
-                p.expression.simplify();
+                expression.simplify();
 
                 // Avoid potentially expensive clone
                 // Cannot directly swap `expression` with `self` because that causes
                 // a double mutable borrow.
-                if let Plus = p.operator {
+                if let Plus = operator {
                     let mut temp = Expression::PiConstant;
-                    std::mem::swap(p.expression.as_mut(), &mut temp);
+                    std::mem::swap(expression.as_mut(), &mut temp);
                     std::mem::swap(self, &mut temp);
                 }
             }
@@ -316,23 +333,29 @@ impl Expression {
         use Expression::*;
 
         match self {
-            FunctionCall(fc) => {
-                let evaluated = fc.expression.evaluate(variables, memory_references)?;
-                Ok(calculate_function(&fc.function, &evaluated))
+            FunctionCall(FunctionCallExpression {
+                function,
+                expression,
+            }) => {
+                let evaluated = expression.evaluate(variables, memory_references)?;
+                Ok(calculate_function(function, &evaluated))
             }
-            Infix(i) => {
-                let left_evaluated = i.left.evaluate(variables, memory_references)?;
-                let right_evaluated = i.right.evaluate(variables, memory_references)?;
-                Ok(calculate_infix(
-                    &left_evaluated,
-                    &i.operator,
-                    &right_evaluated,
-                ))
+            Infix(InfixExpression {
+                left,
+                operator,
+                right,
+            }) => {
+                let left_evaluated = left.evaluate(variables, memory_references)?;
+                let right_evaluated = right.evaluate(variables, memory_references)?;
+                Ok(calculate_infix(&left_evaluated, operator, &right_evaluated))
             }
-            Prefix(p) => {
+            Prefix(PrefixExpression {
+                operator,
+                expression,
+            }) => {
                 use PrefixOperator::*;
-                let value = p.expression.evaluate(variables, memory_references)?;
-                if matches!(p.operator, Minus) {
+                let value = expression.evaluate(variables, memory_references)?;
+                if matches!(operator, Minus) {
                     Ok(-value)
                 } else {
                     Ok(value)
@@ -378,22 +401,32 @@ impl Expression {
         use Expression::*;
 
         match self {
-            FunctionCall(fc) => Expression::FunctionCall(FunctionCallExpression {
-                function: fc.function,
-                expression: fc.expression.substitute_variables(variable_values).into(),
+            FunctionCall(FunctionCallExpression {
+                function,
+                expression,
+            }) => Expression::FunctionCall(FunctionCallExpression {
+                function,
+                expression: expression.substitute_variables(variable_values).into(),
             }),
-            Infix(i) => {
-                let left = i.left.substitute_variables(variable_values).into();
-                let right = i.right.substitute_variables(variable_values).into();
+            Infix(InfixExpression {
+                left,
+                operator,
+                right,
+            }) => {
+                let left = left.substitute_variables(variable_values).into();
+                let right = right.substitute_variables(variable_values).into();
                 Infix(InfixExpression {
                     left,
-                    operator: i.operator,
+                    operator,
                     right,
                 })
             }
-            Prefix(p) => Prefix(PrefixExpression {
-                operator: p.operator,
-                expression: p.expression.substitute_variables(variable_values).into(),
+            Prefix(PrefixExpression {
+                operator,
+                expression,
+            }) => Prefix(PrefixExpression {
+                operator,
+                expression: expression.substitute_variables(variable_values).into(),
             }),
             Variable(identifier) => match variable_values.get(identifier.as_str()) {
                 Some(value) => value.clone(),
@@ -479,11 +512,21 @@ impl fmt::Display for Expression {
         use Expression::*;
         match self {
             Address(memory_reference) => write!(f, "{memory_reference}"),
-            FunctionCall(fc) => write!(f, "{}({})", fc.function, fc.expression),
-            Infix(i) => write!(f, "({}{}{})", i.left, i.operator, i.right),
+            FunctionCall(FunctionCallExpression {
+                function,
+                expression,
+            }) => write!(f, "{function}({expression})"),
+            Infix(InfixExpression {
+                left,
+                operator,
+                right,
+            }) => write!(f, "({left}{operator}{right})"),
             Number(value) => write!(f, "{}", format_complex(value)),
             PiConstant => write!(f, "pi"),
-            Prefix(p) => write!(f, "({}{})", p.operator, p.expression),
+            Prefix(PrefixExpression {
+                operator,
+                expression,
+            }) => write!(f, "({operator}{expression})"),
             Variable(identifier) => write!(f, "%{identifier}"),
         }
     }
