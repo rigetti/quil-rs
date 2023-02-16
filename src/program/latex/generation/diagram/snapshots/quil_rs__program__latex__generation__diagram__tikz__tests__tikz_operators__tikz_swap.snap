@@ -1,0 +1,6 @@
+---
+source: src/program/latex/generation/diagram/tikz.rs
+assertion_line: 62
+expression: "TikzOperator::get_tikz_operator(TikzOperator::TikzSwap(4))"
+---
+\swap{4}

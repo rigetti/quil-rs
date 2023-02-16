@@ -1,0 +1,6 @@
+---
+source: src/program/latex/generation/diagram/tikz.rs
+assertion_line: 42
+expression: "TikzOperator::get_tikz_operator(TikzOperator::TikzLeftKet(0))"
+---
+\lstick{\ket{q_{0}}}

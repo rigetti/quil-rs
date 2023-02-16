@@ -1,0 +1,6 @@
+---
+source: src/program/latex/generation/diagram/tikz.rs
+assertion_line: 47
+expression: "TikzOperator::get_tikz_operator(TikzOperator::TikzControl(2))"
+---
+\ctrl{2}

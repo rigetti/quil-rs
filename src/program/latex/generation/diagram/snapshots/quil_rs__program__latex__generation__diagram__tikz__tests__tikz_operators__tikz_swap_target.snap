@@ -1,0 +1,6 @@
+---
+source: src/program/latex/generation/diagram/tikz.rs
+assertion_line: 67
+expression: "TikzOperator::get_tikz_operator(TikzOperator::TikzSwapTarget)"
+---
+\targX{}
