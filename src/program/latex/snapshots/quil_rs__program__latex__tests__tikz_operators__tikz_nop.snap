@@ -1,0 +1,6 @@
+---
+source: src/program/latex.rs
+assertion_line: 185
+expression: "TikzOperators::get_tikz_operator(TikzOperators::tikz_nop)"
+---
+\qw

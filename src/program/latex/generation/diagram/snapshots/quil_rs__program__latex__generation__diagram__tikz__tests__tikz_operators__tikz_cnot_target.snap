@@ -1,6 +1,0 @@
----
-source: src/program/latex/generation/diagram/tikz.rs
-assertion_line: 52
-expression: "TikzOperator::get_tikz_operator(TikzOperator::TikzCnotTarget)"
----
-\targ{}
