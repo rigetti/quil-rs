@@ -316,7 +316,7 @@ impl CalibrationSet {
         self.measure_calibrations.push(calibration)
     }
 
-    /// Append another [CalibrationSet] onto this one
+    /// Append another [`CalibrationSet`] onto this one
     pub fn extend(&mut self, other: CalibrationSet) {
         self.calibrations.extend(other.calibrations);
         self.measure_calibrations.extend(other.measure_calibrations);
