@@ -254,16 +254,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a357d28ed41a50f9c765dbfe56cbc04a64e53e5fc58ba79fbc34c10ef3df831f"
 
 [[package]]
-name = "fancy-regex"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b95f7c0680e4142284cf8b22c14a476e87d61b004a3a0861872b32ef7ead40a2"
-dependencies = [
- "bit-set",
- "regex",
-]
-
-[[package]]
 name = "fastrand"
 version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -940,7 +930,6 @@ version = "0.15.0"
 dependencies = [
  "criterion",
  "dot-writer",
- "fancy-regex",
  "indexmap",
  "insta",
  "lexical",
@@ -950,6 +939,7 @@ dependencies = [
  "petgraph",
  "proptest",
  "proptest-derive",
+ "regex",
  "rstest",
  "serde",
  "strum",

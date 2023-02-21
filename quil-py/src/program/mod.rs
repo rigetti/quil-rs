@@ -1,4 +1,7 @@
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::{
+    collections::{BTreeMap, HashMap, HashSet},
+    str::FromStr,
+};
 
 use quil_rs::{instruction::Instruction, Program};
 
@@ -41,7 +44,14 @@ impl Default for PyProgram {
 impl PyProgram {
     #[new]
     pub fn new() -> Self {
-        PyProgram(Program::default())
+        Self(Program::default())
+    }
+
+    #[staticmethod]
+    pub fn from_string(program: &str) -> PyResult<Self> {
+        Ok(Self(
+            Program::from_str(program).map_err(|e| ParseError::new_err(e.to_string()))?,
+        ))
     }
 
     #[getter]

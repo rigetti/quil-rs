@@ -43,6 +43,7 @@ impl_str!(PyInstruction);
 
 create_init_submodule! {
     classes: [
+        PyInstruction,
         PyArithmetic,
         PyArithmeticOperand,
         PyArithmeticOperator,
