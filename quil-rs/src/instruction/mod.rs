@@ -1191,45 +1191,6 @@ impl Instruction {
         }
     }
 
-    pub fn is_valid_protoquil(&self) -> bool {
-        matches!(
-            self,
-            Instruction::Declaration(_)
-                | Instruction::Gate(_)
-                | Instruction::Pragma(_)
-                | Instruction::Reset(_)
-                | Instruction::Measurement(_)
-        )
-    }
-
-    pub fn is_valid_quilt(&self) -> bool {
-        matches!(
-            self,
-            Instruction::CalibrationDefinition(_)
-                | Instruction::Capture(_)
-                | Instruction::Declaration(_)
-                | Instruction::Delay(_)
-                | Instruction::Fence(_)
-                | Instruction::FrameDefinition(_)
-                | Instruction::Gate(_)
-                | Instruction::Halt
-                | Instruction::Wait
-                | Instruction::Measurement(_)
-                | Instruction::MeasureCalibrationDefinition(_)
-                | Instruction::Pragma(_)
-                | Instruction::Pulse(_)
-                | Instruction::RawCapture(_)
-                | Instruction::Reset(_)
-                | Instruction::SetFrequency(_)
-                | Instruction::SetPhase(_)
-                | Instruction::SetScale(_)
-                | Instruction::ShiftFrequency(_)
-                | Instruction::ShiftPhase(_)
-                | Instruction::SwapPhases(_)
-                | Instruction::WaveformDefinition(_)
-        )
-    }
-
     #[cfg(test)]
     /// Parse a single instruction from an input string. Returns an error if the input fails to parse,
     /// or if there is input left over after parsing.

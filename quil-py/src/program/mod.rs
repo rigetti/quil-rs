@@ -170,18 +170,6 @@ impl PyProgram {
             .collect()
     }
 
-    pub fn validate_protoquil(&self, _py: Python<'_>) -> PyResult<()> {
-        self.as_inner()
-            .is_protoquil()
-            .map_err(|e| ProgramError::new_err(e.to_string()))
-    }
-
-    pub fn validate_quilt(&self, _py: Python<'_>) -> PyResult<()> {
-        self.as_inner()
-            .is_quilt()
-            .map_err(|e| ProgramError::new_err(e.to_string()))
-    }
-
     pub fn __str__(&self) -> String {
         self.as_inner().to_string(true)
     }
