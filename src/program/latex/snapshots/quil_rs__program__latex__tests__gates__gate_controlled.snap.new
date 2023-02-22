@@ -1,0 +1,6 @@
+---
+source: src/program/latex/mod.rs
+assertion_line: 183
+expression: "get_latex(\"CONTROLLED H 3 2\")"
+---
+

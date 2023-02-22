@@ -1,0 +1,6 @@
+---
+source: src/program/latex/mod.rs
+assertion_line: 228
+expression: "Command::get_command(Command::TargX)"
+---
+\targX{}

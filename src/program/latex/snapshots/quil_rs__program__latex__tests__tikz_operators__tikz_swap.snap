@@ -1,6 +1,0 @@
----
-source: src/program/latex.rs
-assertion_line: 171
-expression: "TikzOperators::get_tikz_operator(TikzOperators::tikz_swap(4))"
----
-\swap{4}

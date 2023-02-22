@@ -1,0 +1,6 @@
+---
+source: src/program/latex/mod.rs
+assertion_line: 208
+expression: "Command::get_command(Command::Ctrl(0))"
+---
+\ctrl{0}
