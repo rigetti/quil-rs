@@ -22,7 +22,7 @@
 //! 
 //! [`Quantikz`]: https://arxiv.org/pdf/1809.03842.pdf
 
-use std::fmt::format;
+use std::fmt::{format, Display};
 
 use crate::Program;
 
@@ -123,6 +123,39 @@ impl Settings {
 
 }
 
+/// The structure of a LaTeX document. Typically a LaTeX document contains 
+/// metadata defining the setup and packages used in a document within a header 
+/// and footer while the body contains content and controls its presentation. 
+struct Document {
+    header: String,
+    body: String,
+    footer: String,
+}
+
+impl Default for Document {
+    fn default() -> Self {
+        Self { 
+            header:
+r"\documentclass[convert={density=300,outext=.png}]{standalone}
+\usepackage[margin=1in]{geometry}
+\usepackage{tikz}
+\usetikzlibrary{quantikz}
+\begin{document}
+\begin{tikzcd}".to_string(), 
+            body: "".to_string(), 
+            footer:
+r"\end{tikzcd}
+\end{document}".to_string(),
+        }
+    }
+}
+
+impl Display for Document {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}\n{}\n{}", self.header, self.body, self.footer)
+    }
+}
+
 #[derive(thiserror::Error, Debug)]
 pub enum LatexGenError {
     // TODO: Add variants for each error type using `thiserror` crate to return detailed Result::Err. Example error below.
@@ -131,15 +164,22 @@ pub enum LatexGenError {
 }
 
 pub trait Latex {
+    /// Returns a Result containing a quil Program as a LaTeX string.
+    /// 
+    /// # Arguments
+    /// `settings` - Customizes the rendering of a circuit.
     fn to_latex(self, settings: Settings) -> Result<String, LatexGenError>;
 }
 
 impl Latex for Program {
     fn to_latex(self, settings: Settings) -> Result<String, LatexGenError> {
-        // TODO: Generate the Program LaTeX.
-        let latex = "";
+        let body = String::from("");
 
-        Ok(latex.to_string())
+        // TODO: Build the document body.
+
+        let document = Document {body: body, ..Default::default()};
+
+        Ok(document.to_string())
     }
 }
 
@@ -149,12 +189,13 @@ mod tests {
     use crate::Program;
     use std::str::FromStr;
 
-    /// Take an instruction and return the LaTeX using the to_latex method.
+    /// Helper function takes instructions and return the LaTeX using the 
+    /// Latex::to_latex method.
     pub fn get_latex(instructions: &str) -> String {
-        let program = Program::from_str(instructions).expect("Program should be returned.");
+        let program = Program::from_str(instructions).expect("program `{instructions}` should be returned");
         program
             .to_latex(Settings::default())
-            .expect("LaTeX should generate without error.")
+            .expect("LaTeX should generate for program `{instructions}`")
     }
 
     #[test]
@@ -162,6 +203,33 @@ mod tests {
     fn test_to_latex() {
         let program = Program::from_str("").expect("");
         program.to_latex(Settings::default()).expect("");
+    }
+
+    mod document {
+        use crate::program::latex::{Document, tests::get_latex};
+
+        #[test]
+        fn test_template() {
+            insta::assert_snapshot!(get_latex(""));
+        }
+
+        #[test]
+        fn test_header() {
+            let document = Document::default();
+            insta::assert_snapshot!(document.header);
+        }
+
+        #[test]
+        fn test_body_default() {
+            let document = Document::default();
+            insta::assert_snapshot!(document.body);
+        }
+
+        #[test]
+        fn test_footer() {
+            let document = Document::default();
+            insta::assert_snapshot!(document.footer);
+        }
     }
 
     mod gates {
