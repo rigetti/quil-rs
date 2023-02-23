@@ -1,16 +1,32 @@
 use std::str::FromStr;
 
+use pyo3::types::PyComplex;
 use quil_rs::expression::{
     Expression, ExpressionFunction, FunctionCallExpression, InfixExpression, InfixOperator,
+    PrefixExpression, PrefixOperator,
 };
 
 use rigetti_pyo3::{
     impl_repr, impl_str, py_wrap_data_struct, py_wrap_union_enum,
-    pyo3::{exceptions::PyValueError, pymethods, PyResult, Python},
+    pyo3::{exceptions::PyValueError, pymethods, types::PyString, Py, PyResult, Python},
     ToPython,
 };
 
 use super::PyMemoryReference;
+
+py_wrap_union_enum! {
+    PyExpression(Expression) as "Expression" {
+        address: Address => PyMemoryReference,
+        function_call: FunctionCall => PyFunctionCallExpression,
+        infix: Infix => PyInfixExpression,
+        number: Number => Py<PyComplex>,
+        pi: PiConstant,
+        prefix: Prefix => PyPrefixExpression,
+        variable: Variable => Py<PyString>
+    }
+}
+impl_repr!(PyExpression);
+impl_str!(PyExpression);
 
 py_wrap_union_enum! {
     PyExpressionFunction(ExpressionFunction) as "ExpressionFunction" {
@@ -31,15 +47,6 @@ py_wrap_data_struct! {
     }
 }
 impl_repr!(PyFunctionCallExpression);
-
-py_wrap_union_enum! {
-    PyExpression(Expression) as "Expression" {
-        address: Address => PyMemoryReference,
-        function_call: FunctionCall => PyFunctionCallExpression
-    }
-}
-impl_repr!(PyExpression);
-impl_str!(PyExpression);
 
 #[pymethods]
 impl PyExpression {
@@ -71,3 +78,17 @@ py_wrap_data_struct! {
     }
 }
 impl_repr!(PyInfixExpression);
+
+py_wrap_union_enum! {
+    PyPrefixOperator(PrefixOperator) as "PrefixOperator" {
+        plus: Plus,
+        minus: Minus
+    }
+}
+
+py_wrap_data_struct! {
+    PyPrefixExpression(PrefixExpression) as "PrefixExpression" {
+        operator: PrefixOperator => PyPrefixOperator,
+        expression: Box<Expression> => PyExpression
+    }
+}

@@ -150,6 +150,11 @@ impl PyProgram {
         self.as_inner_mut().add_instruction(instruction.into())
     }
 
+    pub fn add_instructions(&mut self, instructions: Vec<PyInstruction>) {
+        self.as_inner_mut()
+            .add_instructions(instructions.into_iter().map(Into::into).collect())
+    }
+
     pub fn to_instructions(
         &self,
         include_headers: bool,

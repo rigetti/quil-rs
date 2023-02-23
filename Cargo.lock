@@ -1063,7 +1063,7 @@ dependencies = [
 [[package]]
 name = "rigetti-pyo3"
 version = "0.1.0-rc.5"
-source = "git+https://github.com/rigetti/rigetti-pyo3#3161dffa285ea4a31c04d3280e96be91b4407f92"
+source = "git+https://github.com/rigetti/rigetti-pyo3?branch=17-support-pyclass-parameters#6f2385e081a6eea2a9290493d668c5af3f2db3ff"
 dependencies = [
  "num-complex",
  "num-traits",

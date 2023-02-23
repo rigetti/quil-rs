@@ -20,7 +20,7 @@ wrap_error!(GateError(quil_rs::instruction::GateError));
 py_wrap_error!(quil, GateError, PyGateError, PyValueError);
 
 py_wrap_data_struct! {
-    PyGate(Gate) as "Gate" {
+    PyGate(Gate) as "Gate" with subclass {
         name: String => Py<PyString>,
         parameters: Vec<Expression> => Vec<PyExpression>,
         qubits: Vec<Qubit> => Vec<PyQubit>,
