@@ -1,5 +1,8 @@
 use quil_rs::instruction::Instruction;
-use rigetti_pyo3::{create_init_submodule, impl_repr, impl_str, py_wrap_union_enum};
+use rigetti_pyo3::{
+    create_init_submodule, impl_repr, impl_str, py_wrap_type, py_wrap_union_enum,
+    pyo3::{pyclass, pymethods, types::PyAny, PyResult, Python},
+};
 
 pub use self::{
     arithmetic::{
@@ -30,6 +33,7 @@ mod qubit;
 mod waveform;
 
 py_wrap_union_enum! {
+    #[derive(Debug)]
     PyInstruction(Instruction) as "Instruction" {
         halt: Halt,
         nop: Nop,

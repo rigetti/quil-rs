@@ -18,8 +18,7 @@ crate-type = ["cdylib", "rlib"]
 quil-rs = { path = "../quil-rs" }
 # pyo3 dependencies should be updated together
 pyo3 = { version = "0.17" }
-# rigetti-pyo3 = "0.1.0-rc.5"
-rigetti-pyo3 = { git = "https://github.com/rigetti/rigetti-pyo3", branch = "17-support-pyclass-parameters" }
+rigetti-pyo3 = "0.1.0-rc.6"
 
 [build-dependencies]
 pyo3-build-config = { version = "0.17" }

@@ -8,7 +8,7 @@ use rigetti_pyo3::{
     pyo3::{
         exceptions::PyValueError,
         pymethods,
-        types::{PyInt, PyString},
+        types::{PyAny, PyInt, PyString},
         Py, PyResult, Python,
     },
     wrap_error, PyTryFrom, PyWrapper, ToPython, ToPythonError,
@@ -20,7 +20,8 @@ wrap_error!(GateError(quil_rs::instruction::GateError));
 py_wrap_error!(quil, GateError, PyGateError, PyValueError);
 
 py_wrap_data_struct! {
-    PyGate(Gate) as "Gate" with subclass {
+    #[pyo3(subclass)]
+    PyGate(Gate) as "Gate" {
         name: String => Py<PyString>,
         parameters: Vec<Expression> => Vec<PyExpression>,
         qubits: Vec<Qubit> => Vec<PyQubit>,
