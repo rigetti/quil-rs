@@ -33,21 +33,23 @@ use crate::Program;
 ///     Multi-wire commands: ctrl, targ, control, (swap, targx)
 pub enum Command {
     /// `\lstick{\ket{q_{u32}}}`: Make a qubit "stick out" from the left.
-    Lstick(u32),
+    Lstick(String),
     /// `\rstick{\ket{q_{u32}}}`: Make a qubit "stick out" from the right.
-    Rstick(u32),
+    Rstick(String),
+    /// ` \gate{name}`: Make a gate on the wire.
+    Gate(String),
     /// `\qw`: Connect the current cell to the previous cell i.e. "do nothing".
     Qw,
     /// `\meter{wire}`: Measure a qubit.
-    Meter(u32),    
+    Meter(String),    
     /// `\ctrl{wire}`: Make a control qubit--different from Control.
-    Ctrl(u32),
+    Ctrl(String),
     /// `\targ{}`: Make a controlled-not gate.
     Targ,
     /// `\control{}`: Make a controlled-phase gate--different from Ctrl.
     Control,
     /// `\swap{wire}`: Make a swap gate--used with TargX.
-    Swap(u32),
+    Swap(String),
     /// `\targX{}`: Make a qubit the target for a swap--used with Swap.
     TargX,
 }
@@ -69,12 +71,17 @@ impl Command {
                 format(format_args!(r#"\lstick{{\ket{{q_{{{wire}}}}}}}"#)),
             Self::Rstick(wire) => 
                 format(format_args!(r#"\rstick{{\ket{{q_{{{wire}}}}}}}"#)),
+            Self::Gate(name) => 
+                format(format_args!(r#"\gate{{{name}}}"#)),
             Self::Qw => r"\qw".to_string(),
-            Self::Meter(wire) => format(format_args!(r"\meter{{{wire}}}")),
-            Self::Ctrl(wire) => format(format_args!(r#"\ctrl{{{wire}}}"#)),
+            Self::Meter(wire) => 
+                format(format_args!(r#"\meter{{{wire}}}"#)),
+            Self::Ctrl(wire) => 
+                format(format_args!(r#"\ctrl{{{wire}}}"#)),
             Self::Targ => r"\targ{}".to_string(),
             Self::Control => r"\control{}".to_string(),
-            Self::Swap(wire) => format(format_args!(r"\swap{{{wire}}}")),
+            Self::Swap(wire) => 
+                format(format_args!(r#"\swap{{{wire}}}"#)),
             Self::TargX => r"\targX{}".to_string(),
         }
     }
@@ -257,12 +264,17 @@ mod tests {
 
         #[test]
         fn test_command_left_ket() {
-            insta::assert_snapshot!(Command::get_command(Command::Lstick(0)));
+            insta::assert_snapshot!(Command::get_command(Command::Lstick("0".to_string())));
         }
 
         #[test]
         fn test_command_right_ket() {
-            insta::assert_snapshot!(Command::get_command(Command::Rstick(0)));
+            insta::assert_snapshot!(Command::get_command(Command::Rstick("0".to_string())));
+        }
+
+        #[test]
+        fn test_command_gate() {
+            insta::assert_snapshot!(Command::get_command(Command::Gate("X".to_string())));
         }
 
         #[test]
@@ -272,12 +284,12 @@ mod tests {
 
         #[test]
         fn test_command_measure() {
-            insta::assert_snapshot!(Command::get_command(Command::Meter(0)));
+            insta::assert_snapshot!(Command::get_command(Command::Meter("0".to_string())));
         }
 
         #[test]
         fn test_command_control() {
-            insta::assert_snapshot!(Command::get_command(Command::Ctrl(0)));
+            insta::assert_snapshot!(Command::get_command(Command::Ctrl("0".to_string())));
         }
 
         #[test]
@@ -292,7 +304,7 @@ mod tests {
 
         #[test]
         fn test_command_swap() {
-            insta::assert_snapshot!(Command::get_command(Command::Swap(0)));
+            insta::assert_snapshot!(Command::get_command(Command::Swap("0".to_string())));
         }
 
         #[test]
