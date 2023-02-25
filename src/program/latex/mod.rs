@@ -22,9 +22,11 @@
 //! 
 //! [`Quantikz`]: https://arxiv.org/pdf/1809.03842.pdf
 
+use std::collections::HashMap;
 use std::fmt::{format, Display};
 
 use crate::Program;
+use crate::instruction;
 
 /// Available commands used for building circuits with the same names taken 
 /// from the Quantikz documentation for easy reference. LaTeX string denoted 
@@ -139,6 +141,7 @@ struct Document {
     footer: String,
 }
 
+// TODO: Move TikZ/Quantikz into a separate struct. Keep Document abstract enough to represent any variant of LaTeX Documents.
 impl Default for Document {
     fn default() -> Self {
         Self { 
@@ -163,6 +166,77 @@ impl Display for Document {
     }
 }
 
+/// A Diagram represents a collection of circuits. It encodes the relationships 
+/// between the circuits and their positions or the row that it fills. A row is 
+/// one of the Circuits in the HashMap. At this view over the circuits, Diagram 
+/// can form a relationship between circuits based on information about the 
+/// column and row. For example, one row, say qubit 0, at some column can hold 
+/// information that it is the control. If another row, say qubit 1, at this 
+/// same exact column says that it is the target, then it can inform qubit 0 
+/// that it is controlling qubit 1. This information is then placed into the 
+/// circuit as the diagram forms the equivalent LaTeX form for each qubit.
+struct Diagram {
+    /// A HashMap of circuits and the name of the wire as the key.
+    circuits: HashMap<String, Box<Circuit>>,
+}
+
+impl Diagram {
+    /// Takes a new or existing circuit and adds or updates it using the name
+    /// (String) as the key. If the wire exists, then the circuit chains onto 
+    /// it by updating the next column using the Quantikz command associated 
+    /// with its attributes (e.g. gate, do_nothing, etc).
+    /// 
+    /// # Arguments
+    /// `&mut self` - exposes HashMap<String, Box<Circuit>>
+    /// `circuit` - the circuit to be pushed or updated in circuits
+    fn push_circuit(&mut self, circuit: Circuit) {
+        // allocate a new circuit onto the heap then push it to the circuits vec with a 
+        match self.circuits.get_mut(&circuit.wire) {
+            // update the exisiting circuit
+            Some(circuit) => {
+                // chain onto the old circuit
+            },
+            // add a new circuit
+            None => {
+                self.circuits.insert(circuit.wire.clone(), Box::new(circuit));},
+        }
+    }
+}
+
+impl Display for Diagram {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "TODO: Make me LaTeX")
+    }
+}
+
+/// A circuit represents a single wire. A wire chains columns together of 
+/// various Quantikz elements (using `&`). Encoded in each column is an index 
+/// which determines the placement of the element on the circuit. Each column 
+/// can hold only one element, therefore, each encoded index is unique between 
+/// all of the attributes. Using this property, a String can be generated. 
+#[derive(Debug)]
+struct Circuit {
+    /// abstract attribute representing total-1 elements on the circuit 
+    column: u32,
+    /// a wire, ket(qubit) placed using the Lstick or Rstick commands
+    wire: String,
+    /// gate element(s) placed at column_u32 on wire using the Gate command
+    gate: Vec<(u32, String)>,
+    /// a column_u32 that contains nothing placed using the Qw command  
+    do_nothing: Vec<u32>,
+}
+
+impl Default for Circuit {
+    fn default() -> Self {
+        Self { 
+            column: 0,
+            wire: String::from(""), 
+            gate: vec![], 
+            do_nothing: vec![],
+        }
+    }
+}
+
 #[derive(thiserror::Error, Debug)]
 pub enum LatexGenError {
     // TODO: Add variants for each error type using `thiserror` crate to return detailed Result::Err. Example error below.
@@ -180,9 +254,63 @@ pub trait Latex {
 
 impl Latex for Program {
     fn to_latex(self, settings: Settings) -> Result<String, LatexGenError> {
-        let body = String::from("");
+        // get a reference to the current program
+        let instructions = Program::to_instructions(&self, false);
+
+        // instruction
+        // X 0, Y 1, 
+
+        // store circuit strings
+        let mut diagram = Diagram { circuits: HashMap::new() };
+
+        for instruction in instructions {
+            let mut circuit = Circuit::default();
+
+            match instruction {
+                instruction::Instruction::Gate(gate) => {
+                    // println!("{:?}", gate.name);
+
+                    for qubit in gate.qubits {
+                        match qubit {
+                            _ => {
+                                circuit.wire = qubit.to_string();
+                            }
+                        }
+                    }
+
+                    circuit.gate.push((circuit.column, gate.name));
+
+                    // println!("{:?}", circuit);
+                },
+                _ => (),
+            }
+
+            diagram.push_circuit(circuit)
+        }
+
+        // Program of single qubit passing through two gates
+        // X 0
+        // Y 0
+        // Circuit is a single wire with an X gate and a Y gate
+
+        // If using a vector and stacking the program the following would produce
+        // diagram => ["\lstick{\ket{0}} \gate{X} \qw", "\lstick{\ket{0}} \gate{Y} \qw"]
+        // 
+        // """
+        // \lstick{\ket{0}} \gate{X} \qw
+        // \lstick{\ket{0}} \gate{Y} \qw
+        // """
+        //
+        // The program should produce:
+        // \lstick{\ket{0}} \gate{x} \gate{y} \qw
+        //
+        // Need to manage this situation. Best way to do this would be to manage the state of a Diagram that contains Wires. Where each Wire Contains a Circuit with entries that contain details on how to manage particular cases, 
+        // Questions to ask
+        // is this qubit a control or target at this circuit entry at this point on the wire? 
+
 
         // TODO: Build the document body.
+        let body = diagram.to_string();
 
         let document = Document {body: body, ..Default::default()};
 
@@ -208,7 +336,7 @@ mod tests {
     #[test]
     /// Test functionality of to_latex using default settings.
     fn test_to_latex() {
-        let program = Program::from_str("").expect("");
+        let program = Program::from_str("X 0").expect("");
         program.to_latex(Settings::default()).expect("");
     }
 
