@@ -256,6 +256,11 @@ mod tests {
         fn test_gate_controlled() {
             insta::assert_snapshot!(get_latex("CONTROLLED H 3 2"));
         }
+
+        #[test]
+        fn text_gates_x_and_y_single_qubit() {
+            insta::assert_snapshot!(get_latex("X 0\nY 0"));
+        }
     }
 
     /// Test module for command Operators
