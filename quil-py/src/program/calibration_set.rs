@@ -1,17 +1,11 @@
 use pyo3::prelude::*;
-use quil_rs::{
-    instruction::{Calibration, MeasureCalibrationDefinition},
-    program::CalibrationSet,
-};
-use rigetti_pyo3::{impl_repr, py_wrap_data_struct, PyTryFrom};
+use quil_rs::program::CalibrationSet;
+use rigetti_pyo3::{impl_repr, py_wrap_type, PyTryFrom};
 
 use crate::instruction::{PyCalibration, PyMeasureCalibrationDefinition};
 
-py_wrap_data_struct! {
-    PyCalibrationSet(CalibrationSet) as "CalibrationSet" {
-        calibrations: Vec<Calibration> => Vec<PyCalibration>,
-        measure_calibrations: Vec<MeasureCalibrationDefinition> => Vec<PyMeasureCalibrationDefinition>
-    }
+py_wrap_type! {
+    PyCalibrationSet(CalibrationSet) as "CalibrationSet"
 }
 
 #[pymethods]
