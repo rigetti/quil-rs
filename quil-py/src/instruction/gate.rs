@@ -8,7 +8,7 @@ use rigetti_pyo3::{
     pyo3::{
         exceptions::PyValueError,
         pymethods,
-        types::{PyAny, PyInt, PyString},
+        types::{PyInt, PyString},
         Py, PyResult, Python,
     },
     wrap_error, PyTryFrom, PyWrapper, ToPython, ToPythonError,

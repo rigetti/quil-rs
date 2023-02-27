@@ -1,8 +1,5 @@
 use quil_rs::instruction::Instruction;
-use rigetti_pyo3::{
-    create_init_submodule, impl_repr, impl_str, py_wrap_type, py_wrap_union_enum,
-    pyo3::{pyclass, pymethods, types::PyAny, PyResult, Python},
-};
+use rigetti_pyo3::{create_init_submodule, impl_repr, impl_str, py_wrap_union_enum};
 
 pub use self::{
     arithmetic::{
