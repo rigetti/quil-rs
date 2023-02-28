@@ -162,7 +162,7 @@ r"\end{tikzcd}
 
 impl Display for Document {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}\n{}\n{}", self.header, self.body, self.footer)
+        write!(f, "{}{}{}", self.header, self.body, self.footer)
     }
 }
 
@@ -175,37 +175,87 @@ impl Display for Document {
 /// same exact column says that it is the target, then it can inform qubit 0 
 /// that it is controlling qubit 1. This information is then placed into the 
 /// circuit as the diagram forms the equivalent LaTeX form for each qubit.
+#[derive(Debug)]
 struct Diagram {
-    /// A HashMap of circuits and the name of the wire as the key.
-    circuits: HashMap<String, Box<Circuit>>,
+    /// Settings
+    settings: Settings,
+    /// a HashMap of wires with the name of the wire as the key.
+    circuit: HashMap<String, Box<Wire>>,
 }
 
 impl Diagram {
-    /// Takes a new or existing circuit and adds or updates it using the name
-    /// (String) as the key. If the wire exists, then the circuit chains onto 
-    /// it by updating the next column using the Quantikz command associated 
-    /// with its attributes (e.g. gate, do_nothing, etc).
+    /// Takes a new or existing wire and adds or updates it using the name
+    /// (String) as the key. If a wire exists with the same name, then the 
+    /// contents of the new wire are added to it by updating the next column 
+    /// using the Quantikz command associated with its attributes (e.g. gate, 
+    /// do_nothing, etc).
     /// 
     /// # Arguments
     /// `&mut self` - exposes HashMap<String, Box<Circuit>>
     /// `circuit` - the circuit to be pushed or updated in circuits
-    fn push_circuit(&mut self, circuit: Circuit) {
-        // allocate a new circuit onto the heap then push it to the circuits vec with a 
-        match self.circuits.get_mut(&circuit.wire) {
-            // update the exisiting circuit
-            Some(circuit) => {
-                // chain onto the old circuit
+    fn push_wire(&mut self, wire: Wire) {
+        // find wire in circuit collection
+        match self.circuit.get_mut(&wire.name) {
+            // wire found, push to existing wire
+            Some(wire_in_circuit) => {
+                // indicate a new item to be added by incrementing column
+                wire_in_circuit.column += 1;
+
+                // if wire contains gates to add
+                if !wire.gates.is_empty() {
+                    if let Some(gate) = wire.gates.get(&0) {
+                        // add gates to wire in circuit
+                        wire_in_circuit.gates.insert(wire_in_circuit.column, gate.to_string());
+                    }
+                }
+
             },
-            // add a new circuit
+            // no wire found, insert new wire
             None => {
-                self.circuits.insert(circuit.wire.clone(), Box::new(circuit));},
+                self.circuit.insert(wire.name.clone(), Box::new(wire));
+            },
         }
+        
+        // println!("{:?}", wire);
     }
 }
 
 impl Display for Diagram {
+    /// Converts the Diagram Circuit to LaTeX string. Returns a Result.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "TODO: Make me LaTeX")
+        // add a newline between the first line and the header
+        let mut body = String::from("\n");
+
+        for key in self.circuit.keys() {   
+            // a single line of LaTeX representing a wire from the circuit   
+            let mut line = String::from("");
+
+            // are labels on in settings?
+            if self.settings.label_qubit_lines {
+                // add label to left side of wire
+                line.push_str(&Command::get_command(Command::Lstick(key.to_string())));
+            }
+
+            // convert each attribute other than the default to string.
+            if let Some(wire) = self.circuit.get(key) {
+                for c in 0..=wire.column {
+                    if let Some(gate) = wire.gates.get(&c) {
+                        line.push_str(" & ");
+                        line.push_str(&Command::get_command(Command::Gate(gate.to_string())));
+                    }
+                }
+            }
+
+            // chain an empty column qw to the end of the line
+            line.push_str(" & ");
+            line.push_str(&Command::get_command(Command::Qw));
+
+            // add a newline between each new line or the footer
+            line.push('\n');
+            body.push_str(&line);
+        }
+
+        write!(f, "{}", body)
     }
 }
 
@@ -215,23 +265,23 @@ impl Display for Diagram {
 /// can hold only one element, therefore, each encoded index is unique between 
 /// all of the attributes. Using this property, a String can be generated. 
 #[derive(Debug)]
-struct Circuit {
+struct Wire {
     /// abstract attribute representing total-1 elements on the circuit 
     column: u32,
     /// a wire, ket(qubit) placed using the Lstick or Rstick commands
-    wire: String,
+    name: String,
     /// gate element(s) placed at column_u32 on wire using the Gate command
-    gate: Vec<(u32, String)>,
+    gates: HashMap<u32, String>,
     /// a column_u32 that contains nothing placed using the Qw command  
     do_nothing: Vec<u32>,
 }
 
-impl Default for Circuit {
+impl Default for Wire {
     fn default() -> Self {
         Self { 
             column: 0,
-            wire: String::from(""), 
-            gate: vec![], 
+            name: String::from(""), 
+            gates: HashMap::new(), 
             do_nothing: vec![],
         }
     }
@@ -240,8 +290,8 @@ impl Default for Circuit {
 #[derive(thiserror::Error, Debug)]
 pub enum LatexGenError {
     // TODO: Add variants for each error type using `thiserror` crate to return detailed Result::Err. Example error below.
-    #[error("This is an error on {qubit_index}.")]
-    SomeError{qubit_index: u32},
+    #[error("Tried to pop gate from new circuit and append to wire={wire} but found None.")]
+    NoGateInInst{wire: String},
 }
 
 pub trait Latex {
@@ -261,58 +311,44 @@ impl Latex for Program {
         // X 0, Y 1, 
 
         // store circuit strings
-        let mut diagram = Diagram { circuits: HashMap::new() };
+        let mut diagram = Diagram {settings, circuit: HashMap::new() };
 
         for instruction in instructions {
-            let mut circuit = Circuit::default();
-
             match instruction {
+                // parse gate instructions into a new circuit
                 instruction::Instruction::Gate(gate) => {
-                    // println!("{:?}", gate.name);
+                    // println!("GATE: {:?}", gate.name);
 
+                    // for each qubit in a single gate instruction
                     for qubit in gate.qubits {
+                        // create a new wire
+                        let mut wire = Wire::default();
+
                         match qubit {
+                            // for Fixed and Variable qubit variants
                             _ => {
-                                circuit.wire = qubit.to_string();
+                                // set the name of the wire to the qubit name
+                                wire.name = qubit.to_string();
                             }
                         }
+
+                        // add the gate to the wire at column 0
+                        wire.gates.insert(wire.column, gate.name.clone());
+
+                        // push wire to diagram circuit
+                        diagram.push_wire(wire);
+
+                        // println!("WIRE: {:?}", wire);
                     }
-
-                    circuit.gate.push((circuit.column, gate.name));
-
-                    // println!("{:?}", circuit);
                 },
+                // do nothing for all other instructions
                 _ => (),
             }
-
-            diagram.push_circuit(circuit)
         }
 
-        // Program of single qubit passing through two gates
-        // X 0
-        // Y 0
-        // Circuit is a single wire with an X gate and a Y gate
-
-        // If using a vector and stacking the program the following would produce
-        // diagram => ["\lstick{\ket{0}} \gate{X} \qw", "\lstick{\ket{0}} \gate{Y} \qw"]
-        // 
-        // """
-        // \lstick{\ket{0}} \gate{X} \qw
-        // \lstick{\ket{0}} \gate{Y} \qw
-        // """
-        //
-        // The program should produce:
-        // \lstick{\ket{0}} \gate{x} \gate{y} \qw
-        //
-        // Need to manage this situation. Best way to do this would be to manage the state of a Diagram that contains Wires. Where each Wire Contains a Circuit with entries that contain details on how to manage particular cases, 
-        // Questions to ask
-        // is this qubit a control or target at this circuit entry at this point on the wire? 
-
-
-        // TODO: Build the document body.
         let body = diagram.to_string();
-
         let document = Document {body: body, ..Default::default()};
+        println!("{}", document.to_string());
 
         Ok(document.to_string())
     }
@@ -336,7 +372,7 @@ mod tests {
     #[test]
     /// Test functionality of to_latex using default settings.
     fn test_to_latex() {
-        let program = Program::from_str("X 0").expect("");
+        let program = Program::from_str("X 0\nY 0").expect("");
         program.to_latex(Settings::default()).expect("");
     }
 
