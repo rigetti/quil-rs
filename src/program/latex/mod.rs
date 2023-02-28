@@ -67,7 +67,8 @@ impl Command {
     /// # Examples
     /// ```
     /// use quil_rs::program::latex::Command;
-    /// let lstick_ket_0 = Command::get_command(Command::Lstick(0));
+    /// let ket_0 = "0".to_string();
+    /// let lstick_ket_0 = Command::get_command(Command::Lstick(ket_0));
     /// ```
     pub fn get_command(command: Self) -> String {
         match command {
