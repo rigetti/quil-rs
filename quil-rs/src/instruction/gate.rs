@@ -141,26 +141,25 @@ impl fmt::Display for GateSpecification {
         match self {
             GateSpecification::Matrix(matrix) => {
                 for row in matrix {
-                    writeln!(
-                        f,
-                        "\t{}",
-                        row.iter()
-                            .map(|cell| format!("{cell}"))
-                            .collect::<Vec<String>>()
-                            .join(", ")
-                    )?;
+                    write!(f, "\t")?;
+                    if let Some(first) = row.first() {
+                        write!(f, "{cell}")?;
+                    }
+                    for cell in row.iter().skip(1) {
+                        write!(f, ", {cell}")?;
+                    }
+                    writeln!(f)?;
                 }
             }
             GateSpecification::Permutation(permutation) => {
-                writeln!(
-                    f,
-                    "\t{}",
-                    permutation
-                        .iter()
-                        .map(|i| format!("{i}"))
-                        .collect::<Vec<String>>()
-                        .join(", ")
-                )?;
+                write!(f, "\t")?;
+                if let Some(i) = permutation.first() {
+                    write!(f, "{i}")?;
+                }
+                for i in permutation.iter().skip(1) {
+                    write!(f, ", {i}")?;
+                }
+                writeln!(f)?;
             }
         }
         Ok(())
