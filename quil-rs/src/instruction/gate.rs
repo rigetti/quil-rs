@@ -109,17 +109,11 @@ impl fmt::Display for Gate {
         let parameter_str = get_expression_parameter_string(&self.parameters);
 
         let qubit_str = format_qubits(&self.qubits);
-        let modifier_str = &self
-            .modifiers
-            .iter()
-            .map(|m| format!("{m} "))
-            .collect::<Vec<String>>()
-            .join("");
-        write!(
-            f,
-            "{}{}{} {}",
-            modifier_str, self.name, parameter_str, qubit_str
-        )
+            for modifier in &self.modifiers {
+                write!(f, "{modifier} ")?;
+            }
+            
+            write!(f, "{}{} {}", self.name, parameter_str, qubit_str)
     }
 }
 
