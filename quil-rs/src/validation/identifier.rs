@@ -19,17 +19,17 @@ pub enum IdentifierValidationError {
 const IDENTIFIER_REGEX: &str = r"^([A-Za-z_]|[A-Za-z_][A-Za-z0-9\-_]*[A-Za-z0-9_])$";
 
 /// Returns an error if the given identifier is not a valid Quil Identifier
-pub fn validate_identifier(ident: &str) -> Result<bool, IdentifierValidationError> {
+pub fn validate_identifier(ident: &str) -> Result<(), IdentifierValidationError> {
     let re = Regex::new(IDENTIFIER_REGEX).expect("regex should be valid");
 
     match re.is_match(ident) {
-        true => Ok(true),
+        true => Ok(()),
         false => Err(IdentifierValidationError::Invalid(ident.to_string())),
     }
 }
 
 /// Returns an error if the given identifier is reserved, or if it is not a valid Quil identifier
-pub fn validate_user_identifier(ident: &str) -> Result<bool, IdentifierValidationError> {
+pub fn validate_user_identifier(ident: &str) -> Result<(), IdentifierValidationError> {
     ReservedToken::from_str(ident).map_or(validate_identifier(ident), |t| {
         Err(IdentifierValidationError::Reserved(t))
     })

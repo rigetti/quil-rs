@@ -47,7 +47,7 @@ impl fmt::Display for ArithmeticOperand {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum ArithmeticOperator {
     Add,
     Subtract,
