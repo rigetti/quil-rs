@@ -7,7 +7,7 @@ use quil_rs::expression::{
 };
 
 use rigetti_pyo3::{
-    impl_repr, impl_str, py_wrap_data_struct, py_wrap_union_enum,
+    impl_from_str, impl_parse, impl_repr, impl_str, py_wrap_data_struct, py_wrap_union_enum,
     pyo3::{exceptions::PyValueError, pymethods, types::PyString, Py, PyResult, Python},
     ToPython,
 };

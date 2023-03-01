@@ -4,8 +4,7 @@ use quil_rs::instruction::{
 };
 
 use rigetti_pyo3::{
-    impl_repr, impl_str, py_wrap_data_struct, py_wrap_simple_enum, py_wrap_type,
-    py_wrap_union_enum,
+    impl_repr, impl_str, py_wrap_data_struct, py_wrap_type, py_wrap_union_enum,
     pyo3::{
         types::{PyFloat, PyInt},
         Py,

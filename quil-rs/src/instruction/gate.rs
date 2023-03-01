@@ -7,6 +7,7 @@ use crate::{
 
 use super::{format_qubits, get_expression_parameter_string, Qubit};
 
+/// A struct encapsulating all the properties of a Quil Quantum Gate.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Gate {
     pub name: String,
@@ -15,10 +16,16 @@ pub struct Gate {
     pub modifiers: Vec<GateModifier>,
 }
 
+/// An enum of all the possible modifiers on a quil [`Gate`]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum GateModifier {
+    /// The `CONTROLLED` modifier makes the gate take an extra [`Qubit`] parameter as a control
+    /// qubit.
     Controlled,
+    /// The `DAGGER` modifier does a complex-conjugate transpose on the [`Gate`].
     Dagger,
+    /// The `FORKED` modifier allows an alternate set of parameters to be used based on the state
+    /// of a qubit.
     Forked,
 }
 
@@ -131,9 +138,12 @@ impl fmt::Display for GateModifier {
     }
 }
 
+/// An enum representing a the specification of a [`GateDefinition`] for a given [`GateType`]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum GateSpecification {
+    /// A matrix of [`Expression`]s representing a unitary operation for a [`GateType::Matrix`].
     Matrix(Vec<Vec<Expression>>),
+    /// A vector of integers that defines the permutation used for a [`GateType::Permutation`]
     Permutation(Vec<u64>),
 }
 
@@ -168,6 +178,7 @@ impl fmt::Display for GateSpecification {
     }
 }
 
+/// A struct encapsulating a quil Gate Definition
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct GateDefinition {
     pub name: String,
@@ -201,6 +212,7 @@ impl fmt::Display for GateDefinition {
     }
 }
 
+/// The
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum GateType {
     Matrix,
