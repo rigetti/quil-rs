@@ -211,13 +211,9 @@ pub enum GateType {
 impl fmt::Display for GateType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use GateType::*;
-        write!(
-            f,
-            "{}",
-            match self {
-                Matrix => "MATRIX",
-                Permutation => "PERMUTATION",
-            }
-        )
+        match self {
+                Self::Matrix => write!(f, "MATRIX"),
+                Self::Permutation => write!(f, "PERMUTATION"),
+        }
     }
 }
