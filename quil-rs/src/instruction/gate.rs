@@ -119,16 +119,11 @@ impl fmt::Display for Gate {
 
 impl fmt::Display for GateModifier {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use GateModifier::*;
-        write!(
-            f,
-            "{}",
             match self {
-                Controlled => "CONTROLLED",
-                Dagger => "DAGGER",
-                Forked => "FORKED",
+                Self::Controlled => write!(f, "CONTROLLED"),
+                Self::Dagger => write!(f, "DAGGER"),
+                Self::Forked => write!(f, "FORKED"),
             }
-        )
     }
 }
 
