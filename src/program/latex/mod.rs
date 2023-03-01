@@ -183,7 +183,9 @@ impl Display for Document {
 struct Diagram {
     /// Settings
     settings: Settings,
-    /// a HashMap of wires with the name of the wire as the key.
+    /// preserves the order of wires through indexing the circuit keys
+    order: Vec<String>,
+    /// a HashMap of wires with the name of the wire as the key
     circuit: HashMap<String, Box<Wire>>,
 }
 
@@ -214,8 +216,9 @@ impl Diagram {
                 }
 
             },
-            // no wire found, insert new wire
+            // no wire found, preserve insertion order and insert new wire
             None => {
+                self.order.push(wire.name.clone());
                 self.circuit.insert(wire.name.clone(), Box::new(wire));
             },
         }
@@ -231,7 +234,7 @@ impl Display for Diagram {
         let mut body = String::from('\n');
 
         let mut i = 0; // used to omit trailing Nr
-        for key in self.circuit.keys() {
+        for key in &self.order {
             // a single line of LaTeX representing a wire from the circuit   
             let mut line = String::from("");
 
@@ -324,7 +327,7 @@ impl Latex for Program {
         // X 0, Y 1, 
 
         // store circuit strings
-        let mut diagram = Diagram {settings, circuit: HashMap::new() };
+        let mut diagram = Diagram {settings, order: vec![], circuit: HashMap::new()};
 
         for instruction in instructions {
             match instruction {
