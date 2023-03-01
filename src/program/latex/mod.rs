@@ -133,7 +133,9 @@ impl Default for Settings {
 
 // TODO: Implement functions to update the settings that allows the user customzie the rendering of the circuit.
 impl Settings {
-
+    fn label_qubit_lines(&self, key: String) -> String {
+        Command::get_command(Command::Lstick(key.to_string()))
+    }
 }
 
 /// The structure of a LaTeX document. Typically a LaTeX document contains 
@@ -190,6 +192,21 @@ struct Diagram {
 }
 
 impl Diagram {
+    /// Returns a string indicating whether the qubit at row x column on the 
+    /// wire is a control or target qubit. Using order, a qubit whose index = 0 
+    /// is a control whereas index > 0, without modifiers, is a target.
+    /// 
+    /// # Arguments
+    /// `&usize position` - the index of the qubit in &self.order
+    fn set_ctrl_targ(&self, position: &usize) -> String {
+        if *position == 0 {
+            // the target qubit lies on the next wire 1
+            Command::get_command(Command::Ctrl(String::from("1")))
+        } else {
+            Command::get_command(Command::Targ)
+        }
+    }
+
     /// Takes a new or existing wire and adds or updates it using the name
     /// (String) as the key. If a wire exists with the same name, then the 
     /// contents of the new wire are added to it by updating the next column 
@@ -198,7 +215,7 @@ impl Diagram {
     /// 
     /// # Arguments
     /// `&mut self` - exposes HashMap<String, Box<Circuit>>
-    /// `circuit` - the circuit to be pushed or updated in circuits
+    /// `wire` - the wire to be pushed or updated to in circuits
     fn push_wire(&mut self, wire: Wire) {
         // find wire in circuit collection
         match self.circuit.get_mut(&wire.name) {
@@ -233,23 +250,30 @@ impl Display for Diagram {
         // add a newline between the first line and the header
         let mut body = String::from('\n');
 
-        let mut i = 0; // used to omit trailing Nr
-        for key in &self.order {
+        for i in 0..self.order.len() {
             // a single line of LaTeX representing a wire from the circuit   
             let mut line = String::from("");
 
             // are labels on in settings?
             if self.settings.label_qubit_lines {
                 // add label to left side of wire
-                line.push_str(&Command::get_command(Command::Lstick(key.to_string())));
+                line.push_str(&self.settings.label_qubit_lines(self.order[i].clone()));
             }
 
             // convert each attribute other than the default to string.
-            if let Some(wire) = self.circuit.get(key) {
+            if let Some(wire) = self.circuit.get(&self.order[i]) {
                 for c in 0..=wire.column {
                     if let Some(gate) = wire.gates.get(&c) {
+                        // println!("GATE: {gate}");
+
                         line.push_str(" & ");
+
+                        // determine if target or control
+                        if gate == "CNOT" {
+                            line.push_str(&self.set_ctrl_targ(&i));
+                        } else {
                         line.push_str(&Command::get_command(Command::Gate(gate.to_string())));
+                        }
                     }
                 }
             }
@@ -263,7 +287,6 @@ impl Display for Diagram {
                 // indicate a new row
                 line.push(' ');
                 line.push_str(&Command::get_command(Command::Nr));
-                i += 1;
             }
 
             // add a newline between each new line or the footer
@@ -340,13 +363,8 @@ impl Latex for Program {
                         // create a new wire
                         let mut wire = Wire::default();
 
-                        match qubit {
-                            // for Fixed and Variable qubit variants
-                            _ => {
-                                // set the name of the wire to the qubit name
-                                wire.name = qubit.to_string();
-                            }
-                        }
+                        // set name of wire for any qubit variant as String
+                        wire.name = qubit.to_string();
 
                         // add the gate to the wire at column 0
                         wire.gates.insert(wire.column, gate.name.clone());
@@ -440,6 +458,16 @@ mod tests {
         #[test]
         fn test_gates_x_and_y_two_qubits() {
             insta::assert_snapshot!(get_latex("X 0\nY 1"));
+        }
+
+        #[test]
+        fn test_gates_cnot_ctrl_0_targ_1() {
+            insta::assert_snapshot!(get_latex("CNOT 0 1"));
+        }
+
+        #[test]
+        fn test_gates_cnot_ctrl_1_targ_0() {
+            insta::assert_snapshot!(get_latex("CNOT 1 0"));
         }
 
         // #[test]
