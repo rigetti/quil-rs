@@ -14,6 +14,7 @@ pub enum ReservedToken {
 
 #[derive(Clone, Debug)]
 pub struct NotReservedToken(String);
+
 impl FromStr for ReservedToken {
     type Err = NotReservedToken;
 

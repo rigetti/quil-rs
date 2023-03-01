@@ -1,6 +1,7 @@
 //! Types and functions related to validating Quil identifiers
 use std::str::FromStr;
 
+use once_cell::sync::Lazy;
 use regex::Regex;
 use thiserror;
 
@@ -16,13 +17,14 @@ pub enum IdentifierValidationError {
 }
 
 /// A regex that matches only valid Quil identifiers
-const IDENTIFIER_REGEX: &str = r"^([A-Za-z_]|[A-Za-z_][A-Za-z0-9\-_]*[A-Za-z0-9_])$";
+const IDENTIFIER_REGEX_STRING: &str = r"^([A-Za-z_]|[A-Za-z_][A-Za-z0-9\-_]*[A-Za-z0-9_])$";
+
+static IDENTIFIER_REGEX: Lazy<Regex> =
+    Lazy::new(|| Regex::new(IDENTIFIER_REGEX_STRING).expect("regex should be valid"));
 
 /// Returns an error if the given identifier is not a valid Quil Identifier
 pub fn validate_identifier(ident: &str) -> Result<(), IdentifierValidationError> {
-    let re = Regex::new(IDENTIFIER_REGEX).expect("regex should be valid");
-
-    match re.is_match(ident) {
+    match IDENTIFIER_REGEX.is_match(ident) {
         true => Ok(()),
         false => Err(IdentifierValidationError::Invalid(ident.to_string())),
     }

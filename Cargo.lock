@@ -943,6 +943,7 @@ dependencies = [
  "nom",
  "nom_locate",
  "num-complex",
+ "once_cell",
  "petgraph",
  "proptest",
  "proptest-derive",
