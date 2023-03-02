@@ -300,7 +300,7 @@ fn lex_number(input: LexInput) -> InternalLexResult {
         input,
         match integer_parse_result {
             Ok(_) => Token::Integer(float_string.parse::<u64>().unwrap()),
-            Err(_) => Token::Float(double(float_string)?.1 as f64),
+            Err(_) => Token::Float(double(float_string)?.1),
         },
     ))
 }
