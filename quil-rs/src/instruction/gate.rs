@@ -109,21 +109,21 @@ impl fmt::Display for Gate {
         let parameter_str = get_expression_parameter_string(&self.parameters);
 
         let qubit_str = format_qubits(&self.qubits);
-            for modifier in &self.modifiers {
-                write!(f, "{modifier} ")?;
-            }
-            
-            write!(f, "{}{} {}", self.name, parameter_str, qubit_str)
+        for modifier in &self.modifiers {
+            write!(f, "{modifier} ")?;
+        }
+
+        write!(f, "{}{} {}", self.name, parameter_str, qubit_str)
     }
 }
 
 impl fmt::Display for GateModifier {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            match self {
-                Self::Controlled => write!(f, "CONTROLLED"),
-                Self::Dagger => write!(f, "DAGGER"),
-                Self::Forked => write!(f, "FORKED"),
-            }
+        match self {
+            Self::Controlled => write!(f, "CONTROLLED"),
+            Self::Dagger => write!(f, "DAGGER"),
+            Self::Forked => write!(f, "FORKED"),
+        }
     }
 }
 
@@ -143,7 +143,7 @@ impl fmt::Display for GateSpecification {
                 for row in matrix {
                     write!(f, "\t")?;
                     if let Some(first) = row.first() {
-                        write!(f, "{cell}")?;
+                        write!(f, "{first}")?;
                     }
                     for cell in row.iter().skip(1) {
                         write!(f, ", {cell}")?;
@@ -200,7 +200,7 @@ impl fmt::Display for GateDefinition {
     }
 }
 
-/// The
+/// The type of a [`GateDefinition`]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum GateType {
     Matrix,
@@ -209,10 +209,9 @@ pub enum GateType {
 
 impl fmt::Display for GateType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use GateType::*;
         match self {
-                Self::Matrix => write!(f, "MATRIX"),
-                Self::Permutation => write!(f, "PERMUTATION"),
+            Self::Matrix => write!(f, "MATRIX"),
+            Self::Permutation => write!(f, "PERMUTATION"),
         }
     }
 }

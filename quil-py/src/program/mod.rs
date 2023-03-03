@@ -33,8 +33,6 @@ py_wrap_type! {
 }
 impl_as_mut_for_wrapper!(PyProgram);
 impl_repr!(PyProgram);
-impl_from_str(PyProgram);
-impl_parse(PyProgram);
 
 impl Default for PyProgram {
     fn default() -> Self {
