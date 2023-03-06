@@ -26,9 +26,8 @@ pub use leftover::LeftoverError;
 pub use result::{disallow_leftover, map_parsed, recover};
 pub use syntax::SyntaxError;
 
-// TODO: Should this be refactored as a enum for any error that can occur while working with a
-// `Program`?
 /// Errors that may occur while parsing a [`Program`](crate::program::Program).
+// TODO: [`Program`] should have its own error type: https://github.com/rigetti/quil-rs/issues/150
 #[derive(Debug, PartialEq)]
 pub enum ProgramError<T> {
     InvalidCalibration {
