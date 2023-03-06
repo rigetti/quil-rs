@@ -17,8 +17,8 @@ use std::collections::HashMap;
 use crate::{
     expression::Expression,
     instruction::{
-        Calibration, Gate, GateModifier, Instruction, MeasureCalibrationDefinition, Measurement,
-        Qubit,
+        Calibration, Delay, Gate, GateModifier, Instruction, MeasureCalibrationDefinition,
+        Measurement, Qubit,
     },
 };
 
@@ -102,18 +102,23 @@ impl CalibrationSet {
                         let mut instructions = calibration.instructions.clone();
 
                         for instruction in instructions.iter_mut() {
-                            if let Instruction::Gate(Gate { qubits, .. }) = instruction {
-                                // Swap all qubits for their concrete implementations
-                                for qubit in qubits {
-                                    match qubit {
-                                        Qubit::Variable(name) => {
-                                            if let Some(expansion) = qubit_expansions.get(name) {
-                                                *qubit = expansion.clone();
+                            match instruction {
+                                Instruction::Gate(Gate { qubits, .. })
+                                | Instruction::Delay(Delay { qubits, .. }) => {
+                                    // Swap all qubits for their concrete implementations
+                                    for qubit in qubits {
+                                        match qubit {
+                                            Qubit::Variable(name) => {
+                                                if let Some(expansion) = qubit_expansions.get(name)
+                                                {
+                                                    *qubit = expansion.clone();
+                                                }
                                             }
+                                            Qubit::Fixed(_) => {}
                                         }
-                                        Qubit::Fixed(_) => {}
                                     }
                                 }
+                                _ => {}
                             }
 
                             instruction.apply_to_expressions(|expr| {
@@ -400,6 +405,10 @@ mod tests {
                     "MEASURE 0 ro\n"
                 ),
                 expected: "PRAGMA CORRECT\n",
+            },
+            TestCase {
+                input: concat!("DEFCAL I q:\n", "    DELAY q 4e-8\n", "I 0\n",),
+                expected: "DELAY 0 4e-8\n",
             },
         ];
 
