@@ -30,5 +30,5 @@ definitions (for their respective target language, of course).
 
 In short, an instruction should:
     1. Be organized in the equivalent `instruction` submodule for both `quil-rs` and `quil-py` crates
-    2. Only be re-exported publically from the root of the `Instruction` module
+    2. Only be re-exported publicly from the root of the `Instruction` module
 
