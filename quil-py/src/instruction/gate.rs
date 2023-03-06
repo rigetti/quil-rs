@@ -4,7 +4,8 @@ use quil_rs::{
 };
 
 use rigetti_pyo3::{
-    impl_repr, impl_str, py_wrap_data_struct, py_wrap_error, py_wrap_union_enum,
+    impl_repr, impl_str, py_wrap_data_struct, py_wrap_error, py_wrap_simple_enum,
+    py_wrap_union_enum,
     pyo3::{
         exceptions::PyValueError,
         pymethods,
@@ -100,11 +101,11 @@ py_wrap_data_struct! {
 impl_repr!(PyGateDefinition);
 impl_str!(PyGateDefinition);
 
-py_wrap_union_enum! {
+py_wrap_simple_enum! {
     PyGateModifier(GateModifier) as "GateModifier" {
-        controlled: Controlled,
-        dagger: Dagger,
-        forked: Forked
+        Controlled,
+        Dagger,
+        Forked
     }
 }
 impl_repr!(PyGateModifier);

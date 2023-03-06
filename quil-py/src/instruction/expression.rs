@@ -7,7 +7,7 @@ use quil_rs::expression::{
 };
 
 use rigetti_pyo3::{
-    impl_from_str, impl_parse, impl_repr, impl_str, py_wrap_data_struct, py_wrap_union_enum,
+    impl_repr, impl_str, py_wrap_data_struct, py_wrap_simple_enum, py_wrap_union_enum,
     pyo3::{exceptions::PyValueError, pymethods, types::PyString, Py, PyResult, Python},
     ToPython,
 };
@@ -28,13 +28,13 @@ py_wrap_union_enum! {
 impl_repr!(PyExpression);
 impl_str!(PyExpression);
 
-py_wrap_union_enum! {
+py_wrap_simple_enum! {
     PyExpressionFunction(ExpressionFunction) as "ExpressionFunction" {
-        cis: Cis,
-        cosine: Cosine,
-        exponent: Exponent,
-        sine: Sine,
-        square_root: SquareRoot
+        Cis,
+        Cosine,
+        Exponent,
+        Sine,
+        SquareRoot
     }
 }
 impl_repr!(PyExpressionFunction);
@@ -58,13 +58,13 @@ impl PyExpression {
     }
 }
 
-py_wrap_union_enum! {
+py_wrap_simple_enum! {
     PyInfixOperator(InfixOperator) as "InfixOperator" {
-        caret: Caret,
-        plus: Plus,
-        minus: Minus,
-        slash: Slash,
-        star: Star
+        Caret,
+        Plus,
+        Minus,
+        Slash,
+        Star
     }
 }
 impl_repr!(PyInfixOperator);
@@ -79,10 +79,10 @@ py_wrap_data_struct! {
 }
 impl_repr!(PyInfixExpression);
 
-py_wrap_union_enum! {
+py_wrap_simple_enum! {
     PyPrefixOperator(PrefixOperator) as "PrefixOperator" {
-        plus: Plus,
-        minus: Minus
+        Plus,
+        Minus
     }
 }
 

@@ -1,19 +1,19 @@
 use quil_rs::instruction::{Declaration, ScalarType, Vector};
 
 use rigetti_pyo3::{
-    impl_repr, impl_str, py_wrap_data_struct, py_wrap_union_enum,
+    impl_repr, impl_str, py_wrap_data_struct, py_wrap_simple_enum,
     pyo3::{
         types::{PyInt, PyString},
         Py,
     },
 };
 
-py_wrap_union_enum! {
+py_wrap_simple_enum! {
     PyScalarType(ScalarType) as "ScalarType" {
-        bit: Bit,
-        integer: Integer,
-        octet: Octet,
-        real: Real
+        Bit,
+        Integer,
+        Octet,
+        Real
     }
 }
 impl_repr!(PyScalarType);

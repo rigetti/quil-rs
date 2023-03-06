@@ -17,7 +17,7 @@ pub struct Gate {
 }
 
 /// An enum of all the possible modifiers on a quil [`Gate`]
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum GateModifier {
     /// The `CONTROLLED` modifier makes the gate take an extra [`Qubit`] parameter as a control
     /// qubit.

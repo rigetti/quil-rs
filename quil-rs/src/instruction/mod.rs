@@ -217,7 +217,7 @@ pub struct Include {
     pub filename: String,
 }
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 pub enum ScalarType {
     Bit,
     Integer,

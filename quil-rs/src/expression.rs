@@ -533,7 +533,7 @@ impl fmt::Display for Expression {
 }
 
 /// A function defined within Quil syntax.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub enum ExpressionFunction {
     Cis,
@@ -560,7 +560,7 @@ impl fmt::Display for ExpressionFunction {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub enum PrefixOperator {
     Plus,
@@ -581,7 +581,7 @@ impl fmt::Display for PrefixOperator {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub enum InfixOperator {
     Caret,
