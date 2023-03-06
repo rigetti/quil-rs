@@ -117,7 +117,7 @@ impl PyProgram {
             .collect()
     }
 
-    fn dagger(&self) -> PyResult<Self> {
+    pub fn dagger(&self) -> PyResult<Self> {
         self.as_inner()
             .dagger()
             .map_err(|e| ProgramError::new_err(e.to_string()))
