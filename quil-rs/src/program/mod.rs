@@ -38,19 +38,13 @@ pub mod type_check;
 #[derive(Debug, thiserror::Error, PartialEq)]
 pub enum ProgramError {
     #[error("{0}")]
-    ParsingError(String),
+    ParsingError(#[from] ParseProgramError<Program>),
 
     #[error("this operation isn't supported on instruction: {0}")]
     UnsupportedOperation(Instruction),
 
     #[error("instruction {0} expands into itself")]
     RecursiveCalibration(Instruction),
-}
-
-impl<T: std::fmt::Debug + 'static> From<ParseProgramError<T>> for ProgramError {
-    fn from(value: ParseProgramError<T>) -> Self {
-        ProgramError::ParsingError(value.to_string())
-    }
 }
 
 type Result<T> = std::result::Result<T, ProgramError>;
