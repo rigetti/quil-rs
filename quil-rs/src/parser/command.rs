@@ -43,8 +43,9 @@ use super::{
         parse_memory_reference, parse_permutation, parse_qubit, parse_vector,
         parse_waveform_invocation, parse_waveform_name,
     },
+    error::InternalError,
     expression::parse_expression,
-    ParserInput,
+    ParserErrorKind, ParserInput,
 };
 
 /// Parse an arithmetic instruction of the form `destination source`.
@@ -189,16 +190,17 @@ pub(crate) fn parse_defcal_gate<'a>(
     let (input, qubits) = many0(parse_qubit)(input)?;
     let (input, _) = token!(Colon)(input)?;
     let (input, instructions) = parse_block(input)?;
-    Ok((
-        input,
-        Instruction::CalibrationDefinition(Calibration {
-            instructions,
-            modifiers,
-            name,
-            parameters,
-            qubits,
-        }),
-    ))
+    let calibration = Calibration::new(name.as_str(), parameters, qubits, instructions, modifiers)
+        .map_err(|e| {
+            nom::Err::Error(InternalError::from_kind(
+                input,
+                ParserErrorKind::InvalidInstruction {
+                    instruction_type: "Calibration".to_string(),
+                    reason: e.to_string(),
+                },
+            ))
+        })?;
+    Ok((input, Instruction::CalibrationDefinition(calibration)))
 }
 
 /// Parse the contents of a `DEFCAL MEASURE` instruction, following the `MEASURE` token.
@@ -210,13 +212,11 @@ pub(crate) fn parse_defcal_measure<'a>(
     let (input, destination) = token!(Identifier(v))(input)?;
     let (input, _) = token!(Colon)(input)?;
     let (input, instructions) = parse_block(input)?;
+    let measure_calibration_definition =
+        MeasureCalibrationDefinition::new(qubit, destination, instructions);
     Ok((
         input,
-        Instruction::MeasureCalibrationDefinition(MeasureCalibrationDefinition {
-            instructions,
-            parameter: destination,
-            qubit,
-        }),
+        Instruction::MeasureCalibrationDefinition(measure_calibration_definition),
     ))
 }
 
