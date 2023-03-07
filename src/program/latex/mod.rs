@@ -22,7 +22,7 @@
 //! 
 //! [`Quantikz`]: https://arxiv.org/pdf/1809.03842.pdf
 
-use std::collections::HashMap;
+use std::collections::{HashMap, BTreeMap};
 use std::fmt::{format, Display};
 
 use crate::Program;
@@ -133,8 +133,8 @@ impl Default for Settings {
 
 // TODO: Implement functions to update the settings that allows the user customzie the rendering of the circuit.
 impl Settings {
-    fn label_qubit_lines(&self, key: String) -> String {
-        Command::get_command(Command::Lstick(key.to_string()))
+    fn label_qubit_lines(&self, name: u64) -> String {
+        Command::get_command(Command::Lstick(name.to_string()))
     }
 }
 
@@ -181,14 +181,29 @@ impl Display for Document {
 /// same exact column says that it is the target, then it can inform qubit 0 
 /// that it is controlling qubit 1. This information is then placed into the 
 /// circuit as the diagram forms the equivalent LaTeX form for each qubit.
+/// The circuit dimension is column:`column+1`x row:`circuit.len+1` where the 
+/// product of these two is the total number of items on the entire circuit.
 #[derive(Debug)]
 struct Diagram {
     /// Settings
     settings: Settings,
-    /// preserves the order of wires through indexing the circuit keys
-    order: Vec<String>,
-    /// a HashMap of wires with the name of the wire as the key
-    circuit: HashMap<String, Box<Wire>>,
+    /// total-1 elements on each wire
+    column: u32,
+    /// maintains the instruction order of qubits
+    order: Vec<u64>,
+    /// a BTreeMap of wires with the name of the wire as the key
+    circuit: BTreeMap<u64, Box<Wire>>,
+}
+
+impl Default for Diagram {
+    fn default() -> Self {
+        Self { 
+            settings: Settings::default(), 
+            column: 0, 
+            order: vec![],
+            circuit: BTreeMap::new(),
+        }
+    }
 }
 
 impl Diagram {
@@ -198,13 +213,74 @@ impl Diagram {
     /// 
     /// # Arguments
     /// `&usize position` - the index of the qubit in &self.order
-    fn set_ctrl_targ(&self, position: &usize) -> String {
-        if *position == 0 {
-            // the target qubit lies on the next wire 1
-            Command::get_command(Command::Ctrl(String::from("1")))
-        } else {
-            Command::get_command(Command::Targ)
+    fn set_ctrl_targ(&mut self) {
+
+        let mut ctrl = None;
+        let mut targ = None;
+
+        // for every CNOT the first qubit is the control
+        for qubit in &self.order {
+            // get the wire from the circuit as mutible 
+            if let Some(wire) = self.circuit.get_mut(qubit) {
+
+                // if ctrl = Some, the remaining qubits are target qubits
+                if let Some(_) = ctrl {
+                    // set wire at column as a target qubit
+                    wire.targ.insert(self.column, true);
+                    targ = Some(wire.name); // identify the target qubit
+                
+                // if ctrl = None, this is the first qubit which is the control
+                } else {
+                    ctrl = Some(wire.name); // identify the control qubit
+                }
+            }   
         }
+
+        // physical vector between qubits on the diagram with a positive direction from control to target and negative, from target to control, with the magnitude being the distance between them
+        let vector: i64;
+        if let Some(ctrl) = ctrl {
+            if let Some(targ) = targ {
+                // distance between qubits is the order of the ctrl and targ qubits within the circuit
+
+                // represent open and close parenthesis indicating a range
+                let mut start: i64 = -1; // first qubit in order is ctrl
+                let mut close: i64 = -1; // second qubit in order is targ
+
+                // find the range between the qubits
+                for i in 0..self.order.len() {
+
+                    // first qubit found is the control
+                    if self.order[i] == ctrl {
+                        // starting index containing the control qubit
+                        start = i as i64;
+
+                    // second qubit found is the targ
+                    } else if self.order[i] == targ {
+                        // closing index containing the target qubit
+                        close = i as i64;
+                    }
+                }
+
+                // all qubits arranged on the circuit in increasing order
+                if targ > ctrl {
+                    // the vector is pointing from the target to the control
+                    vector = -1 * (start - close);
+                } else {
+                    // the vector is pointing from the control to the target
+                    vector = start - close;
+                }
+
+                // error if 0 is the result
+                if vector == 0 {
+                    LatexGenError::FoundCNOTWithoutCtrlOrTarg{vector};
+                }
+
+                // set wire at column as the control qubit of target qubit computed as the distance from the control qubit
+                self.circuit.get_mut(&ctrl).and_then(|wire| wire.ctrl.insert(self.column, vector));
+            }
+        }
+
+        println!("{:?}", self);
     }
 
     /// Takes a new or existing wire and adds or updates it using the name
@@ -222,21 +298,18 @@ impl Diagram {
             // wire found, push to existing wire
             Some(wire_in_circuit) => {
                 // indicate a new item to be added by incrementing column
-                wire_in_circuit.column += 1;
+                self.column += 1;
 
                 // if wire contains gates to add
-                if !wire.gates.is_empty() {
-                    if let Some(gate) = wire.gates.get(&0) {
-                        // add gates to wire in circuit
-                        wire_in_circuit.gates.insert(wire_in_circuit.column, gate.to_string());
-                    }
+                if let Some(gate) = wire.gates.get(&0) {
+                    // add gates to wire in circuit
+                    wire_in_circuit.gates.insert(self.column, gate.to_string());
                 }
-
             },
             // no wire found, preserve insertion order and insert new wire
             None => {
-                self.order.push(wire.name.clone());
-                self.circuit.insert(wire.name.clone(), Box::new(wire));
+                self.order.push(wire.name);
+                self.circuit.insert(wire.name, Box::new(wire));
             },
         }
         
@@ -250,30 +323,40 @@ impl Display for Diagram {
         // add a newline between the first line and the header
         let mut body = String::from('\n');
 
-        for i in 0..self.order.len() {
+        let mut i = 0; // used to omit trailing Nr
+        // write the LaTeX string for each wire in the circuit
+        for key in self.circuit.keys() {
             // a single line of LaTeX representing a wire from the circuit   
             let mut line = String::from("");
 
             // are labels on in settings?
             if self.settings.label_qubit_lines {
                 // add label to left side of wire
-                line.push_str(&self.settings.label_qubit_lines(self.order[i].clone()));
+                line.push_str(&self.settings.label_qubit_lines(*key));
             }
 
-            // convert each attribute other than the default to string.
-            if let Some(wire) = self.circuit.get(&self.order[i]) {
-                for c in 0..=wire.column {
+            // convert each column in the wire to string
+            if let Some(wire) = self.circuit.get(key) {
+                for c in 0..=self.column {
                     if let Some(gate) = wire.gates.get(&c) {
-                        // println!("GATE: {gate}");
-
                         line.push_str(" & ");
 
-                        // determine if target or control
                         if gate == "CNOT" {
-                            line.push_str(&self.set_ctrl_targ(&i));
+                            if let Some(targ) = wire.ctrl.get(&c) {
+                                line.push_str(&Command::get_command(Command::Ctrl(targ.to_string())));
+
+                            } else if let Some(_) = wire.targ.get(&c) {
+                                line.push_str(&Command::get_command(Command::Targ));
+
+                            } else {
+                                LatexGenError::FoundCNOTWithoutCtrlOrTarg{ vector: 0};
+                            }
                         } else {
-                        line.push_str(&Command::get_command(Command::Gate(gate.to_string())));
+                            line.push_str(&Command::get_command(Command::Gate(gate.to_string())));
                         }
+                    } else {
+                        line.push_str(" & ");
+                        line.push_str(&Command::get_command(Command::Qw));
                     }
                 }
             }
@@ -287,6 +370,7 @@ impl Display for Diagram {
                 // indicate a new row
                 line.push(' ');
                 line.push_str(&Command::get_command(Command::Nr));
+                i += 1;
             }
 
             // add a newline between each new line or the footer
@@ -305,12 +389,14 @@ impl Display for Diagram {
 /// all of the attributes. Using this property, a String can be generated. 
 #[derive(Debug)]
 struct Wire {
-    /// abstract attribute representing total-1 elements on the circuit 
-    column: u32,
     /// a wire, ket(qubit) placed using the Lstick or Rstick commands
-    name: String,
+    name: u64,
     /// gate element(s) placed at column_u32 on wire using the Gate command
     gates: HashMap<u32, String>,
+    /// control at key=column with value=targ
+    ctrl: HashMap<u32, i64>,
+    /// target at key=column
+    targ: HashMap<u32, bool>,
     /// a column_u32 that contains nothing placed using the Qw command  
     do_nothing: Vec<u32>,
 }
@@ -318,9 +404,10 @@ struct Wire {
 impl Default for Wire {
     fn default() -> Self {
         Self { 
-            column: 0,
-            name: String::from(""), 
+            name: 0, 
             gates: HashMap::new(), 
+            ctrl: HashMap::new(),
+            targ: HashMap::new(),
             do_nothing: vec![],
         }
     }
@@ -331,6 +418,8 @@ pub enum LatexGenError {
     // TODO: Add variants for each error type using `thiserror` crate to return detailed Result::Err. Example error below.
     #[error("Tried to pop gate from new circuit and append to wire={wire} but found None.")]
     NoGateInInst{wire: String},
+    #[error("Tried to calculate distance between control and target qubits and found {vector}.")]
+    FoundCNOTWithoutCtrlOrTarg{vector: i64},
 }
 
 pub trait Latex {
@@ -346,11 +435,8 @@ impl Latex for Program {
         // get a reference to the current program
         let instructions = Program::to_instructions(&self, false);
 
-        // instruction
-        // X 0, Y 1, 
-
         // store circuit strings
-        let mut diagram = Diagram {settings, order: vec![], circuit: HashMap::new()};
+        let mut diagram = Diagram {settings, ..Default::default()};
 
         for instruction in instructions {
             match instruction {
@@ -360,19 +446,41 @@ impl Latex for Program {
 
                     // for each qubit in a single gate instruction
                     for qubit in gate.qubits {
-                        // create a new wire
-                        let mut wire = Wire::default();
 
-                        // set name of wire for any qubit variant as String
-                        wire.name = qubit.to_string();
+                        match qubit {
+                            instruction::Qubit::Fixed(qubit) => {
 
-                        // add the gate to the wire at column 0
-                        wire.gates.insert(wire.column, gate.name.clone());
+                                // create a new wire
+                                let mut wire = Wire::default();
 
-                        // push wire to diagram circuit
-                        diagram.push_wire(wire);
+                                // set name of wire for any qubit variant as String
+                                wire.name = qubit;
 
-                        // println!("WIRE: {:?}", wire);
+                                // TODO: reduce code duplication
+                                if let Some(_) = diagram.circuit.get(&qubit) {
+                                    // add the gate to the wire at column 0
+                                    wire.gates.insert(0, gate.name.clone());   
+                                } else {
+                                    if gate.name == "CNOT" {
+                                        wire.gates.insert(diagram.column, gate.name.clone());
+                                    } else {
+                                        // add the gate to the wire at column 0
+                                        wire.gates.insert(0, gate.name.clone());  
+                                    }
+                                }
+
+                                // push wire to diagram circuit
+                                diagram.push_wire(wire);
+
+                                // println!("WIRE: {:?}", wire);
+                            },
+                            _ => (),
+                        }
+                    }
+
+                    // set qubit relationships based on gate type
+                    if gate.name == "CNOT" {
+                        diagram.set_ctrl_targ();
                     }
                 },
                 // do nothing for all other instructions
@@ -406,7 +514,7 @@ mod tests {
     #[test]
     /// Test functionality of to_latex using default settings.
     fn test_to_latex() {
-        let program = Program::from_str("X 0\nY 1").expect("");
+        let program = Program::from_str("H 0\nCNOT 0 1").expect("");
         program.to_latex(Settings::default()).expect("");
     }
 
