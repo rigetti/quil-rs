@@ -1,3 +1,5 @@
+from typing import Optional
+
 class Qubit:
     """
     A Qubit
@@ -10,7 +12,7 @@ class Qubit:
         - is_*: Returns ``True`` if the inner type is of that variant.
         - as_*: Returns the inner data if it is the given variant, ``None`` otherwise.
         - to_*: Returns the inner data if it is the given variant, raises ``ValueError`` otherwise.
-        - from_*: Creates a new ``GateSpecification`` using an instance of the inner type for the variant.
+        - from_*: Creates a new ``Qubit`` using an instance of the inner type for the variant.
     """
 
     def is_fixed(self) -> bool: ...

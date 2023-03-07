@@ -1,1 +1,1 @@
-import .identifier as identifier
+from . import identifier as identifier
