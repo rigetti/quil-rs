@@ -578,6 +578,16 @@ mod tests {
             insta::assert_snapshot!(get_latex("CNOT 1 0"));
         }
 
+        #[test]
+        fn test_gates_h_and_cnot_ctrl_0_targ_1() {
+            insta::assert_snapshot!(get_latex("H 0\nCNOT 0 1"));
+        }
+
+        #[test]
+        fn test_gates_h_and_cnot_ctrl_1_targ_0() {
+            insta::assert_snapshot!(get_latex("H 1\nCNOT 1 0"));
+        }
+
         // #[test]
         // fn test_gate_controlled() {
         //     insta::assert_snapshot!(get_latex("CONTROLLED H 3 2"));
