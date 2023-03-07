@@ -24,7 +24,7 @@ use crate::instruction::{
 use crate::parser::{lex, parse_instructions, ParseError};
 
 pub use self::calibration::CalibrationSet;
-pub use self::error::{disallow_leftover, map_parsed, recover, ProgramParsingError, SyntaxError};
+pub use self::error::{disallow_leftover, map_parsed, recover, ParseProgramError, SyntaxError};
 pub use self::frame::FrameSet;
 pub use self::memory::MemoryRegion;
 
@@ -47,8 +47,8 @@ pub enum ProgramError {
     RecursiveCalibration(Instruction),
 }
 
-impl<T: std::fmt::Debug + 'static> From<ProgramParsingError<T>> for ProgramError {
-    fn from(value: ProgramParsingError<T>) -> Self {
+impl<T: std::fmt::Debug + 'static> From<ParseProgramError<T>> for ProgramError {
+    fn from(value: ParseProgramError<T>) -> Self {
         ProgramError::ParsingError(value.to_string())
     }
 }
@@ -300,7 +300,7 @@ impl FromStr for Program {
     type Err = ProgramError;
     fn from_str(s: &str) -> Result<Self> {
         let input = LocatedSpan::new(s);
-        let lexed = lex(input).map_err(ProgramParsingError::<Self>::from)?;
+        let lexed = lex(input).map_err(ParseProgramError::<Self>::from)?;
         map_parsed(
             disallow_leftover(
                 parse_instructions(&lexed).map_err(ParseError::from_nom_internal_err),

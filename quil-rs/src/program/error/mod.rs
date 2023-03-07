@@ -28,7 +28,7 @@ pub use syntax::SyntaxError;
 
 /// Errors that may occur while parsing a [`Program`](crate::program::Program).
 #[derive(Debug, PartialEq)]
-pub enum ProgramParsingError<T> {
+pub enum ParseProgramError<T> {
     InvalidCalibration {
         instruction: Instruction,
         message: String,
@@ -36,7 +36,7 @@ pub enum ProgramParsingError<T> {
     Syntax(SyntaxError<T>),
 }
 
-impl<T> From<LexError> for ProgramParsingError<T>
+impl<T> From<LexError> for ParseProgramError<T>
 where
     T: fmt::Debug,
 {
@@ -45,44 +45,44 @@ where
     }
 }
 
-impl<T> From<ParseError> for ProgramParsingError<T> {
+impl<T> From<ParseError> for ParseProgramError<T> {
     fn from(e: ParseError) -> Self {
         Self::Syntax(SyntaxError::from(e))
     }
 }
 
-impl<T> From<LeftoverError<T>> for ProgramParsingError<T> {
+impl<T> From<LeftoverError<T>> for ParseProgramError<T> {
     fn from(err: LeftoverError<T>) -> Self {
         Self::Syntax(SyntaxError::from(err))
     }
 }
 
-impl<T> From<SyntaxError<T>> for ProgramParsingError<T> {
+impl<T> From<SyntaxError<T>> for ParseProgramError<T> {
     fn from(err: SyntaxError<T>) -> Self {
         Self::Syntax(err)
     }
 }
 
-impl<T> ProgramParsingError<T> {
+impl<T> ParseProgramError<T> {
     /// Convert the parsed output into another type.
     ///
-    /// This delegates to [`LeftoverError::map_parsed`] when a [`ProgramError::Leftover`] and does
+    /// This delegates to [`LeftoverError::map_parsed`] when a [`ParseProgramError::Leftover`] and does
     /// nothing but change the type signature otherwise.
-    pub fn map_parsed<T2>(self, map: impl Fn(T) -> T2) -> ProgramParsingError<T2> {
+    pub fn map_parsed<T2>(self, map: impl Fn(T) -> T2) -> ParseProgramError<T2> {
         match self {
             Self::InvalidCalibration {
                 instruction,
                 message,
-            } => ProgramParsingError::InvalidCalibration {
+            } => ParseProgramError::InvalidCalibration {
                 instruction,
                 message,
             },
-            Self::Syntax(err) => ProgramParsingError::Syntax(err.map_parsed(map)),
+            Self::Syntax(err) => ParseProgramError::Syntax(err.map_parsed(map)),
         }
     }
 }
 
-impl<T> fmt::Display for ProgramParsingError<T>
+impl<T> fmt::Display for ParseProgramError<T>
 where
     T: fmt::Debug + 'static,
 {
@@ -97,7 +97,7 @@ where
     }
 }
 
-impl<T> Error for ProgramParsingError<T>
+impl<T> Error for ParseProgramError<T>
 where
     T: fmt::Debug + 'static,
 {
