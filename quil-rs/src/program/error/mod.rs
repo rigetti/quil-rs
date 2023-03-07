@@ -65,9 +65,6 @@ impl<T> From<SyntaxError<T>> for ParseProgramError<T> {
 
 impl<T> ParseProgramError<T> {
     /// Convert the parsed output into another type.
-    ///
-    /// This delegates to [`LeftoverError::map_parsed`] when a [`ParseProgramError::Leftover`] and does
-    /// nothing but change the type signature otherwise.
     pub fn map_parsed<T2>(self, map: impl Fn(T) -> T2) -> ParseProgramError<T2> {
         match self {
             Self::InvalidCalibration {
