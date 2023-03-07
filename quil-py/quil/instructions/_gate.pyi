@@ -27,12 +27,12 @@ class Gate:
     def modifiers(self) -> List[GateModifier]: ...
     def dagger(self) -> "Gate":
         """
-        Returns a copy of the gate with the ``DAGGER`` modififer added to it.
+        Returns a copy of the gate with the ``DAGGER`` modifier added to it.
         """
         ...
     def controlled(self, control_qubit: Qubit) -> "Gate":
         """
-        Returns a copy of the gate with the ``CONTROLLED`` modififer added to it.
+        Returns a copy of the gate with the ``CONTROLLED`` modifier added to it.
         """
     def forked(self, fork_qubit: Qubit, alt_params: List[Expression]) -> "Gate":
         """
