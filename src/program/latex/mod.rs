@@ -333,6 +333,9 @@ impl Display for Diagram {
             if self.settings.label_qubit_lines {
                 // add label to left side of wire
                 line.push_str(&self.settings.label_qubit_lines(*key));
+            } else {
+                // add qw buffer to first column
+                line.push_str(&Command::get_command(Command::Qw));
             }
 
             // convert each column in the wire to string
@@ -504,26 +507,31 @@ mod tests {
 
     /// Helper function takes instructions and return the LaTeX using the 
     /// Latex::to_latex method.
-    pub fn get_latex(instructions: &str) -> String {
-        let program = Program::from_str(instructions).expect("program `{instructions}` should be returned");
+    pub fn get_latex(instructions: &str, settings: Settings) -> String {
+        let program = Program::from_str(instructions)
+            .expect("program `{instructions}` should be returned");
         program
-            .to_latex(Settings::default())
+            .to_latex(settings)
             .expect("LaTeX should generate for program `{instructions}`")
     }
 
     #[test]
     /// Test functionality of to_latex using default settings.
     fn test_to_latex() {
-        let program = Program::from_str("H 0\nCNOT 0 1").expect("");
-        program.to_latex(Settings::default()).expect("");
+        let program = Program::from_str("H 0\nCNOT 0 1")
+            .expect("Quil program should be returned");
+        program
+            .to_latex(Settings::default())
+            .expect("LaTeX should generate for Quil program");
     }
 
+    /// Test module for the Document
     mod document {
-        use crate::program::latex::{Document, tests::get_latex};
+        use crate::program::latex::{Document, Settings, tests::get_latex};
 
         #[test]
         fn test_template() {
-            insta::assert_snapshot!(get_latex(""));
+            insta::assert_snapshot!(get_latex("", Settings::default()));
         }
 
         #[test]
@@ -545,47 +553,68 @@ mod tests {
         }
     }
 
+    /// Test module for gates
     mod gates {
-        use crate::program::latex::tests::get_latex;
+        use crate::program::latex::{Settings, tests::get_latex};
 
         #[test]
         fn test_gate_x() {
-            insta::assert_snapshot!(get_latex("X 0"));
+            insta::assert_snapshot!(get_latex(
+                "X 0",
+                Settings::default()
+            ));
         }
 
         #[test]
         fn test_gate_y() {
-            insta::assert_snapshot!(get_latex("Y 1"));
+            insta::assert_snapshot!(get_latex(
+                "Y 1",
+                Settings::default()));
         }
 
         #[test]
         fn test_gates_x_and_y_single_qubit() {
-            insta::assert_snapshot!(get_latex("X 0\nY 0"));
+            insta::assert_snapshot!(get_latex(
+                "X 0\nY 0",
+                Settings::default()));
         }
 
         #[test]
         fn test_gates_x_and_y_two_qubits() {
-            insta::assert_snapshot!(get_latex("X 0\nY 1"));
+            insta::assert_snapshot!(get_latex(
+                "X 0\nY 1",
+                Settings::default()
+            ));
         }
 
         #[test]
         fn test_gates_cnot_ctrl_0_targ_1() {
-            insta::assert_snapshot!(get_latex("CNOT 0 1"));
+            insta::assert_snapshot!(get_latex(
+                "CNOT 0 1",
+                Settings::default()));
         }
 
         #[test]
         fn test_gates_cnot_ctrl_1_targ_0() {
-            insta::assert_snapshot!(get_latex("CNOT 1 0"));
+            insta::assert_snapshot!(get_latex(
+                "CNOT 1 0",
+                Settings::default()));
         }
 
         #[test]
         fn test_gates_h_and_cnot_ctrl_0_targ_1() {
-            insta::assert_snapshot!(get_latex("H 0\nCNOT 0 1"));
+            insta::assert_snapshot!(get_latex(
+                "H 0\nCNOT 0 1",
+                Settings::default()
+            ));
         }
 
         #[test]
         fn test_gates_h_and_cnot_ctrl_1_targ_0() {
-            insta::assert_snapshot!(get_latex("H 1\nCNOT 1 0"));
+            insta::assert_snapshot!(get_latex(
+                "H 1\nCNOT 1 0",
+                Settings::default()
+            ));
         }
 
         // #[test]
@@ -594,7 +623,7 @@ mod tests {
         // }
     }
 
-    /// Test module for command Operators
+    /// Test module for Quantikz Commands
     mod commands {
         use crate::program::latex::Command;
 
@@ -651,6 +680,23 @@ mod tests {
         #[test]
         fn test_command_swap_target() {
             insta::assert_snapshot!(Command::get_command(Command::TargX));
+        }
+    }
+
+    /// Test module for Settings
+    mod settings {
+        use crate::program::latex::{Settings, tests::get_latex};
+
+        #[test]
+        fn test_settings_label_qubit_lines_false() {
+            let settings = Settings {
+                label_qubit_lines: false,
+                ..Default::default()
+            };
+            insta::assert_snapshot!(get_latex(
+                "H 0\nCNOT 0 1",
+                settings
+            ));
         }
     }
 }
