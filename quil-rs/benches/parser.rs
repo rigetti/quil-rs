@@ -43,6 +43,8 @@ fn from_corpus() -> Vec<QuilBenchConfig> {
         init_submodules()
     }
 
+    dbg!(&corpus_dir);
+
     let dir = fs::read_dir(corpus_dir).expect("failed to locate quil corpus directory");
 
     dir.filter_map(Result::ok)
