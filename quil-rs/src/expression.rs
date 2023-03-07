@@ -29,7 +29,7 @@ use std::str::FromStr;
 use proptest_derive::Arbitrary;
 
 use crate::parser::{lex, parse_expression, ParseError};
-use crate::program::{disallow_leftover, ProgramError};
+use crate::program::{disallow_leftover, ProgramParsingError};
 use crate::{imag, instruction::MemoryReference, real};
 
 /// The different possible types of errors that could occur during expression evaluation.
@@ -449,7 +449,7 @@ impl Expression {
 }
 
 impl FromStr for Expression {
-    type Err = ProgramError<Self>;
+    type Err = ProgramParsingError<Self>;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let input = LocatedSpan::new(s);

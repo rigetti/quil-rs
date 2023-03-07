@@ -24,7 +24,7 @@ use crate::instruction::{
 use crate::parser::{lex, parse_instructions, ParseError};
 
 pub use self::calibration::CalibrationSet;
-pub use self::error::{disallow_leftover, map_parsed, recover, ProgramError, SyntaxError};
+pub use self::error::{disallow_leftover, map_parsed, recover, ProgramParsingError, SyntaxError};
 pub use self::frame::FrameSet;
 pub use self::memory::MemoryRegion;
 
@@ -35,7 +35,25 @@ pub mod graph;
 mod memory;
 pub mod type_check;
 
-pub type Result<O> = std::result::Result<O, ProgramError<O>>;
+#[derive(Debug, thiserror::Error, PartialEq)]
+pub enum ProgramError {
+    #[error("{0}")]
+    ParsingError(String),
+
+    #[error("this operation isn't supported on instruction: {0}")]
+    UnsupportedOperation(Instruction),
+
+    #[error("instruction {0} expands into itself")]
+    RecursiveCalibration(Instruction),
+}
+
+impl<T: std::fmt::Debug + 'static> From<ProgramParsingError<T>> for ProgramError {
+    fn from(value: ProgramParsingError<T>) -> Self {
+        ProgramError::ParsingError(value.to_string())
+    }
+}
+
+type Result<T> = std::result::Result<T, ProgramError>;
 
 #[cfg(feature = "graphviz-dot")]
 pub mod graphviz_dot;
@@ -116,7 +134,7 @@ impl Program {
                     new_program.add_instruction(Instruction::Gate(gate.dagger()));
                     Ok(new_program)
                 }
-                _ => Err(ProgramError::<Self>::UnsupportedOperation(instruction)),
+                _ => Err(ProgramError::UnsupportedOperation(instruction)),
             },
         )
     }
@@ -279,10 +297,10 @@ impl Program {
 }
 
 impl FromStr for Program {
-    type Err = ProgramError<Self>;
+    type Err = ProgramError;
     fn from_str(s: &str) -> Result<Self> {
         let input = LocatedSpan::new(s);
-        let lexed = lex(input).map_err(ProgramError::from)?;
+        let lexed = lex(input).map_err(ProgramParsingError::<Self>::from)?;
         map_parsed(
             disallow_leftover(
                 parse_instructions(&lexed).map_err(ParseError::from_nom_internal_err),
@@ -295,6 +313,7 @@ impl FromStr for Program {
                 program
             },
         )
+        .map_err(ProgramError::from)
     }
 }
 
