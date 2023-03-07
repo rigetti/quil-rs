@@ -1,0 +1,17 @@
+---
+source: src/program/latex/mod.rs
+assertion_line: 712
+expression: "r#\"\\documentclass[convert={density=300,outext=.png}]{standalone}\n\\usepackage[margin=1in]{geometry}\n\\usepackage{tikz}\n\\usetikzlibrary{quantikz}\n\\begin{document}\n\\begin{tikzcd}\n\\lstick{\\ket{q_{0}}} & \\gate{H} & \\ctrl{3} & \\qw \\\\\n\\lstick{\\ket{q_{1}}} & \\qw & \\qw & \\qw \\\\\n\\lstick{\\ket{q_{2}}} & \\qw & \\qw & \\qw \\\\\n\\lstick{\\ket{q_{3}}} & \\qw & \\targ{} & \\qw\n\\end{tikzcd}\n\\end{document}\"#"
+---
+\documentclass[convert={density=300,outext=.png}]{standalone}
+\usepackage[margin=1in]{geometry}
+\usepackage{tikz}
+\usetikzlibrary{quantikz}
+\begin{document}
+\begin{tikzcd}
+\lstick{\ket{q_{0}}} & \gate{H} & \ctrl{3} & \qw \\
+\lstick{\ket{q_{1}}} & \qw & \qw & \qw \\
+\lstick{\ket{q_{2}}} & \qw & \qw & \qw \\
+\lstick{\ket{q_{3}}} & \qw & \targ{} & \qw
+\end{tikzcd}
+\end{document}

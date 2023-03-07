@@ -98,17 +98,17 @@ impl Command {
 #[derive(Debug)]
 pub struct Settings {
     /// Convert numerical constants, e.g. pi, to LaTeX form.
-    texify_numerical_constants: bool,
+    pub texify_numerical_constants: bool,
     /// Include all qubits implicitly referenced in the Quil program.
-    impute_missing_qubits: bool,
+    pub impute_missing_qubits: bool,
     /// Label qubit lines.
-    label_qubit_lines: bool,
+    pub label_qubit_lines: bool,
     /// Write controlled rotations in compact form.
-    abbreviate_controlled_rotations: bool,
+    pub abbreviate_controlled_rotations: bool,
     /// Extend the length of open wires at the right of the diagram.
-    qubit_line_open_wire_length: u32,
+    pub qubit_line_open_wire_length: u32,
     /// Align measurement operations to appear at the end of the diagram.
-    right_align_terminal_measurements: bool,
+    pub right_align_terminal_measurements: bool,
 }
 
 impl Default for Settings {
@@ -133,8 +133,55 @@ impl Default for Settings {
 
 // TODO: Implement functions to update the settings that allows the user customzie the rendering of the circuit.
 impl Settings {
-    fn label_qubit_lines(&self, name: u64) -> String {
+    pub fn label_qubit_lines(&self, name: u64) -> String {
         Command::get_command(Command::Lstick(name.to_string()))
+    }
+
+    /// Adds missing qubits between the first qubit and last qubit in a 
+    /// diagram's circuit. If a missing qubit is found, a new wire is created 
+    /// and pushed to the diagram's circuit.
+    /// 
+    ///  # Arguments
+    /// `&mut Vec<u64> order` - the qubit order of the diagram
+    /// `&mut BTreeMap<u64, Box<Wire>> circuit` - the circuit of the diagram
+    /// 
+    /// # Examples
+    /// ```
+    /// use quil_rs::{Program, program::latex::{Settings, Latex}};
+    /// use std::str::FromStr;
+    /// let program = Program::from_str("H 0\nCNOT 0 1").expect("");
+    /// let settings = Settings {
+    ///     impute_missing_qubits: true,
+    ///     ..Default::default()
+    /// };
+    /// program.to_latex(settings).expect("");
+    /// ```
+    pub fn impute_missing_qubits(&self, order: &mut Vec<u64>, circuit: &mut BTreeMap<u64, Box<Wire>>) {
+
+        // get the first qubit in the BTreeMap
+        let mut first = 0;
+        if let Some(f) = circuit.first_key_value() {
+            first = *f.0 + 1;
+        }
+
+        // get the last qubit in the BTreeMap
+        let mut last = 0;
+        if let Some(l) = circuit.last_key_value() {
+            last = *l.0 - 1;
+        }
+
+        // search through the range of qubits
+        for qubit in first..=last {
+            // if the qubit is not found impute it
+            match circuit.get(&qubit) {
+                Some(_) => (),
+                None => {
+                    let wire = Wire {name: qubit, ..Default::default()};
+                    order.push(qubit);
+                    circuit.insert(qubit, Box::new(wire));
+                },
+            }
+        }
     }
 }
 
@@ -391,7 +438,7 @@ impl Display for Diagram {
 /// can hold only one element, therefore, each encoded index is unique between 
 /// all of the attributes. Using this property, a String can be generated. 
 #[derive(Debug)]
-struct Wire {
+pub struct Wire {
     /// a wire, ket(qubit) placed using the Lstick or Rstick commands
     name: u64,
     /// gate element(s) placed at column_u32 on wire using the Gate command
@@ -474,12 +521,19 @@ impl Latex for Program {
 
                                 // push wire to diagram circuit
                                 diagram.push_wire(wire);
-
+                                
+                                println!("inner qubit {qubit}");
                                 // println!("WIRE: {:?}", wire);
                             },
                             _ => (),
                         }
                     }
+
+                    // are implicit qubits required in settings and are there at least two or more qubits in the diagram?
+                    if diagram.settings.impute_missing_qubits && diagram.order.len() > 1 {
+                        // add implicit qubits to circuit
+                        diagram.settings.impute_missing_qubits(&mut diagram.order, &mut diagram.circuit);
+                    }                    
 
                     // set qubit relationships based on gate type
                     if gate.name == "CNOT" {
@@ -518,10 +572,13 @@ mod tests {
     #[test]
     /// Test functionality of to_latex using default settings.
     fn test_to_latex() {
-        let program = Program::from_str("H 0\nCNOT 0 1")
+        let program = Program::from_str("H 5\nCNOT 5 2")
             .expect("Quil program should be returned");
+
+        let settings = Settings {impute_missing_qubits: true, ..Default::default()};
+
         program
-            .to_latex(Settings::default())
+            .to_latex(settings)
             .expect("LaTeX should generate for Quil program");
     }
 
@@ -695,6 +752,30 @@ mod tests {
             };
             insta::assert_snapshot!(get_latex(
                 "H 0\nCNOT 0 1",
+                settings
+            ));
+        }
+
+        #[test]
+        fn test_settings_impute_missing_qubits_true_ctrl_less_than_targ() {
+            let settings = Settings {
+                impute_missing_qubits: true,
+                ..Default::default()
+            };
+            insta::assert_snapshot!(get_latex(
+                "H 0\nCNOT 0 3",
+                settings
+            ));
+        }
+
+        #[test]
+        fn test_settings_impute_missing_qubits_true_ctrl_greater_than_targ() {
+            let settings = Settings {
+                impute_missing_qubits: true,
+                ..Default::default()
+            };
+            insta::assert_snapshot!(get_latex(
+                "H 5\nCNOT 5 2",
                 settings
             ));
         }
