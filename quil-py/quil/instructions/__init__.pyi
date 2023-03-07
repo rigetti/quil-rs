@@ -15,24 +15,30 @@ class Instruction:
     A Quil instruction. Each variant corresponds to a possible type of Quil instruction.
 
     Variants:
-        ``arithmetic``: An arithmetic expression
+        ``arithmetic``: An arithmetic expression defined by an ``Arithmetic``.
         ``calibration_definition``: Corresponds to a `DEFCAL` instruction (not `DEFCAL MEASURE`)
-        ``declaration``: Corresponds to a `DECLARE` statement
-        ``gate``: A Quil quantum gate instruction
-        ``halt``: Corresponds to the `HALT` instruction.
-        ``measure_calibration_definition``: Corresponds to a `DEFCAL MEASURE` instruction.
-        ``nop``: Corresponds to the `NOP` instruction.
+            defined by a ``Calibration``
+        ``declaration``: Corresponds to a `DECLARE` statement defined by a ``Declaration``
+        ``gate``: A Quil quantum gate instruction defined by a ``Gate``
+        ``halt``: Corresponds to the `HALT` instruction. No inner data.
+        ``measure_calibration_definition``: Corresponds to a `DEFCAL MEASURE` instruction. Defined by a ``MeasureCalibrationDefinition``.
+        ``nop``: Corresponds to the `NOP` instruction. No inner data.
+
+    As seen above, some variants contain inner data that fully specify the instruction.
+    For example, the ``gate`` variant contains a ``Gate``. This is in contrast to variants like
+    ``halt`` that have no inner data because they require none to fully specify an instruction.
+    This difference is important for determining which methods are available for each variant.
 
     Methods (for each variant):
         ``is_*``: Returns ``True`` if the instruction is that variant, ``False`` otherwise.
 
-        If the variant has inner data:
+        If the variant has inner data (e.g. ``gate``):
             ``as_*``: Returns the inner data if it is the given variant, ``None`` otherwise.
             ``to_*``: Returns the inner data if it is the given variant, raises ``ValueError`` otherwise.
             ``from_*``: Creates a new ``Instruction`` of the given variant from an instance of the inner type.
 
-        If the variant doesn't have inner data (ie. ``halt``)
-            ``new_*``: Creates a new ``Instruction`` for the variant
+        If the variant doesn't have inner data (e.g. ``halt``)
+            ``new_*``: Creates a new ``Instruction`` for the variant.
     """
 
     def is_arithmetic(self) -> bool: ...

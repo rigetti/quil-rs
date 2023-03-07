@@ -5,13 +5,18 @@ class Expression:
     A Quil expression.
 
     Variants:
-        ``address``: A memory reference
-        ``function_call``: A function call
-        ``infix``: An infix expression
-        ``number``: A number
-        ``pi``: The constant `pi`
-        ``prefix``: A prefix expression
-        ``variable``: A variable
+        ``address``: An address defined by a ``MemoryReference``.
+        ``function_call``: A ``FunctionCall``.
+        ``infix``: An ``InfixExpression``.
+        ``number``: A number defined as an ``int``.
+        ``pi``: The constant `pi`. No inner data.
+        ``prefix``: A ``PrefixExpression``.
+        ``variable``: A variable defined as a ``str``.
+
+    As seen above, some variants contain inner data that fully specify the expression.
+    For example, the ``number`` variant contains an ``int``. This is in contrast to variants like
+    ``pi`` that have no inner data because they require none to fully specify the expression.
+    This difference is important for determining which methods are available for each variant.
 
     Methods (for each variant):
         ``is_*``: Returns ``True`` if the expression is that variant, ``False`` otherwise.
@@ -21,7 +26,7 @@ class Expression:
             ``to_*``: returns the inner data if it is the given variant, raises ``ValueError`` otherwise.
             ``from_*``: Creates a new ``Expression`` of the given variant from an instance of the inner type.
 
-        If the variant doesn't have inner data (ie. ``pi``)
+        If the variant doesn't have inner data (e.g. ``pi``)
             ``new_*``: Creates a new ``Expression`` for the variant
     """
 
