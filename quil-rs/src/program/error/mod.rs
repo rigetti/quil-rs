@@ -27,21 +27,16 @@ pub use result::{disallow_leftover, map_parsed, recover};
 pub use syntax::SyntaxError;
 
 /// Errors that may occur while parsing a [`Program`](crate::program::Program).
-// TODO: [`Program`] should have its own error type: https://github.com/rigetti/quil-rs/issues/150
 #[derive(Debug, PartialEq)]
-pub enum ProgramError<T> {
+pub enum ParseProgramError<T> {
     InvalidCalibration {
         instruction: Instruction,
         message: String,
     },
-    RecursiveCalibration(Instruction),
     Syntax(SyntaxError<T>),
-    InvalidQuiltInstruction(Instruction),
-    InvalidProtoQuilInstruction(Instruction),
-    UnsupportedOperation(Instruction),
 }
 
-impl<T> From<LexError> for ProgramError<T>
+impl<T> From<LexError> for ParseProgramError<T>
 where
     T: fmt::Debug,
 {
@@ -50,50 +45,41 @@ where
     }
 }
 
-impl<T> From<ParseError> for ProgramError<T> {
+impl<T> From<ParseError> for ParseProgramError<T> {
     fn from(e: ParseError) -> Self {
         Self::Syntax(SyntaxError::from(e))
     }
 }
 
-impl<T> From<LeftoverError<T>> for ProgramError<T> {
+impl<T> From<LeftoverError<T>> for ParseProgramError<T> {
     fn from(err: LeftoverError<T>) -> Self {
         Self::Syntax(SyntaxError::from(err))
     }
 }
 
-impl<T> From<SyntaxError<T>> for ProgramError<T> {
+impl<T> From<SyntaxError<T>> for ParseProgramError<T> {
     fn from(err: SyntaxError<T>) -> Self {
         Self::Syntax(err)
     }
 }
 
-impl<T> ProgramError<T> {
+impl<T> ParseProgramError<T> {
     /// Convert the parsed output into another type.
-    ///
-    /// This delegates to [`LeftoverError::map_parsed`] when a [`ProgramError::Leftover`] and does
-    /// nothing but change the type signature otherwise.
-    pub fn map_parsed<T2>(self, map: impl Fn(T) -> T2) -> ProgramError<T2> {
+    pub fn map_parsed<T2>(self, map: impl Fn(T) -> T2) -> ParseProgramError<T2> {
         match self {
             Self::InvalidCalibration {
                 instruction,
                 message,
-            } => ProgramError::InvalidCalibration {
+            } => ParseProgramError::InvalidCalibration {
                 instruction,
                 message,
             },
-            Self::RecursiveCalibration(inst) => ProgramError::RecursiveCalibration(inst),
-            Self::Syntax(err) => ProgramError::Syntax(err.map_parsed(map)),
-            Self::InvalidQuiltInstruction(inst) => ProgramError::InvalidQuiltInstruction(inst),
-            Self::InvalidProtoQuilInstruction(inst) => {
-                ProgramError::InvalidProtoQuilInstruction(inst)
-            }
-            Self::UnsupportedOperation(inst) => ProgramError::UnsupportedOperation(inst),
+            Self::Syntax(err) => ParseProgramError::Syntax(err.map_parsed(map)),
         }
     }
 }
 
-impl<T> fmt::Display for ProgramError<T>
+impl<T> fmt::Display for ParseProgramError<T>
 where
     T: fmt::Debug + 'static,
 {
@@ -103,33 +89,19 @@ where
                 instruction,
                 message,
             } => write!(f, "invalid calibration `{instruction}`: {message}"),
-            Self::RecursiveCalibration(instruction) => {
-                write!(f, "instruction {instruction} expands into itself")
-            }
             Self::Syntax(err) => fmt::Display::fmt(err, f),
-            Self::InvalidQuiltInstruction(inst) => write!(f, "invalid quilt instruction: {inst}"),
-            Self::InvalidProtoQuilInstruction(inst) => {
-                write!(f, "invalid protoquil instruction: {inst}")
-            }
-            Self::UnsupportedOperation(inst) => {
-                write!(f, "operation is not supported on instruction: {inst}")
-            }
         }
     }
 }
 
-impl<T> Error for ProgramError<T>
+impl<T> Error for ParseProgramError<T>
 where
     T: fmt::Debug + 'static,
 {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             Self::InvalidCalibration { .. } => None,
-            Self::RecursiveCalibration(_) => None,
             Self::Syntax(err) => Some(err),
-            Self::InvalidQuiltInstruction(_) => None,
-            Self::InvalidProtoQuilInstruction(_) => None,
-            Self::UnsupportedOperation(_) => None,
         }
     }
 }

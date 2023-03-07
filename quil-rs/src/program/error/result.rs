@@ -14,7 +14,7 @@
 
 use crate::parser::{ErrorInput, ParseError};
 use crate::program::error::LeftoverError;
-use crate::program::ProgramError;
+use crate::program::ParseProgramError;
 use nom::Finish;
 
 use super::SyntaxError;
@@ -46,21 +46,21 @@ where
 /// This should be preferred over [`Result::map`], as this will map both the `Ok` case and when
 /// there is a [`LeftoverError`].
 pub fn map_parsed<O, O2>(
-    result: Result<O, ProgramError<O>>,
+    result: Result<O, ParseProgramError<O>>,
     map: impl Fn(O) -> O2,
-) -> Result<O2, ProgramError<O2>> {
+) -> Result<O2, ParseProgramError<O2>> {
     match result {
         Ok(parsed) => Ok(map(parsed)),
         Err(err) => Err(err.map_parsed(map)),
     }
 }
 
-/// If this `result` is `Err(ProgramError::Leftover)`, converts it to `Ok(_)` with the parsed
+/// If this `result` is `Err(ProgramParsingError::Leftover)`, converts it to `Ok(_)` with the parsed
 /// output.
-pub fn recover<O>(result: Result<O, ProgramError<O>>) -> Result<O, ProgramError<O>> {
+pub fn recover<O>(result: Result<O, ParseProgramError<O>>) -> Result<O, ParseProgramError<O>> {
     match result {
         Ok(parsed) => Ok(parsed),
-        Err(ProgramError::Syntax(err)) => err.recover().map_err(ProgramError::from),
+        Err(ParseProgramError::Syntax(err)) => err.recover().map_err(ParseProgramError::from),
         Err(err) => Err(err),
     }
 }

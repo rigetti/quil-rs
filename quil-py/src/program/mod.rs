@@ -1,16 +1,12 @@
-use std::{
-    collections::{BTreeMap, HashMap, HashSet},
-    str::FromStr,
-};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use quil_rs::{instruction::Instruction, Program};
 
 use rigetti_pyo3::{
-    create_init_submodule, impl_as_mut_for_wrapper, impl_repr, py_wrap_type,
-    pyo3::{
-        create_exception, exceptions::PyValueError, prelude::*, pyclass::CompareOp, types::PyList,
-    },
-    PyWrapper, PyWrapperMut, ToPython,
+    create_init_submodule, impl_as_mut_for_wrapper, impl_from_str, impl_parse, impl_repr,
+    py_wrap_error, py_wrap_type,
+    pyo3::{exceptions::PyValueError, prelude::*, pyclass::CompareOp, types::PyList},
+    wrap_error, PyWrapper, PyWrapperMut, ToPython, ToPythonError,
 };
 
 use crate::instruction::{
@@ -22,10 +18,8 @@ pub use self::{calibration_set::PyCalibrationSet, frame::PyFrameSet};
 mod calibration_set;
 mod frame;
 
-// The quil-rs counterparts to these errors use generics which cause complications trying to map
-// them directly to an error type here.
-create_exception!(quil, ProgramError, PyValueError);
-create_exception!(quil, ParseError, PyValueError);
+wrap_error!(ProgramError(quil_rs::program::ProgramError));
+py_wrap_error!(quil, ProgramError, PyProgramError, PyValueError);
 
 py_wrap_type! {
     #[derive(Debug, PartialEq)]
@@ -33,6 +27,8 @@ py_wrap_type! {
 }
 impl_as_mut_for_wrapper!(PyProgram);
 impl_repr!(PyProgram);
+impl_from_str!(PyProgram, ProgramError);
+impl_parse!(PyProgram);
 
 impl Default for PyProgram {
     fn default() -> Self {
@@ -45,13 +41,6 @@ impl PyProgram {
     #[new]
     pub fn new() -> Self {
         Self(Program::default())
-    }
-
-    #[staticmethod]
-    pub fn from_string(program: &str) -> PyResult<Self> {
-        Ok(Self(
-            Program::from_str(program).map_err(|e| ParseError::new_err(e.to_string()))?,
-        ))
     }
 
     #[getter]
@@ -120,22 +109,25 @@ impl PyProgram {
     pub fn dagger(&self) -> PyResult<Self> {
         self.as_inner()
             .dagger()
-            .map_err(|e| ProgramError::new_err(e.to_string()))
             .map(PyProgram::from)
+            .map_err(ProgramError::from)
+            .map_err(ProgramError::to_py_err)
     }
 
     pub fn expand_calibrations(&self) -> PyResult<Self> {
         self.as_inner()
             .expand_calibrations()
-            .map_err(|e| ParseError::new_err(e.to_string()))
             .map(PyProgram::from)
+            .map_err(ProgramError::from)
+            .map_err(ProgramError::to_py_err)
     }
 
     pub fn into_simplified(&self) -> PyResult<Self> {
         self.as_inner()
             .into_simplified()
-            .map_err(|e| ParseError::new_err(e.to_string()))
             .map(PyProgram::from)
+            .map_err(ProgramError::from)
+            .map_err(ProgramError::to_py_err)
     }
 
     pub fn get_used_qubits(&self, py: Python<'_>) -> PyResult<HashSet<PyQubit>> {
