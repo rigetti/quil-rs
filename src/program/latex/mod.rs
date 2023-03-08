@@ -533,9 +533,9 @@ impl Latex for Program {
                 instruction::Instruction::Gate(gate) => {
                     // for each qubit in a single gate instruction
                     for qubit in gate.qubits {
-
                         match qubit {
                             instruction::Qubit::Fixed(qubit) => {
+                                println!("{qubit}");
 
                                 // create a new wire
                                 let mut wire = Wire::default();
@@ -548,7 +548,24 @@ impl Latex for Program {
                                     // add the gate to the wire at column 0
                                     wire.gates.insert(0, gate.name.clone());   
                                 } else {
-                                    if gate.name == "CNOT" {
+                                    if gate.name.starts_with('C') {
+                                        
+                                        // count how many controlled modifiers are in the instruction
+                                        let mut controlleds = 0;
+                                        for modifer in &gate.modifiers {
+                                            match modifer {
+                                                instruction::GateModifier::Controlled => controlleds += 1,
+                                                _ => (),
+                                            }
+                                        }
+
+                                        // count how many 'C's are in the gate name which are controlleds
+                                        for c in gate.name.chars() {
+                                            if c == 'C' {
+                                                controlleds += 1;
+                                            }
+                                        }
+
                                         wire.gates.insert(diagram.column, gate.name.clone());
 
                                         if !has_ctrl_targ {
@@ -614,7 +631,7 @@ mod tests {
         // let program = Program::from_str("H 5\nCNOT 5 2\nY 2\nCNOT 2 3")
         //     .expect("Quil program should be returned");        
         
-        let program = Program::from_str("H 0\nCNOT 0 0\nCNOT 0 1")
+        let program = Program::from_str("CCNOT 1 2 0")
             .expect("Quil program should be returned");
 
             let settings = Settings {
@@ -726,10 +743,56 @@ mod tests {
             ));
         }
 
-        // #[test]
-        // fn test_gate_controlled() {
-        //     insta::assert_snapshot!(get_latex("CONTROLLED H 3 2"));
-        // }
+        #[test]
+        fn test_gate_toffoli() {
+            insta::assert_snapshot!(get_latex(
+                "CCNOT 1 2 0", 
+                Settings::default()
+            ));
+        }
+
+        #[test]
+        fn test_gate_ccnot_and_controlled_cnot_equality() {
+            let ccnot = get_latex(
+                "CCNOT 1 2 0",
+                Settings::default()
+            );
+
+            let controlled = get_latex(
+                "CONTROLLED CNOT 1 2 0",
+                Settings::default()
+            );
+
+            assert_eq!(ccnot, controlled);
+        }
+    }
+
+    /// Test module for modifiers
+    mod modifiers {
+        use crate::program::latex::{Settings, tests::get_latex};
+
+        #[test]
+        fn test_modifier_toffoli_gate() {
+            insta::assert_snapshot!(get_latex(
+                "CONTROLLED CNOT 2 1 0", 
+                Settings::default()
+            ));
+        }
+
+        #[test]
+        fn test_modifier_controlled_cnot_and_ccnot_equality() {
+            let controlled = get_latex(
+                "CONTROLLED CNOT 2 1 0",
+                Settings::default()
+            );
+
+            let ccnot = get_latex(
+                "CCNOT 2 1 0",
+                Settings::default()
+            );
+
+            assert_eq!(controlled, ccnot);
+        }
     }
 
     /// Test module for Quantikz Commands
