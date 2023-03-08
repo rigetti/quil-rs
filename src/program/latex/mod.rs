@@ -254,80 +254,107 @@ impl Default for Diagram {
 }
 
 impl Diagram {
-    /// Returns a string indicating whether the qubit at row x column on the 
-    /// wire is a control or target qubit. Using order, a qubit whose index = 0 
-    /// is a control whereas index > 0, without modifiers, is a target.
+    /// For every instruction containing control and target qubits this method 
+    /// identifies which qubit is the target and which qubit is controlling it. 
+    /// The logic of this function is visualized using a physical vector with 
+    /// the tail at the control qubit and the head pointing to the target 
+    /// qubit. The distance between the qubits represents the number of wires 
+    /// between them therefore, the space that the vector needs to traverse. If 
+    /// the control qubit comes before the target qubit the direction is 
+    /// positive, otherwise, it is negative. See [`Quantikz`] documentation on 
+    /// CNOT for some background that helps justify this approach.
+    /// 
+    /// This function is expensive with a time complexity of O(n^2). This is 
+    /// because every time a new CNOT is added, all other columns with qubits 
+    /// containing a CNOT must be updated since another qubit in a separate 
+    /// instruction may be inserted in between wires. This insertion increases 
+    /// the space between wires which [`Quantikz`] uses to determine how long 
+    /// the line should stretch between control and target qubits. Since it is 
+    /// impossible to determine how many wires will be inserted between control 
+    /// and target qubits for a custom body diagram, all columns should be 
+    /// updated to ensure the connections between all control and target qubits 
+    /// in every column is preserved.
     /// 
     /// # Arguments
-    /// `&usize position` - the index of the qubit in &self.order
+    /// `&mut self` - self as mutible allowing to update the circuit qubits
     fn set_ctrl_targ(&mut self) {
+        // ensure every column preserves the connection between ctrl and targ
+        for c in 0..=self.column {
 
-        let mut ctrl = None;
-        let mut targ = None;
+            let mut ctrl = None;
+            let mut targ = None;
 
-        // for every CNOT the first qubit is the control
-        for qubit in &self.order {
-            // get the wire from the circuit as mutible 
-            if let Some(wire) = self.circuit.get_mut(qubit) {
+            // determine the control and target qubits in the column
+            for qubit in &self.order {
+                // get the wire from the circuit as mutible 
+                if let Some(wire) = self.circuit.get_mut(qubit) {
 
-                // if ctrl = Some, the remaining qubits are target qubits
-                if let Some(_) = ctrl {
-                    // set wire at column as a target qubit
-                    wire.targ.insert(self.column, true);
-                    targ = Some(wire.name); // identify the target qubit
+                    if let Some(_) = wire.gates.get(&c) {
+                        // if ctrl is Some, the remaining qubits are target qubits
+                        if let Some(_) = ctrl {
+                            // set wire at column as a target qubit
+                            wire.targ.insert(c, true);
+                            targ = Some(wire.name); // set the target qubit
                 
-                // if ctrl = None, this is the first qubit which is the control
-                } else {
-                    ctrl = Some(wire.name); // identify the control qubit
-                }
-            }   
-        }
-
-        // physical vector between qubits on the diagram with a positive direction from control to target and negative, from target to control, with the magnitude being the distance between them
-        let vector: i64;
-        if let Some(ctrl) = ctrl {
-            if let Some(targ) = targ {
-                // distance between qubits is the order of the ctrl and targ qubits within the circuit
-
-                // represent open and close parenthesis indicating a range
-                let mut start: i64 = -1; // first qubit in order is ctrl
-                let mut close: i64 = -1; // second qubit in order is targ
-
-                // find the range between the qubits
-                for i in 0..self.order.len() {
-
-                    // first qubit found is the control
-                    if self.order[i] == ctrl {
-                        // starting index containing the control qubit
-                        start = i as i64;
-
-                    // second qubit found is the targ
-                    } else if self.order[i] == targ {
-                        // closing index containing the target qubit
-                        close = i as i64;
+                        // if ctrl is None, this is the first qubit which is the control
+                        } else {
+                            ctrl = Some(wire.name); // set the control qubit
+                        }
                     }
                 }
+            }
 
-                // all qubits arranged on the circuit in increasing order
-                if targ > ctrl {
-                    // the vector is pointing from the target to the control
-                    vector = -1 * (start - close);
-                } else {
-                    // the vector is pointing from the control to the target
-                    vector = start - close;
+            // determine the physical vector where a positive vector points from control to target, negative, from target to control. The magnitude of the vector is the absolute value of the distance between them
+            if let Some(ctrl) = ctrl {
+                if let Some(targ) = targ {
+                    // distance between qubits is the order of the ctrl and targ qubits within the circuit
+
+                    // represent inclusive [open, close] brackets of a range
+                    let mut open = None; // opening qubit in range
+                    let mut close = None; // closing qubit in range
+
+                    // find the range between the qubits
+                    let mut i = 0;
+                    for wire in &self.circuit {
+                        // get each existing qubit in the circuit
+                        if *wire.0 == ctrl || *wire.0 == targ {
+                            // if the qubit is the ctrl or target
+                                if let Some(_) = open {
+                                    close = Some(i);
+                                    break;
+    
+                                // open qubit in range not found, set open qubit
+                                } else {
+                                    open = Some(i)
+                                }
+                            }
+
+                            i += 1;
+                        }
+
+                    let mut vector: i64 = 0;
+                    if let Some(open) = open {
+                        if let Some(close) = close {
+                            if ctrl < targ {
+                                // a vector with a head from the ctrl to the targ
+                                vector = 1 * (close - open);
+                            } else {
+                                // a vector with a head from the targ to the ctrl
+                                vector = -1 * (close - open);
+                            }
+                        }
+                    }
+
+                    // a qubit cannot be a ctrl and targ of itself
+                    if vector == 0 {
+                        LatexGenError::FoundCNOTWithoutCtrlOrTarg{vector};
+                    }
+
+                    // set wire at column as the control qubit of target qubit computed as the distance from the control qubit
+                    self.circuit.get_mut(&ctrl).and_then(|wire| wire.ctrl.insert(c, vector));
                 }
-
-                // error if 0 is the result
-                if vector == 0 {
-                    LatexGenError::FoundCNOTWithoutCtrlOrTarg{vector};
-                }
-
-                // set wire at column as the control qubit of target qubit computed as the distance from the control qubit
-                self.circuit.get_mut(&ctrl).and_then(|wire| wire.ctrl.insert(self.column, vector));
             }
         }
-
-        println!("{:?}", self);
     }
 
     /// Takes a new or existing wire and adds or updates it using the name
@@ -359,8 +386,6 @@ impl Diagram {
                 self.circuit.insert(wire.name, Box::new(wire));
             },
         }
-        
-        // println!("{:?}", wire);
     }
 }
 
@@ -447,8 +472,6 @@ pub struct Wire {
     ctrl: HashMap<u32, i64>,
     /// target at key=column
     targ: HashMap<u32, bool>,
-    /// a column_u32 that contains nothing placed using the Qw command  
-    do_nothing: Vec<u32>,
 }
 
 impl Default for Wire {
@@ -458,7 +481,6 @@ impl Default for Wire {
             gates: HashMap::new(), 
             ctrl: HashMap::new(),
             targ: HashMap::new(),
-            do_nothing: vec![],
         }
     }
 }
@@ -492,8 +514,6 @@ impl Latex for Program {
             match instruction {
                 // parse gate instructions into a new circuit
                 instruction::Instruction::Gate(gate) => {
-                    // println!("GATE: {:?}", gate.name);
-
                     // for each qubit in a single gate instruction
                     for qubit in gate.qubits {
 
@@ -521,9 +541,6 @@ impl Latex for Program {
 
                                 // push wire to diagram circuit
                                 diagram.push_wire(wire);
-                                
-                                println!("inner qubit {qubit}");
-                                // println!("WIRE: {:?}", wire);
                             },
                             _ => (),
                         }
@@ -776,6 +793,33 @@ mod tests {
             };
             insta::assert_snapshot!(get_latex(
                 "H 5\nCNOT 5 2",
+                settings
+            ));
+        }
+    }
+
+    /// Test various programs for LaTeX accuracy
+    mod programs {
+        use crate::program::latex::{Settings, tests::get_latex};
+
+        #[test]
+        fn test_program_h0_cnot01_x1_cnot12() {
+            let settings = Settings {
+                ..Default::default()
+            };
+            insta::assert_snapshot!(get_latex(
+                "H 0\nCNOT 0 1\nX 1\nCNOT 1 2",
+                settings
+            ));
+        }
+
+        #[test]
+        fn test_program_h5_cnot52_y2_cnot23() {
+            let settings = Settings {
+                ..Default::default()
+            };
+            insta::assert_snapshot!(get_latex(
+                "H 5\nCNOT 5 2\nY 2\nCNOT 2 3",
                 settings
             ));
         }
