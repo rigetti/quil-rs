@@ -264,16 +264,16 @@ impl Diagram {
     /// positive, otherwise, it is negative. See [`Quantikz`] documentation on 
     /// CNOT for some background that helps justify this approach.
     /// 
-    /// This function is expensive with a time complexity of O(n^2). This is 
-    /// because every time a new CNOT is added, all other columns with qubits 
-    /// containing a CNOT must be updated since another qubit in a separate 
-    /// instruction may be inserted in between wires. This insertion increases 
-    /// the space between wires which [`Quantikz`] uses to determine how long 
-    /// the line should stretch between control and target qubits. Since it is 
+    /// This function is expensive with a time complexity of O(n^2). 
+    /// [`Quantikz`] uses the space between wires to determine how long a line 
+    /// should stretch between control and target qubits. Since it is 
     /// impossible to determine how many wires will be inserted between control 
-    /// and target qubits for a custom body diagram, all columns should be 
-    /// updated to ensure the connections between all control and target qubits 
-    /// in every column is preserved.
+    /// and target qubits (e.g. a user decides to impute missing qubits or some 
+    /// number of other instructions are added containing qubits between them) 
+    /// for a custom body diagram, this method should be run after all wires 
+    /// are inserted into the cicuit. If a Quil program contains control and 
+    /// target qubits then this method parses the complete circuit and set the 
+    /// relationships between wires.
     /// 
     /// # Arguments
     /// `&mut self` - self as mutible allowing to update the circuit qubits
@@ -509,7 +509,7 @@ impl Latex for Program {
 
         // store circuit strings
         let mut diagram = Diagram {settings, ..Default::default()};
-
+        let mut has_ctrl_targ = false;
         for instruction in instructions {
             match instruction {
                 // parse gate instructions into a new circuit
@@ -533,6 +533,10 @@ impl Latex for Program {
                                 } else {
                                     if gate.name == "CNOT" {
                                         wire.gates.insert(diagram.column, gate.name.clone());
+
+                                        if !has_ctrl_targ {
+                                            has_ctrl_targ = true;
+                                        }
                                     } else {
                                         // add the gate to the wire at column 0
                                         wire.gates.insert(0, gate.name.clone());  
@@ -544,22 +548,23 @@ impl Latex for Program {
                             },
                             _ => (),
                         }
-                    }
-
-                    // are implicit qubits required in settings and are there at least two or more qubits in the diagram?
-                    if diagram.settings.impute_missing_qubits && diagram.order.len() > 1 {
-                        // add implicit qubits to circuit
-                        diagram.settings.impute_missing_qubits(&mut diagram.order, &mut diagram.circuit);
-                    }                    
-
-                    // set qubit relationships based on gate type
-                    if gate.name == "CNOT" {
-                        diagram.set_ctrl_targ();
-                    }
+                    }                  
                 },
                 // do nothing for all other instructions
                 _ => (),
             }
+        }
+
+        // are implicit qubits required in settings and are there at least two or more qubits in the diagram?
+        if diagram.settings.impute_missing_qubits && diagram.order.len() > 1 {
+            // add implicit qubits to circuit
+            diagram.settings.impute_missing_qubits(&mut diagram.order, &mut diagram.circuit);
+        }  
+
+        // only call method for programs with control and target gates
+        if has_ctrl_targ {
+            // identify control and target qubits
+            diagram.set_ctrl_targ();
         }
 
         let body = diagram.to_string();
