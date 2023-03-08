@@ -18,9 +18,8 @@ use crate::{instruction::Instruction, token};
 
 use super::{
     common::{self, parse_gate_modifier},
-    error::InternalError,
     expression::parse_expression,
-    ParserErrorKind, ParserInput,
+    ParserInput,
 };
 use crate::instruction::Gate;
 use crate::parser::InternalParserResult;
@@ -36,16 +35,15 @@ pub(crate) fn parse_gate<'a>(input: ParserInput<'a>) -> InternalParserResult<'a,
     ))(input)?;
     let parameters = parameters.unwrap_or_default();
     let (input, qubits) = many0(common::parse_qubit)(input)?;
-    let gate = Gate::new(name.as_str(), parameters, qubits, modifiers).map_err(|e| {
-        nom::Err::Error(InternalError::from_kind(
-            input,
-            ParserErrorKind::InvalidInstruction {
-                instruction_type: "Gate".to_string(),
-                reason: e.to_string(),
-            },
-        ))
-    })?;
-    Ok((input, Instruction::Gate(gate)))
+    Ok((
+        input,
+        Instruction::Gate(Gate {
+            name,
+            parameters,
+            qubits,
+            modifiers,
+        }),
+    ))
 }
 
 #[cfg(test)]
