@@ -1,35 +1,35 @@
 //! LaTeX diagram generation for quil programs.
-//! 
+//!
 //! Provides a feature to generate diagrams using the LaTeX subpackage TikZ/
 //! Quantikz for a given quil Program.
-//! 
+//!
 //! - Usage: `Program.to_latex(settings: Settings);`
-//! 
+//!
 //! - Description:
-//! [`Quantikz`] is a subpackage in the TikZ package used to generate qubit 
+//! [`Quantikz`] is a subpackage in the TikZ package used to generate qubit
 //! circuits. A qubit is represented as a wire separated into multiple columns.
-//! Each column contains a symbol of an operation on the qubit. Multiple qubits 
-//! can be stacked into rows with interactions between any number of them drawn 
-//! as a connecting bar to each involved qubit wire. Commands are used to 
-//! control what is rendered on a circuit, e.g. names of qubits, identifying 
-//! control/target qubits, gates, etc. View [`Quantikz`] for the documentation 
+//! Each column contains a symbol of an operation on the qubit. Multiple qubits
+//! can be stacked into rows with interactions between any number of them drawn
+//! as a connecting bar to each involved qubit wire. Commands are used to
+//! control what is rendered on a circuit, e.g. names of qubits, identifying
+//! control/target qubits, gates, etc. View [`Quantikz`] for the documentation
 //! on its usage and full set of commands.
-//! 
-//! This module should be viewed as a self contained partial implementation of 
-//! [`Quantikz`] with all available commands listed as variants in a Command 
-//! enum. This feature provides the user variability in how they wish to render 
+//!
+//! This module should be viewed as a self contained partial implementation of
+//! [`Quantikz`] with all available commands listed as variants in a Command
+//! enum. This feature provides the user variability in how they wish to render
 //! their Program circuits with metadata contained in a Settings struct.
-//! 
+//!
 //! [`Quantikz`]: https://arxiv.org/pdf/1809.03842.pdf
 
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap, HashMap};
 use std::fmt::{format, Display};
 
-use crate::Program;
 use crate::instruction;
+use crate::Program;
 
-/// Available commands used for building circuits with the same names taken 
-/// from the Quantikz documentation for easy reference. LaTeX string denoted 
+/// Available commands used for building circuits with the same names taken
+/// from the Quantikz documentation for easy reference. LaTeX string denoted
 /// inside `backticks`.
 ///     Single wire commands: lstick, rstick, qw, meter
 ///     Multi-wire commands: ctrl, targ, control, (swap, targx)
@@ -42,10 +42,10 @@ pub enum Command {
     Gate(String),
     /// `\qw`: Connect the current cell to the previous cell i.e. "do nothing".
     Qw,
-    /// `\\`: Start a new row 
+    /// `\\`: Start a new row
     Nr,
     /// `\meter{wire}`: Measure a qubit.
-    Meter(String),    
+    Meter(String),
     /// `\ctrl{wire}`: Make a control qubit--different from Control.
     Ctrl(String),
     /// `\targ{}`: Make a controlled-not gate.
@@ -60,10 +60,10 @@ pub enum Command {
 
 impl Command {
     /// Returns the LaTeX String for a given Command variant.
-    /// 
+    ///
     /// # Arguments
     /// `command` - A Command variant.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use quil_rs::program::latex::Command;
@@ -72,28 +72,22 @@ impl Command {
     /// ```
     pub fn get_command(command: Self) -> String {
         match command {
-            Self::Lstick(wire) => 
-                format(format_args!(r#"\lstick{{\ket{{q_{{{wire}}}}}}}"#)),
-            Self::Rstick(wire) => 
-                format(format_args!(r#"\rstick{{\ket{{q_{{{wire}}}}}}}"#)),
-            Self::Gate(name) => 
-                format(format_args!(r#"\gate{{{name}}}"#)),
+            Self::Lstick(wire) => format(format_args!(r#"\lstick{{\ket{{q_{{{wire}}}}}}}"#)),
+            Self::Rstick(wire) => format(format_args!(r#"\rstick{{\ket{{q_{{{wire}}}}}}}"#)),
+            Self::Gate(name) => format(format_args!(r#"\gate{{{name}}}"#)),
             Self::Qw => r"\qw".to_string(),
             Self::Nr => r"\\".to_string(),
-            Self::Meter(wire) => 
-                format(format_args!(r#"\meter{{{wire}}}"#)),
-            Self::Ctrl(wire) => 
-                format(format_args!(r#"\ctrl{{{wire}}}"#)),
+            Self::Meter(wire) => format(format_args!(r#"\meter{{{wire}}}"#)),
+            Self::Ctrl(wire) => format(format_args!(r#"\ctrl{{{wire}}}"#)),
             Self::Targ => r"\targ{}".to_string(),
             Self::Control => r"\control{}".to_string(),
-            Self::Swap(wire) => 
-                format(format_args!(r#"\swap{{{wire}}}"#)),
+            Self::Swap(wire) => format(format_args!(r#"\swap{{{wire}}}"#)),
             Self::TargX => r"\targX{}".to_string(),
         }
     }
 }
 
-/// Settings contains the metadata that allows the user to customize how the 
+/// Settings contains the metadata that allows the user to customize how the
 /// circuit is rendered or use the default implementation.
 #[derive(Debug)]
 pub struct Settings {
@@ -114,17 +108,17 @@ pub struct Settings {
 impl Default for Settings {
     /// Returns the default Settings.
     fn default() -> Self {
-        Self { 
+        Self {
             /// false: π is pi.
-            texify_numerical_constants: true, 
+            texify_numerical_constants: true,
             /// true: `CNOT 0 2` would have three qubit lines: 0, 1, 2.
-            impute_missing_qubits: false, 
+            impute_missing_qubits: false,
             /// false: remove Lstick/Rstick from latex.
-            label_qubit_lines: true, 
+            label_qubit_lines: true,
             /// true: `RX(pi)` displayed as `X_{\\pi}` instead of `R_X(\\pi)`.
-            abbreviate_controlled_rotations: false, 
+            abbreviate_controlled_rotations: false,
             /// 0: condenses the size of subdiagrams.
-            qubit_line_open_wire_length: 1, 
+            qubit_line_open_wire_length: 1,
             /// false: include Meter in the current column.
             right_align_terminal_measurements: true,
         }
@@ -137,13 +131,13 @@ impl Settings {
         Command::get_command(Command::Lstick(name.to_string()))
     }
 
-    /// Adds missing qubits between the first qubit and last qubit in a 
-    /// diagram's circuit. If a missing qubit is found, a new wire is created 
+    /// Adds missing qubits between the first qubit and last qubit in a
+    /// diagram's circuit. If a missing qubit is found, a new wire is created
     /// and pushed to the diagram's circuit.
-    /// 
+    ///
     ///  # Arguments
     /// `&mut BTreeMap<u64, Box<Wire>> circuit` - the circuit of the diagram
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use quil_rs::{Program, program::latex::{Settings, Latex}};
@@ -158,7 +152,7 @@ impl Settings {
     pub fn impute_missing_qubits(&self, circuit: &mut BTreeMap<u64, Box<Wire>>) {
         // requires at least two qubits to impute missing qubits
         if circuit.len() < 2 {
-            return
+            return;
         }
 
         // get the first qubit in the BTreeMap
@@ -179,17 +173,20 @@ impl Settings {
             match circuit.get(&qubit) {
                 Some(_) => (),
                 None => {
-                    let wire = Wire {name: qubit, ..Default::default()};
+                    let wire = Wire {
+                        name: qubit,
+                        ..Default::default()
+                    };
                     circuit.insert(qubit, Box::new(wire));
-                },
+                }
             }
         }
     }
 }
 
-/// The structure of a LaTeX document. Typically a LaTeX document contains 
-/// metadata defining the setup and packages used in a document within a header 
-/// and footer while the body contains content and controls its presentation. 
+/// The structure of a LaTeX document. Typically a LaTeX document contains
+/// metadata defining the setup and packages used in a document within a header
+/// and footer while the body contains content and controls its presentation.
 struct Document {
     header: String,
     body: String,
@@ -199,18 +196,18 @@ struct Document {
 // TODO: Move TikZ/Quantikz into a separate struct. Keep Document abstract enough to represent any variant of LaTeX Documents.
 impl Default for Document {
     fn default() -> Self {
-        Self { 
-            header:
-r"\documentclass[convert={density=300,outext=.png}]{standalone}
+        Self {
+            header: r"\documentclass[convert={density=300,outext=.png}]{standalone}
 \usepackage[margin=1in]{geometry}
 \usepackage{tikz}
 \usetikzlibrary{quantikz}
 \begin{document}
-\begin{tikzcd}".to_string(), 
-            body: "".to_string(), 
-            footer:
-r"\end{tikzcd}
-\end{document}".to_string(),
+\begin{tikzcd}"
+                .to_string(),
+            body: "".to_string(),
+            footer: r"\end{tikzcd}
+\end{document}"
+                .to_string(),
         }
     }
 }
@@ -221,14 +218,14 @@ impl Display for Document {
     }
 }
 
-/// A Diagram represents a collection of wires in a circuit. It encodes the 
-/// wires row in the diagram and its relationship to other wires. A row is one 
-/// of the wires in the circuit BTreeMap. Diagram tracks relationships between 
-/// wires with two pieces of information--1. the wires row (its order in the 
-/// BTreeMap), and 2. the column that spreads between all wires that pass 
-/// through a multi qubit gate 'e.g. CNOT'. The size of the diagram can be 
-/// measured by multiplying the column with the length of the circuit. This is 
-/// an [m x n] matrix where each element in the matrix represents an item to be 
+/// A Diagram represents a collection of wires in a circuit. It encodes the
+/// wires row in the diagram and its relationship to other wires. A row is one
+/// of the wires in the circuit BTreeMap. Diagram tracks relationships between
+/// wires with two pieces of information--1. the wires row (its order in the
+/// BTreeMap), and 2. the column that spreads between all wires that pass
+/// through a multi qubit gate 'e.g. CNOT'. The size of the diagram can be
+/// measured by multiplying the column with the length of the circuit. This is
+/// an [m x n] matrix where each element in the matrix represents an item to be
 /// rendered onto the diagram using one of the [`Quantikz`] commands.
 #[derive(Debug)]
 struct Diagram {
@@ -244,9 +241,9 @@ struct Diagram {
 
 impl Default for Diagram {
     fn default() -> Self {
-        Self { 
-            settings: Settings::default(), 
-            column: 0, 
+        Self {
+            settings: Settings::default(),
+            column: 0,
             relationships: HashMap::new(),
             circuit: BTreeMap::new(),
         }
@@ -254,34 +251,33 @@ impl Default for Diagram {
 }
 
 impl Diagram {
-    /// For every instruction containing control and target qubits this method 
-    /// identifies which qubit is the target and which qubit is controlling it. 
-    /// The logic of this function is visualized using a physical vector with 
-    /// the tail at the control qubit and the head pointing to the target 
-    /// qubit. The distance between the qubits represents the number of wires 
-    /// between them, i.e the space that the vector needs to traverse. If the 
-    /// control qubit comes before the target qubit the direction is positive, 
-    /// otherwise, it is negative. See [`Quantikz`] documentation on CNOT for 
+    /// For every instruction containing control and target qubits this method
+    /// identifies which qubit is the target and which qubit is controlling it.
+    /// The logic of this function is visualized using a physical vector with
+    /// the tail at the control qubit and the head pointing to the target
+    /// qubit. The distance between the qubits represents the number of wires
+    /// between them, i.e the space that the vector needs to traverse. If the
+    /// control qubit comes before the target qubit the direction is positive,
+    /// otherwise, it is negative. See [`Quantikz`] documentation on CNOT for
     /// some background that helps justify this approach.
-    /// 
-    /// This function is expensive with a time complexity of O(n^2). In the 
-    /// worst case scenario every column contains a multi qubit gate with every 
-    /// qubit as either a target or control. [`Quantikz`] uses the space 
-    /// between wires to determine how long a line should stretch between 
-    /// control and target qubits. Since it is impossible to determine how many 
-    /// wires will be inserted between control and target qubits (e.g. a user 
-    /// decides to impute missing qubits or some number of other instructions 
-    /// are added containing qubits between them) for a custom body diagram, 
-    /// this method can only be run after all wires are inserted into the 
-    /// cicuit. In particular, only run this method if a Quil program contains 
+    ///
+    /// This function is expensive with a time complexity of O(n^2). In the
+    /// worst case scenario every column contains a multi qubit gate with every
+    /// qubit as either a target or control. [`Quantikz`] uses the space
+    /// between wires to determine how long a line should stretch between
+    /// control and target qubits. Since it is impossible to determine how many
+    /// wires will be inserted between control and target qubits (e.g. a user
+    /// decides to impute missing qubits or some number of other instructions
+    /// are added containing qubits between them) for a custom body diagram,
+    /// this method can only be run after all wires are inserted into the
+    /// cicuit. In particular, only run this method if a Quil program contains
     /// multi qubit gates.
-    /// 
+    ///
     /// # Arguments
     /// `&mut self` - self as mutible allowing to update the circuit qubits
     fn set_ctrl_targ(&mut self) {
         // ensure every column preserves the connection between ctrl and targ
         'column: for c in 0..=self.column {
-
             let mut ctrls = vec![]; // the control qubits
             let mut targ = None; // the targ qubit
 
@@ -311,19 +307,18 @@ impl Diagram {
 
                             // push ctrl to 'column loop ctrl variables with initial value requiring update based on targ
                             ctrls.push(wire.name);
-                        }                        
+                        }
                     }
                 }
             } else {
                 // no relationships found on this column, go to next
                 continue 'column;
             }
-            
 
             // determine the physical vector where a positive vector points from control to target, negative, from target to control. The magnitude of the vector is the absolute value of the distance between them
             if let Some(targ) = targ {
                 // distance between qubits is the space between the ctrl and targ qubits in the circuit
-                for ctrl in ctrls { 
+                for ctrl in ctrls {
                     // represent inclusive [open, close] brackets of a range
                     let mut open = None; // opening qubit in range
                     let mut close = None; // closing qubit in range
@@ -334,18 +329,18 @@ impl Diagram {
                         // get each existing qubit in the circuit
                         if *wire.0 == ctrl || *wire.0 == targ {
                             // if the qubit is the ctrl or target
-                                if let Some(_) = open {
-                                    close = Some(i);
-                                    break;
-    
-                                // open qubit in range not found, set open qubit
-                                } else {
-                                    open = Some(i)
-                                }
-                            }
+                            if let Some(_) = open {
+                                close = Some(i);
+                                break;
 
-                            i += 1;
+                            // open qubit in range not found, set open qubit
+                            } else {
+                                open = Some(i)
+                            }
                         }
+
+                        i += 1;
+                    }
 
                     let mut vector: i64 = 0;
                     if let Some(open) = open {
@@ -360,18 +355,20 @@ impl Diagram {
                         }
                     }
                     // set wire at column as the control qubit of target qubit computed as the distance from the control qubit
-                    self.circuit.get_mut(&ctrl).and_then(|wire| wire.ctrl.insert(c, vector));
+                    self.circuit
+                        .get_mut(&ctrl)
+                        .and_then(|wire| wire.ctrl.insert(c, vector));
                 }
             }
         }
     }
 
     /// Takes a new or existing wire and adds or updates it using the name
-    /// (String) as the key. If a wire exists with the same name, then the 
-    /// contents of the new wire are added to it by updating the next column 
-    /// using the Quantikz command associated with its attributes (e.g. gate, 
+    /// (String) as the key. If a wire exists with the same name, then the
+    /// contents of the new wire are added to it by updating the next column
+    /// using the Quantikz command associated with its attributes (e.g. gate,
     /// do_nothing, etc).
-    /// 
+    ///
     /// # Arguments
     /// `&mut self` - exposes HashMap<String, Box<Circuit>>
     /// `wire` - the wire to be pushed or updated to in circuits
@@ -390,11 +387,11 @@ impl Diagram {
                     // add gates to wire in circuit
                     wire_in_circuit.gates.insert(self.column, gate.to_string());
                 }
-            },
+            }
             // no wire found insert new wire
             None => {
                 self.circuit.insert(wire.name, Box::new(wire));
-            },
+            }
         }
 
         // initalize relationships between multi qubit gates
@@ -409,7 +406,7 @@ impl Diagram {
                     } else {
                         self.relationships.insert(self.column, vec![qubit]);
                     }
-                }         
+                }
             }
         }
     }
@@ -422,9 +419,9 @@ impl Display for Diagram {
         let mut body = String::from('\n');
 
         let mut i = 0; // used to omit trailing Nr
-        // write the LaTeX string for each wire in the circuit
+                       // write the LaTeX string for each wire in the circuit
         for key in self.circuit.keys() {
-            // a single line of LaTeX representing a wire from the circuit   
+            // a single line of LaTeX representing a wire from the circuit
             let mut line = String::from("");
 
             // are labels on in settings?
@@ -444,8 +441,9 @@ impl Display for Diagram {
 
                         if gate.starts_with('C') {
                             if let Some(targ) = wire.ctrl.get(&c) {
-                                line.push_str(&Command::get_command(Command::Ctrl(targ.to_string())));
-
+                                line.push_str(&Command::get_command(Command::Ctrl(
+                                    targ.to_string(),
+                                )));
                             } else if let Some(_) = wire.targ.get(&c) {
                                 line.push_str(&Command::get_command(Command::Targ));
                             }
@@ -480,14 +478,14 @@ impl Display for Diagram {
     }
 }
 
-/// A Wire represents a single qubit. A wire only needs to keep track of all 
-/// the elements it contains mapped to some arbitrary column. Diagram keeps 
-/// track of where the Wire belongs in the larger circuit, its row, and knows 
-/// how each Wire relates to each other at that column. When Diagram parses the 
-/// wires as a collection, if the Wire relates to another at some column, then 
-/// its field will be updated at that column based on the knowledge Diagram has 
-/// about this connection. This updated value also looks arbitrary to Wire, it 
-/// does not explicitly define which qubit it relates to, but a digit that 
+/// A Wire represents a single qubit. A wire only needs to keep track of all
+/// the elements it contains mapped to some arbitrary column. Diagram keeps
+/// track of where the Wire belongs in the larger circuit, its row, and knows
+/// how each Wire relates to each other at that column. When Diagram parses the
+/// wires as a collection, if the Wire relates to another at some column, then
+/// its field will be updated at that column based on the knowledge Diagram has
+/// about this connection. This updated value also looks arbitrary to Wire, it
+/// does not explicitly define which qubit it relates to, but a digit that
 /// describes how far away it is from the related qubit based on [`Quantikz`].
 #[derive(Debug)]
 pub struct Wire {
@@ -503,9 +501,9 @@ pub struct Wire {
 
 impl Default for Wire {
     fn default() -> Self {
-        Self { 
-            name: 0, 
-            gates: HashMap::new(), 
+        Self {
+            name: 0,
+            gates: HashMap::new(),
             ctrl: HashMap::new(),
             targ: HashMap::new(),
         }
@@ -520,7 +518,7 @@ pub enum LatexGenError {
 
 pub trait Latex {
     /// Returns a Result containing a quil Program as a LaTeX string.
-    /// 
+    ///
     /// # Arguments
     /// `settings` - Customizes the rendering of a circuit.
     fn to_latex(self, settings: Settings) -> Result<String, LatexGenError>;
@@ -532,7 +530,10 @@ impl Latex for Program {
         let instructions = Program::to_instructions(&self, false);
 
         // store circuit strings
-        let mut diagram = Diagram {settings, ..Default::default()};
+        let mut diagram = Diagram {
+            settings,
+            ..Default::default()
+        };
         let mut has_ctrl_targ = false;
         for instruction in instructions {
             match instruction {
@@ -551,7 +552,7 @@ impl Latex for Program {
                                 // TODO: reduce code duplication
                                 if let Some(_) = diagram.circuit.get(&qubit) {
                                     // add the gate to the wire at column 0
-                                    wire.gates.insert(0, gate.name.clone());   
+                                    wire.gates.insert(0, gate.name.clone());
                                 } else {
                                     if gate.name.starts_with('C') {
                                         wire.gates.insert(diagram.column, gate.name.clone());
@@ -561,17 +562,17 @@ impl Latex for Program {
                                         }
                                     } else {
                                         // add the gate to the wire at column 0
-                                        wire.gates.insert(0, gate.name.clone());  
+                                        wire.gates.insert(0, gate.name.clone());
                                     }
                                 }
 
                                 // push wire to diagram circuit
                                 diagram.push_wire(wire);
-                            },
+                            }
                             _ => (),
                         }
-                    }                  
-                },
+                    }
+                }
                 // do nothing for all other instructions
                 _ => (),
             }
@@ -581,7 +582,7 @@ impl Latex for Program {
         if diagram.settings.impute_missing_qubits {
             // add implicit qubits to circuit
             diagram.settings.impute_missing_qubits(&mut diagram.circuit);
-        }  
+        }
 
         // only call method for programs with control and target gates
         if has_ctrl_targ {
@@ -590,7 +591,10 @@ impl Latex for Program {
         }
 
         let body = diagram.to_string();
-        let document = Document {body: body, ..Default::default()};
+        let document = Document {
+            body: body,
+            ..Default::default()
+        };
         println!("{}", document.to_string());
 
         Ok(document.to_string())
@@ -599,15 +603,15 @@ impl Latex for Program {
 
 #[cfg(test)]
 mod tests {
-    use super::{Settings, Latex};
+    use super::{Latex, Settings};
     use crate::Program;
     use std::str::FromStr;
 
-    /// Helper function takes instructions and return the LaTeX using the 
+    /// Helper function takes instructions and return the LaTeX using the
     /// Latex::to_latex method.
     pub fn get_latex(instructions: &str, settings: Settings) -> String {
-        let program = Program::from_str(instructions)
-            .expect("program `{instructions}` should be returned");
+        let program =
+            Program::from_str(instructions).expect("program `{instructions}` should be returned");
         program
             .to_latex(settings)
             .expect("LaTeX should generate for program `{instructions}`")
@@ -616,10 +620,12 @@ mod tests {
     #[test]
     /// Test functionality of to_latex using default settings.
     fn test_to_latex() {
-        let program = Program::from_str("H 5\nCNOT 5 2")
-            .expect("Quil program should be returned");
+        let program = Program::from_str("H 5\nCNOT 5 2").expect("Quil program should be returned");
 
-        let settings = Settings {impute_missing_qubits: true, ..Default::default()};
+        let settings = Settings {
+            impute_missing_qubits: true,
+            ..Default::default()
+        };
 
         program
             .to_latex(settings)
@@ -628,7 +634,7 @@ mod tests {
 
     /// Test module for the Document
     mod document {
-        use crate::program::latex::{Document, Settings, tests::get_latex};
+        use crate::program::latex::{tests::get_latex, Document, Settings};
 
         #[test]
         fn test_template() {
@@ -656,95 +662,64 @@ mod tests {
 
     /// Test module for gates
     mod gates {
-        use crate::program::latex::{Settings, tests::get_latex};
+        use crate::program::latex::{tests::get_latex, Settings};
 
         #[test]
         fn test_gate_x() {
-            insta::assert_snapshot!(get_latex(
-                "X 0",
-                Settings::default()
-            ));
+            insta::assert_snapshot!(get_latex("X 0", Settings::default()));
         }
 
         #[test]
         fn test_gate_y() {
-            insta::assert_snapshot!(get_latex(
-                "Y 1",
-                Settings::default()));
+            insta::assert_snapshot!(get_latex("Y 1", Settings::default()));
         }
 
         #[test]
         fn test_gates_x_and_y_single_qubit() {
-            insta::assert_snapshot!(get_latex(
-                "X 0\nY 0",
-                Settings::default()));
+            insta::assert_snapshot!(get_latex("X 0\nY 0", Settings::default()));
         }
 
         #[test]
         fn test_gates_x_and_y_two_qubits() {
-            insta::assert_snapshot!(get_latex(
-                "X 0\nY 1",
-                Settings::default()
-            ));
+            insta::assert_snapshot!(get_latex("X 0\nY 1", Settings::default()));
         }
 
         #[test]
         fn test_gates_cnot_ctrl_0_targ_1() {
-            insta::assert_snapshot!(get_latex(
-                "CNOT 0 1",
-                Settings::default()));
+            insta::assert_snapshot!(get_latex("CNOT 0 1", Settings::default()));
         }
 
         #[test]
         fn test_gates_cnot_ctrl_1_targ_0() {
-            insta::assert_snapshot!(get_latex(
-                "CNOT 1 0",
-                Settings::default()));
+            insta::assert_snapshot!(get_latex("CNOT 1 0", Settings::default()));
         }
 
         #[test]
         #[should_panic]
         fn test_gates_cnot_error_single_qubit() {
-            get_latex(
-                "CNOT 0 0",
-                Settings::default());
-        } 
+            get_latex("CNOT 0 0", Settings::default());
+        }
 
         #[test]
         fn test_gates_h_and_cnot_ctrl_0_targ_1() {
-            insta::assert_snapshot!(get_latex(
-                "H 0\nCNOT 0 1",
-                Settings::default()
-            ));
+            insta::assert_snapshot!(get_latex("H 0\nCNOT 0 1", Settings::default()));
         }
 
         #[test]
         fn test_gates_h_and_cnot_ctrl_1_targ_0() {
-            insta::assert_snapshot!(get_latex(
-                "H 1\nCNOT 1 0",
-                Settings::default()
-            ));
+            insta::assert_snapshot!(get_latex("H 1\nCNOT 1 0", Settings::default()));
         }
 
         #[test]
         fn test_gate_toffoli() {
-            insta::assert_snapshot!(get_latex(
-                "CCNOT 1 2 0", 
-                Settings::default()
-            ));
+            insta::assert_snapshot!(get_latex("CCNOT 1 2 0", Settings::default()));
         }
 
         #[test]
         fn test_gate_ccnot_and_controlled_cnot_equality() {
-            let ccnot = get_latex(
-                "CCNOT 1 2 0",
-                Settings::default()
-            );
+            let ccnot = get_latex("CCNOT 1 2 0", Settings::default());
 
-            let controlled = get_latex(
-                "CONTROLLED CNOT 1 2 0",
-                Settings::default()
-            );
+            let controlled = get_latex("CONTROLLED CNOT 1 2 0", Settings::default());
 
             assert_eq!(ccnot, controlled);
         }
@@ -752,27 +727,18 @@ mod tests {
 
     /// Test module for modifiers
     mod modifiers {
-        use crate::program::latex::{Settings, tests::get_latex};
+        use crate::program::latex::{tests::get_latex, Settings};
 
         #[test]
         fn test_modifier_toffoli_gate() {
-            insta::assert_snapshot!(get_latex(
-                "CONTROLLED CNOT 2 1 0", 
-                Settings::default()
-            ));
+            insta::assert_snapshot!(get_latex("CONTROLLED CNOT 2 1 0", Settings::default()));
         }
 
         #[test]
         fn test_modifier_controlled_cnot_and_ccnot_equality() {
-            let controlled = get_latex(
-                "CONTROLLED CNOT 2 1 0",
-                Settings::default()
-            );
+            let controlled = get_latex("CONTROLLED CNOT 2 1 0", Settings::default());
 
-            let ccnot = get_latex(
-                "CCNOT 2 1 0",
-                Settings::default()
-            );
+            let ccnot = get_latex("CCNOT 2 1 0", Settings::default());
 
             assert_eq!(controlled, ccnot);
         }
@@ -840,7 +806,7 @@ mod tests {
 
     /// Test module for Settings
     mod settings {
-        use crate::program::latex::{Settings, tests::get_latex};
+        use crate::program::latex::{tests::get_latex, Settings};
 
         #[test]
         fn test_settings_label_qubit_lines_false() {
@@ -848,10 +814,7 @@ mod tests {
                 label_qubit_lines: false,
                 ..Default::default()
             };
-            insta::assert_snapshot!(get_latex(
-                "H 0\nCNOT 0 1",
-                settings
-            ));
+            insta::assert_snapshot!(get_latex("H 0\nCNOT 0 1", settings));
         }
 
         #[test]
@@ -860,10 +823,7 @@ mod tests {
                 impute_missing_qubits: true,
                 ..Default::default()
             };
-            insta::assert_snapshot!(get_latex(
-                "H 0\nCNOT 0 3",
-                settings
-            ));
+            insta::assert_snapshot!(get_latex("H 0\nCNOT 0 3", settings));
         }
 
         #[test]
@@ -872,26 +832,20 @@ mod tests {
                 impute_missing_qubits: true,
                 ..Default::default()
             };
-            insta::assert_snapshot!(get_latex(
-                "H 5\nCNOT 5 2",
-                settings
-            ));
+            insta::assert_snapshot!(get_latex("H 5\nCNOT 5 2", settings));
         }
     }
 
     /// Test various programs for LaTeX accuracy
     mod programs {
-        use crate::program::latex::{Settings, tests::get_latex};
+        use crate::program::latex::{tests::get_latex, Settings};
 
         #[test]
         fn test_program_h0_cnot01_x1_cnot12() {
             let settings = Settings {
                 ..Default::default()
             };
-            insta::assert_snapshot!(get_latex(
-                "H 0\nCNOT 0 1\nX 1\nCNOT 1 2",
-                settings
-            ));
+            insta::assert_snapshot!(get_latex("H 0\nCNOT 0 1\nX 1\nCNOT 1 2", settings));
         }
 
         #[test]
@@ -899,10 +853,7 @@ mod tests {
             let settings = Settings {
                 ..Default::default()
             };
-            insta::assert_snapshot!(get_latex(
-                "H 5\nCNOT 5 2\nY 2\nCNOT 2 3",
-                settings
-            ));
+            insta::assert_snapshot!(get_latex("H 5\nCNOT 5 2\nY 2\nCNOT 2 3", settings));
         }
     }
 }
