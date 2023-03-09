@@ -192,11 +192,11 @@ pub(crate) fn parse_defcal_gate<'a>(
     Ok((
         input,
         Instruction::CalibrationDefinition(Calibration {
-            instructions,
-            modifiers,
             name,
             parameters,
             qubits,
+            instructions,
+            modifiers,
         }),
     ))
 }
@@ -213,9 +213,9 @@ pub(crate) fn parse_defcal_measure<'a>(
     Ok((
         input,
         Instruction::MeasureCalibrationDefinition(MeasureCalibrationDefinition {
-            instructions,
-            parameter: destination,
             qubit,
+            parameter: destination,
+            instructions,
         }),
     ))
 }

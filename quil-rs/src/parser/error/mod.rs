@@ -62,11 +62,4 @@ pub enum ParserErrorKind {
     /// Literals specified in the input cannot be supported without loss of precision
     #[error("using this literal will result in loss of precision")]
     UnsupportedPrecision,
-
-    /// Encountered an error building a valid instruction from the parsed input
-    #[error("invalid {instruction_type}: {reason}")]
-    InvalidInstruction {
-        instruction_type: String,
-        reason: String,
-    },
 }

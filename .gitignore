@@ -6,3 +6,6 @@ Cargo.lock
 
 # JetBrains Editors
 .idea/
+
+# Python artifacts
+*.so
