@@ -15,6 +15,7 @@ use crate::{
 };
 
 py_wrap_data_struct! {
+    #[pyo3(subclass)]
     PyCalibration(Calibration) as "Calibration" {
         instructions: Vec<Instruction> => Vec<PyInstruction>,
         modifiers: Vec<GateModifier> => Vec<PyGateModifier>,
@@ -52,6 +53,7 @@ impl PyCalibration {
 }
 
 py_wrap_data_struct! {
+    #[pyo3(subclass)]
     PyMeasureCalibrationDefinition(MeasureCalibrationDefinition) as "MeasureCalibrationDefinition" {
         qubit: Option<Qubit> => Option<PyQubit>,
         parameter: String => Py<PyString>,
