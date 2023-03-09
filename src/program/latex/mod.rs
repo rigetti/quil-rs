@@ -221,7 +221,15 @@ impl Display for Document {
     }
 }
 
-/// A Diagram represents a collection of wires in a circuit. It encodes the wires row in the diagram and its relationship to other wires. A row is one of the wires in the circuit BTreeMap. Diagram tracks relationships between wires with two pieces of information--1. the wires row (its order in the BTreeMap), and 2. the column that spreads between all wires that pass through a multi qubit gate 'e.g. CNOT'. The size of the diagram can be measured by multiplying the column with the length of the circuit. This is an [m x n] matrix where each element in the matrix represents an item to be rendered onto the diagram using one of the [`Quantikz`] commands.
+/// A Diagram represents a collection of wires in a circuit. It encodes the 
+/// wires row in the diagram and its relationship to other wires. A row is one 
+/// of the wires in the circuit BTreeMap. Diagram tracks relationships between 
+/// wires with two pieces of information--1. the wires row (its order in the 
+/// BTreeMap), and 2. the column that spreads between all wires that pass 
+/// through a multi qubit gate 'e.g. CNOT'. The size of the diagram can be 
+/// measured by multiplying the column with the length of the circuit. This is 
+/// an [m x n] matrix where each element in the matrix represents an item to be 
+/// rendered onto the diagram using one of the [`Quantikz`] commands.
 #[derive(Debug)]
 struct Diagram {
     /// customizes how the diagram renders the circuit
