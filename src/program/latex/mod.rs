@@ -142,7 +142,6 @@ impl Settings {
     /// and pushed to the diagram's circuit.
     /// 
     ///  # Arguments
-    /// `&mut Vec<u64> order` - the qubit order of the diagram
     /// `&mut BTreeMap<u64, Box<Wire>> circuit` - the circuit of the diagram
     /// 
     /// # Examples
@@ -156,7 +155,11 @@ impl Settings {
     /// };
     /// program.to_latex(settings).expect("");
     /// ```
-    pub fn impute_missing_qubits(&self, order: &mut Vec<u64>, circuit: &mut BTreeMap<u64, Box<Wire>>) {
+    pub fn impute_missing_qubits(&self, circuit: &mut BTreeMap<u64, Box<Wire>>) {
+        // requires at least two qubits to impute missing qubits
+        if circuit.len() < 2 {
+            return
+        }
 
         // get the first qubit in the BTreeMap
         let mut first = 0;
@@ -177,7 +180,6 @@ impl Settings {
                 Some(_) => (),
                 None => {
                     let wire = Wire {name: qubit, ..Default::default()};
-                    order.push(qubit);
                     circuit.insert(qubit, Box::new(wire));
                 },
             }
@@ -219,26 +221,14 @@ impl Display for Document {
     }
 }
 
-/// A Diagram represents a collection of circuits. It encodes the relationships 
-/// between the circuits and their positions or the row that it fills. A row is 
-/// one of the Circuits in the HashMap. At this view over the circuits, Diagram 
-/// can form a relationship between circuits based on information about the 
-/// column and row. For example, one row, say qubit 0, at some column can hold 
-/// information that it is the control. If another row, say qubit 1, at this 
-/// same exact column says that it is the target, then it can inform qubit 0 
-/// that it is controlling qubit 1. This information is then placed into the 
-/// circuit as the diagram forms the equivalent LaTeX form for each qubit.
-/// The circuit dimension is column:`column+1`x row:`circuit.len+1` where the 
-/// product of these two is the total number of items on the entire circuit.
+/// A Diagram represents a collection of wires in a circuit. It encodes the wires row in the diagram and its relationship to other wires. A row is one of the wires in the circuit BTreeMap. Diagram tracks relationships between wires with two pieces of information--1. the wires row (its order in the BTreeMap), and 2. the column that spreads between all wires that pass through a multi qubit gate 'e.g. CNOT'. The size of the diagram can be measured by multiplying the column with the length of the circuit. This is an [m x n] matrix where each element in the matrix represents an item to be rendered onto the diagram using one of the [`Quantikz`] commands.
 #[derive(Debug)]
 struct Diagram {
-    /// Settings
+    /// customizes how the diagram renders the circuit
     settings: Settings,
-    /// total-1 elements on each wire
+    /// total number of elements on each wire
     column: u32,
-    /// maintains the instruction order of qubits
-    order: Vec<u64>,
-    /// column and qubits at which the qubits form relationships
+    /// column at which qubits in positional order form relationships
     relationships: HashMap<u32, Vec<u64>>,
     /// a BTreeMap of wires with the name of the wire as the key
     circuit: BTreeMap<u64, Box<Wire>>,
@@ -249,7 +239,6 @@ impl Default for Diagram {
         Self { 
             settings: Settings::default(), 
             column: 0, 
-            order: vec![],
             relationships: HashMap::new(),
             circuit: BTreeMap::new(),
         }
@@ -262,21 +251,22 @@ impl Diagram {
     /// The logic of this function is visualized using a physical vector with 
     /// the tail at the control qubit and the head pointing to the target 
     /// qubit. The distance between the qubits represents the number of wires 
-    /// between them therefore, the space that the vector needs to traverse. If 
-    /// the control qubit comes before the target qubit the direction is 
-    /// positive, otherwise, it is negative. See [`Quantikz`] documentation on 
-    /// CNOT for some background that helps justify this approach.
+    /// between them, i.e the space that the vector needs to traverse. If the 
+    /// control qubit comes before the target qubit the direction is positive, 
+    /// otherwise, it is negative. See [`Quantikz`] documentation on CNOT for 
+    /// some background that helps justify this approach.
     /// 
-    /// This function is expensive with a time complexity of O(n^2). 
-    /// [`Quantikz`] uses the space between wires to determine how long a line 
-    /// should stretch between control and target qubits. Since it is 
-    /// impossible to determine how many wires will be inserted between control 
-    /// and target qubits (e.g. a user decides to impute missing qubits or some 
-    /// number of other instructions are added containing qubits between them) 
-    /// for a custom body diagram, this method should be run after all wires 
-    /// are inserted into the cicuit. If a Quil program contains control and 
-    /// target qubits then this method parses the complete circuit and set the 
-    /// relationships between wires.
+    /// This function is expensive with a time complexity of O(n^2). In the 
+    /// worst case scenario every column contains a multi qubit gate with every 
+    /// qubit as either a target or control. [`Quantikz`] uses the space 
+    /// between wires to determine how long a line should stretch between 
+    /// control and target qubits. Since it is impossible to determine how many 
+    /// wires will be inserted between control and target qubits (e.g. a user 
+    /// decides to impute missing qubits or some number of other instructions 
+    /// are added containing qubits between them) for a custom body diagram, 
+    /// this method can only be run after all wires are inserted into the 
+    /// cicuit. In particular, only run this method if a Quil program contains 
+    /// multi qubit gates.
     /// 
     /// # Arguments
     /// `&mut self` - self as mutible allowing to update the circuit qubits
@@ -297,7 +287,7 @@ impl Diagram {
                     }
 
                     // the last qubit is the targ
-                    if *qubit == relationship[relationship.len()-1] {
+                    if *qubit == relationship[relationship.len() - 1] {
                         if let Some(wire) = self.circuit.get_mut(qubit) {
                             // insert as target at this column
                             wire.targ.insert(c, true);
@@ -324,9 +314,8 @@ impl Diagram {
 
             // determine the physical vector where a positive vector points from control to target, negative, from target to control. The magnitude of the vector is the absolute value of the distance between them
             if let Some(targ) = targ {
+                // distance between qubits is the space between the ctrl and targ qubits in the circuit
                 for ctrl in ctrls { 
-                    // distance between qubits is the order of the ctrl and targ qubits within the circuit
-
                     // represent inclusive [open, close] brackets of a range
                     let mut open = None; // opening qubit in range
                     let mut close = None; // closing qubit in range
@@ -394,9 +383,8 @@ impl Diagram {
                     wire_in_circuit.gates.insert(self.column, gate.to_string());
                 }
             },
-            // no wire found, preserve insertion order and insert new wire
+            // no wire found insert new wire
             None => {
-                self.order.push(wire.name);
                 self.circuit.insert(wire.name, Box::new(wire));
             },
         }
@@ -484,20 +472,24 @@ impl Display for Diagram {
     }
 }
 
-/// A circuit represents a single wire. A wire chains columns together of 
-/// various Quantikz elements (using `&`). Encoded in each column is an index 
-/// which determines the placement of the element on the circuit. Each column 
-/// can hold only one element, therefore, each encoded index is unique between 
-/// all of the attributes. Using this property, a String can be generated. 
+/// A Wire represents a single qubit. A wire only needs to keep track of all 
+/// the elements it contains mapped to some arbitrary column. Diagram keeps 
+/// track of where the Wire belongs in the larger circuit, its row, and knows 
+/// how each Wire relates to each other at that column. When Diagram parses the 
+/// wires as a collection, if the Wire relates to another at some column, then 
+/// its field will be updated at that column based on the knowledge Diagram has 
+/// about this connection. This updated value also looks arbitrary to Wire, it 
+/// does not explicitly define which qubit it relates to, but a digit that 
+/// describes how far away it is from the related qubit based on [`Quantikz`].
 #[derive(Debug)]
 pub struct Wire {
-    /// a wire, ket(qubit) placed using the Lstick or Rstick commands
+    /// the name of ket(qubit) placed using the Lstick or Rstick commands
     name: u64,
-    /// gate element(s) placed at column_u32 on wire using the Gate command
+    /// gate elements placed at column on wire using the Gate command
     gates: HashMap<u32, String>,
-    /// control at key=column with value=targ
+    /// control at column with distance from targ wire
     ctrl: HashMap<u32, i64>,
-    /// target at key=column
+    /// at this column is the wire a target?
     targ: HashMap<u32, bool>,
 }
 
@@ -514,9 +506,6 @@ impl Default for Wire {
 
 #[derive(thiserror::Error, Debug)]
 pub enum LatexGenError {
-    // TODO: Add variants for each error type using `thiserror` crate to return detailed Result::Err. Example error below.
-    #[error("Tried to pop gate from new circuit and append to wire={wire} but found None.")]
-    NoGateInInst{wire: String},
     #[error("Tried to parse CNOT and found a control qubit without a target.")]
     FoundCNOTWithNoTarget,
 }
@@ -581,9 +570,9 @@ impl Latex for Program {
         }
 
         // are implicit qubits required in settings and are there at least two or more qubits in the diagram?
-        if diagram.settings.impute_missing_qubits && diagram.order.len() > 1 {
+        if diagram.settings.impute_missing_qubits {
             // add implicit qubits to circuit
-            diagram.settings.impute_missing_qubits(&mut diagram.order, &mut diagram.circuit);
+            diagram.settings.impute_missing_qubits(&mut diagram.circuit);
         }  
 
         // only call method for programs with control and target gates
