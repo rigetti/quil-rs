@@ -23,11 +23,13 @@ use crate::expression::Expression;
 use crate::parser::{common::parse_memory_reference, lex, ParseError};
 use crate::program::{disallow_leftover, frame::FrameMatchCondition, SyntaxError};
 
+mod calibration;
 mod gate;
 
 #[cfg(test)]
 use proptest_derive::Arbitrary;
 
+pub use self::calibration::{Calibration, MeasureCalibrationDefinition};
 pub use self::gate::{Gate, GateDefinition, GateError, GateModifier, GateSpecification, GateType};
 
 #[derive(Clone, Debug, PartialEq)]
@@ -167,32 +169,6 @@ impl fmt::Display for AttributeValue {
 }
 
 pub type FrameAttributes = HashMap<String, AttributeValue>;
-
-#[derive(Clone, Debug, Default, PartialEq)]
-pub struct Calibration {
-    pub instructions: Vec<Instruction>,
-    pub modifiers: Vec<GateModifier>,
-    pub name: String,
-    pub parameters: Vec<Expression>,
-    pub qubits: Vec<Qubit>,
-}
-
-impl fmt::Display for Calibration {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let parameter_str = get_expression_parameter_string(&self.parameters);
-        write!(
-            f,
-            "DEFCAL {}{} {}:",
-            self.name,
-            parameter_str,
-            format_qubits(&self.qubits)
-        )?;
-        for instruction in &self.instructions {
-            write!(f, "\n\t{instruction}")?;
-        }
-        Ok(())
-    }
-}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Convert {
@@ -389,29 +365,6 @@ pub struct Fence {
 pub struct FrameDefinition {
     pub identifier: FrameIdentifier,
     pub attributes: HashMap<String, AttributeValue>,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct MeasureCalibrationDefinition {
-    pub qubit: Option<Qubit>,
-    pub parameter: String,
-    pub instructions: Vec<Instruction>,
-}
-
-impl fmt::Display for MeasureCalibrationDefinition {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "DEFCAL MEASURE")?;
-        if let Some(qubit) = &self.qubit {
-            write!(f, " {qubit}")?;
-        }
-
-        writeln!(
-            f,
-            " {}:\n\t{}",
-            self.parameter,
-            format_instructions(&self.instructions)
-        )
-    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

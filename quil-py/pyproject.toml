@@ -24,3 +24,8 @@ sdist-include = ["README.md"]
 [build-system]
 requires = ["maturin>=0.13,<0.14"]
 build-backend = "maturin"
+
+[tool.black]
+line-length = 120
+target-version = ['py37', 'py38', 'py39', 'py310']
+include = '\.pyi?$'

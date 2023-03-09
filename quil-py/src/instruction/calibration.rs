@@ -5,12 +5,17 @@ use quil_rs::{
 
 use rigetti_pyo3::{
     impl_repr, impl_str, py_wrap_data_struct,
-    pyo3::{types::PyString, Py},
+    pyo3::{pymethods, types::PyString, Py, PyResult, Python},
+    PyTryFrom, ToPythonError,
 };
 
-use crate::instruction::{PyExpression, PyGateModifier, PyInstruction, PyQubit};
+use crate::{
+    instruction::{PyExpression, PyGateModifier, PyInstruction, PyQubit},
+    validation::identifier::IdentifierValidationError,
+};
 
 py_wrap_data_struct! {
+    #[pyo3(subclass)]
     PyCalibration(Calibration) as "Calibration" {
         instructions: Vec<Instruction> => Vec<PyInstruction>,
         modifiers: Vec<GateModifier> => Vec<PyGateModifier>,
@@ -22,7 +27,33 @@ py_wrap_data_struct! {
 impl_repr!(PyCalibration);
 impl_str!(PyCalibration);
 
+#[pymethods]
+impl PyCalibration {
+    #[new]
+    pub fn new(
+        py: Python<'_>,
+        name: &str,
+        parameters: Vec<PyExpression>,
+        qubits: Vec<PyQubit>,
+        instructions: Vec<PyInstruction>,
+        modifiers: Vec<PyGateModifier>,
+    ) -> PyResult<Self> {
+        Ok(Self(
+            Calibration::new(
+                name,
+                Vec::<Expression>::py_try_from(py, &parameters)?,
+                Vec::<Qubit>::py_try_from(py, &qubits)?,
+                Vec::<Instruction>::py_try_from(py, &instructions)?,
+                Vec::<GateModifier>::py_try_from(py, &modifiers)?,
+            )
+            .map_err(IdentifierValidationError::from)
+            .map_err(IdentifierValidationError::to_py_err)?,
+        ))
+    }
+}
+
 py_wrap_data_struct! {
+    #[pyo3(subclass)]
     PyMeasureCalibrationDefinition(MeasureCalibrationDefinition) as "MeasureCalibrationDefinition" {
         qubit: Option<Qubit> => Option<PyQubit>,
         parameter: String => Py<PyString>,
@@ -31,3 +62,20 @@ py_wrap_data_struct! {
 }
 impl_repr!(PyMeasureCalibrationDefinition);
 impl_str!(PyMeasureCalibrationDefinition);
+
+#[pymethods]
+impl PyMeasureCalibrationDefinition {
+    #[new]
+    pub fn new(
+        py: Python<'_>,
+        qubit: Option<PyQubit>,
+        parameter: String,
+        instructions: Vec<PyInstruction>,
+    ) -> PyResult<Self> {
+        Ok(Self(MeasureCalibrationDefinition::new(
+            Option::<Qubit>::py_try_from(py, &qubit)?,
+            parameter,
+            Vec::<Instruction>::py_try_from(py, &instructions)?,
+        )))
+    }
+}

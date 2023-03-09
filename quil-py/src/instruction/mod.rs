@@ -32,11 +32,13 @@ mod waveform;
 py_wrap_union_enum! {
     #[derive(Debug)]
     PyInstruction(Instruction) as "Instruction" {
-        halt: Halt,
-        nop: Nop,
         arithmetic: Arithmetic => PyArithmetic,
+        calibration_definition: CalibrationDefinition => PyCalibration,
+        declaration: Declaration => PyDeclaration,
         gate: Gate => PyGate,
-        declaration: Declaration => PyDeclaration
+        halt: Halt,
+        measure_calibration_definition: MeasureCalibrationDefinition => PyMeasureCalibrationDefinition,
+        nop: Nop
     }
 }
 impl_repr!(PyInstruction);
