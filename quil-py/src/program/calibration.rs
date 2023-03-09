@@ -36,6 +36,19 @@ impl PyCalibrationSet {
         }))
     }
 
+    #[getter]
+    pub fn calibrations(&self, py: Python<'_>) -> PyResult<Vec<PyCalibration>> {
+        self.as_inner().calibrations().to_python(py)
+    }
+
+    #[getter]
+    pub fn measure_calibrations(
+        &self,
+        py: Python<'_>,
+    ) -> PyResult<Vec<PyMeasureCalibrationDefinition>> {
+        self.as_inner().measure_calibrations().to_python(py)
+    }
+
     pub fn expand(
         &self,
         py: Python<'_>,

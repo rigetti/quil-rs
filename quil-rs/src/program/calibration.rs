@@ -53,6 +53,16 @@ impl<'a> MatchedCalibration<'a> {
 }
 
 impl CalibrationSet {
+    /// Return all [`Calibration`]s in the set
+    pub fn calibrations(&self) -> &[Calibration] {
+        self.calibrations.as_ref()
+    }
+
+    /// Return all [`MeasureCalibrationDefinition`]s in the set
+    pub fn measure_calibrations(&self) -> &[MeasureCalibrationDefinition] {
+        self.measure_calibrations.as_ref()
+    }
+
     /// Given an instruction, return the instructions to which it is expanded if there is a match.
     /// Recursively calibrate instructions, returning an error if a calibration directly or indirectly
     /// expands into itself.
