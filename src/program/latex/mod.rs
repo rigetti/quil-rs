@@ -238,6 +238,8 @@ struct Diagram {
     column: u32,
     /// maintains the instruction order of qubits
     order: Vec<u64>,
+    /// column and qubits at which the qubits form relationships
+    relationships: HashMap<u32, Vec<u64>>,
     /// a BTreeMap of wires with the name of the wire as the key
     circuit: BTreeMap<u64, Box<Wire>>,
 }
@@ -248,6 +250,7 @@ impl Default for Diagram {
             settings: Settings::default(), 
             column: 0, 
             order: vec![],
+            relationships: HashMap::new(),
             circuit: BTreeMap::new(),
         }
     }
@@ -281,36 +284,47 @@ impl Diagram {
         // ensure every column preserves the connection between ctrl and targ
         'column: for c in 0..=self.column {
 
-            let mut ctrl = None;
-            let mut targ = None;
+            let mut ctrls = vec![]; // the control qubits
+            let mut targ = None; // the targ qubit
 
-            // determine the control and target qubits in the column
-            for qubit in &self.order {
-                // get the wire from the circuit as mutible 
-                if let Some(wire) = self.circuit.get_mut(qubit) {
-                    if let Some(gate) = wire.gates.get(&c) {
-                        if gate != "CNOT" {
-                            continue 'column;
-                        }
+            // determine if a relationship exists at this column
+            if let Some(relationship) = self.relationships.get(&c) {
+                // determine the control and target qubits
+                for qubit in relationship {
+                    // a relationship with one qubit is invalid
+                    if relationship.len() < 2 {
+                        panic!("{}", LatexGenError::FoundCNOTWithNoTarget);
+                    }
 
-                        // if ctrl is Some, the remaining qubits are target qubits
-                        if let Some(_) = ctrl {
-                            // set wire at column as a target qubit
+                    // the last qubit is the targ
+                    if *qubit == relationship[relationship.len()-1] {
+                        if let Some(wire) = self.circuit.get_mut(qubit) {
+                            // insert as target at this column
                             wire.targ.insert(c, true);
-                            targ = Some(wire.name); // set the target qubit
-                
-                
-                        // if ctrl is None, this is the first qubit which is the control
-                        } else {
-                            ctrl = Some(wire.name); // set the control qubit
+
+                            // set 'column loop targ variable to this targ that control qubits will find distance from on their respective wires
+                            targ = Some(wire.name)
                         }
+                    // all other qubits are the controls
+                    } else {
+                        if let Some(wire) = self.circuit.get_mut(qubit) {
+                            // insert as control at this column with initial value 0, targeting themselves
+                            wire.ctrl.insert(c, 0);
+
+                            // push ctrl to 'column loop ctrl variables with initial value requiring update based on targ
+                            ctrls.push(wire.name);
+                        }                        
                     }
                 }
+            } else {
+                // no relationships found on this column, go to next
+                continue 'column;
             }
+            
 
             // determine the physical vector where a positive vector points from control to target, negative, from target to control. The magnitude of the vector is the absolute value of the distance between them
-            if let Some(ctrl) = ctrl {
-                if let Some(targ) = targ {
+            if let Some(targ) = targ {
+                for ctrl in ctrls { 
                     // distance between qubits is the order of the ctrl and targ qubits within the circuit
 
                     // represent inclusive [open, close] brackets of a range
@@ -350,8 +364,6 @@ impl Diagram {
                     }
                     // set wire at column as the control qubit of target qubit computed as the distance from the control qubit
                     self.circuit.get_mut(&ctrl).and_then(|wire| wire.ctrl.insert(c, vector));
-                } else {
-                        panic!("{}", LatexGenError::FoundCNOTWithNoTarget);
                 }
             }
         }
@@ -367,6 +379,8 @@ impl Diagram {
     /// `&mut self` - exposes HashMap<String, Box<Circuit>>
     /// `wire` - the wire to be pushed or updated to in circuits
     fn push_wire(&mut self, wire: Wire) {
+        let qubit = wire.name;
+
         // find wire in circuit collection
         match self.circuit.get_mut(&wire.name) {
             // wire found, push to existing wire
@@ -374,7 +388,7 @@ impl Diagram {
                 // indicate a new item to be added by incrementing column
                 self.column += 1;
 
-                // if wire contains gates to add
+                // get the new gate from the wire and insert into existing wire
                 if let Some(gate) = wire.gates.get(&0) {
                     // add gates to wire in circuit
                     wire_in_circuit.gates.insert(self.column, gate.to_string());
@@ -385,6 +399,22 @@ impl Diagram {
                 self.order.push(wire.name);
                 self.circuit.insert(wire.name, Box::new(wire));
             },
+        }
+
+        // initalize relationships between multi qubit gates
+        if let Some(wire) = self.circuit.get(&qubit) {
+            // get the newly added gate if any at the column it was added
+            if let Some(gate) = wire.gates.get(&self.column) {
+                // tag relationships for multi qubit gates
+                if gate.starts_with('C') {
+                    // add the qubits to the set of related qubits in the current column
+                    if let Some(qubits) = self.relationships.get_mut(&self.column) {
+                        qubits.push(qubit);
+                    } else {
+                        self.relationships.insert(self.column, vec![qubit]);
+                    }
+                }         
+            }
         }
     }
 }
@@ -416,7 +446,7 @@ impl Display for Diagram {
                     if let Some(gate) = wire.gates.get(&c) {
                         line.push_str(" & ");
 
-                        if gate == "CNOT" {
+                        if gate.starts_with('C') {
                             if let Some(targ) = wire.ctrl.get(&c) {
                                 line.push_str(&Command::get_command(Command::Ctrl(targ.to_string())));
 
@@ -515,8 +545,6 @@ impl Latex for Program {
                     for qubit in gate.qubits {
                         match qubit {
                             instruction::Qubit::Fixed(qubit) => {
-                                println!("{qubit}");
-
                                 // create a new wire
                                 let mut wire = Wire::default();
 
@@ -529,23 +557,6 @@ impl Latex for Program {
                                     wire.gates.insert(0, gate.name.clone());   
                                 } else {
                                     if gate.name.starts_with('C') {
-                                        
-                                        // count how many controlled modifiers are in the instruction
-                                        let mut controlleds = 0;
-                                        for modifer in &gate.modifiers {
-                                            match modifer {
-                                                instruction::GateModifier::Controlled => controlleds += 1,
-                                                _ => (),
-                                            }
-                                        }
-
-                                        // count how many 'C's are in the gate name which are controlleds
-                                        for c in gate.name.chars() {
-                                            if c == 'C' {
-                                                controlleds += 1;
-                                            }
-                                        }
-
                                         wire.gates.insert(diagram.column, gate.name.clone());
 
                                         if !has_ctrl_targ {
