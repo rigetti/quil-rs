@@ -279,7 +279,7 @@ impl Diagram {
     /// `&mut self` - self as mutible allowing to update the circuit qubits
     fn set_ctrl_targ(&mut self) {
         // ensure every column preserves the connection between ctrl and targ
-        for c in 0..=self.column {
+        'column: for c in 0..=self.column {
 
             let mut ctrl = None;
             let mut targ = None;
@@ -288,13 +288,17 @@ impl Diagram {
             for qubit in &self.order {
                 // get the wire from the circuit as mutible 
                 if let Some(wire) = self.circuit.get_mut(qubit) {
+                    if let Some(gate) = wire.gates.get(&c) {
+                        if gate != "CNOT" {
+                            continue 'column;
+                        }
 
-                    if let Some(_) = wire.gates.get(&c) {
                         // if ctrl is Some, the remaining qubits are target qubits
                         if let Some(_) = ctrl {
                             // set wire at column as a target qubit
                             wire.targ.insert(c, true);
                             targ = Some(wire.name); // set the target qubit
+                
                 
                         // if ctrl is None, this is the first qubit which is the control
                         } else {
@@ -344,14 +348,10 @@ impl Diagram {
                             }
                         }
                     }
-
-                    // a qubit cannot be a ctrl and targ of itself
-                    if vector == 0 {
-                        LatexGenError::FoundCNOTWithoutCtrlOrTarg{vector};
-                    }
-
                     // set wire at column as the control qubit of target qubit computed as the distance from the control qubit
                     self.circuit.get_mut(&ctrl).and_then(|wire| wire.ctrl.insert(c, vector));
+                } else {
+                        panic!("{}", LatexGenError::FoundCNOTWithNoTarget);
                 }
             }
         }
@@ -422,9 +422,6 @@ impl Display for Diagram {
 
                             } else if let Some(_) = wire.targ.get(&c) {
                                 line.push_str(&Command::get_command(Command::Targ));
-
-                            } else {
-                                LatexGenError::FoundCNOTWithoutCtrlOrTarg{ vector: 0};
                             }
                         } else {
                             line.push_str(&Command::get_command(Command::Gate(gate.to_string())));
@@ -490,8 +487,8 @@ pub enum LatexGenError {
     // TODO: Add variants for each error type using `thiserror` crate to return detailed Result::Err. Example error below.
     #[error("Tried to pop gate from new circuit and append to wire={wire} but found None.")]
     NoGateInInst{wire: String},
-    #[error("Tried to calculate distance between control and target qubits and found {vector}.")]
-    FoundCNOTWithoutCtrlOrTarg{vector: i64},
+    #[error("Tried to parse CNOT and found a control qubit without a target.")]
+    FoundCNOTWithNoTarget,
 }
 
 pub trait Latex {
@@ -611,10 +608,7 @@ mod tests {
     #[test]
     /// Test functionality of to_latex using default settings.
     fn test_to_latex() {
-        // let program = Program::from_str("H 5\nCNOT 5 2\nY 2\nCNOT 2 3")
-        //     .expect("Quil program should be returned");        
-        
-        let program = Program::from_str("CCNOT 1 2 0")
+        let program = Program::from_str("H 5\nCNOT 5 2")
             .expect("Quil program should be returned");
 
         let settings = Settings {impute_missing_qubits: true, ..Default::default()};
@@ -699,6 +693,14 @@ mod tests {
                 "CNOT 1 0",
                 Settings::default()));
         }
+
+        #[test]
+        #[should_panic]
+        fn test_gates_cnot_error_single_qubit() {
+            get_latex(
+                "CNOT 0 0",
+                Settings::default());
+        } 
 
         #[test]
         fn test_gates_h_and_cnot_ctrl_0_targ_1() {
