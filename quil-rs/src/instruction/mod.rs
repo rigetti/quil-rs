@@ -25,12 +25,14 @@ use crate::program::{disallow_leftover, frame::FrameMatchCondition, SyntaxError}
 
 mod calibration;
 mod gate;
+mod measurement;
 
 #[cfg(test)]
 use proptest_derive::Arbitrary;
 
 pub use self::calibration::{Calibration, MeasureCalibrationDefinition};
 pub use self::gate::{Gate, GateDefinition, GateError, GateModifier, GateSpecification, GateType};
+pub use self::measurement::Measurement;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum ArithmeticOperand {
@@ -328,12 +330,6 @@ impl fmt::Display for Declaration {
         }
         Ok(())
     }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Measurement {
-    pub qubit: Qubit,
-    pub target: Option<MemoryReference>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

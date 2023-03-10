@@ -142,22 +142,8 @@ impl CalibrationSet {
                     None => None,
                 }
             }
-            Instruction::Measurement(Measurement { qubit, target }) => {
-                // The matching calibration is the last-specified one that matched the target qubit (if any),
-                // or otherwise the last-specified one that specified no qubit.
-                let mut matching_calibration = None;
-                let mut found_matching_calibration_without_qubit = false;
-                for cal in self.measure_calibrations.iter().rev() {
-                    if let Some(cal_qubit) = &cal.qubit {
-                        if cal_qubit == qubit {
-                            matching_calibration = Some(cal);
-                            break;
-                        }
-                    } else if !found_matching_calibration_without_qubit {
-                        matching_calibration = Some(cal);
-                        found_matching_calibration_without_qubit = true;
-                    }
-                }
+            Instruction::Measurement(measurement) => {
+                let matching_calibration = self.get_match_for_measurement(measurement);
 
                 match matching_calibration {
                     Some(calibration) => {
@@ -168,13 +154,13 @@ impl CalibrationSet {
                                     if pragma.name == "LOAD-MEMORY"
                                         && pragma.data.as_ref() == Some(&calibration.parameter)
                                     {
-                                        if let Some(target) = target {
+                                        if let Some(target) = &measurement.target {
                                             pragma.data = Some(target.to_string())
                                         }
                                     }
                                 }
                                 Instruction::Capture(capture) => {
-                                    if let Some(target) = target {
+                                    if let Some(target) = &measurement.target {
                                         capture.memory_reference = target.clone()
                                     }
                                 }
@@ -211,6 +197,28 @@ impl CalibrationSet {
             }
             None => None,
         })
+    }
+
+    /// Returns the last-specified [`MeasureCalibrationDefinition`] that matches the target
+    /// qubit (if any), or otherwise the last-specified one that specified no qubit.
+    pub fn get_match_for_measurement(
+        &self,
+        measurement: &Measurement,
+    ) -> Option<&MeasureCalibrationDefinition> {
+        let mut matching_calibration = None;
+        let mut found_matching_calibration_without_qubit = false;
+        for cal in self.measure_calibrations.iter().rev() {
+            if let Some(cal_qubit) = &cal.qubit {
+                if cal_qubit == &measurement.qubit {
+                    matching_calibration = Some(cal);
+                    break;
+                }
+            } else if !found_matching_calibration_without_qubit {
+                matching_calibration = Some(cal);
+                found_matching_calibration_without_qubit = true;
+            }
+        }
+        matching_calibration
     }
 
     /// Return the final calibration which matches the gate per the QuilT specification:

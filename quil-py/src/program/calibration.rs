@@ -1,7 +1,9 @@
 use pyo3::prelude::*;
 use quil_rs::{
     expression::Expression,
-    instruction::{Calibration, GateModifier, Instruction, MeasureCalibrationDefinition, Qubit},
+    instruction::{
+        Calibration, GateModifier, Instruction, MeasureCalibrationDefinition, Measurement, Qubit,
+    },
     program::CalibrationSet,
 };
 use rigetti_pyo3::{
@@ -11,7 +13,7 @@ use rigetti_pyo3::{
 
 use crate::instruction::{
     PyCalibration, PyExpression, PyGateModifier, PyInstruction, PyMeasureCalibrationDefinition,
-    PyQubit,
+    PyMeasurement, PyQubit,
 };
 
 use super::ProgramError;
@@ -63,6 +65,17 @@ impl PyCalibrationSet {
             .map_err(ProgramError::from)
             .map_err(ProgramError::to_py_err)?
             .to_python(py)
+    }
+
+    pub fn get_match_for_measurement(
+        &self,
+        py: Python<'_>,
+        measurement: PyMeasurement,
+    ) -> PyResult<Option<PyMeasureCalibrationDefinition>> {
+        Ok(self
+            .as_inner()
+            .get_match_for_measurement(&Measurement::py_try_from(py, &measurement)?)
+            .map(PyMeasureCalibrationDefinition::from))
     }
 
     pub fn get_match_for_gate(
