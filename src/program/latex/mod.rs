@@ -25,6 +25,7 @@
 use std::collections::{BTreeMap, HashMap};
 use std::fmt::{format, Display};
 
+use crate::expression::Expression;
 use crate::instruction;
 use crate::Program;
 
@@ -40,6 +41,8 @@ pub enum Command {
     Rstick(String),
     /// ` \gate{name}`: Make a gate on the wire.
     Gate(String),
+    /// `\phase{symbol}`: Make a phase on the wire with a rotation
+    Phase(String),
     /// `\qw`: Connect the current cell to the previous cell i.e. "do nothing".
     Qw,
     /// `\\`: Start a new row
@@ -75,6 +78,7 @@ impl Command {
             Self::Lstick(wire) => format(format_args!(r#"\lstick{{\ket{{q_{{{wire}}}}}}}"#)),
             Self::Rstick(wire) => format(format_args!(r#"\rstick{{\ket{{q_{{{wire}}}}}}}"#)),
             Self::Gate(name) => format(format_args!(r#"\gate{{{name}}}"#)),
+            Self::Phase(symbol) => format(format_args!(r#"\phase{{{symbol}}}"#)),
             Self::Qw => r"\qw".to_string(),
             Self::Nr => r"\\".to_string(),
             Self::Meter(wire) => format(format_args!(r#"\meter{{{wire}}}"#)),
@@ -83,6 +87,54 @@ impl Command {
             Self::Control => r"\control{}".to_string(),
             Self::Swap(wire) => format(format_args!(r#"\swap{{{wire}}}"#)),
             Self::TargX => r"\targX{}".to_string(),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum Symbol {
+    Alpha,
+    Beta,
+    Gamma,
+    Phi,
+    Pi,
+    Text(String),
+}
+
+impl Symbol {
+    pub fn match_symbol(text: String) -> Symbol {
+        if text == "alpha" {
+            Symbol::Alpha
+        } else if text == "beta" {
+            Symbol::Beta
+        } else if text == "gamma" {
+            Symbol::Gamma
+        } else if text == "phi" {
+            Symbol::Phi
+        } else if text == "pi" {
+            Symbol::Pi
+        } else {
+            Symbol::Text(text)
+        }
+    }
+    /// Returns the LaTeX String for a given Symbol variant.
+    ///
+    /// # Arguments
+    /// `symbol` - A Symbol variant.
+    ///
+    /// # Examples
+    /// ```
+    /// use quil_rs::program::latex::Symbol;
+    /// let alpha = Symbol::get_symbol(Symbol::Alpha);
+    /// ```
+    pub fn get_symbol(symbol: &Parameter) -> String {
+        match symbol {
+            Parameter::Symbol(Symbol::Alpha) => r"\alpha".to_string(),
+            Parameter::Symbol(Symbol::Beta) => r"\beta".to_string(),
+            Parameter::Symbol(Symbol::Gamma) => r"\gamma".to_string(),
+            Parameter::Symbol(Symbol::Phi) => r"\phi".to_string(),
+            Parameter::Symbol(Symbol::Pi) => r"\pi".to_string(),
+            Parameter::Symbol(Symbol::Text(text)) => format(format_args!(r#"\text{{{text}}}"#)),
         }
     }
 }
@@ -109,7 +161,7 @@ impl Default for Settings {
     /// Returns the default Settings.
     fn default() -> Self {
         Self {
-            /// false: π is pi.
+            /// false: pi is π.
             texify_numerical_constants: true,
             /// true: `CNOT 0 2` would have three qubit lines: 0, 1, 2.
             impute_missing_qubits: false,
@@ -447,8 +499,33 @@ impl Display for Diagram {
                                     targ.to_string(),
                                 )));
                             } else if let Some(_) = wire.targ.get(&c) {
-                                line.push_str(&Command::get_command(Command::Targ));
+                                // if this is a target and has a PHASE gate display `\phase{param}`
+                                if gate.contains("PHASE") {
+                                    // set the phase parameters
+                                    if let Some(param) = wire.parameter.get(&c) {
+                                        line.push_str(&Command::get_command(Command::Phase(
+                                            Symbol::get_symbol(&param[0]),
+                                        )));
+                                    }
+                                // if target has a Z gate display `gate{Z}` gate
+                                } else if gate.contains("Z") {
+                                    line.push_str(&Command::get_command(Command::Gate(
+                                        "Z".to_string(),
+                                    )))
+                                // if target has a CNOT gate, display as targ{}
+                                } else {
+                                    line.push_str(&Command::get_command(Command::Targ));
+                                }
                             }
+                        // PHASE gates are displayed as `\phase{param}`
+                        } else if gate.contains("PHASE") {
+                            // set the phase parameters
+                            if let Some(param) = wire.parameter.get(&c) {
+                                line.push_str(&Command::get_command(Command::Phase(
+                                    Symbol::get_symbol(&param[0]),
+                                )));
+                            }
+                        // all other gates display as `\gate{name}`
                         } else {
                             line.push_str(&Command::get_command(Command::Gate(gate.to_string())));
                         }
@@ -480,6 +557,11 @@ impl Display for Diagram {
     }
 }
 
+#[derive(Debug)]
+pub enum Parameter {
+    Symbol(Symbol),
+}
+
 /// A Wire represents a single qubit. A wire only needs to keep track of all
 /// the elements it contains mapped to some arbitrary column. Diagram keeps
 /// track of where the Wire belongs in the larger circuit, its row, and knows
@@ -499,6 +581,8 @@ pub struct Wire {
     ctrl: HashMap<u32, i64>,
     /// at this column is the wire a target?
     targ: HashMap<u32, bool>,
+    /// any parameters that will be
+    parameter: HashMap<u32, Vec<Parameter>>,
 }
 
 impl Default for Wire {
@@ -508,7 +592,30 @@ impl Default for Wire {
             gates: HashMap::new(),
             ctrl: HashMap::new(),
             targ: HashMap::new(),
+            parameter: HashMap::new(),
         }
+    }
+}
+
+impl Wire {
+    /// Retrieves a gates parameters from Expression and matches them with its
+    /// symbolic definition which is then stored into wire at the specific
+    /// column.
+    pub fn set_param(&mut self, param: &Expression, column: u32) {
+        let text: String;
+
+        match param {
+            Expression::Address(mr) => {
+                text = mr.to_string();
+            }
+            Expression::Number(c) => {
+                text = c.re.to_string();
+            }
+            expression => text = expression.to_string(),
+        }
+
+        let param = vec![Parameter::Symbol(Symbol::match_symbol(text))];
+        self.parameter.insert(column, param);
     }
 }
 
@@ -550,6 +657,13 @@ impl Latex for Program {
 
                                 // set name of wire for any qubit variant as String
                                 wire.name = qubit;
+
+                                // set parameters for phase gates
+                                if gate.name.contains("PHASE") {
+                                    for param in &gate.parameters {
+                                        wire.set_param(param, diagram.column);
+                                    }
+                                }
 
                                 // TODO: reduce code duplication
                                 if let Some(_) = diagram.circuit.get(&qubit) {
@@ -622,7 +736,7 @@ mod tests {
     #[test]
     /// Test functionality of to_latex using default settings.
     fn test_to_latex() {
-        let program = Program::from_str("H 5\nCNOT 5 2").expect("Quil program should be returned");
+        let program = Program::from_str("PHASE(pi) 0").expect("Quil program should be returned");
 
         let settings = Settings {
             impute_missing_qubits: true,
@@ -687,6 +801,11 @@ mod tests {
         }
 
         #[test]
+        fn test_gates_phase_pi_rotation() {
+            insta::assert_snapshot!(get_latex("PHASE(pi) 0", Settings::default()));
+        }
+
+        #[test]
         fn test_gates_cnot_ctrl_0_targ_1() {
             insta::assert_snapshot!(get_latex("CNOT 0 1", Settings::default()));
         }
@@ -724,6 +843,16 @@ mod tests {
             let controlled = get_latex("CONTROLLED CNOT 1 2 0", Settings::default());
 
             assert_eq!(ccnot, controlled);
+        }
+
+        #[test]
+        fn test_gate_cphase() {
+            insta::assert_snapshot!(get_latex("CPHASE(pi) 0 1", Settings::default()));
+        }
+
+        #[test]
+        fn test_gate_cz() {
+            insta::assert_snapshot!(get_latex("CZ 0 1", Settings::default()));
         }
     }
 
