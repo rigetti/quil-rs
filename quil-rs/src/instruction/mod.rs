@@ -779,10 +779,9 @@ impl fmt::Display for Instruction {
             Instruction::MeasureCalibrationDefinition(measure_calibration) => {
                 write!(f, "{measure_calibration}")
             }
-            Instruction::Measurement(Measurement { qubit, target }) => match target {
-                Some(reference) => write!(f, "MEASURE {qubit} {reference}"),
-                None => write!(f, "MEASURE {qubit}"),
-            },
+            Instruction::Measurement(measurement) => {
+                write!(f, "{measurement}")
+            }
             Instruction::Move(Move {
                 destination,
                 source,
