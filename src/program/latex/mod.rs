@@ -275,7 +275,7 @@ impl Diagram {
     ///
     /// # Arguments
     /// `&mut self` - self as mutible allowing to update the circuit qubits
-    fn set_ctrl_targ(&mut self) {
+    fn set_ctrl_targ(&mut self) -> Result<(), LatexGenError> {
         // ensure every column preserves the connection between ctrl and targ
         'column: for c in 0..=self.column {
             let mut ctrls = vec![]; // the control qubits
@@ -287,7 +287,7 @@ impl Diagram {
                 for qubit in relationship {
                     // a relationship with one qubit is invalid
                     if relationship.len() < 2 {
-                        panic!("{}", LatexGenError::FoundCNOTWithNoTarget);
+                        return Err(LatexGenError::FoundCNOTWithNoTarget);
                     }
 
                     // the last qubit is the targ
@@ -361,6 +361,8 @@ impl Diagram {
                 }
             }
         }
+
+        Ok(())
     }
 
     /// Takes a new or existing wire and adds or updates it using the name
@@ -587,7 +589,7 @@ impl Latex for Program {
         // only call method for programs with control and target gates
         if has_ctrl_targ {
             // identify control and target qubits
-            diagram.set_ctrl_targ();
+            diagram.set_ctrl_targ()?;
         }
 
         let body = diagram.to_string();
