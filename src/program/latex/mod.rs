@@ -15,11 +15,23 @@
 //! control/target qubits, gates, etc. View [`Quantikz`] for the documentation
 //! on its usage and full set of commands.
 //!
+//!
+//!
+//! TODO
+//! Describe what this module does, how to use it, and what it offers and what
+//! happens when it's used how it shouldn't be (What happens if they try to
+//! generate programs using unimplemented gates).
+//!
+//!
+//!
+//!
 //! This module should be viewed as a self contained partial implementation of
 //! [`Quantikz`] with all available commands listed as variants in a Command
 //! enum. This feature provides the user variability in how they wish to render
 //! their Program circuits with metadata contained in a Settings struct.
 //!
+//! View [`Quantikz`] for the documentation on its usage and full set of
+//! commands.
 //! [`Quantikz`]: https://arxiv.org/pdf/1809.03842.pdf
 
 use std::collections::{BTreeMap, HashMap};
@@ -634,6 +646,10 @@ pub trait Latex {
 }
 
 impl Latex for Program {
+    ///
+    ///
+    ///
+    ///
     fn to_latex(self, settings: Settings) -> Result<String, LatexGenError> {
         // get a reference to the current program
         let instructions = Program::to_instructions(&self, false);
