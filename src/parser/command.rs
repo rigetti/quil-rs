@@ -206,11 +206,10 @@ pub(crate) fn parse_defcal_measure<'a>(
     input: ParserInput<'a>,
 ) -> InternalParserResult<'a, Instruction> {
     let (input, (qubit, destination)) = map(
-        tuple((opt(parse_qubit), opt(token!(Identifier(v))))),
+        tuple((parse_qubit, opt(token!(Identifier(v))))),
         |(a, b)| match (a, b) {
-            (Some(qubit), Some(destination)) => (Some(qubit), destination),
-            (Some(destination), None) => (None, destination.to_string()),
-            _ => panic!("Implement this error"),
+            (qubit, Some(destination)) => (Some(qubit), destination),
+            (destination, None) => (None, destination.to_string()),
         },
     )(input)?;
     let (input, _) = token!(Colon)(input)?;
