@@ -205,6 +205,8 @@ impl CalibrationSet {
         &self,
         measurement: &Measurement,
     ) -> Option<&MeasureCalibrationDefinition> {
+        measurement.target.as_ref()?;
+
         let mut matching_calibration = None;
         let mut found_matching_calibration_without_qubit = false;
         for cal in self.measure_calibrations.iter().rev() {
