@@ -30,6 +30,10 @@ rstest = "0.15.0"
 [features]
 graphviz-dot = ["dot-writer"]
 
+[profile.release]
+lto = true
+codegen-units = 1
+
 [[bench]]
 name = "parser"
 harness = false
