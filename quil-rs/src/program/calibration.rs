@@ -209,7 +209,7 @@ impl CalibrationSet {
         let mut found_matching_calibration_without_qubit = false;
         for cal in self.measure_calibrations.iter().rev() {
             if let Some(cal_qubit) = &cal.qubit {
-                if cal_qubit == &measurement.qubit {
+                if cal_qubit == &measurement.qubit || matches!(cal_qubit, Qubit::Variable(_)) {
                     matching_calibration = Some(cal);
                     break;
                 }
@@ -415,6 +415,8 @@ mod tests {
                     "DEFCAL MEASURE 0 addr:\n",
                     "    PRAGMA INCORRECT_ORDERING\n",
                     "DEFCAL MEASURE 0 addr:\n",
+                    "    PRAGMA CORRECT\n",
+                    "DEFCAL MEASURE q addr:\n",
                     "    PRAGMA CORRECT\n",
                     "DEFCAL MEASURE 1 addr:\n",
                     "    PRAGMA INCORRECT_QUBIT\n",
