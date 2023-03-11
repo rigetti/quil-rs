@@ -43,6 +43,8 @@ pub enum Command {
     Gate(String),
     /// `\phase{symbol}`: Make a phase on the wire with a rotation
     Phase(String),
+    /// `^{\script}`: Add a superscript to a gate
+    Super(String),
     /// `\qw`: Connect the current cell to the previous cell i.e. "do nothing".
     Qw,
     /// `\\`: Start a new row
@@ -79,6 +81,7 @@ impl Command {
             Self::Rstick(wire) => format(format_args!(r#"\rstick{{\ket{{q_{{{wire}}}}}}}"#)),
             Self::Gate(name) => format(format_args!(r#"\gate{{{name}}}"#)),
             Self::Phase(symbol) => format(format_args!(r#"\phase{{{symbol}}}"#)),
+            Self::Super(script) => format(format_args!(r#"^{{\{script}}}"#)),
             Self::Qw => r"\qw".to_string(),
             Self::Nr => r"\\".to_string(),
             Self::Meter(wire) => format(format_args!(r#"\meter{{{wire}}}"#)),
@@ -440,6 +443,13 @@ impl Diagram {
                 if let Some(gate) = wire.gates.get(&0) {
                     // add gates to wire in circuit
                     wire_in_circuit.gates.insert(self.column, gate.to_string());
+
+                    // add modifiers to gate in circuit
+                    if let Some(modifier) = wire.modifiers.get(&0) {
+                        wire_in_circuit
+                            .modifiers
+                            .insert(self.column, modifier.to_vec());
+                    }
                 }
             }
             // no wire found insert new wire
@@ -493,6 +503,18 @@ impl Display for Diagram {
                     if let Some(gate) = wire.gates.get(&c) {
                         line.push_str(" & ");
 
+                        let mut superscript = String::from("");
+                        // attach modifiers to gate name if any
+                        if !wire.modifiers.is_empty() {
+                            if let Some(modifiers) = wire.modifiers.get(&c) {
+                                for modifier in modifiers {
+                                    superscript.push_str(&Command::get_command(Command::Super(
+                                        modifier.to_string(),
+                                    )))
+                                }
+                            }
+                        }
+
                         if gate.starts_with('C') {
                             if let Some(targ) = wire.ctrl.get(&c) {
                                 line.push_str(&Command::get_command(Command::Ctrl(
@@ -502,16 +524,21 @@ impl Display for Diagram {
                                 // if this is a target and has a PHASE gate display `\phase{param}`
                                 if gate.contains("PHASE") {
                                     // set the phase parameters
-                                    if let Some(param) = wire.parameter.get(&c) {
+                                    if let Some(param) = wire.parameters.get(&c) {
                                         line.push_str(&Command::get_command(Command::Phase(
                                             Symbol::get_symbol(&param[0]),
                                         )));
                                     }
                                 // if target has a Z gate display `gate{Z}` gate
                                 } else if gate.contains("Z") {
-                                    line.push_str(&Command::get_command(Command::Gate(
-                                        "Z".to_string(),
-                                    )))
+                                    let mut gate = String::from("Z");
+
+                                    // concatenate superscripts
+                                    if !superscript.is_empty() {
+                                        gate.push_str(&superscript);
+                                    }
+
+                                    line.push_str(&Command::get_command(Command::Gate(gate)))
                                 // if target has a CNOT gate, display as targ{}
                                 } else {
                                     line.push_str(&Command::get_command(Command::Targ));
@@ -520,14 +547,21 @@ impl Display for Diagram {
                         // PHASE gates are displayed as `\phase{param}`
                         } else if gate.contains("PHASE") {
                             // set the phase parameters
-                            if let Some(param) = wire.parameter.get(&c) {
+                            if let Some(param) = wire.parameters.get(&c) {
                                 line.push_str(&Command::get_command(Command::Phase(
                                     Symbol::get_symbol(&param[0]),
                                 )));
                             }
                         // all other gates display as `\gate{name}`
                         } else {
-                            line.push_str(&Command::get_command(Command::Gate(gate.to_string())));
+                            let mut gate = String::from(gate);
+
+                            // concatenate superscripts
+                            if !superscript.is_empty() {
+                                gate.push_str(&superscript);
+                            }
+
+                            line.push_str(&Command::get_command(Command::Gate(gate)));
                         }
                     } else {
                         line.push_str(" & ");
@@ -581,8 +615,10 @@ pub struct Wire {
     ctrl: HashMap<u32, i64>,
     /// at this column is the wire a target?
     targ: HashMap<u32, bool>,
-    /// any parameters that will be
-    parameter: HashMap<u32, Vec<Parameter>>,
+    /// any parameters required at column on the wire for gates
+    parameters: HashMap<u32, Vec<Parameter>>,
+    /// any modifiers added to the wire at column
+    modifiers: HashMap<u32, Vec<String>>,
 }
 
 impl Default for Wire {
@@ -592,7 +628,8 @@ impl Default for Wire {
             gates: HashMap::new(),
             ctrl: HashMap::new(),
             targ: HashMap::new(),
-            parameter: HashMap::new(),
+            parameters: HashMap::new(),
+            modifiers: HashMap::new(),
         }
     }
 }
@@ -615,7 +652,7 @@ impl Wire {
         }
 
         let param = vec![Parameter::Symbol(Symbol::match_symbol(text))];
-        self.parameter.insert(column, param);
+        self.parameters.insert(column, param);
     }
 }
 
@@ -662,6 +699,24 @@ impl Latex for Program {
                                 if gate.name.contains("PHASE") {
                                     for param in &gate.parameters {
                                         wire.set_param(param, diagram.column);
+                                    }
+                                }
+
+                                // set modifers
+                                if !gate.modifiers.is_empty() {
+                                    for modifer in &gate.modifiers {
+                                        match modifer {
+                                            instruction::GateModifier::Dagger => {
+                                                if let Some(modifiers) = wire.modifiers.get_mut(&0)
+                                                {
+                                                    modifiers.push("dagger".to_string())
+                                                } else {
+                                                    wire.modifiers
+                                                        .insert(0, vec!["dagger".to_string()]);
+                                                }
+                                            }
+                                            _ => (),
+                                        }
                                     }
                                 }
 
@@ -736,7 +791,8 @@ mod tests {
     #[test]
     /// Test functionality of to_latex using default settings.
     fn test_to_latex() {
-        let program = Program::from_str("PHASE(pi) 0").expect("Quil program should be returned");
+        let program =
+            Program::from_str("DAGGER DAGGER X 0").expect("Quil program should be returned");
 
         let settings = Settings {
             impute_missing_qubits: true,
@@ -873,11 +929,26 @@ mod tests {
 
             assert_eq!(controlled, ccnot);
         }
+
+        #[test]
+        fn test_modifier_dagger() {
+            insta::assert_snapshot!(get_latex("DAGGER X 0", Settings::default()));
+        }
+
+        #[test]
+        fn test_modifier_dagger_dagger() {
+            insta::assert_snapshot!(get_latex("DAGGER DAGGER Y 0", Settings::default()));
+        }
+
+        #[test]
+        fn test_modifier_dagger_cz() {
+            insta::assert_snapshot!(get_latex("DAGGER CZ 0 1", Settings::default()));
+        }
     }
 
     /// Test module for Quantikz Commands
     mod commands {
-        use crate::program::latex::Command;
+        use crate::program::latex::{Command, Parameter, Symbol};
 
         #[test]
         fn test_command_left_ket() {
@@ -892,6 +963,18 @@ mod tests {
         #[test]
         fn test_command_gate() {
             insta::assert_snapshot!(Command::get_command(Command::Gate("X".to_string())));
+        }
+
+        #[test]
+        fn test_command_phase() {
+            insta::assert_snapshot!(Command::get_command(Command::Phase(Symbol::get_symbol(
+                &Parameter::Symbol(Symbol::Pi)
+            ))));
+        }
+
+        #[test]
+        fn test_command_super() {
+            insta::assert_snapshot!(Command::get_command(Command::Super("dagger".to_string())));
         }
 
         #[test]
