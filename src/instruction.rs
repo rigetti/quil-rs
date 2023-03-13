@@ -16,7 +16,9 @@ use nom_locate::LocatedSpan;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::collections::HashSet;
+use std::pin::Pin;
 use std::str::FromStr;
+use std::sync::Arc;
 use std::{collections::HashMap, fmt};
 
 use crate::expression::Expression;
@@ -1080,7 +1082,50 @@ mod test_instruction_display {
 #[derive(Clone, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
 pub enum Qubit {
     Fixed(u64),
+    #[serde(skip)] // todo
+    Placeholder(QubitPlaceholder),
     Variable(String),
+}
+
+impl Qubit {
+    fn resolve_placeholder<R>(&mut self, resolver: R)
+    where
+        R: Fn(&QubitPlaceholder) -> Option<u64>,
+    {
+        if let Qubit::Placeholder(placeholder) = self {
+            if let Some(resolved) = resolver(placeholder) {
+                *self = Qubit::Fixed(resolved);
+            }
+        }
+    }
+
+    // For comparison, this takes a more active approach than the above, in that it can allocate new indices
+    // using the placeholder. This seems unnecessary and so I've commented it out, but leaving it here
+    // for commentary while in draft
+    // fn resolve_placeholder<I, R>(
+    //     &mut self,
+    //     indices: &mut I,
+    //     resolver: R,
+    // ) -> Result<Option<(QubitPlaceholder, u64)>, ()>
+    // where
+    //     I: Iterator<Item = u64>,
+    //     R: Fn(QubitPlaceholder) -> Option<u64>,
+    // {
+    //     if let Qubit::Placeholder(placeholder) = self {
+    //         if let Some(resolved) = resolver(placeholder.clone()) {
+    //             *self = Qubit::Fixed(resolved);
+    //             Ok(None)
+    //         } else if let Some(next) = indices.next() {
+    //             let return_value = Some((placeholder.clone(), next));
+    //             *self = Qubit::Fixed(next);
+    //             Ok(return_value)
+    //         } else {
+    //             Err(())
+    //         }
+    //     } else {
+    //         Ok(None)
+    //     }
+    // }
 }
 
 impl fmt::Display for Qubit {
@@ -1088,8 +1133,37 @@ impl fmt::Display for Qubit {
         use Qubit::*;
         match self {
             Fixed(value) => write!(f, "{}", value),
+            Placeholder(_) => todo!(),
             Variable(value) => write!(f, "{}", value),
         }
+    }
+}
+
+type QubitPlaceholderInner = Arc<Pin<Box<usize>>>;
+
+/// An opaque placeholder for a qubit whose index may be assigned
+/// at a later time.
+#[derive(Clone, Debug, Eq)]
+pub struct QubitPlaceholder(QubitPlaceholderInner);
+
+impl Default for QubitPlaceholder {
+    fn default() -> Self {
+        use rand::Rng;
+        let value = rand::thread_rng().gen();
+        Self(Arc::new(Box::pin(value)))
+    }
+}
+
+impl std::hash::Hash for QubitPlaceholder {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        (&*self.0 as *const _ as usize).hash(state);
+    }
+}
+
+impl PartialEq for QubitPlaceholder {
+    #[allow(clippy::ptr_eq)]
+    fn eq(&self, other: &Self) -> bool {
+        &*self.0 as *const _ == &*other.0 as *const _
     }
 }
 
@@ -1272,6 +1346,44 @@ impl Instruction {
         }
     }
 
+    /// Return immutable references to the [`Qubit`]s contained within an instruction
+    /// TODO: replace the logic in Program::get_used_qubits with this
+    #[allow(dead_code)]
+    pub(crate) fn get_qubits(&self) -> Vec<&Qubit> {
+        match self {
+            Instruction::Gate(gate) => gate.qubits.iter().collect(),
+            Instruction::Measurement(measurement) => vec![&measurement.qubit],
+            Instruction::Reset(reset) => match &reset.qubit {
+                Some(qubit) => vec![qubit],
+                None => vec![],
+            },
+            Instruction::Delay(delay) => delay.qubits.iter().collect(),
+            Instruction::Fence(fence) => fence.qubits.iter().collect(),
+            Instruction::Capture(capture) => capture.frame.qubits.iter().collect(),
+            Instruction::Pulse(pulse) => pulse.frame.qubits.iter().collect(),
+            Instruction::RawCapture(raw_capture) => raw_capture.frame.qubits.iter().collect(),
+            _ => vec![],
+        }
+    }
+
+    /// Return immutable references to the [`Qubit`]s contained within an instruction
+    pub(crate) fn get_qubits_mut(&mut self) -> Vec<&mut Qubit> {
+        match self {
+            Instruction::Gate(gate) => gate.qubits.iter_mut().collect(),
+            Instruction::Measurement(measurement) => vec![&mut measurement.qubit],
+            Instruction::Reset(reset) => match &mut reset.qubit {
+                Some(qubit) => vec![qubit],
+                None => vec![],
+            },
+            Instruction::Delay(delay) => delay.qubits.iter_mut().collect(),
+            Instruction::Fence(fence) => fence.qubits.iter_mut().collect(),
+            Instruction::Capture(capture) => capture.frame.qubits.iter_mut().collect(),
+            Instruction::Pulse(pulse) => pulse.frame.qubits.iter_mut().collect(),
+            Instruction::RawCapture(raw_capture) => raw_capture.frame.qubits.iter_mut().collect(),
+            _ => vec![],
+        }
+    }
+
     /// Return the waveform _directly_ invoked by the instruction, if any.
     ///
     /// Note: this does not expand calibrations or other instructions which may
@@ -1295,6 +1407,15 @@ impl Instruction {
         let (_, instruction) =
             nom::combinator::all_consuming(parse_instruction)(&lexed).map_err(|e| e.to_string())?;
         Ok(instruction)
+    }
+
+    pub(crate) fn resolve_placeholders<R>(&mut self, qubit_resolver: R)
+    where
+        R: Fn(&QubitPlaceholder) -> Option<u64>,
+    {
+        for qubit in self.get_qubits_mut() {
+            qubit.resolve_placeholder(&qubit_resolver)
+        }
     }
 }
 
@@ -1360,5 +1481,38 @@ RX(%a) 0",
     )]
     fn it_fails_to_parse_memory_reference_from_str(input: &str) {
         assert!(MemoryReference::from_str(input).is_err());
+    }
+
+    mod placeholders {
+        use std::collections::HashMap;
+
+        use crate::instruction::{Qubit, QubitPlaceholder};
+
+        #[test]
+        fn qubit() {
+            let placeholder_1 = QubitPlaceholder::default();
+            let placeholder_2 = QubitPlaceholder::default();
+
+            assert_eq!(placeholder_1, placeholder_1);
+            assert_eq!(placeholder_1, placeholder_1.clone());
+            assert_eq!(placeholder_1.clone(), placeholder_1.clone());
+            assert_ne!(placeholder_1, placeholder_2);
+        }
+
+        #[test]
+        fn qubit_resolution() {
+            let placeholder_1 = QubitPlaceholder::default();
+            let placeholder_2 = QubitPlaceholder::default();
+
+            let resolver = HashMap::from([(placeholder_1.clone(), 1)]);
+
+            let mut qubit_1 = Qubit::Placeholder(placeholder_1);
+            qubit_1.resolve_placeholder(|k| resolver.get(k).copied());
+            assert_eq!(qubit_1, Qubit::Fixed(1));
+
+            let mut qubit_2 = Qubit::Placeholder(placeholder_2.clone());
+            qubit_2.resolve_placeholder(|k| resolver.get(k).copied());
+            assert_eq!(qubit_2, Qubit::Placeholder(placeholder_2));
+        }
     }
 }

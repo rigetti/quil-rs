@@ -45,6 +45,7 @@ impl<'a> MatchedCalibration<'a> {
                 .iter()
                 .filter(|q| match q {
                     Qubit::Fixed(_) => true,
+                    Qubit::Placeholder(_) => false,
                     Qubit::Variable(_) => false,
                 })
                 .count(),
@@ -115,6 +116,7 @@ impl CalibrationSet {
                                                 }
                                             }
                                             Qubit::Fixed(_) => {}
+                                            Qubit::Placeholder(_) => {}
                                         }
                                     }
                                 }
@@ -250,6 +252,7 @@ impl CalibrationSet {
                             (Qubit::Variable(_), _) => true,
                             // If the calibration is fixed, but the gate's qubit is variable, it's not a match
                             (Qubit::Fixed(_), _) => false,
+                            (Qubit::Placeholder(_), _) => false,
                         }
                     });
             if !fixed_qubits_match {

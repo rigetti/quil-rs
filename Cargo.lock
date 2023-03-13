@@ -764,6 +764,7 @@ dependencies = [
  "petgraph",
  "proptest",
  "proptest-derive",
+ "rand",
  "rstest",
  "serde",
  "strum",

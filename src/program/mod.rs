@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::str::FromStr;
 
 use nom_locate::LocatedSpan;
 
 use crate::instruction::{
-    Declaration, FrameDefinition, FrameIdentifier, Instruction, Qubit, Waveform, WaveformDefinition,
+    Declaration, FrameDefinition, FrameIdentifier, Instruction, Qubit, QubitPlaceholder, Waveform,
+    WaveformDefinition,
 };
 use crate::parser::{lex, parse_instructions, ParseError};
 
@@ -215,6 +216,33 @@ impl Program {
             .retain(|name, _definition| waveforms_used.contains(name));
 
         Ok(expanded_program)
+    }
+
+    pub fn resolve_placeholders(&mut self) {
+        let mut qubits_used: HashSet<u64> = HashSet::new();
+        let mut qubit_placeholders: HashSet<QubitPlaceholder> = HashSet::new();
+
+        for qubit in self.get_used_qubits() {
+            match qubit {
+                Qubit::Fixed(index) => {
+                    qubits_used.insert(index);
+                }
+                Qubit::Placeholder(placeholder) => {
+                    qubit_placeholders.insert(placeholder);
+                }
+                _ => {}
+            }
+        }
+
+        let mut qubit_iterator = (0u64..).filter(|index| !qubits_used.contains(index));
+        let qubit_resolutions: HashMap<QubitPlaceholder, u64> = qubit_placeholders
+            .into_iter()
+            .map(|p| (p, qubit_iterator.next().unwrap()))
+            .collect();
+
+        for instruction in &mut self.instructions {
+            instruction.resolve_placeholders(|key| qubit_resolutions.get(key).copied());
+        }
     }
 
     pub fn to_instructions(&self, include_headers: bool) -> Vec<Instruction> {
