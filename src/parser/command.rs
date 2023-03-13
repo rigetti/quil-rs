@@ -16,7 +16,7 @@ use nom::{
     branch::alt,
     combinator::{map, opt},
     multi::{many0, many1, separated_list0, separated_list1},
-    sequence::{delimited, preceded, tuple},
+    sequence::{delimited, pair, preceded, tuple},
 };
 
 use crate::{
@@ -205,13 +205,11 @@ pub(crate) fn parse_defcal_gate<'a>(
 pub(crate) fn parse_defcal_measure<'a>(
     input: ParserInput<'a>,
 ) -> InternalParserResult<'a, Instruction> {
-    let (input, (qubit, destination)) = map(
-        tuple((parse_qubit, opt(token!(Identifier(v))))),
-        |(a, b)| match (a, b) {
-            (qubit, Some(destination)) => (Some(qubit), destination),
-            (destination, None) => (None, destination.to_string()),
-        },
-    )(input)?;
+    let (input, params) = pair(parse_qubit, opt(token!(Identifier(v))))(input)?;
+    let (qubit, destination) = match params {
+        (qubit, Some(destination)) => (Some(qubit), destination),
+        (destination, None) => (None, destination.to_string()),
+    };
     let (input, _) = token!(Colon)(input)?;
     let (input, instructions) = parse_block(input)?;
     Ok((
