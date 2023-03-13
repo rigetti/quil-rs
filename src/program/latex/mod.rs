@@ -133,8 +133,10 @@ impl Symbol {
     ///
     /// # Examples
     /// ```
-    /// use quil_rs::program::latex::Symbol;
-    /// let alpha = Symbol::get_symbol(Symbol::Alpha);
+    /// use quil_rs::program::latex::{Parameter, Symbol};
+    /// let alpha = Symbol::get_symbol(
+    ///     &Parameter::Symbol(Symbol::Alpha)
+    /// );
     /// ```
     pub fn get_symbol(symbol: &Parameter) -> String {
         match symbol {
