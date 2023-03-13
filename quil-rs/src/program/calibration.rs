@@ -17,8 +17,7 @@ use std::collections::HashMap;
 use crate::{
     expression::Expression,
     instruction::{
-        Calibration, Delay, Gate, GateModifier, Instruction, MeasureCalibrationDefinition,
-        Measurement, Qubit,
+        Calibration, Delay, Gate, Instruction, MeasureCalibrationDefinition, Measurement, Qubit,
     },
 };
 
@@ -53,6 +52,16 @@ impl<'a> MatchedCalibration<'a> {
 }
 
 impl CalibrationSet {
+    /// Return all [`Calibration`]s in the set
+    pub fn calibrations(&self) -> &[Calibration] {
+        self.calibrations.as_ref()
+    }
+
+    /// Return all [`MeasureCalibrationDefinition`]s in the set
+    pub fn measure_calibrations(&self) -> &[MeasureCalibrationDefinition] {
+        self.measure_calibrations.as_ref()
+    }
+
     /// Given an instruction, return the instructions to which it is expanded if there is a match.
     /// Recursively calibrate instructions, returning an error if a calibration directly or indirectly
     /// expands into itself.
@@ -65,21 +74,15 @@ impl CalibrationSet {
             return Err(ProgramError::RecursiveCalibration(instruction.clone()));
         }
         let expanded_once_instructions = match instruction {
-            Instruction::Gate(Gate {
-                name,
-                modifiers,
-                parameters,
-                qubits,
-            }) => {
-                let matching_calibration =
-                    self.get_match_for_gate(modifiers, name, parameters, qubits);
+            Instruction::Gate(gate) => {
+                let matching_calibration = self.get_match_for_gate(gate);
 
                 match matching_calibration {
                     Some(calibration) => {
                         let mut qubit_expansions: HashMap<&String, Qubit> = HashMap::new();
                         for (index, calibration_qubit) in calibration.qubits.iter().enumerate() {
                             if let Qubit::Variable(identifier) = calibration_qubit {
-                                qubit_expansions.insert(identifier, qubits[index].clone());
+                                qubit_expansions.insert(identifier, gate.qubits[index].clone());
                             }
                         }
 
@@ -88,7 +91,7 @@ impl CalibrationSet {
                         let variable_expansions: HashMap<String, Expression> = calibration
                             .parameters
                             .iter()
-                            .zip(parameters.iter())
+                            .zip(gate.parameters.iter())
                             .filter_map(|(calibration_expression, gate_expression)| {
                                 if let Expression::Variable(variable_name) = calibration_expression
                                 {
@@ -132,22 +135,8 @@ impl CalibrationSet {
                     None => None,
                 }
             }
-            Instruction::Measurement(Measurement { qubit, target }) => {
-                // The matching calibration is the last-specified one that matched the target qubit (if any),
-                // or otherwise the last-specified one that specified no qubit.
-                let mut matching_calibration = None;
-                let mut found_matching_calibration_without_qubit = false;
-                for cal in self.measure_calibrations.iter().rev() {
-                    if let Some(cal_qubit) = &cal.qubit {
-                        if cal_qubit == qubit {
-                            matching_calibration = Some(cal);
-                            break;
-                        }
-                    } else if !found_matching_calibration_without_qubit {
-                        matching_calibration = Some(cal);
-                        found_matching_calibration_without_qubit = true;
-                    }
-                }
+            Instruction::Measurement(measurement) => {
+                let matching_calibration = self.get_match_for_measurement(measurement);
 
                 match matching_calibration {
                     Some(calibration) => {
@@ -158,13 +147,13 @@ impl CalibrationSet {
                                     if pragma.name == "LOAD-MEMORY"
                                         && pragma.data.as_ref() == Some(&calibration.parameter)
                                     {
-                                        if let Some(target) = target {
+                                        if let Some(target) = &measurement.target {
                                             pragma.data = Some(target.to_string())
                                         }
                                     }
                                 }
                                 Instruction::Capture(capture) => {
-                                    if let Some(target) = target {
+                                    if let Some(target) = &measurement.target {
                                         capture.memory_reference = target.clone()
                                     }
                                 }
@@ -203,6 +192,30 @@ impl CalibrationSet {
         })
     }
 
+    /// Returns the last-specified [`MeasureCalibrationDefinition`] that matches the target
+    /// qubit (if any), or otherwise the last-specified one that specified no qubit.
+    pub fn get_match_for_measurement(
+        &self,
+        measurement: &Measurement,
+    ) -> Option<&MeasureCalibrationDefinition> {
+        measurement.target.as_ref()?;
+
+        let mut matching_calibration = None;
+        let mut found_matching_calibration_without_qubit = false;
+        for cal in self.measure_calibrations.iter().rev() {
+            if let Some(cal_qubit) = &cal.qubit {
+                if cal_qubit == &measurement.qubit || matches!(cal_qubit, Qubit::Variable(_)) {
+                    matching_calibration = Some(cal);
+                    break;
+                }
+            } else if !found_matching_calibration_without_qubit {
+                matching_calibration = Some(cal);
+                found_matching_calibration_without_qubit = true;
+            }
+        }
+        matching_calibration
+    }
+
     /// Return the final calibration which matches the gate per the QuilT specification:
     ///
     /// A calibration matches a gate if:
@@ -212,21 +225,15 @@ impl CalibrationSet {
     /// 4. It has the same parameter count (both specified and unspecified)
     /// 5. All fixed qubits in the calibration definition match those in the gate
     /// 6. All specified parameters in the calibration definition match those in the gate
-    pub fn get_match_for_gate(
-        &self,
-        gate_modifiers: &[GateModifier],
-        gate_name: &str,
-        gate_parameters: &[Expression],
-        gate_qubits: &[Qubit],
-    ) -> Option<&Calibration> {
+    pub fn get_match_for_gate(&self, gate: &Gate) -> Option<&Calibration> {
         let mut matched_calibration: Option<MatchedCalibration> = None;
 
         for calibration in &self.calibrations {
             // Filter out non-matching calibrations: check rules 1-4
-            if calibration.name != gate_name
-                || calibration.modifiers != gate_modifiers
-                || calibration.parameters.len() != gate_parameters.len()
-                || calibration.qubits.len() != gate_qubits.len()
+            if calibration.name != gate.name
+                || calibration.modifiers != gate.modifiers
+                || calibration.parameters.len() != gate.parameters.len()
+                || calibration.qubits.len() != gate.qubits.len()
             {
                 continue;
             }
@@ -239,7 +246,7 @@ impl CalibrationSet {
                     .all(|(calibration_index, _)| {
                         match (
                             &calibration.qubits[calibration_index],
-                            &gate_qubits[calibration_index],
+                            &gate.qubits[calibration_index],
                         ) {
                             // If they're both fixed, test if they're fixed to the same qubit
                             (
@@ -266,7 +273,7 @@ impl CalibrationSet {
                             .clone()
                             .into_simplified();
                         let gate_parameters =
-                            gate_parameters[calibration_index].clone().into_simplified();
+                            gate.parameters[calibration_index].clone().into_simplified();
                         match (calibration_parameters, gate_parameters) {
                             // If the calibration is variable, it matches any fixed qubit
                             (Expression::Variable(_), _) => true,

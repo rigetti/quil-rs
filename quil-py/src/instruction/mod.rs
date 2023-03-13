@@ -14,6 +14,7 @@ pub use self::{
     },
     frame::{PyAttributeValue, PyFrameAttributes, PyFrameDefinition, PyFrameIdentifier},
     gate::{PyGate, PyGateDefinition, PyGateError, PyGateModifier, PyGateSpecification},
+    measurement::PyMeasurement,
     memory_region::{PyMemoryReference, PyMemoryRegion},
     qubit::PyQubit,
     waveform::{PyWaveform, PyWaveformDefinition},
@@ -25,6 +26,7 @@ mod declaration;
 mod expression;
 mod frame;
 mod gate;
+mod measurement;
 mod memory_region;
 mod qubit;
 mod waveform;
@@ -38,6 +40,7 @@ py_wrap_union_enum! {
         gate: Gate => PyGate,
         halt: Halt,
         measure_calibration_definition: MeasureCalibrationDefinition => PyMeasureCalibrationDefinition,
+        measurement: Measurement => PyMeasurement,
         nop: Nop
     }
 }
@@ -56,6 +59,7 @@ create_init_submodule! {
         PyBinaryOperator,
         PyCalibration,
         PyMeasureCalibrationDefinition,
+        PyMeasurement,
         PyDeclaration,
         PyScalarType,
         PyVector,
@@ -71,6 +75,7 @@ create_init_submodule! {
         PyGateDefinition,
         PyGateModifier,
         PyGateSpecification,
+        PyMeasurement,
         PyMemoryReference,
         PyMemoryRegion,
         PyQubit,

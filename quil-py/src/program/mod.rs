@@ -13,9 +13,9 @@ use crate::instruction::{
     PyDeclaration, PyGateDefinition, PyInstruction, PyMemoryRegion, PyQubit, PyWaveform,
 };
 
-pub use self::{calibration_set::PyCalibrationSet, frame::PyFrameSet};
+pub use self::{calibration::PyCalibrationSet, frame::PyFrameSet};
 
-mod calibration_set;
+mod calibration;
 mod frame;
 
 wrap_error!(ProgramError(quil_rs::program::ProgramError));
