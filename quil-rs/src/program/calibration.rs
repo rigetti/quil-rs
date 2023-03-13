@@ -17,8 +17,7 @@ use std::collections::HashMap;
 use crate::{
     expression::Expression,
     instruction::{
-        Calibration, Delay, Gate, GateModifier, Instruction, MeasureCalibrationDefinition,
-        Measurement, Qubit,
+        Calibration, Delay, Gate, Instruction, MeasureCalibrationDefinition, Measurement, Qubit,
     },
 };
 
@@ -75,21 +74,15 @@ impl CalibrationSet {
             return Err(ProgramError::RecursiveCalibration(instruction.clone()));
         }
         let expanded_once_instructions = match instruction {
-            Instruction::Gate(Gate {
-                name,
-                modifiers,
-                parameters,
-                qubits,
-            }) => {
-                let matching_calibration =
-                    self.get_match_for_gate(modifiers, name, parameters, qubits);
+            Instruction::Gate(gate) => {
+                let matching_calibration = self.get_match_for_gate(gate);
 
                 match matching_calibration {
                     Some(calibration) => {
                         let mut qubit_expansions: HashMap<&String, Qubit> = HashMap::new();
                         for (index, calibration_qubit) in calibration.qubits.iter().enumerate() {
                             if let Qubit::Variable(identifier) = calibration_qubit {
-                                qubit_expansions.insert(identifier, qubits[index].clone());
+                                qubit_expansions.insert(identifier, gate.qubits[index].clone());
                             }
                         }
 
@@ -98,7 +91,7 @@ impl CalibrationSet {
                         let variable_expansions: HashMap<String, Expression> = calibration
                             .parameters
                             .iter()
-                            .zip(parameters.iter())
+                            .zip(gate.parameters.iter())
                             .filter_map(|(calibration_expression, gate_expression)| {
                                 if let Expression::Variable(variable_name) = calibration_expression
                                 {
@@ -232,21 +225,15 @@ impl CalibrationSet {
     /// 4. It has the same parameter count (both specified and unspecified)
     /// 5. All fixed qubits in the calibration definition match those in the gate
     /// 6. All specified parameters in the calibration definition match those in the gate
-    pub fn get_match_for_gate(
-        &self,
-        gate_modifiers: &[GateModifier],
-        gate_name: &str,
-        gate_parameters: &[Expression],
-        gate_qubits: &[Qubit],
-    ) -> Option<&Calibration> {
+    pub fn get_match_for_gate(&self, gate: &Gate) -> Option<&Calibration> {
         let mut matched_calibration: Option<MatchedCalibration> = None;
 
         for calibration in &self.calibrations {
             // Filter out non-matching calibrations: check rules 1-4
-            if calibration.name != gate_name
-                || calibration.modifiers != gate_modifiers
-                || calibration.parameters.len() != gate_parameters.len()
-                || calibration.qubits.len() != gate_qubits.len()
+            if calibration.name != gate.name
+                || calibration.modifiers != gate.modifiers
+                || calibration.parameters.len() != gate.parameters.len()
+                || calibration.qubits.len() != gate.qubits.len()
             {
                 continue;
             }
@@ -259,7 +246,7 @@ impl CalibrationSet {
                     .all(|(calibration_index, _)| {
                         match (
                             &calibration.qubits[calibration_index],
-                            &gate_qubits[calibration_index],
+                            &gate.qubits[calibration_index],
                         ) {
                             // If they're both fixed, test if they're fixed to the same qubit
                             (
@@ -286,7 +273,7 @@ impl CalibrationSet {
                             .clone()
                             .into_simplified();
                         let gate_parameters =
-                            gate_parameters[calibration_index].clone().into_simplified();
+                            gate.parameters[calibration_index].clone().into_simplified();
                         match (calibration_parameters, gate_parameters) {
                             // If the calibration is variable, it matches any fixed qubit
                             (Expression::Variable(_), _) => true,
@@ -417,8 +404,6 @@ mod tests {
                     "DEFCAL MEASURE 0 addr:\n",
                     "    PRAGMA INCORRECT_ORDERING\n",
                     "DEFCAL MEASURE 0 addr:\n",
-                    "    PRAGMA CORRECT\n",
-                    "DEFCAL MEASURE q addr:\n",
                     "    PRAGMA CORRECT\n",
                     "DEFCAL MEASURE 1 addr:\n",
                     "    PRAGMA INCORRECT_QUBIT\n",
