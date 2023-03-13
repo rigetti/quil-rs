@@ -59,6 +59,7 @@ create_init_submodule! {
         PyBinaryOperator,
         PyCalibration,
         PyMeasureCalibrationDefinition,
+        PyMeasurement,
         PyDeclaration,
         PyScalarType,
         PyVector,

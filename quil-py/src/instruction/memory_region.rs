@@ -40,6 +40,7 @@ py_wrap_data_struct! {
 impl_repr!(PyMemoryRegion);
 
 py_wrap_data_struct! {
+    #[pyo3(subclass)]
     PyMemoryReference(MemoryReference) as "MemoryReference" {
         name: String => Py<PyString>,
         index: u64 => Py<PyInt>
