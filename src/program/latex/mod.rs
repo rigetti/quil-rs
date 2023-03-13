@@ -717,6 +717,7 @@ impl Latex for Program {
                                     }
                                 }
 
+                                let mut modified_gate = None;
                                 // set modifers
                                 if !gate.modifiers.is_empty() {
                                     for modifer in &gate.modifiers {
@@ -730,6 +731,11 @@ impl Latex for Program {
                                                         .insert(0, vec!["dagger".to_string()]);
                                                 }
                                             }
+                                            instruction::GateModifier::Controlled => {
+                                                let mut modified = String::from('C');
+                                                modified.push_str(&gate.name);
+                                                modified_gate = Some(modified);
+                                            }
                                             _ => (),
                                         }
                                     }
@@ -740,6 +746,8 @@ impl Latex for Program {
                                     // add the gate to the wire at column 0
                                     wire.gates.insert(0, gate.name.clone());
                                 } else {
+                                    // if let Some(modified) =`
+
                                     if gate.name.starts_with('C') {
                                         wire.gates.insert(diagram.column, gate.name.clone());
 
@@ -958,6 +966,32 @@ mod tests {
         #[test]
         fn test_modifier_dagger_cz() {
             insta::assert_snapshot!(get_latex("DAGGER CZ 0 1", Settings::default()));
+        }
+
+        #[test]
+        fn test_program_good_modifiers() {
+            get_latex(
+                r#"Y 0
+CONTROLLED Y 0 1
+CONTROLLED CONTROLLED Y 0 1 2
+CONTROLLED CONTROLLED CONTROLLED Y 0 1 2 3
+
+DAGGER Y 0
+DAGGER DAGGER Y 0
+DAGGER DAGGER DAGGER Y 0
+
+CONTROLLED DAGGER Y 0 1
+CONTROLLED DAGGER CONTROLLED Y 0 1 2
+CONTROLLED DAGGER CONTROLLED DAGGER Y 0 1 2
+
+DEFGATE G:
+    1, 0
+    0, 1
+
+CONTROLLED G 0 1
+DAGGER G 0"#,
+                Settings::default(),
+            );
         }
     }
 
