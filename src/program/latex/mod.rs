@@ -94,6 +94,12 @@ impl Command {
     }
 }
 
+/// Types of parameters passed to commands.
+#[derive(Debug)]
+pub enum Parameter {
+    Symbol(Symbol),
+}
+
 #[derive(Debug)]
 pub enum Symbol {
     Alpha,
@@ -591,11 +597,6 @@ impl Display for Diagram {
     }
 }
 
-#[derive(Debug)]
-pub enum Parameter {
-    Symbol(Symbol),
-}
-
 /// A Wire represents a single qubit. A wire only needs to keep track of all
 /// the elements it contains mapped to some arbitrary column. Diagram keeps
 /// track of where the Wire belongs in the larger circuit, its row, and knows
@@ -638,12 +639,12 @@ impl Wire {
     /// Retrieves a gates parameters from Expression and matches them with its
     /// symbolic definition which is then stored into wire at the specific
     /// column.
-    pub fn set_param(&mut self, param: &Expression, column: u32) {
+    pub fn set_param(&mut self, param: &Expression, column: u32, texify: bool) {
         let text: String;
 
         match param {
             Expression::Address(mr) => {
-                text = mr.to_string();
+                text = mr.name.to_string();
             }
             Expression::Number(c) => {
                 text = c.re.to_string();
@@ -651,7 +652,15 @@ impl Wire {
             expression => text = expression.to_string(),
         }
 
-        let param = vec![Parameter::Symbol(Symbol::match_symbol(text))];
+        let param;
+        // if texify_numerical_constants
+        if texify {
+            // get the matching symbol from text
+            param = vec![Parameter::Symbol(Symbol::match_symbol(text))];
+        } else {
+            // set the symbol as text
+            param = vec![Parameter::Symbol(Symbol::Text(text))];
+        }
         self.parameters.insert(column, param);
     }
 }
@@ -698,7 +707,11 @@ impl Latex for Program {
                                 // set parameters for phase gates
                                 if gate.name.contains("PHASE") {
                                     for param in &gate.parameters {
-                                        wire.set_param(param, diagram.column);
+                                        wire.set_param(
+                                            param,
+                                            diagram.column,
+                                            diagram.settings.texify_numerical_constants,
+                                        );
                                     }
                                 }
 
@@ -1021,6 +1034,44 @@ mod tests {
     /// Test module for Settings
     mod settings {
         use crate::program::latex::{tests::get_latex, Settings};
+
+        #[test]
+        fn test_settings_texify_numerical_constants_true_supported_symbol() {
+            // default texify_numerical_constants is true
+            let settings = Settings {
+                ..Default::default()
+            };
+            insta::assert_snapshot!(get_latex("CPHASE(alpha) 0 1", settings));
+        }
+
+        #[test]
+        fn test_settings_texify_numerical_constants_false_supported_symbol() {
+            let settings = Settings {
+                texify_numerical_constants: false,
+                ..Default::default()
+            };
+            insta::assert_snapshot!(get_latex("CPHASE(alpha) 0 1", settings));
+        }
+
+        #[test]
+        fn test_settings_texify_numerical_constants_unsupported_symbol() {
+            // default texify_numerical_constants is true
+            let settings_true = Settings {
+                ..Default::default()
+            };
+
+            let unsupported_true = get_latex("CPHASE(chi) 0 1", settings_true);
+
+            let settings_false = Settings {
+                texify_numerical_constants: false,
+                ..Default::default()
+            };
+
+            let unsupported_false = get_latex("CPHASE(chi) 0 1", settings_false);
+
+            // unsupported symbols are treated as text regardless of setting
+            assert_eq!(unsupported_true, unsupported_false);
+        }
 
         #[test]
         fn test_settings_label_qubit_lines_false() {
