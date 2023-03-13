@@ -405,6 +405,8 @@ mod tests {
                     "    PRAGMA INCORRECT_ORDERING\n",
                     "DEFCAL MEASURE 0 addr:\n",
                     "    PRAGMA CORRECT\n",
+                    "DEFCAL MEASURE q addr:\n",
+                    "    PRAGMA CORRECT\n",
                     "DEFCAL MEASURE 1 addr:\n",
                     "    PRAGMA INCORRECT_QUBIT\n",
                     "DEFCAL MEASURE addr:\n",
