@@ -348,9 +348,18 @@ impl Diagram {
             if let Some(relationship) = self.relationships.get(&c) {
                 // determine the control and target qubits
                 for qubit in relationship {
-                    // a relationship with one qubit is invalid
+                    // check relationship validity between a gate and single qubit
                     if relationship.len() < 2 {
-                        return Err(LatexGenError::FoundCNOTWithNoTarget);
+                        if let Some(wire) = self.circuit.get(qubit) {
+                            if let Some(gate) = wire.gates.get(&c) {
+                                // a CNOT with a single qubit is invalid
+                                if *gate == "CNOT" {
+                                    return Err(LatexGenError::FoundCNOTWithNoTarget);
+                                }
+                            } else {
+                                continue 'column;
+                            }
+                        }
                     }
 
                     // the last qubit is the targ
@@ -537,9 +546,12 @@ impl Display for Diagram {
                                             Symbol::get_symbol(&param[0]),
                                         )));
                                     }
-                                // if target has a Z gate display `gate{Z}` gate
-                                } else if gate.contains("Z") {
-                                    let mut gate = String::from("Z");
+                                // if target has a CNOT gate, display as targ{}
+                                } else if gate.contains("NOT") {
+                                    line.push_str(&Command::get_command(Command::Targ));
+                                // if target has a 'char' gate display `gate{char}` gate
+                                } else {
+                                    let mut gate = String::from(gate.chars().last().unwrap());
 
                                     // concatenate superscripts
                                     if !superscript.is_empty() {
@@ -547,9 +559,6 @@ impl Display for Diagram {
                                     }
 
                                     line.push_str(&Command::get_command(Command::Gate(gate)))
-                                // if target has a CNOT gate, display as targ{}
-                                } else {
-                                    line.push_str(&Command::get_command(Command::Targ));
                                 }
                             }
                         // PHASE gates are displayed as `\phase{param}`
@@ -702,12 +711,13 @@ impl Latex for Program {
                             instruction::Qubit::Fixed(qubit) => {
                                 // create a new wire
                                 let mut wire = Wire::default();
+                                let mut gate_name = gate.name.clone();
 
                                 // set name of wire for any qubit variant as String
                                 wire.name = qubit;
 
                                 // set parameters for phase gates
-                                if gate.name.contains("PHASE") {
+                                if gate_name.contains("PHASE") {
                                     for param in &gate.parameters {
                                         wire.set_param(
                                             param,
@@ -717,9 +727,9 @@ impl Latex for Program {
                                     }
                                 }
 
-                                let mut modified_gate = None;
                                 // set modifers
                                 if !gate.modifiers.is_empty() {
+                                    let mut modified = gate_name;
                                     for modifer in &gate.modifiers {
                                         match modifer {
                                             instruction::GateModifier::Dagger => {
@@ -732,31 +742,30 @@ impl Latex for Program {
                                                 }
                                             }
                                             instruction::GateModifier::Controlled => {
-                                                let mut modified = String::from('C');
-                                                modified.push_str(&gate.name);
-                                                modified_gate = Some(modified);
+                                                // prepend a C to the gate
+                                                modified.insert_str(0, "C");
                                             }
                                             _ => (),
                                         }
                                     }
+                                    // update gate with modified name
+                                    gate_name = modified;
                                 }
 
                                 // TODO: reduce code duplication
                                 if let Some(_) = diagram.circuit.get(&qubit) {
                                     // add the gate to the wire at column 0
-                                    wire.gates.insert(0, gate.name.clone());
+                                    wire.gates.insert(0, gate_name);
                                 } else {
-                                    // if let Some(modified) =`
-
-                                    if gate.name.starts_with('C') {
-                                        wire.gates.insert(diagram.column, gate.name.clone());
+                                    if gate_name.starts_with('C') {
+                                        wire.gates.insert(diagram.column, gate_name);
 
                                         if !has_ctrl_targ {
                                             has_ctrl_targ = true;
                                         }
                                     } else {
                                         // add the gate to the wire at column 0
-                                        wire.gates.insert(0, gate.name.clone());
+                                        wire.gates.insert(0, gate_name);
                                     }
                                 }
 
