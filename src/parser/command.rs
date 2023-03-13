@@ -383,7 +383,7 @@ pub(crate) fn parse_jump_unless<'a>(
 /// Parse the contents of a `DECLARE` instruction.
 pub(crate) fn parse_label<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Instruction> {
     let (input, name) = token!(Label(v))(input)?;
-    Ok((input, Instruction::Label(Label(name))))
+    Ok((input, Instruction::Label(Label::Fixed(name))))
 }
 
 /// Parse the contents of a `MOVE` instruction.

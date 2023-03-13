@@ -29,14 +29,12 @@ use crate::{instruction::InstructionRole, program::Program};
 pub use super::memory::MemoryAccessType;
 
 #[derive(Debug, Clone)]
+#[non_exhaustive]
 pub enum ScheduleErrorVariant {
     DuplicateLabel,
     UncalibratedInstruction,
     UnschedulableInstruction,
-    // Note: these may be restored once enforced
-    // DurationNotRealConstant,
-    // DurationNotApplicable,
-    // InvalidFrame,
+    UnresolvedPlaceholder,
 }
 
 #[derive(Debug, Clone)]
@@ -490,7 +488,7 @@ fn terminate_working_block(
     match blocks.insert(label.clone(), block) {
         Some(_) => Err(ScheduleError {
             instruction_index,
-            instruction: Instruction::Label(Label(label)),
+            instruction: Instruction::Label(Label::Fixed(label)),
             variant: ScheduleErrorVariant::DuplicateLabel,
         }),
         None => Ok(()),
@@ -559,19 +557,26 @@ impl ScheduledProgram {
                     working_instructions.push(instruction);
                     Ok(())
                 }
-                Instruction::Label(Label(value)) => {
-                    terminate_working_block(
-                        None as Option<BlockTerminator>,
-                        &mut working_instructions,
-                        &mut blocks,
-                        &mut working_label,
-                        program,
-                        instruction_index,
-                    )?;
+                Instruction::Label(label) => match label {
+                    Label::Fixed(label) => {
+                        terminate_working_block(
+                            None as Option<BlockTerminator>,
+                            &mut working_instructions,
+                            &mut blocks,
+                            &mut working_label,
+                            program,
+                            instruction_index,
+                        )?;
 
-                    working_label = Some(value.clone());
-                    Ok(())
-                }
+                        working_label = Some(label.clone());
+                        Ok(())
+                    }
+                    p @ Label::Placeholder(_) => Err(ScheduleError {
+                        instruction_index,
+                        instruction: Instruction::Label(p),
+                        variant: ScheduleErrorVariant::UnresolvedPlaceholder,
+                    }),
+                },
                 Instruction::Jump(Jump { target }) => {
                     terminate_working_block(
                         Some(BlockTerminator::Unconditional {

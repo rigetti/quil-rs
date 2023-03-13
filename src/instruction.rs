@@ -537,7 +537,53 @@ pub struct UnaryLogic {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Label(pub String);
+pub enum Label {
+    Fixed(String),
+    Placeholder(LabelPlaceholder),
+}
+
+impl Label {
+    fn resolve_placeholder<R>(&mut self, resolver: R)
+    where
+        R: Fn(&LabelPlaceholder) -> Option<String>,
+    {
+        if let Label::Placeholder(placeholder) = self {
+            if let Some(resolved) = resolver(placeholder) {
+                *self = Label::Fixed(resolved);
+            }
+        }
+    }
+}
+
+type LabelPlaceholderInner = Arc<Pin<Box<String>>>;
+
+/// An opaque placeholder for a qubit whose index may be assigned
+/// at a later time.
+#[derive(Clone, Debug, Eq)]
+pub struct LabelPlaceholder(LabelPlaceholderInner);
+
+impl LabelPlaceholder {
+    pub fn new(base_label: String) -> Self {
+        Self(Arc::new(Box::pin(base_label)))
+    }
+
+    pub fn as_inner(&self) -> &String {
+        &self.0
+    }
+}
+
+impl std::hash::Hash for LabelPlaceholder {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        (&*self.0 as *const _ as usize).hash(state);
+    }
+}
+
+impl PartialEq for LabelPlaceholder {
+    #[allow(clippy::ptr_eq)]
+    fn eq(&self, other: &Self) -> bool {
+        &*self.0 as *const _ == &*other.0 as *const _
+    }
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Move {
@@ -1023,7 +1069,10 @@ impl fmt::Display for Instruction {
             Instruction::JumpWhen(JumpWhen { condition, target }) => {
                 write!(f, "JUMP-WHEN @{} {}", target, condition)
             }
-            Instruction::Label(Label(label)) => write!(f, "LABEL @{}", label),
+            Instruction::Label(label) => match label {
+                Label::Fixed(label) => write!(f, "LABEL @{}", label),
+                Label::Placeholder(_) => todo!(),
+            },
             Instruction::Comparison(Comparison { operator, operands }) => {
                 write!(
                     f,
@@ -1409,12 +1458,20 @@ impl Instruction {
         Ok(instruction)
     }
 
-    pub(crate) fn resolve_placeholders<R>(&mut self, qubit_resolver: R)
+    pub(crate) fn resolve_placeholders<LR, QR>(&mut self, label_resolver: LR, qubit_resolver: QR)
     where
-        R: Fn(&QubitPlaceholder) -> Option<u64>,
+        LR: Fn(&LabelPlaceholder) -> Option<String>,
+        QR: Fn(&QubitPlaceholder) -> Option<u64>,
     {
-        for qubit in self.get_qubits_mut() {
-            qubit.resolve_placeholder(&qubit_resolver)
+        match self {
+            Instruction::Label(label) => {
+                label.resolve_placeholder(label_resolver);
+            }
+            other => {
+                for qubit in other.get_qubits_mut() {
+                    qubit.resolve_placeholder(&qubit_resolver);
+                }
+            }
         }
     }
 }
@@ -1486,7 +1543,37 @@ RX(%a) 0",
     mod placeholders {
         use std::collections::HashMap;
 
-        use crate::instruction::{Qubit, QubitPlaceholder};
+        use crate::instruction::{Label, LabelPlaceholder, Qubit, QubitPlaceholder};
+
+        #[test]
+        fn label() {
+            let placeholder_1 = LabelPlaceholder::new(String::from("label"));
+            let placeholder_2 = LabelPlaceholder::new(String::from("label"));
+            let placeholder_3 = LabelPlaceholder::new(String::from("other"));
+
+            assert_eq!(placeholder_1, placeholder_1);
+            assert_eq!(placeholder_1, placeholder_1.clone());
+            assert_eq!(placeholder_1.clone(), placeholder_1.clone());
+            assert_ne!(placeholder_1, placeholder_2);
+            assert_ne!(placeholder_2, placeholder_3);
+            assert_ne!(placeholder_1, placeholder_3);
+        }
+
+        #[test]
+        fn label_resolution() {
+            let placeholder_1 = LabelPlaceholder::new(String::from("label"));
+            let placeholder_2 = LabelPlaceholder::new(String::from("label"));
+
+            let resolver = HashMap::from([(placeholder_1.clone(), String::from("label_1"))]);
+
+            let mut label_1 = Label::Placeholder(placeholder_1);
+            label_1.resolve_placeholder(|k| resolver.get(k).cloned());
+            assert_eq!(label_1, Label::Fixed(String::from("label_1")));
+
+            let mut label_2 = Label::Placeholder(placeholder_2.clone());
+            label_2.resolve_placeholder(|k| resolver.get(k).cloned());
+            assert_eq!(label_2, Label::Placeholder(placeholder_2));
+        }
 
         #[test]
         fn qubit() {

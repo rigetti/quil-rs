@@ -609,7 +609,7 @@ mod tests {
         parse_instructions,
         "LABEL @hello\nJUMP @hello\nJUMP-WHEN @hello ro",
         vec![
-            Instruction::Label(Label("hello".to_owned())),
+            Instruction::Label(Label::Fixed("hello".to_owned())),
             Instruction::Jump(Jump {
                 target: "hello".to_owned()
             }),

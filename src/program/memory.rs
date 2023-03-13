@@ -18,9 +18,9 @@ use crate::expression::Expression;
 use crate::instruction::{
     Arithmetic, ArithmeticOperand, BinaryLogic, BinaryOperand, Capture, CircuitDefinition,
     Comparison, ComparisonOperand, Delay, Exchange, Gate, GateDefinition, GateSpecification,
-    Instruction, Jump, JumpUnless, JumpWhen, Label, Load, MeasureCalibrationDefinition,
-    Measurement, MemoryReference, Move, Pulse, RawCapture, SetPhase, SetScale, ShiftPhase, Store,
-    UnaryLogic, Vector, WaveformInvocation,
+    Instruction, Jump, JumpUnless, JumpWhen, Load, MeasureCalibrationDefinition, Measurement,
+    MemoryReference, Move, Pulse, RawCapture, SetPhase, SetScale, ShiftPhase, Store, UnaryLogic,
+    Vector, WaveformInvocation,
 };
 
 #[derive(Clone, Debug, Hash, PartialEq)]
@@ -262,7 +262,7 @@ impl Instruction {
             | Instruction::Halt
             | Instruction::Include(_)
             | Instruction::Jump(Jump { target: _ })
-            | Instruction::Label(Label(_))
+            | Instruction::Label(_)
             | Instruction::Nop
             | Instruction::Pragma(_)
             | Instruction::Reset(_)

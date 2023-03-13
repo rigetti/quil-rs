@@ -18,8 +18,8 @@ use std::str::FromStr;
 use nom_locate::LocatedSpan;
 
 use crate::instruction::{
-    Declaration, FrameDefinition, FrameIdentifier, Instruction, Qubit, QubitPlaceholder, Waveform,
-    WaveformDefinition,
+    Declaration, FrameDefinition, FrameIdentifier, Instruction, Label, LabelPlaceholder, Qubit,
+    QubitPlaceholder, Waveform, WaveformDefinition,
 };
 use crate::parser::{lex, parse_instructions, ParseError};
 
@@ -160,6 +160,16 @@ impl Program {
             .map(|condition| self.frames.get_matching_keys(condition))
     }
 
+    fn get_labels(&self) -> Vec<&Label> {
+        self.instructions
+            .iter()
+            .filter_map(|i| match i {
+                Instruction::Label(label) => Some(label),
+                _ => None,
+            })
+            .collect()
+    }
+
     /// Returns a HashSet consisting of every Qubit that is used in the program.
     pub fn get_used_qubits(&self) -> HashSet<Qubit> {
         self.instructions
@@ -240,8 +250,44 @@ impl Program {
             .map(|p| (p, qubit_iterator.next().unwrap()))
             .collect();
 
+        let mut fixed_labels = HashSet::new();
+        let mut label_placeholders = HashSet::new();
+
+        for label in self.get_labels() {
+            match label {
+                Label::Fixed(fixed) => {
+                    fixed_labels.insert(fixed.clone());
+                }
+                Label::Placeholder(placeholder) => {
+                    label_placeholders.insert(placeholder.clone());
+                }
+            }
+        }
+
+        let label_resolutions: HashMap<LabelPlaceholder, String> = label_placeholders
+            .into_iter()
+            .map(|p| {
+                let base_label = p.as_inner();
+                let mut next_suffix = 0;
+
+                loop {
+                    let next_label = format!("{base_label}_{next_suffix}");
+
+                    if !fixed_labels.contains(&next_label) {
+                        fixed_labels.insert(next_label.clone());
+                        break (p, next_label);
+                    }
+
+                    next_suffix += 1;
+                }
+            })
+            .collect();
+
         for instruction in &mut self.instructions {
-            instruction.resolve_placeholders(|key| qubit_resolutions.get(key).copied());
+            instruction.resolve_placeholders(
+                |key| label_resolutions.get(key).cloned(),
+                |key| qubit_resolutions.get(key).copied(),
+            );
         }
     }
 
