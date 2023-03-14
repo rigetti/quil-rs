@@ -9,8 +9,10 @@ from quil.instructions import (
     MeasureCalibrationDefinition,
     Measurement,
     Instruction,
+    Gate,
 )
 
+@final
 class CalibrationSet:
     @staticmethod
     def __new__(
@@ -40,8 +42,18 @@ class CalibrationSet:
         qubit (if any), or otherwise the last-specified one that specified no qubit.
         """
         ...
-    # def get_match_for_gate(self, gate_modifiers: List[GateModifier], gate_name: str, gate_parameters: List[Expression], gate_qubits: List[Qubit])
+    def get_match_for_gate(self, gate: Gate) -> Optional[Calibration]:
+        """
+        Return the final calibration which matches the gate per the QuilT specification:
 
+        A calibration matches a gate if:
+        1. It has the same name
+        2. It has the same modifiers
+        3. It has the same qubit count (any mix of fixed & variable)
+        4. It has the same parameter count (both specified and unspecified)
+        5. All fixed qubits in the calibration definition match those in the gate
+        6. All specified parameters in the calibration definition match those in the gate
+        """
     def __len__(self) -> int: ...
     def is_empty(self) -> bool:
         """Returns ``True`` if the ``CalibrationSet`` contains no data."""

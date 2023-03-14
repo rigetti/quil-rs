@@ -35,6 +35,7 @@ py_wrap_union_enum! {
     #[derive(Debug)]
     PyInstruction(Instruction) as "Instruction" {
         arithmetic: Arithmetic => PyArithmetic,
+        binary_logic: BinaryLogic => PyBinaryLogic,
         calibration_definition: CalibrationDefinition => PyCalibration,
         declaration: Declaration => PyDeclaration,
         gate: Gate => PyGate,
