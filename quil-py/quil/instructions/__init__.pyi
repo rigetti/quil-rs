@@ -379,6 +379,7 @@ class FrameIdentifier:
     @qubits.setter
     def qubits(self, qubits: List[Qubit]): ...
 
+@final
 class GateModifier(Enum):
     Controlled = "CONTROLLED"
     Dagger = "DAGGER"
@@ -419,6 +420,7 @@ class Gate:
         """
         ...
 
+@final
 class GateSpecification:
     """
     A specification for a gate definition.
@@ -434,6 +436,11 @@ class GateSpecification:
         - from_*: Creates a new ``GateSpecification`` using an instance of the inner type for the variant.
     """
 
+    def inner(self) -> Union[List[List[Expression]], List[int]]:
+        """
+        Returns the inner value of the variant. Raises a ``RuntimeError`` if inner data doesn't exist.
+        """
+        ...
     def is_matrix(self) -> bool: ...
     def is_permutation(self) -> bool: ...
     def as_matrix(self) -> Optional[List[List[Expression]]]: ...

@@ -93,6 +93,8 @@ py_wrap_union_enum! {
 impl_repr!(PyGateSpecification);
 
 py_wrap_data_struct! {
+    #[derive(Debug)]
+    #[pyo3(subclass)]
     PyGateDefinition(GateDefinition) as "GateDefinition" {
         name: String => Py<PyString>,
         parameters: Vec<String> => Vec<Py<PyString>>,
