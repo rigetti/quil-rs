@@ -16,11 +16,6 @@ pub use self::{
     waveform::{PyWaveform, PyWaveformDefinition},
 };
 
-use super::expression::{
-    PyExpression, PyExpressionFunction, PyFunctionCallExpression, PyInfixExpression,
-    PyInfixOperator,
-};
-
 mod arithmetic;
 mod calibration;
 mod declaration;
@@ -38,6 +33,7 @@ py_wrap_union_enum! {
         binary_logic: BinaryLogic => PyBinaryLogic,
         calibration_definition: CalibrationDefinition => PyCalibration,
         declaration: Declaration => PyDeclaration,
+        frame_definition: FrameDefinition => PyFrameDefinition,
         gate: Gate => PyGate,
         halt: Halt,
         measure_calibration_definition: MeasureCalibrationDefinition => PyMeasureCalibrationDefinition,
@@ -67,11 +63,6 @@ create_init_submodule! {
         PyDeclaration,
         PyScalarType,
         PyVector,
-        PyExpression,
-        PyExpressionFunction,
-        PyFunctionCallExpression,
-        PyInfixExpression,
-        PyInfixOperator,
         PyAttributeValue,
         PyFrameDefinition,
         PyFrameIdentifier,

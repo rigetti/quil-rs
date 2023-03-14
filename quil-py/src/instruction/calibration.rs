@@ -10,7 +10,8 @@ use rigetti_pyo3::{
 };
 
 use crate::{
-    instruction::{PyExpression, PyGateModifier, PyInstruction, PyQubit},
+    expression::PyExpression,
+    instruction::{PyGateModifier, PyInstruction, PyQubit},
     validation::identifier::IdentifierValidationError,
 };
 

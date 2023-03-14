@@ -15,7 +15,8 @@ use rigetti_pyo3::{
     wrap_error, PyTryFrom, PyWrapper, ToPython, ToPythonError,
 };
 
-use super::{PyExpression, PyQubit};
+use super::PyQubit;
+use crate::expression::PyExpression;
 
 wrap_error!(GateError(quil_rs::instruction::GateError));
 py_wrap_error!(quil, GateError, PyGateError, PyValueError);

@@ -26,6 +26,7 @@ use crate::program::{disallow_leftover, frame::FrameMatchCondition, SyntaxError}
 mod arithmetic;
 mod calibration;
 mod declaration;
+mod frame;
 mod gate;
 mod measurement;
 
@@ -38,6 +39,7 @@ pub use self::arithmetic::{
 };
 pub use self::calibration::{Calibration, MeasureCalibrationDefinition};
 pub use self::declaration::{Declaration, ScalarType, Vector};
+pub use self::frame::{AttributeValue, FrameAttributes, FrameDefinition, FrameIdentifier};
 pub use self::gate::{Gate, GateDefinition, GateError, GateModifier, GateSpecification, GateType};
 pub use self::measurement::Measurement;
 
@@ -95,39 +97,9 @@ impl fmt::Display for ComparisonOperator {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum AttributeValue {
-    String(String),
-    Expression(Expression),
-}
-
-impl fmt::Display for AttributeValue {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use AttributeValue::*;
-        match self {
-            String(value) => write!(f, "\"{value}\""),
-            Expression(value) => write!(f, "{value}"),
-        }
-    }
-}
-
-pub type FrameAttributes = HashMap<String, AttributeValue>;
-
-#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Convert {
     pub from: MemoryReference,
     pub to: MemoryReference,
-}
-
-#[derive(Clone, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
-pub struct FrameIdentifier {
-    pub name: String,
-    pub qubits: Vec<Qubit>,
-}
-
-impl fmt::Display for FrameIdentifier {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} \"{}\"", format_qubits(&self.qubits), self.name)
-    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -242,12 +214,6 @@ pub struct Delay {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Fence {
     pub qubits: Vec<Qubit>,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct FrameDefinition {
-    pub identifier: FrameIdentifier,
-    pub attributes: HashMap<String, AttributeValue>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -627,18 +593,9 @@ impl fmt::Display for Instruction {
                     write!(f, "FENCE {}", format_qubits(qubits))
                 }
             }
-            Instruction::FrameDefinition(FrameDefinition {
-                identifier,
-                attributes,
-            }) => write!(
-                f,
-                "DEFFRAME {}:{}",
-                identifier,
-                attributes
-                    .iter()
-                    .map(|(k, v)| format!("\n\t{k}: {v}"))
-                    .collect::<String>()
-            ),
+            Instruction::FrameDefinition(frame_defintion) => {
+                write!(f, "{frame_defintion}")
+            }
             Instruction::Gate(gate) => {
                 write!(f, "{gate}")
             }

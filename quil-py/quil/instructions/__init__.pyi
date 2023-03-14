@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import List, Optional, Union, final
+from typing import Dict, List, Optional, Union, final
 
 from quil.expression import Expression
 
@@ -12,9 +12,10 @@ class Instruction:
         ``arithmetic``: An arithmetic expression defined by an ``Arithmetic``.
         ``binary_logic``: A binary expression defined by a ``BinaryLogic``.
         ``calibration_definition``: Corresponds to a `DEFCAL` instruction (not `DEFCAL MEASURE`)
-            defined by a ``Calibration``
-        ``declaration``: Corresponds to a `DECLARE` statement defined by a ``Declaration``
-        ``gate``: A Quil quantum gate instruction defined by a ``Gate``
+            defined by a ``Calibration``.
+        ``declaration``: Corresponds to a `DECLARE` statement defined by a ``Declaration``.
+        ``frame_definition``: Corresponds to a `DEFFRAME` statement, defined by a ``FrameDefinition``.
+        ``gate``: A Quil quantum gate instruction defined by a ``Gate``.
         ``halt``: Corresponds to the `HALT` instruction. No inner data.
         ``measure_calibration_definition``: Corresponds to a `DEFCAL MEASURE` instruction. Defined by a ``MeasureCalibrationDefinition``.
         ``nop``: Corresponds to the `NOP` instruction. No inner data.
@@ -43,6 +44,7 @@ class Instruction:
         Calibration,
         BinaryLogic,
         Declaration,
+        FrameDefinition,
         Gate,
         MeasureCalibrationDefinition,
         Measurement,
@@ -55,6 +57,7 @@ class Instruction:
     def is_binary_logic(self) -> bool: ...
     def is_calibration_definition(self) -> bool: ...
     def is_declaration(self) -> bool: ...
+    def is_frame_definition(self) -> bool: ...
     def is_gate(self) -> bool: ...
     def is_halt(self) -> bool: ...
     def is_measure_calibration_definition(self) -> bool: ...
@@ -73,6 +76,8 @@ class Instruction:
     @staticmethod
     def from_declaration(declaration: Declaration) -> "Instruction": ...
     @staticmethod
+    def from_frame_definition(frame_definition: FrameDefinition) -> "Instruction": ...
+    @staticmethod
     def from_gate(gate: Gate) -> "Instruction": ...
     @staticmethod
     def from_measure_calibration_definition(
@@ -86,6 +91,8 @@ class Instruction:
     def to_arithmetic(self) -> Arithmetic: ...
     def as_declaration(self) -> Optional[Declaration]: ...
     def to_declaration(self) -> Declaration: ...
+    def as_frame_definition(self) -> Optional[FrameDefinition]: ...
+    def to_frame_definition(self) -> FrameDefinition: ...
     def as_binary_logic(self) -> Optional[BinaryLogic]: ...
     def to_binary_logic(self) -> BinaryLogic: ...
     def as_calibration_definition(self) -> Optional[Calibration]: ...
@@ -182,7 +189,7 @@ class BinaryOperand:
         ``from_*``: Creates a new ``BinaryOperand`` of the given variant from an instance of the inner type.
     """
 
-    def inner(self) -> Union[int, float, MemoryReference]:
+    def inner(self) -> Union[int, MemoryReference]:
         """
         Returns the inner value of the variant. Raises a ``RuntimeError`` if inner data doesn't exist.
         """
@@ -311,6 +318,67 @@ class ScalarType(Enum):
     Octet = "OCTET"
     Real = "REAL"
 
+@final
+class AttributeValue:
+    """
+    A Quil instruction. Each variant corresponds to a possible type of Quil instruction.
+
+    Variants:
+        ``string``: A string attribute containing a ``str``.
+        ``expression``: An expression attribute containing an ``Expression``.
+
+    Methods (for each variant):
+        ``is_*``: Returns ``True`` if the ``AttributeValue`` is that variant, ``False`` otherwise.
+
+        ``as_*``: Returns the inner data if it is the given variant, ``None`` otherwise.
+        ``to_*``: Returns the inner data if it is the given variant, raises ``ValueError`` otherwise.
+        ``from_*``: Creates a new ``AttributeValue`` of the given variant from an instance of the inner type.
+    """
+
+    def inner(self) -> Union[str, Expression]:
+        """
+        Returns the inner value of the variant. Raises a ``RuntimeError`` if inner data doesn't exist.
+        """
+        ...
+    def is_string(self) -> bool: ...
+    def is_expression(self) -> bool: ...
+    @staticmethod
+    def from_string(string: str) -> "AttributeValue": ...
+    @staticmethod
+    def from_expression(expression: Expression) -> "AttributeValue": ...
+    def as_string(self) -> Optional[str]: ...
+    def to_string(self) -> str: ...
+    def as_expression(self) -> Optional[Expression]: ...
+    def to_expression(self) -> Expression: ...
+
+class FrameDefinition:
+    @staticmethod
+    def __new__(
+        cls,
+        identifier: FrameIdentifier,
+        attributes: Dict[str, AttributeValue],
+    ) -> "FrameDefinition": ...
+    @property
+    def identifier(self) -> FrameIdentifier: ...
+    @identifier.setter
+    def identifier(self, identifier: FrameIdentifier): ...
+    @property
+    def attributes(self) -> Dict[str, AttributeValue]: ...
+    @attributes.setter
+    def attributes(self, identifier: Dict[str, AttributeValue]): ...
+
+class FrameIdentifier:
+    @staticmethod
+    def __new__(cls, name: str, qubits: List[Qubit]) -> "FrameIdentifier": ...
+    @property
+    def name(self) -> str: ...
+    @name.setter
+    def name(self, name: str): ...
+    @property
+    def qubits(self) -> List[Qubit]: ...
+    @qubits.setter
+    def qubits(self, qubits: List[Qubit]): ...
+
 class GateModifier(Enum):
     Controlled = "CONTROLLED"
     Dagger = "DAGGER"
@@ -408,7 +476,7 @@ class Qubit:
         - from_*: Creates a new ``Qubit`` using an instance of the inner type for the variant.
     """
 
-    def inner(self) -> Union[int, float, MemoryReference]:
+    def inner(self) -> Union[int, str]:
         """
         Returns the inner value of the variant. Raises a ``RuntimeError`` if inner data doesn't exist.
         """
