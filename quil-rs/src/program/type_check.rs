@@ -5,9 +5,9 @@ use crate::{
     expression::{Expression, FunctionCallExpression, InfixExpression, PrefixExpression},
     instruction::{
         Arithmetic, ArithmeticOperand, ArithmeticOperator, BinaryLogic, BinaryOperand,
-        BinaryOperator, Comparison, ComparisonOperand, ComparisonOperator, Exchange, Instruction,
-        Load, MemoryReference, Move, ScalarType, SetFrequency, SetPhase, SetScale, ShiftFrequency,
-        ShiftPhase, Store, UnaryLogic, UnaryOperator,
+        BinaryOperands, BinaryOperator, Comparison, ComparisonOperand, ComparisonOperator,
+        Exchange, Instruction, Load, MemoryReference, Move, ScalarType, SetFrequency, SetPhase,
+        SetScale, ShiftFrequency, ShiftPhase, Store, UnaryLogic, UnaryOperator,
     },
     program::MemoryRegion,
     Program,
@@ -344,7 +344,7 @@ fn type_check_comparison(
 fn type_check_binary_logic(
     instruction: &Instruction,
     operator: &BinaryOperator,
-    operands: &(MemoryReference, BinaryOperand),
+    operands: &BinaryOperands,
     memory_regions: &BTreeMap<String, MemoryRegion>,
 ) -> TypeResult<()> {
     let (x, y) = operands;

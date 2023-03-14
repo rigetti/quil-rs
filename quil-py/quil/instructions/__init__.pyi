@@ -1,14 +1,5 @@
-from typing import Optional
-
-from _calibration import Calibration, MeasureCalibrationDefinition
-from _gate import (
-    Gate as Gate,
-    GateSpecification as GateSpecification,
-    GateModifier as GateModifier,
-    GateDefinition as GateDefinition,
-)
-from _expression import Expression as Expression
-from _qubit import Qubit as Qubit
+from enum import Enum
+from typing import List, Optional, Union, final
 
 class Instruction:
     """
@@ -68,3 +59,349 @@ class Instruction:
         self,
     ) -> Optional[MeasureCalibrationDefinition]: ...
     def to_measure_calibration_definition(self) -> MeasureCalibrationDefinition: ...
+
+@final
+class ArithmeticOperand:
+    """
+    A Quil arithmetic operand.
+
+    Variants:
+        ``literal_integer``: An integer literal.
+        ``literal_real``: A real numbered literal.
+        ``memory_reference``: A Quil ``MemoryReference``.
+
+    Methods (for each variant):
+        ``is_*``: Returns ``True`` if the operand is that variant, ``False`` otherwise.
+        ``as_*``: Returns the inner data if it is the given variant, ``None`` otherwise.
+        ``to_*``: Returns the inner data if it is the given variant, raises ``ValueError`` otherwise.
+        ``from_*``: Creates a new ``ArithmeticOperand`` of the given variant from an instance of the inner type.
+    """
+
+    def inner(self) -> Union[int, float, MemoryReference]:
+        """
+        Returns the inner value of the variant. Raises a ``RuntimeError`` if inner data doesn't exist.
+        """
+        ...
+    def is_literal_integer(self) -> bool: ...
+    def is_literal_real(self) -> bool: ...
+    def is_memory_reference(self) -> bool: ...
+    def as_literal_integer(self) -> Optional[int]: ...
+    def as_literal_real(self) -> Optional[float]: ...
+    def as_memory_reference(self) -> Optional[MemoryReference]: ...
+    def to_literal_integer(self) -> int: ...
+    def to_literal_real(self) -> float: ...
+    def to_memory_reference(self) -> MemoryReference: ...
+    def from_literal_integer(self, literal: int) -> "ArithmeticOperand": ...
+    def from_literal_real(self, literal: float) -> "ArithmeticOperand": ...
+    def from_memory_reference(
+        self, memory_reference: MemoryReference
+    ) -> "ArithmeticOperand": ...
+
+@final
+class ArithmeticOperator(Enum):
+    Add = "Add"
+    Subtract = "Subtract"
+    Divide = "Divide"
+    Multiply = "Multiply"
+
+class Arithmetic:
+    @staticmethod
+    def __new__(
+        cls,
+        operator: ArithmeticOperator,
+        destination: ArithmeticOperand,
+        source: ArithmeticOperand,
+    ) -> "Arithmetic": ...
+    @property
+    def operator(self) -> ArithmeticOperator: ...
+    @operator.setter
+    def operator(self, operator: ArithmeticOperator): ...
+    @property
+    def destination(self) -> ArithmeticOperand: ...
+    @destination.setter
+    def destination(self, operand: ArithmeticOperand): ...
+    @property
+    def source(self) -> ArithmeticOperand: ...
+    @source.setter
+    def source(self, operand: ArithmeticOperand): ...
+
+@final
+class BinaryOperand:
+    """
+    A Quil binary operand.
+
+    Variants:
+        ``literal_integer``: An integer literal.
+        ``memory_reference``: A Quil ``MemoryReference``.
+
+    Methods (for each variant):
+        ``is_*``: Returns ``True`` if the operand is that variant, ``False`` otherwise.
+        ``as_*``: Returns the inner data if it is the given variant, ``None`` otherwise.
+        ``to_*``: Returns the inner data if it is the given variant, raises ``ValueError`` otherwise.
+        ``from_*``: Creates a new ``BinaryOperand`` of the given variant from an instance of the inner type.
+    """
+
+    def inner(self) -> Union[int, float, MemoryReference]:
+        """
+        Returns the inner value of the variant. Raises a ``RuntimeError`` if inner data doesn't exist.
+        """
+        ...
+    def is_literal_integer(self) -> bool: ...
+    def is_memory_reference(self) -> bool: ...
+    def as_literal_integer(self) -> Optional[int]: ...
+    def as_memory_reference(self) -> Optional[MemoryReference]: ...
+    def to_literal_integer(self) -> int: ...
+    def to_memory_reference(self) -> MemoryReference: ...
+    def from_literal_integer(self, literal: int) -> "ArithmeticOperand": ...
+    def from_memory_reference(
+        self, memory_reference: MemoryReference
+    ) -> "ArithmeticOperand": ...
+
+@final
+class BinaryOperator(Enum):
+    And = "AND"
+    Ior = "IOR"
+    Xor = "Xor"
+
+class BinaryOperands:
+    @staticmethod
+    def __new__(
+        cls,
+        memory_reference: MemoryReference,
+        operand: BinaryOperand,
+    ) -> "BinaryOperands": ...
+    @property
+    def memory_reference(self) -> MemoryReference: ...
+    @memory_reference.setter
+    def memory_reference(self, memory_reference: MemoryReference): ...
+    @property
+    def operand(self) -> BinaryOperand: ...
+    @operand.setter
+    def operand(self, operand: BinaryOperand): ...
+
+class BinaryLogic:
+    @staticmethod
+    def __new__(
+        cls,
+        operator: BinaryOperator,
+        operands: BinaryOperands,
+    ) -> "BinaryLogic": ...
+    @property
+    def operator(self) -> BinaryOperator: ...
+    @operator.setter
+    def operator(self, operator: BinaryOperator): ...
+    @property
+    def operands(self) -> BinaryOperands: ...
+    @operands.setter
+    def operands(self, operands: BinaryOperands): ...
+
+class Calibration:
+    @staticmethod
+    def __new__(
+        cls,
+        name: str,
+        parameters: List[Expression],
+        qubits: List[Qubit],
+        instructions: List[Instruction],
+        modifiers: List[GateModifier],
+    ) -> "Calibration": ...
+    @property
+    def name(self) -> str: ...
+    @property
+    def parameters(self) -> List[Expression]: ...
+    @property
+    def qubits(self) -> List[Qubit]: ...
+    @property
+    def instructions(self) -> List[Instruction]: ...
+    @property
+    def modifiers(self) -> List[GateModifier]: ...
+
+class MeasureCalibrationDefinition:
+    @property
+    def qubit(self) -> Optional[Qubit]: ...
+    @property
+    def parameter(self) -> str: ...
+    @property
+    def instructions(self) -> List[Instruction]: ...
+    @classmethod
+    def __new__(
+        cls,
+        qubit: Optional[Qubit],
+        parameter: str,
+        instructions: List[Instruction],
+    ) -> "MeasureCalibrationDefinition": ...
+
+class GateModifier(Enum):
+    Controlled = "CONTROLLED"
+    Dagger = "DAGGER"
+    Forked = "FORKED"
+
+class Gate:
+    @classmethod
+    def __new__(
+        cls,
+        name: str,
+        parameters: List[Expression],
+        qubits: List[Qubit],
+        modifiers: List[GateModifier],
+    ) -> "Gate": ...
+    @property
+    def name(self) -> str: ...
+    @property
+    def parameters(self) -> List[Expression]: ...
+    @property
+    def qubits(self) -> List[Qubit]: ...
+    @property
+    def modifiers(self) -> List[GateModifier]: ...
+    def dagger(self) -> "Gate":
+        """
+        Returns a copy of the gate with the ``DAGGER`` modifier added to it.
+        """
+        ...
+    def controlled(self, control_qubit: Qubit) -> "Gate":
+        """
+        Returns a copy of the gate with the ``CONTROLLED`` modifier added to it.
+        """
+    def forked(self, fork_qubit: Qubit, alt_params: List[Expression]) -> "Gate":
+        """
+        Returns a copy of the gate with the ``FORKED`` modifier added to it.
+
+        Raises a ``GateError`` if the number of provided alternate parameters don't
+        equal the number of existing parameters.
+        """
+        ...
+
+class GateSpecification:
+    """
+    A specification for a gate definition.
+
+    Variants:
+        ``matrix``: A gate specificied by a matrix of ``Expression``s representing a unitary operation.
+        ``permutation``: A gate specified by a vector of integers that defines a permutation.
+
+    Methods (for each variant):
+        - is_*: Returns ``True`` if the inner type is of that variant.
+        - as_*: Returns the inner data if it is the given variant, ``None`` otherwise.
+        - to_*: Returns the inner data if it is the given variant, raises ``ValueError`` otherwise.
+        - from_*: Creates a new ``GateSpecification`` using an instance of the inner type for the variant.
+    """
+
+    def is_matrix(self) -> bool: ...
+    def is_permutation(self) -> bool: ...
+    def as_matrix(self) -> Optional[List[List[Expression]]]: ...
+    def to_matrix(self) -> List[List[Expression]]: ...
+    def as_permutation(self) -> Optional[List[int]]: ...
+    def to_permutation(self) -> List[int]: ...
+    @staticmethod
+    def from_matrix(matrix: List[List[Expression]]) -> "GateSpecification": ...
+    @staticmethod
+    def from_permutation(permutation: List[int]) -> "GateSpecification": ...
+
+class GateDefinition:
+    @classmethod
+    def __new__(
+        cls,
+        name: str,
+        parameters: List[str],
+        specification: GateSpecification,
+    ) -> "GateDefinition": ...
+    @property
+    def name(self) -> str: ...
+    @property
+    def parameters(self) -> List[str]: ...
+    @property
+    def specification(self) -> GateSpecification: ...
+
+class Qubit:
+    """
+    A Qubit
+
+    Variants:
+        ``fixed``: A qubit represented as a fixed integer index.
+        ``variable``: A qubit represented by a name.
+
+    Methods (for each variant):
+        - is_*: Returns ``True`` if the inner type is of that variant.
+        - as_*: Returns the inner data if it is the given variant, ``None`` otherwise.
+        - to_*: Returns the inner data if it is the given variant, raises ``ValueError`` otherwise.
+        - from_*: Creates a new ``Qubit`` using an instance of the inner type for the variant.
+    """
+
+    def is_fixed(self) -> bool: ...
+    def is_variable(self) -> bool: ...
+    def as_fixed(self) -> Optional[int]: ...
+    def to_fixed(self) -> int: ...
+    def as_variable(self) -> Optional[str]: ...
+    def to_variable(self) -> str: ...
+    @staticmethod
+    def from_fixed(index: int) -> "Qubit": ...
+    @staticmethod
+    def from_variable(name: str) -> "Qubit": ...
+
+class Expression:
+    """
+    A Quil expression.
+
+    Variants:
+        ``address``: An address defined by a ``MemoryReference``.
+        ``function_call``: A ``FunctionCall``.
+        ``infix``: An ``InfixExpression``.
+        ``number``: A number defined as an ``int``.
+        ``pi``: The constant `pi`. No inner data.
+        ``prefix``: A ``PrefixExpression``.
+        ``variable``: A variable defined as a ``str``.
+
+    As seen above, some variants contain inner data that fully specify the expression.
+    For example, the ``number`` variant contains an ``int``. This is in contrast to variants like
+    ``pi`` that have no inner data because they require none to fully specify the expression.
+    This difference is important for determining which methods are available for each variant.
+
+    Methods (for each variant):
+        ``is_*``: Returns ``True`` if the expression is that variant, ``False`` otherwise.
+
+        If the variant has inner data:
+            ``as_*``: returns the inner data if it is the given variant, ``None`` otherwise.
+            ``to_*``: returns the inner data if it is the given variant, raises ``ValueError`` otherwise.
+            ``from_*``: Creates a new ``Expression`` of the given variant from an instance of the inner type.
+
+        If the variant doesn't have inner data (e.g. ``pi``)
+            ``new_*``: Creates a new ``Expression`` for the variant
+    """
+
+    def is_address(self) -> bool: ...
+    def is_function_call(self) -> bool: ...
+    def is_infix(self) -> bool: ...
+    def is_number(self) -> bool: ...
+    def is_pi(self) -> bool: ...
+    def is_prefix(self) -> bool: ...
+    def is_variable(self) -> bool: ...
+    def as_number(self) -> Optional[complex]: ...
+    def to_number(self) -> complex: ...
+    def as_variable(self) -> Optional[str]: ...
+    def to_variable(self) -> str: ...
+
+    # TODO: Define the rest of the methods as part of building out the API for each variant
+
+class Measurement:
+    @staticmethod
+    def __new__(
+        cls, qubit: Qubit, target: Optional[MemoryReference]
+    ) -> "Measurement": ...
+    @property
+    def qubit(self) -> Qubit: ...
+    @qubit.setter
+    def qubit(self, qubit: Qubit): ...
+    @property
+    def target(self) -> Optional[MemoryReference]: ...
+    @target.setter
+    def target(self, target: Optional[MemoryReference]): ...
+
+class MemoryReference:
+    @property
+    def name(self) -> str: ...
+    @name.setter
+    def name(self, name: str): ...
+    @property
+    def index(self) -> int: ...
+    @index.setter
+    def index(self, index: int): ...

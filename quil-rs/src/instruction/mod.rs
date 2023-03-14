@@ -23,6 +23,7 @@ use crate::expression::Expression;
 use crate::parser::{common::parse_memory_reference, lex, ParseError};
 use crate::program::{disallow_leftover, frame::FrameMatchCondition, SyntaxError};
 
+mod arithmetic;
 mod calibration;
 mod gate;
 mod measurement;
@@ -30,76 +31,13 @@ mod measurement;
 #[cfg(test)]
 use proptest_derive::Arbitrary;
 
+pub use self::arithmetic::{
+    Arithmetic, ArithmeticOperand, ArithmeticOperator, BinaryLogic, BinaryOperand, BinaryOperands,
+    BinaryOperator,
+};
 pub use self::calibration::{Calibration, MeasureCalibrationDefinition};
 pub use self::gate::{Gate, GateDefinition, GateError, GateModifier, GateSpecification, GateType};
 pub use self::measurement::Measurement;
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum ArithmeticOperand {
-    LiteralInteger(i64),
-    LiteralReal(f64),
-    MemoryReference(MemoryReference),
-}
-
-impl fmt::Display for ArithmeticOperand {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match &self {
-            ArithmeticOperand::LiteralInteger(value) => write!(f, "{value}"),
-            ArithmeticOperand::LiteralReal(value) => write!(f, "{value}"),
-            ArithmeticOperand::MemoryReference(value) => write!(f, "{value}"),
-        }
-    }
-}
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum ArithmeticOperator {
-    Add,
-    Subtract,
-    Divide,
-    Multiply,
-}
-
-impl fmt::Display for ArithmeticOperator {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match &self {
-            ArithmeticOperator::Add => write!(f, "ADD"),
-            ArithmeticOperator::Divide => write!(f, "DIV"),
-            ArithmeticOperator::Multiply => write!(f, "MUL"),
-            ArithmeticOperator::Subtract => write!(f, "SUB"),
-        }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum BinaryOperand {
-    LiteralInteger(i64),
-    MemoryReference(MemoryReference),
-}
-
-impl fmt::Display for BinaryOperand {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match &self {
-            BinaryOperand::LiteralInteger(value) => write!(f, "{value}"),
-            BinaryOperand::MemoryReference(value) => write!(f, "{value}"),
-        }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum BinaryOperator {
-    And,
-    Ior,
-    Xor,
-}
-impl fmt::Display for BinaryOperator {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match &self {
-            BinaryOperator::And => write!(f, "AND"),
-            BinaryOperator::Ior => write!(f, "IOR"),
-            BinaryOperator::Xor => write!(f, "XOR"),
-        }
-    }
-}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum UnaryOperator {
@@ -460,24 +398,9 @@ impl fmt::Display for WaveformDefinition {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct Arithmetic {
-    pub operator: ArithmeticOperator,
-    pub destination: ArithmeticOperand,
-    pub source: ArithmeticOperand,
-}
-
-#[derive(Clone, Debug, PartialEq)]
 pub struct Comparison {
     pub operator: ComparisonOperator,
     pub operands: (MemoryReference, MemoryReference, ComparisonOperand),
-}
-
-pub type BinaryOperands = (MemoryReference, BinaryOperand);
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct BinaryLogic {
-    pub operator: BinaryOperator,
-    pub operands: BinaryOperands,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
