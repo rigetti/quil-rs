@@ -1,0 +1,17 @@
+---
+source: src/program/latex/mod.rs
+assertion_line: 1005
+expression: "r#\"\\documentclass[convert={density=300,outext=.png}]{standalone}\n\\usepackage[margin=1in]{geometry}\n\\usepackage{tikz}\n\\usetikzlibrary{quantikz}\n\\begin{document}\n\\begin{tikzcd}\n\\lstick{\\ket{q_{0}}} & \\gate{Y} & \\ctrl{1} & \\ctrl{2} & \\ctrl{3} & \\gate{Y^{\\dagger}} & \\gate{Y^{\\dagger}^{\\dagger}} & \\gate{Y^{\\dagger}^{\\dagger}^{\\dagger}} & \\ctrl{1} & \\ctrl{2} & \\ctrl{2} & \\ctrl{1} & \\gate{G^{\\dagger}} & \\qw \\\\\n\\lstick{\\ket{q_{1}}} & \\qw & \\gate{Y} & \\ctrl{1} & \\ctrl{2} & \\qw & \\qw & \\qw & \\gate{Y^{\\dagger}} & \\ctrl{1} & \\ctrl{1} & \\gate{G} & \\qw & \\qw \\\\\n\\lstick{\\ket{q_{2}}} & \\qw & \\qw & \\gate{Y} & \\ctrl{1} & \\qw & \\qw & \\qw & \\qw & \\gate{Y^{\\dagger}} & \\gate{Y^{\\dagger}^{\\dagger}} & \\qw & \\qw & \\qw \\\\\n\\lstick{\\ket{q_{3}}} & \\qw & \\qw & \\qw & \\gate{Y} & \\qw & \\qw & \\qw & \\qw & \\qw & \\qw & \\qw & \\qw & \\qw\n\\end{tikzcd}\n\\end{document}\"#"
+---
+\documentclass[convert={density=300,outext=.png}]{standalone}
+\usepackage[margin=1in]{geometry}
+\usepackage{tikz}
+\usetikzlibrary{quantikz}
+\begin{document}
+\begin{tikzcd}
+\lstick{\ket{q_{0}}} & \gate{Y} & \ctrl{1} & \ctrl{2} & \ctrl{3} & \gate{Y^{\dagger}} & \gate{Y^{\dagger}^{\dagger}} & \gate{Y^{\dagger}^{\dagger}^{\dagger}} & \ctrl{1} & \ctrl{2} & \ctrl{2} & \ctrl{1} & \gate{G^{\dagger}} & \qw \\
+\lstick{\ket{q_{1}}} & \qw & \gate{Y} & \ctrl{1} & \ctrl{2} & \qw & \qw & \qw & \gate{Y^{\dagger}} & \ctrl{1} & \ctrl{1} & \gate{G} & \qw & \qw \\
+\lstick{\ket{q_{2}}} & \qw & \qw & \gate{Y} & \ctrl{1} & \qw & \qw & \qw & \qw & \gate{Y^{\dagger}} & \gate{Y^{\dagger}^{\dagger}} & \qw & \qw & \qw \\
+\lstick{\ket{q_{3}}} & \qw & \qw & \qw & \gate{Y} & \qw & \qw & \qw & \qw & \qw & \qw & \qw & \qw & \qw
+\end{tikzcd}
+\end{document}

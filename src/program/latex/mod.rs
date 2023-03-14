@@ -522,13 +522,11 @@ impl Display for Diagram {
 
                         let mut superscript = String::from("");
                         // attach modifiers to gate name if any
-                        if !wire.modifiers.is_empty() {
-                            if let Some(modifiers) = wire.modifiers.get(&c) {
-                                for modifier in modifiers {
-                                    superscript.push_str(&Command::get_command(Command::Super(
-                                        modifier.to_string(),
-                                    )))
-                                }
+                        if let Some(modifiers) = wire.modifiers.get(&c) {
+                            for modifier in modifiers {
+                                superscript.push_str(&Command::get_command(Command::Super(
+                                    modifier.to_string(),
+                                )))
                             }
                         }
 
@@ -979,7 +977,7 @@ mod tests {
 
         #[test]
         fn test_program_good_modifiers() {
-            get_latex(
+            let latex = get_latex(
                 r#"Y 0
 CONTROLLED Y 0 1
 CONTROLLED CONTROLLED Y 0 1 2
@@ -1001,6 +999,8 @@ CONTROLLED G 0 1
 DAGGER G 0"#,
                 Settings::default(),
             );
+
+            insta::assert_snapshot!(latex);
         }
     }
 
@@ -1164,6 +1164,25 @@ DAGGER G 0"#,
                 ..Default::default()
             };
             insta::assert_snapshot!(get_latex("H 5\nCNOT 5 2\nY 2\nCNOT 2 3", settings));
+        }
+
+        #[test]
+        fn test_program_defgate() {
+            let latex = get_latex(
+                r#"DEFGATE H0:
+    0.707, 0.707
+    0.707, -0.707
+
+DEFGATE H1:
+    1/sqrt(2), 1/sqrt(2)
+    1/sqrt(2), -1/sqrt(2)
+
+H0 0
+H1 1"#,
+                Settings::default(),
+            );
+
+            insta::assert_snapshot!(latex);
         }
     }
 }
