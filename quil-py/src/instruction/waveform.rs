@@ -5,7 +5,7 @@ use quil_rs::{
 };
 use rigetti_pyo3::{impl_repr, impl_str, py_wrap_data_struct};
 
-use crate::instruction::expression::PyExpression;
+use crate::expression::PyExpression;
 
 py_wrap_data_struct! {
     PyWaveform(Waveform) as "Waveform" {

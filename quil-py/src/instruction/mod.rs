@@ -8,10 +8,6 @@ pub use self::{
     },
     calibration::{PyCalibration, PyMeasureCalibrationDefinition},
     declaration::{PyDeclaration, PyScalarType, PyVector},
-    expression::{
-        PyExpression, PyExpressionFunction, PyFunctionCallExpression, PyInfixExpression,
-        PyInfixOperator,
-    },
     frame::{PyAttributeValue, PyFrameAttributes, PyFrameDefinition, PyFrameIdentifier},
     gate::{PyGate, PyGateDefinition, PyGateError, PyGateModifier, PyGateSpecification},
     measurement::PyMeasurement,
@@ -20,10 +16,14 @@ pub use self::{
     waveform::{PyWaveform, PyWaveformDefinition},
 };
 
+use super::expression::{
+    PyExpression, PyExpressionFunction, PyFunctionCallExpression, PyInfixExpression,
+    PyInfixOperator,
+};
+
 mod arithmetic;
 mod calibration;
 mod declaration;
-mod expression;
 mod frame;
 mod gate;
 mod measurement;
