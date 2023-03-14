@@ -1,7 +1,7 @@
 ---
 source: src/program/latex/mod.rs
-assertion_line: 1185
-expression: "r#\"\\documentclass[convert={density=300,outext=.png}]{standalone}\n\\usepackage[margin=1in]{geometry}\n\\usepackage{tikz}\n\\usetikzlibrary{quantikz}\n\\begin{document}\n\\begin{tikzcd}\n\\lstick{\\ket{q_{0}}} & \\gate{H0} & \\qw \\\\\n\\lstick{\\ket{q_{1}}} & \\gate{H1} & \\qw\n\\end{tikzcd}\n\\end{document}\"#"
+assertion_line: 1276
+expression: "r#\"\\documentclass[convert={density=300,outext=.png}]{standalone}\n\\usepackage[margin=1in]{geometry}\n\\usepackage{tikz}\n\\usetikzlibrary{quantikz}\n\\begin{document}\n\\begin{tikzcd}\n\\lstick{\\ket{q_{0}}} & \\gate{H0} & \\qw & \\qw \\\\\n\\lstick{\\ket{q_{1}}} & \\qw & \\gate{H1} & \\qw\n\\end{tikzcd}\n\\end{document}\"#"
 ---
 \documentclass[convert={density=300,outext=.png}]{standalone}
 \usepackage[margin=1in]{geometry}
@@ -9,7 +9,7 @@ expression: "r#\"\\documentclass[convert={density=300,outext=.png}]{standalone}\
 \usetikzlibrary{quantikz}
 \begin{document}
 \begin{tikzcd}
-\lstick{\ket{q_{0}}} & \gate{H0} & \qw \\
-\lstick{\ket{q_{1}}} & \gate{H1} & \qw
+\lstick{\ket{q_{0}}} & \gate{H0} & \qw & \qw \\
+\lstick{\ket{q_{1}}} & \qw & \gate{H1} & \qw
 \end{tikzcd}
 \end{document}
