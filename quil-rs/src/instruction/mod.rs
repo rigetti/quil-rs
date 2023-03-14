@@ -25,6 +25,7 @@ use crate::program::{disallow_leftover, frame::FrameMatchCondition, SyntaxError}
 
 mod arithmetic;
 mod calibration;
+mod declaration;
 mod gate;
 mod measurement;
 
@@ -36,6 +37,7 @@ pub use self::arithmetic::{
     BinaryOperator,
 };
 pub use self::calibration::{Calibration, MeasureCalibrationDefinition};
+pub use self::declaration::{Declaration, ScalarType, Vector};
 pub use self::gate::{Gate, GateDefinition, GateError, GateModifier, GateSpecification, GateType};
 pub use self::measurement::Measurement;
 
@@ -133,42 +135,6 @@ pub struct Include {
     pub filename: String,
 }
 
-#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
-pub enum ScalarType {
-    Bit,
-    Integer,
-    Octet,
-    Real,
-}
-
-impl fmt::Display for ScalarType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use ScalarType::*;
-        write!(
-            f,
-            "{}",
-            match self {
-                Bit => "BIT",
-                Integer => "INTEGER",
-                Octet => "OCTET",
-                Real => "REAL",
-            }
-        )
-    }
-}
-
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
-pub struct Vector {
-    pub data_type: ScalarType,
-    pub length: u64,
-}
-
-impl fmt::Display for Vector {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}[{}]", self.data_type, self.length)
-    }
-}
-
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct WaveformInvocation {
     pub name: String,
@@ -251,23 +217,6 @@ pub struct CircuitDefinition {
     // These cannot be fixed qubits and thus are not typed as `Qubit`
     pub qubit_variables: Vec<String>,
     pub instructions: Vec<Instruction>,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Declaration {
-    pub name: String,
-    pub size: Vector,
-    pub sharing: Option<String>,
-}
-
-impl fmt::Display for Declaration {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "DECLARE {} {}", self.name, self.size)?;
-        if let Some(shared) = &self.sharing {
-            write!(f, "SHARING {shared}")?
-        }
-        Ok(())
-    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
