@@ -4,3 +4,7 @@ members = [
     "quil-rs",
     "quil-py"
 ]
+
+[profile.release]
+lto = true
+codegen-units = 1
