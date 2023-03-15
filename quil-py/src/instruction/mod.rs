@@ -7,11 +7,10 @@ pub use self::{
         PyBinaryOperands, PyBinaryOperator,
     },
     calibration::{PyCalibration, PyMeasureCalibrationDefinition},
-    declaration::{PyDeclaration, PyScalarType, PyVector},
+    declaration::{PyDeclaration, PyMemoryReference, PyScalarType, PyVector},
     frame::{PyAttributeValue, PyFrameAttributes, PyFrameDefinition, PyFrameIdentifier},
     gate::{PyGate, PyGateDefinition, PyGateError, PyGateModifier, PyGateSpecification},
     measurement::PyMeasurement,
-    memory_region::{PyMemoryReference, PyMemoryRegion},
     qubit::PyQubit,
     waveform::{PyWaveform, PyWaveformDefinition},
 };
@@ -22,7 +21,6 @@ mod declaration;
 mod frame;
 mod gate;
 mod measurement;
-mod memory_region;
 mod qubit;
 mod waveform;
 
@@ -72,7 +70,6 @@ create_init_submodule! {
         PyGateSpecification,
         PyMeasurement,
         PyMemoryReference,
-        PyMemoryRegion,
         PyQubit,
         PyWaveform,
         PyWaveformDefinition

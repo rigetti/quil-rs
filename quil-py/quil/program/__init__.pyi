@@ -10,6 +10,7 @@ from quil.instructions import (
     Measurement,
     Instruction,
     Gate,
+    Vector,
 )
 
 @final
@@ -77,3 +78,15 @@ class CalibrationSet:
         Return the Quil instructions which describe the contained calibrations
         """
         ...
+
+class MemoryRegion:
+    @staticmethod
+    def __new__(cls, size: Vector, sharing: Optional[str]) -> "MemoryRegion": ...
+    @property
+    def size(self) -> Vector: ...
+    @size.setter
+    def size(self, size: Vector): ...
+    @property
+    def sharing(self) -> Optional[str]: ...
+    @sharing.setter
+    def sharing(self, sharing: Optional[str]): ...

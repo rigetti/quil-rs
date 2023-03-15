@@ -12,16 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use nom_locate::LocatedSpan;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::collections::HashSet;
-use std::str::FromStr;
 use std::{collections::HashMap, fmt};
 
 use crate::expression::Expression;
-use crate::parser::{common::parse_memory_reference, lex, ParseError};
-use crate::program::{disallow_leftover, frame::FrameMatchCondition, SyntaxError};
+use crate::program::frame::FrameMatchCondition;
 
 mod arithmetic;
 mod calibration;
@@ -38,7 +35,7 @@ pub use self::arithmetic::{
     BinaryOperator,
 };
 pub use self::calibration::{Calibration, MeasureCalibrationDefinition};
-pub use self::declaration::{Declaration, ScalarType, Vector};
+pub use self::declaration::{Declaration, MemoryReference, ScalarType, Vector};
 pub use self::frame::{AttributeValue, FrameAttributes, FrameDefinition, FrameIdentifier};
 pub use self::gate::{Gate, GateDefinition, GateError, GateModifier, GateSpecification, GateType};
 pub use self::measurement::Measurement;
@@ -152,33 +149,6 @@ mod waveform_invocation_tests {
             parameters: HashMap::new(),
         };
         assert_eq!(format!("{wfi}"), "CZ".to_string());
-    }
-}
-
-#[derive(Clone, Debug, Hash, PartialEq)]
-#[cfg_attr(test, derive(Arbitrary))]
-pub struct MemoryReference {
-    pub name: String,
-    pub index: u64,
-}
-
-impl Eq for MemoryReference {}
-
-impl fmt::Display for MemoryReference {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}[{}]", self.name, self.index)
-    }
-}
-
-impl FromStr for MemoryReference {
-    type Err = SyntaxError<Self>;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let input = LocatedSpan::new(s);
-        let tokens = lex(input)?;
-        disallow_leftover(
-            parse_memory_reference(&tokens).map_err(ParseError::from_nom_internal_err),
-        )
     }
 }
 
