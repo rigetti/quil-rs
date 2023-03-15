@@ -37,10 +37,12 @@ py_wrap_union_enum! {
         declaration: Declaration => PyDeclaration,
         frame_definition: FrameDefinition => PyFrameDefinition,
         gate: Gate => PyGate,
+        gate_definition: GateDefinition => PyGateDefinition,
         halt: Halt,
         measure_calibration_definition: MeasureCalibrationDefinition => PyMeasureCalibrationDefinition,
         measurement: Measurement => PyMeasurement,
-        nop: Nop
+        nop: Nop,
+        waveform_definition: WaveformDefinition => PyWaveformDefinition
     }
 }
 impl_repr!(PyInstruction);
