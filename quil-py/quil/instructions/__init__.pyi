@@ -338,7 +338,7 @@ class ScalarType(Enum):
 @final
 class AttributeValue:
     """
-    A Quil instruction. Each variant corresponds to a possible type of Quil instruction.
+    A frame attribute value.
 
     Variants:
         ``string``: A string attribute containing a ``str``.
