@@ -312,6 +312,7 @@ class Vector:
     @length.setter
     def length(self, data_type: int): ...
 
+@final
 class ScalarType(Enum):
     Bit = "BIT"
     Integer = "INTEGER"
