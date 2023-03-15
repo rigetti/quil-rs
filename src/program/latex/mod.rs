@@ -34,11 +34,11 @@
 //! commands.
 //! [`Quantikz`]: https://arxiv.org/pdf/1809.03842.pdf
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fmt::{format, Display};
 
 use crate::expression::Expression;
-use crate::instruction;
+use crate::instruction::{self, Gate, Instruction, Qubit};
 use crate::Program;
 
 /// Available commands used for building circuits with the same names taken
@@ -46,6 +46,7 @@ use crate::Program;
 /// inside `backticks`.
 ///     Single wire commands: lstick, rstick, qw, meter
 ///     Multi-wire commands: ctrl, targ, control, (swap, targx)
+#[derive(Debug)]
 pub enum Command {
     /// `\lstick{\ket{q_{u32}}}`: Make a qubit "stick out" from the left.
     Lstick(String),
@@ -55,6 +56,8 @@ pub enum Command {
     Gate(String),
     /// `\phase{symbol}`: Make a phase on the wire with a rotation
     Phase(String),
+    /// `^{\script}`: Add a superscript to a gate
+    Super(String),
     /// `\qw`: Connect the current cell to the previous cell i.e. "do nothing".
     Qw,
     /// `\\`: Start a new row
@@ -91,6 +94,7 @@ impl Command {
             Self::Rstick(wire) => format(format_args!(r#"\rstick{{\ket{{q_{{{wire}}}}}}}"#)),
             Self::Gate(name) => format(format_args!(r#"\gate{{{name}}}"#)),
             Self::Phase(symbol) => format(format_args!(r#"\phase{{{symbol}}}"#)),
+            Self::Super(script) => format(format_args!(r#"^{{\{script}}}"#)),
             Self::Qw => r"\qw".to_string(),
             Self::Nr => r"\\".to_string(),
             Self::Meter(wire) => format(format_args!(r#"\meter{{{wire}}}"#)),
@@ -99,6 +103,27 @@ impl Command {
             Self::Control => r"\control{}".to_string(),
             Self::Swap(wire) => format(format_args!(r#"\swap{{{wire}}}"#)),
             Self::TargX => r"\targX{}".to_string(),
+        }
+    }
+}
+
+/// Types of parameters passed to commands.
+#[derive(Debug)]
+pub enum Parameter {
+    Symbol(Symbol),
+}
+
+impl Clone for Parameter {
+    fn clone(&self) -> Parameter {
+        match self {
+            Parameter::Symbol(symbol) => match symbol {
+                Symbol::Alpha => Parameter::Symbol(Symbol::Alpha),
+                Symbol::Beta => Parameter::Symbol(Symbol::Beta),
+                Symbol::Gamma => Parameter::Symbol(Symbol::Gamma),
+                Symbol::Phi => Parameter::Symbol(Symbol::Phi),
+                Symbol::Pi => Parameter::Symbol(Symbol::Pi),
+                Symbol::Text(text) => Parameter::Symbol(Symbol::Text(text.to_string())),
+            },
         }
     }
 }
@@ -136,8 +161,10 @@ impl Symbol {
     ///
     /// # Examples
     /// ```
-    /// use quil_rs::program::latex::Symbol;
-    /// let alpha = Symbol::get_symbol(Symbol::Alpha);
+    /// use quil_rs::program::latex::{Parameter, Symbol};
+    /// let alpha = Symbol::get_symbol(
+    ///     &Parameter::Symbol(Symbol::Alpha)
+    /// );
     /// ```
     pub fn get_symbol(symbol: &Parameter) -> String {
         match symbol {
@@ -189,7 +216,6 @@ impl Default for Settings {
     }
 }
 
-// TODO: Implement functions to update the settings that allows the user customzie the rendering of the circuit.
 impl Settings {
     pub fn label_qubit_lines(&self, name: u64) -> String {
         Command::get_command(Command::Lstick(name.to_string()))
@@ -213,7 +239,7 @@ impl Settings {
     /// };
     /// program.to_latex(settings).expect("");
     /// ```
-    pub fn impute_missing_qubits(&self, circuit: &mut BTreeMap<u64, Box<Wire>>) {
+    pub fn impute_missing_qubits(&self, column: u32, circuit: &mut BTreeMap<u64, Box<Wire>>) {
         // requires at least two qubits to impute missing qubits
         if circuit.len() < 2 {
             return;
@@ -237,10 +263,16 @@ impl Settings {
             match circuit.get(&qubit) {
                 Some(_) => (),
                 None => {
-                    let wire = Wire {
+                    let mut wire = Wire {
                         name: qubit,
                         ..Default::default()
                     };
+
+                    // insert empties based on total number of columns
+                    for c in 0..column {
+                        wire.empty.insert(c, Command::Qw);
+                    }
+
                     circuit.insert(qubit, Box::new(wire));
                 }
             }
@@ -257,7 +289,6 @@ struct Document {
     footer: String,
 }
 
-// TODO: Move TikZ/Quantikz into a separate struct. Keep Document abstract enough to represent any variant of LaTeX Documents.
 impl Default for Document {
     fn default() -> Self {
         Self {
@@ -315,6 +346,87 @@ impl Default for Diagram {
 }
 
 impl Diagram {
+    /// Compares qubits from a single instruction associated with a column on
+    /// the circuit to all of the qubits used in the quil program. If a qubit
+    /// from the quil program is not found in the qubits in the single
+    /// instruction line, then an empty slot is added to that column on the
+    /// qubit wire of the circuit.
+    ///
+    /// # Arguments
+    /// `&mut self` - exposes the Circuit
+    /// `qubits` - qubits used in the quil program
+    /// `instruction` - exposes qubits in a single instruction
+    fn set_qw(&mut self, qubits: &HashSet<Qubit>, instruction: &Instruction) {
+        for program_qubit in qubits {
+            let mut found = false;
+            match &instruction {
+                instruction::Instruction::Gate(gate) => {
+                    for gate_qubit in &gate.qubits {
+                        if program_qubit == gate_qubit {
+                            found = true;
+                        }
+                    }
+
+                    if !found {
+                        match program_qubit {
+                            instruction::Qubit::Fixed(q) => {
+                                self.circuit
+                                    .get_mut(&q)
+                                    .and_then(|wire| wire.empty.insert(self.column, Command::Qw));
+                            }
+                            _ => (),
+                        }
+                    }
+                }
+                _ => (),
+            }
+        }
+    }
+
+    /// Returns a reformatted gate name based on the modifiers used in a single
+    /// instruction line of a quil program or the original name. Gates with
+    /// CONTROLLED modifiers are reformatted such that each CONTROLLED modifier
+    /// prepends a `C` to the beginning of the gate name. For other modifiers
+    /// such as DAGGER, no special reformatting is required.
+    ///
+    /// For example, for an instruction line `CONTROLLED CONTROLLED Y 0 1 2` the
+    /// gate name is reformatted to `CCY` where each C is mapped to an
+    /// associated qubit with the last qubit to the original gate name. For an
+    /// instruction line `DAGGER DAGGER Y 0`, the gate name remains `Y`,
+    /// instead each of the modifiers are added to the wire at the current
+    /// column where it is to be applied using the Command::Super variant.
+    ///
+    /// # Arguments
+    /// `&mut self` - exposes the current column of the Circuit
+    /// `gate` - exposes the modifiers associated with the instruction gate
+    /// `wire` - exposes the wire to be pushed to in Circuit
+    fn set_modifiers(&mut self, gate: &Gate, wire: &mut Wire) -> String {
+        let mut gate_name = gate.name.clone();
+
+        // set modifers
+        if !gate.modifiers.is_empty() {
+            for modifer in &gate.modifiers {
+                match modifer {
+                    instruction::GateModifier::Dagger => {
+                        if let Some(modifiers) = wire.modifiers.get_mut(&self.column) {
+                            modifiers.push("dagger".to_string())
+                        } else {
+                            wire.modifiers
+                                .insert(self.column, vec!["dagger".to_string()]);
+                        }
+                    }
+                    instruction::GateModifier::Controlled => {
+                        // prepend a C to the gate
+                        gate_name.insert_str(0, "C");
+                    }
+                    _ => (),
+                }
+            }
+        }
+
+        gate_name
+    }
+
     /// For every instruction containing control and target qubits this method
     /// identifies which qubit is the target and which qubit is controlling it.
     /// The logic of this function is visualized using a physical vector with
@@ -349,9 +461,9 @@ impl Diagram {
             if let Some(relationship) = self.relationships.get(&c) {
                 // determine the control and target qubits
                 for qubit in relationship {
-                    // a relationship with one qubit is invalid
+                    // relationships require at least two qubits
                     if relationship.len() < 2 {
-                        return Err(LatexGenError::FoundCNOTWithNoTarget);
+                        continue 'column;
                     }
 
                     // the last qubit is the targ
@@ -438,26 +550,33 @@ impl Diagram {
     /// # Arguments
     /// `&mut self` - exposes HashMap<String, Box<Circuit>>
     /// `wire` - the wire to be pushed or updated to in circuits
-    fn push_wire(&mut self, wire: Wire) {
+    fn push_wire(&mut self, wire: Wire) -> Result<(), LatexGenError> {
         let qubit = wire.name;
 
         // find wire in circuit collection
         match self.circuit.get_mut(&wire.name) {
-            // wire found, push to existing wire
             Some(wire_in_circuit) => {
-                // indicate a new item to be added by incrementing column
-                self.column += 1;
-
                 // get the new gate from the wire and insert into existing wire
-                if let Some(gate) = wire.gates.get(&0) {
+                if let Some(gate) = wire.gates.get(&self.column) {
                     // add gates to wire in circuit
                     wire_in_circuit.gates.insert(self.column, gate.to_string());
                 }
+
+                // add modifiers to gate in circuit
+                if let Some(modifier) = wire.modifiers.get(&self.column) {
+                    wire_in_circuit
+                        .modifiers
+                        .insert(self.column, modifier.to_vec());
+                }
+
+                // add modifiers to gate in circuit
+                if let Some(parameters) = wire.parameters.get(&self.column) {
+                    wire_in_circuit
+                        .parameters
+                        .insert(self.column, parameters.to_vec());
+                }
             }
-            // no wire found insert new wire
-            None => {
-                self.circuit.insert(wire.name, Box::new(wire));
-            }
+            _ => (),
         }
 
         // initalize relationships between multi qubit gates
@@ -468,6 +587,14 @@ impl Diagram {
                 if gate.starts_with('C') {
                     // add the qubits to the set of related qubits in the current column
                     if let Some(qubits) = self.relationships.get_mut(&self.column) {
+                        // ensure relationships are valid
+                        for _self in qubits.iter() {
+                            // qubit cannot control and target itself
+                            if *_self == qubit {
+                                return Err(LatexGenError::FoundCNOTWithNoTarget);
+                            }
+                        }
+
                         qubits.push(qubit);
                     } else {
                         self.relationships.insert(self.column, vec![qubit]);
@@ -475,6 +602,8 @@ impl Diagram {
                 }
             }
         }
+
+        Ok(())
     }
 }
 
@@ -485,7 +614,8 @@ impl Display for Diagram {
         let mut body = String::from('\n');
 
         let mut i = 0; // used to omit trailing Nr
-                       // write the LaTeX string for each wire in the circuit
+
+        // write the LaTeX string for each wire in the circuit
         for key in self.circuit.keys() {
             // a single line of LaTeX representing a wire from the circuit
             let mut line = String::from("");
@@ -501,11 +631,22 @@ impl Display for Diagram {
 
             // convert each column in the wire to string
             if let Some(wire) = self.circuit.get(key) {
-                for c in 0..=self.column {
+                for c in 0..self.column {
                     if let Some(gate) = wire.gates.get(&c) {
                         line.push_str(" & ");
 
+                        let mut superscript = String::from("");
+                        // attach modifiers to gate name if any
+                        if let Some(modifiers) = wire.modifiers.get(&c) {
+                            for modifier in modifiers {
+                                superscript.push_str(&Command::get_command(Command::Super(
+                                    modifier.to_string(),
+                                )))
+                            }
+                        }
+
                         if gate.starts_with('C') {
+                            // set qubit at this column as the control
                             if let Some(targ) = wire.ctrl.get(&c) {
                                 line.push_str(&Command::get_command(Command::Ctrl(
                                     targ.to_string(),
@@ -514,34 +655,51 @@ impl Display for Diagram {
                                 // if this is a target and has a PHASE gate display `\phase{param}`
                                 if gate.contains("PHASE") {
                                     // set the phase parameters
-                                    if let Some(param) = wire.parameter.get(&c) {
-                                        line.push_str(&Command::get_command(Command::Phase(
-                                            Symbol::get_symbol(&param[0]),
-                                        )));
+                                    if let Some(parameters) = wire.parameters.get(&c) {
+                                        for param in parameters {
+                                            line.push_str(&Command::get_command(Command::Phase(
+                                                Symbol::get_symbol(param),
+                                            )));
+                                        }
                                     }
-                                // if target has a Z gate display `gate{Z}` gate
-                                } else if gate.contains("Z") {
-                                    line.push_str(&Command::get_command(Command::Gate(
-                                        "Z".to_string(),
-                                    )))
                                 // if target has a CNOT gate, display as targ{}
-                                } else {
+                                } else if gate.contains("NOT") {
                                     line.push_str(&Command::get_command(Command::Targ));
+                                // if target has a 'char' gate display `gate{char}` gate
+                                } else {
+                                    let mut gate = String::from(gate.chars().last().unwrap());
+
+                                    // concatenate superscripts
+                                    if !superscript.is_empty() {
+                                        gate.push_str(&superscript);
+                                    }
+
+                                    line.push_str(&Command::get_command(Command::Gate(gate)))
                                 }
                             }
                         // PHASE gates are displayed as `\phase{param}`
                         } else if gate.contains("PHASE") {
                             // set the phase parameters
-                            if let Some(param) = wire.parameter.get(&c) {
-                                line.push_str(&Command::get_command(Command::Phase(
-                                    Symbol::get_symbol(&param[0]),
-                                )));
+                            if let Some(parameters) = wire.parameters.get(&c) {
+                                for param in parameters {
+                                    line.push_str(&Command::get_command(Command::Phase(
+                                        Symbol::get_symbol(param),
+                                    )));
+                                }
                             }
                         // all other gates display as `\gate{name}`
                         } else {
-                            line.push_str(&Command::get_command(Command::Gate(gate.to_string())));
+                            let mut gate = String::from(gate);
+
+                            // concatenate superscripts
+                            if !superscript.is_empty() {
+                                gate.push_str(&superscript);
+                            }
+
+                            line.push_str(&Command::get_command(Command::Gate(gate)));
                         }
-                    } else {
+                    } else if let Some(_) = wire.empty.get(&c) {
+                        // chain an empty column qw to the end of the line
                         line.push_str(" & ");
                         line.push_str(&Command::get_command(Command::Qw));
                     }
@@ -569,11 +727,6 @@ impl Display for Diagram {
     }
 }
 
-#[derive(Debug)]
-pub enum Parameter {
-    Symbol(Symbol),
-}
-
 /// A Wire represents a single qubit. A wire only needs to keep track of all
 /// the elements it contains mapped to some arbitrary column. Diagram keeps
 /// track of where the Wire belongs in the larger circuit, its row, and knows
@@ -593,8 +746,12 @@ pub struct Wire {
     ctrl: HashMap<u32, i64>,
     /// at this column is the wire a target?
     targ: HashMap<u32, bool>,
-    /// any parameters that will be
-    parameter: HashMap<u32, Vec<Parameter>>,
+    /// any parameters required at column on the wire for gates
+    parameters: HashMap<u32, Vec<Parameter>>,
+    /// any modifiers added to the wire at column
+    modifiers: HashMap<u32, Vec<String>>,
+    /// empty column
+    empty: HashMap<u32, Command>,
 }
 
 impl Default for Wire {
@@ -604,7 +761,9 @@ impl Default for Wire {
             gates: HashMap::new(),
             ctrl: HashMap::new(),
             targ: HashMap::new(),
-            parameter: HashMap::new(),
+            parameters: HashMap::new(),
+            modifiers: HashMap::new(),
+            empty: HashMap::new(),
         }
     }
 }
@@ -613,12 +772,12 @@ impl Wire {
     /// Retrieves a gates parameters from Expression and matches them with its
     /// symbolic definition which is then stored into wire at the specific
     /// column.
-    pub fn set_param(&mut self, param: &Expression, column: u32) {
+    pub fn set_param(&mut self, expression: &Expression, column: u32, texify: bool) {
         let text: String;
 
-        match param {
+        match expression {
             Expression::Address(mr) => {
-                text = mr.to_string();
+                text = mr.name.to_string();
             }
             Expression::Number(c) => {
                 text = c.re.to_string();
@@ -626,15 +785,170 @@ impl Wire {
             expression => text = expression.to_string(),
         }
 
-        let param = vec![Parameter::Symbol(Symbol::match_symbol(text))];
-        self.parameter.insert(column, param);
+        let param;
+        // if texify_numerical_constants
+        if texify {
+            // get the matching symbol from text
+            param = vec![Parameter::Symbol(Symbol::match_symbol(text))];
+        } else {
+            // set the symbol as text
+            param = vec![Parameter::Symbol(Symbol::Text(text))];
+        }
+        self.parameters.insert(column, param);
     }
 }
 
 #[derive(thiserror::Error, Debug)]
 pub enum LatexGenError {
+    #[error("Cannot parse LaTeX for unsupported program: {program}")]
+    UnsupportedProgram { program: String },
+    #[error("Cannot parse LaTeX for unsupported gate: {gate}")]
+    UnsupportedGate { gate: String },
     #[error("Tried to parse CNOT and found a control qubit without a target.")]
     FoundCNOTWithNoTarget,
+}
+
+/// Supported types
+pub enum Supported {
+    Gate(SupportedGate),
+    New,  // New initialization of a non-None variant
+    None, // ()
+}
+
+/// Set of all Gates that can be parsed to LaTeX
+#[derive(PartialEq)]
+pub enum SupportedGate {
+    Pauli(String),
+    Hadamard(String),
+    Phase(String),
+    ControlledPhase(String),
+    ControlledX(String),
+    DefGate(String),
+    Modifiers(String),
+    Unsupported(String), // for error handling
+}
+
+impl SupportedGate {
+    /// Returns a variant of self for any supported standard gate.
+    ///
+    /// # Arguments
+    /// `name` - the name of the gate from instruction
+    fn get_supported_standard_gate(name: String) -> Self {
+        if name == "I" || name == "X" || name == "Y" || name == "Z" {
+            return Self::Pauli(name);
+        } else if name == "H" {
+            return Self::Hadamard(name);
+        } else if name == "PHASE" || name == "S" || name == "T" {
+            return Self::Phase(name);
+        } else if name == "CZ" || name == "CPHASE" {
+            return Self::ControlledPhase(name);
+        } else if name == "CNOT" || name == "CCNOT" {
+            return Self::ControlledX(name);
+        }
+
+        return Self::Unsupported(name);
+    }
+
+    /// Returns a variant of self for any defined gate.
+    ///
+    /// # Arguments
+    /// `name` - the name of the defined gate from instruction
+    /// `defgate` - a vector of all previously defined gates
+    fn get_supported_defgate(name: String, defgate: &Vec<String>) -> Self {
+        // check all previously defined DEFGATES
+        for defgate in defgate {
+            // return supported if gate name is of DEFGATE
+            if defgate == &name {
+                return SupportedGate::DefGate(name.to_string());
+            }
+        }
+
+        return Self::Unsupported(name);
+    }
+
+    /// Returns a variant of self for any supported modifier.
+    ///
+    /// # Arguments
+    /// `name` - the name of the defined gate from instruction
+    fn get_supported_modifier(name: String) -> Self {
+        if name == "CONTROLLED" || name == "DAGGER" {
+            return Self::Modifiers(name);
+        }
+
+        return Self::Unsupported(name);
+    }
+}
+
+impl Supported {
+    /// Returns new variant of self as variant of supported gate.
+    ///
+    /// # Arguments
+    /// `name` - the name of the defined gate from instruction
+    /// `defgate` - a vector of all previously defined gates    
+    fn new(&self, gate: &Gate, defgate: &Vec<String>) -> Self {
+        // check is standard gate
+        let mut is_supported = SupportedGate::get_supported_standard_gate(gate.name.to_string());
+
+        // check if defgate if not already identified as a standard gate
+        if is_supported == SupportedGate::Unsupported(gate.name.to_string()) {
+            is_supported = SupportedGate::get_supported_defgate(gate.name.to_string(), defgate);
+        }
+
+        // check supported modifers
+        for modifier in &gate.modifiers {
+            is_supported = SupportedGate::get_supported_modifier(modifier.to_string())
+        }
+
+        match self {
+            Supported::New => Self::Gate(is_supported),
+            _ => Supported::None, // same as ()
+        }
+    }
+
+    /// Returns a result indicating whether or not the LaTeX feature can parse
+    /// a given Program to LaTeX.
+    ///
+    /// # Arguments
+    /// `self` - exposes variants of a Supported program
+    /// `program` - the Program to be validated before parsing to LaTeX
+    fn is_supported(&self, program: &Program) -> Result<Vec<Instruction>, LatexGenError> {
+        let instructions = program.to_instructions(false);
+
+        // store DEFGATE names for reference
+        let mut defgate: Vec<String> = vec![];
+
+        // check each instruction to determine if it is supported
+        for instruction in &instructions {
+            match instruction {
+                // check is gate is supported
+                instruction::Instruction::Gate(gate) => match Self::new(self, gate, &defgate) {
+                    // new Supported checks if this instruction is supported
+                    Supported::Gate(is_supported) => match is_supported {
+                        // unsupported if SupportedGate is not returned
+                        SupportedGate::Unsupported(gate) => {
+                            return Err(LatexGenError::UnsupportedGate { gate })
+                        }
+                        // SupportedGate returned so instruction is supported
+                        _ => (),
+                    },
+                    // do nothing for non-New Self variants
+                    _ => (),
+                },
+                // DEFGATE is supported
+                instruction::Instruction::GateDefinition(gate) => {
+                    defgate.push(gate.name.to_string())
+                }
+                // unless explicitly matched, program is unsupported
+                _ => {
+                    return Err(LatexGenError::UnsupportedProgram {
+                        program: program.to_string(false),
+                    })
+                }
+            }
+        }
+
+        Ok(instructions)
+    }
 }
 
 pub trait Latex {
@@ -651,59 +965,81 @@ impl Latex for Program {
     ///
     ///
     fn to_latex(self, settings: Settings) -> Result<String, LatexGenError> {
-        // get a reference to the current program
-        let instructions = Program::to_instructions(&self, false);
+        // get a reference to the current supported program
+        let instructions = Supported::is_supported(&Supported::New, &self)?;
 
-        // store circuit strings
+        // initialize a new diagram
         let mut diagram = Diagram {
             settings,
             ..Default::default()
         };
+
+        // initialize circuit with empty wires of all qubits in program
+        let qubits = Program::get_used_qubits(&self);
+        for qubit in &qubits {
+            match qubit {
+                instruction::Qubit::Fixed(name) => {
+                    let wire = Wire {
+                        name: *name,
+                        ..Default::default()
+                    };
+                    diagram.circuit.insert(*name, Box::new(wire));
+                }
+                _ => (),
+            }
+        }
+
+        // used to left-shift wires to align columns without relationships
         let mut has_ctrl_targ = false;
         for instruction in instructions {
+            // set QW for any unused qubits in this instruction
+            diagram.set_qw(&qubits, &instruction);
+
             match instruction {
                 // parse gate instructions into a new circuit
                 instruction::Instruction::Gate(gate) => {
                     // for each qubit in a single gate instruction
-                    for qubit in gate.qubits {
+                    for qubit in &gate.qubits {
                         match qubit {
                             instruction::Qubit::Fixed(qubit) => {
                                 // create a new wire
-                                let mut wire = Wire::default();
-
-                                // set name of wire for any qubit variant as String
-                                wire.name = qubit;
+                                let mut wire = Wire {
+                                    name: *qubit,
+                                    ..Default::default()
+                                };
 
                                 // set parameters for phase gates
                                 if gate.name.contains("PHASE") {
-                                    for param in &gate.parameters {
-                                        wire.set_param(param, diagram.column);
+                                    for expression in &gate.parameters {
+                                        wire.set_param(
+                                            expression,
+                                            diagram.column,
+                                            diagram.settings.texify_numerical_constants,
+                                        );
                                     }
                                 }
 
-                                // TODO: reduce code duplication
-                                if let Some(_) = diagram.circuit.get(&qubit) {
-                                    // add the gate to the wire at column 0
-                                    wire.gates.insert(0, gate.name.clone());
-                                } else {
-                                    if gate.name.starts_with('C') {
-                                        wire.gates.insert(diagram.column, gate.name.clone());
+                                // update the gate name based on the modifiers
+                                let gate_name = diagram.set_modifiers(&gate, &mut wire);
 
-                                        if !has_ctrl_targ {
-                                            has_ctrl_targ = true;
-                                        }
-                                    } else {
-                                        // add the gate to the wire at column 0
-                                        wire.gates.insert(0, gate.name.clone());
+                                if let Some(_) = diagram.circuit.get(&qubit) {
+                                    // has ctrl gate, must identify ctrls and targs after filling circuit
+                                    if gate_name.starts_with('C') {
+                                        has_ctrl_targ = true;
                                     }
+
+                                    // add the gate to the wire at column 0
+                                    wire.gates.insert(diagram.column, gate_name);
                                 }
 
                                 // push wire to diagram circuit
-                                diagram.push_wire(wire);
+                                diagram.push_wire(wire)?;
                             }
                             _ => (),
                         }
                     }
+
+                    diagram.column += 1;
                 }
                 // do nothing for all other instructions
                 _ => (),
@@ -713,7 +1049,9 @@ impl Latex for Program {
         // are implicit qubits required in settings and are there at least two or more qubits in the diagram?
         if diagram.settings.impute_missing_qubits {
             // add implicit qubits to circuit
-            diagram.settings.impute_missing_qubits(&mut diagram.circuit);
+            diagram
+                .settings
+                .impute_missing_qubits(diagram.column, &mut diagram.circuit);
         }
 
         // only call method for programs with control and target gates
@@ -742,26 +1080,37 @@ mod tests {
     /// Helper function takes instructions and return the LaTeX using the
     /// Latex::to_latex method.
     pub fn get_latex(instructions: &str, settings: Settings) -> String {
-        let program =
-            Program::from_str(instructions).expect("program `{instructions}` should be returned");
+        let program = Program::from_str(instructions).expect("Program should be returned");
         program
             .to_latex(settings)
-            .expect("LaTeX should generate for program `{instructions}`")
+            .expect("LatexGenError should return for Program")
     }
 
     #[test]
     /// Test functionality of to_latex using default settings.
     fn test_to_latex() {
-        let program = Program::from_str("PHASE(pi) 0").expect("Quil program should be returned");
+        get_latex(
+            r#"Y 0
+CONTROLLED Y 0 1
+CONTROLLED CONTROLLED Y 0 1 2
+CONTROLLED CONTROLLED CONTROLLED Y 0 1 2 3
 
-        let settings = Settings {
-            impute_missing_qubits: true,
-            ..Default::default()
-        };
+DAGGER Y 0
+DAGGER DAGGER Y 0
+DAGGER DAGGER DAGGER Y 0
 
-        program
-            .to_latex(settings)
-            .expect("LaTeX should generate for Quil program");
+CONTROLLED DAGGER Y 0 1
+CONTROLLED DAGGER CONTROLLED Y 0 1 2
+CONTROLLED DAGGER CONTROLLED DAGGER Y 0 1 2
+
+DEFGATE G:
+    1, 0
+    0, 1
+
+CONTROLLED G 0 1
+DAGGER G 0"#,
+            Settings::default(),
+        );
     }
 
     /// Test module for the Document
@@ -789,6 +1138,71 @@ mod tests {
         fn test_footer() {
             let document = Document::default();
             insta::assert_snapshot!(document.footer);
+        }
+    }
+
+    /// Test module for Supported (remove #[should_panic] when supported)
+    mod supported {
+        use crate::program::latex::{tests::get_latex, Settings};
+
+        #[test]
+        #[should_panic]
+        fn test_supported_misc_instructions() {
+            get_latex("NOP\nWAIT\nRESET\nHALT", Settings::default());
+        }
+
+        #[test]
+        #[should_panic]
+        fn test_supported_measure() {
+            get_latex(
+                "DECLARE ro BIT\nMEASURE 0\nMEASURE 1 ro[0]",
+                Settings::default(),
+            );
+        }
+
+        #[test]
+        #[should_panic]
+        fn test_supported_program_defcircuit() {
+            get_latex(
+                r#"DEFCIRCUIT EULER(%alpha, %beta, %gamma) q:
+    RX(%alpha) q
+    RY(%beta)  q
+    RZ(%gamma) q
+
+EULER(pi, 2*pi, 3*pi/2) 0"#,
+                Settings::default(),
+            );
+        }
+
+        #[test]
+        #[should_panic]
+        fn test_supported_gate_rotation() {
+            get_latex(
+                r#"DECLARE ro BIT[1]
+DECLARE theta REAL[1]
+RX(pi/2) 0
+RZ(theta) 0
+RY(-pi/2) 0"#,
+                Settings::default(),
+            );
+        }
+
+        #[test]
+        #[should_panic]
+        fn test_supported_arithmetic_instruction() {
+            get_latex(
+                "DECLARE b BIT\nDECLARE theta REAL\nMOVE theta -3.14\nLT b theta -3.14",
+                Settings::default(),
+            );
+        }
+
+        #[test]
+        #[should_panic]
+        fn test_supported_modifier_forked() {
+            get_latex(
+                "FORKED CONTROLLED FORKED RX(a,b,c,d) 0 1 2 3",
+                Settings::default(),
+            );
         }
     }
 
@@ -889,11 +1303,26 @@ mod tests {
 
             assert_eq!(controlled, ccnot);
         }
+
+        #[test]
+        fn test_modifier_dagger() {
+            insta::assert_snapshot!(get_latex("DAGGER X 0", Settings::default()));
+        }
+
+        #[test]
+        fn test_modifier_dagger_dagger() {
+            insta::assert_snapshot!(get_latex("DAGGER DAGGER Y 0", Settings::default()));
+        }
+
+        #[test]
+        fn test_modifier_dagger_cz() {
+            insta::assert_snapshot!(get_latex("DAGGER CZ 0 1", Settings::default()));
+        }
     }
 
     /// Test module for Quantikz Commands
     mod commands {
-        use crate::program::latex::Command;
+        use crate::program::latex::{Command, Parameter, Symbol};
 
         #[test]
         fn test_command_left_ket() {
@@ -908,6 +1337,18 @@ mod tests {
         #[test]
         fn test_command_gate() {
             insta::assert_snapshot!(Command::get_command(Command::Gate("X".to_string())));
+        }
+
+        #[test]
+        fn test_command_phase() {
+            insta::assert_snapshot!(Command::get_command(Command::Phase(Symbol::get_symbol(
+                &Parameter::Symbol(Symbol::Pi)
+            ))));
+        }
+
+        #[test]
+        fn test_command_super() {
+            insta::assert_snapshot!(Command::get_command(Command::Super("dagger".to_string())));
         }
 
         #[test]
@@ -956,6 +1397,44 @@ mod tests {
         use crate::program::latex::{tests::get_latex, Settings};
 
         #[test]
+        fn test_settings_texify_numerical_constants_true_supported_symbol() {
+            // default texify_numerical_constants is true
+            let settings = Settings {
+                ..Default::default()
+            };
+            insta::assert_snapshot!(get_latex("CPHASE(alpha) 0 1", settings));
+        }
+
+        #[test]
+        fn test_settings_texify_numerical_constants_false_supported_symbol() {
+            let settings = Settings {
+                texify_numerical_constants: false,
+                ..Default::default()
+            };
+            insta::assert_snapshot!(get_latex("CPHASE(alpha) 0 1", settings));
+        }
+
+        #[test]
+        fn test_settings_texify_numerical_constants_unsupported_symbol() {
+            // default texify_numerical_constants is true
+            let settings_true = Settings {
+                ..Default::default()
+            };
+
+            let unsupported_true = get_latex("CPHASE(chi) 0 1", settings_true);
+
+            let settings_false = Settings {
+                texify_numerical_constants: false,
+                ..Default::default()
+            };
+
+            let unsupported_false = get_latex("CPHASE(chi) 0 1", settings_false);
+
+            // unsupported symbols are treated as text regardless of setting
+            assert_eq!(unsupported_true, unsupported_false);
+        }
+
+        #[test]
         fn test_settings_label_qubit_lines_false() {
             let settings = Settings {
                 label_qubit_lines: false,
@@ -1001,6 +1480,84 @@ mod tests {
                 ..Default::default()
             };
             insta::assert_snapshot!(get_latex("H 5\nCNOT 5 2\nY 2\nCNOT 2 3", settings));
+        }
+
+        #[test]
+        fn test_program_good_modifiers() {
+            let latex = get_latex(
+                r#"Y 0
+CONTROLLED Y 0 1
+CONTROLLED CONTROLLED Y 0 1 2
+CONTROLLED CONTROLLED CONTROLLED Y 0 1 2 3
+
+DAGGER Y 0
+DAGGER DAGGER Y 0
+DAGGER DAGGER DAGGER Y 0
+
+CONTROLLED DAGGER Y 0 1
+CONTROLLED DAGGER CONTROLLED Y 0 1 2
+CONTROLLED DAGGER CONTROLLED DAGGER Y 0 1 2
+
+DEFGATE G:
+    1, 0
+    0, 1
+
+CONTROLLED G 0 1
+DAGGER G 0"#,
+                Settings::default(),
+            );
+
+            insta::assert_snapshot!(latex);
+        }
+
+        #[test]
+        fn test_program_good_simple_params() {
+            insta::assert_snapshot!(get_latex(
+                "CPHASE(1.0) 0 1\nCPHASE(1.0-2.0i) 1 0",
+                Settings::default()
+            ));
+        }
+
+        #[test]
+        fn test_program_good_complex_params() {
+            insta::assert_snapshot!(get_latex(
+                "CPHASE(pi/2) 1 0\nCPHASE(cos(sin(2*pi/3))*cis(-1)*exp(i*pi)) 3 4",
+                Settings::default()
+            ));
+        }
+
+        #[test]
+        fn test_program_good_basic_defgate() {
+            let latex = get_latex(
+                r#"DEFGATE H0:
+    0.707, 0.707
+    0.707, -0.707
+
+DEFGATE H1:
+    1/sqrt(2), 1/sqrt(2)
+    1/sqrt(2), -1/sqrt(2)
+
+H0 0
+H1 1"#,
+                Settings::default(),
+            );
+
+            insta::assert_snapshot!(latex);
+        }
+
+        #[test]
+        fn test_program_good_defgate_with_long_name() {
+            let latex = get_latex(
+                r#"DEFGATE ______________________________________ugly-python-convention______________________________________:
+    1, 0
+    0, 1
+    
+______________________________________ugly-python-convention______________________________________ 0
+______________________________________ugly-python-convention______________________________________ 1"#,
+                Settings::default(),
+            );
+
+            insta::assert_snapshot!(latex);
         }
     }
 }

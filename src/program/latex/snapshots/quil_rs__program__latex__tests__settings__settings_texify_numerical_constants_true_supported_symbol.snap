@@ -1,0 +1,15 @@
+---
+source: src/program/latex/mod.rs
+assertion_line: 1044
+expression: "r\"\\documentclass[convert={density=300,outext=.png}]{standalone}\n\\usepackage[margin=1in]{geometry}\n\\usepackage{tikz}\n\\usetikzlibrary{quantikz}\n\\begin{document}\n\\begin{tikzcd}\n\\lstick{\\ket{q_{0}}} & \\ctrl{1} & \\qw \\\\\n\\lstick{\\ket{q_{1}}} & \\phase{\\alpha} & \\qw\n\\end{tikzcd}\n\\end{document}\""
+---
+\documentclass[convert={density=300,outext=.png}]{standalone}
+\usepackage[margin=1in]{geometry}
+\usepackage{tikz}
+\usetikzlibrary{quantikz}
+\begin{document}
+\begin{tikzcd}
+\lstick{\ket{q_{0}}} & \ctrl{1} & \qw \\
+\lstick{\ket{q_{1}}} & \phase{\alpha} & \qw
+\end{tikzcd}
+\end{document}
