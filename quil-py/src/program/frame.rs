@@ -17,7 +17,12 @@ impl_repr!(PyFrameSet);
 
 #[pymethods]
 impl PyFrameSet {
-    fn get_all_frames(
+    #[new]
+    pub fn new() -> Self {
+        Self(FrameSet::new())
+    }
+
+    pub fn get_all_frames(
         &self,
         py: Python<'_>,
     ) -> PyResult<HashMap<PyFrameIdentifier, PyFrameAttributes>> {

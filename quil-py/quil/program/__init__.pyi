@@ -1,11 +1,13 @@
-from typing import final, List, Optional
+from typing import Dict, final, List, Optional
 
 @final
 class Program:
     pass
 
 from quil.instructions import (
+    AttributeValue,
     Calibration,
+    FrameIdentifier,
     MeasureCalibrationDefinition,
     Measurement,
     Instruction,
@@ -78,6 +80,12 @@ class CalibrationSet:
         Return the Quil instructions which describe the contained calibrations
         """
         ...
+
+@final
+class FrameSet:
+    @staticmethod
+    def __new__(cls) -> "FrameSet": ...
+    def get_all_frames(self) -> Dict[FrameIdentifier, Dict[str, AttributeValue]]: ...
 
 class MemoryRegion:
     @staticmethod
