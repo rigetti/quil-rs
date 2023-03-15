@@ -14,7 +14,7 @@ use rigetti_pyo3::{
 use crate::{
     expression::PyExpression,
     instruction::{PyGateModifier, PyInstruction, PyQubit},
-    validation::identifier::IdentifierValidationError,
+    validation::identifier::RustIdentifierValidationError,
 };
 
 py_wrap_data_struct! {
@@ -50,8 +50,8 @@ impl PyCalibration {
                 Vec::<Instruction>::py_try_from(py, &instructions)?,
                 Vec::<GateModifier>::py_try_from(py, &modifiers)?,
             )
-            .map_err(IdentifierValidationError::from)
-            .map_err(IdentifierValidationError::to_py_err)?,
+            .map_err(RustIdentifierValidationError::from)
+            .map_err(RustIdentifierValidationError::to_py_err)?,
         ))
     }
 
