@@ -12,7 +12,7 @@ pub use self::{
     gate::{GateError, PyGate, PyGateDefinition, PyGateModifier, PyGateSpecification},
     measurement::PyMeasurement,
     qubit::PyQubit,
-    waveform::{PyWaveform, PyWaveformDefinition},
+    waveform::{PyWaveform, PyWaveformDefinition, PyWaveformInvocation},
 };
 
 mod arithmetic;
@@ -72,7 +72,8 @@ create_init_submodule! {
         PyMemoryReference,
         PyQubit,
         PyWaveform,
-        PyWaveformDefinition
+        PyWaveformDefinition,
+        PyWaveformInvocation
     ],
     errors: [ GateError ],
 }
