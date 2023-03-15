@@ -22,11 +22,11 @@
 //!
 //! [`Quantikz`]: https://arxiv.org/pdf/1809.03842.pdf
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fmt::{format, Display};
 
 use crate::expression::Expression;
-use crate::instruction;
+use crate::instruction::{self, Gate, Instruction, Qubit};
 use crate::Program;
 
 /// Available commands used for building circuits with the same names taken
@@ -204,7 +204,6 @@ impl Default for Settings {
     }
 }
 
-// TODO: Implement functions to update the settings that allows the user customzie the rendering of the circuit.
 impl Settings {
     pub fn label_qubit_lines(&self, name: u64) -> String {
         Command::get_command(Command::Lstick(name.to_string()))
@@ -278,7 +277,6 @@ struct Document {
     footer: String,
 }
 
-// TODO: Move TikZ/Quantikz into a separate struct. Keep Document abstract enough to represent any variant of LaTeX Documents.
 impl Default for Document {
     fn default() -> Self {
         Self {
@@ -336,6 +334,87 @@ impl Default for Diagram {
 }
 
 impl Diagram {
+    /// Compares qubits from a single instruction associated with a column on
+    /// the circuit to all of the qubits used in the quil program. If a qubit
+    /// from the quil program is not found in the qubits in the single
+    /// instruction line, then an empty slot is added to that column on the
+    /// qubit wire of the circuit.
+    ///
+    /// # Arguments
+    /// `&mut self` - exposes the Circuit
+    /// `qubits` - qubits used in the quil program
+    /// `instruction` - exposes qubits in a single instruction
+    fn set_qw(&mut self, qubits: &HashSet<Qubit>, instruction: &Instruction) {
+        for program_qubit in qubits {
+            let mut found = false;
+            match &instruction {
+                instruction::Instruction::Gate(gate) => {
+                    for gate_qubit in &gate.qubits {
+                        if program_qubit == gate_qubit {
+                            found = true;
+                        }
+                    }
+
+                    if !found {
+                        match program_qubit {
+                            instruction::Qubit::Fixed(q) => {
+                                self.circuit
+                                    .get_mut(&q)
+                                    .and_then(|wire| wire.empty.insert(self.column, Command::Qw));
+                            }
+                            _ => (),
+                        }
+                    }
+                }
+                _ => (),
+            }
+        }
+    }
+
+    /// Returns a reformatted gate name based on the modifiers used in a single
+    /// instruction line of a quil program or the original name. Gates with
+    /// CONTROLLED modifiers are reformatted such that each CONTROLLED modifier
+    /// prepends a `C` to the beginning of the gate name. For other modifiers
+    /// such as DAGGER, no special reformatting is required.
+    ///
+    /// For example, for an instruction line `CONTROLLED CONTROLLED Y 0 1 2` the
+    /// gate name is reformatted to `CCY` where each C is mapped to an
+    /// associated qubit with the last qubit to the original gate name. For an
+    /// instruction line `DAGGER DAGGER Y 0`, the gate name remains `Y`,
+    /// instead each of the modifiers are added to the wire at the current
+    /// column where it is to be applied using the Command::Super variant.
+    ///
+    /// # Arguments
+    /// `&mut self` - exposes the current column of the Circuit
+    /// `gate` - exposes the modifiers associated with the instruction gate
+    /// `wire` - exposes the wire to be pushed to in Circuit
+    fn set_modifiers(&mut self, gate: &Gate, wire: &mut Wire) -> String {
+        let mut gate_name = gate.name.clone();
+
+        // set modifers
+        if !gate.modifiers.is_empty() {
+            for modifer in &gate.modifiers {
+                match modifer {
+                    instruction::GateModifier::Dagger => {
+                        if let Some(modifiers) = wire.modifiers.get_mut(&self.column) {
+                            modifiers.push("dagger".to_string())
+                        } else {
+                            wire.modifiers
+                                .insert(self.column, vec!["dagger".to_string()]);
+                        }
+                    }
+                    instruction::GateModifier::Controlled => {
+                        // prepend a C to the gate
+                        gate_name.insert_str(0, "C");
+                    }
+                    _ => (),
+                }
+            }
+        }
+
+        gate_name
+    }
+
     /// For every instruction containing control and target qubits this method
     /// identifies which qubit is the target and which qubit is controlling it.
     /// The logic of this function is visualized using a physical vector with
@@ -750,32 +829,8 @@ impl Latex for Program {
         // used to left-shift wires to align columns without relationships
         let mut has_ctrl_targ = false;
         for instruction in instructions {
-            // TODO: Make separate function for this
             // set QW for any unused qubits in this instruction
-            for program_qubit in &qubits {
-                let mut found = false;
-                match &instruction {
-                    instruction::Instruction::Gate(gate) => {
-                        for gate_qubit in &gate.qubits {
-                            if program_qubit == gate_qubit {
-                                found = true;
-                            }
-                        }
-
-                        if !found {
-                            match program_qubit {
-                                instruction::Qubit::Fixed(q) => {
-                                    diagram.circuit.get_mut(&q).and_then(|wire| {
-                                        wire.empty.insert(diagram.column, Command::Qw)
-                                    });
-                                }
-                                _ => (),
-                            }
-                        }
-                    }
-                    _ => (),
-                }
-            }
+            diagram.set_qw(&qubits, &instruction);
 
             match instruction {
                 // parse gate instructions into a new circuit
@@ -790,11 +845,8 @@ impl Latex for Program {
                                     ..Default::default()
                                 };
 
-                                // used to reformat a gate name
-                                let mut gate_name = gate.name.clone();
-
                                 // set parameters for phase gates
-                                if gate_name.contains("PHASE") {
+                                if gate.name.contains("PHASE") {
                                     for expression in &gate.parameters {
                                         wire.set_param(
                                             expression,
@@ -804,37 +856,11 @@ impl Latex for Program {
                                     }
                                 }
 
-                                // TODO: Make separate function for this
-                                // set modifers
-                                if !gate.modifiers.is_empty() {
-                                    let mut modified = gate_name;
-                                    for modifer in &gate.modifiers {
-                                        match modifer {
-                                            instruction::GateModifier::Dagger => {
-                                                if let Some(modifiers) =
-                                                    wire.modifiers.get_mut(&diagram.column)
-                                                {
-                                                    modifiers.push("dagger".to_string())
-                                                } else {
-                                                    wire.modifiers.insert(
-                                                        diagram.column,
-                                                        vec!["dagger".to_string()],
-                                                    );
-                                                }
-                                            }
-                                            instruction::GateModifier::Controlled => {
-                                                // prepend a C to the gate
-                                                modified.insert_str(0, "C");
-                                            }
-                                            _ => (),
-                                        }
-                                    }
-                                    // update gate with modified name
-                                    gate_name = modified;
-                                }
+                                // update the gate name based on the modifiers
+                                let gate_name = diagram.set_modifiers(&gate, &mut wire);
 
                                 if let Some(_) = diagram.circuit.get(&qubit) {
-                                    // has ctrl gate must identify ctrls and targ
+                                    // has ctrl gate, must identify ctrls and targs after filling circuit
                                     if gate_name.starts_with('C') {
                                         has_ctrl_targ = true;
                                     }
