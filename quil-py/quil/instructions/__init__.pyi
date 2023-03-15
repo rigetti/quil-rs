@@ -379,6 +379,11 @@ class FrameIdentifier:
     @qubits.setter
     def qubits(self, qubits: List[Qubit]): ...
 
+class GateError(ValueError):
+    """An error that may occur when performing operations on a ``Gate``"""
+
+    ...
+
 @final
 class GateModifier(Enum):
     Controlled = "CONTROLLED"

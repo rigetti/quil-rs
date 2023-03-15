@@ -18,8 +18,8 @@ use rigetti_pyo3::{
 use super::PyQubit;
 use crate::expression::PyExpression;
 
-wrap_error!(GateError(quil_rs::instruction::GateError));
-py_wrap_error!(quil, GateError, PyGateError, PyValueError);
+wrap_error!(RustGateError(quil_rs::instruction::GateError));
+py_wrap_error!(quil, RustGateError, GateError, PyValueError);
 
 py_wrap_data_struct! {
     #[pyo3(subclass)]
@@ -50,8 +50,8 @@ impl PyGate {
                 Vec::<Qubit>::py_try_from(py, &qubits)?,
                 Vec::<GateModifier>::py_try_from(py, &modifiers)?,
             )
-            .map_err(GateError::from)
-            .map_err(GateError::to_py_err)?,
+            .map_err(RustGateError::from)
+            .map_err(RustGateError::to_py_err)?,
         ))
     }
 
@@ -78,8 +78,8 @@ impl PyGate {
                 Qubit::py_try_from(py, &fork_qubit)?,
                 Vec::<Expression>::py_try_from(py, &params)?,
             )
-            .map_err(GateError::from)
-            .map_err(GateError::to_py_err)?
+            .map_err(RustGateError::from)
+            .map_err(RustGateError::to_py_err)?
             .to_python(py)
     }
 }

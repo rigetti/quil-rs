@@ -9,7 +9,7 @@ pub use self::{
     calibration::{PyCalibration, PyMeasureCalibrationDefinition},
     declaration::{PyDeclaration, PyMemoryReference, PyScalarType, PyVector},
     frame::{PyAttributeValue, PyFrameAttributes, PyFrameDefinition, PyFrameIdentifier},
-    gate::{PyGate, PyGateDefinition, PyGateError, PyGateModifier, PyGateSpecification},
+    gate::{GateError, PyGate, PyGateDefinition, PyGateModifier, PyGateSpecification},
     measurement::PyMeasurement,
     qubit::PyQubit,
     waveform::{PyWaveform, PyWaveformDefinition},
@@ -74,5 +74,5 @@ create_init_submodule! {
         PyWaveform,
         PyWaveformDefinition
     ],
-    errors: [ PyGateError ],
+    errors: [ GateError ],
 }
