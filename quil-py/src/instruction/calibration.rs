@@ -5,8 +5,10 @@ use quil_rs::{
 
 use rigetti_pyo3::{
     impl_repr, impl_str, py_wrap_data_struct,
-    pyo3::{pymethods, types::PyString, Py, PyResult, Python},
-    PyTryFrom, ToPythonError,
+    pyo3::{
+        pyclass::CompareOp, pymethods, types::PyString, IntoPy, Py, PyObject, PyResult, Python,
+    },
+    PyTryFrom, PyWrapper, ToPythonError,
 };
 
 use crate::{
@@ -16,6 +18,7 @@ use crate::{
 };
 
 py_wrap_data_struct! {
+    #[derive(Debug, PartialEq)]
     #[pyo3(subclass)]
     PyCalibration(Calibration) as "Calibration" {
         instructions: Vec<Instruction> => Vec<PyInstruction>,
@@ -51,9 +54,17 @@ impl PyCalibration {
             .map_err(IdentifierValidationError::to_py_err)?,
         ))
     }
+
+    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
+        match op {
+            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
+            _ => py.NotImplemented(),
+        }
+    }
 }
 
 py_wrap_data_struct! {
+    #[derive(Debug, PartialEq)]
     #[pyo3(subclass)]
     PyMeasureCalibrationDefinition(MeasureCalibrationDefinition) as "MeasureCalibrationDefinition" {
         qubit: Option<Qubit> => Option<PyQubit>,
@@ -78,5 +89,12 @@ impl PyMeasureCalibrationDefinition {
             parameter,
             Vec::<Instruction>::py_try_from(py, &instructions)?,
         )))
+    }
+
+    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
+        match op {
+            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
+            _ => py.NotImplemented(),
+        }
     }
 }

@@ -1,8 +1,10 @@
 use quil_rs::{instruction::Vector, program::MemoryRegion};
 use rigetti_pyo3::{
     impl_hash, impl_repr, py_wrap_data_struct,
-    pyo3::{pymethods, types::PyString, Py, PyResult, Python},
-    PyTryFrom,
+    pyo3::{
+        pyclass::CompareOp, pymethods, types::PyString, IntoPy, Py, PyObject, PyResult, Python,
+    },
+    PyTryFrom, PyWrapper,
 };
 
 use crate::instruction::PyVector;
@@ -26,5 +28,12 @@ impl PyMemoryRegion {
             Vector::py_try_from(py, &size)?,
             sharing,
         )))
+    }
+
+    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
+        match op {
+            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
+            _ => py.NotImplemented(),
+        }
     }
 }

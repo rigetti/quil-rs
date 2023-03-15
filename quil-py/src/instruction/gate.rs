@@ -8,9 +8,10 @@ use rigetti_pyo3::{
     py_wrap_union_enum,
     pyo3::{
         exceptions::PyValueError,
+        pyclass::CompareOp,
         pymethods,
         types::{PyInt, PyString},
-        Py, PyResult, Python,
+        IntoPy, Py, PyObject, PyResult, Python,
     },
     wrap_error, PyTryFrom, PyWrapper, ToPython, ToPythonError,
 };
@@ -22,6 +23,7 @@ wrap_error!(RustGateError(quil_rs::instruction::GateError));
 py_wrap_error!(quil, RustGateError, GateError, PyValueError);
 
 py_wrap_data_struct! {
+    #[derive(Debug, PartialEq, Eq)]
     #[pyo3(subclass)]
     PyGate(Gate) as "Gate" {
         name: String => Py<PyString>,
@@ -82,18 +84,58 @@ impl PyGate {
             .map_err(RustGateError::to_py_err)?
             .to_python(py)
     }
+
+    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
+        match op {
+            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
+            _ => py.NotImplemented(),
+        }
+    }
+}
+
+py_wrap_simple_enum! {
+    #[derive(Debug, PartialEq, Eq)]
+    PyGateModifier(GateModifier) as "GateModifier" {
+        Controlled,
+        Dagger,
+        Forked
+    }
+}
+impl_repr!(PyGateModifier);
+impl_str!(PyGateModifier);
+
+#[pymethods]
+impl PyGateModifier {
+    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
+        match op {
+            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
+            _ => py.NotImplemented(),
+        }
+    }
 }
 
 py_wrap_union_enum! {
+    #[derive(Debug, PartialEq, Eq)]
     PyGateSpecification(GateSpecification) as "GateSpecification" {
         matrix: Matrix => Vec<Vec<PyExpression>>,
         permutation: Permutation => Vec<Py<PyInt>>
     }
 }
 impl_repr!(PyGateSpecification);
+impl_str!(PyGateSpecification);
+
+#[pymethods]
+impl PyGateSpecification {
+    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
+        match op {
+            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
+            _ => py.NotImplemented(),
+        }
+    }
+}
 
 py_wrap_data_struct! {
-    #[derive(Debug)]
+    #[derive(Debug, PartialEq, Eq)]
     #[pyo3(subclass)]
     PyGateDefinition(GateDefinition) as "GateDefinition" {
         name: String => Py<PyString>,
@@ -104,12 +146,26 @@ py_wrap_data_struct! {
 impl_repr!(PyGateDefinition);
 impl_str!(PyGateDefinition);
 
-py_wrap_simple_enum! {
-    PyGateModifier(GateModifier) as "GateModifier" {
-        Controlled,
-        Dagger,
-        Forked
+#[pymethods]
+impl PyGateDefinition {
+    #[new]
+    pub fn new(
+        py: Python<'_>,
+        name: String,
+        parameters: Vec<String>,
+        specification: PyGateSpecification,
+    ) -> PyResult<Self> {
+        Ok(Self(GateDefinition::new(
+            name,
+            parameters,
+            GateSpecification::py_try_from(py, &specification)?,
+        )))
+    }
+
+    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
+        match op {
+            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
+            _ => py.NotImplemented(),
+        }
     }
 }
-impl_repr!(PyGateModifier);
-impl_str!(PyGateModifier);

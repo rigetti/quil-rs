@@ -6,11 +6,12 @@ use quil_rs::{
 use rigetti_pyo3::{
     impl_from_str, impl_hash, impl_repr, impl_str, py_wrap_data_struct, py_wrap_simple_enum,
     pyo3::{
+        pyclass::CompareOp,
         pymethods,
         types::{PyInt, PyString},
-        Py, PyResult, Python,
+        IntoPy, Py, PyObject, PyResult, Python,
     },
-    PyTryFrom,
+    PyTryFrom, PyWrapper,
 };
 
 py_wrap_simple_enum! {
@@ -25,7 +26,7 @@ impl_repr!(PyScalarType);
 impl_str!(PyScalarType);
 
 py_wrap_data_struct! {
-    #[derive(Debug)]
+    #[derive(Debug, Hash, PartialEq, Eq)]
     #[pyo3(subclass)]
     PyVector(Vector) as "Vector" {
         data_type: ScalarType => PyScalarType,
@@ -34,6 +35,7 @@ py_wrap_data_struct! {
 }
 impl_repr!(PyVector);
 impl_str!(PyVector);
+impl_hash!(PyVector);
 
 #[pymethods]
 impl PyVector {
@@ -44,10 +46,17 @@ impl PyVector {
             length,
         )))
     }
+
+    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
+        match op {
+            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
+            _ => py.NotImplemented(),
+        }
+    }
 }
 
 py_wrap_data_struct! {
-    #[derive(Debug)]
+    #[derive(Debug, PartialEq, Eq)]
     #[pyo3(subclass)]
     PyDeclaration(Declaration) as "Declaration" {
         name: String => Py<PyString>,
@@ -73,6 +82,13 @@ impl PyDeclaration {
             sharing,
         )))
     }
+
+    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
+        match op {
+            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
+            _ => py.NotImplemented(),
+        }
+    }
 }
 
 py_wrap_data_struct! {
@@ -93,5 +109,12 @@ impl PyMemoryReference {
     #[new]
     pub fn new(name: String, index: u64) -> Self {
         Self(MemoryReference::new(name, index))
+    }
+
+    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
+        match op {
+            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
+            _ => py.NotImplemented(),
+        }
     }
 }

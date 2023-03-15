@@ -1,5 +1,9 @@
 use quil_rs::instruction::Instruction;
-use rigetti_pyo3::{create_init_submodule, impl_repr, impl_str, py_wrap_union_enum};
+use rigetti_pyo3::{
+    create_init_submodule, impl_repr, impl_str, py_wrap_union_enum,
+    pyo3::{pyclass::CompareOp, pymethods, IntoPy, PyObject, Python},
+    PyWrapper,
+};
 
 pub use self::{
     arithmetic::{
@@ -25,7 +29,7 @@ mod qubit;
 mod waveform;
 
 py_wrap_union_enum! {
-    #[derive(Debug)]
+    #[derive(Debug, PartialEq)]
     PyInstruction(Instruction) as "Instruction" {
         arithmetic: Arithmetic => PyArithmetic,
         binary_logic: BinaryLogic => PyBinaryLogic,
@@ -41,6 +45,16 @@ py_wrap_union_enum! {
 }
 impl_repr!(PyInstruction);
 impl_str!(PyInstruction);
+
+#[pymethods]
+impl PyInstruction {
+    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
+        match op {
+            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
+            _ => py.NotImplemented(),
+        }
+    }
+}
 
 create_init_submodule! {
     classes: [

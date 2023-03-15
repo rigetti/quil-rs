@@ -7,9 +7,10 @@ use rigetti_pyo3::{
     impl_as_mut_for_wrapper, impl_repr, impl_str, py_wrap_data_struct, py_wrap_simple_enum,
     py_wrap_type, py_wrap_union_enum,
     pyo3::{
+        pyclass::CompareOp,
         pymethods,
         types::{PyFloat, PyInt},
-        Py, PyResult, Python,
+        IntoPy, Py, PyObject, PyResult, Python,
     },
     PyTryFrom, PyWrapper, PyWrapperMut, ToPython,
 };
@@ -17,7 +18,7 @@ use rigetti_pyo3::{
 use super::PyMemoryReference;
 
 py_wrap_data_struct! {
-    #[derive(Debug)]
+    #[derive(Debug, PartialEq)]
     #[pyo3(subclass)]
     PyArithmetic(Arithmetic) as "Arithmetic" {
         operator: ArithmeticOperator => PyArithmeticOperator,
@@ -42,10 +43,17 @@ impl PyArithmetic {
             ArithmeticOperand::py_try_from(py, &source)?,
         )))
     }
+
+    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
+        match op {
+            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
+            _ => py.NotImplemented(),
+        }
+    }
 }
 
 py_wrap_union_enum! {
-    #[derive(Debug)]
+    #[derive(Debug, PartialEq)]
     PyArithmeticOperand(ArithmeticOperand) as "ArithmeticOperand" {
         literal_integer: LiteralInteger => Py<PyInt>,
         literal_real: LiteralReal => Py<PyFloat>,
@@ -55,8 +63,18 @@ py_wrap_union_enum! {
 impl_repr!(PyArithmeticOperand);
 impl_str!(PyArithmeticOperand);
 
+#[pymethods]
+impl PyArithmeticOperand {
+    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
+        match op {
+            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
+            _ => py.NotImplemented(),
+        }
+    }
+}
+
 py_wrap_simple_enum! {
-    #[derive(Debug)]
+    #[derive(Debug, PartialEq)]
     PyArithmeticOperator(ArithmeticOperator) as "ArithmeticOperator" {
         Add,
         Subtract,
@@ -67,8 +85,18 @@ py_wrap_simple_enum! {
 impl_repr!(PyArithmeticOperator);
 impl_str!(PyArithmeticOperator);
 
+#[pymethods]
+impl PyArithmeticOperator {
+    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
+        match op {
+            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
+            _ => py.NotImplemented(),
+        }
+    }
+}
+
 py_wrap_union_enum! {
-    #[derive(Debug)]
+    #[derive(Debug, PartialEq, Eq)]
     #[pyo3(subclass)]
     PyBinaryOperand(BinaryOperand) as "BinaryOperand" {
         literal_integer: LiteralInteger => Py<PyInt>,
@@ -78,8 +106,18 @@ py_wrap_union_enum! {
 impl_repr!(PyBinaryOperand);
 impl_str!(PyBinaryOperand);
 
+#[pymethods]
+impl PyBinaryOperand {
+    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
+        match op {
+            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
+            _ => py.NotImplemented(),
+        }
+    }
+}
+
 py_wrap_type! {
-    #[derive(Debug)]
+    #[derive(Debug, PartialEq, Eq)]
     #[pyo3(subclass)]
     PyBinaryOperands(BinaryOperands) as "BinaryOperands"
 }
@@ -125,10 +163,17 @@ impl PyBinaryOperands {
         self.as_inner_mut().1 = BinaryOperand::py_try_from(py, &binary_operand)?;
         Ok(())
     }
+
+    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
+        match op {
+            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
+            _ => py.NotImplemented(),
+        }
+    }
 }
 
 py_wrap_simple_enum! {
-    #[derive(Debug)]
+    #[derive(Debug, PartialEq, Eq)]
     PyBinaryOperator(BinaryOperator) as "BinaryOperator" {
         And,
         Ior,
@@ -138,8 +183,18 @@ py_wrap_simple_enum! {
 impl_repr!(PyBinaryOperator);
 impl_str!(PyBinaryOperator);
 
+#[pymethods]
+impl PyBinaryOperator {
+    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
+        match op {
+            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
+            _ => py.NotImplemented(),
+        }
+    }
+}
+
 py_wrap_data_struct! {
-    #[derive(Debug)]
+    #[derive(Debug, PartialEq, Eq)]
     #[pyo3(subclass)]
     PyBinaryLogic(BinaryLogic) as "BinaryLogic" {
         operator: BinaryOperator => PyBinaryOperator,
@@ -160,5 +215,12 @@ impl PyBinaryLogic {
             BinaryOperator::py_try_from(py, &operator)?,
             BinaryOperands::py_try_from(py, &operands)?,
         )))
+    }
+
+    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
+        match op {
+            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
+            _ => py.NotImplemented(),
+        }
     }
 }

@@ -6,14 +6,17 @@ use quil_rs::instruction::{
 };
 use rigetti_pyo3::{
     impl_hash, impl_repr, impl_str, py_wrap_data_struct, py_wrap_union_enum,
-    pyo3::{pymethods, types::PyString, Py, PyResult, Python},
-    PyTryFrom,
+    pyo3::{
+        pyclass::CompareOp, pymethods, types::PyString, IntoPy, Py, PyObject, PyResult, Python,
+    },
+    PyTryFrom, PyWrapper,
 };
 
 use super::PyQubit;
 use crate::expression::PyExpression;
 
 py_wrap_union_enum! {
+    #[derive(Debug, PartialEq, Eq)]
     PyAttributeValue(AttributeValue) as "AttributeValue" {
         string: String => Py<PyString>,
         expression: Expression => PyExpression
@@ -22,10 +25,20 @@ py_wrap_union_enum! {
 impl_repr!(PyAttributeValue);
 impl_str!(PyAttributeValue);
 
+#[pymethods]
+impl PyAttributeValue {
+    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
+        match op {
+            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
+            _ => py.NotImplemented(),
+        }
+    }
+}
+
 pub type PyFrameAttributes = HashMap<String, PyAttributeValue>;
 
 py_wrap_data_struct! {
-    #[derive(Debug)]
+    #[derive(Debug, PartialEq, Eq)]
     #[pyo3(subclass)]
     PyFrameDefinition(FrameDefinition) as "FrameDefinition" {
         identifier: FrameIdentifier => PyFrameIdentifier,
@@ -47,6 +60,13 @@ impl PyFrameDefinition {
             FrameIdentifier::py_try_from(py, &identifier)?,
             FrameAttributes::py_try_from(py, &attributes)?,
         )))
+    }
+
+    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
+        match op {
+            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
+            _ => py.NotImplemented(),
+        }
     }
 }
 
@@ -70,5 +90,12 @@ impl PyFrameIdentifier {
             name,
             Vec::<Qubit>::py_try_from(py, &qubits)?,
         )))
+    }
+
+    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
+        match op {
+            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
+            _ => py.NotImplemented(),
+        }
     }
 }

@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::collections::HashSet;
 use std::fmt;
@@ -26,6 +25,7 @@ mod declaration;
 mod frame;
 mod gate;
 mod measurement;
+mod qubit;
 mod waveform;
 
 #[cfg(test)]
@@ -40,6 +40,7 @@ pub use self::declaration::{Declaration, MemoryReference, ScalarType, Vector};
 pub use self::frame::{AttributeValue, FrameAttributes, FrameDefinition, FrameIdentifier};
 pub use self::gate::{Gate, GateDefinition, GateError, GateModifier, GateSpecification, GateType};
 pub use self::measurement::Measurement;
+pub use self::qubit::Qubit;
 pub use self::waveform::{Waveform, WaveformDefinition, WaveformInvocation};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -658,22 +659,6 @@ mod test_instruction_display {
             .to_string(),
             "PRAGMA PRESERVE_BLOCK"
         );
-    }
-}
-
-#[derive(Clone, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
-pub enum Qubit {
-    Fixed(u64),
-    Variable(String),
-}
-
-impl fmt::Display for Qubit {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use Qubit::*;
-        match self {
-            Fixed(value) => write!(f, "{value}"),
-            Variable(value) => write!(f, "{value}"),
-        }
     }
 }
 
