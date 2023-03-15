@@ -17,7 +17,12 @@ use std::collections::HashSet;
 use std::fmt;
 
 use crate::expression::Expression;
+#[cfg(test)]
+use crate::parser::lex;
 use crate::program::frame::FrameMatchCondition;
+
+#[cfg(test)]
+use nom_locate::LocatedSpan;
 
 mod arithmetic;
 mod calibration;
@@ -27,9 +32,6 @@ mod gate;
 mod measurement;
 mod qubit;
 mod waveform;
-
-#[cfg(test)]
-use proptest_derive::Arbitrary;
 
 pub use self::arithmetic::{
     Arithmetic, ArithmeticOperand, ArithmeticOperator, BinaryLogic, BinaryOperand, BinaryOperands,

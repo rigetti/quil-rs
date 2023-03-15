@@ -2,6 +2,9 @@ use std::{fmt, str::FromStr};
 
 use nom_locate::LocatedSpan;
 
+#[cfg(test)]
+use proptest_derive::Arbitrary;
+
 use crate::{
     parser::{common::parse_memory_reference, lex, ParseError},
     program::{disallow_leftover, SyntaxError},
