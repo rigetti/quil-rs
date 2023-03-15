@@ -1,19 +1,89 @@
-from typing import Dict, final, List, Optional
-
-@final
-class Program:
-    pass
+from typing import Dict, Set, final, List, Optional
 
 from quil.instructions import (
     AttributeValue,
     Calibration,
+    Declaration,
     FrameIdentifier,
+    GateDefinition,
     MeasureCalibrationDefinition,
     Measurement,
     Instruction,
     Gate,
+    Qubit,
     Vector,
+    Waveform,
 )
+
+@final
+class Program:
+    @staticmethod
+    def __new__(cls) -> "Program": ...
+    @property
+    def instructions(self) -> List[Instruction]: ...
+    @property
+    def calibrations(self) -> CalibrationSet: ...
+    @property
+    def waveforms(self) -> Dict[str, Waveform]: ...
+    @property
+    def frames(self) -> FrameSet: ...
+    @property
+    def memory_regions(self) -> Dict[str, MemoryRegion]: ...
+    @property
+    def declarations(self) -> Dict[str, Declaration]: ...
+    @property
+    def defined_gates(self) -> List[GateDefinition]: ...
+    def dagger(self) -> "Program":
+        """
+        Creates a new conjugate transpose of the ``Program`` by reversing the order of gate
+        instructions and applying the DAGGER modifier to each.
+
+        Raises a ``GateError`` if any of the instructions in the program are not a ``Gate`
+        """
+        ...
+    def expand_calibrations(self) -> "Program":
+        """
+        Expand any instructions in the program which have a matching calibration, leaving the others
+        unchanged. Recurses though each instruction while ensuring there is no cycle in the expansion
+        graph (i.e. no calibration expands directly or indirectly into itself)
+        """
+        ...
+    def into_simplified(self) -> "Program":
+        """
+        Simplify this program into a new [`Program`] which contains only instructions
+        and definitions which are executed; effectively, perform dead code removal.
+
+        Removes:
+        - All calibrations, following calibration expansion
+        - Frame definitions which are not used by any instruction such as `PULSE` or `CAPTURE`
+        - Waveform definitions which are not used by any instruction
+
+        When a valid program is simplified, it remains valid.
+        """
+        ...
+    def get_used_qubits(self) -> Set[Qubit]:
+        """
+        Returns a set consisting of every Qubit that is used in the program.
+        """
+        ...
+    def add_instruction(self, instruction: Instruction):
+        """
+        Add an instruction to the end of the program.
+        """
+        ...
+    def add_instructions(self, instruction: List[Instruction]):
+        """
+        Add a list of instructions to the end of the program.
+        """
+        ...
+    @staticmethod
+    def parse(quil: str) -> "Program":
+        """
+        Parses the given Quil string and returns a new ``Program``.
+        Raises a ``ProgramError`` if the given string isn't valid Quil.
+        """
+    def to_instructions(self, include_headers: bool) -> List[Instruction]: ...
+    def to_headers(self) -> List[Instruction]: ...
 
 @final
 class CalibrationSet:
