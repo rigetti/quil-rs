@@ -1091,34 +1091,6 @@ DAGGER G 0"#,
         fn test_modifier_dagger_cz() {
             insta::assert_snapshot!(get_latex("DAGGER CZ 0 1", Settings::default()));
         }
-
-        #[test]
-        fn test_program_good_modifiers() {
-            let latex = get_latex(
-                r#"Y 0
-CONTROLLED Y 0 1
-CONTROLLED CONTROLLED Y 0 1 2
-CONTROLLED CONTROLLED CONTROLLED Y 0 1 2 3
-
-DAGGER Y 0
-DAGGER DAGGER Y 0
-DAGGER DAGGER DAGGER Y 0
-
-CONTROLLED DAGGER Y 0 1
-CONTROLLED DAGGER CONTROLLED Y 0 1 2
-CONTROLLED DAGGER CONTROLLED DAGGER Y 0 1 2
-
-DEFGATE G:
-    1, 0
-    0, 1
-
-CONTROLLED G 0 1
-DAGGER G 0"#,
-                Settings::default(),
-            );
-
-            insta::assert_snapshot!(latex);
-        }
     }
 
     /// Test module for Quantikz Commands
@@ -1284,7 +1256,51 @@ DAGGER G 0"#,
         }
 
         #[test]
-        fn test_program_defgate() {
+        fn test_program_good_modifiers() {
+            let latex = get_latex(
+                r#"Y 0
+CONTROLLED Y 0 1
+CONTROLLED CONTROLLED Y 0 1 2
+CONTROLLED CONTROLLED CONTROLLED Y 0 1 2 3
+
+DAGGER Y 0
+DAGGER DAGGER Y 0
+DAGGER DAGGER DAGGER Y 0
+
+CONTROLLED DAGGER Y 0 1
+CONTROLLED DAGGER CONTROLLED Y 0 1 2
+CONTROLLED DAGGER CONTROLLED DAGGER Y 0 1 2
+
+DEFGATE G:
+    1, 0
+    0, 1
+
+CONTROLLED G 0 1
+DAGGER G 0"#,
+                Settings::default(),
+            );
+
+            insta::assert_snapshot!(latex);
+        }
+
+        #[test]
+        fn test_program_good_simple_params() {
+            insta::assert_snapshot!(get_latex(
+                "CPHASE(1.0) 0 1\nCPHASE(1.0-2.0i) 1 0",
+                Settings::default()
+            ));
+        }
+
+        #[test]
+        fn test_program_good_complex_params() {
+            insta::assert_snapshot!(get_latex(
+                "CPHASE(pi/2) 1 0\nCPHASE(cos(sin(2*pi/3))*cis(-1)*exp(i*pi)) 3 4",
+                Settings::default()
+            ));
+        }
+
+        #[test]
+        fn test_program_good_basic_defgate() {
             let latex = get_latex(
                 r#"DEFGATE H0:
     0.707, 0.707
@@ -1296,6 +1312,21 @@ DEFGATE H1:
 
 H0 0
 H1 1"#,
+                Settings::default(),
+            );
+
+            insta::assert_snapshot!(latex);
+        }
+
+        #[test]
+        fn test_program_good_defgate_with_long_name() {
+            let latex = get_latex(
+                r#"DEFGATE ______________________________________ugly-python-convention______________________________________:
+    1, 0
+    0, 1
+    
+______________________________________ugly-python-convention______________________________________ 0
+______________________________________ugly-python-convention______________________________________ 1"#,
                 Settings::default(),
             );
 
