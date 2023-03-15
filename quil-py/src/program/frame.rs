@@ -39,3 +39,9 @@ impl PyFrameSet {
         }
     }
 }
+
+impl Default for PyFrameSet {
+    fn default() -> Self {
+        Self::new()
+    }
+}
