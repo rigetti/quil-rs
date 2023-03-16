@@ -2,28 +2,23 @@
 //!
 //! This module enables generating quantum circuits using the LaTeX subpackage
 //! TikZ/[`Quantikz`] for a given quil [`Program`]. This feature is callable on
-//! [`Program`] (see usage below) and returns a LaTeX string which can be rendered in
-//! a LaTeX visualization tool. Be aware that not all Programs can be serialized as
-//! LaTeX. If a [`Program`] contains a gate or modifier that has not been
-//! implemented in the [Supported Gates and Modifiers](#supported-gates-and-modifiers)
-//! section below, an error will be returned detailing whether the entire [`Program`] or which line
-//! of instruction containing the gate or modifier is unsupported.
+//! [`Program`] (see usage below) and returns a LaTeX string which can be
+//! rendered in a LaTeX visualization tool. Be aware that not all Programs can
+//! be serialized as LaTeX. If a [`Program`] contains a gate or modifier that
+//! has not been implemented in the [Supported Gates and Modifiers]
+//! (#supported-gates-and-modifiers) section below, an error will be returned
+//! detailing whether the entire [`Program`] or which line of instruction
+//! containing the gate or modifier is unsupported.
 //!
 //! # Supported Gates and Modifiers
 //!
-//!     - Pauli Gates:           `I`, `X`, `Y`, `Z`
-//!     - Hadamard Gate:         `H`
-//!     - Phase Gate:            `PHASE`, `S`, `T`
-//!     - Controlled Phase Gate: `CZ`, `CPHASE`
-//!     - Controlled X Gates:    `CNOT`, `CCNOT`
-//!     - User-Defined Gates:             `DEFGATE`
-//!     - Modifiers:             `CONTROLLED`, `DAGGER`
-//!
-//! - Usage: `Program.to_latex(settings: Settings);`
-//!
-//! This module can be viewed as a self-contained partial implementation of
-//! [`Quantikz`] with all available commands listed as variants in a Command
-//! enum. View [`Quantikz`] documentation for more information.
+//!   - Pauli Gates:           `I`, `X`, `Y`, `Z`
+//!   - Hadamard Gate:         `H`
+//!   - Phase Gate:            `PHASE`, `S`, `T`
+//!   - Controlled Phase Gate: `CZ`, `CPHASE`
+//!   - Controlled X Gates:    `CNOT`, `CCNOT`
+//!   - User-Defined Gates:    `DEFGATE`
+//!   - Modifiers:             `CONTROLLED`, `DAGGER`
 //!
 //! [`Quantikz`]: https://arxiv.org/pdf/1809.03842.pdf
 
@@ -135,10 +130,10 @@ impl Symbol {
     }
 }
 
-/// Settings contains the metadata that allows the user to customize how the
-/// circuit is rendered or use the default implementation.
+/// RenderSettings contains the metadata that allows the user to customize how
+/// the circuit is rendered or use the default implementation.
 #[derive(Debug)]
-pub struct Settings {
+pub struct RenderSettings {
     /// Convert numerical constants, e.g. pi, to LaTeX form.
     pub texify_numerical_constants: bool,
     /// Include all qubits implicitly referenced in the Quil program.
@@ -153,8 +148,8 @@ pub struct Settings {
     pub right_align_terminal_measurements: bool,
 }
 
-impl Default for Settings {
-    /// Returns the default Settings.
+impl Default for RenderSettings {
+    /// Returns the default RenderSettings.
     fn default() -> Self {
         Self {
             /// false: pi is π.
@@ -173,7 +168,7 @@ impl Default for Settings {
     }
 }
 
-impl Settings {
+impl RenderSettings {
     /// Returns a label as the qubit name to the left side of the wire.
     ///
     ///  # Arguments
@@ -191,10 +186,10 @@ impl Settings {
     ///
     /// # Examples
     /// ```
-    /// use quil_rs::{Program, program::latex::{Settings, Latex}};
+    /// use quil_rs::{Program, program::latex::{RenderSettings, Latex}};
     /// use std::str::FromStr;
     /// let program = Program::from_str("H 0\nCNOT 0 1").expect("");
-    /// let settings = Settings {
+    /// let settings = RenderSettings {
     ///     impute_missing_qubits: true,
     ///     ..Default::default()
     /// };
@@ -283,11 +278,11 @@ impl Display for Document {
 /// through a multi qubit gate 'e.g. CNOT'. The size of the diagram can be
 /// measured by multiplying the column with the length of the circuit. This is
 /// an [m x n] matrix where each element in the matrix represents an item to be
-/// rendered onto the diagram using one of the [`Quantikz`] commands.
+/// rendered onto the diagram using one of the Quantikz commands.
 #[derive(Debug, Default)]
 struct Diagram {
     /// customizes how the diagram renders the circuit
-    settings: Settings,
+    settings: RenderSettings,
     /// total number of elements on each wire
     column: u32,
     /// column at which qubits in positional order form relationships
@@ -385,19 +380,19 @@ impl Diagram {
     /// qubit. The distance between the qubits represents the number of wires
     /// between them, i.e the space that the vector needs to traverse. If the
     /// control qubit comes before the target qubit the direction is positive,
-    /// otherwise, it is negative. See [`Quantikz`] documentation on CNOT for
-    /// some background that helps justify this approach.
+    /// otherwise, it is negative. See Quantikz documentation on CNOT for some
+    /// background that helps justify this approach.
     ///
     /// This function is expensive with a time complexity of O(n^2). In the
     /// worst case scenario every column contains a multi qubit gate with every
-    /// qubit as either a target or control. [`Quantikz`] uses the space
-    /// between wires to determine how long a line should stretch between
-    /// control and target qubits. Since it is impossible to determine how many
-    /// wires will be inserted between control and target qubits (e.g. a user
-    /// decides to impute missing qubits or some number of other instructions
-    /// are added containing qubits between them) for a custom body diagram,
-    /// this method can only be run after all wires are inserted into the
-    /// cicuit. Only run this method if a program contains multi qubit gates.
+    /// qubit as either a target or control. Quantikz uses the space between
+    /// wires to determine how long a line should stretch between control and
+    /// target qubits. Since it is impossible to determine how many wires will
+    /// be inserted between control and target qubits (e.g. a user decides to
+    /// impute missing qubits or some number of other instructions are added
+    /// containing qubits between them) for a custom body diagram, this method
+    /// can only be run after all wires are inserted into the cicuit. Only run
+    /// this method if a program contains multi qubit gates.
     ///
     /// # Arguments
     /// `&mut self` - self as mutible allowing to update the circuit qubits
@@ -690,7 +685,7 @@ impl Display for Diagram {
 /// its field will be updated at that column based on the knowledge Diagram has
 /// about this connection. This updated value also looks arbitrary to Wire, it
 /// does not explicitly define which qubit it relates to, but a digit that
-/// describes how far away it is from the related qubit based on [`Quantikz`].
+/// describes how far away it is from the related qubit based on Quantikz.
 #[derive(Debug, Default)]
 struct Wire {
     /// the name of ket(qubit) placed using the Lstick or Rstick commands
@@ -900,14 +895,19 @@ impl Supported {
 }
 
 pub trait Latex {
-    fn to_latex(self, settings: Settings) -> Result<String, LatexGenError>;
+    fn to_latex(self, settings: RenderSettings) -> Result<String, LatexGenError>;
 }
 
 impl Latex for Program {
-    /// Main function of LaTeX feature, returns a Result containing a quil
-    /// Program as a LaTeX string or an Error. Called on a Program, the
-    /// function starts with a check to ensure the Program contains gates and
-    /// modifers that are implemented and can therefore be parsed to LaTeX.
+    /// This implementation of Latex can be viewed as a self-contained partial
+    /// implementation of ``Quantikz`` with all available commands listed as
+    /// variants in a Command enum. View ``Quantikz`` documentation for more
+    /// information.
+    ///
+    /// This function returns a Result containing a quil [`Program`] as a LaTeX
+    /// string or a [`LatexGenError`] defined using thiserror. Called on a
+    /// Program, the function starts with a check to ensure the [`Program`]
+    /// contains supported gates and modifers that can be serialized to LaTeX.
     ///
     /// # Arguments
     /// `settings` - Customizes the rendering of a circuit.
@@ -915,20 +915,20 @@ impl Latex for Program {
     /// # Examples
     /// ```
     /// // To LaTeX for the Bell State Program.
-    /// use quil_rs::{Program, program::latex::{Settings, Latex}};
+    /// use quil_rs::{Program, program::latex::{RenderSettings, Latex}};
     /// use std::str::FromStr;
     /// let program = Program::from_str("H 0\nCNOT 0 1").expect("");
-    /// let latex = program.to_latex(Settings::default()).expect("");
+    /// let latex = program.to_latex(RenderSettings::default()).expect("");
     /// ```
     ///
     /// ```
     /// // To LaTeX for the Toffoli Gate Program.
-    /// use quil_rs::{Program, program::latex::{Settings, Latex}};
+    /// use quil_rs::{Program, program::latex::{RenderSettings, Latex}};
     /// use std::str::FromStr;
     /// let program = Program::from_str("CONTROLLED CNOT 2 1 0").expect("");
-    /// let latex = program.to_latex(Settings::default()).expect("");
+    /// let latex = program.to_latex(RenderSettings::default()).expect("");
     /// ```
-    fn to_latex(self, settings: Settings) -> Result<String, LatexGenError> {
+    fn to_latex(self, settings: RenderSettings) -> Result<String, LatexGenError> {
         // get a reference to the current supported program
         let instructions = Supported::is_supported(&Supported::New, &self)?;
 
@@ -1029,21 +1029,19 @@ impl Latex for Program {
             body,
             ..Default::default()
         };
-        println!("{document}");
-
         Ok(document.to_string())
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{Latex, Settings};
+    use super::{Latex, RenderSettings};
     use crate::Program;
     use std::str::FromStr;
 
     /// Helper function takes instructions and return the LaTeX using the
     /// Latex::to_latex method.
-    fn get_latex(instructions: &str, settings: Settings) -> String {
+    fn get_latex(instructions: &str, settings: RenderSettings) -> String {
         let program = Program::from_str(instructions).expect("Program should be returned");
         program
             .to_latex(settings)
@@ -1073,17 +1071,17 @@ DEFGATE G:
 
 CONTROLLED G 0 1
 DAGGER G 0"#,
-            Settings::default(),
+            RenderSettings::default(),
         );
     }
 
     /// Test module for the Document
     mod document {
-        use crate::program::latex::{tests::get_latex, Document, Settings};
+        use crate::program::latex::{tests::get_latex, Document, RenderSettings};
 
         #[test]
         fn test_template() {
-            insta::assert_snapshot!(get_latex("", Settings::default()));
+            insta::assert_snapshot!(get_latex("", RenderSettings::default()));
         }
 
         #[test]
@@ -1107,12 +1105,12 @@ DAGGER G 0"#,
 
     /// Test module for Supported (remove #[should_panic] when supported)
     mod supported {
-        use crate::program::latex::{tests::get_latex, Settings};
+        use crate::program::latex::{tests::get_latex, RenderSettings};
 
         #[test]
         #[should_panic]
         fn test_supported_misc_instructions() {
-            get_latex("NOP\nWAIT\nRESET\nHALT", Settings::default());
+            get_latex("NOP\nWAIT\nRESET\nHALT", RenderSettings::default());
         }
 
         #[test]
@@ -1120,7 +1118,7 @@ DAGGER G 0"#,
         fn test_supported_measure() {
             get_latex(
                 "DECLARE ro BIT\nMEASURE 0\nMEASURE 1 ro[0]",
-                Settings::default(),
+                RenderSettings::default(),
             );
         }
 
@@ -1134,7 +1132,7 @@ DAGGER G 0"#,
     RZ(%gamma) q
 
 EULER(pi, 2*pi, 3*pi/2) 0"#,
-                Settings::default(),
+                RenderSettings::default(),
             );
         }
 
@@ -1147,7 +1145,7 @@ DECLARE theta REAL[1]
 RX(pi/2) 0
 RZ(theta) 0
 RY(-pi/2) 0"#,
-                Settings::default(),
+                RenderSettings::default(),
             );
         }
 
@@ -1156,7 +1154,7 @@ RY(-pi/2) 0"#,
         fn test_supported_arithmetic_instruction() {
             get_latex(
                 "DECLARE b BIT\nDECLARE theta REAL\nMOVE theta -3.14\nLT b theta -3.14",
-                Settings::default(),
+                RenderSettings::default(),
             );
         }
 
@@ -1165,122 +1163,125 @@ RY(-pi/2) 0"#,
         fn test_supported_modifier_forked() {
             get_latex(
                 "FORKED CONTROLLED FORKED RX(a,b,c,d) 0 1 2 3",
-                Settings::default(),
+                RenderSettings::default(),
             );
         }
     }
 
     /// Test module for gates
     mod gates {
-        use crate::program::latex::{tests::get_latex, Settings};
+        use crate::program::latex::{tests::get_latex, RenderSettings};
 
         #[test]
         fn test_gate_x() {
-            insta::assert_snapshot!(get_latex("X 0", Settings::default()));
+            insta::assert_snapshot!(get_latex("X 0", RenderSettings::default()));
         }
 
         #[test]
         fn test_gate_y() {
-            insta::assert_snapshot!(get_latex("Y 1", Settings::default()));
+            insta::assert_snapshot!(get_latex("Y 1", RenderSettings::default()));
         }
 
         #[test]
         fn test_gates_x_and_y_single_qubit() {
-            insta::assert_snapshot!(get_latex("X 0\nY 0", Settings::default()));
+            insta::assert_snapshot!(get_latex("X 0\nY 0", RenderSettings::default()));
         }
 
         #[test]
         fn test_gates_x_and_y_two_qubits() {
-            insta::assert_snapshot!(get_latex("X 0\nY 1", Settings::default()));
+            insta::assert_snapshot!(get_latex("X 0\nY 1", RenderSettings::default()));
         }
 
         #[test]
         fn test_gates_phase_pi_rotation() {
-            insta::assert_snapshot!(get_latex("PHASE(pi) 0", Settings::default()));
+            insta::assert_snapshot!(get_latex("PHASE(pi) 0", RenderSettings::default()));
         }
 
         #[test]
         fn test_gates_cnot_ctrl_0_targ_1() {
-            insta::assert_snapshot!(get_latex("CNOT 0 1", Settings::default()));
+            insta::assert_snapshot!(get_latex("CNOT 0 1", RenderSettings::default()));
         }
 
         #[test]
         fn test_gates_cnot_ctrl_1_targ_0() {
-            insta::assert_snapshot!(get_latex("CNOT 1 0", Settings::default()));
+            insta::assert_snapshot!(get_latex("CNOT 1 0", RenderSettings::default()));
         }
 
         #[test]
         #[should_panic]
         fn test_gates_cnot_error_single_qubit() {
-            get_latex("CNOT 0 0", Settings::default());
+            get_latex("CNOT 0 0", RenderSettings::default());
         }
 
         #[test]
         fn test_gates_h_and_cnot_ctrl_0_targ_1() {
-            insta::assert_snapshot!(get_latex("H 0\nCNOT 0 1", Settings::default()));
+            insta::assert_snapshot!(get_latex("H 0\nCNOT 0 1", RenderSettings::default()));
         }
 
         #[test]
         fn test_gates_h_and_cnot_ctrl_1_targ_0() {
-            insta::assert_snapshot!(get_latex("H 1\nCNOT 1 0", Settings::default()));
+            insta::assert_snapshot!(get_latex("H 1\nCNOT 1 0", RenderSettings::default()));
         }
 
         #[test]
         fn test_gate_toffoli() {
-            insta::assert_snapshot!(get_latex("CCNOT 1 2 0", Settings::default()));
+            insta::assert_snapshot!(get_latex("CCNOT 1 2 0", RenderSettings::default()));
         }
 
         #[test]
         fn test_gate_ccnot_and_controlled_cnot_equality() {
-            let ccnot = get_latex("CCNOT 1 2 0", Settings::default());
+            let ccnot = get_latex("CCNOT 1 2 0", RenderSettings::default());
 
-            let controlled = get_latex("CONTROLLED CNOT 1 2 0", Settings::default());
+            let controlled = get_latex("CONTROLLED CNOT 1 2 0", RenderSettings::default());
 
             assert_eq!(ccnot, controlled);
         }
 
         #[test]
         fn test_gate_cphase() {
-            insta::assert_snapshot!(get_latex("CPHASE(pi) 0 1", Settings::default()));
+            insta::assert_snapshot!(get_latex("CPHASE(pi) 0 1", RenderSettings::default()));
         }
 
         #[test]
         fn test_gate_cz() {
-            insta::assert_snapshot!(get_latex("CZ 0 1", Settings::default()));
+            insta::assert_snapshot!(get_latex("CZ 0 1", RenderSettings::default()));
         }
     }
 
     /// Test module for modifiers
     mod modifiers {
-        use crate::program::latex::{tests::get_latex, Settings};
+        use crate::program::latex::{tests::get_latex, RenderSettings};
 
         #[test]
         fn test_modifier_toffoli_gate() {
-            insta::assert_snapshot!(get_latex("CONTROLLED CNOT 2 1 0", Settings::default()));
+            insta::assert_snapshot!(get_latex(
+                "CONTROLLED CNOT 2 1 0",
+                RenderSettings::default()
+            ));
         }
 
         #[test]
         fn test_modifier_controlled_cnot_and_ccnot_equality() {
-            let controlled = get_latex("CONTROLLED CNOT 2 1 0", Settings::default());
+            let controlled = get_latex("CONTROLLED CNOT 2 1 0", RenderSettings::default());
 
-            let ccnot = get_latex("CCNOT 2 1 0", Settings::default());
+            let ccnot = get_latex("CCNOT 2 1 0", RenderSettings::default());
 
             assert_eq!(controlled, ccnot);
         }
 
         #[test]
         fn test_modifier_dagger() {
-            insta::assert_snapshot!(get_latex("DAGGER X 0", Settings::default()));
+            insta::assert_snapshot!(get_latex("DAGGER X 0", RenderSettings::default()));
         }
 
         #[test]
         fn test_modifier_dagger_dagger() {
-            insta::assert_snapshot!(get_latex("DAGGER DAGGER Y 0", Settings::default()));
+            insta::assert_snapshot!(get_latex("DAGGER DAGGER Y 0", RenderSettings::default()));
         }
 
         #[test]
         fn test_modifier_dagger_cz() {
-            insta::assert_snapshot!(get_latex("DAGGER CZ 0 1", Settings::default()));
+            insta::assert_snapshot!(get_latex("DAGGER CZ 0 1", RenderSettings::default()));
         }
     }
 
@@ -1329,14 +1330,14 @@ RY(-pi/2) 0"#,
         }
     }
 
-    /// Test module for Settings
+    /// Test module for RenderSettings
     mod settings {
-        use crate::program::latex::{tests::get_latex, Settings};
+        use crate::program::latex::{tests::get_latex, RenderSettings};
 
         #[test]
         fn test_settings_texify_numerical_constants_true_supported_symbol() {
             // default texify_numerical_constants is true
-            let settings = Settings {
+            let settings = RenderSettings {
                 ..Default::default()
             };
             insta::assert_snapshot!(get_latex("CPHASE(alpha) 0 1", settings));
@@ -1344,7 +1345,7 @@ RY(-pi/2) 0"#,
 
         #[test]
         fn test_settings_texify_numerical_constants_false_supported_symbol() {
-            let settings = Settings {
+            let settings = RenderSettings {
                 texify_numerical_constants: false,
                 ..Default::default()
             };
@@ -1354,13 +1355,13 @@ RY(-pi/2) 0"#,
         #[test]
         fn test_settings_texify_numerical_constants_unsupported_symbol() {
             // default texify_numerical_constants is true
-            let settings_true = Settings {
+            let settings_true = RenderSettings {
                 ..Default::default()
             };
 
             let unsupported_true = get_latex("CPHASE(chi) 0 1", settings_true);
 
-            let settings_false = Settings {
+            let settings_false = RenderSettings {
                 texify_numerical_constants: false,
                 ..Default::default()
             };
@@ -1373,7 +1374,7 @@ RY(-pi/2) 0"#,
 
         #[test]
         fn test_settings_label_qubit_lines_false() {
-            let settings = Settings {
+            let settings = RenderSettings {
                 label_qubit_lines: false,
                 ..Default::default()
             };
@@ -1382,7 +1383,7 @@ RY(-pi/2) 0"#,
 
         #[test]
         fn test_settings_impute_missing_qubits_true_ctrl_less_than_targ() {
-            let settings = Settings {
+            let settings = RenderSettings {
                 impute_missing_qubits: true,
                 ..Default::default()
             };
@@ -1391,7 +1392,7 @@ RY(-pi/2) 0"#,
 
         #[test]
         fn test_settings_impute_missing_qubits_true_ctrl_greater_than_targ() {
-            let settings = Settings {
+            let settings = RenderSettings {
                 impute_missing_qubits: true,
                 ..Default::default()
             };
@@ -1401,11 +1402,11 @@ RY(-pi/2) 0"#,
 
     /// Test various programs for LaTeX accuracy
     mod programs {
-        use crate::program::latex::{tests::get_latex, Settings};
+        use crate::program::latex::{tests::get_latex, RenderSettings};
 
         #[test]
         fn test_program_h0_cnot01_x1_cnot12() {
-            let settings = Settings {
+            let settings = RenderSettings {
                 ..Default::default()
             };
             insta::assert_snapshot!(get_latex("H 0\nCNOT 0 1\nX 1\nCNOT 1 2", settings));
@@ -1413,7 +1414,7 @@ RY(-pi/2) 0"#,
 
         #[test]
         fn test_program_h5_cnot52_y2_cnot23() {
-            let settings = Settings {
+            let settings = RenderSettings {
                 ..Default::default()
             };
             insta::assert_snapshot!(get_latex("H 5\nCNOT 5 2\nY 2\nCNOT 2 3", settings));
@@ -1441,7 +1442,7 @@ DEFGATE G:
 
 CONTROLLED G 0 1
 DAGGER G 0"#,
-                Settings::default(),
+                RenderSettings::default(),
             );
 
             insta::assert_snapshot!(latex);
@@ -1451,7 +1452,7 @@ DAGGER G 0"#,
         fn test_program_good_simple_params() {
             insta::assert_snapshot!(get_latex(
                 "CPHASE(1.0) 0 1\nCPHASE(1.0-2.0i) 1 0",
-                Settings::default()
+                RenderSettings::default()
             ));
         }
 
@@ -1459,7 +1460,7 @@ DAGGER G 0"#,
         fn test_program_good_complex_params() {
             insta::assert_snapshot!(get_latex(
                 "CPHASE(pi/2) 1 0\nCPHASE(cos(sin(2*pi/3))*cis(-1)*exp(i*pi)) 3 4",
-                Settings::default()
+                RenderSettings::default()
             ));
         }
 
@@ -1476,7 +1477,7 @@ DEFGATE H1:
 
 H0 0
 H1 1"#,
-                Settings::default(),
+                RenderSettings::default(),
             );
 
             insta::assert_snapshot!(latex);
@@ -1491,7 +1492,7 @@ H1 1"#,
     
 ______________________________________ugly-python-convention______________________________________ 0
 ______________________________________ugly-python-convention______________________________________ 1"#,
-                Settings::default(),
+                RenderSettings::default(),
             );
 
             insta::assert_snapshot!(latex);
