@@ -43,9 +43,7 @@ use crate::Program;
 enum Command {
     /// `\lstick{\ket{q_{u32}}}`: Make a qubit "stick out" from the left.
     Lstick(String),
-    /// `\rstick{\ket{q_{u32}}}`: Make a qubit "stick out" from the right.
-    Rstick(String),
-    /// ` \gate{name}`: Make a gate on the wire.
+    /// `\gate{name}`: Make a gate on the wire.
     Gate(String),
     /// `\phase{symbol}`: Make a phase on the wire with a rotation
     Phase(String),
@@ -55,18 +53,10 @@ enum Command {
     Qw,
     /// `\\`: Start a new row
     Nr,
-    /// `\meter{wire}`: Measure a qubit.
-    Meter(String),
     /// `\ctrl{wire}`: Make a control qubit--different from Control.
     Ctrl(String),
     /// `\targ{}`: Make a controlled-not gate.
     Targ,
-    /// `\control{}`: Make a controlled-phase gate--different from Ctrl.
-    Control,
-    /// `\swap{wire}`: Make a swap gate--used with TargX.
-    Swap(String),
-    /// `\targX{}`: Make a qubit the target for a swap--used with Swap.
-    TargX,
 }
 
 impl Command {
@@ -74,28 +64,16 @@ impl Command {
     ///
     /// # Arguments
     /// `command` - A Command variant.
-    ///
-    /// # Examples
-    /// ```
-    /// use quil_rs::program::latex::Command;
-    /// let ket_0 = "0".to_string();
-    /// let lstick_ket_0 = Command::get_command(Command::Lstick(ket_0));
-    /// ```
     fn get_command(command: Self) -> String {
         match command {
             Self::Lstick(wire) => format(format_args!(r#"\lstick{{\ket{{q_{{{wire}}}}}}}"#)),
-            Self::Rstick(wire) => format(format_args!(r#"\rstick{{\ket{{q_{{{wire}}}}}}}"#)),
             Self::Gate(name) => format(format_args!(r#"\gate{{{name}}}"#)),
             Self::Phase(symbol) => format(format_args!(r#"\phase{{{symbol}}}"#)),
             Self::Super(script) => format(format_args!(r#"^{{\{script}}}"#)),
             Self::Qw => r"\qw".to_string(),
             Self::Nr => r"\\".to_string(),
-            Self::Meter(wire) => format(format_args!(r#"\meter{{{wire}}}"#)),
             Self::Ctrl(wire) => format(format_args!(r#"\ctrl{{{wire}}}"#)),
             Self::Targ => r"\targ{}".to_string(),
-            Self::Control => r"\control{}".to_string(),
-            Self::Swap(wire) => format(format_args!(r#"\swap{{{wire}}}"#)),
-            Self::TargX => r"\targX{}".to_string(),
         }
     }
 }
@@ -158,14 +136,6 @@ impl Symbol {
     ///
     /// # Arguments
     /// `symbol` - A Symbol variant.
-    ///
-    /// # Examples
-    /// ```
-    /// use quil_rs::program::latex::{Parameter, Symbol};
-    /// let alpha = Symbol::get_symbol(
-    ///     &Parameter::Symbol(Symbol::Alpha)
-    /// );
-    /// ```
     fn get_symbol(symbol: &Parameter) -> String {
         match symbol {
             Parameter::Symbol(Symbol::Alpha) => r"\alpha".to_string(),
@@ -1367,11 +1337,6 @@ RY(-pi/2) 0"#,
         }
 
         #[test]
-        fn test_command_right_ket() {
-            insta::assert_snapshot!(Command::get_command(Command::Rstick("0".to_string())));
-        }
-
-        #[test]
         fn test_command_gate() {
             insta::assert_snapshot!(Command::get_command(Command::Gate("X".to_string())));
         }
@@ -1399,11 +1364,6 @@ RY(-pi/2) 0"#,
         }
 
         #[test]
-        fn test_command_measure() {
-            insta::assert_snapshot!(Command::get_command(Command::Meter("0".to_string())));
-        }
-
-        #[test]
         fn test_command_control() {
             insta::assert_snapshot!(Command::get_command(Command::Ctrl("0".to_string())));
         }
@@ -1411,21 +1371,6 @@ RY(-pi/2) 0"#,
         #[test]
         fn test_command_cnot_target() {
             insta::assert_snapshot!(Command::get_command(Command::Targ));
-        }
-
-        #[test]
-        fn test_command_cphase_target() {
-            insta::assert_snapshot!(Command::get_command(Command::Control));
-        }
-
-        #[test]
-        fn test_command_swap() {
-            insta::assert_snapshot!(Command::get_command(Command::Swap("0".to_string())));
-        }
-
-        #[test]
-        fn test_command_swap_target() {
-            insta::assert_snapshot!(Command::get_command(Command::TargX));
         }
     }
 

@@ -1,6 +1,0 @@
----
-source: src/program/latex/mod.rs
-assertion_line: 193
-expression: "Command::get_command(Command::Rstick(0))"
----
-\rstick{\ket{q_{0}}}
