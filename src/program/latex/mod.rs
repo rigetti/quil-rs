@@ -85,6 +85,14 @@ enum Parameter {
     Symbol(Symbol),
 }
 
+impl ToString for Parameter {
+    fn to_string(&self) -> String {
+        match self {
+            Parameter::Symbol(symbol) => Symbol::to_string(symbol),
+        }
+    }
+}
+
 /// Supported Greek and alphanumeric symbols.
 #[derive(Debug, Clone)]
 enum Symbol {
@@ -96,6 +104,19 @@ enum Symbol {
     Text(String),
 }
 
+impl ToString for Symbol {
+    fn to_string(&self) -> String {
+        match self {
+            Symbol::Alpha => r"\alpha".to_string(),
+            Symbol::Beta => r"\beta".to_string(),
+            Symbol::Gamma => r"\gamma".to_string(),
+            Symbol::Phi => r"\phi".to_string(),
+            Symbol::Pi => r"\pi".to_string(),
+            Symbol::Text(text) => format(format_args!(r#"\text{{{text}}}"#)),
+        }
+    }
+}
+
 impl Symbol {
     /// Returns the supported Symbol variant from text otherwise stores the
     /// unsupported symbol as text in the Text variant.
@@ -103,32 +124,13 @@ impl Symbol {
     /// # Arguments
     /// `text` - a String representing a greek or alaphanumeric symbol
     fn match_symbol(text: String) -> Symbol {
-        if text == "alpha" {
-            Symbol::Alpha
-        } else if text == "beta" {
-            Symbol::Beta
-        } else if text == "gamma" {
-            Symbol::Gamma
-        } else if text == "phi" {
-            Symbol::Phi
-        } else if text == "pi" {
-            Symbol::Pi
-        } else {
-            Symbol::Text(text)
-        }
-    }
-    /// Returns the LaTeX String for a given Symbol variant.
-    ///
-    /// # Arguments
-    /// `symbol` - A Symbol variant.
-    fn get_symbol(symbol: &Parameter) -> String {
-        match symbol {
-            Parameter::Symbol(Symbol::Alpha) => r"\alpha".to_string(),
-            Parameter::Symbol(Symbol::Beta) => r"\beta".to_string(),
-            Parameter::Symbol(Symbol::Gamma) => r"\gamma".to_string(),
-            Parameter::Symbol(Symbol::Phi) => r"\phi".to_string(),
-            Parameter::Symbol(Symbol::Pi) => r"\pi".to_string(),
-            Parameter::Symbol(Symbol::Text(text)) => format(format_args!(r#"\text{{{text}}}"#)),
+        match text.as_str() {
+            "alpha" => Symbol::Alpha,
+            "beta" => Symbol::Beta,
+            "gamma" => Symbol::Gamma,
+            "phi" => Symbol::Phi,
+            "pi" => Symbol::Pi,
+            _ => Symbol::Text(text),
         }
     }
 }
@@ -627,7 +629,7 @@ impl Display for Diagram {
                                     if let Some(parameters) = wire.parameters.get(&c) {
                                         for param in parameters {
                                             line.push_str(&Command::get_command(Command::Phase(
-                                                Symbol::get_symbol(param),
+                                                param.to_string(),
                                             )));
                                         }
                                     }
@@ -652,7 +654,7 @@ impl Display for Diagram {
                             if let Some(parameters) = wire.parameters.get(&c) {
                                 for param in parameters {
                                     line.push_str(&Command::get_command(Command::Phase(
-                                        Symbol::get_symbol(param),
+                                        param.to_string(),
                                     )));
                                 }
                             }
@@ -1314,7 +1316,7 @@ RY(-pi/2) 0"#,
 
     /// Test module for Quantikz Commands
     mod commands {
-        use crate::program::latex::{Command, Parameter, Symbol};
+        use crate::program::latex::{Command, Symbol};
 
         #[test]
         fn test_command_left_ket() {
@@ -1328,9 +1330,7 @@ RY(-pi/2) 0"#,
 
         #[test]
         fn test_command_phase() {
-            insta::assert_snapshot!(Command::get_command(Command::Phase(Symbol::get_symbol(
-                &Parameter::Symbol(Symbol::Pi)
-            ))));
+            insta::assert_snapshot!(Command::get_command(Command::Phase(Symbol::Pi.to_string())));
         }
 
         #[test]
