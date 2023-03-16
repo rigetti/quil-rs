@@ -11,7 +11,7 @@ args = ["run", "maturin", "develop"]
 
 [tasks.stubtest]
 command = "poetry"
-args = ["run", "stubtest", "quil"]
+args = ["run", "stubtest", "--allowlist", ".stubtest-allowlist", "quil"]
 
 [tasks.stubtest-flow]
 dependencies = [
@@ -19,3 +19,9 @@ dependencies = [
     "install-quil",
     "stubtest",
 ]
+
+[tasks.dev-flow]
+dependencies = ["dev-test-flow", "stubtest-flow"]
+
+[tasks.default]
+alias = "dev-flow"
