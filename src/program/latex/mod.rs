@@ -40,7 +40,7 @@ use crate::Program;
 ///     Single wire commands: lstick, rstick, qw, meter
 ///     Multi-wire commands: ctrl, targ, control, (swap, targx)
 #[derive(Debug)]
-pub enum Command {
+enum Command {
     /// `\lstick{\ket{q_{u32}}}`: Make a qubit "stick out" from the left.
     Lstick(String),
     /// `\rstick{\ket{q_{u32}}}`: Make a qubit "stick out" from the right.
@@ -81,7 +81,7 @@ impl Command {
     /// let ket_0 = "0".to_string();
     /// let lstick_ket_0 = Command::get_command(Command::Lstick(ket_0));
     /// ```
-    pub fn get_command(command: Self) -> String {
+    fn get_command(command: Self) -> String {
         match command {
             Self::Lstick(wire) => format(format_args!(r#"\lstick{{\ket{{q_{{{wire}}}}}}}"#)),
             Self::Rstick(wire) => format(format_args!(r#"\rstick{{\ket{{q_{{{wire}}}}}}}"#)),
@@ -102,7 +102,7 @@ impl Command {
 
 /// Types of parameters passed to commands.
 #[derive(Debug)]
-pub enum Parameter {
+enum Parameter {
     /// Symbolic parameters
     Symbol(Symbol),
 }
@@ -124,7 +124,7 @@ impl Clone for Parameter {
 
 /// Supported Greek and alphanumeric symbols.
 #[derive(Debug)]
-pub enum Symbol {
+enum Symbol {
     Alpha,
     Beta,
     Gamma,
@@ -139,7 +139,7 @@ impl Symbol {
     ///
     /// # Arguments
     /// `text` - a String representing a greek or alaphanumeric symbol
-    pub fn match_symbol(text: String) -> Symbol {
+    fn match_symbol(text: String) -> Symbol {
         if text == "alpha" {
             Symbol::Alpha
         } else if text == "beta" {
@@ -166,7 +166,7 @@ impl Symbol {
     ///     &Parameter::Symbol(Symbol::Alpha)
     /// );
     /// ```
-    pub fn get_symbol(symbol: &Parameter) -> String {
+    fn get_symbol(symbol: &Parameter) -> String {
         match symbol {
             Parameter::Symbol(Symbol::Alpha) => r"\alpha".to_string(),
             Parameter::Symbol(Symbol::Beta) => r"\beta".to_string(),
@@ -221,7 +221,7 @@ impl Settings {
     ///
     ///  # Arguments
     /// `name` - name of the qubit
-    pub fn label_qubit_lines(&self, name: u64) -> String {
+    fn label_qubit_lines(&self, name: u64) -> String {
         Command::get_command(Command::Lstick(name.to_string()))
     }
 
@@ -243,7 +243,7 @@ impl Settings {
     /// };
     /// program.to_latex(settings).expect("");
     /// ```
-    pub fn impute_missing_qubits(&self, column: u32, circuit: &mut BTreeMap<u64, Box<Wire>>) {
+    fn impute_missing_qubits(&self, column: u32, circuit: &mut BTreeMap<u64, Box<Wire>>) {
         // requires at least two qubits to impute missing qubits
         if circuit.len() < 2 {
             return;
@@ -751,7 +751,7 @@ impl Display for Diagram {
 /// does not explicitly define which qubit it relates to, but a digit that
 /// describes how far away it is from the related qubit based on [`Quantikz`].
 #[derive(Debug)]
-pub struct Wire {
+struct Wire {
     /// the name of ket(qubit) placed using the Lstick or Rstick commands
     name: u64,
     /// gate elements placed at column on wire using the Gate command
@@ -792,7 +792,7 @@ impl Wire {
     /// `expression` - expression from Program to get name of parameter
     /// `column` - the column taking the parameters
     /// `texify` - is texify_numerical_constants setting on?
-    pub fn set_param(&mut self, expression: &Expression, column: u32, texify: bool) {
+    fn set_param(&mut self, expression: &Expression, column: u32, texify: bool) {
         let text: String;
 
         // get the name of the supported expression
@@ -830,7 +830,7 @@ pub enum LatexGenError {
 }
 
 /// Supported types
-pub enum Supported {
+enum Supported {
     Gate(SupportedGate),
     New,  // New initialization of a non-None variant
     None, // ()
@@ -838,7 +838,7 @@ pub enum Supported {
 
 /// Set of all Gates that can be parsed to LaTeX
 #[derive(PartialEq)]
-pub enum SupportedGate {
+enum SupportedGate {
     Pauli(String),
     Hadamard(String),
     Phase(String),
@@ -1116,7 +1116,7 @@ mod tests {
 
     /// Helper function takes instructions and return the LaTeX using the
     /// Latex::to_latex method.
-    pub fn get_latex(instructions: &str, settings: Settings) -> String {
+    fn get_latex(instructions: &str, settings: Settings) -> String {
         let program = Program::from_str(instructions).expect("Program should be returned");
         program
             .to_latex(settings)
