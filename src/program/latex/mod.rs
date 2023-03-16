@@ -79,29 +79,14 @@ impl Command {
 }
 
 /// Types of parameters passed to commands.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum Parameter {
     /// Symbolic parameters
     Symbol(Symbol),
 }
 
-impl Clone for Parameter {
-    fn clone(&self) -> Parameter {
-        match self {
-            Parameter::Symbol(symbol) => match symbol {
-                Symbol::Alpha => Parameter::Symbol(Symbol::Alpha),
-                Symbol::Beta => Parameter::Symbol(Symbol::Beta),
-                Symbol::Gamma => Parameter::Symbol(Symbol::Gamma),
-                Symbol::Phi => Parameter::Symbol(Symbol::Phi),
-                Symbol::Pi => Parameter::Symbol(Symbol::Pi),
-                Symbol::Text(text) => Parameter::Symbol(Symbol::Text(text.to_string())),
-            },
-        }
-    }
-}
-
 /// Supported Greek and alphanumeric symbols.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum Symbol {
     Alpha,
     Beta,
