@@ -1,23 +1,23 @@
 //! LaTeX circuit generation for quil programs.
 //!
-//! - Description:
-//! Provides a feature to generate quantum circuits using the LaTeX subpackage
-//! TikZ/[`Quantikz`] for a given quil Program. This feature is callable on
-//! Program (see usage below) and returns LaTeX string which can be rendered in
-//! a LaTeX visualization tool. Be aware that not all Programs can be parsed to
-//! LaTeX. If a Program contains a gate or modifier that has not been
-//! implemented in the Supported Gates and Modifiers section below, an error
-//! message will be returned detailing whether the entire Program or which line
+//! This module enables generating quantum circuits using the LaTeX subpackage
+//! TikZ/[`Quantikz`] for a given quil [`Program`]. This feature is callable on
+//! [`Program`] (see usage below) and returns a LaTeX string which can be rendered in
+//! a LaTeX visualization tool. Be aware that not all Programs can be serialized as
+//! LaTeX. If a [`Program`] contains a gate or modifier that has not been
+//! implemented in the [Supported Gates and Modifiers](#supported-gates-and-modifiers)
+//! section below, an error will be returned detailing whether the entire [`Program`] or which line
 //! of instruction containing the gate or modifier is unsupported.
 //!
-//! Supported Gates and Modifiers
-//!     Pauli Gates:           I, X, Y, Z
-//!     Hadamard Gate:         H
-//!     Phase Gate:            PHASE, S, T
-//!     Controlled Phase Gate: CZ, CPHASE
-//!     Controlled X Gates:    CNOT, CCNOT
-//!     New Gates:             DEFGATE
-//!     Modifiers:             CONTROLLED, DAGGER
+//! # Supported Gates and Modifiers
+//!
+//!     - Pauli Gates:           `I`, `X`, `Y`, `Z`
+//!     - Hadamard Gate:         `H`
+//!     - Phase Gate:            `PHASE`, `S`, `T`
+//!     - Controlled Phase Gate: `CZ`, `CPHASE`
+//!     - Controlled X Gates:    `CNOT`, `CCNOT`
+//!     - User-Defined Gates:             `DEFGATE`
+//!     - Modifiers:             `CONTROLLED`, `DAGGER`
 //!
 //! - Usage: `Program.to_latex(settings: Settings);`
 //!
@@ -1077,7 +1077,7 @@ mod tests {
         let program = Program::from_str(instructions).expect("Program should be returned");
         program
             .to_latex(settings)
-            .expect("LatexGenError should return for Program")
+            .expect("Program conversion to LaTeX should succeed")
     }
 
     #[test]
