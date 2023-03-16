@@ -28,7 +28,7 @@
 //! [`Quantikz`]: https://arxiv.org/pdf/1809.03842.pdf
 
 use std::collections::{BTreeMap, HashMap, HashSet};
-use std::fmt::{format, Display};
+use std::fmt::Display;
 
 use crate::expression::Expression;
 use crate::instruction::{self, Gate, Instruction, Qubit};
@@ -66,13 +66,13 @@ impl Command {
     /// `command` - A Command variant.
     fn get_command(command: Self) -> String {
         match command {
-            Self::Lstick(wire) => format(format_args!(r#"\lstick{{\ket{{q_{{{wire}}}}}}}"#)),
-            Self::Gate(name) => format(format_args!(r#"\gate{{{name}}}"#)),
-            Self::Phase(symbol) => format(format_args!(r#"\phase{{{symbol}}}"#)),
-            Self::Super(script) => format(format_args!(r#"^{{\{script}}}"#)),
+            Self::Lstick(wire) => format!(r#"\lstick{{\ket{{q_{{{wire}}}}}}}"#),
+            Self::Gate(name) => format!(r#"\gate{{{name}}}"#),
+            Self::Phase(symbol) => format!(r#"\phase{{{symbol}}}"#),
+            Self::Super(script) => format!(r#"^{{\{script}}}"#),
             Self::Qw => r"\qw".to_string(),
             Self::Nr => r"\\".to_string(),
-            Self::Ctrl(wire) => format(format_args!(r#"\ctrl{{{wire}}}"#)),
+            Self::Ctrl(wire) => format!(r#"\ctrl{{{wire}}}"#),
             Self::Targ => r"\targ{}".to_string(),
         }
     }
@@ -112,7 +112,7 @@ impl ToString for Symbol {
             Symbol::Gamma => r"\gamma".to_string(),
             Symbol::Phi => r"\phi".to_string(),
             Symbol::Pi => r"\pi".to_string(),
-            Symbol::Text(text) => format(format_args!(r#"\text{{{text}}}"#)),
+            Symbol::Text(text) => format!(r#"\text{{{text}}}"#),
         }
     }
 }
@@ -284,7 +284,7 @@ impl Display for Document {
 /// measured by multiplying the column with the length of the circuit. This is
 /// an [m x n] matrix where each element in the matrix represents an item to be
 /// rendered onto the diagram using one of the [`Quantikz`] commands.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct Diagram {
     /// customizes how the diagram renders the circuit
     settings: Settings,
@@ -294,17 +294,6 @@ struct Diagram {
     relationships: HashMap<u32, Vec<u64>>,
     /// a BTreeMap of wires with the name of the wire as the key
     circuit: BTreeMap<u64, Box<Wire>>,
-}
-
-impl Default for Diagram {
-    fn default() -> Self {
-        Self {
-            settings: Settings::default(),
-            column: 0,
-            relationships: HashMap::new(),
-            circuit: BTreeMap::new(),
-        }
-    }
 }
 
 impl Diagram {
@@ -333,7 +322,7 @@ impl Diagram {
                         match program_qubit {
                             instruction::Qubit::Fixed(q) => {
                                 self.circuit
-                                    .get_mut(&q)
+                                    .get_mut(q)
                                     .and_then(|wire| wire.empty.insert(self.column, Command::Qw));
                             }
                             _ => (),
@@ -379,7 +368,7 @@ impl Diagram {
                     }
                     instruction::GateModifier::Controlled => {
                         // prepend a C to the gate
-                        gate_name.insert_str(0, "C");
+                        gate_name.insert(0, 'C');
                     }
                     _ => (),
                 }
@@ -439,16 +428,14 @@ impl Diagram {
                             targ = Some(wire.name)
                         }
                     // all other qubits are the controls
-                    } else {
-                        if let Some(wire) = self.circuit.get_mut(qubit) {
-                            // insert as control at this column with initial
-                            // value 0, targeting themselves
-                            wire.ctrl.insert(c, 0);
+                    } else if let Some(wire) = self.circuit.get_mut(qubit) {
+                        // insert as control at this column with initial
+                        // value 0, targeting themselves
+                        wire.ctrl.insert(c, 0);
 
-                            // push ctrl to 'column loop ctrl variables with
-                            // initial value requiring update based on targ
-                            ctrls.push(wire.name);
-                        }
+                        // push ctrl to 'column loop ctrl variables with
+                        // initial value requiring update based on targ
+                        ctrls.push(wire.name);
                     }
                 }
             } else {
@@ -469,12 +456,11 @@ impl Diagram {
                     let mut close = None; // closing qubit in range
 
                     // find the range between the qubits
-                    let mut i = 0;
-                    for wire in &self.circuit {
+                    for (i, wire) in self.circuit.iter().enumerate() {
                         // get each existing qubit in the circuit
                         if *wire.0 == ctrl || *wire.0 == targ {
                             // if the qubit is the ctrl or target
-                            if let Some(_) = open {
+                            if open.is_some() {
                                 close = Some(i);
                                 break;
 
@@ -483,8 +469,6 @@ impl Diagram {
                                 open = Some(i)
                             }
                         }
-
-                        i += 1;
                     }
 
                     let mut vector: i64 = 0;
@@ -492,10 +476,10 @@ impl Diagram {
                         if let Some(close) = close {
                             if ctrl < targ {
                                 // a vector with a head from the ctrl to the targ
-                                vector = 1 * (close - open);
+                                vector = (close as i64) - (open as i64);
                             } else {
                                 // a vector with a head from the targ to the ctrl
-                                vector = -1 * (close - open);
+                                vector = -((close as i64) - (open as i64));
                             }
                         }
                     }
@@ -622,7 +606,7 @@ impl Display for Diagram {
                                 line.push_str(&Command::get_command(Command::Ctrl(
                                     targ.to_string(),
                                 )));
-                            } else if let Some(_) = wire.targ.get(&c) {
+                            } else if wire.targ.get(&c).is_some() {
                                 // if this is a target and has a PHASE gate display `\phase{param}`
                                 if gate.contains("PHASE") {
                                     // set the phase parameters
@@ -669,7 +653,7 @@ impl Display for Diagram {
 
                             line.push_str(&Command::get_command(Command::Gate(gate)));
                         }
-                    } else if let Some(_) = wire.empty.get(&c) {
+                    } else if wire.empty.get(&c).is_some() {
                         // chain an empty column qw to the end of the line
                         line.push_str(" & ");
                         line.push_str(&Command::get_command(Command::Qw));
@@ -694,7 +678,7 @@ impl Display for Diagram {
             body.push_str(&line);
         }
 
-        write!(f, "{}", body)
+        write!(f, "{body}")
     }
 }
 
@@ -707,7 +691,7 @@ impl Display for Diagram {
 /// about this connection. This updated value also looks arbitrary to Wire, it
 /// does not explicitly define which qubit it relates to, but a digit that
 /// describes how far away it is from the related qubit based on [`Quantikz`].
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct Wire {
     /// the name of ket(qubit) placed using the Lstick or Rstick commands
     name: u64,
@@ -723,20 +707,6 @@ struct Wire {
     modifiers: HashMap<u32, Vec<String>>,
     /// empty column
     empty: HashMap<u32, Command>,
-}
-
-impl Default for Wire {
-    fn default() -> Self {
-        Self {
-            name: 0,
-            gates: HashMap::new(),
-            ctrl: HashMap::new(),
-            targ: HashMap::new(),
-            parameters: HashMap::new(),
-            modifiers: HashMap::new(),
-            empty: HashMap::new(),
-        }
-    }
 }
 
 impl Wire {
@@ -824,7 +794,7 @@ impl SupportedGate {
             return Self::ControlledX(name);
         }
 
-        return Self::Unsupported(name);
+        Self::Unsupported(name)
     }
 
     /// Returns a variant of self for any defined gate.
@@ -837,11 +807,11 @@ impl SupportedGate {
         for defgate in defgate {
             // return supported if gate name is of DEFGATE
             if defgate == &name {
-                return SupportedGate::DefGate(name.to_string());
+                return SupportedGate::DefGate(name);
             }
         }
 
-        return Self::Unsupported(name);
+        Self::Unsupported(name)
     }
 
     /// Returns a variant of self for any supported modifier.
@@ -853,7 +823,7 @@ impl SupportedGate {
             return Self::Modifiers(name);
         }
 
-        return Self::Unsupported(name);
+        Self::Unsupported(name)
     }
 }
 
@@ -1016,7 +986,7 @@ impl Latex for Program {
                                 // update the gate name based on the modifiers
                                 let gate_name = diagram.set_modifiers(&gate, &mut wire);
 
-                                if let Some(_) = diagram.circuit.get(&qubit) {
+                                if diagram.circuit.get(qubit).is_some() {
                                     // has ctrl gate, must identify ctrls and targs after filling circuit
                                     if gate_name.starts_with('C') {
                                         has_ctrl_targ = true;
@@ -1056,10 +1026,10 @@ impl Latex for Program {
 
         let body = diagram.to_string();
         let document = Document {
-            body: body,
+            body,
             ..Default::default()
         };
-        println!("{}", document.to_string());
+        println!("{document}");
 
         Ok(document.to_string())
     }
