@@ -12,7 +12,7 @@ use rigetti_pyo3::{
 };
 
 py_wrap_union_enum! {
-    #[derive(Eq, Hash, PartialEq)]
+    #[derive(Debug, Eq, Hash, PartialEq)]
     PyQubit(Qubit) as "Qubit" {
         fixed: Fixed => Py<PyLong>,
         variable: Variable => Py<PyString>
@@ -24,7 +24,7 @@ impl_hash!(PyQubit);
 
 #[pymethods]
 impl PyQubit {
-    fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
+    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
         match op {
             CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
             _ => py.NotImplemented(),

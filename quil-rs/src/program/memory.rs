@@ -29,6 +29,12 @@ pub struct MemoryRegion {
     pub sharing: Option<String>,
 }
 
+impl MemoryRegion {
+    pub fn new(size: Vector, sharing: Option<String>) -> Self {
+        Self { size, sharing }
+    }
+}
+
 impl Eq for MemoryRegion {}
 
 #[derive(Clone, Debug)]

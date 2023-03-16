@@ -1,5 +1,9 @@
 use quil_rs::instruction::Instruction;
-use rigetti_pyo3::{create_init_submodule, impl_repr, impl_str, py_wrap_union_enum};
+use rigetti_pyo3::{
+    create_init_submodule, impl_repr, impl_str, py_wrap_union_enum,
+    pyo3::{pyclass::CompareOp, pymethods, IntoPy, PyObject, Python},
+    PyWrapper,
+};
 
 pub use self::{
     arithmetic::{
@@ -7,45 +11,54 @@ pub use self::{
         PyBinaryOperands, PyBinaryOperator,
     },
     calibration::{PyCalibration, PyMeasureCalibrationDefinition},
-    declaration::{PyDeclaration, PyScalarType, PyVector},
-    expression::{
-        PyExpression, PyExpressionFunction, PyFunctionCallExpression, PyInfixExpression,
-        PyInfixOperator,
+    declaration::{
+        ParseMemoryReferenceError, PyDeclaration, PyMemoryReference, PyScalarType, PyVector,
     },
     frame::{PyAttributeValue, PyFrameAttributes, PyFrameDefinition, PyFrameIdentifier},
-    gate::{PyGate, PyGateDefinition, PyGateError, PyGateModifier, PyGateSpecification},
+    gate::{GateError, PyGate, PyGateDefinition, PyGateModifier, PyGateSpecification},
     measurement::PyMeasurement,
-    memory_region::{PyMemoryReference, PyMemoryRegion},
     qubit::PyQubit,
-    waveform::{PyWaveform, PyWaveformDefinition},
+    waveform::{PyWaveform, PyWaveformDefinition, PyWaveformInvocation},
 };
 
 mod arithmetic;
 mod calibration;
 mod declaration;
-mod expression;
 mod frame;
 mod gate;
 mod measurement;
-mod memory_region;
 mod qubit;
 mod waveform;
 
 py_wrap_union_enum! {
-    #[derive(Debug)]
+    #[derive(Debug, PartialEq)]
     PyInstruction(Instruction) as "Instruction" {
         arithmetic: Arithmetic => PyArithmetic,
+        binary_logic: BinaryLogic => PyBinaryLogic,
         calibration_definition: CalibrationDefinition => PyCalibration,
         declaration: Declaration => PyDeclaration,
+        frame_definition: FrameDefinition => PyFrameDefinition,
         gate: Gate => PyGate,
+        gate_definition: GateDefinition => PyGateDefinition,
         halt: Halt,
         measure_calibration_definition: MeasureCalibrationDefinition => PyMeasureCalibrationDefinition,
         measurement: Measurement => PyMeasurement,
-        nop: Nop
+        nop: Nop,
+        waveform_definition: WaveformDefinition => PyWaveformDefinition
     }
 }
 impl_repr!(PyInstruction);
 impl_str!(PyInstruction);
+
+#[pymethods]
+impl PyInstruction {
+    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
+        match op {
+            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
+            _ => py.NotImplemented(),
+        }
+    }
+}
 
 create_init_submodule! {
     classes: [
@@ -59,15 +72,13 @@ create_init_submodule! {
         PyBinaryOperator,
         PyCalibration,
         PyMeasureCalibrationDefinition,
+        PyDeclaration,
+        PyScalarType,
+        PyVector,
         PyMeasurement,
         PyDeclaration,
         PyScalarType,
         PyVector,
-        PyExpression,
-        PyExpressionFunction,
-        PyFunctionCallExpression,
-        PyInfixExpression,
-        PyInfixOperator,
         PyAttributeValue,
         PyFrameDefinition,
         PyFrameIdentifier,
@@ -77,10 +88,10 @@ create_init_submodule! {
         PyGateSpecification,
         PyMeasurement,
         PyMemoryReference,
-        PyMemoryRegion,
         PyQubit,
         PyWaveform,
-        PyWaveformDefinition
+        PyWaveformDefinition,
+        PyWaveformInvocation
     ],
-    errors: [ PyGateError ],
+    errors: [ GateError, ParseMemoryReferenceError ],
 }

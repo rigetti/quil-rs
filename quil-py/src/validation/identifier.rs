@@ -5,14 +5,14 @@ use rigetti_pyo3::{
     wrap_error, ToPythonError,
 };
 
-wrap_error!(IdentifierValidationError(
+wrap_error!(RustIdentifierValidationError(
     quil_rs::validation::identifier::IdentifierValidationError
 ));
 
 py_wrap_error!(
     quil,
+    RustIdentifierValidationError,
     IdentifierValidationError,
-    PyIdentifierValidationError,
     PyValueError
 );
 
@@ -20,19 +20,19 @@ py_wrap_error!(
 #[pyo3(name = "validate_identifier")]
 pub fn py_validate_identifier(ident: &str) -> PyResult<()> {
     validate_identifier(ident)
-        .map_err(IdentifierValidationError::from)
-        .map_err(IdentifierValidationError::to_py_err)
+        .map_err(RustIdentifierValidationError::from)
+        .map_err(RustIdentifierValidationError::to_py_err)
 }
 
 #[pyfunction]
-#[pyo3(name = "validate_identifier")]
+#[pyo3(name = "validate_user_identifier")]
 pub fn py_validate_user_identifier(ident: &str) -> PyResult<()> {
     validate_user_identifier(ident)
-        .map_err(IdentifierValidationError::from)
-        .map_err(IdentifierValidationError::to_py_err)
+        .map_err(RustIdentifierValidationError::from)
+        .map_err(RustIdentifierValidationError::to_py_err)
 }
 
 create_init_submodule! {
-    errors: [PyIdentifierValidationError],
+    errors: [IdentifierValidationError],
     funcs: [py_validate_identifier, py_validate_user_identifier],
 }

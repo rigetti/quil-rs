@@ -174,6 +174,16 @@ pub struct GateDefinition {
     pub specification: GateSpecification,
 }
 
+impl GateDefinition {
+    pub fn new(name: String, parameters: Vec<String>, specification: GateSpecification) -> Self {
+        Self {
+            name,
+            parameters,
+            specification,
+        }
+    }
+}
+
 impl fmt::Display for GateDefinition {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let parameter_str = match self.parameters.is_empty() {

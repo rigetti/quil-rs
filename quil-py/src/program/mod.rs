@@ -9,14 +9,13 @@ use rigetti_pyo3::{
     wrap_error, PyWrapper, PyWrapperMut, ToPython, ToPythonError,
 };
 
-use crate::instruction::{
-    PyDeclaration, PyGateDefinition, PyInstruction, PyMemoryRegion, PyQubit, PyWaveform,
-};
+use crate::instruction::{PyDeclaration, PyGateDefinition, PyInstruction, PyQubit, PyWaveform};
 
-pub use self::{calibration::PyCalibrationSet, frame::PyFrameSet};
+pub use self::{calibration::PyCalibrationSet, frame::PyFrameSet, memory::PyMemoryRegion};
 
 mod calibration;
 mod frame;
+mod memory;
 
 wrap_error!(ProgramError(quil_rs::program::ProgramError));
 py_wrap_error!(quil, ProgramError, PyProgramError, PyValueError);
@@ -185,5 +184,5 @@ impl PyProgram {
 }
 
 create_init_submodule! {
-    classes: [ PyFrameSet, PyProgram, PyCalibrationSet ],
+    classes: [ PyFrameSet, PyProgram, PyCalibrationSet, PyMemoryRegion ],
 }

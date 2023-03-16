@@ -1,11 +1,11 @@
-use pyo3::prelude::*;
 use quil_rs::{
     instruction::{Calibration, Gate, Instruction, MeasureCalibrationDefinition, Measurement},
     program::CalibrationSet,
 };
 use rigetti_pyo3::{
-    impl_as_mut_for_wrapper, impl_repr, py_wrap_type, PyTryFrom, PyWrapper, PyWrapperMut, ToPython,
-    ToPythonError,
+    impl_as_mut_for_wrapper, impl_repr, py_wrap_type,
+    pyo3::{pyclass::CompareOp, pymethods, IntoPy, PyObject, PyResult, Python},
+    PyTryFrom, PyWrapper, PyWrapperMut, ToPython, ToPythonError,
 };
 
 use crate::instruction::{
@@ -15,6 +15,7 @@ use crate::instruction::{
 use super::ProgramError;
 
 py_wrap_type! {
+    #[derive(Debug, PartialEq)]
     PyCalibrationSet(CalibrationSet) as "CalibrationSet"
 }
 impl_as_mut_for_wrapper!(PyCalibrationSet);
@@ -118,5 +119,12 @@ impl PyCalibrationSet {
 
     pub fn to_instructions(&self, py: Python<'_>) -> PyResult<Vec<PyInstruction>> {
         self.as_inner().to_instructions().to_python(py)
+    }
+
+    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
+        match op {
+            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
+            _ => py.NotImplemented(),
+        }
     }
 }

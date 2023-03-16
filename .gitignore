@@ -9,3 +9,4 @@ Cargo.lock
 
 # Python artifacts
 *.so
+__pycache__

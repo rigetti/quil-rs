@@ -12,94 +12,38 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use nom_locate::LocatedSpan;
-use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::collections::HashSet;
-use std::str::FromStr;
-use std::{collections::HashMap, fmt};
+use std::fmt;
 
 use crate::expression::Expression;
-use crate::parser::{common::parse_memory_reference, lex, ParseError};
-use crate::program::{disallow_leftover, frame::FrameMatchCondition, SyntaxError};
-
-mod calibration;
-mod gate;
-mod measurement;
+#[cfg(test)]
+use crate::parser::lex;
+use crate::program::frame::FrameMatchCondition;
 
 #[cfg(test)]
-use proptest_derive::Arbitrary;
+use nom_locate::LocatedSpan;
 
+mod arithmetic;
+mod calibration;
+mod declaration;
+mod frame;
+mod gate;
+mod measurement;
+mod qubit;
+mod waveform;
+
+pub use self::arithmetic::{
+    Arithmetic, ArithmeticOperand, ArithmeticOperator, BinaryLogic, BinaryOperand, BinaryOperands,
+    BinaryOperator,
+};
 pub use self::calibration::{Calibration, MeasureCalibrationDefinition};
+pub use self::declaration::{Declaration, MemoryReference, ScalarType, Vector};
+pub use self::frame::{AttributeValue, FrameAttributes, FrameDefinition, FrameIdentifier};
 pub use self::gate::{Gate, GateDefinition, GateError, GateModifier, GateSpecification, GateType};
 pub use self::measurement::Measurement;
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum ArithmeticOperand {
-    LiteralInteger(i64),
-    LiteralReal(f64),
-    MemoryReference(MemoryReference),
-}
-
-impl fmt::Display for ArithmeticOperand {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match &self {
-            ArithmeticOperand::LiteralInteger(value) => write!(f, "{value}"),
-            ArithmeticOperand::LiteralReal(value) => write!(f, "{value}"),
-            ArithmeticOperand::MemoryReference(value) => write!(f, "{value}"),
-        }
-    }
-}
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum ArithmeticOperator {
-    Add,
-    Subtract,
-    Divide,
-    Multiply,
-}
-
-impl fmt::Display for ArithmeticOperator {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match &self {
-            ArithmeticOperator::Add => write!(f, "ADD"),
-            ArithmeticOperator::Divide => write!(f, "DIV"),
-            ArithmeticOperator::Multiply => write!(f, "MUL"),
-            ArithmeticOperator::Subtract => write!(f, "SUB"),
-        }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum BinaryOperand {
-    LiteralInteger(i64),
-    MemoryReference(MemoryReference),
-}
-
-impl fmt::Display for BinaryOperand {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match &self {
-            BinaryOperand::LiteralInteger(value) => write!(f, "{value}"),
-            BinaryOperand::MemoryReference(value) => write!(f, "{value}"),
-        }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum BinaryOperator {
-    And,
-    Ior,
-    Xor,
-}
-impl fmt::Display for BinaryOperator {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match &self {
-            BinaryOperator::And => write!(f, "AND"),
-            BinaryOperator::Ior => write!(f, "IOR"),
-            BinaryOperator::Xor => write!(f, "XOR"),
-        }
-    }
-}
+pub use self::qubit::Qubit;
+pub use self::waveform::{Waveform, WaveformDefinition, WaveformInvocation};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum UnaryOperator {
@@ -155,155 +99,14 @@ impl fmt::Display for ComparisonOperator {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum AttributeValue {
-    String(String),
-    Expression(Expression),
-}
-
-impl fmt::Display for AttributeValue {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use AttributeValue::*;
-        match self {
-            String(value) => write!(f, "\"{value}\""),
-            Expression(value) => write!(f, "{value}"),
-        }
-    }
-}
-
-pub type FrameAttributes = HashMap<String, AttributeValue>;
-
-#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Convert {
     pub from: MemoryReference,
     pub to: MemoryReference,
 }
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
-pub struct FrameIdentifier {
-    pub name: String,
-    pub qubits: Vec<Qubit>,
-}
-
-impl fmt::Display for FrameIdentifier {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} \"{}\"", format_qubits(&self.qubits), self.name)
-    }
-}
-
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Include {
     pub filename: String,
-}
-
-#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
-pub enum ScalarType {
-    Bit,
-    Integer,
-    Octet,
-    Real,
-}
-
-impl fmt::Display for ScalarType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use ScalarType::*;
-        write!(
-            f,
-            "{}",
-            match self {
-                Bit => "BIT",
-                Integer => "INTEGER",
-                Octet => "OCTET",
-                Real => "REAL",
-            }
-        )
-    }
-}
-
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
-pub struct Vector {
-    pub data_type: ScalarType,
-    pub length: u64,
-}
-
-impl fmt::Display for Vector {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}[{}]", self.data_type, self.length)
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct WaveformInvocation {
-    pub name: String,
-    pub parameters: HashMap<String, Expression>,
-}
-
-impl fmt::Display for WaveformInvocation {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut key_value_pairs = self
-            .parameters
-            .iter()
-            .collect::<Vec<(&String, &Expression)>>();
-
-        key_value_pairs.sort_by(|(k1, _), (k2, _)| k1.cmp(k2));
-
-        if key_value_pairs.is_empty() {
-            write!(f, "{}", self.name,)
-        } else {
-            write!(
-                f,
-                "{}({})",
-                self.name,
-                key_value_pairs
-                    .iter()
-                    .map(|(k, v)| format!("{k}: {v}"))
-                    .collect::<Vec<String>>()
-                    .join(", ")
-            )
-        }
-    }
-}
-
-#[cfg(test)]
-mod waveform_invocation_tests {
-    use std::collections::HashMap;
-
-    use crate::instruction::WaveformInvocation;
-
-    #[test]
-    fn format_no_parameters() {
-        let wfi = WaveformInvocation {
-            name: "CZ".into(),
-            parameters: HashMap::new(),
-        };
-        assert_eq!(format!("{wfi}"), "CZ".to_string());
-    }
-}
-
-#[derive(Clone, Debug, Hash, PartialEq)]
-#[cfg_attr(test, derive(Arbitrary))]
-pub struct MemoryReference {
-    pub name: String,
-    pub index: u64,
-}
-
-impl Eq for MemoryReference {}
-
-impl fmt::Display for MemoryReference {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}[{}]", self.name, self.index)
-    }
-}
-
-impl FromStr for MemoryReference {
-    type Err = SyntaxError<Self>;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let input = LocatedSpan::new(s);
-        let tokens = lex(input)?;
-        disallow_leftover(
-            parse_memory_reference(&tokens).map_err(ParseError::from_nom_internal_err),
-        )
-    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -313,23 +116,6 @@ pub struct CircuitDefinition {
     // These cannot be fixed qubits and thus are not typed as `Qubit`
     pub qubit_variables: Vec<String>,
     pub instructions: Vec<Instruction>,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Declaration {
-    pub name: String,
-    pub size: Vector,
-    pub sharing: Option<String>,
-}
-
-impl fmt::Display for Declaration {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "DECLARE {} {}", self.name, self.size)?;
-        if let Some(shared) = &self.sharing {
-            write!(f, "SHARING {shared}")?
-        }
-        Ok(())
-    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -355,12 +141,6 @@ pub struct Delay {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Fence {
     pub qubits: Vec<Qubit>,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct FrameDefinition {
-    pub identifier: FrameIdentifier,
-    pub attributes: HashMap<String, AttributeValue>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -436,48 +216,10 @@ pub struct SwapPhases {
     pub frame_2: FrameIdentifier,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct WaveformDefinition {
-    pub name: String,
-    pub definition: Waveform,
-}
-
-impl fmt::Display for WaveformDefinition {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "DEFWAVEFORM {}{}:\n\t{}",
-            self.name,
-            get_string_parameter_string(&self.definition.parameters),
-            self.definition
-                .matrix
-                .iter()
-                .map(|e| format!("{e}"))
-                .collect::<Vec<_>>()
-                .join(", ")
-        )
-    }
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct Arithmetic {
-    pub operator: ArithmeticOperator,
-    pub destination: ArithmeticOperand,
-    pub source: ArithmeticOperand,
-}
-
 #[derive(Clone, Debug, PartialEq)]
 pub struct Comparison {
     pub operator: ComparisonOperator,
     pub operands: (MemoryReference, MemoryReference, ComparisonOperand),
-}
-
-pub type BinaryOperands = (MemoryReference, BinaryOperand);
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct BinaryLogic {
-    pub operator: BinaryOperator,
-    pub operands: BinaryOperands,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -755,18 +497,9 @@ impl fmt::Display for Instruction {
                     write!(f, "FENCE {}", format_qubits(qubits))
                 }
             }
-            Instruction::FrameDefinition(FrameDefinition {
-                identifier,
-                attributes,
-            }) => write!(
-                f,
-                "DEFFRAME {}:{}",
-                identifier,
-                attributes
-                    .iter()
-                    .map(|(k, v)| format!("\n\t{k}: {v}"))
-                    .collect::<String>()
-            ),
+            Instruction::FrameDefinition(frame_defintion) => {
+                write!(f, "{frame_defintion}")
+            }
             Instruction::Gate(gate) => {
                 write!(f, "{gate}")
             }
@@ -929,28 +662,6 @@ mod test_instruction_display {
             "PRAGMA PRESERVE_BLOCK"
         );
     }
-}
-
-#[derive(Clone, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
-pub enum Qubit {
-    Fixed(u64),
-    Variable(String),
-}
-
-impl fmt::Display for Qubit {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use Qubit::*;
-        match self {
-            Fixed(value) => write!(f, "{value}"),
-            Variable(value) => write!(f, "{value}"),
-        }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Waveform {
-    pub matrix: Vec<Expression>,
-    pub parameters: Vec<String>,
 }
 
 impl Instruction {

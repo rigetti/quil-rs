@@ -33,13 +33,13 @@ use crate::program::{disallow_leftover, ParseProgramError};
 use crate::{imag, instruction::MemoryReference, real};
 
 /// The different possible types of errors that could occur during expression evaluation.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
 pub enum EvaluationError {
-    /// There wasn't enough information to completely evaluate an expression.
+    #[error("There wasn't enough information to completely evaluate the expression.")]
     Incomplete,
-    /// An operation expected a real number but received a complex one.
+    #[error("The operation expected a real number but received a complex one.")]
     NumberNotReal,
-    /// An operation expected a number but received a different type of expression.
+    #[error("The operation expected a number but received a different type of expression.")]
     NotANumber,
 }
 
@@ -60,6 +60,15 @@ pub struct FunctionCallExpression {
     pub expression: Box<Expression>,
 }
 
+impl FunctionCallExpression {
+    pub fn new(function: ExpressionFunction, expression: Box<Expression>) -> Self {
+        Self {
+            function,
+            expression,
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct InfixExpression {
     pub left: Box<Expression>,
@@ -67,10 +76,29 @@ pub struct InfixExpression {
     pub right: Box<Expression>,
 }
 
+impl InfixExpression {
+    pub fn new(left: Box<Expression>, operator: InfixOperator, right: Box<Expression>) -> Self {
+        Self {
+            left,
+            operator,
+            right,
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct PrefixExpression {
     pub operator: PrefixOperator,
     pub expression: Box<Expression>,
+}
+
+impl PrefixExpression {
+    pub fn new(operator: PrefixOperator, expression: Box<Expression>) -> Self {
+        Self {
+            operator,
+            expression,
+        }
+    }
 }
 
 /// Hash value helper: turn a hashable thing into a u64.

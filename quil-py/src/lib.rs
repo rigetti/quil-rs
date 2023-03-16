@@ -1,12 +1,14 @@
 use pyo3::prelude::*;
 use rigetti_pyo3::create_init_submodule;
 
+pub mod expression;
 pub mod instruction;
 pub mod program;
 pub mod validation;
 
 create_init_submodule! {
     submodules: [
+        "expression": expression::init_submodule,
         "instructions": instruction::init_submodule,
         "program": program::init_submodule,
         "validation": validation::init_submodule
