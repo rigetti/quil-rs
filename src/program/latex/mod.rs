@@ -2,28 +2,23 @@
 //!
 //! This module enables generating quantum circuits using the LaTeX subpackage
 //! TikZ/[`Quantikz`] for a given quil [`Program`]. This feature is callable on
-//! [`Program`] (see usage below) and returns a LaTeX string which can be rendered in
-//! a LaTeX visualization tool. Be aware that not all Programs can be serialized as
-//! LaTeX. If a [`Program`] contains a gate or modifier that has not been
-//! implemented in the [Supported Gates and Modifiers](#supported-gates-and-modifiers)
-//! section below, an error will be returned detailing whether the entire [`Program`] or which line
-//! of instruction containing the gate or modifier is unsupported.
+//! [`Program`] (see usage below) and returns a LaTeX string which can be
+//! rendered in a LaTeX visualization tool. Be aware that not all Programs can
+//! be serialized as LaTeX. If a [`Program`] contains a gate or modifier that
+//! has not been implemented in the [Supported Gates and Modifiers]
+//! (#supported-gates-and-modifiers) section below, an error will be returned
+//! detailing whether the entire [`Program`] or which line of instruction
+//! containing the gate or modifier is unsupported.
 //!
 //! # Supported Gates and Modifiers
 //!
-//!     - Pauli Gates:           `I`, `X`, `Y`, `Z`
-//!     - Hadamard Gate:         `H`
-//!     - Phase Gate:            `PHASE`, `S`, `T`
-//!     - Controlled Phase Gate: `CZ`, `CPHASE`
-//!     - Controlled X Gates:    `CNOT`, `CCNOT`
-//!     - User-Defined Gates:             `DEFGATE`
-//!     - Modifiers:             `CONTROLLED`, `DAGGER`
-//!
-//! - Usage: `Program.to_latex(settings: Settings);`
-//!
-//! This module can be viewed as a self-contained partial implementation of
-//! [`Quantikz`] with all available commands listed as variants in a Command
-//! enum. View [`Quantikz`] documentation for more information.
+//!   - Pauli Gates:           `I`, `X`, `Y`, `Z`
+//!   - Hadamard Gate:         `H`
+//!   - Phase Gate:            `PHASE`, `S`, `T`
+//!   - Controlled Phase Gate: `CZ`, `CPHASE`
+//!   - Controlled X Gates:    `CNOT`, `CCNOT`
+//!   - User-Defined Gates:    `DEFGATE`
+//!   - Modifiers:             `CONTROLLED`, `DAGGER`
 //!
 //! [`Quantikz`]: https://arxiv.org/pdf/1809.03842.pdf
 
@@ -283,7 +278,7 @@ impl Display for Document {
 /// through a multi qubit gate 'e.g. CNOT'. The size of the diagram can be
 /// measured by multiplying the column with the length of the circuit. This is
 /// an [m x n] matrix where each element in the matrix represents an item to be
-/// rendered onto the diagram using one of the [`Quantikz`] commands.
+/// rendered onto the diagram using one of the Quantikz commands.
 #[derive(Debug)]
 struct Diagram {
     /// customizes how the diagram renders the circuit
@@ -396,19 +391,19 @@ impl Diagram {
     /// qubit. The distance between the qubits represents the number of wires
     /// between them, i.e the space that the vector needs to traverse. If the
     /// control qubit comes before the target qubit the direction is positive,
-    /// otherwise, it is negative. See [`Quantikz`] documentation on CNOT for
-    /// some background that helps justify this approach.
+    /// otherwise, it is negative. See Quantikz documentation on CNOT for some
+    /// background that helps justify this approach.
     ///
     /// This function is expensive with a time complexity of O(n^2). In the
     /// worst case scenario every column contains a multi qubit gate with every
-    /// qubit as either a target or control. [`Quantikz`] uses the space
-    /// between wires to determine how long a line should stretch between
-    /// control and target qubits. Since it is impossible to determine how many
-    /// wires will be inserted between control and target qubits (e.g. a user
-    /// decides to impute missing qubits or some number of other instructions
-    /// are added containing qubits between them) for a custom body diagram,
-    /// this method can only be run after all wires are inserted into the
-    /// cicuit. Only run this method if a program contains multi qubit gates.
+    /// qubit as either a target or control. Quantikz uses the space between
+    /// wires to determine how long a line should stretch between control and
+    /// target qubits. Since it is impossible to determine how many wires will
+    /// be inserted between control and target qubits (e.g. a user decides to
+    /// impute missing qubits or some number of other instructions are added
+    /// containing qubits between them) for a custom body diagram, this method
+    /// can only be run after all wires are inserted into the cicuit. Only run
+    /// this method if a program contains multi qubit gates.
     ///
     /// # Arguments
     /// `&mut self` - self as mutible allowing to update the circuit qubits
@@ -706,7 +701,7 @@ impl Display for Diagram {
 /// its field will be updated at that column based on the knowledge Diagram has
 /// about this connection. This updated value also looks arbitrary to Wire, it
 /// does not explicitly define which qubit it relates to, but a digit that
-/// describes how far away it is from the related qubit based on [`Quantikz`].
+/// describes how far away it is from the related qubit based on Quantikz.
 #[derive(Debug)]
 struct Wire {
     /// the name of ket(qubit) placed using the Lstick or Rstick commands
@@ -934,10 +929,15 @@ pub trait Latex {
 }
 
 impl Latex for Program {
-    /// Main function of LaTeX feature, returns a Result containing a quil
-    /// Program as a LaTeX string or an Error. Called on a Program, the
-    /// function starts with a check to ensure the Program contains gates and
-    /// modifers that are implemented and can therefore be parsed to LaTeX.
+    /// This implementation of Latex can be viewed as a self-contained partial
+    /// implementation of ``Quantikz`` with all available commands listed as
+    /// variants in a Command enum. View ``Quantikz`` documentation for more
+    /// information.
+    ///
+    /// This function returns a Result containing a quil [`Program`] as a LaTeX
+    /// string or a [`LatexGenError`] defined using thiserror. Called on a
+    /// Program, the function starts with a check to ensure the [`Program`]
+    /// contains supported gates and modifers that can be serialized to LaTeX.
     ///
     /// # Arguments
     /// `settings` - Customizes the rendering of a circuit.
@@ -1059,8 +1059,6 @@ impl Latex for Program {
             body: body,
             ..Default::default()
         };
-        println!("{}", document.to_string());
-
         Ok(document.to_string())
     }
 }
