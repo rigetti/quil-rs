@@ -1,37 +1,30 @@
-//! LaTeX diagram generation for quil programs.
+//! LaTeX circuit generation for quil programs.
 //!
-//! Provides a feature to generate diagrams using the LaTeX subpackage TikZ/
-//! Quantikz for a given quil Program.
+//! - Description:
+//! Provides a feature to generate quantum circuits using the LaTeX subpackage
+//! TikZ/[`Quantikz`] for a given quil Program. This feature is callable on
+//! Program (see usage below) and returns LaTeX string which can be rendered in
+//! a LaTeX visualization tool. Be aware that not all Programs can be parsed to
+//! LaTeX. If a Program contains a gate or modifier that has not been
+//! implemented in the Supported Gates and Modifiers section below, an error
+//! message will be returned detailing whether the entire Program or which line
+//! of instruction containing the gate or modifier is unsupported.
+//!
+//! Supported Gates and Modifiers
+//!     Pauli Gates:           I, X, Y, Z
+//!     Hadamard Gate:         H
+//!     Phase Gate:            PHASE, S, T
+//!     Controlled Phase Gate: CZ, CPHASE
+//!     Controlled X Gates:    CNOT, CCNOT
+//!     New Gates:             DEFGATE
+//!     Modifiers:             CONTROLLED, DAGGER
 //!
 //! - Usage: `Program.to_latex(settings: Settings);`
 //!
-//! - Description:
-//! [`Quantikz`] is a subpackage in the TikZ package used to generate qubit
-//! circuits. A qubit is represented as a wire separated into multiple columns.
-//! Each column contains a symbol of an operation on the qubit. Multiple qubits
-//! can be stacked into rows with interactions between any number of them drawn
-//! as a connecting bar to each involved qubit wire. Commands are used to
-//! control what is rendered on a circuit, e.g. names of qubits, identifying
-//! control/target qubits, gates, etc. View [`Quantikz`] for the documentation
-//! on its usage and full set of commands.
-//!
-//!
-//!
-//! TODO
-//! Describe what this module does, how to use it, and what it offers and what
-//! happens when it's used how it shouldn't be (What happens if they try to
-//! generate programs using unimplemented gates).
-//!
-//!
-//!
-//!
-//! This module should be viewed as a self contained partial implementation of
+//! This module can be viewed as a self-contained partial implementation of
 //! [`Quantikz`] with all available commands listed as variants in a Command
-//! enum. This feature provides the user variability in how they wish to render
-//! their Program circuits with metadata contained in a Settings struct.
+//! enum. View [`Quantikz`] documentation for more information.
 //!
-//! View [`Quantikz`] for the documentation on its usage and full set of
-//! commands.
 //! [`Quantikz`]: https://arxiv.org/pdf/1809.03842.pdf
 
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -110,6 +103,7 @@ impl Command {
 /// Types of parameters passed to commands.
 #[derive(Debug)]
 pub enum Parameter {
+    /// Symbolic parameters
     Symbol(Symbol),
 }
 
@@ -128,6 +122,7 @@ impl Clone for Parameter {
     }
 }
 
+/// Supported Greek and alphanumeric symbols.
 #[derive(Debug)]
 pub enum Symbol {
     Alpha,
@@ -139,6 +134,11 @@ pub enum Symbol {
 }
 
 impl Symbol {
+    /// Returns the supported Symbol variant from text otherwise stores the
+    /// unsupported symbol as text in the Text variant.
+    ///
+    /// # Arguments
+    /// `text` - a String representing a greek or alaphanumeric symbol
     pub fn match_symbol(text: String) -> Symbol {
         if text == "alpha" {
             Symbol::Alpha
@@ -217,6 +217,10 @@ impl Default for Settings {
 }
 
 impl Settings {
+    /// Returns a label as the qubit name to the left side of the wire.
+    ///
+    ///  # Arguments
+    /// `name` - name of the qubit
     pub fn label_qubit_lines(&self, name: u64) -> String {
         Command::get_command(Command::Lstick(name.to_string()))
     }
@@ -308,6 +312,7 @@ impl Default for Document {
 }
 
 impl Display for Document {
+    /// Returns the entire document in LaTeX string.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}{}{}", self.header, self.body, self.footer)
     }
@@ -446,8 +451,7 @@ impl Diagram {
     /// decides to impute missing qubits or some number of other instructions
     /// are added containing qubits between them) for a custom body diagram,
     /// this method can only be run after all wires are inserted into the
-    /// cicuit. In particular, only run this method if a Quil program contains
-    /// multi qubit gates.
+    /// cicuit. Only run this method if a program contains multi qubit gates.
     ///
     /// # Arguments
     /// `&mut self` - self as mutible allowing to update the circuit qubits
@@ -472,16 +476,20 @@ impl Diagram {
                             // insert as target at this column
                             wire.targ.insert(c, true);
 
-                            // set 'column loop targ variable to this targ that control qubits will find distance from on their respective wires
+                            // set 'column loop targ variable to this targ that
+                            // control qubits will find distance from on their
+                            // respective wires
                             targ = Some(wire.name)
                         }
                     // all other qubits are the controls
                     } else {
                         if let Some(wire) = self.circuit.get_mut(qubit) {
-                            // insert as control at this column with initial value 0, targeting themselves
+                            // insert as control at this column with initial
+                            // value 0, targeting themselves
                             wire.ctrl.insert(c, 0);
 
-                            // push ctrl to 'column loop ctrl variables with initial value requiring update based on targ
+                            // push ctrl to 'column loop ctrl variables with
+                            // initial value requiring update based on targ
                             ctrls.push(wire.name);
                         }
                     }
@@ -491,9 +499,13 @@ impl Diagram {
                 continue 'column;
             }
 
-            // determine the physical vector where a positive vector points from control to target, negative, from target to control. The magnitude of the vector is the absolute value of the distance between them
+            // determine the physical vector where a positive vector points
+            // from control to target, negative, from target to control. The
+            // magnitude of the vector is the absolute value of the distance
+            // between them
             if let Some(targ) = targ {
-                // distance between qubits is the space between the ctrl and targ qubits in the circuit
+                // distance between qubits is the space between the ctrl and
+                // targ qubits in the circuit
                 for ctrl in ctrls {
                     // represent inclusive [open, close] brackets of a range
                     let mut open = None; // opening qubit in range
@@ -530,7 +542,8 @@ impl Diagram {
                             }
                         }
                     }
-                    // set wire at column as the control qubit of target qubit computed as the distance from the control qubit
+                    // set wire at column as the control qubit of target qubit
+                    // computed as the distance from the control qubit
                     self.circuit
                         .get_mut(&ctrl)
                         .and_then(|wire| wire.ctrl.insert(c, vector));
@@ -608,7 +621,8 @@ impl Diagram {
 }
 
 impl Display for Diagram {
-    /// Converts the Diagram Circuit to LaTeX string. Returns a Result.
+    /// Returns a result containing the Diagram Circuit as LaTeX string which
+    /// can be input into the body of the Document.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // add a newline between the first line and the header
         let mut body = String::from('\n');
@@ -769,12 +783,19 @@ impl Default for Wire {
 }
 
 impl Wire {
-    /// Retrieves a gates parameters from Expression and matches them with its
+    /// Retrieves a gate's parameters from Expression and matches them with its
     /// symbolic definition which is then stored into wire at the specific
     /// column.
+    ///
+    /// # Arguments
+    /// `&mut self` - exposes the Wire's parameters at this column
+    /// `expression` - expression from Program to get name of parameter
+    /// `column` - the column taking the parameters
+    /// `texify` - is texify_numerical_constants setting on?
     pub fn set_param(&mut self, expression: &Expression, column: u32, texify: bool) {
         let text: String;
 
+        // get the name of the supported expression
         match expression {
             Expression::Address(mr) => {
                 text = mr.name.to_string();
@@ -952,18 +973,34 @@ impl Supported {
 }
 
 pub trait Latex {
-    /// Returns a Result containing a quil Program as a LaTeX string.
-    ///
-    /// # Arguments
-    /// `settings` - Customizes the rendering of a circuit.
     fn to_latex(self, settings: Settings) -> Result<String, LatexGenError>;
 }
 
 impl Latex for Program {
+    /// Main function of LaTeX feature, returns a Result containing a quil
+    /// Program as a LaTeX string or an Error. Called on a Program, the
+    /// function starts with a check to ensure the Program contains gates and
+    /// modifers that are implemented and can therefore be parsed to LaTeX.
     ///
+    /// # Arguments
+    /// `settings` - Customizes the rendering of a circuit.
     ///
+    /// # Examples
+    /// ```
+    /// // To LaTeX for the Bell State Program.
+    /// use quil_rs::{Program, program::latex::{Settings, Latex}};
+    /// use std::str::FromStr;
+    /// let program = Program::from_str("H 0\nCNOT 0 1").expect("");
+    /// let latex = program.to_latex(Settings::default()).expect("");
+    /// ```
     ///
-    ///
+    /// ```
+    /// // To LaTeX for the Toffoli Gate Program.
+    /// use quil_rs::{Program, program::latex::{Settings, Latex}};
+    /// use std::str::FromStr;
+    /// let program = Program::from_str("CONTROLLED CNOT 2 1 0").expect("");
+    /// let latex = program.to_latex(Settings::default()).expect("");
+    /// ```
     fn to_latex(self, settings: Settings) -> Result<String, LatexGenError> {
         // get a reference to the current supported program
         let instructions = Supported::is_supported(&Supported::New, &self)?;
@@ -989,7 +1026,7 @@ impl Latex for Program {
             }
         }
 
-        // used to left-shift wires to align columns without relationships
+        // ensures set_ctrl_targ is called only if program has controlled gates
         let mut has_ctrl_targ = false;
         for instruction in instructions {
             // set QW for any unused qubits in this instruction
