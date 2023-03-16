@@ -1,18 +1,25 @@
-use quil_rs::{
-    instruction::{Declaration, MemoryReference, ScalarType, Vector},
-    program::SyntaxError,
-};
+use quil_rs::instruction::{Declaration, MemoryReference, ScalarType, Vector};
 
 use rigetti_pyo3::{
-    impl_from_str, impl_hash, impl_repr, impl_str, py_wrap_data_struct, py_wrap_simple_enum,
+    impl_from_str, impl_hash, impl_parse, impl_repr, impl_str, py_wrap_data_struct, py_wrap_error,
+    py_wrap_simple_enum,
     pyo3::{
+        exceptions::PyValueError,
         pyclass::CompareOp,
         pymethods,
         types::{PyInt, PyString},
         IntoPy, Py, PyObject, PyResult, Python,
     },
-    PyTryFrom, PyWrapper,
+    wrap_error, PyTryFrom, PyWrapper,
 };
+
+wrap_error!(RustParseMemoryReferenceError(quil_rs::program::SyntaxError<MemoryReference>));
+py_wrap_error!(
+    quil,
+    RustParseMemoryReferenceError,
+    ParseMemoryReferenceError,
+    PyValueError
+);
 
 py_wrap_simple_enum! {
     PyScalarType(ScalarType) as "ScalarType" {
@@ -102,7 +109,8 @@ py_wrap_data_struct! {
 impl_hash!(PyMemoryReference);
 impl_repr!(PyMemoryReference);
 impl_str!(PyMemoryReference);
-impl_from_str!(PyMemoryReference, SyntaxError<MemoryReference>);
+impl_from_str!(PyMemoryReference, RustParseMemoryReferenceError);
+impl_parse!(PyMemoryReference);
 
 #[pymethods]
 impl PyMemoryReference {

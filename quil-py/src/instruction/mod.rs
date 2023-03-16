@@ -11,7 +11,9 @@ pub use self::{
         PyBinaryOperands, PyBinaryOperator,
     },
     calibration::{PyCalibration, PyMeasureCalibrationDefinition},
-    declaration::{PyDeclaration, PyMemoryReference, PyScalarType, PyVector},
+    declaration::{
+        ParseMemoryReferenceError, PyDeclaration, PyMemoryReference, PyScalarType, PyVector,
+    },
     frame::{PyAttributeValue, PyFrameAttributes, PyFrameDefinition, PyFrameIdentifier},
     gate::{GateError, PyGate, PyGateDefinition, PyGateModifier, PyGateSpecification},
     measurement::PyMeasurement,
@@ -91,5 +93,5 @@ create_init_submodule! {
         PyWaveformDefinition,
         PyWaveformInvocation
     ],
-    errors: [ GateError ],
+    errors: [ GateError, ParseMemoryReferenceError ],
 }

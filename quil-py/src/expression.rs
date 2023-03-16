@@ -1,21 +1,20 @@
 use std::collections::HashMap;
 
-use pyo3::types::PyComplex;
-use quil_rs::{
-    expression::{
-        Expression, ExpressionFunction, FunctionCallExpression, InfixExpression, InfixOperator,
-        PrefixExpression, PrefixOperator,
-    },
-    program::ParseProgramError,
+use quil_rs::expression::{
+    Expression, ExpressionFunction, FunctionCallExpression, InfixExpression, InfixOperator,
+    PrefixExpression, PrefixOperator,
 };
 
 use rigetti_pyo3::{
-    create_init_submodule, impl_from_str, impl_hash, impl_repr, impl_str,
+    create_init_submodule, impl_from_str, impl_hash, impl_parse, impl_repr, impl_str,
     num_complex::Complex64,
     py_wrap_data_struct, py_wrap_error, py_wrap_simple_enum, py_wrap_union_enum,
     pyo3::{
-        exceptions::PyValueError, pyclass::CompareOp, pymethods, types::PyString, IntoPy, Py,
-        PyObject, PyResult, Python,
+        exceptions::PyValueError,
+        pyclass::CompareOp,
+        pymethods,
+        types::{PyComplex, PyString},
+        IntoPy, Py, PyObject, PyResult, Python,
     },
     wrap_error, PyTryFrom, PyWrapper, PyWrapperMut, ToPython, ToPythonError,
 };
@@ -24,6 +23,13 @@ use crate::instruction::PyMemoryReference;
 
 wrap_error!(RustEvaluationError(quil_rs::expression::EvaluationError));
 py_wrap_error!(quil, RustEvaluationError, EvaluationError, PyValueError);
+wrap_error!(RustParseExpressionError(quil_rs::program::ParseProgramError<Expression>));
+py_wrap_error!(
+    quil,
+    RustParseExpressionError,
+    ParseExpressionError,
+    PyValueError
+);
 
 py_wrap_union_enum! {
     #[derive(Debug, Hash, PartialEq, Eq)]
@@ -39,8 +45,9 @@ py_wrap_union_enum! {
 }
 impl_repr!(PyExpression);
 impl_str!(PyExpression);
-impl_from_str!(PyExpression, ParseProgramError<Expression>);
+impl_from_str!(PyExpression, RustParseExpressionError);
 impl_hash!(PyExpression);
+impl_parse!(PyExpression);
 
 #[pymethods]
 impl PyExpression {
@@ -249,5 +256,5 @@ impl PyInfixOperator {
 
 create_init_submodule! {
     classes: [PyExpression, PyFunctionCallExpression, PyInfixExpression, PyPrefixExpression, PyExpressionFunction, PyPrefixOperator, PyInfixOperator],
-    errors: [EvaluationError],
+    errors: [EvaluationError, ParseExpressionError],
 }

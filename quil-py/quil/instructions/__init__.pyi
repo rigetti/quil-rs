@@ -535,9 +535,19 @@ class Measurement:
     @target.setter
     def target(self, target: Optional[MemoryReference]): ...
 
+class ParseMemoryReferenceError(ValueError):
+    """Errors that may occur while parsing a ``MemoryReference``"""
+
 class MemoryReference:
     @staticmethod
     def __new__(cls, name: str, index: int) -> "MemoryReference": ...
+    @staticmethod
+    def parse(quil: str) -> "MemoryReference":
+        """
+        Parses a ``MemoryReference`` from a string. Raises a ``ParseMemoryReference`` error if the
+        string isn't a valid Quil memory reference.
+        """
+        ...
     @property
     def name(self) -> str: ...
     @name.setter

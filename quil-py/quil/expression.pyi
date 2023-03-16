@@ -6,6 +6,9 @@ from quil.instructions import MemoryReference
 class EvaluationError(ValueError):
     """Error that may occur while evaluation an ``Expression``"""
 
+class ParseExpressionError(ValueError):
+    """Error that may occur while parsing an ``Expression``"""
+
 @final
 class Expression:
     """
@@ -51,6 +54,12 @@ class Expression:
         Returns the inner value of the variant. Raises a ``RuntimeError`` if inner data doesn't exist.
         """
         ...
+    @staticmethod
+    def parse(quil: str) -> Expression:
+        """
+        Parses an ``Expression`` from a string. Raises a ``ParseExpressionError`` if the string
+        isn't a valid Quil expression.
+        """
     def is_address(self) -> bool: ...
     def is_function_call(self) -> bool: ...
     def is_infix(self) -> bool: ...
