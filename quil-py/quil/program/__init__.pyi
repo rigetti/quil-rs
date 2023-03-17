@@ -183,7 +183,7 @@ class FrameSet:
         ...
     def is_empty(self) -> bool:
         """
-        Returns ``True`` if this ``FrameSet`` describes no frames.
+        Returns ``True`` if this ``FrameSet`` defines no frames.
         """
         ...
     def to_instructions(self) -> List[Instruction]:
