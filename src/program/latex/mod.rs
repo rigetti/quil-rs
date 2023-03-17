@@ -6,9 +6,8 @@
 //! rendered in a LaTeX visualization tool. Be aware that not all Programs can
 //! be serialized as LaTeX. If a [`Program`] contains a gate or modifier that
 //! has not been implemented in the [Supported Gates and Modifiers]
-//! (#supported-gates-and-modifiers) section below, an error will be returned
-//! detailing whether the entire [`Program`] or which line of instruction
-//! containing the gate or modifier is unsupported.
+//! (#supported-gates-and-modifiers) section below, unexpected results may
+//! occur, one of which includes producing incorrect quantum circuits.
 //!
 //! # Supported Gates and Modifiers
 //!
@@ -723,155 +722,8 @@ impl Wire {
 
 #[derive(Clone, Debug, thiserror::Error)]
 pub enum LatexGenError {
-    #[error("Cannot parse LaTeX for unsupported program: {program}")]
-    UnsupportedProgram { program: String },
-    #[error("Cannot parse LaTeX for unsupported gate: {gate}")]
-    UnsupportedGate { gate: String },
     #[error("Tried to parse CNOT and found a control qubit without a target.")]
     FoundCNOTWithNoTarget,
-}
-
-/// Supported types
-enum Supported {
-    Gate(SupportedGate),
-    New,  // New initialization of a non-None variant
-    None, // ()
-}
-
-/// Set of all Gates that can be parsed to LaTeX
-#[derive(Clone, PartialEq)]
-enum SupportedGate {
-    Pauli(String),
-    Hadamard(String),
-    Phase(String),
-    ControlledPhase(String),
-    ControlledX(String),
-    DefGate(String),
-    Modifiers(String),
-    Unsupported(String), // for error handling
-}
-
-impl SupportedGate {
-    /// Returns a variant of self for any supported standard gate.
-    ///
-    /// # Arguments
-    /// `name` - the name of the gate from instruction
-    fn get_supported_standard_gate(name: String) -> Self {
-        if name == "I" || name == "X" || name == "Y" || name == "Z" {
-            return Self::Pauli(name);
-        } else if name == "H" {
-            return Self::Hadamard(name);
-        } else if name == "PHASE" || name == "S" || name == "T" {
-            return Self::Phase(name);
-        } else if name == "CZ" || name == "CPHASE" {
-            return Self::ControlledPhase(name);
-        } else if name == "CNOT" || name == "CCNOT" {
-            return Self::ControlledX(name);
-        }
-
-        Self::Unsupported(name)
-    }
-
-    /// Returns a variant of self for any defined gate.
-    ///
-    /// # Arguments
-    /// `name` - the name of the defined gate from instruction
-    /// `defgate` - a vector of all previously defined gates
-    fn get_supported_defgate(name: String, defgate: &Vec<String>) -> Self {
-        // check all previously defined DEFGATES
-        for defgate in defgate {
-            // return supported if gate name is of DEFGATE
-            if defgate == &name {
-                return SupportedGate::DefGate(name);
-            }
-        }
-
-        Self::Unsupported(name)
-    }
-
-    /// Returns a variant of self for any supported modifier.
-    ///
-    /// # Arguments
-    /// `name` - the name of the defined gate from instruction
-    fn get_supported_modifier(name: String) -> Self {
-        if name == "CONTROLLED" || name == "DAGGER" {
-            return Self::Modifiers(name);
-        }
-
-        Self::Unsupported(name)
-    }
-}
-
-impl Supported {
-    /// Returns new variant of self as variant of supported gate.
-    ///
-    /// # Arguments
-    /// `name` - the name of the defined gate from instruction
-    /// `defgate` - a vector of all previously defined gates    
-    fn new(&self, gate: &Gate, defgate: &Vec<String>) -> Self {
-        // check is standard gate
-        let mut is_supported = SupportedGate::get_supported_standard_gate(gate.name.to_string());
-
-        // check if defgate if not already identified as a standard gate
-        if is_supported == SupportedGate::Unsupported(gate.name.to_string()) {
-            is_supported = SupportedGate::get_supported_defgate(gate.name.to_string(), defgate);
-        }
-
-        // check supported modifers
-        for modifier in &gate.modifiers {
-            is_supported = SupportedGate::get_supported_modifier(modifier.to_string())
-        }
-
-        match self {
-            Supported::New => Self::Gate(is_supported),
-            _ => Supported::None, // same as ()
-        }
-    }
-
-    /// Returns a result indicating whether or not the LaTeX feature can parse
-    /// a given Program to LaTeX.
-    ///
-    /// # Arguments
-    /// `self` - exposes variants of a Supported program
-    /// `program` - the Program to be validated before parsing to LaTeX
-    fn is_supported(&self, program: &Program) -> Result<Vec<Instruction>, LatexGenError> {
-        let instructions = program.to_instructions(false);
-
-        // store DEFGATE names for reference
-        let mut defgate: Vec<String> = vec![];
-
-        // check each instruction to determine if it is supported
-        for instruction in &instructions {
-            match instruction {
-                // check is gate is supported
-                instruction::Instruction::Gate(gate) => match Self::new(self, gate, &defgate) {
-                    // new Supported checks if this instruction is supported
-                    Supported::Gate(is_supported) => match is_supported {
-                        // unsupported if SupportedGate is not returned
-                        SupportedGate::Unsupported(gate) => {
-                            return Err(LatexGenError::UnsupportedGate { gate })
-                        }
-                        // SupportedGate returned so instruction is supported
-                        _ => (),
-                    },
-                    // do nothing for non-New Self variants
-                    _ => (),
-                },
-                // DEFGATE is supported
-                instruction::Instruction::GateDefinition(gate) => {
-                    defgate.push(gate.name.to_string())
-                }
-                // unless explicitly matched, program is unsupported
-                _ => {
-                    return Err(LatexGenError::UnsupportedProgram {
-                        program: program.to_string(false),
-                    })
-                }
-            }
-        }
-
-        Ok(instructions)
-    }
 }
 
 pub trait Latex {
@@ -909,8 +761,8 @@ impl Latex for Program {
     /// let latex = program.to_latex(RenderSettings::default()).expect("");
     /// ```
     fn to_latex(self, settings: RenderSettings) -> Result<String, LatexGenError> {
-        // get a reference to the current supported program
-        let instructions = Supported::is_supported(&Supported::New, &self)?;
+        // get a reference to the current program
+        let instructions = self.to_instructions(false);
 
         // initialize a new diagram
         let mut diagram = Diagram {
@@ -1070,71 +922,6 @@ DAGGER G 0"#,
         fn test_footer() {
             let document = Document::default();
             insta::assert_snapshot!(document.footer);
-        }
-    }
-
-    /// Test module for Supported (remove #[should_panic] when supported)
-    mod supported {
-        use crate::program::latex::{tests::get_latex, RenderSettings};
-
-        #[test]
-        #[should_panic]
-        fn test_supported_misc_instructions() {
-            get_latex("NOP\nWAIT\nRESET\nHALT", RenderSettings::default());
-        }
-
-        #[test]
-        #[should_panic]
-        fn test_supported_measure() {
-            get_latex(
-                "DECLARE ro BIT\nMEASURE 0\nMEASURE 1 ro[0]",
-                RenderSettings::default(),
-            );
-        }
-
-        #[test]
-        #[should_panic]
-        fn test_supported_program_defcircuit() {
-            get_latex(
-                r#"DEFCIRCUIT EULER(%alpha, %beta, %gamma) q:
-    RX(%alpha) q
-    RY(%beta)  q
-    RZ(%gamma) q
-
-EULER(pi, 2*pi, 3*pi/2) 0"#,
-                RenderSettings::default(),
-            );
-        }
-
-        #[test]
-        #[should_panic]
-        fn test_supported_gate_rotation() {
-            get_latex(
-                r#"DECLARE ro BIT[1]
-DECLARE theta REAL[1]
-RX(pi/2) 0
-RZ(theta) 0
-RY(-pi/2) 0"#,
-                RenderSettings::default(),
-            );
-        }
-
-        #[test]
-        #[should_panic]
-        fn test_supported_arithmetic_instruction() {
-            get_latex(
-                "DECLARE b BIT\nDECLARE theta REAL\nMOVE theta -3.14\nLT b theta -3.14",
-                RenderSettings::default(),
-            );
-        }
-
-        #[test]
-        #[should_panic]
-        fn test_supported_modifier_forked() {
-            get_latex(
-                "FORKED CONTROLLED FORKED RX(a,b,c,d) 0 1 2 3",
-                RenderSettings::default(),
-            );
         }
     }
 
