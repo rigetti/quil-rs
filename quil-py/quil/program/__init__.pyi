@@ -162,7 +162,7 @@ class FrameSet:
         ...
     def get_keys(self) -> List[FrameIdentifier]:
         """
-        Return a list of all ``FrameIdentifier``s described by this ``Frameset``
+        Return a list of all ``FrameIdentifier``s described by this ``FrameSet``
         """
         ...
     def insert(
