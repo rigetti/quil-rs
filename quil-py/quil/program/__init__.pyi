@@ -1,4 +1,4 @@
-from typing import Dict, Set, final, List, Optional
+from typing import Dict, FrozenSet, Set, final, List, Optional
 
 from quil.instructions import (
     AttributeValue,
@@ -155,6 +155,42 @@ class CalibrationSet:
 class FrameSet:
     @staticmethod
     def __new__(cls) -> "FrameSet": ...
+    def get(self, identifier: FrameIdentifier) -> Optional[Dict[str, AttributeValue]]:
+        """
+        Retrieve the attributes of a frame by its identifier
+        """
+        ...
+    def get_keys(self) -> List[FrameIdentifier]:
+        """
+        Return a list of all ``FrameIdentifier``s described by this ``FrameSet``
+        """
+        ...
+    def insert(
+        self, identifier: FrameIdentifier, attributes: Dict[str, AttributeValue]
+    ):
+        """
+        Insert a new ``FrameIdentifier``, overwriting any existing one.
+        """
+        ...
+    def merge(self, other: FrameSet):
+        """
+        Merge another ``FrameSet`` into this one, overwriting any existing keys.
+        """
+    def intersection(self, identifiers: FrozenSet[FrameIdentifier]) -> "FrameSet":
+        """
+        Return a new ``FrameSet`` which describes only the given ``FrameIdentifier``s
+        """
+        ...
+    def is_empty(self) -> bool:
+        """
+        Returns ``True`` if this ``FrameSet`` defines no frames.
+        """
+        ...
+    def to_instructions(self) -> List[Instruction]:
+        """
+        Return the Quil instructions which define the contained frames.
+        """
+        ...
     def get_all_frames(self) -> Dict[FrameIdentifier, Dict[str, AttributeValue]]: ...
 
 class MemoryRegion:

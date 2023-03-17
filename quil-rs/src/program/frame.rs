@@ -32,6 +32,11 @@ impl FrameSet {
         }
     }
 
+    /// Retrieve the attributes of a frame by its identifier.
+    pub fn get(&self, identifier: &FrameIdentifier) -> Option<&FrameAttributes> {
+        self.frames.get(identifier)
+    }
+
     /// Return a list of all frame IDs described by this FrameSet.
     pub fn get_keys(&self) -> Vec<&FrameIdentifier> {
         self.frames.keys().collect()
@@ -78,11 +83,6 @@ impl FrameSet {
                 .reduce(|acc, el| acc.into_iter().filter(|&v| el.contains(v)).collect())
                 .unwrap_or_default(),
         }
-    }
-
-    /// Retrieve the attributes of a frame by its identifier.
-    pub fn get(&self, identifier: &FrameIdentifier) -> Option<&FrameAttributes> {
-        self.frames.get(identifier)
     }
 
     /// Insert a new frame by ID, overwriting any existing one.
