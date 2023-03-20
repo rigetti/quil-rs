@@ -1,4 +1,4 @@
-use quil_rs::instruction::{Declaration, MemoryReference, ScalarType, Vector};
+use quil_rs::instruction::{Declaration, MemoryReference, Offset, ScalarType, Vector};
 
 use rigetti_pyo3::{
     impl_from_str, impl_hash, impl_parse, impl_repr, impl_str, py_wrap_data_struct, py_wrap_error,
@@ -64,6 +64,32 @@ impl PyVector {
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
+    PyOffset(Offset) as "Offset" {
+        offset: u64 => Py<PyInt>,
+        data_type: ScalarType => PyScalarType
+    }
+}
+
+#[pymethods]
+impl PyOffset {
+    #[new]
+    pub fn new(py: Python<'_>, offset: u64, data_type: PyScalarType) -> PyResult<Self> {
+        Ok(Self(Offset::new(
+            offset,
+            ScalarType::py_try_from(py, &data_type)?,
+        )))
+    }
+
+    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
+        match op {
+            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
+            _ => py.NotImplemented(),
+        }
+    }
+}
+
+py_wrap_data_struct! {
+    #[derive(Debug, PartialEq, Eq)]
     #[pyo3(subclass)]
     PyDeclaration(Declaration) as "Declaration" {
         name: String => Py<PyString>,
@@ -82,11 +108,13 @@ impl PyDeclaration {
         name: String,
         size: PyVector,
         sharing: Option<String>,
+        offsets: Vec<PyOffset>,
     ) -> PyResult<Self> {
         Ok(Self(Declaration::new(
             name,
             Vector::py_try_from(py, &size)?,
             sharing,
+            Vec::<Offset>::py_try_from(py, &offsets)?,
         )))
     }
 

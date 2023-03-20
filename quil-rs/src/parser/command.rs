@@ -122,12 +122,14 @@ pub(crate) fn parse_logical_unary(
 pub(crate) fn parse_declare<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Instruction> {
     let (input, name) = token!(Identifier(v))(input)?;
     let (input, size) = parse_vector(input)?;
+    let (input, offsets) = todo!();
     Ok((
         input,
         Instruction::Declaration(Declaration {
             name,
             sharing: None,
             size,
+            offsets,
         }),
     ))
 }
@@ -588,7 +590,8 @@ mod tests {
             size: Vector {
                 data_type: ScalarType::Bit,
                 length: 1
-            }
+            },
+            offsets: vec![]
         })
     );
 
@@ -602,7 +605,8 @@ mod tests {
             size: Vector {
                 data_type: ScalarType::Integer,
                 length: 5
-            }
+            },
+            offsets: vec![]
         })
     );
 

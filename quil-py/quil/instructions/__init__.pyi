@@ -295,13 +295,18 @@ class MeasureCalibrationDefinition:
         instructions: List[Instruction],
     ) -> "MeasureCalibrationDefinition": ...
 
-class Declaration:
+class Offset:
     @staticmethod
     def __new__(
         cls,
-        name: str,
-        size: Vector,
-        sharing: Optional[str],
+        offset: int,
+        data_type: ScalarType,
+    ) -> "Offset": ...
+
+class Declaration:
+    @staticmethod
+    def __new__(
+        cls, name: str, size: Vector, sharing: Optional[str], offsets: List[Offset]
     ) -> "Declaration": ...
     @property
     def name(self) -> str: ...
@@ -315,6 +320,10 @@ class Declaration:
     def sharing(self) -> Optional[str]: ...
     @sharing.setter
     def sharing(self, sharing: Optional[str]): ...
+    @property
+    def offsets(self) -> List[Offset]: ...
+    @offsets.setter
+    def offsets(self, offsets: List[Offset]): ...
 
 class Vector:
     @staticmethod

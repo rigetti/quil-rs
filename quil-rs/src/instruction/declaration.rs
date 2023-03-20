@@ -54,8 +54,14 @@ impl fmt::Display for Vector {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Offset {
-    offset: u64,
-    data_type: ScalarType,
+    pub offset: u64,
+    pub data_type: ScalarType,
+}
+
+impl Offset {
+    pub fn new(offset: u64, data_type: ScalarType) -> Self {
+        Self { offset, data_type }
+    }
 }
 
 impl fmt::Display for Offset {
@@ -90,7 +96,7 @@ impl fmt::Display for Declaration {
             write!(f, "SHARING {shared}")?;
             if !self.offsets.is_empty() {
                 write!(f, "OFFSET")?;
-                for offset in self.offsets {
+                for offset in self.offsets.iter() {
                     write!(f, " {offset}")?
                 }
             }
