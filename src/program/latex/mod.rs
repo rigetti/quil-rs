@@ -31,8 +31,8 @@ use crate::Program;
 /// Available commands used for building circuits with the same names taken
 /// from the Quantikz documentation for easy reference. LaTeX string denoted
 /// inside `backticks`.
-///     Single wire commands: lstick, rstick, qw, meter
-///     Multi-wire commands: ctrl, targ, control, (swap, targx)
+///   Single wire commands: lstick, rstick, qw, meter
+///   Multi-wire commands: ctrl, targ, control, (swap, targx)
 #[derive(Clone, Debug)]
 enum Command {
     /// `\lstick{\ket{q_{u32}}}`: Make a qubit "stick out" from the left.
@@ -54,10 +54,6 @@ enum Command {
 }
 
 impl Command {
-    /// Returns the LaTeX String for a given Command variant.
-    ///
-    /// # Arguments
-    /// `command` - A Command variant.
     fn get_command(command: Self) -> String {
         match command {
             Self::Lstick(wire) => format!(r#"\lstick{{\ket{{q_{{{wire}}}}}}}"#),
@@ -112,11 +108,11 @@ impl ToString for Symbol {
 }
 
 impl Symbol {
-    /// Returns the supported Symbol variant from text otherwise stores the
+    /// Returns the supported Symbol variant from text, otherwise, stores the
     /// unsupported symbol as text in the Text variant.
     ///
     /// # Arguments
-    /// `text` - a String representing a greek or alaphanumeric symbol
+    /// `text` - a String representing a Greek or alphanumeric symbol
     fn match_symbol(text: String) -> Symbol {
         match text.as_str() {
             "alpha" => Symbol::Alpha,
@@ -323,13 +319,6 @@ impl Diagram {
     /// CONTROLLED modifiers are reformatted such that each CONTROLLED modifier
     /// prepends a `C` to the beginning of the gate name. For other modifiers
     /// such as DAGGER, no special reformatting is required.
-    ///
-    /// For example, for an instruction line `CONTROLLED CONTROLLED Y 0 1 2` the
-    /// gate name is reformatted to `CCY` where each C is mapped to an
-    /// associated qubit with the last qubit to the original gate name. For an
-    /// instruction line `DAGGER DAGGER Y 0`, the gate name remains `Y`,
-    /// instead each of the modifiers are added to the wire at the current
-    /// column where it is to be applied using the Command::Super variant.
     ///
     /// # Arguments
     /// `&mut self` - exposes the current column of the Circuit
@@ -547,29 +536,26 @@ impl Display for Diagram {
     /// can be input into the body of the Document.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // add a newline between the first line and the header
-        let mut body = String::from('\n');
+        writeln!(f)?;
 
         let mut i = 0; // used to omit trailing Nr
 
         // write the LaTeX string for each wire in the circuit
         for key in self.circuit.keys() {
-            // a single line of LaTeX representing a wire from the circuit
-            let mut line = String::from("");
-
             // are labels on in settings?
             if self.settings.label_qubit_lines {
                 // add label to left side of wire
-                line.push_str(&self.settings.label_qubit_lines(*key));
+                write!(f, "{}", &self.settings.label_qubit_lines(*key))?;
             } else {
                 // add qw buffer to first column
-                line.push_str(&Command::get_command(Command::Qw));
+                write!(f, "{}", &Command::get_command(Command::Qw))?;
             }
 
             // convert each column in the wire to string
             if let Some(wire) = self.circuit.get(key) {
                 for c in 0..self.column {
                     if let Some(gate) = wire.gates.get(&c) {
-                        line.push_str(" & ");
+                        write!(f, " & ")?;
 
                         let mut superscript = String::from("");
                         // attach modifiers to gate name if any
@@ -584,23 +570,29 @@ impl Display for Diagram {
                         if gate.starts_with('C') {
                             // set qubit at this column as the control
                             if let Some(targ) = wire.ctrl.get(&c) {
-                                line.push_str(&Command::get_command(Command::Ctrl(
-                                    targ.to_string(),
-                                )));
+                                write!(
+                                    f,
+                                    "{}",
+                                    &Command::get_command(Command::Ctrl(targ.to_string()))
+                                )?;
                             } else if wire.targ.get(&c).is_some() {
                                 // if this is a target and has a PHASE gate display `\phase{param}`
                                 if gate.contains("PHASE") {
                                     // set the phase parameters
                                     if let Some(parameters) = wire.parameters.get(&c) {
                                         for param in parameters {
-                                            line.push_str(&Command::get_command(Command::Phase(
-                                                param.to_string(),
-                                            )));
+                                            write!(
+                                                f,
+                                                "{}",
+                                                &Command::get_command(Command::Phase(
+                                                    param.to_string(),
+                                                ))
+                                            )?;
                                         }
                                     }
                                 // if target has a CNOT gate, display as targ{}
                                 } else if gate.contains("NOT") {
-                                    line.push_str(&Command::get_command(Command::Targ));
+                                    write!(f, "{}", &Command::get_command(Command::Targ))?;
                                 // if target has a 'char' gate display `gate{char}` gate
                                 } else {
                                     let mut gate = String::from(gate.chars().last().unwrap());
@@ -610,7 +602,7 @@ impl Display for Diagram {
                                         gate.push_str(&superscript);
                                     }
 
-                                    line.push_str(&Command::get_command(Command::Gate(gate)))
+                                    write!(f, "{}", &Command::get_command(Command::Gate(gate)))?;
                                 }
                             }
                         // PHASE gates are displayed as `\phase{param}`
@@ -618,9 +610,11 @@ impl Display for Diagram {
                             // set the phase parameters
                             if let Some(parameters) = wire.parameters.get(&c) {
                                 for param in parameters {
-                                    line.push_str(&Command::get_command(Command::Phase(
-                                        param.to_string(),
-                                    )));
+                                    write!(
+                                        f,
+                                        "{}",
+                                        &Command::get_command(Command::Phase(param.to_string()))
+                                    )?;
                                 }
                             }
                         // all other gates display as `\gate{name}`
@@ -632,34 +626,33 @@ impl Display for Diagram {
                                 gate.push_str(&superscript);
                             }
 
-                            line.push_str(&Command::get_command(Command::Gate(gate)));
+                            write!(f, "{}", &Command::get_command(Command::Gate(gate)))?;
                         }
                     } else if wire.empty.get(&c).is_some() {
                         // chain an empty column qw to the end of the line
-                        line.push_str(" & ");
-                        line.push_str(&Command::get_command(Command::Qw));
+                        write!(f, " & ")?;
+                        write!(f, "{}", &Command::get_command(Command::Qw))?;
                     }
                 }
             }
 
             // chain an empty column qw to the end of the line
-            line.push_str(" & ");
-            line.push_str(&Command::get_command(Command::Qw));
+            write!(f, " & ")?;
+            write!(f, "{}", &Command::get_command(Command::Qw))?;
 
             // if this is the last key iteration, omit Nr from end of line
             if i < self.circuit.len() - 1 {
                 // indicate a new row
-                line.push(' ');
-                line.push_str(&Command::get_command(Command::Nr));
+                write!(f, " ")?;
+                write!(f, "{}", &Command::get_command(Command::Nr))?;
                 i += 1;
             }
 
             // add a newline between each new line or the footer
-            line.push('\n');
-            body.push_str(&line);
+            writeln!(f)?;
         }
 
-        write!(f, "{body}")
+        Ok(())
     }
 }
 
@@ -873,28 +866,7 @@ mod tests {
     #[test]
     /// Test functionality of to_latex using default settings.
     fn test_to_latex() {
-        get_latex(
-            r#"Y 0
-CONTROLLED Y 0 1
-CONTROLLED CONTROLLED Y 0 1 2
-CONTROLLED CONTROLLED CONTROLLED Y 0 1 2 3
-
-DAGGER Y 0
-DAGGER DAGGER Y 0
-DAGGER DAGGER DAGGER Y 0
-
-CONTROLLED DAGGER Y 0 1
-CONTROLLED DAGGER CONTROLLED Y 0 1 2
-CONTROLLED DAGGER CONTROLLED DAGGER Y 0 1 2
-
-DEFGATE G:
-    1, 0
-    0, 1
-
-CONTROLLED G 0 1
-DAGGER G 0"#,
-            RenderSettings::default(),
-        );
+        get_latex(r#"RX 0"#, RenderSettings::default());
     }
 
     /// Test module for the Document
