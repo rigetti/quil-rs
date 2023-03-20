@@ -115,7 +115,6 @@ impl fmt::Display for Declaration {
     }
 }
 
-// TODO: Tests for fmt::Display
 #[cfg(test)]
 mod test_declaration {
     use super::{Declaration, Offset, ScalarType, Sharing, Vector};
