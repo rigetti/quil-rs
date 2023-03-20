@@ -63,12 +63,16 @@ impl PyVector {
 }
 
 py_wrap_data_struct! {
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, PartialEq, Eq, Hash)]
+    #[pyo3(subclass)]
     PyOffset(Offset) as "Offset" {
         offset: u64 => Py<PyInt>,
         data_type: ScalarType => PyScalarType
     }
 }
+impl_repr!(PyOffset);
+impl_str!(PyOffset);
+impl_hash!(PyOffset);
 
 #[pymethods]
 impl PyOffset {
@@ -90,9 +94,30 @@ impl PyOffset {
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq, Hash)]
+    #[pyo3(subclass)]
     PySharing(Sharing) as "Sharing" {
         name: String => Py<PyString>,
         offsets: Vec<Offset> => Vec<PyOffset>
+    }
+}
+impl_repr!(PySharing);
+impl_hash!(PySharing);
+
+#[pymethods]
+impl PySharing {
+    #[new]
+    pub fn new(py: Python<'_>, name: String, offsets: Vec<PyOffset>) -> PyResult<Self> {
+        Ok(Self(Sharing::new(
+            name,
+            Vec::<Offset>::py_try_from(py, &offsets)?,
+        )))
+    }
+
+    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
+        match op {
+            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
+            _ => py.NotImplemented(),
+        }
     }
 }
 

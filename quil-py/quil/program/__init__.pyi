@@ -5,12 +5,13 @@ from quil.instructions import (
     Calibration,
     Declaration,
     FrameIdentifier,
+    Gate,
     GateDefinition,
+    Instruction,
     MeasureCalibrationDefinition,
     Measurement,
-    Instruction,
-    Gate,
     Qubit,
+    Sharing,
     Vector,
     Waveform,
 )
@@ -195,12 +196,12 @@ class FrameSet:
 
 class MemoryRegion:
     @staticmethod
-    def __new__(cls, size: Vector, sharing: Optional[str]) -> "MemoryRegion": ...
+    def __new__(cls, size: Vector, sharing: Optional[Sharing]) -> "MemoryRegion": ...
     @property
     def size(self) -> Vector: ...
     @size.setter
     def size(self, size: Vector): ...
     @property
-    def sharing(self) -> Optional[str]: ...
+    def sharing(self) -> Optional[Sharing]: ...
     @sharing.setter
-    def sharing(self, sharing: Optional[str]): ...
+    def sharing(self, sharing: Optional[Sharing]): ...

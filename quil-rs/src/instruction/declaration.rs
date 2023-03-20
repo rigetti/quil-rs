@@ -58,6 +58,12 @@ pub struct Sharing {
     pub offsets: Vec<Offset>,
 }
 
+impl Sharing {
+    pub fn new(name: String, offsets: Vec<Offset>) -> Self {
+        Self { name, offsets }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Offset {
     pub offset: u64,
@@ -97,9 +103,9 @@ impl fmt::Display for Declaration {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "DECLARE {} {}", self.name, self.size)?;
         if let Some(shared) = &self.sharing {
-            write!(f, "SHARING {}", shared.name)?;
+            write!(f, " SHARING {}", shared.name)?;
             if !shared.offsets.is_empty() {
-                write!(f, "OFFSET")?;
+                write!(f, " OFFSET")?;
                 for offset in shared.offsets.iter() {
                     write!(f, " {offset}")?
                 }
@@ -110,17 +116,39 @@ impl fmt::Display for Declaration {
 }
 
 // TODO: Tests for fmt::Display
-// #[cfg(test)]
-// mod test_declaration {
-//     use super::{Declaration, Vector, Offset, ScalarType};
-//     use rstest::rstest;
-//
-//     #[rstest]
-//     #[case(
-//         "ro",
-//         Vector{ data_type: ScalarType::Bit, length: 1 }
-//     )]
-// }
+#[cfg(test)]
+mod test_declaration {
+    use super::{Declaration, Offset, ScalarType, Sharing, Vector};
+    use insta::assert_snapshot;
+    use rstest::rstest;
+
+    #[rstest]
+    #[case(
+        Declaration{
+            name: "ro".to_string(),
+            size: Vector{data_type: ScalarType::Bit, length: 1},
+            sharing: None,
+
+        }
+    )]
+    #[case(
+        Declaration{
+            name: "ro".to_string(),
+            size: Vector{data_type: ScalarType::Integer, length: 2},
+            sharing: Some(Sharing{name: "foo".to_string(), offsets: vec![]})
+        }
+    )]
+    #[case(
+        Declaration{
+            name: "ro".to_string(),
+            size: Vector{data_type: ScalarType::Real, length: 3},
+            sharing: Some(Sharing{name: "bar".to_string(), offsets: vec![Offset{offset: 4, data_type: ScalarType::Bit}, Offset{offset: 5, data_type: ScalarType::Bit}]})
+        }
+    )]
+    fn test_display(#[case] declaration: Declaration) {
+        assert_snapshot!(declaration.to_string())
+    }
+}
 
 #[derive(Clone, Debug, Hash, PartialEq)]
 #[cfg_attr(test, derive(Arbitrary))]
