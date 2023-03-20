@@ -18,7 +18,7 @@ use nom::{
     branch::alt,
     combinator::{cut, map, opt, value},
     multi::{many0, many1, separated_list0, separated_list1},
-    sequence::{delimited, preceded, tuple},
+    sequence::{delimited, pair, preceded, tuple},
 };
 
 use crate::{
@@ -26,7 +26,7 @@ use crate::{
     expression::Expression,
     instruction::{
         ArithmeticOperand, AttributeValue, BinaryOperand, ComparisonOperand, FrameIdentifier,
-        GateModifier, MemoryReference, Qubit, ScalarType, Vector, WaveformInvocation,
+        GateModifier, MemoryReference, Offset, Qubit, ScalarType, Vector, WaveformInvocation,
     },
     parser::lexer::Operator,
     token,
@@ -279,16 +279,33 @@ pub(crate) fn parse_variable_qubit(input: ParserInput) -> InternalParserResult<S
     }
 }
 
-/// Parse a "vector" which is an integer index, such as `[0]`
-pub(crate) fn parse_vector<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Vector> {
-    let (input, data_type_token) = token!(DataType(v))(input)?;
-
-    let data_type = match data_type_token {
+fn match_data_type_token(token: DataType) -> ScalarType {
+    match token {
         DataType::Bit => ScalarType::Bit,
         DataType::Integer => ScalarType::Integer,
         DataType::Real => ScalarType::Real,
         DataType::Octet => ScalarType::Octet,
-    };
+    }
+}
+
+pub(crate) fn parse_offsets<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Vec<Offset>> {
+    let (input, offsets) = opt(preceded(
+        token!(Offset),
+        many1(map(
+            pair(token!(Integer(v)), token!(DataType(v))),
+            |(offset, data_type)| Offset {
+                offset,
+                data_type: match_data_type_token(data_type),
+            },
+        )),
+    ))(input)?;
+    Ok((input, offsets.unwrap_or_default()))
+}
+
+/// Parse a "vector" which is an integer index, such as `[0]`
+pub(crate) fn parse_vector<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Vector> {
+    let (input, data_type_token) = token!(DataType(v))(input)?;
+    let data_type = match_data_type_token(data_type_token);
 
     let (input, length) = opt(delimited(
         token!(LBracket),

@@ -93,7 +93,7 @@ impl Program {
                 name,
                 size,
                 sharing,
-                offsets,
+                offsets: _,
             }) => {
                 self.memory_regions
                     .insert(name, MemoryRegion { size, sharing });
