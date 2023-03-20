@@ -1,4 +1,4 @@
-use quil_rs::instruction::{Declaration, MemoryReference, Offset, ScalarType, Vector};
+use quil_rs::instruction::{Declaration, MemoryReference, Offset, ScalarType, Sharing, Vector};
 
 use rigetti_pyo3::{
     impl_from_str, impl_hash, impl_parse, impl_repr, impl_str, py_wrap_data_struct, py_wrap_error,
@@ -89,12 +89,20 @@ impl PyOffset {
 }
 
 py_wrap_data_struct! {
+    #[derive(Debug, PartialEq, Eq, Hash)]
+    PySharing(Sharing) as "Sharing" {
+        name: String => Py<PyString>,
+        offsets: Vec<Offset> => Vec<PyOffset>
+    }
+}
+
+py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
     #[pyo3(subclass)]
     PyDeclaration(Declaration) as "Declaration" {
         name: String => Py<PyString>,
         size: Vector => PyVector,
-        sharing: Option<String> => Option<Py<PyString>>
+        sharing: Option<Sharing> => Option<PySharing>
     }
 }
 impl_repr!(PyDeclaration);
@@ -107,14 +115,12 @@ impl PyDeclaration {
         py: Python<'_>,
         name: String,
         size: PyVector,
-        sharing: Option<String>,
-        offsets: Vec<PyOffset>,
+        sharing: Option<PySharing>,
     ) -> PyResult<Self> {
         Ok(Self(Declaration::new(
             name,
             Vector::py_try_from(py, &size)?,
-            sharing,
-            Vec::<Offset>::py_try_from(py, &offsets)?,
+            Option::<Sharing>::py_try_from(py, &sharing)?,
         )))
     }
 

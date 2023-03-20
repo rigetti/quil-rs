@@ -52,7 +52,13 @@ impl fmt::Display for Vector {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct Sharing {
+    pub name: String,
+    pub offsets: Vec<Offset>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Offset {
     pub offset: u64,
     pub data_type: ScalarType,
@@ -74,17 +80,15 @@ impl fmt::Display for Offset {
 pub struct Declaration {
     pub name: String,
     pub size: Vector,
-    pub sharing: Option<String>,
-    pub offsets: Vec<Offset>,
+    pub sharing: Option<Sharing>,
 }
 
 impl Declaration {
-    pub fn new(name: String, size: Vector, sharing: Option<String>, offsets: Vec<Offset>) -> Self {
+    pub fn new(name: String, size: Vector, sharing: Option<Sharing>) -> Self {
         Self {
             name,
             size,
             sharing,
-            offsets,
         }
     }
 }
@@ -93,10 +97,10 @@ impl fmt::Display for Declaration {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "DECLARE {} {}", self.name, self.size)?;
         if let Some(shared) = &self.sharing {
-            write!(f, "SHARING {shared}")?;
-            if !self.offsets.is_empty() {
+            write!(f, "SHARING {}", shared.name)?;
+            if !shared.offsets.is_empty() {
                 write!(f, "OFFSET")?;
-                for offset in self.offsets.iter() {
+                for offset in shared.offsets.iter() {
                     write!(f, " {offset}")?
                 }
             }

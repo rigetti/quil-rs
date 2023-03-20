@@ -93,7 +93,6 @@ impl Program {
                 name,
                 size,
                 sharing,
-                offsets: _,
             }) => {
                 self.memory_regions
                     .insert(name, MemoryRegion { size, sharing });
@@ -270,7 +269,6 @@ impl Program {
                 name: name.clone(),
                 size: descriptor.size.clone(),
                 sharing: descriptor.sharing.clone(),
-                offsets: Vec::new(),
             })
         }));
         result.extend(self.frames.to_instructions());

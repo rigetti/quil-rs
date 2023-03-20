@@ -38,7 +38,7 @@ pub use self::arithmetic::{
     BinaryOperator,
 };
 pub use self::calibration::{Calibration, MeasureCalibrationDefinition};
-pub use self::declaration::{Declaration, MemoryReference, Offset, ScalarType, Vector};
+pub use self::declaration::{Declaration, MemoryReference, Offset, ScalarType, Sharing, Vector};
 pub use self::frame::{AttributeValue, FrameAttributes, FrameDefinition, FrameIdentifier};
 pub use self::gate::{Gate, GateDefinition, GateError, GateModifier, GateSpecification, GateType};
 pub use self::measurement::Measurement;

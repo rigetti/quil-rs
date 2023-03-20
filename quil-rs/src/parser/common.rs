@@ -26,7 +26,8 @@ use crate::{
     expression::Expression,
     instruction::{
         ArithmeticOperand, AttributeValue, BinaryOperand, ComparisonOperand, FrameIdentifier,
-        GateModifier, MemoryReference, Offset, Qubit, ScalarType, Vector, WaveformInvocation,
+        GateModifier, MemoryReference, Offset, Qubit, ScalarType, Sharing, Vector,
+        WaveformInvocation,
     },
     parser::lexer::Operator,
     token,
@@ -288,18 +289,30 @@ fn match_data_type_token(token: DataType) -> ScalarType {
     }
 }
 
-pub(crate) fn parse_offsets<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Vec<Offset>> {
-    let (input, offsets) = opt(preceded(
-        token!(Offset),
-        many1(map(
-            pair(token!(Integer(v)), token!(DataType(v))),
-            |(offset, data_type)| Offset {
-                offset,
-                data_type: match_data_type_token(data_type),
-            },
-        )),
+pub(crate) fn parse_sharing<'a>(
+    input: ParserInput<'a>,
+) -> InternalParserResult<'a, Option<Sharing>> {
+    let (input, sharing) = opt(preceded(
+        token!(Sharing),
+        pair(
+            token!(Identifier(v)),
+            opt(preceded(
+                token!(Offset),
+                many1(map(
+                    pair(token!(Integer(v)), token!(DataType(v))),
+                    |(offset, data_type)| Offset {
+                        offset,
+                        data_type: match_data_type_token(data_type),
+                    },
+                )),
+            )),
+        ),
     ))(input)?;
-    Ok((input, offsets.unwrap_or_default()))
+    let sharing = sharing.map(|(name, offsets)| Sharing {
+        name,
+        offsets: offsets.unwrap_or_default(),
+    });
+    Ok((input, sharing))
 }
 
 /// Parse a "vector" which is an integer index, such as `[0]`
