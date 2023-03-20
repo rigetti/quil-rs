@@ -124,6 +124,7 @@ mod test_declaration {
 
     #[rstest]
     #[case(
+        "Basic Declaration",
         Declaration{
             name: "ro".to_string(),
             size: Vector{data_type: ScalarType::Bit, length: 1},
@@ -132,6 +133,7 @@ mod test_declaration {
         }
     )]
     #[case(
+        "Shared Declaration",
         Declaration{
             name: "ro".to_string(),
             size: Vector{data_type: ScalarType::Integer, length: 2},
@@ -139,14 +141,24 @@ mod test_declaration {
         }
     )]
     #[case(
+        "Shared Declaration with Offsets",
         Declaration{
             name: "ro".to_string(),
             size: Vector{data_type: ScalarType::Real, length: 3},
-            sharing: Some(Sharing{name: "bar".to_string(), offsets: vec![Offset{offset: 4, data_type: ScalarType::Bit}, Offset{offset: 5, data_type: ScalarType::Bit}]})
+            sharing: Some(Sharing{
+                name: "bar".to_string(),
+                offsets: vec![
+                    Offset{offset: 4, data_type: ScalarType::Bit},
+                    Offset{offset: 5, data_type: ScalarType::Bit}
+                ]})
         }
     )]
-    fn test_display(#[case] declaration: Declaration) {
-        assert_snapshot!(declaration.to_string())
+    fn test_display(#[case] description: &str, #[case] declaration: Declaration) {
+        insta::with_settings!({
+            description => description,
+        }, {
+            assert_snapshot!(declaration.to_string())
+        })
     }
 }
 
