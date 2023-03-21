@@ -1,5 +1,7 @@
 use std::fmt;
 
+use serde::{Deserialize, Serialize};
+
 use crate::{
     expression::Expression,
     validation::identifier::{validate_identifier, IdentifierValidationError},
@@ -8,7 +10,7 @@ use crate::{
 use super::{format_qubits, get_expression_parameter_string, Qubit};
 
 /// A struct encapsulating all the properties of a Quil Quantum Gate.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Gate {
     pub name: String,
     pub parameters: Vec<Expression>,
@@ -17,7 +19,7 @@ pub struct Gate {
 }
 
 /// An enum of all the possible modifiers on a quil [`Gate`]
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub enum GateModifier {
     /// The `CONTROLLED` modifier makes the gate take an extra [`Qubit`] parameter as a control
     /// qubit.
@@ -29,7 +31,7 @@ pub enum GateModifier {
     Forked,
 }
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, Deserialize, Serialize)]
 pub enum GateError {
     #[error("invalid name: {0}")]
     InvalidIdentifier(#[from] IdentifierValidationError),
@@ -128,7 +130,7 @@ impl fmt::Display for GateModifier {
 }
 
 /// An enum representing a the specification of a [`GateDefinition`] for a given [`GateType`]
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub enum GateSpecification {
     /// A matrix of [`Expression`]s representing a unitary operation for a [`GateType::Matrix`].
     Matrix(Vec<Vec<Expression>>),
@@ -167,7 +169,7 @@ impl fmt::Display for GateSpecification {
 }
 
 /// A struct encapsulating a quil Gate Definition
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct GateDefinition {
     pub name: String,
     pub parameters: Vec<String>,
@@ -211,7 +213,7 @@ impl fmt::Display for GateDefinition {
 }
 
 /// The type of a [`GateDefinition`]
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub enum GateType {
     Matrix,
     Permutation,

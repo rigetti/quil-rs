@@ -25,6 +25,8 @@ use std::ops::{
 };
 use std::str::FromStr;
 
+use serde::{Deserialize, Serialize};
+
 #[cfg(test)]
 use proptest_derive::Arbitrary;
 
@@ -33,7 +35,7 @@ use crate::program::{disallow_leftover, ParseProgramError};
 use crate::{imag, instruction::MemoryReference, real};
 
 /// The different possible types of errors that could occur during expression evaluation.
-#[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
+#[derive(Clone, Debug, PartialEq, Eq, thiserror::Error, Deserialize, Serialize)]
 pub enum EvaluationError {
     #[error("There wasn't enough information to completely evaluate the expression.")]
     Incomplete,
@@ -43,7 +45,7 @@ pub enum EvaluationError {
     NotANumber,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum Expression {
     Address(MemoryReference),
     FunctionCall(FunctionCallExpression),
@@ -54,7 +56,7 @@ pub enum Expression {
     Variable(String),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct FunctionCallExpression {
     pub function: ExpressionFunction,
     pub expression: Box<Expression>,
@@ -69,7 +71,7 @@ impl FunctionCallExpression {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct InfixExpression {
     pub left: Box<Expression>,
     pub operator: InfixOperator,
@@ -86,7 +88,7 @@ impl InfixExpression {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct PrefixExpression {
     pub operator: PrefixOperator,
     pub expression: Box<Expression>,
@@ -561,7 +563,7 @@ impl fmt::Display for Expression {
 }
 
 /// A function defined within Quil syntax.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Deserialize, Serialize)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub enum ExpressionFunction {
     Cis,
@@ -588,7 +590,7 @@ impl fmt::Display for ExpressionFunction {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Deserialize, Serialize)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub enum PrefixOperator {
     Plus,
@@ -609,7 +611,7 @@ impl fmt::Display for PrefixOperator {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Deserialize, Serialize)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub enum InfixOperator {
     Caret,

@@ -14,6 +14,8 @@
 
 use std::collections::HashMap;
 
+use serde::{Deserialize, Serialize};
+
 use crate::{
     expression::Expression,
     instruction::{
@@ -24,7 +26,7 @@ use crate::{
 use super::ProgramError;
 
 /// A collection of Quil calibrations (`DEFCAL` instructions) with utility methods.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, Deserialize, Serialize)]
 pub struct CalibrationSet {
     pub calibrations: Vec<Calibration>,
     pub measure_calibrations: Vec<MeasureCalibrationDefinition>,

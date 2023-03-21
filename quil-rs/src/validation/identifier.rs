@@ -3,11 +3,12 @@ use std::str::FromStr;
 
 use once_cell::sync::Lazy;
 use regex::Regex;
+use serde::{Deserialize, Serialize};
 use thiserror;
 
 use crate::reserved::ReservedToken;
 
-#[derive(Debug, PartialEq, thiserror::Error)]
+#[derive(Debug, PartialEq, thiserror::Error, Deserialize, Serialize)]
 pub enum IdentifierValidationError {
     #[error("{0} is a reserved token")]
     Reserved(ReservedToken),

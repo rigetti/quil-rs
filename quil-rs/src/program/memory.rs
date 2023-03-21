@@ -14,6 +14,8 @@
 
 use std::collections::HashSet;
 
+use serde::{Deserialize, Serialize};
+
 use crate::expression::{Expression, FunctionCallExpression, InfixExpression, PrefixExpression};
 use crate::instruction::{
     Arithmetic, ArithmeticOperand, BinaryLogic, BinaryOperand, Capture, CircuitDefinition,
@@ -23,7 +25,7 @@ use crate::instruction::{
     Store, UnaryLogic, Vector, WaveformInvocation,
 };
 
-#[derive(Clone, Debug, Hash, PartialEq)]
+#[derive(Clone, Debug, Hash, PartialEq, Deserialize, Serialize)]
 pub struct MemoryRegion {
     pub size: Vector,
     pub sharing: Option<Sharing>,
@@ -37,13 +39,13 @@ impl MemoryRegion {
 
 impl Eq for MemoryRegion {}
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct MemoryAccess {
     pub regions: HashSet<String>,
     pub access_type: MemoryAccessType,
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct MemoryAccesses {
     pub captures: HashSet<String>,
     pub reads: HashSet<String>,
@@ -51,7 +53,7 @@ pub struct MemoryAccesses {
 }
 
 /// Express a mode of memory access.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq, Deserialize, Serialize)]
 pub enum MemoryAccessType {
     /// Read from a memory location
     Read,

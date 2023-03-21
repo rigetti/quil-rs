@@ -1,5 +1,7 @@
 use std::fmt;
 
+use serde::{Deserialize, Serialize};
+
 use crate::{
     instruction::{
         format_instructions, format_qubits, get_expression_parameter_string, Expression,
@@ -8,7 +10,7 @@ use crate::{
     validation::identifier::{validate_identifier, IdentifierValidationError},
 };
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, Deserialize, Serialize)]
 pub struct Calibration {
     pub instructions: Vec<Instruction>,
     pub modifiers: Vec<GateModifier>,
@@ -58,7 +60,7 @@ impl fmt::Display for Calibration {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct MeasureCalibrationDefinition {
     pub qubit: Option<Qubit>,
     pub parameter: String,

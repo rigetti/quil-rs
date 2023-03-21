@@ -16,6 +16,8 @@ use std::borrow::Cow;
 use std::collections::HashSet;
 use std::fmt;
 
+use serde::{Deserialize, Serialize};
+
 use crate::expression::Expression;
 #[cfg(test)]
 use crate::parser::lex;
@@ -45,7 +47,7 @@ pub use self::measurement::Measurement;
 pub use self::qubit::Qubit;
 pub use self::waveform::{Waveform, WaveformDefinition, WaveformInvocation};
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub enum UnaryOperator {
     Neg,
     Not,
@@ -60,7 +62,7 @@ impl fmt::Display for UnaryOperator {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub enum ComparisonOperand {
     LiteralInteger(i64),
     LiteralReal(f64),
@@ -77,7 +79,7 @@ impl fmt::Display for ComparisonOperand {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub enum ComparisonOperator {
     Equal,
     GreaterThanOrEqual,
@@ -98,18 +100,18 @@ impl fmt::Display for ComparisonOperator {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Convert {
     pub from: MemoryReference,
     pub to: MemoryReference,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Include {
     pub filename: String,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct CircuitDefinition {
     pub name: String,
     pub parameters: Vec<String>,
@@ -118,12 +120,12 @@ pub struct CircuitDefinition {
     pub instructions: Vec<Instruction>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Reset {
     pub qubit: Option<Qubit>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Capture {
     pub blocking: bool,
     pub frame: FrameIdentifier,
@@ -131,26 +133,26 @@ pub struct Capture {
     pub waveform: WaveformInvocation,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Delay {
     pub duration: Expression,
     pub frame_names: Vec<String>,
     pub qubits: Vec<Qubit>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Fence {
     pub qubits: Vec<Qubit>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Pragma {
     pub name: String,
     pub arguments: Vec<PragmaArgument>,
     pub data: Option<String>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub enum PragmaArgument {
     Identifier(String),
     Integer(u64),
@@ -165,14 +167,14 @@ impl fmt::Display for PragmaArgument {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Pulse {
     pub blocking: bool,
     pub frame: FrameIdentifier,
     pub waveform: WaveformInvocation,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct RawCapture {
     pub blocking: bool,
     pub frame: FrameIdentifier,
@@ -180,101 +182,101 @@ pub struct RawCapture {
     pub memory_reference: MemoryReference,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct SetFrequency {
     pub frame: FrameIdentifier,
     pub frequency: Expression,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct SetPhase {
     pub frame: FrameIdentifier,
     pub phase: Expression,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct SetScale {
     pub frame: FrameIdentifier,
     pub scale: Expression,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct ShiftFrequency {
     pub frame: FrameIdentifier,
     pub frequency: Expression,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct ShiftPhase {
     pub frame: FrameIdentifier,
     pub phase: Expression,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct SwapPhases {
     pub frame_1: FrameIdentifier,
     pub frame_2: FrameIdentifier,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct Comparison {
     pub operator: ComparisonOperator,
     pub operands: (MemoryReference, MemoryReference, ComparisonOperand),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct UnaryLogic {
     pub operator: UnaryOperator,
     pub operand: MemoryReference,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Label(pub String);
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct Move {
     pub destination: ArithmeticOperand,
     pub source: ArithmeticOperand,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct Exchange {
     pub left: ArithmeticOperand,
     pub right: ArithmeticOperand,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Load {
     pub destination: MemoryReference,
     pub source: String,
     pub offset: MemoryReference,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct Store {
     pub destination: String,
     pub offset: MemoryReference,
     pub source: ArithmeticOperand,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Jump {
     pub target: String,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct JumpWhen {
     pub target: String,
     pub condition: MemoryReference,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct JumpUnless {
     pub target: String,
     pub condition: MemoryReference,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub enum Instruction {
     Arithmetic(Arithmetic),
     BinaryLogic(BinaryLogic),
@@ -317,7 +319,7 @@ pub enum Instruction {
     Wait,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum InstructionRole {
     ClassicalCompute,
     ControlFlow,

@@ -2,17 +2,18 @@
 
 use std::{fmt::Display, str::FromStr};
 
+use serde::{Deserialize, Serialize};
 use strum;
 
 /// An enum that can represent any reserved token in quil.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub enum ReservedToken {
     Keyword(ReservedKeyword),
     Gate(ReservedGate),
     Constant(ReservedConstant),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct NotReservedToken(String);
 
 impl FromStr for ReservedToken {
@@ -42,7 +43,7 @@ impl Display for ReservedToken {
 }
 
 /// Any reserved keyword that isn't specifically a gate identifier or constant
-#[derive(Debug, PartialEq, Eq, strum::Display, strum::EnumString)]
+#[derive(Debug, PartialEq, Eq, strum::Display, strum::EnumString, Deserialize, Serialize)]
 #[strum(serialize_all = "UPPERCASE")]
 pub enum ReservedKeyword {
     Add,
@@ -93,7 +94,7 @@ pub enum ReservedKeyword {
 }
 
 /// Every reserved Gate identifier
-#[derive(Debug, PartialEq, Eq, strum::Display, strum::EnumString)]
+#[derive(Debug, PartialEq, Eq, strum::Display, strum::EnumString, Deserialize, Serialize)]
 #[strum(serialize_all = "UPPERCASE")]
 pub enum ReservedGate {
     CAN,
@@ -124,7 +125,7 @@ pub enum ReservedGate {
 }
 
 /// Every reserved constant
-#[derive(Debug, PartialEq, Eq, strum::Display, strum::EnumString)]
+#[derive(Debug, PartialEq, Eq, strum::Display, strum::EnumString, Deserialize, Serialize)]
 #[strum(serialize_all = "lowercase")]
 pub enum ReservedConstant {
     #[strum(serialize = "i")]

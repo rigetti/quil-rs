@@ -17,6 +17,7 @@ use std::ops;
 use std::str::FromStr;
 
 use nom_locate::LocatedSpan;
+use serde::{Deserialize, Serialize};
 
 use crate::instruction::{
     Declaration, FrameDefinition, FrameIdentifier, Instruction, Qubit, Waveform, WaveformDefinition,
@@ -57,7 +58,7 @@ pub mod graphviz_dot;
 /// This contains not only instructions which are executed in turn on the quantum processor, but
 /// also the "headers" used to describe and manipulate those instructions, such as calibrations
 /// and frame definitions.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, Deserialize, Serialize)]
 pub struct Program {
     pub calibrations: CalibrationSet,
     pub frames: FrameSet,
