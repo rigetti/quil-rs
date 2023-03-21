@@ -40,7 +40,7 @@ use super::{
     common::{
         parse_arithmetic_operand, parse_binary_logic_operand, parse_comparison_operand,
         parse_frame_attribute, parse_frame_identifier, parse_gate_modifier, parse_matrix,
-        parse_memory_reference, parse_permutation, parse_qubit, parse_vector,
+        parse_memory_reference, parse_permutation, parse_qubit, parse_sharing, parse_vector,
         parse_waveform_invocation, parse_waveform_name,
     },
     expression::parse_expression,
@@ -122,12 +122,14 @@ pub(crate) fn parse_logical_unary(
 pub(crate) fn parse_declare<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Instruction> {
     let (input, name) = token!(Identifier(v))(input)?;
     let (input, size) = parse_vector(input)?;
+    let (input, sharing) = parse_sharing(input)?;
+
     Ok((
         input,
         Instruction::Declaration(Declaration {
             name,
-            sharing: None,
             size,
+            sharing,
         }),
     ))
 }
@@ -565,7 +567,7 @@ mod tests {
         Expression, ExpressionFunction, FunctionCallExpression, InfixExpression, InfixOperator,
         PrefixExpression, PrefixOperator,
     };
-    use crate::instruction::{GateDefinition, GateSpecification, PragmaArgument};
+    use crate::instruction::{GateDefinition, GateSpecification, Offset, PragmaArgument, Sharing};
     use crate::parser::lexer::lex;
     use crate::{imag, real};
     use crate::{
@@ -584,11 +586,11 @@ mod tests {
         "ro BIT",
         Instruction::Declaration(Declaration {
             name: "ro".to_owned(),
-            sharing: None,
             size: Vector {
                 data_type: ScalarType::Bit,
                 length: 1
-            }
+            },
+            sharing: None,
         })
     );
 
@@ -598,11 +600,54 @@ mod tests {
         "ro INTEGER[5]",
         Instruction::Declaration(Declaration {
             name: "ro".to_owned(),
-            sharing: None,
             size: Vector {
                 data_type: ScalarType::Integer,
                 length: 5
-            }
+            },
+            sharing: None,
+        })
+    );
+
+    make_test!(
+        declare_instruction_sharing,
+        parse_declare,
+        "ro REAL[1] SHARING bar",
+        Instruction::Declaration(Declaration {
+            name: "ro".to_owned(),
+            size: Vector {
+                data_type: ScalarType::Real,
+                length: 1,
+            },
+            sharing: Some(Sharing {
+                name: "bar".to_string(),
+                offsets: vec![]
+            })
+        })
+    );
+
+    make_test!(
+        declare_instruction_sharing_offsets,
+        parse_declare,
+        "ro REAL[1] SHARING bar OFFSET 2 BIT 3 INTEGER",
+        Instruction::Declaration(Declaration {
+            name: "ro".to_owned(),
+            size: Vector {
+                data_type: ScalarType::Real,
+                length: 1,
+            },
+            sharing: Some(Sharing {
+                name: "bar".to_string(),
+                offsets: vec![
+                    Offset {
+                        offset: 2,
+                        data_type: ScalarType::Bit
+                    },
+                    Offset {
+                        offset: 3,
+                        data_type: ScalarType::Integer
+                    }
+                ],
+            })
         })
     );
 

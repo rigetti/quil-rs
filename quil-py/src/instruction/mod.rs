@@ -12,7 +12,8 @@ pub use self::{
     },
     calibration::{PyCalibration, PyMeasureCalibrationDefinition},
     declaration::{
-        ParseMemoryReferenceError, PyDeclaration, PyMemoryReference, PyScalarType, PyVector,
+        ParseMemoryReferenceError, PyDeclaration, PyMemoryReference, PyOffset, PyScalarType,
+        PySharing, PyVector,
     },
     frame::{PyAttributeValue, PyFrameAttributes, PyFrameDefinition, PyFrameIdentifier},
     gate::{GateError, PyGate, PyGateDefinition, PyGateModifier, PyGateSpecification},
@@ -73,6 +74,8 @@ create_init_submodule! {
         PyCalibration,
         PyMeasureCalibrationDefinition,
         PyDeclaration,
+        PyOffset,
+        PySharing,
         PyScalarType,
         PyVector,
         PyMeasurement,

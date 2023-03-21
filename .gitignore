@@ -4,6 +4,9 @@ Cargo.lock
 .venv
 .DS_Store
 
+# unreviewed insta snapshots
+*.snap.new
+
 # JetBrains Editors
 .idea/
 

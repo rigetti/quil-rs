@@ -52,15 +52,45 @@ impl fmt::Display for Vector {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct Sharing {
+    pub name: String,
+    pub offsets: Vec<Offset>,
+}
+
+impl Sharing {
+    pub fn new(name: String, offsets: Vec<Offset>) -> Self {
+        Self { name, offsets }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct Offset {
+    pub offset: u64,
+    pub data_type: ScalarType,
+}
+
+impl Offset {
+    pub fn new(offset: u64, data_type: ScalarType) -> Self {
+        Self { offset, data_type }
+    }
+}
+
+impl fmt::Display for Offset {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{} {}", self.offset, self.data_type)
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Declaration {
     pub name: String,
     pub size: Vector,
-    pub sharing: Option<String>,
+    pub sharing: Option<Sharing>,
 }
 
 impl Declaration {
-    pub fn new(name: String, size: Vector, sharing: Option<String>) -> Self {
+    pub fn new(name: String, size: Vector, sharing: Option<Sharing>) -> Self {
         Self {
             name,
             size,
@@ -73,9 +103,61 @@ impl fmt::Display for Declaration {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "DECLARE {} {}", self.name, self.size)?;
         if let Some(shared) = &self.sharing {
-            write!(f, "SHARING {shared}")?
+            write!(f, " SHARING {}", shared.name)?;
+            if !shared.offsets.is_empty() {
+                write!(f, " OFFSET")?;
+                for offset in shared.offsets.iter() {
+                    write!(f, " {offset}")?
+                }
+            }
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod test_declaration {
+    use super::{Declaration, Offset, ScalarType, Sharing, Vector};
+    use insta::assert_snapshot;
+    use rstest::rstest;
+
+    #[rstest]
+    #[case(
+        "Basic Declaration",
+        Declaration{
+            name: "ro".to_string(),
+            size: Vector{data_type: ScalarType::Bit, length: 1},
+            sharing: None,
+
+        }
+    )]
+    #[case(
+        "Shared Declaration",
+        Declaration{
+            name: "ro".to_string(),
+            size: Vector{data_type: ScalarType::Integer, length: 2},
+            sharing: Some(Sharing{name: "foo".to_string(), offsets: vec![]})
+        }
+    )]
+    #[case(
+        "Shared Declaration with Offsets",
+        Declaration{
+            name: "ro".to_string(),
+            size: Vector{data_type: ScalarType::Real, length: 3},
+            sharing: Some(Sharing{
+                name: "bar".to_string(),
+                offsets: vec![
+                    Offset{offset: 4, data_type: ScalarType::Bit},
+                    Offset{offset: 5, data_type: ScalarType::Bit}
+                ]})
+        }
+    )]
+    fn test_display(#[case] description: &str, #[case] declaration: Declaration) {
+        insta::with_settings!({
+            description => description,
+        }, {
+            assert_snapshot!(declaration.to_string())
+        })
     }
 }
 

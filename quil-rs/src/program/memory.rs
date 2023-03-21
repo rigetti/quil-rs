@@ -19,18 +19,18 @@ use crate::instruction::{
     Arithmetic, ArithmeticOperand, BinaryLogic, BinaryOperand, Capture, CircuitDefinition,
     Comparison, ComparisonOperand, Delay, Exchange, Gate, GateDefinition, GateSpecification,
     Instruction, Jump, JumpUnless, JumpWhen, Label, Load, MeasureCalibrationDefinition,
-    Measurement, MemoryReference, Move, Pulse, RawCapture, SetPhase, SetScale, ShiftPhase, Store,
-    UnaryLogic, Vector, WaveformInvocation,
+    Measurement, MemoryReference, Move, Pulse, RawCapture, SetPhase, SetScale, Sharing, ShiftPhase,
+    Store, UnaryLogic, Vector, WaveformInvocation,
 };
 
 #[derive(Clone, Debug, Hash, PartialEq)]
 pub struct MemoryRegion {
     pub size: Vector,
-    pub sharing: Option<String>,
+    pub sharing: Option<Sharing>,
 }
 
 impl MemoryRegion {
-    pub fn new(size: Vector, sharing: Option<String>) -> Self {
+    pub fn new(size: Vector, sharing: Option<Sharing>) -> Self {
         Self { size, sharing }
     }
 }
