@@ -1,10 +1,8 @@
 use std::fmt;
 
-use serde::{Deserialize, Serialize};
-
 use super::{MemoryReference, Qubit};
 
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Measurement {
     pub qubit: Qubit,
     pub target: Option<MemoryReference>,

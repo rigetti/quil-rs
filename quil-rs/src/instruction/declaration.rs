@@ -1,7 +1,6 @@
 use std::{fmt, str::FromStr};
 
 use nom_locate::LocatedSpan;
-use serde::{Deserialize, Serialize};
 
 #[cfg(test)]
 use proptest_derive::Arbitrary;
@@ -11,7 +10,7 @@ use crate::{
     program::{disallow_leftover, SyntaxError},
 };
 
-#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 pub enum ScalarType {
     Bit,
     Integer,
@@ -35,7 +34,7 @@ impl fmt::Display for ScalarType {
     }
 }
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct Vector {
     pub data_type: ScalarType,
     pub length: u64,
@@ -53,7 +52,7 @@ impl fmt::Display for Vector {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Sharing {
     pub name: String,
     pub offsets: Vec<Offset>,
@@ -65,7 +64,7 @@ impl Sharing {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Offset {
     pub offset: u64,
     pub data_type: ScalarType,
@@ -83,7 +82,7 @@ impl fmt::Display for Offset {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Declaration {
     pub name: String,
     pub size: Vector,
@@ -162,7 +161,7 @@ mod test_declaration {
     }
 }
 
-#[derive(Clone, Debug, Hash, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Debug, Hash, PartialEq)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub struct MemoryReference {
     pub name: String,

@@ -1,12 +1,10 @@
 use std::{collections::HashMap, fmt};
 
-use serde::{Deserialize, Serialize};
-
 use crate::expression::Expression;
 
 use super::get_string_parameter_string;
 
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Waveform {
     pub matrix: Vec<Expression>,
     pub parameters: Vec<String>,
@@ -18,7 +16,7 @@ impl Waveform {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct WaveformDefinition {
     pub name: String,
     pub definition: Waveform,
@@ -47,7 +45,7 @@ impl fmt::Display for WaveformDefinition {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct WaveformInvocation {
     pub name: String,
     pub parameters: HashMap<String, Expression>,

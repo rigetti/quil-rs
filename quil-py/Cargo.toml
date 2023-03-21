@@ -16,9 +16,7 @@ name = "quil"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-bincode = "1.3.3"
 quil-rs = { path = "../quil-rs", version="0.16.0-rc.0" }
-serde.workspace = true
 # pyo3 dependencies should be updated together
 pyo3 = { version = "0.17" }
 rigetti-pyo3 = "0.1.0-rc.6"

@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use super::{format_qubits, Qubit};
 use crate::expression::Expression;
 
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum AttributeValue {
     String(String),
     Expression(Expression),
@@ -24,7 +24,7 @@ impl fmt::Display for AttributeValue {
 
 pub type FrameAttributes = HashMap<String, AttributeValue>;
 
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FrameDefinition {
     pub identifier: FrameIdentifier,
     pub attributes: HashMap<String, AttributeValue>,

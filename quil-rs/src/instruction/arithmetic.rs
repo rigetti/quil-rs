@@ -1,10 +1,8 @@
 use std::fmt;
 
-use serde::{Deserialize, Serialize};
-
 use super::MemoryReference;
 
-#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Arithmetic {
     pub operator: ArithmeticOperator,
     pub destination: ArithmeticOperand,
@@ -25,7 +23,7 @@ impl Arithmetic {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum ArithmeticOperand {
     LiteralInteger(i64),
     LiteralReal(f64),
@@ -42,7 +40,7 @@ impl fmt::Display for ArithmeticOperand {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum ArithmeticOperator {
     Add,
     Subtract,
@@ -61,7 +59,7 @@ impl fmt::Display for ArithmeticOperator {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum BinaryOperand {
     LiteralInteger(i64),
     MemoryReference(MemoryReference),
@@ -78,7 +76,7 @@ impl fmt::Display for BinaryOperand {
 
 pub type BinaryOperands = (MemoryReference, BinaryOperand);
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum BinaryOperator {
     And,
     Ior,
@@ -95,7 +93,7 @@ impl fmt::Display for BinaryOperator {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct BinaryLogic {
     pub operator: BinaryOperator,
     pub operands: BinaryOperands,

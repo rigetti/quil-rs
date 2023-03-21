@@ -17,12 +17,10 @@ use std::{
     collections::{HashMap, HashSet},
 };
 
-use serde::{Deserialize, Serialize};
-
 use crate::instruction::{FrameAttributes, FrameDefinition, FrameIdentifier, Instruction, Qubit};
 
 /// A collection of Quil frames (`DEFFRAME` instructions) with utility methods.
-#[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct FrameSet {
     frames: HashMap<FrameIdentifier, FrameAttributes>,
 }
