@@ -155,7 +155,7 @@ fn parse_expression_identifier(input: ParserInput) -> InternalParserResult<Expre
 
     match super::split_first_token(input) {
         None => unexpected_eof!(input),
-        Some((Token::Identifier(ident), remainder)) => match ident.as_str() {
+        Some((Token::Identifier(ident), remainder)) => match ident.to_lowercase().as_str() {
             "cis" => parse_function_call(remainder, ExpressionFunction::Cis),
             "cos" => parse_function_call(remainder, ExpressionFunction::Cosine),
             "exp" => parse_function_call(remainder, ExpressionFunction::Exponent),
