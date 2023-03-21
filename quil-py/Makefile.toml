@@ -20,8 +20,19 @@ dependencies = [
     "stubtest",
 ]
 
+[tasks.pytest]
+command = "poetry"
+args = ["run", "pytest"]
+
+[tasks.pytest-flow]
+dependencies = [
+    "poetry-install",
+    "install-quil",
+    "pytest",
+]
+
 [tasks.dev-flow]
-dependencies = ["dev-test-flow", "stubtest-flow"]
+dependencies = ["dev-test-flow", "pytest-flow", "stubtest"]
 
 [tasks.default]
 alias = "dev-flow"

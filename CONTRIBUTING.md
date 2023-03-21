@@ -61,3 +61,7 @@ The `quil-py` crate defines `stubtest-flow`. It builds and installs the Python p
 [stubtest](https://mypy.readthedocs.io/en/stable/stubtest.html) to check that the manually written type hints
 are consistent with what the package exports. If any errors are reported, they should be fixed so users
 of the Python package are given accurate type hints by their tooling.
+
+### `pytest-flow`
+
+The `quil-py` crate also defines `pytest-flow`. It builds and installs the Python package, then runs a test suite against the package using [pytest](https://docs.pytest.org/en/7.2.x/). These tests are used to validate functionality of the `quil` package at the Python level and should always pass.
