@@ -289,6 +289,7 @@ fn match_data_type_token(token: DataType) -> ScalarType {
     }
 }
 
+/// Parse an optional shared memory region and its offsets from a DECLARE statement.
 pub(crate) fn parse_sharing<'a>(
     input: ParserInput<'a>,
 ) -> InternalParserResult<'a, Option<Sharing>> {
