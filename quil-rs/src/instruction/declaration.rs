@@ -154,7 +154,7 @@ mod test_declaration {
     )]
     fn test_display(#[case] description: &str, #[case] declaration: Declaration) {
         insta::with_settings!({
-            description => description,
+            snapshot_suffix => description,
         }, {
             assert_snapshot!(declaration.to_string())
         })
