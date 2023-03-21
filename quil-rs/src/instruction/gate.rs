@@ -285,7 +285,7 @@ mod test_gate_definition {
     )]
     fn test_display(#[case] description: &str, #[case] gate_def: GateDefinition) {
         insta::with_settings!({
-            description => description,
+            snapshot_suffix => description,
         }, {
             assert_snapshot!(gate_def.to_string())
         })
