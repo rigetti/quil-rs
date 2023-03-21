@@ -23,9 +23,10 @@
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fmt::Display;
+use std::str::FromStr;
 
 use crate::expression::Expression;
-use crate::instruction::{self, Gate, Instruction, Qubit};
+use crate::instruction::{Gate, GateModifier, Instruction, Qubit};
 use crate::Program;
 
 /// Available commands used for building circuits with the same names taken
@@ -121,6 +122,34 @@ impl Symbol {
             "phi" => Symbol::Phi,
             "pi" => Symbol::Pi,
             _ => Symbol::Text(text),
+        }
+    }
+}
+
+/// Gates written in shorthand notation that may be decomposed into modifiers
+/// and single gate instructions.
+
+enum CanonicalGate {
+    /// `CNOT` is `CONTROLLED X`
+    Cnot(String),
+    /// `CCNOT` is `CONTROLLED CONTROLLED X`
+    Ccnot(String),
+    /// `CPHASE` is `CONTROLLED PHASE`
+    Cphase(String),
+    /// `CZ` is `CONTROLLED Z`
+    Cz(String),
+    /// gate is in canonical form or is unsupported
+    None,
+}
+
+impl CanonicalGate {
+    fn get_canonical(gate_name: &str) -> CanonicalGate {
+        match gate_name {
+            "CNOT" => CanonicalGate::Cnot(String::from("CONTROLLED X")),
+            "CCNOT" => CanonicalGate::Ccnot(String::from("CONTROLLED CONTROLLED X")),
+            "CPHASE" => CanonicalGate::Cphase(String::from("CONTROLLED PHASE")),
+            "CZ" => CanonicalGate::Cz(String::from("CONTROLLED Z")),
+            _ => CanonicalGate::None,
         }
     }
 }
@@ -280,7 +309,7 @@ struct Diagram {
     /// total number of elements on each wire
     column: u32,
     /// column at which qubits in positional order form relationships
-    relationships: HashMap<u32, Vec<u64>>,
+    relationships: HashMap<u32, Vec<Qubit>>,
     /// a BTreeMap of wires with the name of the wire as the key
     circuit: BTreeMap<u64, Box<Wire>>,
 }
@@ -314,41 +343,36 @@ impl Diagram {
         }
     }
 
-    /// Returns a reformatted gate name based on the modifiers used in a single
-    /// instruction line of a quil program or the original name. Gates with
-    /// CONTROLLED modifiers are reformatted such that each CONTROLLED modifier
-    /// prepends a `C` to the beginning of the gate name. For other modifiers
-    /// such as DAGGER, no special reformatting is required.
+    /// Utility function to insert modifiers of wires in this Circuit at the
+    /// current column. Returns an Err for unsupported modifiers.
     ///
     /// # Arguments
-    /// `&mut self` - exposes the current column of the Circuit
-    /// `gate` - exposes the modifiers associated with the instruction gate
-    /// `wire` - exposes the wire to be pushed to in Circuit
-    fn set_modifiers(&mut self, gate: &Gate, wire: &mut Wire) -> String {
-        let mut gate_name = gate.name.clone();
-
+    /// `column` - the current column of the Circuit
+    /// `wire` - a wire on the Circuit
+    /// `modifiers` - the modifiers from the Gate
+    fn set_modifiers(
+        wire: &mut Wire,
+        column: &u32,
+        modifiers: &Vec<GateModifier>,
+    ) -> Result<(), LatexGenError> {
         // set modifers
-        if !gate.modifiers.is_empty() {
-            for modifer in &gate.modifiers {
-                match modifer {
-                    instruction::GateModifier::Dagger => {
-                        if let Some(modifiers) = wire.modifiers.get_mut(&self.column) {
-                            modifiers.push("dagger".to_string())
-                        } else {
-                            wire.modifiers
-                                .insert(self.column, vec!["dagger".to_string()]);
-                        }
-                    }
-                    instruction::GateModifier::Controlled => {
-                        // prepend a C to the gate
-                        gate_name.insert(0, 'C');
-                    }
-                    _ => (),
+        for modifier in modifiers {
+            match modifier {
+                // return error for FORKED
+                GateModifier::Forked => {
+                    return Err(LatexGenError::UnsupportedModifierForked);
+                }
+                // insert for CONTROLLED and DAGGER
+                _ => {
+                    wire.modifiers
+                        .entry(*column)
+                        .and_modify(|m| m.push(modifier.clone()))
+                        .or_insert_with(|| vec![modifier.clone()]);
                 }
             }
         }
 
-        gate_name
+        Ok(())
     }
 
     /// For every instruction containing control and target qubits this method
@@ -389,27 +413,28 @@ impl Diagram {
                         continue 'column;
                     }
 
-                    // the last qubit is the targ
-                    if *qubit == relationship[relationship.len() - 1] {
-                        if let Some(wire) = self.circuit.get_mut(qubit) {
-                            // insert as target at this column
-                            wire.targ.insert(c, true);
+                    // FIXME
+                    // // the last qubit is the targ
+                    // if *qubit == relationship[relationship.len() - 1] {
+                    //     if let Some(wire) = self.circuit.get_mut(qubit) {
+                    //         // insert as target at this column
+                    //         wire.targ.insert(c, true);
 
-                            // set 'column loop targ variable to this targ that
-                            // control qubits will find distance from on their
-                            // respective wires
-                            targ = Some(wire.name)
-                        }
-                    // all other qubits are the controls
-                    } else if let Some(wire) = self.circuit.get_mut(qubit) {
-                        // insert as control at this column with initial
-                        // value 0, targeting themselves
-                        wire.ctrl.insert(c, 0);
+                    //         // set 'column loop targ variable to this targ that
+                    //         // control qubits will find distance from on their
+                    //         // respective wires
+                    //         targ = Some(wire.name)
+                    //     }
+                    // // all other qubits are the controls
+                    // } else if let Some(wire) = self.circuit.get_mut(qubit) {
+                    //     // insert as control at this column with initial
+                    //     // value 0, targeting themselves
+                    //     wire.ctrl.insert(c, 0);
 
-                        // push ctrl to 'column loop ctrl variables with
-                        // initial value requiring update based on targ
-                        ctrls.push(wire.name);
-                    }
+                    //     // push ctrl to 'column loop ctrl variables with
+                    //     // initial value requiring update based on targ
+                    //     ctrls.push(wire.name);
+                    // }
                 }
             } else {
                 // no relationships found on this column, go to next
@@ -468,60 +493,70 @@ impl Diagram {
         Ok(())
     }
 
-    /// Takes a new or existing wire and adds or updates it using the name
-    /// (String) as the key. If a wire exists with the same name, then the
-    /// contents of the new wire are added to it by updating the next column
-    /// using the Quantikz command associated with its attributes (e.g. gate,
-    /// do_nothing, etc).
+    /// Analyzes a Gate from an instruction and sets the gate at this column on
+    /// the wire. If the gate name is a composite gate, the gate name is
+    /// decomposed into canonical form. For example, CNOT is a composite gate
+    /// that can be decomposed into the equivalent canonical form, CONTROLLED X.
     ///
     /// # Arguments
-    /// `&mut self` - exposes HashMap<String, Box<Circuit>>
-    /// `wire` - the wire to be pushed or updated to in circuits
-    fn push_wire(&mut self, wire: Wire) -> Result<(), LatexGenError> {
-        let qubit = wire.name;
+    /// `column` - the current empty column to set the gate at
+    /// `gate` - the gate of the instruction being parsed in to_latex
+    fn parse_gate(&mut self, gate: &Gate) -> Result<(), LatexGenError> {
+        // preserve qubit order in instruction
+        self.relationships.insert(self.column, gate.qubits.clone());
 
-        // find wire in circuit collection
-        if let Some(wire_in_circuit) = self.circuit.get_mut(&wire.name) {
-            // get the new gate from the wire and insert into existing wire
-            if let Some(gate) = wire.gates.get(&self.column) {
-                // add gates to wire in circuit
-                wire_in_circuit.gates.insert(self.column, gate.to_string());
-
-                // add modifiers to gate in circuit
-                if let Some(modifier) = wire.modifiers.get(&self.column) {
-                    wire_in_circuit
-                        .modifiers
-                        .insert(self.column, modifier.to_vec());
-                }
-
-                // add modifiers to gate in circuit
-                if let Some(parameters) = wire.parameters.get(&self.column) {
-                    wire_in_circuit
-                        .parameters
-                        .insert(self.column, parameters.to_vec());
+        // set modifiers from gate instruction
+        for qubit in &gate.qubits {
+            if let Qubit::Fixed(qubit) = qubit {
+                if let Some(wire) = self.circuit.get_mut(qubit) {
+                    // set modifiers at this column for all qubits
+                    Self::set_modifiers(wire, &self.column, &gate.modifiers)?;
                 }
             }
         }
 
-        // initalize relationships between multi qubit gates
-        if let Some(wire) = self.circuit.get(&qubit) {
-            // get the newly added gate if any at the column it was added
-            if let Some(gate) = wire.gates.get(&self.column) {
-                // tag relationships for multi qubit gates
-                if gate.starts_with('C') {
-                    // add the qubits to the set of related qubits in the current column
-                    if let Some(qubits) = self.relationships.get_mut(&self.column) {
-                        // ensure relationships are valid
-                        for _self in qubits.iter() {
-                            // qubit cannot control and target itself
-                            if *_self == qubit {
-                                return Err(LatexGenError::FoundCNOTWithNoTarget);
-                            }
-                        }
+        // parse the gate to a canonical gate if supported
+        let canonical_gate = match CanonicalGate::get_canonical(&gate.name) {
+            CanonicalGate::Cnot(inst) => Some(inst),
+            CanonicalGate::Ccnot(inst) => Some(inst),
+            CanonicalGate::Cphase(inst) => Some(inst),
+            CanonicalGate::Cz(inst) => Some(inst),
+            CanonicalGate::None => None,
+        };
 
-                        qubits.push(qubit);
-                    } else {
-                        self.relationships.insert(self.column, vec![qubit]);
+        // add the qubits to the canonical gate to form an instruction
+        let instruction = if let Some(mut canonical_gate) = canonical_gate {
+            for qubit in &gate.qubits {
+                if let Qubit::Fixed(qubit) = qubit {
+                    canonical_gate.push(' ');
+                    canonical_gate.push_str(&qubit.to_string());
+                }
+            }
+            Some(canonical_gate)
+        } else {
+            None
+        };
+
+        // get gate from new program of canonical instruction
+        if let Some(instruction) = instruction {
+            let instructions = Program::from_str(&instruction)
+                .expect("should return program {instruction}")
+                .to_instructions(false);
+
+            for instruction in instructions {
+                if let Instruction::Gate(gate) = instruction {
+                    // call until all composite gates are in canonical form
+                    self.parse_gate(&gate)?;
+                }
+            }
+        // gate is in canonical form, build wire
+        } else {
+            // set gates
+            for qubit in &gate.qubits {
+                if let Qubit::Fixed(qubit) = qubit {
+                    if let Some(wire) = self.circuit.get_mut(qubit) {
+                        // set modifiers at this column for all qubits
+                        wire.gates.insert(self.column, gate.name.clone());
                     }
                 }
             }
@@ -561,9 +596,10 @@ impl Display for Diagram {
                         // attach modifiers to gate name if any
                         if let Some(modifiers) = wire.modifiers.get(&c) {
                             for modifier in modifiers {
-                                superscript.push_str(&Command::get_command(Command::Super(
-                                    modifier.to_string(),
-                                )))
+                                // FIXME: Changed data structure
+                                // superscript.push_str(&Command::get_command(Command::Super(
+                                //     modifier.to_string(),
+                                // )))
                             }
                         }
 
@@ -677,8 +713,8 @@ struct Wire {
     targ: HashMap<u32, bool>,
     /// any parameters required at column on the wire for gates
     parameters: HashMap<u32, Vec<Parameter>>,
-    /// any modifiers added to the wire at column
-    modifiers: HashMap<u32, Vec<String>>,
+    /// total number of controlled modifiers added to the wire at this column
+    modifiers: HashMap<u32, Vec<GateModifier>>,
     /// empty column
     empty: HashMap<u32, Command>,
 }
@@ -717,6 +753,8 @@ impl Wire {
 pub enum LatexGenError {
     #[error("Tried to parse CNOT and found a control qubit without a target.")]
     FoundCNOTWithNoTarget,
+    #[error("The FORKED modifier is unsupported.")]
+    UnsupportedModifierForked,
 }
 
 pub trait Latex {
@@ -775,6 +813,14 @@ impl Latex for Program {
             }
         }
 
+        // are implicit qubits required in settings and are there at least two or more qubits in the diagram?
+        if diagram.settings.impute_missing_qubits {
+            // add implicit qubits to circuit
+            diagram
+                .settings
+                .impute_missing_qubits(diagram.column, &mut diagram.circuit);
+        }
+
         // ensures set_ctrl_targ is called only if program has controlled gates
         let mut has_ctrl_targ = false;
         for instruction in instructions {
@@ -783,54 +829,72 @@ impl Latex for Program {
 
             // parse gate instructions into a new circuit
             if let Instruction::Gate(gate) = instruction {
-                // for each qubit in a single gate instruction
-                for qubit in &gate.qubits {
-                    if let Qubit::Fixed(qubit) = qubit {
-                        // create a new wire
-                        let mut wire = Wire {
-                            name: *qubit,
-                            ..Default::default()
-                        };
+                // create a new wire
+                // let mut wire = Wire {
+                //     name: *qubit,
+                //     ..Default::default()
+                // };
 
-                        // set parameters for phase gates
-                        if gate.name.contains("PHASE") {
-                            for expression in &gate.parameters {
-                                wire.set_param(
-                                    expression,
-                                    diagram.column,
-                                    diagram.settings.texify_numerical_constants,
-                                );
-                            }
-                        }
+                println!("{gate:?}");
 
-                        // update the gate name based on the modifiers
-                        let gate_name = diagram.set_modifiers(&gate, &mut wire);
+                diagram.parse_gate(&gate)?;
 
-                        if diagram.circuit.get(qubit).is_some() {
-                            // has ctrl gate, must identify ctrls and targs after filling circuit
-                            if gate_name.starts_with('C') {
-                                has_ctrl_targ = true;
-                            }
+                println!("{diagram:?}");
 
-                            // add the gate to the wire at column 0
-                            wire.gates.insert(diagram.column, gate_name);
-                        }
+                // find wire in circuit collection
+                // if let Some(wire) = diagram.circuit.get_mut(qubit) {
+                //     // insert the gate into the wire at the current column
+                //     wire.parse_gate(diagram.column, &gate);
 
-                        // push wire to diagram circuit
-                        diagram.push_wire(wire)?;
-                    }
-                }
+                //     // // add modifiers to gate in circuit
+                //     // if let Some(modifier) = wire.modifiers.get(&self.column) {
+                //     //     wire_in_circuit
+                //     //         .modifiers
+                //     //         .insert(self.column, modifier.to_vec());
+                //     // }
+
+                //     // // add modifiers to gate in circuit
+                //     // if let Some(parameters) = wire.parameters.get(&self.column) {
+                //     //     wire_in_circuit
+                //     //         .parameters
+                //     //         .insert(self.column, parameters.to_vec());
+                //     // }
+                //     // }
+                // }
+
+                // TODO: Do this in parse_gate()
+                // set parameters for phase gates
+                // if gate.name.contains("PHASE") {
+                //     for expression in &gate.parameters {
+                //         wire.set_param(
+                //             expression,
+                //             diagram.column,
+                //             diagram.settings.texify_numerical_constants,
+                //         );
+                //     }
+                // }
+
+                // TODO: DELETE BELOW--No renaming needed with parse_gate()
+                // update the gate name based on the modifiers
+                // let gate_name = diagram.set_modifiers(&gate, &mut wire);
+
+                // if diagram.circuit.get(qubit).is_some() {
+                //     // has ctrl gate, must identify ctrls and targs after filling circuit
+                //     if gate_name.starts_with('C') {
+                //         has_ctrl_targ = true;
+                //     }
+
+                //     // add the gate to the wire at column 0
+                //     wire.gates.insert(diagram.column, gate_name);
+                // }
+                // TODO: DELETE ABOVE
+
+                // TODO: Change push_wire to set_relationships
+                // push wire to diagram circuit
+                // diagram.push_wire(wire)?;
 
                 diagram.column += 1;
             }
-        }
-
-        // are implicit qubits required in settings and are there at least two or more qubits in the diagram?
-        if diagram.settings.impute_missing_qubits {
-            // add implicit qubits to circuit
-            diagram
-                .settings
-                .impute_missing_qubits(diagram.column, &mut diagram.circuit);
         }
 
         // only call method for programs with control and target gates
@@ -866,7 +930,15 @@ mod tests {
     #[test]
     /// Test functionality of to_latex using default settings.
     fn test_to_latex() {
-        get_latex(r#"RX 0"#, RenderSettings::default());
+        let latex = get_latex(
+            r#"CONTROLLED CNOT 0 3"#,
+            RenderSettings {
+                impute_missing_qubits: true,
+                ..Default::default()
+            },
+        );
+
+        println!("{latex}");
     }
 
     /// Test module for the Document
