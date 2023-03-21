@@ -192,6 +192,10 @@ impl PyProgram {
         }
     }
 
+    // This is infallible now, but will raise an error once placeholders are
+    // supported. This is because placeholders can't be converted to valid Quil,
+    // nor be reliably serialized by something like serde using the current
+    // quil-rs data model.
     pub fn __getstate__<'a>(&self, py: Python<'a>) -> &'a PyBytes {
         PyBytes::new(py, self.as_inner().to_string(true).as_bytes())
     }
