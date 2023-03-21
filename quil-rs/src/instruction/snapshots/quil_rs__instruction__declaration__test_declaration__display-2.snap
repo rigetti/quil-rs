@@ -1,6 +1,6 @@
 ---
 source: quil-rs/src/instruction/declaration.rs
-description: Basic Declaration
+description: Shared Declaration
 expression: declaration.to_string()
 ---
-DECLARE ro BIT[1]
+DECLARE ro INTEGER[2] SHARING foo
