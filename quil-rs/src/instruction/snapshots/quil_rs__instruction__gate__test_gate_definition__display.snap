@@ -1,0 +1,8 @@
+---
+source: quil-rs/src/instruction/gate.rs
+description: Permutation GateDefinition
+expression: gate_def.to_string()
+---
+DEFGATE PermGate AS PERMUTATION:
+	0, 1, 2, 3, 4, 5, 7, 6
+

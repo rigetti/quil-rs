@@ -2,6 +2,7 @@ use std::fmt;
 
 use crate::{
     expression::Expression,
+    instruction::get_string_parameter_string,
     validation::identifier::{validate_identifier, IdentifierValidationError},
 };
 
@@ -186,16 +187,7 @@ impl GateDefinition {
 
 impl fmt::Display for GateDefinition {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let parameter_str = match self.parameters.is_empty() {
-            true => String::new(),
-            false => format!(
-                "({})",
-                self.parameters
-                    .iter()
-                    .map(|p| p.to_string())
-                    .collect::<String>()
-            ),
-        };
+        let parameter_str = get_string_parameter_string(&self.parameters);
         writeln!(
             f,
             "DEFGATE {}{} AS {}:",
@@ -207,6 +199,96 @@ impl fmt::Display for GateDefinition {
             }
         )?;
         write!(f, "{}", self.specification)
+    }
+}
+
+#[cfg(test)]
+mod test_gate_definition {
+    use super::{GateDefinition, GateSpecification};
+    use crate::expression::{
+        Expression, ExpressionFunction, FunctionCallExpression, InfixExpression, InfixOperator,
+        PrefixExpression, PrefixOperator,
+    };
+    use crate::{imag, real};
+    use insta::assert_snapshot;
+    use rstest::rstest;
+
+    #[rstest]
+    #[case(
+        "Permutation GateDefinition",
+        GateDefinition{
+            name: "PermGate".to_string(),
+            parameters: vec![],
+            specification: GateSpecification::Permutation(vec![0, 1, 2, 3, 4, 5, 7, 6]),
+
+        }
+    )]
+    #[case(
+        "Parameterized GateDefinition",
+        GateDefinition{
+            name: "ParamGate".to_string(),
+            parameters: vec!["theta".to_string()],
+            specification: GateSpecification::Matrix(vec![
+                vec![
+                    Expression::FunctionCall(FunctionCallExpression {
+                        function: crate::expression::ExpressionFunction::Cosine,
+                        expression: Box::new(Expression::Infix(InfixExpression {
+                            left: Box::new(Expression::Variable("theta".to_string())),
+                            operator: InfixOperator::Slash,
+                            right: Box::new(Expression::Number(real!(2.0))),
+                        })),
+                    }),
+                    Expression::Infix(InfixExpression {
+                        left: Box::new(Expression::Prefix(PrefixExpression {
+                            operator: PrefixOperator::Minus,
+                            expression: Box::new(Expression::Number(imag!(1f64)))
+                        })),
+                        operator: InfixOperator::Star,
+                        right: Box::new(Expression::FunctionCall(FunctionCallExpression {
+                            function: ExpressionFunction::Sine,
+                            expression: Box::new(Expression::Infix(InfixExpression {
+                                left: Box::new(Expression::Variable("theta".to_string())),
+                                operator: InfixOperator::Slash,
+                                right: Box::new(Expression::Number(real!(2.0))),
+                            })),
+                        })),
+                    })
+                ],
+                vec![
+                    Expression::Infix(InfixExpression {
+                        left: Box::new(Expression::Prefix(PrefixExpression {
+                            operator: PrefixOperator::Minus,
+                            expression: Box::new(Expression::Number(imag!(1f64)))
+                        })),
+                        operator: InfixOperator::Star,
+                        right: Box::new(Expression::FunctionCall(FunctionCallExpression {
+                            function: ExpressionFunction::Sine,
+                            expression: Box::new(Expression::Infix(InfixExpression {
+                                left: Box::new(Expression::Variable("theta".to_string())),
+                                operator: InfixOperator::Slash,
+                                right: Box::new(Expression::Number(real!(2.0))),
+                            })),
+                        })),
+                    }),
+                    Expression::FunctionCall(FunctionCallExpression {
+                        function: crate::expression::ExpressionFunction::Cosine,
+                        expression: Box::new(Expression::Infix(InfixExpression {
+                            left: Box::new(Expression::Variable("theta".to_string())),
+                            operator: InfixOperator::Slash,
+                            right: Box::new(Expression::Number(real!(2.0))),
+                        })),
+                    }),
+                ],
+            ]),
+
+        }
+    )]
+    fn test_display(#[case] description: &str, #[case] gate_def: GateDefinition) {
+        insta::with_settings!({
+            description => description,
+        }, {
+            assert_snapshot!(gate_def.to_string())
+        })
     }
 }
 

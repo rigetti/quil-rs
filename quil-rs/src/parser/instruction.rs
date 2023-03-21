@@ -767,10 +767,10 @@ mod tests {
     make_test!(
         gate_definition_with_params,
         parse_instructions,
-        "DEFGATE RX:\n\tCOS(%theta/2), -i*SIN(%theta/2)\n\t-i*SIN(%theta/2), COS(%theta/2)\n",
+        "DEFGATE RX(%theta):\n\tCOS(%theta/2), -i*SIN(%theta/2)\n\t-i*SIN(%theta/2), COS(%theta/2)\n",
         vec![Instruction::GateDefinition(GateDefinition {
             name: "RX".to_string(),
-            parameters: vec!["%theta".to_string()],
+            parameters: vec!["theta".to_string()],
             specification: GateSpecification::Matrix(vec![
                 vec![
                     Expression::FunctionCall(FunctionCallExpression {

@@ -413,7 +413,7 @@ pub fn get_expression_parameter_string(parameters: &[Expression]) -> String {
         return String::from("");
     }
 
-    let parameter_str: String = parameters.iter().map(|e| format!("{e}")).collect();
+    let parameter_str: String = parameters.iter().map(|e| format!(r"{e}")).collect();
     format!("({parameter_str})")
 }
 
@@ -422,7 +422,11 @@ pub fn get_string_parameter_string(parameters: &[String]) -> String {
         return String::from("");
     }
 
-    let parameter_str: String = parameters.join(",");
+    let parameter_str: String = parameters
+        .iter()
+        .map(|param| format!(r"%{param}"))
+        .collect::<Vec<_>>()
+        .join(",");
     format!("({parameter_str})")
 }
 
