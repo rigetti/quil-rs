@@ -1,11 +1,19 @@
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::{
+    collections::{BTreeMap, HashMap, HashSet},
+    str::FromStr,
+};
 
 use quil_rs::{instruction::Instruction, Program};
 
 use rigetti_pyo3::{
     create_init_submodule, impl_as_mut_for_wrapper, impl_from_str, impl_parse, impl_repr,
     py_wrap_error, py_wrap_type,
-    pyo3::{exceptions::PyValueError, prelude::*, pyclass::CompareOp, types::PyList},
+    pyo3::{
+        exceptions::PyValueError,
+        prelude::*,
+        pyclass::CompareOp,
+        types::{PyBytes, PyList},
+    },
     wrap_error, PyWrapper, PyWrapperMut, ToPython, ToPythonError,
 };
 
@@ -22,6 +30,8 @@ py_wrap_error!(quil, ProgramError, PyProgramError, PyValueError);
 
 py_wrap_type! {
     #[derive(Debug, PartialEq)]
+    // If unset, the module defaults to builtin, which can't be pickled
+    #[pyo3(module = "quil.program")]
     PyProgram(Program) as "Program"
 }
 impl_as_mut_for_wrapper!(PyProgram);
@@ -180,6 +190,18 @@ impl PyProgram {
             CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
             _ => py.NotImplemented(),
         }
+    }
+
+    pub fn __getstate__<'a>(&self, py: Python<'a>) -> &'a PyBytes {
+        PyBytes::new(py, self.as_inner().to_string(true).as_bytes())
+    }
+
+    pub fn __setstate__(&mut self, py: Python<'_>, state: &PyBytes) -> PyResult<()> {
+        *self = Program::from_str(std::str::from_utf8(state.as_bytes())?)
+            .map_err(ProgramError::from)
+            .map_err(ProgramError::to_py_err)?
+            .to_python(py)?;
+        Ok(())
     }
 }
 
