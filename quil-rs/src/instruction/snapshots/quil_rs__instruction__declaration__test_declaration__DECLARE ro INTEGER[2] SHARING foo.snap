@@ -1,0 +1,5 @@
+---
+source: quil-rs/src/instruction/declaration.rs
+expression: test_name
+---
+Shared Declaration
