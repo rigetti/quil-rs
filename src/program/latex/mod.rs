@@ -539,6 +539,11 @@ impl Diagram {
                                         wire.ctrl.insert(self.column, 0);
                                     }
                                 }
+                            } else if wire.parameters.get(&self.column).is_some() {
+                                // parameterized single qubit gates are unsupported
+                                return Err(LatexGenError::UnsupportedGate {
+                                    gate: gate.name.clone(),
+                                });
                             }
                         }
 
@@ -733,6 +738,10 @@ pub enum LatexGenError {
     FoundCNOTWithNoTarget,
     #[error("The FORKED modifier is unsupported.")]
     UnsupportedModifierForked,
+    #[error("This instruction is unsupported: {instruction}.")]
+    UnsupportedInstruction { instruction: String },
+    #[error("This gate is unsupported: {gate}.")]
+    UnsupportedGate { gate: String },
 }
 
 pub trait Latex {
@@ -807,6 +816,12 @@ impl Latex for Program {
                 diagram.parse_gate(&gate)?;
                 diagram.set_ctrl_targ()?;
                 diagram.column += 1;
+            } else if let Instruction::GateDefinition(_) = instruction {
+                // GateDefinition is supported and parsed in Gate
+            } else {
+                return Err(LatexGenError::UnsupportedInstruction {
+                    instruction: instruction.to_string(),
+                });
             }
         }
 
@@ -1204,6 +1219,71 @@ ______________________________________ugly-python-convention____________________
             );
 
             insta::assert_snapshot!(latex);
+        }
+    }
+
+    /// Test module for unsupported programs (remove #[should_panic] and move
+    /// unit test to programs test module when supported)
+    mod unsupported {
+        use crate::program::latex::{tests::get_latex, RenderSettings};
+
+        #[test]
+        #[should_panic]
+        fn test_supported_misc_instructions() {
+            get_latex("NOP\nWAIT\nRESET\nHALT", RenderSettings::default());
+        }
+
+        #[test]
+        #[should_panic]
+        fn test_supported_measure() {
+            get_latex(
+                "DECLARE ro BIT\nMEASURE 0\nMEASURE 1 ro[0]",
+                RenderSettings::default(),
+            );
+        }
+
+        #[test]
+        #[should_panic]
+        fn test_supported_program_defcircuit() {
+            get_latex(
+                r#"DEFCIRCUIT EULER(%alpha, %beta, %gamma) q:
+    RX(%alpha) q
+    RY(%beta)  q
+    RZ(%gamma) q
+EULER(pi, 2*pi, 3*pi/2) 0"#,
+                RenderSettings::default(),
+            );
+        }
+
+        #[test]
+        #[should_panic]
+        fn test_supported_gate_rotation() {
+            get_latex(
+                r#"DECLARE ro BIT[1]
+DECLARE theta REAL[1]
+RX(pi/2) 0
+RZ(theta) 0
+RY(-pi/2) 0"#,
+                RenderSettings::default(),
+            );
+        }
+
+        #[test]
+        #[should_panic]
+        fn test_supported_arithmetic_instruction() {
+            get_latex(
+                "DECLARE b BIT\nDECLARE theta REAL\nMOVE theta -3.14\nLT b theta -3.14",
+                RenderSettings::default(),
+            );
+        }
+
+        #[test]
+        #[should_panic]
+        fn test_supported_modifier_forked() {
+            get_latex(
+                "FORKED CONTROLLED FORKED RX(a,b,c,d) 0 1 2 3",
+                RenderSettings::default(),
+            );
         }
     }
 }
