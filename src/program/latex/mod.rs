@@ -2,12 +2,13 @@
 //!
 //! This module enables generating quantum circuits using the LaTeX subpackage
 //! TikZ/[`Quantikz`] for a given quil [`Program`]. This feature is callable on
-//! [`Program`] (see usage below) and returns a LaTeX string which can be
-//! rendered in a LaTeX visualization tool. Be aware that not all Programs can
-//! be serialized as LaTeX. If a [`Program`] contains a gate or modifier that
-//! has not been implemented in the [Supported Gates and Modifiers]
-//! (#supported-gates-and-modifiers) section below, unexpected results may
-//! occur, one of which includes producing incorrect quantum circuits.
+//! [`Program`] and returns a LaTeX string which can be rendered in a LaTeX
+//! visualization tool. Be aware that not all Programs can be serialized as
+//! LaTeX. If a [`Program`] contains a gate or modifier not mentioned in the
+//! [Supported Gates and Modifiers](#supported-gates-and-modifiers) section
+//! below, unexpected results may occur, one of which includes producing
+//! incorrect quantum circuits, or an error will be returned detailing which
+//! instruction or gate is unsupported in the Program being processed.
 //!
 //! # Supported Gates and Modifiers
 //!
@@ -32,8 +33,11 @@ use crate::Program;
 /// Available commands used for building circuits with the same names taken
 /// from the Quantikz documentation for easy reference. LaTeX string denoted
 /// inside `backticks`.
-///   Single wire commands: lstick, rstick, qw, meter
-///   Multi-wire commands: ctrl, targ, control, (swap, targx)
+///
+/// # Available Commands
+///
+///   Single wire commands: lstick, gate, phase, super, qw, nr
+///   Multi-wire commands: ctrl, targ
 #[derive(Clone, Debug)]
 enum Command {
     /// `\lstick{\ket{q_{u32}}}`: Make a qubit "stick out" from the left.
@@ -137,11 +141,16 @@ enum CanonicalGate {
     Cphase(String),
     /// `CZ` is `CONTROLLED Z`
     Cz(String),
-    /// gate is in canonical form or is unsupported
+    /// gate is in canonical form
     None,
 }
 
 impl CanonicalGate {
+    /// Get the canonical form of a composite gate from a gate name within an
+    /// Instruction.
+    ///
+    ///  # Arguments
+    /// `gate_name` - reference to a gate name from an Instruction
     fn get_canonical(gate_name: &str) -> CanonicalGate {
         match gate_name {
             "CNOT" => CanonicalGate::Cnot(String::from("CONTROLLED X")),
@@ -192,21 +201,13 @@ impl Default for RenderSettings {
 }
 
 impl RenderSettings {
-    /// Returns a label as the qubit name to the left side of the wire.
-    ///
-    ///  # Arguments
-    /// `name` - name of the qubit
-    fn label_qubit_lines(&self, name: u64) -> String {
-        Command::get_command(Command::Lstick(name.to_string()))
-    }
-
     /// Adds missing qubits between the first qubit and last qubit in a
     /// diagram's circuit. If a missing qubit is found, a new wire is created
     /// and pushed to the diagram's circuit.
     ///
     ///  # Arguments
-    /// `column` - the length of instructions from Program
-    /// `&mut BTreeMap<u64, Box<Wire>> circuit` - the circuit of the diagram
+    /// `last_column` - total number of instructions from Program
+    /// `circuit` - the circuit of the diagram
     ///
     /// # Examples
     /// ```
@@ -219,7 +220,7 @@ impl RenderSettings {
     /// };
     /// program.to_latex(settings).expect("");
     /// ```
-    fn impute_missing_qubits(&self, column: u32, circuit: &mut BTreeMap<u64, Box<Wire>>) {
+    fn impute_missing_qubits(last_column: u32, circuit: &mut BTreeMap<u64, Box<Wire>>) {
         // requires at least two qubits to impute missing qubits
         if circuit.len() < 2 {
             return;
@@ -248,7 +249,7 @@ impl RenderSettings {
                 };
 
                 // insert empties based on total number of columns
-                for c in 0..=column {
+                for c in 0..=last_column {
                     wire.empty.insert(c, Command::Qw);
                 }
 
@@ -297,7 +298,7 @@ impl Display for Document {
 /// of the wires in the circuit BTreeMap. Diagram tracks relationships between
 /// wires with two pieces of information--1. the wires row (its order in the
 /// BTreeMap), and 2. the column that spreads between all wires that pass
-/// through a multi qubit gate 'e.g. CNOT'. The size of the diagram can be
+/// through a multi qubit gate, e.g. CNOT. The size of the diagram can be
 /// measured by multiplying the column with the length of the circuit. This is
 /// an [m x n] matrix where each element in the matrix represents an item to be
 /// rendered onto the diagram using one of the Quantikz commands.
@@ -321,9 +322,9 @@ impl Diagram {
     /// qubit wire of the circuit.
     ///
     /// # Arguments
-    /// `&mut self` - exposes the Circuit
-    /// `qubits` - qubits used in the quil program
-    /// `instruction` - exposes qubits in a single instruction
+    /// `&mut self` - exposes the wires on the Circuit
+    /// `qubits` - exposes the qubits used in the Program
+    /// `instruction` - exposes the qubits in a single Instruction
     fn set_qw(&mut self, qubits: &HashSet<Qubit>, instruction: &Instruction) {
         'program_loop: for program_qubit in qubits {
             if let Instruction::Gate(gate) = instruction {
@@ -346,8 +347,8 @@ impl Diagram {
     /// current column. Returns an Err for unsupported modifiers.
     ///
     /// # Arguments
+    /// `wire` - an exposed wire on the Circuit
     /// `column` - the current column of the Circuit
-    /// `wire` - a wire on the Circuit
     /// `modifiers` - the modifiers from the Gate
     fn set_modifiers(
         wire: &mut Wire,
@@ -357,7 +358,7 @@ impl Diagram {
         // set modifers
         for modifier in modifiers {
             match modifier {
-                // return error for FORKED
+                // return error for unsupported modifier FORKED
                 GateModifier::Forked => {
                     return Err(LatexGenError::UnsupportedModifierForked);
                 }
@@ -374,17 +375,18 @@ impl Diagram {
         Ok(())
     }
 
-    /// The logic of this function is visualized using a physical vector with
-    /// the tail at the control qubit and the head pointing to the target
-    /// qubit. The distance between the qubits represents the number of wires
-    /// between them, i.e the space that the vector needs to traverse. If the
-    /// control qubit comes before the target qubit the direction is positive,
-    /// otherwise, it is negative. See Quantikz documentation on CNOT for some
-    /// background that helps justify this approach.
+    /// Locates the target qubit for the control qubits. The location of a
+    /// target qubit is found using its displacement from the control qubits
+    /// which is a physical vector with the tail at the control qubit and the
+    /// head pointing to the target qubit. The distance between the qubits
+    /// represents the number of wires between them, i.e the space that the
+    /// vector needs to traverse. If the control qubit comes before the target
+    /// qubit the direction is positive, otherwise, it is negative. See
+    /// Quantikz documentation on CNOT for justification on this approach.
     ///
     /// # Arguments
-    /// `&mut self` - self as mutible allowing to update the circuit qubits
-    fn set_ctrl_targ(&mut self) -> Result<(), LatexGenError> {
+    /// `&mut self` - exposes diagram relationships and the circuit
+    fn locate_targ(&mut self) -> Result<(), LatexGenError> {
         if let Some(relationship) = self.relationships.get(&self.column) {
             // requires at least two qubits
             if relationship.len() < 2 {
@@ -455,14 +457,15 @@ impl Diagram {
         Ok(())
     }
 
-    /// Analyzes a Gate from an instruction and sets the gate at this column on
+    /// Analyzes a Gate from an Instruction and sets the gate at this column on
     /// the wire. If the gate name is a composite gate, the gate name is
-    /// decomposed into canonical form. For example, CNOT is a composite gate
-    /// that can be decomposed into the equivalent canonical form, CONTROLLED X.
+    /// decomposed into canonical form before being set in the circuit. For
+    /// example, CNOT is a composite gate that can be decomposed into the
+    /// equivalent canonical form, CONTROLLED X.
     ///
     /// # Arguments
-    /// `column` - the current empty column to set the gate at
-    /// `gate` - the gate of the instruction being parsed in to_latex
+    /// `self` - exposes all attributes in the diagram
+    /// `gate` - the Gate of the Instruction from `to_latex`.
     fn parse_gate(&mut self, gate: &Gate) -> Result<(), LatexGenError> {
         // preserve qubit order in instruction
         self.relationships.insert(self.column, gate.qubits.clone());
@@ -572,7 +575,11 @@ impl Display for Diagram {
             // are labels on in settings?
             if self.settings.label_qubit_lines {
                 // add label to left side of wire
-                write!(f, "{}", &self.settings.label_qubit_lines(*key))?;
+                write!(
+                    f,
+                    "{}",
+                    Command::get_command(Command::Lstick(key.to_string()))
+                )?;
             } else {
                 // add qw buffer to first column
                 write!(f, "{}", &Command::get_command(Command::Qw))?;
@@ -687,15 +694,15 @@ impl Display for Diagram {
 /// describes how far away it is from the related qubit based on Quantikz.
 #[derive(Clone, Debug, Default)]
 struct Wire {
-    /// gate elements placed at column on wire using the Gate command
+    /// the Gates on the wire callable by the column
     gates: HashMap<u32, Gate>,
-    /// control at column with distance from targ wire
+    /// at this column the wire is a control
     ctrl: HashMap<u32, i64>,
     /// at this column is the wire a target?
     targ: HashMap<u32, bool>,
-    /// any parameters required at column on the wire for gates
+    /// the Parameters on the wire callable by the column
     parameters: HashMap<u32, Vec<Parameter>>,
-    /// total number of controlled modifiers added to the wire at this column
+    /// the Modifiers on the wire callable by the column
     modifiers: HashMap<u32, Vec<GateModifier>>,
     /// empty column
     empty: HashMap<u32, Command>,
@@ -708,7 +715,7 @@ impl Wire {
     ///
     /// # Arguments
     /// `&mut self` - exposes the Wire's parameters at this column
-    /// `expression` - expression from Program to get name of parameter
+    /// `expression` - expression from Program to get name of Parameter
     /// `column` - the column taking the parameters
     /// `texify` - is texify_numerical_constants setting on?
     fn set_param(&mut self, expression: &Expression, column: u32, texify: bool) {
@@ -749,15 +756,13 @@ pub trait Latex {
 }
 
 impl Latex for Program {
+    /// Returns a Result containing a quil [`Program`] as a LaTeX string or a
+    /// [`LatexGenError`] defined using thiserror.
+    ///
     /// This implementation of Latex can be viewed as a self-contained partial
     /// implementation of ``Quantikz`` with all available commands listed as
     /// variants in a Command enum. View ``Quantikz`` documentation for more
     /// information.
-    ///
-    /// This function returns a Result containing a quil [`Program`] as a LaTeX
-    /// string or a [`LatexGenError`] defined using thiserror. Called on a
-    /// Program, the function starts with a check to ensure the [`Program`]
-    /// contains supported gates and modifers that can be serialized to LaTeX.
     ///
     /// # Arguments
     /// `settings` - Customizes the rendering of a circuit.
@@ -802,9 +807,7 @@ impl Latex for Program {
         // are implicit qubits required in settings and are there at least two or more qubits in the diagram?
         if diagram.settings.impute_missing_qubits {
             // add implicit qubits to circuit
-            diagram
-                .settings
-                .impute_missing_qubits(instructions.len() as u32, &mut diagram.circuit);
+            RenderSettings::impute_missing_qubits(instructions.len() as u32, &mut diagram.circuit);
         }
 
         for instruction in instructions {
@@ -814,7 +817,7 @@ impl Latex for Program {
             // parse gate instructions into a new circuit
             if let Instruction::Gate(gate) = instruction {
                 diagram.parse_gate(&gate)?;
-                diagram.set_ctrl_targ()?;
+                diagram.locate_targ()?;
                 diagram.column += 1;
             } else if let Instruction::GateDefinition(_) = instruction {
                 // GateDefinition is supported and parsed in Gate
@@ -1222,8 +1225,7 @@ ______________________________________ugly-python-convention____________________
         }
     }
 
-    /// Test module for unsupported programs (remove #[should_panic] and move
-    /// unit test to programs test module when supported)
+    /// Test module for unsupported programs
     mod unsupported {
         use crate::program::latex::{tests::get_latex, RenderSettings};
 
