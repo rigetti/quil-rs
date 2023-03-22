@@ -1,0 +1,7 @@
+---
+source: quil-rs/src/instruction/calibration.rs
+expression: measure_cal_def.to_string()
+---
+DEFCAL MEASURE q theta:
+	X(%theta) q
+
