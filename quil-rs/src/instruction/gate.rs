@@ -161,8 +161,8 @@ pub enum GateSpecification {
     Matrix(Vec<Vec<Expression>>),
     /// A vector of integers that defines the permutation used for a [`GateType::Permutation`]
     Permutation(Vec<u64>),
-    ///A Hermitian operator specified Pauli sum, a sum of combinations of Pauli operators, used for
-    ///a [`GateType::PauliSum`]
+    /// A Hermitian operator specified as a Pauli sum, a sum of combinations of Pauli operators,
+    /// used for a [`GateType::PauliSum`]
     PauliSum(Vec<PauliTerm>),
 }
 
