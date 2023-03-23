@@ -523,35 +523,13 @@ impl Diagram {
                     self.parse_gate(&gate)?;
                 }
             }
-        // gate is in canonical form, build wire
+        // gate is in canonical form
         } else {
-            // set gates
-            for fixed_qubit in &gate.qubits {
-                if let Qubit::Fixed(qubit) = fixed_qubit {
-                    if let Some(wire) = self.circuit.get_mut(qubit) {
-                        // set the control and target qubits
-                        if let Some(relationship) = self.relationships.get(&self.column) {
-                            // requires at least 2 qubits or is a PHASE gate
-                            if relationship.len() > 1 || gate.name == "PHASE" {
-                                // target is the last qubit in the instruction or the qubit in PHASE
-                                if let Some(target) = relationship.last() {
-                                    if fixed_qubit == target {
-                                        wire.targ.insert(self.column, true);
-                                    // all other qubits are controls
-                                    } else {
-                                        wire.ctrl.insert(self.column, 0);
-                                    }
-                                }
-                            } else if wire.parameters.get(&self.column).is_some() {
-                                // parameterized single qubit gates are unsupported
-                                return Err(LatexGenError::UnsupportedGate {
-                                    gate: gate.name.clone(),
-                                });
-                            }
-                        }
-
-                        // set modifiers at this column for all qubits
-                        wire.gates.insert(self.column, gate.clone());
+            // set gate for each qubit
+            for qubit in &gate.qubits {
+                if let Qubit::Fixed(fixed_qubit) = qubit {
+                    if let Some(wire) = self.circuit.get_mut(fixed_qubit) {
+                        wire.set_gate(self.column, gate, qubit, &self.relationships)?;
                     }
                 }
             }
@@ -736,6 +714,51 @@ impl Wire {
         };
 
         self.parameters.insert(column, param);
+    }
+
+    /// Returns a result indicating the gate was successfully set for this Wire
+    /// or an error indicating the gate is unsupported. If this is a
+    /// multi-qubit gate, as indicated by the number of qubits in the
+    /// relationship, then, depending on its position in the relationship, is
+    /// set as a target or a control qubit.
+    ///
+    /// # Arguments
+    /// `&mut self` - exposes this Wire's gates at this column
+    /// `column` - the column taking the gate
+    /// `gate` - the gate attempted to be set
+    /// `relationships` - the qubits at this column in a relationship
+    fn set_gate(
+        &mut self,
+        column: u32,
+        gate: &Gate,
+        qubit: &Qubit,
+        relationships: &HashMap<u32, Vec<Qubit>>,
+    ) -> Result<(), LatexGenError> {
+        // set the control and target qubits
+        if let Some(relationship) = relationships.get(&column) {
+            // requires at least 2 qubits or is a PHASE gate
+            if relationship.len() > 1 || gate.name == "PHASE" {
+                // target is the last qubit in the instruction or the qubit in PHASE
+                if let Some(target) = relationship.last() {
+                    if qubit == target {
+                        self.targ.insert(column, true);
+                    // all other qubits are controls
+                    } else {
+                        self.ctrl.insert(column, 0);
+                    }
+                }
+            } else if self.parameters.get(&column).is_some() {
+                // parameterized single qubit gates are unsupported
+                return Err(LatexGenError::UnsupportedGate {
+                    gate: gate.name.clone(),
+                });
+            }
+        }
+
+        // set modifiers at this column for all qubits
+        self.gates.insert(column, gate.clone());
+
+        Ok(())
     }
 }
 
