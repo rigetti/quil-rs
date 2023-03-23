@@ -1,11 +1,14 @@
 use quil_rs::{
     expression::Expression,
-    instruction::{Gate, GateDefinition, GateModifier, GateSpecification, Qubit},
+    instruction::{
+        Gate, GateDefinition, GateModifier, GateSpecification, PauliTerm, PauliWord, Qubit,
+    },
 };
+use strum;
 
 use rigetti_pyo3::{
-    impl_repr, impl_str, py_wrap_data_struct, py_wrap_error, py_wrap_simple_enum,
-    py_wrap_union_enum,
+    impl_from_str, impl_parse, impl_repr, impl_str, py_wrap_data_struct, py_wrap_error,
+    py_wrap_simple_enum, py_wrap_union_enum,
     pyo3::{
         exceptions::PyValueError,
         pyclass::CompareOp,
@@ -21,6 +24,8 @@ use crate::expression::PyExpression;
 
 wrap_error!(RustGateError(quil_rs::instruction::GateError));
 py_wrap_error!(quil, RustGateError, GateError, PyValueError);
+wrap_error!(RustParseEnumError(strum::ParseError));
+py_wrap_error!(quil, RustParseEnumError, EnumParseError, PyValueError);
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
@@ -114,11 +119,53 @@ impl PyGateModifier {
     }
 }
 
+py_wrap_simple_enum! {
+    #[derive(Debug, PartialEq, Eq)]
+    PyPauliWord(PauliWord) as "PauliWord" {
+        I,
+        X,
+        Y,
+        Z
+    }
+}
+impl_repr!(PyPauliWord);
+impl_str!(PyPauliWord);
+impl_from_str!(PyPauliWord, RustParseEnumError);
+impl_parse!(PyPauliWord);
+
+py_wrap_data_struct! {
+    #[derive(Debug, PartialEq, Eq)]
+    #[pyo3(subclass)]
+    PyPauliTerm(PauliTerm) as "PauliTerm" {
+        words: Vec<PauliWord> => Vec<PyPauliWord>,
+        expression: Expression => PyExpression,
+        arguments: Vec<String> => Vec<Py<PyString>>
+    }
+}
+
+#[pymethods]
+impl PyPauliTerm {
+    #[new]
+    pub fn new(
+        py: Python<'_>,
+        words: Vec<PyPauliWord>,
+        expression: PyExpression,
+        arguments: Vec<Py<PyString>>,
+    ) -> PyResult<Self> {
+        Ok(Self(PauliTerm::new(
+            Vec::<PauliWord>::py_try_from(py, &words)?,
+            Expression::py_try_from(py, &expression)?,
+            Vec::<String>::py_try_from(py, &arguments)?,
+        )))
+    }
+}
+
 py_wrap_union_enum! {
     #[derive(Debug, PartialEq, Eq)]
     PyGateSpecification(GateSpecification) as "GateSpecification" {
         matrix: Matrix => Vec<Vec<PyExpression>>,
-        permutation: Permutation => Vec<Py<PyInt>>
+        permutation: Permutation => Vec<Py<PyInt>>,
+        pauli_sum: PauliSum => Vec<PyPauliTerm>
     }
 }
 impl_repr!(PyGateSpecification);

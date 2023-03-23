@@ -26,7 +26,7 @@ use crate::{
     expression::Expression,
     instruction::{
         ArithmeticOperand, AttributeValue, BinaryOperand, ComparisonOperand, FrameIdentifier,
-        GateModifier, MemoryReference, Offset, Qubit, ScalarType, Sharing, Vector,
+        GateModifier, MemoryReference, Offset, PauliTerm, Qubit, ScalarType, Sharing, Vector,
         WaveformInvocation,
     },
     parser::lexer::Operator,
@@ -193,6 +193,13 @@ pub(crate) fn parse_permutation<'a>(input: ParserInput<'a>) -> InternalParserRes
             separated_list1(token!(Comma), token!(Integer(value))),
         ),
     )(input)
+}
+
+/// Parse Pauli sum representation of a `DEFGATE` specification.
+pub(crate) fn parse_pauli_sum<'a>(
+    input: ParserInput<'a>,
+) -> InternalParserResult<'a, Vec<PauliTerm>> {
+    unimplemented!()
 }
 
 /// Parse a reference to a memory location, such as `ro[5]`, with optional brackets

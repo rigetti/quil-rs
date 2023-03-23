@@ -929,6 +929,7 @@ dependencies = [
  "pyo3-build-config",
  "quil-rs",
  "rigetti-pyo3",
+ "strum",
 ]
 
 [[package]]

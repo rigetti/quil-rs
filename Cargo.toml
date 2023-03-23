@@ -7,3 +7,6 @@ members = [
 [profile.release]
 lto = true
 codegen-units = 1
+
+[workspace.dependencies]
+strum = { version = "0.24.1", features = ["derive"] }

@@ -40,8 +40,8 @@ use super::{
     common::{
         parse_arithmetic_operand, parse_binary_logic_operand, parse_comparison_operand,
         parse_frame_attribute, parse_frame_identifier, parse_gate_modifier, parse_matrix,
-        parse_memory_reference, parse_permutation, parse_qubit, parse_sharing, parse_vector,
-        parse_waveform_invocation, parse_waveform_name,
+        parse_memory_reference, parse_pauli_sum, parse_permutation, parse_qubit, parse_sharing,
+        parse_vector, parse_waveform_invocation, parse_waveform_name,
     },
     expression::parse_expression,
     ParserInput,
@@ -261,6 +261,7 @@ pub(crate) fn parse_defgate<'a>(input: ParserInput<'a>) -> InternalParserResult<
     let (input, specification) = match gate_type {
         GateType::Matrix => map(parse_matrix, GateSpecification::Matrix)(input)?,
         GateType::Permutation => map(parse_permutation, GateSpecification::Permutation)(input)?,
+        GateType::PauliSum => map(parse_pauli_sum, GateSpecification::PauliSum)(input)?,
     };
 
     Ok((

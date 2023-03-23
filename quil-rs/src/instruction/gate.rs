@@ -128,6 +128,32 @@ impl fmt::Display for GateModifier {
     }
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq, strum::Display, strum::EnumString)]
+#[strum(serialize_all = "UPPERCASE")]
+pub enum PauliWord {
+    I,
+    X,
+    Y,
+    Z,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PauliTerm {
+    pub words: Vec<PauliWord>,
+    pub expression: Expression,
+    pub arguments: Vec<String>,
+}
+
+impl PauliTerm {
+    pub fn new(words: Vec<PauliWord>, expression: Expression, arguments: Vec<String>) -> Self {
+        Self {
+            words,
+            expression,
+            arguments,
+        }
+    }
+}
+
 /// An enum representing a the specification of a [`GateDefinition`] for a given [`GateType`]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum GateSpecification {
@@ -135,6 +161,9 @@ pub enum GateSpecification {
     Matrix(Vec<Vec<Expression>>),
     /// A vector of integers that defines the permutation used for a [`GateType::Permutation`]
     Permutation(Vec<u64>),
+    ///A Hermitian operator specified Pauli sum, a sum of combinations of Pauli operators, used for
+    ///a [`GateType::PauliSum`]
+    PauliSum(Vec<PauliTerm>),
 }
 
 impl fmt::Display for GateSpecification {
@@ -161,6 +190,19 @@ impl fmt::Display for GateSpecification {
                     write!(f, ", {i}")?;
                 }
                 writeln!(f)?;
+            }
+            GateSpecification::PauliSum(pauli_sum) => {
+                for term in pauli_sum {
+                    write!(f, "\t")?;
+                    for word in term.words.iter() {
+                        write!(f, "{word}")?;
+                    }
+                    write!(f, "{}", term.expression)?;
+                    for argument in term.arguments.iter() {
+                        write!(f, " {argument}")?;
+                    }
+                    writeln!(f)?;
+                }
             }
         }
         Ok(())
@@ -196,6 +238,7 @@ impl fmt::Display for GateDefinition {
             match self.specification {
                 GateSpecification::Matrix(_) => "MATRIX",
                 GateSpecification::Permutation(_) => "PERMUTATION",
+                GateSpecification::PauliSum(_) => "PAULI-SUM",
             }
         )?;
         write!(f, "{}", self.specification)
@@ -204,7 +247,7 @@ impl fmt::Display for GateDefinition {
 
 #[cfg(test)]
 mod test_gate_definition {
-    use super::{GateDefinition, GateSpecification};
+    use super::{GateDefinition, GateSpecification, PauliTerm, PauliWord};
     use crate::expression::{
         Expression, ExpressionFunction, FunctionCallExpression, InfixExpression, InfixOperator,
         PrefixExpression, PrefixOperator,
@@ -283,6 +326,45 @@ mod test_gate_definition {
 
         }
     )]
+    #[case(
+        "Pauli Sum GateDefinition",
+        GateDefinition{
+            name: "PauliSumGate".to_string(),
+            parameters: vec!["theta".to_string()],
+            specification: GateSpecification::PauliSum(vec![
+                PauliTerm {
+                    words: vec![PauliWord::Z, PauliWord::Z],
+                    expression: Expression::Infix(InfixExpression {
+                        left: Box::new(Expression::Prefix(PrefixExpression {
+                            operator: PrefixOperator::Minus,
+                            expression: Box::new(Expression::Variable("theta".to_string()))
+                        })),
+                        operator: InfixOperator::Slash,
+                        right: Box::new(Expression::Number(real!(4.0)))
+                    }),
+                    arguments: vec!["p".to_string(), "q".to_string()],
+                },
+                PauliTerm {
+                    words: vec![PauliWord::Y],
+                    expression: Expression::Infix(InfixExpression {
+                        left: Box::new(Expression::Variable("theta".to_string())),
+                        operator: InfixOperator::Slash,
+                        right: Box::new(Expression::Number(real!(4.0)))
+                    }),
+                    arguments: vec!["p".to_string()],
+                },
+                PauliTerm {
+                    words: vec![PauliWord::X],
+                    expression: Expression::Infix(InfixExpression {
+                        left: Box::new(Expression::Variable("theta".to_string())),
+                        operator: InfixOperator::Slash,
+                        right: Box::new(Expression::Number(real!(4.0)))
+                    }),
+                    arguments: vec!["q".to_string()],
+                },
+            ])
+        }
+    )]
     fn test_display(#[case] description: &str, #[case] gate_def: GateDefinition) {
         insta::with_settings!({
             snapshot_suffix => description,
@@ -297,6 +379,7 @@ mod test_gate_definition {
 pub enum GateType {
     Matrix,
     Permutation,
+    PauliSum,
 }
 
 impl fmt::Display for GateType {
@@ -304,6 +387,7 @@ impl fmt::Display for GateType {
         match self {
             Self::Matrix => write!(f, "MATRIX"),
             Self::Permutation => write!(f, "PERMUTATION"),
+            Self::PauliSum => write!(f, "PAULI-SUM"),
         }
     }
 }
