@@ -438,7 +438,7 @@ impl Diagram {
                     }
                     // pred is None if relationship is split and no iterators are returned indicating this erroneous instruction
                     if pred.is_none() {
-                        return Err(LatexGenError::FoundCNOTWithNoTarget);
+                        return Err(LatexGenError::FoundTargetWithNoControl);
                     }
                 }
             }
@@ -744,8 +744,8 @@ impl Wire {
 
 #[derive(Clone, Debug, thiserror::Error)]
 pub enum LatexGenError {
-    #[error("Tried to parse CNOT and found a control qubit without a target.")]
-    FoundCNOTWithNoTarget,
+    #[error("Found a target qubit with no control qubit.")]
+    FoundTargetWithNoControl,
     #[error("The FORKED modifier is unsupported.")]
     UnsupportedModifierForked,
     #[error("This instruction is unsupported: {instruction}.")]
