@@ -195,11 +195,10 @@ pub(crate) fn parse_permutation<'a>(input: ParserInput<'a>) -> InternalParserRes
     )(input)
 }
 
-/// Parse a collection of [`crate::instruction::PauliWord`]s. These are a special kind of a
-/// [`Token::Identifier`] used in Pauli sum `DEFGATE` specifications where each identifier
-/// is a single string made up of one or more `I`, `X`, `Y`, `Z` characters (e.g. `X`, `YY`),
-/// each representing a Pauli word.
-fn parse_pauli_words<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Vec<PauliWord>> {
+/// Parse a [`crate::instruction::PauliWord`]. These are a special kind of a [`Token::Identifier`]
+/// used in Pauli sum `DEFGATE` specifications where each identifier is made up of one or more
+/// `I`, `X`, `Y`, or `Z` characters (e.g. `X`, `YY`).
+fn parse_pauli_word<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Vec<PauliWord>> {
     map_res(token!(Identifier(v)), |words| {
         let mut pauli_words: Vec<PauliWord> = Vec::new();
         for word in words.split("") {
@@ -222,6 +221,21 @@ fn parse_pauli_words<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Vec
     })(input)
 }
 
+pub(crate) fn parse_pauli_term<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, PauliTerm> {
+    map(
+        tuple((
+            parse_pauli_word,
+            delimited(token!(LParenthesis), parse_expression, token!(RParenthesis)),
+            many1(token!(Identifier(i))),
+        )),
+        |(words, expression, arguments)| PauliTerm {
+            words,
+            expression,
+            arguments,
+        },
+    )(input)
+}
+
 /// Parse Pauli sum representation of a `DEFGATE` specification.
 pub(crate) fn parse_pauli_sum<'a>(
     input: ParserInput<'a>,
@@ -230,21 +244,7 @@ pub(crate) fn parse_pauli_sum<'a>(
         token!(NewLine),
         separated_list1(
             token!(NewLine),
-            preceded(
-                token!(Indentation),
-                map(
-                    tuple((
-                        parse_pauli_words,
-                        delimited(token!(LParenthesis), parse_expression, token!(RParenthesis)),
-                        many1(token!(Identifier(i))),
-                    )),
-                    |(words, expression, arguments)| PauliTerm {
-                        words,
-                        expression,
-                        arguments,
-                    },
-                ),
-            ),
+            preceded(token!(Indentation), parse_pauli_term),
         ),
     )(input)
 }
