@@ -43,6 +43,10 @@ pub enum ParserErrorKind {
     #[error("expected {expected}, found {actual:?}")]
     ExpectedToken { actual: Token, expected: String },
 
+    /// Got an unexpected character
+    #[error("expected {expected}, found {actual}")]
+    ExpectedCharacter { actual: String, expected: String },
+
     /// Tried to parse a kind of command and couldn't
     #[error("failed to parse arguments for {command}")]
     InvalidCommand { command: Command },

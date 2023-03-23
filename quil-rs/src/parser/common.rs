@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::HashMap;
+use std::{collections::HashMap, str::FromStr};
 
 use nom::{
     branch::alt,
-    combinator::{cut, map, opt, value},
+    combinator::{cut, map, map_res, opt, value},
     multi::{many0, many1, separated_list0, separated_list1},
     sequence::{delimited, pair, preceded, tuple},
 };
@@ -26,8 +26,8 @@ use crate::{
     expression::Expression,
     instruction::{
         ArithmeticOperand, AttributeValue, BinaryOperand, ComparisonOperand, FrameIdentifier,
-        GateModifier, MemoryReference, Offset, PauliTerm, Qubit, ScalarType, Sharing, Vector,
-        WaveformInvocation,
+        GateModifier, MemoryReference, Offset, PauliTerm, PauliWord, Qubit, ScalarType, Sharing,
+        Vector, WaveformInvocation,
     },
     parser::lexer::Operator,
     token,
@@ -195,11 +195,58 @@ pub(crate) fn parse_permutation<'a>(input: ParserInput<'a>) -> InternalParserRes
     )(input)
 }
 
+/// Parse a collection of [`crate::instruction::PauliWord`]s. These are a special kind of a
+/// [`Token::Identifier`] used in Pauli sum `DEFGATE` specifications where each identifier
+/// is a single string made up of one or more `I`, `X`, `Y`, `Z` characters (e.g. `X`, `YY`),
+/// each representing a Pauli word.
+fn parse_pauli_words<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Vec<PauliWord>> {
+    map_res(token!(Identifier(v)), |words| {
+        let mut pauli_words: Vec<PauliWord> = Vec::new();
+        for word in words.split("") {
+            if word.is_empty() {
+                // split("") separates every character, including empty spaces at the beginning and
+                // end of string.
+                continue;
+            }
+            pauli_words.push(PauliWord::from_str(word).map_err(|_| {
+                InternalParseError::from_kind(
+                    input,
+                    ParserErrorKind::ExpectedCharacter {
+                        expected: "(I,X,Y,Z)".to_string(),
+                        actual: word.to_string(),
+                    },
+                )
+            })?)
+        }
+        Ok(pauli_words)
+    })(input)
+}
+
 /// Parse Pauli sum representation of a `DEFGATE` specification.
 pub(crate) fn parse_pauli_sum<'a>(
     input: ParserInput<'a>,
 ) -> InternalParserResult<'a, Vec<PauliTerm>> {
-    unimplemented!()
+    preceded(
+        token!(NewLine),
+        separated_list1(
+            token!(NewLine),
+            preceded(
+                token!(Indentation),
+                map(
+                    tuple((
+                        parse_pauli_words,
+                        delimited(token!(LParenthesis), parse_expression, token!(RParenthesis)),
+                        many1(token!(Identifier(i))),
+                    )),
+                    |(words, expression, arguments)| PauliTerm {
+                        words,
+                        expression,
+                        arguments,
+                    },
+                ),
+            ),
+        ),
+    )(input)
 }
 
 /// Parse a reference to a memory location, such as `ro[5]`, with optional brackets
@@ -412,15 +459,17 @@ mod describe_skip_newlines_and_comments {
 #[cfg(test)]
 mod tests {
     use crate::{
-        expression::Expression,
-        instruction::MemoryReference,
-        parser::{common::parse_permutation, lex},
+        expression::{
+            Expression, InfixExpression, InfixOperator, PrefixExpression, PrefixOperator,
+        },
+        instruction::{MemoryReference, PauliTerm, PauliWord},
+        parser::lex,
         real,
     };
 
     use nom_locate::LocatedSpan;
 
-    use super::{parse_matrix, parse_waveform_invocation};
+    use super::{parse_matrix, parse_pauli_sum, parse_permutation, parse_waveform_invocation};
 
     #[test]
     fn waveform_invocation() {
@@ -477,5 +526,47 @@ mod tests {
         let (remainder, permutation) = parse_permutation(&lexed).unwrap();
         assert!(!remainder.is_empty(), "multiline permutations are invalid");
         assert_eq!(permutation, vec![0, 1, 2, 3, 4, 5, 7, 6]);
+    }
+
+    #[test]
+    fn test_parse_pauli_sum() {
+        let input = LocatedSpan::new("\n\tZZ((-%theta)/4) p q\n\tY(%theta/4) p\n\tX(%theta/4) q");
+        let lexed = lex(input).unwrap();
+        let (remainder, pauli_sum) = parse_pauli_sum(&lexed).unwrap();
+        assert!(remainder.is_empty());
+
+        let expected_pauli_sum = vec![
+            PauliTerm {
+                words: vec![PauliWord::Z, PauliWord::Z],
+                expression: Expression::Infix(InfixExpression {
+                    left: Box::new(Expression::Prefix(PrefixExpression {
+                        operator: PrefixOperator::Minus,
+                        expression: Box::new(Expression::Variable("theta".to_string())),
+                    })),
+                    operator: InfixOperator::Slash,
+                    right: Box::new(Expression::Number(real!(4.0))),
+                }),
+                arguments: vec!["p".to_string(), "q".to_string()],
+            },
+            PauliTerm {
+                words: vec![PauliWord::Y],
+                expression: Expression::Infix(InfixExpression {
+                    left: Box::new(Expression::Variable("theta".to_string())),
+                    operator: InfixOperator::Slash,
+                    right: Box::new(Expression::Number(real!(4.0))),
+                }),
+                arguments: vec!["p".to_string()],
+            },
+            PauliTerm {
+                words: vec![PauliWord::X],
+                expression: Expression::Infix(InfixExpression {
+                    left: Box::new(Expression::Variable("theta".to_string())),
+                    operator: InfixOperator::Slash,
+                    right: Box::new(Expression::Number(real!(4.0))),
+                }),
+                arguments: vec!["q".to_string()],
+            },
+        ];
+        assert_eq!(pauli_sum, expected_pauli_sum);
     }
 }
