@@ -152,11 +152,15 @@ impl PyPauliTerm {
         expression: PyExpression,
         arguments: Vec<Py<PyString>>,
     ) -> PyResult<Self> {
-        Ok(Self(PauliTerm::new(
-            Vec::<PauliWord>::py_try_from(py, &words)?,
-            Expression::py_try_from(py, &expression)?,
-            Vec::<String>::py_try_from(py, &arguments)?,
-        )))
+        Ok(Self(
+            PauliTerm::new(
+                Vec::<PauliWord>::py_try_from(py, &words)?,
+                Expression::py_try_from(py, &expression)?,
+                Vec::<String>::py_try_from(py, &arguments)?,
+            )
+            .map_err(RustGateError::from)
+            .map_err(RustGateError::to_py_err)?,
+        ))
     }
 }
 

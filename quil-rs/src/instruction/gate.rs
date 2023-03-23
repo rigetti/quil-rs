@@ -40,6 +40,9 @@ pub enum GateError {
 
     #[error("expected {expected} parameters, but got {actual}")]
     ForkedParameterLength { expected: usize, actual: usize },
+
+    #[error("expected the number of Pauli term arguments, {actual}, to match the number of Pauli words, {expected}")]
+    PauliTermArgumentLength { expected: usize, actual: usize },
 }
 
 impl Gate {
@@ -145,11 +148,22 @@ pub struct PauliTerm {
 }
 
 impl PauliTerm {
-    pub fn new(words: Vec<PauliWord>, expression: Expression, arguments: Vec<String>) -> Self {
-        Self {
-            words,
-            expression,
-            arguments,
+    pub fn new(
+        words: Vec<PauliWord>,
+        expression: Expression,
+        arguments: Vec<String>,
+    ) -> Result<Self, GateError> {
+        if words.len() != arguments.len() {
+            Err(GateError::PauliTermArgumentLength {
+                expected: words.len(),
+                actual: arguments.len(),
+            })
+        } else {
+            Ok(Self {
+                words,
+                expression,
+                arguments,
+            })
         }
     }
 }
