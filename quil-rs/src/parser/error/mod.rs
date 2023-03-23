@@ -66,4 +66,7 @@ pub enum ParserErrorKind {
     /// Literals specified in the input cannot be supported without loss of precision
     #[error("using this literal will result in loss of precision")]
     UnsupportedPrecision,
+
+    #[error("invalid quil: {0}")]
+    InvalidQuil(#[from] crate::instruction::ValidationError),
 }

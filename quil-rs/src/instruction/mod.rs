@@ -48,6 +48,12 @@ pub use self::measurement::Measurement;
 pub use self::qubit::Qubit;
 pub use self::waveform::{Waveform, WaveformDefinition, WaveformInvocation};
 
+#[derive(Clone, Debug, thiserror::Error, PartialEq, Eq)]
+pub enum ValidationError {
+    #[error(transparent)]
+    GateError(#[from] GateError),
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum UnaryOperator {
     Neg,

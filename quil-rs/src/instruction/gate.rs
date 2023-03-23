@@ -30,7 +30,7 @@ pub enum GateModifier {
     Forked,
 }
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Clone, Debug, thiserror::Error, PartialEq, Eq)]
 pub enum GateError {
     #[error("invalid name: {0}")]
     InvalidIdentifier(#[from] IdentifierValidationError),
@@ -41,7 +41,7 @@ pub enum GateError {
     #[error("expected {expected} parameters, but got {actual}")]
     ForkedParameterLength { expected: usize, actual: usize },
 
-    #[error("expected the number of Pauli term arguments, {actual}, to match the number of Pauli words, {expected}")]
+    #[error("expected the number of Pauli term arguments, {actual}, to match the length of the Pauli word, {expected}")]
     PauliTermArgumentLength { expected: usize, actual: usize },
 }
 
@@ -402,7 +402,7 @@ mod test_gate_definition {
     fn test_display(#[case] description: &str, #[case] gate_def: GateDefinition) {
         insta::with_settings!({
             snapshot_suffix => description,
-            // Arguments are stored as a HashSet, so the ordering isn't stable
+            // Arguments are stored as a HashSet, so the ordering isn't stable.
             // This filter captures both permutations and normalizes it.
             filters => vec![(" p q | q p ", " p q ")]
         }, {

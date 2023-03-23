@@ -27,7 +27,7 @@ use crate::{
     instruction::{
         ArithmeticOperand, AttributeValue, BinaryOperand, ComparisonOperand, FrameIdentifier,
         GateModifier, MemoryReference, Offset, PauliGate, PauliSum, PauliTerm, Qubit, ScalarType,
-        Sharing, Vector, WaveformInvocation,
+        Sharing, ValidationError, Vector, WaveformInvocation,
     },
     parser::lexer::Operator,
     token,
@@ -222,16 +222,16 @@ fn parse_pauli_word<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Vec<
 }
 
 pub(crate) fn parse_pauli_term<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, PauliTerm> {
-    map(
+    map_res(
         tuple((
             parse_pauli_word,
             delimited(token!(LParenthesis), parse_expression, token!(RParenthesis)),
             many1(token!(Identifier(i))),
         )),
-        |(words, expression, arguments)| PauliTerm {
-            word: words,
-            expression,
-            arguments,
+        |(word, expression, arguments)| {
+            PauliTerm::new(word, expression, arguments)
+                .map_err(ValidationError::from)
+                .map_err(|e| InternalParseError::from_kind(input, ParserErrorKind::InvalidQuil(e)))
         },
     )(input)
 }
@@ -569,5 +569,12 @@ mod tests {
             },
         ]);
         assert_eq!(pauli_sum, expected_pauli_sum);
+
+        let input = LocatedSpan::new("\n\tZZ((-%theta)/4) p\n");
+        let lexed = lex(input).unwrap();
+        assert!(
+            parse_pauli_sum(&lexed).is_err(),
+            "length of pauli word must match number of arguments"
+        )
     }
 }

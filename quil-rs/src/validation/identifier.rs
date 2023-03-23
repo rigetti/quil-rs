@@ -7,7 +7,7 @@ use thiserror;
 
 use crate::reserved::ReservedToken;
 
-#[derive(Debug, PartialEq, thiserror::Error)]
+#[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
 pub enum IdentifierValidationError {
     #[error("{0} is a reserved token")]
     Reserved(ReservedToken),

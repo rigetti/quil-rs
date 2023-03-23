@@ -5,7 +5,7 @@ use std::{fmt::Display, str::FromStr};
 use strum;
 
 /// An enum that can represent any reserved token in quil.
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ReservedToken {
     Keyword(ReservedKeyword),
     Gate(ReservedGate),
@@ -42,7 +42,7 @@ impl Display for ReservedToken {
 }
 
 /// Any reserved keyword that isn't specifically a gate identifier or constant
-#[derive(Debug, PartialEq, Eq, strum::Display, strum::EnumString)]
+#[derive(Clone, Debug, PartialEq, Eq, strum::Display, strum::EnumString)]
 #[strum(serialize_all = "UPPERCASE")]
 pub enum ReservedKeyword {
     Add,
@@ -93,7 +93,7 @@ pub enum ReservedKeyword {
 }
 
 /// Every reserved Gate identifier
-#[derive(Debug, PartialEq, Eq, strum::Display, strum::EnumString)]
+#[derive(Clone, Debug, PartialEq, Eq, strum::Display, strum::EnumString)]
 #[strum(serialize_all = "UPPERCASE")]
 pub enum ReservedGate {
     CAN,
@@ -124,7 +124,7 @@ pub enum ReservedGate {
 }
 
 /// Every reserved constant
-#[derive(Debug, PartialEq, Eq, strum::Display, strum::EnumString)]
+#[derive(Clone, Debug, PartialEq, Eq, strum::Display, strum::EnumString)]
 #[strum(serialize_all = "lowercase")]
 pub enum ReservedConstant {
     #[strum(serialize = "i")]
