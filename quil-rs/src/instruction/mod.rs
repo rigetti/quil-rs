@@ -419,7 +419,7 @@ pub fn get_expression_parameter_string(parameters: &[Expression]) -> String {
 
 pub fn get_string_parameter_string(parameters: &[String]) -> String {
     if parameters.is_empty() {
-        return String::new("");
+        return String::new();
     }
 
     let parameter_str: String = parameters
