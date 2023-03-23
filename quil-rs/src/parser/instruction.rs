@@ -151,10 +151,11 @@ mod tests {
     use std::str::FromStr;
 
     use nom_locate::LocatedSpan;
+    use num_complex::Complex;
 
     use crate::expression::{
-        Expression, FunctionCallExpression, InfixExpression, InfixOperator, PrefixExpression,
-        PrefixOperator,
+        Expression, ExpressionFunction, FunctionCallExpression, InfixExpression, InfixOperator,
+        PrefixExpression, PrefixOperator,
     };
     use crate::instruction::{
         Arithmetic, ArithmeticOperand, ArithmeticOperator, AttributeValue, BinaryLogic,
@@ -757,6 +758,68 @@ mod tests {
                             function: crate::expression::ExpressionFunction::SquareRoot,
                             expression: Box::new(Expression::Number(real!(2.0))),
                         })),
+                    }),
+                ],
+            ]),
+        })]
+    );
+
+    make_test!(
+        gate_definition_with_params,
+        parse_instructions,
+        "DEFGATE RX(%theta):\n\tCOS(%theta/2), -i*SIN(%theta/2)\n\t-i*SIN(%theta/2), COS(%theta/2)\n",
+        vec![Instruction::GateDefinition(GateDefinition {
+            name: "RX".to_string(),
+            parameters: vec!["theta".to_string()],
+            specification: GateSpecification::Matrix(vec![
+                vec![
+                    Expression::FunctionCall(FunctionCallExpression {
+                        function: ExpressionFunction::Cosine,
+                        expression: Box::new(Expression::Infix(InfixExpression {
+                            left: Box::new(Expression::Variable("theta".to_string())),
+                            operator: InfixOperator::Slash,
+                            right: Box::new(Expression::Number(Complex { re: 2.0, im: 0.0 })),
+                        }))
+                    }),
+                    Expression::Infix(InfixExpression {
+                        left: Box::new(Expression::Prefix(PrefixExpression {
+                            operator: PrefixOperator::Minus,
+                            expression: Box::new(Expression::Number(Complex { re: 0.0, im: 1.0 })),
+                        })),
+                        operator: InfixOperator::Star,
+                        right: Box::new(Expression::FunctionCall(FunctionCallExpression {
+                            function: ExpressionFunction::Sine,
+                            expression: Box::new(Expression::Infix(InfixExpression {
+                                left: Box::new(Expression::Variable("theta".to_string())),
+                                operator: InfixOperator::Slash,
+                                right: Box::new(Expression::Number(Complex { re: 2.0, im: 0.0 })),
+                            }))
+                        }))
+                    }),
+                ],
+                vec![
+                    Expression::Infix(InfixExpression {
+                        left: Box::new(Expression::Prefix(PrefixExpression {
+                            operator: PrefixOperator::Minus,
+                            expression: Box::new(Expression::Number(Complex { re: 0.0, im: 1.0 }))
+                        })),
+                        operator: InfixOperator::Star,
+                        right: Box::new(Expression::FunctionCall(FunctionCallExpression {
+                            function: ExpressionFunction::Sine,
+                            expression: Box::new(Expression::Infix(InfixExpression {
+                                left: Box::new(Expression::Variable("theta".to_string())),
+                                operator: InfixOperator::Slash,
+                                right: Box::new(Expression::Number(Complex { re: 2.0, im: 0.0 }))
+                            }))
+                        }))
+                    }),
+                    Expression::FunctionCall(FunctionCallExpression {
+                        function: ExpressionFunction::Cosine,
+                        expression: Box::new(Expression::Infix(InfixExpression {
+                            left: Box::new(Expression::Variable("theta".to_string())),
+                            operator: InfixOperator::Slash,
+                            right: Box::new(Expression::Number(Complex { re: 2.0, im: 0.0 })),
+                        }))
                     }),
                 ],
             ]),

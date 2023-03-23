@@ -410,7 +410,7 @@ pub fn format_qubits(qubits: &[Qubit]) -> String {
 
 pub fn get_expression_parameter_string(parameters: &[Expression]) -> String {
     if parameters.is_empty() {
-        return String::from("");
+        return String::new();
     }
 
     let parameter_str: String = parameters.iter().map(|e| format!("{e}")).collect();
@@ -419,10 +419,14 @@ pub fn get_expression_parameter_string(parameters: &[Expression]) -> String {
 
 pub fn get_string_parameter_string(parameters: &[String]) -> String {
     if parameters.is_empty() {
-        return String::from("");
+        return String::new();
     }
 
-    let parameter_str: String = parameters.join(",");
+    let parameter_str: String = parameters
+        .iter()
+        .map(|param| format!("%{param}"))
+        .collect::<Vec<_>>()
+        .join(",");
     format!("({parameter_str})")
 }
 

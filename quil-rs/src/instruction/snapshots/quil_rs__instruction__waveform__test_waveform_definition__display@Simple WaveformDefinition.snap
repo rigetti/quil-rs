@@ -1,0 +1,6 @@
+---
+source: quil-rs/src/instruction/waveform.rs
+expression: waveform_def.to_string()
+---
+DEFWAVEFORM WF(%theta):
+	0, 0, 0.00027685415721916584

@@ -45,6 +45,39 @@ impl fmt::Display for WaveformDefinition {
     }
 }
 
+#[cfg(test)]
+mod test_waveform_definition {
+    use super::{Waveform, WaveformDefinition};
+    use crate::expression::Expression;
+    use crate::real;
+
+    use insta::assert_snapshot;
+    use rstest::rstest;
+
+    #[rstest]
+    #[case(
+        "Simple WaveformDefinition",
+        WaveformDefinition {
+            name: "WF".to_string(),
+            definition: Waveform {
+                matrix: vec![
+                    Expression::Number(real!(0.0)),
+                    Expression::Number(real!(0.0)),
+                    Expression::Number(real!(0.00027685415721916584))
+                ],
+                parameters: vec!["theta".to_string()]
+            }
+        }
+    )]
+    fn test_display(#[case] description: &str, #[case] waveform_def: WaveformDefinition) {
+        insta::with_settings!({
+            snapshot_suffix => description,
+        }, {
+            assert_snapshot!(waveform_def.to_string())
+        })
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct WaveformInvocation {
     pub name: String,
