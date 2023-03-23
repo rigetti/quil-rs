@@ -41,8 +41,8 @@ pub use self::calibration::{Calibration, MeasureCalibrationDefinition};
 pub use self::declaration::{Declaration, MemoryReference, Offset, ScalarType, Sharing, Vector};
 pub use self::frame::{AttributeValue, FrameAttributes, FrameDefinition, FrameIdentifier};
 pub use self::gate::{
-    Gate, GateDefinition, GateError, GateModifier, GateSpecification, GateType, PauliTerm,
-    PauliWord,
+    Gate, GateDefinition, GateError, GateModifier, GateSpecification, GateType, PauliGate,
+    PauliSum, PauliTerm,
 };
 pub use self::measurement::Measurement;
 pub use self::qubit::Qubit;

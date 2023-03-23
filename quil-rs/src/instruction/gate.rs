@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{collections::HashSet, fmt};
 
 use crate::{
     expression::Expression,
@@ -133,7 +133,7 @@ impl fmt::Display for GateModifier {
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, strum::Display, strum::EnumString)]
 #[strum(serialize_all = "UPPERCASE")]
-pub enum PauliWord {
+pub enum PauliGate {
     I,
     X,
     Y,
@@ -142,29 +142,43 @@ pub enum PauliWord {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PauliTerm {
-    pub words: Vec<PauliWord>,
+    pub word: Vec<PauliGate>,
     pub expression: Expression,
     pub arguments: Vec<String>,
 }
 
 impl PauliTerm {
     pub fn new(
-        words: Vec<PauliWord>,
+        word: Vec<PauliGate>,
         expression: Expression,
         arguments: Vec<String>,
     ) -> Result<Self, GateError> {
-        if words.len() != arguments.len() {
+        if word.len() != arguments.len() {
             Err(GateError::PauliTermArgumentLength {
-                expected: words.len(),
+                expected: word.len(),
                 actual: arguments.len(),
             })
         } else {
             Ok(Self {
-                words,
+                word,
                 expression,
                 arguments,
             })
         }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PauliSum(pub Vec<PauliTerm>);
+
+impl PauliSum {
+    /// Get all the unique arguments used by the [`PauliTerm`]s in this [`PauliSum`].
+    pub fn get_arguments(&self) -> HashSet<String> {
+        self.0
+            .clone()
+            .into_iter()
+            .flat_map(|term| term.arguments)
+            .collect()
     }
 }
 
@@ -177,7 +191,7 @@ pub enum GateSpecification {
     Permutation(Vec<u64>),
     /// A Hermitian operator specified as a Pauli sum, a sum of combinations of Pauli operators,
     /// used for a [`GateType::PauliSum`]
-    PauliSum(Vec<PauliTerm>),
+    PauliSum(PauliSum),
 }
 
 impl fmt::Display for GateSpecification {
@@ -206,9 +220,9 @@ impl fmt::Display for GateSpecification {
                 writeln!(f)?;
             }
             GateSpecification::PauliSum(pauli_sum) => {
-                for term in pauli_sum {
+                for term in &pauli_sum.0 {
                     write!(f, "\t")?;
-                    for word in term.words.iter() {
+                    for word in term.word.iter() {
                         write!(f, "{word}")?;
                     }
                     write!(f, "{}", term.expression)?;
@@ -243,25 +257,31 @@ impl GateDefinition {
 
 impl fmt::Display for GateDefinition {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let parameter_str = get_string_parameter_string(&self.parameters);
-        writeln!(
+        write!(
             f,
-            "DEFGATE {}{} AS {}:",
+            "DEFGATE {}{}",
             self.name,
-            parameter_str,
-            match self.specification {
-                GateSpecification::Matrix(_) => "MATRIX",
-                GateSpecification::Permutation(_) => "PERMUTATION",
-                GateSpecification::PauliSum(_) => "PAULI-SUM",
-            }
+            get_string_parameter_string(&self.parameters)
         )?;
+        match &self.specification {
+            GateSpecification::Matrix(_) => writeln!(f, " AS MATRIX:")?,
+            GateSpecification::Permutation(_) => writeln!(f, " AS PERMUTATION:")?,
+            GateSpecification::PauliSum(sum) => writeln!(
+                f,
+                " {} AS PAULI-SUM:",
+                sum.get_arguments()
+                    .into_iter()
+                    .collect::<Vec<String>>()
+                    .join(" ")
+            )?,
+        };
         write!(f, "{}", self.specification)
     }
 }
 
 #[cfg(test)]
 mod test_gate_definition {
-    use super::{GateDefinition, GateSpecification, PauliTerm, PauliWord};
+    use super::{GateDefinition, GateSpecification, PauliGate, PauliSum, PauliTerm};
     use crate::expression::{
         Expression, ExpressionFunction, FunctionCallExpression, InfixExpression, InfixOperator,
         PrefixExpression, PrefixOperator,
@@ -345,9 +365,9 @@ mod test_gate_definition {
         GateDefinition{
             name: "PauliSumGate".to_string(),
             parameters: vec!["theta".to_string()],
-            specification: GateSpecification::PauliSum(vec![
+            specification: GateSpecification::PauliSum(PauliSum(vec![
                 PauliTerm {
-                    words: vec![PauliWord::Z, PauliWord::Z],
+                    word: vec![PauliGate::Z, PauliGate::Z],
                     expression: Expression::Infix(InfixExpression {
                         left: Box::new(Expression::Prefix(PrefixExpression {
                             operator: PrefixOperator::Minus,
@@ -359,7 +379,7 @@ mod test_gate_definition {
                     arguments: vec!["p".to_string(), "q".to_string()],
                 },
                 PauliTerm {
-                    words: vec![PauliWord::Y],
+                    word: vec![PauliGate::Y],
                     expression: Expression::Infix(InfixExpression {
                         left: Box::new(Expression::Variable("theta".to_string())),
                         operator: InfixOperator::Slash,
@@ -368,7 +388,7 @@ mod test_gate_definition {
                     arguments: vec!["p".to_string()],
                 },
                 PauliTerm {
-                    words: vec![PauliWord::X],
+                    word: vec![PauliGate::X],
                     expression: Expression::Infix(InfixExpression {
                         left: Box::new(Expression::Variable("theta".to_string())),
                         operator: InfixOperator::Slash,
@@ -376,12 +396,15 @@ mod test_gate_definition {
                     }),
                     arguments: vec!["q".to_string()],
                 },
-            ])
+            ]))
         }
     )]
     fn test_display(#[case] description: &str, #[case] gate_def: GateDefinition) {
         insta::with_settings!({
             snapshot_suffix => description,
+            // Arguments are stored as a HashSet, so the ordering isn't stable
+            // This filter captures both permutations and normalizes it.
+            filters => vec![(" p q | q p ", " p q ")]
         }, {
             assert_snapshot!(gate_def.to_string())
         })

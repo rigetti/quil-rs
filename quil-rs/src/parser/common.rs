@@ -26,8 +26,8 @@ use crate::{
     expression::Expression,
     instruction::{
         ArithmeticOperand, AttributeValue, BinaryOperand, ComparisonOperand, FrameIdentifier,
-        GateModifier, MemoryReference, Offset, PauliTerm, PauliWord, Qubit, ScalarType, Sharing,
-        Vector, WaveformInvocation,
+        GateModifier, MemoryReference, Offset, PauliGate, PauliSum, PauliTerm, Qubit, ScalarType,
+        Sharing, Vector, WaveformInvocation,
     },
     parser::lexer::Operator,
     token,
@@ -198,16 +198,16 @@ pub(crate) fn parse_permutation<'a>(input: ParserInput<'a>) -> InternalParserRes
 /// Parse a [`crate::instruction::PauliWord`]. These are a special kind of a [`Token::Identifier`]
 /// used in Pauli sum `DEFGATE` specifications where each identifier is made up of one or more
 /// `I`, `X`, `Y`, or `Z` characters (e.g. `X`, `YY`).
-fn parse_pauli_word<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Vec<PauliWord>> {
+fn parse_pauli_word<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Vec<PauliGate>> {
     map_res(token!(Identifier(v)), |words| {
-        let mut pauli_words: Vec<PauliWord> = Vec::new();
+        let mut pauli_words: Vec<PauliGate> = Vec::new();
         for word in words.split("") {
             if word.is_empty() {
                 // split("") separates every character, including empty spaces at the beginning and
                 // end of string.
                 continue;
             }
-            pauli_words.push(PauliWord::from_str(word).map_err(|_| {
+            pauli_words.push(PauliGate::from_str(word).map_err(|_| {
                 InternalParseError::from_kind(
                     input,
                     ParserErrorKind::ExpectedCharacter {
@@ -229,7 +229,7 @@ pub(crate) fn parse_pauli_term<'a>(input: ParserInput<'a>) -> InternalParserResu
             many1(token!(Identifier(i))),
         )),
         |(words, expression, arguments)| PauliTerm {
-            words,
+            word: words,
             expression,
             arguments,
         },
@@ -237,15 +237,16 @@ pub(crate) fn parse_pauli_term<'a>(input: ParserInput<'a>) -> InternalParserResu
 }
 
 /// Parse Pauli sum representation of a `DEFGATE` specification.
-pub(crate) fn parse_pauli_sum<'a>(
-    input: ParserInput<'a>,
-) -> InternalParserResult<'a, Vec<PauliTerm>> {
-    preceded(
-        token!(NewLine),
-        separated_list1(
+pub(crate) fn parse_pauli_sum<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, PauliSum> {
+    map(
+        preceded(
             token!(NewLine),
-            preceded(token!(Indentation), parse_pauli_term),
+            separated_list1(
+                token!(NewLine),
+                preceded(token!(Indentation), parse_pauli_term),
+            ),
         ),
+        PauliSum,
     )(input)
 }
 
@@ -462,7 +463,7 @@ mod tests {
         expression::{
             Expression, InfixExpression, InfixOperator, PrefixExpression, PrefixOperator,
         },
-        instruction::{MemoryReference, PauliTerm, PauliWord},
+        instruction::{MemoryReference, PauliGate, PauliSum, PauliTerm},
         parser::lex,
         real,
     };
@@ -535,9 +536,9 @@ mod tests {
         let (remainder, pauli_sum) = parse_pauli_sum(&lexed).unwrap();
         assert!(remainder.is_empty());
 
-        let expected_pauli_sum = vec![
+        let expected_pauli_sum = PauliSum(vec![
             PauliTerm {
-                words: vec![PauliWord::Z, PauliWord::Z],
+                word: vec![PauliGate::Z, PauliGate::Z],
                 expression: Expression::Infix(InfixExpression {
                     left: Box::new(Expression::Prefix(PrefixExpression {
                         operator: PrefixOperator::Minus,
@@ -549,7 +550,7 @@ mod tests {
                 arguments: vec!["p".to_string(), "q".to_string()],
             },
             PauliTerm {
-                words: vec![PauliWord::Y],
+                word: vec![PauliGate::Y],
                 expression: Expression::Infix(InfixExpression {
                     left: Box::new(Expression::Variable("theta".to_string())),
                     operator: InfixOperator::Slash,
@@ -558,7 +559,7 @@ mod tests {
                 arguments: vec!["p".to_string()],
             },
             PauliTerm {
-                words: vec![PauliWord::X],
+                word: vec![PauliGate::X],
                 expression: Expression::Infix(InfixExpression {
                     left: Box::new(Expression::Variable("theta".to_string())),
                     operator: InfixOperator::Slash,
@@ -566,7 +567,7 @@ mod tests {
                 }),
                 arguments: vec!["q".to_string()],
             },
-        ];
+        ]);
         assert_eq!(pauli_sum, expected_pauli_sum);
     }
 }

@@ -472,13 +472,13 @@ class Gate:
         ...
 
 @final
-class PauliWord(Enum):
+class PauliGate(Enum):
     I = "I"
     X = "X"
     Y = "Y"
     Z = "Z"
     @staticmethod
-    def parse(word: str) -> "PauliWord":
+    def parse(word: str) -> "PauliGate":
         """
         Parses a ``PauliWord`` from a string. Raises a ``ParseEnumError`` if the
         string isn't a valid Pauli word.
@@ -488,12 +488,12 @@ class PauliWord(Enum):
 class PauliTerm:
     @staticmethod
     def __new__(
-        cls, words: List[PauliWord], expression: Expression, arguments: List[str]
+        cls, word: List[PauliGate], expression: Expression, arguments: List[str]
     ) -> "PauliTerm": ...
     @property
-    def words(self) -> List[PauliWord]: ...
-    @words.setter
-    def words(self, words: List[PauliWord]): ...
+    def word(self) -> List[PauliGate]: ...
+    @word.setter
+    def word(self, word: List[PauliGate]): ...
     @property
     def expression(self) -> Expression: ...
     @expression.setter
@@ -502,6 +502,14 @@ class PauliTerm:
     def arguments(self) -> List[str]: ...
     @arguments.setter
     def arguments(self, arguments: List[str]): ...
+
+class PauliSum:
+    @staticmethod
+    def __new__(cls, terms: List[PauliTerm]) -> "PauliSum": ...
+    @property
+    def terms(self) -> List[PauliTerm]: ...
+    @terms.setter
+    def terms(self, terms: List[PauliTerm]): ...
 
 @final
 class GateSpecification:
