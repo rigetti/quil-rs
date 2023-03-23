@@ -201,7 +201,7 @@ impl RenderSettings {
     ///
     /// # Examples
     /// ```
-    /// use quil_rs::{Program, program::latex::{RenderSettings, Latex}};
+    /// use quil_rs::{Program, program::latex::{RenderSettings, ToLatex}};
     /// use std::str::FromStr;
     /// let program = Program::from_str("H 0\nCNOT 0 1").expect("");
     /// let settings = RenderSettings {
@@ -773,7 +773,7 @@ impl ToLatex for Program {
     /// # Examples
     /// ```
     /// // To LaTeX for the Bell State Program.
-    /// use quil_rs::{Program, program::latex::{RenderSettings, Latex}};
+    /// use quil_rs::{Program, program::latex::{RenderSettings, ToLatex}};
     /// use std::str::FromStr;
     /// let program = Program::from_str("H 0\nCNOT 0 1").expect("");
     /// let latex = program.to_latex(RenderSettings::default()).expect("");
@@ -781,7 +781,7 @@ impl ToLatex for Program {
     ///
     /// ```
     /// // To LaTeX for the Toffoli Gate Program.
-    /// use quil_rs::{Program, program::latex::{RenderSettings, Latex}};
+    /// use quil_rs::{Program, program::latex::{RenderSettings, ToLatex}};
     /// use std::str::FromStr;
     /// let program = Program::from_str("CONTROLLED CNOT 2 1 0").expect("");
     /// let latex = program.to_latex(RenderSettings::default()).expect("");
