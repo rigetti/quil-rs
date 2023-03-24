@@ -219,16 +219,14 @@ impl RenderSettings {
         // get the first qubit in the BTreeMap
         let first = circuit
             .first_key_value()
-            .expect("previously checked that circuit is not empty")
-            .0
-            + 1;
+            .map(|wire| wire.0 + 1)
+            .expect("previously checked that circuit is not empty");
 
         // get the last qubit in the BTreeMap
         let last = circuit
             .last_key_value()
+            .map(|wire| wire.0 - 1)
             .expect("previously checked that circuit has at least two wires")
-            .0
-            - 1;
 
         // search through the range of qubits
         for qubit in first..=last {
@@ -316,21 +314,20 @@ impl Diagram {
     /// `qubits` - exposes the qubits used in the Program
     /// `instruction` - exposes the qubits in a single Instruction
     fn set_empty(&mut self, qubits: &HashSet<Qubit>, instruction: &Instruction) {
-        'program_loop: for program_qubit in qubits {
-            if let Instruction::Gate(gate) = instruction {
-                for gate_qubit in &gate.qubits {
-                    if program_qubit == gate_qubit {
-                        continue 'program_loop;
-                    }
-                }
-
-                if let Qubit::Fixed(q) = program_qubit {
-                    if let Some(wire) = self.circuit.get_mut(q) {
-                        wire.empty.insert(self.column, Command::Qw);
-                    }
-                }
-            }
+        if let Instruction::Gate(gate) = instruction {
+            qubits
+                .difference(&gate.qubits.iter().cloned().collect())
+                .filter_map(|q| match q {
+                    Qubit::Fixed(index) => Some(index),
+                    _ => None,
+                })
+                .for_each(|index| {
+                    self.circuit
+                        .get_mut(index)
+                        .map(|wire| wire.empty.insert(self.column, Command::Qw));
+                });
         }
+
     }
 
     /// Utility function to insert modifiers of wires in this Circuit at the
