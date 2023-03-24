@@ -266,13 +266,11 @@ impl fmt::Display for GateDefinition {
         match &self.specification {
             GateSpecification::Matrix(_) => writeln!(f, " AS MATRIX:")?,
             GateSpecification::Permutation(_) => writeln!(f, " AS PERMUTATION:")?,
-            GateSpecification::PauliSum(sum) => writeln!(
-                f,
-                " {} AS PAULI-SUM:",
-                sum.get_arguments()
-                    .into_iter()
-                    .collect::<Vec<String>>()
-                    .join(" ")
+            GateSpecification::PauliSum(sum) => {
+                for arg in sum.get_arguments() {
+                    write!(f, " {arg}")?;
+                }
+                writeln!(f, " AS PAULI-SUM:")?;
             )?,
         };
         write!(f, "{}", self.specification)
