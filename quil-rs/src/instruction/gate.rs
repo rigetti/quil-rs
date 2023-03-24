@@ -1,4 +1,4 @@
-use std::{collections::HashSet, fmt};
+use std::fmt;
 
 use crate::{
     expression::Expression,
@@ -169,16 +169,14 @@ impl PauliTerm {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct PauliSum(pub Vec<PauliTerm>);
+pub struct PauliSum {
+    pub arguments: Vec<String>,
+    pub terms: Vec<PauliTerm>,
+}
 
 impl PauliSum {
-    /// Get all the unique arguments used by the [`PauliTerm`]s in this [`PauliSum`].
-    pub fn get_arguments(&self) -> HashSet<String> {
-        self.0
-            .clone()
-            .into_iter()
-            .flat_map(|term| term.arguments)
-            .collect()
+    pub fn new(arguments: Vec<String>, terms: Vec<PauliTerm>) -> Self {
+        Self { arguments, terms }
     }
 }
 
@@ -220,7 +218,7 @@ impl fmt::Display for GateSpecification {
                 writeln!(f)?;
             }
             GateSpecification::PauliSum(pauli_sum) => {
-                for term in &pauli_sum.0 {
+                for term in &pauli_sum.terms {
                     write!(f, "\t")?;
                     for word in term.word.iter() {
                         write!(f, "{word}")?;
@@ -267,7 +265,7 @@ impl fmt::Display for GateDefinition {
             GateSpecification::Matrix(_) => writeln!(f, " AS MATRIX:")?,
             GateSpecification::Permutation(_) => writeln!(f, " AS PERMUTATION:")?,
             GateSpecification::PauliSum(sum) => {
-                for arg in sum.get_arguments() {
+                for arg in &sum.arguments {
                     write!(f, " {arg}")?;
                 }
                 writeln!(f, " AS PAULI-SUM:")?
@@ -363,7 +361,7 @@ mod test_gate_definition {
         GateDefinition{
             name: "PauliSumGate".to_string(),
             parameters: vec!["theta".to_string()],
-            specification: GateSpecification::PauliSum(PauliSum(vec![
+            specification: GateSpecification::PauliSum(PauliSum{arguments: vec!["p".to_string(), "q".to_string()], terms: vec![
                 PauliTerm {
                     word: vec![PauliGate::Z, PauliGate::Z],
                     expression: Expression::Infix(InfixExpression {
@@ -394,15 +392,12 @@ mod test_gate_definition {
                     }),
                     arguments: vec!["q".to_string()],
                 },
-            ]))
+            ]})
         }
     )]
     fn test_display(#[case] description: &str, #[case] gate_def: GateDefinition) {
         insta::with_settings!({
             snapshot_suffix => description,
-            // Arguments are stored as a HashSet, so the ordering isn't stable.
-            // This filter captures both permutations and normalizes it.
-            filters => vec![(" p q | q p ", " p q ")]
         }, {
             assert_snapshot!(gate_def.to_string())
         })

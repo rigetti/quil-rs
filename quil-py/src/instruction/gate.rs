@@ -8,8 +8,8 @@ use quil_rs::{
 use strum;
 
 use rigetti_pyo3::{
-    impl_as_mut_for_wrapper, impl_from_str, impl_parse, impl_repr, impl_str, py_wrap_data_struct,
-    py_wrap_error, py_wrap_simple_enum, py_wrap_type, py_wrap_union_enum,
+    impl_from_str, impl_parse, impl_repr, impl_str, py_wrap_data_struct, py_wrap_error,
+    py_wrap_simple_enum, py_wrap_union_enum,
     pyo3::{
         exceptions::PyValueError,
         pyclass::CompareOp,
@@ -17,7 +17,7 @@ use rigetti_pyo3::{
         types::{PyInt, PyString},
         IntoPy, Py, PyObject, PyResult, Python,
     },
-    wrap_error, PyTryFrom, PyWrapper, PyWrapperMut, ToPython, ToPythonError,
+    wrap_error, PyTryFrom, PyWrapper, ToPython, ToPythonError,
 };
 
 use super::PyQubit;
@@ -165,30 +165,31 @@ impl PyPauliTerm {
     }
 }
 
-py_wrap_type! {
+py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
     #[pyo3(subclass)]
-    PyPauliSum(PauliSum) as "PauliSum"
+    PyPauliSum(PauliSum) as "PauliSum" {
+        arguments: Vec<String> => Vec<Py<PyString>>,
+        terms: Vec<PauliTerm> => Vec<PyPauliTerm>
+    }
 }
 impl_repr!(PyPauliSum);
-impl_as_mut_for_wrapper!(PyPauliSum);
 
 #[pymethods]
 impl PyPauliSum {
     #[new]
-    pub fn new(py: Python<'_>, terms: Vec<PyPauliTerm>) -> PyResult<Self> {
-        Ok(Self(PauliSum(Vec::<PauliTerm>::py_try_from(py, &terms)?)))
+    pub fn new(py: Python<'_>, arguments: Vec<String>, terms: Vec<PyPauliTerm>) -> PyResult<Self> {
+        Ok(Self(PauliSum::new(
+            arguments,
+            Vec::<PauliTerm>::py_try_from(py, &terms)?,
+        )))
     }
 
-    #[getter]
-    pub fn get_terms(&self, py: Python<'_>) -> PyResult<Vec<PyPauliTerm>> {
-        self.as_inner().0.to_python(py)
-    }
-
-    #[setter]
-    pub fn set_terms(&mut self, py: Python<'_>, terms: Vec<PyPauliTerm>) -> PyResult<()> {
-        self.as_inner_mut().0 = Vec::<PauliTerm>::py_try_from(py, &terms)?;
-        Ok(())
+    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
+        match op {
+            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
+            _ => py.NotImplemented(),
+        }
     }
 }
 

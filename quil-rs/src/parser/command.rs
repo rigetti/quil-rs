@@ -14,13 +14,13 @@
 
 use nom::{
     branch::alt,
-    combinator::{map, opt},
+    combinator::{map, map_res, opt},
     multi::{many0, many1, separated_list0, separated_list1},
     sequence::{delimited, pair, preceded, tuple},
 };
 
 use crate::{
-    instruction::{Convert, GateSpecification, GateType, Include, PragmaArgument},
+    instruction::{Convert, GateSpecification, GateType, Include, PauliSum, PragmaArgument},
     parser::common::parse_variable_qubit,
 };
 
@@ -40,11 +40,11 @@ use super::{
     common::{
         parse_arithmetic_operand, parse_binary_logic_operand, parse_comparison_operand,
         parse_frame_attribute, parse_frame_identifier, parse_gate_modifier, parse_matrix,
-        parse_memory_reference, parse_pauli_sum, parse_permutation, parse_qubit, parse_sharing,
+        parse_memory_reference, parse_pauli_terms, parse_permutation, parse_qubit, parse_sharing,
         parse_vector, parse_waveform_invocation, parse_waveform_name,
     },
     expression::parse_expression,
-    ParserInput,
+    InternalParseError, ParserErrorKind, ParserInput,
 };
 
 /// Parse an arithmetic instruction of the form `destination source`.
@@ -248,20 +248,33 @@ pub(crate) fn parse_defgate<'a>(input: ParserInput<'a>) -> InternalParserResult<
         separated_list1(token!(Comma), token!(Variable(v))),
         token!(RParenthesis),
     ))(input)?;
+    let (input, arguments) = opt(many0(token!(Identifier(v))))(input)?;
+    dbg!("input", &input);
     let (input, gate_type) = opt(preceded(
         token!(As),
         alt((
             map(token!(Matrix), |()| GateType::Matrix),
             map(token!(Permutation), |()| GateType::Permutation),
+            map(token!(PauliSum), |()| GateType::PauliSum),
         )),
     ))(input)?;
+
     let (input, _) = token!(Colon)(input)?;
 
     let gate_type = gate_type.unwrap_or(GateType::Matrix);
     let (input, specification) = match gate_type {
         GateType::Matrix => map(parse_matrix, GateSpecification::Matrix)(input)?,
         GateType::Permutation => map(parse_permutation, GateSpecification::Permutation)(input)?,
-        GateType::PauliSum => map(parse_pauli_sum, GateSpecification::PauliSum)(input)?,
+        GateType::PauliSum => map_res(parse_pauli_terms, |terms| {
+            let arguments = arguments.clone().ok_or(InternalParseError::from_kind(
+                input,
+                ParserErrorKind::ExpectedCharacter {
+                    actual: "no args".to_string(),
+                    expected: "args".to_string(),
+                },
+            ))?;
+            Ok(GateSpecification::PauliSum(PauliSum { arguments, terms }))
+        })(input)?,
     };
 
     Ok((
@@ -568,7 +581,10 @@ mod tests {
         Expression, ExpressionFunction, FunctionCallExpression, InfixExpression, InfixOperator,
         PrefixExpression, PrefixOperator,
     };
-    use crate::instruction::{GateDefinition, GateSpecification, Offset, PragmaArgument, Sharing};
+    use crate::instruction::{
+        GateDefinition, GateSpecification, Offset, PauliGate, PauliSum, PauliTerm, PragmaArgument,
+        Sharing,
+    };
     use crate::parser::lexer::lex;
     use crate::{imag, real};
     use crate::{
@@ -933,6 +949,54 @@ mod tests {
             name: "CCNOT".to_string(),
             parameters: vec![],
             specification: GateSpecification::Permutation(vec![0, 1, 2, 3, 4, 5, 7, 6]),
+        })
+    );
+
+    make_test!(
+        defgate_pauli_sum,
+        parse_defgate,
+        r#"PauliSumGate(%theta) p q AS PAULI-SUM:
+    ZZ((-%theta)/4) p q
+    Y(%theta/4) p
+    X(%theta/4) q"#,
+        Instruction::GateDefinition(GateDefinition {
+            name: "PauliSumGate".to_string(),
+            parameters: vec!["theta".to_string()],
+            specification: GateSpecification::PauliSum(PauliSum {
+                arguments: vec!["p".to_string(), "q".to_string()],
+                terms: vec![
+                    PauliTerm {
+                        word: vec![PauliGate::Z, PauliGate::Z],
+                        expression: Expression::Infix(InfixExpression {
+                            left: Box::new(Expression::Prefix(PrefixExpression {
+                                operator: PrefixOperator::Minus,
+                                expression: Box::new(Expression::Variable("theta".to_string()))
+                            })),
+                            operator: InfixOperator::Slash,
+                            right: Box::new(Expression::Number(real!(4.0)))
+                        }),
+                        arguments: vec!["p".to_string(), "q".to_string()],
+                    },
+                    PauliTerm {
+                        word: vec![PauliGate::Y],
+                        expression: Expression::Infix(InfixExpression {
+                            left: Box::new(Expression::Variable("theta".to_string())),
+                            operator: InfixOperator::Slash,
+                            right: Box::new(Expression::Number(real!(4.0)))
+                        }),
+                        arguments: vec!["p".to_string()],
+                    },
+                    PauliTerm {
+                        word: vec![PauliGate::X],
+                        expression: Expression::Infix(InfixExpression {
+                            left: Box::new(Expression::Variable("theta".to_string())),
+                            operator: InfixOperator::Slash,
+                            right: Box::new(Expression::Number(real!(4.0)))
+                        }),
+                        arguments: vec!["q".to_string()],
+                    },
+                ]
+            })
         })
     );
 }

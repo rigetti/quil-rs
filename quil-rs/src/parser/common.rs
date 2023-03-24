@@ -26,8 +26,8 @@ use crate::{
     expression::Expression,
     instruction::{
         ArithmeticOperand, AttributeValue, BinaryOperand, ComparisonOperand, FrameIdentifier,
-        GateModifier, MemoryReference, Offset, PauliGate, PauliSum, PauliTerm, Qubit, ScalarType,
-        Sharing, ValidationError, Vector, WaveformInvocation,
+        GateModifier, MemoryReference, Offset, PauliGate, PauliTerm, Qubit, ScalarType, Sharing,
+        ValidationError, Vector, WaveformInvocation,
     },
     parser::lexer::Operator,
     token,
@@ -237,16 +237,15 @@ pub(crate) fn parse_pauli_term<'a>(input: ParserInput<'a>) -> InternalParserResu
 }
 
 /// Parse Pauli sum representation of a `DEFGATE` specification.
-pub(crate) fn parse_pauli_sum<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, PauliSum> {
-    map(
-        preceded(
+pub(crate) fn parse_pauli_terms<'a>(
+    input: ParserInput<'a>,
+) -> InternalParserResult<'a, Vec<PauliTerm>> {
+    preceded(
+        token!(NewLine),
+        separated_list1(
             token!(NewLine),
-            separated_list1(
-                token!(NewLine),
-                preceded(token!(Indentation), parse_pauli_term),
-            ),
+            preceded(token!(Indentation), parse_pauli_term),
         ),
-        PauliSum,
     )(input)
 }
 
@@ -463,14 +462,14 @@ mod tests {
         expression::{
             Expression, InfixExpression, InfixOperator, PrefixExpression, PrefixOperator,
         },
-        instruction::{MemoryReference, PauliGate, PauliSum, PauliTerm},
+        instruction::{MemoryReference, PauliGate, PauliTerm},
         parser::lex,
         real,
     };
 
     use nom_locate::LocatedSpan;
 
-    use super::{parse_matrix, parse_pauli_sum, parse_permutation, parse_waveform_invocation};
+    use super::{parse_matrix, parse_pauli_terms, parse_permutation, parse_waveform_invocation};
 
     #[test]
     fn waveform_invocation() {
@@ -530,13 +529,13 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_pauli_sum() {
+    fn test_parse_pauli_terms() {
         let input = LocatedSpan::new("\n\tZZ((-%theta)/4) p q\n\tY(%theta/4) p\n\tX(%theta/4) q");
         let lexed = lex(input).unwrap();
-        let (remainder, pauli_sum) = parse_pauli_sum(&lexed).unwrap();
+        let (remainder, pauli_terms) = parse_pauli_terms(&lexed).unwrap();
         assert!(remainder.is_empty());
 
-        let expected_pauli_sum = PauliSum(vec![
+        let expected_pauli_terms = vec![
             PauliTerm {
                 word: vec![PauliGate::Z, PauliGate::Z],
                 expression: Expression::Infix(InfixExpression {
@@ -567,13 +566,14 @@ mod tests {
                 }),
                 arguments: vec!["q".to_string()],
             },
-        ]);
-        assert_eq!(pauli_sum, expected_pauli_sum);
+        ];
+
+        assert_eq!(pauli_terms, expected_pauli_terms);
 
         let input = LocatedSpan::new("\n\tZZ((-%theta)/4) p\n");
         let lexed = lex(input).unwrap();
         assert!(
-            parse_pauli_sum(&lexed).is_err(),
+            parse_pauli_terms(&lexed).is_err(),
             "length of pauli word must match number of arguments"
         )
     }
