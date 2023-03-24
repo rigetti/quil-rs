@@ -226,7 +226,7 @@ impl RenderSettings {
         let last = circuit
             .last_key_value()
             .map(|wire| wire.0 - 1)
-            .expect("previously checked that circuit has at least two wires")
+            .expect("previously checked that circuit has at least two wires");
 
         // search through the range of qubits
         for qubit in first..=last {
@@ -327,7 +327,6 @@ impl Diagram {
                         .map(|wire| wire.empty.insert(self.column, Command::Qw));
                 });
         }
-
     }
 
     /// Utility function to insert modifiers of wires in this Circuit at the
