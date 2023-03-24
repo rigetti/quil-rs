@@ -480,7 +480,7 @@ class PauliGate(Enum):
     @staticmethod
     def parse(word: str) -> "PauliGate":
         """
-        Parses a ``PauliWord`` from a string. Raises a ``ParseEnumError`` if the
+        Parses a ``PauliGate`` from a string. Raises a ``ParseEnumError`` if the
         string isn't a valid Pauli word.
         """
         ...

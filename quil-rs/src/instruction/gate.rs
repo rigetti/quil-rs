@@ -270,9 +270,9 @@ impl fmt::Display for GateDefinition {
                 for arg in sum.get_arguments() {
                     write!(f, " {arg}")?;
                 }
-                writeln!(f, " AS PAULI-SUM:")?;
-            )?,
-        };
+                writeln!(f, " AS PAULI-SUM:")?
+            }
+        }
         write!(f, "{}", self.specification)
     }
 }
