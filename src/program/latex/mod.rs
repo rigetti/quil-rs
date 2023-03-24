@@ -22,6 +22,9 @@
 //!
 //! [`Quantikz`]: https://arxiv.org/pdf/1809.03842.pdf
 
+mod circuit;
+mod diagram;
+
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fmt::Display;
 use std::str::FromStr;
@@ -29,6 +32,14 @@ use std::str::FromStr;
 use crate::expression::Expression;
 use crate::instruction::{Gate, GateModifier, Instruction, Qubit};
 use crate::Program;
+
+use self::circuit::Circuit;
+
+// Overall intent:
+// Iterate program gates -> LatexCircuit. This represents the program in a representation
+// that can infallibly produce a valid diagram.
+// Then Circuit -> Diagram
+
 
 /// Available commands used for building circuits with the same names taken
 /// from the Quantikz documentation for easy reference. LaTeX string denoted
@@ -58,6 +69,7 @@ enum Command {
     Targ,
 }
 
+// For Ryan: this should be std::fmt::Display
 impl ToString for Command {
     fn to_string(&self) -> String {
         match self {
@@ -786,57 +798,13 @@ impl ToLatex for Program {
     /// let program = Program::from_str("CONTROLLED CNOT 2 1 0").expect("");
     /// let latex = program.to_latex(RenderSettings::default()).expect("");
     /// ```
+    /// 
+    /// Ryan: this should take &self, no need for latex generation to consume a program
+    ///  esp if it fails to render
     fn to_latex(self, settings: RenderSettings) -> Result<String, LatexGenError> {
-        // get a reference to the current program
-        let instructions = self.to_instructions(false);
-
-        // initialize a new diagram
-        let mut diagram = Diagram {
-            settings,
-            ..Default::default()
-        };
-
-        // initialize circuit with empty wires of all qubits in program
-        let qubits = Program::get_used_qubits(&self);
-        for qubit in &qubits {
-            if let Qubit::Fixed(name) = qubit {
-                let wire = Wire {
-                    ..Default::default()
-                };
-                diagram.circuit.insert(*name, Box::new(wire));
-            }
-        }
-
-        // are implicit qubits required in settings and are there at least two or more qubits in the diagram?
-        if diagram.settings.impute_missing_qubits {
-            // add implicit qubits to circuit
-            RenderSettings::impute_missing_qubits(instructions.len() as u32, &mut diagram.circuit);
-        }
-
-        for instruction in instructions {
-            // set QW for any unused qubits in this instruction
-            diagram.set_empty(&qubits, &instruction);
-
-            // parse gate instructions into a new circuit
-            if let Instruction::Gate(gate) = instruction {
-                diagram.parse_gate(&gate)?;
-                diagram.locate_targ()?;
-                diagram.column += 1;
-            } else if let Instruction::GateDefinition(_) = instruction {
-                // GateDefinition is supported and parsed in Gate
-            } else {
-                return Err(LatexGenError::UnsupportedInstruction {
-                    instruction: instruction.to_string(),
-                });
-            }
-        }
-
-        let body = diagram.to_string();
-        let document = Document {
-            body,
-            ..Default::default()
-        };
-        Ok(document.to_string())
+        let circuit = Circuit::try_from_program(&self, settings).unwrap(); // TODO
+        let diagram = diagram::Diagram::from(circuit);
+        Ok(diagram.to_string())
     }
 }
 
