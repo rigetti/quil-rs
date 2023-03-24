@@ -333,7 +333,11 @@ impl Eq for MemoryReference {}
 
 impl fmt::Display for MemoryReference {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}[{}]", self.name, self.index)
+        if self.index == 0 {
+            write!(f, "{}", self.name)
+        } else {
+            write!(f, "{}[{}]", self.name, self.index)
+        }
     }
 }
 
