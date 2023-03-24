@@ -20,7 +20,9 @@ use nom::{
 };
 
 use crate::{
-    instruction::{Convert, GateSpecification, GateType, Include, PauliSum, PragmaArgument},
+    instruction::{
+        Convert, GateSpecification, GateType, Include, PauliSum, PragmaArgument, ValidationError,
+    },
     parser::common::parse_variable_qubit,
 };
 
@@ -248,7 +250,7 @@ pub(crate) fn parse_defgate<'a>(input: ParserInput<'a>) -> InternalParserResult<
         separated_list1(token!(Comma), token!(Variable(v))),
         token!(RParenthesis),
     ))(input)?;
-    let (input, arguments) = opt(many0(token!(Identifier(v))))(input)?;
+    let (input, mut arguments) = opt(many0(token!(Identifier(v))))(input)?;
     dbg!("input", &input);
     let (input, gate_type) = opt(preceded(
         token!(As),
@@ -266,14 +268,11 @@ pub(crate) fn parse_defgate<'a>(input: ParserInput<'a>) -> InternalParserResult<
         GateType::Matrix => map(parse_matrix, GateSpecification::Matrix)(input)?,
         GateType::Permutation => map(parse_permutation, GateSpecification::Permutation)(input)?,
         GateType::PauliSum => map_res(parse_pauli_terms, |terms| {
-            let arguments = arguments.clone().ok_or(InternalParseError::from_kind(
-                input,
-                ParserErrorKind::ExpectedCharacter {
-                    actual: "no args".to_string(),
-                    expected: "args".to_string(),
-                },
-            ))?;
-            Ok(GateSpecification::PauliSum(PauliSum { arguments, terms }))
+            Ok(GateSpecification::PauliSum(
+                PauliSum::new(arguments.take().unwrap_or_default(), terms)
+                    .map_err(ValidationError::from)
+                    .map_err(|e| InternalParseError::from_kind(input, ParserErrorKind::from(e)))?,
+            ))
         })(input)?,
     };
 

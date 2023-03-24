@@ -179,10 +179,11 @@ impl_repr!(PyPauliSum);
 impl PyPauliSum {
     #[new]
     pub fn new(py: Python<'_>, arguments: Vec<String>, terms: Vec<PyPauliTerm>) -> PyResult<Self> {
-        Ok(Self(PauliSum::new(
-            arguments,
-            Vec::<PauliTerm>::py_try_from(py, &terms)?,
-        )))
+        Ok(Self(
+            PauliSum::new(arguments, Vec::<PauliTerm>::py_try_from(py, &terms)?)
+                .map_err(RustGateError::from)
+                .map_err(RustGateError::to_py_err)?,
+        ))
     }
 
     pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {

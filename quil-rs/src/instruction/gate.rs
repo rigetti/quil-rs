@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{collections::HashSet, fmt};
 
 use crate::{
     expression::Expression,
@@ -43,6 +43,12 @@ pub enum GateError {
 
     #[error("expected the number of Pauli term arguments, {actual}, to match the length of the Pauli word, {expected}")]
     PauliTermArgumentLength { expected: usize, actual: usize },
+
+    #[error("the Pauli term arguments {mismatches:?}, are not in the defined argument list: {expected_arguments:?}")]
+    PauliSumArgumentMismatch {
+        mismatches: Vec<String>,
+        expected_arguments: Vec<String>,
+    },
 }
 
 impl Gate {
@@ -175,8 +181,20 @@ pub struct PauliSum {
 }
 
 impl PauliSum {
-    pub fn new(arguments: Vec<String>, terms: Vec<PauliTerm>) -> Self {
-        Self { arguments, terms }
+    pub fn new(arguments: Vec<String>, terms: Vec<PauliTerm>) -> Result<Self, GateError> {
+        let term_arguments =
+            HashSet::<String>::from_iter(terms.iter().flat_map(|t| t.arguments.clone()));
+        let argument_set = HashSet::from_iter(arguments.clone().into_iter());
+        let diff: Vec<&String> = term_arguments.difference(&argument_set).collect();
+
+        if !diff.is_empty() {
+            return Err(GateError::PauliSumArgumentMismatch {
+                expected_arguments: arguments,
+                mismatches: diff.into_iter().cloned().collect(),
+            });
+        }
+
+        Ok(Self { arguments, terms })
     }
 }
 
