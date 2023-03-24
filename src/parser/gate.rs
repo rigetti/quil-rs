@@ -14,7 +14,7 @@
 
 use nom::{combinator::opt, multi::many0, multi::separated_list0, sequence::delimited};
 
-use crate::{instruction::Instruction, token};
+use crate::token;
 
 use super::{
     common::{self, parse_gate_modifier},
@@ -25,7 +25,7 @@ use crate::instruction::Gate;
 use crate::parser::InternalParserResult;
 
 /// Parse a gate instruction.
-pub(crate) fn parse_gate<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Instruction> {
+pub(crate) fn parse_gate<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Gate> {
     let (input, modifiers) = many0(parse_gate_modifier)(input)?;
     let (input, name) = token!(Identifier(v))(input)?;
     let (input, parameters) = opt(delimited(
@@ -37,12 +37,12 @@ pub(crate) fn parse_gate<'a>(input: ParserInput<'a>) -> InternalParserResult<'a,
     let (input, qubits) = many0(common::parse_qubit)(input)?;
     Ok((
         input,
-        Instruction::Gate(Gate {
+        Gate {
             name,
             parameters,
             qubits,
             modifiers,
-        }),
+        },
     ))
 }
 
@@ -58,11 +58,11 @@ mod test {
         test_modifiers,
         parse_gate,
         "DAGGER CONTROLLED RX(pi) 0 1",
-        Instruction::Gate(Gate {
+        Gate {
             name: "RX".to_string(),
             parameters: vec![Expression::PiConstant],
             qubits: vec![Qubit::Fixed(0), Qubit::Fixed(1)],
             modifiers: vec![GateModifier::Dagger, GateModifier::Controlled],
-        })
+        }
     );
 }

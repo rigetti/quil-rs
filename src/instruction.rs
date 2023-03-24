@@ -20,6 +20,7 @@ use std::str::FromStr;
 use std::{collections::HashMap, fmt};
 
 use crate::expression::Expression;
+use crate::parser::gate::parse_gate;
 use crate::parser::{common::parse_memory_reference, lex, ParseError};
 use crate::program::{disallow_leftover, frame::FrameMatchCondition, SyntaxError};
 
@@ -359,6 +360,35 @@ pub struct Gate {
     pub parameters: Vec<Expression>,
     pub qubits: Vec<Qubit>,
     pub modifiers: Vec<GateModifier>,
+}
+
+impl std::fmt::Display for Gate {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let parameter_str = get_expression_parameter_string(&self.parameters);
+
+        let qubit_str = format_qubits(&self.qubits);
+        let modifier_str = self
+            .modifiers
+            .iter()
+            .map(|m| format!("{} ", m))
+            .collect::<Vec<String>>()
+            .join("");
+        write!(
+            f,
+            "{}{}{} {}",
+            modifier_str, self.name, parameter_str, qubit_str
+        )
+    }
+}
+
+impl FromStr for Gate {
+    type Err = SyntaxError<Self>;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let input = LocatedSpan::new(s);
+        let tokens = lex(input)?;
+        disallow_leftover(parse_gate(&tokens).map_err(ParseError::from_nom_internal_err))
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -837,21 +867,8 @@ impl fmt::Display for Instruction {
                     .map(|(k, v)| format!("\n\t{}: {}", k, v))
                     .collect::<String>()
             ),
-            Instruction::Gate(Gate {
-                name,
-                parameters,
-                qubits,
-                modifiers,
-            }) => {
-                let parameter_str = get_expression_parameter_string(parameters);
-
-                let qubit_str = format_qubits(qubits);
-                let modifier_str = modifiers
-                    .iter()
-                    .map(|m| format!("{} ", m))
-                    .collect::<Vec<String>>()
-                    .join("");
-                write!(f, "{}{}{} {}", modifier_str, name, parameter_str, qubit_str)
+            Instruction::Gate(gate) => {
+                write!(f, "{gate}")
             }
             Instruction::GateDefinition(GateDefinition {
                 name,

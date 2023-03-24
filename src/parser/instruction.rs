@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use nom::{
-    combinator::all_consuming,
+    combinator::{all_consuming, map},
     multi::{many0, many1},
     sequence::{delimited, preceded},
 };
@@ -111,7 +111,7 @@ pub(crate) fn parse_instruction(input: ParserInput) -> InternalParserResult<Inst
             },
             _ => todo!(),
         },
-        Some((Token::Identifier(_), _)) | Some((Token::Modifier(_), _)) => gate::parse_gate(input),
+        Some((Token::Identifier(_), _)) | Some((Token::Modifier(_), _)) => map(gate::parse_gate, Instruction::Gate)(input),
         Some((_, _)) => Err(nom::Err::Failure(InternalParseError::from_kind(
             &input[..1],
             ParserErrorKind::NotACommandOrGate,

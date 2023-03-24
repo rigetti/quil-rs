@@ -19,7 +19,7 @@ pub(crate) use instruction::parse_instructions;
 pub(crate) use lexer::lex;
 
 mod command;
-mod gate;
+pub(crate) mod gate;
 mod macros;
 
 pub(crate) mod common;
