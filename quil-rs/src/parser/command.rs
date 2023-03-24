@@ -251,7 +251,6 @@ pub(crate) fn parse_defgate<'a>(input: ParserInput<'a>) -> InternalParserResult<
         token!(RParenthesis),
     ))(input)?;
     let (input, mut arguments) = opt(many0(token!(Identifier(v))))(input)?;
-    dbg!("input", &input);
     let (input, gate_type) = opt(preceded(
         token!(As),
         alt((
