@@ -27,7 +27,7 @@ use crate::{
     instruction::{
         ArithmeticOperand, AttributeValue, BinaryOperand, ComparisonOperand, FrameIdentifier,
         GateModifier, MemoryReference, Offset, PauliGate, PauliTerm, Qubit, ScalarType, Sharing,
-        ValidationError, Vector, WaveformInvocation,
+        Vector, WaveformInvocation,
     },
     parser::lexer::Operator,
     token,
@@ -229,9 +229,20 @@ pub(crate) fn parse_pauli_term<'a>(input: ParserInput<'a>) -> InternalParserResu
             many1(token!(Identifier(i))),
         )),
         |(word, expression, arguments)| {
-            PauliTerm::new(word, expression, arguments)
-                .map_err(ValidationError::from)
-                .map_err(|e| InternalParseError::from_kind(input, ParserErrorKind::InvalidQuil(e)))
+            if word.len() != arguments.len() {
+                Err(InternalParseError::from_kind(
+                    input,
+                    ParserErrorKind::PauliTermArgumentMismatch {
+                        word_length: word.len(),
+                        num_args: arguments.len(),
+                    },
+                ))
+            } else {
+                Ok(PauliTerm::new(
+                    word.into_iter().zip(arguments).collect(),
+                    expression,
+                ))
+            }
         },
     )(input)
 }
@@ -537,7 +548,10 @@ mod tests {
 
         let expected_pauli_terms = vec![
             PauliTerm {
-                word: vec![PauliGate::Z, PauliGate::Z],
+                arguments: vec![
+                    (PauliGate::Z, "p".to_string()),
+                    (PauliGate::Z, "q".to_string()),
+                ],
                 expression: Expression::Infix(InfixExpression {
                     left: Box::new(Expression::Prefix(PrefixExpression {
                         operator: PrefixOperator::Minus,
@@ -546,25 +560,22 @@ mod tests {
                     operator: InfixOperator::Slash,
                     right: Box::new(Expression::Number(real!(4.0))),
                 }),
-                arguments: vec!["p".to_string(), "q".to_string()],
             },
             PauliTerm {
-                word: vec![PauliGate::Y],
+                arguments: vec![(PauliGate::Y, "p".to_string())],
                 expression: Expression::Infix(InfixExpression {
                     left: Box::new(Expression::Variable("theta".to_string())),
                     operator: InfixOperator::Slash,
                     right: Box::new(Expression::Number(real!(4.0))),
                 }),
-                arguments: vec!["p".to_string()],
             },
             PauliTerm {
-                word: vec![PauliGate::X],
+                arguments: vec![(PauliGate::X, "q".to_string())],
                 expression: Expression::Infix(InfixExpression {
                     left: Box::new(Expression::Variable("theta".to_string())),
                     operator: InfixOperator::Slash,
                     right: Box::new(Expression::Number(real!(4.0))),
                 }),
-                arguments: vec!["q".to_string()],
             },
         ];
 

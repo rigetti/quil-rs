@@ -964,7 +964,10 @@ mod tests {
                 arguments: vec!["p".to_string(), "q".to_string()],
                 terms: vec![
                     PauliTerm {
-                        word: vec![PauliGate::Z, PauliGate::Z],
+                        arguments: vec![
+                            (PauliGate::Z, "p".to_string()),
+                            (PauliGate::Z, "q".to_string())
+                        ],
                         expression: Expression::Infix(InfixExpression {
                             left: Box::new(Expression::Prefix(PrefixExpression {
                                 operator: PrefixOperator::Minus,
@@ -973,25 +976,22 @@ mod tests {
                             operator: InfixOperator::Slash,
                             right: Box::new(Expression::Number(real!(4.0)))
                         }),
-                        arguments: vec!["p".to_string(), "q".to_string()],
                     },
                     PauliTerm {
-                        word: vec![PauliGate::Y],
+                        arguments: vec![(PauliGate::Y, "p".to_string())],
                         expression: Expression::Infix(InfixExpression {
                             left: Box::new(Expression::Variable("theta".to_string())),
                             operator: InfixOperator::Slash,
                             right: Box::new(Expression::Number(real!(4.0)))
                         }),
-                        arguments: vec!["p".to_string()],
                     },
                     PauliTerm {
-                        word: vec![PauliGate::X],
+                        arguments: vec![(PauliGate::X, "q".to_string())],
                         expression: Expression::Infix(InfixExpression {
                             left: Box::new(Expression::Variable("theta".to_string())),
                             operator: InfixOperator::Slash,
                             right: Box::new(Expression::Number(real!(4.0)))
                         }),
-                        arguments: vec!["q".to_string()],
                     },
                 ]
             })

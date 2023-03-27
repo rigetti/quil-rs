@@ -69,4 +69,9 @@ pub enum ParserErrorKind {
 
     #[error("invalid quil: {0}")]
     InvalidQuil(#[from] crate::instruction::ValidationError),
+
+    #[error(
+        "expected a Pauli term with a word length of {word_length} to match the number of arguments, {num_args}"
+    )]
+    PauliTermArgumentMismatch { word_length: usize, num_args: usize },
 }

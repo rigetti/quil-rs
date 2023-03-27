@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Dict, List, Optional, Union, final
+from typing import Dict, List, Optional, Tuple, Union, final
 
 from quil.expression import Expression
 
@@ -488,20 +488,18 @@ class PauliGate(Enum):
 class PauliTerm:
     @staticmethod
     def __new__(
-        cls, word: List[PauliGate], expression: Expression, arguments: List[str]
+        cls,
+        arguments: List[Tuple[PauliGate, str]],
+        expression: Expression,
     ) -> "PauliTerm": ...
     @property
-    def word(self) -> List[PauliGate]: ...
-    @word.setter
-    def word(self, word: List[PauliGate]): ...
+    def arguments(self) -> List[Tuple[PauliGate, str]]: ...
+    @arguments.setter
+    def arguments(self, word: List[Tuple[PauliGate, str]]): ...
     @property
     def expression(self) -> Expression: ...
     @expression.setter
     def expression(self, expression: Expression): ...
-    @property
-    def arguments(self) -> List[str]: ...
-    @arguments.setter
-    def arguments(self, arguments: List[str]): ...
 
 class PauliSum:
     @staticmethod

@@ -148,28 +148,15 @@ pub enum PauliGate {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PauliTerm {
-    pub word: Vec<PauliGate>,
+    pub arguments: Vec<(PauliGate, String)>,
     pub expression: Expression,
-    pub arguments: Vec<String>,
 }
 
 impl PauliTerm {
-    pub fn new(
-        word: Vec<PauliGate>,
-        expression: Expression,
-        arguments: Vec<String>,
-    ) -> Result<Self, GateError> {
-        if word.len() != arguments.len() {
-            Err(GateError::PauliTermArgumentLength {
-                expected: word.len(),
-                actual: arguments.len(),
-            })
-        } else {
-            Ok(Self {
-                word,
-                expression,
-                arguments,
-            })
+    pub fn new(arguments: Vec<(PauliGate, String)>, expression: Expression) -> Self {
+        Self {
+            arguments,
+            expression,
         }
     }
 }
@@ -182,8 +169,11 @@ pub struct PauliSum {
 
 impl PauliSum {
     pub fn new(arguments: Vec<String>, terms: Vec<PauliTerm>) -> Result<Self, GateError> {
-        let term_arguments =
-            HashSet::<String>::from_iter(terms.iter().flat_map(|t| t.arguments.clone()));
+        let term_arguments = HashSet::<String>::from_iter(
+            terms
+                .iter()
+                .flat_map(|t| t.arguments.clone().into_iter().map(|(_, arg)| arg)),
+        );
         let argument_set = HashSet::from_iter(arguments.clone().into_iter());
         let diff: Vec<&String> = term_arguments.difference(&argument_set).collect();
 
@@ -238,11 +228,11 @@ impl fmt::Display for GateSpecification {
             GateSpecification::PauliSum(pauli_sum) => {
                 for term in &pauli_sum.terms {
                     write!(f, "\t")?;
-                    for word in term.word.iter() {
+                    for (word, _) in term.arguments.iter() {
                         write!(f, "{word}")?;
                     }
                     write!(f, "{}", term.expression)?;
-                    for argument in term.arguments.iter() {
+                    for (_, argument) in term.arguments.iter() {
                         write!(f, " {argument}")?;
                     }
                     writeln!(f)?;
@@ -381,7 +371,7 @@ mod test_gate_definition {
             parameters: vec!["theta".to_string()],
             specification: GateSpecification::PauliSum(PauliSum{arguments: vec!["p".to_string(), "q".to_string()], terms: vec![
                 PauliTerm {
-                    word: vec![PauliGate::Z, PauliGate::Z],
+                    arguments: vec![(PauliGate::Z, "p".to_string()), (PauliGate::Z, "q".to_string())],
                     expression: Expression::Infix(InfixExpression {
                         left: Box::new(Expression::Prefix(PrefixExpression {
                             operator: PrefixOperator::Minus,
@@ -390,25 +380,22 @@ mod test_gate_definition {
                         operator: InfixOperator::Slash,
                         right: Box::new(Expression::Number(real!(4.0)))
                     }),
-                    arguments: vec!["p".to_string(), "q".to_string()],
                 },
                 PauliTerm {
-                    word: vec![PauliGate::Y],
+                    arguments: vec![(PauliGate::Y, "p".to_string())],
                     expression: Expression::Infix(InfixExpression {
                         left: Box::new(Expression::Variable("theta".to_string())),
                         operator: InfixOperator::Slash,
                         right: Box::new(Expression::Number(real!(4.0)))
                     }),
-                    arguments: vec!["p".to_string()],
                 },
                 PauliTerm {
-                    word: vec![PauliGate::X],
+                    arguments: vec![(PauliGate::X, "q".to_string())],
                     expression: Expression::Infix(InfixExpression {
                         left: Box::new(Expression::Variable("theta".to_string())),
                         operator: InfixOperator::Slash,
                         right: Box::new(Expression::Number(real!(4.0)))
                     }),
-                    arguments: vec!["q".to_string()],
                 },
             ]})
         }
