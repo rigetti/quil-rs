@@ -149,7 +149,7 @@ impl PyPauliPair {
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
     #[pyo3(subclass)]
-PyPauliTerm(PauliTerm) as "PauliTerm" {
+    PyPauliTerm(PauliTerm) as "PauliTerm" {
         arguments: Vec<(PauliGate, String)> => Vec<PyPauliPair>,
         expression: Expression => PyExpression
     }
