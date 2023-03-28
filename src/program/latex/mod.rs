@@ -37,89 +37,69 @@ use crate::Program;
 ///
 ///   Single wire commands: lstick, gate, phase, super, qw, nr
 ///   Multi-wire commands: ctrl, targ
-#[derive(Clone, Debug)]
-enum Command {
-    /// `\lstick{\ket{q_{u32}}}`: Make a qubit "stick out" from the left.
-    Lstick(String),
-    /// `\gate{name}`: Make a gate on the wire.
+#[derive(Clone, Debug, derive_more::Display)]
+enum RenderCommand {
+    /// Make a qubit "stick out" from the left.
+    #[display(fmt = "\\lstick{{\\ket{{q_{{{_0}}}}}}}")]
+    Lstick(u64),
+    /// Make a gate on the wire.
+    #[display(fmt = "\\gate{{{_0}}}")]
     Gate(String),
-    /// `\phase{symbol}`: Make a phase on the wire with a rotation
-    Phase(String),
-    /// `^{\script}`: Add a superscript to a gate
+    /// Make a phase on the wire with a rotation
+    #[display(fmt = "\\phase{{{_0}}}")]
+    Phase(Parameter),
+    /// Add a superscript to a gate
+    #[display(fmt = "^{{\\{_0}}}")]
     Super(String),
-    /// `\qw`: Connect the current cell to the previous cell i.e. "do nothing".
+    /// Connect the current cell to the previous cell i.e. "do nothing".
+    #[display(fmt = "\\qw")]
     Qw,
-    /// `\\`: Start a new row
+    /// Start a new row
+    #[display(fmt = "\\\\")]
     Nr,
-    /// `\ctrl{wire}`: Make a control qubit--different from Control.
-    Ctrl(String),
-    /// `\targ{}`: Make a controlled-not gate.
+    /// Make a control qubit--different from Control.
+    #[display(fmt = "\\ctrl{{{_0}}}")]
+    Ctrl(i64),
+    /// Make a controlled-not gate.
+    #[display(fmt = "\\targ{{}}")]
     Targ,
 }
 
-impl ToString for Command {
-    fn to_string(&self) -> String {
-        match self {
-            Self::Lstick(wire) => format!(r#"\lstick{{\ket{{q_{{{wire}}}}}}}"#),
-            Self::Gate(name) => format!(r#"\gate{{{name}}}"#),
-            Self::Phase(symbol) => format!(r#"\phase{{{symbol}}}"#),
-            Self::Super(script) => format!(r#"^{{\{script}}}"#),
-            Self::Qw => r"\qw".to_string(),
-            Self::Nr => r"\\".to_string(),
-            Self::Ctrl(wire) => format!(r#"\ctrl{{{wire}}}"#),
-            Self::Targ => r"\targ{}".to_string(),
-        }
-    }
-}
-
 /// Types of parameters passed to commands.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, derive_more::Display)]
 enum Parameter {
     /// Symbolic parameters
+    #[display(fmt = "{_0}")]
     Symbol(Symbol),
 }
 
-impl ToString for Parameter {
-    fn to_string(&self) -> String {
-        match self {
-            Parameter::Symbol(symbol) => Symbol::to_string(symbol),
-        }
-    }
-}
-
 /// Supported Greek and alphanumeric symbols.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, derive_more::Display)]
 enum Symbol {
+    #[display(fmt = "\\alpha")]
     Alpha,
+    #[display(fmt = "\\beta")]
     Beta,
+    #[display(fmt = "\\gamma")]
     Gamma,
+    #[display(fmt = "\\phi")]
     Phi,
+    #[display(fmt = "\\pi")]
     Pi,
+    #[display(fmt = "\\text{{{_0}}}")]
     Text(String),
 }
 
-impl ToString for Symbol {
-    fn to_string(&self) -> String {
-        match self {
-            Symbol::Alpha => r"\alpha".to_string(),
-            Symbol::Beta => r"\beta".to_string(),
-            Symbol::Gamma => r"\gamma".to_string(),
-            Symbol::Phi => r"\phi".to_string(),
-            Symbol::Pi => r"\pi".to_string(),
-            Symbol::Text(text) => format!(r#"\text{{{text}}}"#),
-        }
-    }
-}
-
-impl From<String> for Symbol {
-    fn from(text: String) -> Self {
-        match text.as_str() {
-            "alpha" => Symbol::Alpha,
-            "beta" => Symbol::Beta,
-            "gamma" => Symbol::Gamma,
-            "phi" => Symbol::Phi,
-            "pi" => Symbol::Pi,
-            _ => Symbol::Text(text),
+impl FromStr for Symbol {
+    type Err = std::convert::Infallible;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "alpha" => Ok(Self::Alpha),
+            "beta" => Ok(Self::Beta),
+            "gamma" => Ok(Self::Gamma),
+            "phi" => Ok(Self::Phi),
+            "pi" => Ok(Self::Pi),
+            _ => Ok(Self::Text(s.to_string())),
         }
     }
 }
@@ -139,9 +119,12 @@ enum CanonicalGate {
     None,
 }
 
-impl From<String> for CanonicalGate {
-    fn from(gate_name: String) -> Self {
-        match gate_name.as_str() {
+impl<S> From<S> for CanonicalGate
+where
+    S: AsRef<str>,
+{
+    fn from(gate_name: S) -> Self {
+        match gate_name.as_ref() {
             "CNOT" => CanonicalGate::Cnot(String::from("CONTROLLED X")),
             "CCNOT" => CanonicalGate::Ccnot(String::from("CONTROLLED CONTROLLED X")),
             "CPHASE" => CanonicalGate::Cphase(String::from("CONTROLLED PHASE")),
@@ -237,7 +220,7 @@ impl RenderSettings {
 
                 // insert empties based on total number of columns
                 for c in 0..=last_column {
-                    wire.empty.insert(c, Command::Qw);
+                    wire.empty.insert(c, RenderCommand::Qw);
                 }
 
                 Box::new(wire)
@@ -321,7 +304,7 @@ impl Diagram {
                 .for_each(|index| {
                     self.circuit
                         .get_mut(index)
-                        .map(|wire| wire.empty.insert(self.column, Command::Qw));
+                        .map(|wire| wire.empty.insert(self.column, RenderCommand::Qw));
                 });
         }
     }
@@ -476,10 +459,10 @@ impl Display for Diagram {
             // are labels on in settings?
             if self.settings.label_qubit_lines {
                 // add label to left side of wire
-                write!(f, "{}", Command::Lstick(key.to_string()).to_string())?;
+                write!(f, "{}", RenderCommand::Lstick(*key))?;
             } else {
                 // add qw buffer to first column
-                write!(f, "{}", Command::Qw.to_string())?;
+                write!(f, "{}", RenderCommand::Qw)?;
             }
 
             // convert each column in the wire to string
@@ -494,8 +477,8 @@ impl Display for Diagram {
                             for modifier in modifiers {
                                 if let GateModifier::Dagger = modifier {
                                     superscript.push_str(
-                                        &Command::Super(String::from("dagger")).to_string(),
-                                    )
+                                        &RenderCommand::Super(String::from("dagger")).to_string(),
+                                    );
                                 }
                             }
                         }
@@ -503,7 +486,7 @@ impl Display for Diagram {
                         if wire.ctrl.get(&c).is_some() {
                             // CONTROLLED qubits are displayed as `\ctrl{targ}`
                             if let Some(targ) = wire.ctrl.get(&c) {
-                                write!(f, "{}", &(Command::Ctrl(targ.to_string())).to_string())?;
+                                write!(f, "{}", &(RenderCommand::Ctrl(*targ)))?;
                             }
                             continue;
                         } else if wire.targ.get(&c).is_some() {
@@ -516,10 +499,10 @@ impl Display for Diagram {
                                 // if the gate contains daggers, display target as X gate with dagger superscripts
                                 if !superscript.is_empty() {
                                     _gate.push_str(&superscript);
-                                    write!(f, "{}", &Command::Gate(_gate).to_string())?;
+                                    write!(f, "{}", &RenderCommand::Gate(_gate))?;
                                 // else display X target as an open dot
                                 } else {
-                                    write!(f, "{}", &Command::Targ.to_string())?;
+                                    write!(f, "{}", &RenderCommand::Targ)?;
                                 }
                                 continue;
                             // PHASE gates are displayed as `\phase{param}`
@@ -527,11 +510,7 @@ impl Display for Diagram {
                                 // set the phase parameters
                                 if let Some(parameters) = wire.parameters.get(&c) {
                                     for param in parameters {
-                                        write!(
-                                            f,
-                                            "{}",
-                                            &Command::Phase(param.to_string()).to_string()
-                                        )?;
+                                        write!(f, "{}", &RenderCommand::Phase(param.clone()))?;
                                     }
                                 }
                                 continue;
@@ -545,24 +524,24 @@ impl Display for Diagram {
                             _gate.push_str(&superscript);
                         }
 
-                        write!(f, "{}", &Command::Gate(_gate).to_string())?;
+                        write!(f, "{}", &RenderCommand::Gate(_gate))?;
                     } else if wire.empty.get(&c).is_some() {
                         // chain an empty column qw to the end of the line
                         write!(f, " & ")?;
-                        write!(f, "{}", &Command::Qw.to_string())?;
+                        write!(f, "{}", &RenderCommand::Qw)?;
                     }
                 }
             }
 
             // chain an empty column qw to the end of the line
             write!(f, " & ")?;
-            write!(f, "{}", &Command::Qw.to_string())?;
+            write!(f, "{}", &RenderCommand::Qw)?;
 
             // if this is the last key iteration, omit Nr from end of line
             if i < self.circuit.len() - 1 {
                 // indicate a new row
                 write!(f, " ")?;
-                write!(f, "{}", &Command::Nr.to_string())?;
+                write!(f, "{}", &RenderCommand::Nr)?;
                 i += 1;
             }
 
@@ -596,7 +575,7 @@ struct Wire {
     /// the Modifiers on the wire callable by the column
     modifiers: HashMap<u32, Vec<GateModifier>>,
     /// empty column
-    empty: HashMap<u32, Command>,
+    empty: HashMap<u32, RenderCommand>,
 }
 
 impl Wire {
@@ -620,7 +599,7 @@ impl Wire {
         // if texify_numerical_constants
         let param = if texify {
             // get the matching symbol from text
-            vec![Parameter::Symbol(text.into())]
+            vec![Parameter::Symbol(text.parse().unwrap())]
         } else {
             // set the symbol as text
             vec![Parameter::Symbol(Symbol::Text(text))]
@@ -946,46 +925,46 @@ mod tests {
 
     /// Test module for Quantikz Commands
     mod commands {
-        use crate::program::latex::{Command, Symbol};
+        use crate::program::latex::{Parameter, RenderCommand, Symbol};
 
         #[test]
         fn test_command_left_ket() {
-            insta::assert_snapshot!(Command::Lstick("0".to_string()).to_string());
+            insta::assert_snapshot!(RenderCommand::Lstick(0).to_string());
         }
 
         #[test]
         fn test_command_gate() {
-            insta::assert_snapshot!(Command::Gate("X".to_string()).to_string());
+            insta::assert_snapshot!(RenderCommand::Gate("X".to_string()).to_string());
         }
 
         #[test]
         fn test_command_phase() {
-            insta::assert_snapshot!(Command::Phase(Symbol::Pi.to_string()).to_string());
+            insta::assert_snapshot!(RenderCommand::Phase(Parameter::Symbol(Symbol::Pi)).to_string());
         }
 
         #[test]
         fn test_command_super() {
-            insta::assert_snapshot!(Command::Super("dagger".to_string()).to_string());
+            insta::assert_snapshot!(RenderCommand::Super("dagger".to_string()).to_string());
         }
 
         #[test]
         fn test_command_qw() {
-            insta::assert_snapshot!(Command::Qw.to_string());
+            insta::assert_snapshot!(RenderCommand::Qw.to_string());
         }
 
         #[test]
         fn test_command_nr() {
-            insta::assert_snapshot!(Command::Nr.to_string());
+            insta::assert_snapshot!(RenderCommand::Nr.to_string());
         }
 
         #[test]
         fn test_command_control() {
-            insta::assert_snapshot!(Command::Ctrl("0".to_string()).to_string());
+            insta::assert_snapshot!(RenderCommand::Ctrl(0).to_string());
         }
 
         #[test]
         fn test_command_cnot_target() {
-            insta::assert_snapshot!(Command::Targ.to_string());
+            insta::assert_snapshot!(RenderCommand::Targ.to_string());
         }
     }
 
