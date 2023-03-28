@@ -200,7 +200,7 @@ impl RenderSettings {
     ///
     /// # Examples
     /// ```
-    /// use quil_rs::{Program, program::latex::{RenderSettings, ToLatex}};
+    /// use quil_rs::{Program, program::latex::RenderSettings};
     /// use std::str::FromStr;
     /// let program = Program::from_str("H 0\nCNOT 0 1").expect("");
     /// let settings = RenderSettings {
@@ -679,11 +679,7 @@ pub enum LatexGenError {
     UnsupportedGate { gate: String },
 }
 
-pub trait ToLatex {
-    fn to_latex(&self, settings: RenderSettings) -> Result<String, LatexGenError>;
-}
-
-impl ToLatex for Program {
+impl Program {
     /// Returns a Result containing a quil [`Program`] as a LaTeX string or a
     /// [`LatexGenError`].
     ///
@@ -698,7 +694,7 @@ impl ToLatex for Program {
     /// # Examples
     /// ```
     /// // To LaTeX for the Bell State Program.
-    /// use quil_rs::{Program, program::latex::{RenderSettings, ToLatex}};
+    /// use quil_rs::{Program, program::latex::RenderSettings};
     /// use std::str::FromStr;
     /// let program = Program::from_str("H 0\nCNOT 0 1").expect("");
     /// let latex = program.to_latex(RenderSettings::default()).expect("");
@@ -706,12 +702,12 @@ impl ToLatex for Program {
     ///
     /// ```
     /// // To LaTeX for the Toffoli Gate Program.
-    /// use quil_rs::{Program, program::latex::{RenderSettings, ToLatex}};
+    /// use quil_rs::{Program, program::latex::RenderSettings};
     /// use std::str::FromStr;
     /// let program = Program::from_str("CONTROLLED CNOT 2 1 0").expect("");
     /// let latex = program.to_latex(RenderSettings::default()).expect("");
     /// ```
-    fn to_latex(&self, settings: RenderSettings) -> Result<String, LatexGenError> {
+    pub fn to_latex(&self, settings: RenderSettings) -> Result<String, LatexGenError> {
         // get a reference to the current program
         let instructions = self.to_instructions(false);
 
@@ -722,7 +718,7 @@ impl ToLatex for Program {
         };
 
         // initialize circuit with empty wires of all qubits in program
-        let qubits = Program::get_used_qubits(&self);
+        let qubits = Program::get_used_qubits(self);
         for qubit in &qubits {
             if let Qubit::Fixed(name) = qubit {
                 let wire = Wire {
@@ -778,9 +774,7 @@ impl ToLatex for Program {
 
 #[cfg(test)]
 mod tests {
-    use super::{RenderSettings, ToLatex};
-    use crate::Program;
-    use std::str::FromStr;
+    use super::{FromStr, Program, RenderSettings};
 
     /// Helper function takes instructions and return the LaTeX using the
     /// Latex::to_latex method.
