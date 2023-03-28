@@ -437,7 +437,6 @@ class GateModifier(Enum):
     Forked = "FORKED"
 
 class Gate:
-    @classmethod
     def __new__(
         cls,
         name: str,
@@ -551,7 +550,6 @@ class GateSpecification:
     def from_pauli_sum(pauli_term: List[PauliTerm]) -> "GateSpecification": ...
 
 class GateDefinition:
-    @classmethod
     def __new__(
         cls,
         name: str,

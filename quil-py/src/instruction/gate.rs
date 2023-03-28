@@ -287,11 +287,15 @@ impl PyGateDefinition {
         parameters: Vec<String>,
         specification: PyGateSpecification,
     ) -> PyResult<Self> {
-        Ok(Self(GateDefinition::new(
-            name,
-            parameters,
-            GateSpecification::py_try_from(py, &specification)?,
-        )))
+        Ok(Self(
+            GateDefinition::new(
+                name,
+                parameters,
+                GateSpecification::py_try_from(py, &specification)?,
+            )
+            .map_err(RustGateError::from)
+            .map_err(RustGateError::to_py_err)?,
+        ))
     }
 
     pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {

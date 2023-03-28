@@ -3,7 +3,9 @@ use std::{collections::HashSet, fmt};
 use crate::{
     expression::Expression,
     instruction::get_string_parameter_string,
-    validation::identifier::{validate_identifier, IdentifierValidationError},
+    validation::identifier::{
+        validate_identifier, validate_user_identifier, IdentifierValidationError,
+    },
 };
 
 use super::{format_qubits, get_expression_parameter_string, Qubit};
@@ -252,12 +254,17 @@ pub struct GateDefinition {
 }
 
 impl GateDefinition {
-    pub fn new(name: String, parameters: Vec<String>, specification: GateSpecification) -> Self {
-        Self {
+    pub fn new(
+        name: String,
+        parameters: Vec<String>,
+        specification: GateSpecification,
+    ) -> Result<Self, GateError> {
+        validate_user_identifier(&name)?;
+        Ok(Self {
             name,
             parameters,
             specification,
-        }
+        })
     }
 }
 
