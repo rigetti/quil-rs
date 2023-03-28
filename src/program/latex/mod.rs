@@ -6,9 +6,8 @@
 //! visualization tool. Be aware that not all Programs can be serialized as
 //! LaTeX. If a [`Program`] contains a gate or modifier not mentioned in the
 //! [Supported Gates and Modifiers](#supported-gates-and-modifiers) section
-//! below, unexpected results may occur, one of which includes producing
-//! incorrect quantum circuits, or an error will be returned detailing which
-//! instruction or gate is unsupported in the Program being processed.
+//! below, an error will be returned detailing which instruction or gate is
+//! unsupported in the Program being processed.
 //!
 //! # Supported Gates and Modifiers
 //!
@@ -296,8 +295,6 @@ struct Diagram {
     settings: RenderSettings,
     /// total number of elements on each wire
     column: u32,
-    /// column at which qubits in positional order form relationships
-    relationships: HashMap<u32, Vec<Qubit>>,
     /// a BTreeMap of wires with the name of the wire as the key
     circuit: BTreeMap<u64, Box<Wire>>,
 }
@@ -361,101 +358,16 @@ impl Diagram {
         Ok(())
     }
 
-    /// Locates the target qubit for the control qubits. The location of a
-    /// target qubit is found using its displacement from the control qubits
-    /// which is a physical vector with the tail at the control qubit and the
-    /// head pointing to the target qubit. The distance between the qubits
-    /// represents the number of wires between them, i.e the space that the
-    /// vector needs to traverse. If the control qubit comes before the target
-    /// qubit the direction is positive, otherwise, it is negative. See
-    /// Quantikz documentation on CNOT for justification on this approach.
-    ///
-    /// # Arguments
-    /// `&mut self` - exposes diagram relationships and the circuit
-    fn locate_targ(&mut self) -> Result<(), LatexGenError> {
-        if let Some(relationship) = self.relationships.get(&self.column) {
-            // requires at least two qubits
-            if relationship.len() < 2 {
-                return Ok(());
-            }
-            // determine the physical vector where a positive vector points
-            // from control to target, negative, from target to control. The
-            // magnitude of the vector is the absolute value of the distance
-            // between them
-            if let Some(last) = relationship.last() {
-                if let Qubit::Fixed(targ) = last {
-                    // any qubit before last in the relationship
-                    let mut pred = None;
-
-                    // distance between qubits is the space between the ctrl and
-                    // targ qubits in the circuit
-                    for qubit in relationship.split(|q| q == last).next().unwrap() {
-                        if let Qubit::Fixed(ctrl) = qubit {
-                            pred = Some(ctrl);
-
-                            // represent inclusive [open, close] brackets of a range
-                            let mut open = None; // opening qubit in range
-                            let mut close = None; // closing qubit in range
-
-                            // find the range between the qubits
-                            for (i, wire) in self.circuit.iter().enumerate() {
-                                // get each existing qubit in the circuit
-                                if *wire.0 == *ctrl || *wire.0 == *targ {
-                                    // if the qubit is the ctrl or target
-                                    if open.is_some() {
-                                        close = Some(i);
-                                        break;
-
-                                    // open qubit in range not found, set open qubit
-                                    } else {
-                                        open = Some(i)
-                                    }
-                                }
-                            }
-
-                            let mut vector: i64 = 0;
-                            if let Some(open) = open {
-                                if let Some(close) = close {
-                                    if ctrl < targ {
-                                        // a vector with a head from the ctrl to the targ
-                                        vector = (close as i64) - (open as i64);
-                                    } else {
-                                        // a vector with a head from the targ to the ctrl
-                                        vector = -((close as i64) - (open as i64));
-                                    }
-                                }
-                            }
-                            // set wire at column as the control qubit of target qubit
-                            // computed as the distance from the control qubit
-                            self.circuit
-                                .get_mut(ctrl)
-                                .and_then(|wire| wire.ctrl.insert(self.column, vector));
-                        }
-                    }
-                    // pred is None if relationship is split and no iterators are returned indicating this erroneous instruction
-                    if pred.is_none() {
-                        return Err(LatexGenError::FoundTargetWithNoControl);
-                    }
-                }
-            }
-        }
-
-        Ok(())
-    }
-
-    /// Analyzes a Gate from an Instruction and sets the gate at this column on
-    /// the wire. If the gate name is a composite gate, the gate name is
-    /// decomposed into canonical form before being set in the circuit. For
-    /// example, CNOT is a composite gate that can be decomposed into the
-    /// equivalent canonical form, CONTROLLED X.
+    /// Inserts a gate from an instruction on the wires in the circuit
+    /// associate with the qubits from the gate. If the gate name is a
+    /// composite gate, the gate name is decomposed into canonical form before
+    /// being set in the circuit. For example, CNOT is a composite gate that
+    /// can be decomposed into the equivalent canonical form, CONTROLLED X.
     ///
     /// # Arguments
     /// `self` - exposes all attributes in the diagram
     /// `gate` - the Gate of the Instruction from `to_latex`.
-    fn parse_gate(&mut self, gate: &Gate) -> Result<(), LatexGenError> {
-        // preserve qubit order in instruction
-        self.relationships.insert(self.column, gate.qubits.clone());
-
+    fn insert_gate(&mut self, gate: &Gate) -> Result<(), LatexGenError> {
         // set modifiers from gate instruction
         for qubit in &gate.qubits {
             if let Qubit::Fixed(qubit) = qubit {
@@ -506,16 +418,41 @@ impl Diagram {
             for instruction in instructions {
                 if let Instruction::Gate(gate) = instruction {
                     // call until all composite gates are in canonical form
-                    self.parse_gate(&gate)?;
+                    self.insert_gate(&gate)?;
                 }
             }
         // gate is in canonical form
         } else {
-            // set gate for each qubit
+            // get the names of the qubits in the circuit before circuit is borrowed as mutable
+            let circuit_qubits: Vec<u64> = self.circuit.keys().cloned().collect();
+
+            // set gate for each qubit in the instruction
             for qubit in &gate.qubits {
-                if let Qubit::Fixed(fixed_qubit) = qubit {
-                    if let Some(wire) = self.circuit.get_mut(fixed_qubit) {
-                        wire.set_gate(self.column, gate, qubit, &self.relationships)?;
+                if let Qubit::Fixed(instruction_qubit) = qubit {
+                    if let Some(wire) = self.circuit.get_mut(instruction_qubit) {
+                        // set the control and target qubits
+                        if gate.qubits.len() > 1 || gate.name == "PHASE" {
+                            // set the target qubit if the qubit is equal to the last qubit in gate
+                            if qubit == gate.qubits.last().unwrap() {
+                                wire.set_targ(&self.column);
+                            // otherwise, set the control qubit
+                            } else {
+                                wire.set_ctrl(
+                                    &self.column,
+                                    qubit,
+                                    gate.qubits.last().unwrap(),
+                                    &circuit_qubits,
+                                );
+                            }
+                        } else if wire.parameters.get(&self.column).is_some() {
+                            // parameterized single qubit gates are unsupported
+                            return Err(LatexGenError::UnsupportedGate {
+                                gate: gate.name.clone(),
+                            });
+                        }
+
+                        // set modifiers at this column for all qubits
+                        wire.gates.insert(self.column, gate.clone());
                     }
                 }
             }
@@ -692,49 +629,41 @@ impl Wire {
         self.parameters.insert(column, param);
     }
 
-    /// Returns a result indicating the gate was successfully set for this Wire
-    /// or an error indicating the gate is unsupported. If this is a
-    /// multi-qubit gate, as indicated by the number of qubits in the
-    /// relationship, then, depending on its position in the relationship, is
-    /// set as a target or a control qubit.
+    /// Set target qubit at this column.
     ///
     /// # Arguments
-    /// `&mut self` - exposes this Wire's gates at this column
-    /// `column` - the column taking the gate
-    /// `gate` - the gate attempted to be set
-    /// `relationships` - the qubits at this column in a relationship
-    fn set_gate(
-        &mut self,
-        column: u32,
-        gate: &Gate,
-        qubit: &Qubit,
-        relationships: &HashMap<u32, Vec<Qubit>>,
-    ) -> Result<(), LatexGenError> {
-        // set the control and target qubits
-        if let Some(relationship) = relationships.get(&column) {
-            // requires at least 2 qubits or is a PHASE gate
-            if relationship.len() > 1 || gate.name == "PHASE" {
-                // target is the last qubit in the instruction or the qubit in PHASE
-                if let Some(target) = relationship.last() {
-                    if qubit == target {
-                        self.targ.insert(column, true);
-                    // all other qubits are controls
-                    } else {
-                        self.ctrl.insert(column, 0);
+    /// `&mut self` - exposes the Wire's targ at this column
+    /// `column` - the column taking the target
+    fn set_targ(&mut self, column: &u32) {
+        self.targ.insert(*column, true);
+    }
+
+    /// Set control qubit at this column at some distance from the target. The
+    /// distance is determined by the relative position of the control and
+    /// target qubits in the circuit.
+    ///
+    /// # Arguments
+    /// `&mut self` - exposes the Wire's ctrl at this column
+    /// `column` - the column taking the control
+    /// `ctrl` - the control qubit
+    /// `targ` - the target qubit
+    /// `circuit_qubits` - the qubits in the circuit
+    fn set_ctrl(&mut self, column: &u32, ctrl: &Qubit, targ: &Qubit, circuit_qubits: &[u64]) {
+        if let Qubit::Fixed(ctrl) = ctrl {
+            if let Qubit::Fixed(targ) = targ {
+                // get the index of the control and target qubits
+                let ctrl_index = circuit_qubits.iter().position(|&x| x == *ctrl);
+                let targ_index = circuit_qubits.iter().position(|&x| x == *targ);
+
+                // if the control and target qubits are found
+                if let Some(ctrl_index) = ctrl_index {
+                    if let Some(targ_index) = targ_index {
+                        self.ctrl
+                            .insert(*column, targ_index as i64 - ctrl_index as i64);
                     }
                 }
-            } else if self.parameters.get(&column).is_some() {
-                // parameterized single qubit gates are unsupported
-                return Err(LatexGenError::UnsupportedGate {
-                    gate: gate.name.clone(),
-                });
             }
         }
-
-        // set modifiers at this column for all qubits
-        self.gates.insert(column, gate.clone());
-
-        Ok(())
     }
 }
 
@@ -751,7 +680,7 @@ pub enum LatexGenError {
 }
 
 pub trait ToLatex {
-    fn to_latex(self, settings: RenderSettings) -> Result<String, LatexGenError>;
+    fn to_latex(&self, settings: RenderSettings) -> Result<String, LatexGenError>;
 }
 
 impl ToLatex for Program {
@@ -782,7 +711,7 @@ impl ToLatex for Program {
     /// let program = Program::from_str("CONTROLLED CNOT 2 1 0").expect("");
     /// let latex = program.to_latex(RenderSettings::default()).expect("");
     /// ```
-    fn to_latex(self, settings: RenderSettings) -> Result<String, LatexGenError> {
+    fn to_latex(&self, settings: RenderSettings) -> Result<String, LatexGenError> {
         // get a reference to the current program
         let instructions = self.to_instructions(false);
 
@@ -815,8 +744,19 @@ impl ToLatex for Program {
 
             // parse gate instructions into a new circuit
             if let Instruction::Gate(gate) = instruction {
-                diagram.parse_gate(&gate)?;
-                diagram.locate_targ()?;
+                // if there are any duplicate qubits in the gate return an error
+                if gate.qubits.len()
+                    != gate
+                        .qubits
+                        .iter()
+                        .cloned()
+                        .collect::<HashSet<Qubit>>()
+                        .len()
+                {
+                    return Err(LatexGenError::FoundTargetWithNoControl);
+                }
+
+                diagram.insert_gate(&gate)?;
                 diagram.column += 1;
             } else if let Instruction::GateDefinition(_) = instruction {
                 // GateDefinition is supported and parsed in Gate
