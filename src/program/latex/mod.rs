@@ -32,12 +32,7 @@ use crate::Program;
 /// Available commands used for building circuits with the same names taken
 /// from the Quantikz documentation for easy reference. LaTeX string denoted
 /// inside `backticks`.
-///
-/// # Available Commands
-///
-///   Single wire commands: lstick, gate, phase, super, qw, nr
-///   Multi-wire commands: ctrl, targ
-#[derive(Clone, Debug, derive_more::Display)]
+#[derive(Clone, Debug, derive_more::Display, PartialEq, Eq, Hash)]
 enum RenderCommand {
     /// Make a qubit "stick out" from the left.
     #[display(fmt = "\\lstick{{\\ket{{q_{{{_0}}}}}}}")]
@@ -66,7 +61,7 @@ enum RenderCommand {
 }
 
 /// Types of parameters passed to commands.
-#[derive(Clone, Debug, derive_more::Display)]
+#[derive(Clone, Debug, derive_more::Display, PartialEq, Eq, Hash)]
 enum Parameter {
     /// Symbolic parameters
     #[display(fmt = "{_0}")]
@@ -74,7 +69,7 @@ enum Parameter {
 }
 
 /// Supported Greek and alphanumeric symbols.
-#[derive(Clone, Debug, derive_more::Display)]
+#[derive(Clone, Debug, derive_more::Display, PartialEq, Eq, Hash)]
 enum Symbol {
     #[display(fmt = "\\alpha")]
     Alpha,
@@ -106,6 +101,7 @@ impl FromStr for Symbol {
 
 /// Gates written in shorthand notation, i.e. composite form, that may be
 /// decomposed into modifiers and single gate instructions, i.e. canonical form.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 enum CanonicalGate {
     /// `CNOT` is `CONTROLLED X`
     Cnot(String),
@@ -193,22 +189,17 @@ impl RenderSettings {
     /// program.to_latex(settings).expect("");
     /// ```
     fn impute_missing_qubits(last_column: u32, circuit: &mut BTreeMap<u64, Box<Wire>>) {
-        // requires at least two qubits to impute missing qubits
-        if circuit.len() < 2 {
-            return;
-        }
+        let mut keys_iter = circuit.keys();
 
         // get the first qubit in the BTreeMap
-        let first = circuit
-            .first_key_value()
-            .map(|wire| wire.0 + 1)
-            .expect("previously checked that circuit is not empty");
+        let Some(first) = keys_iter
+            .next()
+            .map(|wire| wire + 1) else { return; };
 
         // get the last qubit in the BTreeMap
-        let last = circuit
-            .last_key_value()
-            .map(|wire| wire.0 - 1)
-            .expect("previously checked that circuit has at least two wires");
+        let Some(last) = keys_iter
+            .last()
+            .map(|wire| wire - 1) else { return; };
 
         // search through the range of qubits
         for qubit in first..=last {
@@ -329,7 +320,7 @@ impl Diagram {
                     return Err(LatexGenError::UnsupportedModifierForked);
                 }
                 // insert for CONTROLLED and DAGGER
-                _ => {
+                GateModifier::Controlled | GateModifier::Dagger => {
                     wire.modifiers
                         .entry(*column)
                         .and_modify(|m| m.push(modifier.clone()))
@@ -371,7 +362,7 @@ impl Diagram {
         }
 
         // parse the gate to a canonical gate if supported
-        let canonical_gate = match CanonicalGate::from(gate.name.to_string()) {
+        let canonical_gate = match CanonicalGate::from(&gate.name) {
             CanonicalGate::Cnot(inst) => Some(inst),
             CanonicalGate::Ccnot(inst) => Some(inst),
             CanonicalGate::Cphase(inst) => Some(inst),
@@ -379,18 +370,16 @@ impl Diagram {
             CanonicalGate::None => None,
         };
 
-        // add the qubits to the canonical gate to form an instruction
-        let instruction = if let Some(mut canonical_gate) = canonical_gate {
+        // concatenate qubits from gate to canonical_gate
+        let instruction = canonical_gate.map(|instruction| {
+            let mut instruction = instruction;
             for qubit in &gate.qubits {
                 if let Qubit::Fixed(qubit) = qubit {
-                    canonical_gate.push(' ');
-                    canonical_gate.push_str(&qubit.to_string());
+                    instruction.push_str(&format!(" {qubit}"));
                 }
             }
-            Some(canonical_gate)
-        } else {
-            None
-        };
+            instruction
+        });
 
         // get gate from new program of canonical instruction
         if let Some(instruction) = instruction {
@@ -520,9 +509,7 @@ impl Display for Diagram {
                         let mut _gate = gate.name.clone();
 
                         // concatenate superscripts
-                        if !superscript.is_empty() {
-                            _gate.push_str(&superscript);
-                        }
+                        _gate.push_str(&superscript);
 
                         write!(f, "{}", &RenderCommand::Gate(_gate))?;
                     } else if wire.empty.get(&c).is_some() {
@@ -646,7 +633,7 @@ impl Wire {
     }
 }
 
-#[derive(Clone, Debug, thiserror::Error)]
+#[derive(Clone, Debug, thiserror::Error, PartialEq, Eq, Hash)]
 pub enum LatexGenError {
     #[error("Found a target qubit with no control qubit.")]
     FoundTargetWithNoControl,
@@ -700,9 +687,7 @@ impl Program {
         let qubits = Program::get_used_qubits(self);
         for qubit in &qubits {
             if let Qubit::Fixed(name) = qubit {
-                let wire = Wire {
-                    ..Default::default()
-                };
+                let wire = Wire::default();
                 diagram.circuit.insert(*name, Box::new(wire));
             }
         }
