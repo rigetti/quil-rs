@@ -161,6 +161,14 @@ impl PauliTerm {
             expression,
         }
     }
+
+    pub(crate) fn word(&self) -> impl Iterator<Item = &PauliGate> {
+        self.arguments.iter().map(|(gate, _)| gate)
+    }
+
+    pub(crate) fn arguments(&self) -> impl Iterator<Item = &String> {
+        self.arguments.iter().map(|(_, argument)| argument)
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -171,17 +179,17 @@ pub struct PauliSum {
 
 impl PauliSum {
     pub fn new(arguments: Vec<String>, terms: Vec<PauliTerm>) -> Result<Self, GateError> {
-        let term_arguments = HashSet::<String>::from_iter(
-            terms
-                .iter()
-                .flat_map(|t| t.arguments.clone().into_iter().map(|(_, arg)| arg)),
-        );
-        let argument_set = HashSet::from_iter(arguments.clone().into_iter());
-        let diff: Vec<&String> = term_arguments.difference(&argument_set).collect();
+        let diff = terms
+            .iter()
+            .flat_map(|t| t.arguments())
+            .collect::<HashSet<_>>()
+            .difference(&arguments.iter().collect::<HashSet<_>>())
+            .copied()
+            .collect::<Vec<_>>();
 
         if !diff.is_empty() {
             return Err(GateError::PauliSumArgumentMismatch {
-                expected_arguments: arguments,
+                expected_arguments: arguments.clone(),
                 mismatches: diff.into_iter().cloned().collect(),
             });
         }
@@ -230,11 +238,11 @@ impl fmt::Display for GateSpecification {
             GateSpecification::PauliSum(pauli_sum) => {
                 for term in &pauli_sum.terms {
                     write!(f, "\t")?;
-                    for (word, _) in term.arguments.iter() {
+                    for word in term.word() {
                         write!(f, "{word}")?;
                     }
                     write!(f, "({})", term.expression)?;
-                    for (_, argument) in term.arguments.iter() {
+                    for argument in term.arguments() {
                         write!(f, " {argument}")?;
                     }
                     writeln!(f)?;
