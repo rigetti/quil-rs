@@ -21,6 +21,7 @@ pub use self::{
         PyPauliSum, PyPauliTerm,
     },
     measurement::PyMeasurement,
+    pragma::{PyPragma, PyPragmaArgument},
     qubit::PyQubit,
     waveform::{PyWaveform, PyWaveformDefinition, PyWaveformInvocation},
 };
@@ -31,6 +32,7 @@ mod declaration;
 mod frame;
 mod gate;
 mod measurement;
+mod pragma;
 mod qubit;
 mod waveform;
 
@@ -82,6 +84,8 @@ create_init_submodule! {
         PyScalarType,
         PyVector,
         PyMeasurement,
+        PyPragma,
+        PyPragmaArgument,
         PyDeclaration,
         PyScalarType,
         PyVector,

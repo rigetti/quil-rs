@@ -30,6 +30,7 @@ mod declaration;
 mod frame;
 mod gate;
 mod measurement;
+mod pragma;
 mod qubit;
 mod waveform;
 
@@ -45,6 +46,7 @@ pub use self::gate::{
     PauliSum, PauliTerm,
 };
 pub use self::measurement::Measurement;
+pub use self::pragma::{Pragma, PragmaArgument};
 pub use self::qubit::Qubit;
 pub use self::waveform::{Waveform, WaveformDefinition, WaveformInvocation};
 
@@ -150,28 +152,6 @@ pub struct Delay {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Fence {
     pub qubits: Vec<Qubit>,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Pragma {
-    pub name: String,
-    pub arguments: Vec<PragmaArgument>,
-    pub data: Option<String>,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum PragmaArgument {
-    Identifier(String),
-    Integer(u64),
-}
-
-impl fmt::Display for PragmaArgument {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            PragmaArgument::Identifier(i) => write!(f, "{i}"),
-            PragmaArgument::Integer(i) => write!(f, "{i}"),
-        }
-    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -559,22 +539,7 @@ impl fmt::Display for Instruction {
                 }
                 write!(f, "PULSE {frame} {waveform}")
             }
-            Instruction::Pragma(Pragma {
-                name,
-                arguments,
-                data,
-            }) => {
-                write!(f, "PRAGMA {name}")?;
-                if !arguments.is_empty() {
-                    for arg in arguments {
-                        write!(f, " {arg}")?;
-                    }
-                }
-                if let Some(data) = data {
-                    write!(f, " \"{data}\"")?;
-                }
-                Ok(())
-            }
+            Instruction::Pragma(pragma) => write!(f, "{pragma}"),
             Instruction::RawCapture(RawCapture {
                 blocking,
                 frame,
