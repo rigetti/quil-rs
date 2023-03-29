@@ -719,7 +719,8 @@ impl Program {
                 diagram.insert_gate(&gate)?;
                 diagram.column += 1;
             } else if let Instruction::GateDefinition(_) = instruction {
-                // GateDefinition is supported and parsed in Gate
+                // GateDefinition is supported but inserted into the circuit using its Gate instruction form
+                continue;
             } else {
                 return Err(LatexGenError::UnsupportedInstruction {
                     instruction: instruction.to_string(),
