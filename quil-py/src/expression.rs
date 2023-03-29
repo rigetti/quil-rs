@@ -33,6 +33,7 @@ py_wrap_error!(
 
 py_wrap_union_enum! {
     #[derive(Debug, Hash, PartialEq, Eq)]
+    #[pyo3(module="quil.expression")]
     PyExpression(Expression) as "Expression" {
         address: Address => PyMemoryReference,
         function_call: FunctionCall => PyFunctionCallExpression,

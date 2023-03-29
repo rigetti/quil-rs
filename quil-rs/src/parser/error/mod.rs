@@ -43,6 +43,10 @@ pub enum ParserErrorKind {
     #[error("expected {expected}, found {actual:?}")]
     ExpectedToken { actual: Token, expected: String },
 
+    /// Got an unexpected character
+    #[error("expected {expected}, found {actual}")]
+    ExpectedCharacter { actual: String, expected: String },
+
     /// Tried to parse a kind of command and couldn't
     #[error("failed to parse arguments for {command}")]
     InvalidCommand { command: Command },
@@ -62,4 +66,12 @@ pub enum ParserErrorKind {
     /// Literals specified in the input cannot be supported without loss of precision
     #[error("using this literal will result in loss of precision")]
     UnsupportedPrecision,
+
+    #[error("invalid quil: {0}")]
+    InvalidQuil(#[from] crate::instruction::ValidationError),
+
+    #[error(
+        "expected a Pauli term with a word length of {word_length} to match the number of arguments, {num_args}"
+    )]
+    PauliTermArgumentMismatch { word_length: usize, num_args: usize },
 }

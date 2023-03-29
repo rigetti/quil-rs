@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Dict, List, Optional, Union, final
+from typing import Dict, List, Optional, Tuple, Union, final
 
 from quil.expression import Expression
 
@@ -437,7 +437,6 @@ class GateModifier(Enum):
     Forked = "FORKED"
 
 class Gate:
-    @classmethod
     def __new__(
         cls,
         name: str,
@@ -472,6 +471,48 @@ class Gate:
         ...
 
 @final
+class PauliGate(Enum):
+    I = "I"
+    X = "X"
+    Y = "Y"
+    Z = "Z"
+    @staticmethod
+    def parse(word: str) -> "PauliGate":
+        """
+        Parses a ``PauliGate`` from a string. Raises a ``ParseEnumError`` if the
+        string isn't a valid Pauli word.
+        """
+        ...
+
+class PauliTerm:
+    @staticmethod
+    def __new__(
+        cls,
+        arguments: List[Tuple[PauliGate, str]],
+        expression: Expression,
+    ) -> "PauliTerm": ...
+    @property
+    def arguments(self) -> List[Tuple[PauliGate, str]]: ...
+    @arguments.setter
+    def arguments(self, word: List[Tuple[PauliGate, str]]): ...
+    @property
+    def expression(self) -> Expression: ...
+    @expression.setter
+    def expression(self, expression: Expression): ...
+
+class PauliSum:
+    @staticmethod
+    def __new__(cls, arguments: List[str], terms: List[PauliTerm]) -> "PauliSum": ...
+    @property
+    def arguments(self) -> List[str]: ...
+    @arguments.setter
+    def arguments(self, arguments: List[str]): ...
+    @property
+    def terms(self) -> List[PauliTerm]: ...
+    @terms.setter
+    def terms(self, terms: List[PauliTerm]): ...
+
+@final
 class GateSpecification:
     """
     A specification for a gate definition.
@@ -487,24 +528,28 @@ class GateSpecification:
         - from_*: Creates a new ``GateSpecification`` using an instance of the inner type for the variant.
     """
 
-    def inner(self) -> Union[List[List[Expression]], List[int]]:
+    def inner(self) -> Union[List[List[Expression]], List[int], PauliSum]:
         """
         Returns the inner value of the variant. Raises a ``RuntimeError`` if inner data doesn't exist.
         """
         ...
     def is_matrix(self) -> bool: ...
     def is_permutation(self) -> bool: ...
+    def is_pauli_sum(self) -> bool: ...
     def as_matrix(self) -> Optional[List[List[Expression]]]: ...
     def to_matrix(self) -> List[List[Expression]]: ...
     def as_permutation(self) -> Optional[List[int]]: ...
     def to_permutation(self) -> List[int]: ...
+    def as_pauli_sum(self) -> Optional[PauliSum]: ...
+    def to_pauli_sum(self) -> PauliSum: ...
     @staticmethod
     def from_matrix(matrix: List[List[Expression]]) -> "GateSpecification": ...
     @staticmethod
     def from_permutation(permutation: List[int]) -> "GateSpecification": ...
+    @staticmethod
+    def from_pauli_sum(pauli_term: PauliSum) -> "GateSpecification": ...
 
 class GateDefinition:
-    @classmethod
     def __new__(
         cls,
         name: str,
@@ -513,10 +558,16 @@ class GateDefinition:
     ) -> "GateDefinition": ...
     @property
     def name(self) -> str: ...
+    @name.setter
+    def name(self, name: str): ...
     @property
     def parameters(self) -> List[str]: ...
+    @parameters.setter
+    def parameters(self, parameters: List[str]): ...
     @property
     def specification(self) -> GateSpecification: ...
+    @specification.setter
+    def specification(self, specification: GateSpecification): ...
 
 @final
 class Qubit:

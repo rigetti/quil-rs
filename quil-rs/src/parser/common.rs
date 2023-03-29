@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::HashMap;
+use std::{collections::HashMap, str::FromStr};
 
 use nom::{
     branch::alt,
-    combinator::{cut, map, opt, value},
+    combinator::{cut, map, map_res, opt, value},
     multi::{many0, many1, separated_list0, separated_list1},
     sequence::{delimited, pair, preceded, tuple},
 };
@@ -26,8 +26,8 @@ use crate::{
     expression::Expression,
     instruction::{
         ArithmeticOperand, AttributeValue, BinaryOperand, ComparisonOperand, FrameIdentifier,
-        GateModifier, MemoryReference, Offset, Qubit, ScalarType, Sharing, Vector,
-        WaveformInvocation,
+        GateModifier, MemoryReference, Offset, PauliGate, PauliTerm, Qubit, ScalarType, Sharing,
+        Vector, WaveformInvocation,
     },
     parser::lexer::Operator,
     token,
@@ -191,6 +191,71 @@ pub(crate) fn parse_permutation<'a>(input: ParserInput<'a>) -> InternalParserRes
         preceded(
             token!(Indentation),
             separated_list1(token!(Comma), token!(Integer(value))),
+        ),
+    )(input)
+}
+
+/// Parse a [`crate::instruction::PauliWord`]. These are a special kind of a [`Token::Identifier`]
+/// used in Pauli sum `DEFGATE` specifications where each identifier is made up of one or more
+/// `I`, `X`, `Y`, or `Z` characters (e.g. `X`, `YY`).
+fn parse_pauli_word<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Vec<PauliGate>> {
+    map_res(token!(Identifier(v)), |words| {
+        let mut pauli_words: Vec<PauliGate> = Vec::new();
+        for word in words.split("") {
+            if word.is_empty() {
+                // split("") separates every character, including empty spaces at the beginning and
+                // end of string.
+                continue;
+            }
+            pauli_words.push(PauliGate::from_str(word).map_err(|_| {
+                InternalParseError::from_kind(
+                    input,
+                    ParserErrorKind::ExpectedCharacter {
+                        expected: "(I,X,Y,Z)".to_string(),
+                        actual: word.to_string(),
+                    },
+                )
+            })?)
+        }
+        Ok(pauli_words)
+    })(input)
+}
+
+pub(crate) fn parse_pauli_term<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, PauliTerm> {
+    map_res(
+        tuple((
+            parse_pauli_word,
+            delimited(token!(LParenthesis), parse_expression, token!(RParenthesis)),
+            many1(token!(Identifier(i))),
+        )),
+        |(word, expression, arguments)| {
+            if word.len() != arguments.len() {
+                Err(InternalParseError::from_kind(
+                    input,
+                    ParserErrorKind::PauliTermArgumentMismatch {
+                        word_length: word.len(),
+                        num_args: arguments.len(),
+                    },
+                ))
+            } else {
+                Ok(PauliTerm::new(
+                    word.into_iter().zip(arguments).collect(),
+                    expression,
+                ))
+            }
+        },
+    )(input)
+}
+
+/// Parse Pauli sum representation of a `DEFGATE` specification.
+pub(crate) fn parse_pauli_terms<'a>(
+    input: ParserInput<'a>,
+) -> InternalParserResult<'a, Vec<PauliTerm>> {
+    preceded(
+        token!(NewLine),
+        separated_list1(
+            token!(NewLine),
+            preceded(token!(Indentation), parse_pauli_term),
         ),
     )(input)
 }
@@ -405,15 +470,17 @@ mod describe_skip_newlines_and_comments {
 #[cfg(test)]
 mod tests {
     use crate::{
-        expression::Expression,
-        instruction::MemoryReference,
-        parser::{common::parse_permutation, lex},
+        expression::{
+            Expression, InfixExpression, InfixOperator, PrefixExpression, PrefixOperator,
+        },
+        instruction::{MemoryReference, PauliGate, PauliTerm},
+        parser::lex,
         real,
     };
 
     use nom_locate::LocatedSpan;
 
-    use super::{parse_matrix, parse_waveform_invocation};
+    use super::{parse_matrix, parse_pauli_terms, parse_permutation, parse_waveform_invocation};
 
     #[test]
     fn waveform_invocation() {
@@ -470,5 +537,55 @@ mod tests {
         let (remainder, permutation) = parse_permutation(&lexed).unwrap();
         assert!(!remainder.is_empty(), "multiline permutations are invalid");
         assert_eq!(permutation, vec![0, 1, 2, 3, 4, 5, 7, 6]);
+    }
+
+    #[test]
+    fn test_parse_pauli_terms() {
+        let input = LocatedSpan::new("\n\tZZ((-%theta)/4) p q\n\tY(%theta/4) p\n\tX(%theta/4) q");
+        let lexed = lex(input).unwrap();
+        let (remainder, pauli_terms) = parse_pauli_terms(&lexed).unwrap();
+        assert!(remainder.is_empty());
+
+        let expected_pauli_terms = vec![
+            PauliTerm {
+                arguments: vec![
+                    (PauliGate::Z, "p".to_string()),
+                    (PauliGate::Z, "q".to_string()),
+                ],
+                expression: Expression::Infix(InfixExpression {
+                    left: Box::new(Expression::Prefix(PrefixExpression {
+                        operator: PrefixOperator::Minus,
+                        expression: Box::new(Expression::Variable("theta".to_string())),
+                    })),
+                    operator: InfixOperator::Slash,
+                    right: Box::new(Expression::Number(real!(4.0))),
+                }),
+            },
+            PauliTerm {
+                arguments: vec![(PauliGate::Y, "p".to_string())],
+                expression: Expression::Infix(InfixExpression {
+                    left: Box::new(Expression::Variable("theta".to_string())),
+                    operator: InfixOperator::Slash,
+                    right: Box::new(Expression::Number(real!(4.0))),
+                }),
+            },
+            PauliTerm {
+                arguments: vec![(PauliGate::X, "q".to_string())],
+                expression: Expression::Infix(InfixExpression {
+                    left: Box::new(Expression::Variable("theta".to_string())),
+                    operator: InfixOperator::Slash,
+                    right: Box::new(Expression::Number(real!(4.0))),
+                }),
+            },
+        ];
+
+        assert_eq!(pauli_terms, expected_pauli_terms);
+
+        let input = LocatedSpan::new("\n\tZZ((-%theta)/4) p\n");
+        let lexed = lex(input).unwrap();
+        assert!(
+            parse_pauli_terms(&lexed).is_err(),
+            "length of pauli word must match number of arguments"
+        )
     }
 }

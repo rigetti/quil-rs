@@ -315,6 +315,7 @@ fn lex_modifier(input: LexInput) -> InternalLexResult {
             value(Token::Modifier(Modifier::Dagger), tag("DAGGER")),
             value(Token::Modifier(Modifier::Forked), tag("FORKED")),
             value(Token::Offset, tag("OFFSET")),
+            value(Token::PauliSum, tag("PAULI-SUM")),
             value(Token::Permutation, tag("PERMUTATION")),
             value(Token::Sharing, tag("SHARING")),
         ),
