@@ -233,7 +233,7 @@ impl fmt::Display for GateSpecification {
                     for (word, _) in term.arguments.iter() {
                         write!(f, "{word}")?;
                     }
-                    write!(f, "{}", term.expression)?;
+                    write!(f, "({})", term.expression)?;
                     for (_, argument) in term.arguments.iter() {
                         write!(f, " {argument}")?;
                     }
