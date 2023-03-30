@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use super::diagram::{wire::Wire, RenderCommand};
+use super::{diagram::wire::Wire, RenderCommand};
 
 /// RenderSettings contains the metadata that allows the user to customize how
 /// the circuit is rendered or use the default implementation.
@@ -51,7 +51,7 @@ impl RenderSettings {
     ///
     /// # Examples
     /// ```
-    /// use quil_rs::{Program, program::latex::RenderSettings};
+    /// use quil_rs::{Program, program::latex::settings::RenderSettings};
     /// use std::str::FromStr;
     /// let program = Program::from_str("H 0\nCNOT 0 1").expect("");
     /// let settings = RenderSettings {

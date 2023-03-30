@@ -31,7 +31,7 @@ use crate::Program;
 use self::settings::RenderSettings;
 use diagram::{wire::Wire, Diagram};
 
-pub(crate) mod settings;
+pub mod settings;
 
 /// The structure of a LaTeX document. Typically a LaTeX document contains
 /// metadata defining the setup and packages used in a document within a header
@@ -67,6 +67,63 @@ impl fmt::Display for Document {
     }
 }
 
+/// Available commands used for building circuits with the same names taken
+/// from the ``Quantikz`` documentation for easy reference. LaTeX string denoted
+/// inside `backticks`.
+#[derive(Clone, Debug, derive_more::Display, PartialEq, Eq, Hash)]
+pub(crate) enum RenderCommand {
+    /// Make a qubit "stick out" from the left.
+    #[display(fmt = "\\lstick{{\\ket{{q_{{{_0}}}}}}}")]
+    Lstick(u64),
+    /// Make a gate on the wire.
+    #[display(fmt = "\\gate{{{_0}}}")]
+    Gate(String),
+    /// Make a phase on the wire with a rotation
+    #[display(fmt = "\\phase{{{_0}}}")]
+    Phase(Parameter),
+    /// Add a superscript to a gate
+    #[display(fmt = "^{{\\{_0}}}")]
+    Super(String),
+    /// Connect the current cell to the previous cell i.e. "do nothing".
+    #[display(fmt = "\\qw")]
+    Qw,
+    /// Start a new row
+    #[display(fmt = "\\\\")]
+    Nr,
+    /// Make a control qubit.
+    #[display(fmt = "\\ctrl{{{_0}}}")]
+    Ctrl(i64),
+    /// Make a target qubit.
+    #[display(fmt = "\\targ{{}}")]
+    Targ,
+}
+
+/// Types of parameters passed to commands.
+#[derive(Clone, Debug, derive_more::Display, PartialEq, Eq, Hash)]
+pub(crate) enum Parameter {
+    /// Symbolic parameters
+    #[display(fmt = "{_0}")]
+    Symbol(Symbol),
+}
+
+/// Supported Greek and alphanumeric symbols.
+#[derive(Clone, Debug, strum::EnumString, derive_more::Display, PartialEq, Eq, Hash)]
+#[strum(serialize_all = "lowercase")]
+pub(crate) enum Symbol {
+    #[display(fmt = "\\alpha")]
+    Alpha,
+    #[display(fmt = "\\beta")]
+    Beta,
+    #[display(fmt = "\\gamma")]
+    Gamma,
+    #[display(fmt = "\\phi")]
+    Phi,
+    #[display(fmt = "\\pi")]
+    Pi,
+    #[display(fmt = "\\text{{{_0}}}")]
+    Text(String),
+}
+
 #[derive(Clone, Debug, thiserror::Error, PartialEq, Eq, Hash)]
 pub enum LatexGenError {
     #[error("Found a target qubit with no control qubit.")]
@@ -94,7 +151,7 @@ impl Program {
     /// # Examples
     /// ```
     /// // To LaTeX for the Bell State Program.
-    /// use quil_rs::{Program, program::latex::RenderSettings};
+    /// use quil_rs::{Program, program::latex::settings::RenderSettings};
     /// use std::str::FromStr;
     /// let program = Program::from_str("H 0\nCNOT 0 1").expect("");
     /// let latex = program.to_latex(RenderSettings::default()).expect("");
@@ -102,7 +159,7 @@ impl Program {
     ///
     /// ```
     /// // To LaTeX for the Toffoli Gate Program.
-    /// use quil_rs::{Program, program::latex::RenderSettings};
+    /// use quil_rs::{Program, program::latex::settings::RenderSettings};
     /// use std::str::FromStr;
     /// let program = Program::from_str("CONTROLLED CNOT 2 1 0").expect("");
     /// let latex = program.to_latex(RenderSettings::default()).expect("");
@@ -344,9 +401,9 @@ mod tests {
         }
     }
 
-    /// Test module for Quantikz Commands
+    /// Test module for ``Quantikz`` Commands
     mod commands {
-        use crate::program::latex::diagram::{Parameter, RenderCommand, Symbol};
+        use crate::program::latex::{Parameter, RenderCommand, Symbol};
 
         #[test]
         fn test_command_left_ket() {

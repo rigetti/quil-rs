@@ -3,43 +3,72 @@ use std::{collections::HashMap, str::FromStr};
 use crate::{
     expression::Expression,
     instruction::{GateModifier, Qubit},
-    program::latex::diagram::Symbol,
 };
 
-use super::{Parameter, RenderCommand};
+use super::super::{LatexGenError, Parameter, RenderCommand, Symbol};
 
-/// A Wire represents a single qubit. A wire only needs to keep track of all
-/// the elements it contains mapped to some arbitrary column. Diagram keeps
-/// track of where the Wire belongs in the larger circuit, its row, and knows
-/// how each Wire relates to each other at that column. When Diagram parses the
-/// wires as a collection, if the Wire relates to another at some column, then
-/// its field will be updated at that column based on the knowledge Diagram has
-/// about this connection. This updated value also looks arbitrary to Wire, it
-/// does not explicitly define which qubit it relates to, but a digit that
-/// describes how far away it is from the related qubit based on Quantikz.
+/// A Wire represents a single qubit. This is a row vector, or [m x 1] matrix,
+/// where m, is the total number of Quil instructions (or columns) plus one
+/// empty column. Each column on the wire maps to some item that can be
+/// rendered onto the LaTeX document using the ``Quantikz`` RenderCommands. A
+/// wire is part of the Circuit which is an [m x n] matrix where n, is the
+/// number of wires.
 #[derive(Clone, Debug, Default)]
 pub(crate) struct Wire {
     /// the Gates on the wire callable by the column
     pub(crate) gates: HashMap<u32, String>,
-    /// at this column the wire is a control
+    /// at this column the wire is a control some distance from the target
     pub(crate) ctrl: HashMap<u32, i64>,
     /// at this column is the wire a target?
     pub(crate) targ: HashMap<u32, bool>,
-    /// the Parameters on the wire callable by the column
+    /// the Parameters on the wire at this column
     pub(crate) parameters: HashMap<u32, Vec<Parameter>>,
-    /// the Dagger modifiers on the wire callable by the column
+    /// the Dagger modifiers on the wire at this column
     pub(crate) daggers: HashMap<u32, Vec<GateModifier>>,
     /// empty column
     pub(crate) empty: HashMap<u32, RenderCommand>,
 }
 
 impl Wire {
+    /// Iterates over the modifiers from the gate instruction and sets it as a
+    /// dagger modifier of this Wire in the Circuit at the current column.
+    /// Returns an Err for FORKED modifiers, and does nothing for CONTROLLED.
+    ///
+    /// # Arguments
+    /// `column` - the current column of the Circuit
+    /// `modifiers` - the modifiers from the Gate
+    pub(crate) fn extract_daggers(
+        &mut self,
+        column: &u32,
+        modifiers: &Vec<GateModifier>,
+    ) -> Result<(), LatexGenError> {
+        // set modifers
+        for modifier in modifiers {
+            match modifier {
+                // return error for unsupported modifier FORKED
+                GateModifier::Forked => {
+                    return Err(LatexGenError::UnsupportedModifierForked);
+                }
+                // insert DAGGER
+                GateModifier::Dagger => {
+                    self.daggers
+                        .entry(*column)
+                        .and_modify(|m| m.push(modifier.clone()))
+                        .or_insert_with(|| vec![modifier.clone()]);
+                }
+                // do nothing for CONTROLLED
+                _ => (),
+            }
+        }
+
+        Ok(())
+    }
+
     /// Retrieves a gate's parameters from Expression and matches them with its
     /// symbolic definition which is then stored into wire at the specific
     /// column.
     ///
     /// # Arguments
-    /// `&mut self` - exposes the Wire's parameters at this column
     /// `expression` - expression from Program to get name of Parameter
     /// `column` - the column taking the parameters
     /// `texify` - is texify_numerical_constants setting on?
@@ -68,7 +97,6 @@ impl Wire {
     /// Set target qubit at this column.
     ///
     /// # Arguments
-    /// `&mut self` - exposes the Wire's targ at this column
     /// `column` - the column taking the target
     pub(crate) fn set_targ(&mut self, column: &u32) {
         self.targ.insert(*column, true);
@@ -79,7 +107,6 @@ impl Wire {
     /// target qubits in the circuit.
     ///
     /// # Arguments
-    /// `&mut self` - exposes the Wire's ctrl at this column
     /// `column` - the column taking the control
     /// `ctrl` - the control qubit
     /// `targ` - the target qubit

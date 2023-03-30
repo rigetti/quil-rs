@@ -7,66 +7,9 @@ use std::{
 use crate::instruction::{Gate, GateModifier, Instruction, Qubit};
 
 use self::wire::Wire;
-use super::{LatexGenError, RenderSettings};
+use super::{LatexGenError, RenderCommand, RenderSettings};
 
 pub(crate) mod wire;
-
-/// Available commands used for building circuits with the same names taken
-/// from the Quantikz documentation for easy reference. LaTeX string denoted
-/// inside `backticks`.
-#[derive(Clone, Debug, derive_more::Display, PartialEq, Eq, Hash)]
-pub(crate) enum RenderCommand {
-    /// Make a qubit "stick out" from the left.
-    #[display(fmt = "\\lstick{{\\ket{{q_{{{_0}}}}}}}")]
-    Lstick(u64),
-    /// Make a gate on the wire.
-    #[display(fmt = "\\gate{{{_0}}}")]
-    Gate(String),
-    /// Make a phase on the wire with a rotation
-    #[display(fmt = "\\phase{{{_0}}}")]
-    Phase(Parameter),
-    /// Add a superscript to a gate
-    #[display(fmt = "^{{\\{_0}}}")]
-    Super(String),
-    /// Connect the current cell to the previous cell i.e. "do nothing".
-    #[display(fmt = "\\qw")]
-    Qw,
-    /// Start a new row
-    #[display(fmt = "\\\\")]
-    Nr,
-    /// Make a control qubit.
-    #[display(fmt = "\\ctrl{{{_0}}}")]
-    Ctrl(i64),
-    /// Make a target qubit.
-    #[display(fmt = "\\targ{{}}")]
-    Targ,
-}
-
-/// Types of parameters passed to commands.
-#[derive(Clone, Debug, derive_more::Display, PartialEq, Eq, Hash)]
-pub(crate) enum Parameter {
-    /// Symbolic parameters
-    #[display(fmt = "{_0}")]
-    Symbol(Symbol),
-}
-
-/// Supported Greek and alphanumeric symbols.
-#[derive(Clone, Debug, strum::EnumString, derive_more::Display, PartialEq, Eq, Hash)]
-#[strum(serialize_all = "lowercase")]
-pub(crate) enum Symbol {
-    #[display(fmt = "\\alpha")]
-    Alpha,
-    #[display(fmt = "\\beta")]
-    Beta,
-    #[display(fmt = "\\gamma")]
-    Gamma,
-    #[display(fmt = "\\phi")]
-    Phi,
-    #[display(fmt = "\\pi")]
-    Pi,
-    #[display(fmt = "\\text{{{_0}}}")]
-    Text(String),
-}
 
 /// Gates written in shorthand notation, i.e. composite form, that may be
 /// decomposed into modifiers and single gate instructions, i.e. canonical form.
@@ -87,15 +30,12 @@ enum CompositeGate {
     Cz,
 }
 
-/// A Diagram represents a collection of wires in a circuit. It encodes the
-/// wires row in the diagram and its relationship to other wires. A row is one
-/// of the wires in the circuit BTreeMap. Diagram tracks relationships between
-/// wires with two pieces of information--1. the wires row (its order in the
-/// BTreeMap), and 2. the column that spreads between all wires that pass
-/// through a multi qubit gate, e.g. CNOT. The size of the diagram can be
-/// measured by multiplying the column with the length of the circuit. This is
-/// an [m x n] matrix where each element in the matrix represents an item to be
-/// rendered onto the diagram using one of the Quantikz commands.
+/// A Diagram represents a collection of wires in a Circuit. The size of the
+/// Circuit can be measured by multiplying the column with the length of the
+/// Circuit. This is an [m x n] matrix where m, is the number of Quil
+/// instructions (or columns) plus one empty column, and n, is the number of
+/// wires. Each individual element of the matrix represents an item that can be
+/// rendered onto the LaTeX document using the ``Quantikz`` RenderCommands.
 #[derive(Clone, Debug, Default)]
 pub(super) struct Diagram {
     /// customizes how the diagram renders the circuit
@@ -114,7 +54,6 @@ impl Diagram {
     /// qubit wire of the circuit indicating a "do nothing" at that column.
     ///
     /// # Arguments
-    /// `&mut self` - exposes the wires on the Circuit
     /// `qubits` - exposes the qubits used in the Program
     /// `instruction` - exposes the qubits in a single Instruction
     pub(crate) fn set_empty(&mut self, qubits: &HashSet<Qubit>, instruction: &Instruction) {
@@ -133,48 +72,12 @@ impl Diagram {
         }
     }
 
-    /// Iterates over the modifiers from the gate instruction and sets it as a
-    /// dagger modifier of this Wire in the Circuit at the current column.
-    /// Returns an Err for FORKED modifiers, and does nothing for CONTROLLED.
-    ///
-    /// # Arguments
-    /// `wire` - an exposed wire on the Circuit
-    /// `column` - the current column of the Circuit
-    /// `modifiers` - the modifiers from the Gate
-    fn extract_daggers(
-        wire: &mut Wire,
-        column: &u32,
-        modifiers: &Vec<GateModifier>,
-    ) -> Result<(), LatexGenError> {
-        // set modifers
-        for modifier in modifiers {
-            match modifier {
-                // return error for unsupported modifier FORKED
-                GateModifier::Forked => {
-                    return Err(LatexGenError::UnsupportedModifierForked);
-                }
-                // insert DAGGER
-                GateModifier::Dagger => {
-                    wire.daggers
-                        .entry(*column)
-                        .and_modify(|m| m.push(modifier.clone()))
-                        .or_insert_with(|| vec![modifier.clone()]);
-                }
-                // do nothing for CONTROLLED
-                _ => (),
-            }
-        }
-
-        Ok(())
-    }
-
     /// Applies a gate from an instruction to the wires on the circuit
     /// associate with the qubits from the gate. If the gate name matches a
     /// composite gate, then the composite gate is applied to the circuit,
     /// otherwise, the original gate is applied to the circuit.
     ///
     /// # Arguments
-    /// `self` - exposes all attributes in the diagram
     /// `gate` - the Gate of the Instruction from `to_latex`.
     pub(crate) fn apply_gate(&mut self, gate: &Gate) -> Result<(), LatexGenError> {
         // set modifiers and parameters from gate instruction
@@ -182,7 +85,7 @@ impl Diagram {
             if let Qubit::Fixed(qubit) = qubit {
                 if let Some(wire) = self.circuit.get_mut(qubit) {
                     // set modifiers at this column for all qubits
-                    Self::extract_daggers(wire, &self.column, &gate.modifiers)?;
+                    wire.extract_daggers(&self.column, &gate.modifiers)?;
 
                     // set parameters at this column for all qubits
                     for expression in &gate.parameters {
