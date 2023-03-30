@@ -101,32 +101,52 @@ impl FromStr for Symbol {
 
 /// Gates written in shorthand notation, i.e. composite form, that may be
 /// decomposed into modifiers and single gate instructions, i.e. canonical form.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-enum CanonicalGate {
+#[derive(Clone, Debug, strum::EnumString, PartialEq, Eq, Hash)]
+#[strum(serialize_all = "UPPERCASE")]
+enum CompositeGate {
     /// `CNOT` is `CONTROLLED X`
-    Cnot(String),
+    Cnot,
     /// `CCNOT` is `CONTROLLED CONTROLLED X`
-    Ccnot(String),
+    Ccnot,
     /// `CPHASE` is `CONTROLLED PHASE`
-    Cphase(String),
+    Cphase,
     /// `CZ` is `CONTROLLED Z`
-    Cz(String),
+    Cz,
     /// gate is in canonical form
     None,
 }
 
-impl<S> From<S> for CanonicalGate
-where
-    S: AsRef<str>,
-{
-    fn from(gate_name: S) -> Self {
-        match gate_name.as_ref() {
-            "CNOT" => CanonicalGate::Cnot(String::from("CONTROLLED X")),
-            "CCNOT" => CanonicalGate::Ccnot(String::from("CONTROLLED CONTROLLED X")),
-            "CPHASE" => CanonicalGate::Cphase(String::from("CONTROLLED PHASE")),
-            "CZ" => CanonicalGate::Cz(String::from("CONTROLLED Z")),
-            _ => CanonicalGate::None,
-        }
+impl CompositeGate {
+    /// Decompose a composite gate into its canonical form. If the gate is not
+    /// a composite gate, it is returned as is.
+    ///
+    /// # Arguments
+    /// `parameters` - Parameters of the gate
+    /// `modifiers` - Modifiers of the gate
+    /// `qubits` - Qubits the gate acts on
+    fn to_canonical(&self, modifiers: &[GateModifier]) -> Option<Gate> {
+        let control_count = match self {
+            Self::Cnot => 1,
+            Self::Ccnot => 2,
+            Self::Cphase => 1,
+            Self::Cz => 1,
+            Self::None => return None,
+        };
+        Some(Gate {
+            name: match self {
+                Self::Cnot | Self::Ccnot => String::from("X"),
+                Self::Cphase => String::from("PHASE"),
+                Self::Cz => String::from("Z"),
+                _ => unreachable!(),
+            },
+            parameters: Vec::new(),
+            modifiers: modifiers
+                .iter()
+                .cloned()
+                .chain(std::iter::repeat(GateModifier::Controlled).take(control_count))
+                .collect(),
+            qubits: Vec::new(),
+        })
     }
 }
 
@@ -332,17 +352,16 @@ impl Diagram {
         Ok(())
     }
 
-    /// Inserts a gate from an instruction on the wires in the circuit
-    /// associate with the qubits from the gate. If the gate name is a
-    /// composite gate, the gate name is decomposed into canonical form before
-    /// being set in the circuit. For example, CNOT is a composite gate that
-    /// can be decomposed into the equivalent canonical form, CONTROLLED X.
+    /// Applies a gate from an instruction to the wires on the circuit
+    /// associate with the qubits from the gate. If the gate name matches a
+    /// composite gate, then the composite gate is applied to the circuit,
+    /// otherwise, the original gate is applied to the circuit.
     ///
     /// # Arguments
     /// `self` - exposes all attributes in the diagram
     /// `gate` - the Gate of the Instruction from `to_latex`.
-    fn insert_gate(&mut self, gate: &Gate) -> Result<(), LatexGenError> {
-        // set modifiers from gate instruction
+    fn apply_gate(&mut self, gate: &Gate) -> Result<(), LatexGenError> {
+        // set modifiers and parameters from gate instruction
         for qubit in &gate.qubits {
             if let Qubit::Fixed(qubit) = qubit {
                 if let Some(wire) = self.circuit.get_mut(qubit) {
@@ -361,71 +380,41 @@ impl Diagram {
             }
         }
 
-        // parse the gate to a canonical gate if supported
-        let canonical_gate = match CanonicalGate::from(&gate.name) {
-            CanonicalGate::Cnot(inst) => Some(inst),
-            CanonicalGate::Ccnot(inst) => Some(inst),
-            CanonicalGate::Cphase(inst) => Some(inst),
-            CanonicalGate::Cz(inst) => Some(inst),
-            CanonicalGate::None => None,
-        };
+        let canonical_gate = CompositeGate::from_str(&gate.name)
+            .map(|g| g.to_canonical(&gate.modifiers))
+            .unwrap_or(Some(gate.clone()))
+            .unwrap();
 
-        // concatenate qubits from gate to canonical_gate
-        let instruction = canonical_gate.map(|instruction| {
-            let mut instruction = instruction;
-            for qubit in &gate.qubits {
-                if let Qubit::Fixed(qubit) = qubit {
-                    instruction.push_str(&format!(" {qubit}"));
-                }
-            }
-            instruction
-        });
+        // get the names of the qubits in the circuit before circuit is borrowed as mutable
+        let circuit_qubits: Vec<u64> = self.circuit.keys().cloned().collect();
 
-        // get gate from new program of canonical instruction
-        if let Some(instruction) = instruction {
-            let instructions = Program::from_str(&instruction)
-                .expect("should return program {instruction}")
-                .to_instructions(false);
-
-            for instruction in instructions {
-                if let Instruction::Gate(gate) = instruction {
-                    // call until all composite gates are in canonical form
-                    self.insert_gate(&gate)?;
-                }
-            }
-        // gate is in canonical form
-        } else {
-            // get the names of the qubits in the circuit before circuit is borrowed as mutable
-            let circuit_qubits: Vec<u64> = self.circuit.keys().cloned().collect();
-
-            // set gate for each qubit in the instruction
-            for qubit in &gate.qubits {
-                if let Qubit::Fixed(instruction_qubit) = qubit {
-                    if let Some(wire) = self.circuit.get_mut(instruction_qubit) {
-                        // set the control and target qubits
-                        if gate.qubits.len() > 1 || gate.name == "PHASE" {
-                            // set the target qubit if the qubit is equal to the last qubit in gate
-                            if qubit == gate.qubits.last().unwrap() {
-                                wire.set_targ(&self.column);
-                            // otherwise, set the control qubit
-                            } else {
-                                wire.set_ctrl(
-                                    &self.column,
-                                    qubit,
-                                    gate.qubits.last().unwrap(),
-                                    &circuit_qubits,
-                                );
-                            }
-                        } else if wire.parameters.get(&self.column).is_some() {
-                            // parameterized single qubit gates are unsupported
-                            return Err(LatexGenError::UnsupportedGate {
-                                gate: gate.name.clone(),
-                            });
+        // set gate for each qubit in the instruction
+        for qubit in &gate.qubits {
+            if let Qubit::Fixed(instruction_qubit) = qubit {
+                if let Some(wire) = self.circuit.get_mut(instruction_qubit) {
+                    // set the control and target qubits
+                    if gate.qubits.len() > 1 || canonical_gate.name == "PHASE" {
+                        // set the target qubit if the qubit is equal to the last qubit in gate
+                        if qubit == gate.qubits.last().unwrap() {
+                            wire.set_targ(&self.column);
+                        // otherwise, set the control qubit
+                        } else {
+                            wire.set_ctrl(
+                                &self.column,
+                                qubit,
+                                gate.qubits.last().unwrap(),
+                                &circuit_qubits,
+                            );
                         }
-
-                        // set modifiers at this column for all qubits
-                        wire.gates.insert(self.column, gate.clone());
+                    } else if wire.parameters.get(&self.column).is_some() {
+                        // parameterized single qubit gates are unsupported
+                        return Err(LatexGenError::UnsupportedGate {
+                            gate: gate.name.clone(),
+                        });
                     }
+
+                    // set modifiers at this column for all qubits
+                    wire.gates.insert(self.column, canonical_gate.clone());
                 }
             }
         }
@@ -716,7 +705,7 @@ impl Program {
                     return Err(LatexGenError::FoundTargetWithNoControl);
                 }
 
-                diagram.insert_gate(&gate)?;
+                diagram.apply_gate(&gate)?;
                 diagram.column += 1;
             } else if let Instruction::GateDefinition(_) = instruction {
                 // GateDefinition is supported but inserted into the circuit using its Gate instruction form
