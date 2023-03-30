@@ -24,6 +24,7 @@ pub use self::{
     pragma::{PyPragma, PyPragmaArgument},
     qubit::PyQubit,
     reset::PyReset,
+    timing::{PyDelay, PyFence},
     waveform::{PyWaveform, PyWaveformDefinition, PyWaveformInvocation},
 };
 
@@ -36,6 +37,7 @@ mod measurement;
 mod pragma;
 mod qubit;
 mod reset;
+mod timing;
 mod waveform;
 
 py_wrap_union_enum! {
@@ -105,6 +107,8 @@ create_init_submodule! {
         PyMemoryReference,
         PyQubit,
         PyReset,
+        PyDelay,
+        PyFence,
         PyWaveform,
         PyWaveformDefinition,
         PyWaveformInvocation

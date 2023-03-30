@@ -1,7 +1,7 @@
 use quil_rs::instruction::{Qubit, Reset};
 
 use rigetti_pyo3::{
-    py_wrap_data_struct,
+    impl_repr, impl_str, py_wrap_data_struct,
     pyo3::{pyclass::CompareOp, pymethods, IntoPy, PyObject, PyResult, Python},
     PyTryFrom, PyWrapper,
 };
@@ -15,6 +15,8 @@ py_wrap_data_struct! {
         qubit: Option<Qubit> => Option<PyQubit>
     }
 }
+impl_repr!(PyReset);
+impl_str!(PyReset);
 
 #[pymethods]
 impl PyReset {

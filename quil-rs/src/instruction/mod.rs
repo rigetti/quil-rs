@@ -33,6 +33,7 @@ mod measurement;
 mod pragma;
 mod qubit;
 mod reset;
+mod timing;
 mod waveform;
 
 pub use self::arithmetic::{
@@ -50,6 +51,7 @@ pub use self::measurement::Measurement;
 pub use self::pragma::{Pragma, PragmaArgument};
 pub use self::qubit::Qubit;
 pub use self::reset::Reset;
+pub use self::timing::{Delay, Fence};
 pub use self::waveform::{Waveform, WaveformDefinition, WaveformInvocation};
 
 #[derive(Clone, Debug, thiserror::Error, PartialEq, Eq)]
@@ -137,18 +139,6 @@ pub struct Capture {
     pub frame: FrameIdentifier,
     pub memory_reference: MemoryReference,
     pub waveform: WaveformInvocation,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Delay {
-    pub duration: Expression,
-    pub frame_names: Vec<String>,
-    pub qubits: Vec<Qubit>,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Fence {
-    pub qubits: Vec<Qubit>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -469,24 +459,8 @@ impl fmt::Display for Instruction {
             Instruction::Declaration(declaration) => {
                 write!(f, "{declaration}")
             }
-            Instruction::Delay(Delay {
-                qubits,
-                frame_names,
-                duration,
-            }) => {
-                write!(f, "DELAY {}", format_qubits(qubits))?;
-                for frame_name in frame_names {
-                    write!(f, " \"{frame_name}\"")?;
-                }
-                write!(f, " {duration}")
-            }
-            Instruction::Fence(Fence { qubits }) => {
-                if qubits.is_empty() {
-                    write!(f, "FENCE")
-                } else {
-                    write!(f, "FENCE {}", format_qubits(qubits))
-                }
-            }
+            Instruction::Delay(delay) => write!(f, "{delay}"),
+            Instruction::Fence(fence) => write!(f, "{fence}"),
             Instruction::FrameDefinition(frame_defintion) => {
                 write!(f, "{frame_defintion}")
             }
