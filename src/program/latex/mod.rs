@@ -101,53 +101,23 @@ impl FromStr for Symbol {
 
 /// Gates written in shorthand notation, i.e. composite form, that may be
 /// decomposed into modifiers and single gate instructions, i.e. canonical form.
-#[derive(Clone, Debug, strum::EnumString, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, strum::EnumString, derive_more::Display, PartialEq, Eq, Hash)]
 #[strum(serialize_all = "UPPERCASE")]
 enum CompositeGate {
     /// `CNOT` is `CONTROLLED X`
+    #[display(fmt = "X")]
     Cnot,
     /// `CCNOT` is `CONTROLLED CONTROLLED X`
+    #[display(fmt = "X")]
     Ccnot,
     /// `CPHASE` is `CONTROLLED PHASE`
+    #[display(fmt = "PHASE")]
     Cphase,
     /// `CZ` is `CONTROLLED Z`
+    #[display(fmt = "Z")]
     Cz,
     /// gate is in canonical form
     None,
-}
-
-impl CompositeGate {
-    /// Decompose a composite gate into its canonical form. If the gate is not
-    /// a composite gate, it is returned as is.
-    ///
-    /// # Arguments
-    /// `parameters` - Parameters of the gate
-    /// `modifiers` - Modifiers of the gate
-    /// `qubits` - Qubits the gate acts on
-    fn to_canonical(&self, modifiers: &[GateModifier]) -> Option<Gate> {
-        let control_count = match self {
-            Self::Cnot => 1,
-            Self::Ccnot => 2,
-            Self::Cphase => 1,
-            Self::Cz => 1,
-            Self::None => return None,
-        };
-        Some(Gate {
-            name: match self {
-                Self::Cnot | Self::Ccnot => String::from("X"),
-                Self::Cphase => String::from("PHASE"),
-                Self::Cz => String::from("Z"),
-                _ => unreachable!(),
-            },
-            parameters: Vec::new(),
-            modifiers: modifiers
-                .iter()
-                .cloned()
-                .chain(std::iter::repeat(GateModifier::Controlled).take(control_count))
-                .collect(),
-            qubits: Vec::new(),
-        })
-    }
 }
 
 /// RenderSettings contains the metadata that allows the user to customize how
@@ -380,10 +350,10 @@ impl Diagram {
             }
         }
 
+        // get display of gate name from composite gate or original gate
         let canonical_gate = CompositeGate::from_str(&gate.name)
-            .map(|g| g.to_canonical(&gate.modifiers))
-            .unwrap_or(Some(gate.clone()))
-            .unwrap();
+            .map(|g| g.to_string())
+            .unwrap_or(gate.name.clone());
 
         // get the names of the qubits in the circuit before circuit is borrowed as mutable
         let circuit_qubits: Vec<u64> = self.circuit.keys().cloned().collect();
@@ -393,7 +363,7 @@ impl Diagram {
             if let Qubit::Fixed(instruction_qubit) = qubit {
                 if let Some(wire) = self.circuit.get_mut(instruction_qubit) {
                     // set the control and target qubits
-                    if gate.qubits.len() > 1 || canonical_gate.name == "PHASE" {
+                    if gate.qubits.len() > 1 || canonical_gate == "PHASE" {
                         // set the target qubit if the qubit is equal to the last qubit in gate
                         if qubit == gate.qubits.last().unwrap() {
                             wire.set_targ(&self.column);
@@ -469,10 +439,10 @@ impl Display for Diagram {
                             continue;
                         } else if wire.targ.get(&c).is_some() {
                             // CONTROLLED X gates are displayed as `\targ{}`
-                            if gate.name == "X" {
+                            if gate == "X" {
                                 // set the qubit at this column as the target
 
-                                let mut _gate = gate.name.clone();
+                                let mut _gate = gate.clone();
 
                                 // if the gate contains daggers, display target as X gate with dagger superscripts
                                 if !superscript.is_empty() {
@@ -484,7 +454,7 @@ impl Display for Diagram {
                                 }
                                 continue;
                             // PHASE gates are displayed as `\phase{param}`
-                            } else if gate.name == "PHASE" {
+                            } else if gate == "PHASE" {
                                 // set the phase parameters
                                 if let Some(parameters) = wire.parameters.get(&c) {
                                     for param in parameters {
@@ -495,7 +465,7 @@ impl Display for Diagram {
                             }
                         }
                         // all other gates display as `\gate{name}`
-                        let mut _gate = gate.name.clone();
+                        let mut _gate = gate.clone();
 
                         // concatenate superscripts
                         _gate.push_str(&superscript);
@@ -541,7 +511,7 @@ impl Display for Diagram {
 #[derive(Clone, Debug, Default)]
 struct Wire {
     /// the Gates on the wire callable by the column
-    gates: HashMap<u32, Gate>,
+    gates: HashMap<u32, String>,
     /// at this column the wire is a control
     ctrl: HashMap<u32, i64>,
     /// at this column is the wire a target?
