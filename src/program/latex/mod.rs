@@ -52,10 +52,10 @@ enum RenderCommand {
     /// Start a new row
     #[display(fmt = "\\\\")]
     Nr,
-    /// Make a control qubit--different from Control.
+    /// Make a control qubit.
     #[display(fmt = "\\ctrl{{{_0}}}")]
     Ctrl(i64),
-    /// Make a controlled-not gate.
+    /// Make a target qubit.
     #[display(fmt = "\\targ{{}}")]
     Targ,
 }
@@ -290,14 +290,15 @@ impl Diagram {
         }
     }
 
-    /// Utility function to insert modifiers of wires in this Circuit at the
-    /// current column. Returns an Err for unsupported modifiers.
+    /// Iterates over the modifiers from the gate instruction and sets it as a
+    /// dagger modifier of this Wire in the Circuit at the current column.
+    /// Returns an Err for FORKED modifiers, and does nothing for CONTROLLED.
     ///
     /// # Arguments
     /// `wire` - an exposed wire on the Circuit
     /// `column` - the current column of the Circuit
     /// `modifiers` - the modifiers from the Gate
-    fn set_modifiers(
+    fn extract_daggers(
         wire: &mut Wire,
         column: &u32,
         modifiers: &Vec<GateModifier>,
@@ -309,13 +310,15 @@ impl Diagram {
                 GateModifier::Forked => {
                     return Err(LatexGenError::UnsupportedModifierForked);
                 }
-                // insert for CONTROLLED and DAGGER
-                GateModifier::Controlled | GateModifier::Dagger => {
-                    wire.modifiers
+                // insert DAGGER
+                GateModifier::Dagger => {
+                    wire.daggers
                         .entry(*column)
                         .and_modify(|m| m.push(modifier.clone()))
                         .or_insert_with(|| vec![modifier.clone()]);
                 }
+                // do nothing for CONTROLLED
+                _ => (),
             }
         }
 
@@ -336,7 +339,7 @@ impl Diagram {
             if let Qubit::Fixed(qubit) = qubit {
                 if let Some(wire) = self.circuit.get_mut(qubit) {
                     // set modifiers at this column for all qubits
-                    Self::set_modifiers(wire, &self.column, &gate.modifiers)?;
+                    Self::extract_daggers(wire, &self.column, &gate.modifiers)?;
 
                     // set parameters at this column for all qubits
                     for expression in &gate.parameters {
@@ -421,7 +424,7 @@ impl Display for Diagram {
 
                         let mut superscript = String::from("");
                         // attach modifiers to gate name if any
-                        if let Some(modifiers) = wire.modifiers.get(&c) {
+                        if let Some(modifiers) = wire.daggers.get(&c) {
                             for modifier in modifiers {
                                 if let GateModifier::Dagger = modifier {
                                     superscript.push_str(
@@ -518,8 +521,8 @@ struct Wire {
     targ: HashMap<u32, bool>,
     /// the Parameters on the wire callable by the column
     parameters: HashMap<u32, Vec<Parameter>>,
-    /// the Modifiers on the wire callable by the column
-    modifiers: HashMap<u32, Vec<GateModifier>>,
+    /// the Dagger modifiers on the wire callable by the column
+    daggers: HashMap<u32, Vec<GateModifier>>,
     /// empty column
     empty: HashMap<u32, RenderCommand>,
 }
