@@ -32,8 +32,8 @@ enum CompositeGate {
 
 /// A Diagram represents a collection of wires in a Circuit. The size of the
 /// Circuit can be measured by multiplying the column with the length of the
-/// Circuit. This is an [m x n] matrix where m, is the number of Quil
-/// instructions (or columns) plus one empty column, and n, is the number of
+/// Circuit. This is an [m x n] matrix where n, is the number of Quil
+/// instructions (or columns) plus one empty column, and m, is the number of
 /// wires. Each individual element of the matrix represents an item that can be
 /// rendered onto the LaTeX document using the ``Quantikz`` RenderCommands.
 #[derive(Clone, Debug, Default)]

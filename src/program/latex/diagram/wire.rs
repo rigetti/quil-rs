@@ -7,11 +7,11 @@ use crate::{
 
 use super::super::{LatexGenError, Parameter, RenderCommand, Symbol};
 
-/// A Wire represents a single qubit. This is a row vector, or [m x 1] matrix,
-/// where m, is the total number of Quil instructions (or columns) plus one
+/// A Wire represents a single qubit. This is a row vector, or [1 x n] matrix,
+/// where n, is the total number of Quil instructions (or columns) plus one
 /// empty column. Each column on the wire maps to some item that can be
 /// rendered onto the LaTeX document using the ``Quantikz`` RenderCommands. A
-/// wire is part of the Circuit which is an [m x n] matrix where n, is the
+/// wire is part of the Circuit which is an [m x n] matrix where m, is the
 /// number of wires.
 #[derive(Clone, Debug, Default)]
 pub(crate) struct Wire {
