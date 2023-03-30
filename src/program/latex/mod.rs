@@ -103,8 +103,6 @@ enum CompositeGate {
     /// `CZ` is `CONTROLLED Z`
     #[display(fmt = "Z")]
     Cz,
-    /// gate is in canonical form
-    None,
 }
 
 /// RenderSettings contains the metadata that allows the user to customize how
