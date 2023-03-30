@@ -22,7 +22,7 @@
 //! [`Quantikz`]: https://arxiv.org/pdf/1809.03842.pdf
 
 use std::collections::{BTreeMap, HashMap, HashSet};
-use std::fmt::Display;
+use std::fmt;
 use std::str::FromStr;
 
 use crate::expression::Expression;
@@ -237,7 +237,7 @@ impl Default for Document {
     }
 }
 
-impl Display for Document {
+impl fmt::Display for Document {
     /// Returns the entire document in LaTeX string.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}{}{}", self.header, self.body, self.footer)
@@ -396,7 +396,7 @@ impl Diagram {
     }
 }
 
-impl Display for Diagram {
+impl fmt::Display for Diagram {
     /// Returns a result containing the Diagram Circuit as LaTeX string which
     /// can be input into the body of the Document.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
