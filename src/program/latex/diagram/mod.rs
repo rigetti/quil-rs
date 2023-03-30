@@ -4,11 +4,11 @@ use std::{
     str::FromStr,
 };
 
-use self::{settings::RenderSettings, wire::Wire};
-use super::LatexGenError;
 use crate::instruction::{Gate, GateModifier, Instruction, Qubit};
 
-pub(crate) mod settings;
+use self::wire::Wire;
+use super::{LatexGenError, RenderSettings};
+
 pub(crate) mod wire;
 
 /// Available commands used for building circuits with the same names taken

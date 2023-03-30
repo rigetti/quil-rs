@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use super::{wire::Wire, RenderCommand};
+use super::diagram::{wire::Wire, RenderCommand};
 
 /// RenderSettings contains the metadata that allows the user to customize how
 /// the circuit is rendered or use the default implementation.

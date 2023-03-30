@@ -23,15 +23,15 @@
 
 mod diagram;
 
-use std::collections::HashSet;
-use std::fmt;
+use std::{collections::HashSet, fmt};
 
 use crate::instruction::{Instruction, Qubit};
 use crate::Program;
 
-use diagram::settings::RenderSettings;
-use diagram::wire::Wire;
-use diagram::Diagram;
+use self::settings::RenderSettings;
+use diagram::{wire::Wire, Diagram};
+
+pub(crate) mod settings;
 
 /// The structure of a LaTeX document. Typically a LaTeX document contains
 /// metadata defining the setup and packages used in a document within a header
