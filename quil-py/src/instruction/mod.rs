@@ -23,6 +23,7 @@ pub use self::{
     measurement::PyMeasurement,
     pragma::{PyPragma, PyPragmaArgument},
     qubit::PyQubit,
+    reset::PyReset,
     waveform::{PyWaveform, PyWaveformDefinition, PyWaveformInvocation},
 };
 
@@ -34,6 +35,7 @@ mod gate;
 mod measurement;
 mod pragma;
 mod qubit;
+mod reset;
 mod waveform;
 
 py_wrap_union_enum! {
@@ -102,6 +104,7 @@ create_init_submodule! {
         PyMeasurement,
         PyMemoryReference,
         PyQubit,
+        PyReset,
         PyWaveform,
         PyWaveformDefinition,
         PyWaveformInvocation

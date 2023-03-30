@@ -32,6 +32,7 @@ mod gate;
 mod measurement;
 mod pragma;
 mod qubit;
+mod reset;
 mod waveform;
 
 pub use self::arithmetic::{
@@ -48,6 +49,7 @@ pub use self::gate::{
 pub use self::measurement::Measurement;
 pub use self::pragma::{Pragma, PragmaArgument};
 pub use self::qubit::Qubit;
+pub use self::reset::Reset;
 pub use self::waveform::{Waveform, WaveformDefinition, WaveformInvocation};
 
 #[derive(Clone, Debug, thiserror::Error, PartialEq, Eq)]
@@ -127,11 +129,6 @@ pub struct CircuitDefinition {
     // These cannot be fixed qubits and thus are not typed as `Qubit`
     pub qubit_variables: Vec<String>,
     pub instructions: Vec<Instruction>,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Reset {
-    pub qubit: Option<Qubit>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -551,10 +548,7 @@ impl fmt::Display for Instruction {
                 }
                 write!(f, "RAW-CAPTURE {frame} {duration} {memory_reference}")
             }
-            Instruction::Reset(Reset { qubit }) => match qubit {
-                Some(qubit) => write!(f, "RESET {qubit}"),
-                None => write!(f, "RESET"),
-            },
+            Instruction::Reset(reset) => write!(f, "{reset}"),
             Instruction::SetFrequency(SetFrequency { frame, frequency }) => {
                 write!(f, "SET-FREQUENCY {frame} {frequency}")
             }

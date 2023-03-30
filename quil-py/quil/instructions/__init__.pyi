@@ -601,6 +601,13 @@ class Qubit:
     @staticmethod
     def from_variable(name: str) -> "Qubit": ...
 
+class Reset:
+    def __new__(cls, qubit: Optional[Qubit]) -> "Reset": ...
+    @property
+    def qubit(self) -> Optional[Qubit]: ...
+    @qubit.setter
+    def qubit(self, qubit: Optional[Qubit]): ...
+
 @final
 class PragmaArgument:
     """
