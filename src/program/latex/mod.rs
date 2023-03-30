@@ -407,7 +407,7 @@ impl fmt::Display for Diagram {
                     if let Some(gate) = wire.gates.get(&c) {
                         write!(f, " & ")?;
 
-                        let mut superscript = String::from("");
+                        let mut superscript = String::new();
                         // attach modifiers to gate name if any
                         if let Some(modifiers) = wire.daggers.get(&c) {
                             for modifier in modifiers {
