@@ -21,8 +21,8 @@ use petgraph::graphmap::GraphMap;
 use petgraph::Directed;
 
 use crate::instruction::{
-    FrameIdentifier, Instruction, Jump, JumpUnless, JumpWhen, Label, MeasureCalibrationDefinition,
-    MemoryReference,
+    self, FrameIdentifier, Instruction, Jump, JumpUnless, JumpWhen, Label,
+    MeasureCalibrationDefinition, MemoryReference, Qubit,
 };
 use crate::{instruction::InstructionRole, program::Program};
 
@@ -88,7 +88,7 @@ pub enum ExecutionDependency {
     /// The instructions share a reference frame
     ReferenceFrame,
 
-    /// The ordering between these two instructions must remain unchanged
+    /// The ordering between these two instructions must remain unchanged from the input program
     StableOrdering,
 }
 
@@ -299,6 +299,7 @@ impl InstructionBlock {
 
         // Store the instruction index of the last instruction to block that frame
         let mut last_instruction_by_frame: HashMap<FrameIdentifier, PreviousNodes> = HashMap::new();
+        let mut last_instruction_by_qubit: HashMap<Qubit, PreviousNodes> = HashMap::new();
 
         // Store memory access reads and writes. Key is memory region name.
         // NOTE: this may be refined to serialize by memory region offset rather than by entire region.
@@ -321,34 +322,69 @@ impl InstructionBlock {
                         .get_frames_for_instruction(instruction, false)
                         .unwrap_or_default();
 
-                    let blocked_frames = program
-                        .get_frames_for_instruction(instruction, true)
-                        .unwrap_or_default();
+                    if let Instruction::Fence(instruction::Fence { qubits }) = instruction {
+                        let qubits = if qubits.is_empty() {
+                            program.get_used_qubits()
+                        } else {
+                            qubits.iter().cloned().collect()
+                        };
 
-                    let blocked_but_not_used_frames = blocked_frames.difference(&used_frames);
-
-                    for frame in &used_frames {
-                        let previous_node_ids = last_instruction_by_frame
-                            .entry((*frame).clone())
-                            .or_default()
-                            .get_dependencies_for_next_user(node);
-
-                        for previous_node_id in previous_node_ids {
-                            add_dependency!(graph, previous_node_id => node, ExecutionDependency::ReferenceFrame);
+                        for qubit in qubits {
+                            for previous_node_id in last_instruction_by_qubit
+                                .entry(qubit)
+                                .or_default()
+                                .get_dependencies_for_next_user(node)
+                            {
+                                add_dependency!(graph, previous_node_id => node, ExecutionDependency::StableOrdering)
+                            }
                         }
-                    }
 
-                    for frame in blocked_but_not_used_frames {
-                        if let Some(previous_node_id) = last_instruction_by_frame
-                            .entry((*frame).clone())
-                            .or_default()
-                            .get_dependency_for_next_blocker(node)
-                        {
-                            add_dependency!(graph, previous_node_id => node, ExecutionDependency::ReferenceFrame);
+                        Ok(())
+                    } else {
+                        let blocked_frames = program
+                            .get_frames_for_instruction(instruction, true)
+                            .unwrap_or_default();
+
+                        let blocked_but_not_used_frames = blocked_frames.difference(&used_frames);
+
+                        for frame in &used_frames {
+                            let previous_node_ids = last_instruction_by_frame
+                                .entry((*frame).clone())
+                                .or_default()
+                                .get_dependencies_for_next_user(node);
+
+                            for previous_node_id in previous_node_ids {
+                                add_dependency!(graph, previous_node_id => node, ExecutionDependency::ReferenceFrame);
+                            }
                         }
-                    }
 
-                    Ok(())
+                        for frame in blocked_but_not_used_frames {
+                            if let Some(previous_node_id) = last_instruction_by_frame
+                                .entry((*frame).clone())
+                                .or_default()
+                                .get_dependency_for_next_blocker(node)
+                            {
+                                add_dependency!(graph, previous_node_id => node, ExecutionDependency::ReferenceFrame);
+                            }
+                        }
+
+                        let used_qubits = used_frames.iter().fold(HashSet::new(), |mut agg, el| {
+                            agg.extend(&el.qubits);
+                            agg
+                        });
+
+                        for qubit in used_qubits {
+                            if let Some(previous_node_id) = last_instruction_by_qubit
+                                .entry((*qubit).clone())
+                                .or_default()
+                                .get_dependency_for_next_blocker(node)
+                            {
+                                add_dependency!(graph, previous_node_id => node, ExecutionDependency::StableOrdering)
+                            }
+                        }
+
+                        Ok(())
+                    }
                 }
                 InstructionRole::ControlFlow => Err(ScheduleError {
                     instruction_index: Some(index),
@@ -393,6 +429,12 @@ impl InstructionBlock {
         for previous_nodes in last_instruction_by_frame.into_values() {
             for node in previous_nodes.drain() {
                 add_dependency!(graph, node => ScheduledGraphNode::BlockEnd, ExecutionDependency::ReferenceFrame);
+            }
+        }
+
+        for previous_nodes in last_instruction_by_qubit.into_values() {
+            for node in previous_nodes.drain() {
+                add_dependency!(graph, node => ScheduledGraphNode::BlockEnd, ExecutionDependency::StableOrdering);
             }
         }
 

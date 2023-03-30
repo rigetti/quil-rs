@@ -16,11 +16,13 @@ ordering"];
     "block_0_0" [shape=rectangle, label="[0] PULSE 0 \"rf\" test(a: param[0])"];
     "block_0_0" -> "block_0_1" [label="frame"];
     "block_0_0" -> "block_0_end" [label="await read
-frame"];
+frame
+ordering"];
     "block_0_1" [shape=rectangle, label="[1] CAPTURE 0 \"ro_rx\" test(a: param[0]) ro[0]"];
     "block_0_1" -> "block_0_end" [label="await capture
 await read
-frame"];
+frame
+ordering"];
     "block_0_end" [shape=circle, label="end"];
   }
 }

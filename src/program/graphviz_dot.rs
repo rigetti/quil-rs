@@ -306,8 +306,6 @@ NONBLOCKING PULSE 2 \"rf\" test(duration: 1e6)
 PULSE 0 \"rf\" test(duration: 1e6)
 NONBLOCKING PULSE 0 \"ro_tx\" test(duration: 1e6)
 PULSE 0 \"rf\" test(duration: 1e6)
-FENCE 0
-FENCE 0
 "
         );
 
@@ -350,6 +348,18 @@ NONBLOCKING PULSE 0 1 \"cz\" test(duration: 1e-6)
 NONBLOCKING PULSE 1 \"rf\" test(duration: 1e-6)
 FENCE 1
 "
+        );
+
+        build_dot_format_snapshot_test_case!(
+            non_overlapping_fence,
+            r#"
+FENCE 0
+NONBLOCKING PULSE 0 "rf" drag_gaussian(alpha: (-0.95146893464447))
+FENCE 0
+FENCE 1
+NONBLOCKING PULSE 1 "rf" drag_gaussian(alpha: (-1.3853631708424974))
+FENCE 1
+"#
         );
 
         build_dot_format_snapshot_test_case!(

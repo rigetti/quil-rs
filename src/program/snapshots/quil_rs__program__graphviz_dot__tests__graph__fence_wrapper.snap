@@ -9,18 +9,24 @@ digraph {
     label="block_0";
     node [style="filled"];
     "block_0_start" [shape=circle, label="start"];
-    "block_0_start" -> "block_0_0" [label="frame"];
+    "block_0_start" -> "block_0_0" [label="ordering"];
+    "block_0_start" -> "block_0_1" [label="frame"];
+    "block_0_start" -> "block_0_2" [label="frame"];
     "block_0_start" -> "block_0_end" [label="ordering"];
     "block_0_0" [shape=rectangle, label="[0] FENCE"];
-    "block_0_0" -> "block_0_1" [label="frame"];
-    "block_0_0" -> "block_0_2" [label="frame"];
-    "block_0_0" -> "block_0_end" [label="frame"];
+    "block_0_0" -> "block_0_1" [label="ordering"];
+    "block_0_0" -> "block_0_2" [label="ordering"];
+    "block_0_0" -> "block_0_3" [label="ordering"];
+    "block_0_0" -> "block_0_end" [label="ordering"];
     "block_0_1" [shape=rectangle, label="[1] NONBLOCKING PULSE 0 1 \"cz\" test(duration: 1e-6)"];
-    "block_0_1" -> "block_0_3" [label="frame"];
+    "block_0_1" -> "block_0_3" [label="ordering"];
+    "block_0_1" -> "block_0_end" [label="frame
+ordering"];
     "block_0_2" [shape=rectangle, label="[2] NONBLOCKING PULSE 1 \"rf\" test(duration: 1e-6)"];
-    "block_0_2" -> "block_0_3" [label="frame"];
+    "block_0_2" -> "block_0_3" [label="ordering"];
+    "block_0_2" -> "block_0_end" [label="frame"];
     "block_0_3" [shape=rectangle, label="[3] FENCE 1"];
-    "block_0_3" -> "block_0_end" [label="frame"];
+    "block_0_3" -> "block_0_end" [label="ordering"];
     "block_0_end" [shape=circle, label="end"];
   }
 }

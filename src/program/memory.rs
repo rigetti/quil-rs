@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 
 use crate::expression::Expression;
 use crate::instruction::{
@@ -22,6 +22,7 @@ use crate::instruction::{
     Measurement, MemoryReference, Move, Pulse, RawCapture, SetPhase, SetScale, ShiftPhase, Store,
     UnaryLogic, Vector, WaveformInvocation,
 };
+use crate::Program;
 
 #[derive(Clone, Debug, Hash, PartialEq)]
 pub struct MemoryRegion {
@@ -228,13 +229,8 @@ impl Instruction {
                 reads: set_from_memory_references![waveform.get_memory_references()],
                 ..Default::default()
             },
-            Instruction::RawCapture(RawCapture {
-                duration,
-                memory_reference,
-                ..
-            }) => MemoryAccesses {
+            Instruction::RawCapture(RawCapture { duration, .. }) => MemoryAccesses {
                 reads: set_from_memory_references![duration.get_memory_references()],
-                captures: set_from_memory_references![vec![memory_reference]],
                 ..Default::default()
             },
             Instruction::SetPhase(SetPhase { phase: expr, .. })
@@ -310,6 +306,40 @@ impl WaveformInvocation {
 
         for expression in self.parameters.values() {
             result.extend(expression.get_memory_references());
+        }
+
+        result
+    }
+}
+
+impl Program {
+    /// Return all the ways in which a particular [`MemoryReference`] is accessed within a [`Program`].
+    ///
+    /// Note that this does not account for calibration expansion; for accurate results, ensure
+    /// that the program has been fully expanded first.
+    pub fn get_memory_access_types_by_region(&self) -> BTreeMap<String, HashSet<MemoryAccessType>> {
+        let mut result: BTreeMap<String, HashSet<MemoryAccessType>> = BTreeMap::new();
+
+        for instruction in &self.instructions {
+            let accesses = instruction.get_memory_accesses();
+            for region in accesses.reads {
+                result
+                    .entry(region)
+                    .or_default()
+                    .insert(MemoryAccessType::Read);
+            }
+            for region in accesses.writes {
+                result
+                    .entry(region)
+                    .or_default()
+                    .insert(MemoryAccessType::Write);
+            }
+            for region in accesses.captures {
+                result
+                    .entry(region)
+                    .or_default()
+                    .insert(MemoryAccessType::Capture);
+            }
         }
 
         result
