@@ -69,7 +69,8 @@ enum Parameter {
 }
 
 /// Supported Greek and alphanumeric symbols.
-#[derive(Clone, Debug, derive_more::Display, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, strum::EnumString, derive_more::Display, PartialEq, Eq, Hash)]
+#[strum(serialize_all = "lowercase")]
 enum Symbol {
     #[display(fmt = "\\alpha")]
     Alpha,
@@ -83,20 +84,6 @@ enum Symbol {
     Pi,
     #[display(fmt = "\\text{{{_0}}}")]
     Text(String),
-}
-
-impl FromStr for Symbol {
-    type Err = std::convert::Infallible;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "alpha" => Ok(Self::Alpha),
-            "beta" => Ok(Self::Beta),
-            "gamma" => Ok(Self::Gamma),
-            "phi" => Ok(Self::Phi),
-            "pi" => Ok(Self::Pi),
-            _ => Ok(Self::Text(s.to_string())),
-        }
-    }
 }
 
 /// Gates written in shorthand notation, i.e. composite form, that may be
@@ -547,8 +534,10 @@ impl Wire {
 
         // if texify_numerical_constants
         let param = if texify {
-            // get the matching symbol from text
-            vec![Parameter::Symbol(text.parse().unwrap())]
+            // set the texified symbol
+            let symbol = Parameter::Symbol(Symbol::from_str(&text).unwrap_or(Symbol::Text(text)));
+
+            vec![symbol]
         } else {
             // set the symbol as text
             vec![Parameter::Symbol(Symbol::Text(text))]
