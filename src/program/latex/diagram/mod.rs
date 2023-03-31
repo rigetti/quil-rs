@@ -56,20 +56,18 @@ impl Diagram {
     /// # Arguments
     /// `qubits` - exposes the qubits used in the Program
     /// `instruction` - exposes the qubits in a single Instruction
-    pub(crate) fn set_empty(&mut self, qubits: &HashSet<Qubit>, instruction: &Instruction) {
-        if let Instruction::Gate(gate) = instruction {
-            qubits
-                .difference(&gate.qubits.iter().cloned().collect())
-                .filter_map(|q| match q {
-                    Qubit::Fixed(index) => Some(index),
-                    _ => None,
-                })
-                .for_each(|index| {
-                    self.circuit
-                        .get_mut(index)
-                        .map(|wire| wire.empty.insert(self.column, RenderCommand::Qw));
-                });
-        }
+    pub(crate) fn set_empty(&mut self, qubits: &HashSet<Qubit>, gate: &Gate) {
+        qubits
+            .difference(&gate.qubits.iter().cloned().collect())
+            .filter_map(|q| match q {
+                Qubit::Fixed(index) => Some(index),
+                _ => None,
+            })
+            .for_each(|index| {
+                self.circuit
+                    .get_mut(index)
+                    .map(|wire| wire.empty.insert(self.column, RenderCommand::Qw));
+            });
     }
 
     /// Applies a gate from an instruction to the wires on the circuit

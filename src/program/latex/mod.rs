@@ -190,11 +190,11 @@ impl Program {
         }
 
         for instruction in instructions {
-            // set QW for any unused qubits in this instruction
-            diagram.set_empty(&qubits, &instruction);
-
             // parse gate instructions into a new circuit
             if let Instruction::Gate(gate) = instruction {
+                // set QW for any qubits in the circuit not used in this gate
+                diagram.set_empty(&qubits, &gate);
+
                 // if there are any duplicate qubits in the gate return an error
                 if gate.qubits.len()
                     != gate
