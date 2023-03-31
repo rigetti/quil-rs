@@ -26,6 +26,7 @@ use nom_locate::LocatedSpan;
 
 mod arithmetic;
 mod calibration;
+mod circuit;
 mod declaration;
 mod frame;
 mod gate;
@@ -38,6 +39,7 @@ pub use self::arithmetic::{
     BinaryOperator,
 };
 pub use self::calibration::{Calibration, MeasureCalibrationDefinition};
+pub use self::circuit::CircuitDefinition;
 pub use self::declaration::{Declaration, MemoryReference, Offset, ScalarType, Sharing, Vector};
 pub use self::frame::{AttributeValue, FrameAttributes, FrameDefinition, FrameIdentifier};
 pub use self::gate::{
@@ -116,15 +118,6 @@ pub struct Convert {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Include {
     pub filename: String,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct CircuitDefinition {
-    pub name: String,
-    pub parameters: Vec<String>,
-    // These cannot be fixed qubits and thus are not typed as `Qubit`
-    pub qubit_variables: Vec<String>,
-    pub instructions: Vec<Instruction>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -461,30 +454,7 @@ impl fmt::Display for Instruction {
                 }
                 write!(f, "CAPTURE {frame} {waveform} {memory_reference}")
             }
-            Instruction::CircuitDefinition(CircuitDefinition {
-                name,
-                parameters,
-                qubit_variables,
-                instructions,
-            }) => {
-                let mut parameter_str: String = parameters
-                    .iter()
-                    .map(|p| format!("%{p}"))
-                    .collect::<Vec<String>>()
-                    .join(", ");
-                if !parameter_str.is_empty() {
-                    parameter_str = format!("({parameter_str})");
-                }
-                write!(f, "DEFCIRCUIT {name}{parameter_str}")?;
-                for qubit_variable in qubit_variables {
-                    write!(f, " {qubit_variable}")?;
-                }
-                writeln!(f, ":")?;
-                for instruction in &**instructions {
-                    writeln!(f, "\t{instruction}")?;
-                }
-                Ok(())
-            }
+            Instruction::CircuitDefinition(circuit) => write!(f, "{circuit}"),
             Instruction::Convert(Convert { from, to }) => {
                 write!(f, "CONVERT {to} {from}")?;
                 Ok(())
