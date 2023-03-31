@@ -4,7 +4,7 @@ use std::{
     str::FromStr,
 };
 
-use crate::instruction::{Gate, GateModifier, Qubit};
+use crate::instruction::{Gate, Qubit};
 
 use self::wire::Wire;
 use super::{LatexGenError, RenderCommand, RenderSettings};
@@ -140,81 +140,83 @@ impl fmt::Display for Diagram {
     /// Returns a result containing the Diagram Circuit as LaTeX string which
     /// can be input into the body of the Document.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        // add a newline between the first line and the header
+        // write a newline between the body and the Document header
         writeln!(f)?;
 
-        let mut i = 0; // used to omit trailing Nr
-
         // write the LaTeX string for each wire in the circuit
-        for key in self.circuit.keys() {
+        for (i, key) in self.circuit.keys().enumerate() {
             // are labels on in settings?
             if self.settings.label_qubit_lines {
-                // add label to left side of wire
+                // write the label to the left side of wire
                 write!(f, "{}", RenderCommand::Lstick(*key))?;
             } else {
-                // add qw buffer to first column
+                // write an empty column buffer as the first column
                 write!(f, "{}", RenderCommand::Qw)?;
             }
 
-            // convert each column in the wire to string
+            // write the LaTeX string for each item at each column in the wire
             if let Some(wire) = self.circuit.get(key) {
-                for c in 0..self.verticals {
-                    if let Some(gate) = wire.gates.get(&c) {
+                for column in 0..self.verticals {
+                    // write the string for some item at this column
+                    if let Some(gate) = wire.gates.get(&column) {
                         write!(f, " & ")?;
 
+                        // appended to the end of the gate name
                         let mut superscript = String::new();
-                        // attach modifiers to gate name if any
-                        if let Some(modifiers) = wire.daggers.get(&c) {
-                            for modifier in modifiers {
-                                if let GateModifier::Dagger = modifier {
-                                    superscript.push_str(
-                                        &RenderCommand::Super(String::from("dagger")).to_string(),
-                                    );
-                                }
-                            }
+
+                        // iterate over daggers and build superscript
+                        if let Some(daggers) = wire.daggers.get(&column) {
+                            daggers.iter().for_each(|_| {
+                                superscript.push_str(
+                                    &RenderCommand::Super(String::from("dagger")).to_string(),
+                                );
+                            });
                         }
 
-                        if wire.ctrl.get(&c).is_some() {
-                            // CONTROLLED qubits are displayed as `\ctrl{targ}`
-                            if let Some(targ) = wire.ctrl.get(&c) {
+                        // if the wire has a control at this column write the control string and continue
+                        if wire.ctrl.get(&column).is_some() {
+                            if let Some(targ) = wire.ctrl.get(&column) {
                                 write!(f, "{}", &(RenderCommand::Ctrl(*targ)))?;
                             }
                             continue;
-                        } else if wire.targ.get(&c).is_some() {
-                            // CONTROLLED X gates are displayed as `\targ{}`
-                            if gate == "X" {
-                                // set the qubit at this column as the target
 
+                        // if the wire has a target at this column determine if it is associated with an X gate or a PHASE gate
+                        } else if wire.targ.get(&column).is_some() {
+                            // if the target is associated with an X gate determine if it is associated with dagger superscripts
+                            if gate == "X" {
                                 let mut _gate = gate.clone();
 
-                                // if the gate contains daggers, display target as X gate with dagger superscripts
+                                // if it is associated with dagger superscripts write it as an X gate with superscripts
                                 if !superscript.is_empty() {
                                     _gate.push_str(&superscript);
+
                                     write!(f, "{}", &RenderCommand::Gate(_gate))?;
-                                // else display X target as an open dot
+
+                                // otherwise, write it as an open dot
                                 } else {
                                     write!(f, "{}", &RenderCommand::Targ)?;
                                 }
                                 continue;
-                            // PHASE gates are displayed as `\phase{param}`
+
+                            // otherwise, if the target is associated with a PHASE gate write it as a PHASE gate with parameters
                             } else if gate == "PHASE" {
-                                // set the phase parameters
-                                if let Some(parameters) = wire.parameters.get(&c) {
-                                    for param in parameters {
-                                        write!(f, "{}", &RenderCommand::Phase(param.clone()))?;
-                                    }
+                                if let Some(parameters) = wire.parameters.get(&column) {
+                                    parameters.iter().for_each(|p| {
+                                        write!(f, "{}", &RenderCommand::Phase(p.clone())).ok();
+                                    });
                                 }
                                 continue;
                             }
                         }
-                        // all other gates display as `\gate{name}`
-                        let mut _gate = gate.clone();
 
-                        // concatenate superscripts
+                        // write all other items as a generic gate with superscripts if applicable
+                        let mut _gate = gate.clone();
                         _gate.push_str(&superscript);
 
                         write!(f, "{}", &RenderCommand::Gate(_gate))?;
-                    } else if wire.empty.get(&c).is_some() {
+
+                    // otherwise, write the string as an empty column
+                    } else if wire.empty.get(&column).is_some() {
                         // chain an empty column qw to the end of the line
                         write!(f, " & ")?;
                         write!(f, "{}", &RenderCommand::Qw)?;
@@ -231,10 +233,9 @@ impl fmt::Display for Diagram {
                 // indicate a new row
                 write!(f, " ")?;
                 write!(f, "{}", &RenderCommand::Nr)?;
-                i += 1;
             }
 
-            // add a newline between each new line or the footer
+            // write a newline between each row and or the body and the document footer
             writeln!(f)?;
         }
 
