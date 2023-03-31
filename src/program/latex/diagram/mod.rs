@@ -40,8 +40,8 @@ enum CompositeGate {
 pub(super) struct Diagram {
     /// customizes how the diagram renders the circuit
     pub(crate) settings: RenderSettings,
-    /// total number of elements on each wire
-    pub(crate) column: u32,
+    /// the total number of columns as vertical lines through all wires
+    pub(crate) verticals: usize,
     /// a BTreeMap of wires with the name of the wire as the key
     pub(crate) circuit: BTreeMap<u64, Box<Wire>>,
 }
@@ -65,8 +65,8 @@ impl Diagram {
             })
             .for_each(|index| {
                 if let Some(wire) = self.circuit.get_mut(index) {
-                    // set the column on the wire for the empty slot
-                    wire.column = self.column;
+                    // increment the wire column
+                    wire.column += 1;
                     wire.set_empty()
                 }
             });
@@ -84,8 +84,8 @@ impl Diagram {
         for qubit in &gate.qubits {
             if let Qubit::Fixed(qubit) = qubit {
                 if let Some(wire) = self.circuit.get_mut(qubit) {
-                    // set the column on the wire for the gate
-                    wire.column = self.column;
+                    // increment the wire column
+                    wire.column += 1;
 
                     // set modifiers at this column for all qubits
                     wire.set_daggers(&gate.modifiers)?;
@@ -119,7 +119,7 @@ impl Diagram {
                         } else {
                             wire.set_ctrl(qubit, gate.qubits.last().unwrap(), &circuit_qubits);
                         }
-                    } else if wire.parameters.get(&self.column).is_some() {
+                    } else if wire.parameters.get(&wire.column).is_some() {
                         // parameterized single qubit gates are unsupported
                         return Err(LatexGenError::UnsupportedGate {
                             gate: gate.name.clone(),
@@ -127,7 +127,7 @@ impl Diagram {
                     }
 
                     // set modifiers at this column for all qubits
-                    wire.gates.insert(self.column, canonical_gate.clone());
+                    wire.gates.insert(wire.column, canonical_gate.clone());
                 }
             }
         }
@@ -158,7 +158,7 @@ impl fmt::Display for Diagram {
 
             // convert each column in the wire to string
             if let Some(wire) = self.circuit.get(key) {
-                for c in 0..self.column {
+                for c in 0..self.verticals {
                     if let Some(gate) = wire.gates.get(&c) {
                         write!(f, " & ")?;
 

@@ -15,20 +15,20 @@ use super::super::{LatexGenError, Parameter, Symbol};
 /// number of wires.
 #[derive(Clone, Debug, Default)]
 pub(crate) struct Wire {
-    /// the column of the wire
-    pub(crate) column: u32,
+    /// the current column of the wire
+    pub(crate) column: usize,
     /// the Gates on the wire callable by the column
-    pub(crate) gates: HashMap<u32, String>,
+    pub(crate) gates: HashMap<usize, String>,
     /// at this column the wire is a control some distance from the target
-    pub(crate) ctrl: HashMap<u32, i64>,
+    pub(crate) ctrl: HashMap<usize, i64>,
     /// at this column is the wire a target?
-    pub(crate) targ: HashMap<u32, bool>,
+    pub(crate) targ: HashMap<usize, bool>,
     /// the Parameters on the wire at this column
-    pub(crate) parameters: HashMap<u32, Vec<Parameter>>,
+    pub(crate) parameters: HashMap<usize, Vec<Parameter>>,
     /// the Dagger modifiers on the wire at this column
-    pub(crate) daggers: HashMap<u32, Vec<GateModifier>>,
+    pub(crate) daggers: HashMap<usize, Vec<GateModifier>>,
     /// empty column
-    pub(crate) empty: HashMap<u32, bool>,
+    pub(crate) empty: HashMap<usize, bool>,
 }
 
 impl Wire {

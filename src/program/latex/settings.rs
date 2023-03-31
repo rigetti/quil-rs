@@ -60,7 +60,10 @@ impl RenderSettings {
     /// };
     /// program.to_latex(settings).expect("");
     /// ```
-    pub(crate) fn impute_missing_qubits(last_column: u32, circuit: &mut BTreeMap<u64, Box<Wire>>) {
+    pub(crate) fn impute_missing_qubits(
+        last_column: usize,
+        circuit: &mut BTreeMap<u64, Box<Wire>>,
+    ) {
         let mut keys_iter = circuit.keys();
 
         // get the first qubit in the BTreeMap
@@ -82,7 +85,7 @@ impl RenderSettings {
                 };
 
                 // insert empties based on total number of columns
-                for c in 0..=last_column {
+                for c in 0..last_column {
                     wire.empty.insert(c, true);
                 }
 

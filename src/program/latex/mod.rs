@@ -171,6 +171,7 @@ impl Program {
         // initialize a new diagram
         let mut diagram = Diagram {
             settings,
+            verticals: instructions.len() + 1,
             ..Default::default()
         };
 
@@ -186,7 +187,7 @@ impl Program {
         // are implicit qubits required in settings and are there at least two or more qubits in the diagram?
         if diagram.settings.impute_missing_qubits {
             // add implicit qubits to circuit
-            RenderSettings::impute_missing_qubits(instructions.len() as u32, &mut diagram.circuit);
+            RenderSettings::impute_missing_qubits(instructions.len(), &mut diagram.circuit);
         }
 
         for instruction in instructions {
@@ -206,7 +207,6 @@ impl Program {
 
                 diagram.apply_gate(&gate)?;
                 diagram.apply_empty(&qubits, &gate);
-                diagram.column += 1;
             } else if let Instruction::GateDefinition(_) = instruction {
                 // GateDefinition is supported but inserted into the circuit using its Gate instruction form
                 continue;
