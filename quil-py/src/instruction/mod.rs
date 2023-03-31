@@ -47,6 +47,8 @@ py_wrap_union_enum! {
         binary_logic: BinaryLogic => PyBinaryLogic,
         calibration_definition: CalibrationDefinition => PyCalibration,
         declaration: Declaration => PyDeclaration,
+        delay: Delay => PyDelay,
+        fence: Fence => PyFence,
         frame_definition: FrameDefinition => PyFrameDefinition,
         gate: Gate => PyGate,
         gate_definition: GateDefinition => PyGateDefinition,
@@ -54,6 +56,8 @@ py_wrap_union_enum! {
         measure_calibration_definition: MeasureCalibrationDefinition => PyMeasureCalibrationDefinition,
         measurement: Measurement => PyMeasurement,
         nop: Nop,
+        pragma: Pragma => PyPragma,
+        reset: Reset => PyReset,
         waveform_definition: WaveformDefinition => PyWaveformDefinition
     }
 }
