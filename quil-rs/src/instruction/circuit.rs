@@ -39,7 +39,9 @@ impl fmt::Display for CircuitDefinition {
         }
         writeln!(f, ":")?;
         for instruction in &self.instructions {
-            writeln!(f, "\t{instruction}")?;
+            for line in instruction.to_string().split('\n') {
+                writeln!(f, "\t{line}")?;
+            }
         }
         Ok(())
     }
