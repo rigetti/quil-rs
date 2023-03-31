@@ -4,7 +4,7 @@ use std::{
     str::FromStr,
 };
 
-use crate::instruction::{Gate, GateModifier, Instruction, Qubit};
+use crate::instruction::{Gate, GateModifier, Qubit};
 
 use self::wire::Wire;
 use super::{LatexGenError, RenderCommand, RenderSettings};
@@ -56,7 +56,7 @@ impl Diagram {
     /// # Arguments
     /// `qubits` - exposes the qubits used in the Program
     /// `instruction` - exposes the qubits in a single Instruction
-    pub(crate) fn set_empty(&mut self, qubits: &HashSet<Qubit>, gate: &Gate) {
+    pub(crate) fn apply_empty(&mut self, qubits: &HashSet<Qubit>, gate: &Gate) {
         qubits
             .difference(&gate.qubits.iter().cloned().collect())
             .filter_map(|q| match q {
@@ -64,9 +64,11 @@ impl Diagram {
                 _ => None,
             })
             .for_each(|index| {
-                self.circuit
-                    .get_mut(index)
-                    .map(|wire| wire.empty.insert(self.column, RenderCommand::Qw));
+                if let Some(wire) = self.circuit.get_mut(index) {
+                    // set the column on the wire for the empty slot
+                    wire.column = self.column;
+                    wire.set_empty()
+                }
             });
     }
 
@@ -78,20 +80,19 @@ impl Diagram {
     /// # Arguments
     /// `gate` - the Gate of the Instruction from `to_latex`.
     pub(crate) fn apply_gate(&mut self, gate: &Gate) -> Result<(), LatexGenError> {
-        // set modifiers and parameters from gate instruction
+        // for each fixed qubit in the gate
         for qubit in &gate.qubits {
             if let Qubit::Fixed(qubit) = qubit {
                 if let Some(wire) = self.circuit.get_mut(qubit) {
+                    // set the column on the wire for the gate
+                    wire.column = self.column;
+
                     // set modifiers at this column for all qubits
-                    wire.extract_daggers(&self.column, &gate.modifiers)?;
+                    wire.set_daggers(&gate.modifiers)?;
 
                     // set parameters at this column for all qubits
                     for expression in &gate.parameters {
-                        wire.set_param(
-                            expression,
-                            self.column,
-                            self.settings.texify_numerical_constants,
-                        );
+                        wire.set_param(expression, self.settings.texify_numerical_constants);
                     }
                 }
             }
@@ -113,15 +114,10 @@ impl Diagram {
                     if gate.qubits.len() > 1 || canonical_gate == "PHASE" {
                         // set the target qubit if the qubit is equal to the last qubit in gate
                         if qubit == gate.qubits.last().unwrap() {
-                            wire.set_targ(&self.column);
+                            wire.set_targ();
                         // otherwise, set the control qubit
                         } else {
-                            wire.set_ctrl(
-                                &self.column,
-                                qubit,
-                                gate.qubits.last().unwrap(),
-                                &circuit_qubits,
-                            );
+                            wire.set_ctrl(qubit, gate.qubits.last().unwrap(), &circuit_qubits);
                         }
                     } else if wire.parameters.get(&self.column).is_some() {
                         // parameterized single qubit gates are unsupported

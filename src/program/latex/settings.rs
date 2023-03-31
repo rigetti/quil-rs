@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use super::{diagram::wire::Wire, RenderCommand};
+use super::diagram::wire::Wire;
 
 /// RenderSettings contains the metadata that allows the user to customize how
 /// the circuit is rendered or use the default implementation.
@@ -83,7 +83,7 @@ impl RenderSettings {
 
                 // insert empties based on total number of columns
                 for c in 0..=last_column {
-                    wire.empty.insert(c, RenderCommand::Qw);
+                    wire.empty.insert(c, true);
                 }
 
                 Box::new(wire)

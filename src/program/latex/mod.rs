@@ -192,9 +192,6 @@ impl Program {
         for instruction in instructions {
             // parse gate instructions into a new circuit
             if let Instruction::Gate(gate) = instruction {
-                // set QW for any qubits in the circuit not used in this gate
-                diagram.set_empty(&qubits, &gate);
-
                 // if there are any duplicate qubits in the gate return an error
                 if gate.qubits.len()
                     != gate
@@ -208,6 +205,7 @@ impl Program {
                 }
 
                 diagram.apply_gate(&gate)?;
+                diagram.apply_empty(&qubits, &gate);
                 diagram.column += 1;
             } else if let Instruction::GateDefinition(_) = instruction {
                 // GateDefinition is supported but inserted into the circuit using its Gate instruction form

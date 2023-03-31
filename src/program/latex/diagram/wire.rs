@@ -5,7 +5,7 @@ use crate::{
     instruction::{GateModifier, Qubit},
 };
 
-use super::super::{LatexGenError, Parameter, RenderCommand, Symbol};
+use super::super::{LatexGenError, Parameter, Symbol};
 
 /// A Wire represents a single qubit. This is a row vector, or [1 x n] matrix,
 /// where n, is the total number of Quil instructions (or columns) plus one
@@ -15,6 +15,8 @@ use super::super::{LatexGenError, Parameter, RenderCommand, Symbol};
 /// number of wires.
 #[derive(Clone, Debug, Default)]
 pub(crate) struct Wire {
+    /// the column of the wire
+    pub(crate) column: u32,
     /// the Gates on the wire callable by the column
     pub(crate) gates: HashMap<u32, String>,
     /// at this column the wire is a control some distance from the target
@@ -26,20 +28,23 @@ pub(crate) struct Wire {
     /// the Dagger modifiers on the wire at this column
     pub(crate) daggers: HashMap<u32, Vec<GateModifier>>,
     /// empty column
-    pub(crate) empty: HashMap<u32, RenderCommand>,
+    pub(crate) empty: HashMap<u32, bool>,
 }
 
 impl Wire {
-    /// Iterates over the modifiers from the gate instruction and sets it as a
-    /// dagger modifier of this Wire in the Circuit at the current column.
-    /// Returns an Err for FORKED modifiers, and does nothing for CONTROLLED.
+    /// Set empty at the current column.
+    pub(crate) fn set_empty(&mut self) {
+        self.empty.insert(self.column, true);
+    }
+
+    /// Iterates over the modifiers from the gate instruction and pushes DAGGER
+    /// modifiers to daggers vector at the current column. Returns an Err for
+    /// FORKED modifiers, and does nothing for modifiers.
     ///
     /// # Arguments
-    /// `column` - the current column of the Circuit
     /// `modifiers` - the modifiers from the Gate
-    pub(crate) fn extract_daggers(
+    pub(crate) fn set_daggers(
         &mut self,
-        column: &u32,
         modifiers: &Vec<GateModifier>,
     ) -> Result<(), LatexGenError> {
         // set modifers
@@ -52,7 +57,7 @@ impl Wire {
                 // insert DAGGER
                 GateModifier::Dagger => {
                     self.daggers
-                        .entry(*column)
+                        .entry(self.column)
                         .and_modify(|m| m.push(modifier.clone()))
                         .or_insert_with(|| vec![modifier.clone()]);
                 }
@@ -70,9 +75,8 @@ impl Wire {
     ///
     /// # Arguments
     /// `expression` - expression from Program to get name of Parameter
-    /// `column` - the column taking the parameters
     /// `texify` - is texify_numerical_constants setting on?
-    pub(crate) fn set_param(&mut self, expression: &Expression, column: u32, texify: bool) {
+    pub(crate) fn set_param(&mut self, expression: &Expression, texify: bool) {
         // get the name of the supported expression
         let text = match expression {
             Expression::Address(mr) => mr.name.to_string(),
@@ -91,33 +95,23 @@ impl Wire {
             vec![Parameter::Symbol(Symbol::Text(text))]
         };
 
-        self.parameters.insert(column, param);
+        self.parameters.insert(self.column, param);
     }
 
-    /// Set target qubit at this column.
-    ///
-    /// # Arguments
-    /// `column` - the column taking the target
-    pub(crate) fn set_targ(&mut self, column: &u32) {
-        self.targ.insert(*column, true);
+    /// Set target qubit at the current column.
+    pub(crate) fn set_targ(&mut self) {
+        self.targ.insert(self.column, true);
     }
 
-    /// Set control qubit at this column at some distance from the target. The
-    /// distance is determined by the relative position of the control and
+    /// Set control qubit at the current column some distance from the target.
+    /// The distance is determined by the relative position of the control and
     /// target qubits in the circuit.
     ///
     /// # Arguments
-    /// `column` - the column taking the control
     /// `ctrl` - the control qubit
     /// `targ` - the target qubit
     /// `circuit_qubits` - the qubits in the circuit
-    pub(crate) fn set_ctrl(
-        &mut self,
-        column: &u32,
-        ctrl: &Qubit,
-        targ: &Qubit,
-        circuit_qubits: &[u64],
-    ) {
+    pub(crate) fn set_ctrl(&mut self, ctrl: &Qubit, targ: &Qubit, circuit_qubits: &[u64]) {
         if let Qubit::Fixed(ctrl) = ctrl {
             if let Qubit::Fixed(targ) = targ {
                 // get the index of the control and target qubits
@@ -128,7 +122,7 @@ impl Wire {
                 if let Some(ctrl_index) = ctrl_index {
                     if let Some(targ_index) = targ_index {
                         self.ctrl
-                            .insert(*column, targ_index as i64 - ctrl_index as i64);
+                            .insert(self.column, targ_index as i64 - ctrl_index as i64);
                     }
                 }
             }
