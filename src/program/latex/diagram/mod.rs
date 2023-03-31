@@ -184,13 +184,13 @@ impl fmt::Display for Diagram {
                         } else if wire.targ.get(&column).is_some() {
                             // if the target is associated with an X gate determine if it is associated with dagger superscripts
                             if gate == "X" {
-                                let mut _gate = gate.clone();
-
                                 // if it is associated with dagger superscripts write it as an X gate with superscripts
                                 if !superscript.is_empty() {
-                                    _gate.push_str(&superscript);
-
-                                    write!(f, "{}", &RenderCommand::Gate(_gate))?;
+                                    write!(
+                                        f,
+                                        "{}",
+                                        &RenderCommand::Gate(String::from("X"), superscript)
+                                    )?;
 
                                 // otherwise, write it as an open dot
                                 } else {
@@ -202,7 +202,12 @@ impl fmt::Display for Diagram {
                             } else if gate == "PHASE" {
                                 if let Some(parameters) = wire.parameters.get(&column) {
                                     parameters.iter().for_each(|p| {
-                                        write!(f, "{}", &RenderCommand::Phase(p.clone())).ok();
+                                        write!(
+                                            f,
+                                            "{}",
+                                            &RenderCommand::Phase(p.clone(), superscript.clone())
+                                        )
+                                        .ok();
                                     });
                                 }
                                 continue;
@@ -210,10 +215,11 @@ impl fmt::Display for Diagram {
                         }
 
                         // write all other items as a generic gate with superscripts if applicable
-                        let mut _gate = gate.clone();
-                        _gate.push_str(&superscript);
-
-                        write!(f, "{}", &RenderCommand::Gate(_gate))?;
+                        write!(
+                            f,
+                            "{}",
+                            &RenderCommand::Gate(String::from(gate), superscript)
+                        )?;
 
                     // otherwise, write the string as an empty column
                     } else if wire.empty.get(&column).is_some() {

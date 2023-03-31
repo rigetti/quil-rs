@@ -75,12 +75,12 @@ pub(crate) enum RenderCommand {
     /// Make a qubit "stick out" from the left.
     #[display(fmt = "\\lstick{{\\ket{{q_{{{_0}}}}}}}")]
     Lstick(u64),
-    /// Make a gate on the wire.
-    #[display(fmt = "\\gate{{{_0}}}")]
-    Gate(String),
-    /// Make a phase on the wire with a rotation
-    #[display(fmt = "\\phase{{{_0}}}")]
-    Phase(Parameter),
+    /// Make a gate on the wire with an optional superscript.
+    #[display(fmt = "\\gate{{{_0}{_1}}}")]
+    Gate(String, String),
+    /// Make a phase on the wire with a rotation and optional superscript
+    #[display(fmt = "\\phase{{{_0}{_1}}}")]
+    Phase(Parameter, String),
     /// Add a superscript to a gate
     #[display(fmt = "^{{\\{_0}}}")]
     Super(String),
@@ -244,7 +244,7 @@ mod tests {
     /// Test functionality of to_latex using default settings.
     fn test_to_latex() {
         let latex = get_latex(
-            "H 0\nCNOT 0 1",
+            "DAGGER CPHASE(alpha) 0 1",
             RenderSettings {
                 impute_missing_qubits: true,
                 ..Default::default()
@@ -394,8 +394,21 @@ mod tests {
         }
 
         #[test]
+        fn test_modifier_phase_dagger() {
+            insta::assert_snapshot!(get_latex("DAGGER PHASE(pi) 0", RenderSettings::default()));
+        }
+
+        #[test]
         fn test_modifier_dagger_cz() {
             insta::assert_snapshot!(get_latex("DAGGER CZ 0 1", RenderSettings::default()));
+        }
+
+        #[test]
+        fn test_modifier_cphase_dagger() {
+            insta::assert_snapshot!(get_latex(
+                "DAGGER CPHASE(alpha) 0 1",
+                RenderSettings::default()
+            ));
         }
     }
 
@@ -410,12 +423,16 @@ mod tests {
 
         #[test]
         fn test_command_gate() {
-            insta::assert_snapshot!(RenderCommand::Gate("X".to_string()).to_string());
+            insta::assert_snapshot!(RenderCommand::Gate("X".to_string(), String::new()).to_string());
         }
 
         #[test]
         fn test_command_phase() {
-            insta::assert_snapshot!(RenderCommand::Phase(Parameter::Symbol(Symbol::Pi)).to_string());
+            insta::assert_snapshot!(RenderCommand::Phase(
+                Parameter::Symbol(Symbol::Pi),
+                String::new()
+            )
+            .to_string());
         }
 
         #[test]
