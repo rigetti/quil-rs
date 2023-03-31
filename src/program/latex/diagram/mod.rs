@@ -144,7 +144,7 @@ impl fmt::Display for Diagram {
         writeln!(f)?;
 
         // write the LaTeX string for each wire in the circuit
-        for (i, key) in self.circuit.keys().enumerate() {
+        for key in self.circuit.keys() {
             // are labels on in settings?
             if self.settings.label_qubit_lines {
                 // write the label to the left side of wire
@@ -229,8 +229,8 @@ impl fmt::Display for Diagram {
             write!(f, "{}", &RenderCommand::Qw)?;
 
             // if this is the last key iteration, omit Nr from end of line
-            if i < self.circuit.len() - 1 {
-                // indicate a new row
+            if key != self.circuit.keys().last().unwrap() {
+                // otherwise, write Nr to the end of the line
                 write!(f, " ")?;
                 write!(f, "{}", &RenderCommand::Nr)?;
             }
