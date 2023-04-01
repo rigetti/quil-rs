@@ -8,11 +8,10 @@ use crate::{
 use super::super::{LatexGenError, Parameter, RenderCommand, Symbol};
 
 /// A Wire represents a single qubit. This is a row vector, or [1 x n] matrix,
-/// where n, is the total number of Quil instructions (or columns) plus one
-/// empty column. Each column on the wire maps to some item that can be
-/// rendered onto the LaTeX document using the ``Quantikz`` RenderCommands. A
-/// wire is part of the Circuit which is an [m x n] matrix where m, is the
-/// number of wires.
+/// where n, is the total number of Quil instructions (or columns). Each column
+/// on the wire maps to some item that can be serialized into LaTeX using the
+/// ``Quantikz`` RenderCommands. A wire is part of the Circuit which is an [m x
+/// n] matrix where m, is the total number of wires, or length, of the Circuit.
 #[derive(Clone, Debug, Default)]
 pub(crate) struct Wire {
     /// the current column of the wire
@@ -163,7 +162,7 @@ impl fmt::Display for Wire {
                     if gate == "X" {
                         // if it is associated with dagger superscripts write it as an X gate with superscripts
                         if !superscript.is_empty() {
-                            write!(f, "{}", &RenderCommand::Gate("X".to_string(), superscript))?;
+                            write!(f, "{}", &RenderCommand::Gate(gate.to_string(), superscript))?;
 
                         // otherwise, write it as an open dot
                         } else {

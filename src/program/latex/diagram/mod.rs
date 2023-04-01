@@ -31,11 +31,11 @@ enum CompositeGate {
 }
 
 /// A Diagram represents a collection of wires in a Circuit. The size of the
-/// Circuit can be measured by multiplying the column with the length of the
-/// Circuit. This is an [m x n] matrix where n, is the number of Quil
-/// instructions (or columns) plus one empty column, and m, is the number of
-/// wires. Each individual element of the matrix represents an item that can be
-/// rendered onto the LaTeX document using the ``Quantikz`` RenderCommands.
+/// Diagram can be measured by multiplying the number of Instructions in a
+/// Program with the length of the Circuit. This is an [m x n] matrix where n,
+/// is the number of Quil instructions (or columns), and m, is the number of
+/// wires (or rows). Each individual element of the matrix represents an item
+/// that is serializable into LaTeX using the ``Quantikz`` RenderCommands.
 #[derive(Clone, Debug, Default)]
 pub(super) struct Diagram {
     /// customizes how the diagram renders the circuit
@@ -141,28 +141,26 @@ impl fmt::Display for Diagram {
         writeln!(f)?;
 
         // write the LaTeX string for each wire in the circuit
-        for key in self.circuit.keys() {
+        for (qubit, wire) in &self.circuit {
             // are labels on in settings?
             if self.settings.label_qubit_lines {
                 // write the label to the left side of wire
-                write!(f, "{}", RenderCommand::Lstick(*key))?;
+                write!(f, "{}", RenderCommand::Lstick(*qubit))?;
             } else {
                 // write an empty column buffer as the first column
                 write!(f, "{}", RenderCommand::Qw)?;
             }
 
             // write the LaTeX string for the wire
-            if let Some(wire) = self.circuit.get(key) {
-                write!(f, "{wire}")?;
-            }
+            write!(f, "{wire}")?;
 
-            // chain an empty column qw to the end of the line
+            // chain an empty column to the end of the line
             write!(f, " & ")?;
             write!(f, "{}", &RenderCommand::Qw)?;
 
-            // if this is the last key iteration, omit Nr from end of line
-            if key != self.circuit.keys().last().unwrap() {
-                // otherwise, write Nr to the end of the line
+            // if this is the last iteration, omit a new row from the end of the line
+            if *qubit != *self.circuit.keys().last().unwrap() {
+                // otherwise, write a new row to the end of the line
                 write!(f, " ")?;
                 write!(f, "{}", &RenderCommand::Nr)?;
             }
