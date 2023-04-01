@@ -40,8 +40,6 @@ enum CompositeGate {
 pub(super) struct Diagram {
     /// customizes how the diagram renders the circuit
     pub(crate) settings: RenderSettings,
-    /// the total number of columns as vertical lines through all wires
-    pub(crate) verticals: usize,
     /// a BTreeMap of wires with the name of the wire as the key
     pub(crate) circuit: BTreeMap<u64, Box<Wire>>,
 }
@@ -137,8 +135,7 @@ impl Diagram {
 }
 
 impl fmt::Display for Diagram {
-    /// Returns a result containing the Diagram Circuit as LaTeX string which
-    /// can be input into the body of the Document.
+    /// Returns a result containing the body of the Document.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // write a newline between the body and the Document header
         writeln!(f)?;
@@ -154,80 +151,9 @@ impl fmt::Display for Diagram {
                 write!(f, "{}", RenderCommand::Qw)?;
             }
 
-            // write the LaTeX string for each item at each column in the wire
+            // write the LaTeX string for the wire
             if let Some(wire) = self.circuit.get(key) {
-                for column in 0..self.verticals {
-                    // write the string for some item at this column
-                    if let Some(gate) = wire.gates.get(&column) {
-                        write!(f, " & ")?;
-
-                        // appended to the end of the gate name
-                        let mut superscript = String::new();
-
-                        // iterate over daggers and build superscript
-                        if let Some(daggers) = wire.daggers.get(&column) {
-                            daggers.iter().for_each(|_| {
-                                superscript.push_str(
-                                    &RenderCommand::Super(String::from("dagger")).to_string(),
-                                );
-                            });
-                        }
-
-                        // if the wire has a control at this column write the control string and continue
-                        if wire.ctrl.get(&column).is_some() {
-                            if let Some(targ) = wire.ctrl.get(&column) {
-                                write!(f, "{}", &(RenderCommand::Ctrl(*targ)))?;
-                            }
-                            continue;
-
-                        // if the wire has a target at this column determine if it is associated with an X gate or a PHASE gate
-                        } else if wire.targ.get(&column).is_some() {
-                            // if the target is associated with an X gate determine if it is associated with dagger superscripts
-                            if gate == "X" {
-                                // if it is associated with dagger superscripts write it as an X gate with superscripts
-                                if !superscript.is_empty() {
-                                    write!(
-                                        f,
-                                        "{}",
-                                        &RenderCommand::Gate(String::from("X"), superscript)
-                                    )?;
-
-                                // otherwise, write it as an open dot
-                                } else {
-                                    write!(f, "{}", &RenderCommand::Targ)?;
-                                }
-                                continue;
-
-                            // otherwise, if the target is associated with a PHASE gate write it as a PHASE gate with parameters
-                            } else if gate == "PHASE" {
-                                if let Some(parameters) = wire.parameters.get(&column) {
-                                    parameters.iter().for_each(|p| {
-                                        write!(
-                                            f,
-                                            "{}",
-                                            &RenderCommand::Phase(p.clone(), superscript.clone())
-                                        )
-                                        .ok();
-                                    });
-                                }
-                                continue;
-                            }
-                        }
-
-                        // write all other items as a generic gate with superscripts if applicable
-                        write!(
-                            f,
-                            "{}",
-                            &RenderCommand::Gate(String::from(gate), superscript)
-                        )?;
-
-                    // otherwise, write the string as an empty column
-                    } else if wire.empty.get(&column).is_some() {
-                        // chain an empty column qw to the end of the line
-                        write!(f, " & ")?;
-                        write!(f, "{}", &RenderCommand::Qw)?;
-                    }
-                }
+                write!(f, "{wire}")?;
             }
 
             // chain an empty column qw to the end of the line

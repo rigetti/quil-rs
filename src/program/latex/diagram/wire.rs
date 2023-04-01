@@ -1,11 +1,11 @@
-use std::{collections::HashMap, str::FromStr};
+use std::{collections::HashMap, fmt, str::FromStr};
 
 use crate::{
     expression::Expression,
     instruction::{GateModifier, Qubit},
 };
 
-use super::super::{LatexGenError, Parameter, Symbol};
+use super::super::{LatexGenError, Parameter, RenderCommand, Symbol};
 
 /// A Wire represents a single qubit. This is a row vector, or [1 x n] matrix,
 /// where n, is the total number of Quil instructions (or columns) plus one
@@ -127,5 +127,77 @@ impl Wire {
                 }
             }
         }
+    }
+}
+
+impl fmt::Display for Wire {
+    /// Returns a result containing the LaTeX string for the wire
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // write the LaTeX string for each item at each column with a length the total number of instructions in the Wire plus one empty column
+        for column in 0..=self.column + 1 {
+            // write the string for some item at this column
+            if let Some(gate) = self.gates.get(&column) {
+                write!(f, " & ")?;
+
+                // appended to the end of the gate name
+                let mut superscript = String::new();
+
+                // iterate over daggers and build superscript
+                if let Some(daggers) = self.daggers.get(&column) {
+                    daggers.iter().for_each(|_| {
+                        superscript
+                            .push_str(&RenderCommand::Super(String::from("dagger")).to_string());
+                    });
+                }
+
+                // if the wire has a control at this column write the control string and continue
+                if self.ctrl.get(&column).is_some() {
+                    if let Some(targ) = self.ctrl.get(&column) {
+                        write!(f, "{}", &(RenderCommand::Ctrl(*targ)))?;
+                    }
+                    continue;
+
+                // if the wire has a target at this column determine if it is associated with an X gate or a PHASE gate
+                } else if self.targ.get(&column).is_some() {
+                    // if the target is associated with an X gate determine if it is associated with dagger superscripts
+                    if gate == "X" {
+                        // if it is associated with dagger superscripts write it as an X gate with superscripts
+                        if !superscript.is_empty() {
+                            write!(f, "{}", &RenderCommand::Gate("X".to_string(), superscript))?;
+
+                        // otherwise, write it as an open dot
+                        } else {
+                            write!(f, "{}", &RenderCommand::Targ)?;
+                        }
+                        continue;
+
+                    // otherwise, if the target is associated with a PHASE gate write it as a PHASE gate with parameters
+                    } else if gate == "PHASE" {
+                        if let Some(parameters) = self.parameters.get(&column) {
+                            parameters.iter().for_each(|p| {
+                                write!(
+                                    f,
+                                    "{}",
+                                    &RenderCommand::Phase(p.clone(), superscript.clone())
+                                )
+                                .ok();
+                            });
+                        }
+                        continue;
+                    }
+                }
+
+                // write all other items as a generic gate with superscripts if applicable
+                write!(f, "{}", &RenderCommand::Gate(gate.to_string(), superscript))?;
+
+            // otherwise, write the string as an empty column
+            } else if self.empty.get(&column).is_some() {
+                // chain an empty column qw to the end of the line
+                write!(f, " & ")?;
+                write!(f, "{}", &RenderCommand::Qw)?;
+            }
+        }
+
+        Ok(())
     }
 }

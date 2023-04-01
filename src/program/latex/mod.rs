@@ -171,7 +171,6 @@ impl Program {
         // initialize a new diagram
         let mut diagram = Diagram {
             settings,
-            verticals: instructions.len() + 1,
             ..Default::default()
         };
 
