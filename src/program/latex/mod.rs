@@ -359,6 +359,18 @@ mod tests {
         fn test_gate_cz() {
             insta::assert_snapshot!(get_latex("CZ 0 1", RenderSettings::default()));
         }
+
+        #[test]
+        #[should_panic]
+        fn test_gate_xy() {
+            get_latex("XY 0 1", RenderSettings::default());
+        }
+
+        #[test]
+        #[should_panic]
+        fn test_gate_controlled_xy() {
+            get_latex("CONTROLLED XY 0 1 2", RenderSettings::default());
+        }
     }
 
     /// Test module for modifiers

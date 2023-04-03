@@ -1,8 +1,9 @@
 use std::{
     collections::{BTreeMap, HashSet},
     fmt,
-    str::FromStr,
 };
+
+use lazy_regex::{Lazy, Regex};
 
 use crate::instruction::{Gate, Qubit};
 
@@ -10,25 +11,6 @@ use self::wire::Wire;
 use super::{LatexGenError, RenderCommand, RenderSettings};
 
 pub(crate) mod wire;
-
-/// Gates written in shorthand notation, i.e. composite form, that may be
-/// decomposed into modifiers and single gate instructions, i.e. canonical form.
-#[derive(Clone, Debug, strum::EnumString, derive_more::Display, PartialEq, Eq, Hash)]
-#[strum(serialize_all = "UPPERCASE")]
-enum CompositeGate {
-    /// `CNOT` is `CONTROLLED X`
-    #[display(fmt = "X")]
-    Cnot,
-    /// `CCNOT` is `CONTROLLED CONTROLLED X`
-    #[display(fmt = "X")]
-    Ccnot,
-    /// `CPHASE` is `CONTROLLED PHASE`
-    #[display(fmt = "PHASE")]
-    Cphase,
-    /// `CZ` is `CONTROLLED Z`
-    #[display(fmt = "Z")]
-    Cz,
-}
 
 /// A Diagram represents a collection of wires in a Circuit. The size of the
 /// Diagram can be measured by multiplying the number of Instructions in a
@@ -96,10 +78,19 @@ impl Diagram {
             }
         }
 
-        // get display of gate name from composite gate or original gate
-        let canonical_gate = CompositeGate::from_str(&gate.name)
-            .map(|g| g.to_string())
-            .unwrap_or(gate.name.clone());
+        // if the gate is a composite gate, then apply the composite gate
+        static ABBREVIATED_CONTROLLED_GATE: Lazy<Regex> =
+            Lazy::new(|| Regex::new("(?P<count>C+)(?P<base>PHASE|X|Y|Z|NOT)").unwrap());
+
+        let mut canonical_gate = gate.name.clone();
+        if let Some(captures) = ABBREVIATED_CONTROLLED_GATE.captures(&gate.name) {
+            let base = captures.name("base").unwrap().as_str();
+
+            match base {
+                "NOT" => canonical_gate = "X".to_string(),
+                _ => canonical_gate = base.to_string(),
+            }
+        }
 
         // get the names of the qubits in the circuit before circuit is borrowed as mutable
         let circuit_qubits: Vec<u64> = self.circuit.keys().cloned().collect();
@@ -111,6 +102,12 @@ impl Diagram {
                 if let Some(wire) = self.circuit.get_mut(instruction_qubit) {
                     // set the control and target qubits
                     if gate.qubits.len() > 1 || canonical_gate == "PHASE" {
+                        if canonical_gate == "XY" {
+                            return Err(LatexGenError::UnsupportedGate {
+                                gate: gate.name.clone(),
+                            });
+                        }
+
                         // set the target qubit if the qubit is equal to the last qubit in gate
                         if qubit == targ {
                             wire.set_targ();
@@ -126,7 +123,7 @@ impl Diagram {
                     }
 
                     // set modifiers at this column for all qubits
-                    wire.gates.insert(wire.column, canonical_gate.clone());
+                    wire.gates.insert(wire.column, canonical_gate.to_string());
                 }
             }
         }

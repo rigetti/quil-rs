@@ -12,6 +12,7 @@ categories = ["parser-implementations", "science", "compilers", "emulators"]
 derive_more = { version = "0.99.17", optional = true }
 dot-writer = { version = "0.1.2", optional = true }
 indexmap = "1.6.1"
+lazy-regex = { version = "2.5.0", optional = true }
 lexical = "6.1.1"
 nom = "7.1.1"
 nom_locate = "4.0.0"
@@ -30,7 +31,7 @@ rstest = "0.15.0"
 
 [features]
 graphviz-dot = ["dot-writer"]
-latex = ["derive_more"]
+latex = ["derive_more", "lazy-regex"]
 
 [profile.release]
 lto = true
