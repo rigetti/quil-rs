@@ -105,17 +105,18 @@ impl Diagram {
         let circuit_qubits: Vec<u64> = self.circuit.keys().cloned().collect();
 
         // set gate for each qubit in the instruction
+        let targ = gate.qubits.last().unwrap();
         for qubit in &gate.qubits {
             if let Qubit::Fixed(instruction_qubit) = qubit {
                 if let Some(wire) = self.circuit.get_mut(instruction_qubit) {
                     // set the control and target qubits
                     if gate.qubits.len() > 1 || canonical_gate == "PHASE" {
                         // set the target qubit if the qubit is equal to the last qubit in gate
-                        if qubit == gate.qubits.last().unwrap() {
+                        if qubit == targ {
                             wire.set_targ();
                         // otherwise, set the control qubit
                         } else {
-                            wire.set_ctrl(qubit, gate.qubits.last().unwrap(), &circuit_qubits);
+                            wire.set_ctrl(qubit, targ, &circuit_qubits);
                         }
                     } else if wire.parameters.get(&wire.column).is_some() {
                         // parameterized single qubit gates are unsupported
@@ -141,6 +142,7 @@ impl fmt::Display for Diagram {
         writeln!(f)?;
 
         // write the LaTeX string for each wire in the circuit
+        let last = self.circuit.keys().last().unwrap_or(&0);
         for (qubit, wire) in &self.circuit {
             // are labels on in settings?
             if self.settings.label_qubit_lines {
@@ -158,8 +160,8 @@ impl fmt::Display for Diagram {
             write!(f, " & ")?;
             write!(f, "{}", &RenderCommand::Qw)?;
 
-            // if this is the last iteration, omit a new row from the end of the line
-            if *qubit != *self.circuit.keys().last().unwrap() {
+            // omit a new row if this is the last qubit wire
+            if *qubit != *last {
                 // otherwise, write a new row to the end of the line
                 write!(f, " ")?;
                 write!(f, "{}", &RenderCommand::Nr)?;
