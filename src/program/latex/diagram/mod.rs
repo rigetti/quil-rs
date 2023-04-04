@@ -7,7 +7,7 @@ use lazy_regex::{Lazy, Regex};
 
 use crate::instruction::{Gate, Qubit};
 
-use self::wire::Wire;
+use self::wire::{Wire, T};
 use super::{LatexGenError, RenderCommand, RenderSettings};
 
 pub(crate) mod wire;
@@ -45,8 +45,6 @@ impl Diagram {
             })
             .for_each(|index| {
                 if let Some(wire) = self.circuit.get_mut(index) {
-                    // increment the wire column
-                    wire.column += 1;
                     wire.set_empty()
                 }
             });
@@ -64,9 +62,6 @@ impl Diagram {
         for qubit in &gate.qubits {
             if let Qubit::Fixed(qubit) = qubit {
                 if let Some(wire) = self.circuit.get_mut(qubit) {
-                    // increment the wire column
-                    wire.column += 1;
-
                     // set modifiers at this column for all qubits
                     wire.set_daggers(&gate.modifiers)?;
 
@@ -110,20 +105,20 @@ impl Diagram {
 
                         // set the target qubit if the qubit is equal to the last qubit in gate
                         if qubit == targ {
-                            wire.set_targ();
+                            wire.set_targ(canonical_gate.to_string());
                         // otherwise, set the control qubit
                         } else {
                             wire.set_ctrl(qubit, targ, &circuit_qubits);
                         }
-                    } else if wire.parameters.get(&wire.column).is_some() {
+                    } else if wire.parameters.get(&wire.gates.len()).is_some() {
                         // parameterized single qubit gates are unsupported
                         return Err(LatexGenError::UnsupportedGate {
                             gate: gate.name.clone(),
                         });
+                    } else {
+                        // set modifiers at this column for all qubits
+                        wire.gates.push(T::Standard(canonical_gate.to_string()));
                     }
-
-                    // set modifiers at this column for all qubits
-                    wire.gates.insert(wire.column, canonical_gate.to_string());
                 }
             }
         }

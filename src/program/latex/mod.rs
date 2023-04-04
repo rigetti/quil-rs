@@ -178,7 +178,10 @@ impl Program {
         let qubits = Program::get_used_qubits(self);
         for qubit in &qubits {
             if let Qubit::Fixed(name) = qubit {
-                let wire = Wire::default();
+                let wire = Wire {
+                    gates: Vec::with_capacity(instructions.len()),
+                    ..Default::default()
+                };
                 diagram.circuit.insert(*name, Box::new(wire));
             }
         }
