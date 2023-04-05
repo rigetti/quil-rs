@@ -1,8 +1,10 @@
 use std::{collections::HashMap, fmt, str::FromStr};
 
+use lazy_regex::{Lazy, Regex};
+
 use crate::{
     expression::Expression,
-    instruction::{GateModifier, Qubit},
+    instruction::{Gate, GateModifier, Qubit},
 };
 
 use super::super::{LatexGenError, Parameter, RenderCommand, Symbol};
@@ -18,55 +20,83 @@ pub(crate) struct Wire {
     pub(crate) gates: Vec<T>,
     /// the Parameters on the wire at this column
     pub(crate) parameters: HashMap<usize, Vec<Parameter>>,
-    /// the Dagger modifiers on the wire at this column
-    pub(crate) daggers: HashMap<usize, Vec<GateModifier>>,
 }
 
+/// A T represents a Gate that can be pushed onto a Wire. The ``Gate`` struct
+/// in the ``instruction`` module is used to form this T variant which is
+/// pushed onto the Wire and then serialized into LaTeX using the associated
+/// ``Quantikz`` RenderCommand.
 #[derive(Clone, Debug, Default)]
 pub(crate) enum T {
     #[default]
     Empty,
-    Standard(String),
+    StdGate {
+        name: String,
+        dagger_count: usize,
+        ctrl_count: usize,
+    },
     Ctrl(i64),
-    Targ(String),
+}
+
+impl TryFrom<Gate> for T {
+    type Error = LatexGenError;
+
+    /// Returns a StdGate that can be pushed onto the wire. This gate is first
+    /// decomposed into canonical form and may contain modifiers. The modifiers
+    /// are counted and applied to the gate. If the modifier is FORKED, then an
+    /// error returned. This is because FORKED is not supported by the
+    /// ``Quantikz`` library.
+    ///
+    /// # Arguments
+    /// `gate` - the Gate of the Instruction from `to_latex`.
+    fn try_from(gate: Gate) -> Result<Self, Self::Error> {
+        // if the gate is a composite gate, then apply the composite gate
+        static ABBREVIATED_CONTROLLED_GATE: Lazy<Regex> =
+            Lazy::new(|| Regex::new("(?P<count>C+)(?P<base>PHASE|X|Y|Z|NOT)").unwrap());
+
+        let mut canonical_gate = gate.name.to_string();
+        let mut ctrl_count = 0;
+        if let Some(captures) = ABBREVIATED_CONTROLLED_GATE.captures(&gate.name) {
+            let base = captures.name("base").unwrap().as_str();
+            ctrl_count = captures.name("count").unwrap().as_str().len();
+
+            // convert abbreviated controlled gates to canonical form. If the base is NOT, then this is an X gate.
+            match base {
+                "NOT" => canonical_gate = "X".to_string(),
+                _ => canonical_gate = base.to_string(),
+            }
+        }
+
+        // count the supported modifiers
+        let mut dagger_count = 0;
+        for modifier in gate.modifiers {
+            match modifier {
+                // return error for unsupported modifier FORKED
+                GateModifier::Forked => {
+                    return Err(LatexGenError::UnsupportedModifierForked);
+                }
+                GateModifier::Dagger => {
+                    dagger_count += 1;
+                }
+                GateModifier::Controlled => {
+                    ctrl_count += 1;
+                }
+            }
+        }
+
+        // return the StdGate
+        Ok(T::StdGate {
+            name: canonical_gate,
+            dagger_count,
+            ctrl_count,
+        })
+    }
 }
 
 impl Wire {
     /// Set empty at the current column.
     pub(crate) fn set_empty(&mut self) {
         self.gates.push(T::Empty);
-    }
-
-    /// Iterates over the modifiers from the gate instruction and pushes DAGGER
-    /// modifiers to daggers vector at the current column. Returns an Err for
-    /// FORKED modifiers, and does nothing for modifiers.
-    ///
-    /// # Arguments
-    /// `modifiers` - the modifiers from the Gate
-    pub(crate) fn set_daggers(
-        &mut self,
-        modifiers: &Vec<GateModifier>,
-    ) -> Result<(), LatexGenError> {
-        // set modifers
-        for modifier in modifiers {
-            match modifier {
-                // return error for unsupported modifier FORKED
-                GateModifier::Forked => {
-                    return Err(LatexGenError::UnsupportedModifierForked);
-                }
-                // insert DAGGER
-                GateModifier::Dagger => {
-                    self.daggers
-                        .entry(self.gates.len() - 1)
-                        .and_modify(|m| m.push(modifier.clone()))
-                        .or_insert_with(|| vec![modifier.clone()]);
-                }
-                // do nothing for CONTROLLED
-                _ => (),
-            }
-        }
-
-        Ok(())
     }
 
     /// Retrieves a gate's parameters from Expression and matches them with its
@@ -95,12 +125,7 @@ impl Wire {
             vec![Parameter::Symbol(Symbol::Text(text))]
         };
 
-        self.parameters.insert(self.gates.len() - 1, param);
-    }
-
-    /// Set target qubit at the current column.
-    pub(crate) fn set_targ(&mut self, gate: String) {
-        self.gates.push(T::Targ(gate));
+        self.parameters.insert(self.gates.len(), param);
     }
 
     /// Set control qubit at the current column some distance from the target.
@@ -140,37 +165,23 @@ impl fmt::Display for Wire {
             // appended to the end of the gate name
             let mut superscript = String::new();
 
-            // iterate over daggers and build superscript
-            if let Some(daggers) = self.daggers.get(&column) {
-                daggers.iter().for_each(|_| {
-                    superscript.push_str(&RenderCommand::Super(String::from("dagger")).to_string());
-                });
-            }
-
             match &self.gates[column] {
                 T::Empty => {
                     // chain an empty column qw to the end of the line
                     // write!(f, " & ")?;
                     write!(f, "{}", &RenderCommand::Qw)?;
                 }
-                T::Standard(gate) => {
-                    write!(f, "{}", &RenderCommand::Gate(gate.to_string(), superscript))?;
-                }
-                T::Ctrl(targ) => {
-                    write!(f, "{}", &(RenderCommand::Ctrl(*targ)))?;
-                }
-                T::Targ(gate) => {
-                    if gate == "X" {
-                        // if it is associated with dagger superscripts write it as an X gate with superscripts
-                        if !superscript.is_empty() {
-                            write!(f, "{}", &RenderCommand::Gate(gate.to_string(), superscript))?;
+                T::StdGate {
+                    name,
+                    dagger_count,
+                    ctrl_count,
+                } => {
+                    (0..*dagger_count).for_each(|_| {
+                        superscript
+                            .push_str(&RenderCommand::Super(String::from("dagger")).to_string());
+                    });
 
-                        // otherwise, write it as an open dot
-                        } else {
-                            write!(f, "{}", &RenderCommand::Targ)?;
-                        }
-                        continue;
-                    } else if gate == "PHASE" {
+                    if name == "PHASE" {
                         if let Some(parameters) = self.parameters.get(&column) {
                             parameters.iter().for_each(|p| {
                                 write!(
@@ -181,8 +192,19 @@ impl fmt::Display for Wire {
                                 .ok();
                             });
                         }
-                        continue;
+                    } else if name == "X" {
+                        // if it is associated with dagger superscripts write it as an X gate with superscripts
+                        if dagger_count > &0 || ctrl_count == &0 {
+                            write!(f, "{}", &RenderCommand::Gate(name.to_string(), superscript))?;
+                        } else {
+                            write!(f, "{}", &RenderCommand::Targ)?;
+                        }
+                    } else {
+                        write!(f, "{}", &RenderCommand::Gate(name.to_string(), superscript))?;
                     }
+                }
+                T::Ctrl(targ) => {
+                    write!(f, "{}", &(RenderCommand::Ctrl(*targ)))?;
                 }
             }
         }

@@ -3,11 +3,9 @@ use std::{
     fmt,
 };
 
-use lazy_regex::{Lazy, Regex};
-
 use crate::instruction::{Gate, Qubit};
 
-use self::wire::{Wire, T};
+use self::wire::Wire;
 use super::{LatexGenError, RenderCommand, RenderSettings};
 
 pub(crate) mod wire;
@@ -50,22 +48,16 @@ impl Diagram {
             });
     }
 
-    /// Applies a gate from an instruction to the wires on the circuit
-    /// associate with the qubits from the gate. If the gate name matches a
-    /// composite gate, then the composite gate is applied to the circuit,
-    /// otherwise, the original gate is applied to the circuit.
+    /// Applies a gate from an instruction to the associated wires in the
+    /// circuit of this diagram.
     ///
     /// # Arguments
     /// `gate` - the Gate of the Instruction from `to_latex`.
     pub(crate) fn apply_gate(&mut self, gate: &Gate) -> Result<(), LatexGenError> {
-        // for each fixed qubit in the gate
+        // set the parameters for each qubit in the instruction
         for qubit in &gate.qubits {
             if let Qubit::Fixed(qubit) = qubit {
                 if let Some(wire) = self.circuit.get_mut(qubit) {
-                    // set modifiers at this column for all qubits
-                    wire.set_daggers(&gate.modifiers)?;
-
-                    // set parameters at this column for all qubits
                     for expression in &gate.parameters {
                         wire.set_param(expression, self.settings.texify_numerical_constants);
                     }
@@ -73,51 +65,42 @@ impl Diagram {
             }
         }
 
-        // if the gate is a composite gate, then apply the composite gate
-        static ABBREVIATED_CONTROLLED_GATE: Lazy<Regex> =
-            Lazy::new(|| Regex::new("(?P<count>C+)(?P<base>PHASE|X|Y|Z|NOT)").unwrap());
-
-        let mut canonical_gate = gate.name.clone();
-        if let Some(captures) = ABBREVIATED_CONTROLLED_GATE.captures(&gate.name) {
-            let base = captures.name("base").unwrap().as_str();
-
-            match base {
-                "NOT" => canonical_gate = "X".to_string(),
-                _ => canonical_gate = base.to_string(),
-            }
-        }
-
         // get the names of the qubits in the circuit before circuit is borrowed as mutable
         let circuit_qubits: Vec<u64> = self.circuit.keys().cloned().collect();
 
         // set gate for each qubit in the instruction
-        let targ = gate.qubits.last().unwrap();
-        for qubit in &gate.qubits {
+        let last_qubit = gate.qubits.last().unwrap();
+        for (i, qubit) in gate.qubits.iter().enumerate() {
             if let Qubit::Fixed(instruction_qubit) = qubit {
                 if let Some(wire) = self.circuit.get_mut(instruction_qubit) {
-                    // set the control and target qubits
-                    if gate.qubits.len() > 1 || canonical_gate == "PHASE" {
-                        if canonical_gate == "XY" {
-                            return Err(LatexGenError::UnsupportedGate {
-                                gate: gate.name.clone(),
-                            });
-                        }
+                    // push the gate to the wire
+                    wire.gates.push(wire::T::try_from(gate.clone())?);
 
-                        // set the target qubit if the qubit is equal to the last qubit in gate
-                        if qubit == targ {
-                            wire.set_targ(canonical_gate.to_string());
-                        // otherwise, set the control qubit
-                        } else {
-                            wire.set_ctrl(qubit, targ, &circuit_qubits);
+                    // update the last gate to a control gate if the instruction has more than one qubit
+                    if gate.qubits.len() > 1 {
+                        if let wire::T::StdGate {
+                            name,
+                            dagger_count: _,
+                            ctrl_count,
+                        } = wire.gates.last().unwrap()
+                        {
+                            if i != gate.qubits.len() - 1 {
+                                // reset the last gate to a control gate
+                                wire.gates.pop();
+                                wire.set_ctrl(qubit, last_qubit, &circuit_qubits);
+                            } else if i == gate.qubits.len() - 1 && ctrl_count - i > 1 {
+                                // there should be no more than one control modifier from the last qubit in a control and target instruction
+                                return Err(LatexGenError::UnsupportedGate { gate: name.clone() });
+                            }
                         }
-                    } else if wire.parameters.get(&wire.gates.len()).is_some() {
+                    }
+
+                    // parameterized non-PHASE gates are unsupported
+                    if !wire.parameters.is_empty() && !gate.name.contains("PHASE") {
                         // parameterized single qubit gates are unsupported
                         return Err(LatexGenError::UnsupportedGate {
                             gate: gate.name.clone(),
                         });
-                    } else {
-                        // set modifiers at this column for all qubits
-                        wire.gates.push(T::Standard(canonical_gate.to_string()));
                     }
                 }
             }
