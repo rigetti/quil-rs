@@ -19,7 +19,7 @@ pub(crate) struct Wire {
     /// the Gates on the wire callable by the column
     pub(crate) gates: Vec<T>,
     /// the Parameters on the wire at this column
-    pub(crate) parameters: HashMap<usize, Vec<Parameter>>,
+    pub(crate) parameters: HashMap<usize, Parameter>,
 }
 
 /// A T represents a Gate that can be pushed onto a Wire. The ``Gate`` struct
@@ -117,12 +117,11 @@ impl Wire {
         // if texify_numerical_constants
         let param = if texify {
             // set the texified symbol
-            let symbol = Parameter::Symbol(Symbol::from_str(&text).unwrap_or(Symbol::Text(text)));
 
-            vec![symbol]
+            Parameter::Symbol(Symbol::from_str(&text).unwrap_or(Symbol::Text(text)))
         } else {
             // set the symbol as text
-            vec![Parameter::Symbol(Symbol::Text(text))]
+            Parameter::Symbol(Symbol::Text(text))
         };
 
         self.parameters.insert(self.gates.len(), param);
@@ -182,15 +181,12 @@ impl fmt::Display for Wire {
                     });
 
                     if name == "PHASE" {
-                        if let Some(parameters) = self.parameters.get(&column) {
-                            parameters.iter().for_each(|p| {
-                                write!(
-                                    f,
-                                    "{}",
-                                    &RenderCommand::Phase(p.clone(), superscript.clone())
-                                )
-                                .ok();
-                            });
+                        if let Some(p) = self.parameters.get(&column) {
+                            write!(
+                                f,
+                                "{}",
+                                &RenderCommand::Phase(p.clone(), superscript.clone())
+                            )?;
                         }
                     } else if name == "X" {
                         // if it is associated with dagger superscripts write it as an X gate with superscripts
