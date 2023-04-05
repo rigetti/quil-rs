@@ -122,7 +122,7 @@ impl fmt::Display for Diagram {
             // are labels on in settings?
             if self.settings.label_qubit_lines {
                 // write the label to the left side of wire
-                write!(f, "{}", RenderCommand::Lstick(*qubit))?;
+                write!(f, "{}", RenderCommand::LeftWireLabel(*qubit))?;
             } else {
                 // write an empty column buffer as the first column
                 write!(f, "{}", RenderCommand::Qw)?;

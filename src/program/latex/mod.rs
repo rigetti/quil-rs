@@ -72,9 +72,9 @@ impl fmt::Display for Document {
 /// inside `backticks`.
 #[derive(Clone, Debug, derive_more::Display, PartialEq, Eq, Hash)]
 pub(crate) enum RenderCommand {
-    /// Make a qubit "stick out" from the left.
+    /// Set a fixed qubit as the label to the left of wire.
     #[display(fmt = "\\lstick{{\\ket{{q_{{{_0}}}}}}}")]
-    Lstick(u64),
+    LeftWireLabel(u64),
     /// Make a gate on the wire with an optional superscript.
     #[display(fmt = "\\gate{{{_0}{_1}}}")]
     Gate(String, String),
@@ -432,7 +432,7 @@ mod tests {
 
         #[test]
         fn test_command_left_ket() {
-            insta::assert_snapshot!(RenderCommand::Lstick(0).to_string());
+            insta::assert_snapshot!(RenderCommand::LeftWireLabel(0).to_string());
         }
 
         #[test]
