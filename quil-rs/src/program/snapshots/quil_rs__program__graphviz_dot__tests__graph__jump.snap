@@ -1,0 +1,45 @@
+---
+source: src/program/graphviz_dot.rs
+expression: dot_format
+---
+digraph {
+  entry -> "first-block_start";
+  entry [label="Entry Point"];
+  subgraph cluster_0 {
+    label="first-block";
+    node [style="filled"];
+    "first-block_start" [shape=circle, label="start"];
+    "first-block_start" -> "first-block_0" [label="frame"];
+    "first-block_start" -> "first-block_end" [label="frame
+ordering"];
+    "first-block_0" [shape=rectangle, label="[0] PULSE 0 \"rf\" test(duration: 1000000)"];
+    "first-block_0" -> "first-block_end" [label="frame"];
+    "first-block_end" [shape=circle, label="end"];
+  }
+  "first-block_end" -> "third-block_start" [label="if ro[0] != 0"];
+  "first-block_end" -> "second-block_start" [label="if ro[0] == 0"];
+  subgraph cluster_1 {
+    label="second-block";
+    node [style="filled"];
+    "second-block_start" [shape=circle, label="start"];
+    "second-block_start" -> "second-block_0" [label="frame"];
+    "second-block_start" -> "second-block_end" [label="frame
+ordering"];
+    "second-block_0" [shape=rectangle, label="[0] PULSE 0 \"rf\" test(duration: 1000000)"];
+    "second-block_0" -> "second-block_end" [label="frame"];
+    "second-block_end" [shape=circle, label="end"];
+  }
+  "second-block_end" -> "third-block_start" [label="always"];
+  subgraph cluster_2 {
+    label="third-block";
+    node [style="filled"];
+    "third-block_start" [shape=circle, label="start"];
+    "third-block_start" -> "third-block_0" [label="frame"];
+    "third-block_start" -> "third-block_end" [label="frame
+ordering"];
+    "third-block_0" [shape=rectangle, label="[0] PULSE 0 \"rf\" test(duration: 1000000)"];
+    "third-block_0" -> "third-block_end" [label="frame"];
+    "third-block_end" [shape=circle, label="end"];
+  }
+}
+
