@@ -11,6 +11,7 @@ pub use self::{
         PyBinaryOperands, PyBinaryOperator,
     },
     calibration::{PyCalibration, PyMeasureCalibrationDefinition},
+    circuit::PyCircuitDefinition,
     declaration::{
         ParseMemoryReferenceError, PyDeclaration, PyMemoryReference, PyOffset, PyScalarType,
         PySharing, PyVector,
@@ -30,6 +31,7 @@ pub use self::{
 
 mod arithmetic;
 mod calibration;
+mod circuit;
 mod declaration;
 mod frame;
 mod gate;
@@ -46,6 +48,7 @@ py_wrap_union_enum! {
         arithmetic: Arithmetic => PyArithmetic,
         binary_logic: BinaryLogic => PyBinaryLogic,
         calibration_definition: CalibrationDefinition => PyCalibration,
+        circuit_definition: CircuitDefinition => PyCircuitDefinition,
         declaration: Declaration => PyDeclaration,
         delay: Delay => PyDelay,
         fence: Fence => PyFence,
@@ -85,6 +88,7 @@ create_init_submodule! {
         PyBinaryOperands,
         PyBinaryOperator,
         PyCalibration,
+        PyCircuitDefinition,
         PyMeasureCalibrationDefinition,
         PyDeclaration,
         PyOffset,
