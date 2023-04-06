@@ -510,7 +510,7 @@ impl ScheduledProgram {
         let mut working_instructions: Vec<Instruction> = vec![];
         let mut blocks = IndexMap::new();
 
-        let instructions = program.to_instructions(false);
+        let instructions = program.to_instructions();
 
         for (index, instruction) in instructions.into_iter().enumerate() {
             let instruction_index = Some(index);

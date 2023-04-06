@@ -2,11 +2,13 @@ use std::fmt;
 
 use crate::{
     instruction::{
-        format_instructions, format_qubits, get_expression_parameter_string, Expression,
-        GateModifier, Instruction, Qubit,
+        format_instructions, get_expression_parameter_string, Expression, GateModifier,
+        Instruction, Qubit,
     },
     validation::identifier::{validate_identifier, IdentifierValidationError},
 };
+
+use super::format_qubit_parameters;
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Calibration {
@@ -49,7 +51,7 @@ impl fmt::Display for Calibration {
             "DEFCAL {}{} {}:",
             self.name,
             parameter_str,
-            format_qubits(&self.qubits)
+            format_qubit_parameters(&self.qubits)
         )?;
         for instruction in &self.instructions {
             write!(f, "\n\t{instruction}")?;

@@ -1007,10 +1007,9 @@ mod tests {
 
         for input in inputs {
             let program = Program::from_str(input).unwrap();
-            let output = program.to_string(true);
+            let output = program.to_string();
             let roundtrip = Program::from_str(&output).unwrap();
-
-            assert_eq!(program, roundtrip);
+            assert_eq!(output, roundtrip.to_string());
         }
     }
 }

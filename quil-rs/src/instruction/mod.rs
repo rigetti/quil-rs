@@ -410,6 +410,18 @@ pub fn format_qubits(qubits: &[Qubit]) -> String {
         .join(" ")
 }
 
+/// Format qubits as a Quil parameter list, where each variable qubit must be prefixed with a `%`.
+pub fn format_qubit_parameters(qubits: &[Qubit]) -> String {
+    qubits
+        .iter()
+        .map(|q| match q {
+            Qubit::Fixed(index) => format!("{index}"),
+            Qubit::Variable(var) => format!("%{var}"),
+        })
+        .collect::<Vec<String>>()
+        .join(" ")
+}
+
 pub fn get_expression_parameter_string(parameters: &[Expression]) -> String {
     if parameters.is_empty() {
         return String::new();
@@ -662,7 +674,7 @@ impl Instruction {
     ///
     ///
     /// let program = Program::from_str("SHIFT-PHASE 0 \"rf\" 2*2").unwrap();
-    /// let mut instructions = program.to_instructions(true);
+    /// let mut instructions = program.to_instructions();
     /// instructions.iter_mut().for_each(|inst| inst.apply_to_expressions(Expression::simplify));
     ///
     /// assert_eq!(instructions[0].to_string(), String::from("SHIFT-PHASE 0 \"rf\" 4"))
