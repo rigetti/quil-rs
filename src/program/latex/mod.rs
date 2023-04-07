@@ -90,6 +90,9 @@ pub(crate) enum RenderCommand {
     /// Start a new row
     #[display(fmt = "\\\\")]
     Nr,
+    /// Separates columns on the same row.
+    #[display(fmt = " & ")]
+    Separate,
     /// Make a control qubit.
     #[display(fmt = "\\ctrl{{{_0}}}")]
     Ctrl(i64),
@@ -179,7 +182,7 @@ impl Program {
         for qubit in &qubits {
             if let Qubit::Fixed(name) = qubit {
                 let wire = Wire {
-                    gates: Vec::with_capacity(instructions.len()),
+                    columns: Vec::with_capacity(instructions.len()),
                     ..Default::default()
                 };
                 diagram.circuit.insert(*name, Box::new(wire));
@@ -373,6 +376,36 @@ mod tests {
         #[should_panic]
         fn test_gate_controlled_xy() {
             get_latex("CONTROLLED XY 0 1 2", RenderSettings::default());
+        }
+
+        #[test]
+        #[should_panic]
+        fn test_gate_swap() {
+            get_latex("SWAP 0 1", RenderSettings::default());
+        }
+
+        #[test]
+        #[should_panic]
+        fn test_gate_cswap() {
+            get_latex("CSWAP 0 1 2", RenderSettings::default());
+        }
+
+        #[test]
+        #[should_panic]
+        fn test_gate_controlled_swap() {
+            get_latex("CONTROLLED SWAP 0 1 2", RenderSettings::default());
+        }
+
+        #[test]
+        #[should_panic]
+        fn test_gate_iswap() {
+            get_latex("ISWAP 1 2", RenderSettings::default());
+        }
+
+        #[test]
+        #[should_panic]
+        fn test_gate_pswap() {
+            get_latex("PSWAP(gamma) 1 2", RenderSettings::default());
         }
     }
 

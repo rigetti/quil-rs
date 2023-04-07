@@ -4,7 +4,7 @@ use lazy_regex::{Lazy, Regex};
 
 use crate::{
     expression::Expression,
-    instruction::{Gate, GateModifier, Qubit},
+    instruction::{Gate, GateModifier},
 };
 
 use super::super::{LatexGenError, Parameter, RenderCommand, Symbol};
@@ -16,21 +16,21 @@ use super::super::{LatexGenError, Parameter, RenderCommand, Symbol};
 /// n] matrix where m, is the total number of wires, or length, of the Circuit.
 #[derive(Clone, Debug, Default)]
 pub(crate) struct Wire {
-    /// the Gates on the wire callable by the column
-    pub(crate) gates: Vec<T>,
+    /// the columns on the wire that can be serialized into LaTeX
+    pub(crate) columns: Vec<QuantikzCellType>,
     /// the Parameters on the wire at this column
     pub(crate) parameters: HashMap<usize, Parameter>,
 }
 
-/// A T represents a Gate that can be pushed onto a Wire. The ``Gate`` struct
-/// in the ``instruction`` module is used to form this T variant which is
-/// pushed onto the Wire and then serialized into LaTeX using the associated
+/// RenderGate represents a Gate that can be pushed onto a Wire. The ``Gate``
+/// struct in the ``instruction`` module is used to form this T variant which
+/// is pushed onto the Wire and then serialized into LaTeX using the associated
 /// ``Quantikz`` RenderCommand.
 #[derive(Clone, Debug, Default)]
-pub(crate) enum T {
+pub(crate) enum QuantikzCellType {
     #[default]
     Empty,
-    StdGate {
+    Gate {
         name: String,
         dagger_count: usize,
         ctrl_count: usize,
@@ -38,7 +38,7 @@ pub(crate) enum T {
     Ctrl(i64),
 }
 
-impl TryFrom<Gate> for T {
+impl TryFrom<Gate> for QuantikzCellType {
     type Error = LatexGenError;
 
     /// Returns a StdGate that can be pushed onto the wire. This gate is first
@@ -85,7 +85,7 @@ impl TryFrom<Gate> for T {
         }
 
         // return the StdGate
-        Ok(T::StdGate {
+        Ok(QuantikzCellType::Gate {
             name: canonical_gate,
             dagger_count,
             ctrl_count,
@@ -96,7 +96,7 @@ impl TryFrom<Gate> for T {
 impl Wire {
     /// Set empty at the current column.
     pub(crate) fn set_empty(&mut self) {
-        self.gates.push(T::Empty);
+        self.columns.push(QuantikzCellType::Empty);
     }
 
     /// Retrieves a gate's parameters from Expression and matches them with its
@@ -124,7 +124,7 @@ impl Wire {
             Parameter::Symbol(Symbol::Text(text))
         };
 
-        self.parameters.insert(self.gates.len(), param);
+        self.parameters.insert(self.columns.len(), param);
     }
 
     /// Set control qubit at the current column some distance from the target.
@@ -135,22 +135,8 @@ impl Wire {
     /// `ctrl` - the control qubit
     /// `targ` - the target qubit
     /// `circuit_qubits` - the qubits in the circuit
-    pub(crate) fn set_ctrl(&mut self, ctrl: &Qubit, targ: &Qubit, circuit_qubits: &[u64]) {
-        if let Qubit::Fixed(ctrl) = ctrl {
-            if let Qubit::Fixed(targ) = targ {
-                // get the index of the control and target qubits
-                let ctrl_index = circuit_qubits.iter().position(|&x| x == *ctrl);
-                let targ_index = circuit_qubits.iter().position(|&x| x == *targ);
-
-                // if the control and target qubits are found
-                if let Some(ctrl_index) = ctrl_index {
-                    if let Some(targ_index) = targ_index {
-                        self.gates
-                            .push(T::Ctrl(targ_index as i64 - ctrl_index as i64));
-                    }
-                }
-            }
-        }
+    pub(crate) fn set_ctrl(&mut self, distance: i64) {
+        self.columns.push(QuantikzCellType::Ctrl(distance));
     }
 }
 
@@ -158,19 +144,18 @@ impl fmt::Display for Wire {
     /// Returns a result containing the LaTeX string for the wire
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // write the LaTeX string for each item at each column with a length the total number of instructions in the Wire plus one empty column
-        for column in 0..self.gates.len() {
-            write!(f, " & ")?;
+        for column in 0..self.columns.len() {
+            write!(f, "{}", &RenderCommand::Separate)?;
 
             // appended to the end of the gate name
             let mut superscript = String::new();
 
-            match &self.gates[column] {
-                T::Empty => {
+            match &self.columns[column] {
+                QuantikzCellType::Empty => {
                     // chain an empty column qw to the end of the line
-                    // write!(f, " & ")?;
                     write!(f, "{}", &RenderCommand::Qw)?;
                 }
-                T::StdGate {
+                QuantikzCellType::Gate {
                     name,
                     dagger_count,
                     ctrl_count,
@@ -199,7 +184,7 @@ impl fmt::Display for Wire {
                         write!(f, "{}", &RenderCommand::Gate(name.to_string(), superscript))?;
                     }
                 }
-                T::Ctrl(targ) => {
+                QuantikzCellType::Ctrl(targ) => {
                     write!(f, "{}", &(RenderCommand::Ctrl(*targ)))?;
                 }
             }

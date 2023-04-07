@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use super::diagram::wire::{Wire, T};
+use super::diagram::wire::{QuantikzCellType, Wire};
 
 /// RenderSettings contains the metadata that allows the user to customize how
 /// the circuit is rendered or use the default implementation.
@@ -12,12 +12,6 @@ pub struct RenderSettings {
     pub impute_missing_qubits: bool,
     /// Label qubit lines.
     pub label_qubit_lines: bool,
-    /// Write controlled rotations in compact form.
-    pub abbreviate_controlled_rotations: bool,
-    /// Extend the length of open wires at the right of the diagram.
-    pub qubit_line_open_wire_length: u32,
-    /// Align measurement operations to appear at the end of the diagram.
-    pub right_align_terminal_measurements: bool,
 }
 
 impl Default for RenderSettings {
@@ -30,12 +24,6 @@ impl Default for RenderSettings {
             impute_missing_qubits: false,
             /// false: remove Lstick/Rstick from latex.
             label_qubit_lines: true,
-            /// true: `RX(pi)` displayed as `X_{\\pi}` instead of `R_X(\\pi)`.
-            abbreviate_controlled_rotations: false,
-            /// 0: condenses the size of subdiagrams.
-            qubit_line_open_wire_length: 1,
-            /// false: include Meter in the current column.
-            right_align_terminal_measurements: true,
         }
     }
 }
@@ -86,7 +74,7 @@ impl RenderSettings {
 
                 // insert empties based on total number of columns
                 for _ in 0..last_column {
-                    wire.gates.push(T::Empty)
+                    wire.columns.push(QuantikzCellType::Empty)
                 }
 
                 Box::new(wire)

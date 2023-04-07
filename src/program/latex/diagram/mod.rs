@@ -65,32 +65,44 @@ impl Diagram {
             }
         }
 
-        // get the names of the qubits in the circuit before circuit is borrowed as mutable
-        let circuit_qubits: Vec<u64> = self.circuit.keys().cloned().collect();
+        // circuit needed immutably but also used mutably
+        let circuit = self.circuit.clone();
+
+        // only unwrap the last qubit once
+        let last_qubit = gate.qubits.last().unwrap();
 
         // set gate for each qubit in the instruction
-        let last_qubit = gate.qubits.last().unwrap();
         for (i, qubit) in gate.qubits.iter().enumerate() {
             if let Qubit::Fixed(instruction_qubit) = qubit {
-                if let Some(wire) = self.circuit.get_mut(instruction_qubit) {
-                    // push the gate to the wire
-                    wire.gates.push(wire::T::try_from(gate.clone())?);
+                let render_gate = wire::QuantikzCellType::try_from(gate.clone())?;
 
-                    // update the last gate to a control gate if the instruction has more than one qubit
+                if let Some(wire) = self.circuit.get_mut(instruction_qubit) {
+                    // set control Ctrl QuantikzCellType for multi-qubit gates
                     if gate.qubits.len() > 1 {
-                        if let wire::T::StdGate {
+                        if let wire::QuantikzCellType::Gate {
                             name,
                             dagger_count: _,
                             ctrl_count,
-                        } = wire.gates.last().unwrap()
+                        } = &render_gate
                         {
                             if i != gate.qubits.len() - 1 {
-                                // reset the last gate to a control gate
-                                wire.gates.pop();
-                                wire.set_ctrl(qubit, last_qubit, &circuit_qubits);
-                            } else if i == gate.qubits.len() - 1 && ctrl_count - i > 1 {
+                                // last qubit is the target
+                                if let Qubit::Fixed(target) = last_qubit {
+                                    // get the distance between the instruction qubit and the target qubit
+                                    let distance = if instruction_qubit < target {
+                                        circuit.range(instruction_qubit..target).count() as i64
+                                    } else {
+                                        -(circuit.range(target..instruction_qubit).count() as i64)
+                                    };
+
+                                    wire.set_ctrl(distance);
+                                    continue;
+                                }
+                            } else if gate.qubits.len() - ctrl_count > 1 {
                                 // there should be no more than one control modifier from the last qubit in a control and target instruction
-                                return Err(LatexGenError::UnsupportedGate { gate: name.clone() });
+                                return Err(LatexGenError::UnsupportedGate {
+                                    gate: name.to_string(),
+                                });
                             }
                         }
                     }
@@ -102,6 +114,9 @@ impl Diagram {
                             gate: gate.name.clone(),
                         });
                     }
+
+                    // push the gate to the wire
+                    wire.columns.push(render_gate);
                 }
             }
         }
@@ -132,8 +147,7 @@ impl fmt::Display for Diagram {
             write!(f, "{wire}")?;
 
             // chain an empty column to the end of the line
-            write!(f, " & ")?;
-            write!(f, "{}", &RenderCommand::Qw)?;
+            write!(f, "{}{}", &RenderCommand::Separate, &RenderCommand::Qw)?;
 
             // omit a new row if this is the last qubit wire
             if *qubit != *last {
