@@ -131,12 +131,16 @@ pub(crate) enum Symbol {
 pub enum LatexGenError {
     #[error("Found a target qubit with no control qubit.")]
     FoundTargetWithNoControl,
+    #[error("Circuit does not have qubit {0}")]
+    QubitNotFound(u64),
     #[error("The FORKED modifier is unsupported.")]
     UnsupportedModifierForked,
     #[error("This instruction is unsupported: {instruction}.")]
     UnsupportedInstruction { instruction: String },
     #[error("This gate is unsupported: {gate}.")]
     UnsupportedGate { gate: String },
+    #[error("Only fixed qubits are supported")]
+    UnsupportedQubit,
 }
 
 impl Program {

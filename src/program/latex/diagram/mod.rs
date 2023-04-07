@@ -68,57 +68,54 @@ impl Diagram {
         // circuit needed immutably but also used mutably
         let circuit = self.circuit.clone();
 
-        // only unwrap the last qubit once
-        let last_qubit = gate.qubits.last().unwrap();
+        // Quantum Gates operate on at least one qubit
+        let last_qubit = gate.qubits[gate.qubits.len() - 1]
+            .clone()
+            .into_fixed()
+            .map_err(|_| LatexGenError::UnsupportedQubit)?;
 
         // set gate for each qubit in the instruction
-        for (i, qubit) in gate.qubits.iter().enumerate() {
-            if let Qubit::Fixed(instruction_qubit) = qubit {
-                let render_gate = wire::QuantikzCellType::try_from(gate.clone())?;
+        for qubit in gate.qubits.iter() {
+            let instruction_qubit = qubit
+                .clone()
+                .into_fixed()
+                .map_err(|_| LatexGenError::UnsupportedQubit)?;
 
-                if let Some(wire) = self.circuit.get_mut(instruction_qubit) {
-                    // set control Ctrl QuantikzCellType for multi-qubit gates
-                    if gate.qubits.len() > 1 {
-                        if let wire::QuantikzCellType::Gate {
-                            name,
-                            dagger_count: _,
-                            ctrl_count,
-                        } = &render_gate
-                        {
-                            if i != gate.qubits.len() - 1 {
-                                // last qubit is the target
-                                if let Qubit::Fixed(target) = last_qubit {
-                                    // get the distance between the instruction qubit and the target qubit
-                                    let distance = if instruction_qubit < target {
-                                        circuit.range(instruction_qubit..target).count() as i64
-                                    } else {
-                                        -(circuit.range(target..instruction_qubit).count() as i64)
-                                    };
+            let wire = self
+                .circuit
+                .get_mut(&instruction_qubit)
+                .ok_or(LatexGenError::QubitNotFound(instruction_qubit))?;
 
-                                    wire.set_ctrl(distance);
-                                    continue;
-                                }
-                            } else if gate.qubits.len() - ctrl_count > 1 {
-                                // there should be no more than one control modifier from the last qubit in a control and target instruction
-                                return Err(LatexGenError::UnsupportedGate {
-                                    gate: name.to_string(),
-                                });
-                            }
-                        }
-                    }
+            let quantikz_gate = wire::QuantikzGate::try_from(gate.clone())?;
 
-                    // parameterized non-PHASE gates are unsupported
-                    if !wire.parameters.is_empty() && !gate.name.contains("PHASE") {
-                        // parameterized single qubit gates are unsupported
-                        return Err(LatexGenError::UnsupportedGate {
-                            gate: gate.name.clone(),
-                        });
-                    }
-
-                    // push the gate to the wire
-                    wire.columns.push(render_gate);
-                }
+            if gate.qubits.len() - quantikz_gate.ctrl_count > 1 {
+                return Err(LatexGenError::UnsupportedGate {
+                    gate: gate.name.to_string(),
+                });
             }
+
+            if quantikz_gate.ctrl_count > 0 && instruction_qubit != last_qubit {
+                // get the distance between the instruction qubit and the target qubit
+                let distance = if instruction_qubit < last_qubit {
+                    circuit.range(instruction_qubit..last_qubit).count() as i64
+                } else {
+                    -(circuit.range(last_qubit..instruction_qubit).count() as i64)
+                };
+                wire.columns.push(wire::QuantikzCellType::Ctrl(distance));
+                continue;
+            }
+
+            // parameterized non-PHASE gates are unsupported
+            if !wire.parameters.is_empty() && !gate.name.contains("PHASE") {
+                // parameterized single qubit gates are unsupported
+                return Err(LatexGenError::UnsupportedGate {
+                    gate: gate.name.clone(),
+                });
+            }
+
+            // push the gate to the wire
+            wire.columns
+                .push(wire::QuantikzCellType::Gate(quantikz_gate));
         }
 
         Ok(())

@@ -22,6 +22,13 @@ pub(crate) struct Wire {
     pub(crate) parameters: HashMap<usize, Parameter>,
 }
 
+#[derive(Clone, Debug, Default)]
+pub(crate) struct QuantikzGate {
+    pub(crate) name: String,
+    pub(crate) dagger_count: usize,
+    pub(crate) ctrl_count: usize,
+}
+
 /// RenderGate represents a Gate that can be pushed onto a Wire. The ``Gate``
 /// struct in the ``instruction`` module is used to form this T variant which
 /// is pushed onto the Wire and then serialized into LaTeX using the associated
@@ -30,25 +37,13 @@ pub(crate) struct Wire {
 pub(crate) enum QuantikzCellType {
     #[default]
     Empty,
-    Gate {
-        name: String,
-        dagger_count: usize,
-        ctrl_count: usize,
-    },
+    Gate(QuantikzGate),
     Ctrl(i64),
 }
 
-impl TryFrom<Gate> for QuantikzCellType {
+impl TryFrom<Gate> for QuantikzGate {
     type Error = LatexGenError;
 
-    /// Returns a StdGate that can be pushed onto the wire. This gate is first
-    /// decomposed into canonical form and may contain modifiers. The modifiers
-    /// are counted and applied to the gate. If the modifier is FORKED, then an
-    /// error returned. This is because FORKED is not supported by the
-    /// ``Quantikz`` library.
-    ///
-    /// # Arguments
-    /// `gate` - the Gate of the Instruction from `to_latex`.
     fn try_from(gate: Gate) -> Result<Self, Self::Error> {
         // if the gate is a composite gate, then apply the composite gate
         static ABBREVIATED_CONTROLLED_GATE: Lazy<Regex> =
@@ -84,8 +79,7 @@ impl TryFrom<Gate> for QuantikzCellType {
             }
         }
 
-        // return the StdGate
-        Ok(QuantikzCellType::Gate {
+        Ok(QuantikzGate {
             name: canonical_gate,
             dagger_count,
             ctrl_count,
@@ -126,18 +120,6 @@ impl Wire {
 
         self.parameters.insert(self.columns.len(), param);
     }
-
-    /// Set control qubit at the current column some distance from the target.
-    /// The distance is determined by the relative position of the control and
-    /// target qubits in the circuit.
-    ///
-    /// # Arguments
-    /// `ctrl` - the control qubit
-    /// `targ` - the target qubit
-    /// `circuit_qubits` - the qubits in the circuit
-    pub(crate) fn set_ctrl(&mut self, distance: i64) {
-        self.columns.push(QuantikzCellType::Ctrl(distance));
-    }
 }
 
 impl fmt::Display for Wire {
@@ -155,11 +137,11 @@ impl fmt::Display for Wire {
                     // chain an empty column qw to the end of the line
                     write!(f, "{}", &RenderCommand::Qw)?;
                 }
-                QuantikzCellType::Gate {
+                QuantikzCellType::Gate(QuantikzGate {
                     name,
                     dagger_count,
                     ctrl_count,
-                } => {
+                }) => {
                     (0..*dagger_count).for_each(|_| {
                         superscript
                             .push_str(&RenderCommand::Super(String::from("dagger")).to_string());
