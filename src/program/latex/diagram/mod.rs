@@ -54,17 +54,6 @@ impl Diagram {
     /// # Arguments
     /// `gate` - the Gate of the Instruction from `to_latex`.
     pub(crate) fn apply_gate(&mut self, gate: &Gate) -> Result<(), LatexGenError> {
-        // set the parameters for each qubit in the instruction
-        for qubit in &gate.qubits {
-            if let Qubit::Fixed(qubit) = qubit {
-                if let Some(wire) = self.circuit.get_mut(qubit) {
-                    for expression in &gate.parameters {
-                        wire.set_param(expression, self.settings.texify_numerical_constants);
-                    }
-                }
-            }
-        }
-
         // circuit needed immutably but also used mutably
         let circuit = self.circuit.clone();
 
@@ -85,6 +74,11 @@ impl Diagram {
                 .circuit
                 .get_mut(&instruction_qubit)
                 .ok_or(LatexGenError::QubitNotFound(instruction_qubit))?;
+
+            // set the parameters for each qubit in the instruction
+            for expression in &gate.parameters {
+                wire.set_param(expression, self.settings.texify_numerical_constants);
+            }
 
             let quantikz_gate = wire::QuantikzGate::try_from(gate.clone())?;
 
