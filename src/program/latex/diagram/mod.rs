@@ -20,7 +20,7 @@ pub(crate) mod wire;
 pub(super) struct Diagram {
     /// customizes how the diagram renders the circuit
     pub(crate) settings: RenderSettings,
-    /// a BTreeMap of wires with the name of the wire as the key
+    /// Wires (diagram rows) keyed by qubit index
     pub(crate) circuit: BTreeMap<u64, Box<Wire>>,
 }
 
