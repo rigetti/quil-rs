@@ -31,7 +31,10 @@ mod declaration;
 mod frame;
 mod gate;
 mod measurement;
+mod pragma;
 mod qubit;
+mod reset;
+mod timing;
 mod waveform;
 
 pub use self::arithmetic::{
@@ -47,7 +50,10 @@ pub use self::gate::{
     PauliSum, PauliTerm,
 };
 pub use self::measurement::Measurement;
+pub use self::pragma::{Pragma, PragmaArgument};
 pub use self::qubit::Qubit;
+pub use self::reset::Reset;
+pub use self::timing::{Delay, Fence};
 pub use self::waveform::{Waveform, WaveformDefinition, WaveformInvocation};
 
 #[derive(Clone, Debug, thiserror::Error, PartialEq, Eq)]
@@ -121,50 +127,11 @@ pub struct Include {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Reset {
-    pub qubit: Option<Qubit>,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Capture {
     pub blocking: bool,
     pub frame: FrameIdentifier,
     pub memory_reference: MemoryReference,
     pub waveform: WaveformInvocation,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Delay {
-    pub duration: Expression,
-    pub frame_names: Vec<String>,
-    pub qubits: Vec<Qubit>,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Fence {
-    pub qubits: Vec<Qubit>,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Pragma {
-    pub name: String,
-    pub arguments: Vec<PragmaArgument>,
-    pub data: Option<String>,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum PragmaArgument {
-    Identifier(String),
-    Integer(u64),
-}
-
-impl fmt::Display for PragmaArgument {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            PragmaArgument::Identifier(i) => write!(f, "{i}"),
-            PragmaArgument::Integer(i) => write!(f, "{i}"),
-        }
-    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -462,24 +429,8 @@ impl fmt::Display for Instruction {
             Instruction::Declaration(declaration) => {
                 write!(f, "{declaration}")
             }
-            Instruction::Delay(Delay {
-                qubits,
-                frame_names,
-                duration,
-            }) => {
-                write!(f, "DELAY {}", format_qubits(qubits))?;
-                for frame_name in frame_names {
-                    write!(f, " \"{frame_name}\"")?;
-                }
-                write!(f, " {duration}")
-            }
-            Instruction::Fence(Fence { qubits }) => {
-                if qubits.is_empty() {
-                    write!(f, "FENCE")
-                } else {
-                    write!(f, "FENCE {}", format_qubits(qubits))
-                }
-            }
+            Instruction::Delay(delay) => write!(f, "{delay}"),
+            Instruction::Fence(fence) => write!(f, "{fence}"),
             Instruction::FrameDefinition(frame_defintion) => {
                 write!(f, "{frame_defintion}")
             }
@@ -529,22 +480,7 @@ impl fmt::Display for Instruction {
                 }
                 write!(f, "PULSE {frame} {waveform}")
             }
-            Instruction::Pragma(Pragma {
-                name,
-                arguments,
-                data,
-            }) => {
-                write!(f, "PRAGMA {name}")?;
-                if !arguments.is_empty() {
-                    for arg in arguments {
-                        write!(f, " {arg}")?;
-                    }
-                }
-                if let Some(data) = data {
-                    write!(f, " \"{data}\"")?;
-                }
-                Ok(())
-            }
+            Instruction::Pragma(pragma) => write!(f, "{pragma}"),
             Instruction::RawCapture(RawCapture {
                 blocking,
                 frame,
@@ -556,10 +492,7 @@ impl fmt::Display for Instruction {
                 }
                 write!(f, "RAW-CAPTURE {frame} {duration} {memory_reference}")
             }
-            Instruction::Reset(Reset { qubit }) => match qubit {
-                Some(qubit) => write!(f, "RESET {qubit}"),
-                None => write!(f, "RESET"),
-            },
+            Instruction::Reset(reset) => write!(f, "{reset}"),
             Instruction::SetFrequency(SetFrequency { frame, frequency }) => {
                 write!(f, "SET-FREQUENCY {frame} {frequency}")
             }

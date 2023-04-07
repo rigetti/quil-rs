@@ -22,7 +22,10 @@ pub use self::{
         PyPauliSum, PyPauliTerm,
     },
     measurement::PyMeasurement,
+    pragma::{PyPragma, PyPragmaArgument},
     qubit::PyQubit,
+    reset::PyReset,
+    timing::{PyDelay, PyFence},
     waveform::{PyWaveform, PyWaveformDefinition, PyWaveformInvocation},
 };
 
@@ -33,7 +36,10 @@ mod declaration;
 mod frame;
 mod gate;
 mod measurement;
+mod pragma;
 mod qubit;
+mod reset;
+mod timing;
 mod waveform;
 
 py_wrap_union_enum! {
@@ -44,6 +50,8 @@ py_wrap_union_enum! {
         calibration_definition: CalibrationDefinition => PyCalibration,
         circuit_definition: CircuitDefinition => PyCircuitDefinition,
         declaration: Declaration => PyDeclaration,
+        delay: Delay => PyDelay,
+        fence: Fence => PyFence,
         frame_definition: FrameDefinition => PyFrameDefinition,
         gate: Gate => PyGate,
         gate_definition: GateDefinition => PyGateDefinition,
@@ -51,6 +59,8 @@ py_wrap_union_enum! {
         measure_calibration_definition: MeasureCalibrationDefinition => PyMeasureCalibrationDefinition,
         measurement: Measurement => PyMeasurement,
         nop: Nop,
+        pragma: Pragma => PyPragma,
+        reset: Reset => PyReset,
         waveform_definition: WaveformDefinition => PyWaveformDefinition
     }
 }
@@ -86,6 +96,8 @@ create_init_submodule! {
         PyScalarType,
         PyVector,
         PyMeasurement,
+        PyPragma,
+        PyPragmaArgument,
         PyDeclaration,
         PyScalarType,
         PyVector,
@@ -102,6 +114,9 @@ create_init_submodule! {
         PyMeasurement,
         PyMemoryReference,
         PyQubit,
+        PyReset,
+        PyDelay,
+        PyFence,
         PyWaveform,
         PyWaveformDefinition,
         PyWaveformInvocation
