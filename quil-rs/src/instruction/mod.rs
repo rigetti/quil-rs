@@ -411,15 +411,18 @@ pub fn format_qubits(qubits: &[Qubit]) -> String {
 }
 
 /// Format qubits as a Quil parameter list, where each variable qubit must be prefixed with a `%`.
-pub fn format_qubit_parameters(qubits: &[Qubit]) -> String {
-    qubits
-        .iter()
-        .map(|q| match q {
-            Qubit::Fixed(index) => format!("{index}"),
-            Qubit::Variable(var) => format!("%{var}"),
-        })
-        .collect::<Vec<String>>()
-        .join(" ")
+fn write_qubit_parameters(f: &mut fmt::Formatter, qubits: &[Qubit]) -> fmt::Result {
+    for (i, qubit) in qubits.iter().enumerate() {
+        if i > 0 {
+            write!(f, " ")?;
+        }
+        match qubit {
+            Qubit::Fixed(index) => write!(f, "{index}"),
+            Qubit::Variable(var) => write!(f, "%{var}"),
+        }
+    }
+    
+    Ok(())
 }
 
 pub fn get_expression_parameter_string(parameters: &[Expression]) -> String {
