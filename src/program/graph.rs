@@ -85,8 +85,8 @@ pub enum ExecutionDependency {
     /// The downstream instruction must wait for the given operation to complete.
     AwaitMemoryAccess(MemoryAccessType),
 
-    /// The instructions share a reference frame
-    ReferenceFrame,
+    /// The downstream instruction must immediately follow the upstream instruction
+    Timing,
 
     /// The ordering between these two instructions must remain unchanged
     StableOrdering,
@@ -240,8 +240,8 @@ impl Default for PreviousNodes {
     /// (in other words, this instruction cannot be scheduled prior to the start of the instruction block).
     fn default() -> Self {
         Self {
-            using: None,
-            blocking: vec![ScheduledGraphNode::BlockStart].into_iter().collect(),
+            using: Some(ScheduledGraphNode::BlockStart),
+            blocking: HashSet::new(),
         }
     }
 }
@@ -299,6 +299,8 @@ impl InstructionBlock {
 
         // Store the instruction index of the last instruction to block that frame
         let mut last_instruction_by_frame: HashMap<FrameIdentifier, PreviousNodes> = HashMap::new();
+        let mut last_timed_instruction_by_frame: HashMap<FrameIdentifier, PreviousNodes> =
+            HashMap::new();
 
         // Store memory access reads and writes. Key is memory region name.
         // NOTE: this may be refined to serialize by memory region offset rather than by entire region.
@@ -328,23 +330,47 @@ impl InstructionBlock {
                     let blocked_but_not_used_frames = blocked_frames.difference(&used_frames);
 
                     for frame in &used_frames {
+                        // If the instruction's timing must be precise, it is based on the previous timed instructions only.
+                        // That is, the timing of a PULSE is set by a preceding PULSE but not a SET-FREQUENCY, which also
+                        // "uses" that particular frame.
+                        if instruction.requires_precise_timing() {
+                            let previous_node_ids = last_timed_instruction_by_frame
+                                .entry((*frame).clone())
+                                .or_default()
+                                .get_dependencies_for_next_user(node);
+
+                            for previous_node_id in previous_node_ids {
+                                add_dependency!(graph, previous_node_id => node, ExecutionDependency::Timing);
+                            }
+                        }
+
                         let previous_node_ids = last_instruction_by_frame
                             .entry((*frame).clone())
                             .or_default()
                             .get_dependencies_for_next_user(node);
 
                         for previous_node_id in previous_node_ids {
-                            add_dependency!(graph, previous_node_id => node, ExecutionDependency::ReferenceFrame);
+                            add_dependency!(graph, previous_node_id => node, ExecutionDependency::StableOrdering);
                         }
                     }
 
                     for frame in blocked_but_not_used_frames {
+                        if instruction.requires_precise_timing() {
+                            if let Some(previous_node_id) = last_timed_instruction_by_frame
+                                .entry((*frame).clone())
+                                .or_default()
+                                .get_dependency_for_next_blocker(node)
+                            {
+                                add_dependency!(graph, previous_node_id => node, ExecutionDependency::Timing);
+                            }
+                        }
+
                         if let Some(previous_node_id) = last_instruction_by_frame
                             .entry((*frame).clone())
                             .or_default()
                             .get_dependency_for_next_blocker(node)
                         {
-                            add_dependency!(graph, previous_node_id => node, ExecutionDependency::ReferenceFrame);
+                            add_dependency!(graph, previous_node_id => node, ExecutionDependency::StableOrdering);
                         }
                     }
 
@@ -390,9 +416,15 @@ impl InstructionBlock {
         // does not terminate until these are complete
         add_dependency!(graph, last_classical_instruction => ScheduledGraphNode::BlockEnd, ExecutionDependency::StableOrdering);
 
+        for previous_nodes in last_timed_instruction_by_frame.into_values() {
+            for node in previous_nodes.drain() {
+                add_dependency!(graph, node => ScheduledGraphNode::BlockEnd, ExecutionDependency::Timing);
+            }
+        }
+
         for previous_nodes in last_instruction_by_frame.into_values() {
             for node in previous_nodes.drain() {
-                add_dependency!(graph, node => ScheduledGraphNode::BlockEnd, ExecutionDependency::ReferenceFrame);
+                add_dependency!(graph, node => ScheduledGraphNode::BlockEnd, ExecutionDependency::StableOrdering);
             }
         }
 

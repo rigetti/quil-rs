@@ -62,7 +62,7 @@ impl InstructionBlock {
                             MemoryAccessType::Write => "await write",
                             MemoryAccessType::Capture => "await capture",
                         },
-                        ExecutionDependency::ReferenceFrame => "frame",
+                        ExecutionDependency::Timing => "timing",
                         ExecutionDependency::StableOrdering => "ordering",
                     })
                     .collect::<Vec<&str>>();
@@ -353,6 +353,15 @@ FENCE 1
         );
 
         build_dot_format_snapshot_test_case!(
+            fence_one_wrapper,
+            r#"
+FENCE 0
+NONBLOCKING PULSE 0 "rf" flat(iq: 1, duration: 4e-7)
+FENCE 0
+"#
+        );
+
+        build_dot_format_snapshot_test_case!(
             jump,
             "DECLARE ro BIT
 LABEL @first-block
@@ -410,6 +419,14 @@ CAPTURE 0 \"ro_rx\" test ro"
             pulse_after_capture,
             "DECLARE ro BIT
 CAPTURE 0 \"ro_rx\" test ro
+PULSE 0 \"rf\" test"
+        );
+
+        // assert that a block "waits" for a capture to complete even with a pulse after it
+        build_dot_format_snapshot_test_case!(
+            pulse_after_set_frequency,
+            "DECLARE ro BIT
+SET-FREQUENCY 0 \"rf\" 3e9
 PULSE 0 \"rf\" test"
         );
 
