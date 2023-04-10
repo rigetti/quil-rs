@@ -354,78 +354,70 @@ mod tests {
 
     use crate::program::Program;
 
-    #[test]
-    fn expansion() {
-        struct TestCase<'a> {
-            input: &'a str,
-            expected: &'a str,
-        }
+    use insta::assert_snapshot;
+    use rstest::rstest;
 
-        let cases = vec![
-            // Test match ordering/precedence
-            TestCase {
-                input: concat!(
-                    "DEFCAL RX(%theta) %qubit:\n",
-                    "    PULSE 1 \"xy\" gaussian(duration: 1, fwhm: 2, t0: 3)\n",
-                    "DEFCAL RX(%theta) 0:\n",
-                    "    PULSE 2 \"xy\" gaussian(duration: 1, fwhm: 2, t0: 3)\n",
-                    "DEFCAL RX(pi/2) 0:\n",
-                    "    PULSE 3 \"xy\" gaussian(duration: 1, fwhm: 2, t0: 3)\n",
-                    "RX(pi/2) 1\n",
-                    "RX(pi) 0\n",
-                    "RX(pi/2) 0\n"
-                ),
-                expected: concat!(
-                    "PULSE 1 \"xy\" gaussian(duration: 1, fwhm: 2, t0: 3)\n",
-                    "PULSE 2 \"xy\" gaussian(duration: 1, fwhm: 2, t0: 3)\n",
-                    "PULSE 3 \"xy\" gaussian(duration: 1, fwhm: 2, t0: 3)\n"
-                ),
-            },
-            TestCase {
-                input: concat!(
-                    "DEFCAL X 0:\n",
-                    "    PULSE 0 \"xy\" gaussian(duration: 1, fwhm: 2, t0: 3)\n",
-                    "X 0\n"
-                ),
-                expected: "PULSE 0 \"xy\" gaussian(duration: 1, fwhm: 2, t0: 3)\n",
-            },
-            TestCase {
-                input: concat!(
-                    "DEFCAL X 0:\n",
-                    "    Y 0\n",
-                    "DEFCAL Y 0:\n",
-                    "    PULSE 0 \"xy\" gaussian(duration: 1, fwhm: 2, t0: 3)\n",
-                    "X 0\n"
-                ),
-                expected: "PULSE 0 \"xy\" gaussian(duration: 1, fwhm: 2, t0: 3)\n",
-            },
-            TestCase {
-                input: concat!(
-                    "DEFCAL MEASURE 0 addr:\n",
-                    "    PRAGMA INCORRECT_ORDERING\n",
-                    "DEFCAL MEASURE 0 addr:\n",
-                    "    PRAGMA CORRECT\n",
-                    "DEFCAL MEASURE q addr:\n",
-                    "    PRAGMA CORRECT\n",
-                    "DEFCAL MEASURE 1 addr:\n",
-                    "    PRAGMA INCORRECT_QUBIT\n",
-                    "DEFCAL MEASURE addr:\n",
-                    "    PRAGMA INCORRECT_PRECEDENCE\n",
-                    "MEASURE 0 ro\n"
-                ),
-                expected: "PRAGMA CORRECT\n",
-            },
-            TestCase {
-                input: concat!("DEFCAL I q:\n", "    DELAY q 4e-8\n", "I 0\n",),
-                expected: "DELAY 0 4e-8\n",
-            },
-        ];
-
-        for case in &cases {
-            let program = Program::from_str(case.input).unwrap();
-            let calibrated_program = program.expand_calibrations().unwrap();
-            assert_eq!(calibrated_program.to_string(false).as_str(), case.expected);
-        }
+    #[rstest]
+    #[case(
+        "Calibration-Param-Precedence",
+        concat!(
+            "DEFCAL RX(%theta) %qubit:\n",
+            "    PULSE 1 \"xy\" gaussian(duration: 1, fwhm: 2, t0: 3)\n",
+            "DEFCAL RX(%theta) 0:\n",
+            "    PULSE 2 \"xy\" gaussian(duration: 1, fwhm: 2, t0: 3)\n",
+            "DEFCAL RX(pi/2) 0:\n",
+            "    PULSE 3 \"xy\" gaussian(duration: 1, fwhm: 2, t0: 3)\n",
+            "RX(pi/2) 1\n",
+            "RX(pi) 0\n",
+            "RX(pi/2) 0\n"
+        ),
+    )]
+    #[case(
+        "Calibration-Simple",
+        concat!(
+            "DEFCAL X 0:\n",
+            "    PULSE 0 \"xy\" gaussian(duration: 1, fwhm: 2, t0: 3)\n",
+            "X 0\n",
+        ),
+    )]
+    #[case(
+        "Calibration-Instruction-Match",
+        concat!(
+            "DEFCAL X 0:\n",
+            "    Y 0\n",
+            "DEFCAL Y 0:\n",
+            "    PULSE 0 \"xy\" gaussian(duration: 1, fwhm: 2, t0: 3)\n",
+            "X 0\n"
+        ),
+    )]
+    #[case(
+        "Measure-Calibration",
+        concat!(
+            "DEFCAL MEASURE 0 addr:\n",
+            "    PRAGMA INCORRECT_ORDERING\n",
+            "DEFCAL MEASURE 0 addr:\n",
+            "    PRAGMA CORRECT\n",
+            "DEFCAL MEASURE q addr:\n",
+            "    PRAGMA CORRECT\n",
+            "DEFCAL MEASURE 1 addr:\n",
+            "    PRAGMA INCORRECT_QUBIT\n",
+            "DEFCAL MEASURE addr:\n",
+            "    PRAGMA INCORRECT_PRECEDENCE\n",
+            "MEASURE 0 ro\n"
+        ),
+    )]
+    #[case(
+        "Calibration-Variable-Qubit",
+        concat!("DEFCAL I %q:\n", "    DELAY q 4e-8\n", "I 0\n",),
+    )]
+    fn test_expansion(#[case] description: &str, #[case] input: &str) {
+        let program = Program::from_str(input).unwrap();
+        let calibrated_program = program.expand_calibrations().unwrap();
+        insta::with_settings!({
+            snapshot_suffix => description,
+        }, {
+            assert_snapshot!(calibrated_program.to_string())
+        })
     }
 
     #[test]

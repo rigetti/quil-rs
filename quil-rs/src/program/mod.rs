@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use std::collections::{BTreeMap, HashSet};
+use std::fmt;
 use std::ops;
 use std::str::FromStr;
 
@@ -121,7 +122,7 @@ impl Program {
     ///
     /// Errors if any of the instructions in the program are not [`Instruction::Gate`]
     pub fn dagger(&self) -> Result<Self> {
-        self.to_instructions(true).into_iter().try_rfold(
+        self.to_instructions().into_iter().try_rfold(
             Program::new(),
             |mut new_program, instruction| match instruction {
                 Instruction::Gate(gate) => {
@@ -250,43 +251,40 @@ impl Program {
         Ok(expanded_program)
     }
 
-    pub fn to_instructions(&self, include_headers: bool) -> Vec<Instruction> {
-        let mut result = vec![];
+    pub fn to_instructions(&self) -> Vec<Instruction> {
+        let capacity = self.memory_regions.len()
+            + self.frames.len()
+            + self.waveforms.len()
+            + self.instructions.len();
 
-        if include_headers {
-            result.extend(self.to_headers())
-        }
+        let mut instructions: Vec<Instruction> = Vec::with_capacity(capacity);
 
-        result.extend(self.instructions.clone());
-
-        result
-    }
-
-    pub fn to_headers(&self) -> Vec<Instruction> {
-        let mut result = vec![];
-        result.extend(self.memory_regions.iter().map(|(name, descriptor)| {
+        instructions.extend(self.memory_regions.iter().map(|(name, descriptor)| {
             Instruction::Declaration(Declaration {
                 name: name.clone(),
                 size: descriptor.size.clone(),
                 sharing: descriptor.sharing.clone(),
             })
         }));
-        result.extend(self.frames.to_instructions());
-        result.extend(self.waveforms.iter().map(|(name, definition)| {
+        instructions.extend(self.frames.to_instructions());
+        instructions.extend(self.waveforms.iter().map(|(name, definition)| {
             Instruction::WaveformDefinition(WaveformDefinition {
                 name: name.clone(),
                 definition: definition.clone(),
             })
         }));
-        result.extend(self.calibrations.to_instructions());
-        result
+        instructions.extend(self.calibrations.to_instructions());
+        instructions.extend(self.instructions.clone());
+        instructions
     }
+}
 
-    pub fn to_string(&self, include_headers: bool) -> String {
-        self.to_instructions(include_headers)
-            .iter()
-            .map(|inst| format!("{inst}\n"))
-            .collect()
+impl fmt::Display for Program {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for instruction in self.to_instructions() {
+            writeln!(f, "{instruction}")?;
+        }
+        Ok(())
     }
 }
 
@@ -422,10 +420,8 @@ I 0
         assert_eq!(program.waveforms.len(), 1);
         assert_eq!(program.instructions.len(), 1);
 
-        assert_eq!(program.to_string(false), "I 0\n");
-
         assert_eq!(
-            program.to_string(true),
+            program.to_string(),
             "DECLARE ro BIT[5]
 DEFFRAME 0 \"rx\":
 \tHARDWARE-OBJECT: \"hardware\"
@@ -445,8 +441,8 @@ DECLARE ro BIT
 DECLARE anc BIT
 DECLARE ec BIT
 ";
-        let program1 = Program::from_str(input).unwrap().to_string(true);
-        let program2 = Program::from_str(input).unwrap().to_string(true);
+        let program1 = Program::from_str(input).unwrap().to_string();
+        let program2 = Program::from_str(input).unwrap().to_string();
 
         // verify that each memory declaration in the program is in the same index as the same
         // program after being re-parsed and serialized.

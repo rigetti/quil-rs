@@ -24,16 +24,14 @@ yanked = "deny"
 notice = "deny"
 # A list of advisory IDs to ignore. Note that ignored advisories will still
 # output a note when they are encountered.
-ignore = [
-  "RUSTSEC-2023-0018" # remove_dir_all is used by proptest, a dev dependency 
-]
+ignore = []
 
 # This section is considered when running `cargo deny check licenses`
 # More documentation for the licenses section can be found here:
 # https://embarkstudios.github.io/cargo-deny/checks/licenses/cfg.html
 [licenses]
 unlicensed = "deny"
-allow = ["Apache-2.0", "Apache-2.0 WITH LLVM-exception", "BSD-2-Clause", "BSD-3-Clause", "MIT", "Unicode-DFS-2016"]
+allow = ["Apache-2.0", "Apache-2.0 WITH LLVM-exception", "BSD-3-Clause", "MIT", "Unicode-DFS-2016"]
 # List of explictly disallowed licenses
 # See https://spdx.org/licenses/ for list of possible licenses
 # [possible values: any SPDX 3.11 short identifier (+ optional exception)].
@@ -74,9 +72,10 @@ skip-tree = [
     { name = "syn", version = "*", depth = 5 }, # Used in both serde_derive and proptest-derive
     { name = "quick-error", version = "*" },    # proptest relies on two versions of this
     { name = "itoa", version = "*" },           # various dependencies rely on two versions of this
-    { name = "hermit-abi", version = "*" },           # various dependencies rely on two versions of this
-    { name = "memoffset", version = "*" },           # various dependencies rely on two versions of this
-    { name = "windows-sys", version = "*" },           # various dependencies rely on two versions of this
+    { name = "hermit-abi", version = "*" },     # various dependencies rely on two versions of this
+    { name = "memoffset", version = "*" },      # various dependencies rely on two versions of this
+    { name = "windows-sys", version = "*" },    # various dependencies rely on two versions of this
+    { name = "redox_syscall", version = "*" },  # proptest and pyo3 rely on two versions of this
 ]
 
 # This section is considered when running `cargo deny check sources`.

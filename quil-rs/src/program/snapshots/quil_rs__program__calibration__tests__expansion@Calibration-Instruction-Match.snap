@@ -1,0 +1,10 @@
+---
+source: quil-rs/src/program/calibration.rs
+expression: calibrated_program.to_string()
+---
+DEFCAL X 0:
+	Y 0
+DEFCAL Y 0:
+	PULSE 0 "xy" gaussian(duration: 1, fwhm: 2, t0: 3)
+PULSE 0 "xy" gaussian(duration: 1, fwhm: 2, t0: 3)
+

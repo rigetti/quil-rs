@@ -93,7 +93,7 @@ impl PyProgram {
     // declarations and simplify this?
     pub fn declarations(&self, py: Python<'_>) -> PyResult<HashMap<String, PyDeclaration>> {
         self.as_inner()
-            .to_instructions(true)
+            .to_instructions()
             .iter()
             .filter_map(|inst| match inst {
                 Instruction::Declaration(declaration) => Some(declaration),
@@ -106,7 +106,7 @@ impl PyProgram {
     #[getter]
     pub fn defined_gates(&self, py: Python<'_>) -> PyResult<Vec<PyGateDefinition>> {
         self.as_inner()
-            .to_instructions(true)
+            .to_instructions()
             .iter()
             .filter_map(|inst| match inst {
                 Instruction::GateDefinition(gate_def) => Some(gate_def.to_python(py)),
@@ -156,28 +156,16 @@ impl PyProgram {
             .add_instructions(instructions.into_iter().map(Into::into).collect())
     }
 
-    pub fn to_instructions(
-        &self,
-        include_headers: bool,
-        py: Python<'_>,
-    ) -> PyResult<Vec<PyInstruction>> {
+    pub fn to_instructions(&self, py: Python<'_>) -> PyResult<Vec<PyInstruction>> {
         self.as_inner()
-            .to_instructions(include_headers)
+            .to_instructions()
             .iter()
             .map(|i| i.to_python(py))
             .collect()
     }
 
-    pub fn to_headers(&self, py: Python<'_>) -> PyResult<Vec<PyInstruction>> {
-        self.as_inner()
-            .to_headers()
-            .iter()
-            .map(|h| h.to_python(py))
-            .collect()
-    }
-
     pub fn __str__(&self) -> String {
-        self.as_inner().to_string(true)
+        self.as_inner().to_string()
     }
 
     pub fn __add__(&self, py: Python<'_>, rhs: Self) -> PyResult<Self> {
@@ -197,7 +185,7 @@ impl PyProgram {
     // nor be reliably serialized by something like serde using the current
     // quil-rs data model.
     pub fn __getstate__<'a>(&self, py: Python<'a>) -> &'a PyBytes {
-        PyBytes::new(py, self.as_inner().to_string(true).as_bytes())
+        PyBytes::new(py, self.as_inner().to_string().as_bytes())
     }
 
     pub fn __setstate__(&mut self, py: Python<'_>, state: &PyBytes) -> PyResult<()> {
