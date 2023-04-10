@@ -412,16 +412,13 @@ pub fn format_qubits(qubits: &[Qubit]) -> String {
 
 /// Format qubits as a Quil parameter list, where each variable qubit must be prefixed with a `%`.
 fn write_qubit_parameters(f: &mut fmt::Formatter, qubits: &[Qubit]) -> fmt::Result {
-    for (i, qubit) in qubits.iter().enumerate() {
-        if i > 0 {
-            write!(f, " ")?;
-        }
+    for qubit in qubits.iter() {
         match qubit {
-            Qubit::Fixed(index) => write!(f, "{index}"),
-            Qubit::Variable(var) => write!(f, "%{var}"),
+            Qubit::Fixed(index) => write!(f, " {index}")?,
+            Qubit::Variable(var) => write!(f, " %{var}")?,
         }
     }
-    
+
     Ok(())
 }
 

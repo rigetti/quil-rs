@@ -8,7 +8,7 @@ use crate::{
     validation::identifier::{validate_identifier, IdentifierValidationError},
 };
 
-use super::format_qubit_parameters;
+use super::write_qubit_parameters;
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Calibration {
@@ -46,13 +46,9 @@ impl Calibration {
 impl fmt::Display for Calibration {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let parameter_str = get_expression_parameter_string(&self.parameters);
-        write!(
-            f,
-            "DEFCAL {}{} {}:",
-            self.name,
-            parameter_str,
-            format_qubit_parameters(&self.qubits)
-        )?;
+        write!(f, "DEFCAL {}{}", self.name, parameter_str)?;
+        write_qubit_parameters(f, &self.qubits)?;
+        write!(f, ":")?;
         for instruction in &self.instructions {
             write!(f, "\n\t{instruction}")?;
         }
