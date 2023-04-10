@@ -16,7 +16,10 @@ pub use self::{
         ParseMemoryReferenceError, PyDeclaration, PyMemoryReference, PyOffset, PyScalarType,
         PySharing, PyVector,
     },
-    frame::{PyAttributeValue, PyFrameAttributes, PyFrameDefinition, PyFrameIdentifier},
+    frame::{
+        PyAttributeValue, PyCapture, PyFrameAttributes, PyFrameDefinition, PyFrameIdentifier,
+        PyPulse, PyRawCapture,
+    },
     gate::{
         GateError, PyGate, PyGateDefinition, PyGateModifier, PyGateSpecification, PyPauliGate,
         PyPauliSum, PyPauliTerm,
@@ -48,6 +51,7 @@ py_wrap_union_enum! {
         arithmetic: Arithmetic => PyArithmetic,
         binary_logic: BinaryLogic => PyBinaryLogic,
         calibration_definition: CalibrationDefinition => PyCalibration,
+        capture: Capture => PyCapture,
         circuit_definition: CircuitDefinition => PyCircuitDefinition,
         declaration: Declaration => PyDeclaration,
         delay: Delay => PyDelay,
@@ -60,6 +64,8 @@ py_wrap_union_enum! {
         measurement: Measurement => PyMeasurement,
         nop: Nop,
         pragma: Pragma => PyPragma,
+        pulse: Pulse => PyPulse,
+        raw_capture: RawCapture => PyRawCapture,
         reset: Reset => PyReset,
         waveform_definition: WaveformDefinition => PyWaveformDefinition
     }
@@ -102,8 +108,11 @@ create_init_submodule! {
         PyScalarType,
         PyVector,
         PyAttributeValue,
+        PyCapture,
         PyFrameDefinition,
         PyFrameIdentifier,
+        PyPulse,
+        PyRawCapture,
         PyGate,
         PyGateDefinition,
         PyGateModifier,
