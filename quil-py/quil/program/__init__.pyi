@@ -83,8 +83,7 @@ class Program:
         Parses the given Quil string and returns a new ``Program``.
         Raises a ``ProgramError`` if the given string isn't valid Quil.
         """
-    def to_instructions(self, include_headers: bool) -> List[Instruction]: ...
-    def to_headers(self) -> List[Instruction]: ...
+    def to_instructions(self) -> List[Instruction]: ...
 
 @final
 class CalibrationSet:
