@@ -19,7 +19,7 @@ vulnerability = "deny"
 # The lint level for unmaintained crates
 unmaintained = "deny"
 # The lint level for crates that have been yanked from their source registry
-yanked = "warn"
+yanked = "deny"
 # The lint level for crates with security notices.
 notice = "deny"
 # A list of advisory IDs to ignore. Note that ignored advisories will still
