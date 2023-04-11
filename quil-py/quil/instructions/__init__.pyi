@@ -559,7 +559,7 @@ class RawCapture:
         blocking: bool,
         frame: FrameIdentifier,
         duration: Expression,
-        waveform: MemoryReference,
+        memory_reference: MemoryReference,
     ) -> "RawCapture": ...
     @property
     def blocking(self) -> bool: ...
