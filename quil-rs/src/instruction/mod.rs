@@ -44,7 +44,9 @@ pub use self::arithmetic::{
 pub use self::calibration::{Calibration, MeasureCalibrationDefinition};
 pub use self::circuit::CircuitDefinition;
 pub use self::declaration::{Declaration, MemoryReference, Offset, ScalarType, Sharing, Vector};
-pub use self::frame::{AttributeValue, FrameAttributes, FrameDefinition, FrameIdentifier};
+pub use self::frame::{
+    AttributeValue, Capture, FrameAttributes, FrameDefinition, FrameIdentifier, Pulse, RawCapture,
+};
 pub use self::gate::{
     Gate, GateDefinition, GateError, GateModifier, GateSpecification, GateType, PauliGate,
     PauliSum, PauliTerm,
@@ -124,29 +126,6 @@ pub struct Convert {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Include {
     pub filename: String,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Capture {
-    pub blocking: bool,
-    pub frame: FrameIdentifier,
-    pub memory_reference: MemoryReference,
-    pub waveform: WaveformInvocation,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Pulse {
-    pub blocking: bool,
-    pub frame: FrameIdentifier,
-    pub waveform: WaveformInvocation,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct RawCapture {
-    pub blocking: bool,
-    pub frame: FrameIdentifier,
-    pub duration: Expression,
-    pub memory_reference: MemoryReference,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -422,17 +401,7 @@ impl fmt::Display for Instruction {
             Instruction::CalibrationDefinition(calibration) => {
                 write!(f, "{calibration}")
             }
-            Instruction::Capture(Capture {
-                blocking,
-                frame,
-                waveform,
-                memory_reference,
-            }) => {
-                if !blocking {
-                    write!(f, "NONBLOCKING ")?;
-                }
-                write!(f, "CAPTURE {frame} {waveform} {memory_reference}")
-            }
+            Instruction::Capture(capture) => write!(f, "{capture}"),
             Instruction::CircuitDefinition(circuit) => write!(f, "{circuit}"),
             Instruction::Convert(Convert { from, to }) => {
                 write!(f, "CONVERT {to} {from}")?;
@@ -482,28 +451,9 @@ impl fmt::Display for Instruction {
             }) => {
                 write!(f, "STORE {destination} {offset} {source}")
             }
-            Instruction::Pulse(Pulse {
-                blocking,
-                frame,
-                waveform,
-            }) => {
-                if !blocking {
-                    write!(f, "NONBLOCKING ")?
-                }
-                write!(f, "PULSE {frame} {waveform}")
-            }
+            Instruction::Pulse(pulse) => write!(f, "{pulse}"),
             Instruction::Pragma(pragma) => write!(f, "{pragma}"),
-            Instruction::RawCapture(RawCapture {
-                blocking,
-                frame,
-                duration,
-                memory_reference,
-            }) => {
-                if !blocking {
-                    write!(f, "NONBLOCKING ")?
-                }
-                write!(f, "RAW-CAPTURE {frame} {duration} {memory_reference}")
-            }
+            Instruction::RawCapture(raw_capture) => write!(f, "{raw_capture}"),
             Instruction::Reset(reset) => write!(f, "{reset}"),
             Instruction::SetFrequency(SetFrequency { frame, frequency }) => {
                 write!(f, "SET-FREQUENCY {frame} {frequency}")
