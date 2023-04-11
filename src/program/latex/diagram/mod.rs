@@ -5,7 +5,7 @@ use std::{
 
 use crate::instruction::{Gate, Qubit};
 
-use self::wire::{Column, Wire};
+use self::wire::{QuantikzColumn, Wire};
 use super::{LatexGenError, Parameter, RenderCommand, RenderSettings};
 
 pub(crate) mod wire;
@@ -32,15 +32,12 @@ impl Diagram {
     /// qubit wire of the circuit indicating a "do nothing" at that column.
     ///
     /// # Arguments
-    /// `qubits` - exposes the qubits used in the Program
-    /// `instruction` - exposes the qubits in a single Instruction
+    /// `qubits` - the qubits from the Quil program.
+    /// `gate` - the Gate of the Instruction from `to_latex`.
     pub(crate) fn apply_empty(&mut self, qubits: &HashSet<Qubit>, gate: &Gate) {
         qubits
             .difference(&gate.qubits.iter().cloned().collect())
-            .filter_map(|q| match q {
-                Qubit::Fixed(index) => Some(index),
-                _ => None,
-            })
+            .filter_map(|q| q.as_fixed())
             .for_each(|index| {
                 if let Some(wire) = self.circuit.get_mut(index) {
                     wire.set_empty()
@@ -65,7 +62,7 @@ impl Diagram {
 
         // set gate for each qubit in the instruction
         for qubit in gate.qubits.iter() {
-            let mut column = Column::default();
+            let mut column = QuantikzColumn::default();
 
             let instruction_qubit = qubit
                 .clone()

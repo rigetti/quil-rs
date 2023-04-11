@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use super::diagram::wire::{Column, Wire};
+use super::diagram::wire::{QuantikzColumn, Wire};
 
 /// RenderSettings contains the metadata that allows the user to customize how
 /// the circuit is rendered or use the default implementation.
@@ -74,7 +74,7 @@ impl RenderSettings {
 
                 // insert empties based on total number of columns
                 for _ in 0..last_column {
-                    wire.columns.push(Column::default());
+                    wire.columns.push(QuantikzColumn::default());
                 }
 
                 Box::new(wire)

@@ -186,12 +186,12 @@ impl Program {
         // initialize circuit with empty wires of all qubits in program
         let qubits = Program::get_used_qubits(self);
         for qubit in &qubits {
-            if let Qubit::Fixed(name) = qubit {
-                let wire = Wire {
-                    columns: Vec::with_capacity(instructions.len()),
-                };
-                diagram.circuit.insert(*name, Box::new(wire));
-            }
+            let wire = Wire {
+                columns: Vec::with_capacity(instructions.len()),
+            };
+            diagram
+                .circuit
+                .insert(*qubit.as_fixed().unwrap(), Box::new(wire));
         }
 
         // are implicit qubits required in settings and are there at least two or more qubits in the diagram?
