@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt, str::FromStr};
+use std::{fmt, str::FromStr};
 
 use lazy_regex::{Lazy, Regex};
 
@@ -17,9 +17,47 @@ use super::super::{LatexGenError, Parameter, RenderCommand, Symbol};
 #[derive(Clone, Debug, Default)]
 pub(crate) struct Wire {
     /// the columns on the wire that can be serialized into LaTeX
-    pub(crate) columns: Vec<QuantikzCellType>,
-    /// the Parameters on the wire at this column
-    pub(crate) parameters: HashMap<usize, Parameter>,
+    pub(crate) columns: Vec<Column>,
+}
+
+/// A single column on the wire containing Quantikz items and any associated
+/// Parameters.
+#[derive(Clone, Debug, Default)]
+pub(crate) struct Column {
+    /// a column on the wire containing renderable items
+    pub(crate) cell: QuantikzCellType,
+    /// the Parameter on the wire at some column
+    pub(crate) parameter: Parameter,
+}
+
+impl Column {
+    /// Retrieves a gate's parameters from Expression and matches them with its
+    /// symbolic definition which is then stored into wire at the specific
+    /// column.
+    ///
+    /// # Arguments
+    /// `expression` - expression from Program to get name of Parameter
+    /// `texify` - is texify_numerical_constants setting on?
+    pub(crate) fn set_param(&mut self, expression: &Expression, texify: bool) {
+        // get the name of the supported expression
+        let text = match expression {
+            Expression::Address(mr) => mr.name.to_string(),
+            Expression::Number(c) => c.re.to_string(),
+            expression => expression.to_string(),
+        };
+
+        // if texify_numerical_constants
+        let param = if texify {
+            // set the texified symbol
+
+            Parameter::Symbol(Symbol::from_str(&text).unwrap_or(Symbol::Text(text)))
+        } else {
+            // set the symbol as text
+            Parameter::Symbol(Symbol::Text(text))
+        };
+
+        self.parameter = param;
+    }
 }
 
 #[derive(Clone, Debug, Default)]
@@ -90,35 +128,8 @@ impl TryFrom<Gate> for QuantikzGate {
 impl Wire {
     /// Set empty at the current column.
     pub(crate) fn set_empty(&mut self) {
-        self.columns.push(QuantikzCellType::Empty);
-    }
-
-    /// Retrieves a gate's parameters from Expression and matches them with its
-    /// symbolic definition which is then stored into wire at the specific
-    /// column.
-    ///
-    /// # Arguments
-    /// `expression` - expression from Program to get name of Parameter
-    /// `texify` - is texify_numerical_constants setting on?
-    pub(crate) fn set_param(&mut self, expression: &Expression, texify: bool) {
-        // get the name of the supported expression
-        let text = match expression {
-            Expression::Address(mr) => mr.name.to_string(),
-            Expression::Number(c) => c.re.to_string(),
-            expression => expression.to_string(),
-        };
-
-        // if texify_numerical_constants
-        let param = if texify {
-            // set the texified symbol
-
-            Parameter::Symbol(Symbol::from_str(&text).unwrap_or(Symbol::Text(text)))
-        } else {
-            // set the symbol as text
-            Parameter::Symbol(Symbol::Text(text))
-        };
-
-        self.parameters.insert(self.columns.len(), param);
+        // get the current column and set it to empty
+        self.columns.push(Column::default())
     }
 }
 
@@ -132,7 +143,7 @@ impl fmt::Display for Wire {
             // appended to the end of the gate name
             let mut superscript = String::new();
 
-            match &self.columns[column] {
+            match &self.columns[column].cell {
                 QuantikzCellType::Empty => {
                     // chain an empty column qw to the end of the line
                     write!(f, "{}", &RenderCommand::Qw)?;
@@ -148,13 +159,14 @@ impl fmt::Display for Wire {
                     });
 
                     if name == "PHASE" {
-                        if let Some(p) = self.parameters.get(&column) {
-                            write!(
-                                f,
-                                "{}",
-                                &RenderCommand::Phase(p.clone(), superscript.clone())
-                            )?;
-                        }
+                        write!(
+                            f,
+                            "{}",
+                            &RenderCommand::Phase(
+                                self.columns[column].parameter.clone(),
+                                superscript.clone()
+                            )
+                        )?;
                     } else if name == "X" {
                         // if it is associated with dagger superscripts write it as an X gate with superscripts
                         if dagger_count > &0 || ctrl_count == &0 {

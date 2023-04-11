@@ -102,8 +102,10 @@ pub(crate) enum RenderCommand {
 }
 
 /// Types of parameters passed to commands.
-#[derive(Clone, Debug, derive_more::Display, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, derive_more::Display, PartialEq, Eq, Hash, Default)]
 pub(crate) enum Parameter {
+    #[default]
+    None,
     /// Symbolic parameters
     #[display(fmt = "{_0}")]
     Symbol(Symbol),
@@ -187,7 +189,6 @@ impl Program {
             if let Qubit::Fixed(name) = qubit {
                 let wire = Wire {
                     columns: Vec::with_capacity(instructions.len()),
-                    ..Default::default()
                 };
                 diagram.circuit.insert(*name, Box::new(wire));
             }
@@ -253,7 +254,7 @@ mod tests {
     /// Test functionality of to_latex using default settings.
     fn test_to_latex() {
         let latex = get_latex(
-            "DAGGER CPHASE(alpha) 0 1",
+            "H 0\nCNOT 0 1",
             RenderSettings {
                 impute_missing_qubits: true,
                 ..Default::default()

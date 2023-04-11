@@ -5,8 +5,8 @@ use std::{
 
 use crate::instruction::{Gate, Qubit};
 
-use self::wire::Wire;
-use super::{LatexGenError, RenderCommand, RenderSettings};
+use self::wire::{Column, Wire};
+use super::{LatexGenError, Parameter, RenderCommand, RenderSettings};
 
 pub(crate) mod wire;
 
@@ -65,6 +65,8 @@ impl Diagram {
 
         // set gate for each qubit in the instruction
         for qubit in gate.qubits.iter() {
+            let mut column = Column::default();
+
             let instruction_qubit = qubit
                 .clone()
                 .into_fixed()
@@ -77,7 +79,7 @@ impl Diagram {
 
             // set the parameters for each qubit in the instruction
             for expression in &gate.parameters {
-                wire.set_param(expression, self.settings.texify_numerical_constants);
+                column.set_param(expression, self.settings.texify_numerical_constants);
             }
 
             let quantikz_gate = wire::QuantikzGate::try_from(gate.clone())?;
@@ -88,6 +90,7 @@ impl Diagram {
                 });
             }
 
+            // if the instruction qubit a control qubit
             if quantikz_gate.ctrl_count > 0 && instruction_qubit != last_qubit {
                 // get the distance between the instruction qubit and the target qubit
                 let distance = if instruction_qubit < last_qubit {
@@ -95,12 +98,15 @@ impl Diagram {
                 } else {
                     -(circuit.range(last_qubit..instruction_qubit).count() as i64)
                 };
-                wire.columns.push(wire::QuantikzCellType::Ctrl(distance));
-                continue;
+                column.cell = wire::QuantikzCellType::Ctrl(distance);
+
+            // otherwise, the instruction qubit is the target qubit or a single qubit gate
+            } else {
+                column.cell = wire::QuantikzCellType::Gate(quantikz_gate);
             }
 
             // parameterized non-PHASE gates are unsupported
-            if !wire.parameters.is_empty() && !gate.name.contains("PHASE") {
+            if column.parameter != Parameter::None && !gate.name.contains("PHASE") {
                 // parameterized single qubit gates are unsupported
                 return Err(LatexGenError::UnsupportedGate {
                     gate: gate.name.clone(),
@@ -108,8 +114,7 @@ impl Diagram {
             }
 
             // push the gate to the wire
-            wire.columns
-                .push(wire::QuantikzCellType::Gate(quantikz_gate));
+            wire.columns.push(column);
         }
 
         Ok(())
