@@ -200,30 +200,35 @@ impl Program {
             RenderSettings::impute_missing_qubits(instructions.len(), &mut diagram.circuit);
         }
 
+        // build a circuit from the instructions
         for instruction in instructions {
-            // parse gate instructions into a new circuit
-            if let Instruction::Gate(gate) = instruction {
-                // if there are any duplicate qubits in the gate return an error
-                if gate.qubits.len()
-                    != gate
-                        .qubits
-                        .iter()
-                        .cloned()
-                        .collect::<HashSet<Qubit>>()
-                        .len()
-                {
-                    return Err(LatexGenError::FoundTargetWithNoControl);
-                }
+            match instruction {
+                // build the circuit from a gate instruction
+                Instruction::Gate(gate) => {
+                    // if there are duplicate qubits in the gate return an error
+                    if gate.qubits.len()
+                        != gate
+                            .qubits
+                            .iter()
+                            .cloned()
+                            .collect::<HashSet<Qubit>>()
+                            .len()
+                    {
+                        return Err(LatexGenError::FoundTargetWithNoControl);
+                    }
 
-                diagram.apply_gate(&gate)?;
-                diagram.apply_empty(&qubits, &gate);
-            } else if let Instruction::GateDefinition(_) = instruction {
+                    diagram.apply_gate(&gate)?;
+                    diagram.apply_empty(&qubits, &gate);
+                }
                 // GateDefinition is supported but inserted into the circuit using its Gate instruction form
-                continue;
-            } else {
-                return Err(LatexGenError::UnsupportedInstruction {
-                    instruction: instruction.to_string(),
-                });
+                Instruction::GateDefinition(_) => continue,
+
+                // all other instructions are not supported
+                _ => {
+                    return Err(LatexGenError::UnsupportedInstruction {
+                        instruction: instruction.to_string(),
+                    })
+                }
             }
         }
 

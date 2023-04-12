@@ -9,9 +9,6 @@ use crate::{
 
 use super::super::{LatexGenError, Parameter, RenderCommand, Symbol};
 
-/// The QuantikzGate is a valid cell of a QuantikzCellType that is the form of
-/// the ``Gate`` struct in the ``Instruction`` containing the components that
-/// are used to render a gate on the wire in the circuit diagram.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
 pub(crate) struct QuantikzGate {
     pub(crate) name: String,
