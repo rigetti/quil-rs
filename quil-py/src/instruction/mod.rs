@@ -18,7 +18,8 @@ pub use self::{
     },
     frame::{
         PyAttributeValue, PyCapture, PyFrameAttributes, PyFrameDefinition, PyFrameIdentifier,
-        PyPulse, PyRawCapture,
+        PyPulse, PyRawCapture, PySetFrequency, PySetPhase, PySetScale, PyShiftFrequency,
+        PyShiftPhase, PySwapPhases,
     },
     gate::{
         GateError, PyGate, PyGateDefinition, PyGateModifier, PyGateSpecification, PyPauliGate,
@@ -67,6 +68,12 @@ py_wrap_union_enum! {
         pulse: Pulse => PyPulse,
         raw_capture: RawCapture => PyRawCapture,
         reset: Reset => PyReset,
+        set_frequency: SetFrequency => PySetFrequency,
+        set_phase: SetPhase => PySetPhase,
+        set_scale: SetScale => PySetScale,
+        shift_frequency: ShiftFrequency => PyShiftFrequency,
+        shift_phase: ShiftPhase => PyShiftPhase,
+        swap_phases: SwapPhases => PySwapPhases,
         waveform_definition: WaveformDefinition => PyWaveformDefinition
     }
 }
@@ -113,6 +120,12 @@ create_init_submodule! {
         PyFrameIdentifier,
         PyPulse,
         PyRawCapture,
+        PySetFrequency,
+        PySetPhase,
+        PySetScale,
+        PyShiftFrequency,
+        PyShiftPhase,
+        PySwapPhases,
         PyGate,
         PyGateDefinition,
         PyGateModifier,
