@@ -46,6 +46,7 @@ pub use self::circuit::CircuitDefinition;
 pub use self::declaration::{Declaration, MemoryReference, Offset, ScalarType, Sharing, Vector};
 pub use self::frame::{
     AttributeValue, Capture, FrameAttributes, FrameDefinition, FrameIdentifier, Pulse, RawCapture,
+    SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, SwapPhases,
 };
 pub use self::gate::{
     Gate, GateDefinition, GateError, GateModifier, GateSpecification, GateType, PauliGate,
@@ -126,42 +127,6 @@ pub struct Convert {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Include {
     pub filename: String,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct SetFrequency {
-    pub frame: FrameIdentifier,
-    pub frequency: Expression,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct SetPhase {
-    pub frame: FrameIdentifier,
-    pub phase: Expression,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct SetScale {
-    pub frame: FrameIdentifier,
-    pub scale: Expression,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct ShiftFrequency {
-    pub frame: FrameIdentifier,
-    pub frequency: Expression,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct ShiftPhase {
-    pub frame: FrameIdentifier,
-    pub phase: Expression,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct SwapPhases {
-    pub frame_1: FrameIdentifier,
-    pub frame_2: FrameIdentifier,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -455,24 +420,12 @@ impl fmt::Display for Instruction {
             Instruction::Pragma(pragma) => write!(f, "{pragma}"),
             Instruction::RawCapture(raw_capture) => write!(f, "{raw_capture}"),
             Instruction::Reset(reset) => write!(f, "{reset}"),
-            Instruction::SetFrequency(SetFrequency { frame, frequency }) => {
-                write!(f, "SET-FREQUENCY {frame} {frequency}")
-            }
-            Instruction::SetPhase(SetPhase { frame, phase }) => {
-                write!(f, "SET-PHASE {frame} {phase}")
-            }
-            Instruction::SetScale(SetScale { frame, scale }) => {
-                write!(f, "SET-SCALE {frame} {scale}")
-            }
-            Instruction::ShiftFrequency(ShiftFrequency { frame, frequency }) => {
-                write!(f, "SHIFT-FREQUENCY {frame} {frequency}")
-            }
-            Instruction::ShiftPhase(ShiftPhase { frame, phase }) => {
-                write!(f, "SHIFT-PHASE {frame} {phase}")
-            }
-            Instruction::SwapPhases(SwapPhases { frame_1, frame_2 }) => {
-                write!(f, "SWAP-PHASES {frame_1} {frame_2}")
-            }
+            Instruction::SetFrequency(set_frequency) => write!(f, "{set_frequency}"),
+            Instruction::SetPhase(set_phase) => write!(f, "{set_phase}"),
+            Instruction::SetScale(set_scale) => write!(f, "{set_scale}"),
+            Instruction::ShiftFrequency(shift_frequency) => write!(f, "{shift_frequency}"),
+            Instruction::ShiftPhase(shift_phase) => write!(f, "{shift_phase}"),
+            Instruction::SwapPhases(swap_phases) => write!(f, "{swap_phases}"),
             Instruction::WaveformDefinition(waveform_definition) => {
                 write!(f, "{waveform_definition}")
             }

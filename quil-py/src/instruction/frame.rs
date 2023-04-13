@@ -5,7 +5,8 @@ use quil_rs::{
     expression::Expression,
     instruction::{
         AttributeValue, Capture, FrameAttributes, FrameDefinition, FrameIdentifier,
-        MemoryReference, Pulse, Qubit, RawCapture, WaveformInvocation,
+        MemoryReference, Pulse, Qubit, RawCapture, SetFrequency, SetPhase, SetScale,
+        ShiftFrequency, ShiftPhase, SwapPhases, WaveformInvocation,
     },
 };
 use rigetti_pyo3::{
@@ -215,6 +216,190 @@ impl PyRawCapture {
             FrameIdentifier::py_try_from(py, &frame)?,
             Expression::py_try_from(py, &duration)?,
             MemoryReference::py_try_from(py, &memory_reference)?,
+        )))
+    }
+
+    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
+        match op {
+            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
+            _ => py.NotImplemented(),
+        }
+    }
+}
+
+py_wrap_data_struct! {
+    #[derive(Debug, PartialEq, Eq)]
+    #[pyo3(subclass)]
+    PySetFrequency(SetFrequency) as "SetFrequency" {
+        frame: FrameIdentifier => PyFrameIdentifier,
+        frequency: Expression => PyExpression
+    }
+}
+impl_repr!(PySetFrequency);
+impl_str!(PySetFrequency);
+
+#[pymethods]
+impl PySetFrequency {
+    #[new]
+    pub fn new(
+        py: Python<'_>,
+        frame: PyFrameIdentifier,
+        frequency: PyExpression,
+    ) -> PyResult<Self> {
+        Ok(Self(SetFrequency::new(
+            FrameIdentifier::py_try_from(py, &frame)?,
+            Expression::py_try_from(py, &frequency)?,
+        )))
+    }
+
+    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
+        match op {
+            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
+            _ => py.NotImplemented(),
+        }
+    }
+}
+
+py_wrap_data_struct! {
+    #[derive(Debug, PartialEq, Eq)]
+    #[pyo3(subclass)]
+    PySetPhase(SetPhase) as "SetPhase" {
+        frame: FrameIdentifier => PyFrameIdentifier,
+        phase: Expression => PyExpression
+    }
+}
+impl_repr!(PySetPhase);
+impl_str!(PySetPhase);
+
+#[pymethods]
+impl PySetPhase {
+    #[new]
+    pub fn new(py: Python<'_>, frame: PyFrameIdentifier, phase: PyExpression) -> PyResult<Self> {
+        Ok(Self(SetPhase::new(
+            FrameIdentifier::py_try_from(py, &frame)?,
+            Expression::py_try_from(py, &phase)?,
+        )))
+    }
+
+    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
+        match op {
+            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
+            _ => py.NotImplemented(),
+        }
+    }
+}
+
+py_wrap_data_struct! {
+    #[derive(Debug, PartialEq, Eq)]
+    #[pyo3(subclass)]
+    PySetScale(SetScale) as "SetScale" {
+        frame: FrameIdentifier => PyFrameIdentifier,
+        scale: Expression => PyExpression
+    }
+}
+impl_repr!(PySetScale);
+impl_str!(PySetScale);
+
+#[pymethods]
+impl PySetScale {
+    #[new]
+    pub fn new(py: Python<'_>, frame: PyFrameIdentifier, scale: PyExpression) -> PyResult<Self> {
+        Ok(Self(SetScale::new(
+            FrameIdentifier::py_try_from(py, &frame)?,
+            Expression::py_try_from(py, &scale)?,
+        )))
+    }
+
+    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
+        match op {
+            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
+            _ => py.NotImplemented(),
+        }
+    }
+}
+
+py_wrap_data_struct! {
+    #[derive(Debug, PartialEq, Eq)]
+    #[pyo3(subclass)]
+    PyShiftFrequency(ShiftFrequency) as "ShiftFrequency" {
+        frame: FrameIdentifier => PyFrameIdentifier,
+        frequency: Expression => PyExpression
+    }
+}
+impl_repr!(PyShiftFrequency);
+impl_str!(PyShiftFrequency);
+
+#[pymethods]
+impl PyShiftFrequency {
+    #[new]
+    pub fn new(
+        py: Python<'_>,
+        frame: PyFrameIdentifier,
+        frequency: PyExpression,
+    ) -> PyResult<Self> {
+        Ok(Self(ShiftFrequency::new(
+            FrameIdentifier::py_try_from(py, &frame)?,
+            Expression::py_try_from(py, &frequency)?,
+        )))
+    }
+
+    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
+        match op {
+            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
+            _ => py.NotImplemented(),
+        }
+    }
+}
+
+py_wrap_data_struct! {
+    #[derive(Debug, PartialEq, Eq)]
+    #[pyo3(subclass)]
+    PyShiftPhase(ShiftPhase) as "ShiftPhase" {
+        frame: FrameIdentifier => PyFrameIdentifier,
+        phase: Expression => PyExpression
+    }
+}
+impl_repr!(PyShiftPhase);
+impl_str!(PyShiftPhase);
+
+#[pymethods]
+impl PyShiftPhase {
+    #[new]
+    pub fn new(py: Python<'_>, frame: PyFrameIdentifier, phase: PyExpression) -> PyResult<Self> {
+        Ok(Self(ShiftPhase::new(
+            FrameIdentifier::py_try_from(py, &frame)?,
+            Expression::py_try_from(py, &phase)?,
+        )))
+    }
+
+    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
+        match op {
+            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
+            _ => py.NotImplemented(),
+        }
+    }
+}
+
+py_wrap_data_struct! {
+    #[derive(Debug, PartialEq, Eq)]
+    #[pyo3(subclass)]
+    PySwapPhases(SwapPhases) as "SwapPhases" {
+        frame_1: FrameIdentifier => PyFrameIdentifier,
+        frame_2: FrameIdentifier => PyFrameIdentifier
+    }
+}
+
+#[pymethods]
+impl PySwapPhases {
+    #[new]
+    pub fn new(
+        py: Python<'_>,
+        frame_1: PyFrameIdentifier,
+        frame_2: PyFrameIdentifier,
+    ) -> PyResult<Self> {
+        Ok(Self(SwapPhases::new(
+            FrameIdentifier::py_try_from(py, &frame_1)?,
+            FrameIdentifier::py_try_from(py, &frame_2)?,
         )))
     }
 
