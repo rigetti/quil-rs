@@ -49,7 +49,7 @@ impl Diagram {
     ///
     /// # Examples
     /// ```
-    /// use quil_rs::{Program, program::latex::settings::RenderSettings};
+    /// use quil_rs::{Program, program::latex::RenderSettings};
     /// use std::str::FromStr;
     /// let program = Program::from_str("H 0\nCNOT 0 1").expect("");
     /// let settings = RenderSettings {
@@ -59,21 +59,11 @@ impl Diagram {
     /// program.to_latex(settings).expect("");
     /// ```
     pub(crate) fn build_wire_map(&mut self, mut qubits: Vec<u64>) -> Result<(), LatexGenError> {
-        // sort qubits so that wire mapping contains the correct row number for each qubit
-        // program.get_qubits() => [3, 5, 1]
-        // qubits.sort() => [1, 3, 5]
-        // column_indices = [0, 1, 2]
-        // expected wires = {
-        //    3: 1
-        //    5: 2
-        //    1: 0
-        // }
-
-        // TODO: Return error
         if qubits.is_empty() {
             return Err(LatexGenError::RequiresQubits);
         }
 
+        // sort so that mapping contains the correct row number for each qubit
         qubits.sort();
         if self.settings.impute_missing_qubits {
             for (i, qubit) in

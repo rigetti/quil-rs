@@ -6,7 +6,6 @@ use crate::instruction::{Gate, GateModifier};
 
 use super::super::{LatexGenError, RenderCommand, Symbol};
 
-// Should this be enum? Before it was `struct`
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
 pub(crate) enum QuantikzCell {
     Gate(QuantikzGate),

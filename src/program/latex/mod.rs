@@ -197,7 +197,7 @@ impl Program {
     /// # Examples
     /// ```
     /// // To LaTeX for the Bell State Program.
-    /// use quil_rs::{Program, program::latex::settings::RenderSettings};
+    /// use quil_rs::{Program, program::latex::RenderSettings};
     /// use std::str::FromStr;
     /// let program = Program::from_str("H 0\nCNOT 0 1").expect("");
     /// let latex = program.to_latex(RenderSettings::default()).expect("");
@@ -205,7 +205,7 @@ impl Program {
     ///
     /// ```
     /// // To LaTeX for the Toffoli Gate Program.
-    /// use quil_rs::{Program, program::latex::settings::RenderSettings};
+    /// use quil_rs::{Program, program::latex::RenderSettings};
     /// use std::str::FromStr;
     /// let program = Program::from_str("CONTROLLED CNOT 2 1 0").expect("");
     /// let latex = program.to_latex(RenderSettings::default()).expect("");
@@ -299,7 +299,7 @@ mod tests {
         #[test]
         #[should_panic]
         fn test_empty_program() {
-            insta::assert_snapshot!(get_latex("", RenderSettings::default()));
+            get_latex("", RenderSettings::default());
         }
 
         #[test]
