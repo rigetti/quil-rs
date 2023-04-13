@@ -23,16 +23,14 @@
 
 mod diagram;
 
+use std::str::FromStr;
 use std::{collections::HashSet, fmt};
 
+use crate::expression::Expression;
 use crate::instruction::{Instruction, Qubit};
 use crate::Program;
 
-use self::settings::RenderSettings;
-use diagram::{wire::Wire, Diagram};
-
-pub mod settings;
-
+use diagram::Diagram;
 /// The structure of a LaTeX document. Typically a LaTeX document contains
 /// metadata defining the setup and packages used in a document within a header
 /// and footer while the body contains content and controls its presentation.
@@ -63,7 +61,7 @@ impl Default for Document {
 impl fmt::Display for Document {
     /// Returns the entire document in LaTeX string.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}{}{}", self.header, self.body, self.footer)
+        write!(f, "{}\n{}{}", self.header, self.body, self.footer)
     }
 }
 
@@ -80,7 +78,7 @@ pub(crate) enum RenderCommand {
     Gate(String, String),
     /// Make a phase on the wire with a rotation and optional superscript
     #[display(fmt = "\\phase{{{_0}{_1}}}")]
-    Phase(Parameter, String),
+    Phase(Symbol, String),
     /// Add a superscript to a gate
     #[display(fmt = "^{{\\{_0}}}")]
     Super(String),
@@ -101,14 +99,25 @@ pub(crate) enum RenderCommand {
     Targ,
 }
 
-/// Types of parameters passed to commands.
-#[derive(Clone, Debug, derive_more::Display, PartialEq, Eq, Hash, Default)]
-pub(crate) enum Parameter {
-    #[default]
-    None,
-    /// Symbolic parameters
-    #[display(fmt = "{_0}")]
-    Symbol(Symbol),
+impl Symbol {
+    pub(crate) fn from_expression(expression: Expression) -> Self {
+        // get the name of the supported expression
+        let text = match expression {
+            Expression::Address(mr) => mr.name,
+            Expression::Number(c) => c.re.to_string(),
+            expression => expression.to_string(),
+        };
+
+        Self::Text(text)
+    }
+
+    /// Convert a text symbol to a LaTeX symbol.
+    pub(crate) fn texify(self) -> Self {
+        match &self {
+            Symbol::Text(text) => Symbol::from_str(text).unwrap_or(self),
+            _ => self,
+        }
+    }
 }
 
 /// Supported Greek and alphanumeric symbols.
@@ -129,10 +138,38 @@ pub(crate) enum Symbol {
     Text(String),
 }
 
+/// RenderSettings contains the metadata that allows the user to customize how
+/// the circuit is rendered or use the default implementation.
+#[derive(Clone, Copy, Debug)]
+pub struct RenderSettings {
+    /// Convert numerical constants, e.g. pi, to LaTeX form.
+    pub texify_numerical_constants: bool,
+    /// Include all qubits implicitly referenced in the Quil program.
+    pub impute_missing_qubits: bool,
+    /// Label qubit lines.
+    pub label_qubit_lines: bool,
+}
+
+impl Default for RenderSettings {
+    /// Returns the default RenderSettings.
+    fn default() -> Self {
+        Self {
+            /// false: pi is π.
+            texify_numerical_constants: true,
+            /// true: `CNOT 0 2` would have three qubit lines: 0, 1, 2.
+            impute_missing_qubits: false,
+            /// false: remove Lstick/Rstick from latex.
+            label_qubit_lines: true,
+        }
+    }
+}
+
 #[derive(Clone, Debug, thiserror::Error, PartialEq, Eq, Hash)]
 pub enum LatexGenError {
     #[error("Found a target qubit with no control qubit.")]
     FoundTargetWithNoControl,
+    #[error("Qubits are required to build a circuit.")]
+    RequiresQubits,
     #[error("Circuit does not have qubit {0}")]
     QubitNotFound(u64),
     #[error("The FORKED modifier is unsupported.")]
@@ -177,28 +214,15 @@ impl Program {
         // get a reference to the current program
         let instructions = self.to_instructions(false);
 
+        // get fixed qubits as vector
+        let qubits = self
+            .get_used_qubits()
+            .into_iter()
+            .map(|q| q.into_fixed().unwrap())
+            .collect();
+
         // initialize a new diagram
-        let mut diagram = Diagram {
-            settings,
-            ..Default::default()
-        };
-
-        // initialize circuit with empty wires of all qubits in program
-        let qubits = Program::get_used_qubits(self);
-        for qubit in &qubits {
-            let wire = Wire {
-                columns: Vec::with_capacity(instructions.len()),
-            };
-            diagram
-                .circuit
-                .insert(*qubit.as_fixed().unwrap(), Box::new(wire));
-        }
-
-        // are implicit qubits required in settings and are there at least two or more qubits in the diagram?
-        if diagram.settings.impute_missing_qubits {
-            // add implicit qubits to circuit
-            RenderSettings::impute_missing_qubits(instructions.len(), &mut diagram.circuit);
-        }
+        let mut diagram = Diagram::new(qubits, settings)?;
 
         // build a circuit from the instructions
         for instruction in instructions {
@@ -217,8 +241,7 @@ impl Program {
                         return Err(LatexGenError::FoundTargetWithNoControl);
                     }
 
-                    diagram.apply_gate(&gate)?;
-                    diagram.apply_empty(&qubits, &gate);
+                    diagram.add_gate(&gate)?;
                 }
                 // GateDefinition is supported but inserted into the circuit using its Gate instruction form
                 Instruction::GateDefinition(_) => continue,
@@ -274,7 +297,8 @@ mod tests {
         use crate::program::latex::{tests::get_latex, Document, RenderSettings};
 
         #[test]
-        fn test_template() {
+        #[should_panic]
+        fn test_empty_program() {
             insta::assert_snapshot!(get_latex("", RenderSettings::default()));
         }
 
@@ -471,7 +495,7 @@ mod tests {
 
     /// Test module for ``Quantikz`` Commands
     mod commands {
-        use crate::program::latex::{Parameter, RenderCommand, Symbol};
+        use crate::program::latex::{RenderCommand, Symbol};
 
         #[test]
         fn test_command_left_ket() {
@@ -485,11 +509,7 @@ mod tests {
 
         #[test]
         fn test_command_phase() {
-            insta::assert_snapshot!(RenderCommand::Phase(
-                Parameter::Symbol(Symbol::Pi),
-                String::new()
-            )
-            .to_string());
+            insta::assert_snapshot!(RenderCommand::Phase(Symbol::Pi, String::new()).to_string());
         }
 
         #[test]
