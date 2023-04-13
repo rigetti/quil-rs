@@ -388,6 +388,8 @@ py_wrap_data_struct! {
         frame_2: FrameIdentifier => PyFrameIdentifier
     }
 }
+impl_repr!(PySwapPhases);
+impl_str!(PySwapPhases);
 
 #[pymethods]
 impl PySwapPhases {
