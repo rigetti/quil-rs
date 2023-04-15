@@ -1,4 +1,7 @@
-use std::{collections::BTreeMap, fmt};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fmt,
+};
 
 use crate::instruction::Gate;
 
@@ -15,19 +18,19 @@ pub(crate) mod cell;
 /// that is serializable into LaTeX using the ``Quantikz`` RenderCommands.
 pub(crate) struct Diagram {
     settings: RenderSettings,
-    wires: BTreeMap<u64, usize>, // qubit index -> column index
+    wires: BTreeMap<u64, usize>,
     columns: Vec<DiagramColumn>,
 }
 
 struct DiagramColumn {
-    cells: Vec<QuantikzCell>, // number of wires
+    cells: Vec<QuantikzCell>,
 }
 
 impl Diagram {
-    pub(crate) fn new(qubits: Vec<u64>, settings: RenderSettings) -> Result<Self, LatexGenError> {
-        // Initialize a new `Diagram` with the given qubits
-        // If settings.impute_missing qubits, then pad the gaps.
-
+    pub(crate) fn new(
+        qubits: BTreeSet<u64>,
+        settings: RenderSettings,
+    ) -> Result<Self, LatexGenError> {
         let mut diagram = Self {
             settings,
             wires: BTreeMap::new(),
@@ -58,17 +61,15 @@ impl Diagram {
     /// };
     /// program.to_latex(settings).expect("");
     /// ```
-    pub(crate) fn build_wire_map(&mut self, mut qubits: Vec<u64>) -> Result<(), LatexGenError> {
+    pub(crate) fn build_wire_map(&mut self, qubits: BTreeSet<u64>) -> Result<(), LatexGenError> {
         if qubits.is_empty() {
             return Err(LatexGenError::RequiresQubits);
         }
 
-        // sort so that mapping contains the correct row number for each qubit
-        qubits.sort();
         if self.settings.impute_missing_qubits {
-            for (i, qubit) in
-                (qubits[0]..*qubits.last().expect("qubits is not empty") + 1).enumerate()
-            {
+            let first = *qubits.first().expect("qubits is not empty");
+            let last = *qubits.last().expect("qubits is not empty");
+            for (i, qubit) in (first..last + 1).enumerate() {
                 self.wires.insert(qubit, i);
             }
         } else {
@@ -86,7 +87,6 @@ impl Diagram {
     /// # Arguments
     /// `gate` - the Gate of the Instruction from `to_latex`.
     pub(crate) fn add_gate(&mut self, gate: &Gate) -> Result<(), LatexGenError> {
-        // Initialize a column full of empty cells to be filled in.
         let mut cells: Vec<QuantikzCell> = vec![QuantikzCell::Empty; self.wires.len()];
 
         let quantikz_gate = cell::QuantikzGate::try_from(gate.clone())?;
@@ -99,34 +99,37 @@ impl Diagram {
 
         // parameterized non-PHASE gates are unsupported
         if quantikz_gate.parameter.is_some() && !gate.name.contains("PHASE") {
-            // parameterized single qubit gates are unsupported
             return Err(LatexGenError::UnsupportedGate {
                 gate: gate.name.clone(),
             });
         }
 
-        // TODO: Error handling instead of unwrap
         let mut qubit_iterator = gate
             .qubits
             .iter()
-            .map(|q| q.clone().into_fixed().unwrap())
+            .map(|q| {
+                q.clone()
+                    .into_fixed()
+                    .map_err(|_| LatexGenError::UnsupportedQubit)
+            })
             .rev();
 
-        // start iterator at target qubit
-        let target_qubit = qubit_iterator.next().unwrap();
+        let target_qubit = qubit_iterator
+            .next()
+            .ok_or(LatexGenError::RequiresQubits)??;
 
-        // TODO: Return error instead of unwrap
-        let target_index = *self.wires.get(&target_qubit).unwrap();
+        let target_index = *self
+            .wires
+            .get(&target_qubit)
+            .ok_or(LatexGenError::QubitNotFound(target_qubit))?;
 
         cells[target_index] = QuantikzCell::Gate(quantikz_gate);
 
-        // This is oversimplified for the example. There will be a little
-        // bit of pre-processing necessary to get your "canonical gate",
-        // and it probably makes sense to go in reverse order so you can start
-        // with the target qubit.
         for qubit in qubit_iterator {
-            // TODO: Error handling instead of unwrap
-            let column_index = *self.wires.get(&qubit).unwrap();
+            let column_index = *self
+                .wires
+                .get(&qubit?)
+                .ok_or(LatexGenError::QubitNotFound(target_qubit))?;
             cells[column_index] = QuantikzCell::Control(target_index as i64 - column_index as i64)
         }
 
@@ -137,21 +140,14 @@ impl Diagram {
 }
 
 impl fmt::Display for Diagram {
-    /// Returns a result containing the body of the Document.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        // write the LaTeX string for each wire in the circuit
         let last = self.wires.keys().last().unwrap_or(&0);
-        let cell_settings = CellSettings {
-            texify: self.settings.texify_numerical_constants,
-        };
+        let cell_settings = CellSettings::from(self.settings);
 
         for (qubit, cell_index) in &self.wires {
-            // are labels on in settings?
             if self.settings.label_qubit_lines {
-                // write the label to the left side of wire
                 write!(f, "{}", RenderCommand::LeftWireLabel(*qubit))?;
             } else {
-                // write an empty column buffer as the first column
                 write!(f, "{}", RenderCommand::Qw)?;
             }
 
@@ -167,13 +163,11 @@ impl fmt::Display for Diagram {
 
             write!(f, "{}{}", &RenderCommand::Separate, &RenderCommand::Qw)?;
 
-            // omit a new row if this is the last qubit wire
+            // omit LaTeX line break (`\\`) if this is the last qubit
             if *qubit != *last {
-                // otherwise, write a new row to the end of the line
                 write!(f, " {}", &RenderCommand::Nr)?;
             }
 
-            // write a newline between each row and or the body and the document footer
             writeln!(f)?;
         }
 

@@ -24,7 +24,10 @@
 mod diagram;
 
 use std::str::FromStr;
-use std::{collections::HashSet, fmt};
+use std::{
+    collections::{BTreeSet, HashSet},
+    fmt,
+};
 
 use crate::expression::Expression;
 use crate::instruction::{Instruction, Qubit};
@@ -166,18 +169,22 @@ impl Default for RenderSettings {
 
 #[derive(Clone, Debug, thiserror::Error, PartialEq, Eq, Hash)]
 pub enum LatexGenError {
-    #[error("Found a target qubit with no control qubit.")]
-    FoundTargetWithNoControl,
+    #[error("Gate instruction has duplicate qubits.")]
+    DuplicateQubits,
     #[error("Qubits are required to build a circuit.")]
     RequiresQubits,
     #[error("Circuit does not have qubit {0}")]
     QubitNotFound(u64),
+    #[error("Parameterized gate has no parameter.")]
+    MissingParameter,
     #[error("The FORKED modifier is unsupported.")]
     UnsupportedModifierForked,
     #[error("This instruction is unsupported: {instruction}.")]
     UnsupportedInstruction { instruction: String },
     #[error("This gate is unsupported: {gate}.")]
     UnsupportedGate { gate: String },
+    #[error("The parameter length {length} of gate {gate} is unsupported")]
+    UnsupportedParameterLength { gate: String, length: usize },
     #[error("Only fixed qubits are supported")]
     UnsupportedQubit,
 }
@@ -211,25 +218,20 @@ impl Program {
     /// let latex = program.to_latex(RenderSettings::default()).expect("");
     /// ```
     pub fn to_latex(&self, settings: RenderSettings) -> Result<String, LatexGenError> {
-        // get a reference to the current program
         let instructions = self.to_instructions(false);
 
-        // get fixed qubits as vector
         let qubits = self
             .get_used_qubits()
             .into_iter()
-            .map(|q| q.into_fixed().unwrap())
-            .collect();
+            .map(|q| q.into_fixed())
+            .collect::<Result<BTreeSet<u64>, _>>()
+            .map_err(|_| LatexGenError::UnsupportedQubit)?;
 
-        // initialize a new diagram
         let mut diagram = Diagram::new(qubits, settings)?;
 
-        // build a circuit from the instructions
         for instruction in instructions {
             match instruction {
-                // build the circuit from a gate instruction
                 Instruction::Gate(gate) => {
-                    // if there are duplicate qubits in the gate return an error
                     if gate.qubits.len()
                         != gate
                             .qubits
@@ -238,15 +240,13 @@ impl Program {
                             .collect::<HashSet<Qubit>>()
                             .len()
                     {
-                        return Err(LatexGenError::FoundTargetWithNoControl);
+                        return Err(LatexGenError::DuplicateQubits);
                     }
 
                     diagram.add_gate(&gate)?;
                 }
                 // GateDefinition is supported but inserted into the circuit using its Gate instruction form
                 Instruction::GateDefinition(_) => continue,
-
-                // all other instructions are not supported
                 _ => {
                     return Err(LatexGenError::UnsupportedInstruction {
                         instruction: instruction.to_string(),
