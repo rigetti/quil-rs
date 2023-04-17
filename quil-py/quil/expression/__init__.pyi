@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Dict, final, List, Optional, Union
+from typing import Dict, final, Sequence, Optional, Union
 
 from quil.instructions import MemoryReference
 
@@ -103,7 +103,9 @@ class Expression:
         Return a simplified copy of the expression.
         """
     def evaluate(
-        self, variables: Dict[str, complex], memory_references: Dict[str, List[float]]
+        self,
+        variables: Dict[str, complex],
+        memory_references: Dict[str, Sequence[float]],
     ) -> complex:
         """
         Evaluate an expression, expecting that it may be fully reduced to a single complex number.
