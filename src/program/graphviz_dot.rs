@@ -425,9 +425,9 @@ PULSE 0 \"rf\" test"
         // assert that a block "waits" for a capture to complete even with a pulse after it
         build_dot_format_snapshot_test_case!(
             pulse_after_set_frequency,
-            "DECLARE ro BIT
-SET-FREQUENCY 0 \"rf\" 3e9
-PULSE 0 \"rf\" test"
+            r#"DECLARE ro BIT
+SET-FREQUENCY 0 "rf" 3e9
+PULSE 0 "rf" test"#
         );
 
         // assert that a block "waits" for a capture to complete
