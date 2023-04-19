@@ -10,6 +10,8 @@ use crate::{
     program::{disallow_leftover, SyntaxError},
 };
 
+use super::ArithmeticOperand;
+
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 pub enum ScalarType {
     Bit,
@@ -190,6 +192,60 @@ impl FromStr for MemoryReference {
         let tokens = lex(input)?;
         disallow_leftover(
             parse_memory_reference(&tokens).map_err(ParseError::from_nom_internal_err),
+        )
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Load {
+    pub destination: MemoryReference,
+    pub source: String,
+    pub offset: MemoryReference,
+}
+
+impl Load {
+    pub fn new(destination: MemoryReference, source: String, offset: MemoryReference) -> Self {
+        Self {
+            destination,
+            source,
+            offset,
+        }
+    }
+}
+
+impl fmt::Display for Load {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "LOAD {} {} {}",
+            self.destination, self.source, self.offset
+        )
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Store {
+    pub destination: String,
+    pub offset: MemoryReference,
+    pub source: ArithmeticOperand,
+}
+
+impl Store {
+    pub fn new(destination: String, offset: MemoryReference, source: ArithmeticOperand) -> Self {
+        Self {
+            destination,
+            offset,
+            source,
+        }
+    }
+}
+
+impl fmt::Display for Store {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "STORE {} {} {}",
+            self.destination, self.offset, self.source
         )
     }
 }

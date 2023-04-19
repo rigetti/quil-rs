@@ -24,9 +24,9 @@ use crate::program::frame::FrameMatchCondition;
 #[cfg(test)]
 use nom_locate::LocatedSpan;
 
-mod arithmetic;
 mod calibration;
 mod circuit;
+mod classical;
 mod declaration;
 mod frame;
 mod gate;
@@ -37,13 +37,16 @@ mod reset;
 mod timing;
 mod waveform;
 
-pub use self::arithmetic::{
-    Arithmetic, ArithmeticOperand, ArithmeticOperator, BinaryLogic, BinaryOperand, BinaryOperands,
-    BinaryOperator,
-};
 pub use self::calibration::{Calibration, MeasureCalibrationDefinition};
 pub use self::circuit::CircuitDefinition;
-pub use self::declaration::{Declaration, MemoryReference, Offset, ScalarType, Sharing, Vector};
+pub use self::classical::{
+    Arithmetic, ArithmeticOperand, ArithmeticOperator, BinaryLogic, BinaryOperand, BinaryOperands,
+    BinaryOperator, Comparison, ComparisonOperand, ComparisonOperator, Convert, Exchange, Move,
+    UnaryLogic, UnaryOperator,
+};
+pub use self::declaration::{
+    Declaration, Load, MemoryReference, Offset, ScalarType, Sharing, Store, Vector,
+};
 pub use self::frame::{
     AttributeValue, Capture, FrameAttributes, FrameDefinition, FrameIdentifier, Pulse, RawCapture,
     SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, SwapPhases,
@@ -53,7 +56,7 @@ pub use self::gate::{
     PauliSum, PauliTerm,
 };
 pub use self::measurement::Measurement;
-pub use self::pragma::{Pragma, PragmaArgument};
+pub use self::pragma::{Include, Pragma, PragmaArgument};
 pub use self::qubit::Qubit;
 pub use self::reset::Reset;
 pub use self::timing::{Delay, Fence};
@@ -66,109 +69,7 @@ pub enum ValidationError {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum UnaryOperator {
-    Neg,
-    Not,
-}
-
-impl fmt::Display for UnaryOperator {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match &self {
-            UnaryOperator::Neg => write!(f, "NEG"),
-            UnaryOperator::Not => write!(f, "NOT"),
-        }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum ComparisonOperand {
-    LiteralInteger(i64),
-    LiteralReal(f64),
-    MemoryReference(MemoryReference),
-}
-
-impl fmt::Display for ComparisonOperand {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match &self {
-            ComparisonOperand::LiteralInteger(value) => write!(f, "{value}"),
-            ComparisonOperand::LiteralReal(value) => write!(f, "{value}"),
-            ComparisonOperand::MemoryReference(value) => write!(f, "{value}"),
-        }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum ComparisonOperator {
-    Equal,
-    GreaterThanOrEqual,
-    GreaterThan,
-    LessThanOrEqual,
-    LessThan,
-}
-
-impl fmt::Display for ComparisonOperator {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match &self {
-            ComparisonOperator::Equal => write!(f, "EQ"),
-            ComparisonOperator::GreaterThanOrEqual => write!(f, "GE"),
-            ComparisonOperator::GreaterThan => write!(f, "GT"),
-            ComparisonOperator::LessThanOrEqual => write!(f, "LE"),
-            ComparisonOperator::LessThan => write!(f, "LT"),
-        }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Convert {
-    pub from: MemoryReference,
-    pub to: MemoryReference,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Include {
-    pub filename: String,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct Comparison {
-    pub operator: ComparisonOperator,
-    pub operands: (MemoryReference, MemoryReference, ComparisonOperand),
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct UnaryLogic {
-    pub operator: UnaryOperator,
-    pub operand: MemoryReference,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Label(pub String);
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct Move {
-    pub destination: ArithmeticOperand,
-    pub source: ArithmeticOperand,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct Exchange {
-    pub left: ArithmeticOperand,
-    pub right: ArithmeticOperand,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Load {
-    pub destination: MemoryReference,
-    pub source: String,
-    pub offset: MemoryReference,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct Store {
-    pub destination: String,
-    pub offset: MemoryReference,
-    pub source: ArithmeticOperand,
-}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Jump {
@@ -358,64 +259,26 @@ pub fn get_string_parameter_string(parameters: &[String]) -> String {
 impl fmt::Display for Instruction {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Instruction::Arithmetic(Arithmetic {
-                operator,
-                destination,
-                source,
-            }) => write!(f, "{operator} {destination} {source}"),
-            Instruction::CalibrationDefinition(calibration) => {
-                write!(f, "{calibration}")
-            }
+            Instruction::Arithmetic(arithmetic) => write!(f, "{arithmetic}"),
+            Instruction::CalibrationDefinition(calibration) => write!(f, "{calibration}"),
             Instruction::Capture(capture) => write!(f, "{capture}"),
             Instruction::CircuitDefinition(circuit) => write!(f, "{circuit}"),
-            Instruction::Convert(Convert { from, to }) => {
-                write!(f, "CONVERT {to} {from}")?;
-                Ok(())
-            }
-            Instruction::Declaration(declaration) => {
-                write!(f, "{declaration}")
-            }
+            Instruction::Convert(convert) => write!(f, "{convert}"),
+            Instruction::Declaration(declaration) => write!(f, "{declaration}"),
             Instruction::Delay(delay) => write!(f, "{delay}"),
             Instruction::Fence(fence) => write!(f, "{fence}"),
-            Instruction::FrameDefinition(frame_defintion) => {
-                write!(f, "{frame_defintion}")
-            }
-            Instruction::Gate(gate) => {
-                write!(f, "{gate}")
-            }
-            Instruction::GateDefinition(gate_definition) => {
-                write!(f, "{gate_definition}")
-            }
-            Instruction::Include(Include { filename }) => {
-                write!(f, r#"INCLUDE {filename:?}"#)
-            }
+            Instruction::FrameDefinition(frame_defintion) => write!(f, "{frame_defintion}"),
+            Instruction::Gate(gate) => write!(f, "{gate}"),
+            Instruction::GateDefinition(gate_definition) => write!(f, "{gate_definition}"),
+            Instruction::Include(include) => write!(f, "{include}"),
             Instruction::MeasureCalibrationDefinition(measure_calibration) => {
                 write!(f, "{measure_calibration}")
             }
-            Instruction::Measurement(measurement) => {
-                write!(f, "{measurement}")
-            }
-            Instruction::Move(Move {
-                destination,
-                source,
-            }) => write!(f, "MOVE {destination} {source}"),
-            Instruction::Exchange(Exchange { left, right }) => {
-                write!(f, "EXCHANGE {left} {right}")
-            }
-            Instruction::Load(Load {
-                destination,
-                source,
-                offset,
-            }) => {
-                write!(f, "LOAD {destination} {source} {offset}")
-            }
-            Instruction::Store(Store {
-                destination,
-                offset,
-                source,
-            }) => {
-                write!(f, "STORE {destination} {offset} {source}")
-            }
+            Instruction::Measurement(measurement) => write!(f, "{measurement}"),
+            Instruction::Move(r#move) => write!(f, "{move}"),
+            Instruction::Exchange(exchange) => write!(f, "{exchange}"),
+            Instruction::Load(load) => write!(f, "{load}"),
+            Instruction::Store(store) => write!(f, "{store}"),
             Instruction::Pulse(pulse) => write!(f, "{pulse}"),
             Instruction::Pragma(pragma) => write!(f, "{pragma}"),
             Instruction::RawCapture(raw_capture) => write!(f, "{raw_capture}"),
@@ -440,19 +303,11 @@ impl fmt::Display for Instruction {
                 write!(f, "JUMP-WHEN @{target} {condition}")
             }
             Instruction::Label(Label(label)) => write!(f, "LABEL @{label}"),
-            Instruction::Comparison(Comparison { operator, operands }) => {
-                write!(
-                    f,
-                    "{} {} {} {}",
-                    operator, operands.0, operands.1, operands.2
-                )
-            }
+            Instruction::Comparison(comparison) => write!(f, "{comparison}"),
             Instruction::BinaryLogic(BinaryLogic { operator, operands }) => {
                 write!(f, "{} {} {}", operator, operands.0, operands.1)
             }
-            Instruction::UnaryLogic(UnaryLogic { operator, operand }) => {
-                write!(f, "{operator} {operand}")
-            }
+            Instruction::UnaryLogic(unary_logic) => write!(f, "{unary_logic}"),
         }
     }
 }

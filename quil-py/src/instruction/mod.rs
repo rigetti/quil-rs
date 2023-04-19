@@ -6,12 +6,12 @@ use rigetti_pyo3::{
 };
 
 pub use self::{
-    arithmetic::{
+    calibration::{PyCalibration, PyMeasureCalibrationDefinition},
+    circuit::PyCircuitDefinition,
+    classical::{
         PyArithmetic, PyArithmeticOperand, PyArithmeticOperator, PyBinaryLogic, PyBinaryOperand,
         PyBinaryOperands, PyBinaryOperator,
     },
-    calibration::{PyCalibration, PyMeasureCalibrationDefinition},
-    circuit::PyCircuitDefinition,
     declaration::{
         ParseMemoryReferenceError, PyDeclaration, PyMemoryReference, PyOffset, PyScalarType,
         PySharing, PyVector,
@@ -33,9 +33,9 @@ pub use self::{
     waveform::{PyWaveform, PyWaveformDefinition, PyWaveformInvocation},
 };
 
-mod arithmetic;
 mod calibration;
 mod circuit;
+mod classical;
 mod declaration;
 mod frame;
 mod gate;
