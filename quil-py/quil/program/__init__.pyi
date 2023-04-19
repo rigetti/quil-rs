@@ -1,4 +1,4 @@
-from typing import Dict, FrozenSet, Set, final, List, Optional
+from typing import Dict, FrozenSet, Set, final, List, Optional, Sequence
 
 from quil.instructions import (
     AttributeValue,
@@ -72,7 +72,7 @@ class Program:
         Add an instruction to the end of the program.
         """
         ...
-    def add_instructions(self, instruction: List[Instruction]):
+    def add_instructions(self, instruction: Sequence[Instruction]):
         """
         Add a list of instructions to the end of the program.
         """
@@ -83,22 +83,22 @@ class Program:
         Parses the given Quil string and returns a new ``Program``.
         Raises a ``ProgramError`` if the given string isn't valid Quil.
         """
-    def to_instructions(self) -> List[Instruction]: ...
+    def to_instructions(self) -> Sequence[Instruction]: ...
 
 @final
 class CalibrationSet:
     @staticmethod
     def __new__(
         cls,
-        calibrations: List[Calibration],
-        measure_calibration_definitions: List[MeasureCalibrationDefinition],
+        calibrations: Sequence[Calibration],
+        measure_calibration_definitions: Sequence[MeasureCalibrationDefinition],
     ) -> "CalibrationSet": ...
     @property
     def calibrations(self) -> List[Calibration]: ...
     @property
     def measure_calibrations(self) -> List[MeasureCalibrationDefinition]: ...
     def expand(
-        self, instruction: Instruction, previous_calibrations: List[Instruction]
+        self, instruction: Instruction, previous_calibrations: Sequence[Instruction]
     ) -> List[Instruction]:
         """
         Given an instruction, return the instructions to which it is expanded if there is a match.
