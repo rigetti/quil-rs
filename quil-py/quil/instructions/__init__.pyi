@@ -15,6 +15,7 @@ class Instruction:
         ``calibration_definition``: Corresponds to a `DEFCAL` instruction (not `DEFCAL MEASURE`)
             defined by a ``Calibration``.
         ``capture``: Corresponds to a `CAPTURE` instruction
+        ``calibration``: Corresponds to a `DEFCAL` instruction.
         ``circuit_definition``: Corresponds to a `DEFCIRCUIT` instruction and its body,
             defined by a ``CircuitDefinition``.
         ``convert``: Corresponds to a `CONVERT` instruction.
