@@ -1303,10 +1303,10 @@ impl Instruction {
         Ok(instruction)
     }
 
-    /// Per the language spec, whether this instruction's timing within the pulse
-    /// program must be precisely controlled, so as to begin exactly on the end of
+    /// Per the Quil-T spec, whether this instruction's timing within the pulse
+    /// program must be precisely controlled so as to begin exactly on the end of
     /// the latest preceding timed instruction
-    pub(crate) fn requires_precise_timing(&self) -> bool {
+    pub(crate) fn is_scheduled(&self) -> bool {
         match self {
             Instruction::Capture(_)
             | Instruction::Delay(_)

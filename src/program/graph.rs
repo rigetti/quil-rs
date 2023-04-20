@@ -85,8 +85,10 @@ pub enum ExecutionDependency {
     /// The downstream instruction must wait for the given operation to complete.
     AwaitMemoryAccess(MemoryAccessType),
 
-    /// The downstream instruction must immediately follow the upstream instruction
-    Timing,
+    /// The schedule of the downstream instruction depends on the upstream instruction.
+    /// Per the Quil-T specification, the downstream instruction begins execution at
+    /// the time that its latest upstream neighbor completes.
+    Scheduled,
 
     /// The ordering between these two instructions must remain unchanged
     StableOrdering,
@@ -333,14 +335,14 @@ impl InstructionBlock {
                         // If the instruction's timing must be precise, it is based on the previous timed instructions only.
                         // That is, the timing of a PULSE is set by a preceding PULSE but not a SET-FREQUENCY, which also
                         // "uses" that particular frame.
-                        if instruction.requires_precise_timing() {
+                        if instruction.is_scheduled() {
                             let previous_node_ids = last_timed_instruction_by_frame
                                 .entry((*frame).clone())
                                 .or_default()
                                 .get_dependencies_for_next_user(node);
 
                             for previous_node_id in previous_node_ids {
-                                add_dependency!(graph, previous_node_id => node, ExecutionDependency::Timing);
+                                add_dependency!(graph, previous_node_id => node, ExecutionDependency::Scheduled);
                             }
                         }
 
@@ -355,13 +357,13 @@ impl InstructionBlock {
                     }
 
                     for frame in blocked_but_not_used_frames {
-                        if instruction.requires_precise_timing() {
+                        if instruction.is_scheduled() {
                             if let Some(previous_node_id) = last_timed_instruction_by_frame
                                 .entry((*frame).clone())
                                 .or_default()
                                 .get_dependency_for_next_blocker(node)
                             {
-                                add_dependency!(graph, previous_node_id => node, ExecutionDependency::Timing);
+                                add_dependency!(graph, previous_node_id => node, ExecutionDependency::Scheduled);
                             }
                         }
 
@@ -418,7 +420,7 @@ impl InstructionBlock {
 
         for previous_nodes in last_timed_instruction_by_frame.into_values() {
             for node in previous_nodes.drain() {
-                add_dependency!(graph, node => ScheduledGraphNode::BlockEnd, ExecutionDependency::Timing);
+                add_dependency!(graph, node => ScheduledGraphNode::BlockEnd, ExecutionDependency::Scheduled);
             }
         }
 

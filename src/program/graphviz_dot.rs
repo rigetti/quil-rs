@@ -62,7 +62,7 @@ impl InstructionBlock {
                             MemoryAccessType::Write => "await write",
                             MemoryAccessType::Capture => "await capture",
                         },
-                        ExecutionDependency::Timing => "timing",
+                        ExecutionDependency::Scheduled => "timing",
                         ExecutionDependency::StableOrdering => "ordering",
                     })
                     .collect::<Vec<&str>>();
