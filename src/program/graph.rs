@@ -219,7 +219,8 @@ impl Default for InstructionBlock {
 ///
 /// ## Examples
 ///
-/// Note that "depends on" is equivalent to "must execute after completion of".
+/// Note that "depends on" is equivalent to "must execute at or after completion of." The interpretation of
+/// "at or after" depends on the type of dependency and the compiler.
 ///
 /// ```text
 /// user --> user # a second user takes a dependency on the first
@@ -238,8 +239,10 @@ struct PreviousNodes {
 
 impl Default for PreviousNodes {
     /// The default value for [PreviousNodes] is useful in that, if no previous nodes have been recorded
-    /// as using a frame, we should consider that the start of the instruction block "blocks" use of that frame
-    /// (in other words, this instruction cannot be scheduled prior to the start of the instruction block).
+    /// as using a frame, we should consider that the start of the instruction block "uses" of that frame
+    ///
+    /// In other words, no instruction can be scheduled prior to the start of the instruction block
+    /// and all scheduled instructions within the block depend on the block's start time, at least indirectly.
     fn default() -> Self {
         Self {
             using: Some(ScheduledGraphNode::BlockStart),
@@ -313,7 +316,7 @@ impl InstructionBlock {
 
             let instruction_role = InstructionRole::from(instruction);
             match instruction_role {
-                // Classical instructions must be strongly ordered by appearance in the program
+                // Classical instructions must be ordered by appearance in the program
                 InstructionRole::ClassicalCompute => {
                     add_dependency!(graph, last_classical_instruction => node, ExecutionDependency::StableOrdering);
 
@@ -332,9 +335,6 @@ impl InstructionBlock {
                     let blocked_but_not_used_frames = blocked_frames.difference(&used_frames);
 
                     for frame in &used_frames {
-                        // If the instruction's timing must be precise, it is based on the previous timed instructions only.
-                        // That is, the timing of a PULSE is set by a preceding PULSE but not a SET-FREQUENCY, which also
-                        // "uses" that particular frame.
                         if instruction.is_scheduled() {
                             let previous_node_ids = last_timed_instruction_by_frame
                                 .entry((*frame).clone())
