@@ -113,19 +113,19 @@ impl BinaryLogic {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Convert {
-    pub from: MemoryReference,
+    pub original: MemoryReference,
     pub to: MemoryReference,
 }
 
 impl Convert {
     pub fn new(from: MemoryReference, to: MemoryReference) -> Self {
-        Self { from, to }
+        Self { original: from, to }
     }
 }
 
 impl fmt::Display for Convert {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "CONVERT {} {}", self.to, self.from)
+        write!(f, "CONVERT {} {}", self.to, self.original)
     }
 }
 
@@ -210,7 +210,7 @@ impl fmt::Display for ComparisonOperand {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum ComparisonOperator {
     Equal,
     GreaterThanOrEqual,
@@ -249,7 +249,7 @@ impl fmt::Display for UnaryLogic {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum UnaryOperator {
     Neg,
     Not,

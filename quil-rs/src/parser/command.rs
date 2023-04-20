@@ -163,7 +163,7 @@ pub(crate) fn parse_capture(
 pub(crate) fn parse_convert(input: ParserInput) -> InternalParserResult<Instruction> {
     let (input, to) = parse_memory_reference(input)?;
     let (input, from) = parse_memory_reference(input)?;
-    Ok((input, Instruction::Convert(Convert { from, to })))
+    Ok((input, Instruction::Convert(Convert { original: from, to })))
 }
 
 /// Parse the contents of a `DEFCAL` instruction (including `DEFCAL MEASURE`),

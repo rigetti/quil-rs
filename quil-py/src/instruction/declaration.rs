@@ -1,4 +1,9 @@
-use quil_rs::instruction::{Declaration, MemoryReference, Offset, ScalarType, Sharing, Vector};
+use quil_rs::instruction::{
+    ArithmeticOperand, Declaration, Load, MemoryReference, Offset, ScalarType, Sharing, Store,
+    Vector,
+};
+
+use super::PyArithmeticOperand;
 
 use rigetti_pyo3::{
     impl_from_str, impl_hash, impl_parse, impl_repr, impl_str, py_wrap_data_struct, py_wrap_error,
@@ -176,6 +181,78 @@ impl PyMemoryReference {
     #[new]
     pub fn new(name: String, index: u64) -> Self {
         Self(MemoryReference::new(name, index))
+    }
+
+    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
+        match op {
+            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
+            _ => py.NotImplemented(),
+        }
+    }
+}
+
+py_wrap_data_struct! {
+    #[derive(Debug, PartialEq, Eq)]
+    #[pyo3(subclass)]
+    PyLoad(Load) as "Load" {
+        destination: MemoryReference => PyMemoryReference,
+        source: String => Py<PyString>,
+        offset: MemoryReference => PyMemoryReference
+    }
+}
+impl_repr!(PyLoad);
+impl_str!(PyLoad);
+
+#[pymethods]
+impl PyLoad {
+    #[new]
+    pub fn new(
+        py: Python<'_>,
+        destination: PyMemoryReference,
+        source: String,
+        offset: PyMemoryReference,
+    ) -> PyResult<Self> {
+        Ok(Self(Load::new(
+            MemoryReference::py_try_from(py, &destination)?,
+            source,
+            MemoryReference::py_try_from(py, &offset)?,
+        )))
+    }
+
+    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
+        match op {
+            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
+            _ => py.NotImplemented(),
+        }
+    }
+}
+
+py_wrap_data_struct! {
+    #[derive(Debug, PartialEq)]
+    #[pyo3(subclass)]
+    PyStore(Store) as "Store" {
+        destination: String => Py<PyString>,
+        offset: MemoryReference => PyMemoryReference,
+        source: ArithmeticOperand => PyArithmeticOperand
+    }
+}
+impl_repr!(PyStore);
+impl_str!(PyStore);
+
+#[pymethods]
+impl PyStore {
+    #[new]
+    pub fn new(
+        py: Python<'_>,
+        destination: String,
+        offset: PyMemoryReference,
+        source: PyArithmeticOperand,
+    ) -> PyResult<Self> {
+        Ok(Self(Store::new(
+            destination,
+            MemoryReference::py_try_from(py, &offset)?,
+            ArithmeticOperand::py_try_from(py, &source)?,
+        )))
     }
 
     pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {

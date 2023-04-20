@@ -831,7 +831,7 @@ mod tests {
         parse_instructions,
         "CONVERT theta unadjusted-theta[1]",
         vec![Instruction::Convert(Convert {
-            from: MemoryReference {
+            original: MemoryReference {
                 name: "unadjusted-theta".to_string(),
                 index: 1
             },

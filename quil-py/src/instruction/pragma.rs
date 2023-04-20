@@ -1,4 +1,4 @@
-use quil_rs::instruction::{Pragma, PragmaArgument};
+use quil_rs::instruction::{Include, Pragma, PragmaArgument};
 
 use rigetti_pyo3::{
     impl_repr, impl_str, py_wrap_data_struct, py_wrap_union_enum,
@@ -59,6 +59,29 @@ impl_str!(PyPragmaArgument);
 
 #[pymethods]
 impl PyPragmaArgument {
+    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
+        match op {
+            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
+            _ => py.NotImplemented(),
+        }
+    }
+}
+
+py_wrap_data_struct! {
+    #[derive(Debug, PartialEq, Eq)]
+    #[pyo3(subclass)]
+    PyInclude(Include) as "Include" {
+        filename: String => Py<PyString>
+    }
+}
+
+#[pymethods]
+impl PyInclude {
+    #[new]
+    pub fn new(filename: String) -> Self {
+        Self(Include::new(filename))
+    }
+
     pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
         match op {
             CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
