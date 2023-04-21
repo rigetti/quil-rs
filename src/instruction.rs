@@ -1208,11 +1208,17 @@ impl Instruction {
                     FrameMatchCondition::AnyOfNames(frame_names),
                 ])
             }),
-            Instruction::Fence(Fence { qubits }) => Some(if qubits.is_empty() {
-                FrameMatchCondition::All
-            } else {
-                FrameMatchCondition::AnyOfQubits(Cow::Borrowed(qubits))
-            }),
+            Instruction::Fence(Fence { qubits }) => {
+                if include_blocked {
+                    Some(if qubits.is_empty() {
+                        FrameMatchCondition::All
+                    } else {
+                        FrameMatchCondition::AnyOfQubits(Cow::Borrowed(qubits))
+                    })
+                } else {
+                    None
+                }
+            }
             Instruction::Reset(Reset { qubit }) => {
                 let qubits = match qubit {
                     Some(qubit) => {
@@ -1295,6 +1301,52 @@ impl Instruction {
         let (_, instruction) =
             nom::combinator::all_consuming(parse_instruction)(&lexed).map_err(|e| e.to_string())?;
         Ok(instruction)
+    }
+
+    /// Per the Quil-T spec, whether this instruction's timing within the pulse
+    /// program must be precisely controlled so as to begin exactly on the end of
+    /// the latest preceding timed instruction
+    pub(crate) fn is_scheduled(&self) -> bool {
+        match self {
+            Instruction::Capture(_)
+            | Instruction::Delay(_)
+            | Instruction::Fence(_)
+            | Instruction::Pulse(_)
+            | Instruction::RawCapture(_) => true,
+            Instruction::Arithmetic(_)
+            | Instruction::BinaryLogic(_)
+            | Instruction::CalibrationDefinition(_)
+            | Instruction::CircuitDefinition(_)
+            | Instruction::Convert(_)
+            | Instruction::Comparison(_)
+            | Instruction::Declaration(_)
+            | Instruction::Exchange(_)
+            | Instruction::FrameDefinition(_)
+            | Instruction::Gate(_)
+            | Instruction::GateDefinition(_)
+            | Instruction::Halt
+            | Instruction::Include(_)
+            | Instruction::Jump(_)
+            | Instruction::JumpUnless(_)
+            | Instruction::JumpWhen(_)
+            | Instruction::Label(_)
+            | Instruction::Load(_)
+            | Instruction::MeasureCalibrationDefinition(_)
+            | Instruction::Measurement(_)
+            | Instruction::Move(_)
+            | Instruction::Nop
+            | Instruction::Pragma(_)
+            | Instruction::Reset(_)
+            | Instruction::SetFrequency(_)
+            | Instruction::SetPhase(_)
+            | Instruction::SetScale(_)
+            | Instruction::ShiftFrequency(_)
+            | Instruction::ShiftPhase(_)
+            | Instruction::Store(_)
+            | Instruction::SwapPhases(_)
+            | Instruction::UnaryLogic(_)
+            | Instruction::WaveformDefinition(_) => false,
+        }
     }
 }
 
