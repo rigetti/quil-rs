@@ -27,8 +27,8 @@ impl From<RenderSettings> for CellSettings {
 impl QuantikzCell {
     pub(crate) fn to_latex(&self, settings: &CellSettings) -> Result<String, LatexGenError> {
         match self {
-            QuantikzCell::Empty => Ok(format!("{}", &RenderCommand::Qw)),
-            QuantikzCell::Control(target) => Ok(format!("{}", &(RenderCommand::Ctrl(*target)))),
+            QuantikzCell::Empty => Ok(RenderCommand::Qw.to_string()),
+            QuantikzCell::Control(target) => Ok(RenderCommand::Ctrl(*target).to_string()),
             QuantikzCell::Gate(QuantikzGate {
                 name,
                 parameter,

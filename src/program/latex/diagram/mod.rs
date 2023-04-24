@@ -107,8 +107,9 @@ impl Diagram {
         let mut qubit_iterator = gate
             .qubits
             .iter()
+            .cloned()
             .map(|q| {
-                q.clone()
+                q
                     .into_fixed()
                     .map_err(|_| LatexGenError::UnsupportedQubit)
             })
@@ -126,9 +127,10 @@ impl Diagram {
         cells[target_index] = QuantikzCell::Gate(quantikz_gate);
 
         for qubit in qubit_iterator {
-            let column_index = *self
+            let column_index = self
                 .wires
                 .get(&qubit?)
+                .copied()
                 .ok_or(LatexGenError::QubitNotFound(target_qubit))?;
             cells[column_index] = QuantikzCell::Control(target_index as i64 - column_index as i64)
         }
@@ -141,7 +143,7 @@ impl Diagram {
 
 impl fmt::Display for Diagram {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let last = self.wires.keys().last().unwrap_or(&0);
+        let last = self.wires.keys().last().copied().unwrap_or(0);
         let cell_settings = CellSettings::from(self.settings);
 
         for (qubit, cell_index) in &self.wires {
