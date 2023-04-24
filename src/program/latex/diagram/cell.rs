@@ -48,28 +48,23 @@ impl QuantikzCell {
                     }
                 });
                 if name == "PHASE" {
-                    Ok(format!(
-                        "{}",
-                        &RenderCommand::Phase(
+                    Ok(RenderCommand::Phase(
                             symbol.ok_or(LatexGenError::MissingParameter)?,
                             superscript
-                        )
-                    ))
+                        ).to_string()
+                    )
                 // the conditional defines a target gate
                 } else if name == "X" && *ctrl_count > 0 {
                     if *dagger_count > 0 {
-                        Ok(format!(
-                            "{}",
-                            &RenderCommand::Gate(name.to_string(), superscript)
-                        ))
+                        Ok(
+                            RenderCommand::Gate(name.to_string(), superscript).to_string()
+                        )
                     } else {
-                        Ok(format!("{}", &RenderCommand::Targ))
+                        Ok(RenderCommand::Targ.to_string())
                     }
                 } else {
-                    Ok(format!(
-                        "{}",
-                        &RenderCommand::Gate(name.to_string(), superscript)
-                    ))
+                    Ok(RenderCommand::Gate(name.to_string(), superscript).to_string()
+                    )
                 }
             }
         }

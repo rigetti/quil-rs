@@ -143,7 +143,7 @@ impl Diagram {
 
 impl fmt::Display for Diagram {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let last = self.wires.keys().last().copied().unwrap_or(0);
+        let last = self.wires.keys().last().copied().unwrap_or_default();
         let cell_settings = CellSettings::from(self.settings);
 
         for (qubit, cell_index) in &self.wires {
@@ -166,7 +166,7 @@ impl fmt::Display for Diagram {
             write!(f, "{}{}", &RenderCommand::Separate, &RenderCommand::Qw)?;
 
             // omit LaTeX line break (`\\`) if this is the last qubit
-            if *qubit != *last {
+            if *qubit != last {
                 write!(f, " {}", &RenderCommand::Nr)?;
             }
 
