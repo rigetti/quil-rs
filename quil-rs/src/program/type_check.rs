@@ -411,100 +411,58 @@ fn type_check_unary_logic(
 /// Type check an [Instruction::Move].
 fn type_check_move(
     instruction: &Instruction,
-    destination: &ArithmeticOperand,
+    destination: &MemoryReference,
     source: &ArithmeticOperand,
     memory_regions: &BTreeMap<String, MemoryRegion>,
 ) -> TypeResult<()> {
-    match destination {
-        ArithmeticOperand::LiteralInteger(_) | ArithmeticOperand::LiteralReal(_) => {
-            operator_operand_mismatch(
-                instruction,
-                "MOVE",
-                "memory reference",
-                destination,
-                "`literal value`",
-            )
-        }
-        ArithmeticOperand::MemoryReference(dest_ref) => {
-            if let Some(dest_region) = memory_regions.get(&dest_ref.name) {
-                let dt = &dest_region.size.data_type;
-                match (source, dt) {
-                    (ArithmeticOperand::LiteralInteger(_), ScalarType::Real) => data_type_mismatch(
-                        instruction,
-                        destination,
-                        dt,
-                        source,
-                        "`literal integer`",
-                    ),
-                    (ArithmeticOperand::LiteralReal(_), st) if st != &ScalarType::Real => {
-                        data_type_mismatch(instruction, destination, dt, source, "`literal real`")
-                    }
-                    (ArithmeticOperand::MemoryReference(src_ref), dt) => {
-                        if let Some(src_region) = memory_regions.get(&src_ref.name) {
-                            let st = &src_region.size.data_type;
-                            if st != dt {
-                                data_type_mismatch(instruction, destination, dt, source, st)
-                            } else {
-                                Ok(())
-                            }
-                        } else {
-                            undefined_memory_reference(instruction, src_ref)
-                        }
-                    }
-                    _ => Ok(()),
-                }
-            } else {
-                undefined_memory_reference(instruction, dest_ref)
+    if let Some(dest_region) = memory_regions.get(&destination.name) {
+        let dt = &dest_region.size.data_type;
+        match (source, dt) {
+            (ArithmeticOperand::LiteralInteger(_), ScalarType::Real) => {
+                data_type_mismatch(instruction, destination, dt, source, "`literal integer`")
             }
+            (ArithmeticOperand::LiteralReal(_), st) if st != &ScalarType::Real => {
+                data_type_mismatch(instruction, destination, dt, source, "`literal real`")
+            }
+            (ArithmeticOperand::MemoryReference(src_ref), dt) => {
+                if let Some(src_region) = memory_regions.get(&src_ref.name) {
+                    let st = &src_region.size.data_type;
+                    if st != dt {
+                        data_type_mismatch(instruction, destination, dt, source, st)
+                    } else {
+                        Ok(())
+                    }
+                } else {
+                    undefined_memory_reference(instruction, src_ref)
+                }
+            }
+            _ => Ok(()),
         }
+    } else {
+        undefined_memory_reference(instruction, destination)
     }
 }
 
 /// Type check an [Instruction::Exchange].
 fn type_check_exchange(
     instruction: &Instruction,
-    left: &ArithmeticOperand,
-    right: &ArithmeticOperand,
+    left: &MemoryReference,
+    right: &MemoryReference,
     memory_regions: &BTreeMap<String, MemoryRegion>,
 ) -> TypeResult<()> {
-    match (left, right) {
-        (
-            ArithmeticOperand::MemoryReference(left_ref),
-            ArithmeticOperand::MemoryReference(right_ref),
-        ) => {
-            match (
-                memory_regions.get(&left_ref.name),
-                memory_regions.get(&right_ref.name),
-            ) {
-                (None, _) => undefined_memory_reference(instruction, left_ref),
-                (_, None) => undefined_memory_reference(instruction, right_ref),
-                (Some(left_region), Some(right_region)) => {
-                    let (lt, rt) = (&left_region.size.data_type, &right_region.size.data_type);
-                    if lt != rt {
-                        data_type_mismatch(instruction, left, lt, right, rt)
-                    } else {
-                        Ok(())
-                    }
-                }
+    match (
+        memory_regions.get(&left.name),
+        memory_regions.get(&right.name),
+    ) {
+        (None, _) => undefined_memory_reference(instruction, left),
+        (_, None) => undefined_memory_reference(instruction, right),
+        (Some(left_region), Some(right_region)) => {
+            let (lt, rt) = (&left_region.size.data_type, &right_region.size.data_type);
+            if lt != rt {
+                data_type_mismatch(instruction, left, lt, right, rt)
+            } else {
+                Ok(())
             }
-        }
-        (ArithmeticOperand::LiteralInteger(_), _) | (ArithmeticOperand::LiteralReal(_), _) => {
-            operator_operand_mismatch(
-                instruction,
-                "EXCHANGE",
-                "memory reference",
-                left,
-                "`literal value`",
-            )
-        }
-        (_, ArithmeticOperand::LiteralInteger(_)) | (_, ArithmeticOperand::LiteralReal(_)) => {
-            operator_operand_mismatch(
-                instruction,
-                "EXCHANGE",
-                "memory reference",
-                right,
-                "`literal value`",
-            )
         }
     }
 }
@@ -550,69 +508,73 @@ fn type_check_store(
     source: &ArithmeticOperand,
     memory_regions: &BTreeMap<String, MemoryRegion>,
 ) -> TypeResult<()> {
-    match (
-        memory_regions.get(destination),
-        memory_regions.get(&offset.name),
-    ) {
-        (None, _) => undefined_memory_reference(instruction, destination),
-        (_, None) => undefined_memory_reference(instruction, offset),
-        (Some(dest_region), Some(offset_region)) => {
-            let (dt, ot) = (&dest_region.size.data_type, &offset_region.size.data_type);
-            if ot != &ScalarType::Integer {
-                operator_operand_mismatch(instruction, "STORE", "integral", offset, ot)
+    let dest_region =
+        memory_regions
+            .get(destination)
+            .ok_or(TypeError::UndefinedMemoryReference {
+                instruction: instruction.clone(),
+                reference: destination.to_string(),
+            })?;
+    memory_regions
+        .get(&offset.name)
+        .ok_or(TypeError::UndefinedMemoryReference {
+            instruction: instruction.clone(),
+            reference: offset.name.clone(),
+        })
+        .and_then(|m| {
+            if m.size.data_type != ScalarType::Integer {
+                operator_operand_mismatch(
+                    instruction,
+                    "STORE",
+                    "integral",
+                    offset,
+                    m.size.data_type,
+                )
             } else {
-                // https://quil-lang.github.io/#6-5Classical-Instructions
-                // # Perform an indirect store of a to x offset by n.
-                // STORE    x n a          # x[n] := a
-                //      <oct*> <int> <oct>
-                //      <oct*> <int> <!int>
-                //      <int*> <int> <int>
-                //      <int*> <int> <!int>
-                //      <real*> <int> <real>
-                //      <real*> <int> <!real>
-                //      <bit*> <int> <bit>
-                //      <bit*> <int> <!int>
-                match (source, dt) {
-                    // <oct*> <int> <!int>
-                    (ArithmeticOperand::LiteralInteger(_), ScalarType::Octet) => Ok(()),
-                    // <int*> <int> <!int>
-                    (ArithmeticOperand::LiteralInteger(_), ScalarType::Integer) => Ok(()),
-                    // <real*> <int> <!real>
-                    (ArithmeticOperand::LiteralReal(_), ScalarType::Real) => Ok(()),
-                    // <bit*> <int> <!bit>
-                    (ArithmeticOperand::LiteralInteger(_), ScalarType::Bit) => Ok(()),
+                Ok(())
+            }
+        })?;
+
+    match (source, &dest_region.size.data_type) {
+        (ArithmeticOperand::MemoryReference(source_ref), dt) => {
+            match memory_regions.get(&source_ref.name) {
+                None => undefined_memory_reference(instruction, offset),
+                Some(source_region) => {
+                    // https://quil-lang.github.io/#6-5Classical-Instructions
+                    // # Perform an indirect store of a to x offset by n.
+                    // STORE    x n a          # x[n] := a
+                    //      <oct*> <int> <oct>
+                    //      <oct*> <int> <!int>
+                    //      <int*> <int> <int>
+                    //      <int*> <int> <!int>
+                    //      <real*> <int> <real>
+                    //      <real*> <int> <!real>
+                    //      <bit*> <int> <bit>
+                    //      <bit*> <int> <!int>
+
                     // <d*> <int> <s>  => check that d & s match
-                    (ArithmeticOperand::MemoryReference(src_ref), _) => {
-                        if let Some(src_region) = memory_regions.get(&src_ref.name) {
-                            let st = &src_region.size.data_type;
-                            if st == dt {
-                                Ok(())
-                            } else {
-                                data_type_mismatch(instruction, src_ref, st, destination, dt)
-                            }
-                        } else {
-                            undefined_memory_reference(instruction, src_ref)
-                        }
-                    }
-                    // Mismatches
-                    (ArithmeticOperand::LiteralInteger(_), ScalarType::Real) => data_type_mismatch(
-                        instruction,
-                        source,
-                        "`literal integer`",
-                        destination,
-                        dt,
-                    ),
-                    (ArithmeticOperand::LiteralReal(_), ScalarType::Integer) => {
-                        data_type_mismatch(instruction, source, "`literal real`", destination, dt)
-                    }
-                    (ArithmeticOperand::LiteralReal(_), ScalarType::Bit) => {
-                        data_type_mismatch(instruction, source, "`literal real`", destination, dt)
-                    }
-                    (ArithmeticOperand::LiteralReal(_), ScalarType::Octet) => {
-                        data_type_mismatch(instruction, source, "`literal real`", destination, dt)
+                    let st = &source_region.size.data_type;
+                    if st == dt {
+                        Ok(())
+                    } else {
+                        data_type_mismatch(instruction, source_ref, st, destination, dt)
                     }
                 }
             }
+        }
+        (ArithmeticOperand::LiteralInteger(_), ScalarType::Octet) => Ok(()),
+        // <int*> <int> <!int>
+        (ArithmeticOperand::LiteralInteger(_), ScalarType::Integer) => Ok(()),
+        // <real*> <int> <!real>
+        (ArithmeticOperand::LiteralReal(_), ScalarType::Real) => Ok(()),
+        // <bit*> <int> <!bit>
+        (ArithmeticOperand::LiteralInteger(_), ScalarType::Bit) => Ok(()),
+        // Mismatches
+        (ArithmeticOperand::LiteralInteger(_), dt) => {
+            data_type_mismatch(instruction, source, "`literal integer`", destination, dt)
+        }
+        (ArithmeticOperand::LiteralReal(_), dt) => {
+            data_type_mismatch(instruction, source, "`literal real`", destination, dt)
         }
     }
 }
@@ -933,7 +895,7 @@ DECLARE {dst_decl} {dst_type}
 DECLARE {offset_decl} {offset_type}
 STORE {dst_ref} {offset_ref} {value}
 "#
-        )).unwrap_or_else(|_| panic!("Bad STORE program with (dst_decl, dst_type, value, offset_decl, offset_type, dst_ref, offset_ref) = ({dst_decl}, {dst_type}, {value}, {offset_decl}, {offset_type}, {dst_ref}, {offset_ref})."));
+        )).unwrap_or_else(|e| panic!("Bad STORE program with (dst_decl, dst_type, value, offset_decl, offset_type, dst_ref, offset_ref) = ({dst_decl}, {dst_type}, {value}, {offset_decl}, {offset_type}, {dst_ref}, {offset_ref}).: {e}"));
         let (f, i) = (f64::from_str(value), i64::from_str(value));
         assert_eq!(
             type_check(&p).is_ok(),

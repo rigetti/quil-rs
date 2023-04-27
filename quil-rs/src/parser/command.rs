@@ -163,7 +163,13 @@ pub(crate) fn parse_capture(
 pub(crate) fn parse_convert(input: ParserInput) -> InternalParserResult<Instruction> {
     let (input, to) = parse_memory_reference(input)?;
     let (input, from) = parse_memory_reference(input)?;
-    Ok((input, Instruction::Convert(Convert { original: from, to })))
+    Ok((
+        input,
+        Instruction::Convert(Convert {
+            destination: from,
+            source: to,
+        }),
+    ))
 }
 
 /// Parse the contents of a `DEFCAL` instruction (including `DEFCAL MEASURE`),
@@ -355,13 +361,7 @@ pub(crate) fn parse_exchange(input: ParserInput) -> InternalParserResult<Instruc
     let (input, left) = parse_memory_reference(input)?;
     let (input, right) = parse_memory_reference(input)?;
 
-    Ok((
-        input,
-        Instruction::Exchange(Exchange {
-            left: ArithmeticOperand::MemoryReference(left),
-            right: ArithmeticOperand::MemoryReference(right),
-        }),
-    ))
+    Ok((input, Instruction::Exchange(Exchange { left, right })))
 }
 
 /// Parse the contents of a `FENCE` instruction.
@@ -404,7 +404,7 @@ pub(crate) fn parse_label<'a>(input: ParserInput<'a>) -> InternalParserResult<'a
 
 /// Parse the contents of a `MOVE` instruction.
 pub(crate) fn parse_move(input: ParserInput) -> InternalParserResult<Instruction> {
-    let (input, destination) = parse_arithmetic_operand(input)?;
+    let (input, destination) = parse_memory_reference(input)?;
     let (input, source) = parse_arithmetic_operand(input)?;
     Ok((
         input,

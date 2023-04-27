@@ -230,8 +230,8 @@ py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
     #[pyo3(subclass)]
     PyConvert(Convert) as "Convert" {
-        original: MemoryReference => PyMemoryReference,
-        to: MemoryReference => PyMemoryReference
+        destination: MemoryReference => PyMemoryReference,
+        source: MemoryReference => PyMemoryReference
     }
 }
 impl_repr!(PyConvert);
@@ -259,7 +259,7 @@ py_wrap_data_struct! {
     #[derive(Debug, PartialEq)]
     #[pyo3(subclass)]
     PyMove(Move) as "Move" {
-        destination: ArithmeticOperand => PyArithmeticOperand,
+        destination: MemoryReference => PyMemoryReference,
         source: ArithmeticOperand => PyArithmeticOperand
     }
 }
@@ -271,11 +271,11 @@ impl PyMove {
     #[new]
     fn new(
         py: Python<'_>,
-        destination: PyArithmeticOperand,
+        destination: PyMemoryReference,
         source: PyArithmeticOperand,
     ) -> PyResult<Self> {
         Ok(Self(Move::new(
-            ArithmeticOperand::py_try_from(py, &destination)?,
+            MemoryReference::py_try_from(py, &destination)?,
             ArithmeticOperand::py_try_from(py, &source)?,
         )))
     }
@@ -292,8 +292,8 @@ py_wrap_data_struct! {
     #[derive(Debug, PartialEq)]
     #[pyo3(subclass)]
     PyExchange(Exchange) as "Exchange" {
-        left: ArithmeticOperand => PyArithmeticOperand,
-        right: ArithmeticOperand => PyArithmeticOperand
+        left: MemoryReference => PyMemoryReference,
+        right: MemoryReference => PyMemoryReference
     }
 }
 impl_repr!(PyExchange);
@@ -304,12 +304,12 @@ impl PyExchange {
     #[new]
     pub fn new(
         py: Python<'_>,
-        left: PyArithmeticOperand,
-        right: PyArithmeticOperand,
+        left: PyMemoryReference,
+        right: PyMemoryReference,
     ) -> PyResult<Self> {
         Ok(Self(Exchange::new(
-            ArithmeticOperand::py_try_from(py, &left)?,
-            ArithmeticOperand::py_try_from(py, &right)?,
+            MemoryReference::py_try_from(py, &left)?,
+            MemoryReference::py_try_from(py, &right)?,
         )))
     }
 

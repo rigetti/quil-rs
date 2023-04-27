@@ -89,3 +89,5 @@ impl PyInclude {
         }
     }
 }
+impl_repr!(PyInclude);
+impl_str!(PyInclude);

@@ -113,30 +113,33 @@ impl BinaryLogic {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Convert {
-    pub original: MemoryReference,
-    pub to: MemoryReference,
+    pub destination: MemoryReference,
+    pub source: MemoryReference,
 }
 
 impl Convert {
-    pub fn new(from: MemoryReference, to: MemoryReference) -> Self {
-        Self { original: from, to }
+    pub fn new(original: MemoryReference, to: MemoryReference) -> Self {
+        Self {
+            destination: original,
+            source: to,
+        }
     }
 }
 
 impl fmt::Display for Convert {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "CONVERT {} {}", self.to, self.original)
+        write!(f, "CONVERT {} {}", self.destination, self.source)
     }
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Move {
-    pub destination: ArithmeticOperand,
+    pub destination: MemoryReference,
     pub source: ArithmeticOperand,
 }
 
 impl Move {
-    pub fn new(destination: ArithmeticOperand, source: ArithmeticOperand) -> Self {
+    pub fn new(destination: MemoryReference, source: ArithmeticOperand) -> Self {
         Self {
             destination,
             source,
@@ -152,8 +155,8 @@ impl fmt::Display for Move {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Exchange {
-    pub left: ArithmeticOperand,
-    pub right: ArithmeticOperand,
+    pub left: MemoryReference,
+    pub right: MemoryReference,
 }
 
 impl fmt::Display for Exchange {
@@ -163,7 +166,7 @@ impl fmt::Display for Exchange {
 }
 
 impl Exchange {
-    pub fn new(left: ArithmeticOperand, right: ArithmeticOperand) -> Self {
+    pub fn new(left: MemoryReference, right: MemoryReference) -> Self {
         Self { left, right }
     }
 }

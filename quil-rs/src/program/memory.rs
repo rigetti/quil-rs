@@ -133,12 +133,16 @@ impl Instruction {
                 destination,
                 source,
                 ..
-            })
-            | Instruction::Move(Move {
+            }) => MemoryAccesses {
+                writes: set_from_optional_memory_reference![destination.get_memory_reference()],
+                reads: set_from_optional_memory_reference![source.get_memory_reference()],
+                ..Default::default()
+            },
+            Instruction::Move(Move {
                 destination,
                 source,
             }) => MemoryAccesses {
-                writes: set_from_optional_memory_reference![destination.get_memory_reference()],
+                writes: set_from_memory_references![vec![destination]],
                 reads: set_from_optional_memory_reference![source.get_memory_reference()],
                 ..Default::default()
             },
@@ -179,10 +183,7 @@ impl Instruction {
                 ..Default::default()
             },
             Instruction::Exchange(Exchange { left, right }) => MemoryAccesses {
-                writes: merge_sets![
-                    set_from_optional_memory_reference!(left.get_memory_reference()),
-                    set_from_optional_memory_reference!(right.get_memory_reference())
-                ],
+                writes: set_from_memory_references![vec![left, right]],
                 ..Default::default()
             },
             Instruction::Gate(Gate { parameters, .. }) => MemoryAccesses {
@@ -251,13 +252,10 @@ impl Instruction {
             },
             Instruction::Store(Store {
                 destination,
-                offset,
+                offset: _,
                 source,
             }) => MemoryAccesses {
-                reads: merge_sets![
-                    set_from_memory_references!(vec![offset]),
-                    set_from_optional_memory_reference!(source.get_memory_reference())
-                ],
+                reads: set_from_optional_memory_reference!(source.get_memory_reference()),
                 writes: set_from_reference_vec![vec![destination]],
                 ..Default::default()
             },
