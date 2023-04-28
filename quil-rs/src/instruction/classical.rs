@@ -75,21 +75,12 @@ impl fmt::Display for BinaryOperand {
 
 pub type BinaryOperands = (MemoryReference, BinaryOperand);
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, strum::Display)]
+#[strum(serialize_all = "UPPERCASE")]
 pub enum BinaryOperator {
     And,
     Ior,
     Xor,
-}
-
-impl fmt::Display for BinaryOperator {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match &self {
-            BinaryOperator::And => write!(f, "AND"),
-            BinaryOperator::Ior => write!(f, "IOR"),
-            BinaryOperator::Xor => write!(f, "XOR"),
-        }
-    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
