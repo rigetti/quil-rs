@@ -46,23 +46,16 @@ impl fmt::Display for ArithmeticOperand {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, strum::Display)]
 pub enum ArithmeticOperator {
+    #[strum(to_string = "ADD")]
     Add,
+    #[strum(to_string = "SUB")]
     Subtract,
+    #[strum(to_string = "DIV")]
     Divide,
+    #[strum(to_string = "MUL")]
     Multiply,
-}
-
-impl fmt::Display for ArithmeticOperator {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match &self {
-            ArithmeticOperator::Add => write!(f, "ADD"),
-            ArithmeticOperator::Divide => write!(f, "DIV"),
-            ArithmeticOperator::Multiply => write!(f, "MUL"),
-            ArithmeticOperator::Subtract => write!(f, "SUB"),
-        }
-    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
