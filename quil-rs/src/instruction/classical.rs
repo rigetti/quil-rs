@@ -245,17 +245,9 @@ impl fmt::Display for UnaryLogic {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, strum::Display)]
+#[strum(serialize_all = "UPPERCASE")]
 pub enum UnaryOperator {
     Neg,
     Not,
-}
-
-impl fmt::Display for UnaryOperator {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match &self {
-            UnaryOperator::Neg => write!(f, "NEG"),
-            UnaryOperator::Not => write!(f, "NOT"),
-        }
-    }
 }
