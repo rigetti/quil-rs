@@ -467,7 +467,7 @@ class ComparisonOperand:
 
     Variants:
         ``literal_integer``: An integer literal.
-        ``literal_real``: An floating point literal.
+        ``literal_real``: A floating point literal.
         ``memory_reference``: A Quil ``MemoryReference``.
 
     Methods (for each variant):
