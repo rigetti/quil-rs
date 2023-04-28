@@ -676,10 +676,10 @@ mod tests {
         parse_instructions,
         "MOVE a 1.0",
         vec![Instruction::Move(Move {
-            destination: ArithmeticOperand::MemoryReference(MemoryReference {
+            destination: MemoryReference {
                 name: "a".to_owned(),
                 index: 0
-            }),
+            },
             source: ArithmeticOperand::LiteralReal(1.0)
         })]
     );
@@ -831,11 +831,11 @@ mod tests {
         parse_instructions,
         "CONVERT theta unadjusted-theta[1]",
         vec![Instruction::Convert(Convert {
-            from: MemoryReference {
+            destination: MemoryReference {
                 name: "unadjusted-theta".to_string(),
                 index: 1
             },
-            to: MemoryReference {
+            source: MemoryReference {
                 name: "theta".to_string(),
                 index: 0
             },

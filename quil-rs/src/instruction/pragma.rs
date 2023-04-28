@@ -44,3 +44,20 @@ impl fmt::Display for PragmaArgument {
         }
     }
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Include {
+    pub filename: String,
+}
+
+impl fmt::Display for Include {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, r#"INCLUDE {:?}"#, self.filename)
+    }
+}
+
+impl Include {
+    pub fn new(filename: String) -> Self {
+        Self { filename }
+    }
+}
