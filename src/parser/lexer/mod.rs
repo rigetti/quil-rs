@@ -86,6 +86,8 @@ pub enum Command {
     SetScale,
     ShiftFrequency,
     ShiftPhase,
+    #[strum(to_string = "SWAP-PHASES")]
+    SwapPhases,
     Store,
     Sub,
     Xor,
@@ -235,6 +237,7 @@ fn recognize_command_or_identifier(identifier: String) -> Token {
         "SET-FREQUENCY" => Token::Command(SetFrequency),
         "SET-PHASE" => Token::Command(SetPhase),
         "SET-SCALE" => Token::Command(SetScale),
+        "SWAP-PHASES" => Token::Command(SwapPhases),
         "SHIFT-FREQUENCY" => Token::Command(ShiftFrequency),
         "SHIFT-PHASE" => Token::Command(ShiftPhase),
         "LABEL" => Token::Command(Label),

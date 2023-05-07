@@ -29,8 +29,8 @@ use crate::instruction::{
     Capture, CircuitDefinition, Comparison, ComparisonOperator, Declaration, Delay, Exchange,
     Fence, FrameDefinition, GateDefinition, Instruction, Jump, JumpUnless, JumpWhen, Label, Load,
     MeasureCalibrationDefinition, Measurement, Move, Pragma, Pulse, RawCapture, Reset,
-    SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, Store, UnaryLogic, UnaryOperator,
-    Waveform, WaveformDefinition,
+    SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, Store, SwapPhases, UnaryLogic,
+    UnaryOperator, Waveform, WaveformDefinition,
 };
 use crate::parser::instruction::parse_block;
 use crate::parser::InternalParserResult;
@@ -537,6 +537,17 @@ pub(crate) fn parse_shift_phase(input: ParserInput) -> InternalParserResult<Inst
     let (input, phase) = parse_expression(input)?;
 
     Ok((input, Instruction::ShiftPhase(ShiftPhase { frame, phase })))
+}
+
+/// Parse the contents of a `SWAP-PHASES` instruction.
+pub(crate) fn parse_swap_phases(input: ParserInput) -> InternalParserResult<Instruction> {
+    let (input, frame_1) = parse_frame_identifier(input)?;
+    let (input, frame_2) = parse_frame_identifier(input)?;
+
+    Ok((
+        input,
+        Instruction::SwapPhases(SwapPhases { frame_1, frame_2 }),
+    ))
 }
 
 /// Parse the contents of a `MEASURE` instruction.
