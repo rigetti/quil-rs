@@ -162,6 +162,7 @@ mod tests {
         ShiftPhase, SwapPhases, UnaryLogic, UnaryOperator, Waveform, WaveformDefinition,
         WaveformInvocation,
     };
+    use crate::parser::common::tests::KITCHEN_SINK_QUIL;
     use crate::parser::lexer::lex;
     use crate::{make_test, real, Program};
 
@@ -959,6 +960,12 @@ mod tests {
         ];
         assert_eq!(remainder.len(), 0);
         assert_eq!(parsed, expected);
+    }
+
+    /// Test that an entire sample program can be parsed without failure.
+    #[test]
+    fn kitchen_sink() {
+        Program::from_str(KITCHEN_SINK_QUIL).unwrap();
     }
 
     /// Assert that when a program is converted to a string, the conversion of
