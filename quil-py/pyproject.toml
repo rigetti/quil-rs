@@ -1,7 +1,8 @@
 [project]
 name = "quil"
 requires-python = ">=3.8"
-readme = "README.md"
+description = "A Python package for building and parsing Quil programs."
+readme = "README-py.md"
 license = { text = "Apache-2.0" }
 authors = [
 	{ name = "Rigetti Computing", email = "softapps@rigetti.com" },
@@ -21,7 +22,7 @@ classifiers = [
 name = "quil"
 version = "0.1.0"
 description = "A Python package for building and parsing Quil programs."
-readme = "README.md"
+readme = "README-py.md"
 authors = [ "Rigetti Computing <softapps@rigetti.com>" ]
 
 [tool.poetry.dependencies]
