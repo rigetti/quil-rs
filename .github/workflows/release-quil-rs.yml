@@ -1,0 +1,26 @@
+name: Release crates
+
+on:
+  release:
+    types: [published]
+    
+jobs:
+  is-quil-rs-release:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || startswith(github.event.release.tag_name, 'quil-rs/v') }}
+    steps:
+      - run: echo "release tag starts with quil-rs/v, proceeding with release"
+
+  release:
+    runs-on: ubuntu-latest
+    needs: is-quil-rs-release
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.PAT }}
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - run: cargo publish --manifest-path=quil-rs/Cargo.toml --token ${{ secrets.CRATES_IO_TOKEN }}
