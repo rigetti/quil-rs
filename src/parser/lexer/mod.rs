@@ -86,7 +86,6 @@ pub enum Command {
     SetScale,
     ShiftFrequency,
     ShiftPhase,
-    #[strum(to_string = "SWAP-PHASES")]
     SwapPhases,
     Store,
     Sub,

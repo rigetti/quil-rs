@@ -813,8 +813,8 @@ mod tests {
                 }),
             }),
         ];
-        assert_eq!(remainder.len(), 0);
         assert_eq!(parsed, expected);
+        assert_eq!(remainder.len(), 0);
     }
 
     #[test]
@@ -845,8 +845,8 @@ mod tests {
                 },
             }),
         ];
-        assert_eq!(remainder.len(), 0);
         assert_eq!(parsed, expected);
+        assert_eq!(remainder.len(), 0);
     }
 
     #[test]
@@ -873,8 +873,8 @@ mod tests {
                 }),
             }),
         ];
-        assert_eq!(remainder.len(), 0);
         assert_eq!(parsed, expected);
+        assert_eq!(remainder.len(), 0);
     }
 
     #[test]
@@ -901,8 +901,8 @@ mod tests {
                 }),
             }),
         ];
-        assert_eq!(remainder.len(), 0);
         assert_eq!(parsed, expected);
+        assert_eq!(remainder.len(), 0);
     }
 
     #[test]
@@ -930,8 +930,8 @@ mod tests {
                 }),
             }),
         ];
-        assert_eq!(remainder.len(), 0);
         assert_eq!(parsed, expected);
+        assert_eq!(remainder.len(), 0);
     }
 
     #[test]
@@ -958,8 +958,8 @@ mod tests {
                 }),
             }),
         ];
-        assert_eq!(remainder.len(), 0);
         assert_eq!(parsed, expected);
+        assert_eq!(remainder.len(), 0);
     }
 
     /// Test that an entire sample program can be parsed without failure.
