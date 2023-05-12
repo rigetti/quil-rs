@@ -14,14 +14,16 @@
 
 use nom::{
     branch::alt,
-    combinator::{map, opt},
+    combinator::{map, opt, value},
     multi::{many0, many1, separated_list0, separated_list1},
     sequence::{delimited, pair, preceded, tuple},
 };
 
 use crate::{
-    instruction::{Convert, GateSpecification, GateType, Include, PragmaArgument},
+    expression::Expression,
+    instruction::{Convert, GateSpecification, GateType, Include, PragmaArgument, Qubit},
     parser::common::parse_variable_qubit,
+    real,
 };
 
 use crate::instruction::{
@@ -29,8 +31,8 @@ use crate::instruction::{
     Capture, CircuitDefinition, Comparison, ComparisonOperator, Declaration, Delay, Exchange,
     Fence, FrameDefinition, GateDefinition, Instruction, Jump, JumpUnless, JumpWhen, Label, Load,
     MeasureCalibrationDefinition, Measurement, Move, Pragma, Pulse, RawCapture, Reset,
-    SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, Store, UnaryLogic, UnaryOperator,
-    Waveform, WaveformDefinition,
+    SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, Store, SwapPhases, UnaryLogic,
+    UnaryOperator, Waveform, WaveformDefinition,
 };
 use crate::parser::instruction::parse_block;
 use crate::parser::InternalParserResult;
@@ -249,8 +251,8 @@ pub(crate) fn parse_defgate<'a>(input: ParserInput<'a>) -> InternalParserResult<
     let (input, gate_type) = opt(preceded(
         token!(As),
         alt((
-            map(token!(Matrix), |()| GateType::Matrix),
-            map(token!(Permutation), |()| GateType::Permutation),
+            value(GateType::Matrix, token!(Matrix)),
+            value(GateType::Permutation, token!(Permutation)),
         )),
     ))(input)?;
     let (input, _) = token!(Colon)(input)?;
@@ -322,9 +324,19 @@ pub(crate) fn parse_defcircuit<'a>(
 
 /// Parse the contents of a `DELAY` instruction.
 pub(crate) fn parse_delay<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Instruction> {
-    let (input, qubits) = many0(parse_qubit)(input)?;
+    let (input, mut qubits) = many0(parse_qubit)(input)?;
     let (input, frame_names) = many0(token!(String(v)))(input)?;
-    let (input, duration) = parse_expression(input)?;
+    // If there is no intervening frame name and the delay is an integer, it will have been parsed
+    // as a qubit. We check for and correct that condition here.
+    let (input, duration) = parse_expression(input).or_else(|e| {
+        if let Some(Qubit::Fixed(index)) = qubits.last() {
+            let duration = *index as f64;
+            qubits.pop();
+            Ok((input, Expression::Number(real!(duration))))
+        } else {
+            Err(e)
+        }
+    })?;
 
     Ok((
         input,
@@ -537,6 +549,17 @@ pub(crate) fn parse_shift_phase(input: ParserInput) -> InternalParserResult<Inst
     let (input, phase) = parse_expression(input)?;
 
     Ok((input, Instruction::ShiftPhase(ShiftPhase { frame, phase })))
+}
+
+/// Parse the contents of a `SWAP-PHASES` instruction.
+pub(crate) fn parse_swap_phases(input: ParserInput) -> InternalParserResult<Instruction> {
+    let (input, frame_1) = parse_frame_identifier(input)?;
+    let (input, frame_2) = parse_frame_identifier(input)?;
+
+    Ok((
+        input,
+        Instruction::SwapPhases(SwapPhases { frame_1, frame_2 }),
+    ))
 }
 
 /// Parse the contents of a `MEASURE` instruction.

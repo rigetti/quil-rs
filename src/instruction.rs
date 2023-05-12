@@ -1244,7 +1244,7 @@ impl Instruction {
                 Some(FrameMatchCondition::Specific(frame))
             }
             Instruction::SwapPhases(SwapPhases { frame_1, frame_2 }) => {
-                Some(FrameMatchCondition::And(vec![
+                Some(FrameMatchCondition::Or(vec![
                     FrameMatchCondition::Specific(frame_1),
                     FrameMatchCondition::Specific(frame_2),
                 ]))
