@@ -79,12 +79,8 @@ impl FrameSet {
                 .unwrap_or_default(),
             FrameMatchCondition::Or(conditions) => conditions
                 .into_iter()
-                .map(|c| self.get_matching_keys(c))
-                .reduce(|mut acc, el| {
-                    acc.extend(el);
-                    acc
-                })
-                .unwrap_or_default(),
+                .flat_map(|c| self.get_matching_keys(c))
+                .collect(),
         }
     }
 
