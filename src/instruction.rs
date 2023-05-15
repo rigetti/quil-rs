@@ -1312,7 +1312,13 @@ impl Instruction {
             | Instruction::Delay(_)
             | Instruction::Fence(_)
             | Instruction::Pulse(_)
-            | Instruction::RawCapture(_) => true,
+            | Instruction::RawCapture(_)
+            | Instruction::SetFrequency(_)
+            | Instruction::SetPhase(_)
+            | Instruction::SetScale(_)
+            | Instruction::ShiftFrequency(_)
+            | Instruction::ShiftPhase(_)
+            | Instruction::SwapPhases(_) => true,
             Instruction::Arithmetic(_)
             | Instruction::BinaryLogic(_)
             | Instruction::CalibrationDefinition(_)
@@ -1337,13 +1343,7 @@ impl Instruction {
             | Instruction::Nop
             | Instruction::Pragma(_)
             | Instruction::Reset(_)
-            | Instruction::SetFrequency(_)
-            | Instruction::SetPhase(_)
-            | Instruction::SetScale(_)
-            | Instruction::ShiftFrequency(_)
-            | Instruction::ShiftPhase(_)
             | Instruction::Store(_)
-            | Instruction::SwapPhases(_)
             | Instruction::UnaryLogic(_)
             | Instruction::WaveformDefinition(_) => false,
         }
