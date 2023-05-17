@@ -1,3 +1,42 @@
+## 0.16.0-rc.4
+
+### Breaking Changes
+
+- introduce ExecutionDependency::Scheduled (#186)
+- empty commit so knope calculates current version
+
+### Fixes
+
+- mark additional instructions as scheduled (#203)
+- parse SWAP-PHASES (#200)
+- allow for variable qubit in DEFCAL MEASURE
+- correctly expand delays (#142)
+
+## 0.16.0-rc.3
+
+### Breaking Changes
+
+- introduce ExecutionDependency::Scheduled (#186)
+- empty commit so knope calculates current version
+
+### Fixes
+
+- parse SWAP-PHASES (#200)
+- allow for variable qubit in DEFCAL MEASURE
+- correctly expand delays (#142)
+
+## 0.16.0-rc.2
+
+### Breaking Changes
+
+- introduce ExecutionDependency::Scheduled (#186)
+- empty commit so knope calculates current version
+
+### Fixes
+
+- allow for variable qubit in DEFCAL MEASURE
+- correctly expand delays (#142)
+
 ## 0.16.0-rc.1
 
 ### Breaking Changes

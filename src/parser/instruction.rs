@@ -89,6 +89,7 @@ pub(crate) fn parse_instruction(input: ParserInput) -> InternalParserResult<Inst
             Command::SetScale => command::parse_set_scale(remainder),
             Command::ShiftFrequency => command::parse_shift_frequency(remainder),
             Command::ShiftPhase => command::parse_shift_phase(remainder),
+            Command::SwapPhases => command::parse_swap_phases(remainder),
             Command::Store => command::parse_store(remainder),
             Command::Sub => command::parse_arithmetic(ArithmeticOperator::Subtract, remainder),
             Command::Xor => command::parse_logical_binary(BinaryOperator::Xor, remainder),
@@ -158,8 +159,10 @@ mod tests {
         ComparisonOperator, Convert, FrameDefinition, FrameIdentifier, Gate, GateDefinition,
         GateSpecification, Include, Instruction, Jump, JumpWhen, Label, MemoryReference, Move,
         Pulse, Qubit, RawCapture, Reset, SetFrequency, SetPhase, SetScale, ShiftFrequency,
-        ShiftPhase, UnaryLogic, UnaryOperator, Waveform, WaveformDefinition, WaveformInvocation,
+        ShiftPhase, SwapPhases, UnaryLogic, UnaryOperator, Waveform, WaveformDefinition,
+        WaveformInvocation,
     };
+    use crate::parser::common::tests::KITCHEN_SINK_QUIL;
     use crate::parser::lexer::lex;
     use crate::{make_test, real, Program};
 
@@ -810,8 +813,40 @@ mod tests {
                 }),
             }),
         ];
-        assert_eq!(remainder.len(), 0);
         assert_eq!(parsed, expected);
+        assert_eq!(remainder.len(), 0);
+    }
+
+    #[test]
+    fn parse_swap_phases() {
+        let input =
+            LocatedSpan::new(r#"SWAP-PHASES 0 "rf" 1 "rf"; SWAP-PHASES 1 2 3 "rf" 4 5 6 "rf""#);
+        let tokens = lex(input).unwrap();
+        let (remainder, parsed) = parse_instructions(&tokens).unwrap();
+        let expected = vec![
+            Instruction::SwapPhases(SwapPhases {
+                frame_1: FrameIdentifier {
+                    name: String::from("rf"),
+                    qubits: vec![Qubit::Fixed(0)],
+                },
+                frame_2: FrameIdentifier {
+                    name: String::from("rf"),
+                    qubits: vec![Qubit::Fixed(1)],
+                },
+            }),
+            Instruction::SwapPhases(SwapPhases {
+                frame_1: FrameIdentifier {
+                    name: String::from("rf"),
+                    qubits: vec![Qubit::Fixed(1), Qubit::Fixed(2), Qubit::Fixed(3)],
+                },
+                frame_2: FrameIdentifier {
+                    name: String::from("rf"),
+                    qubits: vec![Qubit::Fixed(4), Qubit::Fixed(5), Qubit::Fixed(6)],
+                },
+            }),
+        ];
+        assert_eq!(parsed, expected);
+        assert_eq!(remainder.len(), 0);
     }
 
     #[test]
@@ -838,8 +873,8 @@ mod tests {
                 }),
             }),
         ];
-        assert_eq!(remainder.len(), 0);
         assert_eq!(parsed, expected);
+        assert_eq!(remainder.len(), 0);
     }
 
     #[test]
@@ -866,8 +901,8 @@ mod tests {
                 }),
             }),
         ];
-        assert_eq!(remainder.len(), 0);
         assert_eq!(parsed, expected);
+        assert_eq!(remainder.len(), 0);
     }
 
     #[test]
@@ -895,8 +930,8 @@ mod tests {
                 }),
             }),
         ];
-        assert_eq!(remainder.len(), 0);
         assert_eq!(parsed, expected);
+        assert_eq!(remainder.len(), 0);
     }
 
     #[test]
@@ -923,8 +958,14 @@ mod tests {
                 }),
             }),
         ];
-        assert_eq!(remainder.len(), 0);
         assert_eq!(parsed, expected);
+        assert_eq!(remainder.len(), 0);
+    }
+
+    /// Test that an entire sample program can be parsed without failure.
+    #[test]
+    fn kitchen_sink() {
+        Program::from_str(KITCHEN_SINK_QUIL).unwrap();
     }
 
     /// Assert that when a program is converted to a string, the conversion of

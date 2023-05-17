@@ -814,7 +814,7 @@ checksum = "a993555f31e5a609f617c12db6250dedcac1b0a85076912c436e6fc9b2c8e6a3"
 
 [[package]]
 name = "quil-rs"
-version = "0.16.0-rc.1"
+version = "0.16.0-rc.4"
 dependencies = [
  "criterion",
  "derive_more",
