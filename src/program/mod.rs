@@ -22,6 +22,7 @@ use crate::instruction::{
     QubitPlaceholder, Waveform, WaveformDefinition,
 };
 use crate::parser::{lex, parse_instructions, ParseError};
+use crate::quil::Quil;
 
 pub use self::calibration::CalibrationSet;
 pub use self::error::{disallow_leftover, map_parsed, recover, ProgramError, SyntaxError};
@@ -316,11 +317,15 @@ impl Program {
 
         result
     }
+}
 
-    pub fn to_string(&self, include_headers: bool) -> String {
-        self.to_instructions(include_headers)
+impl Quil for Program {
+    type Display = String;
+
+    fn to_quil(&self) -> std::result::Result<Self::Display, crate::quil::ToQuilError> {
+        self.to_instructions(true)
             .iter()
-            .map(|inst| format!("{}\n", inst))
+            .map(|inst| inst.to_quil().map(|inst| format!("{}\n", inst)))
             .collect()
     }
 }
@@ -359,6 +364,7 @@ mod tests {
 
     use crate::instruction::Instruction;
     use crate::instruction::Qubit;
+    use crate::quil::Quil;
 
     use super::Program;
 
@@ -442,10 +448,8 @@ I 0
         assert_eq!(program.waveforms.len(), 1);
         assert_eq!(program.instructions.len(), 1);
 
-        assert_eq!(program.to_string(false), "I 0\n");
-
         assert_eq!(
-            program.to_string(true),
+            program.to_quil().unwrap(),
             "DECLARE ro BIT[5]
 DEFFRAME 0 \"rx\":
 \tHARDWARE-OBJECT: \"hardware\"
@@ -465,8 +469,8 @@ DECLARE ro BIT
 DECLARE anc BIT
 DECLARE ec BIT
 ";
-        let program1 = Program::from_str(input).unwrap().to_string(true);
-        let program2 = Program::from_str(input).unwrap().to_string(true);
+        let program1 = Program::from_str(input).unwrap().to_quil().unwrap();
+        let program2 = Program::from_str(input).unwrap().to_quil().unwrap();
 
         // verify that each memory declaration in the program is in the same index as the same
         // program after being re-parsed and serialized.
@@ -572,32 +576,38 @@ DEFFRAME 0 1 \"2q\":
                 .get_frames_for_instruction(&instruction, false)
                 .unwrap_or_default()
                 .into_iter()
-                .map(|f| f.to_string())
+                .map(|f| f.to_quil_or_debug())
                 .collect();
             let expected_used_frames: HashSet<String> = expected_used_frames
                 .into_iter()
                 .map(|el| el.to_owned())
                 .collect();
             assert_eq!(
-                used_frames, expected_used_frames,
+                used_frames,
+                expected_used_frames,
                 "Instruction {} *used* frames `{:?}` but we expected `{:?}`",
-                instruction, used_frames, expected_used_frames
+                instruction.to_quil_or_debug(),
+                used_frames,
+                expected_used_frames
             );
 
             let blocked_frames: HashSet<String> = program
                 .get_frames_for_instruction(&instruction, true)
                 .unwrap()
                 .into_iter()
-                .map(|f| f.to_string())
+                .map(|f| f.to_quil_or_debug())
                 .collect();
             let expected_blocked_frames: HashSet<String> = expected_blocked_frames
                 .into_iter()
                 .map(|el| el.to_owned())
                 .collect();
             assert_eq!(
-                blocked_frames, expected_blocked_frames,
+                blocked_frames,
+                expected_blocked_frames,
                 "Instruction {} *blocked* frames `{:?}` but we expected `{:?}`",
-                instruction, blocked_frames, expected_blocked_frames
+                instruction.to_quil_or_debug(),
+                blocked_frames,
+                expected_blocked_frames
             );
         }
     }

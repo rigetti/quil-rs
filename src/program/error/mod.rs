@@ -22,6 +22,7 @@ use std::fmt::Formatter;
 
 use crate::instruction::Instruction;
 use crate::parser::{LexError, ParseError};
+use crate::quil::Quil;
 pub use leftover::LeftoverError;
 pub use result::{disallow_leftover, map_parsed, recover};
 pub use syntax::SyntaxError;
@@ -93,9 +94,22 @@ where
             Self::InvalidCalibration {
                 instruction,
                 message,
-            } => write!(f, "invalid calibration `{}`: {}", instruction, message),
+            } => write!(
+                f,
+                "invalid calibration `{}`: {}",
+                instruction
+                    .to_quil()
+                    .unwrap_or_else(|_| format!("{:?}", instruction)),
+                message
+            ),
             Self::RecursiveCalibration(instruction) => {
-                write!(f, "instruction {} expands into itself", instruction)
+                write!(
+                    f,
+                    "instruction {} expands into itself",
+                    instruction
+                        .to_quil()
+                        .unwrap_or_else(|_| format!("{:?}", instruction))
+                )
             }
             Self::Syntax(err) => fmt::Display::fmt(err, f),
         }

@@ -23,6 +23,7 @@ use crate::{
     expression::Expression,
     instruction::{Convert, GateSpecification, GateType, Include, PragmaArgument, Qubit},
     parser::common::parse_variable_qubit,
+    quil::Quil,
     real,
 };
 
@@ -210,7 +211,7 @@ pub(crate) fn parse_defcal_measure<'a>(
     let (input, params) = pair(parse_qubit, opt(token!(Identifier(v))))(input)?;
     let (qubit, destination) = match params {
         (qubit, Some(destination)) => (Some(qubit), destination),
-        (destination, None) => (None, destination.to_string()),
+        (destination, None) => (None, destination.to_quil_or_debug()),
     };
     let (input, _) = token!(Colon)(input)?;
     let (input, instructions) = parse_block(input)?;

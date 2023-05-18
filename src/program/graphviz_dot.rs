@@ -16,9 +16,12 @@
 
 use dot_writer::{Attributes, DotWriter, Shape, Style};
 
-use crate::program::graph::{
-    BlockTerminator, ExecutionDependency, InstructionBlock, MemoryAccessType, ScheduledGraphNode,
-    ScheduledProgram,
+use crate::{
+    program::graph::{
+        BlockTerminator, ExecutionDependency, InstructionBlock, MemoryAccessType,
+        ScheduledGraphNode, ScheduledProgram,
+    },
+    quil::Quil,
 };
 
 impl InstructionBlock {
@@ -47,7 +50,7 @@ impl InstructionBlock {
                         .set_label(&escape_label(&format!(
                             "[{}] {}",
                             index,
-                            self.instructions.get(*index).unwrap()
+                            self.instructions.get(*index).unwrap().to_quil_or_debug()
                         )));
                 }
             };

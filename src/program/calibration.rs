@@ -342,7 +342,7 @@ impl CalibrationSet {
 mod tests {
     use std::str::FromStr;
 
-    use crate::program::Program;
+    use crate::{program::Program, quil::Quil};
 
     #[test]
     fn expansion() {
@@ -413,8 +413,15 @@ mod tests {
 
         for case in &cases {
             let program = Program::from_str(case.input).unwrap();
-            let calibrated_program = program.expand_calibrations().unwrap();
-            assert_eq!(calibrated_program.to_string(false).as_str(), case.expected);
+            let calibrated_program = program
+                .expand_calibrations()
+                .unwrap()
+                .into_simplified()
+                .unwrap();
+            assert_eq!(
+                calibrated_program.to_quil().unwrap().as_str(),
+                case.expected
+            );
         }
     }
 

@@ -164,6 +164,7 @@ mod tests {
     };
     use crate::parser::common::tests::KITCHEN_SINK_QUIL;
     use crate::parser::lexer::lex;
+    use crate::quil::Quil;
     use crate::{make_test, real, Program};
 
     use super::parse_instructions;
@@ -981,7 +982,7 @@ mod tests {
 
         for input in inputs {
             let program = Program::from_str(input).unwrap();
-            let output = program.to_string(true);
+            let output = program.to_quil().unwrap();
             let roundtrip = Program::from_str(&output).unwrap();
 
             assert_eq!(program, roundtrip);
