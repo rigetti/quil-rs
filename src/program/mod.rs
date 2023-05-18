@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::str::FromStr;
 
 use nom_locate::LocatedSpan;
@@ -229,66 +229,83 @@ impl Program {
         Ok(expanded_program)
     }
 
-    pub fn resolve_placeholders(&mut self) {
-        let mut qubits_used: HashSet<u64> = HashSet::new();
-        let mut qubit_placeholders: HashSet<QubitPlaceholder> = HashSet::new();
+    /// Resolve [`LabelPlaceholder`]s and [`QubitPlaceholder`]s within the program such that the resolved values
+    /// will remain unique to that placeholder within the scope of the program.
+    ///
+    /// If you provide `label_resolver` and/or `qubit_resolver`, those will be used to resolve those values respectively.
+    /// If your placeholder returns `None` for a particular placeholder, it will not be replaced but will be left as a placeholder.
+    ///
+    /// If you do not provide a resolver for a placeholder, a default resolver will be used which will generate a unique value
+    /// for that placeholder within the scope of the program using an auto-incrementing value (for qubit) or suffix (for label)
+    /// while ensuring that unique value is not already in use within the program.
+    pub fn resolve_placeholders(
+        &mut self,
+        label_resolver: Option<Box<dyn Fn(&LabelPlaceholder) -> Option<String>>>,
+        qubit_resolver: Option<Box<dyn Fn(&QubitPlaceholder) -> Option<u64>>>,
+    ) {
+        let qubit_resolver = qubit_resolver.unwrap_or_else(|| {
+            let mut qubits_used: HashSet<u64> = HashSet::new();
+            let mut qubit_placeholders: BTreeSet<QubitPlaceholder> = BTreeSet::new();
 
-        for qubit in self.get_used_qubits() {
-            match qubit {
-                Qubit::Fixed(index) => {
-                    qubits_used.insert(index);
-                }
-                Qubit::Placeholder(placeholder) => {
-                    qubit_placeholders.insert(placeholder);
-                }
-                _ => {}
-            }
-        }
-
-        let mut qubit_iterator = (0u64..).filter(|index| !qubits_used.contains(index));
-        let qubit_resolutions: HashMap<QubitPlaceholder, u64> = qubit_placeholders
-            .into_iter()
-            .map(|p| (p, qubit_iterator.next().unwrap()))
-            .collect();
-
-        let mut fixed_labels = HashSet::new();
-        let mut label_placeholders = HashSet::new();
-
-        for label in self.get_labels() {
-            match label {
-                Label::Fixed(fixed) => {
-                    fixed_labels.insert(fixed.clone());
-                }
-                Label::Placeholder(placeholder) => {
-                    label_placeholders.insert(placeholder.clone());
-                }
-            }
-        }
-
-        let label_resolutions: HashMap<LabelPlaceholder, String> = label_placeholders
-            .into_iter()
-            .map(|p| {
-                let base_label = p.as_inner();
-                let mut next_suffix = 0;
-
-                loop {
-                    let next_label = format!("{base_label}_{next_suffix}");
-
-                    if !fixed_labels.contains(&next_label) {
-                        fixed_labels.insert(next_label.clone());
-                        break (p, next_label);
+            for qubit in self.get_used_qubits() {
+                match qubit {
+                    Qubit::Fixed(index) => {
+                        qubits_used.insert(index);
                     }
-
-                    next_suffix += 1;
+                    Qubit::Placeholder(placeholder) => {
+                        qubit_placeholders.insert(placeholder);
+                    }
+                    _ => {}
                 }
-            })
-            .collect();
+            }
+
+            let mut qubit_iterator = (0u64..).filter(|index| !qubits_used.contains(index));
+            let qubit_resolutions: HashMap<QubitPlaceholder, u64> = qubit_placeholders
+                .into_iter()
+                .map(|p| (p, qubit_iterator.next().unwrap()))
+                .collect();
+
+            Box::new(move |key| qubit_resolutions.get(key).copied())
+        });
+
+        let label_resolver = label_resolver.unwrap_or_else(|| {
+            let mut fixed_labels = HashSet::new();
+            let mut label_placeholders = BTreeSet::new();
+            for label in self.get_labels() {
+                match label {
+                    Label::Fixed(fixed) => {
+                        fixed_labels.insert(fixed.clone());
+                    }
+                    Label::Placeholder(placeholder) => {
+                        label_placeholders.insert(placeholder.clone());
+                    }
+                }
+            }
+
+            let label_resolutions: HashMap<LabelPlaceholder, String> = label_placeholders
+                .into_iter()
+                .map(|p| {
+                    let base_label = p.as_inner();
+                    let mut next_suffix = 0;
+
+                    loop {
+                        let next_label = format!("{base_label}_{next_suffix}");
+
+                        if !fixed_labels.contains(&next_label) {
+                            fixed_labels.insert(next_label.clone());
+                            break (p, next_label);
+                        }
+
+                        next_suffix += 1;
+                    }
+                })
+                .collect();
+
+            Box::new(move |key| label_resolutions.get(key).cloned())
+        });
 
         for instruction in &mut self.instructions {
-            instruction.resolve_placeholders(
-                |key| label_resolutions.get(key).cloned(),
-                |key| qubit_resolutions.get(key).copied(),
-            );
+            instruction.resolve_placeholders(&label_resolver, &qubit_resolver);
         }
     }
 
@@ -360,10 +377,13 @@ impl From<Vec<Instruction>> for Program {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
     use std::{collections::HashSet, str::FromStr};
 
     use crate::instruction::Instruction;
     use crate::instruction::Qubit;
+    use crate::instruction::QubitPlaceholder;
+    use crate::instruction::{Gate, Label, LabelPlaceholder};
     use crate::quil::Quil;
 
     use super::Program;
@@ -690,5 +710,93 @@ I 0
         let expected: Program = "NOP\nNOP".parse().expect("Should parse NOPs");
         let p: Program = expected.instructions.clone().into();
         assert_eq!(expected, p);
+    }
+
+    #[test]
+    fn placeholder_replacement() {
+        let placeholder_1 = QubitPlaceholder::default();
+        let placeholder_2 = QubitPlaceholder::default();
+        let label_placeholder_1 = LabelPlaceholder::new(String::from("custom_label"));
+        let label_placeholder_2 = LabelPlaceholder::new(String::from("custom_label"));
+
+        let mut program = Program::new();
+
+        program.add_instruction(Instruction::Label(Label::Placeholder(
+            label_placeholder_1.clone(),
+        )));
+
+        program.add_instruction(Instruction::Label(Label::Placeholder(
+            label_placeholder_2.clone(),
+        )));
+
+        program.add_instruction(Instruction::Gate(Gate {
+            name: "X".to_string(),
+            qubits: vec![Qubit::Placeholder(placeholder_1.clone())],
+            parameters: vec![],
+            modifiers: vec![],
+        }));
+
+        program.add_instruction(Instruction::Gate(Gate {
+            name: "Y".to_string(),
+            qubits: vec![Qubit::Placeholder(placeholder_2.clone())],
+            parameters: vec![],
+            modifiers: vec![],
+        }));
+
+        let mut auto_increment_resolved = program.clone();
+        auto_increment_resolved.resolve_placeholders(None, None);
+        assert_eq!(
+            auto_increment_resolved.instructions,
+            vec![
+                Instruction::Label(Label::Fixed("custom_label_0".to_string())),
+                Instruction::Label(Label::Fixed("custom_label_1".to_string())),
+                Instruction::Gate(Gate {
+                    name: "X".to_string(),
+                    qubits: vec![Qubit::Fixed(0)],
+                    parameters: vec![],
+                    modifiers: vec![],
+                }),
+                Instruction::Gate(Gate {
+                    name: "Y".to_string(),
+                    qubits: vec![Qubit::Fixed(1)],
+                    parameters: vec![],
+                    modifiers: vec![],
+                }),
+            ]
+        );
+
+        let mut custom_resolved = program.clone();
+        let custom_label_resolutions = HashMap::from([
+            (label_placeholder_1, "new_label".to_string()),
+            (label_placeholder_2, "other_new_label".to_string()),
+        ]);
+        let custom_qubit_resolutions = HashMap::from([(placeholder_1, 42), (placeholder_2, 10000)]);
+        custom_resolved.resolve_placeholders(
+            Some(Box::new(move |placeholder| {
+                custom_label_resolutions.get(placeholder).cloned()
+            })),
+            Some(Box::new(move |placeholder| {
+                custom_qubit_resolutions.get(placeholder).copied()
+            })),
+        );
+        assert_eq!(
+            custom_resolved.instructions,
+            vec![
+                Instruction::Label(Label::Fixed("new_label".to_string())),
+                Instruction::Label(Label::Fixed("other_new_label".to_string())),
+                Instruction::Gate(Gate {
+                    name: "X".to_string(),
+                    qubits: vec![Qubit::Fixed(42)],
+                    parameters: vec![],
+                    modifiers: vec![],
+                }),
+                Instruction::Gate(Gate {
+                    name: "Y".to_string(),
+                    qubits: vec![Qubit::Fixed(10000)],
+                    parameters: vec![],
+                    modifiers: vec![],
+                }),
+            ]
+        );
     }
 }

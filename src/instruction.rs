@@ -13,7 +13,6 @@
 // limitations under the License.
 
 use nom_locate::LocatedSpan;
-use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -197,7 +196,7 @@ pub struct Convert {
     pub to: MemoryReference,
 }
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct FrameIdentifier {
     pub name: String,
     pub qubits: Vec<Qubit>,
@@ -626,11 +625,27 @@ impl LabelPlaceholder {
     pub fn as_inner(&self) -> &String {
         &self.0
     }
+
+    fn address(&self) -> usize {
+        &*self.0 as *const _ as usize
+    }
 }
 
 impl std::hash::Hash for LabelPlaceholder {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        (&*self.0 as *const _ as usize).hash(state);
+        self.address().hash(state);
+    }
+}
+
+impl PartialOrd for LabelPlaceholder {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.address().partial_cmp(&other.address())
+    }
+}
+
+impl Ord for LabelPlaceholder {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.address().cmp(&other.address())
     }
 }
 
@@ -1192,10 +1207,9 @@ mod test_instruction_display {
     }
 }
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum Qubit {
     Fixed(u64),
-    #[serde(skip)] // todo
     Placeholder(QubitPlaceholder),
     Variable(String),
 }
@@ -1211,34 +1225,6 @@ impl Qubit {
             }
         }
     }
-
-    // For comparison, this takes a more active approach than the above, in that it can allocate new indices
-    // using the placeholder. This seems unnecessary and so I've commented it out, but leaving it here
-    // for commentary while in draft
-    // fn resolve_placeholder<I, R>(
-    //     &mut self,
-    //     indices: &mut I,
-    //     resolver: R,
-    // ) -> Result<Option<(QubitPlaceholder, u64)>, ()>
-    // where
-    //     I: Iterator<Item = u64>,
-    //     R: Fn(QubitPlaceholder) -> Option<u64>,
-    // {
-    //     if let Qubit::Placeholder(placeholder) = self {
-    //         if let Some(resolved) = resolver(placeholder.clone()) {
-    //             *self = Qubit::Fixed(resolved);
-    //             Ok(None)
-    //         } else if let Some(next) = indices.next() {
-    //             let return_value = Some((placeholder.clone(), next));
-    //             *self = Qubit::Fixed(next);
-    //             Ok(return_value)
-    //         } else {
-    //             Err(())
-    //         }
-    //     } else {
-    //         Ok(None)
-    //     }
-    // }
 }
 
 impl Quil for Qubit {
@@ -1261,6 +1247,12 @@ type QubitPlaceholderInner = Arc<()>;
 #[derive(Clone, Debug, Eq)]
 pub struct QubitPlaceholder(QubitPlaceholderInner);
 
+impl QubitPlaceholder {
+    fn address(&self) -> usize {
+        &*self.0 as *const _ as usize
+    }
+}
+
 impl Default for QubitPlaceholder {
     fn default() -> Self {
         Self(Arc::new(()))
@@ -1269,14 +1261,26 @@ impl Default for QubitPlaceholder {
 
 impl std::hash::Hash for QubitPlaceholder {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        (&*self.0 as *const _ as usize).hash(state);
+        self.address().hash(state);
     }
 }
 
 impl PartialEq for QubitPlaceholder {
     #[allow(clippy::ptr_eq)]
     fn eq(&self, other: &Self) -> bool {
-        &*self.0 as *const _ == &*other.0 as *const _
+        self.address().eq(&other.address())
+    }
+}
+
+impl PartialOrd for QubitPlaceholder {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.address().partial_cmp(&other.address())
+    }
+}
+
+impl Ord for QubitPlaceholder {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.address().cmp(&other.address())
     }
 }
 
@@ -1528,9 +1532,11 @@ impl Instruction {
         Ok(instruction)
     }
 
-    pub(crate) fn resolve_placeholders<LR, QR>(&mut self, label_resolver: LR, qubit_resolver: QR)
-    where
-        LR: Fn(&LabelPlaceholder) -> Option<String>,
+    pub(crate) fn resolve_placeholders<QR>(
+        &mut self,
+        label_resolver: &dyn Fn(&LabelPlaceholder) -> Option<String>,
+        qubit_resolver: QR,
+    ) where
         QR: Fn(&QubitPlaceholder) -> Option<u64>,
     {
         match self {
