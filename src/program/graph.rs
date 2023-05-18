@@ -83,8 +83,10 @@ pub enum ExecutionDependency {
     /// The downstream instruction must wait for the given operation to complete.
     AwaitMemoryAccess(MemoryAccessType),
 
-    /// The instructions share a reference frame
-    ReferenceFrame,
+    /// The schedule of the downstream instruction depends on the upstream instruction.
+    /// Per the Quil-T specification, the downstream instruction begins execution at
+    /// the time that its latest upstream neighbor completes.
+    Scheduled,
 
     /// The ordering between these two instructions must remain unchanged
     StableOrdering,
@@ -215,7 +217,8 @@ impl Default for InstructionBlock {
 ///
 /// ## Examples
 ///
-/// Note that "depends on" is equivalent to "must execute after completion of".
+/// Note that "depends on" is equivalent to "must execute at or after completion of." The interpretation of
+/// "at or after" depends on the type of dependency and the compiler.
 ///
 /// ```text
 /// user --> user # a second user takes a dependency on the first
@@ -234,12 +237,14 @@ struct PreviousNodes {
 
 impl Default for PreviousNodes {
     /// The default value for [PreviousNodes] is useful in that, if no previous nodes have been recorded
-    /// as using a frame, we should consider that the start of the instruction block "blocks" use of that frame
-    /// (in other words, this instruction cannot be scheduled prior to the start of the instruction block).
+    /// as using a frame, we should consider that the start of the instruction block "uses" of that frame
+    ///
+    /// In other words, no instruction can be scheduled prior to the start of the instruction block
+    /// and all scheduled instructions within the block depend on the block's start time, at least indirectly.
     fn default() -> Self {
         Self {
-            using: None,
-            blocking: vec![ScheduledGraphNode::BlockStart].into_iter().collect(),
+            using: Some(ScheduledGraphNode::BlockStart),
+            blocking: HashSet::new(),
         }
     }
 }
@@ -297,6 +302,8 @@ impl InstructionBlock {
 
         // Store the instruction index of the last instruction to block that frame
         let mut last_instruction_by_frame: HashMap<FrameIdentifier, PreviousNodes> = HashMap::new();
+        let mut last_timed_instruction_by_frame: HashMap<FrameIdentifier, PreviousNodes> =
+            HashMap::new();
 
         // Store memory access reads and writes. Key is memory region name.
         // NOTE: this may be refined to serialize by memory region offset rather than by entire region.
@@ -307,7 +314,7 @@ impl InstructionBlock {
 
             let instruction_role = InstructionRole::from(instruction);
             match instruction_role {
-                // Classical instructions must be strongly ordered by appearance in the program
+                // Classical instructions must be ordered by appearance in the program
                 InstructionRole::ClassicalCompute => {
                     add_dependency!(graph, last_classical_instruction => node, ExecutionDependency::StableOrdering);
 
@@ -326,23 +333,44 @@ impl InstructionBlock {
                     let blocked_but_not_used_frames = blocked_frames.difference(&used_frames);
 
                     for frame in &used_frames {
+                        if instruction.is_scheduled() {
+                            let previous_node_ids = last_timed_instruction_by_frame
+                                .entry((*frame).clone())
+                                .or_default()
+                                .get_dependencies_for_next_user(node);
+
+                            for previous_node_id in previous_node_ids {
+                                add_dependency!(graph, previous_node_id => node, ExecutionDependency::Scheduled);
+                            }
+                        }
+
                         let previous_node_ids = last_instruction_by_frame
                             .entry((*frame).clone())
                             .or_default()
                             .get_dependencies_for_next_user(node);
 
                         for previous_node_id in previous_node_ids {
-                            add_dependency!(graph, previous_node_id => node, ExecutionDependency::ReferenceFrame);
+                            add_dependency!(graph, previous_node_id => node, ExecutionDependency::StableOrdering);
                         }
                     }
 
                     for frame in blocked_but_not_used_frames {
+                        if instruction.is_scheduled() {
+                            if let Some(previous_node_id) = last_timed_instruction_by_frame
+                                .entry((*frame).clone())
+                                .or_default()
+                                .get_dependency_for_next_blocker(node)
+                            {
+                                add_dependency!(graph, previous_node_id => node, ExecutionDependency::Scheduled);
+                            }
+                        }
+
                         if let Some(previous_node_id) = last_instruction_by_frame
                             .entry((*frame).clone())
                             .or_default()
                             .get_dependency_for_next_blocker(node)
                         {
-                            add_dependency!(graph, previous_node_id => node, ExecutionDependency::ReferenceFrame);
+                            add_dependency!(graph, previous_node_id => node, ExecutionDependency::StableOrdering);
                         }
                     }
 
@@ -388,9 +416,15 @@ impl InstructionBlock {
         // does not terminate until these are complete
         add_dependency!(graph, last_classical_instruction => ScheduledGraphNode::BlockEnd, ExecutionDependency::StableOrdering);
 
+        for previous_nodes in last_timed_instruction_by_frame.into_values() {
+            for node in previous_nodes.drain() {
+                add_dependency!(graph, node => ScheduledGraphNode::BlockEnd, ExecutionDependency::Scheduled);
+            }
+        }
+
         for previous_nodes in last_instruction_by_frame.into_values() {
             for node in previous_nodes.drain() {
-                add_dependency!(graph, node => ScheduledGraphNode::BlockEnd, ExecutionDependency::ReferenceFrame);
+                add_dependency!(graph, node => ScheduledGraphNode::BlockEnd, ExecutionDependency::StableOrdering);
             }
         }
 

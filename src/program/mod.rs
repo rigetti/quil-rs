@@ -545,15 +545,11 @@ DEFFRAME 0 1 \"2q\":
                 vec![r#"0 1 "2q""#],
             ),
             // A Fence with qubits specified uses and blocks all frames intersecting that qubit
-            (
-                r#"FENCE 1"#,
-                vec![r#"1 "c""#, r#"0 1 "2q""#],
-                vec![r#"1 "c""#, r#"0 1 "2q""#],
-            ),
+            (r#"FENCE 1"#, vec![], vec![r#"1 "c""#, r#"0 1 "2q""#]),
             // Fence-all uses and blocks all frames declared in the program
             (
                 r#"FENCE"#,
-                vec![r#"0 "a""#, r#"0 "b""#, r#"1 "c""#, r#"0 1 "2q""#],
+                vec![],
                 vec![r#"0 "a""#, r#"0 "b""#, r#"1 "c""#, r#"0 1 "2q""#],
             ),
             // Delay uses and blocks frames on exactly the given qubits and with any of the given names
@@ -565,6 +561,11 @@ DEFFRAME 0 1 \"2q\":
             (r#"DELAY 1 1.0"#, vec![r#"1 "c""#], vec![r#"1 "c""#]),
             (r#"DELAY 1 "c" 1.0"#, vec![r#"1 "c""#], vec![r#"1 "c""#]),
             (r#"DELAY 0 1 1.0"#, vec![r#"0 1 "2q""#], vec![r#"0 1 "2q""#]),
+            (
+                r#"SWAP-PHASES 0 "a" 0 "b""#,
+                vec![r#"0 "a""#, r#"0 "b""#],
+                vec![r#"0 "a""#, r#"0 "b""#],
+            ),
         ] {
             let instruction = Instruction::parse(instruction_string).unwrap();
             let used_frames: HashSet<String> = program
