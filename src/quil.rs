@@ -23,6 +23,4 @@ pub enum ToQuilError {
     UnresolvedLabelPlaceholder,
     #[error("Qubit has not yet been resolved")]
     UnresolvedQubitPlaceholder,
-    #[error("Formatter error: {0}")]
-    FormatterError(#[from] std::fmt::Error),
 }
