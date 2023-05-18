@@ -1597,6 +1597,7 @@ RX(%a) 0",
 
         use crate::instruction::{Label, LabelPlaceholder, Qubit, QubitPlaceholder};
 
+        #[allow(clippy::redundant_clone)]
         #[test]
         fn label() {
             let placeholder_1 = LabelPlaceholder::new(String::from("label"));
@@ -1627,6 +1628,7 @@ RX(%a) 0",
             assert_eq!(label_2, Label::Placeholder(placeholder_2));
         }
 
+        #[allow(clippy::redundant_clone)]
         #[test]
         fn qubit() {
             let placeholder_1 = QubitPlaceholder::default();
