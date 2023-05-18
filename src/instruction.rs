@@ -16,7 +16,6 @@ use nom_locate::LocatedSpan;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::collections::HashSet;
-use std::pin::Pin;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::{collections::HashMap, fmt};
@@ -555,7 +554,7 @@ impl Label {
     }
 }
 
-type LabelPlaceholderInner = Arc<Pin<Box<String>>>;
+type LabelPlaceholderInner = Arc<String>;
 
 /// An opaque placeholder for a qubit whose index may be assigned
 /// at a later time.
@@ -564,7 +563,7 @@ pub struct LabelPlaceholder(LabelPlaceholderInner);
 
 impl LabelPlaceholder {
     pub fn new(base_label: String) -> Self {
-        Self(Arc::new(Box::pin(base_label)))
+        Self(Arc::new(base_label))
     }
 
     pub fn as_inner(&self) -> &String {
@@ -1188,7 +1187,7 @@ impl fmt::Display for Qubit {
     }
 }
 
-type QubitPlaceholderInner = Arc<Pin<Box<usize>>>;
+type QubitPlaceholderInner = Arc<()>;
 
 /// An opaque placeholder for a qubit whose index may be assigned
 /// at a later time.
@@ -1197,9 +1196,7 @@ pub struct QubitPlaceholder(QubitPlaceholderInner);
 
 impl Default for QubitPlaceholder {
     fn default() -> Self {
-        use rand::Rng;
-        let value = rand::thread_rng().gen();
-        Self(Arc::new(Box::pin(value)))
+        Self(Arc::new(()))
     }
 }
 
@@ -1480,7 +1477,7 @@ impl Instruction {
             }
         }
     }
-    
+
     /// Per the Quil-T spec, whether this instruction's timing within the pulse
     /// program must be precisely controlled so as to begin exactly on the end of
     /// the latest preceding timed instruction
