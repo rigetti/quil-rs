@@ -77,7 +77,6 @@ skip-tree = [
     { name = "hermit-abi", version = "*" },           # various dependencies rely on two versions of this
     { name = "memoffset", version = "*" },           # various dependencies rely on two versions of this
     { name = "windows-sys", version = "*" },           # various dependencies rely on two versions of this
-    { name = "crossbeam-channel", version = "*" },           # various dependencies rely on two versions of this
 ]
 
 # This section is considered when running `cargo deny check sources`.
