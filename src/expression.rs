@@ -462,11 +462,11 @@ static FORMAT_REAL_OPTIONS: Lazy<WriteFloatOptions> = Lazy::new(|| {
         .expect("options are valid")
 });
 
-static FORMAT_COMPLEX_OPTIONS: Lazy<WriteFloatOptions> = Lazy::new(|| {
+static FORMAT_IMAGINARY_OPTIONS: Lazy<WriteFloatOptions> = Lazy::new(|| {
     WriteFloatOptions::builder()
         .negative_exponent_break(NonZeroI32::new(-5))
         .positive_exponent_break(NonZeroI32::new(15))
-        .trim_floats(false)
+        .trim_floats(false) // Per the quil spec, the imaginary part of a complex number is always a floating point number
         .build()
         .expect("options are valid")
 });
@@ -480,26 +480,12 @@ static FORMAT_COMPLEX_OPTIONS: Lazy<WriteFloatOptions> = Lazy::new(|| {
 #[inline(always)]
 fn format_complex(value: &Complex64) -> String {
     const FORMAT: u128 = format::STANDARD;
-    // Safety:
-    // This uses `build_unchecked`, which is safe as long as `is_valid` is true, and
-    // `is_valid` must be true because we don't change the default values for:
-    //   - the exponent string,
-    //   - the decimal point,
-    //   - the NaN string,
-    //   - the ∞ string,
-    //   - or the minimum or maximum significant digits.
-    // Of what we _do_ change:
-    //   - negative_exponent_break is < 0,
-    //   - positive_exponent_break is > 0,
-    //   - and trim floats can only take a bool and both branches are safe.
-    // As of version 6.1.1 of lexical, this means `OPTIONS.is_valid()` must be true. However, we
-    // still `assert!` it just to be "safe."
     if value.re == 0f64 && value.im == 0f64 {
         "0".to_owned()
     } else if value.im == 0f64 {
         to_string_with_options::<_, FORMAT>(value.re, &FORMAT_REAL_OPTIONS)
     } else if value.re == 0f64 {
-        to_string_with_options::<_, FORMAT>(value.im, &FORMAT_COMPLEX_OPTIONS) + "i"
+        to_string_with_options::<_, FORMAT>(value.im, &FORMAT_IMAGINARY_OPTIONS) + "i"
     } else {
         let mut out = to_string_with_options::<_, FORMAT>(value.re, &FORMAT_REAL_OPTIONS);
         if value.im > 0f64 {
@@ -507,7 +493,7 @@ fn format_complex(value: &Complex64) -> String {
         }
         out.push_str(&to_string_with_options::<_, FORMAT>(
             value.im,
-            &FORMAT_COMPLEX_OPTIONS,
+            &FORMAT_IMAGINARY_OPTIONS,
         ));
         out.push('i');
         out
