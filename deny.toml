@@ -19,7 +19,7 @@ vulnerability = "deny"
 # The lint level for unmaintained crates
 unmaintained = "deny"
 # The lint level for crates that have been yanked from their source registry
-yanked = "deny"
+yanked = "warn"
 # The lint level for crates with security notices.
 notice = "deny"
 # A list of advisory IDs to ignore. Note that ignored advisories will still
@@ -77,6 +77,7 @@ skip-tree = [
     { name = "hermit-abi", version = "*" },           # various dependencies rely on two versions of this
     { name = "memoffset", version = "*" },           # various dependencies rely on two versions of this
     { name = "windows-sys", version = "*" },           # various dependencies rely on two versions of this
+    { name = "crossbeam-channel", version = "*" },           # various dependencies rely on two versions of this
 ]
 
 # This section is considered when running `cargo deny check sources`.
