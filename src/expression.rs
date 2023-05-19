@@ -15,6 +15,7 @@
 use lexical::{format, to_string_with_options, WriteFloatOptions};
 use nom_locate::LocatedSpan;
 use num_complex::Complex64;
+use once_cell::sync::Lazy;
 use std::collections::{hash_map::DefaultHasher, HashMap};
 use std::f64::consts::PI;
 use std::fmt;
@@ -452,6 +453,24 @@ impl FromStr for Expression {
     }
 }
 
+static FORMAT_REAL_OPTIONS: Lazy<WriteFloatOptions> = Lazy::new(|| {
+    WriteFloatOptions::builder()
+        .negative_exponent_break(NonZeroI32::new(-5))
+        .positive_exponent_break(NonZeroI32::new(15))
+        .trim_floats(true)
+        .build()
+        .expect("options are valid")
+});
+
+static FORMAT_COMPLEX_OPTIONS: Lazy<WriteFloatOptions> = Lazy::new(|| {
+    WriteFloatOptions::builder()
+        .negative_exponent_break(NonZeroI32::new(-5))
+        .positive_exponent_break(NonZeroI32::new(15))
+        .trim_floats(false)
+        .build()
+        .expect("options are valid")
+});
+
 /// Format a num_complex::Complex64 value in a way that omits the real or imaginary part when
 /// reasonable. That is:
 ///
@@ -475,27 +494,21 @@ fn format_complex(value: &Complex64) -> String {
     //   - and trim floats can only take a bool and both branches are safe.
     // As of version 6.1.1 of lexical, this means `OPTIONS.is_valid()` must be true. However, we
     // still `assert!` it just to be "safe."
-    const OPTIONS: WriteFloatOptions = unsafe {
-        let options = WriteFloatOptions::builder()
-            .negative_exponent_break(NonZeroI32::new(-5))
-            .positive_exponent_break(NonZeroI32::new(15))
-            .trim_floats(true)
-            .build_unchecked();
-        assert!(options.is_valid());
-        options
-    };
     if value.re == 0f64 && value.im == 0f64 {
         "0".to_owned()
     } else if value.im == 0f64 {
-        to_string_with_options::<_, FORMAT>(value.re, &OPTIONS)
+        to_string_with_options::<_, FORMAT>(value.re, &FORMAT_REAL_OPTIONS)
     } else if value.re == 0f64 {
-        to_string_with_options::<_, FORMAT>(value.im, &OPTIONS) + "i"
+        to_string_with_options::<_, FORMAT>(value.im, &FORMAT_COMPLEX_OPTIONS) + "i"
     } else {
-        let mut out = to_string_with_options::<_, FORMAT>(value.re, &OPTIONS);
+        let mut out = to_string_with_options::<_, FORMAT>(value.re, &FORMAT_REAL_OPTIONS);
         if value.im > 0f64 {
             out.push('+')
         }
-        out.push_str(&to_string_with_options::<_, FORMAT>(value.im, &OPTIONS));
+        out.push_str(&to_string_with_options::<_, FORMAT>(
+            value.im,
+            &FORMAT_COMPLEX_OPTIONS,
+        ));
         out.push('i');
         out
     }
@@ -922,6 +935,8 @@ mod tests {
             (Complex64::new(0.0, 0.0), "0"),
             (Complex64::new(-0.0, 0.0), "0"),
             (Complex64::new(-0.0, -0.0), "0"),
+            (Complex64::new(0.0, 1.0), "1.0i"),
+            (Complex64::new(1.0, -1.0), "1-1.0i"),
             (Complex64::new(1.234, 0.0), "1.234"),
             (Complex64::new(0.0, 1.234), "1.234i"),
             (Complex64::new(-1.234, 0.0), "-1.234"),
@@ -930,7 +945,7 @@ mod tests {
             (Complex64::new(-1.234, 5.678), "-1.234+5.678i"),
             (Complex64::new(1.234, -5.678), "1.234-5.678i"),
             (Complex64::new(-1.234, -5.678), "-1.234-5.678i"),
-            (Complex64::new(1e100, 2e-100), "1e100+2e-100i"),
+            (Complex64::new(1e100, 2e-100), "1e100+2.0e-100i"),
         ] {
             assert_eq!(format_complex(x), *s);
         }
