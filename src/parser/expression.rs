@@ -267,11 +267,11 @@ mod tests {
         let cases = vec![
             "pi",
             "sin(pi)",
-            "(1+(2*3))",
-            "((1+2)*3)",
+            "1+(2*3)",
+            "(1+2)*3",
             "%theta",
             "cis(%theta)",
-            "(%a+%b)",
+            "%a+%b",
         ];
 
         for case in cases {

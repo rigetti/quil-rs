@@ -513,15 +513,35 @@ impl fmt::Display for Expression {
                 left,
                 operator,
                 right,
-            } => write!(f, "({}{}{})", left, operator, right),
+            } => {
+                format_inner_expression(f, left)?;
+                write!(f, "{}", operator)?;
+                format_inner_expression(f, right)
+            }
             Number(value) => write!(f, "{}", format_complex(value)),
             PiConstant => write!(f, "pi"),
             Prefix {
                 operator,
                 expression,
-            } => write!(f, "({}{})", operator, expression),
+            } => {
+                write!(f, "{}", operator)?;
+                format_inner_expression(f, expression)
+            }
             Variable(identifier) => write!(f, "%{}", identifier),
         }
+    }
+}
+
+/// Utility function to wrap infix expressions that are part of an expression in parentheses, so
+/// that correct precedence rules are enforced.
+fn format_inner_expression(f: &mut fmt::Formatter, expression: &Expression) -> fmt::Result {
+    match expression {
+        Expression::Infix {
+            left,
+            operator,
+            right,
+        } => write!(f, "({left}{operator}{right})"),
+        _ => write!(f, "{expression}"),
     }
 }
 
