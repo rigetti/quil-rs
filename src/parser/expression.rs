@@ -38,12 +38,19 @@ enum Precedence {
 impl From<&Token> for Precedence {
     fn from(token: &Token) -> Self {
         match token {
-            Token::Operator(Operator::Plus) | Token::Operator(Operator::Minus) => Precedence::Sum,
-            Token::Operator(Operator::Star) | Token::Operator(Operator::Slash) => {
-                Precedence::Product
-            }
+            Token::Operator(operator) => Self::from(operator),
             // TODO: Is this used?
             Token::LParenthesis => Precedence::Call,
+            _ => Precedence::Lowest,
+        }
+    }
+}
+
+impl From<&Operator> for Precedence {
+    fn from(operator: &Operator) -> Self {
+        match operator {
+            Operator::Plus | Operator::Minus => Precedence::Sum,
+            Operator::Star | Operator::Slash => Precedence::Product,
             _ => Precedence::Lowest,
         }
     }
@@ -200,7 +207,7 @@ fn parse_infix(input: ParserInput, left: Expression) -> InternalParserResult<Exp
                 Operator::Slash => InfixOperator::Slash,
                 Operator::Star => InfixOperator::Star,
             };
-            let precedence = get_precedence(remainder);
+            let precedence = Precedence::from(token_operator);
             let (remainder, right) = parse(remainder, precedence)?;
             let infix_expression = Expression::Infix {
                 left: Box::new(left),
@@ -226,6 +233,7 @@ fn parse_prefix(input: ParserInput) -> InternalParserResult<PrefixOperator> {
 
 #[cfg(test)]
 mod tests {
+    use crate::instruction::MemoryReference;
     use crate::{expression::PrefixOperator, parser::lexer::lex};
     use crate::{
         expression::{Expression, ExpressionFunction, InfixOperator},
@@ -272,6 +280,7 @@ mod tests {
             "%theta",
             "cis(%theta)",
             "%a+%b",
+            "(pi/2)+(1*theta[0])",
         ];
 
         for case in cases {
@@ -350,6 +359,28 @@ mod tests {
             }),
             operator: InfixOperator::Star,
             right: Box::new(Expression::Variable("a".to_owned())),
+        }
+    );
+
+    test!(
+        infix_with_infix_operands_implicit_precedence,
+        parse_expression,
+        "pi/2 + 2*theta[0]",
+        Expression::Infix {
+            left: Box::new(Expression::Infix {
+                left: Box::new(Expression::PiConstant),
+                operator: InfixOperator::Slash,
+                right: Box::new(Expression::Number(real!(2f64))),
+            }),
+            operator: InfixOperator::Plus,
+            right: Box::new(Expression::Infix {
+                left: Box::new(Expression::Number(real!(2f64))),
+                operator: InfixOperator::Star,
+                right: Box::new(Expression::Address(MemoryReference {
+                    name: "theta".to_string(),
+                    index: 0,
+                })),
+            }),
         }
     );
 
