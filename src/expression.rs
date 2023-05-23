@@ -545,6 +545,32 @@ fn format_inner_expression(f: &mut fmt::Formatter, expression: &Expression) -> f
     }
 }
 
+#[cfg(test)]
+mod test {
+    use crate::{
+        expression::{Expression, InfixOperator, PrefixOperator},
+        real,
+    };
+
+    #[test]
+    fn formats_nested_expression() {
+        let expression = Expression::Infix {
+            left: Box::new(Expression::Prefix {
+                operator: PrefixOperator::Minus,
+                expression: Box::new(Expression::Number(real!(3f64))),
+            }),
+            operator: InfixOperator::Star,
+            right: Box::new(Expression::Infix {
+                left: Box::new(Expression::PiConstant),
+                operator: InfixOperator::Slash,
+                right: Box::new(Expression::Number(real!(2f64))),
+            }),
+        };
+
+        assert_eq!(expression.to_string(), "-3*(pi/2)");
+    }
+}
+
 /// A function defined within Quil syntax.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(test, derive(Arbitrary))]
