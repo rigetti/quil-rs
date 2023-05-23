@@ -281,6 +281,7 @@ mod tests {
             "cis(%theta)",
             "%a+%b",
             "(pi/2)+(1*theta[0])",
+            "3--2",
         ];
 
         for case in cases {
@@ -381,6 +382,23 @@ mod tests {
                     index: 0,
                 })),
             }),
+        }
+    );
+
+    test!(
+        infix_minus_negative,
+        parse_expression,
+        "-3 - -2",
+        Expression::Infix {
+            left: Box::new(Expression::Prefix {
+                operator: PrefixOperator::Minus,
+                expression: Box::new(Expression::Number(real!(3f64))),
+            }),
+            operator: InfixOperator::Minus,
+            right: Box::new(Expression::Prefix {
+                operator: PrefixOperator::Minus,
+                expression: Box::new(Expression::Number(real!(2.0)))
+            })
         }
     );
 
