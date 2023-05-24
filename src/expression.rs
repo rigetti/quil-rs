@@ -249,11 +249,75 @@ impl Expression {
             }
             Infix {
                 left,
-                operator: _,
+                operator,
                 right,
             } => {
                 left.simplify();
                 right.simplify();
+
+                let new = match (left.as_ref(), right.as_ref()) {
+                    (left, Number(right)) if right == &Complex64::from(0f64) => {
+                        match operator {
+                            InfixOperator::Plus | InfixOperator::Minus => Some(left.clone()),
+                            InfixOperator::Star => Some(Number(0f64.into())),
+                            InfixOperator::Slash => None, // We leave divide-by-zero errors to the evaluator
+                            InfixOperator::Caret => Some(Number(1f64.into())),
+                        }
+                    }
+                    (left, Number(right)) if right == &Complex64::from(1f64) => match operator {
+                        InfixOperator::Star | InfixOperator::Slash => Some(left.clone()),
+                        _ => None,
+                    },
+                    (Number(left), Number(right)) => Some(Number(operator.apply(*left, *right))),
+                    (Number(number), PiConstant) | (PiConstant, Number(number)) => {
+                        Some(Number(operator.apply(*number, std::f64::consts::PI.into())))
+                    }
+                    (PiConstant, PiConstant) => Some(Number(
+                        operator.apply(std::f64::consts::PI.into(), std::f64::consts::PI.into()),
+                    )),
+                    (
+                        Infix {
+                            left: inner_left,
+                            operator: inner_operator,
+                            right,
+                        },
+                        Number(number),
+                    ) => {
+                        if let Number(inner_right) = right.as_ref() {
+                            match (inner_operator, operator) {
+                                (InfixOperator::Caret, InfixOperator::Caret) => Some(Infix {
+                                    left: inner_left.clone(),
+                                    operator: InfixOperator::Caret,
+                                    right: Box::new(Number(inner_right * number)),
+                                }),
+                                (InfixOperator::Slash, InfixOperator::Star) => Some(Infix {
+                                    left: inner_left.clone(),
+                                    operator: InfixOperator::Star,
+                                    right: Box::new(Number(number / inner_right)),
+                                }),
+                                (InfixOperator::Star, InfixOperator::Slash) => Some(Infix {
+                                    left: inner_left.clone(),
+                                    operator: InfixOperator::Star,
+                                    right: Box::new(Number(inner_right / number)),
+                                }),
+                                (InfixOperator::Star, InfixOperator::Star) => Some(Infix {
+                                    left: inner_left.clone(),
+                                    operator: InfixOperator::Star,
+                                    right: Box::new(Number(inner_right * number)),
+                                }),
+                                _ => None,
+                            }
+                            .map(|e| e.into_simplified())
+                        } else {
+                            None
+                        }
+                    }
+                    _ => None,
+                };
+
+                if let Some(new) = new {
+                    *self = new;
+                }
             }
             Prefix {
                 operator,
@@ -582,6 +646,19 @@ pub enum InfixOperator {
     Minus,
     Slash,
     Star,
+}
+
+impl InfixOperator {
+    fn apply(&self, left: Complex64, right: Complex64) -> Complex64 {
+        use InfixOperator::*;
+        match self {
+            Caret => left.powc(right),
+            Plus => left + right,
+            Minus => left - right,
+            Slash => left / right,
+            Star => left * right,
+        }
+    }
 }
 
 impl fmt::Display for InfixOperator {
