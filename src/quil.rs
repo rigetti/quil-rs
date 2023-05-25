@@ -1,18 +1,21 @@
 /// A trait to wrap items which represent some construct within the Quil language.
 pub trait Quil {
-    type Display: std::fmt::Display;
-
     /// Return a string in valid Quil syntax or an error if the item cannot be represented with valid Quil.
-    fn to_quil(&self) -> Result<Self::Display, ToQuilError>;
+    fn to_quil(&self) -> Result<String, ToQuilError> {
+        let mut buffer = String::new();
+        self.write(&mut buffer)?;
+        Ok(buffer)
+    }
+
+    /// Write the Quil representation of the item to the given writer.
+    fn write(&self, writer: &mut impl std::fmt::Write) -> Result<(), ToQuilError>;
 
     /// Return a string in valid Quil syntax if possible or otherwise the debug representation of the item.
     fn to_quil_or_debug(&self) -> String
     where
         Self: std::fmt::Debug,
     {
-        self.to_quil()
-            .map(|s| s.to_string())
-            .unwrap_or_else(|_| format!("{:#?}", self))
+        self.to_quil().unwrap_or_else(|_| format!("{:#?}", self))
     }
 }
 
@@ -22,6 +25,8 @@ pub type ToQuilResult<T> = Result<T, ToQuilError>;
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
 pub enum ToQuilError {
+    #[error("Failed to write Quil: {0}")]
+    FormatError(#[from] std::fmt::Error),
     #[error("Label has not yet been resolved")]
     UnresolvedLabelPlaceholder,
     #[error("Qubit has not yet been resolved")]

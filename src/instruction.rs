@@ -22,7 +22,7 @@ use std::sync::Arc;
 use crate::expression::Expression;
 use crate::parser::{common::parse_memory_reference, lex, ParseError};
 use crate::program::{disallow_leftover, frame::FrameMatchCondition, SyntaxError};
-use crate::quil::{Quil, ToQuilError, ToQuilResult};
+use crate::quil::{Quil, ToQuilError};
 
 #[cfg(test)]
 use proptest_derive::Arbitrary;
@@ -35,14 +35,19 @@ pub enum ArithmeticOperand {
 }
 
 impl Quil for ArithmeticOperand {
-    type Display = String;
-
-    fn to_quil(&self) -> ToQuilResult<Self::Display> {
-        Ok(match &self {
-            ArithmeticOperand::LiteralInteger(value) => format!("{}", value),
-            ArithmeticOperand::LiteralReal(value) => format!("{}", value),
-            ArithmeticOperand::MemoryReference(value) => format!("{}", value.to_quil()?),
-        })
+    fn write(
+        &self,
+        writer: &mut impl std::fmt::Write,
+    ) -> std::result::Result<(), crate::quil::ToQuilError> {
+        match &self {
+            ArithmeticOperand::LiteralInteger(value) => {
+                write!(writer, "{}", value).map_err(Into::into)
+            }
+            ArithmeticOperand::LiteralReal(value) => {
+                write!(writer, "{}", value).map_err(Into::into)
+            }
+            ArithmeticOperand::MemoryReference(value) => value.write(writer),
+        }
     }
 }
 
@@ -55,15 +60,17 @@ pub enum ArithmeticOperator {
 }
 
 impl Quil for ArithmeticOperator {
-    type Display = &'static str;
-
-    fn to_quil(&self) -> ToQuilResult<Self::Display> {
-        Ok(match &self {
-            ArithmeticOperator::Add => "ADD",
-            ArithmeticOperator::Divide => "DIV",
-            ArithmeticOperator::Multiply => "MUL",
-            ArithmeticOperator::Subtract => "SUB",
-        })
+    fn write(
+        &self,
+        writer: &mut impl std::fmt::Write,
+    ) -> std::result::Result<(), crate::quil::ToQuilError> {
+        match &self {
+            ArithmeticOperator::Add => write!(writer, "ADD"),
+            ArithmeticOperator::Divide => write!(writer, "DIV"),
+            ArithmeticOperator::Multiply => write!(writer, "MUL"),
+            ArithmeticOperator::Subtract => write!(writer, "SUB"),
+        }
+        .map_err(Into::into)
     }
 }
 
@@ -74,13 +81,14 @@ pub enum BinaryOperand {
 }
 
 impl Quil for BinaryOperand {
-    type Display = String;
-
-    fn to_quil(&self) -> ToQuilResult<Self::Display> {
-        Ok(match &self {
-            BinaryOperand::LiteralInteger(value) => format!("{}", value),
-            BinaryOperand::MemoryReference(value) => value.to_quil()?,
-        })
+    fn write(
+        &self,
+        writer: &mut impl std::fmt::Write,
+    ) -> std::result::Result<(), crate::quil::ToQuilError> {
+        match &self {
+            BinaryOperand::LiteralInteger(value) => write!(writer, "{value}").map_err(Into::into),
+            BinaryOperand::MemoryReference(value) => value.write(writer),
+        }
     }
 }
 
@@ -91,14 +99,16 @@ pub enum BinaryOperator {
     Xor,
 }
 impl Quil for BinaryOperator {
-    type Display = &'static str;
-
-    fn to_quil(&self) -> ToQuilResult<Self::Display> {
-        Ok(match &self {
-            BinaryOperator::And => "AND",
-            BinaryOperator::Ior => "IOR",
-            BinaryOperator::Xor => "XOR",
-        })
+    fn write(
+        &self,
+        writer: &mut impl std::fmt::Write,
+    ) -> std::result::Result<(), crate::quil::ToQuilError> {
+        match &self {
+            BinaryOperator::And => write!(writer, "AND"),
+            BinaryOperator::Ior => write!(writer, "IOR"),
+            BinaryOperator::Xor => write!(writer, "XOR"),
+        }
+        .map_err(Into::into)
     }
 }
 
@@ -109,13 +119,15 @@ pub enum UnaryOperator {
 }
 
 impl Quil for UnaryOperator {
-    type Display = &'static str;
-
-    fn to_quil(&self) -> ToQuilResult<Self::Display> {
-        Ok(match &self {
-            UnaryOperator::Neg => "NEG",
-            UnaryOperator::Not => "NOT",
-        })
+    fn write(
+        &self,
+        writer: &mut impl std::fmt::Write,
+    ) -> std::result::Result<(), crate::quil::ToQuilError> {
+        match &self {
+            UnaryOperator::Neg => write!(writer, "NEG"),
+            UnaryOperator::Not => write!(writer, "NOT"),
+        }
+        .map_err(Into::into)
     }
 }
 
@@ -127,14 +139,17 @@ pub enum ComparisonOperand {
 }
 
 impl Quil for ComparisonOperand {
-    type Display = String;
-
-    fn to_quil(&self) -> ToQuilResult<Self::Display> {
-        Ok(match &self {
-            ComparisonOperand::LiteralInteger(value) => format!("{}", value),
-            ComparisonOperand::LiteralReal(value) => format!("{}", value),
-            ComparisonOperand::MemoryReference(value) => value.to_quil()?,
-        })
+    fn write(
+        &self,
+        writer: &mut impl std::fmt::Write,
+    ) -> std::result::Result<(), crate::quil::ToQuilError> {
+        match &self {
+            ComparisonOperand::LiteralInteger(value) => {
+                write!(writer, "{value}").map_err(Into::into)
+            }
+            ComparisonOperand::LiteralReal(value) => write!(writer, "{value}").map_err(Into::into),
+            ComparisonOperand::MemoryReference(value) => value.write(writer),
+        }
     }
 }
 
@@ -148,16 +163,18 @@ pub enum ComparisonOperator {
 }
 
 impl Quil for ComparisonOperator {
-    type Display = &'static str;
-
-    fn to_quil(&self) -> ToQuilResult<Self::Display> {
-        Ok(match &self {
-            ComparisonOperator::Equal => "EQ",
-            ComparisonOperator::GreaterThanOrEqual => "GE",
-            ComparisonOperator::GreaterThan => "GT",
-            ComparisonOperator::LessThanOrEqual => "LE",
-            ComparisonOperator::LessThan => "LT",
-        })
+    fn write(
+        &self,
+        writer: &mut impl std::fmt::Write,
+    ) -> std::result::Result<(), crate::quil::ToQuilError> {
+        match &self {
+            ComparisonOperator::Equal => write!(writer, "EQ"),
+            ComparisonOperator::GreaterThanOrEqual => write!(writer, "GE"),
+            ComparisonOperator::GreaterThan => write!(writer, "GT"),
+            ComparisonOperator::LessThanOrEqual => write!(writer, "LE"),
+            ComparisonOperator::LessThan => write!(writer, "LT"),
+        }
+        .map_err(Into::into)
     }
 }
 
@@ -168,14 +185,16 @@ pub enum AttributeValue {
 }
 
 impl Quil for AttributeValue {
-    type Display = String;
-
-    fn to_quil(&self) -> ToQuilResult<Self::Display> {
+    fn write(
+        &self,
+        writer: &mut impl std::fmt::Write,
+    ) -> std::result::Result<(), crate::quil::ToQuilError> {
         use AttributeValue::*;
-        Ok(match self {
-            String(value) => format!("\"{}\"", value),
-            Expression(value) => format!("{}", value),
-        })
+        match self {
+            String(value) => write!(writer, "{value:?}"),
+            Expression(value) => write!(writer, "{value}"),
+        }
+        .map_err(Into::into)
     }
 }
 
@@ -203,14 +222,15 @@ pub struct FrameIdentifier {
 }
 
 impl Quil for FrameIdentifier {
-    type Display = String;
-
-    fn to_quil(&self) -> ToQuilResult<Self::Display> {
-        Ok(format!(
-            "{} \"{}\"",
-            format_qubits(&self.qubits)?,
-            self.name
-        ))
+    fn write(
+        &self,
+        writer: &mut impl std::fmt::Write,
+    ) -> std::result::Result<(), crate::quil::ToQuilError> {
+        for qubit in &self.qubits {
+            qubit.write(writer)?;
+            write!(writer, " ")?;
+        }
+        write!(writer, "{:?}", self.name).map_err(Into::into)
     }
 }
 
@@ -227,14 +247,16 @@ pub enum GateModifier {
 }
 
 impl Quil for GateModifier {
-    type Display = &'static str;
-
-    fn to_quil(&self) -> ToQuilResult<Self::Display> {
-        Ok(match self {
-            Self::Controlled => "CONTROLLED",
-            Self::Dagger => "DAGGER",
-            Self::Forked => "FORKED",
-        })
+    fn write(
+        &self,
+        writer: &mut impl std::fmt::Write,
+    ) -> std::result::Result<(), crate::quil::ToQuilError> {
+        match self {
+            Self::Controlled => write!(writer, "CONTROLLED"),
+            Self::Dagger => write!(writer, "DAGGER"),
+            Self::Forked => write!(writer, "FORKED"),
+        }
+        .map_err(Into::into)
     }
 }
 
@@ -245,13 +267,15 @@ pub enum GateType {
 }
 
 impl Quil for GateType {
-    type Display = &'static str;
-
-    fn to_quil(&self) -> ToQuilResult<Self::Display> {
-        Ok(match self {
-            Self::Matrix => "MATRIX",
-            Self::Permutation => "PERMUTATION",
-        })
+    fn write(
+        &self,
+        writer: &mut impl std::fmt::Write,
+    ) -> std::result::Result<(), crate::quil::ToQuilError> {
+        match self {
+            Self::Matrix => write!(writer, "MATRIX"),
+            Self::Permutation => write!(writer, "PERMUTATION"),
+        }
+        .map_err(Into::into)
     }
 }
 
@@ -264,15 +288,17 @@ pub enum ScalarType {
 }
 
 impl Quil for ScalarType {
-    type Display = &'static str;
-
-    fn to_quil(&self) -> ToQuilResult<Self::Display> {
-        Ok(match self {
-            Self::Bit => "BIT",
-            Self::Integer => "INTEGER",
-            Self::Octet => "OCTET",
-            Self::Real => "REAL",
-        })
+    fn write(
+        &self,
+        writer: &mut impl std::fmt::Write,
+    ) -> std::result::Result<(), crate::quil::ToQuilError> {
+        match self {
+            Self::Bit => write!(writer, "BIT"),
+            Self::Integer => write!(writer, "INTEGER"),
+            Self::Octet => write!(writer, "OCTET"),
+            Self::Real => write!(writer, "REAL"),
+        }
+        .map_err(Into::into)
     }
 }
 
@@ -283,10 +309,12 @@ pub struct Vector {
 }
 
 impl Quil for Vector {
-    type Display = String;
-
-    fn to_quil(&self) -> ToQuilResult<Self::Display> {
-        Ok(format!("{}[{}]", self.data_type.to_quil()?, self.length))
+    fn write(
+        &self,
+        writer: &mut impl std::fmt::Write,
+    ) -> std::result::Result<(), crate::quil::ToQuilError> {
+        self.data_type.write(writer)?;
+        write!(writer, "[{}]", self.length).map_err(Into::into)
     }
 }
 
@@ -297,9 +325,10 @@ pub struct WaveformInvocation {
 }
 
 impl Quil for WaveformInvocation {
-    type Display = String;
-
-    fn to_quil(&self) -> ToQuilResult<Self::Display> {
+    fn write(
+        &self,
+        writer: &mut impl std::fmt::Write,
+    ) -> std::result::Result<(), crate::quil::ToQuilError> {
         let mut key_value_pairs = self
             .parameters
             .iter()
@@ -307,10 +336,11 @@ impl Quil for WaveformInvocation {
 
         key_value_pairs.sort_by(|(k1, _), (k2, _)| k1.cmp(k2));
 
-        Ok(if key_value_pairs.is_empty() {
-            format!("{}", self.name,)
+        if key_value_pairs.is_empty() {
+            write!(writer, "{}", self.name,)
         } else {
-            format!(
+            write!(
+                writer,
                 "{}({})",
                 self.name,
                 key_value_pairs
@@ -319,7 +349,8 @@ impl Quil for WaveformInvocation {
                     .collect::<Vec<String>>()
                     .join(", ")
             )
-        })
+        }
+        .map_err(Into::into)
     }
 }
 
@@ -349,10 +380,11 @@ pub struct MemoryReference {
 impl Eq for MemoryReference {}
 
 impl Quil for MemoryReference {
-    type Display = String;
-
-    fn to_quil(&self) -> ToQuilResult<Self::Display> {
-        Ok(self.to_string())
+    fn write(
+        &self,
+        writer: &mut impl std::fmt::Write,
+    ) -> std::result::Result<(), crate::quil::ToQuilError> {
+        write!(writer, "{}[{}]", self.name, self.index).map_err(Into::into)
     }
 }
 
@@ -398,24 +430,24 @@ pub enum GateSpecification {
 }
 
 impl Quil for GateSpecification {
-    type Display = String;
-
-    fn to_quil(&self) -> ToQuilResult<Self::Display> {
-        Ok(match self {
-            GateSpecification::Matrix(matrix) => matrix
-                .iter()
-                .map(|row| {
-                    format!(
-                        "\n\t{}",
-                        row.iter()
-                            .map(|cell| format!("{}", cell))
-                            .collect::<Vec<String>>()
-                            .join(",")
-                    )
-                })
-                .collect::<String>(),
+    fn write(
+        &self,
+        writer: &mut impl std::fmt::Write,
+    ) -> std::result::Result<(), crate::quil::ToQuilError> {
+        match self {
+            GateSpecification::Matrix(matrix) => matrix.iter().try_for_each(|row| {
+                write!(
+                    writer,
+                    "\n\t{}",
+                    row.iter()
+                        .map(|cell| format!("{}", cell))
+                        .collect::<Vec<String>>()
+                        .join(",")
+                )
+            }),
             GateSpecification::Permutation(permutation) => {
-                format!(
+                write!(
+                    writer,
                     "\t{}",
                     permutation
                         .iter()
@@ -424,7 +456,8 @@ impl Quil for GateSpecification {
                         .join(", ")
                 )
             }
-        })
+        }
+        .map_err(Into::into)
     }
 }
 
@@ -499,13 +532,15 @@ pub enum PragmaArgument {
     Integer(u64),
 }
 impl Quil for PragmaArgument {
-    type Display = String;
-
-    fn to_quil(&self) -> ToQuilResult<Self::Display> {
+    fn write(
+        &self,
+        writer: &mut impl std::fmt::Write,
+    ) -> std::result::Result<(), crate::quil::ToQuilError> {
         match self {
-            PragmaArgument::Identifier(i) => Ok(i.clone()),
-            PragmaArgument::Integer(i) => Ok(i.to_string()),
+            PragmaArgument::Identifier(i) => write!(writer, "{i}"),
+            PragmaArgument::Integer(i) => write!(writer, "{i}"),
         }
+        .map_err(Into::into)
     }
 }
 
@@ -794,50 +829,40 @@ impl From<&Instruction> for InstructionRole {
     }
 }
 
-pub fn format_instructions(values: &[Instruction]) -> ToQuilResult<String> {
-    values
-        .iter()
-        .map(|i| i.to_quil().map(|i| format!("{}", i)))
-        .collect::<Result<Vec<String>, _>>()
-        .map(|v| v.join("\n\t"))
-}
+pub fn write_join_quil<I, T>(
+    writer: &mut impl std::fmt::Write,
+    values: I,
+    joiner: &str,
+) -> Result<(), ToQuilError>
+where
+    I: IntoIterator<Item = T>,
+    T: Quil,
+{
+    let mut iter = values.into_iter();
+    if let Some(first) = iter.next() {
+        first.write(writer)?;
 
-pub fn format_integer_vector(values: &[u64]) -> String {
-    values
-        .iter()
-        .map(|q| format!("{}", q))
-        .collect::<Vec<String>>()
-        .join(" ")
-}
-
-pub fn format_matrix(matrix: &[Vec<Expression>]) -> String {
-    matrix
-        .iter()
-        .map(|row| {
-            row.iter()
-                .map(|cell| format!("{}", cell))
-                .collect::<Vec<String>>()
-                .join(", ")
-        })
-        .collect::<Vec<String>>()
-        .join("\n\t")
-}
-
-pub fn format_qubits(qubits: &[Qubit]) -> ToQuilResult<String> {
-    Ok(qubits
-        .iter()
-        .map(|q| q.to_quil().map(|q| format!("{}", q)))
-        .collect::<Result<Vec<String>, _>>()?
-        .join(" "))
-}
-
-pub fn get_expression_parameter_string(parameters: &[Expression]) -> String {
-    if parameters.is_empty() {
-        return String::from("");
+        for value in iter {
+            write!(writer, "{}", joiner)?;
+            value.write(writer)?;
+        }
     }
+    Ok(())
+}
 
-    let parameter_str: String = parameters.iter().map(|e| format!("{}", e)).collect();
-    format!("({})", parameter_str)
+pub fn write_expression_parameter_string(
+    writer: &mut impl std::fmt::Write,
+    parameters: &[Expression],
+) -> Result<(), ToQuilError> {
+    if !parameters.is_empty() {
+        let parameter_str: String = parameters
+            .iter()
+            .map(|e| e.to_string())
+            .collect::<Vec<_>>()
+            .join(", ");
+        write!(writer, "({})", parameter_str)?;
+    }
+    Ok(())
 }
 
 pub fn get_string_parameter_string(parameters: &[String]) -> String {
@@ -850,32 +875,39 @@ pub fn get_string_parameter_string(parameters: &[String]) -> String {
 }
 
 impl Quil for Instruction {
-    type Display = String;
-
-    fn to_quil(&self) -> ToQuilResult<Self::Display> {
-        Ok(match self {
+    fn write(
+        &self,
+        writer: &mut impl std::fmt::Write,
+    ) -> std::result::Result<(), crate::quil::ToQuilError> {
+        match self {
             Instruction::Arithmetic(Arithmetic {
                 operator,
                 destination,
                 source,
-            }) => format!(
-                "{} {} {}",
-                operator.to_quil()?,
-                destination.to_quil()?,
-                source.to_quil()?
-            ),
+            }) => {
+                write!(
+                    writer,
+                    "{} {} {}",
+                    operator.to_quil()?,
+                    destination.to_quil()?,
+                    source.to_quil()?
+                )?;
+            }
             Instruction::CalibrationDefinition(calibration) => {
-                let parameter_str = get_expression_parameter_string(&calibration.parameters);
-                let mut result = format!(
-                    "DEFCAL {}{} {}:",
-                    calibration.name,
-                    parameter_str,
-                    format_qubits(&calibration.qubits)?
-                );
-                for instruction in &calibration.instructions {
-                    result.push_str(&format!("\n\t{}", instruction.to_quil()?));
+                write!(writer, "DEFCAL {}", calibration.name)?;
+                write_expression_parameter_string(writer, &calibration.parameters)?;
+
+                for qubit in &calibration.qubits {
+                    write!(writer, " ")?;
+                    qubit.write(writer)?;
                 }
-                result
+
+                write!(writer, ":")?;
+
+                for instruction in &calibration.instructions {
+                    write!(writer, "\n\t")?;
+                    instruction.write(writer)?;
+                }
             }
             Instruction::Capture(Capture {
                 blocking,
@@ -883,14 +915,17 @@ impl Quil for Instruction {
                 waveform,
                 memory_reference,
             }) => {
-                let prefix = if *blocking { "" } else { "NONBLOCKING " };
-                format!(
-                    "{}CAPTURE {} {} {}",
-                    prefix,
-                    frame.to_quil()?,
-                    waveform.to_quil()?,
-                    memory_reference.to_quil()?
-                )
+                if *blocking {
+                    write!(writer, "CAPTURE ")?;
+                } else {
+                    write!(writer, "NONBLOCKING CAPTURE ")?;
+                }
+
+                frame.write(writer)?;
+                write!(writer, " ")?;
+                waveform.write(writer)?;
+                write!(writer, " ")?;
+                memory_reference.write(writer)?;
             }
             Instruction::CircuitDefinition(CircuitDefinition {
                 name,
@@ -898,188 +933,227 @@ impl Quil for Instruction {
                 qubit_variables,
                 instructions,
             }) => {
-                let mut parameter_str: String = parameters
+                let parameter_str: String = parameters
                     .iter()
                     .map(|p| format!("%{}", p))
                     .collect::<Vec<String>>()
                     .join(", ");
+
+                write!(writer, "DEFCIRCUIT {}", name)?;
                 if !parameter_str.is_empty() {
-                    parameter_str = format!("({})", parameter_str);
+                    write!(writer, "({})", parameter_str)?;
                 }
-                let mut result = format!("DEFCIRCUIT {}{}", name, parameter_str);
                 for qubit_variable in qubit_variables {
-                    result.push_str(&format!(" {}", qubit_variable));
+                    write!(writer, " {}", qubit_variable)?;
                 }
-                result.push_str(":");
+                write!(writer, ":")?;
                 for instruction in &**instructions {
-                    result.push_str(&format!("\t{}", instruction.to_quil()?));
+                    write!(writer, "\t")?;
+                    instruction.write(writer)?;
                 }
-                result
             }
             Instruction::Convert(Convert { from, to }) => {
-                format!("CONVERT {} {}", to.to_quil()?, from.to_quil()?)
+                write!(writer, "CONVERT ")?;
+                to.write(writer)?;
+                write!(writer, " ")?;
+                from.write(writer)?;
             }
             Instruction::Declaration(Declaration {
                 name,
                 size,
                 sharing,
             }) => {
-                let mut result = format!("DECLARE {} {}", name, size.to_quil()?);
+                write!(writer, "DECLARE {} ", name)?;
+                size.write(writer)?;
                 match sharing {
-                    Some(shared) => result.push_str(&format!("SHARING {}", shared)),
+                    Some(shared) => {
+                        write!(writer, "SHARING {}", shared)?;
+                    }
                     None => {}
                 }
-                result
             }
             Instruction::Delay(Delay {
                 qubits,
                 frame_names,
                 duration,
             }) => {
-                let mut result = format!("DELAY {}", format_qubits(qubits)?);
-                for frame_name in frame_names {
-                    result.push_str(&format!(" \"{}\"", frame_name));
+                write!(writer, "DELAY")?;
+                for qubit in qubits {
+                    write!(writer, " ")?;
+                    qubit.write(writer)?;
                 }
-                result.push_str(&format!(" {}", duration));
-                result
+                for frame_name in frame_names {
+                    write!(writer, " {frame_name:?}")?;
+                }
+                write!(writer, " {}", duration)?;
             }
             Instruction::Fence(Fence { qubits }) => {
-                if qubits.is_empty() {
-                    format!("FENCE")
-                } else {
-                    format!("FENCE {}", format_qubits(qubits)?)
+                write!(writer, "FENCE")?;
+
+                for qubit in qubits {
+                    write!(writer, " ")?;
+                    qubit.write(writer)?;
                 }
             }
             Instruction::FrameDefinition(FrameDefinition {
                 identifier,
                 attributes,
-            }) => format!(
-                "DEFFRAME {}:{}",
-                identifier.to_quil()?,
-                attributes
-                    .iter()
-                    .map(|(k, v)| v.to_quil().map(|v| format!("\n\t{}: {}", k, v)))
-                    .collect::<Result<String, _>>()?
-            ),
+            }) => {
+                write!(writer, "DEFFRAME ")?;
+                identifier.write(writer)?;
+                write!(writer, ":")?;
+                for (key, value) in attributes {
+                    write!(writer, "\n\t{}: ", key)?;
+                    value.write(writer)?;
+                }
+            }
             Instruction::Gate(Gate {
                 name,
                 parameters,
                 qubits,
                 modifiers,
             }) => {
-                let parameter_str = get_expression_parameter_string(parameters);
+                for modifier in modifiers {
+                    modifier.write(writer)?;
+                    write!(writer, " ")?;
+                }
 
-                let qubit_str = format_qubits(qubits)?;
-                let modifier_str = modifiers
-                    .iter()
-                    .map(|m| m.to_quil().map(|q| format!("{} ", q)))
-                    .collect::<Result<Vec<String>, _>>()?
-                    .join("");
-                format!("{}{}{} {}", modifier_str, name, parameter_str, qubit_str)
+                write!(writer, "{name}")?;
+                write_expression_parameter_string(writer, parameters)?;
+
+                for qubit in qubits {
+                    write!(writer, " ")?;
+                    qubit.write(writer)?;
+                }
             }
             Instruction::GateDefinition(GateDefinition {
                 name,
                 parameters,
                 specification,
             }) => {
-                let parameter_str: String = parameters.iter().map(|p| p.to_string()).collect();
-                format!(
-                    "DEFGATE {}{} AS {}:\n{}",
-                    name,
-                    parameter_str,
+                let parameter_str: String = parameters
+                    .iter()
+                    .map(|p| format!("%{}", p))
+                    .collect::<Vec<String>>()
+                    .join(", ");
+
+                write!(writer, "DEFGATE {}", name,)?;
+
+                if !parameter_str.is_empty() {
+                    write!(writer, "({})", parameter_str)?;
+                }
+
+                write!(
+                    writer,
+                    " AS {}",
                     match specification {
                         GateSpecification::Matrix(_) => "MATRIX",
                         GateSpecification::Permutation(_) => "PERMUTATION",
-                    },
-                    specification.to_quil()?
-                )
+                    }
+                )?;
+
+                writeln!(writer, ":")?;
+                specification.write(writer)?;
             }
             Instruction::Include(Include { filename }) => {
-                format!(r#"INCLUDE {:?}"#, filename)
+                write!(writer, r#"INCLUDE {:?}"#, filename)?;
             }
             Instruction::MeasureCalibrationDefinition(MeasureCalibrationDefinition {
                 qubit,
                 parameter,
                 instructions,
             }) => {
-                let mut result = String::from("DEFCAL MEASURE");
+                write!(writer, "DEFCAL MEASURE")?;
                 match qubit {
                     Some(qubit) => {
-                        result.push_str(&format!(" {}", qubit.to_quil()?));
+                        write!(writer, " ")?;
+                        qubit.write(writer)?;
                     }
                     None => {}
                 }
 
-                result.push_str(&format!(
-                    " {}:\n\t{}",
-                    parameter,
-                    format_instructions(instructions)?
-                ));
-                result
+                write!(writer, " {}:", parameter,)?;
+                for instruction in instructions {
+                    write!(writer, "\n\t")?;
+                    instruction.write(writer)?;
+                }
             }
             Instruction::Measurement(Measurement { qubit, target }) => match target {
-                Some(reference) => format!("MEASURE {} {}", qubit.to_quil()?, reference.to_quil()?),
-                None => format!("MEASURE {}", qubit.to_quil()?),
+                Some(reference) => {
+                    write!(writer, "MEASURE ",)?;
+                    qubit.write(writer)?;
+                    write!(writer, " ")?;
+                    reference.write(writer)?;
+                }
+                None => {
+                    write!(writer, "MEASURE ")?;
+                    qubit.write(writer)?;
+                }
             },
             Instruction::Move(Move {
                 destination,
                 source,
-            }) => format!("MOVE {} {}", destination.to_quil()?, source.to_quil()?),
+            }) => {
+                write!(writer, "MOVE ",)?;
+                destination.write(writer)?;
+                write!(writer, " ")?;
+                source.write(writer)?;
+            }
             Instruction::Exchange(Exchange { left, right }) => {
-                format!("EXCHANGE {} {}", left.to_quil()?, right.to_quil()?)
+                write!(writer, "EXCHANGE ")?;
+                left.write(writer)?;
+                write!(writer, " ")?;
+                right.write(writer)?;
             }
             Instruction::Load(Load {
                 destination,
                 source,
                 offset,
             }) => {
-                format!(
-                    "LOAD {} {} {}",
-                    destination.to_quil()?,
-                    source,
-                    offset.to_quil()?
-                )
+                write!(writer, "LOAD ",)?;
+                destination.write(writer)?;
+                write!(writer, " {source} ")?;
+                offset.write(writer)?;
             }
             Instruction::Store(Store {
                 destination,
                 offset,
                 source,
             }) => {
-                format!(
-                    "STORE {} {} {}",
-                    destination,
-                    offset.to_quil()?,
-                    source.to_quil()?
-                )
+                write!(writer, "STORE {} ", destination,)?;
+                offset.write(writer)?;
+                write!(writer, " ")?;
+                source.write(writer)?;
             }
             Instruction::Pulse(Pulse {
                 blocking,
                 frame,
                 waveform,
             }) => {
-                let prefix = if *blocking { "" } else { "NONBLOCKING " };
-                format!(
-                    "{}PULSE {} {}",
-                    prefix,
-                    frame.to_quil()?,
-                    waveform.to_quil()?
-                )
+                if *blocking {
+                    write!(writer, "PULSE ")?;
+                } else {
+                    write!(writer, "NONBLOCKING PULSE ")?;
+                }
+                frame.write(writer)?;
+                write!(writer, " ")?;
+                waveform.write(writer)?;
             }
             Instruction::Pragma(Pragma {
                 name,
                 arguments,
                 data,
             }) => {
-                let mut result = format!("PRAGMA {}", name);
+                write!(writer, "PRAGMA {}", name)?;
                 if !arguments.is_empty() {
                     for arg in arguments {
-                        result.push_str(&format!(" {}", arg.to_quil()?));
+                        write!(writer, " ")?;
+                        arg.write(writer)?;
                     }
                 }
                 if let Some(data) = data {
-                    result.push_str(&format!(" {:?}", data));
+                    write!(writer, " {:?}", data)?;
                 }
-                result
             }
             Instruction::RawCapture(RawCapture {
                 blocking,
@@ -1087,82 +1161,118 @@ impl Quil for Instruction {
                 duration,
                 memory_reference,
             }) => {
-                let prefix = if *blocking { "" } else { "NONBLOCKING " };
-                format!(
-                    "{}RAW-CAPTURE {} {} {}",
-                    prefix,
-                    frame.to_quil()?,
-                    duration,
-                    memory_reference.to_quil()?
-                )
+                if *blocking {
+                    write!(writer, "RAW-CAPTURE ")?;
+                } else {
+                    write!(writer, "NONBLOCKING RAW-CAPTURE ")?;
+                }
+
+                frame.write(writer)?;
+                write!(writer, " {duration} ")?;
+                memory_reference.write(writer)?;
             }
             Instruction::Reset(Reset { qubit }) => match qubit {
-                Some(qubit) => format!("RESET {}", qubit.to_quil()?),
-                None => format!("RESET"),
+                Some(qubit) => {
+                    write!(writer, "RESET ")?;
+                    qubit.write(writer)?;
+                }
+                None => {
+                    write!(writer, "RESET")?;
+                }
             },
             Instruction::SetFrequency(SetFrequency { frame, frequency }) => {
-                format!("SET-FREQUENCY {} {}", frame.to_quil()?, frequency)
+                write!(writer, "SET-FREQUENCY ")?;
+                frame.write(writer)?;
+                write!(writer, " {frequency}")?;
             }
             Instruction::SetPhase(SetPhase { frame, phase }) => {
-                format!("SET-PHASE {} {}", frame.to_quil()?, phase)
+                write!(writer, "SET-PHASE ")?;
+                frame.write(writer)?;
+                write!(writer, " {phase}")?;
             }
             Instruction::SetScale(SetScale { frame, scale }) => {
-                format!("SET-SCALE {} {}", frame.to_quil()?, scale)
+                write!(writer, "SET-SCALE ")?;
+                frame.write(writer)?;
+                write!(writer, " {scale}")?;
             }
             Instruction::ShiftFrequency(ShiftFrequency { frame, frequency }) => {
-                format!("SHIFT-FREQUENCY {} {}", frame.to_quil()?, frequency)
+                write!(writer, "SHIFT-FREQUENCY ")?;
+                frame.write(writer)?;
+                write!(writer, " {frequency}")?;
             }
             Instruction::ShiftPhase(ShiftPhase { frame, phase }) => {
-                format!("SHIFT-PHASE {} {}", frame.to_quil()?, phase)
+                write!(writer, "SHIFT-PHASE ")?;
+                frame.write(writer)?;
+                write!(writer, " {phase}")?;
             }
             Instruction::SwapPhases(SwapPhases { frame_1, frame_2 }) => {
-                format!("SWAP-PHASES {} {}", frame_1.to_quil()?, frame_2.to_quil()?)
+                write!(writer, "SWAP-PHASES ")?;
+                frame_1.write(writer)?;
+                write!(writer, " ")?;
+                frame_2.write(writer)?;
             }
-            Instruction::WaveformDefinition(WaveformDefinition { name, definition }) => format!(
-                "DEFWAVEFORM {}{}:\n\t{}",
-                name,
-                get_string_parameter_string(&definition.parameters),
-                definition
-                    .matrix
-                    .iter()
-                    .map(|e| format!("{}", e))
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            ),
-            Instruction::Halt => format!("HALT"),
-            Instruction::Nop => format!("NOP"),
-            Instruction::Jump(Jump { target }) => format!("JUMP @{}", target),
+            Instruction::WaveformDefinition(WaveformDefinition { name, definition }) => {
+                write!(writer, "DEFWAVEFORM {}", name)?;
+                write!(
+                    writer,
+                    "{}:\n\t{}",
+                    get_string_parameter_string(&definition.parameters),
+                    definition
+                        .matrix
+                        .iter()
+                        .map(|e| format!("{}", e))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                )?;
+            }
+            Instruction::Halt => {
+                write!(writer, "HALT")?;
+            }
+            Instruction::Nop => {
+                write!(writer, "NOP")?;
+            }
+            Instruction::Jump(Jump { target }) => {
+                write!(writer, "JUMP @{}", target)?;
+            }
             Instruction::JumpUnless(JumpUnless { condition, target }) => {
-                format!("JUMP-UNLESS @{} {}", target, condition.to_quil()?)
+                write!(writer, "JUMP-UNLESS @{} ", target)?;
+                condition.write(writer)?;
             }
             Instruction::JumpWhen(JumpWhen { condition, target }) => {
-                format!("JUMP-WHEN @{} {}", target, condition.to_quil()?)
+                write!(writer, "JUMP-WHEN @{} ", target)?;
+                condition.write(writer)?;
             }
             Instruction::Label(label) => match label {
-                Label::Fixed(label) => format!("LABEL @{}", label),
-                Label::Placeholder(_) => todo!(),
+                Label::Fixed(label) => {
+                    write!(writer, "LABEL @{}", label)?;
+                }
+                Label::Placeholder(_) => {
+                    return Err(ToQuilError::UnresolvedLabelPlaceholder);
+                }
             },
             Instruction::Comparison(Comparison { operator, operands }) => {
-                format!(
-                    "{} {} {} {}",
-                    operator.to_quil()?,
-                    operands.0.to_quil()?,
-                    operands.1.to_quil()?,
-                    operands.2.to_quil()?
-                )
+                operator.write(writer)?;
+                write!(writer, " ")?;
+                operands.0.write(writer)?;
+                write!(writer, " ")?;
+                operands.1.write(writer)?;
+                write!(writer, " ")?;
+                operands.2.write(writer)?;
             }
             Instruction::BinaryLogic(BinaryLogic { operator, operands }) => {
-                format!(
-                    "{} {} {}",
-                    operator.to_quil()?,
-                    operands.0.to_quil()?,
-                    operands.1.to_quil()?
-                )
+                operator.write(writer)?;
+                write!(writer, " ")?;
+                operands.0.write(writer)?;
+                write!(writer, " ")?;
+                operands.1.write(writer)?;
             }
             Instruction::UnaryLogic(UnaryLogic { operator, operand }) => {
-                format!("{} {}", operator.to_quil()?, operand.to_quil()?)
+                operator.write(writer)?;
+                write!(writer, " ")?;
+                operand.write(writer)?;
             }
-        })
+        }
+        Ok(())
     }
 }
 
@@ -1228,14 +1338,15 @@ impl Qubit {
 }
 
 impl Quil for Qubit {
-    type Display = String;
-
-    fn to_quil(&self) -> ToQuilResult<Self::Display> {
+    fn write(
+        &self,
+        writer: &mut impl std::fmt::Write,
+    ) -> std::result::Result<(), crate::quil::ToQuilError> {
         use Qubit::*;
         match self {
-            Fixed(value) => Ok(format!("{}", value)),
+            Fixed(value) => write!(writer, "{value}").map_err(Into::into),
             Placeholder(_) => Err(ToQuilError::UnresolvedQubitPlaceholder),
-            Variable(value) => Ok(value.clone()),
+            Variable(value) => write!(writer, "{value}s").map_err(Into::into),
         }
     }
 }

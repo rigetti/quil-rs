@@ -238,6 +238,7 @@ impl Program {
     /// If you do not provide a resolver for a placeholder, a default resolver will be used which will generate a unique value
     /// for that placeholder within the scope of the program using an auto-incrementing value (for qubit) or suffix (for label)
     /// while ensuring that unique value is not already in use within the program.
+    #[allow(clippy::type_complexity)]
     pub fn resolve_placeholders(
         &mut self,
         label_resolver: Option<Box<dyn Fn(&LabelPlaceholder) -> Option<String>>>,
@@ -337,13 +338,15 @@ impl Program {
 }
 
 impl Quil for Program {
-    type Display = String;
-
-    fn to_quil(&self) -> std::result::Result<Self::Display, crate::quil::ToQuilError> {
-        self.to_instructions(true)
-            .iter()
-            .map(|inst| inst.to_quil().map(|inst| format!("{}\n", inst)))
-            .collect()
+    fn write(
+        &self,
+        writer: &mut impl std::fmt::Write,
+    ) -> std::result::Result<(), crate::quil::ToQuilError> {
+        for instruction in &self.to_instructions(true) {
+            instruction.write(writer)?;
+            writer.write_char('\n')?;
+        }
+        Ok(())
     }
 }
 
