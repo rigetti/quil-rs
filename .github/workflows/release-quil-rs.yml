@@ -3,6 +3,8 @@ name: Release crates
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    description: "Manually publish release"
     
 jobs:
   is-quil-rs-release:
