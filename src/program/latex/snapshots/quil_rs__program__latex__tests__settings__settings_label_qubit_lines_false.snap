@@ -1,0 +1,15 @@
+---
+source: src/program/latex/mod.rs
+assertion_line: 689
+expression: "r#\"\\documentclass[convert={density=300,outext=.png}]{standalone}\n\\usepackage[margin=1in]{geometry}\n\\usepackage{tikz}\n\\usetikzlibrary{quantikz}\n\\begin{document}\n\\begin{tikzcd}\n\\qw & \\gate{H} & \\ctrl{1} & \\qw \\\\\n\\qw & \\qw & \\targ{} & \\qw\n\\end{tikzcd}\n\\end{document}\"#"
+---
+\documentclass[convert={density=300,outext=.png}]{standalone}
+\usepackage[margin=1in]{geometry}
+\usepackage{tikz}
+\usetikzlibrary{quantikz}
+\begin{document}
+\begin{tikzcd}
+\qw & \gate{H} & \ctrl{1} & \qw \\
+\qw & \qw & \targ{} & \qw
+\end{tikzcd}
+\end{document}

@@ -1,0 +1,6 @@
+---
+source: src/program/latex/mod.rs
+assertion_line: 188
+expression: "Command::get_command(Command::Lstick(0))"
+---
+\lstick{\ket{q_{0}}}

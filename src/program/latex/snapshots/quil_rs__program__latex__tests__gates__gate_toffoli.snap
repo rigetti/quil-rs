@@ -1,0 +1,16 @@
+---
+source: src/program/latex/mod.rs
+assertion_line: 723
+expression: "get_latex(\"CCNOT 1 2 0\", Settings::default())"
+---
+\documentclass[convert={density=300,outext=.png}]{standalone}
+\usepackage[margin=1in]{geometry}
+\usepackage{tikz}
+\usetikzlibrary{quantikz}
+\begin{document}
+\begin{tikzcd}
+\lstick{\ket{q_{0}}} & \targ{} & \qw \\
+\lstick{\ket{q_{1}}} & \ctrl{-1} & \qw \\
+\lstick{\ket{q_{2}}} & \ctrl{-2} & \qw
+\end{tikzcd}
+\end{document}

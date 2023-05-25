@@ -39,6 +39,9 @@ pub type Result<O> = std::result::Result<O, ProgramError<O>>;
 #[cfg(feature = "graphviz-dot")]
 pub mod graphviz_dot;
 
+#[cfg(feature = "latex")]
+pub mod latex;
+
 /// A Quil Program instance describes a quantum program with metadata used in execution.
 ///
 /// This contains not only instructions which are executed in turn on the quantum processor, but

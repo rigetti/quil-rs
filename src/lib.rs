@@ -31,6 +31,7 @@
 //! [constructor for timing graphs]: crate::program::graph::ScheduledProgram#method.get_dot_format
 //! [expressions]: crate::expression::Expression
 //! [instructions]: crate::instruction::Instruction
+//! [latex]: crate::program::latex::Latex#method.to_latex
 //! [parser]: crate::program::Program#method.from_str
 //! [programs]: crate::program::Program
 //! [serializer]: crate::program::Program#method.to_string

@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use enum_as_inner::EnumAsInner;
 use nom_locate::LocatedSpan;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
@@ -1077,7 +1078,7 @@ mod test_instruction_display {
     }
 }
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq, Serialize, Deserialize, EnumAsInner)]
 pub enum Qubit {
     Fixed(u64),
     Variable(String),
