@@ -219,6 +219,517 @@ fn is_small(x: f64) -> bool {
     x.abs() < 1e-16
 }
 
+mod simplification {
+    use super::{
+        format_complex, is_small, Expression, ExpressionFunction, InfixOperator, MemoryReference,
+        PrefixOperator,
+    };
+    use egg::{define_language, rewrite as rw, Id, Language};
+    use ordered_float::OrderedFloat;
+    use std::{
+        ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign},
+        str::FromStr,
+    };
+    use symbolic_expressions::{parser, IntoSexp, Sexp};
+
+    pub(crate) fn run(expression: &Expression) -> Expression {
+        let sexp = expression.into_sexp();
+        let recexpr = sexp
+            .to_string()
+            .parse()
+            .expect("Expression->Sexp->RecExpr should work by design");
+        let runner = egg::Runner::default()
+            .with_expr(&recexpr)
+            .run(&make_rules());
+        let root = runner.roots[0];
+        let (_, best) = egg::Extractor::new(&runner.egraph, egg::AstSize).find_best(root);
+        let simpler_sexp = parser::parse_str(&best.to_string())
+            .expect("RecExpr implements to_sexp, so this parse should succeed");
+        let mut simpler_exp = Expression::from(&simpler_sexp);
+        if let Ok(number) = simpler_exp.evaluate(&Default::default(), &Default::default()) {
+            simpler_exp = Expression::Number(number);
+        }
+        simpler_exp
+    }
+
+    impl IntoSexp for Expression {
+        fn into_sexp(&self) -> Sexp {
+            match self {
+                Expression::Address(memory_reference) => {
+                    let mut s = Sexp::start("address");
+                    s.push(&memory_reference.name);
+                    s.push(memory_reference.index.to_string());
+                    s
+                }
+                Expression::FunctionCall {
+                    function,
+                    expression,
+                } => {
+                    let mut s = Sexp::start(&function.to_string());
+                    s.push(&**expression);
+                    s
+                }
+                Expression::Infix {
+                    left,
+                    operator,
+                    right,
+                } => {
+                    let mut s = Sexp::start(&operator.to_string());
+                    s.push(&**left);
+                    s.push(&**right);
+                    s
+                }
+                Expression::Number(n) => format_complex(n).into(),
+                Expression::PiConstant => "pi".into(),
+                Expression::Prefix {
+                    operator,
+                    expression,
+                } => {
+                    let mut s = Sexp::start(match operator {
+                        PrefixOperator::Plus => "pos",
+                        PrefixOperator::Minus => "neg",
+                    });
+                    s.push(&**expression);
+                    s
+                }
+                Expression::Variable(s) => s.into(),
+            }
+        }
+    }
+
+    impl From<&Expression> for Sexp {
+        fn from(expression: &Expression) -> Self {
+            expression.into_sexp()
+        }
+    }
+
+    impl From<&Sexp> for Expression {
+        fn from(sexp: &Sexp) -> Self {
+            match sexp {
+                Sexp::Empty => panic!("Can't make an expression from an empty sexp"),
+                Sexp::String(s) => {
+                    match Expression::from_str(s)
+                        .expect("Strings encode valid Expressions by design")
+                    {
+                        // corner case, we're missing the prefix %
+                        Expression::Address(MemoryReference { name, .. }) => {
+                            Expression::Variable(name)
+                        }
+                        e => e,
+                    }
+                }
+                Sexp::List(ss) => match &ss[..] {
+                    [Sexp::String(s), e] => {
+                        let expression = Expression::from(e).into();
+                        match s.as_str() {
+                            "cis" => Expression::FunctionCall {
+                                function: ExpressionFunction::Cis,
+                                expression,
+                            },
+                            "cos" => Expression::FunctionCall {
+                                function: ExpressionFunction::Cosine,
+                                expression,
+                            },
+                            "exp" => Expression::FunctionCall {
+                                function: ExpressionFunction::Exponent,
+                                expression,
+                            },
+                            "sin" => Expression::FunctionCall {
+                                function: ExpressionFunction::Sine,
+                                expression,
+                            },
+                            "sqrt" => Expression::FunctionCall {
+                                function: ExpressionFunction::SquareRoot,
+                                expression,
+                            },
+                            "pos" => Expression::Prefix {
+                                operator: PrefixOperator::Plus,
+                                expression,
+                            },
+                            "neg" => Expression::Prefix {
+                                operator: PrefixOperator::Minus,
+                                expression,
+                            },
+                            _ => panic!("Unexpected unary expr: {s}"),
+                        }
+                    }
+                    [Sexp::String(s), Sexp::String(name), Sexp::String(y)]
+                        if s.as_str() == "address" =>
+                    {
+                        let index = y.parse::<u64>().expect("Should be an index");
+                        Expression::Address(MemoryReference {
+                            name: name.clone(),
+                            index,
+                        })
+                    }
+                    [Sexp::String(s), x, y] => {
+                        let left = Expression::from(x).into();
+                        let right = Expression::from(y).into();
+                        let operator = match s.as_str() {
+                            "^" => InfixOperator::Caret,
+                            "*" => InfixOperator::Star,
+                            "/" => InfixOperator::Slash,
+                            "+" => InfixOperator::Plus,
+                            "-" => InfixOperator::Minus,
+                            _ => panic!("Unexpected infix op: {s}"),
+                        };
+                        Expression::Infix {
+                            left,
+                            right,
+                            operator,
+                        }
+                    }
+                    _ => panic!("Unexpected list sexp: {ss:#?}"),
+                },
+            }
+        }
+    }
+
+    #[derive(Debug, Default, PartialEq, Eq, Clone, Copy, Hash)]
+    struct C {
+        re: OrderedFloat<f64>,
+        im: OrderedFloat<f64>,
+    }
+
+    impl From<num_complex::Complex64> for C {
+        fn from(x: num_complex::Complex64) -> Self {
+            Self {
+                re: x.re.into(),
+                im: x.im.into(),
+            }
+        }
+    }
+
+    impl From<C> for num_complex::Complex64 {
+        fn from(x: C) -> Self {
+            Self {
+                re: x.re.into(),
+                im: x.im.into(),
+            }
+        }
+    }
+
+    impl std::str::FromStr for C {
+        type Err = ();
+        fn from_str(s: &str) -> Result<Self, Self::Err> {
+            num_complex::Complex64::from_str(s)
+                .map(Self::from)
+                .map_err(|_| ())
+        }
+    }
+
+    impl std::fmt::Display for C {
+        fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+            f.write_str(&format_complex(&num_complex::Complex64::from(*self)))
+        }
+    }
+
+    // Never tell my math professors I did this.
+    impl PartialOrd for C {
+        fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+            Some(self.cmp(other))
+        }
+    }
+
+    // Never tell my math professors I did this.
+    impl Ord for C {
+        fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+            let (r1, t1) = num_complex::Complex64::from(*self).to_polar();
+            let (r2, t2) = num_complex::Complex64::from(*other).to_polar();
+            let first = r1.partial_cmp(&r2).unwrap();
+            if first == std::cmp::Ordering::Equal {
+                t1.partial_cmp(&t2).unwrap()
+            } else {
+                first
+            }
+        }
+    }
+
+    impl C {
+        const PI: Self = Self {
+            re: OrderedFloat(std::f64::consts::PI),
+            im: OrderedFloat(0.0),
+        };
+        const ZERO: Self = Self {
+            re: OrderedFloat(0.0),
+            im: OrderedFloat(0.0),
+        };
+        fn close(&self, other: Self) -> bool {
+            is_small((*self - other).abs())
+        }
+        fn abs(self) -> f64 {
+            num_complex::Complex64::from(self).norm()
+        }
+        fn cis(self) -> Self {
+            let z = num_complex::Complex64::from(self);
+            Self::from(z.cos() + crate::imag!(1.0) * z.sin())
+        }
+        fn cos(self) -> Self {
+            Self::from(num_complex::Complex64::from(self).cos())
+        }
+        fn exp(self) -> Self {
+            Self::from(num_complex::Complex64::from(self).exp())
+        }
+        fn pow(self, e: Self) -> Self {
+            Self::from(num_complex::Complex64::from(self).powc(e.into()))
+        }
+        fn sin(self) -> Self {
+            Self::from(num_complex::Complex64::from(self).sin())
+        }
+        fn sqrt(self) -> Self {
+            Self::from(num_complex::Complex64::from(self).sqrt())
+        }
+    }
+
+    impl Neg for C {
+        type Output = Self;
+        fn neg(self) -> Self::Output {
+            Self::from(-num_complex::Complex64::from(self))
+        }
+    }
+
+    macro_rules! impl_via_complex {
+        ($name:ident, $name_assign:ident, $function:ident, $function_assign:ident) => {
+            impl $name for C {
+                type Output = Self;
+                fn $function(self, other: Self) -> Self {
+                    Self::from(
+                        num_complex::Complex64::from(self)
+                            .$function(num_complex::Complex64::from(other)),
+                    )
+                }
+            }
+            impl $name_assign for C {
+                fn $function_assign(&mut self, other: Self) {
+                    *self = Self::from(
+                        num_complex::Complex64::from(*self)
+                            .$function(num_complex::Complex64::from(other)),
+                    );
+                }
+            }
+        };
+    }
+
+    impl_via_complex!(Add, AddAssign, add, add_assign);
+    impl_via_complex!(Sub, SubAssign, sub, sub_assign);
+    impl_via_complex!(Mul, MulAssign, mul, mul_assign);
+    impl_via_complex!(Div, DivAssign, div, div_assign);
+
+    define_language! {
+        enum Expr {
+            // Numbers
+            "pi" = Pi,
+            Number(C),
+            // Functions
+            "cis" = Cis(Id),
+            "cos" = Cos(Id),
+            "exp" = Exp(Id),
+            "sin" = Sin(Id),
+            "sqrt" = Sqrt(Id),
+            // Prefix arithmetic
+            "pos" = Pos(Id),
+            "neg" = Neg(Id),
+            // Infix arithmetic
+            "^" = Pow([Id; 2]),
+            "*" = Mul([Id; 2]),
+            "/" = Div([Id; 2]),
+            "+" = Add([Id; 2]),
+            "-" = Sub([Id; 2]),
+            // Address
+            "address" = Address([Id; 2]),
+            // Variables
+            Symbol(egg::Symbol),
+        }
+    }
+
+    #[derive(Default)]
+    struct ConstantFold;
+    type EGraph = egg::EGraph<Expr, ConstantFold>;
+
+    impl egg::Analysis<Expr> for ConstantFold {
+        type Data = Option<(C, egg::PatternAst<Expr>)>;
+        fn make(egraph: &EGraph, enode: &Expr) -> Self::Data {
+            let x = |id: &Id| egraph[*id].data.as_ref().map(|d| d.0);
+            match enode {
+                Expr::Pi => Some((C::PI, enode.to_string().parse().ok()?)),
+                Expr::Number(c) => Some((*c, c.to_string().parse().ok()?)),
+                Expr::Cis(id) => {
+                    let c = x(id)?;
+                    Some((c.cis(), format!("(cis {c})").parse().ok()?))
+                }
+                Expr::Cos(id) => {
+                    let c = x(id)?;
+                    Some((c.cos(), format!("(cos {c})").parse().ok()?))
+                }
+                Expr::Exp(id) => {
+                    let c = x(id)?;
+                    Some((c.exp(), format!("(exp {c})").parse().ok()?))
+                }
+                Expr::Sin(id) => {
+                    let c = x(id)?;
+                    Some((c.sin(), format!("(sin {c})").parse().ok()?))
+                }
+                Expr::Sqrt(i) => {
+                    let c = x(i)?;
+                    Some((c.sqrt(), format!("(sqrt {c})").parse().ok()?))
+                }
+                Expr::Pos(id) => {
+                    let c = x(id)?;
+                    Some((c, format!("(pos {c})").parse().ok()?))
+                }
+                Expr::Neg(id) => {
+                    let c = -x(id)?;
+                    Some((c, format!("{c}").parse().ok()?))
+                }
+                Expr::Pow([base, power]) => {
+                    let b = x(base)?;
+                    let p = x(power)?;
+                    Some((b.pow(p), format!("(^ {b} {p})").parse().ok()?))
+                }
+                Expr::Mul([left, right]) => {
+                    let l = x(left)?;
+                    let r = x(right)?;
+                    Some((l * r, format!("(* {l} {r})").parse().ok()?))
+                }
+                Expr::Div([left, right]) => {
+                    let l = x(left)?;
+                    let r = x(right)?;
+                    Some((l / r, format!("(/ {l} {r})").parse().ok()?))
+                }
+                Expr::Add([left, right]) => {
+                    let l = x(left)?;
+                    let r = x(right)?;
+                    Some((l + r, format!("(+ {l} {r})").parse().ok()?))
+                }
+                Expr::Sub([left, right]) => {
+                    let l = x(left)?;
+                    let r = x(right)?;
+                    Some((l - r, format!("(- {l} {r})").parse().ok()?))
+                }
+                _ => None,
+            }
+        }
+
+        fn merge(&mut self, to: &mut Self::Data, from: Self::Data) -> egg::DidMerge {
+            egg::merge_option(to, from, |a, b| {
+                assert_eq!(a.0, b.0, "Merged non-equal constants");
+                egg::DidMerge(false, false)
+            })
+        }
+        fn modify(egraph: &mut EGraph, id: Id) {
+            let data = egraph[id].data.clone();
+            if let Some((c, pat)) = data {
+                let value = match c {
+                    _ if c.close(C::PI) => Expr::Pi,
+                    _ => Expr::Number(c),
+                };
+                if egraph.are_explanations_enabled() {
+                    egraph.union_instantiations(
+                        &pat,
+                        &value.to_string().parse().unwrap(),
+                        &Default::default(),
+                        "constant-fold".to_string(),
+                    );
+                } else {
+                    let added = egraph.add(value);
+                    egraph.union(id, added);
+                }
+                egraph[id].nodes.retain(|n| n.is_leaf());
+            }
+        }
+    }
+
+    fn is_not_zero(var: &str) -> impl Fn(&mut EGraph, Id, &egg::Subst) -> bool {
+        let key = var.parse().unwrap();
+        move |egraph, _, subst| {
+            egraph[subst[key]]
+                .data
+                .as_ref()
+                .map(|(value, _)| !value.close(C::ZERO))
+                .unwrap_or(false)
+        }
+    }
+
+    type Rewrite = egg::Rewrite<Expr, ConstantFold>;
+
+    fn make_rules() -> Vec<Rewrite> {
+        vec![
+            // Infix arithmetic
+            // largely copied from https://github.com/egraphs-good/egg/blob/main/tests/math.rs
+            rw!("comm-add"      ; "(+ ?a ?b)"               => "(+ ?b ?a)"),
+            rw!("comm-mul"      ; "(* ?a ?b)"               => "(* ?b ?a)"),
+            rw!("assoc-add"     ; "(+ ?a (+ ?b ?c))"        => "(+ (+ ?a ?b) ?c)"),
+            rw!("assoc-mul"     ; "(* ?a (* ?b ?c))"        => "(* (* ?a ?b) ?c)"),
+            rw!("sub-canon"     ; "(- ?a ?b)"               => "(+ ?a (* -1 ?b))"),
+            rw!("div-canon"     ; "(/ ?a ?b)"               => "(* ?a (^ ?b -1))" if is_not_zero("?b")),
+            rw!("zero-add"      ; "(+ ?a 0)"                => "?a"),
+            rw!("zero-mul"      ; "(* ?a 0)"                => "0"),
+            rw!("one-mul"       ; "(* ?a 1)"                => "?a"),
+            rw!("cancel-sub"    ; "(- ?a ?a)"               => "0"),
+            rw!("cancel-div"    ; "(/ ?a ?a)"               => "1" if is_not_zero("?a")),
+            rw!("distribute"    ; "(* ?a (+ ?b ?c))"        => "(+ (* ?a ?b) (* ?a ?c))"),
+            rw!("factor"        ; "(+ (* ?a ?b) (* ?a ?c))" => "(* ?a (+ ?b ?c))"),
+            rw!("pow-mul"       ; "(* (^ ?a ?b) (^ ?a ?c))" => "(^ ?a (+ ?b ?c))"),
+            rw!("pow0"          ; "(^ ?x 0)"                => "1" if is_not_zero("?x")),
+            rw!("pow1"          ; "(^ ?x 1)"                => "?x"),
+            rw!("pow2"          ; "(^ ?x 2)"                => "(* ?x ?x)"),
+            rw!("pow-recip"     ; "(^ ?x -1)"               => "(/ 1 ?x)" if is_not_zero("?x")),
+            rw!("recip-mul-div" ; "(* ?x (/ 1 ?x))"         => "1" if is_not_zero("?x")),
+            // Prefix
+            rw!("pos-canon"     ; "(pos ?a)"                => "?a"),
+        ]
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        egg::test_fn! {
+            docstring_example,
+            make_rules(),
+            "(+ (cos (* 2 pi)) 2)" => "3"
+        }
+
+        egg::test_fn! {
+            issue_208_1,
+            make_rules(),
+            "(* 0 theta)" => "0"
+        }
+
+        egg::test_fn! {
+            issue_208_2,
+            make_rules(),
+            "(/ theta 1)" => "theta"
+        }
+
+        egg::test_fn! {
+            issue_208_3,
+            make_rules(),
+            "(/ (* theta 5) 5)" => "theta"
+        }
+
+        egg::test_fn! {
+            memory_ref,
+            make_rules(),
+            "theta[0]" => "theta[0]"
+        }
+
+        #[test]
+        fn test_sexp() {
+            let expression = Expression::from_str("cos(2 * pi) + 2").unwrap();
+            let s = Sexp::from(&expression);
+            assert_eq!(s.to_string(), "(+ (cos (* 2 pi)) 2)");
+            assert!(s.is_list());
+            assert_eq!(s.list_name().unwrap(), "+");
+            let expression = Expression::from_str("pi").unwrap();
+            let s = Sexp::from(&expression);
+            assert_eq!(s.to_string(), "pi");
+            assert!(s.is_string());
+            assert_eq!(s.string().unwrap(), "pi");
+        }
+    }
+}
+
 impl Expression {
     /// Simplify the expression as much as possible, in-place.
     ///
@@ -235,48 +746,7 @@ impl Expression {
     /// assert_eq!(expression, Expression::Number(Complex64::from(3.0)));
     /// ```
     pub fn simplify(&mut self) {
-        use Expression::*;
-
-        match self {
-            FunctionCall {
-                function,
-                expression,
-            } => {
-                expression.simplify();
-                if let Number(number) = expression.as_ref() {
-                    *self = Number(calculate_function(function, number));
-                }
-            }
-            Infix {
-                left,
-                operator: _,
-                right,
-            } => {
-                left.simplify();
-                right.simplify();
-            }
-            Prefix {
-                operator,
-                expression,
-            } => {
-                use PrefixOperator::*;
-                expression.simplify();
-
-                // Avoid potentially expensive clone
-                // Cannot directly swap `expression` with `self` because that causes
-                // a double mutable borrow.
-                if let Plus = operator {
-                    let mut temp = Expression::PiConstant;
-                    std::mem::swap(expression.as_mut(), &mut temp);
-                    std::mem::swap(self, &mut temp);
-                }
-            }
-            Variable(_) | Address(_) | PiConstant | Number(_) => {}
-        };
-
-        if let Ok(number) = self.evaluate(&HashMap::new(), &HashMap::new()) {
-            *self = Number(number);
-        }
+        *self = simplification::run(self);
     }
 
     /// Consume the expression, simplifying it as much as possible.
