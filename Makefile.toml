@@ -1,0 +1,3 @@
+[tasks.sync-versions]
+workspace = false
+script = "sh ./scripts/sync_versions.sh"

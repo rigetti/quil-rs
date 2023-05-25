@@ -21,9 +21,14 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.PAT }}
     steps:
     - uses: actions/checkout@v3
+    - uses: taiki-e/install-action@cargo-edit
       with:
         fetch-depth: 0
         token: ${{ secrets.PAT }}
+    - name: Install jq
+      run: |
+        sudo apt-get update
+        sudo apt-get install jq
     - name: Install Knope
       uses: knope-dev/action@v1
       with:
