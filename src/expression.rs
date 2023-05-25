@@ -237,25 +237,46 @@ mod simplification {
     /// - turn it into a stringified [`Sexp`], then parse that into a [`RecExpr<Expr>`],
     /// - let [`egg`] simplify the recursive expression as best as it can,
     /// - and turn that back into an [`Expression`].
-    pub(super) fn run(expression: &Expression) -> Expression {
+    pub(super) fn run(expression: &Expression) -> Result<Expression, SimplificationError> {
         let sexp = expression.into_sexp();
         let recexpr = sexp
             .to_string()
             .parse()
-            .expect("Expression->Sexp->RecExpr should work by design");
+            .map_err(|e| SimplificationError::RecExprFromSexp(format!("{e:#?}")))?;
         let runner = egg::Runner::default()
             .with_expr(&recexpr)
             .run(&make_rules());
         let root = runner.roots[0];
         let (_, best) = egg::Extractor::new(&runner.egraph, egg::AstSize).find_best(root);
         let simpler_sexp = parser::parse_str(&best.to_string())
-            .expect("RecExpr implements to_sexp, so this parse should succeed");
-        let mut simpler_exp = Expression::from(&simpler_sexp);
+            .map_err(|e| SimplificationError::SexpFromRecExpr(format!("{e:#?}")))?;
+        let mut simpler_exp = Expression::try_from(&simpler_sexp)?;
         // Edge case: negation of a constant isn't getting absorbed
         if let Ok(number) = simpler_exp.evaluate(&Default::default(), &Default::default()) {
             simpler_exp = Expression::Number(number);
         }
-        simpler_exp
+        Ok(simpler_exp)
+    }
+
+    /// All the myriad ways simplifying an [`Expression`] can fail.
+    #[derive(Debug, thiserror::Error)]
+    pub enum SimplificationError {
+        #[error("Unable to parse a RecExpr from given Sexp: {0}")]
+        RecExprFromSexp(String),
+        #[error("Unable to parse Sexp from given RecExpr: {0}")]
+        SexpFromRecExpr(String),
+        #[error("Can't make an expression from an empty Sexp")]
+        ExprEmptySexp,
+        #[error("These strings encode valid Expressions by design, but saw: {0}")]
+        InvalidExpressionString(#[from] super::ProgramError<Expression>),
+        #[error("Unexpected unary expr: {0}")]
+        UnexpectedUnaryExpr(String),
+        #[error("Expected a valid index: {0}")]
+        IndexExpected(#[from] std::num::ParseIntError),
+        #[error("Unexpected infix operation: {0}")]
+        UnexpectedInfixOp(String),
+        #[error("Unexpected list Sexp: {0:#?}")]
+        UnexpectedListSexp(Sexp),
     }
 
     impl IntoSexp for Expression {
@@ -309,83 +330,86 @@ mod simplification {
         }
     }
 
-    impl From<&Sexp> for Expression {
-        fn from(sexp: &Sexp) -> Self {
+    impl TryFrom<&Sexp> for Expression {
+        type Error = SimplificationError;
+        fn try_from(sexp: &Sexp) -> Result<Self, Self::Error> {
             match sexp {
-                Sexp::Empty => panic!("Can't make an expression from an empty sexp"),
+                Sexp::Empty => Err(SimplificationError::ExprEmptySexp),
                 Sexp::String(s) => {
-                    match Expression::from_str(s)
-                        .expect("Strings encode valid Expressions by design")
-                    {
+                    let expr = Expression::from_str(s)
+                        .map_err(SimplificationError::InvalidExpressionString)?;
+                    Ok(match expr {
                         // corner case, we're missing the prefix %
                         Expression::Address(MemoryReference { name, .. }) => {
                             Expression::Variable(name)
                         }
                         e => e,
-                    }
+                    })
                 }
                 Sexp::List(ss) => match &ss[..] {
                     [Sexp::String(s), e] => {
-                        let expression = Expression::from(e).into();
+                        let expression = Expression::try_from(e)?.into();
                         match s.as_str() {
-                            "cis" => Expression::FunctionCall {
+                            "cis" => Ok(Expression::FunctionCall {
                                 function: ExpressionFunction::Cis,
                                 expression,
-                            },
-                            "cos" => Expression::FunctionCall {
+                            }),
+                            "cos" => Ok(Expression::FunctionCall {
                                 function: ExpressionFunction::Cosine,
                                 expression,
-                            },
-                            "exp" => Expression::FunctionCall {
+                            }),
+                            "exp" => Ok(Expression::FunctionCall {
                                 function: ExpressionFunction::Exponent,
                                 expression,
-                            },
-                            "sin" => Expression::FunctionCall {
+                            }),
+                            "sin" => Ok(Expression::FunctionCall {
                                 function: ExpressionFunction::Sine,
                                 expression,
-                            },
-                            "sqrt" => Expression::FunctionCall {
+                            }),
+                            "sqrt" => Ok(Expression::FunctionCall {
                                 function: ExpressionFunction::SquareRoot,
                                 expression,
-                            },
-                            "pos" => Expression::Prefix {
+                            }),
+                            "pos" => Ok(Expression::Prefix {
                                 operator: PrefixOperator::Plus,
                                 expression,
-                            },
-                            "neg" => Expression::Prefix {
+                            }),
+                            "neg" => Ok(Expression::Prefix {
                                 operator: PrefixOperator::Minus,
                                 expression,
-                            },
-                            _ => panic!("Unexpected unary expr: {s}"),
+                            }),
+                            _ => Err(SimplificationError::UnexpectedUnaryExpr(s.to_string())),
                         }
                     }
                     [Sexp::String(s), Sexp::String(name), Sexp::String(y)]
                         if s.as_str() == "address" =>
                     {
-                        let index = y.parse::<u64>().expect("Should be an index");
-                        Expression::Address(MemoryReference {
+                        let index = y
+                            .parse::<u64>()
+                            .map_err(SimplificationError::IndexExpected)?;
+                        Ok(Expression::Address(MemoryReference {
                             name: name.clone(),
                             index,
-                        })
+                        }))
                     }
                     [Sexp::String(s), x, y] => {
-                        let left = Expression::from(x).into();
-                        let right = Expression::from(y).into();
+                        let left = Expression::try_from(x)?.into();
+                        let right = Expression::try_from(y)?.into();
                         let operator = match s.as_str() {
                             "^" => InfixOperator::Caret,
                             "*" => InfixOperator::Star,
                             "/" => InfixOperator::Slash,
                             "+" => InfixOperator::Plus,
                             "-" => InfixOperator::Minus,
-                            _ => panic!("Unexpected infix op: {s}"),
+                            _ => return Err(SimplificationError::UnexpectedInfixOp(s.to_string())),
                         };
-                        Expression::Infix {
+                        Ok(Expression::Infix {
                             left,
                             right,
                             operator,
-                        }
+                        })
                     }
-                    _ => panic!("Unexpected list sexp: {ss:#?}"),
+                    _ => Err(SimplificationError::UnexpectedListSexp(sexp.clone())),
                 },
             }
         }
@@ -569,7 +593,6 @@ mod simplification {
 
     /// Our analysis will perform constant folding on our language.
     impl egg::Analysis<Expr> for ConstantFold {
-
         /// Constant values
         type Data = Option<C>;
 
@@ -605,8 +628,7 @@ mod simplification {
 
         /// Update the graph to equate and simplify constant values.
         fn modify(egraph: &mut EGraph, id: Id) {
-            let data = egraph[id].data.clone();
-            if let Some(c) = data {
+            if let Some(c) = egraph[id].data {
                 let value = match c {
                     _ if c.close(C::PI) => Expr::Pi,
                     _ => Expr::Number(c),
@@ -747,7 +769,9 @@ impl Expression {
     /// assert_eq!(expression, Expression::Number(Complex64::from(3.0)));
     /// ```
     pub fn simplify(&mut self) {
-        *self = simplification::run(self);
+        if let Ok(simpler) = simplification::run(self) {
+            *self = simpler;
+        }
     }
 
     /// Consume the expression, simplifying it as much as possible.
