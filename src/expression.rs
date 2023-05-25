@@ -219,6 +219,7 @@ fn is_small(x: f64) -> bool {
     x.abs() < 1e-16
 }
 
+/// A submodule whose sole purpose is to contain complex machinery for simplifying [`Expression`]s.
 mod simplification {
     use super::{
         format_complex, is_small, Expression, ExpressionFunction, InfixOperator, MemoryReference,
@@ -232,6 +233,10 @@ mod simplification {
     };
     use symbolic_expressions::{parser, IntoSexp, Sexp};
 
+    /// Simplify an [`Expression`]:
+    /// - turn it into a stringified [`Sexp`], then parse that into a [`RecExpr<Expr>`],
+    /// - let [`egg`] simplify the recursive expression as best as it can,
+    /// - and turn that back into an [`Expression`].
     pub(super) fn run(expression: &Expression) -> Expression {
         let sexp = expression.into_sexp();
         let recexpr = sexp
@@ -386,6 +391,8 @@ mod simplification {
         }
     }
 
+    /// An [`egg`]-friendly complex number.
+    /// We can't jsut use `num_complex::Complex64`, because we need `Ord` and `Hash`.
     #[derive(Debug, Default, PartialEq, Eq, Clone, Copy, Hash)]
     struct C {
         re: OrderedFloat<f64>,
@@ -425,14 +432,20 @@ mod simplification {
         }
     }
 
-    // Never tell my math professors I did this.
+    /// An "ordering" that will work well enough for our purposes but isn't mathematically sound.
+    /// Never tell my math professors I did this.
+    ///
+    /// https://en.wikipedia.org/wiki/Complex_number#Ordering
     impl PartialOrd for C {
         fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
             Some(self.cmp(other))
         }
     }
 
-    // Never tell my math professors I did this.
+    /// An "ordering" that will work well enough for our purposes but isn't mathematically sound.
+    /// Never tell my math professors I did this.
+    ///
+    /// https://en.wikipedia.org/wiki/Complex_number#Ordering
     impl Ord for C {
         fn cmp(&self, other: &Self) -> std::cmp::Ordering {
             let (r1, t1) = num_complex::Complex64::from(*self).to_polar();
@@ -447,6 +460,10 @@ mod simplification {
     }
 
     impl C {
+        const I: Self = Self {
+            re: OrderedFloat(0.0),
+            im: OrderedFloat(1.0),
+        };
         const PI: Self = Self {
             re: OrderedFloat(std::f64::consts::PI),
             im: OrderedFloat(0.0),
@@ -463,7 +480,7 @@ mod simplification {
         }
         fn cis(self) -> Self {
             let z = num_complex::Complex64::from(self);
-            Self::from(z.cos() + crate::imag!(1.0) * z.sin())
+            Self::from(z.cos() + num_complex::Complex64::from(Self::I) * z.sin())
         }
         fn cos(self) -> Self {
             Self::from(num_complex::Complex64::from(self).cos())
@@ -517,6 +534,8 @@ mod simplification {
     impl_via_complex!(Div, DivAssign, div, div_assign);
 
     define_language! {
+        /// An [`egg`]-friendly version of [`Expression`]s, this language allows us to manipulate
+        /// and simplify terms.
         enum Expr {
             // Numbers
             "pi" = Pi,
@@ -543,12 +562,18 @@ mod simplification {
         }
     }
 
+    /// Our analysis will perform constant folding on our language.
     #[derive(Default)]
     struct ConstantFold;
     type EGraph = egg::EGraph<Expr, ConstantFold>;
 
+    /// Our analysis will perform constant folding on our language.
     impl egg::Analysis<Expr> for ConstantFold {
+
+        /// Constant values
         type Data = Option<C>;
+
+        /// Pull the (possible) [`Self::Data`] from the given expression.
         fn make(egraph: &EGraph, enode: &Expr) -> Self::Data {
             let x = |id: &Id| egraph[*id].data.as_ref();
             match enode {
@@ -570,12 +595,15 @@ mod simplification {
             }
         }
 
+        /// Merge two pieces of data with the same value.
         fn merge(&mut self, to: &mut Self::Data, from: Self::Data) -> egg::DidMerge {
             egg::merge_option(to, from, |a, b| {
                 assert!(a.close(b), "Merged non-equal constants");
                 egg::DidMerge(false, false)
             })
         }
+
+        /// Update the graph to equate and simplify constant values.
         fn modify(egraph: &mut EGraph, id: Id) {
             let data = egraph[id].data.clone();
             if let Some(c) = data {
@@ -590,6 +618,7 @@ mod simplification {
         }
     }
 
+    /// Is the variable equivalent to zero in the given circumstances?
     fn is_not_zero(var: &str) -> impl Fn(&mut EGraph, Id, &egg::Subst) -> bool {
         let key = var.parse().unwrap();
         move |egraph, _, subst| {
@@ -601,8 +630,10 @@ mod simplification {
         }
     }
 
+    /// Rewrite terms of our [`Expr`] language by reducing with our [`ConstantFold`] analysis.
     type Rewrite = egg::Rewrite<Expr, ConstantFold>;
 
+    /// Instantiate our rewrite rules for simplifying [`Expr`] terms.
     fn make_rules() -> Vec<Rewrite> {
         vec![
             // largely copied from https://github.com/egraphs-good/egg/blob/main/tests/math.rs
