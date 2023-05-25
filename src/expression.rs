@@ -232,7 +232,7 @@ mod simplification {
     };
     use symbolic_expressions::{parser, IntoSexp, Sexp};
 
-    pub(crate) fn run(expression: &Expression) -> Expression {
+    pub(super) fn run(expression: &Expression) -> Expression {
         let sexp = expression.into_sexp();
         let recexpr = sexp
             .to_string()
@@ -246,6 +246,7 @@ mod simplification {
         let simpler_sexp = parser::parse_str(&best.to_string())
             .expect("RecExpr implements to_sexp, so this parse should succeed");
         let mut simpler_exp = Expression::from(&simpler_sexp);
+        // Edge case: negation of a constant isn't getting absorbed
         if let Ok(number) = simpler_exp.evaluate(&Default::default(), &Default::default()) {
             simpler_exp = Expression::Number(number);
         }
@@ -547,93 +548,43 @@ mod simplification {
     type EGraph = egg::EGraph<Expr, ConstantFold>;
 
     impl egg::Analysis<Expr> for ConstantFold {
-        type Data = Option<(C, egg::PatternAst<Expr>)>;
+        type Data = Option<C>;
         fn make(egraph: &EGraph, enode: &Expr) -> Self::Data {
-            let x = |id: &Id| egraph[*id].data.as_ref().map(|d| d.0);
+            let x = |id: &Id| egraph[*id].data.as_ref();
             match enode {
-                Expr::Pi => Some((C::PI, enode.to_string().parse().ok()?)),
-                Expr::Number(c) => Some((*c, c.to_string().parse().ok()?)),
-                Expr::Cis(id) => {
-                    let c = x(id)?;
-                    Some((c.cis(), format!("(cis {c})").parse().ok()?))
-                }
-                Expr::Cos(id) => {
-                    let c = x(id)?;
-                    Some((c.cos(), format!("(cos {c})").parse().ok()?))
-                }
-                Expr::Exp(id) => {
-                    let c = x(id)?;
-                    Some((c.exp(), format!("(exp {c})").parse().ok()?))
-                }
-                Expr::Sin(id) => {
-                    let c = x(id)?;
-                    Some((c.sin(), format!("(sin {c})").parse().ok()?))
-                }
-                Expr::Sqrt(i) => {
-                    let c = x(i)?;
-                    Some((c.sqrt(), format!("(sqrt {c})").parse().ok()?))
-                }
-                Expr::Pos(id) => {
-                    let c = x(id)?;
-                    Some((c, format!("(pos {c})").parse().ok()?))
-                }
-                Expr::Neg(id) => {
-                    let c = -x(id)?;
-                    Some((c, format!("{c}").parse().ok()?))
-                }
-                Expr::Pow([base, power]) => {
-                    let b = x(base)?;
-                    let p = x(power)?;
-                    Some((b.pow(p), format!("(^ {b} {p})").parse().ok()?))
-                }
-                Expr::Mul([left, right]) => {
-                    let l = x(left)?;
-                    let r = x(right)?;
-                    Some((l * r, format!("(* {l} {r})").parse().ok()?))
-                }
-                Expr::Div([left, right]) => {
-                    let l = x(left)?;
-                    let r = x(right)?;
-                    Some((l / r, format!("(/ {l} {r})").parse().ok()?))
-                }
-                Expr::Add([left, right]) => {
-                    let l = x(left)?;
-                    let r = x(right)?;
-                    Some((l + r, format!("(+ {l} {r})").parse().ok()?))
-                }
-                Expr::Sub([left, right]) => {
-                    let l = x(left)?;
-                    let r = x(right)?;
-                    Some((l - r, format!("(- {l} {r})").parse().ok()?))
-                }
+                Expr::Pi => Some(C::PI),
+                Expr::Number(c) => Some(*c),
+                Expr::Cis(id) => Some(x(id)?.cis()),
+                Expr::Cos(id) => Some(x(id)?.cos()),
+                Expr::Exp(id) => Some(x(id)?.exp()),
+                Expr::Sin(id) => Some(x(id)?.sin()),
+                Expr::Sqrt(id) => Some(x(id)?.sqrt()),
+                Expr::Pos(id) => Some(*x(id)?),
+                Expr::Neg(id) => Some(-*x(id)?),
+                Expr::Pow([base, power]) => Some(x(base)?.pow(*x(power)?)),
+                Expr::Mul([left, right]) => Some(*x(left)? * *x(right)?),
+                Expr::Div([left, right]) => Some(*x(left)? / *x(right)?),
+                Expr::Add([left, right]) => Some(*x(left)? + *x(right)?),
+                Expr::Sub([left, right]) => Some(*x(left)? - *x(right)?),
                 _ => None,
             }
         }
 
         fn merge(&mut self, to: &mut Self::Data, from: Self::Data) -> egg::DidMerge {
             egg::merge_option(to, from, |a, b| {
-                assert_eq!(a.0, b.0, "Merged non-equal constants");
+                assert!(a.close(b), "Merged non-equal constants");
                 egg::DidMerge(false, false)
             })
         }
         fn modify(egraph: &mut EGraph, id: Id) {
             let data = egraph[id].data.clone();
-            if let Some((c, pat)) = data {
+            if let Some(c) = data {
                 let value = match c {
                     _ if c.close(C::PI) => Expr::Pi,
                     _ => Expr::Number(c),
                 };
-                if egraph.are_explanations_enabled() {
-                    egraph.union_instantiations(
-                        &pat,
-                        &value.to_string().parse().unwrap(),
-                        &Default::default(),
-                        "constant-fold".to_string(),
-                    );
-                } else {
-                    let added = egraph.add(value);
-                    egraph.union(id, added);
-                }
+                let added = egraph.add(value);
+                egraph.union(id, added);
                 egraph[id].nodes.retain(|n| n.is_leaf());
             }
         }
@@ -645,7 +596,7 @@ mod simplification {
             egraph[subst[key]]
                 .data
                 .as_ref()
-                .map(|(value, _)| !value.close(C::ZERO))
+                .map(|value| !value.close(C::ZERO))
                 .unwrap_or(false)
         }
     }
@@ -654,13 +605,14 @@ mod simplification {
 
     fn make_rules() -> Vec<Rewrite> {
         vec![
-            // Infix arithmetic
             // largely copied from https://github.com/egraphs-good/egg/blob/main/tests/math.rs
+            // and https://github.com/herbie-fp/herbie/blob/main/egg-herbie/src/rules.rs
             rw!("comm-add"      ; "(+ ?a ?b)"               => "(+ ?b ?a)"),
             rw!("comm-mul"      ; "(* ?a ?b)"               => "(* ?b ?a)"),
             rw!("assoc-add"     ; "(+ ?a (+ ?b ?c))"        => "(+ (+ ?a ?b) ?c)"),
             rw!("assoc-mul"     ; "(* ?a (* ?b ?c))"        => "(* (* ?a ?b) ?c)"),
             rw!("sub-canon"     ; "(- ?a ?b)"               => "(+ ?a (* -1 ?b))"),
+            rw!("sub-canon-2"   ; "(- ?a ?b)"               => "(+ ?a (neg ?b))"),
             rw!("div-canon"     ; "(/ ?a ?b)"               => "(* ?a (^ ?b -1))" if is_not_zero("?b")),
             rw!("zero-add"      ; "(+ ?a 0)"                => "?a"),
             rw!("zero-mul"      ; "(* ?a 0)"                => "0"),
@@ -670,13 +622,25 @@ mod simplification {
             rw!("distribute"    ; "(* ?a (+ ?b ?c))"        => "(+ (* ?a ?b) (* ?a ?c))"),
             rw!("factor"        ; "(+ (* ?a ?b) (* ?a ?c))" => "(* ?a (+ ?b ?c))"),
             rw!("pow-mul"       ; "(* (^ ?a ?b) (^ ?a ?c))" => "(^ ?a (+ ?b ?c))"),
-            rw!("pow0"          ; "(^ ?x 0)"                => "1" if is_not_zero("?x")),
-            rw!("pow1"          ; "(^ ?x 1)"                => "?x"),
-            rw!("pow2"          ; "(^ ?x 2)"                => "(* ?x ?x)"),
-            rw!("pow-recip"     ; "(^ ?x -1)"               => "(/ 1 ?x)" if is_not_zero("?x")),
-            rw!("recip-mul-div" ; "(* ?x (/ 1 ?x))"         => "1" if is_not_zero("?x")),
-            // Prefix
+            rw!("mul-pow"       ; "(^ ?a (+ ?b ?c))"        => "(* (^ ?a ?b) (^ ?a ?c))"),
+            rw!("pow0"          ; "(^ ?a 0)"                => "1" if is_not_zero("?a")),
+            rw!("pow1"          ; "(^ ?a 1)"                => "?a"),
+            rw!("pow2"          ; "(^ ?a 2)"                => "(* ?a ?a)"),
+            rw!("pow2-neg"      ; "(^ (neg ?a) 2)"          => "(* ?a ?a)"),
+            rw!("pow2-sqrt"     ; "(^ (sqrt ?a) 2)"         => "?a"),
+            rw!("sqrt-pow2"     ; "(sqrt (^ ?a 2))"         => "?a"),
+            rw!("pow1/2"        ; "(^ ?a 0.5)"              => "(sqrt ?a)"),
+            rw!("pow-recip"     ; "(^ ?a -1)"               => "(/ 1 ?a)" if is_not_zero("?a")),
+            rw!("recip-mul-div" ; "(* ?a (/ 1 ?a))"         => "1" if is_not_zero("?a")),
             rw!("pos-canon"     ; "(pos ?a)"                => "?a"),
+            rw!("neg-canon"     ; "(neg ?a)"                => "-?a"),
+            rw!("neg-canon-2"   ; "(neg ?a)"                => "(* -1 ?a)"),
+            rw!("cos-zero"      ; "(cos 0)"                 => "1"),
+            rw!("cos-pi"        ; "(cos pi)"                => "-1"),
+            rw!("sin-zero"      ; "(sin 0)"                 => "0"),
+            rw!("sin-pi"        ; "(sin pi)"                => "0"),
+            rw!("cos-neg"       ; "(cos (neg ?a))"          => "(cos ?a)"),
+            rw!("sin-neg"       ; "(sin (neg ?a))"          => "(neg (sin ?a))"),
         ]
     }
 
@@ -712,6 +676,12 @@ mod simplification {
             memory_ref,
             make_rules(),
             "theta[0]" => "theta[0]"
+        }
+
+        egg::test_fn! {
+            var,
+            make_rules(),
+            "%foo" => "%foo"
         }
 
         #[test]
