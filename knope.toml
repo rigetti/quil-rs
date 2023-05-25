@@ -1,6 +1,6 @@
 [packages.quil-rs]
 versioned_files = ["quil-rs/Cargo.toml"]
-changelog = "quil-py/CHANGELOG.md"
+changelog = "quil-rs/CHANGELOG.md"
 scopes = ["rs", "rust", "quil-rs"]
 
 [packages.quil-py]
