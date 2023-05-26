@@ -769,8 +769,16 @@ impl Expression {
     /// assert_eq!(expression, Expression::Number(Complex64::from(3.0)));
     /// ```
     pub fn simplify(&mut self) {
-        if let Ok(simpler) = simplification::run(self) {
-            *self = simpler;
+        match self {
+            Expression::Address(_)
+            | Expression::Number(_)
+            | Expression::PiConstant
+            | Expression::Variable(_) => {}
+            _ => {
+                if let Ok(simpler) = simplification::run(self) {
+                    *self = simpler;
+                }
+            }
         }
     }
 
