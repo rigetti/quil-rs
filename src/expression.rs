@@ -417,7 +417,12 @@ mod simplification {
 
     /// An [`egg`]-friendly complex number.
     /// We can't jsut use `num_complex::Complex64`, because we need `Ord` and `Hash`.
-    #[derive(Debug, Default, PartialEq, Eq, Clone, Copy, Hash)]
+    ///
+    /// Fun fact, there is no total ordering on the complex numbers; however, the derived thing
+    /// here will work for our purposes.
+    ///
+    /// https://en.wikipedia.org/wiki/Complex_number#Ordering
+    #[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
     struct C {
         re: OrderedFloat<f64>,
         im: OrderedFloat<f64>,
@@ -453,33 +458,6 @@ mod simplification {
     impl std::fmt::Display for C {
         fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
             f.write_str(&format_complex(&num_complex::Complex64::from(*self)))
-        }
-    }
-
-    /// An "ordering" that will work well enough for our purposes but isn't mathematically sound.
-    /// Never tell my math professors I did this.
-    ///
-    /// https://en.wikipedia.org/wiki/Complex_number#Ordering
-    impl PartialOrd for C {
-        fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-            Some(self.cmp(other))
-        }
-    }
-
-    /// An "ordering" that will work well enough for our purposes but isn't mathematically sound.
-    /// Never tell my math professors I did this.
-    ///
-    /// https://en.wikipedia.org/wiki/Complex_number#Ordering
-    impl Ord for C {
-        fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-            let (r1, t1) = num_complex::Complex64::from(*self).to_polar();
-            let (r2, t2) = num_complex::Complex64::from(*other).to_polar();
-            let first = r1.partial_cmp(&r2).unwrap();
-            if first == std::cmp::Ordering::Equal {
-                t1.partial_cmp(&t2).unwrap()
-            } else {
-                first
-            }
         }
     }
 
