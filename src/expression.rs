@@ -225,7 +225,7 @@ mod simplification {
         format_complex, is_small, Expression, ExpressionFunction, InfixOperator, MemoryReference,
         PrefixOperator,
     };
-    use egg::{define_language, rewrite as rw, Id, Language};
+    use egg::{define_language, rewrite as rw, FromOp, Id, Language, RecExpr};
     use ordered_float::OrderedFloat;
     use std::{
         ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign},
@@ -234,15 +234,13 @@ mod simplification {
     use symbolic_expressions::{parser, IntoSexp, Sexp};
 
     /// Simplify an [`Expression`]:
-    /// - turn it into a stringified [`Sexp`], then parse that into a [`RecExpr<Expr>`],
+    /// - turn it into a [`Sexp`],
+    /// - parse that into a [`RecExpr<Expr>`],
     /// - let [`egg`] simplify the recursive expression as best as it can,
-    /// - and turn that back into an [`Expression`].
+    /// - and turn that back into an [`Expression`] (by way of another [`Sexp`]).
     pub(super) fn run(expression: &Expression) -> Result<Expression, SimplificationError> {
         let sexp = expression.into_sexp();
-        let recexpr = sexp
-            .to_string()
-            .parse()
-            .map_err(|e| SimplificationError::RecExprFromSexp(format!("{e:#?}")))?;
+        let recexpr = parse_expr(&sexp)?;
         let runner = egg::Runner::default()
             .with_expr(&recexpr)
             .run(&make_rules());
@@ -265,9 +263,9 @@ mod simplification {
         RecExprFromSexp(String),
         #[error("Unable to parse Sexp from given RecExpr: {0}")]
         SexpFromRecExpr(String),
-        #[error("Can't make an expression from an empty Sexp")]
-        ExprEmptySexp,
-        #[error("These strings encode valid Expressions by design, but saw: {0}")]
+        #[error("Can't make anything from an empty Sexp")]
+        EmptySexp,
+        #[error("These strings should encode valid Expressions by design, but saw: {0}")]
         InvalidExpressionString(#[from] super::ProgramError<Expression>),
         #[error("Unexpected unary expr: {0}")]
         UnexpectedUnaryExpr(String),
@@ -277,6 +275,8 @@ mod simplification {
         UnexpectedInfixOp(String),
         #[error("Unexpected list Sexp: {0:#?}")]
         UnexpectedListSexp(Sexp),
+        #[error("Unknown operation: {0}")]
+        UnknownOp(String),
     }
 
     impl IntoSexp for Expression {
@@ -334,7 +334,7 @@ mod simplification {
         type Error = SimplificationError;
         fn try_from(sexp: &Sexp) -> Result<Self, Self::Error> {
             match sexp {
-                Sexp::Empty => Err(SimplificationError::ExprEmptySexp),
+                Sexp::Empty => Err(SimplificationError::EmptySexp),
                 Sexp::String(s) => {
                     let expr = Expression::from_str(s)
                         .map_err(SimplificationError::InvalidExpressionString)?;
@@ -584,6 +584,44 @@ mod simplification {
             // Variables
             Symbol(egg::Symbol),
         }
+    }
+
+    /// Parse the [`Sexp`] into a [`RecExpr<Expr>`], avoiding needless stringification.
+    ///
+    /// See https://docs.rs/egg/0.9.4/src/egg/language.rs.html#545
+    fn parse_expr(sexp: &Sexp) -> Result<RecExpr<Expr>, SimplificationError> {
+        fn parse_sexp_into(
+            sexp: &Sexp,
+            expr: &mut RecExpr<Expr>,
+        ) -> Result<Id, SimplificationError> {
+            match sexp {
+                Sexp::Empty => Err(SimplificationError::EmptySexp),
+                Sexp::String(s) => {
+                    let node = Expr::from_op(s, vec![])
+                        .map_err(|e| SimplificationError::UnknownOp(format!("{e:#?}")))?;
+                    Ok(expr.add(node))
+                }
+                Sexp::List(list) if list.is_empty() => Err(SimplificationError::EmptySexp),
+                Sexp::List(list) => match &list[0] {
+                    Sexp::Empty => Err(SimplificationError::EmptySexp), // should be unreachable
+                    list @ Sexp::List(..) => {
+                        Err(SimplificationError::UnexpectedListSexp(list.clone()))
+                    }
+                    Sexp::String(op) => {
+                        let arg_ids: Vec<Id> = list[1..]
+                            .iter()
+                            .map(|s| parse_sexp_into(s, expr))
+                            .collect::<Result<_, _>>()?;
+                        let node = Expr::from_op(op, arg_ids)
+                            .map_err(|e| SimplificationError::UnknownOp(format!("{e:#?}")))?;
+                        Ok(expr.add(node))
+                    }
+                },
+            }
+        }
+        let mut expr = RecExpr::default();
+        parse_sexp_into(sexp, &mut expr)?;
+        Ok(expr)
     }
 
     /// Our analysis will perform constant folding on our language.
