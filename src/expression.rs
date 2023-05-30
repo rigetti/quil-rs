@@ -594,13 +594,14 @@ mod simplification {
         Ok(expr)
     }
 
-    /// Our analysis will perform constant folding on our language.
+    /// Our analysis will perform arithmetic simplification (largely, constant folding) on our
+    /// language.
     #[derive(Default)]
-    struct ConstantFold;
-    type EGraph = egg::EGraph<Expr, ConstantFold>;
+    struct Arithmetic;
+    type EGraph = egg::EGraph<Expr, Arithmetic>;
 
     /// Our analysis will perform constant folding on our language.
-    impl egg::Analysis<Expr> for ConstantFold {
+    impl egg::Analysis<Expr> for Arithmetic {
         /// Constant values
         type Data = Option<C>;
 
@@ -660,8 +661,8 @@ mod simplification {
         }
     }
 
-    /// Rewrite terms of our [`Expr`] language by reducing with our [`ConstantFold`] analysis.
-    type Rewrite = egg::Rewrite<Expr, ConstantFold>;
+    /// Rewrite terms of our [`Expr`] language by reducing with our [`Arithmetic`] analysis.
+    type Rewrite = egg::Rewrite<Expr, Arithmetic>;
 
     /// Instantiate our rewrite rules for simplifying [`Expr`] terms.
     fn make_rules() -> Vec<Rewrite> {
