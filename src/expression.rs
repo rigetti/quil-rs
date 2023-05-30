@@ -319,7 +319,7 @@ mod simplification {
                     s.push(&**expression);
                     s
                 }
-                Expression::Variable(s) => s.into(),
+                Expression::Variable(s) => format!("%{s}").into(),
             }
         }
     }
@@ -336,15 +336,7 @@ mod simplification {
             match sexp {
                 Sexp::Empty => Err(SimplificationError::EmptySexp),
                 Sexp::String(s) => {
-                    let expr = Expression::from_str(s)
-                        .map_err(SimplificationError::InvalidExpressionString)?;
-                    Ok(match expr {
-                        // corner case, we're missing the prefix %
-                        Expression::Address(MemoryReference { name, .. }) => {
-                            Expression::Variable(name)
-                        }
-                        e => e,
-                    })
+                    Expression::from_str(s).map_err(SimplificationError::InvalidExpressionString)
                 }
                 Sexp::List(ss) => match &ss[..] {
                     [Sexp::String(s), e] => {
