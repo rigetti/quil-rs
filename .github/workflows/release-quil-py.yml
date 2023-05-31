@@ -5,6 +5,9 @@ on:
     types: [published]
   workflow_dispatch:
     description: "Manually publish release"
+  push: 
+    branches:
+      - 'release-quil-py'
 
 
 jobs:
@@ -15,7 +18,7 @@ jobs:
       - run: echo "Release tag starts with quil-py/v, proceeding with release"
 
   macos:
-    runs-on: macos-11
+    runs-on: macos-12
     needs: is-python-release
     strategy:
       matrix:
@@ -47,7 +50,7 @@ jobs:
           path: dist
 
   linux:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: is-python-release
     env:
       CXXFLAGS: "-std=c++11"
@@ -72,6 +75,10 @@ jobs:
         target: ${{ matrix.target }}
         manylinux: 2014
         args: -i ${{ matrix.python-version }} --release --manifest-path quil-py/Cargo.toml --out dist
+
+    - name: Install wheel
+      run: |
+        pip install quil --no-index --find-links dist --force-reinstall
     - name: Upload wheels
       uses: actions/upload-artifact@v3
       with:
@@ -86,12 +93,12 @@ jobs:
       - uses: actions/download-artifact@v3
       - name: Publish to PyPi
         env:
-          MATURIN_USERNAME: ${{ secrets.PYPI_USERNAME }}
-          MATURIN_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+          MATURIN_USERNAME: ${{ secrets.TEST_PYPI_USERNAME }}
+          MATURIN_PASSWORD: ${{ secrets.TEST_PYPI_PASSWORD }}
         uses: messense/maturin-action@v1
         with:
           command: upload 
-          args: --skip-existing wheels/*
+          args: -r https://test.pypi.org/legacy/ --skip-existing wheels/*
 
   publish-rust-crate:
     name: Release
@@ -106,4 +113,4 @@ jobs:
         with:
           toolchain: stable
           override: true
-      - run: cargo publish --manifest-path=quil-py/Cargo.toml --token ${{ secrets.CRATES_IO_TOKEN }}
+      - run: cargo publish --manifest-path=quil-py/Cargo.toml --token ${{ secrets.CRATES_IO_TOKEN }} --dry-run
