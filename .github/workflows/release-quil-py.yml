@@ -75,8 +75,8 @@ jobs:
         target: ${{ matrix.target }}
         manylinux: 2014
         args: -i ${{ matrix.python-version }} --release --manifest-path quil-py/Cargo.toml --out dist
-
     - name: Install wheel
+      if: ${{ target == 'x86_64' }} # pip can only install wheels for it's own architecture
       run: |
         pip install quil --no-index --find-links dist --force-reinstall
     - name: Upload wheels
