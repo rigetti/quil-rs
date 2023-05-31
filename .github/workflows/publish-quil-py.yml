@@ -95,10 +95,11 @@ jobs:
         env:
           MATURIN_USERNAME: ${{ secrets.TEST_PYPI_USERNAME }}
           MATURIN_PASSWORD: ${{ secrets.TEST_PYPI_PASSWORD }}
+          MATURIN_REPOSITORY_URL: https://test.pypi.org/legacy
         uses: messense/maturin-action@v1
         with:
           command: upload 
-          args: -r 'https://test.pypi.org/legacy/' --skip-existing wheels/*
+          args: --skip-existing wheels/*
 
   publish-rust-crate:
     name: Release
