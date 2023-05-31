@@ -1,4 +1,4 @@
-name: Release crates
+name: Publish quil-rs
 
 on:
   release:

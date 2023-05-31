@@ -1,4 +1,4 @@
-name: Release quil-py
+name: Publish quil-py
 
 on:
   release:
@@ -98,7 +98,7 @@ jobs:
         uses: messense/maturin-action@v1
         with:
           command: upload 
-          args: -r https://test.pypi.org/legacy/ --skip-existing wheels/*
+          args: -r 'https://test.pypi.org/legacy/' --skip-existing wheels/*
 
   publish-rust-crate:
     name: Release
