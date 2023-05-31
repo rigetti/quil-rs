@@ -12,7 +12,7 @@ on:
 
 jobs:
   is-python-release:
-    if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.event.release.tag_name, 'quil-py/v') }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'push' || startsWith(github.event.release.tag_name, 'quil-py/v') }}
     runs-on: ubuntu-latest
     steps:
       - run: echo "Release tag starts with quil-py/v, proceeding with release"
