@@ -1260,16 +1260,25 @@ mod tests {
         }
     }
 
+    // Better behaved than the auto-derived version re: names
+    fn arb_memory_reference() -> impl Strategy<Value = MemoryReference> {
+        (r"[a-zA-Z][a-zA-Z0-9]+", any::<u64>())
+            .prop_map(|(name, index)| MemoryReference { name, index })
+    }
+
+    fn arb_complex64() -> impl Strategy<Value = Complex64> {
+        any::<(f64, f64)>().prop_map(|(re, im)| Complex64 { re, im })
+    }
+
     /// Generate an arbitrary Expression for a property test.
     /// See https://docs.rs/proptest/1.0.0/proptest/prelude/trait.Strategy.html#method.prop_recursive
     fn arb_expr() -> impl Strategy<Value = Expression> {
         use Expression::*;
         let leaf = prop_oneof![
-            any::<MemoryReference>().prop_map(Address),
-            (any::<f64>(), any::<f64>())
-                .prop_map(|(re, im)| Number(num_complex::Complex64::new(re, im))),
+            arb_memory_reference().prop_map(Address),
+            arb_complex64().prop_map(Number),
             Just(PiConstant),
-            ".*".prop_map(Variable),
+            r"[a-zA-Z][a-zA-Z0-9]+".prop_map(Variable),
         ];
         (leaf).prop_recursive(
             4,  // No more than 4 branch levels deep
@@ -1297,10 +1306,6 @@ mod tests {
                 ]
             },
         )
-    }
-
-    fn arb_complex64() -> impl Strategy<Value = Complex64> {
-        any::<(f64, f64)>().prop_map(|(re, im)| Complex64::new(re, im))
     }
 
     proptest! {

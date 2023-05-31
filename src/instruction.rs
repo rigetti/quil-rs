@@ -23,9 +23,6 @@ use crate::expression::Expression;
 use crate::parser::{common::parse_memory_reference, lex, ParseError};
 use crate::program::{disallow_leftover, frame::FrameMatchCondition, SyntaxError};
 
-#[cfg(test)]
-use proptest_derive::Arbitrary;
-
 #[derive(Clone, Debug, PartialEq)]
 pub enum ArithmeticOperand {
     LiteralInteger(i64),
@@ -322,14 +319,11 @@ mod waveform_invocation_tests {
     }
 }
 
-#[derive(Clone, Debug, Hash, PartialEq)]
-#[cfg_attr(test, derive(Arbitrary))]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct MemoryReference {
     pub name: String,
     pub index: u64,
 }
-
-impl Eq for MemoryReference {}
 
 impl fmt::Display for MemoryReference {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
