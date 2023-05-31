@@ -5,14 +5,10 @@ on:
     types: [published]
   workflow_dispatch:
     description: "Manually publish release"
-  push: 
-    branches:
-      - 'release-quil-py'
-
 
 jobs:
   is-python-release:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'push' || startsWith(github.event.release.tag_name, 'quil-py/v') }}
+    if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.event.release.tag_name, 'quil-py/v') }}
     runs-on: ubuntu-latest
     steps:
       - run: echo "Release tag starts with quil-py/v, proceeding with release"
@@ -93,9 +89,8 @@ jobs:
       - uses: actions/download-artifact@v3
       - name: Publish to PyPi
         env:
-          MATURIN_USERNAME: ${{ secrets.TEST_PYPI_USERNAME }}
-          MATURIN_PASSWORD: ${{ secrets.TEST_PYPI_PASSWORD }}
-          MATURIN_REPOSITORY_URL: https://test.pypi.org/legacy
+          MATURIN_USERNAME: ${{ secrets.PYPI_USERNAME }}
+          MATURIN_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
         uses: messense/maturin-action@v1
         with:
           command: upload 
@@ -114,4 +109,4 @@ jobs:
         with:
           toolchain: stable
           override: true
-      - run: cargo publish --manifest-path=quil-py/Cargo.toml --token ${{ secrets.CRATES_IO_TOKEN }} --dry-run
+      - run: cargo publish --manifest-path=quil-py/Cargo.toml --token ${{ secrets.CRATES_IO_TOKEN }}
