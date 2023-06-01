@@ -24,7 +24,6 @@
 - `CalibrationSet` now has getter methods for `calibrations` and `measure_calibrations`.
 - `CalibrationSet` now has a `get_match_for_measurement` method.
 - `Program` now has a `dagger` method for applying `DAGGER` modifiers to all gates in a program.
-- 
 
 ### Fixes
 
