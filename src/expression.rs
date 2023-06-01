@@ -248,12 +248,7 @@ mod simplification {
         let (_, best) = egg::Extractor::new(&runner.egraph, egg::AstSize).find_best(root);
         let simpler_sexp = parser::parse_str(&best.to_string())
             .map_err(|e| SimplificationError::SexpFromRecExpr(format!("{e:#?}")))?;
-        let mut simpler_exp = Expression::try_from(&simpler_sexp)?;
-        // Edge case: negation of a constant isn't getting absorbed
-        if let Ok(number) = simpler_exp.evaluate(&Default::default(), &Default::default()) {
-            simpler_exp = Expression::Number(number);
-        }
-        Ok(simpler_exp)
+        Expression::try_from(&simpler_sexp)
     }
 
     /// All the myriad ways simplifying an [`Expression`] can fail.
@@ -265,8 +260,8 @@ mod simplification {
         SexpFromRecExpr(String),
         #[error("Can't make anything from an empty Sexp")]
         EmptySexp,
-        #[error("These strings should encode valid Expressions by design, but saw: {0}")]
-        InvalidExpressionString(#[from] super::ProgramError<Expression>),
+        #[error("Invalid string for a complex number: {0}")]
+        ComplexParsingError(#[from] num_complex::ParseComplexError<std::num::ParseFloatError>),
         #[error("Unexpected unary expr: {0}")]
         UnexpectedUnaryExpr(String),
         #[error("Expected a valid index: {0}")]
@@ -335,9 +330,12 @@ mod simplification {
         fn try_from(sexp: &Sexp) -> Result<Self, Self::Error> {
             match sexp {
                 Sexp::Empty => Err(SimplificationError::EmptySexp),
-                Sexp::String(s) => {
-                    Expression::from_str(s).map_err(SimplificationError::InvalidExpressionString)
-                }
+                Sexp::String(s) => match s.as_str() {
+                    "pi" => Ok(Expression::PiConstant),
+                    _ => num_complex::Complex64::from_str(s)
+                        .map(Expression::Number)
+                        .map_err(SimplificationError::ComplexParsingError),
+                },
                 Sexp::List(ss) => match &ss[..] {
                     [Sexp::String(s), e] => {
                         let expression = Expression::try_from(e)?.into();
