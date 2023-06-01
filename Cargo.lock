@@ -973,7 +973,7 @@ checksum = "a993555f31e5a609f617c12db6250dedcac1b0a85076912c436e6fc9b2c8e6a3"
 
 [[package]]
 name = "quil-py"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "pyo3",
  "pyo3-build-config",
@@ -984,7 +984,7 @@ dependencies = [
 
 [[package]]
 name = "quil-rs"
-version = "0.16.0-rc.1"
+version = "0.16.0"
 dependencies = [
  "criterion",
  "dot-writer",
@@ -1121,9 +1121,9 @@ checksum = "f162c6dd7b008981e4d40210aca20b4bd0f9b60ca9271061b07f78537722f2e1"
 
 [[package]]
 name = "rigetti-pyo3"
-version = "0.1.0-rc.6"
+version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1278482dd3684b2f648ce34eb2a9183eece8b6660398e2df40fdb3b7fca782a0"
+checksum = "4d5ebc489b238aa8229066ea79babf773a8206813c25dae17b9b826f9b935832"
 dependencies = [
  "num-complex",
  "num-traits",
