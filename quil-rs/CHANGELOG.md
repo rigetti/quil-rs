@@ -1,3 +1,38 @@
+## 0.17.0
+
+### Breaking Changes
+
+- The `Infix`, `Prefix`, and `FunctionCall` variants of `Expression` are no longer struct variants. They now are tuple variants with an inner `InfixExpression`, `PrefixExpression`, and `FunctionCallExpression`, respectively.
+- The `GateType` and `GateSpecification` enums now include a `PauliSum` variant.
+- `program::error::ProgramError<T>` has been renamed to `ParseProgramError<T>`
+- `Program` methods that return a result now use `program::ProgramError` as the error type.
+- `Program.to_headers()` has been removed. This has affected two other methods:
+    - `Program.to_string()` is now implemented via `std::fmt::Display` and doesn't take an argument to include "headers", they are always included in the string.
+    - `Program.to_instructions()` no longer takes an argument to include headers, what were called "headers" are always included.
+- `CalibrationSet::get_match_for_gate` now takes a single `Gate` as a parameter.
+
+### Features
+
+- `PauliSum` `GateSpecification`s are now supported.
+- All instruction types now have a `new` constructor, which perform extra validation, if appropriate.
+- The `Gate` type now has methods for applying `DAGGER`, `CONTROLLED`, and `FORKED` modifiers.
+- `SWAP-PHASES` is now supported.
+- `WAIT` is now supported.
+- `DECLARE` with offests and sharing are now supported.
+- `Program`s can now be appended with the `+` operator.
+- `get` and `insert` methods have been added to `FrameSet`
+- `CalibrationSet` now has getter methods for `calibrations` and `measure_calibrations`.
+- `CalibrationSet` now has a `get_match_for_measurement` method.
+- `Program` now has a `dagger` method for applying `DAGGER` modifiers to all gates in a program.
+- 
+
+### Fixes
+
+- Casing is now ignored when parsing function call expressions.
+- Parameters now include the leading `%` when printed with `std::fmt::Display`.
+- `DEFCAL MEASURE` can now be parsed with a variable qubit and an address, instead of just one or the other.
+
+
 ## 0.16.0
 
 ### Breaking Changes
