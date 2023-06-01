@@ -26,10 +26,6 @@ command = "sh ./scripts/sync_versions.sh"
 
 [[workflows.steps]]
 type = "Command"
-command = "cargo update -w"
-
-[[workflows.steps]]
-type = "Command"
 command = "git add Cargo.lock quil-py/Cargo.toml"
 
 [[workflows.steps]]
