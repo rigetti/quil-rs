@@ -21,10 +21,12 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.PAT }}
     steps:
     - uses: actions/checkout@v3
-    - uses: taiki-e/install-action@cargo-edit
       with:
         fetch-depth: 0
         token: ${{ secrets.PAT }}
+    - uses: taiki-e/install-action@v2
+      with:
+        tool: cargo-edit
     - name: Install jq
       run: |
         sudo apt-get update
