@@ -1,8 +1,13 @@
 [package]
 name = "quil-py"
+description = "Python bindings for quil-rs"
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
+repository = "https://github.com/rigetti/quil-rs"
+keywords = ["pyquil", "SDK", "Rigetti", "Quil", "Quantum"]
+categories = ["api-bindings", "parsers", "science", "emulators"]
+readme = "./README.md"
 
 [lib]
 # The name of the native library. This is the name which will be used in Python to import the
@@ -16,7 +21,7 @@ name = "quil"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-quil-rs = { path = "../quil-rs", version="0.16.0-rc.0" }
+quil-rs = { path = "../quil-rs", version = "0.16.0-rc.1" }
 strum.workspace = true
 # pyo3 dependencies should be updated together
 pyo3 = { version = "0.17" }
