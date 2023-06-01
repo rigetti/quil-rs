@@ -1,0 +1,8 @@
+---
+source: quil-rs/src/instruction/gate.rs
+expression: gate_def.to_string()
+---
+DEFGATE ParamGate(%theta) AS MATRIX:
+	cos(%theta/2), -1.0i*sin(%theta/2)
+	-1.0i*sin(%theta/2), cos(%theta/2)
+
