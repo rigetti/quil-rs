@@ -468,7 +468,7 @@ mod describe_skip_newlines_and_comments {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use crate::{
         expression::{
             Expression, InfixExpression, InfixOperator, PrefixExpression, PrefixOperator,
@@ -481,6 +481,64 @@ mod tests {
     use nom_locate::LocatedSpan;
 
     use super::{parse_matrix, parse_pauli_terms, parse_permutation, parse_waveform_invocation};
+
+    /// A Quil program which uses all available instructions.
+    pub const KITCHEN_SINK_QUIL: &str = "DECLARE ro BIT[1]
+DEFGATE HADAMARD AS MATRIX:
+\t(1/sqrt(2)),(1/sqrt(2))
+\t(1/sqrt(2)),((-1)/sqrt(2))
+
+DEFGATE RX(%theta) AS MATRIX:
+\tcos((%theta/2)),((-1i)*sin((%theta/2)))
+\t((-1i)*sin((%theta/2))),cos((%theta/2))
+
+DEFGATE Name AS PERMUTATION:
+\t1, 0
+
+DEFCIRCUIT SIMPLE:
+\tX 0
+\tX 1
+
+RX 0
+CZ 0 1
+MEASURE 0 ro[0]
+RESET 0
+RESET
+CAPTURE 0 \"out\" my_waveform() iq[0]
+DEFCAL X 0:
+\tPULSE 0 \"xy\" my_waveform()
+
+DEFCAL RX(%theta) 0:
+\tPULSE 0 \"xy\" my_waveform()
+
+DEFCAL MEASURE 0 dest:
+\tDECLARE iq REAL[2]
+\tCAPTURE 0 \"out\" flat(duration: 1000000, iqs: (2+3i)) iq[0]
+
+DEFFRAME 0 \"xy\":
+\tSAMPLE-RATE: 3000
+
+DEFFRAME 0 \"xy\":
+\tDIRECTION: \"rx\"
+\tCENTER-FREQUENCY: 1000
+\tHARDWARE-OBJECT: \"some object\"
+\tINITIAL-FREQUENCY: 2000
+\tSAMPLE-RATE: 3000
+
+DELAY 0 100
+DELAY 0 \"xy\" 100000000
+FENCE 0
+FENCE 0 1
+PULSE 0 \"xy\" my_waveform()
+PULSE 0 1 \"cz\" my_parametrized_waveform(a: 1)
+RAW-CAPTURE 0 \"out\" 200000000 iqs[0]
+SET-FREQUENCY 0 \"xy\" 5400000000
+SET-PHASE 0 \"xy\" pi
+SET-SCALE 0 \"xy\" pi
+SHIFT-FREQUENCY 0 \"ro\" 6100000000
+SHIFT-PHASE 0 \"xy\" (-pi)
+SHIFT-PHASE 0 \"xy\" (%theta*(2/pi))
+SWAP-PHASES 2 3 \"xy\" 3 4 \"xy\"";
 
     #[test]
     fn waveform_invocation() {

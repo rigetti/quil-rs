@@ -6,7 +6,7 @@ DEFCAL RX(%theta) %qubit:
 	PULSE 1 "xy" gaussian(duration: 1, fwhm: 2, t0: 3)
 DEFCAL RX(%theta) 0:
 	PULSE 2 "xy" gaussian(duration: 1, fwhm: 2, t0: 3)
-DEFCAL RX((pi/2)) 0:
+DEFCAL RX(pi/2) 0:
 	PULSE 3 "xy" gaussian(duration: 1, fwhm: 2, t0: 3)
 PULSE 1 "xy" gaussian(duration: 1, fwhm: 2, t0: 3)
 PULSE 2 "xy" gaussian(duration: 1, fwhm: 2, t0: 3)

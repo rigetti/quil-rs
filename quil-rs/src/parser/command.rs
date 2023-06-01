@@ -1,43 +1,24 @@
-// Copyright 2021 Rigetti Computing
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+use nom::branch::alt;
+use nom::combinator::{map, map_res, opt};
+use nom::multi::{many0, many1, separated_list0, separated_list1};
+use nom::sequence::{delimited, pair, preceded, tuple};
 
-use nom::{
-    branch::alt,
-    combinator::{map, map_res, opt},
-    multi::{many0, many1, separated_list0, separated_list1},
-    sequence::{delimited, pair, preceded, tuple},
-};
-
-use crate::{
-    instruction::{
-        Convert, GateSpecification, GateType, Include, PauliSum, PragmaArgument, ValidationError,
-    },
-    parser::common::parse_variable_qubit,
-};
-
+use crate::expression::Expression;
 use crate::instruction::{
     Arithmetic, ArithmeticOperand, ArithmeticOperator, BinaryLogic, BinaryOperator, Calibration,
-    Capture, CircuitDefinition, Comparison, ComparisonOperator, Declaration, Delay, Exchange,
-    Fence, FrameDefinition, GateDefinition, Instruction, Jump, JumpUnless, JumpWhen, Label, Load,
-    MeasureCalibrationDefinition, Measurement, Move, Pragma, Pulse, RawCapture, Reset,
-    SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, Store, UnaryLogic, UnaryOperator,
-    Waveform, WaveformDefinition,
+    Capture, CircuitDefinition, Comparison, ComparisonOperator, Convert, Declaration, Delay,
+    Exchange, Fence, FrameDefinition, GateDefinition, GateSpecification, GateType, Include,
+    Instruction, Jump, JumpUnless, JumpWhen, Label, Load, MeasureCalibrationDefinition,
+    Measurement, Move, PauliSum, Pragma, PragmaArgument, Pulse, Qubit, RawCapture, Reset,
+    SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, Store, SwapPhases, UnaryLogic,
+    UnaryOperator, ValidationError, Waveform, WaveformDefinition,
 };
+
 use crate::parser::instruction::parse_block;
 use crate::parser::InternalParserResult;
-use crate::token;
+use crate::{real, token};
 
+use super::common::parse_variable_qubit;
 use super::{
     common::{
         parse_arithmetic_operand, parse_binary_logic_operand, parse_comparison_operand,
@@ -342,9 +323,19 @@ pub(crate) fn parse_defcircuit<'a>(
 
 /// Parse the contents of a `DELAY` instruction.
 pub(crate) fn parse_delay<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Instruction> {
-    let (input, qubits) = many0(parse_qubit)(input)?;
+    let (input, mut qubits) = many0(parse_qubit)(input)?;
     let (input, frame_names) = many0(token!(String(v)))(input)?;
-    let (input, duration) = parse_expression(input)?;
+    // If there is no intervening frame name and the delay is an integer, it will have been parsed
+    // as a qubit. We check for and correct that condition here.
+    let (input, duration) = parse_expression(input).or_else(|e| {
+        if let Some(Qubit::Fixed(index)) = qubits.last() {
+            let duration = *index as f64;
+            qubits.pop();
+            Ok((input, Expression::Number(real!(duration))))
+        } else {
+            Err(e)
+        }
+    })?;
 
     Ok((
         input,
@@ -551,6 +542,17 @@ pub(crate) fn parse_shift_phase(input: ParserInput) -> InternalParserResult<Inst
     let (input, phase) = parse_expression(input)?;
 
     Ok((input, Instruction::ShiftPhase(ShiftPhase { frame, phase })))
+}
+
+/// Parse the contents of a `SWAP-PHASES` instruction.
+pub(crate) fn parse_swap_phases(input: ParserInput) -> InternalParserResult<Instruction> {
+    let (input, frame_1) = parse_frame_identifier(input)?;
+    let (input, frame_2) = parse_frame_identifier(input)?;
+
+    Ok((
+        input,
+        Instruction::SwapPhases(SwapPhases { frame_1, frame_2 }),
+    ))
 }
 
 /// Parse the contents of a `MEASURE` instruction.

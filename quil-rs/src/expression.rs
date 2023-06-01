@@ -15,6 +15,7 @@
 use lexical::{format, to_string_with_options, WriteFloatOptions};
 use nom_locate::LocatedSpan;
 use num_complex::Complex64;
+use once_cell::sync::Lazy;
 use std::collections::{hash_map::DefaultHasher, HashMap};
 use std::f64::consts::PI;
 use std::fmt;
@@ -486,6 +487,24 @@ impl FromStr for Expression {
     }
 }
 
+static FORMAT_REAL_OPTIONS: Lazy<WriteFloatOptions> = Lazy::new(|| {
+    WriteFloatOptions::builder()
+        .negative_exponent_break(NonZeroI32::new(-5))
+        .positive_exponent_break(NonZeroI32::new(15))
+        .trim_floats(true)
+        .build()
+        .expect("options are valid")
+});
+
+static FORMAT_IMAGINARY_OPTIONS: Lazy<WriteFloatOptions> = Lazy::new(|| {
+    WriteFloatOptions::builder()
+        .negative_exponent_break(NonZeroI32::new(-5))
+        .positive_exponent_break(NonZeroI32::new(15))
+        .trim_floats(false) // Per the quil spec, the imaginary part of a complex number is always a floating point number
+        .build()
+        .expect("options are valid")
+});
+
 /// Format a num_complex::Complex64 value in a way that omits the real or imaginary part when
 /// reasonable. That is:
 ///
@@ -495,41 +514,21 @@ impl FromStr for Expression {
 #[inline(always)]
 fn format_complex(value: &Complex64) -> String {
     const FORMAT: u128 = format::STANDARD;
-    // Safety:
-    // This uses `build_unchecked`, which is safe as long as `is_valid` is true, and
-    // `is_valid` must be true because we don't change the default values for:
-    //   - the exponent string,
-    //   - the decimal point,
-    //   - the NaN string,
-    //   - the ∞ string,
-    //   - or the minimum or maximum significant digits.
-    // Of what we _do_ change:
-    //   - negative_exponent_break is < 0,
-    //   - positive_exponent_break is > 0,
-    //   - and trim floats can only take a bool and both branches are safe.
-    // As of version 6.1.1 of lexical, this means `OPTIONS.is_valid()` must be true. However, we
-    // still `assert!` it just to be "safe."
-    const OPTIONS: WriteFloatOptions = unsafe {
-        let options = WriteFloatOptions::builder()
-            .negative_exponent_break(NonZeroI32::new(-5))
-            .positive_exponent_break(NonZeroI32::new(15))
-            .trim_floats(true)
-            .build_unchecked();
-        assert!(options.is_valid());
-        options
-    };
     if value.re == 0f64 && value.im == 0f64 {
         "0".to_owned()
     } else if value.im == 0f64 {
-        to_string_with_options::<_, FORMAT>(value.re, &OPTIONS)
+        to_string_with_options::<_, FORMAT>(value.re, &FORMAT_REAL_OPTIONS)
     } else if value.re == 0f64 {
-        to_string_with_options::<_, FORMAT>(value.im, &OPTIONS) + "i"
+        to_string_with_options::<_, FORMAT>(value.im, &FORMAT_IMAGINARY_OPTIONS) + "i"
     } else {
-        let mut out = to_string_with_options::<_, FORMAT>(value.re, &OPTIONS);
+        let mut out = to_string_with_options::<_, FORMAT>(value.re, &FORMAT_REAL_OPTIONS);
         if value.im > 0f64 {
             out.push('+')
         }
-        out.push_str(&to_string_with_options::<_, FORMAT>(value.im, &OPTIONS));
+        out.push_str(&to_string_with_options::<_, FORMAT>(
+            value.im,
+            &FORMAT_IMAGINARY_OPTIONS,
+        ));
         out.push('i');
         out
     }
@@ -548,15 +547,63 @@ impl fmt::Display for Expression {
                 left,
                 operator,
                 right,
-            }) => write!(f, "({left}{operator}{right})"),
+            }) => {
+                format_inner_expression(f, left)?;
+                write!(f, "{}", operator)?;
+                format_inner_expression(f, right)
+            }
             Number(value) => write!(f, "{}", format_complex(value)),
             PiConstant => write!(f, "pi"),
             Prefix(PrefixExpression {
                 operator,
                 expression,
-            }) => write!(f, "({operator}{expression})"),
-            Variable(identifier) => write!(f, "%{identifier}"),
+            }) => {
+                write!(f, "{}", operator)?;
+                format_inner_expression(f, expression)
+            }
+            Variable(identifier) => write!(f, "%{}", identifier),
         }
+    }
+}
+
+/// Utility function to wrap infix expressions that are part of an expression in parentheses, so
+/// that correct precedence rules are enforced.
+fn format_inner_expression(f: &mut fmt::Formatter, expression: &Expression) -> fmt::Result {
+    match expression {
+        Expression::Infix(InfixExpression {
+            left,
+            operator,
+            right,
+        }) => write!(f, "({left}{operator}{right})"),
+        _ => write!(f, "{expression}"),
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::{
+        expression::{
+            Expression, InfixExpression, InfixOperator, PrefixExpression, PrefixOperator,
+        },
+        real,
+    };
+
+    #[test]
+    fn formats_nested_expression() {
+        let expression = Expression::Infix(InfixExpression {
+            left: Box::new(Expression::Prefix(PrefixExpression {
+                operator: PrefixOperator::Minus,
+                expression: Box::new(Expression::Number(real!(3f64))),
+            })),
+            operator: InfixOperator::Star,
+            right: Box::new(Expression::Infix(InfixExpression {
+                left: Box::new(Expression::PiConstant),
+                operator: InfixOperator::Slash,
+                right: Box::new(Expression::Number(real!(2f64))),
+            })),
+        });
+
+        assert_eq!(expression.to_string(), "-3*(pi/2)");
     }
 }
 
@@ -958,6 +1005,8 @@ mod tests {
             (Complex64::new(0.0, 0.0), "0"),
             (Complex64::new(-0.0, 0.0), "0"),
             (Complex64::new(-0.0, -0.0), "0"),
+            (Complex64::new(0.0, 1.0), "1.0i"),
+            (Complex64::new(1.0, -1.0), "1-1.0i"),
             (Complex64::new(1.234, 0.0), "1.234"),
             (Complex64::new(0.0, 1.234), "1.234i"),
             (Complex64::new(-1.234, 0.0), "-1.234"),
@@ -966,7 +1015,7 @@ mod tests {
             (Complex64::new(-1.234, 5.678), "-1.234+5.678i"),
             (Complex64::new(1.234, -5.678), "1.234-5.678i"),
             (Complex64::new(-1.234, -5.678), "-1.234-5.678i"),
-            (Complex64::new(1e100, 2e-100), "1e100+2e-100i"),
+            (Complex64::new(1e100, 2e-100), "1e100+2.0e-100i"),
         ] {
             assert_eq!(format_complex(x), *s);
         }
