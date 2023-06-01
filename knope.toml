@@ -22,11 +22,11 @@ prerelease_label = "rc"
 
 [[workflows.steps]]
 type = "Command"
-command = "cargo update -w"
+command = "sh ./scripts/sync_versions.sh"
 
 [[workflows.steps]]
 type = "Command"
-command = "sh ./scripts/sync_versions.sh"
+command = "cargo update -w"
 
 [[workflows.steps]]
 type = "Command"
