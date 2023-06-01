@@ -18,7 +18,7 @@
 - The `Gate` type now has methods for applying `DAGGER`, `CONTROLLED`, and `FORKED` modifiers.
 - `SWAP-PHASES` is now supported.
 - `WAIT` is now supported.
-- `DECLARE` with offests and sharing are now supported.
+- `DECLARE` with offset and sharing is now supported.
 - `Program`s can now be appended with the `+` operator.
 - `get` and `insert` methods have been added to `FrameSet`
 - `CalibrationSet` now has getter methods for `calibrations` and `measure_calibrations`.
