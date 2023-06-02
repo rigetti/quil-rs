@@ -1,18 +1,36 @@
-[package]
-versioned_files = ["Cargo.toml"]
-changelog = "CHANGELOG.md"
+[packages.quil-rs]
+versioned_files = ["quil-rs/Cargo.toml"]
+# Temprorarily disabling this so we can manually write the changelog entry
+# for 0.17.0 since knope doesn't handle generating the changelog for a large
+# feature branch very well. This should be re-enabled from the following release.
+# changelog = "quil-rs/CHANGELOG.md"
+scopes = ["rs", "rust", "quil-rs"]
+
+[packages.quil-py]
+versioned_files = ["quil-py/Cargo.toml", "quil-py/pyproject.toml"]
+# Temprorarily disabling this so we can manually write the changelog entry
+# for quil-py since knope doesn't handle generating the changelog for a large
+# feature branch very well. This should be re-enabled for the following release.
+# changelog = "quil-py/CHANGELOG.md"
+scopes = ["py", "python", "quil-py"]
 
 [[workflows]]
 name = "prerelease"
-
 [[workflows.steps]]
 type = "PrepareRelease"
 prerelease_label = "rc"
 
 [[workflows.steps]]
 type = "Command"
-command = "cargo update -w && git add Cargo.lock && git commit -m \"chore: prepare pre-release $version [skip ci]\""
-variables = { "$version" = "Version" }
+command = "sh ./scripts/sync_versions.sh"
+
+[[workflows.steps]]
+type = "Command"
+command = "git add Cargo.lock quil-py/Cargo.toml"
+
+[[workflows.steps]]
+type = "Command"
+command = "git commit -m \"chore: prepare pre-release [skip ci]\""
 
 [[workflows.steps]]
 type = "Command"
@@ -20,7 +38,6 @@ command = "git push"
 
 [[workflows.steps]]
 type = "Release"
-
 [[workflows]]
 name = "release"
 
@@ -29,8 +46,15 @@ type = "PrepareRelease"
 
 [[workflows.steps]]
 type = "Command"
-command = "git add Cargo.lock && git commit -m \"chore: prepare release $version [skip ci]\""
-variables = { "$version" = "Version" }
+command = "sh ./scripts/sync_versions.sh"
+
+[[workflows.steps]]
+type = "Command"
+command = "git add Cargo.lock quil-py/Cargo.toml"
+
+[[workflows.steps]]
+type = "Command"
+command = "git commit -m \"chore: prepare release [skip ci]\""
 
 [[workflows.steps]]
 type = "Command"
