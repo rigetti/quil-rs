@@ -198,20 +198,23 @@ impl Program {
         self.instructions
             .iter()
             .flat_map(|i| match i {
-                Instruction::Gate(gate) => gate.qubits.clone(),
-                Instruction::Measurement(measurement) => vec![measurement.qubit.clone()],
+                Instruction::Gate(gate) => gate.qubits.iter().collect(),
+                Instruction::Measurement(measurement) => vec![&measurement.qubit],
                 Instruction::Reset(reset) => match &reset.qubit {
-                    Some(qubit) => vec![qubit.to_owned()],
-                    None => vec![],
+                    Some(qubit) => vec![qubit],
+                    None => Vec::new(),
                 },
-                Instruction::Delay(delay) => delay.qubits.clone(),
-                Instruction::Fence(fence) => fence.qubits.clone(),
-                Instruction::Capture(capture) => capture.frame.qubits.clone(),
-                Instruction::Pulse(pulse) => pulse.frame.qubits.clone(),
-                Instruction::RawCapture(raw_capture) => raw_capture.frame.qubits.clone(),
-                _ => vec![],
+                Instruction::Delay(delay) => delay.qubits.iter().collect(),
+                Instruction::Fence(fence) => fence.qubits.iter().collect(),
+                Instruction::Capture(capture) => capture.frame.qubits.iter().collect(),
+                Instruction::Pulse(pulse) => pulse.frame.qubits.iter().collect(),
+                Instruction::RawCapture(raw_capture) => raw_capture.frame.qubits.iter().collect(),
+                _ => Vec::new(),
             })
             .collect::<HashSet<_>>()
+            .into_iter()
+            .cloned()
+            .collect()
     }
 
     /// Simplify this program into a new [`Program`] which contains only instructions
