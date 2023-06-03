@@ -194,7 +194,7 @@ impl Program {
     }
 
     /// Returns a HashSet consisting of every Qubit that is used in the program.
-    pub fn get_used_qubits(&self) -> HashSet<Qubit> {
+    pub fn get_used_qubits(&self) -> HashSet<&Qubit> {
         self.instructions
             .iter()
             .flat_map(|i| match i {
@@ -212,9 +212,6 @@ impl Program {
                 _ => Vec::new(),
             })
             .collect::<HashSet<_>>()
-            .into_iter()
-            .cloned()
-            .collect()
     }
 
     /// Simplify this program into a new [`Program`] which contains only instructions
