@@ -1,5 +1,4 @@
-use std::{path::Path, fs, str::FromStr, process::Command};
-
+use std::{fs, path::Path, process::Command, str::FromStr};
 
 pub struct QuilBenchConfig {
     pub name: String,
@@ -52,5 +51,3 @@ fn init_submodules() {
         .wait_with_output()
         .expect("failed to init submodules, verify `git` is installed");
 }
-
-

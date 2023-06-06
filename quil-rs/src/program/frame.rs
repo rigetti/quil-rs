@@ -53,14 +53,12 @@ impl FrameSet {
             FrameMatchCondition::AnyOfNames(names) => {
                 keys.filter(|&f| names.contains(&f.name)).collect()
             }
-            FrameMatchCondition::AnyOfQubits(qubits) => {
-                keys.filter(|&f| f.qubits.iter().any(|q| qubits.contains(&q)))
-                    .collect()
-            }
-            FrameMatchCondition::ExactQubits(qubits) => {
-                keys.filter(|&f| f.qubits.iter().collect::<HashSet<_>>() == qubits)
-                    .collect()
-            }
+            FrameMatchCondition::AnyOfQubits(qubits) => keys
+                .filter(|&f| f.qubits.iter().any(|q| qubits.contains(&q)))
+                .collect(),
+            FrameMatchCondition::ExactQubits(qubits) => keys
+                .filter(|&f| f.qubits.iter().collect::<HashSet<_>>() == qubits)
+                .collect(),
             FrameMatchCondition::Specific(frame) => {
                 // This unusual pattern (fetch key & value by key, discard value) allows us to return
                 // a reference to `self` rather than `condition`, keeping lifetimes simpler.
