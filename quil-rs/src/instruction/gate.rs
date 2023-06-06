@@ -160,11 +160,7 @@ impl Gate {
                 Qubit::Fixed(i) => Ok(*i),
             })
             .collect::<Result<Vec<_>, _>>();
-        Ok(lifted_gate_matrix(
-            &gate_matrix(self)?,
-            &mut qubits?,
-            n_qubits,
-        ))
+        Ok(lifted_gate_matrix(&gate_matrix(self)?, &qubits?, n_qubits))
     }
 }
 
@@ -175,7 +171,7 @@ impl Gate {
 /// matrices. For 2-qubit gates acting on adjacent qubit indices, it is also easy. However, for a
 /// multiqubit gate acting on non-adjactent qubit indices, we must first apply a permutation matrix
 /// to make the qubits adjacent and then apply the inverse permutation.
-fn lifted_gate_matrix(matrix: &Matrix, qubits: &mut [u64], n_qubits: u64) -> Matrix {
+fn lifted_gate_matrix(matrix: &Matrix, qubits: &[u64], n_qubits: u64) -> Matrix {
     let (perm, start) = permutation_arbitrary(qubits, n_qubits);
     let v = qubit_adjacent_lifted_gate(start, matrix, n_qubits);
     perm.t().mapv(|c| c.conj()).dot(&v.dot(&perm))
@@ -185,7 +181,7 @@ fn lifted_gate_matrix(matrix: &Matrix, qubits: &mut [u64], n_qubits: u64) -> Mat
 ///
 /// The main source of complexity is in handling handling FORKED gates. Given a gate with
 /// modifiers, such as `FORKED CONTROLLED FORKED RX(a,b,c,d) 0 1 2 3`, we get a tree, as in
-/// 
+///
 /// ```text
 ///
 ///               FORKED CONTROLLED FORKED RX(a,b,c,d) 0 1 2 3
@@ -256,6 +252,7 @@ fn gate_matrix(mut gate: &mut Gate) -> Result<Matrix, GateError> {
         }
     }
 }
+
 /// Generate the permutation matrix that permutes an arbitrary number of single-particle Hilbert
 /// spaces into adjacent positions.
 ///
@@ -277,13 +274,14 @@ fn gate_matrix(mut gate: &mut Gate) -> Result<Matrix, GateError> {
 /// Notes: assumes qubit indices are unique.
 ///
 /// Done in preparation for arbitrary gate application on adjacent qubits.
-fn permutation_arbitrary(qubit_inds: &mut [u64], n_qubits: u64) -> (Matrix, u64) {
+fn permutation_arbitrary(qubit_inds: &[u64], n_qubits: u64) -> (Matrix, u64) {
     // Begin construction of permutation
     let mut perm = Array2::eye(2usize.pow(n_qubits as u32));
     // First, sort the list and find the median.
-    qubit_inds.sort();
-    let med_i = qubit_inds.len() / 2;
-    let med = qubit_inds[med_i];
+    let mut sorted_inds = qubit_inds.clone().to_vec();
+    sorted_inds.sort();
+    let med_i = sorted_inds.len() / 2;
+    let med = sorted_inds[med_i];
     // The starting position of all specified Hilbert spaces begins at the qubit at (median -
     // med_i)
     let start = med - med_i as u64;
@@ -292,7 +290,6 @@ fn permutation_arbitrary(qubit_inds: &mut [u64], n_qubits: u64) -> (Matrix, u64)
     let final_map = (start..start + qubit_inds.len() as u64)
         .rev()
         .collect::<Vec<_>>();
-    let start_i = final_map[final_map.len() - 1];
     // Current qubit indexing
     let mut qubit_arr = (0..n_qubits).collect::<Vec<_>>();
 
@@ -300,22 +297,22 @@ fn permutation_arbitrary(qubit_inds: &mut [u64], n_qubits: u64) -> (Matrix, u64)
     let mut right = true;
     while !made_it {
         let array = if right {
-            (0..n_qubits).collect::<Vec<_>>()
+            (0..qubit_inds.len()).collect::<Vec<_>>()
         } else {
-            (0..n_qubits).rev().collect()
+            (0..qubit_inds.len()).rev().collect()
         };
         for i in array {
             let j = qubit_arr
                 .iter()
-                .find(|&&q| q == qubit_inds[i as usize])
+                .position(|&q| q == qubit_inds[i as usize])
                 .expect("These arrays cover the same range.");
-            let (pmod, qubit_arr) =
-                two_swap_helper(*j, final_map[i as usize], n_qubits, &mut qubit_arr);
+            dbg!((i, j, final_map[i as usize], n_qubits, &qubit_arr));
+            let pmod = two_swap_helper(j as u64, final_map[i as usize], n_qubits, &mut qubit_arr);
             perm = pmod.dot(&perm);
             if qubit_inds
                 .iter()
-                .zip(final_map.iter().rev())
-                .all(|(&q, &fm)| qubit_arr[fm as usize] == q)
+                .zip(final_map.iter().enumerate().rev())
+                .all(|(&q, (i, &fm))| q == qubit_arr[fm as usize + (if i == 0 { 1 } else { 0 })])
             {
                 made_it = true;
                 break;
@@ -323,7 +320,7 @@ fn permutation_arbitrary(qubit_inds: &mut [u64], n_qubits: u64) -> (Matrix, u64)
         }
         right = !right;
     }
-    (perm, start_i)
+    (perm, start)
 }
 
 /// Generate the permutation matrix that permutes two single-particle Hilbert spaces into adjacent
@@ -338,9 +335,8 @@ fn permutation_arbitrary(qubit_inds: &mut [u64], n_qubits: u64) -> (Matrix, u64)
 ///     j < k: Swap j left to k, until j at ind (k) and k at ind (k-1).
 ///
 /// Done in preparation for arbitrary 2-qubit gate application on ADJACENT qubits.
-fn two_swap_helper(j: u64, k: u64, n_qubits: u64, qubit_map: &mut [u64]) -> (Matrix, Vec<u64>) {
+fn two_swap_helper(j: u64, k: u64, n_qubits: u64, qubit_map: &mut [u64]) -> Matrix {
     let mut perm = Array2::eye(2usize.pow(n_qubits as u32));
-    let mut new_qubit_map = qubit_map.to_vec();
     let swap = CONSTANT_GATE_MATRICES
         .get("SWAP")
         .expect("Key should exist by design.");
@@ -348,20 +344,20 @@ fn two_swap_helper(j: u64, k: u64, n_qubits: u64, qubit_map: &mut [u64]) -> (Mat
         Ordering::Equal => {}
         Ordering::Greater => {
             // swap j right to k, until j at ind (k) and k at ind (k+1)
-            for i in 0..k - 1 {
+            for i in (k + 1..=j).rev() {
                 perm = qubit_adjacent_lifted_gate(i - 1, swap, n_qubits).dot(&perm);
-                new_qubit_map.swap((i - 1) as usize, i as usize);
+                qubit_map.swap(i as usize, (i - 1) as usize);
             }
         }
         Ordering::Less => {
             // swap j left to k, until j at ind (k) and k at ind (k-1)
             for i in j..k {
                 perm = qubit_adjacent_lifted_gate(i, swap, n_qubits).dot(&perm);
-                new_qubit_map.swap(i as usize, (i + 1) as usize);
+                qubit_map.swap(i as usize, (i + 1) as usize);
             }
         }
     }
-    (perm, new_qubit_map)
+    perm
 }
 
 /// Lifts input k-qubit gate on adjacent qubits starting from qubit i to complete Hilbert space of
@@ -383,7 +379,7 @@ fn two_swap_helper(j: u64, k: u64, n_qubits: u64, qubit_map: &mut [u64]) -> (Mat
 /// the left and ending with qubit 0 on the right (in a little-endian fashion), gates are still
 /// lifted to apply on qubits in increasing index (right-to-left) order.
 fn qubit_adjacent_lifted_gate(i: u64, matrix: &Matrix, n_qubits: u64) -> Matrix {
-    let bottom_matrix = Array2::eye(2usize.pow(n_qubits as u32));
+    let bottom_matrix = Array2::eye(2usize.pow(i as u32));
     let gate_size = (matrix.shape()[0] as f64).log2().floor() as u64;
     let top_qubits = n_qubits - i - gate_size;
     let top_matrix = Array2::eye(2usize.pow(top_qubits as u32));
@@ -580,7 +576,126 @@ impl fmt::Display for GateModifier {
 
 #[cfg(test)]
 mod test_gate_into_matrix {
-    use super::{Gate, GateModifier};
+    use super::{
+        lifted_gate_matrix, qubit_adjacent_lifted_gate, two_swap_helper, Matrix,
+        CONSTANT_GATE_MATRICES,
+    };
+    use crate::{imag, real};
+    use ndarray::{array, linalg::kron, Array2};
+    use num_complex::Complex64;
+    use once_cell::sync::Lazy;
+    use rstest::rstest;
+
+    // numpy.testing.assert_allclose for arrays of complex numbers
+    // loops by hand to print out position & differences and to avoid needing, e.g., ordered-float
+    macro_rules! assert_allclose {
+        ($actual:expr, $desired:expr) => {
+            assert_allclose!($actual, $desired, 1e-7)
+        };
+        ($actual:expr, $desired:expr, $rtol:expr) => {
+            for i in 0..$actual.nrows() {
+                for j in 0..$actual.ncols() {
+                    let a = $actual[[i, j]];
+                    let d = $desired[[i, j]];
+                    let diff = (a - d).norm();
+                    let tol = ($rtol * d).norm();
+                    assert!(
+                        diff <= tol,
+                        "\n{}\n&\n{} found different in {:?} position; diff = {diff}, tol = {tol}",
+                        $actual,
+                        $desired,
+                        (i, j)
+                    );
+                }
+            }
+        };
+    }
+
+    static _0: Complex64 = real!(0.0);
+    static _1: Complex64 = real!(1.0);
+    static _I: Complex64 = imag!(1.0);
+    static SWAP: Lazy<Matrix> = Lazy::new(|| CONSTANT_GATE_MATRICES.get("SWAP").cloned().unwrap());
+    static X: Lazy<Matrix> = Lazy::new(|| array![[_0, _1], [_1, _0]]);
+    static P0: Lazy<Matrix> = Lazy::new(|| array![[_1, _0], [_0, _0]]);
+    static P1: Lazy<Matrix> = Lazy::new(|| array![[_0, _0], [_0, _1]]);
+    static CNOT: Lazy<Matrix> = Lazy::new(|| CONSTANT_GATE_MATRICES.get("CNOT").cloned().unwrap());
+    static ISWAP: Lazy<Matrix> =
+        Lazy::new(|| CONSTANT_GATE_MATRICES.get("ISWAP").cloned().unwrap());
+
+    #[rstest]
+    #[case(0, 2, &SWAP)]
+    #[case(0, 3, &kron(&Array2::eye(2), &SWAP))]
+    #[case(0, 4, &kron(&Array2::eye(4), &SWAP))]
+    #[case(1, 3, &kron(&SWAP, &Array2::eye(2)))]
+    #[case(1, 4, &kron(&Array2::eye(2), &kron(&SWAP, &Array2::eye(2))))]
+    #[case(2, 4, &kron(&Array2::eye(1), &kron(&SWAP, &Array2::eye(4))))]
+    #[case(8, 10, &kron(&Array2::eye(1), &kron(&SWAP, &Array2::eye(2usize.pow(8)))))]
+    fn test_qubit_adjacent_lifted_gate(
+        #[case] i: u64,
+        #[case] n_qubits: u64,
+        #[case] expected: &Matrix,
+    ) {
+        let result = qubit_adjacent_lifted_gate(i, &SWAP, n_qubits);
+        assert_allclose!(result, expected);
+    }
+
+    // test cases via pyquil.simulation.tools.two_swap_helper
+    #[rstest]
+    #[case(0, 0, 2, &mut[0, 1], &[0, 1], &Array2::eye(4))]
+    #[case(0, 1, 2, &mut[0, 1], &[1, 0], &array![[_1, _0, _0, _0],
+                                                 [_0, _0, _1, _0],
+                                                 [_0, _1, _0, _0],
+                                                 [_0, _0, _0, _1]])]
+    #[case(0, 1, 2, &mut[1, 0], &[0, 1], &array![[_1, _0, _0, _0],
+                                                 [_0, _0, _1, _0],
+                                                 [_0, _1, _0, _0],
+                                                 [_0, _0, _0, _1]])]
+    #[case(1, 0, 2, &mut[0, 1], &[1, 0], &array![[_1, _0, _0, _0],
+                                                 [_0, _0, _1, _0],
+                                                 [_0, _1, _0, _0],
+                                                 [_0, _0, _0, _1]])]
+    #[case(1, 0, 2, &mut[1, 0], &[0, 1], &array![[_1, _0, _0, _0],
+                                                 [_0, _0, _1, _0],
+                                                 [_0, _1, _0, _0],
+                                                 [_0, _0, _0, _1]])]
+    #[case(0, 1, 3, &mut[0, 1, 2], &[1, 0, 2], &array![[_1, _0, _0, _0, _0, _0, _0, _0],
+                                                       [_0, _0, _1, _0, _0, _0, _0, _0],
+                                                       [_0, _1, _0, _0, _0, _0, _0, _0],
+                                                       [_0, _0, _0, _1, _0, _0, _0, _0],
+                                                       [_0, _0, _0, _0, _1, _0, _0, _0],
+                                                       [_0, _0, _0, _0, _0, _0, _1, _0],
+                                                       [_0, _0, _0, _0, _0, _1, _0, _0],
+                                                       [_0, _0, _0, _0, _0, _0, _0, _1]])]
+    fn test_two_swap_helper(
+        #[case] j: u64,
+        #[case] k: u64,
+        #[case] n_qubits: u64,
+        #[case] qubit_map: &mut [u64],
+        #[case] expected_qubit_map: &[u64],
+        #[case] expected_matrix: &Matrix,
+    ) {
+        let result = two_swap_helper(j, k, n_qubits, qubit_map);
+        assert_eq!(qubit_map, expected_qubit_map);
+        assert_allclose!(result, expected_matrix);
+    }
+
+    #[rstest]
+    #[case(&CNOT, &mut [1, 0], 2, &(kron(&P0, &Array2::eye(2)) + kron(&P1, &X)))]
+    #[case(&CNOT, &mut [0, 1], 2, &(kron(&P0, &Array2::eye(2)) + kron(&X, &P1)))]
+    #[case(&CNOT, &mut [2, 1], 3, &(kron(&P0, &Array2::eye(2)) + kron(&X, &P1)))]
+    #[case(&ISWAP, &mut [0, 1], 3, &kron(&Array2::eye(2), &ISWAP))]
+    #[case(&ISWAP, &mut [1, 0], 3, &kron(&Array2::eye(2), &ISWAP))]
+    #[case(&ISWAP, &mut [1, 2], 4, &kron(&Array2::eye(2), &kron(&ISWAP, &Array2::eye(2))))]
+    #[case(&ISWAP, &mut [3, 2], 4, &kron(&ISWAP, &Array2::eye(4)))]
+    #[case(&ISWAP, &mut [2, 3], 4, &kron(&ISWAP, &Array2::eye(4)))]
+    fn test_two_qubit_gates(
+        #[case] matrix: &Matrix,
+        #[case] indices: &mut [u64],
+        #[case] n_qubits: u64,
+        #[case] expected: &Matrix,
+    ) {
+        assert_allclose!(lifted_gate_matrix(&matrix, indices, n_qubits), expected);
+    }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, strum::Display, strum::EnumString)]
