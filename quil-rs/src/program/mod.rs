@@ -634,9 +634,8 @@ DEFWAVEFORM custom:
 I 0
 ";
         let program = Program::from_str(input).unwrap();
-        let expected = vec![Qubit::Fixed(0), Qubit::Variable("q".to_string())]
-            .into_iter()
-            .collect::<HashSet<_>>();
+        let expected_owned = vec![Qubit::Fixed(0), Qubit::Variable("q".to_string())];
+        let expected = expected_owned.iter().collect::<HashSet<_>>();
         let actual = program.get_used_qubits();
         assert_eq!(expected, actual);
     }
