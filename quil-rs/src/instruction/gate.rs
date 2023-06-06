@@ -185,6 +185,8 @@ fn lifted_gate_matrix(matrix: &Matrix, qubits: &mut [u64], n_qubits: u64) -> Mat
 ///
 /// The main source of complexity is in handling handling FORKED gates. Given a gate with
 /// modifiers, such as `FORKED CONTROLLED FORKED RX(a,b,c,d) 0 1 2 3`, we get a tree, as in
+/// 
+/// ```no_run
 ///
 ///               FORKED CONTROLLED FORKED RX(a,b,c,d) 0 1 2 3
 ///                 /                                      \
@@ -193,6 +195,7 @@ fn lifted_gate_matrix(matrix: &Matrix, qubits: &mut [u64], n_qubits: u64) -> Mat
 ///         FORKED RX(a,b) 2 3                      FORKED RX(c,d) 2 3
 ///          /          \                            /          \
 ///      RX(a) 3      RX(b) 3                    RX(c) 3      RX(d) 3
+/// ```
 fn gate_matrix(mut gate: &mut Gate) -> Result<Matrix, GateError> {
     static ZERO: Lazy<Matrix> =
         Lazy::new(|| array![[real!(1.0), real!(0.0)], [real!(0.0), real!(0.0)]]);
