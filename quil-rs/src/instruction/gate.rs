@@ -278,7 +278,8 @@ fn permutation_arbitrary(qubit_inds: &[u64], n_qubits: u64) -> (Matrix, u64) {
     // Begin construction of permutation
     let mut perm = Array2::eye(2usize.pow(n_qubits as u32));
     // First, sort the list and find the median.
-    let mut sorted_inds = qubit_inds.clone().to_vec();
+    let mut sorted_inds = Vec::with_capacity(qubit_inds.len());
+    sorted_inds.copy_from_slice(qubit_inds);
     sorted_inds.sort();
     let med_i = sorted_inds.len() / 2;
     let med = sorted_inds[med_i];
@@ -304,10 +305,10 @@ fn permutation_arbitrary(qubit_inds: &[u64], n_qubits: u64) -> (Matrix, u64) {
         for i in array {
             let j = qubit_arr
                 .iter()
-                .position(|&q| q == qubit_inds[i as usize])
+                .position(|&q| q == qubit_inds[i])
                 .expect("These arrays cover the same range.");
-            dbg!((i, j, final_map[i as usize], n_qubits, &qubit_arr));
-            let pmod = two_swap_helper(j as u64, final_map[i as usize], n_qubits, &mut qubit_arr);
+            dbg!((i, j, final_map[i], n_qubits, &qubit_arr));
+            let pmod = two_swap_helper(j as u64, final_map[i], n_qubits, &mut qubit_arr);
             perm = pmod.dot(&perm);
             if qubit_inds
                 .iter()
