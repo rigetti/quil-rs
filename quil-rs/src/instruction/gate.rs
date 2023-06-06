@@ -690,6 +690,8 @@ mod test_gate_into_matrix {
                                   [_0, _0, _1, _0],
                                   [_0, _1, _0, _0],
                                   [_0, _0, _0, _1]])]
+    #[case(&[1, 0], 2, 0, &Array2::eye(4))]
+    #[ignore]  // TODO currently hangs
     fn test_permutation_arbitrary(
         #[case] qubit_inds: &[u64],
         #[case] n_qubits: u64,
@@ -701,23 +703,24 @@ mod test_gate_into_matrix {
         assert_eq!(result_start, expected_start);
     }
 
-    //     #[rstest]
-    //     #[case(&CNOT, &mut [1, 0], 2, &(kron(&P0, &Array2::eye(2)) + kron(&P1, &X)))]
-    //     #[case(&CNOT, &mut [0, 1], 2, &(kron(&P0, &Array2::eye(2)) + kron(&X, &P1)))]
-    //     #[case(&CNOT, &mut [2, 1], 3, &(kron(&P0, &Array2::eye(2)) + kron(&X, &P1)))]
-    //     #[case(&ISWAP, &mut [0, 1], 3, &kron(&Array2::eye(2), &ISWAP))]
-    //     #[case(&ISWAP, &mut [1, 0], 3, &kron(&Array2::eye(2), &ISWAP))]
-    //     #[case(&ISWAP, &mut [1, 2], 4, &kron(&Array2::eye(2), &kron(&ISWAP, &Array2::eye(2))))]
-    //     #[case(&ISWAP, &mut [3, 2], 4, &kron(&ISWAP, &Array2::eye(4)))]
-    //     #[case(&ISWAP, &mut [2, 3], 4, &kron(&ISWAP, &Array2::eye(4)))]
-    //     fn test_two_qubit_gates(
-    //         #[case] matrix: &Matrix,
-    //         #[case] indices: &mut [u64],
-    //         #[case] n_qubits: u64,
-    //         #[case] expected: &Matrix,
-    //     ) {
-    //         assert_allclose!(lifted_gate_matrix(&matrix, indices, n_qubits), expected);
-    //     }
+    #[rstest]
+    #[case(&CNOT, &mut [1, 0], 2, &(kron(&P0, &Array2::eye(2)) + kron(&P1, &X)))]
+    #[case(&CNOT, &mut [0, 1], 2, &(kron(&P0, &Array2::eye(2)) + kron(&X, &P1)))]
+    #[case(&CNOT, &mut [2, 1], 3, &(kron(&P0, &Array2::eye(2)) + kron(&X, &P1)))]
+    #[case(&ISWAP, &mut [0, 1], 3, &kron(&Array2::eye(2), &ISWAP))]
+    #[case(&ISWAP, &mut [1, 0], 3, &kron(&Array2::eye(2), &ISWAP))]
+    #[case(&ISWAP, &mut [1, 2], 4, &kron(&Array2::eye(2), &kron(&ISWAP, &Array2::eye(2))))]
+    #[case(&ISWAP, &mut [3, 2], 4, &kron(&ISWAP, &Array2::eye(4)))]
+    #[case(&ISWAP, &mut [2, 3], 4, &kron(&ISWAP, &Array2::eye(4)))]
+    #[ignore]  // TODO currently hangs
+    fn test_two_qubit_gates(
+        #[case] matrix: &Matrix,
+        #[case] indices: &mut [u64],
+        #[case] n_qubits: u64,
+        #[case] expected: &Matrix,
+    ) {
+        assert_allclose!(lifted_gate_matrix(&matrix, indices, n_qubits), expected);
+    }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, strum::Display, strum::EnumString)]
