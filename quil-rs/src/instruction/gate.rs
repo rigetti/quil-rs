@@ -578,7 +578,6 @@ impl fmt::Display for GateModifier {
 #[cfg(test)]
 mod test_gate_into_matrix {
     use super::{Gate, GateModifier};
-
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, strum::Display, strum::EnumString)]
