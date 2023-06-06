@@ -6,4 +6,5 @@ lto = true
 codegen-units = 1
 
 [workspace.dependencies]
+ndarray = "0.15.6"
 strum = { version = "0.24.1", features = ["derive"] }

@@ -17,10 +17,12 @@ use std::fmt;
 use std::ops;
 use std::str::FromStr;
 
+use ndarray::Array2;
 use nom_locate::LocatedSpan;
 
 use crate::instruction::{
-    Declaration, FrameDefinition, FrameIdentifier, Instruction, Qubit, Waveform, WaveformDefinition,
+    Declaration, FrameDefinition, FrameIdentifier, GateError, Instruction, Matrix, Qubit, Waveform,
+    WaveformDefinition,
 };
 use crate::parser::{lex, parse_instructions, ParseError};
 
@@ -46,6 +48,12 @@ pub enum ProgramError {
 
     #[error("instruction {0} expands into itself")]
     RecursiveCalibration(Instruction),
+
+    #[error("{0}")]
+    GateError(#[from] GateError),
+
+    #[error("can only compute program unitary for programs composed of `Gate`s; found unsupported instruction: {0}")]
+    UnsupportedForUnitary(Instruction),
 }
 
 type Result<T> = std::result::Result<T, ProgramError>;
@@ -276,6 +284,25 @@ impl Program {
         instructions.extend(self.calibrations.to_instructions());
         instructions.extend(self.instructions.clone());
         instructions
+    }
+
+    /// Return the unitary of a program.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the program contains instructions other than `Gate`s.
+    pub fn to_unitary(&self, n_qubits: u64) -> Result<Matrix> {
+        let mut umat = Array2::eye(2usize.pow(n_qubits as u32));
+        for instruction in self.instructions.clone() {
+            match instruction {
+                Instruction::Halt => {}
+                Instruction::Gate(mut gate) => {
+                    umat = gate.into_matrix(n_qubits)?.dot(&umat);
+                }
+                _ => return Err(ProgramError::UnsupportedForUnitary(instruction)),
+            }
+        }
+        Ok(umat)
     }
 }
 

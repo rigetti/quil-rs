@@ -52,7 +52,7 @@ pub use self::frame::{
     SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, SwapPhases,
 };
 pub use self::gate::{
-    Gate, GateDefinition, GateError, GateModifier, GateSpecification, GateType, PauliGate,
+    Gate, GateDefinition, GateError, GateModifier, GateSpecification, GateType, Matrix, PauliGate,
     PauliSum, PauliTerm,
 };
 pub use self::measurement::Measurement;
