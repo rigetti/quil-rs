@@ -186,7 +186,7 @@ fn lifted_gate_matrix(matrix: &Matrix, qubits: &mut [u64], n_qubits: u64) -> Mat
 /// The main source of complexity is in handling handling FORKED gates. Given a gate with
 /// modifiers, such as `FORKED CONTROLLED FORKED RX(a,b,c,d) 0 1 2 3`, we get a tree, as in
 /// 
-/// ```no_run
+/// ```text
 ///
 ///               FORKED CONTROLLED FORKED RX(a,b,c,d) 0 1 2 3
 ///                 /                                      \
