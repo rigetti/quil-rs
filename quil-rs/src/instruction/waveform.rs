@@ -1,8 +1,8 @@
 use std::{collections::HashMap, fmt};
 
-use crate::expression::Expression;
+use crate::{expression::Expression, instruction::write_comma_separated_list};
 
-use super::get_string_parameter_string;
+use super::write_parameter_string;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Waveform {
@@ -30,18 +30,10 @@ impl WaveformDefinition {
 
 impl fmt::Display for WaveformDefinition {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "DEFWAVEFORM {}{}:\n\t{}",
-            self.name,
-            get_string_parameter_string(&self.definition.parameters),
-            self.definition
-                .matrix
-                .iter()
-                .map(|e| format!("{e}"))
-                .collect::<Vec<_>>()
-                .join(", ")
-        )
+        write!(f, "DEFWAVEFORM {}", self.name)?;
+        write_parameter_string(f, &self.definition.parameters)?;
+        write!(f, ":\n\t")?;
+        write_comma_separated_list(f, &self.definition.matrix)
     }
 }
 

@@ -222,6 +222,13 @@ pub fn format_qubits(qubits: &[Qubit]) -> String {
         .join(" ")
 }
 
+fn write_qubits(f: &mut fmt::Formatter, qubits: &[Qubit]) -> fmt::Result {
+    for qubit in qubits {
+        write!(f, " {qubit}")?;
+    }
+    Ok(())
+}
+
 /// Format qubits as a Quil parameter list, where each variable qubit must be prefixed with a `%`.
 fn write_qubit_parameters(f: &mut fmt::Formatter, qubits: &[Qubit]) -> fmt::Result {
     for qubit in qubits.iter() {
@@ -234,26 +241,48 @@ fn write_qubit_parameters(f: &mut fmt::Formatter, qubits: &[Qubit]) -> fmt::Resu
     Ok(())
 }
 
-pub fn get_expression_parameter_string(parameters: &[Expression]) -> String {
-    if parameters.is_empty() {
-        return String::new();
+pub fn write_comma_separated_list(
+    f: &mut fmt::Formatter,
+    values: &[impl fmt::Display],
+) -> fmt::Result {
+    if values.is_empty() {
+        return Ok(());
     }
 
-    let parameter_str: String = parameters.iter().map(|e| format!("{e}")).collect();
-    format!("({parameter_str})")
+    write!(f, "{}", values[0])?;
+    for value in values[1..].iter() {
+        write!(f, ", {value}")?;
+    }
+    Ok(())
 }
 
-pub fn get_string_parameter_string(parameters: &[String]) -> String {
+pub fn write_expression_parameter_string(
+    f: &mut fmt::Formatter,
+    parameters: &[Expression],
+) -> fmt::Result {
     if parameters.is_empty() {
-        return String::new();
+        return Ok(());
     }
 
-    let parameter_str: String = parameters
-        .iter()
-        .map(|param| format!("%{param}"))
-        .collect::<Vec<_>>()
-        .join(",");
-    format!("({parameter_str})")
+    write!(f, "(")?;
+    write!(f, "{}", parameters[0])?;
+    for parameter in parameters[1..].iter() {
+        write!(f, ", {parameter}")?;
+    }
+    write!(f, ")")
+}
+
+pub fn write_parameter_string(f: &mut fmt::Formatter, parameters: &[String]) -> fmt::Result {
+    if parameters.is_empty() {
+        return Ok(());
+    }
+
+    write!(f, "(")?;
+    write!(f, "%{}", parameters[0])?;
+    for parameter in parameters[1..].iter() {
+        write!(f, ", %{parameter}")?;
+    }
+    write!(f, ")")
 }
 
 impl fmt::Display for Instruction {

@@ -1,6 +1,6 @@
 use std::fmt;
 
-use super::{get_string_parameter_string, Instruction};
+use super::{write_parameter_string, Instruction};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct CircuitDefinition {
@@ -30,10 +30,7 @@ impl CircuitDefinition {
 impl fmt::Display for CircuitDefinition {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "DEFCIRCUIT {}", self.name)?;
-        if !self.parameters.is_empty() {
-            let parameter_str = get_string_parameter_string(&self.parameters);
-            write!(f, "{parameter_str}")?;
-        }
+        write_parameter_string(f, &self.parameters)?;
         for qubit_variable in &self.qubit_variables {
             write!(f, " {qubit_variable}")?;
         }
