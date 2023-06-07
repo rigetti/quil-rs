@@ -1,4 +1,6 @@
 from enum import Enum
+import numpy as np
+from numpy.typing import NDArray
 from typing import Dict, List, Optional, Sequence, Tuple, Union, final
 from typing_extensions import Self
 
@@ -926,6 +928,15 @@ class Gate:
 
         Raises a ``GateError`` if the number of provided alternate parameters don't
         equal the number of existing parameters.
+        """
+        ...
+    def into_unitary(self, n_qubits: int) -> NDArray[np.complex_]:
+        """
+        Lift a Gate to the full `n_qubits`-qubit Hilbert space.
+
+        Returns a ``GateError` if any of the parameters of this gate are
+        non-constant, if any of the qubits are variable, if the name of this
+        gate is unknown, or if there are an unexpected number of parameters.
         """
         ...
 

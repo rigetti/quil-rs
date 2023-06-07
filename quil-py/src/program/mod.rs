@@ -1,25 +1,24 @@
-use std::{
-    collections::{BTreeMap, HashMap, HashSet},
-    str::FromStr,
-};
-
+pub use self::{calibration::PyCalibrationSet, frame::PyFrameSet, memory::PyMemoryRegion};
+use crate::instruction::{PyDeclaration, PyGateDefinition, PyInstruction, PyQubit, PyWaveform};
+use numpy::{PyArray2, ToPyArray};
 use quil_rs::{instruction::Instruction, Program};
-
 use rigetti_pyo3::{
     create_init_submodule, impl_as_mut_for_wrapper, impl_from_str, impl_parse, impl_repr,
+    num_complex::Complex64,
     py_wrap_error, py_wrap_type,
     pyo3::{
         exceptions::PyValueError,
         prelude::*,
         pyclass::CompareOp,
         types::{PyBytes, PyList},
+        IntoPy,
     },
     wrap_error, PyWrapper, PyWrapperMut, ToPython, ToPythonError,
 };
-
-use crate::instruction::{PyDeclaration, PyGateDefinition, PyInstruction, PyQubit, PyWaveform};
-
-pub use self::{calibration::PyCalibrationSet, frame::PyFrameSet, memory::PyMemoryRegion};
+use std::{
+    collections::{BTreeMap, HashMap, HashSet},
+    str::FromStr,
+};
 
 mod calibration;
 mod frame;
@@ -162,6 +161,16 @@ impl PyProgram {
             .iter()
             .map(|i| i.to_python(py))
             .collect()
+    }
+
+    pub fn to_unitary(&self, py: Python<'_>, n_qubits: u64) -> PyResult<Py<PyArray2<Complex64>>> {
+        Ok(self
+            .as_inner()
+            .to_unitary(n_qubits)
+            .map_err(ProgramError::from)
+            .map_err(ProgramError::to_py_err)?
+            .to_pyarray(py)
+            .to_owned())
     }
 
     pub fn __str__(&self) -> String {

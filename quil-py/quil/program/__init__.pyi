@@ -1,5 +1,7 @@
 from typing import Dict, FrozenSet, Set, final, List, Optional, Sequence
 
+import numpy as np
+from numpy.typing import NDArray
 from quil.instructions import (
     AttributeValue,
     Calibration,
@@ -84,6 +86,7 @@ class Program:
         Raises a ``ProgramError`` if the given string isn't valid Quil.
         """
     def to_instructions(self) -> Sequence[Instruction]: ...
+    def to_unitary(self) -> NDArray[np.complex_]: ...
 
 @final
 class CalibrationSet:
