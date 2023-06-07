@@ -197,7 +197,32 @@ fn gate_matrix(mut gate: &mut Gate) -> Result<Matrix, GateError> {
         Lazy::new(|| array![[real!(1.0), real!(0.0)], [real!(0.0), real!(0.0)]]);
     static ONE: Lazy<Matrix> =
         Lazy::new(|| array![[real!(0.0), real!(0.0)], [real!(0.0), real!(1.0)]]);
-    if gate.modifiers.is_empty() {
+    if let Some(modifier) = gate.modifiers.pop() {
+        match modifier {
+            GateModifier::Controlled => {
+                gate.qubits = gate.qubits[1..].to_vec();
+                let matrix = gate_matrix(gate)?;
+                Ok(kron(&ZERO, &Array2::eye(matrix.shape()[0])) + kron(&ONE, &matrix))
+            }
+            GateModifier::Dagger => gate_matrix(gate).map(|g| g.t().mapv(|c| c.conj())),
+            GateModifier::Forked => {
+                let param_index = gate.parameters.len();
+                if param_index & 1 != 0 {
+                    Err(GateError::ForkedGateOddNumParams)
+                } else {
+                    // Some mutability dancing to keep the borrow checker happy
+                    gate.qubits = gate.qubits[1..].to_vec();
+                    let (p0, p1) = gate.parameters[..].split_at(param_index / 2);
+                    let mut child0 = gate.clone();
+                    child0.parameters = p0.to_vec();
+                    let mat0 = gate_matrix(&mut child0)?;
+                    gate.parameters = p1.to_vec();
+                    let mat1 = gate_matrix(gate)?;
+                    Ok(kron(&ZERO, &mat0) + kron(&ONE, &mat1))
+                }
+            }
+        }
+    } else {
         if gate.parameters.is_empty() {
             CONSTANT_GATE_MATRICES
                 .get(&gate.name)
@@ -223,31 +248,6 @@ fn gate_matrix(mut gate: &mut Gate) -> Result<Matrix, GateError> {
                     expected: 1,
                     actual,
                 }),
-            }
-        }
-    } else {
-        match gate.modifiers.pop().expect("This was guaranteed nonempty") {
-            GateModifier::Controlled => {
-                gate.qubits = gate.qubits[1..].to_vec();
-                let matrix = gate_matrix(gate)?;
-                Ok(kron(&ZERO, &Array2::eye(matrix.shape()[0])) + kron(&ONE, &matrix))
-            }
-            GateModifier::Dagger => gate_matrix(gate).map(|g| g.t().mapv(|c| c.conj())),
-            GateModifier::Forked => {
-                let param_index = gate.parameters.len();
-                if param_index & 1 != 0 {
-                    Err(GateError::ForkedGateOddNumParams)
-                } else {
-                    // Some mutability dancing to keep the borrow checker happy
-                    gate.qubits = gate.qubits[1..].to_vec();
-                    let (p0, p1) = gate.parameters[..].split_at(param_index / 2);
-                    let mut child0 = gate.clone();
-                    child0.parameters = p0.to_vec();
-                    let mat0 = gate_matrix(&mut child0)?;
-                    gate.parameters = p1.to_vec();
-                    let mat1 = gate_matrix(gate)?;
-                    Ok(kron(&ZERO, &mat0) + kron(&ONE, &mat1))
-                }
             }
         }
     }
@@ -739,7 +739,7 @@ mod test_gate_into_matrix {
     #[case(&ISWAP, &mut [1, 2], 4, &kron(&Array2::eye(2), &kron(&ISWAP, &Array2::eye(2))))]
     #[case(&ISWAP, &mut [3, 2], 4, &kron(&ISWAP, &Array2::eye(4)))]
     #[case(&ISWAP, &mut [2, 3], 4, &kron(&ISWAP, &Array2::eye(4)))]
-    fn test_two_qubit_gates(
+    fn test_lifted_gate_matrix(
         #[case] matrix: &Matrix,
         #[case] indices: &mut [u64],
         #[case] n_qubits: u64,
