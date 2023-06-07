@@ -297,7 +297,7 @@ impl Program {
             match instruction {
                 Instruction::Halt => {}
                 Instruction::Gate(mut gate) => {
-                    umat = gate.into_unitary(n_qubits)?.dot(&umat);
+                    umat = gate.to_unitary(n_qubits)?.dot(&umat);
                 }
                 _ => return Err(ProgramError::UnsupportedForUnitary(instruction)),
             }

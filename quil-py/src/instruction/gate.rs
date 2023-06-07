@@ -90,10 +90,14 @@ impl PyGate {
             .to_python(py)
     }
 
-    fn into_unitary(&mut self, py: Python<'_>, n_qubits: u64) -> PyResult<Py<PyArray2<Complex64>>> {
+    fn to_unitary_mut(
+        &mut self,
+        py: Python<'_>,
+        n_qubits: u64,
+    ) -> PyResult<Py<PyArray2<Complex64>>> {
         Ok(self
             .as_inner_mut()
-            .into_unitary(n_qubits)
+            .to_unitary(n_qubits)
             .map_err(RustGateError::from)
             .map_err(RustGateError::to_py_err)?
             .to_pyarray(py)

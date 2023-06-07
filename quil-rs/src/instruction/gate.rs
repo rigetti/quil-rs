@@ -151,7 +151,7 @@ impl Gate {
     /// Returns an error if any of the parameters of this gate are non-constant, if any of the
     /// qubits are variable, if the name of this gate is unknown, or if there are an unexpected
     /// number of parameters.
-    pub fn into_unitary(&mut self, n_qubits: u64) -> Result<Matrix, GateError> {
+    pub fn to_unitary(&mut self, n_qubits: u64) -> Result<Matrix, GateError> {
         let qubits = self
             .qubits
             .iter()
@@ -782,12 +782,8 @@ mod test_gate_into_matrix {
         2,
         &lifted_gate_matrix(&CZ, &[0, 1], 2)
     )]
-    fn test_into_unitary(
-        #[case] gate: &mut Gate,
-        #[case] n_qubits: u64,
-        #[case] expected: &Matrix,
-    ) {
-        let result = gate.into_unitary(n_qubits);
+    fn test_to_unitary(#[case] gate: &mut Gate, #[case] n_qubits: u64, #[case] expected: &Matrix) {
+        let result = gate.to_unitary(n_qubits);
         assert!(result.is_ok());
         assert_allclose!(result.as_ref().unwrap(), expected);
     }
