@@ -151,7 +151,7 @@ impl Gate {
     /// Returns an error if any of the parameters of this gate are non-constant, if any of the
     /// qubits are variable, if the name of this gate is unknown, or if there are an unexpected
     /// number of parameters.
-    pub fn into_matrix(&mut self, n_qubits: u64) -> Result<Matrix, GateError> {
+    pub fn into_unitary(&mut self, n_qubits: u64) -> Result<Matrix, GateError> {
         let qubits = self
             .qubits
             .iter()
@@ -280,7 +280,7 @@ fn permutation_arbitrary(qubit_inds: &[u64], n_qubits: u64) -> (Matrix, u64) {
     // First, sort the list and find the median.
     let mut sorted_inds = qubit_inds.to_vec();
     sorted_inds.sort();
-    let med_i = sorted_inds.len() / 2;
+    let med_i = qubit_inds.len() / 2;
     let med = sorted_inds[med_i];
     // The starting position of all specified Hilbert spaces begins at the qubit at (median -
     // med_i)
@@ -291,8 +291,13 @@ fn permutation_arbitrary(qubit_inds: &[u64], n_qubits: u64) -> (Matrix, u64) {
         let final_map = (start..start + qubit_inds.len() as u64)
             .rev()
             .collect::<Vec<_>>();
-        // Current qubit indexing
-        let mut qubit_arr = (0..n_qubits).collect::<Vec<_>>();
+
+        // Note that the lifting operation takes a k-qubit gate operating on the qubits i+k-1, i+k-2,
+        // ... i (left to right). two_swap_helper can be used to build the permutation matrix by
+        // filling out the final map by sweeping over the qubit_inds from left to right and back again,
+        // swapping qubits into position. we loop over the qubit_inds until the final mapping matches
+        // the argument.
+        let mut qubit_arr = (0..n_qubits).collect::<Vec<_>>(); // Current qubit indexing
 
         let mut made_it = false;
         let mut right = true;
@@ -302,6 +307,7 @@ fn permutation_arbitrary(qubit_inds: &[u64], n_qubits: u64) -> (Matrix, u64) {
             } else {
                 (0..qubit_inds.len()).rev().collect()
             };
+
             for i in array {
                 let j = qubit_arr
                     .iter()
@@ -309,12 +315,10 @@ fn permutation_arbitrary(qubit_inds: &[u64], n_qubits: u64) -> (Matrix, u64) {
                     .expect("These arrays cover the same range.");
                 let pmod = two_swap_helper(j as u64, final_map[i], n_qubits, &mut qubit_arr);
                 perm = pmod.dot(&perm);
-                if qubit_inds
-                    .iter()
-                    .zip(final_map.iter().enumerate().rev())
-                    .all(|(&q, (i, &fm))| {
-                        q == qubit_arr[fm as usize + (if i == 0 { 1 } else { 0 })]
-                    })
+                if (final_map[final_map.len() - 1]..final_map[0] + 1)
+                    .rev()
+                    .zip(qubit_inds)
+                    .all(|(f, &q)| qubit_arr[f as usize] == q)
                 {
                     made_it = true;
                     break;
@@ -604,7 +608,7 @@ mod test_gate_into_matrix {
                     let tol = ($rtol * d).norm();
                     assert!(
                         diff <= tol,
-                        "\n{}\n&\n{} found different in {:?} position; diff = {diff}, tol = {tol}",
+                        "\n{}\n&\n{}\nare different in {:?} position; diff = {diff:?}, tol = {tol:?}",
                         $actual,
                         $desired,
                         (i, j)
@@ -715,7 +719,6 @@ mod test_gate_into_matrix {
                                      [_0, _0, _0, _0, _0, _1, _0, _0],
                                      [_0, _0, _0, _1, _0, _0, _0, _0],
                                      [_0, _0, _0, _0, _0, _0, _0, _1]])]
-    #[ignore] // TODO currently hangs
     fn test_permutation_arbitrary(
         #[case] qubit_inds: &[u64],
         #[case] n_qubits: u64,
@@ -730,13 +733,12 @@ mod test_gate_into_matrix {
     #[rstest]
     #[case(&CNOT, &mut [1, 0], 2, &(kron(&P0, &Array2::eye(2)) + kron(&P1, &X)))]
     #[case(&CNOT, &mut [0, 1], 2, &(kron(&P0, &Array2::eye(2)) + kron(&X, &P1)))]
-    #[case(&CNOT, &mut [2, 1], 3, &(kron(&P0, &Array2::eye(2)) + kron(&X, &P1)))]
+    #[case(&CNOT, &mut [2, 1], 3, &(kron(&CNOT, &Array2::eye(2))))]
     #[case(&ISWAP, &mut [0, 1], 3, &kron(&Array2::eye(2), &ISWAP))]
     #[case(&ISWAP, &mut [1, 0], 3, &kron(&Array2::eye(2), &ISWAP))]
     #[case(&ISWAP, &mut [1, 2], 4, &kron(&Array2::eye(2), &kron(&ISWAP, &Array2::eye(2))))]
     #[case(&ISWAP, &mut [3, 2], 4, &kron(&ISWAP, &Array2::eye(4)))]
     #[case(&ISWAP, &mut [2, 3], 4, &kron(&ISWAP, &Array2::eye(4)))]
-    #[ignore] // TODO currently hangs
     fn test_two_qubit_gates(
         #[case] matrix: &Matrix,
         #[case] indices: &mut [u64],
