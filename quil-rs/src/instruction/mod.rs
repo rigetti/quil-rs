@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::borrow::Cow;
 use std::collections::HashSet;
 use std::fmt;
 
@@ -428,11 +427,11 @@ impl Instruction {
         }
     }
 
-    pub(crate) fn get_frame_match_condition(
-        &self,
+    pub(crate) fn get_frame_match_condition<'a>(
+        &'a self,
         include_blocked: bool,
-        qubits_available: HashSet<Qubit>,
-    ) -> Option<FrameMatchCondition> {
+        qubits_available: HashSet<&'a Qubit>,
+    ) -> Option<FrameMatchCondition<'a>> {
         match self {
             Instruction::Pulse(Pulse {
                 blocking, frame, ..
@@ -443,7 +442,7 @@ impl Instruction {
             | Instruction::RawCapture(RawCapture {
                 blocking, frame, ..
             }) => Some(if *blocking && include_blocked {
-                FrameMatchCondition::AnyOfQubits(Cow::Borrowed(&frame.qubits))
+                FrameMatchCondition::AnyOfQubits(frame.qubits.iter().collect())
             } else {
                 FrameMatchCondition::Specific(frame)
             }),
@@ -452,11 +451,11 @@ impl Instruction {
                 qubits,
                 ..
             }) => Some(if frame_names.is_empty() {
-                FrameMatchCondition::ExactQubits(Cow::Borrowed(qubits))
+                FrameMatchCondition::ExactQubits(qubits.iter().collect())
             } else {
                 FrameMatchCondition::And(vec![
-                    FrameMatchCondition::ExactQubits(Cow::Borrowed(qubits)),
-                    FrameMatchCondition::AnyOfNames(frame_names),
+                    FrameMatchCondition::ExactQubits(qubits.iter().collect()),
+                    FrameMatchCondition::AnyOfNames(frame_names.iter().collect()),
                 ])
             }),
             Instruction::Fence(Fence { qubits }) => {
@@ -464,7 +463,7 @@ impl Instruction {
                     Some(if qubits.is_empty() {
                         FrameMatchCondition::All
                     } else {
-                        FrameMatchCondition::AnyOfQubits(Cow::Borrowed(qubits))
+                        FrameMatchCondition::AnyOfQubits(qubits.iter().collect())
                     })
                 } else {
                     None
@@ -474,12 +473,11 @@ impl Instruction {
                 let qubits = match qubit {
                     Some(qubit) => {
                         let mut set = HashSet::new();
-                        set.insert(qubit.clone());
+                        set.insert(qubit);
                         set
                     }
                     None => qubits_available,
                 };
-                let qubits = qubits.into_iter().collect();
 
                 if include_blocked {
                     Some(FrameMatchCondition::AnyOfQubits(qubits))

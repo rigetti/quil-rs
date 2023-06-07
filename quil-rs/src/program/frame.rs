@@ -12,10 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::{
-    borrow::Cow,
-    collections::{HashMap, HashSet},
-};
+use std::collections::{HashMap, HashSet};
 
 use crate::instruction::{FrameAttributes, FrameDefinition, FrameIdentifier, Instruction, Qubit};
 
@@ -56,18 +53,12 @@ impl FrameSet {
             FrameMatchCondition::AnyOfNames(names) => {
                 keys.filter(|&f| names.contains(&f.name)).collect()
             }
-            FrameMatchCondition::AnyOfQubits(qubits) => {
-                let any_of_set: HashSet<_> = qubits.iter().collect();
-
-                keys.filter(|&f| f.qubits.iter().any(|q| any_of_set.contains(q)))
-                    .collect()
-            }
-            FrameMatchCondition::ExactQubits(qubits) => {
-                let exact_set: HashSet<_> = qubits.iter().collect();
-
-                keys.filter(|&f| f.qubits.iter().collect::<HashSet<_>>() == exact_set)
-                    .collect()
-            }
+            FrameMatchCondition::AnyOfQubits(qubits) => keys
+                .filter(|&f| f.qubits.iter().any(|q| qubits.contains(&q)))
+                .collect(),
+            FrameMatchCondition::ExactQubits(qubits) => keys
+                .filter(|&f| f.qubits.iter().collect::<HashSet<_>>() == qubits)
+                .collect(),
             FrameMatchCondition::Specific(frame) => {
                 // This unusual pattern (fetch key & value by key, discard value) allows us to return
                 // a reference to `self` rather than `condition`, keeping lifetimes simpler.
@@ -146,13 +137,13 @@ pub(crate) enum FrameMatchCondition<'a> {
     All,
 
     /// Match all frames which share any one of these names
-    AnyOfNames(&'a [String]),
+    AnyOfNames(HashSet<&'a String>),
 
     /// Match all frames which contain any of these qubits
-    AnyOfQubits(Cow<'a, [Qubit]>),
+    AnyOfQubits(HashSet<&'a Qubit>),
 
     /// Match all frames which contain exactly these qubits
-    ExactQubits(Cow<'a, [Qubit]>),
+    ExactQubits(HashSet<&'a Qubit>),
 
     /// Return this specific frame, if present in the set
     Specific(&'a FrameIdentifier),
