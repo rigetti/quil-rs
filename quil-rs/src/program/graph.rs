@@ -176,18 +176,21 @@ impl MemoryAccessQueue {
 
 /// Add a dependency to an edge on the graph, whether that edge currently exists or not.
 macro_rules! add_dependency {
-    ($graph:expr, $source:expr => $target:expr, $dependency:expr) => {
-        match $graph.edge_weight_mut($source, $target) {
+    ($graph:expr, $source:expr => $target:expr, $dependency:expr) => {{
+        let source = $source;
+        let target = $target;
+        let dependency = $dependency;
+        match $graph.edge_weight_mut(source, target) {
             Some(edge) => {
-                edge.insert($dependency);
+                edge.insert(dependency);
             }
             None => {
                 let mut edge = HashSet::new();
-                edge.insert($dependency);
-                $graph.add_edge($source.clone(), $target.clone(), edge);
+                edge.insert(dependency);
+                $graph.add_edge(source, target, edge);
             }
         }
-    };
+    }};
 }
 
 pub type DependencyGraph = GraphMap<ScheduledGraphNode, HashSet<ExecutionDependency>, Directed>;
