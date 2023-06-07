@@ -583,7 +583,8 @@ impl fmt::Display for GateModifier {
 mod test_gate_into_matrix {
     use super::{
         lifted_gate_matrix, permutation_arbitrary, qubit_adjacent_lifted_gate, two_swap_helper,
-        Matrix, CONSTANT_GATE_MATRICES,
+        Expression::Number, Gate, GateModifier::*, Matrix, ParameterizedMatrix, Qubit::Fixed,
+        CONSTANT_GATE_MATRICES, PARAMETERIZED_GATE_MATRICES,
     };
     use crate::{imag, real};
     use ndarray::{array, linalg::kron, Array2};
@@ -619,6 +620,8 @@ mod test_gate_into_matrix {
     static _0: Complex64 = real!(0.0);
     static _1: Complex64 = real!(1.0);
     static _I: Complex64 = imag!(1.0);
+    static PI: Complex64 = real!(std::f64::consts::PI);
+    static PI_4: Complex64 = real!(std::f64::consts::FRAC_PI_4);
     static SWAP: Lazy<Matrix> = Lazy::new(|| CONSTANT_GATE_MATRICES.get("SWAP").cloned().unwrap());
     static X: Lazy<Matrix> = Lazy::new(|| array![[_0, _1], [_1, _0]]);
     static P0: Lazy<Matrix> = Lazy::new(|| array![[_1, _0], [_0, _0]]);
@@ -627,6 +630,11 @@ mod test_gate_into_matrix {
     static ISWAP: Lazy<Matrix> =
         Lazy::new(|| CONSTANT_GATE_MATRICES.get("ISWAP").cloned().unwrap());
     static H: Lazy<Matrix> = Lazy::new(|| CONSTANT_GATE_MATRICES.get("H").cloned().unwrap());
+    static RZ: Lazy<ParameterizedMatrix> =
+        Lazy::new(|| PARAMETERIZED_GATE_MATRICES.get("RZ").cloned().unwrap());
+    static CCNOT: Lazy<Matrix> =
+        Lazy::new(|| CONSTANT_GATE_MATRICES.get("CCNOT").cloned().unwrap());
+    static CZ: Lazy<Matrix> = Lazy::new(|| CONSTANT_GATE_MATRICES.get("CZ").cloned().unwrap());
 
     #[rstest]
     #[case(0, 2, &SWAP)]
@@ -754,6 +762,30 @@ mod test_gate_into_matrix {
         #[case] expected: &Matrix,
     ) {
         assert_allclose!(lifted_gate_matrix(matrix, indices, n_qubits), expected);
+    }
+
+    #[rstest]
+    #[case(&mut Gate::new("H", vec![], vec![Fixed(0)], vec![]).unwrap(), 4, &kron(&Array2::eye(8), &H))]
+    #[case(&mut Gate::new("RZ", vec![Number(PI_4)], vec![Fixed(0)], vec![Dagger]).unwrap(), 1, &RZ(-PI_4))]
+    #[case(&mut Gate::new("X", vec![], vec![Fixed(0)], vec![Dagger]).unwrap().controlled(Fixed(1)), 2, &CNOT)]
+    #[case(
+        &mut Gate::new("X", vec![], vec![Fixed(0)], vec![]).unwrap().dagger().controlled(Fixed(1)).dagger().dagger().controlled(Fixed(2)),
+        3,
+        &CCNOT
+    )]
+    #[case(
+        &mut Gate::new("PHASE", vec![Number(_0)], vec![Fixed(1)], vec![]).unwrap().forked(Fixed(0), vec![Number(PI)]).unwrap(),
+        2,
+        &lifted_gate_matrix(&CZ, &[0, 1], 2)
+    )]
+    fn test_into_unitary(
+        #[case] gate: &mut Gate,
+        #[case] n_qubits: u64,
+        #[case] expected: &Matrix,
+    ) {
+        let result = gate.into_unitary(n_qubits);
+        assert!(result.is_ok());
+        assert_allclose!(result.as_ref().unwrap(), expected);
     }
 }
 
