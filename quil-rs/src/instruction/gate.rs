@@ -222,33 +222,31 @@ fn gate_matrix(mut gate: &mut Gate) -> Result<Matrix, GateError> {
                 }
             }
         }
+    } else if gate.parameters.is_empty() {
+        CONSTANT_GATE_MATRICES
+            .get(&gate.name)
+            .cloned()
+            .ok_or_else(|| GateError::UnknownGateForMatrix {
+                name: gate.name.clone(),
+            })
     } else {
-        if gate.parameters.is_empty() {
-            CONSTANT_GATE_MATRICES
-                .get(&gate.name)
-                .cloned()
-                .ok_or_else(|| GateError::UnknownGateForMatrix {
-                    name: gate.name.clone(),
-                })
-        } else {
-            match gate.parameters.len() {
-                1 => {
-                    if let Expression::Number(x) = gate.parameters[0].clone().into_simplified() {
-                        PARAMETERIZED_GATE_MATRICES
-                            .get(&gate.name)
-                            .map(|f| f(x))
-                            .ok_or_else(|| GateError::UnknownGateForMatrix {
-                                name: gate.name.clone(),
-                            })
-                    } else {
-                        Err(GateError::GateMatrixNonConstantParams)
-                    }
+        match gate.parameters.len() {
+            1 => {
+                if let Expression::Number(x) = gate.parameters[0].clone().into_simplified() {
+                    PARAMETERIZED_GATE_MATRICES
+                        .get(&gate.name)
+                        .map(|f| f(x))
+                        .ok_or_else(|| GateError::UnknownGateForMatrix {
+                            name: gate.name.clone(),
+                        })
+                } else {
+                    Err(GateError::GateMatrixNonConstantParams)
                 }
-                actual => Err(GateError::GateMatrixArgumentLength {
-                    expected: 1,
-                    actual,
-                }),
             }
+            actual => Err(GateError::GateMatrixArgumentLength {
+                expected: 1,
+                actual,
+            }),
         }
     }
 }
