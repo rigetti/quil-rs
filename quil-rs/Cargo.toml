@@ -35,3 +35,7 @@ graphviz-dot = ["dot-writer"]
 [[bench]]
 name = "parser"
 harness = false
+
+[[bench]]
+name = "get_frames_for_instruction"
+harness = false
