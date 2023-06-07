@@ -604,6 +604,9 @@ impl Instruction {
 }
 
 #[cfg(test)]
+pub(crate) use gate::assert_allclose;
+
+#[cfg(test)]
 mod tests {
     use rstest::*;
     use std::str::FromStr;

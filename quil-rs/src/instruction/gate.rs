@@ -580,42 +580,46 @@ impl fmt::Display for GateModifier {
 }
 
 #[cfg(test)]
+/// Kind of like numpy.testing.assert_allclose for arrays of complex numbers.
+/// Loops by hand to print out position & differences and to avoid needing, e.g., ordered-float
+macro_rules! assert_allclose {
+    ($actual:expr, $desired:expr) => {
+        assert_allclose!($actual, $desired, 1e-7)
+    };
+    ($actual:expr, $desired:expr, $tol:expr) => {
+        for i in 0..$actual.nrows() {
+            for j in 0..$actual.ncols() {
+                let a = $actual[[i, j]];
+                let d = $desired[[i, j]];
+                let diff = (a - d).norm();
+                let tol = $tol;
+                assert!(
+                    diff <= tol,
+                    "\n{}\n&\n{}\nare different in {:?} position; diff = {diff:?}, tol = {tol:?}",
+                    $actual,
+                    $desired,
+                    (i, j)
+                );
+            }
+        }
+    };
+}
+
+#[cfg(test)]
+pub(crate) use assert_allclose;
+
+#[cfg(test)]
 mod test_gate_into_matrix {
     use super::{
-        lifted_gate_matrix, permutation_arbitrary, qubit_adjacent_lifted_gate, two_swap_helper,
-        Expression::Number, Gate, GateModifier::*, Matrix, ParameterizedMatrix, Qubit::Fixed,
-        CONSTANT_GATE_MATRICES, PARAMETERIZED_GATE_MATRICES,
+        assert_allclose, lifted_gate_matrix, permutation_arbitrary, qubit_adjacent_lifted_gate,
+        two_swap_helper, Expression::Number, Gate, GateModifier::*, Matrix, ParameterizedMatrix,
+        Qubit::Fixed, CONSTANT_GATE_MATRICES, PARAMETERIZED_GATE_MATRICES,
     };
     use crate::{imag, real};
     use ndarray::{array, linalg::kron, Array2};
     use num_complex::Complex64;
     use once_cell::sync::Lazy;
     use rstest::rstest;
-
-    // numpy.testing.assert_allclose for arrays of complex numbers
-    // loops by hand to print out position & differences and to avoid needing, e.g., ordered-float
-    macro_rules! assert_allclose {
-        ($actual:expr, $desired:expr) => {
-            assert_allclose!($actual, $desired, 1e-7)
-        };
-        ($actual:expr, $desired:expr, $rtol:expr) => {
-            for i in 0..$actual.nrows() {
-                for j in 0..$actual.ncols() {
-                    let a = $actual[[i, j]];
-                    let d = $desired[[i, j]];
-                    let diff = (a - d).norm();
-                    let tol = ($rtol * d).norm();
-                    assert!(
-                        diff <= tol,
-                        "\n{}\n&\n{}\nare different in {:?} position; diff = {diff:?}, tol = {tol:?}",
-                        $actual,
-                        $desired,
-                        (i, j)
-                    );
-                }
-            }
-        };
-    }
 
     static _0: Complex64 = real!(0.0);
     static _1: Complex64 = real!(1.0);
