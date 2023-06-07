@@ -265,7 +265,7 @@ mod simplification {
         ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign},
         str::FromStr,
     };
-    use symbolic_expressions::{parser, IntoSexp, Sexp};
+    use symbolic_expressions::{parser, IntoSexp, Sexp, SexpError};
 
     /// Simplify an [`Expression`]:
     /// - turn it into a [`Sexp`],
@@ -280,18 +280,16 @@ mod simplification {
             .run(&make_rules());
         let root = runner.roots[0];
         let (_, best) = egg::Extractor::new(&runner.egraph, egg::AstSize).find_best(root);
-        let simpler_sexp = parser::parse_str(&best.to_string())
-            .map_err(|e| SimplificationError::SexpFromRecExpr(format!("{e:#?}")))?;
+        let simpler_sexp =
+            parser::parse_str(&best.to_string()).map_err(SimplificationError::SexpFromRecExpr)?;
         Expression::try_from(&simpler_sexp)
     }
 
     /// All the myriad ways simplifying an [`Expression`] can fail.
     #[derive(Debug, thiserror::Error)]
     pub enum SimplificationError {
-        #[error("Unable to parse a RecExpr from given Sexp: {0}")]
-        RecExprFromSexp(String),
-        #[error("Unable to parse Sexp from given RecExpr: {0}")]
-        SexpFromRecExpr(String),
+        #[error("Unable to parse Sexp from given RecExpr: {0:?}")]
+        SexpFromRecExpr(#[from] SexpError),
         #[error("Can't make anything from an empty Sexp")]
         EmptySexp,
         #[error("Invalid string for a complex number: {0}")]
@@ -430,19 +428,19 @@ mod simplification {
     }
 
     /// An [`egg`]-friendly complex number.
-    /// We can't jsut use `num_complex::Complex64`, because we need `Ord` and `Hash`.
+    /// We can't just use `num_complex::Complex64`, because we need `Ord` and `Hash`.
     ///
     /// Fun fact, there is no total ordering on the complex numbers; however, the derived thing
     /// here will work for our purposes.
     ///
     /// https://en.wikipedia.org/wiki/Complex_number#Ordering
     #[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
-    struct C {
+    struct Complex {
         re: OrderedFloat<f64>,
         im: OrderedFloat<f64>,
     }
 
-    impl From<num_complex::Complex64> for C {
+    impl From<num_complex::Complex64> for Complex {
         fn from(x: num_complex::Complex64) -> Self {
             Self {
                 re: x.re.into(),
@@ -451,8 +449,8 @@ mod simplification {
         }
     }
 
-    impl From<C> for num_complex::Complex64 {
-        fn from(x: C) -> Self {
+    impl From<Complex> for num_complex::Complex64 {
+        fn from(x: Complex) -> Self {
             Self {
                 re: x.re.into(),
                 im: x.im.into(),
@@ -460,7 +458,7 @@ mod simplification {
         }
     }
 
-    impl std::str::FromStr for C {
+    impl std::str::FromStr for Complex {
         type Err = ();
         fn from_str(s: &str) -> Result<Self, Self::Err> {
             num_complex::Complex64::from_str(s)
@@ -469,13 +467,13 @@ mod simplification {
         }
     }
 
-    impl std::fmt::Display for C {
+    impl std::fmt::Display for Complex {
         fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
             f.write_str(&format_complex(&num_complex::Complex64::from(*self)))
         }
     }
 
-    impl C {
+    impl Complex {
         const I: Self = Self {
             re: OrderedFloat(0.0),
             im: OrderedFloat(1.0),
@@ -515,16 +513,16 @@ mod simplification {
         }
     }
 
-    impl Neg for C {
+    impl Neg for Complex {
         type Output = Self;
         fn neg(self) -> Self::Output {
             Self::from(-num_complex::Complex64::from(self))
         }
     }
 
-    macro_rules! impl_via_complex {
+    macro_rules! impl_via_num_complex {
         ($name:ident, $name_assign:ident, $function:ident, $function_assign:ident) => {
-            impl $name for C {
+            impl $name for Complex {
                 type Output = Self;
                 fn $function(self, other: Self) -> Self {
                     Self::from(
@@ -533,7 +531,7 @@ mod simplification {
                     )
                 }
             }
-            impl $name_assign for C {
+            impl $name_assign for Complex {
                 fn $function_assign(&mut self, other: Self) {
                     *self = Self::from(
                         num_complex::Complex64::from(*self)
@@ -544,10 +542,10 @@ mod simplification {
         };
     }
 
-    impl_via_complex!(Add, AddAssign, add, add_assign);
-    impl_via_complex!(Sub, SubAssign, sub, sub_assign);
-    impl_via_complex!(Mul, MulAssign, mul, mul_assign);
-    impl_via_complex!(Div, DivAssign, div, div_assign);
+    impl_via_num_complex!(Add, AddAssign, add, add_assign);
+    impl_via_num_complex!(Sub, SubAssign, sub, sub_assign);
+    impl_via_num_complex!(Mul, MulAssign, mul, mul_assign);
+    impl_via_num_complex!(Div, DivAssign, div, div_assign);
 
     define_language! {
         /// An [`egg`]-friendly version of [`Expression`]s, this language allows us to manipulate
@@ -555,7 +553,7 @@ mod simplification {
         enum Expr {
             // Numbers
             "pi" = Pi,
-            Number(C),
+            Number(Complex),
             // Functions
             "cis" = Cis(Id),
             "cos" = Cos(Id),
@@ -625,13 +623,13 @@ mod simplification {
     /// Our analysis will perform constant folding on our language.
     impl egg::Analysis<Expr> for Arithmetic {
         /// Constant values
-        type Data = Option<C>;
+        type Data = Option<Complex>;
 
         /// Pull the (possible) [`Self::Data`] from the given expression.
         fn make(egraph: &EGraph, enode: &Expr) -> Self::Data {
             let x = |id: &Id| egraph[*id].data.as_ref();
             match enode {
-                Expr::Pi => Some(C::PI),
+                Expr::Pi => Some(Complex::PI),
                 Expr::Number(c) => Some(*c),
                 Expr::Cis(id) => Some(x(id)?.cis()),
                 Expr::Cos(id) => Some(x(id)?.cos()),
@@ -660,9 +658,10 @@ mod simplification {
         /// Update the graph to equate and simplify constant values.
         fn modify(egraph: &mut EGraph, id: Id) {
             if let Some(c) = egraph[id].data {
-                let value = match c {
-                    _ if c.close(C::PI) => Expr::Pi,
-                    _ => Expr::Number(c),
+                let value = if c.close(Complex::PI) {
+                    Expr::Pi
+                } else {
+                    Expr::Number(c)
                 };
                 let added = egraph.add(value);
                 egraph.union(id, added);
@@ -678,7 +677,7 @@ mod simplification {
             egraph[subst[key]]
                 .data
                 .as_ref()
-                .map(|value| !value.close(C::ZERO))
+                .map(|value| !value.close(Complex::ZERO))
                 .unwrap_or(false)
         }
     }
@@ -1440,46 +1439,71 @@ mod tests {
         #[test]
         fn exponentiation_works_as_expected(left in arb_expr(), right in arb_expr()) {
             let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Caret, right: Box::new(right.clone()) } );
-            prop_assert_eq!(&(left.clone() ^ right.clone()), &expected);
+            prop_assert_eq!(left ^ right, expected);
+        }
+
+        #[test]
+        fn in_place_exponentiation_works_as_expected(left in arb_expr(), right in arb_expr()) {
+            let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Caret, right: Box::new(right.clone()) } );
             let mut x = left;
             x ^= right;
-            prop_assert_eq!(&x, &expected);
+            prop_assert_eq!(x, expected);
         }
 
         #[test]
         fn addition_works_as_expected(left in arb_expr(), right in arb_expr()) {
             let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Plus, right: Box::new(right.clone()) } );
-            prop_assert_eq!(&(left.clone() + right.clone()), &expected);
+            prop_assert_eq!(left + right, expected);
+        }
+
+        #[test]
+        fn in_place_addition_works_as_expected(left in arb_expr(), right in arb_expr()) {
+            let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Plus, right: Box::new(right.clone()) } );
             let mut x = left;
             x += right;
-            prop_assert_eq!(&x, &expected);
+            prop_assert_eq!(x, expected);
         }
 
         #[test]
         fn subtraction_works_as_expected(left in arb_expr(), right in arb_expr()) {
             let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Minus, right: Box::new(right.clone()) } );
-            prop_assert_eq!(&(left.clone() - right.clone()), &expected);
+            prop_assert_eq!(left - right, expected);
+        }
+
+        #[test]
+        fn in_place_subtraction_works_as_expected(left in arb_expr(), right in arb_expr()) {
+            let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Minus, right: Box::new(right.clone()) } );
             let mut x = left;
             x -= right;
-            prop_assert_eq!(&x, &expected);
+            prop_assert_eq!(x, expected);
         }
 
         #[test]
         fn multiplication_works_as_expected(left in arb_expr(), right in arb_expr()) {
             let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Star, right: Box::new(right.clone()) } );
-            prop_assert_eq!(&(left.clone() * right.clone()), &expected);
+            prop_assert_eq!(left * right, expected);
+        }
+
+        #[test]
+        fn in_place_multiplication_works_as_expected(left in arb_expr(), right in arb_expr()) {
+            let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Star, right: Box::new(right.clone()) } );
             let mut x = left;
             x *= right;
-            prop_assert_eq!(&x, &expected);
+            prop_assert_eq!(x, expected);
         }
 
         #[test]
         fn division_works_as_expected(left in arb_expr(), right in arb_expr()) {
             let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Slash, right: Box::new(right.clone()) } );
-            prop_assert_eq!(&(left.clone() / right.clone()), &expected);
+            prop_assert_eq!(left / right, expected);
+        }
+
+        #[test]
+        fn in_place_division_works_as_expected(left in arb_expr(), right in arb_expr()) {
+            let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Slash, right: Box::new(right.clone()) } );
             let mut x = left;
             x /= right;
-            prop_assert_eq!(&x, &expected);
+            prop_assert_eq!(x, expected);
         }
 
 
