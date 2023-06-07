@@ -516,22 +516,19 @@ fn terminate_working_block(
         return Ok(());
     }
 
-    let block = InstructionBlock::build(working_instructions.to_vec(), terminator, program)?;
+    // This leaves working_instructions and working_label in their respective "empty" states.
+    let block = InstructionBlock::build(std::mem::take(working_instructions), terminator, program)?;
     let label = working_label
-        .clone()
+        .take()
         .unwrap_or_else(|| ScheduledProgram::generate_autoincremented_label(blocks));
 
-    match blocks.insert(label.clone(), block) {
-        Some(_) => Err(ScheduleError {
+    if blocks.insert(label.clone(), block).is_some() {
+        return Err(ScheduleError {
             instruction_index,
             instruction: Instruction::Label(Label(label)),
             variant: ScheduleErrorVariant::DuplicateLabel,
-        }),
-        None => Ok(()),
-    }?;
-
-    working_instructions.drain(..);
-    *working_label = None;
+        });
+    }
 
     Ok(())
 }
@@ -574,13 +571,14 @@ impl ScheduledProgram {
                 | Instruction::Reset(_)
                 | Instruction::Wait => {
                     working_instructions.push(instruction);
-                    Ok(())
                 }
-                Instruction::Gate(_) | Instruction::Measurement(_) => Err(ScheduleError {
-                    instruction_index,
-                    instruction: instruction.clone(),
-                    variant: ScheduleErrorVariant::UncalibratedInstruction,
-                }),
+                Instruction::Gate(_) | Instruction::Measurement(_) => {
+                    return Err(ScheduleError {
+                        instruction_index,
+                        instruction,
+                        variant: ScheduleErrorVariant::UncalibratedInstruction,
+                    })
+                }
                 Instruction::CalibrationDefinition(_)
                 | Instruction::CircuitDefinition(_)
                 | Instruction::Declaration(_)
@@ -589,10 +587,9 @@ impl ScheduledProgram {
                 | Instruction::MeasureCalibrationDefinition(MeasureCalibrationDefinition {
                     ..
                 })
-                | Instruction::WaveformDefinition(_) => Ok(()),
+                | Instruction::WaveformDefinition(_) => {}
                 Instruction::Pragma(_) => {
                     working_instructions.push(instruction);
-                    Ok(())
                 }
                 Instruction::Label(Label(value)) => {
                     terminate_working_block(
@@ -604,8 +601,7 @@ impl ScheduledProgram {
                         instruction_index,
                     )?;
 
-                    working_label = Some(value.clone());
-                    Ok(())
+                    working_label = Some(value);
                 }
                 Instruction::Jump(Jump { target }) => {
                     terminate_working_block(
@@ -618,7 +614,6 @@ impl ScheduledProgram {
                         program,
                         instruction_index,
                     )?;
-                    Ok(())
                 }
                 Instruction::JumpWhen(JumpWhen { target, condition }) => {
                     terminate_working_block(
@@ -633,7 +628,6 @@ impl ScheduledProgram {
                         program,
                         instruction_index,
                     )?;
-                    Ok(())
                 }
                 Instruction::JumpUnless(JumpUnless { target, condition }) => {
                     terminate_working_block(
@@ -647,7 +641,7 @@ impl ScheduledProgram {
                         &mut working_label,
                         program,
                         instruction_index,
-                    )
+                    )?;
                 }
                 Instruction::Halt => terminate_working_block(
                     Some(BlockTerminator::Halt),
@@ -656,8 +650,8 @@ impl ScheduledProgram {
                     &mut working_label,
                     program,
                     instruction_index,
-                ),
-            }?;
+                )?,
+            };
         }
 
         terminate_working_block(
