@@ -732,7 +732,7 @@ mod test_gate_into_matrix {
 
     #[rstest]
     #[case(&CNOT, &mut [1, 0], 2, &(kron(&P0, &Array2::eye(2)) + kron(&P1, &X)))]
-    #[case(&CNOT, &mut [0, 1], 2, &(kron(&P0, &Array2::eye(2)) + kron(&X, &P1)))]
+    #[case(&CNOT, &mut [0, 1], 2, &(kron(&Array2::eye(2), &P0) + kron(&X, &P1)))]
     #[case(&CNOT, &mut [2, 1], 3, &(kron(&CNOT, &Array2::eye(2))))]
     #[case(&ISWAP, &mut [0, 1], 3, &kron(&Array2::eye(2), &ISWAP))]
     #[case(&ISWAP, &mut [1, 0], 3, &kron(&Array2::eye(2), &ISWAP))]
