@@ -626,6 +626,7 @@ mod test_gate_into_matrix {
     static CNOT: Lazy<Matrix> = Lazy::new(|| CONSTANT_GATE_MATRICES.get("CNOT").cloned().unwrap());
     static ISWAP: Lazy<Matrix> =
         Lazy::new(|| CONSTANT_GATE_MATRICES.get("ISWAP").cloned().unwrap());
+    static H: Lazy<Matrix> = Lazy::new(|| CONSTANT_GATE_MATRICES.get("H").cloned().unwrap());
 
     #[rstest]
     #[case(0, 2, &SWAP)]
@@ -737,13 +738,22 @@ mod test_gate_into_matrix {
     #[case(&ISWAP, &mut [1, 2], 4, &kron(&Array2::eye(2), &kron(&ISWAP, &Array2::eye(2))))]
     #[case(&ISWAP, &mut [3, 2], 4, &kron(&ISWAP, &Array2::eye(4)))]
     #[case(&ISWAP, &mut [2, 3], 4, &kron(&ISWAP, &Array2::eye(4)))]
+    #[case(&H, &mut [0], 4, &kron(&Array2::eye(8), &H))]
+    #[case(&H, &mut [1], 4, &kron(&Array2::eye(4), &kron(&H, &Array2::eye(2))))]
+    #[case(&H, &mut [2], 4, &kron(&Array2::eye(2), &kron(&H, &Array2::eye(4))))]
+    #[case(&H, &mut [3], 4, &kron(&H, &Array2::eye(8)))]
+    #[case(&H, &mut [0], 5, &kron(&Array2::eye(16), &H))]
+    #[case(&H, &mut [1], 5, &kron(&Array2::eye(8), &kron(&H, &Array2::eye(2))))]
+    #[case(&H, &mut [2], 5, &kron(&Array2::eye(4), &kron(&H, &Array2::eye(4))))]
+    #[case(&H, &mut [3], 5, &kron(&Array2::eye(2), &kron(&H, &Array2::eye(8))))]
+    #[case(&H, &mut [4], 5, &kron(&H, &Array2::eye(16)))]
     fn test_lifted_gate_matrix(
         #[case] matrix: &Matrix,
         #[case] indices: &mut [u64],
         #[case] n_qubits: u64,
         #[case] expected: &Matrix,
     ) {
-        assert_allclose!(lifted_gate_matrix(&matrix, indices, n_qubits), expected);
+        assert_allclose!(lifted_gate_matrix(matrix, indices, n_qubits), expected);
     }
 }
 
