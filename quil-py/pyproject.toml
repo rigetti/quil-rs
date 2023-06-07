@@ -25,6 +25,7 @@ authors = ["Rigetti Computing <softapps@rigetti.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.8"
+numpy = "^1.21"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"

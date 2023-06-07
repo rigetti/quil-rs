@@ -22,6 +22,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 quil-rs = { path = "../quil-rs", version = "0.17.0" }
+ndarray.workspace = true
 strum.workspace = true
 # pyo3 dependencies should be updated together
 pyo3 = { version = "0.17" }
