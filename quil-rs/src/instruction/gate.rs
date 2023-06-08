@@ -60,23 +60,28 @@ pub enum GateError {
         expected_arguments: Vec<String>,
     },
 
-    #[error("unknown gate to turn into matrix: {name}")]
-    UnknownGateForMatrix { name: String },
+    #[error("unknown gate `{name}` to turn into {} matrix ",  if *parameterized { "parameterized" } else { "constant" })]
+    UndefinedGate { name: String, parameterized: bool },
 
     #[error("expected {expected} parameters, was given {actual}")]
-    GateMatrixArgumentLength { expected: usize, actual: usize },
+    MatrixArgumentLength { expected: usize, actual: usize },
 
-    #[error("cannot produce a matrix from a gate with non-constant parameters")]
-    GateMatrixNonConstantParams,
+    #[error(
+        "cannot produce a matrix for a gate `{name}` with non-constant parameters {parameters:?}"
+    )]
+    MatrixNonConstantParams {
+        name: String,
+        parameters: Vec<Expression>,
+    },
 
-    #[error("cannot produce a matrix from a gate with variable qubits")]
-    GateMatrixVariableQubit,
+    #[error("cannot produce a matrix for gate `{name}` with variable qubit {qubit}")]
+    MatrixVariableQubit { name: String, qubit: Qubit },
 
-    #[error("no modifiers found, but at least one was expected")]
-    NoGateModifiers,
-
-    #[error("forked gate has an odd number of parameters")]
-    ForkedGateOddNumParams,
+    #[error("forked gate `{name}` has an odd number of parameters: {parameters:?}")]
+    ForkedGateOddNumParams {
+        name: String,
+        parameters: Vec<Expression>,
+    },
 }
 
 /// Matrix version of a gate.
@@ -156,7 +161,10 @@ impl Gate {
             .qubits
             .iter()
             .map(|q| match q {
-                Qubit::Variable(_) => Err(GateError::GateMatrixVariableQubit),
+                Qubit::Variable(_) => Err(GateError::MatrixVariableQubit {
+                    name: self.name.clone(),
+                    qubit: q.clone(),
+                }),
                 Qubit::Fixed(i) => Ok(*i),
             })
             .collect::<Result<Vec<_>, _>>();
@@ -179,8 +187,8 @@ fn lifted_gate_matrix(matrix: &Matrix, qubits: &[u64], n_qubits: u64) -> Matrix 
 
 /// Recursively handle a gate, with all modifiers.
 ///
-/// The main source of complexity is in handling handling FORKED gates. Given a gate with
-/// modifiers, such as `FORKED CONTROLLED FORKED RX(a,b,c,d) 0 1 2 3`, we get a tree, as in
+/// The main source of complexity is in handling FORKED gates. Given a gate with modifiers, such as
+/// `FORKED CONTROLLED FORKED RX(a,b,c,d) 0 1 2 3`, we get a tree, as in
 ///
 /// ```text
 ///
@@ -208,7 +216,10 @@ fn gate_matrix(mut gate: &mut Gate) -> Result<Matrix, GateError> {
             GateModifier::Forked => {
                 let param_index = gate.parameters.len();
                 if param_index & 1 != 0 {
-                    Err(GateError::ForkedGateOddNumParams)
+                    Err(GateError::ForkedGateOddNumParams {
+                        name: gate.name.clone(),
+                        parameters: gate.parameters.clone(),
+                    })
                 } else {
                     // Some mutability dancing to keep the borrow checker happy
                     gate.qubits = gate.qubits[1..].to_vec();
@@ -226,8 +237,9 @@ fn gate_matrix(mut gate: &mut Gate) -> Result<Matrix, GateError> {
         CONSTANT_GATE_MATRICES
             .get(&gate.name)
             .cloned()
-            .ok_or_else(|| GateError::UnknownGateForMatrix {
+            .ok_or_else(|| GateError::UndefinedGate {
                 name: gate.name.clone(),
+                parameterized: false,
             })
     } else {
         match gate.parameters.len() {
@@ -236,14 +248,18 @@ fn gate_matrix(mut gate: &mut Gate) -> Result<Matrix, GateError> {
                     PARAMETERIZED_GATE_MATRICES
                         .get(&gate.name)
                         .map(|f| f(x))
-                        .ok_or_else(|| GateError::UnknownGateForMatrix {
+                        .ok_or_else(|| GateError::UndefinedGate {
                             name: gate.name.clone(),
+                            parameterized: true,
                         })
                 } else {
-                    Err(GateError::GateMatrixNonConstantParams)
+                    Err(GateError::MatrixNonConstantParams {
+                        name: gate.name.clone(),
+                        parameters: gate.parameters.clone(),
+                    })
                 }
             }
-            actual => Err(GateError::GateMatrixArgumentLength {
+            actual => Err(GateError::MatrixArgumentLength {
                 expected: 1,
                 actual,
             }),
