@@ -260,6 +260,7 @@ mod simplification {
         InfixExpression, InfixOperator, MemoryReference, PrefixExpression, PrefixOperator,
     };
     use egg::{define_language, rewrite as rw, FromOp, Id, Language, RecExpr};
+    use once_cell::sync::Lazy;
     use ordered_float::OrderedFloat;
     use std::{
         ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign},
@@ -275,9 +276,7 @@ mod simplification {
     pub(super) fn run(expression: &Expression) -> Result<Expression, SimplificationError> {
         let sexp = expression.into_sexp();
         let recexpr = parse_expr(&sexp)?;
-        let runner = egg::Runner::default()
-            .with_expr(&recexpr)
-            .run(&make_rules());
+        let runner = egg::Runner::default().with_expr(&recexpr).run(&(*RULES));
         let root = runner.roots[0];
         let (_, best) = egg::Extractor::new(&runner.egraph, egg::AstSize).find_best(root);
         let simpler_sexp =
@@ -686,26 +685,29 @@ mod simplification {
     type Rewrite = egg::Rewrite<Expr, Arithmetic>;
 
     /// Instantiate our rewrite rules for simplifying [`Expr`] terms.
-    fn make_rules() -> Vec<Rewrite> {
+    static RULES: Lazy<Vec<Rewrite>> = Lazy::new(|| {
         vec![
             // largely copied from https://github.com/egraphs-good/egg/blob/main/tests/math.rs
             // and https://github.com/herbie-fp/herbie/blob/main/egg-herbie/src/rules.rs
+
+            // addition & subtraction
+            rw!("zero-add"      ; "(+ ?a 0)"                => "?a"),
             rw!("comm-add"      ; "(+ ?a ?b)"               => "(+ ?b ?a)"),
             rw!("comm-mul"      ; "(* ?a ?b)"               => "(* ?b ?a)"),
             rw!("assoc-add"     ; "(+ ?a (+ ?b ?c))"        => "(+ (+ ?a ?b) ?c)"),
             rw!("assoc-mul"     ; "(* ?a (* ?b ?c))"        => "(* (* ?a ?b) ?c)"),
             rw!("sub-canon"     ; "(- ?a ?b)"               => "(+ ?a (* -1 ?b))"),
             rw!("sub-canon-2"   ; "(- ?a ?b)"               => "(+ ?a (neg ?b))"),
+            rw!("cancel-sub"    ; "(- ?a ?a)"               => "0"),
+            // multiplication & division
             rw!("div-canon"     ; "(/ ?a ?b)"               => "(* ?a (^ ?b -1))" if is_not_zero("?b")),
-            rw!("zero-add"      ; "(+ ?a 0)"                => "?a"),
             rw!("zero-mul"      ; "(* ?a 0)"                => "0"),
             rw!("one-mul"       ; "(* ?a 1)"                => "?a"),
-            rw!("cancel-sub"    ; "(- ?a ?a)"               => "0"),
             rw!("cancel-div"    ; "(/ ?a ?a)"               => "1" if is_not_zero("?a")),
+            // + - * /
             rw!("distribute"    ; "(* ?a (+ ?b ?c))"        => "(+ (* ?a ?b) (* ?a ?c))"),
             rw!("factor"        ; "(+ (* ?a ?b) (* ?a ?c))" => "(* ?a (+ ?b ?c))"),
-            rw!("pow-mul"       ; "(* (^ ?a ?b) (^ ?a ?c))" => "(^ ?a (+ ?b ?c))"),
-            rw!("mul-pow"       ; "(^ ?a (+ ?b ?c))"        => "(* (^ ?a ?b) (^ ?a ?c))"),
+            // pow & sqrt
             rw!("pow0"          ; "(^ ?a 0)"                => "1" if is_not_zero("?a")),
             rw!("pow1"          ; "(^ ?a 1)"                => "?a"),
             rw!("pow2"          ; "(^ ?a 2)"                => "(* ?a ?a)"),
@@ -715,17 +717,33 @@ mod simplification {
             rw!("pow1/2"        ; "(^ ?a 0.5)"              => "(sqrt ?a)"),
             rw!("pow-recip"     ; "(^ ?a -1)"               => "(/ 1 ?a)" if is_not_zero("?a")),
             rw!("recip-mul-div" ; "(* ?a (/ 1 ?a))"         => "1" if is_not_zero("?a")),
+            rw!("pow-mul"       ; "(* (^ ?a ?b) (^ ?a ?c))" => "(^ ?a (+ ?b ?c))"),
+            rw!("mul-pow"       ; "(^ ?a (+ ?b ?c))"        => "(* (^ ?a ?b) (^ ?a ?c))"),
+            // pos and neg
             rw!("pos-canon"     ; "(pos ?a)"                => "?a"),
             rw!("neg-canon"     ; "(neg ?a)"                => "-?a"),
-            rw!("neg-canon-2"   ; "(neg ?a)"                => "(* -1 ?a)"),
+            // exp
+            rw!("exp-zero"      ; "(exp 0)"                 => "1"),
+            rw!("exp-neg"       ; "(exp (neg ?a))"          => "(/ 1 (exp ?a))"),
+            // trig
+            rw!("cis-zero"      ; "(cis 0)"                 => "1"),
+            rw!("cis-pi"        ; "(cis pi)"                => "-1"),
             rw!("cos-zero"      ; "(cos 0)"                 => "1"),
             rw!("cos-pi"        ; "(cos pi)"                => "-1"),
+            rw!("cos-+pi"       ; "(cos (+ ?a pi)))"        => "(neg (cos ?a))"),
+            rw!("cos-+pi/2"     ; "(cos (+ ?a (/ pi 2)))"   => "(neg (sin ?a))"),
             rw!("sin-zero"      ; "(sin 0)"                 => "0"),
             rw!("sin-pi"        ; "(sin pi)"                => "0"),
+            rw!("sin-+pi"       ; "(sin (+ ?a pi))"         => "(neg (sin ?a))"),
+            rw!("sin-+pi/2"     ; "(sin (+ ?a (/ pi 2)))"   => "(cos ?a)"),
             rw!("cos-neg"       ; "(cos (neg ?a))"          => "(cos ?a)"),
             rw!("sin-neg"       ; "(sin (neg ?a))"          => "(neg (sin ?a))"),
+            // cos^2 + sin^2 = 1
+            rw!("cos-sin-sum"   ; "(+ (* (cos ?a) (cos ?a)) (* (sin ?a) (sin ?a)))" => "1"),
+            rw!("sub-1-cos"     ; "(- (* (cos ?a) (cos ?a)) 1)" => "(neg (* (sin ?a) (sin ?a)))"),
+            rw!("sub-1-sin"     ; "(- (* (sin ?a) (sin ?a)) 1)" => "(neg (* (cos ?a) (cos ?a)))"),
         ]
-    }
+    });
 
     #[cfg(test)]
     mod tests {
@@ -733,37 +751,37 @@ mod simplification {
 
         egg::test_fn! {
             docstring_example,
-            make_rules(),
+            &RULES,
             "(+ (cos (* 2 pi)) 2)" => "3"
         }
 
         egg::test_fn! {
             issue_208_1,
-            make_rules(),
+            &RULES,
             "(* 0 theta)" => "0"
         }
 
         egg::test_fn! {
             issue_208_2,
-            make_rules(),
+            &RULES,
             "(/ theta 1)" => "theta"
         }
 
         egg::test_fn! {
             issue_208_3,
-            make_rules(),
+            &RULES,
             "(/ (* theta 5) 5)" => "theta"
         }
 
         egg::test_fn! {
             memory_ref,
-            make_rules(),
+            &RULES,
             "theta[0]" => "theta[0]"
         }
 
         egg::test_fn! {
             var,
-            make_rules(),
+            &RULES,
             "%foo" => "%foo"
         }
 
