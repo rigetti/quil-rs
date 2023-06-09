@@ -1506,7 +1506,6 @@ mod tests {
             prop_assert_eq!(x, expected);
         }
 
-
     }
 
     #[test]
