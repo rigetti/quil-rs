@@ -228,7 +228,7 @@ fn write_qubits(f: &mut fmt::Formatter, qubits: &[Qubit]) -> fmt::Result {
     Ok(())
 }
 
-/// Format qubits as a Quil parameter list, where each variable qubit must be prefixed with a `%`.
+/// Write qubits as a Quil parameter list, where each variable qubit must be prefixed with a `%`.
 fn write_qubit_parameters(f: &mut fmt::Formatter, qubits: &[Qubit]) -> fmt::Result {
     for qubit in qubits.iter() {
         match qubit {
@@ -240,24 +240,27 @@ fn write_qubit_parameters(f: &mut fmt::Formatter, qubits: &[Qubit]) -> fmt::Resu
     Ok(())
 }
 
-pub fn write_comma_separated_list(
+/// Write the values as a comma separated list, with an optional prefix before each value.
+fn write_comma_separated_list(
     f: &mut fmt::Formatter,
     values: &[impl fmt::Display],
+    prefix: Option<&str>,
 ) -> fmt::Result {
+    let prefix = prefix.unwrap_or_default();
     let mut iter = values.iter();
 
     if let Some(value) = iter.next() {
-        write!(f, "{value}")?;
+        write!(f, "{prefix}{value}")?;
     }
 
     for value in iter {
-        write!(f, ", {value}")?;
+        write!(f, ", {prefix}{value}")?;
     }
 
     Ok(())
 }
 
-pub fn write_expression_parameter_string(
+fn write_expression_parameter_string(
     f: &mut fmt::Formatter,
     parameters: &[Expression],
 ) -> fmt::Result {
@@ -266,23 +269,17 @@ pub fn write_expression_parameter_string(
     }
 
     write!(f, "(")?;
-    write!(f, "{}", parameters[0])?;
-    for parameter in parameters[1..].iter() {
-        write!(f, ", {parameter}")?;
-    }
+    write_comma_separated_list(f, parameters, None)?;
     write!(f, ")")
 }
 
-pub fn write_parameter_string(f: &mut fmt::Formatter, parameters: &[String]) -> fmt::Result {
+fn write_parameter_string(f: &mut fmt::Formatter, parameters: &[String]) -> fmt::Result {
     if parameters.is_empty() {
         return Ok(());
     }
 
     write!(f, "(")?;
-    write!(f, "%{}", parameters[0])?;
-    for parameter in parameters[1..].iter() {
-        write!(f, ", %{parameter}")?;
-    }
+    write_comma_separated_list(f, parameters, Some("%"))?;
     write!(f, ")")
 }
 

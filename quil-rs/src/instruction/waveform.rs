@@ -33,7 +33,7 @@ impl fmt::Display for WaveformDefinition {
         write!(f, "DEFWAVEFORM {}", self.name)?;
         write_parameter_string(f, &self.definition.parameters)?;
         write!(f, ":\n\t")?;
-        write_comma_separated_list(f, &self.definition.matrix)
+        write_comma_separated_list(f, &self.definition.matrix, None)
     }
 }
 
