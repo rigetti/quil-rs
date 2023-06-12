@@ -783,17 +783,25 @@ mod tests {
             assert_eq!(case.expression, case.simplified);
         }
     }
+    //
+    // Better behaved than the auto-derived version re: names
+    fn arb_memory_reference() -> impl Strategy<Value = MemoryReference> {
+        (r"[a-zA-Z][a-zA-Z0-9]+", any::<u64>())
+            .prop_map(|(name, index)| MemoryReference { name, index })
+    }
 
+    fn arb_complex64() -> impl Strategy<Value = Complex64> {
+        any::<(f64, f64)>().prop_map(|(re, im)| Complex64 { re, im })
+    }
     /// Generate an arbitrary Expression for a property test.
     /// See https://docs.rs/proptest/1.0.0/proptest/prelude/trait.Strategy.html#method.prop_recursive
     fn arb_expr() -> impl Strategy<Value = Expression> {
         use Expression::*;
         let leaf = prop_oneof![
-            any::<MemoryReference>().prop_map(Address),
-            (any::<f64>(), any::<f64>())
-                .prop_map(|(re, im)| Number(num_complex::Complex64::new(re, im))),
+            arb_memory_reference().prop_map(Address),
+            arb_complex64().prop_map(Number),
             Just(PiConstant),
-            ".*".prop_map(Variable),
+            r"[a-zA-Z][a-zA-Z0-9]*".prop_map(Variable),
         ];
         (leaf).prop_recursive(
             4,  // No more than 4 branch levels deep
@@ -825,10 +833,6 @@ mod tests {
         )
     }
 
-    fn arb_complex64() -> impl Strategy<Value = Complex64> {
-        any::<(f64, f64)>().prop_map(|(re, im)| Complex64::new(re, im))
-    }
-
     proptest! {
 
         #[test]
@@ -838,9 +842,8 @@ mod tests {
                 operator: InfixOperator::Plus,
                 right: Box::new(Expression::Number(real!(b))),
             } );
-            let matching = first.clone();
             let differing = Expression::Number(real!(a + b));
-            prop_assert_eq!(&first, &matching);
+            prop_assert_eq!(&first, &first);
             prop_assert_ne!(&first, &differing);
         }
 
@@ -936,7 +939,12 @@ mod tests {
         #[test]
         fn exponentiation_works_as_expected(left in arb_expr(), right in arb_expr()) {
             let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Caret, right: Box::new(right.clone()) } );
-            prop_assert_eq!(left.clone() ^ right.clone(), expected.clone());
+            prop_assert_eq!(left ^ right, expected);
+        }
+
+        #[test]
+        fn in_place_exponentiation_works_as_expected(left in arb_expr(), right in arb_expr()) {
+            let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Caret, right: Box::new(right.clone()) } );
             let mut x = left;
             x ^= right;
             prop_assert_eq!(x, expected);
@@ -945,7 +953,12 @@ mod tests {
         #[test]
         fn addition_works_as_expected(left in arb_expr(), right in arb_expr()) {
             let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Plus, right: Box::new(right.clone()) } );
-            prop_assert_eq!(left.clone() + right.clone(), expected.clone());
+            prop_assert_eq!(left + right, expected);
+        }
+
+        #[test]
+        fn in_place_addition_works_as_expected(left in arb_expr(), right in arb_expr()) {
+            let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Plus, right: Box::new(right.clone()) } );
             let mut x = left;
             x += right;
             prop_assert_eq!(x, expected);
@@ -954,7 +967,12 @@ mod tests {
         #[test]
         fn subtraction_works_as_expected(left in arb_expr(), right in arb_expr()) {
             let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Minus, right: Box::new(right.clone()) } );
-            prop_assert_eq!(left.clone() - right.clone(), expected.clone());
+            prop_assert_eq!(left - right, expected);
+        }
+
+        #[test]
+        fn in_place_subtraction_works_as_expected(left in arb_expr(), right in arb_expr()) {
+            let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Minus, right: Box::new(right.clone()) } );
             let mut x = left;
             x -= right;
             prop_assert_eq!(x, expected);
@@ -963,7 +981,12 @@ mod tests {
         #[test]
         fn multiplication_works_as_expected(left in arb_expr(), right in arb_expr()) {
             let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Star, right: Box::new(right.clone()) } );
-            prop_assert_eq!(left.clone() * right.clone(), expected.clone());
+            prop_assert_eq!(left * right, expected);
+        }
+
+        #[test]
+        fn in_place_multiplication_works_as_expected(left in arb_expr(), right in arb_expr()) {
+            let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Star, right: Box::new(right.clone()) } );
             let mut x = left;
             x *= right;
             prop_assert_eq!(x, expected);
@@ -972,7 +995,12 @@ mod tests {
         #[test]
         fn division_works_as_expected(left in arb_expr(), right in arb_expr()) {
             let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Slash, right: Box::new(right.clone()) } );
-            prop_assert_eq!(left.clone() / right.clone(), expected.clone());
+            prop_assert_eq!(left / right, expected);
+        }
+
+        #[test]
+        fn in_place_division_works_as_expected(left in arb_expr(), right in arb_expr()) {
+            let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Slash, right: Box::new(right.clone()) } );
             let mut x = left;
             x /= right;
             prop_assert_eq!(x, expected);

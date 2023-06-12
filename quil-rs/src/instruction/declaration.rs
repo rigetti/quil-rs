@@ -2,9 +2,6 @@ use std::{fmt, str::FromStr};
 
 use nom_locate::LocatedSpan;
 
-#[cfg(test)]
-use proptest_derive::Arbitrary;
-
 use crate::{
     parser::{common::parse_memory_reference, lex, ParseError},
     program::{disallow_leftover, SyntaxError},
@@ -164,7 +161,6 @@ mod test_declaration {
 }
 
 #[derive(Clone, Debug, Hash, PartialEq)]
-#[cfg_attr(test, derive(Arbitrary))]
 pub struct MemoryReference {
     pub name: String,
     pub index: u64,
