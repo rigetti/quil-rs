@@ -786,7 +786,7 @@ mod tests {
     //
     // Better behaved than the auto-derived version re: names
     fn arb_memory_reference() -> impl Strategy<Value = MemoryReference> {
-        (r"[a-zA-Z][a-zA-Z0-9]+", any::<u64>())
+        (r"[a-zA-Z][a-zA-Z0-9]*", any::<u64>())
             .prop_map(|(name, index)| MemoryReference { name, index })
     }
 
@@ -1006,6 +1006,14 @@ mod tests {
             prop_assert_eq!(x, expected);
         }
 
+        #[test]
+        fn round_trip(e in arb_expr()) {
+            let s = e.to_string();
+            let p = Expression::from_str(&s);
+            dbg!((&e, &s, &p));
+            prop_assert!(p.is_ok());
+            prop_assert_eq!(p.unwrap().into_simplified(), e.into_simplified());
+        }
 
     }
 

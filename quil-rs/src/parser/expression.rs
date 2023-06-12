@@ -33,6 +33,7 @@ enum Precedence {
     Lowest,
     Sum,
     Product,
+    Caret,
     Call,
 }
 
@@ -52,7 +53,7 @@ impl From<&Operator> for Precedence {
         match operator {
             Operator::Plus | Operator::Minus => Precedence::Sum,
             Operator::Star | Operator::Slash => Precedence::Product,
-            _ => Precedence::Lowest,
+            Operator::Caret => Precedence::Caret,
         }
     }
 }

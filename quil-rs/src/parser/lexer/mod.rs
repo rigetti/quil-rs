@@ -559,12 +559,34 @@ mod tests {
         case("a-", vec![Token::Identifier("_-".to_string())]),
         case("-a", vec![Token::Identifier("-a".to_string())]),
         case("a\\", vec![Token::Identifier("_\\".to_string())]),
+        case("i-1", vec![Token::Identifier("i-1".to_string())]),
     )]
     fn it_fails_to_lex_identifier(input: &str, not_expected: Vec<Token>) {
         let input = LocatedSpan::new(input);
         if let Ok(tokens) = lex(input) {
             assert_ne!(tokens, not_expected);
         }
+    }
+
+    #[rstest(input, expected,
+        case("2^3", vec![Token::Integer(2), Token::Operator(Operator::Caret), Token::Integer(3)]),
+        case("x^3", vec![Token::Identifier("x".to_string()), Token::Operator(Operator::Caret), Token::Integer(3)]),
+        case("2^y", vec![Token::Integer(2), Token::Operator(Operator::Caret), Token::Identifier("y".to_string())]),
+        case("x^y", vec![Token::Identifier("x".to_string()), Token::Operator(Operator::Caret), Token::Identifier("y".to_string())]),
+        case("x[0]^y", vec![
+                            Token::Identifier("x".to_string()),
+                            Token::LBracket,
+                            Token::Integer(0),
+                            Token::RBracket,
+                            Token::Operator(Operator::Caret),
+                            Token::Identifier("y".to_string())
+                       ]
+        ),
+        case("i-1", vec![Token::Identifier("i".to_string()), Token::Operator(Operator::Minus), Token::Integer(1)]),
+    )]
+    fn operator(input: &str, expected: Vec<Token>) {
+        let tokens = lex(LocatedSpan::new(input)).unwrap();
+        assert_eq!(tokens, expected)
     }
 
     /// Test that an entire sample program can be lexed without failure.
