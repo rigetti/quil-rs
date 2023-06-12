@@ -245,15 +245,15 @@ pub fn write_comma_separated_list(
     values: &[impl fmt::Display],
 ) -> fmt::Result {
     let mut iter = values.iter();
-    
+
     if let Some(value) = iter.next() {
         write!(f, "{value}")?;
     }
-    
+
     for value in iter {
         write!(f, ", {value}")?;
     }
-    
+
     Ok(())
 }
 
