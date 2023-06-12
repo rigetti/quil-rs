@@ -748,6 +748,7 @@ mod simplification {
     #[cfg(test)]
     mod tests {
         use super::*;
+        use rstest::rstest;
 
         egg::test_fn! {
             docstring_example,
@@ -786,26 +787,33 @@ mod simplification {
         }
 
         egg::test_fn! {
+            prefix_neg,
+            &RULES,
+            "(neg -1)" => "1"
+        }
+
+        egg::test_fn! {
             neg_sub,
             &RULES,
             "(neg (- 1 2))" => "1"
         }
 
-        #[test]
-        fn test_sexp() {
-            let expression = Expression::from_str("cos(2 * pi) + 2").unwrap();
-            let s = Sexp::from(&expression);
-            assert_eq!(s.to_string(), "(+ (cos (* 2 pi)) 2)");
-            assert!(s.is_list());
-            assert_eq!(s.list_name().unwrap(), "+");
-            let expression = Expression::from_str("pi").unwrap();
-            let s = Sexp::from(&expression);
-            assert_eq!(s.to_string(), "pi");
-            assert!(s.is_string());
-            assert_eq!(s.string().unwrap(), "pi");
-            let expression = Expression::from_str("-(1 - 2)").unwrap();
-            let s = Sexp::from(&expression);
-            assert_eq!(s.to_string(), "(neg (- 1 2))");
+        egg::test_fn! {
+            neg_imag,
+            &RULES,
+            "(neg 9.48e42i)" => "-9.48e42i"
+        }
+
+        #[rstest]
+        #[case("cos(2 * pi) + 2", "(+ (cos (* 2 pi)) 2)")]
+        #[case("pi", "pi")]
+        #[case("-(1 - 2)", "(neg (- 1 2))")]
+        #[case("-9.48e42i^A[9]", "(^ (neg 9.48e42i) (address A 9))")]
+        fn test_sexp(#[case] input: &str, #[case] expected: &str) {
+            let parsed = Expression::from_str(&input);
+            assert!(parsed.is_ok());
+            let sexp = Sexp::from(&parsed.unwrap());
+            assert_eq!(sexp.to_string(), expected);
         }
     }
 }
