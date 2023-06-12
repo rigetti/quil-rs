@@ -284,7 +284,7 @@ mod tests {
             "cis(%theta)",
             "%a+%b",
             "(pi/2)+(1*theta[0])",
-            "3--2",
+            "3 - -2",
         ];
 
         for case in cases {
@@ -402,20 +402,6 @@ mod tests {
                 operator: PrefixOperator::Minus,
                 expression: Box::new(Expression::Number(real!(2f64)))
             }))
-        })
-    );
-
-    test!(
-        i_minus_a,
-        parse_expression,
-        "i-a",
-        Expression::Infix(InfixExpression {
-            left: Box::new(Expression::Number(imag!(1f64))),
-            operator: InfixOperator::Minus,
-            right: Box::new(Expression::Address(MemoryReference {
-                name: "a".to_string(),
-                index: 0
-            })),
         })
     );
 

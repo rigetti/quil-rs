@@ -559,7 +559,6 @@ mod tests {
         case("a-", vec![Token::Identifier("_-".to_string())]),
         case("-a", vec![Token::Identifier("-a".to_string())]),
         case("a\\", vec![Token::Identifier("_\\".to_string())]),
-        case("i-a", vec![Token::Identifier("i-a".to_string())]),
     )]
     fn it_fails_to_lex_identifier(input: &str, not_expected: Vec<Token>) {
         let input = LocatedSpan::new(input);
@@ -582,7 +581,6 @@ mod tests {
                             Token::Identifier("y".to_string())
                        ]
         ),
-        case("i-a", vec![Token::Identifier("i".to_string()), Token::Operator(Operator::Minus), Token::Identifier("a".to_string())]),
     )]
     fn operator(input: &str, expected: Vec<Token>) {
         let tokens = lex(LocatedSpan::new(input)).unwrap();

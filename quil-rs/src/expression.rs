@@ -675,7 +675,7 @@ impl fmt::Display for InfixOperator {
             match self {
                 Caret => "^",
                 Plus => "+",
-                Minus => "-",
+                Minus => " - ",
                 Slash => "/",
                 Star => "*",
             }
