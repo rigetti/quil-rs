@@ -33,6 +33,7 @@ enum Precedence {
     Lowest,
     Sum,
     Product,
+    Exponentiation,
     Call,
 }
 
@@ -52,7 +53,7 @@ impl From<&Operator> for Precedence {
         match operator {
             Operator::Plus | Operator::Minus => Precedence::Sum,
             Operator::Star | Operator::Slash => Precedence::Product,
-            _ => Precedence::Lowest,
+            Operator::Caret => Precedence::Exponentiation,
         }
     }
 }
@@ -283,7 +284,7 @@ mod tests {
             "cis(%theta)",
             "%a+%b",
             "(pi/2)+(1*theta[0])",
-            "3--2",
+            "3 - -2",
         ];
 
         for case in cases {
@@ -399,7 +400,7 @@ mod tests {
             operator: InfixOperator::Minus,
             right: Box::new(Expression::Prefix(PrefixExpression {
                 operator: PrefixOperator::Minus,
-                expression: Box::new(Expression::Number(real!(2.0)))
+                expression: Box::new(Expression::Number(real!(2f64)))
             }))
         })
     );

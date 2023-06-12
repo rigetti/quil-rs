@@ -320,7 +320,7 @@ mod simplification {
                     s
                 }
                 Expression::Infix(i) => {
-                    let mut s = Sexp::start(&i.operator.to_string());
+                    let mut s = Sexp::start(&i.operator.to_string().trim());
                     s.push(&*i.left);
                     s.push(&*i.right);
                     s
@@ -785,6 +785,12 @@ mod simplification {
             "%foo" => "%foo"
         }
 
+        egg::test_fn! {
+            neg_sub,
+            &RULES,
+            "(neg (- 1 2))" => "1"
+        }
+
         #[test]
         fn test_sexp() {
             let expression = Expression::from_str("cos(2 * pi) + 2").unwrap();
@@ -797,6 +803,9 @@ mod simplification {
             assert_eq!(s.to_string(), "pi");
             assert!(s.is_string());
             assert_eq!(s.string().unwrap(), "pi");
+            let expression = Expression::from_str("-(1 - 2)").unwrap();
+            let s = Sexp::from(&expression);
+            assert_eq!(s.to_string(), "(neg (- 1 2))");
         }
     }
 }
@@ -1166,7 +1175,8 @@ impl fmt::Display for PrefixOperator {
             f,
             "{}",
             match self {
-                Plus => "+",
+                // NOTE: prefix Plus does nothing, and it causes parsing issues
+                Plus => "",
                 Minus => "-",
             }
         )
@@ -1192,7 +1202,8 @@ impl fmt::Display for InfixOperator {
             match self {
                 Caret => "^",
                 Plus => "+",
-                Minus => "-",
+                // NOTE: spaces included to distinguish from hyphenated identifiers
+                Minus => " - ",
                 Slash => "/",
                 Star => "*",
             }
@@ -1303,7 +1314,7 @@ mod tests {
 
     // Better behaved than the auto-derived version re: names
     fn arb_memory_reference() -> impl Strategy<Value = MemoryReference> {
-        (r"[a-zA-Z][a-zA-Z0-9]+", any::<u64>())
+        (r"[a-zA-Z][a-zA-Z0-9]*", any::<u64>())
             .prop_map(|(name, index)| MemoryReference { name, index })
     }
 
@@ -1319,7 +1330,7 @@ mod tests {
             arb_memory_reference().prop_map(Address),
             arb_complex64().prop_map(Number),
             Just(PiConstant),
-            r"[a-zA-Z][a-zA-Z0-9]+".prop_map(Variable),
+            r"[a-zA-Z][a-zA-Z0-9]*".prop_map(Variable),
         ];
         (leaf).prop_recursive(
             4,  // No more than 4 branch levels deep
@@ -1451,7 +1462,9 @@ mod tests {
         fn complexes_are_parseable_as_expressions(value in arb_complex64()) {
             let parsed = Expression::from_str(&format_complex(&value));
             assert!(parsed.is_ok());
-            assert_eq!(Expression::Number(value), parsed.unwrap().into_simplified());
+            let simple = parsed.unwrap().into_simplified();
+            dbg!((&value, &simple));
+            assert_eq!(Expression::Number(value), simple);
         }
 
         #[test]
@@ -1522,6 +1535,15 @@ mod tests {
             let mut x = left;
             x /= right;
             prop_assert_eq!(x, expected);
+        }
+
+        #[test]
+        fn round_trip(e in arb_expr()) {
+            let s = e.to_string();
+            let p = Expression::from_str(&s);
+            dbg!((&e, &s, &p));
+            prop_assert!(p.is_ok());
+            prop_assert_eq!(p.unwrap().into_simplified(), e.into_simplified());
         }
 
     }
