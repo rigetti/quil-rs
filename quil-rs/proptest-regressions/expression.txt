@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 9ceb3c3fff887149f28bef979320c87df76914ccbedacbf9947b268180628808 # shrinks to e = Infix(InfixExpression { left: Address(MemoryReference { name: "a", index: 0 }), operator: Caret, right: Prefix(PrefixExpression { operator: Plus, expression: Address(MemoryReference { name: "A", index: 0 }) }) })
