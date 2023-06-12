@@ -649,7 +649,8 @@ impl fmt::Display for PrefixOperator {
             f,
             "{}",
             match self {
-                Plus => "+",
+                // NOTE: prefix Plus does nothing, and it causes parsing issues
+                Plus => "",
                 Minus => "-",
             }
         )
@@ -675,6 +676,7 @@ impl fmt::Display for InfixOperator {
             match self {
                 Caret => "^",
                 Plus => "+",
+                // NOTE: spaces included to distinguish from hyphenated identifiers
                 Minus => " - ",
                 Slash => "/",
                 Star => "*",
