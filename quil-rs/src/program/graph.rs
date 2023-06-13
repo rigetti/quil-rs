@@ -176,18 +176,21 @@ impl MemoryAccessQueue {
 
 /// Add a dependency to an edge on the graph, whether that edge currently exists or not.
 macro_rules! add_dependency {
-    ($graph:expr, $source:expr => $target:expr, $dependency:expr) => {
-        match $graph.edge_weight_mut($source, $target) {
+    ($graph:expr, $source:expr => $target:expr, $dependency:expr) => {{
+        let source = $source;
+        let target = $target;
+        let dependency = $dependency;
+        match $graph.edge_weight_mut(source, target) {
             Some(edge) => {
-                edge.insert($dependency);
+                edge.insert(dependency);
             }
             None => {
                 let mut edge = HashSet::new();
-                edge.insert($dependency);
-                $graph.add_edge($source.clone(), $target.clone(), edge);
+                edge.insert(dependency);
+                $graph.add_edge(source, target, edge);
             }
         }
-    };
+    }};
 }
 
 pub type DependencyGraph = GraphMap<ScheduledGraphNode, HashSet<ExecutionDependency>, Directed>;
@@ -503,6 +506,11 @@ pub struct ScheduledProgram {
 /// between control instructions (such as `LABEL` and 'JUMP`). When such a control instruction is reached,
 /// this function performs the work to close out and store the instructions in the current "working block"
 /// and then reset the state to prepare for the next block.
+///
+/// # Errors
+///
+/// If an error occurs, `working_instructions` and/or `working_label` may have been emptied and
+/// cannot be relied on to be unchanged.
 fn terminate_working_block(
     terminator: Option<BlockTerminator>,
     working_instructions: &mut Vec<Instruction>,
@@ -516,22 +524,19 @@ fn terminate_working_block(
         return Ok(());
     }
 
-    let block = InstructionBlock::build(working_instructions.to_vec(), terminator, program)?;
+    // This leaves working_instructions and working_label in their respective "empty" states.
+    let block = InstructionBlock::build(std::mem::take(working_instructions), terminator, program)?;
     let label = working_label
-        .clone()
+        .take()
         .unwrap_or_else(|| ScheduledProgram::generate_autoincremented_label(blocks));
 
-    match blocks.insert(label.clone(), block) {
-        Some(_) => Err(ScheduleError {
+    if blocks.insert(label.clone(), block).is_some() {
+        return Err(ScheduleError {
             instruction_index,
             instruction: Instruction::Label(Label(label)),
             variant: ScheduleErrorVariant::DuplicateLabel,
-        }),
-        None => Ok(()),
-    }?;
-
-    working_instructions.drain(..);
-    *working_label = None;
+        });
+    }
 
     Ok(())
 }
@@ -574,13 +579,14 @@ impl ScheduledProgram {
                 | Instruction::Reset(_)
                 | Instruction::Wait => {
                     working_instructions.push(instruction);
-                    Ok(())
                 }
-                Instruction::Gate(_) | Instruction::Measurement(_) => Err(ScheduleError {
-                    instruction_index,
-                    instruction: instruction.clone(),
-                    variant: ScheduleErrorVariant::UncalibratedInstruction,
-                }),
+                Instruction::Gate(_) | Instruction::Measurement(_) => {
+                    return Err(ScheduleError {
+                        instruction_index,
+                        instruction,
+                        variant: ScheduleErrorVariant::UncalibratedInstruction,
+                    })
+                }
                 Instruction::CalibrationDefinition(_)
                 | Instruction::CircuitDefinition(_)
                 | Instruction::Declaration(_)
@@ -589,10 +595,9 @@ impl ScheduledProgram {
                 | Instruction::MeasureCalibrationDefinition(MeasureCalibrationDefinition {
                     ..
                 })
-                | Instruction::WaveformDefinition(_) => Ok(()),
+                | Instruction::WaveformDefinition(_) => {}
                 Instruction::Pragma(_) => {
                     working_instructions.push(instruction);
-                    Ok(())
                 }
                 Instruction::Label(Label(value)) => {
                     terminate_working_block(
@@ -604,8 +609,7 @@ impl ScheduledProgram {
                         instruction_index,
                     )?;
 
-                    working_label = Some(value.clone());
-                    Ok(())
+                    working_label = Some(value);
                 }
                 Instruction::Jump(Jump { target }) => {
                     terminate_working_block(
@@ -618,7 +622,6 @@ impl ScheduledProgram {
                         program,
                         instruction_index,
                     )?;
-                    Ok(())
                 }
                 Instruction::JumpWhen(JumpWhen { target, condition }) => {
                     terminate_working_block(
@@ -633,7 +636,6 @@ impl ScheduledProgram {
                         program,
                         instruction_index,
                     )?;
-                    Ok(())
                 }
                 Instruction::JumpUnless(JumpUnless { target, condition }) => {
                     terminate_working_block(
@@ -647,7 +649,7 @@ impl ScheduledProgram {
                         &mut working_label,
                         program,
                         instruction_index,
-                    )
+                    )?;
                 }
                 Instruction::Halt => terminate_working_block(
                     Some(BlockTerminator::Halt),
@@ -656,8 +658,8 @@ impl ScheduledProgram {
                     &mut working_label,
                     program,
                     instruction_index,
-                ),
-            }?;
+                )?,
+            };
         }
 
         terminate_working_block(

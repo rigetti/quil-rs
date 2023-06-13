@@ -39,3 +39,7 @@ harness = false
 [[bench]]
 name = "get_frames_for_instruction"
 harness = false
+
+[[bench]]
+name = "scheduled_program_from_program"
+harness = false
