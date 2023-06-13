@@ -38,8 +38,17 @@ pub enum ArithmeticOperand {
 
 impl std::hash::Hash for ArithmeticOperand {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.to_string().hash(state)
+        match self {
+            Self::LiteralInteger(operand) => operand.hash(state),
+            Self::LiteralReal(operand) => hash_float(operand, state),
+            Self::MemoryReference(operand) => operand.hash(state),
+        }
     }
+}
+
+#[inline]
+fn hash_float(value: &f64, state: &mut impl std::hash::Hasher) {
+    std::hash::Hash::hash(&format!("{value}"), state)
 }
 
 impl fmt::Display for ArithmeticOperand {
