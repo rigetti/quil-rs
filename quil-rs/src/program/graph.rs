@@ -506,6 +506,11 @@ pub struct ScheduledProgram {
 /// between control instructions (such as `LABEL` and 'JUMP`). When such a control instruction is reached,
 /// this function performs the work to close out and store the instructions in the current "working block"
 /// and then reset the state to prepare for the next block.
+///
+/// # Errors
+///
+/// If an error occurs, `working_instructions` and/or `working_label` may have been emptied and
+/// cannot be relied on to be unchanged.
 fn terminate_working_block(
     terminator: Option<BlockTerminator>,
     working_instructions: &mut Vec<Instruction>,

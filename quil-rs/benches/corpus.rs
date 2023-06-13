@@ -16,7 +16,7 @@ fn bench_config_from_file(path: &Path) -> Option<QuilBenchConfig> {
         .file_name()
         .expect("path should have file name component")
         .to_str()
-        .expect("bad filename")
+        .expect("filename should be valid")
         .to_string();
 
     if quil_rs::Program::from_str(&program).is_ok() {
