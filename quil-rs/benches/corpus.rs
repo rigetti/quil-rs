@@ -1,4 +1,9 @@
-use std::{fs, path::{Path, PathBuf}, process::Command, str::FromStr};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+    process::Command,
+    str::FromStr,
+};
 
 pub struct QuilBenchConfig {
     pub name: String,
@@ -10,8 +15,7 @@ fn bench_config_from_file(path: &Path) -> Option<QuilBenchConfig> {
         return None;
     }
 
-    let program =
-        fs::read_to_string(path).expect("failed to read quil program file");
+    let program = fs::read_to_string(path).expect("failed to read quil program file");
     let name = path
         .file_name()
         .expect("path should have file name component")
@@ -39,12 +43,9 @@ pub fn from_corpus() -> Vec<QuilBenchConfig> {
     let dir = fs::read_dir(corpus_dir).expect("failed to locate quil corpus directory");
 
     dir.filter_map(Result::ok)
-        .filter_map(|entry| {
-            bench_config_from_file(&entry.path())
-        })
-        .chain({
-            bench_config_from_file(&PathBuf::from(SAMPLE_CALIBRATIONS))
-        }).collect()
+        .filter_map(|entry| bench_config_from_file(&entry.path()))
+        .chain({ bench_config_from_file(&PathBuf::from(SAMPLE_CALIBRATIONS)) })
+        .collect()
 }
 
 // in the event someone wants to run the benchmarks locally, this will download the corpus of quil used
