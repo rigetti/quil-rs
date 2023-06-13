@@ -303,9 +303,7 @@ impl fmt::Display for Instruction {
             }
             Instruction::Label(Label(label)) => write!(f, "LABEL @{label}"),
             Instruction::Comparison(comparison) => write!(f, "{comparison}"),
-            Instruction::BinaryLogic(BinaryLogic { operator, operands }) => {
-                write!(f, "{} {} {}", operator, operands.0, operands.1)
-            }
+            Instruction::BinaryLogic(binary_logic) => write!(f, "{binary_logic}"),
             Instruction::UnaryLogic(unary_logic) => write!(f, "{unary_logic}"),
         }
     }
