@@ -809,6 +809,7 @@ mod simplification {
         #[case("pi", "pi")]
         #[case("-(1 - 2)", "(neg (- 1 2))")]
         #[case("-9.48e42i^A[9]", "(^ (neg 9.48e42i) (address A 9))")]
+        #[case("x^1-2i", "(^ (address x 0) 1.0-2.0i)")]
         fn test_sexp(#[case] input: &str, #[case] expected: &str) {
             let parsed = Expression::from_str(&input);
             assert!(parsed.is_ok());
