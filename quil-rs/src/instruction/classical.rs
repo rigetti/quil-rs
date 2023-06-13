@@ -2,7 +2,7 @@ use std::fmt;
 
 use super::MemoryReference;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Hash, PartialEq)]
 pub struct Arithmetic {
     pub operator: ArithmeticOperator,
     pub destination: ArithmeticOperand,
@@ -36,6 +36,12 @@ pub enum ArithmeticOperand {
     MemoryReference(MemoryReference),
 }
 
+impl std::hash::Hash for ArithmeticOperand {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.to_string().hash(state)
+    }
+}
+
 impl fmt::Display for ArithmeticOperand {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self {
@@ -46,7 +52,7 @@ impl fmt::Display for ArithmeticOperand {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, strum::Display)]
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, strum::Display)]
 pub enum ArithmeticOperator {
     #[strum(to_string = "ADD")]
     Add,
@@ -58,7 +64,7 @@ pub enum ArithmeticOperator {
     Multiply,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub enum BinaryOperand {
     LiteralInteger(i64),
     MemoryReference(MemoryReference),
@@ -75,7 +81,7 @@ impl fmt::Display for BinaryOperand {
 
 pub type BinaryOperands = (MemoryReference, BinaryOperand);
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, strum::Display)]
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, strum::Display)]
 #[strum(serialize_all = "UPPERCASE")]
 pub enum BinaryOperator {
     And,
@@ -83,7 +89,7 @@ pub enum BinaryOperator {
     Xor,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct BinaryLogic {
     pub operator: BinaryOperator,
     pub operands: BinaryOperands,
@@ -95,7 +101,7 @@ impl BinaryLogic {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct Convert {
     pub destination: MemoryReference,
     pub source: MemoryReference,
@@ -116,7 +122,7 @@ impl fmt::Display for Convert {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Hash, PartialEq)]
 pub struct Move {
     pub destination: MemoryReference,
     pub source: ArithmeticOperand,
@@ -137,7 +143,7 @@ impl fmt::Display for Move {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Hash, PartialEq)]
 pub struct Exchange {
     pub left: MemoryReference,
     pub right: MemoryReference,
@@ -155,7 +161,7 @@ impl Exchange {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Hash, PartialEq)]
 pub struct Comparison {
     pub operator: ComparisonOperator,
     pub operands: (MemoryReference, MemoryReference, ComparisonOperand),
@@ -197,7 +203,13 @@ impl fmt::Display for ComparisonOperand {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+impl std::hash::Hash for ComparisonOperand {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.to_string().hash(state)
+    }
+}
+
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 pub enum ComparisonOperator {
     Equal,
     GreaterThanOrEqual,
@@ -218,7 +230,7 @@ impl fmt::Display for ComparisonOperator {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct UnaryLogic {
     pub operator: UnaryOperator,
     pub operand: MemoryReference,
@@ -236,7 +248,7 @@ impl fmt::Display for UnaryLogic {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, strum::Display)]
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, strum::Display)]
 #[strum(serialize_all = "UPPERCASE")]
 pub enum UnaryOperator {
     Neg,
