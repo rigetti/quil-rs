@@ -221,7 +221,14 @@ pub fn format_qubits(qubits: &[Qubit]) -> String {
         .join(" ")
 }
 
-/// Format qubits as a Quil parameter list, where each variable qubit must be prefixed with a `%`.
+fn write_qubits(f: &mut fmt::Formatter, qubits: &[Qubit]) -> fmt::Result {
+    for qubit in qubits {
+        write!(f, " {qubit}")?;
+    }
+    Ok(())
+}
+
+/// Write qubits as a Quil parameter list, where each variable qubit must be prefixed with a `%`.
 fn write_qubit_parameters(f: &mut fmt::Formatter, qubits: &[Qubit]) -> fmt::Result {
     for qubit in qubits.iter() {
         match qubit {
@@ -233,26 +240,47 @@ fn write_qubit_parameters(f: &mut fmt::Formatter, qubits: &[Qubit]) -> fmt::Resu
     Ok(())
 }
 
-pub fn get_expression_parameter_string(parameters: &[Expression]) -> String {
-    if parameters.is_empty() {
-        return String::new();
+/// Write the values as a comma separated list, with an optional prefix before each value.
+fn write_comma_separated_list(
+    f: &mut fmt::Formatter,
+    values: &[impl fmt::Display],
+    prefix: Option<&str>,
+) -> fmt::Result {
+    let prefix = prefix.unwrap_or_default();
+    let mut iter = values.iter();
+
+    if let Some(value) = iter.next() {
+        write!(f, "{prefix}{value}")?;
     }
 
-    let parameter_str: String = parameters.iter().map(|e| format!("{e}")).collect();
-    format!("({parameter_str})")
+    for value in iter {
+        write!(f, ", {prefix}{value}")?;
+    }
+
+    Ok(())
 }
 
-pub fn get_string_parameter_string(parameters: &[String]) -> String {
+fn write_expression_parameter_string(
+    f: &mut fmt::Formatter,
+    parameters: &[Expression],
+) -> fmt::Result {
     if parameters.is_empty() {
-        return String::new();
+        return Ok(());
     }
 
-    let parameter_str: String = parameters
-        .iter()
-        .map(|param| format!("%{param}"))
-        .collect::<Vec<_>>()
-        .join(",");
-    format!("({parameter_str})")
+    write!(f, "(")?;
+    write_comma_separated_list(f, parameters, None)?;
+    write!(f, ")")
+}
+
+fn write_parameter_string(f: &mut fmt::Formatter, parameters: &[String]) -> fmt::Result {
+    if parameters.is_empty() {
+        return Ok(());
+    }
+
+    write!(f, "(")?;
+    write_comma_separated_list(f, parameters, Some("%"))?;
+    write!(f, ")")
 }
 
 impl fmt::Display for Instruction {
