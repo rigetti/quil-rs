@@ -2,7 +2,7 @@ use std::fmt;
 
 use super::{get_string_parameter_string, Instruction};
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Hash)]
 pub struct CircuitDefinition {
     pub name: String,
     pub parameters: Vec<String>,

@@ -1,5 +1,7 @@
 use std::fmt;
 
+use crate::hash::hash_f64;
+
 use super::MemoryReference;
 
 #[derive(Clone, Debug, Hash, PartialEq)]
@@ -40,15 +42,10 @@ impl std::hash::Hash for ArithmeticOperand {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         match self {
             Self::LiteralInteger(operand) => operand.hash(state),
-            Self::LiteralReal(operand) => hash_float(operand, state),
+            Self::LiteralReal(operand) => hash_f64(*operand, state),
             Self::MemoryReference(operand) => operand.hash(state),
         }
     }
-}
-
-#[inline]
-fn hash_float(value: &f64, state: &mut impl std::hash::Hasher) {
-    std::hash::Hash::hash(&format!("{value}"), state)
 }
 
 impl fmt::Display for ArithmeticOperand {
@@ -214,7 +211,11 @@ impl fmt::Display for ComparisonOperand {
 
 impl std::hash::Hash for ComparisonOperand {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.to_string().hash(state)
+        match self {
+            ComparisonOperand::LiteralInteger(operand) => operand.hash(state),
+            ComparisonOperand::LiteralReal(operand) => hash_f64(*operand, state),
+            ComparisonOperand::MemoryReference(operand) => operand.hash(state),
+        }
     }
 }
 

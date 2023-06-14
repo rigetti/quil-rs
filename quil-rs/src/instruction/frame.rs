@@ -4,9 +4,9 @@ use std::fmt;
 use serde::{Deserialize, Serialize};
 
 use super::{format_qubits, MemoryReference, Qubit, WaveformInvocation};
-use crate::expression::Expression;
+use crate::{expression::Expression, hash::hash_hashmap};
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum AttributeValue {
     String(String),
     Expression(Expression),
@@ -53,6 +53,13 @@ impl fmt::Display for FrameDefinition {
     }
 }
 
+impl std::hash::Hash for FrameDefinition {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.identifier.hash(state);
+        hash_hashmap(&self.attributes, state)
+    }
+}
+
 #[derive(Clone, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
 pub struct FrameIdentifier {
     pub name: String,
@@ -71,7 +78,7 @@ impl fmt::Display for FrameIdentifier {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Capture {
     pub blocking: bool,
     pub frame: FrameIdentifier,
@@ -108,7 +115,7 @@ impl fmt::Display for Capture {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Pulse {
     pub blocking: bool,
     pub frame: FrameIdentifier,
@@ -134,7 +141,7 @@ impl fmt::Display for Pulse {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct RawCapture {
     pub blocking: bool,
     pub frame: FrameIdentifier,
@@ -171,7 +178,7 @@ impl fmt::Display for RawCapture {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct SetFrequency {
     pub frame: FrameIdentifier,
     pub frequency: Expression,
@@ -189,7 +196,7 @@ impl fmt::Display for SetFrequency {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct SetPhase {
     pub frame: FrameIdentifier,
     pub phase: Expression,
@@ -207,7 +214,7 @@ impl fmt::Display for SetPhase {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct SetScale {
     pub frame: FrameIdentifier,
     pub scale: Expression,
@@ -225,7 +232,7 @@ impl fmt::Display for SetScale {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ShiftFrequency {
     pub frame: FrameIdentifier,
     pub frequency: Expression,
@@ -243,7 +250,7 @@ impl fmt::Display for ShiftFrequency {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ShiftPhase {
     pub frame: FrameIdentifier,
     pub phase: Expression,
@@ -261,7 +268,7 @@ impl fmt::Display for ShiftPhase {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct SwapPhases {
     pub frame_1: FrameIdentifier,
     pub frame_2: FrameIdentifier,

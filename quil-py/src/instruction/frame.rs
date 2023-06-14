@@ -35,6 +35,7 @@ py_wrap_union_enum! {
 }
 impl_repr!(PyAttributeValue);
 impl_str!(PyAttributeValue);
+impl_hash!(PyAttributeValue);
 
 #[pymethods]
 impl PyAttributeValue {
@@ -58,6 +59,7 @@ py_wrap_data_struct! {
 }
 impl_repr!(PyFrameDefinition);
 impl_str!(PyFrameDefinition);
+impl_hash!(PyFrameDefinition);
 
 #[pymethods]
 impl PyFrameDefinition {
@@ -123,6 +125,7 @@ py_wrap_data_struct! {
 }
 impl_repr!(PyCapture);
 impl_str!(PyCapture);
+impl_hash!(PyCapture);
 
 #[pymethods]
 impl PyCapture {
@@ -162,6 +165,7 @@ py_wrap_data_struct! {
 
 impl_repr!(PyPulse);
 impl_str!(PyPulse);
+impl_hash!(PyPulse);
 
 #[pymethods]
 impl PyPulse {
@@ -200,6 +204,7 @@ py_wrap_data_struct! {
 
 impl_repr!(PyRawCapture);
 impl_str!(PyRawCapture);
+impl_hash!(PyRawCapture);
 
 #[pymethods]
 impl PyRawCapture {
@@ -237,6 +242,7 @@ py_wrap_data_struct! {
 }
 impl_repr!(PySetFrequency);
 impl_str!(PySetFrequency);
+impl_hash!(PySetFrequency);
 
 #[pymethods]
 impl PySetFrequency {
@@ -270,6 +276,7 @@ py_wrap_data_struct! {
 }
 impl_repr!(PySetPhase);
 impl_str!(PySetPhase);
+impl_hash!(PySetPhase);
 
 #[pymethods]
 impl PySetPhase {
@@ -299,6 +306,7 @@ py_wrap_data_struct! {
 }
 impl_repr!(PySetScale);
 impl_str!(PySetScale);
+impl_hash!(PySetScale);
 
 #[pymethods]
 impl PySetScale {
@@ -328,6 +336,7 @@ py_wrap_data_struct! {
 }
 impl_repr!(PyShiftFrequency);
 impl_str!(PyShiftFrequency);
+impl_hash!(PyShiftFrequency);
 
 #[pymethods]
 impl PyShiftFrequency {
@@ -361,6 +370,7 @@ py_wrap_data_struct! {
 }
 impl_repr!(PyShiftPhase);
 impl_str!(PyShiftPhase);
+impl_hash!(PyShiftPhase);
 
 #[pymethods]
 impl PyShiftPhase {
@@ -390,6 +400,7 @@ py_wrap_data_struct! {
 }
 impl_repr!(PySwapPhases);
 impl_str!(PySwapPhases);
+impl_hash!(PySwapPhases);
 
 #[pymethods]
 impl PySwapPhases {

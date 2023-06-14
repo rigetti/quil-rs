@@ -28,6 +28,7 @@ py_wrap_data_struct! {
     }
 }
 impl_repr!(PyArithmetic);
+impl_hash!(PyArithmetic);
 
 #[pymethods]
 impl PyArithmetic {

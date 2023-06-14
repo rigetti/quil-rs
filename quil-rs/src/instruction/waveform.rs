@@ -1,10 +1,10 @@
 use std::{collections::HashMap, fmt};
 
-use crate::expression::Expression;
+use crate::{expression::Expression, hash::hash_hashmap};
 
 use super::get_string_parameter_string;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Waveform {
     pub matrix: Vec<Expression>,
     pub parameters: Vec<String>,
@@ -16,7 +16,7 @@ impl Waveform {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct WaveformDefinition {
     pub name: String,
     pub definition: Waveform,
@@ -113,6 +113,13 @@ impl fmt::Display for WaveformInvocation {
                     .join(", ")
             )
         }
+    }
+}
+
+impl std::hash::Hash for WaveformInvocation {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.name.hash(state);
+        hash_hashmap(&self.parameters, state);
     }
 }
 

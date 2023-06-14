@@ -36,6 +36,7 @@ py_wrap_simple_enum! {
 }
 impl_repr!(PyScalarType);
 impl_str!(PyScalarType);
+impl_hash!(PyScalarType);
 
 py_wrap_data_struct! {
     #[derive(Debug, Hash, PartialEq, Eq)]
@@ -137,6 +138,7 @@ py_wrap_data_struct! {
 }
 impl_repr!(PyDeclaration);
 impl_str!(PyDeclaration);
+impl_hash!(PyDeclaration);
 
 #[pymethods]
 impl PyDeclaration {
@@ -202,6 +204,7 @@ py_wrap_data_struct! {
 }
 impl_repr!(PyLoad);
 impl_str!(PyLoad);
+impl_hash!(PyLoad);
 
 #[pymethods]
 impl PyLoad {
@@ -238,6 +241,7 @@ py_wrap_data_struct! {
 }
 impl_repr!(PyStore);
 impl_str!(PyStore);
+impl_hash!(PyStore);
 
 #[pymethods]
 impl PyStore {
