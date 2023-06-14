@@ -203,8 +203,9 @@ macro_rules! impl_expr_op {
         }
         impl $name_assign for Expression {
             fn $function_assign(&mut self, other: Self) {
-                let result = self.clone().$function(other);
-                *self = result;
+                // Move out of self to avoid potentially cloning a large value
+                let temp = ::std::mem::replace(self, Self::PiConstant);
+                *self = temp.$function(other);
             }
         }
     };
