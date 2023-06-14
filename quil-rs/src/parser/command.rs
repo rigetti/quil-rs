@@ -218,7 +218,7 @@ pub(crate) fn parse_defframe<'a>(input: ParserInput<'a>) -> InternalParserResult
     let (input, identifier) = parse_frame_identifier(input)?;
     let (input, _) = token!(Colon)(input)?;
     let (input, attribute_pairs) = many1(parse_frame_attribute)(input)?;
-    let attributes = attribute_pairs.iter().cloned().collect();
+    let attributes = attribute_pairs.into_iter().collect();
 
     Ok((
         input,
