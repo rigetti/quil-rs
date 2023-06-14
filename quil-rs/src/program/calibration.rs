@@ -168,6 +168,7 @@ impl CalibrationSet {
             _ => None,
         };
 
+        // TODO: would allocating with with_capacity help here?
         // Add this instruction to the breadcrumb trail before recursion
         let mut downstream_previous_calibrations = vec![instruction.clone()];
         downstream_previous_calibrations.extend_from_slice(previous_calibrations);
@@ -338,11 +339,13 @@ impl CalibrationSet {
     pub fn to_instructions(&self) -> Vec<Instruction> {
         self.calibrations
             .iter()
-            .map(|c| Instruction::CalibrationDefinition(c.clone()))
+            .cloned()
+            .map(Instruction::CalibrationDefinition)
             .chain(
                 self.measure_calibrations
                     .iter()
-                    .map(|c| Instruction::MeasureCalibrationDefinition(c.clone())),
+                    .cloned()
+                    .map(Instruction::MeasureCalibrationDefinition),
             )
             .collect()
     }
