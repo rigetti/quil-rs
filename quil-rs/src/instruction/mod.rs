@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::borrow::Cow;
 use std::collections::HashSet;
 use std::fmt;
 
@@ -222,7 +221,14 @@ pub fn format_qubits(qubits: &[Qubit]) -> String {
         .join(" ")
 }
 
-/// Format qubits as a Quil parameter list, where each variable qubit must be prefixed with a `%`.
+fn write_qubits(f: &mut fmt::Formatter, qubits: &[Qubit]) -> fmt::Result {
+    for qubit in qubits {
+        write!(f, " {qubit}")?;
+    }
+    Ok(())
+}
+
+/// Write qubits as a Quil parameter list, where each variable qubit must be prefixed with a `%`.
 fn write_qubit_parameters(f: &mut fmt::Formatter, qubits: &[Qubit]) -> fmt::Result {
     for qubit in qubits.iter() {
         match qubit {
@@ -234,26 +240,47 @@ fn write_qubit_parameters(f: &mut fmt::Formatter, qubits: &[Qubit]) -> fmt::Resu
     Ok(())
 }
 
-pub fn get_expression_parameter_string(parameters: &[Expression]) -> String {
-    if parameters.is_empty() {
-        return String::new();
+/// Write the values as a comma separated list, with an optional prefix before each value.
+fn write_comma_separated_list(
+    f: &mut fmt::Formatter,
+    values: &[impl fmt::Display],
+    prefix: Option<&str>,
+) -> fmt::Result {
+    let prefix = prefix.unwrap_or_default();
+    let mut iter = values.iter();
+
+    if let Some(value) = iter.next() {
+        write!(f, "{prefix}{value}")?;
     }
 
-    let parameter_str: String = parameters.iter().map(|e| format!("{e}")).collect();
-    format!("({parameter_str})")
+    for value in iter {
+        write!(f, ", {prefix}{value}")?;
+    }
+
+    Ok(())
 }
 
-pub fn get_string_parameter_string(parameters: &[String]) -> String {
+fn write_expression_parameter_string(
+    f: &mut fmt::Formatter,
+    parameters: &[Expression],
+) -> fmt::Result {
     if parameters.is_empty() {
-        return String::new();
+        return Ok(());
     }
 
-    let parameter_str: String = parameters
-        .iter()
-        .map(|param| format!("%{param}"))
-        .collect::<Vec<_>>()
-        .join(",");
-    format!("({parameter_str})")
+    write!(f, "(")?;
+    write_comma_separated_list(f, parameters, None)?;
+    write!(f, ")")
+}
+
+fn write_parameter_string(f: &mut fmt::Formatter, parameters: &[String]) -> fmt::Result {
+    if parameters.is_empty() {
+        return Ok(());
+    }
+
+    write!(f, "(")?;
+    write_comma_separated_list(f, parameters, Some("%"))?;
+    write!(f, ")")
 }
 
 impl fmt::Display for Instruction {
@@ -304,9 +331,7 @@ impl fmt::Display for Instruction {
             }
             Instruction::Label(Label(label)) => write!(f, "LABEL @{label}"),
             Instruction::Comparison(comparison) => write!(f, "{comparison}"),
-            Instruction::BinaryLogic(BinaryLogic { operator, operands }) => {
-                write!(f, "{} {} {}", operator, operands.0, operands.1)
-            }
+            Instruction::BinaryLogic(binary_logic) => write!(f, "{binary_logic}"),
             Instruction::UnaryLogic(unary_logic) => write!(f, "{unary_logic}"),
         }
     }
@@ -428,11 +453,11 @@ impl Instruction {
         }
     }
 
-    pub(crate) fn get_frame_match_condition(
-        &self,
+    pub(crate) fn get_frame_match_condition<'a>(
+        &'a self,
         include_blocked: bool,
-        qubits_available: HashSet<Qubit>,
-    ) -> Option<FrameMatchCondition> {
+        qubits_available: HashSet<&'a Qubit>,
+    ) -> Option<FrameMatchCondition<'a>> {
         match self {
             Instruction::Pulse(Pulse {
                 blocking, frame, ..
@@ -443,7 +468,7 @@ impl Instruction {
             | Instruction::RawCapture(RawCapture {
                 blocking, frame, ..
             }) => Some(if *blocking && include_blocked {
-                FrameMatchCondition::AnyOfQubits(Cow::Borrowed(&frame.qubits))
+                FrameMatchCondition::AnyOfQubits(frame.qubits.iter().collect())
             } else {
                 FrameMatchCondition::Specific(frame)
             }),
@@ -452,11 +477,11 @@ impl Instruction {
                 qubits,
                 ..
             }) => Some(if frame_names.is_empty() {
-                FrameMatchCondition::ExactQubits(Cow::Borrowed(qubits))
+                FrameMatchCondition::ExactQubits(qubits.iter().collect())
             } else {
                 FrameMatchCondition::And(vec![
-                    FrameMatchCondition::ExactQubits(Cow::Borrowed(qubits)),
-                    FrameMatchCondition::AnyOfNames(frame_names),
+                    FrameMatchCondition::ExactQubits(qubits.iter().collect()),
+                    FrameMatchCondition::AnyOfNames(frame_names.iter().collect()),
                 ])
             }),
             Instruction::Fence(Fence { qubits }) => {
@@ -464,7 +489,7 @@ impl Instruction {
                     Some(if qubits.is_empty() {
                         FrameMatchCondition::All
                     } else {
-                        FrameMatchCondition::AnyOfQubits(Cow::Borrowed(qubits))
+                        FrameMatchCondition::AnyOfQubits(qubits.iter().collect())
                     })
                 } else {
                     None
@@ -474,12 +499,11 @@ impl Instruction {
                 let qubits = match qubit {
                     Some(qubit) => {
                         let mut set = HashSet::new();
-                        set.insert(qubit.clone());
+                        set.insert(qubit);
                         set
                     }
                     None => qubits_available,
                 };
-                let qubits = qubits.into_iter().collect();
 
                 if include_blocked {
                     Some(FrameMatchCondition::AnyOfQubits(qubits))

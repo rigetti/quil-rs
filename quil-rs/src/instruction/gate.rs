@@ -1,9 +1,7 @@
 use crate::{
     expression::Expression,
     imag,
-    instruction::{
-        format_qubits, get_expression_parameter_string, get_string_parameter_string, Qubit,
-    },
+    instruction::{write_expression_parameter_string, write_parameter_string, write_qubits, Qubit},
     real,
     validation::identifier::{
         validate_identifier, validate_user_identifier, IdentifierValidationError,
@@ -574,14 +572,13 @@ static PARAMETERIZED_GATE_MATRICES: Lazy<HashMap<String, ParameterizedMatrix>> =
 
 impl fmt::Display for Gate {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let parameter_str = get_expression_parameter_string(&self.parameters);
-
-        let qubit_str = format_qubits(&self.qubits);
         for modifier in &self.modifiers {
             write!(f, "{modifier} ")?;
         }
 
-        write!(f, "{}{} {}", self.name, parameter_str, qubit_str)
+        write!(f, "{}", self.name)?;
+        write_expression_parameter_string(f, &self.parameters)?;
+        write_qubits(f, &self.qubits)
     }
 }
 
@@ -944,12 +941,8 @@ impl GateDefinition {
 
 impl fmt::Display for GateDefinition {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "DEFGATE {}{}",
-            self.name,
-            get_string_parameter_string(&self.parameters)
-        )?;
+        write!(f, "DEFGATE {}", self.name,)?;
+        write_parameter_string(f, &self.parameters)?;
         match &self.specification {
             GateSpecification::Matrix(_) => writeln!(f, " AS MATRIX:")?,
             GateSpecification::Permutation(_) => writeln!(f, " AS PERMUTATION:")?,
