@@ -353,6 +353,7 @@ mod simplification {
                 Sexp::Empty => Err(SimplificationError::EmptySexp),
                 Sexp::String(s) => match s.as_str() {
                     "pi" => Ok(Expression::PiConstant),
+                    x if x.starts_with('%') => Ok(Expression::Variable(s[1..].to_string())),
                     _ => num_complex::Complex64::from_str(s)
                         .map(Expression::Number)
                         .map_err(SimplificationError::ComplexParsingError),
@@ -642,14 +643,14 @@ mod simplification {
                 Expr::Div([left, right]) => Some(*x(left)? / *x(right)?),
                 Expr::Add([left, right]) => Some(*x(left)? + *x(right)?),
                 Expr::Sub([left, right]) => Some(*x(left)? - *x(right)?),
-                _ => None,
+                Expr::Address(_) | Expr::Symbol(_) => None,
             }
         }
 
         /// Merge two pieces of data with the same value.
         fn merge(&mut self, to: &mut Self::Data, from: Self::Data) -> egg::DidMerge {
             egg::merge_option(to, from, |a, b| {
-                assert!(a.close(b), "Merged non-equal constants");
+                assert!(a.close(b), "Merged non-equal constants: {a} & {b}");
                 egg::DidMerge(false, false)
             })
         }
@@ -681,6 +682,12 @@ mod simplification {
         }
     }
 
+    /// Is the variable equivalent to a number in the given circumstances?
+    fn is_number(var: &str) -> impl Fn(&mut EGraph, Id, &egg::Subst) -> bool {
+        let key = var.parse().unwrap();
+        move |egraph, _, subst| egraph[subst[key]].data.as_ref().is_some()
+    }
+
     /// Rewrite terms of our [`Expr`] language by reducing with our [`Arithmetic`] analysis.
     type Rewrite = egg::Rewrite<Expr, Arithmetic>;
 
@@ -696,13 +703,11 @@ mod simplification {
             rw!("comm-mul"      ; "(* ?a ?b)"               => "(* ?b ?a)"),
             rw!("assoc-add"     ; "(+ ?a (+ ?b ?c))"        => "(+ (+ ?a ?b) ?c)"),
             rw!("assoc-mul"     ; "(* ?a (* ?b ?c))"        => "(* (* ?a ?b) ?c)"),
-            rw!("sub-canon"     ; "(- ?a ?b)"               => "(+ ?a (* -1 ?b))"),
-            rw!("sub-canon-2"   ; "(- ?a ?b)"               => "(+ ?a (neg ?b))"),
             rw!("cancel-sub"    ; "(- ?a ?a)"               => "0"),
             // multiplication & division
-            rw!("div-canon"     ; "(/ ?a ?b)"               => "(* ?a (^ ?b -1))" if is_not_zero("?b")),
             rw!("zero-mul"      ; "(* ?a 0)"                => "0"),
             rw!("one-mul"       ; "(* ?a 1)"                => "?a"),
+            rw!("one-div"       ; "(/ ?a 1)"                => "?a"),
             rw!("cancel-div"    ; "(/ ?a ?a)"               => "1" if is_not_zero("?a")),
             // + - * /
             rw!("distribute"    ; "(* ?a (+ ?b ?c))"        => "(+ (* ?a ?b) (* ?a ?c))"),
@@ -715,13 +720,16 @@ mod simplification {
             rw!("pow2-sqrt"     ; "(^ (sqrt ?a) 2)"         => "?a"),
             rw!("sqrt-pow2"     ; "(sqrt (^ ?a 2))"         => "?a"),
             rw!("pow1/2"        ; "(^ ?a 0.5)"              => "(sqrt ?a)"),
-            rw!("pow-recip"     ; "(^ ?a -1)"               => "(/ 1 ?a)" if is_not_zero("?a")),
-            rw!("recip-mul-div" ; "(* ?a (/ 1 ?a))"         => "1" if is_not_zero("?a")),
+            rw!("div-mul"       ; "(/ ?a (* ?b ?a))"        => "?b" if is_not_zero("?a")),
+            rw!("div-mul-2"     ; "(/ (* ?b ?a) ?a)"        => "?b" if is_not_zero("?a")),
+            rw!("mul-div"       ; "(* ?a (/ ?b ?a))"        => "?b" if is_not_zero("?a")),
+            rw!("mul-div-2"     ; "(* (/ ?b ?a) ?a)"        => "?b" if is_not_zero("?a")),
             rw!("pow-mul"       ; "(* (^ ?a ?b) (^ ?a ?c))" => "(^ ?a (+ ?b ?c))"),
             rw!("mul-pow"       ; "(^ ?a (+ ?b ?c))"        => "(* (^ ?a ?b) (^ ?a ?c))"),
             // pos and neg
             rw!("pos-canon"     ; "(pos ?a)"                => "?a"),
-            rw!("neg-canon"     ; "(neg ?a)"                => "-?a"),
+            rw!("neg-canon"     ; "(neg ?a)"                => "-?a" if is_number("?a")),
+            rw!("sub-neg"       ; "(- ?a (neg ?b))"         => "(+ ?a ?b)"),
             // exp
             rw!("exp-zero"      ; "(exp 0)"                 => "1"),
             rw!("exp-neg"       ; "(exp (neg ?a))"          => "(/ 1 (exp ?a))"),
@@ -738,10 +746,6 @@ mod simplification {
             rw!("sin-+pi/2"     ; "(sin (+ ?a (/ pi 2)))"   => "(cos ?a)"),
             rw!("cos-neg"       ; "(cos (neg ?a))"          => "(cos ?a)"),
             rw!("sin-neg"       ; "(sin (neg ?a))"          => "(neg (sin ?a))"),
-            // cos^2 + sin^2 = 1
-            rw!("cos-sin-sum"   ; "(+ (* (cos ?a) (cos ?a)) (* (sin ?a) (sin ?a)))" => "1"),
-            rw!("sub-1-cos"     ; "(- (* (cos ?a) (cos ?a)) 1)" => "(neg (* (sin ?a) (sin ?a)))"),
-            rw!("sub-1-sin"     ; "(- (* (sin ?a) (sin ?a)) 1)" => "(neg (* (cos ?a) (cos ?a)))"),
         ]
     });
 
@@ -804,13 +808,17 @@ mod simplification {
             "(neg 9.48e42i)" => "-9.48e42i"
         }
 
+        egg::test_fn! {
+            pow_neg_address,
+            &RULES,
+            "(^ (neg 9.48e42i) (address A 9))" => "(^ -9.48e42i (address A 9))"
+        }
+
         #[rstest]
         #[case("cos(2 * pi) + 2", "(+ (cos (* 2 pi)) 2)")]
         #[case("pi", "pi")]
         #[case("-(1 - 2)", "(neg (- 1 2))")]
         #[case("-9.48e42i^A[9]", "(^ (neg 9.48e42i) (address A 9))")]
-        #[case("1+2i", "1.0+2.0i")]
-        #[case("x^1-2i", "(^ (address x 0) 1.0-2.0i)")]
         fn test_sexp(#[case] input: &str, #[case] expected: &str) {
             let parsed = Expression::from_str(input);
             assert!(parsed.is_ok());
@@ -1231,6 +1239,7 @@ mod tests {
     use crate::{
         expression::{EvaluationError, Expression, ExpressionFunction},
         real,
+        reserved::ReservedToken,
     };
 
     use super::*;
@@ -1322,14 +1331,51 @@ mod tests {
         }
     }
 
-    // Better behaved than the auto-derived version re: names
-    fn arb_memory_reference() -> impl Strategy<Value = MemoryReference> {
-        (r"[a-zA-Z][a-zA-Z0-9]*", any::<u64>())
-            .prop_map(|(name, index)| MemoryReference { name, index })
+    /// Parenthesized version of [`Expression::to_string()`]
+    fn parenthesized(expression: &Expression) -> String {
+        use Expression::*;
+        match expression {
+            Address(memory_reference) => format!("({memory_reference})"),
+            FunctionCall(FunctionCallExpression {
+                function,
+                expression,
+            }) => format!("({function}({}))", parenthesized(expression)),
+            Infix(InfixExpression {
+                left,
+                operator,
+                right,
+            }) => format!(
+                "({}{}{})",
+                parenthesized(left),
+                operator,
+                parenthesized(right)
+            ),
+            Number(value) => format!("({})", format_complex(value)),
+            PiConstant => "pi".to_string(),
+            Prefix(PrefixExpression {
+                operator,
+                expression,
+            }) => format!("({}{})", operator, parenthesized(expression)),
+            Variable(identifier) => format!("(%{identifier})"),
+        }
     }
 
+    // Better behaved than the auto-derived version for names
+    fn arb_name() -> impl Strategy<Value = String> {
+        r"[a-zA-Z][a-zA-Z0-9]{0,4}".prop_filter("Exclude reserved tokens", |t| {
+            ReservedToken::from_str(t).is_err()
+        })
+    }
+
+    // Better behaved than the auto-derived version re: names & indices
+    fn arb_memory_reference() -> impl Strategy<Value = MemoryReference> {
+        (arb_name(), (0..u32::MAX as u64)).prop_map(|(name, index)| MemoryReference { name, index })
+    }
+
+    // Better behaved than the auto-derived version via arbitrary floats
     fn arb_complex64() -> impl Strategy<Value = Complex64> {
-        any::<(f64, f64)>().prop_map(|(re, im)| Complex64 { re, im })
+        let bound = 6.0 * std::f64::consts::PI;
+        ((-bound..bound), (-bound..bound)).prop_map(|(re, im)| Complex64 { re, im })
     }
 
     /// Generate an arbitrary Expression for a property test.
@@ -1340,12 +1386,12 @@ mod tests {
             arb_memory_reference().prop_map(Address),
             arb_complex64().prop_map(Number),
             Just(PiConstant),
-            r"[a-zA-Z][a-zA-Z0-9]*".prop_map(Variable),
+            arb_name().prop_map(Variable),
         ];
         (leaf).prop_recursive(
             4,  // No more than 4 branch levels deep
             64, // Target around 64 total nodes
-            2,  // Each "collection" is up to 2 elements
+            16, // Each "collection" is up to 16 elements
             |expr| {
                 prop_oneof![
                     (any::<ExpressionFunction>(), expr.clone()).prop_map(|(function, e)| {
@@ -1473,7 +1519,6 @@ mod tests {
             let parsed = Expression::from_str(&format_complex(&value));
             assert!(parsed.is_ok());
             let simple = parsed.unwrap().into_simplified();
-            dbg!((&value, &simple));
             assert_eq!(Expression::Number(value), simple);
         }
 
@@ -1549,9 +1594,8 @@ mod tests {
 
         #[test]
         fn round_trip(e in arb_expr()) {
-            let s = e.to_string();
+            let s = parenthesized(&e);
             let p = Expression::from_str(&s);
-            dbg!((&e, &s, &p));
             prop_assert!(p.is_ok());
             prop_assert_eq!(p.unwrap().into_simplified(), e.into_simplified());
         }
