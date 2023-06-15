@@ -698,15 +698,14 @@ mod simplification {
             // and https://github.com/herbie-fp/herbie/blob/main/egg-herbie/src/rules.rs
 
             // addition & subtraction
-            rw!("zero-add"      ; "(+ ?a 0)"                => "?a"),
-            rw!("comm-add"      ; "(+ ?a ?b)"               => "(+ ?b ?a)"),
-            rw!("comm-mul"      ; "(* ?a ?b)"               => "(* ?b ?a)"),
-            rw!("assoc-add"     ; "(+ ?a (+ ?b ?c))"        => "(+ (+ ?a ?b) ?c)"),
-            rw!("assoc-mul"     ; "(* ?a (* ?b ?c))"        => "(* (* ?a ?b) ?c)"),
+            rw!("add-zero"      ; "(+ ?a 0)"                => "?a"),
+            rw!("zero-add"      ; "(+ 0 ?a)"                => "?a"),
             rw!("cancel-sub"    ; "(- ?a ?a)"               => "0"),
             // multiplication & division
-            rw!("zero-mul"      ; "(* ?a 0)"                => "0"),
-            rw!("one-mul"       ; "(* ?a 1)"                => "?a"),
+            rw!("mul-zero"      ; "(* ?a 0)"                => "0"),
+            rw!("zero-mul"      ; "(* 0 ?a)"                => "0"),
+            rw!("one-mul"       ; "(* 1 ?a)"                => "?a"),
+            rw!("mul-one"       ; "(* ?a 1)"                => "?a"),
             rw!("one-div"       ; "(/ ?a 1)"                => "?a"),
             rw!("cancel-div"    ; "(/ ?a ?a)"               => "1" if is_not_zero("?a")),
             // + - * /
@@ -1362,7 +1361,7 @@ mod tests {
 
     // Better behaved than the auto-derived version for names
     fn arb_name() -> impl Strategy<Value = String> {
-        r"[a-zA-Z][a-zA-Z0-9]{0,4}".prop_filter("Exclude reserved tokens", |t| {
+        r"[a-z][a-zA-Z0-9]{1,10}".prop_filter("Exclude reserved tokens", |t| {
             ReservedToken::from_str(t).is_err()
         })
     }
