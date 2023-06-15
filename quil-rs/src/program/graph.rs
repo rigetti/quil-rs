@@ -614,7 +614,7 @@ impl ScheduledProgram {
                 Instruction::Jump(Jump { target }) => {
                     terminate_working_block(
                         Some(BlockTerminator::Unconditional {
-                            target: target.clone(),
+                            target,
                         }),
                         &mut working_instructions,
                         &mut blocks,
@@ -626,8 +626,8 @@ impl ScheduledProgram {
                 Instruction::JumpWhen(JumpWhen { target, condition }) => {
                     terminate_working_block(
                         Some(BlockTerminator::Conditional {
-                            target: target.clone(),
-                            condition: condition.clone(),
+                            target,
+                            condition,
                             jump_if_condition_true: true,
                         }),
                         &mut working_instructions,
@@ -640,8 +640,8 @@ impl ScheduledProgram {
                 Instruction::JumpUnless(JumpUnless { target, condition }) => {
                     terminate_working_block(
                         Some(BlockTerminator::Conditional {
-                            target: target.clone(),
-                            condition: condition.clone(),
+                            target,
+                            condition,
                             jump_if_condition_true: false,
                         }),
                         &mut working_instructions,
