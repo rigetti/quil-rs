@@ -28,6 +28,7 @@ py_wrap_data_struct! {
     }
 }
 impl_repr!(PyArithmetic);
+impl_str!(PyArithmetic);
 impl_hash!(PyArithmetic);
 
 #[pymethods]
@@ -209,6 +210,7 @@ py_wrap_data_struct! {
     }
 }
 impl_repr!(PyBinaryLogic);
+impl_str!(PyBinaryLogic);
 
 #[pymethods]
 impl PyBinaryLogic {

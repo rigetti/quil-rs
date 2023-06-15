@@ -1,7 +1,7 @@
 [package]
 name = "quil-rs"
 description = "Rust tooling for Quil (Quantum Instruction Language)"
-version = "0.17.0"
+version = "0.18.0-rc.0"
 edition = "2021"
 license = "Apache-2.0"
 repository = "https://github.com/rigetti/quil-rust"
@@ -38,4 +38,8 @@ harness = false
 
 [[bench]]
 name = "get_frames_for_instruction"
+harness = false
+
+[[bench]]
+name = "scheduled_program_from_program"
 harness = false

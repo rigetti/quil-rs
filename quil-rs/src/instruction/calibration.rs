@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::{
     instruction::{
-        format_instructions, get_expression_parameter_string, Expression, GateModifier,
+        format_instructions, write_expression_parameter_string, Expression, GateModifier,
         Instruction, Qubit,
     },
     validation::identifier::{validate_identifier, IdentifierValidationError},
@@ -45,8 +45,8 @@ impl Calibration {
 
 impl fmt::Display for Calibration {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let parameter_str = get_expression_parameter_string(&self.parameters);
-        write!(f, "DEFCAL {}{}", self.name, parameter_str)?;
+        write!(f, "DEFCAL {}", self.name)?;
+        write_expression_parameter_string(f, &self.parameters)?;
         write_qubit_parameters(f, &self.qubits)?;
         write!(f, ":")?;
         for instruction in &self.instructions {

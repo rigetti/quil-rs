@@ -2,13 +2,13 @@ use std::{collections::HashSet, fmt};
 
 use crate::{
     expression::Expression,
-    instruction::get_string_parameter_string,
+    instruction::write_parameter_string,
     validation::identifier::{
         validate_identifier, validate_user_identifier, IdentifierValidationError,
     },
 };
 
-use super::{format_qubits, get_expression_parameter_string, Qubit};
+use super::{write_expression_parameter_string, write_qubits, Qubit};
 
 /// A struct encapsulating all the properties of a Quil Quantum Gate.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -118,14 +118,13 @@ impl Gate {
 
 impl fmt::Display for Gate {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let parameter_str = get_expression_parameter_string(&self.parameters);
-
-        let qubit_str = format_qubits(&self.qubits);
         for modifier in &self.modifiers {
             write!(f, "{modifier} ")?;
         }
 
-        write!(f, "{}{} {}", self.name, parameter_str, qubit_str)
+        write!(f, "{}", self.name)?;
+        write_expression_parameter_string(f, &self.parameters)?;
+        write_qubits(f, &self.qubits)
     }
 }
 
@@ -278,12 +277,8 @@ impl GateDefinition {
 
 impl fmt::Display for GateDefinition {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "DEFGATE {}{}",
-            self.name,
-            get_string_parameter_string(&self.parameters)
-        )?;
+        write!(f, "DEFGATE {}", self.name,)?;
+        write_parameter_string(f, &self.parameters)?;
         match &self.specification {
             GateSpecification::Matrix(_) => writeln!(f, " AS MATRIX:")?,
             GateSpecification::Permutation(_) => writeln!(f, " AS PERMUTATION:")?,

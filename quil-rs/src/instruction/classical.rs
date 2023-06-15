@@ -101,6 +101,16 @@ pub struct BinaryLogic {
     pub operands: BinaryOperands,
 }
 
+impl fmt::Display for BinaryLogic {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{} {} {}",
+            self.operator, self.operands.0, self.operands.1
+        )
+    }
+}
+
 impl BinaryLogic {
     pub fn new(operator: BinaryOperator, operands: BinaryOperands) -> Self {
         Self { operator, operands }

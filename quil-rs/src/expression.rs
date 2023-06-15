@@ -839,9 +839,8 @@ mod tests {
                 operator: InfixOperator::Plus,
                 right: Box::new(Expression::Number(real!(b))),
             } );
-            let matching = first.clone();
             let differing = Expression::Number(real!(a + b));
-            prop_assert_eq!(&first, &matching);
+            prop_assert_eq!(&first, &first);
             prop_assert_ne!(&first, &differing);
         }
 
@@ -937,7 +936,7 @@ mod tests {
         #[test]
         fn exponentiation_works_as_expected(left in arb_expr(), right in arb_expr()) {
             let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Caret, right: Box::new(right.clone()) } );
-            prop_assert_eq!(left.clone() ^ right.clone(), expected.clone());
+            prop_assert_eq!(&(left.clone() ^ right.clone()), &expected);
             let mut x = left;
             x ^= right;
             prop_assert_eq!(x, expected);
@@ -946,7 +945,7 @@ mod tests {
         #[test]
         fn addition_works_as_expected(left in arb_expr(), right in arb_expr()) {
             let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Plus, right: Box::new(right.clone()) } );
-            prop_assert_eq!(left.clone() + right.clone(), expected.clone());
+            prop_assert_eq!(&(left.clone() + right.clone()), &expected);
             let mut x = left;
             x += right;
             prop_assert_eq!(x, expected);
@@ -955,7 +954,7 @@ mod tests {
         #[test]
         fn subtraction_works_as_expected(left in arb_expr(), right in arb_expr()) {
             let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Minus, right: Box::new(right.clone()) } );
-            prop_assert_eq!(left.clone() - right.clone(), expected.clone());
+            prop_assert_eq!(&(left.clone() - right.clone()), &expected);
             let mut x = left;
             x -= right;
             prop_assert_eq!(x, expected);
@@ -964,7 +963,7 @@ mod tests {
         #[test]
         fn multiplication_works_as_expected(left in arb_expr(), right in arb_expr()) {
             let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Star, right: Box::new(right.clone()) } );
-            prop_assert_eq!(left.clone() * right.clone(), expected.clone());
+            prop_assert_eq!(&(left.clone() * right.clone()), &expected);
             let mut x = left;
             x *= right;
             prop_assert_eq!(x, expected);
@@ -973,7 +972,7 @@ mod tests {
         #[test]
         fn division_works_as_expected(left in arb_expr(), right in arb_expr()) {
             let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Slash, right: Box::new(right.clone()) } );
-            prop_assert_eq!(left.clone() / right.clone(), expected.clone());
+            prop_assert_eq!(&(left.clone() / right.clone()), &expected);
             let mut x = left;
             x /= right;
             prop_assert_eq!(x, expected);
