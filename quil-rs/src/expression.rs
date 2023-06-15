@@ -12,26 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate::{
+    parser::{lex, parse_expression, ParseError},
+    program::{disallow_leftover, ParseProgramError},
+    {imag, instruction::MemoryReference, real},
+};
 use lexical::{format, to_string_with_options, WriteFloatOptions};
 use nom_locate::LocatedSpan;
 use num_complex::Complex64;
 use once_cell::sync::Lazy;
-use std::collections::{hash_map::DefaultHasher, HashMap};
-use std::f64::consts::PI;
-use std::fmt;
-use std::hash::{Hash, Hasher};
-use std::num::NonZeroI32;
-use std::ops::{
-    Add, AddAssign, BitXor, BitXorAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign,
+use std::{
+    collections::{hash_map::DefaultHasher, HashMap},
+    f64::consts::PI,
+    fmt,
+    hash::{Hash, Hasher},
+    num::NonZeroI32,
+    ops::{Add, AddAssign, BitXor, BitXorAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign},
+    str::FromStr,
 };
-use std::str::FromStr;
 
 #[cfg(test)]
 use proptest_derive::Arbitrary;
-
-use crate::parser::{lex, parse_expression, ParseError};
-use crate::program::{disallow_leftover, ParseProgramError};
-use crate::{imag, instruction::MemoryReference, real};
 
 /// The different possible types of errors that could occur during expression evaluation.
 #[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
@@ -256,13 +257,15 @@ fn is_small(x: f64) -> bool {
 /// A submodule whose sole purpose is to contain complex machinery for simplifying [`Expression`]s.
 mod simplification {
     use super::{
-        format_complex, is_small, Expression, ExpressionFunction, FunctionCallExpression,
-        InfixExpression, InfixOperator, MemoryReference, PrefixExpression, PrefixOperator,
+        format_complex, hash_to_u64, imag, is_small, real, Expression, ExpressionFunction,
+        FunctionCallExpression, InfixExpression, InfixOperator, MemoryReference, PrefixExpression,
+        PrefixOperator,
     };
     use egg::{define_language, rewrite as rw, FromOp, Id, Language, RecExpr};
     use once_cell::sync::Lazy;
-    use ordered_float::OrderedFloat;
     use std::{
+        cmp::Ordering,
+        hash::{Hash, Hasher},
         ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign},
         str::FromStr,
     };
@@ -430,30 +433,64 @@ mod simplification {
     /// An [`egg`]-friendly complex number.
     /// We can't just use `num_complex::Complex64`, because we need `Ord` and `Hash`.
     ///
-    /// Fun fact, there is no total ordering on the complex numbers; however, the derived thing
-    /// here will work for our purposes.
+    /// Fun fact, there is no total ordering on the complex numbers; however, the implementations
+    /// here are good enough for our purposes.
     ///
     /// https://en.wikipedia.org/wiki/Complex_number#Ordering
-    #[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
-    struct Complex {
-        re: OrderedFloat<f64>,
-        im: OrderedFloat<f64>,
-    }
+    #[derive(Debug, Default, Clone, Copy)]
+    struct Complex(num_complex::Complex64);
 
-    impl From<num_complex::Complex64> for Complex {
-        fn from(x: num_complex::Complex64) -> Self {
-            Self {
-                re: x.re.into(),
-                im: x.im.into(),
+    impl Hash for Complex {
+        fn hash<H: Hasher>(&self, state: &mut H) {
+            // Skip zero values (akin to `format_complex`).
+            // Also, since f64 isn't hashable, use the u64 binary representation.
+            // The docs claim this is rather portable: https://doc.rust-lang.org/std/primitive.f64.html#method.to_bits
+            if self.0.re.abs() > 0f64 {
+                self.0.re.to_bits().hash(state)
+            }
+            if self.0.im.abs() > 0f64 {
+                self.0.im.to_bits().hash(state)
             }
         }
     }
 
-    impl From<Complex> for num_complex::Complex64 {
-        fn from(x: Complex) -> Self {
-            Self {
-                re: x.re.into(),
-                im: x.im.into(),
+    impl PartialEq for Complex {
+        // Partial equality by hash value
+        fn eq(&self, other: &Self) -> bool {
+            hash_to_u64(self) == hash_to_u64(other)
+        }
+    }
+
+    impl Eq for Complex {}
+
+    impl PartialOrd for Complex {
+        fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+            Some(self.cmp(other))
+        }
+    }
+
+    /// Typical ordering, but with NAN as the biggest value; borrowed the idea from ordered-float
+    #[inline(always)]
+    fn _fcmp(x: f64, y: f64) -> Ordering {
+        if let Some(ordering) = x.partial_cmp(&y) {
+            ordering
+        } else {
+            match (x.is_nan(), y.is_nan()) {
+                (true, true) => Ordering::Equal,
+                (false, true) => Ordering::Less,
+                (true, false) => Ordering::Greater,
+                (false, false) => unreachable!("These floats should be partially comparable"),
+            }
+        }
+    }
+
+    /// lexicographic ordering with NAN as the biggest value
+    impl Ord for Complex {
+        fn cmp(&self, other: &Self) -> Ordering {
+            match (_fcmp(self.0.re, other.0.re), _fcmp(self.0.im, other.0.im)) {
+                (Ordering::Less, _) => Ordering::Less,
+                (Ordering::Greater, _) => Ordering::Greater,
+                (Ordering::Equal, other) => other,
             }
         }
     }
@@ -462,90 +499,73 @@ mod simplification {
         type Err = ();
         fn from_str(s: &str) -> Result<Self, Self::Err> {
             num_complex::Complex64::from_str(s)
-                .map(Self::from)
+                .map(Self)
                 .map_err(|_| ())
         }
     }
 
     impl std::fmt::Display for Complex {
         fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-            f.write_str(&format_complex(&num_complex::Complex64::from(*self)))
+            f.write_str(&format_complex(&self.0))
         }
     }
 
+    macro_rules! impl_via_inner {
+        ($function:ident) => {
+            fn $function(self) -> Self {
+                Self(self.0.$function())
+            }
+        };
+        ($trait:ident, $function:ident) => {
+            impl $trait for Complex {
+                type Output = Self;
+                fn $function(self) -> Self::Output {
+                    Self(self.0.$function())
+                }
+            }
+        };
+        ($trait:ident, $trait_assign:ident, $function:ident, $function_assign:ident) => {
+            impl $trait for Complex {
+                type Output = Self;
+                fn $function(self, other: Self) -> Self {
+                    Self(self.0.$function(other.0))
+                }
+            }
+            impl $trait_assign for Complex {
+                fn $function_assign(&mut self, other: Self) {
+                    *self = Self(self.0.$function(other.0))
+                }
+            }
+        };
+    }
+
+    impl_via_inner!(Neg, neg);
+    impl_via_inner!(Add, AddAssign, add, add_assign);
+    impl_via_inner!(Sub, SubAssign, sub, sub_assign);
+    impl_via_inner!(Mul, MulAssign, mul, mul_assign);
+    impl_via_inner!(Div, DivAssign, div, div_assign);
+
     impl Complex {
-        const I: Self = Self {
-            re: OrderedFloat(0.0),
-            im: OrderedFloat(1.0),
-        };
-        const PI: Self = Self {
-            re: OrderedFloat(std::f64::consts::PI),
-            im: OrderedFloat(0.0),
-        };
-        const ZERO: Self = Self {
-            re: OrderedFloat(0.0),
-            im: OrderedFloat(0.0),
-        };
+        const ZERO: Self = Self(real!(0.0));
+        const PI: Self = Self(real!(std::f64::consts::PI));
         fn close(&self, other: Self) -> bool {
             is_small((*self - other).abs())
         }
         fn abs(self) -> f64 {
-            num_complex::Complex64::from(self).norm()
+            self.0.norm()
         }
         fn cis(self) -> Self {
-            let z = num_complex::Complex64::from(self);
-            Self::from(z.cos() + num_complex::Complex64::from(Self::I) * z.sin())
+            // num_complex::Complex64::cis takes a float :-(
+            Self(self.0.cos() + imag!(1.0) * self.0.sin())
         }
-        fn cos(self) -> Self {
-            Self::from(num_complex::Complex64::from(self).cos())
+        fn pow(self, other: Self) -> Self {
+            Self(self.0.powc(other.0))
         }
-        fn exp(self) -> Self {
-            Self::from(num_complex::Complex64::from(self).exp())
-        }
-        fn pow(self, e: Self) -> Self {
-            Self::from(num_complex::Complex64::from(self).powc(e.into()))
-        }
-        fn sin(self) -> Self {
-            Self::from(num_complex::Complex64::from(self).sin())
-        }
-        fn sqrt(self) -> Self {
-            Self::from(num_complex::Complex64::from(self).sqrt())
-        }
+        impl_via_inner!(cos);
+        impl_via_inner!(exp);
+        impl_via_inner!(sin);
+        impl_via_inner!(sqrt);
     }
-
-    impl Neg for Complex {
-        type Output = Self;
-        fn neg(self) -> Self::Output {
-            Self::from(-num_complex::Complex64::from(self))
-        }
-    }
-
-    macro_rules! impl_via_num_complex {
-        ($name:ident, $name_assign:ident, $function:ident, $function_assign:ident) => {
-            impl $name for Complex {
-                type Output = Self;
-                fn $function(self, other: Self) -> Self {
-                    Self::from(
-                        num_complex::Complex64::from(self)
-                            .$function(num_complex::Complex64::from(other)),
-                    )
-                }
-            }
-            impl $name_assign for Complex {
-                fn $function_assign(&mut self, other: Self) {
-                    *self = Self::from(
-                        num_complex::Complex64::from(*self)
-                            .$function(num_complex::Complex64::from(other)),
-                    );
-                }
-            }
-        };
-    }
-
-    impl_via_num_complex!(Add, AddAssign, add, add_assign);
-    impl_via_num_complex!(Sub, SubAssign, sub, sub_assign);
-    impl_via_num_complex!(Mul, MulAssign, mul, mul_assign);
-    impl_via_num_complex!(Div, DivAssign, div, div_assign);
 
     define_language! {
         /// An [`egg`]-friendly version of [`Expression`]s, this language allows us to manipulate
@@ -682,12 +702,6 @@ mod simplification {
         }
     }
 
-    /// Is the variable equivalent to a number in the given circumstances?
-    fn is_number(var: &str) -> impl Fn(&mut EGraph, Id, &egg::Subst) -> bool {
-        let key = var.parse().unwrap();
-        move |egraph, _, subst| egraph[subst[key]].data.as_ref().is_some()
-    }
-
     /// Rewrite terms of our [`Expr`] language by reducing with our [`Arithmetic`] analysis.
     type Rewrite = egg::Rewrite<Expr, Arithmetic>;
 
@@ -727,7 +741,6 @@ mod simplification {
             rw!("mul-pow"       ; "(^ ?a (+ ?b ?c))"        => "(* (^ ?a ?b) (^ ?a ?c))"),
             // pos and neg
             rw!("pos-canon"     ; "(pos ?a)"                => "?a"),
-            rw!("neg-canon"     ; "(neg ?a)"                => "-?a" if is_number("?a")),
             rw!("sub-neg"       ; "(- ?a (neg ?b))"         => "(+ ?a ?b)"),
             // exp
             rw!("exp-zero"      ; "(exp 0)"                 => "1"),
@@ -1368,13 +1381,14 @@ mod tests {
 
     // Better behaved than the auto-derived version re: names & indices
     fn arb_memory_reference() -> impl Strategy<Value = MemoryReference> {
-        (arb_name(), (0..u32::MAX as u64)).prop_map(|(name, index)| MemoryReference { name, index })
+        (arb_name(), (u64::MIN..u32::MAX as u64))
+            .prop_map(|(name, index)| MemoryReference { name, index })
     }
 
     // Better behaved than the auto-derived version via arbitrary floats
     fn arb_complex64() -> impl Strategy<Value = Complex64> {
-        let bound = 6.0 * std::f64::consts::PI;
-        ((-bound..bound), (-bound..bound)).prop_map(|(re, im)| Complex64 { re, im })
+        let tau = std::f64::consts::TAU;
+        ((-tau..tau), (-tau..tau)).prop_map(|(re, im)| Complex64 { re, im })
     }
 
     /// Generate an arbitrary Expression for a property test.
