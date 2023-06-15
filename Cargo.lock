@@ -1011,7 +1011,7 @@ checksum = "a1d01941d82fa2ab50be1e79e6714289dd7cde78eba4c074bc5a4374f650dfe0"
 
 [[package]]
 name = "quil-py"
-version = "0.1.0"
+version = "0.2.0-rc.0"
 dependencies = [
  "pyo3",
  "pyo3-build-config",
@@ -1022,7 +1022,7 @@ dependencies = [
 
 [[package]]
 name = "quil-rs"
-version = "0.17.0"
+version = "0.18.0-rc.0"
 dependencies = [
  "criterion",
  "dot-writer",
