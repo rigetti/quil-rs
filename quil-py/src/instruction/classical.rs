@@ -249,10 +249,14 @@ impl_hash!(PyConvert);
 #[pymethods]
 impl PyConvert {
     #[new]
-    fn new(py: Python<'_>, from: PyMemoryReference, to: PyMemoryReference) -> PyResult<Self> {
+    fn new(
+        py: Python<'_>,
+        destination: PyMemoryReference,
+        source: PyMemoryReference,
+    ) -> PyResult<Self> {
         Ok(Self(Convert::new(
-            MemoryReference::py_try_from(py, &from)?,
-            MemoryReference::py_try_from(py, &to)?,
+            MemoryReference::py_try_from(py, &destination)?,
+            MemoryReference::py_try_from(py, &source)?,
         )))
     }
 

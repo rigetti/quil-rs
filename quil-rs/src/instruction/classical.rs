@@ -124,10 +124,10 @@ pub struct Convert {
 }
 
 impl Convert {
-    pub fn new(original: MemoryReference, to: MemoryReference) -> Self {
+    pub fn new(destination: MemoryReference, source: MemoryReference) -> Self {
         Self {
-            destination: original,
-            source: to,
+            destination,
+            source,
         }
     }
 }
