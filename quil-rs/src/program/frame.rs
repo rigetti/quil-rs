@@ -63,7 +63,7 @@ impl FrameSet {
                 // This unusual pattern (fetch key & value by key, discard value) allows us to return
                 // a reference to `self` rather than `condition`, keeping lifetimes simpler.
                 if let Some((frame, _)) = self.frames.get_key_value(frame) {
-                    vec![frame].into_iter().collect()
+                    HashSet::from([frame])
                 } else {
                     HashSet::new()
                 }
