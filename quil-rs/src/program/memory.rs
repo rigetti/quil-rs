@@ -81,7 +81,7 @@ macro_rules! set_from_reference_vec {
 /// Build a HashSet<String> from an Option<&MemoryReference>
 macro_rules! set_from_optional_memory_reference {
     ($reference:expr) => {
-        set_from_reference_vec![$reference.map_or(vec![], |reference| vec![reference.name.clone()])]
+        set_from_reference_vec![$reference.map_or_else(Vec::new, |reference| vec![reference.name.clone()])]
     };
 }
 
@@ -142,6 +142,7 @@ impl Instruction {
                 destination,
                 source,
             }) => MemoryAccesses {
+                // TODO: is it better to use option instead of vec?
                 writes: set_from_memory_references![vec![destination]],
                 reads: set_from_optional_memory_reference![source.get_memory_reference()],
                 ..Default::default()
@@ -315,6 +316,7 @@ impl Expression {
 impl WaveformInvocation {
     /// Return, if any, the memory references contained within this WaveformInvocation.
     pub fn get_memory_references(&self) -> Vec<&MemoryReference> {
+        // TODO: iterators?
         let mut result = vec![];
 
         for expression in self.parameters.values() {
