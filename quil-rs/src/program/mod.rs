@@ -144,7 +144,7 @@ impl Program {
         for instruction in &self.instructions {
             match self.calibrations.expand(instruction, &[])? {
                 Some(expanded) => {
-                    expanded_instructions.extend(expanded.into_iter());
+                    expanded_instructions.extend(expanded);
                 }
                 None => {
                     expanded_instructions.push(instruction.clone());
