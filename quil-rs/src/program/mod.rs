@@ -152,7 +152,6 @@ impl Program {
             }
         }
 
-        // TODO: should this just be a new Program?
         let mut new_program = Self {
             calibrations: self.calibrations.clone(),
             frames: self.frames.clone(),
@@ -161,9 +160,7 @@ impl Program {
             instructions: Vec::new(),
         };
 
-        for instruction in expanded_instructions {
-            new_program.add_instruction(instruction);
-        }
+        new_program.add_instructions(expanded_instructions);
 
         Ok(new_program)
     }
