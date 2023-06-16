@@ -152,8 +152,14 @@ impl Program {
             }
         }
 
-        let mut new_program = self.clone();
-        new_program.instructions = vec![];
+        // TODO: should this just be a new Program?
+        let mut new_program = Self {
+            calibrations: self.calibrations.clone(),
+            frames: self.frames.clone(),
+            memory_regions: self.memory_regions.clone(),
+            waveforms: self.waveforms.clone(),
+            instructions: Vec::new(),
+        };
 
         for instruction in expanded_instructions {
             new_program.add_instruction(instruction);
@@ -317,6 +323,7 @@ impl From<Vec<Instruction>> for Program {
     }
 }
 
+// TODO: why not use owned values?
 impl<'a, 'b> ops::Add<&'b Program> for &'a Program {
     type Output = Program;
 
