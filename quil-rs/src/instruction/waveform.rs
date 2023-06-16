@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fmt};
 
-use crate::{expression::Expression, hash::hash_hashmap, instruction::write_comma_separated_list};
+use crate::{expression::Expression, instruction::write_comma_separated_list};
 
 use super::write_parameter_string;
 
@@ -105,13 +105,6 @@ impl fmt::Display for WaveformInvocation {
                     .join(", ")
             )
         }
-    }
-}
-
-impl std::hash::Hash for WaveformInvocation {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.name.hash(state);
-        hash_hashmap(&self.parameters, state);
     }
 }
 

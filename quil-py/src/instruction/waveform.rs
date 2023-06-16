@@ -88,7 +88,6 @@ py_wrap_data_struct! {
 }
 impl_repr!(PyWaveformInvocation);
 impl_str!(PyWaveformInvocation);
-impl_hash!(PyWaveformInvocation);
 
 #[pymethods]
 impl PyWaveformInvocation {

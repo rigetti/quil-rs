@@ -10,7 +10,7 @@ use crate::{
 
 use super::write_qubit_parameters;
 
-#[derive(Clone, Debug, Default, Hash, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct Calibration {
     pub instructions: Vec<Instruction>,
     pub modifiers: Vec<GateModifier>,
@@ -56,7 +56,7 @@ impl fmt::Display for Calibration {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Hash)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct MeasureCalibrationDefinition {
     pub qubit: Option<Qubit>,
     pub parameter: String,

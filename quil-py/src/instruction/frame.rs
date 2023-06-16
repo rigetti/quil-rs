@@ -59,7 +59,6 @@ py_wrap_data_struct! {
 }
 impl_repr!(PyFrameDefinition);
 impl_str!(PyFrameDefinition);
-impl_hash!(PyFrameDefinition);
 
 #[pymethods]
 impl PyFrameDefinition {
@@ -125,7 +124,6 @@ py_wrap_data_struct! {
 }
 impl_repr!(PyCapture);
 impl_str!(PyCapture);
-impl_hash!(PyCapture);
 
 #[pymethods]
 impl PyCapture {
@@ -165,7 +163,6 @@ py_wrap_data_struct! {
 
 impl_repr!(PyPulse);
 impl_str!(PyPulse);
-impl_hash!(PyPulse);
 
 #[pymethods]
 impl PyPulse {
