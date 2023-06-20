@@ -269,7 +269,7 @@ mod simplification {
         ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign},
         str::FromStr,
     };
-    use symbolic_expressions::{parser, IntoSexp, Sexp, SexpError};
+    use symbolic_expressions::{IntoSexp, Sexp};
 
     /// Simplify an [`Expression`]:
     /// - turn it into a [`Sexp`],
@@ -278,32 +278,31 @@ mod simplification {
     /// - and turn that back into an [`Expression`] (by way of another [`Sexp`]).
     pub(super) fn run(expression: &Expression) -> Result<Expression, SimplificationError> {
         let sexp = expression.into_sexp();
-        let recexpr = parse_expr(&sexp)?;
+        let recexpr = sexp_to_recexpr(&sexp)?;
         let runner = egg::Runner::default().with_expr(&recexpr).run(&(*RULES));
         let root = runner.roots[0];
         let (_, best) = egg::Extractor::new(&runner.egraph, egg::AstSize).find_best(root);
-        let simpler_sexp =
-            parser::parse_str(&best.to_string()).map_err(SimplificationError::SexpFromRecExpr)?;
+        let simpler_sexp = recexpr_to_sexp(best)?;
         Expression::try_from(&simpler_sexp)
     }
 
     /// All the myriad ways simplifying an [`Expression`] can fail.
     #[derive(Debug, thiserror::Error)]
     pub enum SimplificationError {
-        #[error("Unable to parse Sexp from given RecExpr: {0:?}")]
-        SexpFromRecExpr(#[from] SexpError),
-        #[error("Can't make anything from an empty Sexp")]
-        EmptySexp,
         #[error("Invalid string for a complex number: {0}")]
         ComplexParsingError(#[from] num_complex::ParseComplexError<std::num::ParseFloatError>),
-        #[error("Unexpected unary expr: {0}")]
-        UnexpectedUnaryExpr(String),
+        #[error("Cycle found in recursive expression: {0}")]
+        CycleInRecExpr(String),
+        #[error("Can't make anything from an empty Sexp")]
+        EmptySexp,
         #[error("Expected a valid index: {0}")]
         IndexExpected(#[from] std::num::ParseIntError),
         #[error("Unexpected infix operation: {0}")]
         UnexpectedInfixOp(String),
         #[error("Unexpected list Sexp: {0:#?}")]
         UnexpectedListSexp(Sexp),
+        #[error("Unexpected unary expr: {0}")]
+        UnexpectedUnaryExpr(String),
         #[error("Unknown operation: {0}")]
         UnknownOp(String),
     }
@@ -599,11 +598,8 @@ mod simplification {
     /// Parse the [`Sexp`] into a [`RecExpr<Expr>`], avoiding needless stringification.
     ///
     /// See https://docs.rs/egg/0.9.4/src/egg/language.rs.html#545
-    fn parse_expr(sexp: &Sexp) -> Result<RecExpr<Expr>, SimplificationError> {
-        fn parse_sexp_into(
-            sexp: &Sexp,
-            expr: &mut RecExpr<Expr>,
-        ) -> Result<Id, SimplificationError> {
+    fn sexp_to_recexpr(sexp: &Sexp) -> Result<RecExpr<Expr>, SimplificationError> {
+        fn sexp_into(sexp: &Sexp, expr: &mut RecExpr<Expr>) -> Result<Id, SimplificationError> {
             match sexp {
                 Sexp::Empty => Err(SimplificationError::EmptySexp),
                 Sexp::String(s) => {
@@ -614,13 +610,13 @@ mod simplification {
                 Sexp::List(list) if list.is_empty() => Err(SimplificationError::EmptySexp),
                 Sexp::List(list) => match &list[0] {
                     Sexp::Empty => Err(SimplificationError::EmptySexp), // should be unreachable
-                    list @ Sexp::List(..) => {
-                        Err(SimplificationError::UnexpectedListSexp(list.clone()))
+                    inner_list @ Sexp::List(..) => {
+                        Err(SimplificationError::UnexpectedListSexp(inner_list.clone()))
                     }
                     Sexp::String(op) => {
                         let arg_ids: Vec<Id> = list[1..]
                             .iter()
-                            .map(|s| parse_sexp_into(s, expr))
+                            .map(|s| sexp_into(s, expr))
                             .collect::<Result<_, _>>()?;
                         let node = Expr::from_op(op, arg_ids)
                             .map_err(|e| SimplificationError::UnknownOp(format!("{e:#?}")))?;
@@ -630,8 +626,32 @@ mod simplification {
             }
         }
         let mut expr = RecExpr::default();
-        parse_sexp_into(sexp, &mut expr)?;
+        sexp_into(sexp, &mut expr)?;
         Ok(expr)
+    }
+
+    /// Parse the [`RecExpr<Expr>`] into a [`Sexp`], avoiding (some) needless stringification.
+    ///
+    /// See https://docs.rs/egg/latest/src/egg/language.rs.html#470
+    fn recexpr_to_sexp(expr: RecExpr<Expr>) -> Result<Sexp, SimplificationError> {
+        fn recexpr_into(nodes: &[Expr], i: usize) -> Result<Sexp, SimplificationError> {
+            let op = Sexp::String(nodes[i].to_string());
+            if nodes[i].is_leaf() {
+                Ok(op)
+            } else {
+                let mut list = vec![op];
+                for child in nodes[i].children().iter().map(|i| usize::from(*i)) {
+                    if child < i {
+                        list.push(recexpr_into(nodes, child)?);
+                    } else {
+                        return Err(SimplificationError::CycleInRecExpr(format!("{nodes:?}")));
+                    }
+                }
+                Ok(Sexp::List(list))
+            }
+        }
+        let nodes = expr.as_ref();
+        recexpr_into(nodes, nodes.len() - 1)
     }
 
     /// Our analysis will perform arithmetic simplification (largely, constant folding) on our
@@ -702,6 +722,11 @@ mod simplification {
         }
     }
 
+    fn is_number(var: &str) -> impl Fn(&mut EGraph, Id, &egg::Subst) -> bool {
+        let key = var.parse().unwrap();
+        move |egraph, _, subst| egraph[subst[key]].data.as_ref().is_some()
+    }
+
     /// Rewrite terms of our [`Expr`] language by reducing with our [`Arithmetic`] analysis.
     type Rewrite = egg::Rewrite<Expr, Arithmetic>;
 
@@ -722,7 +747,7 @@ mod simplification {
             rw!("mul-one"       ; "(* ?a 1)"                => "?a"),
             rw!("one-div"       ; "(/ ?a 1)"                => "?a"),
             rw!("cancel-div"    ; "(/ ?a ?a)"               => "1" if is_not_zero("?a")),
-            // + - * /
+            // + & *
             rw!("distribute"    ; "(* ?a (+ ?b ?c))"        => "(+ (* ?a ?b) (* ?a ?c))"),
             rw!("factor"        ; "(+ (* ?a ?b) (* ?a ?c))" => "(* ?a (+ ?b ?c))"),
             // pow & sqrt
@@ -742,22 +767,10 @@ mod simplification {
             // pos and neg
             rw!("pos-canon"     ; "(pos ?a)"                => "?a"),
             rw!("sub-neg"       ; "(- ?a (neg ?b))"         => "(+ ?a ?b)"),
+            rw!("neg-canon"     ; "(neg ?a)"                => "-?a" if is_number("?a")),
             // exp
             rw!("exp-zero"      ; "(exp 0)"                 => "1"),
             rw!("exp-neg"       ; "(exp (neg ?a))"          => "(/ 1 (exp ?a))"),
-            // trig
-            rw!("cis-zero"      ; "(cis 0)"                 => "1"),
-            rw!("cis-pi"        ; "(cis pi)"                => "-1"),
-            rw!("cos-zero"      ; "(cos 0)"                 => "1"),
-            rw!("cos-pi"        ; "(cos pi)"                => "-1"),
-            rw!("cos-+pi"       ; "(cos (+ ?a pi)))"        => "(neg (cos ?a))"),
-            rw!("cos-+pi/2"     ; "(cos (+ ?a (/ pi 2)))"   => "(neg (sin ?a))"),
-            rw!("sin-zero"      ; "(sin 0)"                 => "0"),
-            rw!("sin-pi"        ; "(sin pi)"                => "0"),
-            rw!("sin-+pi"       ; "(sin (+ ?a pi))"         => "(neg (sin ?a))"),
-            rw!("sin-+pi/2"     ; "(sin (+ ?a (/ pi 2)))"   => "(cos ?a)"),
-            rw!("cos-neg"       ; "(cos (neg ?a))"          => "(cos ?a)"),
-            rw!("sin-neg"       ; "(sin (neg ?a))"          => "(neg (sin ?a))"),
         ]
     });
 
@@ -1205,7 +1218,7 @@ impl fmt::Display for PrefixOperator {
             f,
             "{}",
             match self {
-                // NOTE: prefix Plus does nothing, and it causes parsing issues
+                // NOTE: prefix Plus does nothing but cause parsing issues
                 Plus => "",
                 Minus => "-",
             }
