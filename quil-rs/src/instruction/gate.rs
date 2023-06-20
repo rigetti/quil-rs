@@ -188,8 +188,8 @@ impl PauliSum {
 
         if !diff.is_empty() {
             return Err(GateError::PauliSumArgumentMismatch {
-                expected_arguments: arguments.clone(),
                 mismatches: diff.into_iter().cloned().collect(),
+                expected_arguments: arguments,
             });
         }
 
