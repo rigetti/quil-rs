@@ -317,17 +317,16 @@ impl From<Vec<Instruction>> for Program {
     }
 }
 
-impl<'a, 'b> ops::Add<&'b Program> for &'a Program {
+impl ops::Add<Program> for Program {
     type Output = Program;
 
-    fn add(self, rhs: &'b Program) -> Program {
-        let mut new = self.clone();
-        new.calibrations.extend(rhs.calibrations.clone());
-        new.frames.merge(rhs.frames.clone());
-        new.memory_regions.extend(rhs.memory_regions.clone());
-        new.waveforms.extend(rhs.waveforms.clone());
-        new.instructions.extend(rhs.instructions.clone());
-        new
+    fn add(mut self, rhs: Program) -> Program {
+        self.calibrations.extend(rhs.calibrations);
+        self.frames.merge(rhs.frames);
+        self.memory_regions.extend(rhs.memory_regions);
+        self.waveforms.extend(rhs.waveforms);
+        self.instructions.extend(rhs.instructions);
+        self
     }
 }
 

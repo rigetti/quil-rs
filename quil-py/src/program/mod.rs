@@ -169,7 +169,7 @@ impl PyProgram {
     }
 
     pub fn __add__(&self, py: Python<'_>, rhs: Self) -> PyResult<Self> {
-        let new = self.as_inner() + rhs.as_inner();
+        let new = self.as_inner().clone() + rhs.as_inner().clone();
         new.to_python(py)
     }
 
