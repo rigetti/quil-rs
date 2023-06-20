@@ -142,7 +142,6 @@ impl Instruction {
                 destination,
                 source,
             }) => MemoryAccesses {
-                // TODO: is it better to use option instead of vec?
                 writes: set_from_memory_references![vec![destination]],
                 reads: set_from_optional_memory_reference![source.get_memory_reference()],
                 ..Default::default()
@@ -316,7 +315,6 @@ impl Expression {
 impl WaveformInvocation {
     /// Return, if any, the memory references contained within this WaveformInvocation.
     pub fn get_memory_references(&self) -> Vec<&MemoryReference> {
-        // TODO: iterators?
         let mut result = vec![];
 
         for expression in self.parameters.values() {

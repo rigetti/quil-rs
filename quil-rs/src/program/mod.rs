@@ -320,7 +320,6 @@ impl From<Vec<Instruction>> for Program {
     }
 }
 
-// TODO: why not use owned values?
 impl<'a, 'b> ops::Add<&'b Program> for &'a Program {
     type Output = Program;
 
