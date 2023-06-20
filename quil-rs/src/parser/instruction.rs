@@ -835,12 +835,12 @@ mod tests {
         "CONVERT theta unadjusted-theta[1]",
         vec![Instruction::Convert(Convert {
             destination: MemoryReference {
-                name: "unadjusted-theta".to_string(),
-                index: 1
-            },
-            source: MemoryReference {
                 name: "theta".to_string(),
                 index: 0
+            },
+            source: MemoryReference {
+                name: "unadjusted-theta".to_string(),
+                index: 1
             },
         })]
     );
