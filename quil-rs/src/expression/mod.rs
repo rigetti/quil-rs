@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use crate::{
+    hash::{hash_f64, hash_to_u64},
     parser::{lex, parse_expression, ParseError},
     program::{disallow_leftover, ParseProgramError},
     {imag, instruction::MemoryReference, real},
@@ -22,7 +23,7 @@ use nom_locate::LocatedSpan;
 use num_complex::Complex64;
 use once_cell::sync::Lazy;
 use std::{
-    collections::{hash_map::DefaultHasher, HashMap},
+    collections::HashMap,
     f64::consts::PI,
     fmt,
     hash::{Hash, Hasher},
@@ -105,13 +106,6 @@ impl PrefixExpression {
     }
 }
 
-/// Hash value helper: turn a hashable thing into a u64.
-fn hash_to_u64<T: Hash>(t: &T) -> u64 {
-    let mut s = DefaultHasher::new();
-    t.hash(&mut s);
-    s.finish()
-}
-
 impl Hash for Expression {
     // Implemented by hand since we can't derive with f64s hidden inside.
     // Also to understand when things should be the same, like with commutativity (`1 + 2 == 2 + 1`).
@@ -161,10 +155,10 @@ impl Hash for Expression {
                 // Also, since f64 isn't hashable, use the u64 binary representation.
                 // The docs claim this is rather portable: https://doc.rust-lang.org/std/primitive.f64.html#method.to_bits
                 if n.re.abs() > 0f64 {
-                    n.re.to_bits().hash(state)
+                    hash_f64(n.re, state)
                 }
                 if n.im.abs() > 0f64 {
-                    n.im.to_bits().hash(state)
+                    hash_f64(n.im, state)
                 }
             }
             PiConstant => {
@@ -659,7 +653,7 @@ impl fmt::Display for InfixOperator {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
+    use std::collections::{hash_map::DefaultHasher, HashSet};
 
     use num_complex::Complex64;
     use proptest::prelude::*;

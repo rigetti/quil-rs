@@ -2,7 +2,7 @@ use std::fmt;
 
 use super::{MemoryReference, Qubit};
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Measurement {
     pub qubit: Qubit,
     pub target: Option<MemoryReference>,

@@ -147,8 +147,8 @@ pub(crate) fn parse_convert(input: ParserInput) -> InternalParserResult<Instruct
     Ok((
         input,
         Instruction::Convert(Convert {
-            destination: from,
-            source: to,
+            destination: to,
+            source: from,
         }),
     ))
 }

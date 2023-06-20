@@ -4,7 +4,7 @@ use crate::{expression::Expression, instruction::write_comma_separated_list};
 
 use super::write_parameter_string;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Waveform {
     pub matrix: Vec<Expression>,
     pub parameters: Vec<String>,
@@ -16,7 +16,7 @@ impl Waveform {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct WaveformDefinition {
     pub name: String,
     pub definition: Waveform,

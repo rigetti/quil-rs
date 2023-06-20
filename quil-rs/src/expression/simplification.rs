@@ -1,8 +1,11 @@
 /// Complex machinery for simplifying [`Expression`]s.
-use crate::expression::{
-    format_complex, hash_to_u64, imag, is_small, real, Expression, ExpressionFunction,
-    FunctionCallExpression, InfixExpression, InfixOperator, MemoryReference, PrefixExpression,
-    PrefixOperator,
+use crate::{
+    expression::{
+        format_complex, hash_to_u64, imag, is_small, real, Expression, ExpressionFunction,
+        FunctionCallExpression, InfixExpression, InfixOperator, MemoryReference, PrefixExpression,
+        PrefixOperator,
+    },
+    hash::hash_f64,
 };
 use egg::{define_language, rewrite as rw, Id, Language, RecExpr};
 use once_cell::sync::Lazy;
@@ -52,10 +55,10 @@ impl Hash for Complex {
         // Also, since f64 isn't hashable, use the u64 binary representation.
         // The docs claim this is rather portable: https://doc.rust-lang.org/std/primitive.f64.html#method.to_bits
         if self.0.re.abs() > 0f64 {
-            self.0.re.to_bits().hash(state)
+            hash_f64(self.0.re, state)
         }
         if self.0.im.abs() > 0f64 {
-            self.0.im.to_bits().hash(state)
+            hash_f64(self.0.im, state)
         }
     }
 }
