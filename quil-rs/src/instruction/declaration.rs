@@ -84,7 +84,7 @@ impl fmt::Display for Offset {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Declaration {
     pub name: String,
     pub size: Vector,
@@ -196,7 +196,7 @@ impl FromStr for MemoryReference {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Load {
     pub destination: MemoryReference,
     pub source: String,
@@ -223,7 +223,7 @@ impl fmt::Display for Load {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Hash)]
 pub struct Store {
     pub destination: String,
     pub offset: MemoryReference,

@@ -1,7 +1,7 @@
 use quil_rs::instruction::{Include, Pragma, PragmaArgument};
 
 use rigetti_pyo3::{
-    impl_repr, impl_str, py_wrap_data_struct, py_wrap_union_enum,
+    impl_hash, impl_repr, impl_str, py_wrap_data_struct, py_wrap_union_enum,
     pyo3::{
         pyclass::CompareOp,
         pymethods,
@@ -22,6 +22,7 @@ py_wrap_data_struct! {
 }
 impl_repr!(PyPragma);
 impl_str!(PyPragma);
+impl_hash!(PyPragma);
 
 #[pymethods]
 impl PyPragma {
@@ -56,6 +57,7 @@ py_wrap_union_enum! {
 }
 impl_repr!(PyPragmaArgument);
 impl_str!(PyPragmaArgument);
+impl_hash!(PyPragmaArgument);
 
 #[pymethods]
 impl PyPragmaArgument {
@@ -91,3 +93,4 @@ impl PyInclude {
 }
 impl_repr!(PyInclude);
 impl_str!(PyInclude);
+impl_hash!(PyInclude);

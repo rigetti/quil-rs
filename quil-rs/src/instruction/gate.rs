@@ -11,7 +11,7 @@ use crate::{
 use super::{write_expression_parameter_string, write_qubits, Qubit};
 
 /// A struct encapsulating all the properties of a Quil Quantum Gate.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Gate {
     pub name: String,
     pub parameters: Vec<Expression>,
@@ -20,7 +20,7 @@ pub struct Gate {
 }
 
 /// An enum of all the possible modifiers on a quil [`Gate`]
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum GateModifier {
     /// The `CONTROLLED` modifier makes the gate take an extra [`Qubit`] parameter as a control
     /// qubit.
@@ -138,7 +138,7 @@ impl fmt::Display for GateModifier {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, strum::Display, strum::EnumString)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, strum::Display, strum::EnumString)]
 #[strum(serialize_all = "UPPERCASE")]
 pub enum PauliGate {
     I,
@@ -147,7 +147,7 @@ pub enum PauliGate {
     Z,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct PauliTerm {
     pub arguments: Vec<(PauliGate, String)>,
     pub expression: Expression,
@@ -170,7 +170,7 @@ impl PauliTerm {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct PauliSum {
     pub arguments: Vec<String>,
     pub terms: Vec<PauliTerm>,
@@ -198,7 +198,7 @@ impl PauliSum {
 }
 
 /// An enum representing a the specification of a [`GateDefinition`] for a given [`GateType`]
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum GateSpecification {
     /// A matrix of [`Expression`]s representing a unitary operation for a [`GateType::Matrix`].
     Matrix(Vec<Vec<Expression>>),
@@ -253,7 +253,7 @@ impl fmt::Display for GateSpecification {
 }
 
 /// A struct encapsulating a quil Gate Definition
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct GateDefinition {
     pub name: String,
     pub parameters: Vec<String>,
@@ -420,7 +420,7 @@ mod test_gate_definition {
 }
 
 /// The type of a [`GateDefinition`]
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum GateType {
     Matrix,
     Permutation,

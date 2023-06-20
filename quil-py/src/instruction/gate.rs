@@ -8,7 +8,7 @@ use quil_rs::{
 use strum;
 
 use rigetti_pyo3::{
-    impl_from_str, impl_parse, impl_repr, impl_str, py_wrap_data_struct, py_wrap_error,
+    impl_from_str, impl_hash, impl_parse, impl_repr, impl_str, py_wrap_data_struct, py_wrap_error,
     py_wrap_simple_enum, py_wrap_type, py_wrap_union_enum,
     pyo3::{
         exceptions::PyValueError,
@@ -40,6 +40,7 @@ py_wrap_data_struct! {
 }
 impl_repr!(PyGate);
 impl_str!(PyGate);
+impl_hash!(PyGate);
 
 #[pymethods]
 impl PyGate {
@@ -109,6 +110,7 @@ py_wrap_simple_enum! {
 }
 impl_repr!(PyGateModifier);
 impl_str!(PyGateModifier);
+impl_hash!(PyGateModifier);
 
 #[pymethods]
 impl PyGateModifier {
@@ -131,6 +133,7 @@ py_wrap_simple_enum! {
 }
 impl_repr!(PyPauliGate);
 impl_str!(PyPauliGate);
+impl_hash!(PyPauliGate);
 impl_from_str!(PyPauliGate, RustParseEnumError);
 impl_parse!(PyPauliGate);
 
@@ -255,6 +258,7 @@ py_wrap_union_enum! {
 }
 impl_repr!(PyGateSpecification);
 impl_str!(PyGateSpecification);
+impl_hash!(PyGateSpecification);
 
 #[pymethods]
 impl PyGateSpecification {
@@ -277,6 +281,7 @@ py_wrap_data_struct! {
 }
 impl_repr!(PyGateDefinition);
 impl_str!(PyGateDefinition);
+impl_hash!(PyGateDefinition);
 
 #[pymethods]
 impl PyGateDefinition {
