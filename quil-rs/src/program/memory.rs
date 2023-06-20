@@ -85,7 +85,7 @@ macro_rules! set_from_optional_memory_reference {
     };
 }
 
-/// Build a HashSet<String> from a Vec<&MemoryReference>
+/// Build a HashSet<&String> from a Vec<&MemoryReference>
 macro_rules! set_from_memory_references {
     ($references:expr) => {
         set_from_reference_vec![$references.iter().map(|reference| &reference.name)]
