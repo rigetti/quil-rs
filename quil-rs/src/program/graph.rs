@@ -613,9 +613,7 @@ impl ScheduledProgram {
                 }
                 Instruction::Jump(Jump { target }) => {
                     terminate_working_block(
-                        Some(BlockTerminator::Unconditional {
-                            target,
-                        }),
+                        Some(BlockTerminator::Unconditional { target }),
                         &mut working_instructions,
                         &mut blocks,
                         &mut working_label,
