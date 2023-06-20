@@ -212,7 +212,7 @@ fn expression_to_recexpr(expression: &Expression) -> RecExpr<Expr> {
                 function,
                 expression,
             }) => {
-                let id = helper(&expression, r);
+                let id = helper(expression, r);
                 let expr = match function {
                     ExpressionFunction::Cis => Expr::Cis(id),
                     ExpressionFunction::Cosine => Expr::Cos(id),
@@ -227,7 +227,7 @@ fn expression_to_recexpr(expression: &Expression) -> RecExpr<Expr> {
                 operator,
                 right,
             }) => {
-                let ids = [helper(&left, r), helper(&right, r)];
+                let ids = [helper(left, r), helper(right, r)];
                 let expr = match operator {
                     InfixOperator::Caret => Expr::Pow(ids),
                     InfixOperator::Plus => Expr::Add(ids),
@@ -242,7 +242,7 @@ fn expression_to_recexpr(expression: &Expression) -> RecExpr<Expr> {
                 operator,
                 expression,
             }) => {
-                let id = helper(&expression, r);
+                let id = helper(expression, r);
                 let expr = match operator {
                     PrefixOperator::Plus => Expr::Pos(id),
                     PrefixOperator::Minus => Expr::Neg(id),
@@ -365,8 +365,8 @@ fn recexpr_to_expression(recexpr: RecExpr<Expr>) -> Result<Expression, Simplific
                 let s = sym.to_string();
                 match s {
                     ref x if x.starts_with('%') => Ok(Expression::Variable(s[1..].to_string())),
-                    ref x if x.contains("[") => {
-                        Ok(Expression::Address(MemoryReference::from_str(&x)?))
+                    ref x if x.contains('[') => {
+                        Ok(Expression::Address(MemoryReference::from_str(x)?))
                     }
                     _ => num_complex::Complex64::from_str(&s)
                         .map(Expression::Number)
