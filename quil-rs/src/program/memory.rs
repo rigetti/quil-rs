@@ -81,14 +81,14 @@ macro_rules! set_from_reference_vec {
 /// Build a HashSet<String> from an Option<&MemoryReference>
 macro_rules! set_from_optional_memory_reference {
     ($reference:expr) => {
-        set_from_reference_vec![$reference.map_or(vec![], |reference| vec![reference.name.clone()])]
+        set_from_reference_vec![$reference.map_or_else(Vec::new, |reference| vec![&reference.name])]
     };
 }
 
-/// Build a HashSet<String> from a Vec<&MemoryReference>
+/// Build a HashSet<&String> from a Vec<&MemoryReference>
 macro_rules! set_from_memory_references {
     ($references:expr) => {
-        set_from_reference_vec![$references.iter().map(|reference| reference.name.clone())]
+        set_from_reference_vec![$references.iter().map(|reference| &reference.name)]
     };
 }
 

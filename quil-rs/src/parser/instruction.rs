@@ -540,7 +540,7 @@ mod tests {
         "DEFFRAME 0 \"ro_rx\":\n\tDIRECTION: \"rx\"\n\n# (Pdb) settings.gates[GateID(name=\"x180\", targets=(0,))]\n\n",
         vec![Instruction::FrameDefinition(FrameDefinition {
             identifier: FrameIdentifier { name: "ro_rx".to_owned(), qubits: vec![Qubit::Fixed(0)] },
-            attributes: [("DIRECTION".to_owned(), AttributeValue::String("rx".to_owned()))].iter().cloned().collect()
+            attributes: [("DIRECTION".to_owned(), AttributeValue::String("rx".to_owned()))].into_iter().collect()
         })]);
 
     make_test!(
@@ -585,8 +585,7 @@ mod tests {
                 waveform: WaveformInvocation {
                     name: "custom_waveform".to_owned(),
                     parameters: [("a".to_owned(), Expression::Number(crate::real![1f64]))]
-                        .iter()
-                        .cloned()
+                        .into_iter()
                         .collect()
                 }
             })]
@@ -606,8 +605,7 @@ mod tests {
                 "INITIAL-FREQUENCY".to_owned(),
                 AttributeValue::Expression(Expression::Number(crate::real![2e9]))
             )]
-            .iter()
-            .cloned()
+            .into_iter()
             .collect()
         })]
     );
