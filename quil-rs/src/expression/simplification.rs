@@ -4,7 +4,7 @@ use crate::expression::{
     FunctionCallExpression, InfixExpression, InfixOperator, MemoryReference, PrefixExpression,
     PrefixOperator,
 };
-use egg::{define_language, rewrite as rw, FromOp, Id, Language, RecExpr};
+use egg::{define_language, rewrite as rw, Id, Language, RecExpr};
 use once_cell::sync::Lazy;
 use std::{
     cmp::Ordering,
@@ -12,21 +12,17 @@ use std::{
     ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign},
     str::FromStr,
 };
-use symbolic_expressions::{IntoSexp, Sexp};
 
 /// Simplify an [`Expression`]:
-/// - turn it into a [`Sexp`],
-/// - parse that into a [`RecExpr<Expr>`],
+/// - turn it into a [`RecExpr<Expr>`],
 /// - let [`egg`] simplify the recursive expression as best as it can,
-/// - and turn that back into an [`Expression`] (by way of another [`Sexp`]).
+/// - and turn that back into an [`Expression`]
 pub(super) fn run(expression: &Expression) -> Result<Expression, SimplificationError> {
-    let sexp = expression.into_sexp();
-    let recexpr = sexp_to_recexpr(&sexp)?;
+    let recexpr = expression_to_recexpr(expression);
     let runner = egg::Runner::default().with_expr(&recexpr).run(&(*RULES));
     let root = runner.roots[0];
     let (_, best) = egg::Extractor::new(&runner.egraph, egg::AstSize).find_best(root);
-    let simpler_sexp = recexpr_to_sexp(best)?;
-    Expression::try_from(&simpler_sexp)
+    recexpr_to_expression(best)
 }
 
 /// All the myriad ways simplifying an [`Expression`] can fail.
@@ -34,142 +30,10 @@ pub(super) fn run(expression: &Expression) -> Result<Expression, SimplificationE
 pub enum SimplificationError {
     #[error("Invalid string for a complex number: {0}")]
     ComplexParsingError(#[from] num_complex::ParseComplexError<std::num::ParseFloatError>),
-    #[error("Cycle found in recursive expression: {0}")]
-    CycleInRecExpr(String),
-    #[error("Can't make anything from an empty Sexp")]
-    EmptySexp,
     #[error("Expected a valid index: {0}")]
     IndexExpected(#[from] std::num::ParseIntError),
-    #[error("Unexpected infix operation: {0}")]
-    UnexpectedInfixOp(String),
-    #[error("Unexpected list Sexp: {0:#?}")]
-    UnexpectedListSexp(Sexp),
-    #[error("Unexpected unary expr: {0}")]
-    UnexpectedUnaryExpr(String),
-    #[error("Unknown operation: {0}")]
-    UnknownOp(String),
-}
-
-impl IntoSexp for Expression {
-    fn into_sexp(&self) -> Sexp {
-        match self {
-            Expression::Address(memory_reference) => {
-                let mut s = Sexp::start("address");
-                s.push(&memory_reference.name);
-                s.push(memory_reference.index.to_string());
-                s
-            }
-            Expression::FunctionCall(f) => {
-                let mut s = Sexp::start(&f.function.to_string());
-                s.push(&*f.expression);
-                s
-            }
-            Expression::Infix(i) => {
-                let mut s = Sexp::start(i.operator.to_string().trim());
-                s.push(&*i.left);
-                s.push(&*i.right);
-                s
-            }
-            Expression::Number(n) => format_complex(n).into(),
-            Expression::PiConstant => "pi".into(),
-            Expression::Prefix(p) => {
-                let mut s = Sexp::start(match p.operator {
-                    PrefixOperator::Plus => "pos",
-                    PrefixOperator::Minus => "neg",
-                });
-                s.push(&*p.expression);
-                s
-            }
-            Expression::Variable(s) => format!("%{s}").into(),
-        }
-    }
-}
-
-impl From<&Expression> for Sexp {
-    fn from(expression: &Expression) -> Self {
-        expression.into_sexp()
-    }
-}
-
-impl TryFrom<&Sexp> for Expression {
-    type Error = SimplificationError;
-    fn try_from(sexp: &Sexp) -> Result<Self, Self::Error> {
-        match sexp {
-            Sexp::Empty => Err(SimplificationError::EmptySexp),
-            Sexp::String(s) => match s.as_str() {
-                "pi" => Ok(Expression::PiConstant),
-                x if x.starts_with('%') => Ok(Expression::Variable(s[1..].to_string())),
-                _ => num_complex::Complex64::from_str(s)
-                    .map(Expression::Number)
-                    .map_err(SimplificationError::ComplexParsingError),
-            },
-            Sexp::List(ss) => match &ss[..] {
-                [Sexp::String(s), e] => {
-                    let expression = Expression::try_from(e)?.into();
-                    match s.as_str() {
-                        "cis" => Ok(Expression::FunctionCall(FunctionCallExpression {
-                            function: ExpressionFunction::Cis,
-                            expression,
-                        })),
-                        "cos" => Ok(Expression::FunctionCall(FunctionCallExpression {
-                            function: ExpressionFunction::Cosine,
-                            expression,
-                        })),
-                        "exp" => Ok(Expression::FunctionCall(FunctionCallExpression {
-                            function: ExpressionFunction::Exponent,
-                            expression,
-                        })),
-                        "sin" => Ok(Expression::FunctionCall(FunctionCallExpression {
-                            function: ExpressionFunction::Sine,
-                            expression,
-                        })),
-                        "sqrt" => Ok(Expression::FunctionCall(FunctionCallExpression {
-                            function: ExpressionFunction::SquareRoot,
-                            expression,
-                        })),
-                        "pos" => Ok(Expression::Prefix(PrefixExpression {
-                            operator: PrefixOperator::Plus,
-                            expression,
-                        })),
-                        "neg" => Ok(Expression::Prefix(PrefixExpression {
-                            operator: PrefixOperator::Minus,
-                            expression,
-                        })),
-                        _ => Err(SimplificationError::UnexpectedUnaryExpr(s.to_string())),
-                    }
-                }
-                [Sexp::String(s), Sexp::String(name), Sexp::String(y)]
-                    if s.as_str() == "address" =>
-                {
-                    let index = y
-                        .parse::<u64>()
-                        .map_err(SimplificationError::IndexExpected)?;
-                    Ok(Expression::Address(MemoryReference {
-                        name: name.clone(),
-                        index,
-                    }))
-                }
-                [Sexp::String(s), x, y] => {
-                    let left = Expression::try_from(x)?.into();
-                    let right = Expression::try_from(y)?.into();
-                    let operator = match s.as_str() {
-                        "^" => InfixOperator::Caret,
-                        "*" => InfixOperator::Star,
-                        "/" => InfixOperator::Slash,
-                        "+" => InfixOperator::Plus,
-                        "-" => InfixOperator::Minus,
-                        _ => return Err(SimplificationError::UnexpectedInfixOp(s.to_string())),
-                    };
-                    Ok(Expression::Infix(InfixExpression {
-                        left,
-                        right,
-                        operator,
-                    }))
-                }
-                _ => Err(SimplificationError::UnexpectedListSexp(sexp.clone())),
-            },
-        }
-    }
+    #[error("Invalid string for a memory reference: {0}")]
+    MemoryReferenceSyntax(#[from] <MemoryReference as FromStr>::Err),
 }
 
 /// An [`egg`]-friendly complex number.
@@ -331,70 +195,188 @@ define_language! {
         "/" = Div([Id; 2]),
         "+" = Add([Id; 2]),
         "-" = Sub([Id; 2]),
-        // Address
-        "address" = Address([Id; 2]),
-        // Variables
+        // Variables and Addresses
         Symbol(egg::Symbol),
     }
 }
 
-/// Parse the [`Sexp`] into a [`RecExpr<Expr>`], avoiding needless stringification.
-///
-/// See https://docs.rs/egg/0.9.4/src/egg/language.rs.html#545
-fn sexp_to_recexpr(sexp: &Sexp) -> Result<RecExpr<Expr>, SimplificationError> {
-    fn sexp_into(sexp: &Sexp, expr: &mut RecExpr<Expr>) -> Result<Id, SimplificationError> {
-        match sexp {
-            Sexp::Empty => Err(SimplificationError::EmptySexp),
-            Sexp::String(s) => {
-                let node = Expr::from_op(s, vec![])
-                    .map_err(|e| SimplificationError::UnknownOp(format!("{e:#?}")))?;
-                Ok(expr.add(node))
+/// Parse the [`Expression`] into a [`RecExpr<Expr>`]
+fn expression_to_recexpr(expression: &Expression) -> RecExpr<Expr> {
+    fn helper(e: &Expression, r: &mut RecExpr<Expr>) -> Id {
+        match e {
+            Expression::Address(m) => {
+                let expr = Expr::Symbol(m.to_string().into());
+                r.add(expr)
             }
-            Sexp::List(list) if list.is_empty() => Err(SimplificationError::EmptySexp),
-            Sexp::List(list) => match &list[0] {
-                Sexp::Empty => Err(SimplificationError::EmptySexp), // should be unreachable
-                inner_list @ Sexp::List(..) => {
-                    Err(SimplificationError::UnexpectedListSexp(inner_list.clone()))
-                }
-                Sexp::String(op) => {
-                    let arg_ids: Vec<Id> = list[1..]
-                        .iter()
-                        .map(|s| sexp_into(s, expr))
-                        .collect::<Result<_, _>>()?;
-                    let node = Expr::from_op(op, arg_ids)
-                        .map_err(|e| SimplificationError::UnknownOp(format!("{e:#?}")))?;
-                    Ok(expr.add(node))
-                }
-            },
+            Expression::FunctionCall(FunctionCallExpression {
+                function,
+                expression,
+            }) => {
+                let id = helper(&expression, r);
+                let expr = match function {
+                    ExpressionFunction::Cis => Expr::Cis(id),
+                    ExpressionFunction::Cosine => Expr::Cos(id),
+                    ExpressionFunction::Exponent => Expr::Exp(id),
+                    ExpressionFunction::Sine => Expr::Sin(id),
+                    ExpressionFunction::SquareRoot => Expr::Sqrt(id),
+                };
+                r.add(expr)
+            }
+            Expression::Infix(InfixExpression {
+                left,
+                operator,
+                right,
+            }) => {
+                let ids = [helper(&left, r), helper(&right, r)];
+                let expr = match operator {
+                    InfixOperator::Caret => Expr::Pow(ids),
+                    InfixOperator::Plus => Expr::Add(ids),
+                    InfixOperator::Minus => Expr::Sub(ids),
+                    InfixOperator::Slash => Expr::Div(ids),
+                    InfixOperator::Star => Expr::Mul(ids),
+                };
+                r.add(expr)
+            }
+            Expression::Number(x) => r.add(Expr::Number(Complex(*x))),
+            Expression::Prefix(PrefixExpression {
+                operator,
+                expression,
+            }) => {
+                let id = helper(&expression, r);
+                let expr = match operator {
+                    PrefixOperator::Plus => Expr::Pos(id),
+                    PrefixOperator::Minus => Expr::Neg(id),
+                };
+                r.add(expr)
+            }
+            Expression::PiConstant => r.add(Expr::Pi),
+            Expression::Variable(v) => r.add(Expr::Symbol(format!("%{v}").into())),
         }
     }
-    let mut expr = RecExpr::default();
-    sexp_into(sexp, &mut expr)?;
-    Ok(expr)
+    let mut r = RecExpr::default();
+    helper(expression, &mut r);
+    r
 }
 
-/// Parse the [`RecExpr<Expr>`] into a [`Sexp`], avoiding (some) needless stringification.
+/// Parse the [`RecExpr<Expr>`] back into an [`Expression`]
 ///
-/// See https://docs.rs/egg/latest/src/egg/language.rs.html#470
-fn recexpr_to_sexp(expr: RecExpr<Expr>) -> Result<Sexp, SimplificationError> {
-    fn recexpr_into(nodes: &[Expr], i: usize) -> Result<Sexp, SimplificationError> {
-        let op = Sexp::String(nodes[i].to_string());
-        if nodes[i].is_leaf() {
-            Ok(op)
-        } else {
-            let mut list = vec![op];
-            for child in nodes[i].children().iter().map(|i| usize::from(*i)) {
-                if child < i {
-                    list.push(recexpr_into(nodes, child)?);
-                } else {
-                    return Err(SimplificationError::CycleInRecExpr(format!("{nodes:?}")));
+/// This returns a [`Result`] rather than just the expression due to some `FromStr` usage in the
+/// very last case.
+fn recexpr_to_expression(recexpr: RecExpr<Expr>) -> Result<Expression, SimplificationError> {
+    fn helper(nodes: &[Expr], i: usize) -> Result<Expression, SimplificationError> {
+        match nodes[i] {
+            Expr::Pi => Ok(Expression::PiConstant),
+            Expr::Number(x) => Ok(Expression::Number(x.0)),
+            Expr::Cis(id) => {
+                let expression = Box::new(helper(nodes, id.into())?);
+                Ok(Expression::FunctionCall(FunctionCallExpression {
+                    function: ExpressionFunction::Cis,
+                    expression,
+                }))
+            }
+            Expr::Cos(id) => {
+                let expression = Box::new(helper(nodes, id.into())?);
+                Ok(Expression::FunctionCall(FunctionCallExpression {
+                    function: ExpressionFunction::Cosine,
+                    expression,
+                }))
+            }
+            Expr::Exp(id) => {
+                let expression = Box::new(helper(nodes, id.into())?);
+                Ok(Expression::FunctionCall(FunctionCallExpression {
+                    function: ExpressionFunction::Exponent,
+                    expression,
+                }))
+            }
+            Expr::Sin(id) => {
+                let expression = Box::new(helper(nodes, id.into())?);
+                Ok(Expression::FunctionCall(FunctionCallExpression {
+                    function: ExpressionFunction::Sine,
+                    expression,
+                }))
+            }
+            Expr::Sqrt(id) => {
+                let expression = Box::new(helper(nodes, id.into())?);
+                Ok(Expression::FunctionCall(FunctionCallExpression {
+                    function: ExpressionFunction::SquareRoot,
+                    expression,
+                }))
+            }
+            Expr::Pos(id) => {
+                let expression = Box::new(helper(nodes, id.into())?);
+                Ok(Expression::Prefix(PrefixExpression {
+                    operator: PrefixOperator::Plus,
+                    expression,
+                }))
+            }
+            Expr::Neg(id) => {
+                let expression = Box::new(helper(nodes, id.into())?);
+                Ok(Expression::Prefix(PrefixExpression {
+                    operator: PrefixOperator::Minus,
+                    expression,
+                }))
+            }
+            Expr::Pow([left_id, right_id]) => {
+                let left = Box::new(helper(nodes, left_id.into())?);
+                let right = Box::new(helper(nodes, right_id.into())?);
+                Ok(Expression::Infix(InfixExpression {
+                    operator: InfixOperator::Caret,
+                    left,
+                    right,
+                }))
+            }
+            Expr::Mul([left_id, right_id]) => {
+                let left = Box::new(helper(nodes, left_id.into())?);
+                let right = Box::new(helper(nodes, right_id.into())?);
+                Ok(Expression::Infix(InfixExpression {
+                    operator: InfixOperator::Star,
+                    left,
+                    right,
+                }))
+            }
+            Expr::Div([left_id, right_id]) => {
+                let left = Box::new(helper(nodes, left_id.into())?);
+                let right = Box::new(helper(nodes, right_id.into())?);
+                Ok(Expression::Infix(InfixExpression {
+                    operator: InfixOperator::Slash,
+                    left,
+                    right,
+                }))
+            }
+            Expr::Add([left_id, right_id]) => {
+                let left = Box::new(helper(nodes, left_id.into())?);
+                let right = Box::new(helper(nodes, right_id.into())?);
+                Ok(Expression::Infix(InfixExpression {
+                    operator: InfixOperator::Plus,
+                    left,
+                    right,
+                }))
+            }
+            Expr::Sub([left_id, right_id]) => {
+                let left = Box::new(helper(nodes, left_id.into())?);
+                let right = Box::new(helper(nodes, right_id.into())?);
+                Ok(Expression::Infix(InfixExpression {
+                    operator: InfixOperator::Minus,
+                    left,
+                    right,
+                }))
+            }
+            Expr::Symbol(sym) => {
+                let s = sym.to_string();
+                match s {
+                    ref x if x.starts_with('%') => Ok(Expression::Variable(s[1..].to_string())),
+                    ref x if x.contains("[") => {
+                        Ok(Expression::Address(MemoryReference::from_str(&x)?))
+                    }
+                    _ => num_complex::Complex64::from_str(&s)
+                        .map(Expression::Number)
+                        .map_err(SimplificationError::ComplexParsingError),
                 }
             }
-            Ok(Sexp::List(list))
         }
     }
-    let nodes = expr.as_ref();
-    recexpr_into(nodes, nodes.len() - 1)
+    let nodes = recexpr.as_ref();
+    helper(nodes, nodes.len() - 1)
 }
 
 /// Our analysis will perform arithmetic simplification (largely, constant folding) on our
@@ -426,7 +408,7 @@ impl egg::Analysis<Expr> for Arithmetic {
             Expr::Div([left, right]) => Some(*x(left)? / *x(right)?),
             Expr::Add([left, right]) => Some(*x(left)? + *x(right)?),
             Expr::Sub([left, right]) => Some(*x(left)? - *x(right)?),
-            Expr::Address(_) | Expr::Symbol(_) => None,
+            Expr::Symbol(_) => None,
         }
     }
 
@@ -517,7 +499,6 @@ static RULES: Lazy<Vec<Rewrite>> = Lazy::new(|| {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rstest::rstest;
 
     egg::test_fn! {
         docstring_example,
@@ -576,18 +557,6 @@ mod tests {
     egg::test_fn! {
         pow_neg_address,
         &RULES,
-        "(^ (neg 9.48e42i) (address A 9))" => "(^ -9.48e42i (address A 9))"
-    }
-
-    #[rstest]
-    #[case("cos(2 * pi) + 2", "(+ (cos (* 2 pi)) 2)")]
-    #[case("pi", "pi")]
-    #[case("-(1 - 2)", "(neg (- 1 2))")]
-    #[case("-9.48e42i^A[9]", "(^ (neg 9.48e42i) (address A 9))")]
-    fn test_sexp(#[case] input: &str, #[case] expected: &str) {
-        let parsed = Expression::from_str(input);
-        assert!(parsed.is_ok());
-        let sexp = Sexp::from(&parsed.unwrap());
-        assert_eq!(sexp.to_string(), expected);
+        "(^ (neg 9.48e42i) A[9])" => "(^ -9.48e42i A[9]))"
     }
 }

@@ -22,7 +22,6 @@ strum.workspace = true
 thiserror = "1.0.37"
 once_cell = "1.17.1"
 egg = "0.9.4"
-symbolic_expressions = "5.0.3"
 
 [dev-dependencies]
 criterion = { version = "0.4.0", features = ["html_reports"] }

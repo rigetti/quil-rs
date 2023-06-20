@@ -1032,7 +1032,6 @@ dependencies = [
  "rstest",
  "serde",
  "strum",
- "symbolic_expressions",
  "thiserror",
 ]
 
