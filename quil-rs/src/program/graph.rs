@@ -285,7 +285,7 @@ impl PreviousNodes {
     }
 
     /// Consume the [PreviousNodes] and return all nodes within.
-    pub fn drain(mut self) -> HashSet<ScheduledGraphNode> {
+    pub fn into_hashset(mut self) -> HashSet<ScheduledGraphNode> {
         if let Some(using) = self.using {
             self.blocking.insert(using);
         }
@@ -408,7 +408,7 @@ impl InstructionBlock {
                         // Test to make sure that no instructions depend directly on themselves
                         if memory_dependency.node_id != node {
                             let execution_dependency = ExecutionDependency::AwaitMemoryAccess(
-                                memory_dependency.access_type.clone(),
+                                memory_dependency.access_type,
                             );
                             add_dependency!(graph, memory_dependency.node_id => node, execution_dependency);
                         }
@@ -422,20 +422,20 @@ impl InstructionBlock {
         add_dependency!(graph, last_classical_instruction => ScheduledGraphNode::BlockEnd, ExecutionDependency::StableOrdering);
 
         for previous_nodes in last_timed_instruction_by_frame.into_values() {
-            for node in previous_nodes.drain() {
+            for node in previous_nodes.into_hashset() {
                 add_dependency!(graph, node => ScheduledGraphNode::BlockEnd, ExecutionDependency::Scheduled);
             }
         }
 
         for previous_nodes in last_instruction_by_frame.into_values() {
-            for node in previous_nodes.drain() {
+            for node in previous_nodes.into_hashset() {
                 add_dependency!(graph, node => ScheduledGraphNode::BlockEnd, ExecutionDependency::StableOrdering);
             }
         }
 
         // Examine all "pending" memory operations for all regions
         let remaining_dependencies = pending_memory_access
-            .drain()
+            .into_iter()
             .flat_map(|(_, queue)| queue.flush())
             .collect::<Vec<MemoryAccessDependency>>();
 
@@ -613,9 +613,7 @@ impl ScheduledProgram {
                 }
                 Instruction::Jump(Jump { target }) => {
                     terminate_working_block(
-                        Some(BlockTerminator::Unconditional {
-                            target: target.clone(),
-                        }),
+                        Some(BlockTerminator::Unconditional { target }),
                         &mut working_instructions,
                         &mut blocks,
                         &mut working_label,
@@ -626,8 +624,8 @@ impl ScheduledProgram {
                 Instruction::JumpWhen(JumpWhen { target, condition }) => {
                     terminate_working_block(
                         Some(BlockTerminator::Conditional {
-                            target: target.clone(),
-                            condition: condition.clone(),
+                            target,
+                            condition,
                             jump_if_condition_true: true,
                         }),
                         &mut working_instructions,
@@ -640,8 +638,8 @@ impl ScheduledProgram {
                 Instruction::JumpUnless(JumpUnless { target, condition }) => {
                     terminate_working_block(
                         Some(BlockTerminator::Conditional {
-                            target: target.clone(),
-                            condition: condition.clone(),
+                            target,
+                            condition,
                             jump_if_condition_true: false,
                         }),
                         &mut working_instructions,

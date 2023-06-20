@@ -152,7 +152,7 @@ impl Program {
         for instruction in &self.instructions {
             match self.calibrations.expand(instruction, &[])? {
                 Some(expanded) => {
-                    expanded_instructions.extend(expanded.into_iter());
+                    expanded_instructions.extend(expanded);
                 }
                 None => {
                     expanded_instructions.push(instruction.clone());
@@ -160,12 +160,15 @@ impl Program {
             }
         }
 
-        let mut new_program = self.clone();
-        new_program.instructions = vec![];
+        let mut new_program = Self {
+            calibrations: self.calibrations.clone(),
+            frames: self.frames.clone(),
+            memory_regions: self.memory_regions.clone(),
+            waveforms: self.waveforms.clone(),
+            instructions: Vec::new(),
+        };
 
-        for instruction in expanded_instructions {
-            new_program.add_instruction(instruction);
-        }
+        new_program.add_instructions(expanded_instructions);
 
         Ok(new_program)
     }

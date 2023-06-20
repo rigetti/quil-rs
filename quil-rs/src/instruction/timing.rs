@@ -3,7 +3,7 @@ use std::fmt;
 use super::Qubit;
 use crate::expression::Expression;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Delay {
     pub duration: Expression,
     pub frame_names: Vec<String>,
@@ -33,7 +33,7 @@ impl fmt::Display for Delay {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Fence {
     pub qubits: Vec<Qubit>,
 }

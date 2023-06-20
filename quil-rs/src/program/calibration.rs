@@ -169,7 +169,9 @@ impl CalibrationSet {
         };
 
         // Add this instruction to the breadcrumb trail before recursion
-        let mut downstream_previous_calibrations = vec![instruction.clone()];
+        let mut downstream_previous_calibrations =
+            Vec::with_capacity(previous_calibrations.len() + 1);
+        downstream_previous_calibrations.push(instruction.clone());
         downstream_previous_calibrations.extend_from_slice(previous_calibrations);
 
         Ok(match expanded_once_instructions {
@@ -338,11 +340,13 @@ impl CalibrationSet {
     pub fn to_instructions(&self) -> Vec<Instruction> {
         self.calibrations
             .iter()
-            .map(|c| Instruction::CalibrationDefinition(c.clone()))
+            .cloned()
+            .map(Instruction::CalibrationDefinition)
             .chain(
                 self.measure_calibrations
                     .iter()
-                    .map(|c| Instruction::MeasureCalibrationDefinition(c.clone())),
+                    .cloned()
+                    .map(Instruction::MeasureCalibrationDefinition),
             )
             .collect()
     }

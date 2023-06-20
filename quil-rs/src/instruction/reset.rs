@@ -2,7 +2,7 @@ use std::fmt;
 
 use super::Qubit;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Reset {
     pub qubit: Option<Qubit>,
 }

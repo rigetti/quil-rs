@@ -1,6 +1,6 @@
 use std::fmt;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Pragma {
     pub name: String,
     pub arguments: Vec<PragmaArgument>,
@@ -30,7 +30,7 @@ impl fmt::Display for Pragma {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum PragmaArgument {
     Identifier(String),
     Integer(u64),
@@ -45,7 +45,7 @@ impl fmt::Display for PragmaArgument {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Include {
     pub filename: String,
 }

@@ -29,6 +29,7 @@ use std::str::FromStr;
 #[cfg(test)]
 use proptest_derive::Arbitrary;
 
+use crate::hash::hash_f64;
 use crate::parser::{lex, parse_expression, ParseError};
 use crate::program::{disallow_leftover, ParseProgramError};
 use crate::{imag, instruction::MemoryReference, real};
@@ -158,10 +159,10 @@ impl Hash for Expression {
                 // Also, since f64 isn't hashable, use the u64 binary representation.
                 // The docs claim this is rather portable: https://doc.rust-lang.org/std/primitive.f64.html#method.to_bits
                 if n.re.abs() > 0f64 {
-                    n.re.to_bits().hash(state)
+                    hash_f64(n.re, state)
                 }
                 if n.im.abs() > 0f64 {
-                    n.im.to_bits().hash(state)
+                    hash_f64(n.im, state)
                 }
             }
             PiConstant => {
@@ -203,8 +204,9 @@ macro_rules! impl_expr_op {
         }
         impl $name_assign for Expression {
             fn $function_assign(&mut self, other: Self) {
-                let result = self.clone().$function(other);
-                *self = result;
+                // Move out of self to avoid potentially cloning a large value
+                let temp = ::std::mem::replace(self, Self::PiConstant);
+                *self = temp.$function(other);
             }
         }
     };
