@@ -44,7 +44,7 @@ pub fn from_corpus() -> Vec<QuilBenchConfig> {
 
     dir.filter_map(Result::ok)
         .filter_map(|entry| bench_config_from_file(&entry.path()))
-        .chain({ bench_config_from_file(&PathBuf::from(SAMPLE_CALIBRATIONS)) })
+        .chain(bench_config_from_file(&PathBuf::from(SAMPLE_CALIBRATIONS)))
         .collect()
 }
 
