@@ -42,7 +42,7 @@ pub enum SimplificationError {
 /// An [`egg`]-friendly complex number.
 /// We can't just use `num_complex::Complex64`, because we need `Ord` and `Hash`.
 ///
-/// Fun fact, there is no total ordering on the complex numbers; however, the implementations
+/// Fun fact, there is no natural ordering on the complex numbers; however, the implementations
 /// here are good enough for our purposes.
 ///
 /// https://en.wikipedia.org/wiki/Complex_number#Ordering
