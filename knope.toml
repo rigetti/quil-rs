@@ -26,7 +26,7 @@ command = "sh ./scripts/sync_versions.sh"
 
 [[workflows.steps]]
 type = "Command"
-command = "git add Cargo.lock quil-py/Cargo.toml"
+command = "git add quil-py/Cargo.toml"
 
 [[workflows.steps]]
 type = "Command"
@@ -50,7 +50,7 @@ command = "sh ./scripts/sync_versions.sh"
 
 [[workflows.steps]]
 type = "Command"
-command = "git add Cargo.lock quil-py/Cargo.toml"
+command = "git add quil-py/Cargo.toml"
 
 [[workflows.steps]]
 type = "Command"
