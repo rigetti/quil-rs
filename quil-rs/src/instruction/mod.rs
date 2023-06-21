@@ -455,7 +455,7 @@ impl Instruction {
 
     pub(crate) fn get_frame_match_condition<'a>(
         &'a self,
-        qubits_available: HashSet<&'a Qubit>,
+        qubits_available: &'a HashSet<Qubit>,
     ) -> Option<FrameMatchConditions<'a>> {
         match self {
             Instruction::Pulse(Pulse {
@@ -503,7 +503,7 @@ impl Instruction {
                         set.insert(qubit);
                         set
                     }
-                    None => qubits_available,
+                    None => qubits_available.iter().collect(),
                 };
 
                 Some(FrameMatchConditions {
