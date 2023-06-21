@@ -595,12 +595,12 @@ impl fmt::Display for GateModifier {
 #[cfg(test)]
 mod test_gate_into_matrix {
     use super::{
-        lifted_gate_matrix, permutation_arbitrary, qubit_adjacent_lifted_gate,
-        two_swap_helper, Expression::Number, Gate, GateModifier::*, Matrix, ParameterizedMatrix,
-        Qubit::Fixed, CONSTANT_GATE_MATRICES, PARAMETERIZED_GATE_MATRICES,
+        lifted_gate_matrix, permutation_arbitrary, qubit_adjacent_lifted_gate, two_swap_helper,
+        Expression::Number, Gate, GateModifier::*, Matrix, ParameterizedMatrix, Qubit::Fixed,
+        CONSTANT_GATE_MATRICES, PARAMETERIZED_GATE_MATRICES,
     };
-    use approx::assert_abs_diff_eq;
     use crate::{imag, real};
+    use approx::assert_abs_diff_eq;
     use ndarray::{array, linalg::kron, Array2};
     use num_complex::Complex64;
     use once_cell::sync::Lazy;
