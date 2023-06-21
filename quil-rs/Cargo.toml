@@ -9,6 +9,7 @@ keywords = ["Quil", "Quantum", "Rigetti"]
 categories = ["parser-implementations", "science", "compilers", "emulators"]
 
 [dependencies]
+approx = { version = "0.5.1", features = ["num-complex"] }
 dot-writer = { version = "0.1.2", optional = true }
 indexmap = "1.6.1"
 lexical = "6.1.1"

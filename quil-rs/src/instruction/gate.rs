@@ -165,8 +165,8 @@ impl Gate {
                 }),
                 Qubit::Fixed(i) => Ok(*i),
             })
-            .collect::<Result<Vec<_>, _>>();
-        Ok(lifted_gate_matrix(&gate_matrix(self)?, &qubits?, n_qubits))
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(lifted_gate_matrix(&gate_matrix(self)?, &qubits, n_qubits))
     }
 }
 
@@ -593,41 +593,13 @@ impl fmt::Display for GateModifier {
 }
 
 #[cfg(test)]
-/// Kind of like numpy.testing.assert_allclose for arrays of complex numbers.
-/// Loops by hand to print out position & differences and to avoid needing, e.g., ordered-float
-macro_rules! assert_allclose {
-    ($actual:expr, $desired:expr) => {
-        assert_allclose!($actual, $desired, 1e-7)
-    };
-    ($actual:expr, $desired:expr, $tol:expr) => {
-        for i in 0..$actual.nrows() {
-            for j in 0..$actual.ncols() {
-                let a = $actual[[i, j]];
-                let d = $desired[[i, j]];
-                let diff = (a - d).norm();
-                let tol = $tol;
-                assert!(
-                    diff <= tol,
-                    "\n{}\n&\n{}\nare different in {:?} position; diff = {diff:?}, tol = {tol:?}",
-                    $actual,
-                    $desired,
-                    (i, j)
-                );
-            }
-        }
-    };
-}
-
-#[cfg(test)]
-pub(crate) use assert_allclose;
-
-#[cfg(test)]
 mod test_gate_into_matrix {
     use super::{
-        assert_allclose, lifted_gate_matrix, permutation_arbitrary, qubit_adjacent_lifted_gate,
+        lifted_gate_matrix, permutation_arbitrary, qubit_adjacent_lifted_gate,
         two_swap_helper, Expression::Number, Gate, GateModifier::*, Matrix, ParameterizedMatrix,
         Qubit::Fixed, CONSTANT_GATE_MATRICES, PARAMETERIZED_GATE_MATRICES,
     };
+    use approx::assert_abs_diff_eq;
     use crate::{imag, real};
     use ndarray::{array, linalg::kron, Array2};
     use num_complex::Complex64;
@@ -667,7 +639,7 @@ mod test_gate_into_matrix {
         #[case] expected: &Matrix,
     ) {
         let result = qubit_adjacent_lifted_gate(i, &SWAP, n_qubits);
-        assert_allclose!(result, expected);
+        assert_abs_diff_eq!(result, expected);
     }
 
     // test cases via pyquil.simulation.tools.two_swap_helper
@@ -708,7 +680,7 @@ mod test_gate_into_matrix {
     ) {
         let result = two_swap_helper(j, k, n_qubits, qubit_map);
         assert_eq!(qubit_map, expected_qubit_map);
-        assert_allclose!(result, expected_matrix);
+        assert_abs_diff_eq!(result, expected_matrix);
     }
 
     // test cases via pyquil.simulation.tools.permutation_arbitrary
@@ -750,7 +722,7 @@ mod test_gate_into_matrix {
         #[case] expected_matrix: &Matrix,
     ) {
         let (result_matrix, result_start) = permutation_arbitrary(qubit_inds, n_qubits);
-        assert_allclose!(result_matrix, expected_matrix);
+        assert_abs_diff_eq!(result_matrix, expected_matrix);
         assert_eq!(result_start, expected_start);
     }
 
@@ -778,7 +750,7 @@ mod test_gate_into_matrix {
         #[case] n_qubits: u64,
         #[case] expected: &Matrix,
     ) {
-        assert_allclose!(lifted_gate_matrix(matrix, indices, n_qubits), expected);
+        assert_abs_diff_eq!(lifted_gate_matrix(matrix, indices, n_qubits), expected);
     }
 
     #[rstest]
@@ -798,7 +770,7 @@ mod test_gate_into_matrix {
     fn test_to_unitary(#[case] gate: &mut Gate, #[case] n_qubits: u64, #[case] expected: &Matrix) {
         let result = gate.to_unitary(n_qubits);
         assert!(result.is_ok());
-        assert_allclose!(result.as_ref().unwrap(), expected);
+        assert_abs_diff_eq!(result.as_ref().unwrap(), expected);
     }
 }
 

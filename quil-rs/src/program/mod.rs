@@ -366,9 +366,10 @@ mod tests {
     use super::Program;
     use crate::{
         imag,
-        instruction::{assert_allclose, Instruction, Matrix, Qubit},
+        instruction::{Instruction, Matrix, Qubit},
         real,
     };
+    use approx::assert_abs_diff_eq;
     use ndarray::{array, linalg::kron, Array2};
     use num_complex::Complex64;
     use once_cell::sync::Lazy;
@@ -718,6 +719,6 @@ I 0
         assert!(program.is_ok());
         let matrix = program.unwrap().to_unitary(n_qubits);
         assert!(matrix.is_ok());
-        assert_allclose!(matrix.as_ref().unwrap(), expected);
+        assert_abs_diff_eq!(matrix.as_ref().unwrap(), expected);
     }
 }
