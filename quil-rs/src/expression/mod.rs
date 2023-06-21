@@ -12,27 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate::{
+    hash::{hash_f64, hash_to_u64},
+    parser::{lex, parse_expression, ParseError},
+    program::{disallow_leftover, ParseProgramError},
+    {imag, instruction::MemoryReference, real},
+};
 use lexical::{format, to_string_with_options, WriteFloatOptions};
 use nom_locate::LocatedSpan;
 use num_complex::Complex64;
 use once_cell::sync::Lazy;
-use std::collections::{hash_map::DefaultHasher, HashMap};
-use std::f64::consts::PI;
-use std::fmt;
-use std::hash::{Hash, Hasher};
-use std::num::NonZeroI32;
-use std::ops::{
-    Add, AddAssign, BitXor, BitXorAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign,
+use std::{
+    collections::HashMap,
+    f64::consts::PI,
+    fmt,
+    hash::{Hash, Hasher},
+    num::NonZeroI32,
+    ops::{Add, AddAssign, BitXor, BitXorAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign},
+    str::FromStr,
 };
-use std::str::FromStr;
 
 #[cfg(test)]
 use proptest_derive::Arbitrary;
 
-use crate::hash::hash_f64;
-use crate::parser::{lex, parse_expression, ParseError};
-use crate::program::{disallow_leftover, ParseProgramError};
-use crate::{imag, instruction::MemoryReference, real};
+mod simplification;
 
 /// The different possible types of errors that could occur during expression evaluation.
 #[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
@@ -101,13 +104,6 @@ impl PrefixExpression {
             expression,
         }
     }
-}
-
-/// Hash value helper: turn a hashable thing into a u64.
-fn hash_to_u64<T: Hash>(t: &T) -> u64 {
-    let mut s = DefaultHasher::new();
-    t.hash(&mut s);
-    s.finish()
 }
 
 impl Hash for Expression {
@@ -271,47 +267,16 @@ impl Expression {
     /// assert_eq!(expression, Expression::Number(Complex64::from(3.0)));
     /// ```
     pub fn simplify(&mut self) {
-        use Expression::*;
-
         match self {
-            FunctionCall(FunctionCallExpression {
-                function,
-                expression,
-            }) => {
-                expression.simplify();
-                if let Number(number) = expression.as_ref() {
-                    *self = Number(calculate_function(function, number));
+            Expression::Address(_)
+            | Expression::Number(_)
+            | Expression::PiConstant
+            | Expression::Variable(_) => {}
+            _ => {
+                if let Ok(simpler) = simplification::run(self) {
+                    *self = simpler;
                 }
             }
-            Infix(InfixExpression {
-                left,
-                operator: _,
-                right,
-            }) => {
-                left.simplify();
-                right.simplify();
-            }
-            Prefix(PrefixExpression {
-                operator,
-                expression,
-            }) => {
-                use PrefixOperator::*;
-                expression.simplify();
-
-                // Avoid potentially expensive clone
-                // Cannot directly swap `expression` with `self` because that causes
-                // a double mutable borrow.
-                if let Plus = operator {
-                    let mut temp = Expression::PiConstant;
-                    std::mem::swap(expression.as_mut(), &mut temp);
-                    std::mem::swap(self, &mut temp);
-                }
-            }
-            Variable(_) | Address(_) | PiConstant | Number(_) => {}
-        };
-
-        if let Ok(number) = self.evaluate(&HashMap::new(), &HashMap::new()) {
-            *self = Number(number);
         }
     }
 
@@ -651,7 +616,8 @@ impl fmt::Display for PrefixOperator {
             f,
             "{}",
             match self {
-                Plus => "+",
+                // NOTE: prefix Plus does nothing but cause parsing issues
+                Plus => "",
                 Minus => "-",
             }
         )
@@ -677,7 +643,8 @@ impl fmt::Display for InfixOperator {
             match self {
                 Caret => "^",
                 Plus => "+",
-                Minus => "-",
+                // NOTE: spaces included to distinguish from hyphenated identifiers
+                Minus => " - ",
                 Slash => "/",
                 Star => "*",
             }
@@ -687,7 +654,7 @@ impl fmt::Display for InfixOperator {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
+    use std::collections::{hash_map::DefaultHasher, HashSet};
 
     use num_complex::Complex64;
     use proptest::prelude::*;
@@ -695,6 +662,7 @@ mod tests {
     use crate::{
         expression::{EvaluationError, Expression, ExpressionFunction},
         real,
+        reserved::ReservedToken,
     };
 
     use super::*;
@@ -786,21 +754,68 @@ mod tests {
         }
     }
 
+    /// Parenthesized version of [`Expression::to_string()`]
+    fn parenthesized(expression: &Expression) -> String {
+        use Expression::*;
+        match expression {
+            Address(memory_reference) => format!("({memory_reference})"),
+            FunctionCall(FunctionCallExpression {
+                function,
+                expression,
+            }) => format!("({function}({}))", parenthesized(expression)),
+            Infix(InfixExpression {
+                left,
+                operator,
+                right,
+            }) => format!(
+                "({}{}{})",
+                parenthesized(left),
+                operator,
+                parenthesized(right)
+            ),
+            Number(value) => format!("({})", format_complex(value)),
+            PiConstant => "pi".to_string(),
+            Prefix(PrefixExpression {
+                operator,
+                expression,
+            }) => format!("({}{})", operator, parenthesized(expression)),
+            Variable(identifier) => format!("(%{identifier})"),
+        }
+    }
+
+    // Better behaved than the auto-derived version for names
+    fn arb_name() -> impl Strategy<Value = String> {
+        r"[a-z][a-zA-Z0-9]{1,10}".prop_filter("Exclude reserved tokens", |t| {
+            ReservedToken::from_str(t).is_err()
+        })
+    }
+
+    // Better behaved than the auto-derived version re: names & indices
+    fn arb_memory_reference() -> impl Strategy<Value = MemoryReference> {
+        (arb_name(), (u64::MIN..u32::MAX as u64))
+            .prop_map(|(name, index)| MemoryReference { name, index })
+    }
+
+    // Better behaved than the auto-derived version via arbitrary floats
+    fn arb_complex64() -> impl Strategy<Value = Complex64> {
+        let tau = std::f64::consts::TAU;
+        ((-tau..tau), (-tau..tau)).prop_map(|(re, im)| Complex64 { re, im })
+    }
+
     /// Generate an arbitrary Expression for a property test.
     /// See https://docs.rs/proptest/1.0.0/proptest/prelude/trait.Strategy.html#method.prop_recursive
     fn arb_expr() -> impl Strategy<Value = Expression> {
         use Expression::*;
         let leaf = prop_oneof![
-            any::<MemoryReference>().prop_map(Address),
-            (any::<f64>(), any::<f64>())
-                .prop_map(|(re, im)| Number(num_complex::Complex64::new(re, im))),
+            arb_memory_reference().prop_map(Address),
+            arb_complex64().prop_map(Number),
             Just(PiConstant),
-            ".*".prop_map(Variable),
+            arb_name().prop_map(Variable),
         ];
         (leaf).prop_recursive(
             4,  // No more than 4 branch levels deep
             64, // Target around 64 total nodes
-            2,  // Each "collection" is up to 2 elements
+            16, // Each "collection" is up to 16 elements
             |expr| {
                 prop_oneof![
                     (any::<ExpressionFunction>(), expr.clone()).prop_map(|(function, e)| {
@@ -825,10 +840,6 @@ mod tests {
                 ]
             },
         )
-    }
-
-    fn arb_complex64() -> impl Strategy<Value = Complex64> {
-        any::<(f64, f64)>().prop_map(|(re, im)| Complex64::new(re, im))
     }
 
     proptest! {
@@ -931,13 +942,19 @@ mod tests {
         fn complexes_are_parseable_as_expressions(value in arb_complex64()) {
             let parsed = Expression::from_str(&format_complex(&value));
             assert!(parsed.is_ok());
-            assert_eq!(Expression::Number(value), parsed.unwrap().into_simplified());
+            let simple = parsed.unwrap().into_simplified();
+            assert_eq!(Expression::Number(value), simple);
         }
 
         #[test]
         fn exponentiation_works_as_expected(left in arb_expr(), right in arb_expr()) {
             let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Caret, right: Box::new(right.clone()) } );
-            prop_assert_eq!(&(left.clone() ^ right.clone()), &expected);
+            prop_assert_eq!(left ^ right, expected);
+        }
+
+        #[test]
+        fn in_place_exponentiation_works_as_expected(left in arb_expr(), right in arb_expr()) {
+            let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Caret, right: Box::new(right.clone()) } );
             let mut x = left;
             x ^= right;
             prop_assert_eq!(x, expected);
@@ -946,7 +963,12 @@ mod tests {
         #[test]
         fn addition_works_as_expected(left in arb_expr(), right in arb_expr()) {
             let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Plus, right: Box::new(right.clone()) } );
-            prop_assert_eq!(&(left.clone() + right.clone()), &expected);
+            prop_assert_eq!(left + right, expected);
+        }
+
+        #[test]
+        fn in_place_addition_works_as_expected(left in arb_expr(), right in arb_expr()) {
+            let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Plus, right: Box::new(right.clone()) } );
             let mut x = left;
             x += right;
             prop_assert_eq!(x, expected);
@@ -955,7 +977,12 @@ mod tests {
         #[test]
         fn subtraction_works_as_expected(left in arb_expr(), right in arb_expr()) {
             let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Minus, right: Box::new(right.clone()) } );
-            prop_assert_eq!(&(left.clone() - right.clone()), &expected);
+            prop_assert_eq!(left - right, expected);
+        }
+
+        #[test]
+        fn in_place_subtraction_works_as_expected(left in arb_expr(), right in arb_expr()) {
+            let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Minus, right: Box::new(right.clone()) } );
             let mut x = left;
             x -= right;
             prop_assert_eq!(x, expected);
@@ -964,7 +991,12 @@ mod tests {
         #[test]
         fn multiplication_works_as_expected(left in arb_expr(), right in arb_expr()) {
             let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Star, right: Box::new(right.clone()) } );
-            prop_assert_eq!(&(left.clone() * right.clone()), &expected);
+            prop_assert_eq!(left * right, expected);
+        }
+
+        #[test]
+        fn in_place_multiplication_works_as_expected(left in arb_expr(), right in arb_expr()) {
+            let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Star, right: Box::new(right.clone()) } );
             let mut x = left;
             x *= right;
             prop_assert_eq!(x, expected);
@@ -973,12 +1005,24 @@ mod tests {
         #[test]
         fn division_works_as_expected(left in arb_expr(), right in arb_expr()) {
             let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Slash, right: Box::new(right.clone()) } );
-            prop_assert_eq!(&(left.clone() / right.clone()), &expected);
+            prop_assert_eq!(left / right, expected);
+        }
+
+        #[test]
+        fn in_place_division_works_as_expected(left in arb_expr(), right in arb_expr()) {
+            let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Slash, right: Box::new(right.clone()) } );
             let mut x = left;
             x /= right;
             prop_assert_eq!(x, expected);
         }
 
+        #[test]
+        fn round_trip(e in arb_expr()) {
+            let s = parenthesized(&e);
+            let p = Expression::from_str(&s);
+            prop_assert!(p.is_ok());
+            prop_assert_eq!(p.unwrap().into_simplified(), e.into_simplified());
+        }
 
     }
 

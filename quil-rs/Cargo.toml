@@ -11,6 +11,7 @@ categories = ["parser-implementations", "science", "compilers", "emulators"]
 [dependencies]
 approx = { version = "0.5.1", features = ["num-complex"] }
 dot-writer = { version = "0.1.2", optional = true }
+egg = { version = "0.9.4", features = ["deterministic"] }
 indexmap = "1.6.1"
 lexical = "6.1.1"
 ndarray.workspace = true
