@@ -21,7 +21,7 @@ use crate::program::graph::{
     ScheduledProgram,
 };
 
-impl InstructionBlock {
+impl<'a> InstructionBlock<'a> {
     /// Given a [`dot_writer::Scope`] representing a subgraph/cluster, write the timing graph for this block into it.
     /// Uses the `node_prefix` argument for namespacing so that node IDs remain unique within the overall graph.
     fn write_dot_format(&self, cluster: &mut dot_writer::Scope, node_prefix: &str) {
@@ -80,7 +80,7 @@ impl InstructionBlock {
     }
 }
 
-impl ScheduledProgram {
+impl<'a> ScheduledProgram<'a> {
     /// Return a DOT format string (as bytes) for use with Graphviz.
     ///
     /// This outputs a `digraph` object with a `subgraph` for each block to inform the layout engine.

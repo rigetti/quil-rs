@@ -315,6 +315,7 @@ impl Expression {
 impl WaveformInvocation {
     /// Return, if any, the memory references contained within this WaveformInvocation.
     pub fn get_memory_references(&self) -> Vec<&MemoryReference> {
+        // TODO: iterator + collect
         let mut result = vec![];
 
         for expression in self.parameters.values() {
