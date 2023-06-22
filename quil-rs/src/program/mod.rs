@@ -27,6 +27,7 @@ use crate::parser::{lex, parse_instructions, ParseError};
 pub use self::calibration::CalibrationSet;
 pub use self::error::{disallow_leftover, map_parsed, recover, ParseProgramError, SyntaxError};
 pub use self::frame::FrameSet;
+use self::frame::MatchedFrames;
 pub use self::memory::MemoryRegion;
 
 mod calibration;
@@ -187,13 +188,12 @@ impl Program {
     pub fn get_frames_for_instruction<'a>(
         &'a self,
         instruction: &'a Instruction,
-        include_blocked: bool,
-    ) -> Option<HashSet<&'a FrameIdentifier>> {
+    ) -> Option<MatchedFrames<'a>> {
         let qubits_used_by_program = self.get_used_qubits();
 
         instruction
-            .get_frame_match_condition(include_blocked, qubits_used_by_program)
-            .map(|condition| self.frames.get_matching_keys(condition))
+            .get_frame_match_condition(qubits_used_by_program)
+            .map(|condition| self.frames.get_matching_keys_for_conditions(condition))
     }
 
     /// Returns a HashSet consisting of every Qubit that is used in the program.
@@ -237,7 +237,10 @@ impl Program {
         let mut waveforms_used: HashSet<&String> = HashSet::new();
 
         for instruction in &expanded_program.instructions {
-            if let Some(frames) = expanded_program.get_frames_for_instruction(instruction, false) {
+            if let Some(frames) = expanded_program
+                .get_frames_for_instruction(instruction)
+                .and_then(|f| f.used)
+            {
                 frames_used.extend(frames)
             }
 
@@ -474,12 +477,12 @@ DEFFRAME 0 1 \"2q\":
             (
                 r#"PULSE 0 "a" custom_waveform"#,
                 vec![r#"0 "a""#],
-                vec![r#"0 "a""#, r#"0 "b""#, r#"0 1 "2q""#],
+                vec![r#"0 "b""#, r#"0 1 "2q""#],
             ),
             (
                 r#"PULSE 1 "c" custom_waveform"#,
                 vec![r#"1 "c""#],
-                vec![r#"1 "c""#, r#"0 1 "2q""#],
+                vec![r#"0 1 "2q""#],
             ),
             // Pulses on non-declared frames and unused qubits do not use or block any frames in the program
             (r#"PULSE 2 "a" custom_waveform"#, vec![], vec![]),
@@ -487,41 +490,41 @@ DEFFRAME 0 1 \"2q\":
             (
                 r#"CAPTURE 0 "a" custom_waveform ro[0]"#,
                 vec![r#"0 "a""#],
-                vec![r#"0 "a""#, r#"0 "b""#, r#"0 1 "2q""#],
+                vec![r#"0 "b""#, r#"0 1 "2q""#],
             ),
             (
                 r#"CAPTURE 1 "c" custom_waveform ro[0]"#,
                 vec![r#"1 "c""#],
-                vec![r#"1 "c""#, r#"0 1 "2q""#],
+                vec![r#"0 1 "2q""#],
             ),
             (r#"CAPTURE 2 "a" custom_waveform ro[0]"#, vec![], vec![]),
             // Raw Captures work identically to Pulses
             (
                 r#"RAW-CAPTURE 0 "a" 1e-6 ro[0]"#,
                 vec![r#"0 "a""#],
-                vec![r#"0 "a""#, r#"0 "b""#, r#"0 1 "2q""#],
+                vec![r#"0 "b""#, r#"0 1 "2q""#],
             ),
             (
                 r#"RAW-CAPTURE 1 "c" 1e-6 ro[0]"#,
                 vec![r#"1 "c""#],
-                vec![r#"1 "c""#, r#"0 1 "2q""#],
+                vec![r#"0 1 "2q""#],
             ),
             (r#"RAW-CAPTURE 2 "a" 1e-6 ro[0]"#, vec![], vec![]),
             // A non-blocking pulse blocks only its precise frame, not other frames on the same qubits
             (
                 r#"NONBLOCKING PULSE 0 "a" custom_waveform"#,
                 vec![r#"0 "a""#],
-                vec![r#"0 "a""#],
+                vec![],
             ),
             (
                 r#"NONBLOCKING PULSE 1 "c" custom_waveform"#,
                 vec![r#"1 "c""#],
-                vec![r#"1 "c""#],
+                vec![],
             ),
             (
                 r#"NONBLOCKING PULSE 0 1 "2q" custom_waveform"#,
                 vec![r#"0 1 "2q""#],
-                vec![r#"0 1 "2q""#],
+                vec![],
             ),
             // A Fence with qubits specified uses and blocks all frames intersecting that qubit
             (r#"FENCE 1"#, vec![], vec![r#"1 "c""#, r#"0 1 "2q""#]),
@@ -532,23 +535,20 @@ DEFFRAME 0 1 \"2q\":
                 vec![r#"0 "a""#, r#"0 "b""#, r#"1 "c""#, r#"0 1 "2q""#],
             ),
             // Delay uses and blocks frames on exactly the given qubits and with any of the given names
-            (
-                r#"DELAY 0 1.0"#,
-                vec![r#"0 "a""#, r#"0 "b""#],
-                vec![r#"0 "a""#, r#"0 "b""#],
-            ),
-            (r#"DELAY 1 1.0"#, vec![r#"1 "c""#], vec![r#"1 "c""#]),
-            (r#"DELAY 1 "c" 1.0"#, vec![r#"1 "c""#], vec![r#"1 "c""#]),
-            (r#"DELAY 0 1 1.0"#, vec![r#"0 1 "2q""#], vec![r#"0 1 "2q""#]),
+            (r#"DELAY 0 1.0"#, vec![r#"0 "a""#, r#"0 "b""#], vec![]),
+            (r#"DELAY 1 1.0"#, vec![r#"1 "c""#], vec![]),
+            (r#"DELAY 1 "c" 1.0"#, vec![r#"1 "c""#], vec![]),
+            (r#"DELAY 0 1 1.0"#, vec![r#"0 1 "2q""#], vec![]),
             (
                 r#"SWAP-PHASES 0 "a" 0 "b""#,
                 vec![r#"0 "a""#, r#"0 "b""#],
-                vec![r#"0 "a""#, r#"0 "b""#],
+                vec![],
             ),
         ] {
             let instruction = Instruction::parse(instruction_string).unwrap();
-            let used_frames: HashSet<String> = program
-                .get_frames_for_instruction(&instruction, false)
+            let matched_frames = program.get_frames_for_instruction(&instruction).unwrap();
+            let used_frames: HashSet<String> = matched_frames
+                .used
                 .unwrap_or_default()
                 .into_iter()
                 .map(|f| f.to_string())
@@ -562,9 +562,9 @@ DEFFRAME 0 1 \"2q\":
                 "Instruction {instruction} *used* frames `{used_frames:?}` but we expected `{expected_used_frames:?}`"
             );
 
-            let blocked_frames: HashSet<String> = program
-                .get_frames_for_instruction(&instruction, true)
-                .unwrap()
+            let blocked_frames: HashSet<String> = matched_frames
+                .blocked
+                .unwrap_or_default()
                 .into_iter()
                 .map(|f| f.to_string())
                 .collect();

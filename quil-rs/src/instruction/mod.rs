@@ -18,7 +18,7 @@ use std::fmt;
 use crate::expression::Expression;
 #[cfg(test)]
 use crate::parser::lex;
-use crate::program::frame::FrameMatchCondition;
+use crate::program::frame::{FrameMatchCondition, FrameMatchConditions};
 
 #[cfg(test)]
 use nom_locate::LocatedSpan;
@@ -455,9 +455,8 @@ impl Instruction {
 
     pub(crate) fn get_frame_match_condition<'a>(
         &'a self,
-        include_blocked: bool,
         qubits_available: HashSet<&'a Qubit>,
-    ) -> Option<FrameMatchCondition<'a>> {
+    ) -> Option<FrameMatchConditions<'a>> {
         match self {
             Instruction::Pulse(Pulse {
                 blocking, frame, ..
@@ -467,34 +466,34 @@ impl Instruction {
             })
             | Instruction::RawCapture(RawCapture {
                 blocking, frame, ..
-            }) => Some(if *blocking && include_blocked {
-                FrameMatchCondition::AnyOfQubits(frame.qubits.iter().collect())
-            } else {
-                FrameMatchCondition::Specific(frame)
+            }) => Some(FrameMatchConditions {
+                blocked: blocking
+                    .then(|| FrameMatchCondition::AnyOfQubits(frame.qubits.iter().collect())),
+                used: Some(FrameMatchCondition::Specific(frame)),
             }),
             Instruction::Delay(Delay {
                 frame_names,
                 qubits,
                 ..
-            }) => Some(if frame_names.is_empty() {
-                FrameMatchCondition::ExactQubits(qubits.iter().collect())
-            } else {
-                FrameMatchCondition::And(vec![
-                    FrameMatchCondition::ExactQubits(qubits.iter().collect()),
-                    FrameMatchCondition::AnyOfNames(frame_names.iter().collect()),
-                ])
-            }),
-            Instruction::Fence(Fence { qubits }) => {
-                if include_blocked {
-                    Some(if qubits.is_empty() {
-                        FrameMatchCondition::All
-                    } else {
-                        FrameMatchCondition::AnyOfQubits(qubits.iter().collect())
-                    })
+            }) => Some(FrameMatchConditions {
+                used: Some(if frame_names.is_empty() {
+                    FrameMatchCondition::ExactQubits(qubits.iter().collect())
                 } else {
-                    None
-                }
-            }
+                    FrameMatchCondition::And(vec![
+                        FrameMatchCondition::ExactQubits(qubits.iter().collect()),
+                        FrameMatchCondition::AnyOfNames(frame_names.iter().collect()),
+                    ])
+                }),
+                blocked: None,
+            }),
+            Instruction::Fence(Fence { qubits }) => Some(FrameMatchConditions {
+                used: None,
+                blocked: Some(if qubits.is_empty() {
+                    FrameMatchCondition::All
+                } else {
+                    FrameMatchCondition::AnyOfQubits(qubits.iter().collect())
+                }),
+            }),
             Instruction::Reset(Reset { qubit }) => {
                 let qubits = match qubit {
                     Some(qubit) => {
@@ -505,24 +504,27 @@ impl Instruction {
                     None => qubits_available,
                 };
 
-                if include_blocked {
-                    Some(FrameMatchCondition::AnyOfQubits(qubits))
-                } else {
-                    Some(FrameMatchCondition::ExactQubits(qubits))
-                }
+                Some(FrameMatchConditions {
+                    used: Some(FrameMatchCondition::ExactQubits(qubits.clone())),
+                    blocked: Some(FrameMatchCondition::AnyOfQubits(qubits)),
+                })
             }
             Instruction::SetFrequency(SetFrequency { frame, .. })
             | Instruction::SetPhase(SetPhase { frame, .. })
             | Instruction::SetScale(SetScale { frame, .. })
             | Instruction::ShiftFrequency(ShiftFrequency { frame, .. })
-            | Instruction::ShiftPhase(ShiftPhase { frame, .. }) => {
-                Some(FrameMatchCondition::Specific(frame))
-            }
+            | Instruction::ShiftPhase(ShiftPhase { frame, .. }) => Some(FrameMatchConditions {
+                used: Some(FrameMatchCondition::Specific(frame)),
+                blocked: None,
+            }),
             Instruction::SwapPhases(SwapPhases { frame_1, frame_2 }) => {
-                Some(FrameMatchCondition::Or(vec![
-                    FrameMatchCondition::Specific(frame_1),
-                    FrameMatchCondition::Specific(frame_2),
-                ]))
+                Some(FrameMatchConditions {
+                    used: Some(FrameMatchCondition::Or(vec![
+                        FrameMatchCondition::Specific(frame_1),
+                        FrameMatchCondition::Specific(frame_2),
+                    ])),
+                    blocked: None,
+                })
             }
             Instruction::Arithmetic(_)
             | Instruction::BinaryLogic(_)
