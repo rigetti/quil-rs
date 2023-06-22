@@ -1,3 +1,20 @@
+## 0.18.0-rc.3
+
+### Breaking Changes
+
+- optimize clones and collections (#228)
+- Expression parameter strings are now delimited by a comma. `get_expression_parameter_string` and `get_string_parameter_string` have been removed from the instruction module. (#214)
+
+### Features
+
+- Most instruction types are now hashable.
+
+### Fixes
+
+- documentation typo
+- The destination and source are no longer flipped when parsing CONVERT instructions. (#226)
+- BinaryLogic now has it's own to string implementation (#222)
+
 ## 0.17.0
 
 ### Breaking Changes
