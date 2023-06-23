@@ -190,9 +190,9 @@ pub(crate) struct FrameMatchConditions<'a> {
     /// are blocked by an [`Instruction`]. A "blocked" frame is one which is not used by the
     /// `Instruction` but is not available for use by other instructions while this one executes.
     ///
-    /// **Note**: for efficiency in computation, this may or include frames also matched by `used`.
+    /// **Note**: for efficiency in computation, this may match frames also matched by `used`.
     /// In order to query which frames are _blocked but not used_, both conditions must first
-    /// be evaluated in the scope of the available frames, and
+    /// be evaluated in the scope of the available frames.
     pub blocked: Option<FrameMatchCondition<'a>>,
 }
 
