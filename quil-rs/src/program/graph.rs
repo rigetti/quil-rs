@@ -307,7 +307,6 @@ impl<'a> InstructionBlock<'a> {
         let mut last_classical_instruction = ScheduledGraphNode::BlockStart;
 
         // Store the instruction index of the last instruction to block that frame
-        // TODO: with_capacity program.frames.len()
         let mut last_instruction_by_frame: HashMap<FrameIdentifier, PreviousNodes> = HashMap::new();
         let mut last_timed_instruction_by_frame: HashMap<FrameIdentifier, PreviousNodes> =
             HashMap::new();
@@ -496,7 +495,6 @@ pub enum BlockTerminator<'a> {
     Halt,
 }
 
-// TODO: make dependent on the lifetime of Program
 #[derive(Clone, Debug)]
 pub struct ScheduledProgram<'a> {
     /// All blocks within the ScheduledProgram, keyed on string label.
