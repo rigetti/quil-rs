@@ -481,7 +481,9 @@ impl Instruction {
             } else {
                 FrameMatchCondition::And(vec![
                     FrameMatchCondition::ExactQubits(qubits.iter().collect()),
-                    FrameMatchCondition::AnyOfNames(frame_names.iter().collect()),
+                    FrameMatchCondition::AnyOfNames(
+                        frame_names.iter().map(String::as_str).collect(),
+                    ),
                 ])
             }),
             Instruction::Fence(Fence { qubits }) => {

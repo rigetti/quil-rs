@@ -485,11 +485,11 @@ impl<'a> InstructionBlock<'a> {
 pub enum BlockTerminator<'a> {
     Conditional {
         condition: &'a MemoryReference,
-        target: &'a String,
+        target: &'a str,
         jump_if_condition_true: bool,
     },
     Unconditional {
-        target: &'a String,
+        target: &'a str,
     },
     Continue,
     Halt,
@@ -517,7 +517,7 @@ fn terminate_working_block<'a>(
     terminator: Option<BlockTerminator<'a>>,
     working_instructions: &mut Vec<&'a Instruction>,
     blocks: &mut IndexMap<String, InstructionBlock<'a>>,
-    working_label: &mut Option<&'a String>,
+    working_label: &mut Option<&'a str>,
     program: &'a Program,
     instruction_index: Option<usize>,
 ) -> ScheduleResult<()> {
@@ -530,7 +530,7 @@ fn terminate_working_block<'a>(
     let block = InstructionBlock::build(std::mem::take(working_instructions), terminator, program)?;
     let label = working_label
         .take()
-        .cloned()
+        .map(String::from)
         .unwrap_or_else(|| ScheduledProgram::generate_autoincremented_label(blocks));
 
     if blocks.insert(label.clone(), block).is_some() {
