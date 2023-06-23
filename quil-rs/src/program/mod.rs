@@ -84,7 +84,8 @@ impl Program {
     }
 
     /// Returns an iterator over mutable references to the instructions that make up the body of the program.
-    pub fn body_instructions_mut(&mut self) -> impl Iterator<Item = &mut Instruction> {
+    #[cfg(test)]
+    pub(crate) fn body_instructions_mut(&mut self) -> impl Iterator<Item = &mut Instruction> {
         self.instructions.iter_mut()
     }
 
