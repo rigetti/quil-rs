@@ -152,7 +152,7 @@ impl PyProgram {
 
     pub fn add_instructions(&mut self, instructions: Vec<PyInstruction>) {
         self.as_inner_mut()
-            .add_instructions(instructions.into_iter().map(Into::into).collect())
+            .add_instructions(instructions.into_iter().map(Into::into))
     }
 
     pub fn to_instructions(&self, py: Python<'_>) -> PyResult<Vec<PyInstruction>> {
