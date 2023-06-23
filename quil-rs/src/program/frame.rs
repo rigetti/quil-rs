@@ -71,7 +71,6 @@ impl FrameSet {
             FrameMatchCondition::And(conditions) => conditions
                 .into_iter()
                 .map(|c| self.get_matching_keys(c))
-                // TODO: avoid excess collecting
                 .reduce(|acc, el| acc.into_iter().filter(|&v| el.contains(v)).collect())
                 .unwrap_or_default(),
             FrameMatchCondition::Or(conditions) => conditions
