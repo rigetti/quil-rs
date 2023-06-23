@@ -101,8 +101,15 @@ impl Program {
 
     /// Returns an iterator over mutable references to the instructions that make up the body of the program.
     #[cfg(test)]
-    pub(crate) fn body_instructions_mut(&mut self) -> impl Iterator<Item = &mut Instruction> {
-        self.instructions.iter_mut()
+    pub fn for_each_body_instruction<F>(&mut self, closure: F)
+        where F: FnMut(&mut Instruction),
+    {
+        let mut instructions = std::mem::take(&mut self.instructions);
+        self.used_qubits.clear();
+
+        instructions.iter_mut().for_each(closure);
+
+        self.add_instructions(instructions);
     }
 
     /// Like `Clone`, but does not clone the body instructions.

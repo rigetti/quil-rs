@@ -649,9 +649,9 @@ RX(2) 0",
         )
         .unwrap();
         let closure = |expr: &mut Expression| *expr = Expression::Variable(String::from("a"));
-        for instruction in program.body_instructions_mut() {
+        program.for_each_body_instruction(|instruction| {
             instruction.apply_to_expressions(closure);
-        }
+        });
 
         let expected_program = Program::from_str(
             "DECLARE ro BIT
