@@ -57,8 +57,7 @@ impl PyProgram {
         Ok(PyList::new(
             py,
             self.as_inner()
-                .instructions
-                .iter()
+                .body_instructions()
                 .map(|i| i.to_python(py))
                 .collect::<PyResult<Vec<PyInstruction>>>()?,
         ))
