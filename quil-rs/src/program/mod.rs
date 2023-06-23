@@ -79,12 +79,12 @@ impl Program {
     }
 
     /// Returns an iterator over immutable references to the instructions that make up the body of the program.
-    pub fn body_instructions(&self) -> impl Iterator<Item=&Instruction> {
+    pub fn body_instructions(&self) -> impl Iterator<Item = &Instruction> {
         self.instructions.iter()
     }
 
     /// Returns an iterator over mutable references to the instructions that make up the body of the program.
-    pub fn body_instructions_mut(&mut self) -> impl Iterator<Item=&mut Instruction> {
+    pub fn body_instructions_mut(&mut self) -> impl Iterator<Item = &mut Instruction> {
         self.instructions.iter_mut()
     }
 
