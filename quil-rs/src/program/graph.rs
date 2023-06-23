@@ -552,9 +552,7 @@ impl<'a> ScheduledProgram<'a> {
         let mut working_instructions: Vec<&'a Instruction> = vec![];
         let mut blocks = IndexMap::new();
 
-        // let instructions = program.to_instructions();
-
-        for (index, instruction) in program.instructions.iter().enumerate() {
+        for (index, instruction) in program.body_instructions().enumerate() {
             let instruction_index = Some(index);
             match instruction {
                 Instruction::Arithmetic(_)
