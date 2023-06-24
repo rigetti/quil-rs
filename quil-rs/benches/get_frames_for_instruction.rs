@@ -20,7 +20,7 @@ fn benchmark_quil_corpus(c: &mut Criterion) {
                                 .expect("program should parse successfully")
                         },
                         |prog| {
-                            for instruction in &prog.instructions {
+                            for instruction in prog.body_instructions() {
                                 for _ in 0..50 {
                                     let frames = prog
                                         .get_frames_for_instruction(instruction, include_blocked);

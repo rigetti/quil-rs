@@ -199,13 +199,13 @@ pub type DependencyGraph = GraphMap<ScheduledGraphNode, HashSet<ExecutionDepende
 /// which include no control flow instructions aside from an (optional) terminating control
 /// flow instruction.
 #[derive(Clone, Debug)]
-pub struct InstructionBlock {
-    pub instructions: Vec<Instruction>,
+pub struct InstructionBlock<'a> {
+    pub instructions: Vec<&'a Instruction>,
     pub(super) graph: DependencyGraph,
-    pub terminator: BlockTerminator,
+    pub terminator: BlockTerminator<'a>,
 }
 
-impl Default for InstructionBlock {
+impl<'a> Default for InstructionBlock<'a> {
     fn default() -> Self {
         Self {
             instructions: Default::default(),
@@ -293,11 +293,12 @@ impl PreviousNodes {
     }
 }
 
-impl InstructionBlock {
+impl<'a> InstructionBlock<'a> {
     pub fn build(
-        instructions: Vec<Instruction>,
-        terminator: Option<BlockTerminator>,
-        program: &Program,
+        // The set of instructions in the block, a subset of the `program`.
+        instructions: Vec<&'a Instruction>,
+        terminator: Option<BlockTerminator<'a>>,
+        program: &'a Program,
     ) -> ScheduleResult<Self> {
         let mut graph: DependencyGraph = GraphMap::new();
         // Root node
@@ -316,6 +317,7 @@ impl InstructionBlock {
 
         for (index, instruction) in instructions.iter().enumerate() {
             let node = graph.add_node(ScheduledGraphNode::InstructionIndex(index));
+            let instruction = *instruction;
 
             let instruction_role = InstructionRole::from(instruction);
             match instruction_role {
@@ -461,7 +463,7 @@ impl InstructionBlock {
 
     /// Return a particular-indexed instruction (if present).
     pub fn get_instruction(&self, node_id: usize) -> Option<&Instruction> {
-        self.instructions.get(node_id)
+        self.instructions.get(node_id).copied()
     }
 
     /// Return the count of executable instructions in this block.
@@ -474,29 +476,29 @@ impl InstructionBlock {
         self.instructions.is_empty()
     }
 
-    pub fn set_exit_condition(&mut self, terminator: BlockTerminator) {
-        self.terminator = terminator
+    pub fn set_exit_condition(&mut self, terminator: BlockTerminator<'a>) {
+        self.terminator = terminator;
     }
 }
 
 #[derive(Clone, Debug)]
-pub enum BlockTerminator {
+pub enum BlockTerminator<'a> {
     Conditional {
-        condition: MemoryReference,
-        target: String,
+        condition: &'a MemoryReference,
+        target: &'a str,
         jump_if_condition_true: bool,
     },
     Unconditional {
-        target: String,
+        target: &'a str,
     },
     Continue,
     Halt,
 }
 
 #[derive(Clone, Debug)]
-pub struct ScheduledProgram {
+pub struct ScheduledProgram<'a> {
     /// All blocks within the ScheduledProgram, keyed on string label.
-    pub blocks: IndexMap<String, InstructionBlock>,
+    pub blocks: IndexMap<String, InstructionBlock<'a>>,
 }
 
 /// Builds an [`InstructionBlock`] from provided instructions, terminator, and program, then tracks
@@ -511,12 +513,12 @@ pub struct ScheduledProgram {
 ///
 /// If an error occurs, `working_instructions` and/or `working_label` may have been emptied and
 /// cannot be relied on to be unchanged.
-fn terminate_working_block(
-    terminator: Option<BlockTerminator>,
-    working_instructions: &mut Vec<Instruction>,
-    blocks: &mut IndexMap<String, InstructionBlock>,
-    working_label: &mut Option<String>,
-    program: &Program,
+fn terminate_working_block<'a>(
+    terminator: Option<BlockTerminator<'a>>,
+    working_instructions: &mut Vec<&'a Instruction>,
+    blocks: &mut IndexMap<String, InstructionBlock<'a>>,
+    working_label: &mut Option<&'a str>,
+    program: &'a Program,
     instruction_index: Option<usize>,
 ) -> ScheduleResult<()> {
     // If this "block" has no instructions and no terminator, it's not worth storing - skip it
@@ -528,6 +530,7 @@ fn terminate_working_block(
     let block = InstructionBlock::build(std::mem::take(working_instructions), terminator, program)?;
     let label = working_label
         .take()
+        .map(String::from)
         .unwrap_or_else(|| ScheduledProgram::generate_autoincremented_label(blocks));
 
     if blocks.insert(label.clone(), block).is_some() {
@@ -541,17 +544,15 @@ fn terminate_working_block(
     Ok(())
 }
 
-impl ScheduledProgram {
+impl<'a> ScheduledProgram<'a> {
     /// Structure a sequential program
     #[allow(unused_assignments)]
-    pub fn from_program(program: &Program) -> ScheduleResult<Self> {
+    pub fn from_program(program: &'a Program) -> ScheduleResult<Self> {
         let mut working_label = None;
-        let mut working_instructions: Vec<Instruction> = vec![];
+        let mut working_instructions: Vec<&'a Instruction> = vec![];
         let mut blocks = IndexMap::new();
 
-        let instructions = program.to_instructions();
-
-        for (index, instruction) in instructions.into_iter().enumerate() {
+        for (index, instruction) in program.body_instructions().enumerate() {
             let instruction_index = Some(index);
             match instruction {
                 Instruction::Arithmetic(_)
@@ -583,7 +584,7 @@ impl ScheduledProgram {
                 Instruction::Gate(_) | Instruction::Measurement(_) => {
                     return Err(ScheduleError {
                         instruction_index,
-                        instruction,
+                        instruction: instruction.clone(),
                         variant: ScheduleErrorVariant::UncalibratedInstruction,
                     })
                 }
