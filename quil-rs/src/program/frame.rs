@@ -72,7 +72,7 @@ impl FrameSet {
         match condition {
             FrameMatchCondition::All => keys.collect(),
             FrameMatchCondition::AnyOfNames(names) => {
-                keys.filter(|&f| names.contains(&f.name)).collect()
+                keys.filter(|&f| names.contains(f.name.as_str())).collect()
             }
             FrameMatchCondition::AnyOfQubits(qubits) => keys
                 .filter(|&f| f.qubits.iter().any(|q| qubits.contains(&q)))
@@ -158,7 +158,7 @@ pub(crate) enum FrameMatchCondition<'a> {
     All,
 
     /// Match all frames which share any one of these names
-    AnyOfNames(HashSet<&'a String>),
+    AnyOfNames(HashSet<&'a str>),
 
     /// Match all frames which contain any of these qubits
     AnyOfQubits(HashSet<&'a Qubit>),

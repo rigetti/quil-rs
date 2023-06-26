@@ -57,8 +57,7 @@ impl PyProgram {
         Ok(PyList::new(
             py,
             self.as_inner()
-                .instructions
-                .iter()
+                .body_instructions()
                 .map(|i| i.to_python(py))
                 .collect::<PyResult<Vec<PyInstruction>>>()?,
         ))
@@ -153,7 +152,7 @@ impl PyProgram {
 
     pub fn add_instructions(&mut self, instructions: Vec<PyInstruction>) {
         self.as_inner_mut()
-            .add_instructions(instructions.into_iter().map(Into::into).collect())
+            .add_instructions(instructions.into_iter().map(Into::into))
     }
 
     pub fn to_instructions(&self, py: Python<'_>) -> PyResult<Vec<PyInstruction>> {

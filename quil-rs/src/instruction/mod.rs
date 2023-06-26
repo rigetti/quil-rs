@@ -481,7 +481,9 @@ impl Instruction {
                 } else {
                     FrameMatchCondition::And(vec![
                         FrameMatchCondition::ExactQubits(qubits.iter().collect()),
-                        FrameMatchCondition::AnyOfNames(frame_names.iter().collect()),
+                        FrameMatchCondition::AnyOfNames(
+                            frame_names.iter().map(String::as_str).collect(),
+                        ),
                     ])
                 }),
                 blocked: None,
@@ -647,7 +649,7 @@ RX(2) 0",
         )
         .unwrap();
         let closure = |expr: &mut Expression| *expr = Expression::Variable(String::from("a"));
-        for instruction in program.instructions.iter_mut() {
+        for instruction in program.body_instructions_mut() {
             instruction.apply_to_expressions(closure);
         }
 

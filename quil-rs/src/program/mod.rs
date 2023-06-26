@@ -65,7 +65,7 @@ pub struct Program {
     pub frames: FrameSet,
     pub memory_regions: BTreeMap<String, MemoryRegion>,
     pub waveforms: BTreeMap<String, Waveform>,
-    pub instructions: Vec<Instruction>,
+    instructions: Vec<Instruction>,
 }
 
 impl Program {
@@ -77,6 +77,21 @@ impl Program {
             waveforms: BTreeMap::new(),
             instructions: vec![],
         }
+    }
+
+    /// Returns an iterator over immutable references to the instructions that make up the body of the program.
+    pub fn body_instructions(&self) -> impl Iterator<Item = &Instruction> {
+        self.instructions.iter()
+    }
+
+    pub fn into_body_instructions(self) -> impl Iterator<Item = Instruction> {
+        self.instructions.into_iter()
+    }
+
+    /// Returns an iterator over mutable references to the instructions that make up the body of the program.
+    #[cfg(test)]
+    pub(crate) fn body_instructions_mut(&mut self) -> impl Iterator<Item = &mut Instruction> {
+        self.instructions.iter_mut()
     }
 
     /// Add an instruction to the end of the program.
@@ -109,7 +124,10 @@ impl Program {
         }
     }
 
-    pub fn add_instructions(&mut self, instructions: Vec<Instruction>) {
+    pub fn add_instructions<I>(&mut self, instructions: I)
+    where
+        I: IntoIterator<Item = Instruction>,
+    {
         instructions
             .into_iter()
             .for_each(|i| self.add_instruction(i));
