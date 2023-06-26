@@ -39,10 +39,31 @@ impl FrameSet {
         self.frames.keys().collect()
     }
 
+    pub(crate) fn get_matching_keys_for_conditions<'s>(
+        &'s self,
+        condition: FrameMatchConditions,
+    ) -> MatchedFrames<'s> {
+        let used = condition
+            .used
+            .map_or_else(HashSet::new, |c| self.get_matching_keys_for_condition(c));
+
+        let blocked = condition.blocked.map_or_else(HashSet::new, |c| {
+            let mut blocked = self.get_matching_keys_for_condition(c);
+
+            if !used.is_empty() {
+                blocked.retain(|&f| !used.contains(&f));
+            }
+
+            blocked
+        });
+
+        MatchedFrames { used, blocked }
+    }
+
     /// Return all frames in the set which match all of these conditions. If a frame _would_ match, but is
     /// not present in this [FrameSet], then it is not returned (notably, the [FrameMatchCondition::Specific]
     /// match condition).
-    pub(crate) fn get_matching_keys<'s>(
+    pub(crate) fn get_matching_keys_for_condition<'s>(
         &'s self,
         condition: FrameMatchCondition,
     ) -> HashSet<&'s FrameIdentifier> {
@@ -70,12 +91,12 @@ impl FrameSet {
             }
             FrameMatchCondition::And(conditions) => conditions
                 .into_iter()
-                .map(|c| self.get_matching_keys(c))
+                .map(|c| self.get_matching_keys_for_condition(c))
                 .reduce(|acc, el| acc.into_iter().filter(|&v| el.contains(v)).collect())
                 .unwrap_or_default(),
             FrameMatchCondition::Or(conditions) => conditions
                 .into_iter()
-                .flat_map(|c| self.get_matching_keys(c))
+                .flat_map(|c| self.get_matching_keys_for_condition(c))
                 .collect(),
         }
     }
@@ -153,4 +174,47 @@ pub(crate) enum FrameMatchCondition<'a> {
 
     /// Return all frames which match any of these conditions
     Or(Vec<FrameMatchCondition<'a>>),
+}
+
+/// A pair of conditions to match frames within a [`crate::Program`] (or another scope).
+///
+/// This allows for deferred evaluation of matching an instruction against available frames.
+pub(crate) struct FrameMatchConditions<'a> {
+    /// A condition to identify which frames within a [`crate::Program`] (or another scope)
+    /// are actively used by an [`Instruction`].
+    ///
+    /// If `None`, then this [`Instruction`] does not use any frames, regardless of which are available.
+    pub used: Option<FrameMatchCondition<'a>>,
+
+    /// A condition to identify which frames within a [`crate::Program`] (or another scope)
+    /// are blocked by an [`Instruction`]. A "blocked" frame is one which is not used by the
+    /// `Instruction` but is not available for use by other instructions while this one executes.
+    ///
+    /// **Note**: for efficiency in computation, this may match frames also matched by `used`.
+    /// In order to query which frames are _blocked but not used_, both conditions must first
+    /// be evaluated in the scope of the available frames.
+    pub blocked: Option<FrameMatchCondition<'a>>,
+}
+
+/// The product of evaluating  [`FrameMatchConditions`] in the scope of available frames (such as within a [`crate::Program`]).
+pub struct MatchedFrames<'a> {
+    /// Which concrete frames are blocked and not used.
+    /// This set is mutually exclusive with `used`.
+    blocked: HashSet<&'a FrameIdentifier>,
+
+    /// Which concrete frames are used by the [`Instruction`]
+    used: HashSet<&'a FrameIdentifier>,
+}
+
+impl<'a> MatchedFrames<'a> {
+    /// Which concrete frames are blocked and not used.
+    /// This set is mutually exclusive with `used`.
+    pub fn blocked(&self) -> &HashSet<&'a FrameIdentifier> {
+        &self.blocked
+    }
+
+    /// Which concrete frames are used by the [`Instruction`]
+    pub fn used(&self) -> &HashSet<&'a FrameIdentifier> {
+        &self.used
+    }
 }
