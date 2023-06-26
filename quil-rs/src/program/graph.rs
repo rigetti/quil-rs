@@ -330,7 +330,7 @@ impl InstructionBlock {
                     let matched_frames = program.get_frames_for_instruction(instruction);
 
                     if let Some(matched_frames) = matched_frames {
-                        for frame in matched_frames.used {
+                        for frame in matched_frames.used() {
                             if instruction.is_scheduled() {
                                 let previous_node_ids = last_timed_instruction_by_frame
                                     .entry((*frame).clone())
@@ -352,7 +352,7 @@ impl InstructionBlock {
                             }
                         }
 
-                        for frame in matched_frames.blocked {
+                        for frame in matched_frames.blocked() {
                             if instruction.is_scheduled() {
                                 if let Some(previous_node_id) = last_timed_instruction_by_frame
                                     .entry((*frame).clone())

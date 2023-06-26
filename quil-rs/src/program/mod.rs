@@ -237,11 +237,8 @@ impl Program {
         let mut waveforms_used: HashSet<&String> = HashSet::new();
 
         for instruction in &expanded_program.instructions {
-            if let Some(frames) = expanded_program
-                .get_frames_for_instruction(instruction)
-                .map(|f| f.used)
-            {
-                frames_used.extend(frames)
+            if let Some(matched_frames) = expanded_program.get_frames_for_instruction(instruction) {
+                frames_used.extend(matched_frames.used())
             }
 
             if let Some(waveform) = instruction.get_waveform_invocation() {
@@ -548,7 +545,7 @@ DEFFRAME 0 1 \"2q\":
             let instruction = Instruction::parse(instruction_string).unwrap();
             let matched_frames = program.get_frames_for_instruction(&instruction).unwrap();
             let used_frames: HashSet<String> = matched_frames
-                .used
+                .used()
                 .into_iter()
                 .map(|f| f.to_string())
                 .collect();
@@ -562,7 +559,7 @@ DEFFRAME 0 1 \"2q\":
             );
 
             let blocked_frames: HashSet<String> = matched_frames
-                .blocked
+                .blocked()
                 .into_iter()
                 .map(|f| f.to_string())
                 .collect();

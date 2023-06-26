@@ -198,10 +198,20 @@ pub(crate) struct FrameMatchConditions<'a> {
 
 /// The product of evaluating  [`FrameMatchConditions`] in the scope of available frames (such as within a [`crate::Program`]).
 pub struct MatchedFrames<'a> {
-    /// Which concrete frames are used by the [`Instruction`]
-    pub used: HashSet<&'a FrameIdentifier>,
-
     /// Which concrete frames are blocked and not used.
     /// This set is mutually exclusive with `used`.
-    pub blocked: HashSet<&'a FrameIdentifier>,
+    blocked: HashSet<&'a FrameIdentifier>,
+
+    /// Which concrete frames are used by the [`Instruction`]
+    used: HashSet<&'a FrameIdentifier>,
+}
+
+impl<'a> MatchedFrames<'a> {
+    pub fn blocked(&self) -> &HashSet<&'a FrameIdentifier> {
+        &self.blocked
+    }
+
+    pub fn used(&self) -> &HashSet<&'a FrameIdentifier> {
+        &self.used
+    }
 }
