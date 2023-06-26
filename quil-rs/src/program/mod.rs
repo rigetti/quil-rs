@@ -418,12 +418,12 @@ DEFCAL I 0:
     DELAY 0 1.0
 DEFFRAME 0 \"rx\":
     HARDWARE-OBJECT: \"hardware\"
-DEFWAVEFORM custom 6.0:
+DEFWAVEFORM custom:
     1,2
 I 0
 ";
-        let a = Program::from_str(input);
-        let b = Program::from_str(input);
+        let a = Program::from_str(input).unwrap();
+        let b = Program::from_str(input).unwrap();
         assert_eq!(a, b);
     }
 
@@ -440,7 +440,7 @@ DEFCAL I 0:
     DELAY 0 1.0
 DEFFRAME 0 \"rx\":
     HARDWARE-OBJECT: \"hardware\"
-DEFWAVEFORM custom 6.0:
+DEFWAVEFORM custom:
     1,2
 I 0
 ";
@@ -457,10 +457,10 @@ DEFFRAME 1 \"rx\":
     HARDWARE-OBJECT: \"hardware\"
 DEFWAVEFORM custom:
     1,2
-1 0
+I 0
 ";
-        let a = Program::from_str(input_a);
-        let b = Program::from_str(input_b);
+        let a = Program::from_str(input_a).unwrap();
+        let b = Program::from_str(input_b).unwrap();
         assert_ne!(a, b);
     }
 
@@ -718,6 +718,36 @@ I 0
         let expected: Program = "NOP\nNOP".parse().expect("Should parse NOPs");
         let p: Program = expected.instructions.clone().into();
         assert_eq!(expected, p);
+    }
+
+    #[test]
+    fn test_clone_without_body_instructions() {
+        let quil = "
+DECLARE ro BIT
+MEASURE q ro
+JUMP-UNLESS @end-reset ro
+X q
+LABEL @end-reset
+
+DEFCAL I 0:
+    DELAY 0 1.0
+DEFFRAME 0 \"rx\":
+    HARDWARE-OBJECT: \"hardware\"
+DEFWAVEFORM custom:
+    1,2
+I 0
+";
+        // Test is invalid if there are no body instructions
+        let original = Program::from_str(quil).unwrap();
+        assert!(!original.instructions.is_empty());
+
+        let mut cloned = original.clone_without_body_instructions();
+        // Make sure instruction list is empty.
+        assert!(cloned.instructions.is_empty());
+
+        // Cloning the instruction list should make the programs equal again.
+        cloned.instructions = original.instructions.clone();
+        assert_eq!(original, cloned);
     }
 
     static _0: Complex64 = real!(0.0);
