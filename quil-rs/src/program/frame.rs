@@ -45,12 +45,12 @@ impl FrameSet {
     ) -> MatchedFrames<'s> {
         let used = condition
             .used
-            .map(|c| self.get_matching_keys_for_condition(c));
+            .map_or_else(HashSet::new, |c| self.get_matching_keys_for_condition(c));
 
-        let blocked = condition.blocked.map(|c| {
+        let blocked = condition.blocked.map_or_else(HashSet::new, |c| {
             let mut blocked = self.get_matching_keys_for_condition(c);
 
-            if let Some(used) = &used {
+            if !used.is_empty() {
                 blocked.retain(|&f| !used.contains(&f));
             }
 
@@ -199,9 +199,9 @@ pub(crate) struct FrameMatchConditions<'a> {
 /// The product of evaluating  [`FrameMatchConditions`] in the scope of available frames (such as within a [`crate::Program`]).
 pub struct MatchedFrames<'a> {
     /// Which concrete frames are used by the [`Instruction`]
-    pub used: Option<HashSet<&'a FrameIdentifier>>,
+    pub used: HashSet<&'a FrameIdentifier>,
 
     /// Which concrete frames are blocked and not used.
-    /// This set must be mutually exclusive with `used`.
-    pub blocked: Option<HashSet<&'a FrameIdentifier>>,
+    /// This set is mutually exclusive with `used`.
+    pub blocked: HashSet<&'a FrameIdentifier>,
 }

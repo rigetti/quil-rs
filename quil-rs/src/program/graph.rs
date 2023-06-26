@@ -330,49 +330,45 @@ impl InstructionBlock {
                     let matched_frames = program.get_frames_for_instruction(instruction);
 
                     if let Some(matched_frames) = matched_frames {
-                        if let Some(used_frames) = &matched_frames.used {
-                            for frame in used_frames {
-                                if instruction.is_scheduled() {
-                                    let previous_node_ids = last_timed_instruction_by_frame
-                                        .entry((*frame).clone())
-                                        .or_default()
-                                        .get_dependencies_for_next_user(node);
-
-                                    for previous_node_id in previous_node_ids {
-                                        add_dependency!(graph, previous_node_id => node, ExecutionDependency::Scheduled);
-                                    }
-                                }
-
-                                let previous_node_ids = last_instruction_by_frame
+                        for frame in matched_frames.used {
+                            if instruction.is_scheduled() {
+                                let previous_node_ids = last_timed_instruction_by_frame
                                     .entry((*frame).clone())
                                     .or_default()
                                     .get_dependencies_for_next_user(node);
 
                                 for previous_node_id in previous_node_ids {
-                                    add_dependency!(graph, previous_node_id => node, ExecutionDependency::StableOrdering);
+                                    add_dependency!(graph, previous_node_id => node, ExecutionDependency::Scheduled);
                                 }
+                            }
+
+                            let previous_node_ids = last_instruction_by_frame
+                                .entry((*frame).clone())
+                                .or_default()
+                                .get_dependencies_for_next_user(node);
+
+                            for previous_node_id in previous_node_ids {
+                                add_dependency!(graph, previous_node_id => node, ExecutionDependency::StableOrdering);
                             }
                         }
 
-                        if let Some(blocked_but_not_used_frames) = &matched_frames.blocked {
-                            for frame in blocked_but_not_used_frames.iter() {
-                                if instruction.is_scheduled() {
-                                    if let Some(previous_node_id) = last_timed_instruction_by_frame
-                                        .entry((*frame).clone())
-                                        .or_default()
-                                        .get_dependency_for_next_blocker(node)
-                                    {
-                                        add_dependency!(graph, previous_node_id => node, ExecutionDependency::Scheduled);
-                                    }
-                                }
-
-                                if let Some(previous_node_id) = last_instruction_by_frame
+                        for frame in matched_frames.blocked {
+                            if instruction.is_scheduled() {
+                                if let Some(previous_node_id) = last_timed_instruction_by_frame
                                     .entry((*frame).clone())
                                     .or_default()
                                     .get_dependency_for_next_blocker(node)
                                 {
-                                    add_dependency!(graph, previous_node_id => node, ExecutionDependency::StableOrdering);
+                                    add_dependency!(graph, previous_node_id => node, ExecutionDependency::Scheduled);
                                 }
+                            }
+
+                            if let Some(previous_node_id) = last_instruction_by_frame
+                                .entry((*frame).clone())
+                                .or_default()
+                                .get_dependency_for_next_blocker(node)
+                            {
+                                add_dependency!(graph, previous_node_id => node, ExecutionDependency::StableOrdering);
                             }
                         }
                     }

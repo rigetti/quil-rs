@@ -239,7 +239,7 @@ impl Program {
         for instruction in &expanded_program.instructions {
             if let Some(frames) = expanded_program
                 .get_frames_for_instruction(instruction)
-                .and_then(|f| f.used)
+                .map(|f| f.used)
             {
                 frames_used.extend(frames)
             }
@@ -549,7 +549,6 @@ DEFFRAME 0 1 \"2q\":
             let matched_frames = program.get_frames_for_instruction(&instruction).unwrap();
             let used_frames: HashSet<String> = matched_frames
                 .used
-                .unwrap_or_default()
                 .into_iter()
                 .map(|f| f.to_string())
                 .collect();
@@ -564,7 +563,6 @@ DEFFRAME 0 1 \"2q\":
 
             let blocked_frames: HashSet<String> = matched_frames
                 .blocked
-                .unwrap_or_default()
                 .into_iter()
                 .map(|f| f.to_string())
                 .collect();
