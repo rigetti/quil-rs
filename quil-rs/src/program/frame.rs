@@ -207,10 +207,13 @@ pub struct MatchedFrames<'a> {
 }
 
 impl<'a> MatchedFrames<'a> {
+    /// Which concrete frames are blocked and not used.
+    /// This set is mutually exclusive with `used`.
     pub fn blocked(&self) -> &HashSet<&'a FrameIdentifier> {
         &self.blocked
     }
 
+    /// Which concrete frames are used by the [`Instruction`]
     pub fn used(&self) -> &HashSet<&'a FrameIdentifier> {
         &self.used
     }
