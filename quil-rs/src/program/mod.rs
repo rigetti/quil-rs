@@ -101,6 +101,17 @@ impl Program {
         self.instructions.iter_mut()
     }
 
+    /// Like `Clone`, but does not clone the body instructions.
+    pub fn clone_without_body_instructions(&self) -> Self {
+        Self {
+            instructions: Vec::new(),
+            calibrations: self.calibrations.clone(),
+            frames: self.frames.clone(),
+            memory_regions: self.memory_regions.clone(),
+            waveforms: self.waveforms.clone(),
+        }
+    }
+
     /// Add an instruction to the end of the program.
     pub fn add_instruction(&mut self, instruction: Instruction) {
         match instruction {
