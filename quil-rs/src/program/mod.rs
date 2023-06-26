@@ -564,7 +564,7 @@ DEFFRAME 0 1 \"2q\":
             let matched_frames = program.get_frames_for_instruction(&instruction).unwrap();
             let used_frames: HashSet<String> = matched_frames
                 .used()
-                .into_iter()
+                .iter()
                 .map(|f| f.to_string())
                 .collect();
             let expected_used_frames: HashSet<String> = expected_used_frames
@@ -578,7 +578,7 @@ DEFFRAME 0 1 \"2q\":
 
             let blocked_frames: HashSet<String> = matched_frames
                 .blocked()
-                .into_iter()
+                .iter()
                 .map(|f| f.to_string())
                 .collect();
             let expected_blocked_frames: HashSet<String> = expected_blocked_frames
