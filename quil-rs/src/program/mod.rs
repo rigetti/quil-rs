@@ -102,7 +102,8 @@ impl Program {
     /// Returns an iterator over mutable references to the instructions that make up the body of the program.
     #[cfg(test)]
     pub(crate) fn for_each_body_instruction<F>(&mut self, closure: F)
-        where F: FnMut(&mut Instruction),
+    where
+        F: FnMut(&mut Instruction),
     {
         let mut instructions = std::mem::take(&mut self.instructions);
         self.used_qubits.clear();
@@ -389,9 +390,7 @@ impl FromStr for Program {
             ),
             |instructions| {
                 let mut program = Self::new();
-                for instruction in instructions {
-                    program.add_instruction(instruction)
-                }
+                program.add_instructions(instructions);
                 program
             },
         )
