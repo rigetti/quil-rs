@@ -1,3 +1,5 @@
+use crate::{expression::PyExpression, instruction::PyQubit};
+use numpy::{PyArray2, ToPyArray};
 use quil_rs::{
     expression::Expression,
     instruction::{
@@ -5,11 +7,10 @@ use quil_rs::{
         Qubit,
     },
 };
-use strum;
-
 use rigetti_pyo3::{
-    impl_from_str, impl_hash, impl_parse, impl_repr, impl_str, py_wrap_data_struct, py_wrap_error,
-    py_wrap_simple_enum, py_wrap_type, py_wrap_union_enum,
+    impl_from_str, impl_hash, impl_parse, impl_repr, impl_str,
+    num_complex::Complex64,
+    py_wrap_data_struct, py_wrap_error, py_wrap_simple_enum, py_wrap_type, py_wrap_union_enum,
     pyo3::{
         exceptions::PyValueError,
         pyclass::CompareOp,
@@ -19,9 +20,7 @@ use rigetti_pyo3::{
     },
     wrap_error, PyTryFrom, PyWrapper, PyWrapperMut, ToPython, ToPythonError,
 };
-
-use super::PyQubit;
-use crate::expression::PyExpression;
+use strum;
 
 wrap_error!(RustGateError(quil_rs::instruction::GateError));
 py_wrap_error!(quil, RustGateError, GateError, PyValueError);
@@ -90,6 +89,20 @@ impl PyGate {
             .map_err(RustGateError::from)
             .map_err(RustGateError::to_py_err)?
             .to_python(py)
+    }
+
+    fn to_unitary_mut(
+        &mut self,
+        py: Python<'_>,
+        n_qubits: u64,
+    ) -> PyResult<Py<PyArray2<Complex64>>> {
+        Ok(self
+            .as_inner_mut()
+            .to_unitary(n_qubits)
+            .map_err(RustGateError::from)
+            .map_err(RustGateError::to_py_err)?
+            .to_pyarray(py)
+            .to_owned())
     }
 
     pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {

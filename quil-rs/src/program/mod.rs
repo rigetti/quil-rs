@@ -17,10 +17,12 @@ use std::fmt;
 use std::ops;
 use std::str::FromStr;
 
+use ndarray::Array2;
 use nom_locate::LocatedSpan;
 
 use crate::instruction::{
-    Declaration, FrameDefinition, FrameIdentifier, Instruction, Qubit, Waveform, WaveformDefinition,
+    Declaration, FrameDefinition, FrameIdentifier, GateError, Instruction, Matrix, Qubit, Waveform,
+    WaveformDefinition,
 };
 use crate::parser::{lex, parse_instructions, ParseError};
 
@@ -46,6 +48,12 @@ pub enum ProgramError {
 
     #[error("instruction {0} expands into itself")]
     RecursiveCalibration(Instruction),
+
+    #[error("{0}")]
+    GateError(#[from] GateError),
+
+    #[error("can only compute program unitary for programs composed of `Gate`s; found unsupported instruction: {0}")]
+    UnsupportedForUnitary(Instruction),
 }
 
 type Result<T> = std::result::Result<T, ProgramError>;
@@ -298,6 +306,25 @@ impl Program {
         instructions.extend(self.instructions.clone());
         instructions
     }
+
+    /// Return the unitary of a program.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the program contains instructions other than `Gate`s.
+    pub fn to_unitary(&self, n_qubits: u64) -> Result<Matrix> {
+        let mut umat = Array2::eye(2usize.pow(n_qubits as u32));
+        for instruction in self.instructions.clone() {
+            match instruction {
+                Instruction::Halt => {}
+                Instruction::Gate(mut gate) => {
+                    umat = gate.to_unitary(n_qubits)?.dot(&umat);
+                }
+                _ => return Err(ProgramError::UnsupportedForUnitary(instruction)),
+            }
+        }
+        Ok(umat)
+    }
 }
 
 impl fmt::Display for Program {
@@ -354,12 +381,18 @@ impl<'a, 'b> ops::Add<&'b Program> for &'a Program {
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::HashSet, str::FromStr};
-
-    use crate::instruction::Instruction;
-    use crate::instruction::Qubit;
-
     use super::Program;
+    use crate::{
+        imag,
+        instruction::{Instruction, Matrix, Qubit},
+        real,
+    };
+    use approx::assert_abs_diff_eq;
+    use ndarray::{array, linalg::kron, Array2};
+    use num_complex::Complex64;
+    use once_cell::sync::Lazy;
+    use rstest::rstest;
+    use std::{collections::HashSet, str::FromStr};
 
     #[test]
     fn program_eq() {
@@ -674,5 +707,36 @@ I 0
         let expected: Program = "NOP\nNOP".parse().expect("Should parse NOPs");
         let p: Program = expected.instructions.clone().into();
         assert_eq!(expected, p);
+    }
+
+    static _0: Complex64 = real!(0.0);
+    static _1: Complex64 = real!(1.0);
+    static _I: Complex64 = imag!(1.0);
+    static _1_SQRT_2: Complex64 = real!(std::f64::consts::FRAC_1_SQRT_2);
+    static H: Lazy<Matrix> = Lazy::new(|| array![[_1, _1], [_1, -_1]] * _1_SQRT_2);
+    static X: Lazy<Matrix> = Lazy::new(|| array![[_0, _1], [_1, _0]]);
+    static Y: Lazy<Matrix> = Lazy::new(|| array![[_0, -_I], [_I, _0]]);
+    static Z: Lazy<Matrix> = Lazy::new(|| array![[_1, _0], [_0, -_1]]);
+    static CNOT: Lazy<Matrix> = Lazy::new(|| {
+        array![
+            [_1, _0, _0, _0],
+            [_0, _1, _0, _0],
+            [_0, _0, _0, _1],
+            [_0, _0, _1, _0]
+        ]
+    });
+    static I2: Lazy<Matrix> = Lazy::new(|| Array2::eye(2));
+    static I4: Lazy<Matrix> = Lazy::new(|| Array2::eye(4));
+
+    #[rstest]
+    #[case("H 0\nH 1\nH 0", 2, &kron(&H, &I2))]
+    #[case("H 0\nX 1\nY 2\nZ 3", 4, &kron(&Z, &kron(&Y, &kron(&X, &H))))]
+    #[case("X 2\nCNOT 2 1\nCNOT 1 0", 3, &kron(&I2, &CNOT).dot(&kron(&CNOT, &I2)).dot(&kron(&X, &I4)))]
+    fn test_to_unitary(#[case] input: &str, #[case] n_qubits: u64, #[case] expected: &Matrix) {
+        let program = Program::from_str(input);
+        assert!(program.is_ok());
+        let matrix = program.unwrap().to_unitary(n_qubits);
+        assert!(matrix.is_ok());
+        assert_abs_diff_eq!(matrix.as_ref().unwrap(), expected);
     }
 }
