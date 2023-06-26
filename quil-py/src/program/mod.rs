@@ -51,6 +51,10 @@ impl PyProgram {
         Self(Program::default())
     }
 
+    pub fn clone_without_body_instructions(&self) -> Self {
+        Self(self.as_inner().clone_without_body_instructions())
+    }
+
     #[getter]
     pub fn instructions<'a>(&self, py: Python<'a>) -> PyResult<&'a PyList> {
         Ok(PyList::new(
