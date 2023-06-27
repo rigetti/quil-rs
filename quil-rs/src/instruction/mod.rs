@@ -455,7 +455,7 @@ impl Instruction {
 
     pub(crate) fn get_frame_match_condition<'a>(
         &'a self,
-        qubits_available: HashSet<&'a Qubit>,
+        qubits_available: &'a HashSet<Qubit>,
     ) -> Option<FrameMatchConditions<'a>> {
         match self {
             Instruction::Pulse(Pulse {
@@ -503,7 +503,7 @@ impl Instruction {
                         set.insert(qubit);
                         set
                     }
-                    None => qubits_available,
+                    None => qubits_available.iter().collect(),
                 };
 
                 Some(FrameMatchConditions {
@@ -649,9 +649,9 @@ RX(2) 0",
         )
         .unwrap();
         let closure = |expr: &mut Expression| *expr = Expression::Variable(String::from("a"));
-        for instruction in program.body_instructions_mut() {
+        program.for_each_body_instruction(|instruction| {
             instruction.apply_to_expressions(closure);
-        }
+        });
 
         let expected_program = Program::from_str(
             "DECLARE ro BIT

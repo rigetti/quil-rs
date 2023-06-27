@@ -74,6 +74,8 @@ pub struct Program {
     pub memory_regions: BTreeMap<String, MemoryRegion>,
     pub waveforms: BTreeMap<String, Waveform>,
     instructions: Vec<Instruction>,
+    // private field used for caching operations
+    used_qubits: HashSet<Qubit>,
 }
 
 impl Program {
@@ -84,6 +86,7 @@ impl Program {
             memory_regions: BTreeMap::new(),
             waveforms: BTreeMap::new(),
             instructions: vec![],
+            used_qubits: HashSet::new(),
         }
     }
 
@@ -98,8 +101,16 @@ impl Program {
 
     /// Returns an iterator over mutable references to the instructions that make up the body of the program.
     #[cfg(test)]
-    pub(crate) fn body_instructions_mut(&mut self) -> impl Iterator<Item = &mut Instruction> {
-        self.instructions.iter_mut()
+    pub(crate) fn for_each_body_instruction<F>(&mut self, closure: F)
+    where
+        F: FnMut(&mut Instruction),
+    {
+        let mut instructions = std::mem::take(&mut self.instructions);
+        self.used_qubits.clear();
+
+        instructions.iter_mut().for_each(closure);
+
+        self.add_instructions(instructions);
     }
 
     /// Like `Clone`, but does not clone the body instructions.
@@ -110,6 +121,7 @@ impl Program {
             frames: self.frames.clone(),
             memory_regions: self.memory_regions.clone(),
             waveforms: self.waveforms.clone(),
+            used_qubits: HashSet::new(),
         }
     }
 
@@ -138,6 +150,41 @@ impl Program {
             }
             Instruction::WaveformDefinition(WaveformDefinition { name, definition }) => {
                 self.waveforms.insert(name, definition);
+            }
+            Instruction::Gate(gate) => {
+                self.used_qubits.extend(gate.qubits.clone());
+                self.instructions.push(Instruction::Gate(gate));
+            }
+            Instruction::Measurement(measurement) => {
+                self.used_qubits.insert(measurement.qubit.clone());
+                self.instructions
+                    .push(Instruction::Measurement(measurement));
+            }
+            Instruction::Reset(reset) => {
+                if let Some(qubit) = &reset.qubit {
+                    self.used_qubits.insert(qubit.clone());
+                }
+                self.instructions.push(Instruction::Reset(reset));
+            }
+            Instruction::Delay(delay) => {
+                self.used_qubits.extend(delay.qubits.clone());
+                self.instructions.push(Instruction::Delay(delay));
+            }
+            Instruction::Fence(fence) => {
+                self.used_qubits.extend(fence.qubits.clone());
+                self.instructions.push(Instruction::Fence(fence));
+            }
+            Instruction::Capture(capture) => {
+                self.used_qubits.extend(capture.frame.qubits.clone());
+                self.instructions.push(Instruction::Capture(capture));
+            }
+            Instruction::Pulse(pulse) => {
+                self.used_qubits.extend(pulse.frame.qubits.clone());
+                self.instructions.push(Instruction::Pulse(pulse));
+            }
+            Instruction::RawCapture(raw_capture) => {
+                self.used_qubits.extend(raw_capture.frame.qubits.clone());
+                self.instructions.push(Instruction::RawCapture(raw_capture));
             }
             other => self.instructions.push(other),
         }
@@ -196,6 +243,7 @@ impl Program {
             memory_regions: self.memory_regions.clone(),
             waveforms: self.waveforms.clone(),
             instructions: Vec::new(),
+            used_qubits: HashSet::new(),
         };
 
         new_program.add_instructions(expanded_instructions);
@@ -234,24 +282,8 @@ impl Program {
     }
 
     /// Returns a HashSet consisting of every Qubit that is used in the program.
-    pub fn get_used_qubits(&self) -> HashSet<&Qubit> {
-        self.instructions
-            .iter()
-            .flat_map(|i| match i {
-                Instruction::Gate(gate) => gate.qubits.iter().collect(),
-                Instruction::Measurement(measurement) => vec![&measurement.qubit],
-                Instruction::Reset(reset) => match &reset.qubit {
-                    Some(qubit) => vec![qubit],
-                    None => Vec::new(),
-                },
-                Instruction::Delay(delay) => delay.qubits.iter().collect(),
-                Instruction::Fence(fence) => fence.qubits.iter().collect(),
-                Instruction::Capture(capture) => capture.frame.qubits.iter().collect(),
-                Instruction::Pulse(pulse) => pulse.frame.qubits.iter().collect(),
-                Instruction::RawCapture(raw_capture) => raw_capture.frame.qubits.iter().collect(),
-                _ => Vec::new(),
-            })
-            .collect::<HashSet<_>>()
+    pub fn get_used_qubits(&self) -> &HashSet<Qubit> {
+        &self.used_qubits
     }
 
     /// Simplify this program into a new [`Program`] which contains only instructions
@@ -358,9 +390,7 @@ impl FromStr for Program {
             ),
             |instructions| {
                 let mut program = Self::new();
-                for instruction in instructions {
-                    program.add_instruction(instruction)
-                }
+                program.add_instructions(instructions);
                 program
             },
         )
@@ -697,7 +727,7 @@ I 0
         let expected_owned = vec![Qubit::Fixed(0), Qubit::Variable("q".to_string())];
         let expected = expected_owned.iter().collect::<HashSet<_>>();
         let actual = program.get_used_qubits();
-        assert_eq!(expected, actual);
+        assert_eq!(expected, actual.iter().collect());
     }
 
     #[test]
@@ -739,9 +769,11 @@ I 0
         let mut cloned = original.clone_without_body_instructions();
         // Make sure instruction list is empty.
         assert!(cloned.instructions.is_empty());
+        assert!(cloned.used_qubits.is_empty());
 
         // Cloning the instruction list should make the programs equal again.
-        cloned.instructions = original.instructions.clone();
+        // Need to use add_instructions because of the side effects, e.g. setting used_qubits.
+        cloned.add_instructions(original.instructions.clone());
         assert_eq!(original, cloned);
     }
 
