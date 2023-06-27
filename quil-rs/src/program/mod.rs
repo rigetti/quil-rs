@@ -769,9 +769,11 @@ I 0
         let mut cloned = original.clone_without_body_instructions();
         // Make sure instruction list is empty.
         assert!(cloned.instructions.is_empty());
+        assert!(cloned.used_qubits.is_empty());
 
         // Cloning the instruction list should make the programs equal again.
-        cloned.instructions = original.instructions.clone();
+        // Need to use add_instructions because of the side effects, e.g. setting used_qubits.
+        cloned.add_instructions(original.instructions.clone());
         assert_eq!(original, cloned);
     }
 
