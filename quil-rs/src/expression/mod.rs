@@ -112,44 +112,41 @@ fn is_small(x: f64) -> bool {
     x.abs() < 1e-16
 }
 
-/// Multiples of π/8 that get stringified prettily, for use in hashing below.
-/// See https://github.com/rigetti/pyquil/blob/673928a8383be487e8da6d90b8c7c1a20d9ab5e6/pyquil/quilatom.py#L633-657
-const MULTS_PI_8_TABLE: [(i64, &'static str); 27] = [
-    (-16, "-2*pi"),
-    (-14, "-7*pi/4"),
-    (-12, "-3*pi/2"),
-    (-10, "-5*pi/4"),
-    (-9, "-9*pi/8"),
-    (-8, "-pi"),
-    (-7, "-7*pi/8"),
-    (-6, "-3*pi/4"),
-    (-5, "-5*pi/8"),
-    (-4, "-pi/2"),
-    (-3, "-3*pi/8"),
-    (-2, "-pi/4"),
-    (-1, "-pi/8"),
-    (0, "0"),
-    (1, "pi/8"),
-    (2, "pi/4"),
-    (3, "3*pi/8"),
-    (4, "pi/2"),
-    (5, "5*pi/8"),
-    (6, "3*pi/4"),
-    (7, "7*pi/8"),
-    (8, "pi"),
-    (9, "9*pi/8"),
-    (10, "5*pi/4"),
-    (12, "3*pi/2"),
-    (14, "7*pi/4"),
-    (16, "2*pi"),
-];
+/// Greatest common divisor of two integers
+/// https://en.wikipedia.org/wiki/Binary_GCD_algorithm
+#[inline(always)]
+fn gcd(mut u: i64, mut v: i64) -> i64 {
+    // Base cases: gcd(n, 0) = gcd(0, n) = n
+    if u == 0 {
+        return v;
+    }
+    if v == 0 {
+        return u;
+    }
+    // Using identity 2
+    let shift = (u | v).trailing_zeros();
+    // Make u odd
+    u >>= u.trailing_zeros();
+    loop {
+        // Make v odd
+        v >>= v.trailing_zeros();
+        // Using identity 4 (gcd(u, v) = gcd(|v-u|, min(u, v))
+        v -= u;
+        let m = v >> 31;
+        u += v & m;
+        v = (v + m) ^ m;
+        if v == 0 {
+            break;
+        }
+    }
+    return u << shift;
+}
 
 impl Hash for Expression {
     // Implemented by hand since we can't derive with f64s hidden inside.
     // Also to understand when things should be the same, like with commutativity (`1 + 2 == 2 + 1`).
     // See https://github.com/rigetti/quil-rust/issues/27
-    // _Also_ also to ensure that fractional multiples of π (nπ/8 for n in {-16, ..., 16}) hash to
-    // the same value.
+    // _Also_ also to ensure that multiples of π/8 hash to the same value.
     fn hash<H: Hasher>(&self, state: &mut H) {
         use std::cmp::{max_by_key, min_by_key};
         use Expression::*;
@@ -189,26 +186,39 @@ impl Hash for Expression {
                     }
                 }
             }
-            Number(n) => {
-                // check for closeness to fractional multiples of π
-                if is_small(n.im) {
-                    for (numerator, repr) in MULTS_PI_8_TABLE {
-                        let f = (numerator as f64) * std::f64::consts::FRAC_PI_8;
-                        if is_small(n.re - f) {
-                            repr.hash(state);
-                            break;
+            Number(c) => {
+                let x = c.re / std::f64::consts::FRAC_PI_8;
+                // check for closeness to multiples of π/8
+                if is_small(c.im) && is_small(x.fract()) {
+                    let mut y = x.floor() as i64;
+                    if y.abs() == 0 {
+                        '0'.hash(state)
+                    } else {
+                        let mut s = String::new();
+                        if y < 0 {
+                            s.push('-');
+                            y = y.abs()
                         }
+                        let g = gcd(y, 8);
+                        match (y / g, 8 / g) {
+                            (1, 1) => s.push_str("pi"),
+                            (1, d) => s.push_str(&format!("pi/{d}")),
+                            (n, 1) => s.push_str(&format!("{n}*pi")),
+                            (n, d) => s.push_str(&format!("{n}*pi/{d}")),
+                        }
+                        dbg!((&c, &x, &y, &g, y.abs() / g, 8 / g, &s));
+                        s.hash(state);
                     }
                 } else {
                     "Number".hash(state);
                     // Skip zero values (akin to `format_complex`).
                     // Also, since f64 isn't hashable, use the u64 binary representation.
                     // The docs claim this is rather portable: https://doc.rust-lang.org/std/primitive.f64.html#method.to_bits
-                    if n.re.abs() > 0f64 {
-                        hash_f64(n.re, state)
+                    if c.re.abs() > 0f64 {
+                        hash_f64(c.re, state)
                     }
-                    if n.im.abs() > 0f64 {
-                        hash_f64(n.im, state)
+                    if c.im.abs() > 0f64 {
+                        hash_f64(c.im, state)
                     }
                 }
             }
@@ -829,6 +839,11 @@ mod tests {
         }
     }
 
+    // Better behaved than the auto-derived version via arbitrary floats
+    fn arb_f64() -> impl Strategy<Value = f64> {
+        -100f64..100f64
+    }
+
     // Better behaved than the auto-derived version for names
     fn arb_name() -> impl Strategy<Value = String> {
         r"[a-z][a-zA-Z0-9]{1,10}".prop_filter("Exclude reserved tokens", |t| {
@@ -844,8 +859,7 @@ mod tests {
 
     // Better behaved than the auto-derived version via arbitrary floats
     fn arb_complex64() -> impl Strategy<Value = Complex64> {
-        let tau = std::f64::consts::TAU;
-        ((-tau..tau), (-tau..tau)).prop_map(|(re, im)| Complex64 { re, im })
+        (arb_f64(), arb_f64()).prop_map(|(re, im)| Complex64 { re, im })
     }
 
     /// Generate an arbitrary Expression for a property test.
@@ -891,7 +905,7 @@ mod tests {
     proptest! {
 
         #[test]
-        fn eq(a in any::<f64>(), b in any::<f64>()) {
+        fn eq(a in arb_f64(), b in arb_f64()) {
             let first = Expression::Infix (InfixExpression {
                 left: Box::new(Expression::Number(real!(a))),
                 operator: InfixOperator::Plus,
@@ -903,7 +917,7 @@ mod tests {
         }
 
         #[test]
-        fn eq_commutative(a in any::<f64>(), b in any::<f64>()) {
+        fn eq_commutative(a in arb_f64(), b in arb_f64()) {
             let first = Expression::Infix(InfixExpression {
                 left: Box::new(Expression::Number(real!(a))),
                 operator: InfixOperator::Plus,
@@ -918,7 +932,7 @@ mod tests {
         }
 
         #[test]
-        fn hash(a in any::<f64>(), b in any::<f64>()) {
+        fn hash(a in arb_f64(), b in arb_f64()) {
             let first = Expression::Infix (InfixExpression {
                 left: Box::new(Expression::Number(real!(a))),
                 operator: InfixOperator::Plus,
@@ -933,7 +947,7 @@ mod tests {
         }
 
         #[test]
-        fn hash_commutative(a in any::<f64>(), b in any::<f64>()) {
+        fn hash_commutative(a in arb_f64(), b in arb_f64()) {
             let first = Expression::Infix(InfixExpression {
                 left: Box::new(Expression::Number(real!(a))),
                 operator: InfixOperator::Plus,
@@ -965,12 +979,12 @@ mod tests {
         }
 
         #[test]
-        fn reals_are_real(x in any::<f64>()) {
+        fn reals_are_real(x in arb_f64()) {
             prop_assert_eq!(Expression::Number(real!(x)).to_real(), Ok(x))
         }
 
         #[test]
-        fn some_nums_are_real(re in any::<f64>(), im in any::<f64>()) {
+        fn some_nums_are_real(re in arb_f64(), im in arb_f64()) {
             let result = Expression::Number(Complex64{re, im}).to_real();
             if is_small(im) {
                 prop_assert_eq!(result, Ok(re))
@@ -1108,7 +1122,8 @@ mod tests {
     #[case(Expression::Number(real!(std::f64::consts::PI)), "pi")]
     #[case(Expression::Number(real!(std::f64::consts::FRAC_PI_8)), "pi/8")]
     #[case(Expression::Number(real!(-3.0 * std::f64::consts::FRAC_PI_4)), "-3*pi/4")]
-    fn specific_hash_test(#[case] left: Expression, #[case] right: impl Hash) {
+    fn specific_hash_test(#[case] left: Expression, #[case] right: impl Hash + std::fmt::Debug) {
+        dbg!((&left, &right));
         let h_left = {
             let mut s = DefaultHasher::new();
             left.hash(&mut s);
