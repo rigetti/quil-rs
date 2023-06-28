@@ -31,7 +31,14 @@ ignore = []
 # https://embarkstudios.github.io/cargo-deny/checks/licenses/cfg.html
 [licenses]
 unlicensed = "deny"
-allow = ["Apache-2.0", "Apache-2.0 WITH LLVM-exception", "BSD-2-Clause", "BSD-3-Clause", "MIT", "Unicode-DFS-2016"]
+allow = [
+  "Apache-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "MIT",
+  "Unicode-DFS-2016",
+]
 # List of explictly disallowed licenses
 # See https://spdx.org/licenses/ for list of possible licenses
 # [possible values: any SPDX 3.11 short identifier (+ optional exception)].
@@ -69,13 +76,14 @@ multiple-versions = "deny"
 wildcards = "deny"
 highlight = "all"
 skip-tree = [
-    { name = "syn", version = "*", depth = 5 }, # Used in both serde_derive and proptest-derive
-    { name = "quick-error", version = "*" },    # proptest relies on two versions of this
-    { name = "itoa", version = "*" },           # various dependencies rely on two versions of this
-    { name = "hermit-abi", version = "*" },     # various dependencies rely on two versions of this
-    { name = "memoffset", version = "*" },      # various dependencies rely on two versions of this
-    { name = "windows-sys", version = "*" },    # various dependencies rely on two versions of this
-    { name = "redox_syscall", version = "*" },  # proptest and pyo3 rely on two versions of this
+  { name = "syn", version = "*", depth = 5 }, # Used in both serde_derive and proptest-derive
+  { name = "quick-error", version = "*" },    # proptest relies on two versions of this
+  { name = "itoa", version = "*" },           # various dependencies rely on two versions of this
+  { name = "hermit-abi", version = "*" },     # various dependencies rely on two versions of this
+  { name = "memoffset", version = "*" },      # various dependencies rely on two versions of this
+  { name = "windows-sys", version = "*" },    # various dependencies rely on two versions of this
+  { name = "regex-syntax", version = "*" },   # proptest and criterion rely on two versions of this
+  { name = "redox_syscall", version = "*" },  # proptest and pyo3 rely on two versions of this
 ]
 
 # This section is considered when running `cargo deny check sources`.
@@ -91,4 +99,3 @@ unknown-git = "deny"
 # List of URLs for allowed crate registries. Defaults to the crates.io index
 # if not specified. If it is specified but empty, no registries are allowed.
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
-
