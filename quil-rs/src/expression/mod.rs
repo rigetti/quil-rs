@@ -106,10 +106,50 @@ impl PrefixExpression {
     }
 }
 
+/// Is this a small floating point number?
+#[inline(always)]
+fn is_small(x: f64) -> bool {
+    x.abs() < 1e-16
+}
+
+/// Multiples of π/8 that get stringified prettily, for use in hashing below.
+/// See https://github.com/rigetti/pyquil/blob/673928a8383be487e8da6d90b8c7c1a20d9ab5e6/pyquil/quilatom.py#L633-657
+const MULTS_PI_8_TABLE: [(i64, &'static str); 27] = [
+    (-16, "-2*pi"),
+    (-14, "-7*pi/4"),
+    (-12, "-3*pi/2"),
+    (-10, "-5*pi/4"),
+    (-9, "-9*pi/8"),
+    (-8, "-pi"),
+    (-7, "-7*pi/8"),
+    (-6, "-3*pi/4"),
+    (-5, "-5*pi/8"),
+    (-4, "-pi/2"),
+    (-3, "-3*pi/8"),
+    (-2, "-pi/4"),
+    (-1, "-pi/8"),
+    (0, "0"),
+    (1, "pi/8"),
+    (2, "pi/4"),
+    (3, "3*pi/8"),
+    (4, "pi/2"),
+    (5, "5*pi/8"),
+    (6, "3*pi/4"),
+    (7, "7*pi/8"),
+    (8, "pi"),
+    (9, "9*pi/8"),
+    (10, "5*pi/4"),
+    (12, "3*pi/2"),
+    (14, "7*pi/4"),
+    (16, "2*pi"),
+];
+
 impl Hash for Expression {
     // Implemented by hand since we can't derive with f64s hidden inside.
     // Also to understand when things should be the same, like with commutativity (`1 + 2 == 2 + 1`).
     // See https://github.com/rigetti/quil-rust/issues/27
+    // _Also_ also to ensure that fractional multiples of π (nπ/8 for n in {-16, ..., 16}) hash to
+    // the same value.
     fn hash<H: Hasher>(&self, state: &mut H) {
         use std::cmp::{max_by_key, min_by_key};
         use Expression::*;
@@ -150,19 +190,30 @@ impl Hash for Expression {
                 }
             }
             Number(n) => {
-                "Number".hash(state);
-                // Skip zero values (akin to `format_complex`).
-                // Also, since f64 isn't hashable, use the u64 binary representation.
-                // The docs claim this is rather portable: https://doc.rust-lang.org/std/primitive.f64.html#method.to_bits
-                if n.re.abs() > 0f64 {
-                    hash_f64(n.re, state)
-                }
-                if n.im.abs() > 0f64 {
-                    hash_f64(n.im, state)
+                // check for closeness to fractional multiples of π
+                if is_small(n.im) {
+                    for (numerator, repr) in MULTS_PI_8_TABLE {
+                        let f = (numerator as f64) * std::f64::consts::FRAC_PI_8;
+                        if is_small(n.re - f) {
+                            repr.hash(state);
+                            break;
+                        }
+                    }
+                } else {
+                    "Number".hash(state);
+                    // Skip zero values (akin to `format_complex`).
+                    // Also, since f64 isn't hashable, use the u64 binary representation.
+                    // The docs claim this is rather portable: https://doc.rust-lang.org/std/primitive.f64.html#method.to_bits
+                    if n.re.abs() > 0f64 {
+                        hash_f64(n.re, state)
+                    }
+                    if n.im.abs() > 0f64 {
+                        hash_f64(n.im, state)
+                    }
                 }
             }
             PiConstant => {
-                "PiConstant".hash(state);
+                "pi".hash(state);
             }
             Prefix(p) => {
                 "Prefix".hash(state);
@@ -243,12 +294,6 @@ fn calculate_function(
         Exponent => argument.exp(),
         SquareRoot => argument.sqrt(),
     }
-}
-
-/// Is this a small floating point number?
-#[inline(always)]
-fn is_small(x: f64) -> bool {
-    x.abs() < 1e-16
 }
 
 impl Expression {
@@ -658,6 +703,7 @@ mod tests {
 
     use num_complex::Complex64;
     use proptest::prelude::*;
+    use rstest::rstest;
 
     use crate::{
         expression::{EvaluationError, Expression, ExpressionFunction},
@@ -1026,43 +1072,53 @@ mod tests {
 
     }
 
-    #[test]
-    fn specific_to_real_tests() {
-        for (input, expected) in vec![
-            (Expression::PiConstant, Ok(PI)),
-            (Expression::Number(Complex64 { re: 1.0, im: 0.0 }), Ok(1.0)),
-            (
-                Expression::Number(Complex64 { re: 1.0, im: 1.0 }),
-                Err(EvaluationError::NumberNotReal),
-            ),
-            (
-                Expression::Variable("Not a number".into()),
-                Err(EvaluationError::NotANumber),
-            ),
-        ] {
-            assert_eq!(input.to_real(), expected)
-        }
+    #[rstest]
+    #[case(Expression::PiConstant, Ok(PI))]
+    #[case(Expression::Number(Complex64 { re: 1.0, im: 0.0 }), Ok(1.0))]
+    #[case(Expression::Number(Complex64 { re: 1.0, im: 1.0 }), Err(EvaluationError::NumberNotReal))]
+    #[case(Expression::Variable("Not a number".into()), Err(EvaluationError::NotANumber))]
+    fn specific_to_real_tests(
+        #[case] input: Expression,
+        #[case] expected: Result<f64, EvaluationError>,
+    ) {
+        assert_eq!(input.to_real(), expected)
     }
 
-    #[test]
-    fn specific_format_complex_tests() {
-        for (x, s) in &[
-            (Complex64::new(0.0, 0.0), "0"),
-            (Complex64::new(-0.0, 0.0), "0"),
-            (Complex64::new(-0.0, -0.0), "0"),
-            (Complex64::new(0.0, 1.0), "1.0i"),
-            (Complex64::new(1.0, -1.0), "1-1.0i"),
-            (Complex64::new(1.234, 0.0), "1.234"),
-            (Complex64::new(0.0, 1.234), "1.234i"),
-            (Complex64::new(-1.234, 0.0), "-1.234"),
-            (Complex64::new(0.0, -1.234), "-1.234i"),
-            (Complex64::new(1.234, 5.678), "1.234+5.678i"),
-            (Complex64::new(-1.234, 5.678), "-1.234+5.678i"),
-            (Complex64::new(1.234, -5.678), "1.234-5.678i"),
-            (Complex64::new(-1.234, -5.678), "-1.234-5.678i"),
-            (Complex64::new(1e100, 2e-100), "1e100+2.0e-100i"),
-        ] {
-            assert_eq!(format_complex(x), *s);
-        }
+    #[rstest]
+    #[case(Complex64::new(0.0, 0.0), "0")]
+    #[case(Complex64::new(-0.0, 0.0), "0")]
+    #[case(Complex64::new(-0.0, -0.0), "0")]
+    #[case(Complex64::new(0.0, 1.0), "1.0i")]
+    #[case(Complex64::new(1.0, -1.0), "1-1.0i")]
+    #[case(Complex64::new(1.234, 0.0), "1.234")]
+    #[case(Complex64::new(0.0, 1.234), "1.234i")]
+    #[case(Complex64::new(-1.234, 0.0), "-1.234")]
+    #[case(Complex64::new(0.0, -1.234), "-1.234i")]
+    #[case(Complex64::new(1.234, 5.678), "1.234+5.678i")]
+    #[case(Complex64::new(-1.234, 5.678), "-1.234+5.678i")]
+    #[case(Complex64::new(1.234, -5.678), "1.234-5.678i")]
+    #[case(Complex64::new(-1.234, -5.678), "-1.234-5.678i")]
+    #[case(Complex64::new(1e100, 2e-100), "1e100+2.0e-100i")]
+    fn specific_format_complex_tests(#[case] x: Complex64, #[case] s: &str) {
+        assert_eq!(format_complex(&x), s);
+    }
+
+    #[rstest]
+    #[case(Expression::Number(real!(std::f64::consts::PI)), Expression::PiConstant)]
+    #[case(Expression::Number(real!(std::f64::consts::PI)), "pi")]
+    #[case(Expression::Number(real!(std::f64::consts::FRAC_PI_8)), "pi/8")]
+    #[case(Expression::Number(real!(-3.0 * std::f64::consts::FRAC_PI_4)), "-3*pi/4")]
+    fn specific_hash_test(#[case] left: Expression, #[case] right: impl Hash) {
+        let h_left = {
+            let mut s = DefaultHasher::new();
+            left.hash(&mut s);
+            s.finish()
+        };
+        let h_right = {
+            let mut s = DefaultHasher::new();
+            right.hash(&mut s);
+            s.finish()
+        };
+        assert_eq!(h_left, h_right);
     }
 }
