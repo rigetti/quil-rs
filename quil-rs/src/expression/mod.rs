@@ -112,41 +112,10 @@ fn is_small(x: f64) -> bool {
     x.abs() < 1e-16
 }
 
-/// Greatest common divisor of two integers
-/// https://en.wikipedia.org/wiki/Binary_GCD_algorithm
-#[inline(always)]
-fn gcd(mut u: i64, mut v: i64) -> i64 {
-    // Base cases: gcd(n, 0) = gcd(0, n) = n
-    if u == 0 {
-        return v;
-    }
-    if v == 0 {
-        return u;
-    }
-    // Using identity 2
-    let shift = (u | v).trailing_zeros();
-    // Make u odd
-    u >>= u.trailing_zeros();
-    loop {
-        // Make v odd
-        v >>= v.trailing_zeros();
-        // Using identity 4 (gcd(u, v) = gcd(|v-u|, min(u, v))
-        v -= u;
-        let m = v >> 31;
-        u += v & m;
-        v = (v + m) ^ m;
-        if v == 0 {
-            break;
-        }
-    }
-    return u << shift;
-}
-
 impl Hash for Expression {
     // Implemented by hand since we can't derive with f64s hidden inside.
     // Also to understand when things should be the same, like with commutativity (`1 + 2 == 2 + 1`).
     // See https://github.com/rigetti/quil-rust/issues/27
-    // _Also_ also to ensure that multiples of π/8 hash to the same value.
     fn hash<H: Hasher>(&self, state: &mut H) {
         use std::cmp::{max_by_key, min_by_key};
         use Expression::*;
@@ -187,43 +156,21 @@ impl Hash for Expression {
                 }
             }
             Number(c) => {
-                let x = c.re / std::f64::consts::FRAC_PI_8;
-                // check for closeness to multiples of π/8
-                if is_small(c.im) && is_small(x.fract()) {
-                    let mut y = x.floor() as i64;
-                    if y.abs() == 0 {
-                        '0'.hash(state)
-                    } else {
-                        let mut s = String::new();
-                        if y < 0 {
-                            s.push('-');
-                            y = y.abs()
-                        }
-                        let g = gcd(y, 8);
-                        match (y / g, 8 / g) {
-                            (1, 1) => s.push_str("pi"),
-                            (1, d) => s.push_str(&format!("pi/{d}")),
-                            (n, 1) => s.push_str(&format!("{n}*pi")),
-                            (n, d) => s.push_str(&format!("{n}*pi/{d}")),
-                        }
-                        dbg!((&c, &x, &y, &g, y.abs() / g, 8 / g, &s));
-                        s.hash(state);
-                    }
-                } else {
-                    "Number".hash(state);
-                    // Skip zero values (akin to `format_complex`).
-                    // Also, since f64 isn't hashable, use the u64 binary representation.
-                    // The docs claim this is rather portable: https://doc.rust-lang.org/std/primitive.f64.html#method.to_bits
-                    if c.re.abs() > 0f64 {
-                        hash_f64(c.re, state)
-                    }
-                    if c.im.abs() > 0f64 {
-                        hash_f64(c.im, state)
-                    }
+                "Number".hash(state);
+                // Skip zero values (akin to `format_complex`).
+                // Also, since f64 isn't hashable, use the u64 binary representation.
+                // The docs claim this is rather portable: https://doc.rust-lang.org/std/primitive.f64.html#method.to_bits
+                if c.re.abs() > 0f64 {
+                    hash_f64(c.re, state);
+                }
+                if c.im.abs() > 0f64 {
+                    hash_f64(c.im, state);
                 }
             }
             PiConstant => {
-                "pi".hash(state);
+                // Hash π just like a number to ensure equality elsewhere.
+                "Number".hash(state);
+                hash_f64(std::f64::consts::PI, state);
             }
             Prefix(p) => {
                 "Prefix".hash(state);
@@ -1119,11 +1066,7 @@ mod tests {
 
     #[rstest]
     #[case(Expression::Number(real!(std::f64::consts::PI)), Expression::PiConstant)]
-    #[case(Expression::Number(real!(std::f64::consts::PI)), "pi")]
-    #[case(Expression::Number(real!(std::f64::consts::FRAC_PI_8)), "pi/8")]
-    #[case(Expression::Number(real!(-3.0 * std::f64::consts::FRAC_PI_4)), "-3*pi/4")]
-    fn specific_hash_test(#[case] left: Expression, #[case] right: impl Hash + std::fmt::Debug) {
-        dbg!((&left, &right));
+    fn specific_hash_test(#[case] left: Expression, #[case] right: impl Hash) {
         let h_left = {
             let mut s = DefaultHasher::new();
             left.hash(&mut s);
