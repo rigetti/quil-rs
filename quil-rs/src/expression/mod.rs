@@ -155,16 +155,16 @@ impl Hash for Expression {
                     }
                 }
             }
-            Number(c) => {
+            Number(n) => {
                 "Number".hash(state);
                 // Skip zero values (akin to `format_complex`).
                 // Also, since f64 isn't hashable, use the u64 binary representation.
                 // The docs claim this is rather portable: https://doc.rust-lang.org/std/primitive.f64.html#method.to_bits
-                if c.re.abs() > 0f64 {
-                    hash_f64(c.re, state);
+                if n.re.abs() > 0f64 {
+                    hash_f64(n.re, state)
                 }
-                if c.im.abs() > 0f64 {
-                    hash_f64(c.im, state);
+                if n.im.abs() > 0f64 {
+                    hash_f64(n.im, state)
                 }
             }
             PiConstant => {
