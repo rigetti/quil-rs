@@ -268,10 +268,10 @@ impl Expression {
     /// ```
     pub fn simplify(&mut self) {
         match self {
-            Expression::Address(_)
-            | Expression::Number(_)
-            | Expression::PiConstant
-            | Expression::Variable(_) => {}
+            Expression::Address(_) | Expression::Number(_) | Expression::Variable(_) => {}
+            Expression::PiConstant => {
+                *self = Expression::Number(Complex64::from(PI));
+            }
             _ => {
                 if let Ok(simpler) = simplification::run(self) {
                     *self = simpler;
@@ -1016,14 +1016,42 @@ mod tests {
             prop_assert_eq!(x, expected);
         }
 
+        // Redundant clone: clippy does not correctly introspect the prop_assert_eq! macro
+        #[allow(clippy::redundant_clone)]
         #[test]
         fn round_trip(e in arb_expr()) {
+            let simple_e = e.clone().into_simplified();
             let s = parenthesized(&e);
             let p = Expression::from_str(&s);
             prop_assert!(p.is_ok());
-            prop_assert_eq!(p.unwrap().into_simplified(), e.into_simplified());
+            let p = p.unwrap();
+            let simple_p = p.clone().into_simplified();
+            prop_assert_eq!(
+                simple_p.clone(),
+                simple_e.clone(),
+                "Simplified expressions should be equal:\nparenthesized {p} ({p:?}) extracted from {s} simplified to {simple_p}\nvs original {e} ({e:?}) simplified to {simple_e}",
+                p=p,
+                s=s,
+                e=e,
+                simple_p=simple_p,
+                simple_e=simple_e
+            );
         }
 
+    }
+
+    #[test]
+    fn specific_simplification_tests() {
+        for (input, expected) in vec![
+            // ("pi", Expression::Number(PI.into())),
+            ("pi/2", Expression::Number((PI / 2.0).into())),
+            ("pi * pi", Expression::Number((PI.powi(2)).into())),
+        ] {
+            assert_eq!(
+                Expression::from_str(input).unwrap().into_simplified(),
+                expected
+            )
+        }
     }
 
     #[test]
