@@ -139,6 +139,19 @@ impl FrameSet {
         self.frames.is_empty()
     }
 
+    /// Return the Quil instructions which describe the contained frames, consuming the [`FrameSet`].
+    pub fn into_instructions(self) -> Vec<Instruction> {
+        self.frames
+            .into_iter()
+            .map(|(identifier, attributes)| {
+                Instruction::FrameDefinition(FrameDefinition {
+                    identifier,
+                    attributes,
+                })
+            })
+            .collect()
+    }
+
     /// Return the Quil instructions which describe the contained frames.
     pub fn to_instructions(&self) -> Vec<Instruction> {
         self.frames

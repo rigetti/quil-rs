@@ -336,6 +336,19 @@ impl CalibrationSet {
         self.measure_calibrations.extend(other.measure_calibrations);
     }
 
+    /// Return the Quil instructions which describe the contained calibrations, consuming the [`CalibrationSet`].
+    pub fn into_instructions(self) -> Vec<Instruction> {
+        self.calibrations
+            .into_iter()
+            .map(Instruction::CalibrationDefinition)
+            .chain(
+                self.measure_calibrations
+                    .into_iter()
+                    .map(Instruction::MeasureCalibrationDefinition),
+            )
+            .collect()
+    }
+
     /// Return the Quil instructions which describe the contained calibrations.
     pub fn to_instructions(&self) -> Vec<Instruction> {
         self.calibrations
