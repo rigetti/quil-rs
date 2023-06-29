@@ -236,9 +236,9 @@ impl CalibrationSet {
     ///
     /// If multiple calibrations match the measurement, the precedence is as follows:
     ///
-    ///     1. Match fixed qubit
-    ///     2. Match variable qubit
-    ///     3. Match no qubit
+    ///     1. Match fixed qubit.
+    ///     2. Match variable qubit.
+    ///     3. Match no qubit.
     ///
     /// In the case of multiple calibrations with equal precedence, the last one wins.
     pub fn get_match_for_measurement(
