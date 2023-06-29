@@ -11,6 +11,7 @@ use egg::{define_language, rewrite as rw, Id, Language, RecExpr};
 use once_cell::sync::Lazy;
 use std::{
     cmp::Ordering,
+    f64::consts::PI,
     hash::{Hash, Hasher},
     ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign},
     str::FromStr,
@@ -268,7 +269,7 @@ fn expression_to_recexpr(expression: &Expression) -> RecExpr<Expr> {
 fn recexpr_to_expression(recexpr: RecExpr<Expr>) -> Result<Expression, SimplificationError> {
     fn helper(nodes: &[Expr], i: usize) -> Result<Expression, SimplificationError> {
         match nodes[i] {
-            Expr::Pi => Ok(Expression::PiConstant),
+            Expr::Pi => Ok(Expression::Number(PI.into())),
             Expr::Number(x) => Ok(Expression::Number(x.0)),
             Expr::Cis(id) => {
                 let expression = Box::new(helper(nodes, id.into())?);

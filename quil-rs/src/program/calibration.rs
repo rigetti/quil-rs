@@ -398,6 +398,14 @@ mod tests {
         ),
     )]
     #[case(
+        "Calibration-Literal-Parameter",
+        concat!(
+            "DEFCAL RX(3.141592653589793) 0:\n",
+            "    NOP\n",
+            "RX(3.141592653589793) 0\n",
+        ),
+    )]
+    #[case(
         "Calibration-Instruction-Match",
         concat!(
             "DEFCAL X 0:\n",
