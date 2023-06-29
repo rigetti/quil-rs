@@ -14,6 +14,9 @@
 
 use std::collections::HashMap;
 
+use itertools::FoldWhile::{Continue, Done};
+use itertools::Itertools;
+
 use crate::{
     expression::Expression,
     instruction::{
@@ -236,28 +239,28 @@ impl CalibrationSet {
     ) -> Option<&MeasureCalibrationDefinition> {
         measurement.target.as_ref()?;
 
-        let mut matching_calibration = None;
-        let mut found_matching_variable_qubit = false;
-        let mut found_matching_no_qubit = false;
-        for cal in self.measure_calibrations.iter().rev() {
-            if let Some(cal_qubit) = &cal.qubit {
-                match cal_qubit {
-                    Qubit::Fixed(_) if cal_qubit == &measurement.qubit => {
-                        matching_calibration = Some(cal);
-                        break;
+        self.measure_calibrations()
+            .iter()
+            .rev()
+            .fold_while(None, |best_match, calibration| {
+                if let Some(qubit) = &calibration.qubit {
+                    match qubit {
+                        Qubit::Fixed(_) if qubit == &measurement.qubit => Done(Some(calibration)),
+                        Qubit::Variable(_)
+                            if best_match.is_none()
+                                || best_match.is_some_and(|c| c.qubit.is_none()) =>
+                        {
+                            Continue(Some(calibration))
+                        }
+                        _ => Continue(best_match),
                     }
-                    Qubit::Variable(_) if !found_matching_variable_qubit => {
-                        found_matching_variable_qubit = true;
-                        matching_calibration = Some(cal);
-                    }
-                    _ => {}
+                } else if best_match.is_none() {
+                    Continue(Some(calibration))
+                } else {
+                    Continue(best_match)
                 }
-            } else if !found_matching_variable_qubit && !found_matching_no_qubit {
-                found_matching_no_qubit = true;
-                matching_calibration = Some(cal);
-            }
-        }
-        matching_calibration
+            })
+            .into_inner()
     }
 
     /// Return the final calibration which matches the gate per the QuilT specification:
