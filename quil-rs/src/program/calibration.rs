@@ -17,7 +17,9 @@ use std::collections::HashMap;
 use crate::{
     expression::Expression,
     instruction::{
-        Calibration, Delay, Gate, Instruction, MeasureCalibrationDefinition, Measurement, Qubit,
+        Calibration, Capture, Delay, FrameIdentifier, Gate, Instruction,
+        MeasureCalibrationDefinition, Measurement, Pulse, Qubit, RawCapture, SetFrequency,
+        SetPhase, SetScale, ShiftFrequency, ShiftPhase,
     },
 };
 
@@ -107,7 +109,39 @@ impl CalibrationSet {
                         for instruction in instructions.iter_mut() {
                             match instruction {
                                 Instruction::Gate(Gate { qubits, .. })
-                                | Instruction::Delay(Delay { qubits, .. }) => {
+                                | Instruction::Delay(Delay { qubits, .. })
+                                | Instruction::Capture(Capture {
+                                    frame: FrameIdentifier { qubits, .. },
+                                    ..
+                                })
+                                | Instruction::RawCapture(RawCapture {
+                                    frame: FrameIdentifier { qubits, .. },
+                                    ..
+                                })
+                                | Instruction::SetFrequency(SetFrequency {
+                                    frame: FrameIdentifier { qubits, .. },
+                                    ..
+                                })
+                                | Instruction::SetPhase(SetPhase {
+                                    frame: FrameIdentifier { qubits, .. },
+                                    ..
+                                })
+                                | Instruction::SetScale(SetScale {
+                                    frame: FrameIdentifier { qubits, .. },
+                                    ..
+                                })
+                                | Instruction::ShiftFrequency(ShiftFrequency {
+                                    frame: FrameIdentifier { qubits, .. },
+                                    ..
+                                })
+                                | Instruction::ShiftPhase(ShiftPhase {
+                                    frame: FrameIdentifier { qubits, .. },
+                                    ..
+                                })
+                                | Instruction::Pulse(Pulse {
+                                    frame: FrameIdentifier { qubits, .. },
+                                    ..
+                                }) => {
                                     // Swap all qubits for their concrete implementations
                                     for qubit in qubits {
                                         match qubit {
@@ -456,7 +490,6 @@ mod tests {
             "    PRAGMA CORRECT\n",
             "MEASURE 0 ro\n",
         )
-
     )]
     #[case(
         "Precedence-Variable-Match",
@@ -479,6 +512,14 @@ mod tests {
             "DEFCAL MEASURE addr:\n",
             "    PRAGMA CORRECT\n",
             "MEASURE 0 ro\n",
+        )
+    )]
+    #[case(
+        "ShiftPhase",
+        concat!(
+            "DEFCAL RZ(%theta) %q:\n",
+            "    SHIFT-PHASE %q \"rf\" -%theta\n",
+            "RZ(pi) 0\n",
         )
     )]
     fn test_expansion(#[case] description: &str, #[case] input: &str) {
