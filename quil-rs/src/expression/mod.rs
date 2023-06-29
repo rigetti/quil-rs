@@ -1043,7 +1043,7 @@ mod tests {
     #[test]
     fn specific_simplification_tests() {
         for (input, expected) in vec![
-            // ("pi", Expression::Number(PI.into())),
+            ("pi", Expression::Number(PI.into())),
             ("pi/2", Expression::Number((PI / 2.0).into())),
             ("pi * pi", Expression::Number((PI.powi(2)).into())),
         ] {
