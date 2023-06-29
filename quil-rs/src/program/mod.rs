@@ -286,6 +286,31 @@ impl Program {
         &self.used_qubits
     }
 
+    /// Consume the [`Program`] to return all of the instructions which constitute it.
+    pub fn into_instructions(self) -> Vec<Instruction> {
+        let capacity = self.memory_regions.len()
+            + self.frames.len()
+            + self.waveforms.len()
+            + self.instructions.len();
+
+        let mut instructions: Vec<Instruction> = Vec::with_capacity(capacity);
+
+        instructions.extend(self.memory_regions.into_iter().map(|(name, descriptor)| {
+            Instruction::Declaration(Declaration {
+                name,
+                size: descriptor.size,
+                sharing: descriptor.sharing,
+            })
+        }));
+        instructions.extend(self.frames.into_instructions());
+        instructions.extend(self.waveforms.into_iter().map(|(name, definition)| {
+            Instruction::WaveformDefinition(WaveformDefinition { name, definition })
+        }));
+        instructions.extend(self.calibrations.into_instructions());
+        instructions.extend(self.instructions);
+        instructions
+    }
+
     /// Simplify this program into a new [`Program`] which contains only instructions
     /// and definitions which are executed; effectively, perform dead code removal.
     ///
@@ -323,6 +348,7 @@ impl Program {
         Ok(expanded_program)
     }
 
+    /// Return a copy of all of the instructions which constitute this [`Program`].
     pub fn to_instructions(&self) -> Vec<Instruction> {
         let capacity = self.memory_regions.len()
             + self.frames.len()
