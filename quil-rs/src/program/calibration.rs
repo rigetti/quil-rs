@@ -14,6 +14,9 @@
 
 use std::collections::HashMap;
 
+use itertools::FoldWhile::{Continue, Done};
+use itertools::Itertools;
+
 use crate::{
     expression::Expression,
     instruction::{
@@ -230,26 +233,42 @@ impl CalibrationSet {
 
     /// Returns the last-specified [`MeasureCalibrationDefinition`] that matches the target
     /// qubit (if any), or otherwise the last-specified one that specified no qubit.
+    ///
+    /// If multiple calibrations match the measurement, the precedence is as follows:
+    ///
+    ///   1. Match fixed qubit.
+    ///   2. Match variable qubit.
+    ///   3. Match no qubit.
+    ///
+    /// In the case of multiple calibrations with equal precedence, the last one wins.
     pub fn get_match_for_measurement(
         &self,
         measurement: &Measurement,
     ) -> Option<&MeasureCalibrationDefinition> {
         measurement.target.as_ref()?;
 
-        let mut matching_calibration = None;
-        let mut found_matching_calibration_without_qubit = false;
-        for cal in self.measure_calibrations.iter().rev() {
-            if let Some(cal_qubit) = &cal.qubit {
-                if cal_qubit == &measurement.qubit || matches!(cal_qubit, Qubit::Variable(_)) {
-                    matching_calibration = Some(cal);
-                    break;
+        self.measure_calibrations()
+            .iter()
+            .rev()
+            .fold_while(None, |best_match, calibration| {
+                if let Some(qubit) = &calibration.qubit {
+                    match qubit {
+                        Qubit::Fixed(_) if qubit == &measurement.qubit => Done(Some(calibration)),
+                        Qubit::Variable(_)
+                            if best_match.is_none()
+                                || best_match.is_some_and(|c| c.qubit.is_none()) =>
+                        {
+                            Continue(Some(calibration))
+                        }
+                        _ => Continue(best_match),
+                    }
+                } else if best_match.is_none() {
+                    Continue(Some(calibration))
+                } else {
+                    Continue(best_match)
                 }
-            } else if !found_matching_calibration_without_qubit {
-                matching_calibration = Some(cal);
-                found_matching_calibration_without_qubit = true;
-            }
-        }
-        matching_calibration
+            })
+            .into_inner()
     }
 
     /// Return the final calibration which matches the gate per the QuilT specification:
@@ -457,17 +476,54 @@ mod tests {
             "DEFCAL MEASURE 0 addr:\n",
             "    PRAGMA CORRECT\n",
             "DEFCAL MEASURE q addr:\n",
-            "    PRAGMA CORRECT\n",
+            "    PRAGMA INCORRECT_PRECEDENCE\n",
             "DEFCAL MEASURE 1 addr:\n",
             "    PRAGMA INCORRECT_QUBIT\n",
             "DEFCAL MEASURE addr:\n",
             "    PRAGMA INCORRECT_PRECEDENCE\n",
-            "MEASURE 0 ro\n"
+            "MEASURE 0 ro\n",
         ),
     )]
     #[case(
         "Calibration-Variable-Qubit",
         concat!("DEFCAL I %q:\n", "    DELAY q 4e-8\n", "I 0\n",),
+    )]
+    #[case(
+        "Precedence-Fixed-Match",
+        concat!(
+            "DEFCAL MEASURE addr:\n",
+            "    PRAGMA INCORRECT_PRECEDENCE\n",
+            "DEFCAL MEASURE q addr:\n",
+            "    PRAGMA INCORRECT_PRECEDENCE\n",
+            "DEFCAL MEASURE 0 addr:\n",
+            "    PRAGMA INCORRECT_ORDER\n",
+            "DEFCAL MEASURE 0 addr:\n",
+            "    PRAGMA CORRECT\n",
+            "MEASURE 0 ro\n",
+        )
+    )]
+    #[case(
+        "Precedence-Variable-Match",
+        concat!(
+            "DEFCAL MEASURE addr:\n",
+            "    PRAGMA INCORRECT_PRECEDENCE\n",
+            "DEFCAL MEASURE q addr:\n",
+            "    PRAGMA INCORRECT_PRECEDENCE\n",
+            "DEFCAL MEASURE b addr:\n",
+            "    PRAGMA CORRECT\n",
+            "MEASURE 0 ro\n",
+        )
+
+    )]
+    #[case(
+        "Precedence-No-Qubit-Match",
+        concat!(
+            "DEFCAL MEASURE addr:\n",
+            "    PRAGMA INCORRECT_PRECEDENCE\n",
+            "DEFCAL MEASURE addr:\n",
+            "    PRAGMA CORRECT\n",
+            "MEASURE 0 ro\n",
+        )
     )]
     #[case(
         "ShiftPhase",

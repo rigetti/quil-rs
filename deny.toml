@@ -84,6 +84,7 @@ skip-tree = [
   { name = "windows-sys", version = "*" },    # various dependencies rely on two versions of this
   { name = "regex-syntax", version = "*" },   # proptest and criterion rely on two versions of this
   { name = "redox_syscall", version = "*" },  # proptest and pyo3 rely on two versions of this
+  { name = "itertools", version = "*" },      # proptest relies on an older version of itertools than we use
 ]
 
 # This section is considered when running `cargo deny check sources`.
