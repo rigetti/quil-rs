@@ -467,15 +467,17 @@ static RULES: Lazy<Vec<Rewrite>> = Lazy::new(|| {
         rw!("zero-add"      ; "(+ 0 ?a)"                => "?a"),
         rw!("cancel-sub"    ; "(- ?a ?a)"               => "0"),
         // multiplication & division
-        rw!("mul-zero"      ; "(* ?a 0)"                => "0"),
         rw!("zero-mul"      ; "(* 0 ?a)"                => "0"),
         rw!("one-mul"       ; "(* 1 ?a)"                => "?a"),
-        rw!("mul-one"       ; "(* ?a 1)"                => "?a"),
         rw!("one-div"       ; "(/ ?a 1)"                => "?a"),
         rw!("cancel-div"    ; "(/ ?a ?a)"               => "1" if is_not_zero("?a")),
         // + & *
         rw!("distribute"    ; "(* ?a (+ ?b ?c))"        => "(+ (* ?a ?b) (* ?a ?c))"),
         rw!("factor"        ; "(+ (* ?a ?b) (* ?a ?c))" => "(* ?a (+ ?b ?c))"),
+        rw!("associate-add" ; "(+ ?a ?b)"               => "(+ ?b ?a)"),
+        rw!("associate-mul" ; "(* ?a ?b)"               => "(* ?b ?a)"),
+        rw!("commute-add"   ; "(+ (+ ?a ?b) ?c)"        => "(+ ?a (+ ?b ?c))"),
+        rw!("commute-mul"   ; "(* (* ?a ?b) ?c)"        => "(* ?a (* ?b ?c))"),
         // pow & sqrt
         rw!("pow0"          ; "(^ ?a 0)"                => "1" if is_not_zero("?a")),
         rw!("pow1"          ; "(^ ?a 1)"                => "?a"),
@@ -562,5 +564,23 @@ mod tests {
         pow_neg_address,
         &RULES,
         "(^ (neg 9.48e42i) A[9])" => "(^ -9.48e42i A[9]))"
+    }
+
+    egg::test_fn! {
+        fold_constant_mul,
+        &RULES,
+        "(* 2 pi)" => "6.283185307179586"
+    }
+
+    egg::test_fn! {
+        fold_constant_mul_div,
+        &RULES,
+        "(/ (* 2 pi) 6.283185307179586)" => "1"
+    }
+
+    egg::test_fn! {
+        fold_constant_mul_div_with_ref,
+        &RULES,
+        "(/ (* (* a[0] 2) pi) 6.283185307179586)" => "a[0]"
     }
 }
