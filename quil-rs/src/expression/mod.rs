@@ -1046,6 +1046,13 @@ mod tests {
             ("pi", Expression::Number(PI.into())),
             ("pi/2", Expression::Number((PI / 2.0).into())),
             ("pi * pi", Expression::Number((PI.powi(2)).into())),
+            (
+                "(a[0]*2*pi)/6.283185307179586",
+                Expression::Address(MemoryReference {
+                    name: String::from("a"),
+                    index: 0,
+                }),
+            ),
         ] {
             assert_eq!(
                 Expression::from_str(input).unwrap().into_simplified(),
