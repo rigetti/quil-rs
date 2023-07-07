@@ -33,8 +33,10 @@ proptest = "1.0.0"
 proptest-derive = "0.3.0"
 rstest = "0.15.0"
 
+# These are described in the crate README.md
 [features]
 graphviz-dot = ["dot-writer"]
+wasm-bindgen = ["egg/wasm-bindgen"]
 
 [[bench]]
 name = "parser"

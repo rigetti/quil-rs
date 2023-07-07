@@ -10,6 +10,13 @@ It serves three purposes:
 
 It should be considered unstable until the release of v1.0.
 
+## Crate Features
+
+| Feature      | Description                                                        |   |   |   |
+|--------------|--------------------------------------------------------------------|---|---|---|
+| graphviz-dot | Enable plotting `ScheduledProgram`s in Graphviz dotfile format.    |   |   |   |
+| wasm-bindgen | Enable compilation to `wasm32-unknown-unknown` with `wasm-bindgen` |   |   |   |
+
 
 ## Testing
 
