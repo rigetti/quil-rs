@@ -438,6 +438,7 @@ impl ops::Add<Program> for Program {
     fn add(self, rhs: Program) -> Program {
         let mut new_program = self;
         new_program.calibrations.extend(rhs.calibrations);
+        new_program.memory_regions.extend(rhs.memory_regions);
         new_program.frames.merge(rhs.frames);
         new_program.waveforms.extend(rhs.waveforms);
         new_program.instructions.extend(rhs.instructions);
@@ -762,6 +763,54 @@ I 0
         let instrs = vec![Instruction::Nop, Instruction::Nop];
         p.add_instructions(instrs.clone());
         assert_eq!(p.instructions, instrs);
+    }
+
+    #[test]
+    fn test_add_programs() {
+        let lhs_input = "
+DECLARE ro BIT
+
+MEASURE q ro
+X q
+
+DEFCAL I 0:
+    DELAY 0 1.0
+DEFFRAME 0 \"rx\":
+    HARDWARE-OBJECT: \"hardware\"
+DEFWAVEFORM custom:
+    1,2
+I 0
+";
+        let rhs_input = "
+DECLARE foo REAL
+H 1
+CNOT 2 3
+
+DEFCAL I 1:
+    DELAY 0 1.0
+DEFFRAME 1 \"rx\":
+    HARDWARE-OBJECT: \"hardware\"
+DEFWAVEFORM custom2:
+    1,2
+";
+        let lhs = Program::from_str(lhs_input).unwrap();
+        let rhs = Program::from_str(rhs_input).unwrap();
+
+        let sum = lhs + rhs;
+        assert_eq!(sum.calibrations.len(), 2);
+        assert_eq!(sum.memory_regions.len(), 2);
+        assert_eq!(sum.frames.len(), 2);
+        assert_eq!(sum.waveforms.len(), 2);
+        assert_eq!(sum.instructions.len(), 5);
+        let expected_owned = vec![
+            Qubit::Fixed(0),
+            Qubit::Fixed(1),
+            Qubit::Fixed(2),
+            Qubit::Fixed(3),
+            Qubit::Variable("q".to_string()),
+        ];
+        let expected = expected_owned.iter().collect::<HashSet<_>>();
+        assert_eq!(expected, sum.get_used_qubits().iter().collect())
     }
 
     #[test]
