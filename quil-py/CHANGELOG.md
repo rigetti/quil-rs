@@ -1,3 +1,9 @@
+## 0.3.0-rc.0
+
+### Breaking Changes
+
+- This release is identical to 0.18.0. An error in our CI caused a continuity error with our published releases. (#254)
+
 ## 0.2.0
 
 ### Breaking Changes
