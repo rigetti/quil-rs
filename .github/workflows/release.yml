@@ -32,8 +32,8 @@ jobs:
         git config --global user.name "${{ github.triggering_actor }}"
         git config --global user.email "${{ github.triggering_actor}}@users.noreply.github.com"
     - name: Prepare Prerelease
-      run: knope prerelease
-      if: github.event_name == 'push'
+      run: knope release --prerelease-label=rc
+      if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.type == 'prerelease')
     - name: Prepare Release
-      run: knope ${{ inputs.type }}
-      if: github.event_name == 'workflow_dispatch'
+      run: knope release
+      if: github.event_name == 'workflow_dispatch' && inputs.type == 'release'
