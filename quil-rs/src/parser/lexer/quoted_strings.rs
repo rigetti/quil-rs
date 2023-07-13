@@ -107,10 +107,17 @@ mod tests {
     #[case("\"foo bar (baz) 123\" after", "foo bar (baz) 123", " after")]
     #[case(r#""{\"name\": \"quoted json\"}""#, r#"{"name": "quoted json"}"#, "")]
     #[case(r#""hello"\n"world""#, "hello", "\\n\"world\"")]
-    fn test_string_parser(#[case] input: &str, #[case] output: &str, #[case] leftover: &str) {
-        let input = LocatedSpan::new(input);
-        let (remaining, parsed) = unescaped_quoted_string(input).finish().unwrap();
+    fn string_parser(#[case] input: &str, #[case] output: &str, #[case] leftover: &str) {
+        let span = LocatedSpan::new(input);
+        let (remaining, parsed) = unescaped_quoted_string(span).finish().unwrap();
         assert_eq!(parsed, output);
         assert_eq!(remaining.fragment(), &leftover);
+        let round_tripped = format!("{:?}", parsed);
+        assert!(
+            input.starts_with(&round_tripped),
+            "expected `{}` to start with `{}`",
+            input,
+            round_tripped
+        );
     }
 }

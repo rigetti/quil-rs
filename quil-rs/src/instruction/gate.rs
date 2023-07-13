@@ -198,7 +198,7 @@ fn lifted_gate_matrix(matrix: &Matrix, qubits: &[u64], n_qubits: u64) -> Matrix 
 ///          /          \                            /          \
 ///      RX(a) 3      RX(b) 3                    RX(c) 3      RX(d) 3
 /// ```
-fn gate_matrix(mut gate: &mut Gate) -> Result<Matrix, GateError> {
+fn gate_matrix(gate: &mut Gate) -> Result<Matrix, GateError> {
     static ZERO: Lazy<Matrix> =
         Lazy::new(|| array![[real!(1.0), real!(0.0)], [real!(0.0), real!(0.0)]]);
     static ONE: Lazy<Matrix> =

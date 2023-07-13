@@ -16,7 +16,7 @@ impl fmt::Display for AttributeValue {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use AttributeValue::*;
         match self {
-            String(value) => write!(f, "\"{value}\""),
+            String(value) => write!(f, "{value:?}"),
             Expression(value) => write!(f, "{value}"),
         }
     }
@@ -67,7 +67,7 @@ impl FrameIdentifier {
 
 impl fmt::Display for FrameIdentifier {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} \"{}\"", format_qubits(&self.qubits), self.name)
+        write!(f, "{} {:?}", format_qubits(&self.qubits), &self.name)
     }
 }
 
