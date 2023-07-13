@@ -1,3 +1,9 @@
+## 0.19.1-rc.0
+
+### Fixes
+
+- escape Quil strings for display (#258)
+
 ## 0.19.0
 
 ### Breaking Changes
