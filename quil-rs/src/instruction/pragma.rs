@@ -24,7 +24,7 @@ impl fmt::Display for Pragma {
             write!(f, " {arg}")?;
         }
         if let Some(data) = &self.data {
-            write!(f, " \"{data}\"")?;
+            write!(f, " {data:?}")?;
         }
         Ok(())
     }
