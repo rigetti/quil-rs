@@ -394,6 +394,10 @@ impl Program {
         }
         Ok(umat)
     }
+
+    pub fn get_instruction(&self, index: usize) -> Option<&Instruction> {
+        self.instructions.get(index)
+    }
 }
 
 impl fmt::Display for Program {

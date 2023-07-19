@@ -455,6 +455,10 @@ impl<'a> InstructionBlock<'a> {
         &self.graph
     }
 
+    pub fn get_dependency_graph_mut(&mut self) -> &mut DependencyGraph {
+        &mut self.graph
+    }
+
     /// Return a particular-indexed instruction (if present).
     pub fn get_instruction(&self, node_id: usize) -> Option<&Instruction> {
         self.instructions.get(node_id).copied()
