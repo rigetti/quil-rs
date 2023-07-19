@@ -395,6 +395,7 @@ impl Program {
         Ok(umat)
     }
 
+    /// Get a reference to the [`Instruction`] at the given index, if present.
     pub fn get_instruction(&self, index: usize) -> Option<&Instruction> {
         self.instructions.get(index)
     }
