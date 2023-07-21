@@ -19,6 +19,8 @@ use crate::expression::Expression;
 #[cfg(test)]
 use crate::parser::lex;
 use crate::program::frame::{FrameMatchCondition, FrameMatchConditions};
+use crate::program::{MatchedFrames, MemoryAccesses};
+use crate::Program;
 
 #[cfg(test)]
 use nom_locate::LocatedSpan;
@@ -628,6 +630,83 @@ impl Instruction {
             | Instruction::UnaryLogic(_)
             | Instruction::WaveformDefinition(_) => false,
         }
+    }
+}
+
+#[derive(Default)]
+pub struct InstructionHandler {
+    get_is_scheduled: Option<Box<dyn FnMut(&Instruction) -> Option<bool>>>,
+    get_role_for_instruction: Option<Box<dyn FnMut(&Instruction) -> Option<InstructionRole>>>,
+    get_matching_frames: Option<
+        Box<dyn for<'a> FnMut(&'a Instruction, &'a Program) -> Option<Option<MatchedFrames<'a>>>>,
+    >,
+    get_memory_accesses: Option<Box<dyn FnMut(&Instruction) -> Option<MemoryAccesses>>>,
+}
+
+impl InstructionHandler {
+    pub fn set_is_scheduled<F>(mut self, f: F) -> Self
+    where
+        F: FnMut(&Instruction) -> Option<bool> + 'static,
+    {
+        self.get_is_scheduled = Some(Box::new(f));
+        self
+    }
+
+    pub fn set_role_for_instruction<F>(mut self, f: F) -> Self
+    where
+        F: FnMut(&Instruction) -> Option<InstructionRole> + 'static,
+    {
+        self.get_role_for_instruction = Some(Box::new(f));
+        self
+    }
+
+    pub fn set_matching_frames<F>(mut self, f: F) -> Self
+    where
+        F: for<'a> FnMut(&'a Instruction, &'a Program) -> Option<Option<MatchedFrames<'a>>>
+            + 'static,
+    {
+        self.get_matching_frames = Some(Box::new(f));
+        self
+    }
+
+    pub fn set_memory_accesses<F>(mut self, f: F) -> Self
+    where
+        F: FnMut(&Instruction) -> Option<MemoryAccesses> + 'static,
+    {
+        self.get_memory_accesses = Some(Box::new(f));
+        self
+    }
+
+    pub fn is_scheduled(&mut self, instruction: &Instruction) -> bool {
+        self.get_is_scheduled
+            .as_mut()
+            .and_then(|f| f(instruction))
+            .unwrap_or_else(|| instruction.is_scheduled())
+    }
+
+    pub fn role_for_instruction(&mut self, instruction: &Instruction) -> InstructionRole {
+        self.get_role_for_instruction
+            .as_mut()
+            .and_then(|f| f(instruction))
+            .unwrap_or_else(|| InstructionRole::from(instruction))
+    }
+
+    pub fn matching_frames<'a>(
+        &mut self,
+        instruction: &'a Instruction,
+        program: &'a Program,
+    ) -> Option<MatchedFrames<'a>> {
+        self.get_matching_frames
+            .as_mut()
+            .and_then(|f| f(instruction, program))
+            .unwrap_or_else(|| program.get_frames_for_instruction(instruction))
+    }
+
+    pub fn memory_accesses(&mut self, instruction: &Instruction) -> MemoryAccesses {
+        self.get_memory_accesses
+            .as_mut()
+            .and_then(|f| f(instruction))
+            .unwrap_or_else(|| instruction.get_memory_accesses())
     }
 }
 
