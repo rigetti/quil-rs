@@ -633,12 +633,18 @@ impl Instruction {
     }
 }
 
+/// Trait signature for a function or closure that returns an optional override for whether
+/// an instruction should be scheduled.
 pub trait GetIsScheduledFnMut: FnMut(&Instruction) -> Option<bool> {}
 impl<F> GetIsScheduledFnMut for F where F: FnMut(&Instruction) -> Option<bool> {}
 
+/// Trait signature for a function or closure that returns an optional override for an
+/// instruction's [`InstructionRole`].
 pub trait GetRoleForInstructionFnMut: FnMut(&Instruction) -> Option<InstructionRole> {}
 impl<F> GetRoleForInstructionFnMut for F where F: FnMut(&Instruction) -> Option<InstructionRole> {}
 
+/// Trait signature for a function or closure that returns an optional override for an
+/// instruction's [`MatchedFrames`].
 pub trait GetMatchingFramesFnMut:
     for<'a> FnMut(&'a Instruction, &'a Program) -> Option<Option<MatchedFrames<'a>>>
 {
@@ -648,9 +654,15 @@ impl<F> GetMatchingFramesFnMut for F where
 {
 }
 
+/// Trait signature for a function or closure that returns an optional override for an
+/// instruction's [`MemoryAccesses`].
 pub trait GetMemoryAccessesFnMut: FnMut(&Instruction) -> Option<MemoryAccesses> {}
 impl<F> GetMemoryAccessesFnMut for F where F: FnMut(&Instruction) -> Option<MemoryAccesses> {}
 
+/// A struct that allows setting optional overrides for key [`Instruction`] methods.
+///
+/// A common use case for this is to support custom `PRAGMA` instructions, which are treated as
+/// classical style no-ops by default.
 #[derive(Default)]
 pub struct InstructionHandler {
     get_is_scheduled: Option<Box<dyn GetIsScheduledFnMut>>,
@@ -660,6 +672,10 @@ pub struct InstructionHandler {
 }
 
 impl InstructionHandler {
+    /// Set an override function for whether an instruction is scheduled.
+    ///
+    /// If the provided function returns `None`, a default will be used.
+    /// See also [`InstructionHandler::is_scheduled`].
     pub fn set_is_scheduled<F>(mut self, f: F) -> Self
     where
         F: GetIsScheduledFnMut + 'static,
@@ -668,6 +684,10 @@ impl InstructionHandler {
         self
     }
 
+    /// Set an override function for determining an instruction's [`InstructionRole`].
+    ///
+    /// If the provided function returns `None`, a default will be used.
+    /// See also [`InstructionHandler::role_for_instruction`].
     pub fn set_role_for_instruction<F>(mut self, f: F) -> Self
     where
         F: GetRoleForInstructionFnMut + 'static,
@@ -676,6 +696,10 @@ impl InstructionHandler {
         self
     }
 
+    /// Set an override function for determining an instruction's [`MatchedFrames`].
+    ///
+    /// If the provided function returns `None`, a default will be used.
+    /// See also [`InstructionHandler::get_matching_frames`].
     pub fn set_matching_frames<F>(mut self, f: F) -> Self
     where
         F: GetMatchingFramesFnMut + 'static,
@@ -684,6 +708,10 @@ impl InstructionHandler {
         self
     }
 
+    /// Set an override function for determining an instruction's [`MemoryAccesses`].
+    ///
+    /// If the provided function returns `None`, a default will be used.
+    /// See also [`InstructionHandler::get_memory_accesses`].
     pub fn set_memory_accesses<F>(mut self, f: F) -> Self
     where
         F: GetMemoryAccessesFnMut + 'static,
@@ -692,6 +720,11 @@ impl InstructionHandler {
         self
     }
 
+    /// Determine whether the given instruction is scheduled.
+    ///
+    /// This uses the return value of the override function, if set and returns `Some`. If not set
+    /// or the function returns `None`, defaults to the return value of
+    /// [`Instruction::is_scheduled`].
     pub fn is_scheduled(&mut self, instruction: &Instruction) -> bool {
         self.get_is_scheduled
             .as_mut()
@@ -699,6 +732,11 @@ impl InstructionHandler {
             .unwrap_or_else(|| instruction.is_scheduled())
     }
 
+    /// Determine the [`InstructionRole`] for the given instruction.
+    ///
+    /// This uses the return value of the override function, if set and returns `Some`. If not set
+    /// or the function returns `None`, defaults to the return value of
+    /// [`InstructionRole::from`].
     pub fn role_for_instruction(&mut self, instruction: &Instruction) -> InstructionRole {
         self.get_role_for_instruction
             .as_mut()
@@ -706,6 +744,11 @@ impl InstructionHandler {
             .unwrap_or_else(|| InstructionRole::from(instruction))
     }
 
+    /// Determine the [`MatchedFrames`] for the given instruction.
+    ///
+    /// This uses the return value of the override function, if set and returns `Some`. If not set
+    /// or the function returns `None`, defaults to the return value of
+    /// [`Program::get_frames_for_instruction`].
     pub fn matching_frames<'a>(
         &mut self,
         instruction: &'a Instruction,
@@ -717,6 +760,11 @@ impl InstructionHandler {
             .unwrap_or_else(|| program.get_frames_for_instruction(instruction))
     }
 
+    /// Determine the [`MemoryAccesses`] for the given instruction.
+    ///
+    /// This uses the return value of the override function, if set and returns `Some`. If not set
+    /// or the function returns `None`, defaults to the return value of
+    /// [`Instruction::get_memory_accesses`].
     pub fn memory_accesses(&mut self, instruction: &Instruction) -> MemoryAccesses {
         self.get_memory_accesses
             .as_mut()
