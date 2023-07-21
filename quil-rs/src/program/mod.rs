@@ -29,8 +29,8 @@ use crate::parser::{lex, parse_instructions, ParseError};
 pub use self::calibration::CalibrationSet;
 pub use self::error::{disallow_leftover, map_parsed, recover, ParseProgramError, SyntaxError};
 pub use self::frame::FrameSet;
-use self::frame::MatchedFrames;
-pub use self::memory::MemoryRegion;
+pub use self::frame::MatchedFrames;
+pub use self::memory::{MemoryAccesses, MemoryRegion};
 
 mod calibration;
 mod error;
