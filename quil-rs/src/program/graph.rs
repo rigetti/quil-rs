@@ -22,7 +22,7 @@ use petgraph::Directed;
 
 use crate::instruction::{
     FrameIdentifier, Instruction, InstructionHandler, Jump, JumpUnless, JumpWhen, Label,
-    MeasureCalibrationDefinition, MemoryReference,
+    MemoryReference,
 };
 use crate::{instruction::InstructionRole, program::Program};
 

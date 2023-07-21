@@ -633,20 +633,36 @@ impl Instruction {
     }
 }
 
+pub trait GetIsScheduledFnMut: FnMut(&Instruction) -> Option<bool> {}
+impl<F> GetIsScheduledFnMut for F where F: FnMut(&Instruction) -> Option<bool> {}
+
+pub trait GetRoleForInstructionFnMut: FnMut(&Instruction) -> Option<InstructionRole> {}
+impl<F> GetRoleForInstructionFnMut for F where F: FnMut(&Instruction) -> Option<InstructionRole> {}
+
+pub trait GetMatchingFramesFnMut:
+    for<'a> FnMut(&'a Instruction, &'a Program) -> Option<Option<MatchedFrames<'a>>>
+{
+}
+impl<F> GetMatchingFramesFnMut for F where
+    F: for<'a> FnMut(&'a Instruction, &'a Program) -> Option<Option<MatchedFrames<'a>>>
+{
+}
+
+pub trait GetMemoryAccessesFnMut: FnMut(&Instruction) -> Option<MemoryAccesses> {}
+impl<F> GetMemoryAccessesFnMut for F where F: FnMut(&Instruction) -> Option<MemoryAccesses> {}
+
 #[derive(Default)]
 pub struct InstructionHandler {
-    get_is_scheduled: Option<Box<dyn FnMut(&Instruction) -> Option<bool>>>,
-    get_role_for_instruction: Option<Box<dyn FnMut(&Instruction) -> Option<InstructionRole>>>,
-    get_matching_frames: Option<
-        Box<dyn for<'a> FnMut(&'a Instruction, &'a Program) -> Option<Option<MatchedFrames<'a>>>>,
-    >,
-    get_memory_accesses: Option<Box<dyn FnMut(&Instruction) -> Option<MemoryAccesses>>>,
+    get_is_scheduled: Option<Box<dyn GetIsScheduledFnMut>>,
+    get_role_for_instruction: Option<Box<dyn GetRoleForInstructionFnMut>>,
+    get_matching_frames: Option<Box<dyn GetMatchingFramesFnMut>>,
+    get_memory_accesses: Option<Box<dyn GetMemoryAccessesFnMut>>,
 }
 
 impl InstructionHandler {
     pub fn set_is_scheduled<F>(mut self, f: F) -> Self
     where
-        F: FnMut(&Instruction) -> Option<bool> + 'static,
+        F: GetIsScheduledFnMut + 'static,
     {
         self.get_is_scheduled = Some(Box::new(f));
         self
@@ -654,7 +670,7 @@ impl InstructionHandler {
 
     pub fn set_role_for_instruction<F>(mut self, f: F) -> Self
     where
-        F: FnMut(&Instruction) -> Option<InstructionRole> + 'static,
+        F: GetRoleForInstructionFnMut + 'static,
     {
         self.get_role_for_instruction = Some(Box::new(f));
         self
@@ -662,8 +678,7 @@ impl InstructionHandler {
 
     pub fn set_matching_frames<F>(mut self, f: F) -> Self
     where
-        F: for<'a> FnMut(&'a Instruction, &'a Program) -> Option<Option<MatchedFrames<'a>>>
-            + 'static,
+        F: GetMatchingFramesFnMut + 'static,
     {
         self.get_matching_frames = Some(Box::new(f));
         self
@@ -671,7 +686,7 @@ impl InstructionHandler {
 
     pub fn set_memory_accesses<F>(mut self, f: F) -> Self
     where
-        F: FnMut(&Instruction) -> Option<MemoryAccesses> + 'static,
+        F: GetMemoryAccessesFnMut + 'static,
     {
         self.get_memory_accesses = Some(Box::new(f));
         self
