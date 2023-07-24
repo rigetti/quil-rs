@@ -541,7 +541,13 @@ fn format_inner_expression(f: &mut fmt::Formatter, expression: &Expression) -> f
             left,
             operator,
             right,
-        }) => write!(f, "({left}{operator}{right})"),
+        }) => {
+            write!(f, "(")?;
+            format_inner_expression(f, left)?;
+            write!(f, "{operator}")?;
+            format_inner_expression(f, right)?;
+            write!(f, ")")
+        }
         _ => write!(f, "{expression}"),
     }
 }
@@ -1038,6 +1044,21 @@ mod tests {
             );
         }
 
+    }
+
+    /// Assert that certain selected expressions are parsed and re-written to string
+    /// in exactly the same way.
+    #[test]
+    fn specific_round_trip_tests() {
+        for input in &[
+            "-1*(phases[0]+phases[1])",
+            "(-1*(phases[0]+phases[1]))+(-1*(phases[0]+phases[1]))",
+        ] {
+            let parsed = Expression::from_str(input);
+            let parsed = parsed.unwrap();
+            let restring = parsed.to_string();
+            assert_eq!(input, &restring);
+        }
     }
 
     #[test]
