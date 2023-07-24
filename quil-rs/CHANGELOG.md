@@ -1,3 +1,10 @@
+## 0.19.1-rc.1
+
+### Fixes
+
+- infix expression parenthesization (#262)
+- escape Quil strings for display (#258)
+
 ## 0.19.1-rc.0
 
 ### Fixes
