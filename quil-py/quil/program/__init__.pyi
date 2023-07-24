@@ -26,10 +26,16 @@ class Program:
     def instructions(self) -> List[Instruction]: ...
     @property
     def calibrations(self) -> CalibrationSet: ...
+    @calibrations.setter
+    def calibrations(self, calibration_set: CalibrationSet): ...
     @property
     def waveforms(self) -> Dict[str, Waveform]: ...
+    @waveforms.setter
+    def waveforms(self, waveforms: Dict[str, Waveform]): ...
     @property
     def frames(self) -> FrameSet: ...
+    @frames.setter
+    def frames(self, frames: FrameSet): ...
     @property
     def memory_regions(self) -> Dict[str, MemoryRegion]: ...
     @property
@@ -91,6 +97,7 @@ class Program:
         """
         Creates a clone of this ``Program`` with an empty body instructions list.
         """
+    def __add__(self, rhs: Program) -> Program: ...
 
 @final
 class CalibrationSet:
@@ -104,9 +111,7 @@ class CalibrationSet:
     def calibrations(self) -> List[Calibration]: ...
     @property
     def measure_calibrations(self) -> List[MeasureCalibrationDefinition]: ...
-    def expand(
-        self, instruction: Instruction, previous_calibrations: Sequence[Instruction]
-    ) -> List[Instruction]:
+    def expand(self, instruction: Instruction, previous_calibrations: Sequence[Instruction]) -> List[Instruction]:
         """
         Given an instruction, return the instructions to which it is expanded if there is a match.
         Recursively calibrate instructions, returning an error if a calibration directly or indirectly
@@ -114,9 +119,7 @@ class CalibrationSet:
         """
     ...
 
-    def get_match_for_measurement(
-        self, measurement: Measurement
-    ) -> Optional[MeasureCalibrationDefinition]:
+    def get_match_for_measurement(self, measurement: Measurement) -> Optional[MeasureCalibrationDefinition]:
         """
         Returns the last-specified ``MeasureCalibrationDefinition`` that matches the target
         qubit (if any), or otherwise the last-specified one that specified no qubit.
@@ -138,16 +141,16 @@ class CalibrationSet:
     def is_empty(self) -> bool:
         """Returns ``True`` if the ``CalibrationSet`` contains no data."""
         ...
-    def push_calibration(self):
+    def push_calibration(self, calibration: Calibration):
         """
         Add another gate ``Calibration`` (`DEFCAL`) to the set.
         """
         ...
-    def push_measurement_calibration(self):
+    def push_measurement_calibration(self, calibration: MeasureCalibrationDefinition):
         """
         Add another ``MeasureCalibrationDefinition`` (`DEFCAL MEASURE`) to the set
         """
-    def extend(self):
+    def extend(self, calibration_set: CalibrationSet):
         """
         Append another [`CalibrationSet`] onto this one
         """
@@ -172,9 +175,7 @@ class FrameSet:
         Return a list of all ``FrameIdentifier``s described by this ``FrameSet``
         """
         ...
-    def insert(
-        self, identifier: FrameIdentifier, attributes: Dict[str, AttributeValue]
-    ):
+    def insert(self, identifier: FrameIdentifier, attributes: Dict[str, AttributeValue]):
         """
         Insert a new ``FrameIdentifier``, overwriting any existing one.
         """

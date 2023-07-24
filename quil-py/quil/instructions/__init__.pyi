@@ -68,6 +68,46 @@ class Instruction:
             ``new_*``: Creates a new ``Instruction`` for the variant.
     """
 
+    def __new__(
+        cls,
+        instruction: Union[
+            Arithmetic,
+            Calibration,
+            Capture,
+            BinaryLogic,
+            CircuitDefinition,
+            Convert,
+            Comparison,
+            Declaration,
+            Delay,
+            Exchange,
+            Fence,
+            FrameDefinition,
+            Gate,
+            GateDefinition,
+            Include,
+            Load,
+            MeasureCalibrationDefinition,
+            Measurement,
+            Move,
+            Pragma,
+            Pulse,
+            RawCapture,
+            Reset,
+            SetFrequency,
+            SetPhase,
+            SetScale,
+            ShiftFrequency,
+            ShiftPhase,
+            Store,
+            SwapPhases,
+            UnaryLogic,
+            WaveformDefinition,
+        ],
+    ) -> Self:
+        """
+        Returns a new ``Instruction`` from the given inner data.
+        """
     def inner(
         self,
     ) -> Union[
@@ -439,9 +479,7 @@ class Convert:
     def source(self, source: MemoryReference): ...
 
 class Move:
-    def __new__(
-        cls, destination: MemoryReference, source: ArithmeticOperand
-    ) -> Self: ...
+    def __new__(cls, destination: MemoryReference, source: ArithmeticOperand) -> Self: ...
     @property
     def destination(self) -> MemoryReference: ...
     @destination.setter
@@ -525,9 +563,7 @@ class Comparison:
         self,
     ) -> Tuple[MemoryReference, MemoryReference, ComparisonOperand]: ...
     @operands.setter
-    def operands(
-        self, operands: Tuple[MemoryReference, MemoryReference, ComparisonOperand]
-    ): ...
+    def operands(self, operands: Tuple[MemoryReference, MemoryReference, ComparisonOperand]): ...
 
 @final
 class UnaryOperator(Enum):
@@ -1077,9 +1113,7 @@ class Reset:
     def qubit(self, qubit: Optional[Qubit]): ...
 
 class Delay:
-    def __new__(
-        cls, duration: Expression, frame_names: Sequence[str], qubits: Sequence[Qubit]
-    ) -> Self: ...
+    def __new__(cls, duration: Expression, frame_names: Sequence[str], qubits: Sequence[Qubit]) -> Self: ...
     @property
     def duration(self) -> Expression: ...
     @duration.setter
@@ -1139,9 +1173,7 @@ class Include:
     def filename(self, filename: str): ...
 
 class Pragma:
-    def __new__(
-        cls, name: str, arguments: Sequence[PragmaArgument], data: Optional[str]
-    ) -> Self: ...
+    def __new__(cls, name: str, arguments: Sequence[PragmaArgument], data: Optional[str]) -> Self: ...
     @property
     def name(self) -> str: ...
     @name.setter
@@ -1188,9 +1220,7 @@ class MemoryReference:
     def index(self, index: int): ...
 
 class Load:
-    def __new__(
-        cls, destination: MemoryReference, source: str, offset: MemoryReference
-    ) -> Self: ...
+    def __new__(cls, destination: MemoryReference, source: str, offset: MemoryReference) -> Self: ...
     @property
     def destination(self) -> MemoryReference: ...
     @destination.setter
@@ -1205,9 +1235,7 @@ class Load:
     def offset(self, offset: MemoryReference): ...
 
 class Store:
-    def __new__(
-        cls, destination: str, offset: MemoryReference, source: ArithmeticOperand
-    ) -> Self: ...
+    def __new__(cls, destination: str, offset: MemoryReference, source: ArithmeticOperand) -> Self: ...
     @property
     def destination(self) -> str: ...
     @destination.setter
@@ -1222,9 +1250,7 @@ class Store:
     def source(self, source: ArithmeticOperand): ...
 
 class Waveform:
-    def __new__(
-        cls, matrix: Sequence[Expression], parameters: Sequence[str]
-    ) -> Self: ...
+    def __new__(cls, matrix: Sequence[Expression], parameters: Sequence[str]) -> Self: ...
     @property
     def matrix(self) -> List[Expression]: ...
     @matrix.setter
