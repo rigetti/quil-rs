@@ -19,6 +19,8 @@ use crate::expression::Expression;
 #[cfg(test)]
 use crate::parser::lex;
 use crate::program::frame::{FrameMatchCondition, FrameMatchConditions};
+use crate::program::{MatchedFrames, MemoryAccesses};
+use crate::Program;
 
 #[cfg(test)]
 use nom_locate::LocatedSpan;
@@ -628,6 +630,146 @@ impl Instruction {
             | Instruction::UnaryLogic(_)
             | Instruction::WaveformDefinition(_) => false,
         }
+    }
+}
+
+/// Trait signature for a function or closure that returns an optional override for whether
+/// an instruction should be scheduled.
+pub trait GetIsScheduledFnMut: FnMut(&Instruction) -> Option<bool> {}
+impl<F> GetIsScheduledFnMut for F where F: FnMut(&Instruction) -> Option<bool> {}
+
+/// Trait signature for a function or closure that returns an optional override for an
+/// instruction's [`InstructionRole`].
+pub trait GetRoleForInstructionFnMut: FnMut(&Instruction) -> Option<InstructionRole> {}
+impl<F> GetRoleForInstructionFnMut for F where F: FnMut(&Instruction) -> Option<InstructionRole> {}
+
+/// Trait signature for a function or closure that returns an optional override for an
+/// instruction's [`MatchedFrames`].
+pub trait GetMatchingFramesFnMut:
+    for<'a> FnMut(&'a Instruction, &'a Program) -> Option<Option<MatchedFrames<'a>>>
+{
+}
+impl<F> GetMatchingFramesFnMut for F where
+    F: for<'a> FnMut(&'a Instruction, &'a Program) -> Option<Option<MatchedFrames<'a>>>
+{
+}
+
+/// Trait signature for a function or closure that returns an optional override for an
+/// instruction's [`MemoryAccesses`].
+pub trait GetMemoryAccessesFnMut: FnMut(&Instruction) -> Option<MemoryAccesses> {}
+impl<F> GetMemoryAccessesFnMut for F where F: FnMut(&Instruction) -> Option<MemoryAccesses> {}
+
+/// A struct that allows setting optional overrides for key [`Instruction`] methods.
+///
+/// A common use case for this is to support custom `PRAGMA` instructions, which are treated as
+/// classical style no-ops by default.
+#[derive(Default)]
+pub struct InstructionHandler {
+    get_is_scheduled: Option<Box<dyn GetIsScheduledFnMut>>,
+    get_role_for_instruction: Option<Box<dyn GetRoleForInstructionFnMut>>,
+    get_matching_frames: Option<Box<dyn GetMatchingFramesFnMut>>,
+    get_memory_accesses: Option<Box<dyn GetMemoryAccessesFnMut>>,
+}
+
+impl InstructionHandler {
+    /// Set an override function for whether an instruction is scheduled.
+    ///
+    /// If the provided function returns `None`, a default will be used.
+    /// See also [`InstructionHandler::is_scheduled`].
+    pub fn set_is_scheduled<F>(mut self, f: F) -> Self
+    where
+        F: GetIsScheduledFnMut + 'static,
+    {
+        self.get_is_scheduled = Some(Box::new(f));
+        self
+    }
+
+    /// Set an override function for determining an instruction's [`InstructionRole`].
+    ///
+    /// If the provided function returns `None`, a default will be used.
+    /// See also [`InstructionHandler::role_for_instruction`].
+    pub fn set_role_for_instruction<F>(mut self, f: F) -> Self
+    where
+        F: GetRoleForInstructionFnMut + 'static,
+    {
+        self.get_role_for_instruction = Some(Box::new(f));
+        self
+    }
+
+    /// Set an override function for determining an instruction's [`MatchedFrames`].
+    ///
+    /// If the provided function returns `None`, a default will be used.
+    /// See also [`InstructionHandler::get_matching_frames`].
+    pub fn set_matching_frames<F>(mut self, f: F) -> Self
+    where
+        F: GetMatchingFramesFnMut + 'static,
+    {
+        self.get_matching_frames = Some(Box::new(f));
+        self
+    }
+
+    /// Set an override function for determining an instruction's [`MemoryAccesses`].
+    ///
+    /// If the provided function returns `None`, a default will be used.
+    /// See also [`InstructionHandler::get_memory_accesses`].
+    pub fn set_memory_accesses<F>(mut self, f: F) -> Self
+    where
+        F: GetMemoryAccessesFnMut + 'static,
+    {
+        self.get_memory_accesses = Some(Box::new(f));
+        self
+    }
+
+    /// Determine whether the given instruction is scheduled.
+    ///
+    /// This uses the return value of the override function, if set and returns `Some`. If not set
+    /// or the function returns `None`, defaults to the return value of
+    /// [`Instruction::is_scheduled`].
+    pub fn is_scheduled(&mut self, instruction: &Instruction) -> bool {
+        self.get_is_scheduled
+            .as_mut()
+            .and_then(|f| f(instruction))
+            .unwrap_or_else(|| instruction.is_scheduled())
+    }
+
+    /// Determine the [`InstructionRole`] for the given instruction.
+    ///
+    /// This uses the return value of the override function, if set and returns `Some`. If not set
+    /// or the function returns `None`, defaults to the return value of
+    /// [`InstructionRole::from`].
+    pub fn role_for_instruction(&mut self, instruction: &Instruction) -> InstructionRole {
+        self.get_role_for_instruction
+            .as_mut()
+            .and_then(|f| f(instruction))
+            .unwrap_or_else(|| InstructionRole::from(instruction))
+    }
+
+    /// Determine the [`MatchedFrames`] for the given instruction.
+    ///
+    /// This uses the return value of the override function, if set and returns `Some`. If not set
+    /// or the function returns `None`, defaults to the return value of
+    /// [`Program::get_frames_for_instruction`].
+    pub fn matching_frames<'a>(
+        &mut self,
+        instruction: &'a Instruction,
+        program: &'a Program,
+    ) -> Option<MatchedFrames<'a>> {
+        self.get_matching_frames
+            .as_mut()
+            .and_then(|f| f(instruction, program))
+            .unwrap_or_else(|| program.get_frames_for_instruction(instruction))
+    }
+
+    /// Determine the [`MemoryAccesses`] for the given instruction.
+    ///
+    /// This uses the return value of the override function, if set and returns `Some`. If not set
+    /// or the function returns `None`, defaults to the return value of
+    /// [`Instruction::get_memory_accesses`].
+    pub fn memory_accesses(&mut self, instruction: &Instruction) -> MemoryAccesses {
+        self.get_memory_accesses
+            .as_mut()
+            .and_then(|f| f(instruction))
+            .unwrap_or_else(|| instruction.get_memory_accesses())
     }
 }
 
