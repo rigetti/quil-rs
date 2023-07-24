@@ -3,7 +3,7 @@ use crate::instruction::{PyDeclaration, PyGateDefinition, PyInstruction, PyQubit
 use numpy::{PyArray2, ToPyArray};
 use quil_rs::{
     instruction::{Instruction, Waveform},
-    program::{CalibrationSet, FrameSet},
+    program::{CalibrationSet, FrameSet, MemoryRegion},
     Program,
 };
 use rigetti_pyo3::{
@@ -119,6 +119,17 @@ impl PyProgram {
             .iter()
             .map(|(name, memory_region)| Ok((name.to_python(py)?, memory_region.to_python(py)?)))
             .collect()
+    }
+
+    #[setter]
+    pub fn set_memory_regions(
+        &mut self,
+        py: Python<'_>,
+        memory_regions: BTreeMap<String, PyMemoryRegion>,
+    ) -> PyResult<()> {
+        self.as_inner_mut().memory_regions =
+            BTreeMap::<String, MemoryRegion>::py_try_from(py, &memory_regions)?;
+        Ok(())
     }
 
     #[getter]
