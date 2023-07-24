@@ -1,3 +1,9 @@
+## 0.4.0-rc.0
+
+### Breaking Changes
+
+- allow overriding Instruction getters (#260)
+
 ## 0.3.0
 
 ### Breaking Changes
