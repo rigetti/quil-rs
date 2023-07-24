@@ -26,7 +26,6 @@ use crate::instruction::{
 };
 use crate::{instruction::InstructionRole, program::Program};
 
-use super::frame::MatchedFrames;
 pub use super::memory::MemoryAccessType;
 
 #[derive(Debug, Clone)]
@@ -329,8 +328,7 @@ impl<'a> InstructionBlock<'a> {
                     Ok(())
                 }
                 InstructionRole::RFControl => {
-                    let matched_frames: Option<MatchedFrames<'_>> =
-                        custom_handler.matching_frames(instruction, program);
+                    let matched_frames = custom_handler.matching_frames(instruction, program);
                     let is_scheduled = custom_handler.is_scheduled(instruction);
 
                     if let Some(matched_frames) = matched_frames {
