@@ -1,0 +1,126 @@
+---
+source: quil-rs/src/program/graph.rs
+expression: block.graph
+---
+{
+    BlockStart: [
+        (
+            InstructionIndex(
+                0,
+            ),
+            Outgoing,
+        ),
+        (
+            InstructionIndex(
+                1,
+            ),
+            Outgoing,
+        ),
+    ],
+    InstructionIndex(
+        0,
+    ): [
+        (
+            BlockStart,
+            Incoming,
+        ),
+        (
+            InstructionIndex(
+                3,
+            ),
+            Outgoing,
+        ),
+    ],
+    InstructionIndex(
+        1,
+    ): [
+        (
+            BlockStart,
+            Incoming,
+        ),
+        (
+            InstructionIndex(
+                2,
+            ),
+            Outgoing,
+        ),
+        (
+            BlockEnd,
+            Outgoing,
+        ),
+    ],
+    InstructionIndex(
+        2,
+    ): [
+        (
+            InstructionIndex(
+                1,
+            ),
+            Incoming,
+        ),
+        (
+            InstructionIndex(
+                4,
+            ),
+            Outgoing,
+        ),
+        (
+            BlockEnd,
+            Outgoing,
+        ),
+    ],
+    InstructionIndex(
+        3,
+    ): [
+        (
+            InstructionIndex(
+                0,
+            ),
+            Incoming,
+        ),
+        (
+            BlockEnd,
+            Outgoing,
+        ),
+    ],
+    InstructionIndex(
+        4,
+    ): [
+        (
+            InstructionIndex(
+                2,
+            ),
+            Incoming,
+        ),
+        (
+            BlockEnd,
+            Outgoing,
+        ),
+    ],
+    BlockEnd: [
+        (
+            InstructionIndex(
+                3,
+            ),
+            Incoming,
+        ),
+        (
+            InstructionIndex(
+                4,
+            ),
+            Incoming,
+        ),
+        (
+            InstructionIndex(
+                1,
+            ),
+            Incoming,
+        ),
+        (
+            InstructionIndex(
+                2,
+            ),
+            Incoming,
+        ),
+    ],
+}

@@ -475,7 +475,7 @@ impl<'a> InstructionBlock<'a> {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum BlockTerminator<'a> {
     Conditional {
         condition: &'a MemoryReference,
@@ -689,5 +689,86 @@ impl<'a> ScheduledProgram<'a> {
             label = format!("block_{suffix}");
         }
         label
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use insta::assert_debug_snapshot;
+    use crate::instruction::Pragma;
+    use crate::program::{MatchedFrames, MemoryAccesses};
+    use super::*;
+
+    #[test]
+    fn test_instructionblock_build_with_custom_handler() {
+        const NO_OP: &str = "NO-OP";
+        const RAW_INSTRUCTION: &str = "RAW-INSTRUCTION";
+
+        let program = r#"
+DEFFRAME 0 "quux":
+    SAMPLE-RATE: 1.0
+    INITIAL-FREQUENCY: 1e8
+PRAGMA NO-OP
+PRAGMA RAW-INSTRUCTION
+PRAGMA RAW-INSTRUCTION
+PRAGMA NO-OP
+PRAGMA RAW-INSTRUCTION
+"#.parse::<Program>().unwrap();
+
+        let instructions: Vec<_> = program.instructions.iter().collect();
+
+        let terminator = None;
+
+        let mut custom_handler = InstructionHandler::default()
+            .set_is_scheduled(|instruction| {
+                match instruction {
+                    Instruction::Pragma(Pragma { name, .. }) if name == NO_OP => Some(false),
+                    Instruction::Pragma(Pragma { name, .. }) if name == RAW_INSTRUCTION => Some(true),
+                    _ => None,
+                }
+            })
+            .set_role_for_instruction(|instruction| {
+                match instruction {
+                    Instruction::Pragma(Pragma { name, .. }) if name == NO_OP => Some(InstructionRole::ClassicalCompute),
+                    Instruction::Pragma(Pragma { name, .. }) if name == RAW_INSTRUCTION => Some(InstructionRole::RFControl),
+                    _ => None,
+                }
+            })
+            .set_matching_frames(|instruction, program| {
+                match instruction {
+                    Instruction::Pragma(Pragma { name, .. }) if name == NO_OP => Some(None),
+                    Instruction::Pragma(Pragma { name, .. }) if name == RAW_INSTRUCTION => Some(Some({
+                        MatchedFrames {
+                            used: program.frames.get_keys().into_iter().collect(),
+                            blocked: HashSet::new(),
+                        }
+                    })),
+                    _ => None,
+                }
+            })
+            .set_memory_accesses(|instruction| {
+                match instruction {
+                    Instruction::Pragma(Pragma { name, .. }) if name == NO_OP => Some(MemoryAccesses::default()),
+                    Instruction::Pragma(Pragma { name, .. }) if name == RAW_INSTRUCTION => Some({
+                        MemoryAccesses {
+                            captures: HashSet::new(),
+                            reads: [String::from("ro")].into(),
+                            writes: HashSet::new(),
+                        }
+                    }),
+                    _ => None,
+                }
+            });
+
+        let block = InstructionBlock::build(
+            instructions.clone(),
+            terminator,
+            &program,
+            &mut custom_handler,
+        ).unwrap();
+
+        assert_eq!(block.instructions, instructions);
+        assert_eq!(block.terminator, BlockTerminator::Continue);
+        assert_debug_snapshot!(block.graph);
     }
 }
