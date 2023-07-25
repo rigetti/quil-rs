@@ -694,71 +694,80 @@ impl<'a> ScheduledProgram<'a> {
 
 #[cfg(test)]
 mod tests {
-    use insta::assert_debug_snapshot;
+    use super::*;
     use crate::instruction::Pragma;
     use crate::program::{MatchedFrames, MemoryAccesses};
-    use super::*;
+    use insta::assert_debug_snapshot;
 
     mod custom_handler {
+        use super::*;
         use crate::instruction::PragmaArgument;
         use crate::program::frame::FrameMatchCondition;
-        use super::*;
 
         fn get_custom_handler() -> InstructionHandler {
             const NO_OP: &str = "NO-OP";
             const RAW_INSTRUCTION: &str = "RAW-INSTRUCTION";
 
             InstructionHandler::default()
-                .set_is_scheduled(|instruction| {
-                    match instruction {
-                        Instruction::Pragma(Pragma { name, .. }) if name == NO_OP => Some(false),
-                        Instruction::Pragma(Pragma { name, .. }) if name == RAW_INSTRUCTION => Some(true),
-                        _ => None,
+                .set_is_scheduled(|instruction| match instruction {
+                    Instruction::Pragma(Pragma { name, .. }) if name == NO_OP => Some(false),
+                    Instruction::Pragma(Pragma { name, .. }) if name == RAW_INSTRUCTION => {
+                        Some(true)
                     }
+                    _ => None,
                 })
-                .set_role_for_instruction(|instruction| {
-                    match instruction {
-                        Instruction::Pragma(Pragma { name, .. }) if name == NO_OP => Some(InstructionRole::ClassicalCompute),
-                        Instruction::Pragma(Pragma { name, .. }) if name == RAW_INSTRUCTION => Some(InstructionRole::RFControl),
-                        _ => None,
+                .set_role_for_instruction(|instruction| match instruction {
+                    Instruction::Pragma(Pragma { name, .. }) if name == NO_OP => {
+                        Some(InstructionRole::ClassicalCompute)
                     }
+                    Instruction::Pragma(Pragma { name, .. }) if name == RAW_INSTRUCTION => {
+                        Some(InstructionRole::RFControl)
+                    }
+                    _ => None,
                 })
-                .set_matching_frames(|instruction, program| {
-                    match instruction {
-                        Instruction::Pragma(Pragma { name, .. }) if name == NO_OP => Some(None),
-                        Instruction::Pragma(Pragma { name, arguments, .. }) if name == RAW_INSTRUCTION => Some(Some({
-                            let frame_condition = if arguments.is_empty() {
-                                FrameMatchCondition::All
-                            } else {
-                                FrameMatchCondition::AnyOfNames(arguments.iter().filter_map(|arg| match arg {
-                                    PragmaArgument::Identifier(name) => Some(name.as_str()),
-                                    PragmaArgument::Integer(_) => None,
-                                }).collect())
-                            };
+                .set_matching_frames(|instruction, program| match instruction {
+                    Instruction::Pragma(Pragma { name, .. }) if name == NO_OP => Some(None),
+                    Instruction::Pragma(Pragma {
+                        name, arguments, ..
+                    }) if name == RAW_INSTRUCTION => Some(Some({
+                        let frame_condition = if arguments.is_empty() {
+                            FrameMatchCondition::All
+                        } else {
+                            FrameMatchCondition::AnyOfNames(
+                                arguments
+                                    .iter()
+                                    .filter_map(|arg| match arg {
+                                        PragmaArgument::Identifier(name) => Some(name.as_str()),
+                                        PragmaArgument::Integer(_) => None,
+                                    })
+                                    .collect(),
+                            )
+                        };
 
-                            eprintln!("{frame_condition:?}");
-                            let used = program.frames.get_matching_keys_for_condition(frame_condition);
+                        eprintln!("{frame_condition:?}");
+                        let used = program
+                            .frames
+                            .get_matching_keys_for_condition(frame_condition);
 
-                            MatchedFrames {
-                                used ,
-                                blocked: HashSet::new(),
-                            }
-                        })),
-                        _ => None,
-                    }
+                        MatchedFrames {
+                            used,
+                            blocked: HashSet::new(),
+                        }
+                    })),
+                    _ => None,
                 })
-                .set_memory_accesses(|instruction| {
-                    match instruction {
-                        Instruction::Pragma(Pragma { name, .. }) if name == NO_OP => Some(MemoryAccesses::default()),
-                        Instruction::Pragma(Pragma { name, .. }) if name == RAW_INSTRUCTION => Some({
-                            MemoryAccesses {
-                                captures: HashSet::new(),
-                                reads: [String::from("ro")].into(),
-                                writes: HashSet::new(),
-                            }
-                        }),
-                        _ => None,
+                .set_memory_accesses(|instruction| match instruction {
+                    Instruction::Pragma(Pragma { name, .. }) if name == NO_OP => {
+                        Some(MemoryAccesses::default())
                     }
+                    Instruction::Pragma(Pragma { name, .. }) if name == RAW_INSTRUCTION => Some({
+                        MemoryAccesses {
+                            captures: HashSet::new(),
+                            reads: [String::from("ro")].into(),
+                            writes: HashSet::new(),
+                        }
+                    }),
+                    _ => None,
                 })
         }
 
@@ -773,7 +782,9 @@ PRAGMA RAW-INSTRUCTION
 PRAGMA RAW-INSTRUCTION
 PRAGMA NO-OP
 PRAGMA RAW-INSTRUCTION
-"#.parse::<Program>().unwrap();
+"#
+            .parse::<Program>()
+            .unwrap();
 
             let instructions: Vec<_> = program.instructions.iter().collect();
             let terminator = None;
@@ -784,7 +795,8 @@ PRAGMA RAW-INSTRUCTION
                 terminator,
                 &program,
                 &mut custom_handler,
-            ).unwrap();
+            )
+            .unwrap();
 
             assert_eq!(block.instructions, instructions);
             assert_eq!(block.terminator, BlockTerminator::Continue);
@@ -808,7 +820,9 @@ PRAGMA NO-OP
 PRAGMA RAW-INSTRUCTION bar
 PRAGMA NO-OP
 PRAGMA RAW-INSTRUCTION foo
-"#.parse::<Program>().unwrap();
+"#
+            .parse::<Program>()
+            .unwrap();
 
             let instructions: Vec<_> = program.instructions.iter().collect();
             let terminator = None;
@@ -819,7 +833,8 @@ PRAGMA RAW-INSTRUCTION foo
                 terminator,
                 &program,
                 &mut custom_handler,
-            ).unwrap();
+            )
+            .unwrap();
 
             assert_eq!(block.instructions, instructions);
             assert_eq!(block.terminator, BlockTerminator::Continue);
