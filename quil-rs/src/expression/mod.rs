@@ -792,7 +792,7 @@ mod tests {
     // Better behaved than the auto-derived version for names
     fn arb_name() -> impl Strategy<Value = String> {
         r"[a-z][a-zA-Z0-9]{1,10}".prop_filter("Exclude reserved tokens", |t| {
-            ReservedToken::from_str(t).is_err()
+            ReservedToken::from_str(t).is_err() && !t.to_lowercase().starts_with("nan")
         })
     }
 
