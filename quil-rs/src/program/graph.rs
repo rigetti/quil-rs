@@ -699,12 +699,72 @@ mod tests {
     use crate::program::{MatchedFrames, MemoryAccesses};
     use super::*;
 
-    #[test]
-    fn test_instructionblock_build_with_custom_handler() {
-        const NO_OP: &str = "NO-OP";
-        const RAW_INSTRUCTION: &str = "RAW-INSTRUCTION";
+    mod custom_handler {
+        use crate::instruction::PragmaArgument;
+        use crate::program::frame::FrameMatchCondition;
+        use super::*;
 
-        let program = r#"
+        fn get_custom_handler() -> InstructionHandler {
+            const NO_OP: &str = "NO-OP";
+            const RAW_INSTRUCTION: &str = "RAW-INSTRUCTION";
+
+            InstructionHandler::default()
+                .set_is_scheduled(|instruction| {
+                    match instruction {
+                        Instruction::Pragma(Pragma { name, .. }) if name == NO_OP => Some(false),
+                        Instruction::Pragma(Pragma { name, .. }) if name == RAW_INSTRUCTION => Some(true),
+                        _ => None,
+                    }
+                })
+                .set_role_for_instruction(|instruction| {
+                    match instruction {
+                        Instruction::Pragma(Pragma { name, .. }) if name == NO_OP => Some(InstructionRole::ClassicalCompute),
+                        Instruction::Pragma(Pragma { name, .. }) if name == RAW_INSTRUCTION => Some(InstructionRole::RFControl),
+                        _ => None,
+                    }
+                })
+                .set_matching_frames(|instruction, program| {
+                    match instruction {
+                        Instruction::Pragma(Pragma { name, .. }) if name == NO_OP => Some(None),
+                        Instruction::Pragma(Pragma { name, arguments, .. }) if name == RAW_INSTRUCTION => Some(Some({
+                            let frame_condition = if arguments.is_empty() {
+                                FrameMatchCondition::All
+                            } else {
+                                FrameMatchCondition::AnyOfNames(arguments.iter().filter_map(|arg| match arg {
+                                    PragmaArgument::Identifier(name) => Some(name.as_str()),
+                                    PragmaArgument::Integer(_) => None,
+                                }).collect())
+                            };
+
+                            eprintln!("{frame_condition:?}");
+                            let used = program.frames.get_matching_keys_for_condition(frame_condition);
+
+                            MatchedFrames {
+                                used ,
+                                blocked: HashSet::new(),
+                            }
+                        })),
+                        _ => None,
+                    }
+                })
+                .set_memory_accesses(|instruction| {
+                    match instruction {
+                        Instruction::Pragma(Pragma { name, .. }) if name == NO_OP => Some(MemoryAccesses::default()),
+                        Instruction::Pragma(Pragma { name, .. }) if name == RAW_INSTRUCTION => Some({
+                            MemoryAccesses {
+                                captures: HashSet::new(),
+                                reads: [String::from("ro")].into(),
+                                writes: HashSet::new(),
+                            }
+                        }),
+                        _ => None,
+                    }
+                })
+        }
+
+        #[test]
+        fn test_instructionblock_build() {
+            let program = r#"
 DEFFRAME 0 "quux":
     SAMPLE-RATE: 1.0
     INITIAL-FREQUENCY: 1e8
@@ -715,60 +775,55 @@ PRAGMA NO-OP
 PRAGMA RAW-INSTRUCTION
 "#.parse::<Program>().unwrap();
 
-        let instructions: Vec<_> = program.instructions.iter().collect();
+            let instructions: Vec<_> = program.instructions.iter().collect();
+            let terminator = None;
+            let mut custom_handler = get_custom_handler();
 
-        let terminator = None;
+            let block = InstructionBlock::build(
+                instructions.clone(),
+                terminator,
+                &program,
+                &mut custom_handler,
+            ).unwrap();
 
-        let mut custom_handler = InstructionHandler::default()
-            .set_is_scheduled(|instruction| {
-                match instruction {
-                    Instruction::Pragma(Pragma { name, .. }) if name == NO_OP => Some(false),
-                    Instruction::Pragma(Pragma { name, .. }) if name == RAW_INSTRUCTION => Some(true),
-                    _ => None,
-                }
-            })
-            .set_role_for_instruction(|instruction| {
-                match instruction {
-                    Instruction::Pragma(Pragma { name, .. }) if name == NO_OP => Some(InstructionRole::ClassicalCompute),
-                    Instruction::Pragma(Pragma { name, .. }) if name == RAW_INSTRUCTION => Some(InstructionRole::RFControl),
-                    _ => None,
-                }
-            })
-            .set_matching_frames(|instruction, program| {
-                match instruction {
-                    Instruction::Pragma(Pragma { name, .. }) if name == NO_OP => Some(None),
-                    Instruction::Pragma(Pragma { name, .. }) if name == RAW_INSTRUCTION => Some(Some({
-                        MatchedFrames {
-                            used: program.frames.get_keys().into_iter().collect(),
-                            blocked: HashSet::new(),
-                        }
-                    })),
-                    _ => None,
-                }
-            })
-            .set_memory_accesses(|instruction| {
-                match instruction {
-                    Instruction::Pragma(Pragma { name, .. }) if name == NO_OP => Some(MemoryAccesses::default()),
-                    Instruction::Pragma(Pragma { name, .. }) if name == RAW_INSTRUCTION => Some({
-                        MemoryAccesses {
-                            captures: HashSet::new(),
-                            reads: [String::from("ro")].into(),
-                            writes: HashSet::new(),
-                        }
-                    }),
-                    _ => None,
-                }
-            });
+            assert_eq!(block.instructions, instructions);
+            assert_eq!(block.terminator, BlockTerminator::Continue);
+            assert_debug_snapshot!(block.graph);
+        }
 
-        let block = InstructionBlock::build(
-            instructions.clone(),
-            terminator,
-            &program,
-            &mut custom_handler,
-        ).unwrap();
+        #[test]
+        fn test_instructionblock_build_multiple_gates() {
+            let program = r#"
+DEFFRAME 0 "foo":
+    SAMPLE-RATE: 1.0
+    INITIAL-FREQUENCY: 1e8
+DEFFRAME 1 "bar":
+    SAMPLE-RATE: 1.0
+    INITIAL-FREQUENCY: 1e8
 
-        assert_eq!(block.instructions, instructions);
-        assert_eq!(block.terminator, BlockTerminator::Continue);
-        assert_debug_snapshot!(block.graph);
+PRAGMA NO-OP
+PRAGMA RAW-INSTRUCTION foo
+PRAGMA RAW-INSTRUCTION foo bar
+PRAGMA NO-OP
+PRAGMA RAW-INSTRUCTION bar
+PRAGMA NO-OP
+PRAGMA RAW-INSTRUCTION foo
+"#.parse::<Program>().unwrap();
+
+            let instructions: Vec<_> = program.instructions.iter().collect();
+            let terminator = None;
+            let mut custom_handler = get_custom_handler();
+
+            let block = InstructionBlock::build(
+                instructions.clone(),
+                terminator,
+                &program,
+                &mut custom_handler,
+            ).unwrap();
+
+            assert_eq!(block.instructions, instructions);
+            assert_eq!(block.terminator, BlockTerminator::Continue);
+            assert_debug_snapshot!(block.graph);
+        }
     }
 }
