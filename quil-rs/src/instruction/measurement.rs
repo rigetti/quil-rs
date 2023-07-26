@@ -1,4 +1,4 @@
-use std::fmt;
+use crate::quil::Quil;
 
 use super::{MemoryReference, Qubit};
 
@@ -14,11 +14,19 @@ impl Measurement {
     }
 }
 
-impl fmt::Display for Measurement {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl Quil for Measurement {
+    fn write(&self, writer: &mut impl std::fmt::Write) -> Result<(), crate::quil::ToQuilError> {
         match &self.target {
-            Some(reference) => write!(f, "MEASURE {} {reference}", self.qubit),
-            None => write!(f, "MEASURE {}", self.qubit),
+            Some(reference) => {
+                write!(writer, "MEASURE ",)?;
+                self.qubit.write(writer)?;
+                write!(writer, " ")?;
+                reference.write(writer)
+            }
+            None => {
+                write!(writer, "MEASURE ")?;
+                self.qubit.write(writer)
+            }
         }
     }
 }

@@ -1,5 +1,7 @@
 use std::fmt;
 
+use crate::impl_quil;
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Pragma {
     pub name: String,
@@ -30,6 +32,8 @@ impl fmt::Display for Pragma {
     }
 }
 
+impl_quil!(Pragma);
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum PragmaArgument {
     Identifier(String),
@@ -45,6 +49,8 @@ impl fmt::Display for PragmaArgument {
     }
 }
 
+impl_quil!(PragmaArgument);
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Include {
     pub filename: String,
@@ -55,6 +61,8 @@ impl fmt::Display for Include {
         write!(f, r#"INCLUDE {:?}"#, self.filename)
     }
 }
+
+impl_quil!(Include);
 
 impl Include {
     pub fn new(filename: String) -> Self {

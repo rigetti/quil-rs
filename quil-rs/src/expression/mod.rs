@@ -14,6 +14,7 @@
 
 use crate::{
     hash::{hash_f64, hash_to_u64},
+    impl_quil,
     parser::{lex, parse_expression, ParseError},
     program::{disallow_leftover, ParseProgramError},
     {imag, instruction::MemoryReference, real},
@@ -532,6 +533,8 @@ impl fmt::Display for Expression {
         }
     }
 }
+
+impl_quil!(Expression);
 
 /// Utility function to wrap infix expressions that are part of an expression in parentheses, so
 /// that correct precedence rules are enforced.

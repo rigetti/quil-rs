@@ -18,9 +18,9 @@ use crate::expression::{Expression, FunctionCallExpression, InfixExpression, Pre
 use crate::instruction::{
     Arithmetic, ArithmeticOperand, BinaryLogic, BinaryOperand, Capture, CircuitDefinition,
     Comparison, ComparisonOperand, Delay, Exchange, Gate, GateDefinition, GateSpecification,
-    Instruction, Jump, JumpUnless, JumpWhen, Label, Load, MeasureCalibrationDefinition,
-    Measurement, MemoryReference, Move, Pulse, RawCapture, SetPhase, SetScale, Sharing, ShiftPhase,
-    Store, UnaryLogic, Vector, WaveformInvocation,
+    Instruction, JumpUnless, JumpWhen, Load, MeasureCalibrationDefinition, Measurement,
+    MemoryReference, Move, Pulse, RawCapture, SetPhase, SetScale, Sharing, ShiftPhase, Store,
+    UnaryLogic, Vector, WaveformInvocation,
 };
 
 #[derive(Clone, Debug, Hash, PartialEq)]
@@ -266,8 +266,8 @@ impl Instruction {
             | Instruction::Halt
             | Instruction::Wait
             | Instruction::Include(_)
-            | Instruction::Jump(Jump { target: _ })
-            | Instruction::Label(Label(_))
+            | Instruction::Jump(_)
+            | Instruction::Label(_)
             | Instruction::Nop
             | Instruction::Pragma(_)
             | Instruction::Reset(_)

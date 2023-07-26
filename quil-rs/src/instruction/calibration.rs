@@ -1,10 +1,9 @@
-use std::fmt;
-
 use crate::{
     instruction::{
-        format_instructions, write_expression_parameter_string, Expression, GateModifier,
+        write_expression_parameter_string, write_instruction_block, Expression, GateModifier,
         Instruction, Qubit,
     },
+    quil::Quil,
     validation::identifier::{validate_identifier, IdentifierValidationError},
 };
 
@@ -43,14 +42,15 @@ impl Calibration {
     }
 }
 
-impl fmt::Display for Calibration {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl Quil for Calibration {
+    fn write(&self, f: &mut impl std::fmt::Write) -> crate::quil::ToQuilResult<()> {
         write!(f, "DEFCAL {}", self.name)?;
         write_expression_parameter_string(f, &self.parameters)?;
         write_qubit_parameters(f, &self.qubits)?;
         write!(f, ":")?;
         for instruction in &self.instructions {
-            write!(f, "\n\t{instruction}")?;
+            write!(f, "\n\t")?;
+            instruction.write(f)?;
         }
         Ok(())
     }
@@ -68,6 +68,7 @@ mod test_measure_calibration_definition {
     use super::MeasureCalibrationDefinition;
     use crate::expression::Expression;
     use crate::instruction::{Gate, Instruction, Qubit};
+    use crate::quil::Quil;
     use insta::assert_snapshot;
     use rstest::rstest;
 
@@ -104,7 +105,7 @@ mod test_measure_calibration_definition {
         insta::with_settings!({
             snapshot_suffix => description,
         }, {
-            assert_snapshot!(measure_cal_def.to_string())
+            assert_snapshot!(measure_cal_def.to_quil_or_debug())
         })
     }
 }
@@ -119,18 +120,18 @@ impl MeasureCalibrationDefinition {
     }
 }
 
-impl fmt::Display for MeasureCalibrationDefinition {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl Quil for MeasureCalibrationDefinition {
+    fn write(&self, f: &mut impl std::fmt::Write) -> crate::quil::ToQuilResult<()> {
         write!(f, "DEFCAL MEASURE")?;
         if let Some(qubit) = &self.qubit {
-            write!(f, " {qubit}")?;
+            write!(f, " ")?;
+            qubit.write(f)?;
         }
 
-        writeln!(
-            f,
-            " {}:\n\t{}",
-            self.parameter,
-            format_instructions(&self.instructions)
-        )
+        writeln!(f, " {}:", self.parameter,)?;
+
+        write_instruction_block(f, &self.instructions)?;
+        writeln!(f)?;
+        Ok(())
     }
 }

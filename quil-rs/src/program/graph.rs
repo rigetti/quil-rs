@@ -33,10 +33,6 @@ pub enum ScheduleErrorVariant {
     DuplicateLabel,
     UncalibratedInstruction,
     UnschedulableInstruction,
-    // Note: these may be restored once enforced
-    // DurationNotRealConstant,
-    // DurationNotApplicable,
-    // InvalidFrame,
 }
 
 #[derive(Debug, Clone)]
@@ -530,7 +526,7 @@ fn terminate_working_block<'a>(
     if blocks.insert(label.clone(), block).is_some() {
         return Err(ScheduleError {
             instruction_index,
-            instruction: Instruction::Label(Label(label)),
+            instruction: Instruction::Label(Label::Fixed(label)),
             variant: ScheduleErrorVariant::DuplicateLabel,
         });
     }
@@ -558,6 +554,7 @@ impl<'a> ScheduledProgram<'a> {
                 | Instruction::Delay(_)
                 | Instruction::Fence(_)
                 | Instruction::Include(_)
+                | Instruction::Label(Label::Placeholder(_))
                 | Instruction::Move(_)
                 | Instruction::Nop
                 | Instruction::Exchange(_)
@@ -594,7 +591,7 @@ impl<'a> ScheduledProgram<'a> {
                 Instruction::Pragma(_) => {
                     working_instructions.push(instruction);
                 }
-                Instruction::Label(Label(value)) => {
+                Instruction::Label(Label::Fixed(value)) => {
                     terminate_working_block(
                         None as Option<BlockTerminator>,
                         &mut working_instructions,

@@ -1,10 +1,8 @@
 use std::collections::HashMap;
 use std::fmt;
 
-use serde::{Deserialize, Serialize};
-
-use super::{format_qubits, MemoryReference, Qubit, WaveformInvocation};
-use crate::expression::Expression;
+use super::{MemoryReference, Qubit, WaveformInvocation};
+use crate::{expression::Expression, impl_quil, quil::Quil};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum AttributeValue {
@@ -21,6 +19,8 @@ impl fmt::Display for AttributeValue {
         }
     }
 }
+
+impl_quil!(AttributeValue);
 
 pub type FrameAttributes = HashMap<String, AttributeValue>;
 
@@ -39,21 +39,21 @@ impl FrameDefinition {
     }
 }
 
-impl fmt::Display for FrameDefinition {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "DEFFRAME {}:{}",
-            self.identifier,
-            self.attributes
-                .iter()
-                .map(|(k, v)| format!("\n\t{k}: {v}"))
-                .collect::<String>()
-        )
+impl Quil for FrameDefinition {
+    fn write(&self, writer: &mut impl std::fmt::Write) -> crate::quil::ToQuilResult<()> {
+        write!(writer, "DEFFRAME ")?;
+        self.identifier.write(writer)?;
+        write!(writer, ":")?;
+        for (key, value) in &self.attributes {
+            write!(writer, "\n\t{}: ", key)?;
+            value.write(writer)?;
+        }
+
+        Ok(())
     }
 }
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct FrameIdentifier {
     pub name: String,
     pub qubits: Vec<Qubit>,
@@ -65,9 +65,16 @@ impl FrameIdentifier {
     }
 }
 
-impl fmt::Display for FrameIdentifier {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} {:?}", format_qubits(&self.qubits), &self.name)
+impl Quil for FrameIdentifier {
+    fn write(
+        &self,
+        writer: &mut impl std::fmt::Write,
+    ) -> std::result::Result<(), crate::quil::ToQuilError> {
+        for qubit in &self.qubits {
+            qubit.write(writer)?;
+            write!(writer, " ")?;
+        }
+        write!(writer, "{:?}", self.name).map_err(Into::into)
     }
 }
 
@@ -95,16 +102,22 @@ impl Capture {
     }
 }
 
-impl fmt::Display for Capture {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if !self.blocking {
-            write!(f, "NONBLOCKING ")?;
+impl Quil for Capture {
+    fn write(&self, writer: &mut impl std::fmt::Write) -> Result<(), crate::quil::ToQuilError> {
+        {
+            if self.blocking {
+                write!(writer, "CAPTURE ")?;
+            } else {
+                write!(writer, "NONBLOCKING CAPTURE ")?;
+            }
+
+            self.frame.write(writer)?;
+            write!(writer, " ")?;
+            self.waveform.write(writer)?;
+            write!(writer, " ")?;
+            self.memory_reference.write(writer)?;
+            Ok(())
         }
-        write!(
-            f,
-            "CAPTURE {} {} {}",
-            self.frame, self.waveform, self.memory_reference
-        )
     }
 }
 
@@ -125,12 +138,19 @@ impl Pulse {
     }
 }
 
-impl fmt::Display for Pulse {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if !self.blocking {
-            write!(f, "NONBLOCKING ")?
+impl Quil for Pulse {
+    fn write(&self, writer: &mut impl std::fmt::Write) -> crate::quil::ToQuilResult<()> {
+        {
+            if self.blocking {
+                write!(writer, "PULSE ")?;
+            } else {
+                write!(writer, "NONBLOCKING PULSE ")?;
+            }
+            self.frame.write(writer)?;
+            write!(writer, " ")?;
+            self.waveform.write(writer)?;
+            Ok(())
         }
-        write!(f, "PULSE {} {}", self.frame, self.waveform)
     }
 }
 
@@ -158,16 +178,21 @@ impl RawCapture {
     }
 }
 
-impl fmt::Display for RawCapture {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if !self.blocking {
-            write!(f, "NONBLOCKING ")?
+impl Quil for RawCapture {
+    fn write(&self, writer: &mut impl std::fmt::Write) -> crate::quil::ToQuilResult<()> {
+        {
+            if self.blocking {
+                write!(writer, "RAW-CAPTURE ")?;
+            } else {
+                write!(writer, "NONBLOCKING RAW-CAPTURE ")?;
+            }
+            self.frame.write(writer)?;
+            write!(writer, " ")?;
+            self.duration.write(writer)?;
+            write!(writer, " ")?;
+            self.memory_reference.write(writer)?;
+            Ok(())
         }
-        write!(
-            f,
-            "RAW-CAPTURE {} {} {}",
-            self.frame, self.duration, self.memory_reference
-        )
     }
 }
 
@@ -183,9 +208,13 @@ impl SetFrequency {
     }
 }
 
-impl fmt::Display for SetFrequency {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "SET-FREQUENCY {} {}", self.frame, self.frequency)
+impl Quil for SetFrequency {
+    fn write(&self, writer: &mut impl std::fmt::Write) -> crate::quil::ToQuilResult<()> {
+        write!(writer, "SET-FREQUENCY ")?;
+        self.frame.write(writer)?;
+        write!(writer, " ")?;
+        self.frequency.write(writer)?;
+        Ok(())
     }
 }
 
@@ -201,9 +230,13 @@ impl SetPhase {
     }
 }
 
-impl fmt::Display for SetPhase {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "SET-PHASE {} {}", self.frame, self.phase)
+impl Quil for SetPhase {
+    fn write(&self, writer: &mut impl std::fmt::Write) -> crate::quil::ToQuilResult<()> {
+        write!(writer, "SET-PHASE ")?;
+        self.frame.write(writer)?;
+        write!(writer, " ")?;
+        self.phase.write(writer)?;
+        Ok(())
     }
 }
 
@@ -219,9 +252,13 @@ impl SetScale {
     }
 }
 
-impl fmt::Display for SetScale {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "SET-SCALE {} {}", self.frame, self.scale)
+impl Quil for SetScale {
+    fn write(&self, writer: &mut impl std::fmt::Write) -> crate::quil::ToQuilResult<()> {
+        write!(writer, "SET-SCALE ")?;
+        self.frame.write(writer)?;
+        write!(writer, " ")?;
+        self.scale.write(writer)?;
+        Ok(())
     }
 }
 
@@ -237,9 +274,13 @@ impl ShiftFrequency {
     }
 }
 
-impl fmt::Display for ShiftFrequency {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "SHIFT-FREQUENCY {} {}", self.frame, self.frequency)
+impl Quil for ShiftFrequency {
+    fn write(&self, writer: &mut impl std::fmt::Write) -> crate::quil::ToQuilResult<()> {
+        write!(writer, "SHIFT-FREQUENCY ")?;
+        self.frame.write(writer)?;
+        write!(writer, " ")?;
+        self.frequency.write(writer)?;
+        Ok(())
     }
 }
 
@@ -255,9 +296,13 @@ impl ShiftPhase {
     }
 }
 
-impl fmt::Display for ShiftPhase {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "SHIFT-PHASE {} {}", self.frame, self.phase)
+impl Quil for ShiftPhase {
+    fn write(&self, writer: &mut impl std::fmt::Write) -> crate::quil::ToQuilResult<()> {
+        write!(writer, "SHIFT-PHASE ")?;
+        self.frame.write(writer)?;
+        write!(writer, " ")?;
+        self.phase.write(writer)?;
+        Ok(())
     }
 }
 
@@ -273,8 +318,12 @@ impl SwapPhases {
     }
 }
 
-impl fmt::Display for SwapPhases {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "SWAP-PHASES {} {}", self.frame_1, self.frame_2)
+impl Quil for SwapPhases {
+    fn write(&self, writer: &mut impl std::fmt::Write) -> crate::quil::ToQuilResult<()> {
+        write!(writer, "SWAP-PHASES ")?;
+        self.frame_1.write(writer)?;
+        write!(writer, " ")?;
+        self.frame_2.write(writer)?;
+        Ok(())
     }
 }

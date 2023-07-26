@@ -16,6 +16,7 @@ use crate::instruction::{
 
 use crate::parser::instruction::parse_block;
 use crate::parser::InternalParserResult;
+use crate::quil::Quil;
 use crate::{real, token};
 
 use super::common::parse_variable_qubit;
@@ -199,7 +200,7 @@ pub(crate) fn parse_defcal_measure<'a>(
     let (input, params) = pair(parse_qubit, opt(token!(Identifier(v))))(input)?;
     let (qubit, destination) = match params {
         (qubit, Some(destination)) => (Some(qubit), destination),
-        (destination, None) => (None, destination.to_string()),
+        (destination, None) => (None, destination.to_quil_or_debug()),
     };
     let (input, _) = token!(Colon)(input)?;
     let (input, instructions) = parse_block(input)?;
@@ -390,7 +391,7 @@ pub(crate) fn parse_jump_unless<'a>(
 /// Parse the contents of a `DECLARE` instruction.
 pub(crate) fn parse_label<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Instruction> {
     let (input, name) = token!(Label(v))(input)?;
-    Ok((input, Instruction::Label(Label(name))))
+    Ok((input, Instruction::Label(Label::Fixed(name))))
 }
 
 /// Parse the contents of a `MOVE` instruction.

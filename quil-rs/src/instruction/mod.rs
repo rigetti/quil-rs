@@ -16,9 +16,11 @@ use std::collections::HashSet;
 use std::fmt;
 
 use crate::expression::Expression;
+use crate::impl_quil_for_ref;
 #[cfg(test)]
 use crate::parser::lex;
 use crate::program::frame::{FrameMatchCondition, FrameMatchConditions};
+use crate::quil::{write_join_quil, Quil, ToQuilResult};
 
 #[cfg(test)]
 use nom_locate::LocatedSpan;
@@ -29,6 +31,7 @@ mod classical;
 mod declaration;
 mod frame;
 mod gate;
+mod label;
 mod measurement;
 mod pragma;
 mod qubit;
@@ -54,9 +57,10 @@ pub use self::gate::{
     Gate, GateDefinition, GateError, GateModifier, GateSpecification, GateType, Matrix, PauliGate,
     PauliSum, PauliTerm,
 };
+pub use self::label::{Label, LabelPlaceholder};
 pub use self::measurement::Measurement;
 pub use self::pragma::{Include, Pragma, PragmaArgument};
-pub use self::qubit::Qubit;
+pub use self::qubit::{Qubit, QubitPlaceholder};
 pub use self::reset::Reset;
 pub use self::timing::{Delay, Fence};
 pub use self::waveform::{Waveform, WaveformDefinition, WaveformInvocation};
@@ -66,9 +70,6 @@ pub enum ValidationError {
     #[error(transparent)]
     GateError(#[from] GateError),
 }
-
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct Label(pub String);
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Jump {
@@ -184,12 +185,32 @@ impl From<&Instruction> for InstructionRole {
     }
 }
 
-pub fn format_instructions(values: &[Instruction]) -> String {
-    values
-        .iter()
-        .map(|i| format!("{i}"))
-        .collect::<Vec<String>>()
-        .join("\n\t")
+pub fn write_instruction_block<I, Q>(
+    f: &mut impl std::fmt::Write,
+    values: I,
+) -> crate::quil::ToQuilResult<()>
+where
+    I: IntoIterator<Item = Q>,
+    Q: Quil,
+{
+    write_join_quil(f, values, "\n", "\t")
+}
+
+pub(crate) fn write_join(
+    f: &mut impl std::fmt::Write,
+    values: &[impl std::fmt::Display],
+    separator: &str,
+    prefix: &str,
+) -> std::fmt::Result {
+    let mut iter = values.iter();
+    if let Some(first) = iter.next() {
+        write!(f, "{prefix}{first}")?;
+
+        for value in iter {
+            write!(f, "{separator}{prefix}{value}")?;
+        }
+    }
+    Ok(())
 }
 
 pub fn format_integer_vector(values: &[u64]) -> String {
@@ -213,64 +234,42 @@ pub fn format_matrix(matrix: &[Vec<Expression>]) -> String {
         .join("\n\t")
 }
 
-pub fn format_qubits(qubits: &[Qubit]) -> String {
-    qubits
-        .iter()
-        .map(|q| format!("{q}"))
-        .collect::<Vec<String>>()
-        .join(" ")
-}
-
-fn write_qubits(f: &mut fmt::Formatter, qubits: &[Qubit]) -> fmt::Result {
+fn write_qubits(f: &mut impl std::fmt::Write, qubits: &[Qubit]) -> crate::quil::ToQuilResult<()> {
     for qubit in qubits {
-        write!(f, " {qubit}")?;
+        write!(f, " ")?;
+        qubit.write(f)?;
     }
     Ok(())
 }
 
-/// Write qubits as a Quil parameter list, where each variable qubit must be prefixed with a `%`.
-fn write_qubit_parameters(f: &mut fmt::Formatter, qubits: &[Qubit]) -> fmt::Result {
+/// Write qubits as a Quil parameter list, where each variable qubit must be prefixed with a `%`
+/// and all are prefixed with ` `. Return an error if any is a qubit placeholder.
+fn write_qubit_parameters(f: &mut impl std::fmt::Write, qubits: &[Qubit]) -> ToQuilResult<()> {
     for qubit in qubits.iter() {
         match qubit {
-            Qubit::Fixed(index) => write!(f, " {index}")?,
             Qubit::Variable(var) => write!(f, " %{var}")?,
+            other => {
+                write!(f, " ")?;
+                other.write(f)?;
+            }
         }
     }
 
     Ok(())
 }
 
-/// Write the values as a comma separated list, with an optional prefix before each value.
-fn write_comma_separated_list(
-    f: &mut fmt::Formatter,
-    values: &[impl fmt::Display],
-    prefix: Option<&str>,
-) -> fmt::Result {
-    let prefix = prefix.unwrap_or_default();
-    let mut iter = values.iter();
-
-    if let Some(value) = iter.next() {
-        write!(f, "{prefix}{value}")?;
-    }
-
-    for value in iter {
-        write!(f, ", {prefix}{value}")?;
-    }
-
-    Ok(())
-}
-
 fn write_expression_parameter_string(
-    f: &mut fmt::Formatter,
+    f: &mut impl std::fmt::Write,
     parameters: &[Expression],
-) -> fmt::Result {
+) -> crate::quil::ToQuilResult<()> {
     if parameters.is_empty() {
         return Ok(());
     }
 
     write!(f, "(")?;
-    write_comma_separated_list(f, parameters, None)?;
-    write!(f, ")")
+    write_join_quil(f, parameters, ", ", "")?;
+    write!(f, ")")?;
+    Ok(())
 }
 
 fn write_parameter_string(f: &mut fmt::Formatter, parameters: &[String]) -> fmt::Result {
@@ -279,67 +278,67 @@ fn write_parameter_string(f: &mut fmt::Formatter, parameters: &[String]) -> fmt:
     }
 
     write!(f, "(")?;
-    write_comma_separated_list(f, parameters, Some("%"))?;
+    write_join(f, parameters, ",", "%")?;
     write!(f, ")")
 }
 
-impl fmt::Display for Instruction {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl Quil for Instruction {
+    fn write(&self, f: &mut impl std::fmt::Write) -> Result<(), crate::quil::ToQuilError> {
         match self {
-            Instruction::Arithmetic(arithmetic) => write!(f, "{arithmetic}"),
-            Instruction::CalibrationDefinition(calibration) => write!(f, "{calibration}"),
-            Instruction::Capture(capture) => write!(f, "{capture}"),
-            Instruction::CircuitDefinition(circuit) => write!(f, "{circuit}"),
-            Instruction::Convert(convert) => write!(f, "{convert}"),
-            Instruction::Declaration(declaration) => write!(f, "{declaration}"),
-            Instruction::Delay(delay) => write!(f, "{delay}"),
-            Instruction::Fence(fence) => write!(f, "{fence}"),
-            Instruction::FrameDefinition(frame_defintion) => write!(f, "{frame_defintion}"),
-            Instruction::Gate(gate) => write!(f, "{gate}"),
-            Instruction::GateDefinition(gate_definition) => write!(f, "{gate_definition}"),
-            Instruction::Include(include) => write!(f, "{include}"),
+            Instruction::Arithmetic(arithmetic) => arithmetic.write(f),
+            Instruction::CalibrationDefinition(calibration) => calibration.write(f),
+            Instruction::Capture(capture) => capture.write(f),
+            Instruction::CircuitDefinition(circuit) => circuit.write(f),
+            Instruction::Convert(convert) => convert.write(f),
+            Instruction::Declaration(declaration) => declaration.write(f),
+            Instruction::Delay(delay) => delay.write(f),
+            Instruction::Fence(fence) => fence.write(f),
+            Instruction::FrameDefinition(frame_definition) => frame_definition.write(f),
+            Instruction::Gate(gate) => gate.write(f),
+            Instruction::GateDefinition(gate_definition) => gate_definition.write(f),
+            Instruction::Include(include) => include.write(f),
             Instruction::MeasureCalibrationDefinition(measure_calibration) => {
-                write!(f, "{measure_calibration}")
+                measure_calibration.write(f)
             }
-            Instruction::Measurement(measurement) => write!(f, "{measurement}"),
-            Instruction::Move(r#move) => write!(f, "{move}"),
-            Instruction::Exchange(exchange) => write!(f, "{exchange}"),
-            Instruction::Load(load) => write!(f, "{load}"),
-            Instruction::Store(store) => write!(f, "{store}"),
-            Instruction::Pulse(pulse) => write!(f, "{pulse}"),
-            Instruction::Pragma(pragma) => write!(f, "{pragma}"),
-            Instruction::RawCapture(raw_capture) => write!(f, "{raw_capture}"),
-            Instruction::Reset(reset) => write!(f, "{reset}"),
-            Instruction::SetFrequency(set_frequency) => write!(f, "{set_frequency}"),
-            Instruction::SetPhase(set_phase) => write!(f, "{set_phase}"),
-            Instruction::SetScale(set_scale) => write!(f, "{set_scale}"),
-            Instruction::ShiftFrequency(shift_frequency) => write!(f, "{shift_frequency}"),
-            Instruction::ShiftPhase(shift_phase) => write!(f, "{shift_phase}"),
-            Instruction::SwapPhases(swap_phases) => write!(f, "{swap_phases}"),
-            Instruction::WaveformDefinition(waveform_definition) => {
-                write!(f, "{waveform_definition}")
-            }
-            Instruction::Halt => write!(f, "HALT"),
-            Instruction::Nop => write!(f, "NOP"),
-            Instruction::Wait => write!(f, "WAIT"),
-            Instruction::Jump(Jump { target }) => write!(f, "JUMP @{target}"),
+            Instruction::Measurement(measurement) => measurement.write(f),
+            Instruction::Move(r#move) => r#move.write(f),
+            Instruction::Exchange(exchange) => exchange.write(f),
+            Instruction::Load(load) => load.write(f),
+            Instruction::Store(store) => store.write(f),
+            Instruction::Pulse(pulse) => pulse.write(f),
+            Instruction::Pragma(pragma) => pragma.write(f),
+            Instruction::RawCapture(raw_capture) => raw_capture.write(f),
+            Instruction::Reset(reset) => reset.write(f),
+            Instruction::SetFrequency(set_frequency) => set_frequency.write(f),
+            Instruction::SetPhase(set_phase) => set_phase.write(f),
+            Instruction::SetScale(set_scale) => set_scale.write(f),
+            Instruction::ShiftFrequency(shift_frequency) => shift_frequency.write(f),
+            Instruction::ShiftPhase(shift_phase) => shift_phase.write(f),
+            Instruction::SwapPhases(swap_phases) => swap_phases.write(f),
+            Instruction::WaveformDefinition(waveform_definition) => waveform_definition.write(f),
+            Instruction::Halt => write!(f, "HALT").map_err(Into::into),
+            Instruction::Nop => write!(f, "NOP").map_err(Into::into),
+            Instruction::Wait => write!(f, "WAIT").map_err(Into::into),
+            Instruction::Jump(Jump { target }) => write!(f, "JUMP @{target}").map_err(Into::into),
             Instruction::JumpUnless(JumpUnless { condition, target }) => {
-                write!(f, "JUMP-UNLESS @{target} {condition}")
+                write!(f, "JUMP-UNLESS @{target} {condition}").map_err(Into::into)
             }
             Instruction::JumpWhen(JumpWhen { condition, target }) => {
-                write!(f, "JUMP-WHEN @{target} {condition}")
+                write!(f, "JUMP-WHEN @{target} {condition}").map_err(Into::into)
             }
-            Instruction::Label(Label(label)) => write!(f, "LABEL @{label}"),
-            Instruction::Comparison(comparison) => write!(f, "{comparison}"),
-            Instruction::BinaryLogic(binary_logic) => write!(f, "{binary_logic}"),
-            Instruction::UnaryLogic(unary_logic) => write!(f, "{unary_logic}"),
+            Instruction::Label(label) => label.write(f),
+            Instruction::Comparison(comparison) => comparison.write(f),
+            Instruction::BinaryLogic(binary_logic) => binary_logic.write(f),
+            Instruction::UnaryLogic(unary_logic) => unary_logic.write(f),
         }
     }
 }
 
+impl_quil_for_ref!(Instruction);
+
 #[cfg(test)]
 mod test_instruction_display {
-    use crate::instruction::PragmaArgument;
+    use crate::{instruction::PragmaArgument, quil::Quil};
 
     use super::{Instruction, Pragma};
 
@@ -351,7 +350,8 @@ mod test_instruction_display {
                 arguments: vec![],
                 data: Some(String::from("PARTIAL")),
             })
-            .to_string(),
+            .to_quil()
+            .unwrap(),
             "PRAGMA INITIAL_REWIRING \"PARTIAL\""
         );
         assert_eq!(
@@ -360,7 +360,8 @@ mod test_instruction_display {
                 arguments: vec![PragmaArgument::Identifier("q0".to_string())],
                 data: Some(String::from("addr")),
             })
-            .to_string(),
+            .to_quil()
+            .unwrap(),
             "PRAGMA LOAD-MEMORY q0 \"addr\""
         );
         assert_eq!(
@@ -369,7 +370,8 @@ mod test_instruction_display {
                 arguments: vec![],
                 data: None,
             })
-            .to_string(),
+            .to_quil()
+            .unwrap(),
             "PRAGMA PRESERVE_BLOCK"
         );
     }
@@ -386,14 +388,14 @@ impl Instruction {
     /// ```rust
     /// use std::mem::replace;
     /// use std::str::FromStr;
-    /// use quil_rs::{expression::Expression, Program};
+    /// use quil_rs::{expression::Expression, Program, quil::Quil};
     ///
     ///
     /// let program = Program::from_str("SHIFT-PHASE 0 \"rf\" 2*2").unwrap();
     /// let mut instructions = program.to_instructions();
     /// instructions.iter_mut().for_each(|inst| inst.apply_to_expressions(Expression::simplify));
     ///
-    /// assert_eq!(instructions[0].to_string(), String::from("SHIFT-PHASE 0 \"rf\" 4"))
+    /// assert_eq!(instructions[0].to_quil().unwrap(), String::from("SHIFT-PHASE 0 \"rf\" 4"))
     ///
     /// ```
     pub fn apply_to_expressions(&mut self, mut closure: impl FnMut(&mut Expression)) {
@@ -558,6 +560,44 @@ impl Instruction {
         }
     }
 
+    /// Return immutable references to the [`Qubit`]s contained within an instruction
+    /// TODO: replace the logic in Program::get_used_qubits with this
+    #[allow(dead_code)]
+    pub(crate) fn get_qubits(&self) -> Vec<&Qubit> {
+        match self {
+            Instruction::Gate(gate) => gate.qubits.iter().collect(),
+            Instruction::Measurement(measurement) => vec![&measurement.qubit],
+            Instruction::Reset(reset) => match &reset.qubit {
+                Some(qubit) => vec![qubit],
+                None => vec![],
+            },
+            Instruction::Delay(delay) => delay.qubits.iter().collect(),
+            Instruction::Fence(fence) => fence.qubits.iter().collect(),
+            Instruction::Capture(capture) => capture.frame.qubits.iter().collect(),
+            Instruction::Pulse(pulse) => pulse.frame.qubits.iter().collect(),
+            Instruction::RawCapture(raw_capture) => raw_capture.frame.qubits.iter().collect(),
+            _ => vec![],
+        }
+    }
+
+    /// Return mutable references to the [`Qubit`]s contained within an instruction
+    pub(crate) fn get_qubits_mut(&mut self) -> Vec<&mut Qubit> {
+        match self {
+            Instruction::Gate(gate) => gate.qubits.iter_mut().collect(),
+            Instruction::Measurement(measurement) => vec![&mut measurement.qubit],
+            Instruction::Reset(reset) => match &mut reset.qubit {
+                Some(qubit) => vec![qubit],
+                None => vec![],
+            },
+            Instruction::Delay(delay) => delay.qubits.iter_mut().collect(),
+            Instruction::Fence(fence) => fence.qubits.iter_mut().collect(),
+            Instruction::Capture(capture) => capture.frame.qubits.iter_mut().collect(),
+            Instruction::Pulse(pulse) => pulse.frame.qubits.iter_mut().collect(),
+            Instruction::RawCapture(raw_capture) => raw_capture.frame.qubits.iter_mut().collect(),
+            _ => vec![],
+        }
+    }
+
     /// Return the waveform _directly_ invoked by the instruction, if any.
     ///
     /// Note: this does not expand calibrations or other instructions which may
@@ -629,6 +669,23 @@ impl Instruction {
             | Instruction::WaveformDefinition(_) => false,
         }
     }
+
+    pub(crate) fn resolve_placeholders<LR, QR>(&mut self, label_resolver: LR, qubit_resolver: QR)
+    where
+        LR: Fn(&LabelPlaceholder) -> Option<String>,
+        QR: Fn(&QubitPlaceholder) -> Option<u64>,
+    {
+        match self {
+            Instruction::Label(label) => {
+                label.resolve_placeholder(label_resolver);
+            }
+            other => {
+                for qubit in other.get_qubits_mut() {
+                    qubit.resolve_placeholder(&qubit_resolver);
+                }
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -693,5 +750,70 @@ RX(%a) 0",
     )]
     fn it_fails_to_parse_memory_reference_from_str(input: &str) {
         assert!(MemoryReference::from_str(input).is_err());
+    }
+
+    mod placeholders {
+        use std::collections::HashMap;
+
+        use crate::instruction::{Label, LabelPlaceholder, Qubit, QubitPlaceholder};
+
+        #[allow(clippy::redundant_clone)]
+        #[test]
+        fn label() {
+            let placeholder_1 = LabelPlaceholder::new(String::from("label"));
+            let placeholder_2 = LabelPlaceholder::new(String::from("label"));
+            let placeholder_3 = LabelPlaceholder::new(String::from("other"));
+
+            assert_eq!(placeholder_1, placeholder_1);
+            assert_eq!(placeholder_1, placeholder_1.clone());
+            assert_eq!(placeholder_1.clone(), placeholder_1.clone());
+            assert_ne!(placeholder_1, placeholder_2);
+            assert_ne!(placeholder_2, placeholder_3);
+            assert_ne!(placeholder_1, placeholder_3);
+        }
+
+        #[test]
+        fn label_resolution() {
+            let placeholder_1 = LabelPlaceholder::new(String::from("label"));
+            let placeholder_2 = LabelPlaceholder::new(String::from("label"));
+
+            let resolver = HashMap::from([(placeholder_1.clone(), String::from("label_1"))]);
+
+            let mut label_1 = Label::Placeholder(placeholder_1);
+            label_1.resolve_placeholder(|k| resolver.get(k).cloned());
+            assert_eq!(label_1, Label::Fixed(String::from("label_1")));
+
+            let mut label_2 = Label::Placeholder(placeholder_2.clone());
+            label_2.resolve_placeholder(|k| resolver.get(k).cloned());
+            assert_eq!(label_2, Label::Placeholder(placeholder_2));
+        }
+
+        #[allow(clippy::redundant_clone)]
+        #[test]
+        fn qubit() {
+            let placeholder_1 = QubitPlaceholder::default();
+            let placeholder_2 = QubitPlaceholder::default();
+
+            assert_eq!(placeholder_1, placeholder_1);
+            assert_eq!(placeholder_1, placeholder_1.clone());
+            assert_eq!(placeholder_1.clone(), placeholder_1.clone());
+            assert_ne!(placeholder_1, placeholder_2);
+        }
+
+        #[test]
+        fn qubit_resolution() {
+            let placeholder_1 = QubitPlaceholder::default();
+            let placeholder_2 = QubitPlaceholder::default();
+
+            let resolver = HashMap::from([(placeholder_1.clone(), 1)]);
+
+            let mut qubit_1 = Qubit::Placeholder(placeholder_1);
+            qubit_1.resolve_placeholder(|k| resolver.get(k).copied());
+            assert_eq!(qubit_1, Qubit::Fixed(1));
+
+            let mut qubit_2 = Qubit::Placeholder(placeholder_2.clone());
+            qubit_2.resolve_placeholder(|k| resolver.get(k).copied());
+            assert_eq!(qubit_2, Qubit::Placeholder(placeholder_2));
+        }
     }
 }

@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::hash::hash_f64;
+use crate::{hash::hash_f64, impl_quil};
 
 use super::MemoryReference;
 
@@ -31,6 +31,8 @@ impl fmt::Display for Arithmetic {
     }
 }
 
+impl_quil!(Arithmetic);
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum ArithmeticOperand {
     LiteralInteger(i64),
@@ -57,6 +59,8 @@ impl fmt::Display for ArithmeticOperand {
         }
     }
 }
+
+impl_quil!(ArithmeticOperand);
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, strum::Display)]
 pub enum ArithmeticOperator {
@@ -85,6 +89,8 @@ impl fmt::Display for BinaryOperand {
     }
 }
 
+impl_quil!(BinaryOperand);
+
 pub type BinaryOperands = (MemoryReference, BinaryOperand);
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, strum::Display)]
@@ -94,6 +100,8 @@ pub enum BinaryOperator {
     Ior,
     Xor,
 }
+
+impl_quil!(BinaryOperator);
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct BinaryLogic {
@@ -110,6 +118,8 @@ impl fmt::Display for BinaryLogic {
         )
     }
 }
+
+impl_quil!(BinaryLogic);
 
 impl BinaryLogic {
     pub fn new(operator: BinaryOperator, operands: BinaryOperands) -> Self {
@@ -138,6 +148,8 @@ impl fmt::Display for Convert {
     }
 }
 
+impl_quil!(Convert);
+
 #[derive(Clone, Debug, Hash, PartialEq)]
 pub struct Move {
     pub destination: MemoryReference,
@@ -159,6 +171,8 @@ impl fmt::Display for Move {
     }
 }
 
+impl_quil!(Move);
+
 #[derive(Clone, Debug, Hash, PartialEq)]
 pub struct Exchange {
     pub left: MemoryReference,
@@ -170,6 +184,8 @@ impl fmt::Display for Exchange {
         write!(f, "EXCHANGE {} {}", self.left, self.right)
     }
 }
+
+impl_quil!(Exchange);
 
 impl Exchange {
     pub fn new(left: MemoryReference, right: MemoryReference) -> Self {
@@ -202,6 +218,8 @@ impl fmt::Display for Comparison {
     }
 }
 
+impl_quil!(Comparison);
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum ComparisonOperand {
     LiteralInteger(i64),
@@ -218,6 +236,8 @@ impl fmt::Display for ComparisonOperand {
         }
     }
 }
+
+impl_quil!(ComparisonOperand);
 
 impl std::hash::Hash for ComparisonOperand {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
@@ -250,6 +270,8 @@ impl fmt::Display for ComparisonOperator {
     }
 }
 
+impl_quil!(ComparisonOperator);
+
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct UnaryLogic {
     pub operator: UnaryOperator,
@@ -268,9 +290,13 @@ impl fmt::Display for UnaryLogic {
     }
 }
 
+impl_quil!(UnaryLogic);
+
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, strum::Display)]
 #[strum(serialize_all = "UPPERCASE")]
 pub enum UnaryOperator {
     Neg,
     Not,
 }
+
+impl_quil!(UnaryOperator);

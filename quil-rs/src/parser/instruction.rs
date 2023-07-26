@@ -169,6 +169,7 @@ mod tests {
     };
     use crate::parser::common::tests::KITCHEN_SINK_QUIL;
     use crate::parser::lexer::lex;
+    use crate::quil::Quil;
     use crate::{make_test, real, Program};
 
     use super::parse_instructions;
@@ -615,7 +616,7 @@ mod tests {
         parse_instructions,
         "LABEL @hello\nJUMP @hello\nJUMP-WHEN @hello ro",
         vec![
-            Instruction::Label(Label("hello".to_owned())),
+            Instruction::Label(Label::Fixed("hello".to_owned())),
             Instruction::Jump(Jump {
                 target: "hello".to_owned()
             }),
@@ -1046,9 +1047,9 @@ mod tests {
 
         for input in inputs {
             let program = Program::from_str(input).unwrap();
-            let output = program.to_string();
+            let output = program.to_quil().unwrap();
             let roundtrip = Program::from_str(&output).unwrap();
-            assert_eq!(output, roundtrip.to_string());
+            assert_eq!(output, roundtrip.to_quil().unwrap());
         }
     }
 }

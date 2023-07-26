@@ -1,8 +1,8 @@
 use std::{collections::HashMap, fmt};
 
-use crate::{expression::Expression, instruction::write_comma_separated_list};
+use crate::{expression::Expression, impl_quil};
 
-use super::write_parameter_string;
+use super::{write_join, write_parameter_string};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Waveform {
@@ -33,9 +33,11 @@ impl fmt::Display for WaveformDefinition {
         write!(f, "DEFWAVEFORM {}", self.name)?;
         write_parameter_string(f, &self.definition.parameters)?;
         write!(f, ":\n\t")?;
-        write_comma_separated_list(f, &self.definition.matrix, None)
+        write_join(f, &self.definition.matrix, ", ", "")
     }
 }
+
+impl_quil!(WaveformDefinition);
 
 #[cfg(test)]
 mod test_waveform_definition {
@@ -107,6 +109,8 @@ impl fmt::Display for WaveformInvocation {
         }
     }
 }
+
+impl_quil!(WaveformInvocation);
 
 #[cfg(test)]
 mod waveform_invocation_tests {

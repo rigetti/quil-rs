@@ -1,7 +1,8 @@
 use crate::{
     expression::Expression,
-    imag,
+    imag, impl_quil,
     instruction::{write_expression_parameter_string, write_parameter_string, write_qubits, Qubit},
+    quil::Quil,
     real,
     validation::identifier::{
         validate_identifier, validate_user_identifier, IdentifierValidationError,
@@ -72,7 +73,7 @@ pub enum GateError {
         parameters: Vec<Expression>,
     },
 
-    #[error("cannot produce a matrix for gate `{name}` with variable qubit {qubit}")]
+    #[error("cannot produce a matrix for gate `{name}` with variable qubit {qubit}", qubit=.qubit.to_quil_or_debug())]
     MatrixVariableQubit { name: String, qubit: Qubit },
 
     #[error("forked gate `{name}` has an odd number of parameters: {parameters:?}")]
@@ -80,6 +81,9 @@ pub enum GateError {
         name: String,
         parameters: Vec<Expression>,
     },
+
+    #[error("cannot produce a matrix for a gate `{name}` with unresolved qubit placeholders")]
+    UnresolvedQubitPlaceholder { name: String },
 }
 
 /// Matrix version of a gate.
@@ -162,6 +166,9 @@ impl Gate {
                 Qubit::Variable(_) => Err(GateError::MatrixVariableQubit {
                     name: self.name.clone(),
                     qubit: q.clone(),
+                }),
+                Qubit::Placeholder(_) => Err(GateError::UnresolvedQubitPlaceholder {
+                    name: self.name.clone(),
                 }),
                 Qubit::Fixed(i) => Ok(*i),
             })
@@ -570,8 +577,8 @@ static PARAMETERIZED_GATE_MATRICES: Lazy<HashMap<String, ParameterizedMatrix>> =
     ])
 });
 
-impl fmt::Display for Gate {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl Quil for Gate {
+    fn write(&self, f: &mut impl std::fmt::Write) -> crate::quil::ToQuilResult<()> {
         for modifier in &self.modifiers {
             write!(f, "{modifier} ")?;
         }
@@ -928,6 +935,8 @@ impl fmt::Display for GateDefinition {
         write!(f, "{}", self.specification)
     }
 }
+
+impl_quil!(GateDefinition);
 
 #[cfg(test)]
 mod test_gate_definition {

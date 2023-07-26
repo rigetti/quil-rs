@@ -3,6 +3,7 @@ use std::{fmt, str::FromStr};
 use nom_locate::LocatedSpan;
 
 use crate::{
+    impl_quil,
     parser::{common::parse_memory_reference, lex, ParseError},
     program::{disallow_leftover, SyntaxError},
 };
@@ -114,6 +115,8 @@ impl fmt::Display for Declaration {
     }
 }
 
+impl_quil!(Declaration);
+
 #[cfg(test)]
 mod test_declaration {
     use super::{Declaration, Offset, ScalarType, Sharing, Vector};
@@ -180,6 +183,8 @@ impl fmt::Display for MemoryReference {
     }
 }
 
+impl_quil!(MemoryReference);
+
 impl FromStr for MemoryReference {
     type Err = SyntaxError<Self>;
 
@@ -219,6 +224,8 @@ impl fmt::Display for Load {
     }
 }
 
+impl_quil!(Load);
+
 #[derive(Clone, Debug, PartialEq, Hash)]
 pub struct Store {
     pub destination: String,
@@ -245,3 +252,5 @@ impl fmt::Display for Store {
         )
     }
 }
+
+impl_quil!(Store);

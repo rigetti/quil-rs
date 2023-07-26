@@ -1,6 +1,6 @@
-use std::fmt;
+use crate::quil::Quil;
 
-use super::{write_parameter_string, Instruction};
+use super::Instruction;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct CircuitDefinition {
@@ -27,19 +27,29 @@ impl CircuitDefinition {
     }
 }
 
-impl fmt::Display for CircuitDefinition {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "DEFCIRCUIT {}", self.name)?;
-        write_parameter_string(f, &self.parameters)?;
+impl Quil for CircuitDefinition {
+    fn write(&self, writer: &mut impl std::fmt::Write) -> Result<(), crate::quil::ToQuilError> {
+        let parameter_str: String = self
+            .parameters
+            .iter()
+            .map(|p| format!("%{}", p))
+            .collect::<Vec<String>>()
+            .join(", ");
+
+        write!(writer, "DEFCIRCUIT {}", self.name)?;
+        if !parameter_str.is_empty() {
+            write!(writer, "({})", parameter_str)?;
+        }
         for qubit_variable in &self.qubit_variables {
-            write!(f, " {qubit_variable}")?;
+            write!(writer, " {}", qubit_variable)?;
         }
-        writeln!(f, ":")?;
+        writeln!(writer, ":")?;
         for instruction in &self.instructions {
-            for line in instruction.to_string().split('\n') {
-                writeln!(f, "\t{line}")?;
-            }
+            write!(writer, "\t")?;
+            instruction.write(writer)?;
+            writeln!(writer)?;
         }
+
         Ok(())
     }
 }
@@ -48,6 +58,7 @@ impl fmt::Display for CircuitDefinition {
 mod test_circuit_definition {
     use crate::expression::Expression;
     use crate::instruction::{Gate, Instruction, Qubit};
+    use crate::quil::Quil;
 
     use super::CircuitDefinition;
 
@@ -121,7 +132,7 @@ mod test_circuit_definition {
         insta::with_settings!({
             snapshot_suffix => description,
         }, {
-            assert_snapshot!(circuit_def.to_string())
+            assert_snapshot!(circuit_def.to_quil_or_debug())
         })
     }
 }
