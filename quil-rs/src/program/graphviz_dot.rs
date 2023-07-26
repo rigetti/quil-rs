@@ -205,12 +205,12 @@ fn get_node_id(node: &ScheduledGraphNode, prefix: &str) -> String {
 pub(crate) mod tests {
     pub(crate) use graph::build_dot_format_snapshot_test_case;
     mod graph {
-        use std::str::FromStr;
+        
 
         use crate::instruction::InstructionHandler;
         use crate::program::Program;
 
-        use super::super::ScheduledProgram;
+        
 
         /// Build a test case which compiles the input program, builds the dot-format string from the program,
         /// and then compares that to a "correct" snapshot of that dot format. This makes diffs easy to compare and
@@ -247,13 +247,11 @@ DEFFRAME 0 1 \"cz\":
     INITIAL-FREQUENCY: 1e6
 ";
 
-                    let program =
-                        format!("{}\n{}", FRAME_DEFINITIONS, $input).parse::<Program>().unwrap();
-                    let scheduled_program = ScheduledProgram::from_program(
-                        &program,
-                        $handler,
-                    )
-                    .unwrap();
+                    let program = format!("{}\n{}", FRAME_DEFINITIONS, $input)
+                        .parse::<Program>()
+                        .unwrap();
+                    let scheduled_program =
+                        ScheduledProgram::from_program(&program, $handler).unwrap();
 
                     for block in scheduled_program.blocks.values() {
                         let graph = block.get_dependency_graph();

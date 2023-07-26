@@ -839,6 +839,5 @@ PRAGMA RAW-INSTRUCTION foo
 "#,
             &mut get_custom_handler(),
         }
-
     }
 }
