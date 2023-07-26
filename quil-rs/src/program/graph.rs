@@ -21,7 +21,7 @@ use petgraph::graphmap::GraphMap;
 use petgraph::Directed;
 
 use crate::instruction::{
-    FrameIdentifier, Instruction, Jump, JumpUnless, JumpWhen, Label, MeasureCalibrationDefinition,
+    FrameIdentifier, Instruction, InstructionHandler, Jump, JumpUnless, JumpWhen, Label,
     MemoryReference,
 };
 use crate::{instruction::InstructionRole, program::Program};
@@ -295,6 +295,7 @@ impl<'a> InstructionBlock<'a> {
         instructions: Vec<&'a Instruction>,
         terminator: Option<BlockTerminator<'a>>,
         program: &'a Program,
+        custom_handler: &mut InstructionHandler,
     ) -> ScheduleResult<Self> {
         let mut graph: DependencyGraph = GraphMap::new();
         // Root node
@@ -311,12 +312,10 @@ impl<'a> InstructionBlock<'a> {
         // NOTE: this may be refined to serialize by memory region offset rather than by entire region.
         let mut pending_memory_access: HashMap<String, MemoryAccessQueue> = HashMap::new();
 
-        for (index, instruction) in instructions.iter().enumerate() {
+        for (index, &instruction) in instructions.iter().enumerate() {
             let node = graph.add_node(ScheduledGraphNode::InstructionIndex(index));
-            let instruction = *instruction;
 
-            let instruction_role = InstructionRole::from(instruction);
-            match instruction_role {
+            match custom_handler.role_for_instruction(instruction) {
                 // Classical instructions must be ordered by appearance in the program
                 InstructionRole::ClassicalCompute => {
                     add_dependency!(graph, last_classical_instruction => node, ExecutionDependency::StableOrdering);
@@ -325,11 +324,12 @@ impl<'a> InstructionBlock<'a> {
                     Ok(())
                 }
                 InstructionRole::RFControl => {
-                    let matched_frames = program.get_frames_for_instruction(instruction);
+                    let matched_frames = custom_handler.matching_frames(instruction, program);
+                    let is_scheduled = custom_handler.is_scheduled(instruction);
 
                     if let Some(matched_frames) = matched_frames {
                         for frame in matched_frames.used() {
-                            if instruction.is_scheduled() {
+                            if is_scheduled {
                                 let previous_node_ids = last_timed_instruction_by_frame
                                     .entry((*frame).clone())
                                     .or_default()
@@ -351,7 +351,7 @@ impl<'a> InstructionBlock<'a> {
                         }
 
                         for frame in matched_frames.blocked() {
-                            if instruction.is_scheduled() {
+                            if is_scheduled {
                                 if let Some(previous_node_id) = last_timed_instruction_by_frame
                                     .entry((*frame).clone())
                                     .or_default()
@@ -385,7 +385,7 @@ impl<'a> InstructionBlock<'a> {
                 }),
             }?;
 
-            let accesses = instruction.get_memory_accesses();
+            let accesses = custom_handler.memory_accesses(instruction);
             for (regions, access_type) in [
                 (accesses.reads, MemoryAccessType::Read),
                 (accesses.writes, MemoryAccessType::Write),
@@ -510,6 +510,7 @@ fn terminate_working_block<'a>(
     working_label: &mut Option<&'a str>,
     program: &'a Program,
     instruction_index: Option<usize>,
+    custom_handler: &mut InstructionHandler,
 ) -> ScheduleResult<()> {
     // If this "block" has no instructions and no terminator, it's not worth storing - skip it
     if working_instructions.is_empty() && terminator.is_none() && working_label.is_none() {
@@ -517,7 +518,13 @@ fn terminate_working_block<'a>(
     }
 
     // This leaves working_instructions and working_label in their respective "empty" states.
-    let block = InstructionBlock::build(std::mem::take(working_instructions), terminator, program)?;
+    let block = InstructionBlock::build(
+        std::mem::take(working_instructions),
+        terminator,
+        program,
+        custom_handler,
+    )?;
+
     let label = working_label
         .take()
         .map(String::from)
@@ -537,7 +544,10 @@ fn terminate_working_block<'a>(
 impl<'a> ScheduledProgram<'a> {
     /// Structure a sequential program
     #[allow(unused_assignments)]
-    pub fn from_program(program: &'a Program) -> ScheduleResult<Self> {
+    pub fn from_program(
+        program: &'a Program,
+        custom_handler: &mut InstructionHandler,
+    ) -> ScheduleResult<Self> {
         let mut working_label = None;
         let mut working_instructions: Vec<&'a Instruction> = vec![];
         let mut blocks = IndexMap::new();
@@ -584,9 +594,7 @@ impl<'a> ScheduledProgram<'a> {
                 | Instruction::Declaration(_)
                 | Instruction::GateDefinition(_)
                 | Instruction::FrameDefinition(_)
-                | Instruction::MeasureCalibrationDefinition(MeasureCalibrationDefinition {
-                    ..
-                })
+                | Instruction::MeasureCalibrationDefinition(_)
                 | Instruction::WaveformDefinition(_) => {}
                 Instruction::Pragma(_) => {
                     working_instructions.push(instruction);
@@ -599,6 +607,7 @@ impl<'a> ScheduledProgram<'a> {
                         &mut working_label,
                         program,
                         instruction_index,
+                        custom_handler,
                     )?;
 
                     working_label = Some(value);
@@ -611,6 +620,7 @@ impl<'a> ScheduledProgram<'a> {
                         &mut working_label,
                         program,
                         instruction_index,
+                        custom_handler,
                     )?;
                 }
                 Instruction::JumpWhen(JumpWhen { target, condition }) => {
@@ -625,6 +635,7 @@ impl<'a> ScheduledProgram<'a> {
                         &mut working_label,
                         program,
                         instruction_index,
+                        custom_handler,
                     )?;
                 }
                 Instruction::JumpUnless(JumpUnless { target, condition }) => {
@@ -639,6 +650,7 @@ impl<'a> ScheduledProgram<'a> {
                         &mut working_label,
                         program,
                         instruction_index,
+                        custom_handler,
                     )?;
                 }
                 Instruction::Halt => terminate_working_block(
@@ -648,6 +660,7 @@ impl<'a> ScheduledProgram<'a> {
                     &mut working_label,
                     program,
                     instruction_index,
+                    custom_handler,
                 )?,
             };
         }
@@ -659,6 +672,7 @@ impl<'a> ScheduledProgram<'a> {
             &mut working_label,
             program,
             None,
+            custom_handler,
         )?;
 
         Ok(ScheduledProgram { blocks })

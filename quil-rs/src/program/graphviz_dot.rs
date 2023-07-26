@@ -185,7 +185,7 @@ impl<'a> ScheduledProgram<'a> {
 
 /// Escape a string for safe use as a Graphviz node ID or label
 fn escape_label(original: &str) -> String {
-    original.replace('\"', "\\\"")
+    original.replace('\\', "\\\\").replace('"', "\\\"")
 }
 
 /// Return a string to be used as the node ID within the graph text.
@@ -209,6 +209,7 @@ mod tests {
     mod graph {
         use std::str::FromStr;
 
+        use crate::instruction::InstructionHandler;
         use crate::program::Program;
 
         use super::super::ScheduledProgram;
@@ -242,7 +243,11 @@ DEFFRAME 0 1 \"cz\":
 
                     let program =
                         Program::from_str(&format!("{}\n{}", FRAME_DEFINITIONS, $input)).unwrap();
-                    let scheduled_program = ScheduledProgram::from_program(&program).unwrap();
+                    let scheduled_program = ScheduledProgram::from_program(
+                        &program,
+                        &mut InstructionHandler::default(),
+                    )
+                    .unwrap();
 
                     for block in scheduled_program.blocks.values() {
                         let graph = block.get_dependency_graph();
