@@ -1,0 +1,34 @@
+---
+source: quil-rs/src/program/graph.rs
+expression: dot_format
+---
+digraph {
+  entry -> "block_0_start";
+  entry [label="Entry Point"];
+  subgraph cluster_0 {
+    label="block_0";
+    node [style="filled"];
+    "block_0_start" [shape=circle, label="start"];
+    "block_0_start" -> "block_0_0" [label="ordering"];
+    "block_0_start" -> "block_0_1" [label="ordering
+timing"];
+    "block_0_0" [shape=rectangle, label="[0] PRAGMA NO-OP"];
+    "block_0_0" -> "block_0_3" [label="ordering"];
+    "block_0_1" [shape=rectangle, label="[1] PRAGMA RAW-INSTRUCTION"];
+    "block_0_1" -> "block_0_2" [label="ordering
+timing"];
+    "block_0_1" -> "block_0_end" [label="await read"];
+    "block_0_2" [shape=rectangle, label="[2] PRAGMA RAW-INSTRUCTION"];
+    "block_0_2" -> "block_0_4" [label="ordering
+timing"];
+    "block_0_2" -> "block_0_end" [label="await read"];
+    "block_0_3" [shape=rectangle, label="[3] PRAGMA NO-OP"];
+    "block_0_3" -> "block_0_end" [label="ordering"];
+    "block_0_4" [shape=rectangle, label="[4] PRAGMA RAW-INSTRUCTION"];
+    "block_0_4" -> "block_0_end" [label="await read
+ordering
+timing"];
+    "block_0_end" [shape=circle, label="end"];
+  }
+}
+

@@ -697,13 +697,22 @@ mod tests {
     use super::*;
     use crate::instruction::Pragma;
     use crate::program::{MatchedFrames, MemoryAccesses};
-    use insta::assert_debug_snapshot;
 
+    #[cfg(feature = "graphviz-dot")]
     mod custom_handler {
         use super::*;
         use crate::instruction::PragmaArgument;
         use crate::program::frame::FrameMatchCondition;
+        use crate::program::graphviz_dot::tests::build_dot_format_snapshot_test_case;
 
+        /// Generates a custom [`InstructionHandler`] that specially handles two `PRAGMA` instructions:
+        ///
+        /// - `NO-OP` is considered a `ClassicalCompute` instruction that does nothing
+        /// - `RAW-INSTRUCTION` is an `RFControl` instruction that is scheduled on all frames by default
+        ///   or the frames specified as arguments, and reads from `ro`.
+        ///
+        /// Note that any program being tested must define at least one frame for `RAW-INSTRUCTION` to
+        /// have any effect.
         fn get_custom_handler() -> InstructionHandler {
             const NO_OP: &str = "NO-OP";
             const RAW_INSTRUCTION: &str = "RAW-INSTRUCTION";
@@ -744,7 +753,6 @@ mod tests {
                             )
                         };
 
-                        eprintln!("{frame_condition:?}");
                         let used = program
                             .frames
                             .get_matching_keys_for_condition(frame_condition);
@@ -771,9 +779,9 @@ mod tests {
                 })
         }
 
-        #[test]
-        fn test_instructionblock_build() {
-            let program = r#"
+        build_dot_format_snapshot_test_case! {
+            only_pragmas_without_frames,
+            r#"
 DEFFRAME 0 "quux":
     SAMPLE-RATE: 1.0
     INITIAL-FREQUENCY: 1e8
@@ -782,30 +790,13 @@ PRAGMA RAW-INSTRUCTION
 PRAGMA RAW-INSTRUCTION
 PRAGMA NO-OP
 PRAGMA RAW-INSTRUCTION
-"#
-            .parse::<Program>()
-            .unwrap();
-
-            let instructions: Vec<_> = program.instructions.iter().collect();
-            let terminator = None;
-            let mut custom_handler = get_custom_handler();
-
-            let block = InstructionBlock::build(
-                instructions.clone(),
-                terminator,
-                &program,
-                &mut custom_handler,
-            )
-            .unwrap();
-
-            assert_eq!(block.instructions, instructions);
-            assert_eq!(block.terminator, BlockTerminator::Continue);
-            assert_debug_snapshot!(block.graph);
+"#,
+            &mut get_custom_handler(),
         }
 
-        #[test]
-        fn test_instructionblock_build_multiple_gates() {
-            let program = r#"
+        build_dot_format_snapshot_test_case! {
+            only_pragmas_with_frames,
+            r#"
 DEFFRAME 0 "foo":
     SAMPLE-RATE: 1.0
     INITIAL-FREQUENCY: 1e8
@@ -815,30 +806,39 @@ DEFFRAME 1 "bar":
 
 PRAGMA NO-OP
 PRAGMA RAW-INSTRUCTION foo
-PRAGMA RAW-INSTRUCTION foo bar
-PRAGMA NO-OP
 PRAGMA RAW-INSTRUCTION bar
 PRAGMA NO-OP
+PRAGMA RAW-INSTRUCTION foo bar
+PRAGMA NO-OP
 PRAGMA RAW-INSTRUCTION foo
-"#
-            .parse::<Program>()
-            .unwrap();
-
-            let instructions: Vec<_> = program.instructions.iter().collect();
-            let terminator = None;
-            let mut custom_handler = get_custom_handler();
-
-            let block = InstructionBlock::build(
-                instructions.clone(),
-                terminator,
-                &program,
-                &mut custom_handler,
-            )
-            .unwrap();
-
-            assert_eq!(block.instructions, instructions);
-            assert_eq!(block.terminator, BlockTerminator::Continue);
-            assert_debug_snapshot!(block.graph);
+"#,
+            &mut get_custom_handler(),
         }
+
+        build_dot_format_snapshot_test_case! {
+            mixed_pragmas_and_pulses,
+            r#"
+DEFFRAME 0 "foo":
+    SAMPLE-RATE: 1.0
+    INITIAL-FREQUENCY: 1e8
+DEFFRAME 1 "bar":
+    SAMPLE-RATE: 1.0
+    INITIAL-FREQUENCY: 1e8
+
+PRAGMA NO-OP
+PRAGMA RAW-INSTRUCTION foo
+PULSE 1 "bar" gaussian(duration: 1, fwhm: 2, t0: 3)
+PRAGMA RAW-INSTRUCTION foo bar
+PRAGMA NO-OP
+PULSE 0 "foo" gaussian(duration: 1, fwhm: 2, t0: 3)
+PRAGMA RAW-INSTRUCTION bar
+PULSE 0 "foo" gaussian(duration: 1, fwhm: 2, t0: 3)
+PULSE 1 "bar" gaussian(duration: 1, fwhm: 2, t0: 3)
+PRAGMA NO-OP
+PRAGMA RAW-INSTRUCTION foo
+"#,
+            &mut get_custom_handler(),
+        }
+
     }
 }
