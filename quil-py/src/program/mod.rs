@@ -1,7 +1,11 @@
 pub use self::{calibration::PyCalibrationSet, frame::PyFrameSet, memory::PyMemoryRegion};
 use crate::instruction::{PyDeclaration, PyGateDefinition, PyInstruction, PyQubit, PyWaveform};
 use numpy::{PyArray2, ToPyArray};
-use quil_rs::{instruction::Instruction, Program};
+use quil_rs::{
+    instruction::{Instruction, Waveform},
+    program::{CalibrationSet, FrameSet, MemoryRegion},
+    Program,
+};
 use rigetti_pyo3::{
     create_init_submodule, impl_as_mut_for_wrapper, impl_from_str, impl_parse, impl_repr,
     num_complex::Complex64,
@@ -13,7 +17,7 @@ use rigetti_pyo3::{
         types::{PyBytes, PyList},
         IntoPy,
     },
-    wrap_error, PyWrapper, PyWrapperMut, ToPython, ToPythonError,
+    wrap_error, PyTryFrom, PyWrapper, PyWrapperMut, ToPython, ToPythonError,
 };
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
@@ -71,14 +75,41 @@ impl PyProgram {
         self.as_inner().calibrations.to_python(py)
     }
 
+    #[setter]
+    pub fn set_calibrations(
+        &mut self,
+        py: Python<'_>,
+        calibrations: PyCalibrationSet,
+    ) -> PyResult<()> {
+        let program = self.as_inner_mut();
+        program.calibrations = CalibrationSet::py_try_from(py, &calibrations)?;
+        Ok(())
+    }
+
     #[getter]
     pub fn waveforms(&self, py: Python<'_>) -> PyResult<BTreeMap<String, PyWaveform>> {
         self.as_inner().waveforms.to_python(py)
     }
 
+    #[setter]
+    pub fn set_waveforms(
+        &mut self,
+        py: Python<'_>,
+        waveforms: BTreeMap<String, PyWaveform>,
+    ) -> PyResult<()> {
+        self.as_inner_mut().waveforms = BTreeMap::<String, Waveform>::py_try_from(py, &waveforms)?;
+        Ok(())
+    }
+
     #[getter]
     pub fn frames(&self, py: Python<'_>) -> PyResult<PyFrameSet> {
         self.as_inner().frames.to_python(py)
+    }
+
+    #[setter]
+    pub fn set_frames(&mut self, py: Python<'_>, frames: PyFrameSet) -> PyResult<()> {
+        self.as_inner_mut().frames = FrameSet::py_try_from(py, &frames)?;
+        Ok(())
     }
 
     #[getter]
@@ -88,6 +119,17 @@ impl PyProgram {
             .iter()
             .map(|(name, memory_region)| Ok((name.to_python(py)?, memory_region.to_python(py)?)))
             .collect()
+    }
+
+    #[setter]
+    pub fn set_memory_regions(
+        &mut self,
+        py: Python<'_>,
+        memory_regions: BTreeMap<String, PyMemoryRegion>,
+    ) -> PyResult<()> {
+        self.as_inner_mut().memory_regions =
+            BTreeMap::<String, MemoryRegion>::py_try_from(py, &memory_regions)?;
+        Ok(())
     }
 
     #[getter]
