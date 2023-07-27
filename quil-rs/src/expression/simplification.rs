@@ -470,8 +470,8 @@ static RULES: Lazy<Vec<Rewrite>> = Lazy::new(|| {
         rw!("add zero"      ; "(+ ?a 0)"                => "?a"),
         rw!("zero add"      ; "(+ 0 ?a)"                => "?a"),
         rw!("sub cancel"    ; "(- ?a ?a)"               => "0"),
-        rw!("add neg"       ; "(+ ?a (neg ?b))"         => "(- ?a ?b)"),
-        rw!("add neg 2"     ; "(+ (neg ?a) ?b)"         => "(- ?b ?a)"),
+        rw!("add neg r"     ; "(+ ?a (neg ?b))"         => "(- ?a ?b)"),
+        rw!("add neg l"     ; "(+ (neg ?a) ?b)"         => "(- ?b ?a)"),
         rw!("add self"      ; "(+ ?a ?a)"               => "(* 2 ?a)"),
         rw!("sub zero"      ; "(- ?a 0)"                => "?a"),
         rw!("zero sub"      ; "(- 0 ?a)"                => "(neg ?a)"),
@@ -486,10 +486,10 @@ static RULES: Lazy<Vec<Rewrite>> = Lazy::new(|| {
         rw!("div cancel"    ; "(/ ?a ?a)"               => "1" if is_not_zero("?a")),
         rw!("neg d cancel"  ; "(/ (neg ?a) ?a)"         => "-1" if is_not_zero("?a")),
         rw!("d neg cancel"  ; "(/ ?a (neg ?a))"         => "-1" if is_not_zero("?a")),
-        rw!("div mul"       ; "(/ ?a (* ?b ?a))"        => "?b" if is_not_zero("?a")),
-        rw!("div mul 2"     ; "(/ (* ?b ?a) ?a)"        => "?b" if is_not_zero("?a")),
-        rw!("mul div"       ; "(* ?a (/ ?b ?a))"        => "?b" if is_not_zero("?a")),
-        rw!("mul div 2"     ; "(* (/ ?b ?a) ?a)"        => "?b" if is_not_zero("?a")),
+        rw!("div mul r"     ; "(/ ?a (* ?b ?a))"        => "?b" if is_not_zero("?a")),
+        rw!("div mul l"     ; "(/ (* ?b ?a) ?a)"        => "?b" if is_not_zero("?a")),
+        rw!("mul div r"     ; "(* ?a (/ ?b ?a))"        => "?b" if is_not_zero("?a")),
+        rw!("mul div l"     ; "(* (/ ?b ?a) ?a)"        => "?b" if is_not_zero("?a")),
         // commutativity
         rw!("add commute"   ; "(+ ?a ?b)"               => "(+ ?b ?a)"),
         rw!("mul commute"   ; "(* ?a ?b)"               => "(* ?b ?a)"),
@@ -650,7 +650,6 @@ mod tests {
               egg::BackoffScheduler::default()
                 .with_initial_match_limit(1 << 14)
                 .with_ban_length(1 << 2)
-
           )
               .with_iter_limit(10usize.saturating_pow(3))
               .with_node_limit(10usize.saturating_pow(7))
