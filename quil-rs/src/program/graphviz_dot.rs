@@ -202,14 +202,12 @@ fn get_node_id(node: &ScheduledGraphNode, prefix: &str) -> String {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
+    pub(crate) use graph::build_dot_format_snapshot_test_case;
     mod graph {
-        use std::str::FromStr;
 
         use crate::instruction::InstructionHandler;
         use crate::program::Program;
-
-        use super::super::ScheduledProgram;
 
         /// Build a test case which compiles the input program, builds the dot-format string from the program,
         /// and then compares that to a "correct" snapshot of that dot format. This makes diffs easy to compare and
@@ -220,9 +218,17 @@ mod tests {
         /// that the `get_dot_format` method works. If _all_ or _most_ of these tests are failing, examine the
         /// diffs closely to determine if it's only a matter of reformatting.
         macro_rules! build_dot_format_snapshot_test_case {
-            ($name: ident, $input:expr) => {
+            ($name: ident, $input: expr) => {
+                crate::program::graphviz_dot::tests::build_dot_format_snapshot_test_case!(
+                    $name,
+                    $input,
+                    &mut InstructionHandler::default(),
+                );
+            };
+            ($name: ident, $input:expr, $handler: expr $(,)?) => {
                 #[test]
                 fn $name() {
+                    use crate::program::graph::ScheduledProgram;
                     const FRAME_DEFINITIONS: &'static str = "
 DEFFRAME 0 \"rf\":
     INITIAL-FREQUENCY: 1e6
@@ -238,13 +244,11 @@ DEFFRAME 0 1 \"cz\":
     INITIAL-FREQUENCY: 1e6
 ";
 
-                    let program =
-                        Program::from_str(&format!("{}\n{}", FRAME_DEFINITIONS, $input)).unwrap();
-                    let scheduled_program = ScheduledProgram::from_program(
-                        &program,
-                        &mut InstructionHandler::default(),
-                    )
-                    .unwrap();
+                    let program = format!("{}\n{}", FRAME_DEFINITIONS, $input)
+                        .parse::<Program>()
+                        .unwrap();
+                    let scheduled_program =
+                        ScheduledProgram::from_program(&program, $handler).unwrap();
 
                     for block in scheduled_program.blocks.values() {
                         let graph = block.get_dependency_graph();
@@ -262,6 +266,8 @@ DEFFRAME 0 1 \"cz\":
                 }
             };
         }
+
+        pub(crate) use build_dot_format_snapshot_test_case;
 
         build_dot_format_snapshot_test_case!(
             single_instruction,
