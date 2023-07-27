@@ -205,12 +205,9 @@ fn get_node_id(node: &ScheduledGraphNode, prefix: &str) -> String {
 pub(crate) mod tests {
     pub(crate) use graph::build_dot_format_snapshot_test_case;
     mod graph {
-        
 
         use crate::instruction::InstructionHandler;
         use crate::program::Program;
-
-        
 
         /// Build a test case which compiles the input program, builds the dot-format string from the program,
         /// and then compares that to a "correct" snapshot of that dot format. This makes diffs easy to compare and
