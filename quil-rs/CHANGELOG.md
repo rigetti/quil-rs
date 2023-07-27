@@ -1,3 +1,14 @@
+## 0.20.0-rc.2
+
+### Breaking Changes
+
+- allow overriding Instruction getters (#260)
+
+### Fixes
+
+- infix expression parenthesization (#262)
+- escape Quil strings for display (#258)
+
 ## 0.20.0-rc.1
 
 ### Breaking Changes
