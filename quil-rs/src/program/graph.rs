@@ -709,7 +709,7 @@ mod tests {
         ///
         /// - `NO-OP` is considered a `ClassicalCompute` instruction that does nothing
         /// - `RAW-INSTRUCTION` is an `RFControl` instruction that is scheduled on all frames by default
-        ///   or the frames specified as arguments, and reads from `ro`.
+        ///   or the frame names specified as arguments, and reads from `ro`.
         ///
         /// Note that any program being tested must define at least one frame for `RAW-INSTRUCTION` to
         /// have any effect.
