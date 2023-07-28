@@ -1,31 +1,19 @@
 use std::fs::read_to_string;
+use std::path::PathBuf;
 use std::str::FromStr;
 
+use insta::assert_snapshot;
 use rstest::rstest;
 
 use quil_rs::program::Program;
 
+/// A test to ensure that a Program doesn't incorrectly filter out calibrations
+/// when it is parsed.
 #[rstest]
-#[case("cz")]
-#[case("cz_phase")]
-#[case("measure")]
-#[case("rx")]
-#[case("xy")]
-fn test_duplicate_calibrations(#[case] program_name: &str) {
-    // TODO: Create a common module that loads test programs
-    let program_path = format!(
-        "{}/tests/programs/calibration_{program_name}.quil",
-        env!("CARGO_MANIFEST_DIR")
-    );
-    let program_text = read_to_string(&program_path).unwrap_or_else(|_| {
-        panic!(
-            "Should be able to locate test file: {}",
-            program_path.clone()
-        )
-    });
-
+fn test_calibration_filtering(#[files("tests/programs/calibration_*.quil")] path: PathBuf) {
+    let program_text =
+        read_to_string(&path).unwrap_or_else(|_| panic!("Should be able to load file: {:?}", path));
     let program = Program::from_str(&program_text).expect("Should be able to parse test program.");
 
-    // TODO: Snapshot test
-    assert_eq!(program_text, program.to_string());
+    assert_snapshot!(path.file_name().unwrap().to_str(), program.to_string());
 }
