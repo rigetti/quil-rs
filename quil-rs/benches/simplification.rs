@@ -10,11 +10,14 @@ static EXPRESSIONS: Lazy<Vec<Expression>> = Lazy::new(|| {
         .collect()
 });
 
+fn simplify(e: Expression) -> Expression {
+    e.into_simplified()
+}
+
 fn benchmark_expression_simplification(c: &mut Criterion) {
     EXPRESSIONS.iter().enumerate().for_each(|(i, e)| {
-        let mut e2 = e.clone();
         c.bench_function(&format!("expression_{i}"), |b| {
-            b.iter(|| black_box(e2.simplify()))
+            b.iter(|| black_box(simplify(e.clone())))
         });
     })
 }
