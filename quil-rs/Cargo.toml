@@ -51,3 +51,7 @@ harness = false
 [[bench]]
 name = "scheduled_program_from_program"
 harness = false
+
+[[bench]]
+name = "simplification"
+harness = false
