@@ -1,3 +1,23 @@
+## 0.4.0
+
+### Breaking Changes
+
+- allow overriding Instruction getters (#260)
+
+### Features
+
+- Add setters for `Program` calibrations, waveforms, frames, and memory_regions (#264)
+
+## 0.4.0-rc.2
+
+### Breaking Changes
+
+- allow overriding Instruction getters (#260)
+
+### Features
+
+- Add setters for `Program` calibrations, waveforms, frames, and memory_regions (#264)
+
 ## 0.4.0-rc.1
 
 ### Breaking Changes
