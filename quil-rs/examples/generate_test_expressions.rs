@@ -107,7 +107,11 @@ fn name(rng: &mut impl Rng) -> String {
         .collect::<String>();
     while ReservedToken::from_str(&name).is_ok()
         || name.to_lowercase() == "nan"
-        || name.chars().next().map(|c| c.is_digit(10)).unwrap_or(false)
+        || name
+            .chars()
+            .next()
+            .map(|c| c.is_ascii_digit())
+            .unwrap_or(false)
     {
         name = rng
             .sample_iter(&Alphanumeric)
@@ -200,8 +204,8 @@ fn main() -> Result<(), String> {
         .map_err(|e| format!("Error in creating output file: {e:?}"))?;
     let mut buf = BufWriter::new(file);
     for _ in 0..args.number_of_expressions {
-        let e = &build(&mut rng, args.maximum_depth);
-        let h = hash(e);
+        let e = build(&mut rng, args.maximum_depth);
+        let h = hash(&e);
         writeln!(buf, "{:x}\t{}", h, parenthesized(&e),)
             .map_err(|e| format!("Error in writing to output file: {e:?}"))?;
     }

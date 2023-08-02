@@ -24,7 +24,7 @@ fn simplify(e: Expression) -> Expression {
 
 fn benchmark_expression_simplification(c: &mut Criterion) {
     EXPRESSIONS.iter().for_each(|(n, e)| {
-        c.bench_function(&n, |b| b.iter(|| black_box(simplify(e.clone()))));
+        c.bench_function(n, |b| b.iter(|| black_box(simplify(e.clone()))));
     })
 }
 
