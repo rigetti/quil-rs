@@ -1,8 +1,7 @@
 use std::collections::HashMap;
-use std::fmt;
 
 use super::{MemoryReference, Qubit, WaveformInvocation};
-use crate::{expression::Expression, impl_quil_from_display, quil::Quil};
+use crate::{expression::Expression, quil::Quil};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum AttributeValue {
@@ -10,17 +9,19 @@ pub enum AttributeValue {
     Expression(Expression),
 }
 
-impl fmt::Display for AttributeValue {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl Quil for AttributeValue {
+    fn write(
+        &self,
+        f: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
+    ) -> crate::quil::ToQuilResult<()> {
         use AttributeValue::*;
         match self {
-            String(value) => write!(f, "{value:?}"),
-            Expression(value) => write!(f, "{value}"),
+            String(value) => write!(f, "{value:?}").map_err(Into::into),
+            Expression(value) => value.write(f, fall_back_to_debug),
         }
     }
 }
-
-impl_quil_from_display!(AttributeValue);
 
 pub type FrameAttributes = HashMap<String, AttributeValue>;
 

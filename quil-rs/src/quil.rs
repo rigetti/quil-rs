@@ -39,43 +39,8 @@ pub enum ToQuilError {
     UnresolvedQubitPlaceholder,
 }
 
-#[macro_export]
-macro_rules! impl_quil_from_display_for_ref {
-    ($type:ty) => {
-        impl $crate::quil::Quil for &$type {
-            fn write(
-                &self,
-                writer: &mut impl std::fmt::Write,
-                fall_back_to_debug: bool,
-            ) -> $crate::quil::ToQuilResult<()> {
-                (*self).write(writer, fall_back_to_debug)
-            }
-        }
-    };
-}
-
-/// Implement the Quil trait using the `Display` implementation of the type.
-///
-/// For types that do not implement `Display`, a manual implementation is needed.
-#[macro_export]
-macro_rules! impl_quil_from_display {
-    ($type:ty) => {
-        impl $crate::quil::Quil for $type {
-            fn write(
-                &self,
-                writer: &mut impl std::fmt::Write,
-                _fall_back_to_debug: bool,
-            ) -> $crate::quil::ToQuilResult<()> {
-                write!(writer, "{}", self).map_err(Into::into)
-            }
-        }
-
-        $crate::impl_quil_from_display_for_ref!($type);
-    };
-}
-
 /// Write a sequencer of Quil items to the given writer, joined with the provided `joiner`.
-pub(crate) fn write_join_quil<I, T>(
+pub(crate) fn write_join_quil<'i, I, T>(
     writer: &mut impl std::fmt::Write,
     fall_back_to_debug: bool,
     values: I,
@@ -83,8 +48,8 @@ pub(crate) fn write_join_quil<I, T>(
     prefix: &str,
 ) -> Result<(), ToQuilError>
 where
-    I: IntoIterator<Item = T>,
-    T: Quil,
+    I: IntoIterator<Item = &'i T>,
+    T: Quil + 'i,
 {
     let mut iter = values.into_iter();
     if let Some(first) = iter.next() {

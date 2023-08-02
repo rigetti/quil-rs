@@ -16,7 +16,6 @@ use std::collections::HashSet;
 use std::fmt;
 
 use crate::expression::Expression;
-use crate::impl_quil_from_display_for_ref;
 #[cfg(test)]
 use crate::parser::lex;
 use crate::program::frame::{FrameMatchCondition, FrameMatchConditions};
@@ -73,21 +72,59 @@ pub enum ValidationError {
     GateError(#[from] GateError),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Jump {
-    pub target: String,
+    pub target: Label,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+impl Quil for Jump {
+    fn write(
+        &self,
+        writer: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
+    ) -> Result<(), crate::quil::ToQuilError> {
+        write!(writer, "JUMP  ")?;
+        self.target.write(writer, fall_back_to_debug)?;
+        Ok(())
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct JumpWhen {
-    pub target: String,
+    pub target: Label,
     pub condition: MemoryReference,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+impl Quil for JumpWhen {
+    fn write(
+        &self,
+        writer: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
+    ) -> Result<(), crate::quil::ToQuilError> {
+        write!(writer, "JUMP-WHEN ")?;
+        self.target.write(writer, fall_back_to_debug)?;
+        write!(writer, " ")?;
+        Ok(())
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct JumpUnless {
-    pub target: String,
+    pub target: Label,
     pub condition: MemoryReference,
+}
+
+impl Quil for JumpUnless {
+    fn write(
+        &self,
+        writer: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
+    ) -> Result<(), crate::quil::ToQuilError> {
+        write!(writer, "JUMP-UNLESS ")?;
+        self.target.write(writer, fall_back_to_debug)?;
+        write!(writer, " ")?;
+        Ok(())
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -187,14 +224,14 @@ impl From<&Instruction> for InstructionRole {
     }
 }
 
-pub fn write_instruction_block<I, Q>(
+pub fn write_instruction_block<'i, I, Q>(
     f: &mut impl std::fmt::Write,
     fall_back_to_debug: bool,
     values: I,
 ) -> crate::quil::ToQuilResult<()>
 where
-    I: IntoIterator<Item = Q>,
-    Q: Quil,
+    I: IntoIterator<Item = &'i Q>,
+    Q: Quil + 'i,
 {
     write_join_quil(f, fall_back_to_debug, values, "\n", "\t")
 }
@@ -222,19 +259,6 @@ pub fn format_integer_vector(values: &[u64]) -> String {
         .map(|q| format!("{q}"))
         .collect::<Vec<String>>()
         .join(" ")
-}
-
-pub fn format_matrix(matrix: &[Vec<Expression>]) -> String {
-    matrix
-        .iter()
-        .map(|row| {
-            row.iter()
-                .map(|cell| format!("{cell}"))
-                .collect::<Vec<String>>()
-                .join(", ")
-        })
-        .collect::<Vec<String>>()
-        .join("\n\t")
 }
 
 fn write_qubits(
@@ -284,7 +308,7 @@ fn write_expression_parameter_string(
     Ok(())
 }
 
-fn write_parameter_string(f: &mut fmt::Formatter, parameters: &[String]) -> fmt::Result {
+fn write_parameter_string(f: &mut impl std::fmt::Write, parameters: &[String]) -> fmt::Result {
     if parameters.is_empty() {
         return Ok(());
     }
@@ -345,13 +369,9 @@ impl Quil for Instruction {
             Instruction::Halt => write!(f, "HALT").map_err(Into::into),
             Instruction::Nop => write!(f, "NOP").map_err(Into::into),
             Instruction::Wait => write!(f, "WAIT").map_err(Into::into),
-            Instruction::Jump(Jump { target }) => write!(f, "JUMP @{target}").map_err(Into::into),
-            Instruction::JumpUnless(JumpUnless { condition, target }) => {
-                write!(f, "JUMP-UNLESS @{target} {condition}").map_err(Into::into)
-            }
-            Instruction::JumpWhen(JumpWhen { condition, target }) => {
-                write!(f, "JUMP-WHEN @{target} {condition}").map_err(Into::into)
-            }
+            Instruction::Jump(jump) => jump.write(f, fall_back_to_debug),
+            Instruction::JumpUnless(jump) => jump.write(f, fall_back_to_debug),
+            Instruction::JumpWhen(jump) => jump.write(f, fall_back_to_debug),
             Instruction::Label(label) => label.write(f, fall_back_to_debug),
             Instruction::Comparison(comparison) => comparison.write(f, fall_back_to_debug),
             Instruction::BinaryLogic(binary_logic) => binary_logic.write(f, fall_back_to_debug),
@@ -359,8 +379,6 @@ impl Quil for Instruction {
         }
     }
 }
-
-impl_quil_from_display_for_ref!(Instruction);
 
 #[cfg(test)]
 mod test_instruction_display {

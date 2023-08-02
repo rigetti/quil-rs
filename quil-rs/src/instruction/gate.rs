@@ -1,8 +1,8 @@
 use crate::{
     expression::Expression,
-    imag, impl_quil_from_display,
+    imag,
     instruction::{write_expression_parameter_string, write_parameter_string, write_qubits, Qubit},
-    quil::Quil,
+    quil::{write_join_quil, Quil},
     real,
     validation::identifier::{
         validate_identifier, validate_user_identifier, IdentifierValidationError,
@@ -14,7 +14,6 @@ use once_cell::sync::Lazy;
 use std::{
     cmp::Ordering,
     collections::{HashMap, HashSet},
-    fmt,
 };
 
 /// A struct encapsulating all the properties of a Quil Quantum Gate.
@@ -584,7 +583,7 @@ impl Quil for Gate {
         fall_back_to_debug: bool,
     ) -> crate::quil::ToQuilResult<()> {
         for modifier in &self.modifiers {
-            write!(f, "{modifier} ")?;
+            modifier.write(f, fall_back_to_debug)?;
         }
 
         write!(f, "{}", self.name)?;
@@ -593,13 +592,18 @@ impl Quil for Gate {
     }
 }
 
-impl fmt::Display for GateModifier {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl Quil for GateModifier {
+    fn write(
+        &self,
+        f: &mut impl std::fmt::Write,
+        _fall_back_to_debug: bool,
+    ) -> crate::quil::ToQuilResult<()> {
         match self {
             Self::Controlled => write!(f, "CONTROLLED"),
             Self::Dagger => write!(f, "DAGGER"),
             Self::Forked => write!(f, "FORKED"),
         }
+        .map_err(Into::into)
     }
 }
 
@@ -856,18 +860,17 @@ pub enum GateSpecification {
     PauliSum(PauliSum),
 }
 
-impl fmt::Display for GateSpecification {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl Quil for GateSpecification {
+    fn write(
+        &self,
+        f: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
+    ) -> crate::quil::ToQuilResult<()> {
         match self {
             GateSpecification::Matrix(matrix) => {
                 for row in matrix {
                     write!(f, "\t")?;
-                    if let Some(first) = row.first() {
-                        write!(f, "{first}")?;
-                    }
-                    for cell in row.iter().skip(1) {
-                        write!(f, ", {cell}")?;
-                    }
+                    write_join_quil(f, fall_back_to_debug, row.iter(),", ", "")?;
                     writeln!(f)?;
                 }
             }
@@ -887,7 +890,9 @@ impl fmt::Display for GateSpecification {
                     for word in term.word() {
                         write!(f, "{word}")?;
                     }
-                    write!(f, "({})", term.expression)?;
+                    write!(f, "(")?;
+                    term.expression.write(f, fall_back_to_debug)?;
+                    write!(f, ")")?;
                     for argument in term.arguments() {
                         write!(f, " {argument}")?;
                     }
@@ -922,8 +927,12 @@ impl GateDefinition {
     }
 }
 
-impl fmt::Display for GateDefinition {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl Quil for GateDefinition {
+    fn write(
+        &self,
+        f: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
+    ) -> crate::quil::ToQuilResult<()> {
         write!(f, "DEFGATE {}", self.name,)?;
         write_parameter_string(f, &self.parameters)?;
         match &self.specification {
@@ -936,11 +945,10 @@ impl fmt::Display for GateDefinition {
                 writeln!(f, " AS PAULI-SUM:")?
             }
         }
-        write!(f, "{}", self.specification)
+        self.specification.write(f, fall_back_to_debug)?;
+        Ok(())
     }
 }
-
-impl_quil_from_display!(GateDefinition);
 
 #[cfg(test)]
 mod test_gate_definition {
@@ -949,6 +957,7 @@ mod test_gate_definition {
         Expression, ExpressionFunction, FunctionCallExpression, InfixExpression, InfixOperator,
         PrefixExpression, PrefixOperator,
     };
+    use crate::quil::Quil;
     use crate::{imag, real};
     use insta::assert_snapshot;
     use rstest::rstest;
@@ -1063,7 +1072,7 @@ mod test_gate_definition {
         insta::with_settings!({
             snapshot_suffix => description,
         }, {
-            assert_snapshot!(gate_def.to_string())
+            assert_snapshot!(gate_def.to_quil_or_debug())
         })
     }
 }
@@ -1076,12 +1085,17 @@ pub enum GateType {
     PauliSum,
 }
 
-impl fmt::Display for GateType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl Quil for GateType {
+    fn write(
+        &self,
+        f: &mut impl std::fmt::Write,
+        _fall_back_to_debug: bool,
+    ) -> crate::quil::ToQuilResult<()> {
         match self {
             Self::Matrix => write!(f, "MATRIX"),
             Self::Permutation => write!(f, "PERMUTATION"),
             Self::PauliSum => write!(f, "PAULI-SUM"),
         }
+        .map_err(Into::into)
     }
 }

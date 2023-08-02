@@ -5,7 +5,7 @@ use crate::{
         FunctionCallExpression, InfixExpression, InfixOperator, MemoryReference, PrefixExpression,
         PrefixOperator,
     },
-    hash::hash_f64,
+    hash::hash_f64, quil::Quil,
 };
 use egg::{define_language, rewrite as rw, Id, Language, RecExpr};
 use once_cell::sync::Lazy;
@@ -209,7 +209,7 @@ fn expression_to_recexpr(expression: &Expression) -> RecExpr<Expr> {
     fn helper(e: &Expression, r: &mut RecExpr<Expr>) -> Id {
         match e {
             Expression::Address(m) => {
-                let expr = Expr::Symbol(m.to_string().into());
+                let expr = Expr::Symbol(m.to_quil_or_debug().into());
                 r.add(expr)
             }
             Expression::FunctionCall(FunctionCallExpression {

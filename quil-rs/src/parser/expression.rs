@@ -241,6 +241,7 @@ mod tests {
     };
     use crate::instruction::MemoryReference;
     use crate::parser::lexer::lex;
+    use crate::quil::Quil;
     use crate::{imag, real};
 
     use nom_locate::LocatedSpan;
@@ -292,7 +293,7 @@ mod tests {
             let tokens = lex(input).unwrap();
             let (remainder, parsed) = parse_expression(&tokens).unwrap();
             assert_eq!(remainder.len(), 0);
-            assert_eq!(parsed.to_string(), case);
+            assert_eq!(parsed.to_quil_or_debug(), case);
         }
     }
 

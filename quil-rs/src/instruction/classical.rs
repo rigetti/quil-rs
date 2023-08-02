@@ -1,6 +1,4 @@
-use std::fmt;
-
-use crate::{hash::hash_f64, impl_quil_from_display};
+use crate::{hash::hash_f64, quil::Quil};
 
 use super::MemoryReference;
 
@@ -25,13 +23,20 @@ impl Arithmetic {
     }
 }
 
-impl fmt::Display for Arithmetic {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} {} {}", self.operator, self.destination, self.source)
+impl Quil for Arithmetic {
+    fn write(
+        &self,
+        f: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
+    ) -> crate::quil::ToQuilResult<()> {
+        self.operator.write(f, fall_back_to_debug)?;
+        write!(f, " ")?;
+        self.destination.write(f, fall_back_to_debug)?;
+        write!(f, " ")?;
+        self.source.write(f, fall_back_to_debug)?;
+        Ok(())
     }
 }
-
-impl_quil_from_display!(Arithmetic);
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum ArithmeticOperand {
@@ -50,28 +55,42 @@ impl std::hash::Hash for ArithmeticOperand {
     }
 }
 
-impl fmt::Display for ArithmeticOperand {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl Quil for ArithmeticOperand {
+    fn write(
+        &self,
+        f: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
+    ) -> crate::quil::ToQuilResult<()> {
         match &self {
-            ArithmeticOperand::LiteralInteger(value) => write!(f, "{value}"),
-            ArithmeticOperand::LiteralReal(value) => write!(f, "{value}"),
-            ArithmeticOperand::MemoryReference(value) => write!(f, "{value}"),
+            ArithmeticOperand::LiteralInteger(value) => write!(f, "{value}").map_err(Into::into),
+            ArithmeticOperand::LiteralReal(value) => write!(f, "{value}").map_err(Into::into),
+            ArithmeticOperand::MemoryReference(value) => value.write(f, fall_back_to_debug),
         }
     }
 }
 
-impl_quil_from_display!(ArithmeticOperand);
-
-#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, strum::Display)]
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 pub enum ArithmeticOperator {
-    #[strum(to_string = "ADD")]
     Add,
-    #[strum(to_string = "SUB")]
     Subtract,
-    #[strum(to_string = "DIV")]
     Divide,
-    #[strum(to_string = "MUL")]
     Multiply,
+}
+
+impl Quil for ArithmeticOperator {
+    fn write(
+        &self,
+        f: &mut impl std::fmt::Write,
+        _fall_back_to_debug: bool,
+    ) -> crate::quil::ToQuilResult<()> {
+        match &self {
+            ArithmeticOperator::Add => write!(f, "ADD"),
+            ArithmeticOperator::Subtract => write!(f, "SUB"),
+            ArithmeticOperator::Divide => write!(f, "DIV"),
+            ArithmeticOperator::Multiply => write!(f, "MUL"),
+        }
+        .map_err(Into::into)
+    }
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
@@ -80,28 +99,42 @@ pub enum BinaryOperand {
     MemoryReference(MemoryReference),
 }
 
-impl fmt::Display for BinaryOperand {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl Quil for BinaryOperand {
+    fn write(
+        &self,
+        f: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
+    ) -> crate::quil::ToQuilResult<()> {
         match &self {
-            BinaryOperand::LiteralInteger(value) => write!(f, "{value}"),
-            BinaryOperand::MemoryReference(value) => write!(f, "{value}"),
+            BinaryOperand::LiteralInteger(value) => write!(f, "{value}").map_err(Into::into),
+            BinaryOperand::MemoryReference(value) => value.write(f, fall_back_to_debug),
         }
     }
 }
 
-impl_quil_from_display!(BinaryOperand);
-
 pub type BinaryOperands = (MemoryReference, BinaryOperand);
 
-#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, strum::Display)]
-#[strum(serialize_all = "UPPERCASE")]
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 pub enum BinaryOperator {
     And,
     Ior,
     Xor,
 }
 
-impl_quil_from_display!(BinaryOperator);
+impl Quil for BinaryOperator {
+    fn write(
+        &self,
+        f: &mut impl std::fmt::Write,
+        _fall_back_to_debug: bool,
+    ) -> crate::quil::ToQuilResult<()> {
+        match &self {
+            BinaryOperator::And => write!(f, "AND"),
+            BinaryOperator::Ior => write!(f, "IOR"),
+            BinaryOperator::Xor => write!(f, "XOR"),
+        }
+        .map_err(Into::into)
+    }
+}
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct BinaryLogic {
@@ -109,17 +142,20 @@ pub struct BinaryLogic {
     pub operands: BinaryOperands,
 }
 
-impl fmt::Display for BinaryLogic {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{} {} {}",
-            self.operator, self.operands.0, self.operands.1
-        )
+impl Quil for BinaryLogic {
+    fn write(
+        &self,
+        f: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
+    ) -> crate::quil::ToQuilResult<()> {
+        self.operator.write(f, fall_back_to_debug)?;
+        write!(f, " ")?;
+        self.operands.0.write(f, fall_back_to_debug)?;
+        write!(f, " ")?;
+        self.operands.1.write(f, fall_back_to_debug)?;
+        Ok(())
     }
 }
-
-impl_quil_from_display!(BinaryLogic);
 
 impl BinaryLogic {
     pub fn new(operator: BinaryOperator, operands: BinaryOperands) -> Self {
@@ -142,13 +178,19 @@ impl Convert {
     }
 }
 
-impl fmt::Display for Convert {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "CONVERT {} {}", self.destination, self.source)
+impl Quil for Convert {
+    fn write(
+        &self,
+        f: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
+    ) -> crate::quil::ToQuilResult<()> {
+        write!(f, "CONVERT ")?;
+        self.destination.write(f, fall_back_to_debug)?;
+        write!(f, " ")?;
+        self.source.write(f, fall_back_to_debug)?;
+        Ok(())
     }
 }
-
-impl_quil_from_display!(Convert);
 
 #[derive(Clone, Debug, Hash, PartialEq)]
 pub struct Move {
@@ -165,13 +207,19 @@ impl Move {
     }
 }
 
-impl fmt::Display for Move {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "MOVE {} {}", self.destination, self.source)
+impl Quil for Move {
+    fn write(
+        &self,
+        f: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
+    ) -> crate::quil::ToQuilResult<()> {
+        write!(f, "MOVE ")?;
+        self.destination.write(f, fall_back_to_debug)?;
+        write!(f, " ")?;
+        self.source.write(f, fall_back_to_debug)?;
+        Ok(())
     }
 }
-
-impl_quil_from_display!(Move);
 
 #[derive(Clone, Debug, Hash, PartialEq)]
 pub struct Exchange {
@@ -179,13 +227,19 @@ pub struct Exchange {
     pub right: MemoryReference,
 }
 
-impl fmt::Display for Exchange {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "EXCHANGE {} {}", self.left, self.right)
+impl Quil for Exchange {
+    fn write(
+        &self,
+        f: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
+    ) -> crate::quil::ToQuilResult<()> {
+        write!(f, "EXCHANGE ")?;
+        self.left.write(f, fall_back_to_debug)?;
+        write!(f, " ")?;
+        self.right.write(f, fall_back_to_debug)?;
+        Ok(())
     }
 }
-
-impl_quil_from_display!(Exchange);
 
 impl Exchange {
     pub fn new(left: MemoryReference, right: MemoryReference) -> Self {
@@ -208,17 +262,22 @@ impl Comparison {
     }
 }
 
-impl fmt::Display for Comparison {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{} {} {} {}",
-            self.operator, self.operands.0, self.operands.1, self.operands.2
-        )
+impl Quil for Comparison {
+    fn write(
+        &self,
+        f: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
+    ) -> crate::quil::ToQuilResult<()> {
+        self.operator.write(f, fall_back_to_debug)?;
+        write!(f, " ")?;
+        self.operands.0.write(f, fall_back_to_debug)?;
+        write!(f, " ")?;
+        self.operands.1.write(f, fall_back_to_debug)?;
+        write!(f, " ")?;
+        self.operands.2.write(f, fall_back_to_debug)?;
+        Ok(())
     }
 }
-
-impl_quil_from_display!(Comparison);
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum ComparisonOperand {
@@ -227,17 +286,19 @@ pub enum ComparisonOperand {
     MemoryReference(MemoryReference),
 }
 
-impl fmt::Display for ComparisonOperand {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl Quil for ComparisonOperand {
+    fn write(
+        &self,
+        f: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
+    ) -> crate::quil::ToQuilResult<()> {
         match &self {
-            ComparisonOperand::LiteralInteger(value) => write!(f, "{value}"),
-            ComparisonOperand::LiteralReal(value) => write!(f, "{value}"),
-            ComparisonOperand::MemoryReference(value) => write!(f, "{value}"),
+            ComparisonOperand::LiteralInteger(value) => write!(f, "{value}").map_err(Into::into),
+            ComparisonOperand::LiteralReal(value) => write!(f, "{value}").map_err(Into::into),
+            ComparisonOperand::MemoryReference(value) => value.write(f, fall_back_to_debug)
         }
     }
 }
-
-impl_quil_from_display!(ComparisonOperand);
 
 impl std::hash::Hash for ComparisonOperand {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
@@ -258,19 +319,21 @@ pub enum ComparisonOperator {
     LessThan,
 }
 
-impl fmt::Display for ComparisonOperator {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl Quil for ComparisonOperator {
+    fn write(
+        &self,
+        f: &mut impl std::fmt::Write,
+        _fall_back_to_debug: bool,
+    ) -> crate::quil::ToQuilResult<()> {
         match &self {
             ComparisonOperator::Equal => write!(f, "EQ"),
             ComparisonOperator::GreaterThanOrEqual => write!(f, "GE"),
             ComparisonOperator::GreaterThan => write!(f, "GT"),
             ComparisonOperator::LessThanOrEqual => write!(f, "LE"),
             ComparisonOperator::LessThan => write!(f, "LT"),
-        }
+        }.map_err(Into::into)
     }
 }
-
-impl_quil_from_display!(ComparisonOperator);
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct UnaryLogic {
@@ -284,19 +347,35 @@ impl UnaryLogic {
     }
 }
 
-impl fmt::Display for UnaryLogic {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} {}", self.operator, self.operand)
+impl Quil for UnaryLogic {
+    fn write(
+        &self,
+        f: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
+    ) -> crate::quil::ToQuilResult<()> {
+        self.operator.write(f, fall_back_to_debug)?;
+        write!(f, " ")?;
+        self.operand.write(f, fall_back_to_debug)?;
+        Ok(())
     }
 }
 
-impl_quil_from_display!(UnaryLogic);
-
-#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, strum::Display)]
-#[strum(serialize_all = "UPPERCASE")]
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 pub enum UnaryOperator {
     Neg,
     Not,
 }
 
-impl_quil_from_display!(UnaryOperator);
+impl Quil for UnaryOperator {
+    fn write(
+        &self,
+        f: &mut impl std::fmt::Write,
+        _fall_back_to_debug: bool,
+    ) -> crate::quil::ToQuilResult<()> {
+        match &self {
+            UnaryOperator::Neg => write!(f, "NEG"),
+            UnaryOperator::Not => write!(f, "NOT"),
+        }
+        .map_err(Into::into)
+    }
+}

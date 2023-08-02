@@ -564,7 +564,6 @@ impl<'a> ScheduledProgram<'a> {
                 | Instruction::Delay(_)
                 | Instruction::Fence(_)
                 | Instruction::Include(_)
-                | Instruction::Label(Label::Placeholder(_))
                 | Instruction::Move(_)
                 | Instruction::Nop
                 | Instruction::Exchange(_)
@@ -581,13 +580,6 @@ impl<'a> ScheduledProgram<'a> {
                 | Instruction::Reset(_)
                 | Instruction::Wait => {
                     working_instructions.push(instruction);
-                }
-                Instruction::Gate(_) | Instruction::Measurement(_) => {
-                    return Err(ScheduleError {
-                        instruction_index,
-                        instruction: instruction.clone(),
-                        variant: ScheduleErrorVariant::UncalibratedInstruction,
-                    })
                 }
                 Instruction::CalibrationDefinition(_)
                 | Instruction::CircuitDefinition(_)
@@ -612,7 +604,9 @@ impl<'a> ScheduledProgram<'a> {
 
                     working_label = Some(value);
                 }
-                Instruction::Jump(Jump { target }) => {
+                Instruction::Jump(Jump {
+                    target: Label::Fixed(target),
+                }) => {
                     terminate_working_block(
                         Some(BlockTerminator::Unconditional { target }),
                         &mut working_instructions,
@@ -623,7 +617,10 @@ impl<'a> ScheduledProgram<'a> {
                         custom_handler,
                     )?;
                 }
-                Instruction::JumpWhen(JumpWhen { target, condition }) => {
+                Instruction::JumpWhen(JumpWhen {
+                    target: Label::Fixed(target),
+                    condition,
+                }) => {
                     terminate_working_block(
                         Some(BlockTerminator::Conditional {
                             target,
@@ -638,7 +635,10 @@ impl<'a> ScheduledProgram<'a> {
                         custom_handler,
                     )?;
                 }
-                Instruction::JumpUnless(JumpUnless { target, condition }) => {
+                Instruction::JumpUnless(JumpUnless {
+                    target: Label::Fixed(target),
+                    condition,
+                }) => {
                     terminate_working_block(
                         Some(BlockTerminator::Conditional {
                             target,
@@ -662,6 +662,18 @@ impl<'a> ScheduledProgram<'a> {
                     instruction_index,
                     custom_handler,
                 )?,
+                Instruction::Gate(_)
+                | Instruction::Measurement(_)
+                | Instruction::Label(Label::Placeholder(_))
+                | Instruction::Jump(_)
+                | Instruction::JumpWhen(_)
+                | Instruction::JumpUnless(_) => {
+                    return Err(ScheduleError {
+                        instruction_index,
+                        instruction: instruction.clone(),
+                        variant: ScheduleErrorVariant::UncalibratedInstruction,
+                    })
+                }
             };
         }
 

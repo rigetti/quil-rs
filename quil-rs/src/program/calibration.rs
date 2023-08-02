@@ -17,6 +17,7 @@ use std::collections::HashMap;
 use itertools::FoldWhile::{Continue, Done};
 use itertools::Itertools;
 
+use crate::quil::Quil;
 use crate::{
     expression::Expression,
     instruction::{
@@ -185,7 +186,7 @@ impl CalibrationSet {
                                         && pragma.data.as_ref() == Some(&calibration.parameter)
                                     {
                                         if let Some(target) = &measurement.target {
-                                            pragma.data = Some(target.to_string())
+                                            pragma.data = Some(target.to_quil_or_debug())
                                         }
                                     }
                                 }

@@ -618,10 +618,10 @@ mod tests {
         vec![
             Instruction::Label(Label::Fixed("hello".to_owned())),
             Instruction::Jump(Jump {
-                target: "hello".to_owned()
+                target: Label::Fixed("hello".to_owned())
             }),
             Instruction::JumpWhen(JumpWhen {
-                target: "hello".to_owned(),
+                target: Label::Fixed("hello".to_owned()),
                 condition: MemoryReference {
                     name: "ro".to_owned(),
                     index: 0
