@@ -366,14 +366,25 @@ pub(crate) fn parse_fence(input: ParserInput) -> InternalParserResult<Instructio
 /// Parse the contents of a `JUMP` instruction.
 pub(crate) fn parse_jump<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Instruction> {
     let (input, target) = token!(Label(v))(input)?;
-    Ok((input, Instruction::Jump(Jump { target: Label::Fixed(target) })))
+    Ok((
+        input,
+        Instruction::Jump(Jump {
+            target: Label::Fixed(target),
+        }),
+    ))
 }
 
 /// Parse the contents of a `JUMP-WHEN` instruction.
 pub(crate) fn parse_jump_when<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Instruction> {
     let (input, target) = token!(Label(v))(input)?;
     let (input, condition) = parse_memory_reference(input)?;
-    Ok((input, Instruction::JumpWhen(JumpWhen { target: Label::Fixed(target), condition })))
+    Ok((
+        input,
+        Instruction::JumpWhen(JumpWhen {
+            target: Label::Fixed(target),
+            condition,
+        }),
+    ))
 }
 
 /// Parse the contents of a `JUMP-UNLESS` instruction.
@@ -384,7 +395,10 @@ pub(crate) fn parse_jump_unless<'a>(
     let (input, condition) = parse_memory_reference(input)?;
     Ok((
         input,
-        Instruction::JumpUnless(JumpUnless { target: Label::Fixed(target), condition }),
+        Instruction::JumpUnless(JumpUnless {
+            target: Label::Fixed(target),
+            condition,
+        }),
     ))
 }
 

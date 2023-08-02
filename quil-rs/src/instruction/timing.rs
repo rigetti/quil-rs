@@ -32,7 +32,7 @@ impl Quil for Delay {
         for frame_name in &self.frame_names {
             write!(writer, " \"{}\"", frame_name)?;
         }
-        write!(writer, " ", )?;
+        write!(writer, " ",)?;
         self.duration.write(writer, fall_back_to_debug)
     }
 }

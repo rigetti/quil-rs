@@ -573,7 +573,8 @@ mod test {
         expression::{
             Expression, InfixExpression, InfixOperator, PrefixExpression, PrefixOperator,
         },
-        real, quil::Quil,
+        quil::Quil,
+        real,
     };
 
     #[test]

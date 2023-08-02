@@ -28,10 +28,10 @@ impl Quil for Label {
         fall_back_to_debug: bool,
     ) -> crate::quil::ToQuilResult<()> {
         match self {
-            Label::Fixed(label) => write!(writer, "LABEL @{}", label).map_err(Into::into),
+            Label::Fixed(label) => write!(writer, "@{}", label).map_err(Into::into),
             Label::Placeholder(_) => {
                 if fall_back_to_debug {
-                    write!(writer, "LABEL {:?}", self).map_err(Into::into)
+                    write!(writer, "@{:?}", self).map_err(Into::into)
                 } else {
                     Err(ToQuilError::UnresolvedLabelPlaceholder)
                 }
@@ -82,5 +82,30 @@ impl Ord for LabelPlaceholder {
 impl PartialEq for LabelPlaceholder {
     fn eq(&self, other: &Self) -> bool {
         Arc::<std::string::String>::ptr_eq(&self.0, &other.0)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rstest::rstest;
+
+    #[test]
+    fn resolve_placeholder() {}
+
+    #[rstest]
+    #[case(Label::Fixed(String::from("test")), Ok("@test"), "@test")]
+    #[case(
+        Label::Placeholder(LabelPlaceholder::new(String::from("test-placeholder"))),
+        Err(ToQuilError::UnresolvedLabelPlaceholder),
+        "@Placeholder(LabelPlaceholder(\"test-placeholder\"))"
+    )]
+    fn quil_format(
+        #[case] input: Label,
+        #[case] expected_quil: crate::quil::ToQuilResult<&str>,
+        #[case] expected_debug: &str,
+    ) {
+        assert_eq!(input.to_quil(), expected_quil.map(|s| s.to_string()));
+        assert_eq!(input.to_quil_or_debug(), expected_debug);
     }
 }

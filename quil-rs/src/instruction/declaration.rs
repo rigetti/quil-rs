@@ -34,7 +34,8 @@ impl Quil for ScalarType {
                 Octet => "OCTET",
                 Real => "REAL",
             }
-        ).map_err(Into::into)
+        )
+        .map_err(Into::into)
     }
 }
 
@@ -138,9 +139,9 @@ impl Quil for Declaration {
 #[cfg(test)]
 mod test_declaration {
     use super::{Declaration, Offset, ScalarType, Sharing, Vector};
+    use crate::quil::Quil;
     use insta::assert_snapshot;
     use rstest::rstest;
-    use crate::quil::Quil;
 
     #[rstest]
     #[case(

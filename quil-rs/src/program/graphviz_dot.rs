@@ -140,7 +140,12 @@ impl<'a> ScheduledProgram<'a> {
                             )
                             .attributes()
                             .set_label(
-                                format!("if {} {} 0", condition.to_quil_or_debug(), equality_operators.0).as_str(),
+                                format!(
+                                    "if {} {} 0",
+                                    condition.to_quil_or_debug(),
+                                    equality_operators.0
+                                )
+                                .as_str(),
                             );
                         if let Some(next_label) = next_block_label {
                             digraph
@@ -150,7 +155,12 @@ impl<'a> ScheduledProgram<'a> {
                                 )
                                 .attributes()
                                 .set_label(
-                                    format!("if {} {} 0", condition.to_quil_or_debug(), equality_operators.1).as_str(),
+                                    format!(
+                                        "if {} {} 0",
+                                        condition.to_quil_or_debug(),
+                                        equality_operators.1
+                                    )
+                                    .as_str(),
                                 );
                         };
                     }

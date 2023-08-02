@@ -1,4 +1,8 @@
 /// A trait to wrap items which represent some construct within the Quil language.
+///
+/// If you want to serialize an object to string and fail if it can't be represented as valid Quil, then use
+/// `to_quil()`. If you want to serialize an object to string infallibly, and can tolerate invalid Quil, then
+/// use `to_quil_or_debug()`.
 pub trait Quil {
     /// Return a string in valid Quil syntax or an error if the item cannot be represented with valid Quil.
     fn to_quil(&self) -> Result<String, ToQuilError> {
@@ -7,7 +11,9 @@ pub trait Quil {
         Ok(buffer)
     }
 
-    /// Return a string in valid Quil syntax if possible or otherwise the debug representation of the item.
+    /// Return a string in valid Quil syntax if possible. Any individual component of this object
+    /// which cannot be represented in Quil will be replaced with a `Debug` representation of that
+    /// component.
     fn to_quil_or_debug(&self) -> String
     where
         Self: std::fmt::Debug,
@@ -28,7 +34,7 @@ pub trait Quil {
 pub type ToQuilResult<T> = Result<T, ToQuilError>;
 
 /// Errors which can occur when converting a Quil item to a string.
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, PartialEq)]
 #[non_exhaustive]
 pub enum ToQuilError {
     #[error("Failed to write Quil: {0}")]

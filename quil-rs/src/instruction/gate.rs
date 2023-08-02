@@ -870,7 +870,7 @@ impl Quil for GateSpecification {
             GateSpecification::Matrix(matrix) => {
                 for row in matrix {
                     write!(f, "\t")?;
-                    write_join_quil(f, fall_back_to_debug, row.iter(),", ", "")?;
+                    write_join_quil(f, fall_back_to_debug, row.iter(), ", ", "")?;
                     writeln!(f)?;
                 }
             }

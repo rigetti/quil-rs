@@ -5,7 +5,8 @@ use crate::{
         FunctionCallExpression, InfixExpression, InfixOperator, MemoryReference, PrefixExpression,
         PrefixOperator,
     },
-    hash::hash_f64, quil::Quil,
+    hash::hash_f64,
+    quil::Quil,
 };
 use egg::{define_language, rewrite as rw, Id, Language, RecExpr};
 use once_cell::sync::Lazy;

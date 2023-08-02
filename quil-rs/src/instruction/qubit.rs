@@ -86,3 +86,37 @@ impl Ord for QubitPlaceholder {
         self.address().cmp(&other.address())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rstest::rstest;
+
+    #[test]
+    fn resolve_placeholder() {
+        let mut qubit = Qubit::Placeholder(QubitPlaceholder::default());
+        qubit.resolve_placeholder(|_| Some(0));
+        assert_eq!(qubit, Qubit::Fixed(0));
+    }
+
+    #[rstest]
+    #[case(Qubit::Fixed(0), Ok("0"), "0")]
+    #[case(
+        Qubit::Variable("q".to_string()),
+        Ok("q"),
+        "q"
+    )]
+    #[case(
+        Qubit::Placeholder(QubitPlaceholder::default()),
+        Err(ToQuilError::UnresolvedQubitPlaceholder),
+        "Placeholder(QubitPlaceholder(()))"
+    )]
+    fn quil_format(
+        #[case] input: Qubit,
+        #[case] expected_quil: crate::quil::ToQuilResult<&str>,
+        #[case] expected_debug: &str,
+    ) {
+        assert_eq!(input.to_quil(), expected_quil.map(|s| s.to_string()));
+        assert_eq!(input.to_quil_or_debug(), expected_debug);
+    }
+}

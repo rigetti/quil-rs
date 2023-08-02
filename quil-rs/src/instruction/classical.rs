@@ -295,7 +295,7 @@ impl Quil for ComparisonOperand {
         match &self {
             ComparisonOperand::LiteralInteger(value) => write!(f, "{value}").map_err(Into::into),
             ComparisonOperand::LiteralReal(value) => write!(f, "{value}").map_err(Into::into),
-            ComparisonOperand::MemoryReference(value) => value.write(f, fall_back_to_debug)
+            ComparisonOperand::MemoryReference(value) => value.write(f, fall_back_to_debug),
         }
     }
 }
@@ -331,7 +331,8 @@ impl Quil for ComparisonOperator {
             ComparisonOperator::GreaterThan => write!(f, "GT"),
             ComparisonOperator::LessThanOrEqual => write!(f, "LE"),
             ComparisonOperator::LessThan => write!(f, "LT"),
-        }.map_err(Into::into)
+        }
+        .map_err(Into::into)
     }
 }
 
