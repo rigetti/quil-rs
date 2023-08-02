@@ -3,10 +3,18 @@ use once_cell::sync::Lazy;
 use quil_rs::expression::Expression;
 use std::str::FromStr;
 
-static EXPRESSIONS: Lazy<Vec<Expression>> = Lazy::new(|| {
-    include_str!("expressions.txt")
+static EXPRESSIONS: Lazy<Vec<(String, Expression)>> = Lazy::new(|| {
+    include_str!("test_expressions.txt")
         .lines()
-        .map(|line| Expression::from_str(line).expect("these are valid expressions"))
+        .map(|line| {
+            let (name, expr) = line
+                .split_once('\t')
+                .expect("these lines are designed this way");
+            (
+                name.to_string(),
+                Expression::from_str(expr).expect("these are valid expressions"),
+            )
+        })
         .collect()
 });
 
@@ -15,10 +23,8 @@ fn simplify(e: Expression) -> Expression {
 }
 
 fn benchmark_expression_simplification(c: &mut Criterion) {
-    EXPRESSIONS.iter().enumerate().for_each(|(i, e)| {
-        c.bench_function(&format!("expression_{i}"), |b| {
-            b.iter(|| black_box(simplify(e.clone())))
-        });
+    EXPRESSIONS.iter().for_each(|(n, e)| {
+        c.bench_function(&n, |b| b.iter(|| black_box(simplify(e.clone()))));
     })
 }
 
