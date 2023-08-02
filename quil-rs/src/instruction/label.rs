@@ -22,10 +22,20 @@ impl Label {
 }
 
 impl Quil for Label {
-    fn write(&self, writer: &mut impl std::fmt::Write) -> crate::quil::ToQuilResult<()> {
+    fn write(
+        &self,
+        writer: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
+    ) -> crate::quil::ToQuilResult<()> {
         match self {
             Label::Fixed(label) => write!(writer, "LABEL @{}", label).map_err(Into::into),
-            Label::Placeholder(_) => Err(ToQuilError::UnresolvedLabelPlaceholder),
+            Label::Placeholder(_) => {
+                if fall_back_to_debug {
+                    write!(writer, "LABEL {:?}", self).map_err(Into::into)
+                } else {
+                    Err(ToQuilError::UnresolvedLabelPlaceholder)
+                }
+            }
         }
     }
 }

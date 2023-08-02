@@ -43,14 +43,18 @@ impl Calibration {
 }
 
 impl Quil for Calibration {
-    fn write(&self, f: &mut impl std::fmt::Write) -> crate::quil::ToQuilResult<()> {
+    fn write(
+        &self,
+        f: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
+    ) -> crate::quil::ToQuilResult<()> {
         write!(f, "DEFCAL {}", self.name)?;
-        write_expression_parameter_string(f, &self.parameters)?;
-        write_qubit_parameters(f, &self.qubits)?;
+        write_expression_parameter_string(f, fall_back_to_debug, &self.parameters)?;
+        write_qubit_parameters(f, fall_back_to_debug, &self.qubits)?;
         write!(f, ":")?;
         for instruction in &self.instructions {
             write!(f, "\n\t")?;
-            instruction.write(f)?;
+            instruction.write(f, fall_back_to_debug)?;
         }
         Ok(())
     }
@@ -121,16 +125,20 @@ impl MeasureCalibrationDefinition {
 }
 
 impl Quil for MeasureCalibrationDefinition {
-    fn write(&self, f: &mut impl std::fmt::Write) -> crate::quil::ToQuilResult<()> {
+    fn write(
+        &self,
+        f: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
+    ) -> crate::quil::ToQuilResult<()> {
         write!(f, "DEFCAL MEASURE")?;
         if let Some(qubit) = &self.qubit {
             write!(f, " ")?;
-            qubit.write(f)?;
+            qubit.write(f, fall_back_to_debug)?;
         }
 
         writeln!(f, " {}:", self.parameter,)?;
 
-        write_instruction_block(f, &self.instructions)?;
+        write_instruction_block(f, fall_back_to_debug, &self.instructions)?;
         writeln!(f)?;
         Ok(())
     }

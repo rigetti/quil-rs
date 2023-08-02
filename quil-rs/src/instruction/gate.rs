@@ -1,6 +1,6 @@
 use crate::{
     expression::Expression,
-    imag, impl_quil,
+    imag, impl_quil_from_display,
     instruction::{write_expression_parameter_string, write_parameter_string, write_qubits, Qubit},
     quil::Quil,
     real,
@@ -578,14 +578,18 @@ static PARAMETERIZED_GATE_MATRICES: Lazy<HashMap<String, ParameterizedMatrix>> =
 });
 
 impl Quil for Gate {
-    fn write(&self, f: &mut impl std::fmt::Write) -> crate::quil::ToQuilResult<()> {
+    fn write(
+        &self,
+        f: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
+    ) -> crate::quil::ToQuilResult<()> {
         for modifier in &self.modifiers {
             write!(f, "{modifier} ")?;
         }
 
         write!(f, "{}", self.name)?;
-        write_expression_parameter_string(f, &self.parameters)?;
-        write_qubits(f, &self.qubits)
+        write_expression_parameter_string(f, fall_back_to_debug, &self.parameters)?;
+        write_qubits(f, fall_back_to_debug, &self.qubits)
     }
 }
 
@@ -936,7 +940,7 @@ impl fmt::Display for GateDefinition {
     }
 }
 
-impl_quil!(GateDefinition);
+impl_quil_from_display!(GateDefinition);
 
 #[cfg(test)]
 mod test_gate_definition {

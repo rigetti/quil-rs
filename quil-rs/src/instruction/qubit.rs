@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::quil::{Quil, ToQuilError};
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub enum Qubit {
     Fixed(u64),
     Placeholder(QubitPlaceholder),
@@ -26,11 +26,18 @@ impl Quil for Qubit {
     fn write(
         &self,
         writer: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
     ) -> std::result::Result<(), crate::quil::ToQuilError> {
         use Qubit::*;
         match self {
             Fixed(value) => write!(writer, "{value}").map_err(Into::into),
-            Placeholder(_) => Err(ToQuilError::UnresolvedQubitPlaceholder),
+            Placeholder(_) => {
+                if fall_back_to_debug {
+                    write!(writer, "{:?}", self).map_err(Into::into)
+                } else {
+                    Err(ToQuilError::UnresolvedQubitPlaceholder)
+                }
+            }
             Variable(value) => write!(writer, "{value}").map_err(Into::into),
         }
     }

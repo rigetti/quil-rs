@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::ops;
 use std::str::FromStr;
 
@@ -379,7 +379,10 @@ impl Program {
             let mut qubits_used: HashSet<u64> = HashSet::new();
             let mut qubit_placeholders: IndexSet<QubitPlaceholder> = IndexSet::new();
 
-            for qubit in self.get_used_qubits() {
+            // Stable iteration order makes placeholder resolution deterministic
+            let sorted_qubits = self.get_used_qubits().iter().collect::<BTreeSet<_>>();
+
+            for qubit in sorted_qubits {
                 match qubit {
                     Qubit::Fixed(index) => {
                         qubits_used.insert(*index);
@@ -498,9 +501,10 @@ impl Quil for Program {
     fn write(
         &self,
         writer: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
     ) -> std::result::Result<(), crate::quil::ToQuilError> {
         for instruction in self.to_instructions() {
-            instruction.write(writer)?;
+            instruction.write(writer, fall_back_to_debug)?;
             writeln!(writer)?;
         }
         Ok(())

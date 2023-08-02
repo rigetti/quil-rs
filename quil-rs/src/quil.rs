@@ -3,20 +3,26 @@ pub trait Quil {
     /// Return a string in valid Quil syntax or an error if the item cannot be represented with valid Quil.
     fn to_quil(&self) -> Result<String, ToQuilError> {
         let mut buffer = String::new();
-        self.write(&mut buffer)?;
+        self.write(&mut buffer, false)?;
         Ok(buffer)
     }
-
-    /// Write the Quil representation of the item to the given writer.
-    fn write(&self, writer: &mut impl std::fmt::Write) -> Result<(), ToQuilError>;
 
     /// Return a string in valid Quil syntax if possible or otherwise the debug representation of the item.
     fn to_quil_or_debug(&self) -> String
     where
         Self: std::fmt::Debug,
     {
-        self.to_quil().unwrap_or_else(|_| format!("{:#?}", self))
+        let mut buffer = String::new();
+        self.write(&mut buffer, true).ok();
+        buffer
     }
+
+    /// Write the Quil representation of the item to the given writer.
+    fn write(
+        &self,
+        writer: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
+    ) -> Result<(), ToQuilError>;
 }
 
 pub type ToQuilResult<T> = Result<T, ToQuilError>;
@@ -34,11 +40,15 @@ pub enum ToQuilError {
 }
 
 #[macro_export]
-macro_rules! impl_quil_for_ref {
+macro_rules! impl_quil_from_display_for_ref {
     ($type:ty) => {
         impl $crate::quil::Quil for &$type {
-            fn write(&self, writer: &mut impl std::fmt::Write) -> $crate::quil::ToQuilResult<()> {
-                (*self).write(writer)
+            fn write(
+                &self,
+                writer: &mut impl std::fmt::Write,
+                fall_back_to_debug: bool,
+            ) -> $crate::quil::ToQuilResult<()> {
+                (*self).write(writer, fall_back_to_debug)
             }
         }
     };
@@ -48,27 +58,26 @@ macro_rules! impl_quil_for_ref {
 ///
 /// For types that do not implement `Display`, a manual implementation is needed.
 #[macro_export]
-macro_rules! impl_quil {
+macro_rules! impl_quil_from_display {
     ($type:ty) => {
         impl $crate::quil::Quil for $type {
-            fn write(&self, writer: &mut impl std::fmt::Write) -> $crate::quil::ToQuilResult<()> {
+            fn write(
+                &self,
+                writer: &mut impl std::fmt::Write,
+                _fall_back_to_debug: bool,
+            ) -> $crate::quil::ToQuilResult<()> {
                 write!(writer, "{}", self).map_err(Into::into)
             }
         }
 
-        $crate::impl_quil_for_ref!($type);
-
-        // impl $crate::quil::Quil for &$type {
-        //     fn write(&self, writer: &mut impl std::fmt::Write) -> $crate::quil::ToQuilResult<()> {
-        //         write!(writer, "{}", self).map_err(Into::into)
-        //     }
-        // }
+        $crate::impl_quil_from_display_for_ref!($type);
     };
 }
 
 /// Write a sequencer of Quil items to the given writer, joined with the provided `joiner`.
 pub(crate) fn write_join_quil<I, T>(
     writer: &mut impl std::fmt::Write,
+    fall_back_to_debug: bool,
     values: I,
     joiner: &str,
     prefix: &str,
@@ -80,11 +89,11 @@ where
     let mut iter = values.into_iter();
     if let Some(first) = iter.next() {
         write!(writer, "{}", prefix)?;
-        first.write(writer)?;
+        first.write(writer, fall_back_to_debug)?;
 
         for value in iter {
             write!(writer, "{joiner}{prefix}")?;
-            value.write(writer)?;
+            value.write(writer, fall_back_to_debug)?;
         }
     }
     Ok(())

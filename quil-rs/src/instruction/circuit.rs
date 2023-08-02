@@ -28,7 +28,11 @@ impl CircuitDefinition {
 }
 
 impl Quil for CircuitDefinition {
-    fn write(&self, writer: &mut impl std::fmt::Write) -> Result<(), crate::quil::ToQuilError> {
+    fn write(
+        &self,
+        writer: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
+    ) -> Result<(), crate::quil::ToQuilError> {
         let parameter_str: String = self
             .parameters
             .iter()
@@ -46,7 +50,7 @@ impl Quil for CircuitDefinition {
         writeln!(writer, ":")?;
         for instruction in &self.instructions {
             write!(writer, "\t")?;
-            instruction.write(writer)?;
+            instruction.write(writer, fall_back_to_debug)?;
             writeln!(writer)?;
         }
 

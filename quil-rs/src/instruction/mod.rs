@@ -16,10 +16,11 @@ use std::collections::HashSet;
 use std::fmt;
 
 use crate::expression::Expression;
-use crate::impl_quil_for_ref;
+use crate::impl_quil_from_display_for_ref;
 #[cfg(test)]
 use crate::parser::lex;
 use crate::program::frame::{FrameMatchCondition, FrameMatchConditions};
+use crate::program::{MatchedFrames, MemoryAccesses};
 use crate::quil::{write_join_quil, Quil, ToQuilResult};
 use crate::Program;
 
@@ -188,13 +189,14 @@ impl From<&Instruction> for InstructionRole {
 
 pub fn write_instruction_block<I, Q>(
     f: &mut impl std::fmt::Write,
+    fall_back_to_debug: bool,
     values: I,
 ) -> crate::quil::ToQuilResult<()>
 where
     I: IntoIterator<Item = Q>,
     Q: Quil,
 {
-    write_join_quil(f, values, "\n", "\t")
+    write_join_quil(f, fall_back_to_debug, values, "\n", "\t")
 }
 
 pub(crate) fn write_join(
@@ -235,23 +237,31 @@ pub fn format_matrix(matrix: &[Vec<Expression>]) -> String {
         .join("\n\t")
 }
 
-fn write_qubits(f: &mut impl std::fmt::Write, qubits: &[Qubit]) -> crate::quil::ToQuilResult<()> {
+fn write_qubits(
+    f: &mut impl std::fmt::Write,
+    fall_back_to_debug: bool,
+    qubits: &[Qubit],
+) -> crate::quil::ToQuilResult<()> {
     for qubit in qubits {
         write!(f, " ")?;
-        qubit.write(f)?;
+        qubit.write(f, fall_back_to_debug)?;
     }
     Ok(())
 }
 
 /// Write qubits as a Quil parameter list, where each variable qubit must be prefixed with a `%`
 /// and all are prefixed with ` `. Return an error if any is a qubit placeholder.
-fn write_qubit_parameters(f: &mut impl std::fmt::Write, qubits: &[Qubit]) -> ToQuilResult<()> {
+fn write_qubit_parameters(
+    f: &mut impl std::fmt::Write,
+    fall_back_to_debug: bool,
+    qubits: &[Qubit],
+) -> ToQuilResult<()> {
     for qubit in qubits.iter() {
         match qubit {
             Qubit::Variable(var) => write!(f, " %{var}")?,
             other => {
                 write!(f, " ")?;
-                other.write(f)?;
+                other.write(f, fall_back_to_debug)?;
             }
         }
     }
@@ -261,6 +271,7 @@ fn write_qubit_parameters(f: &mut impl std::fmt::Write, qubits: &[Qubit]) -> ToQ
 
 fn write_expression_parameter_string(
     f: &mut impl std::fmt::Write,
+    fall_back_to_debug: bool,
     parameters: &[Expression],
 ) -> crate::quil::ToQuilResult<()> {
     if parameters.is_empty() {
@@ -268,7 +279,7 @@ fn write_expression_parameter_string(
     }
 
     write!(f, "(")?;
-    write_join_quil(f, parameters, ", ", "")?;
+    write_join_quil(f, fall_back_to_debug, parameters, ", ", "")?;
     write!(f, ")")?;
     Ok(())
 }
@@ -284,39 +295,53 @@ fn write_parameter_string(f: &mut fmt::Formatter, parameters: &[String]) -> fmt:
 }
 
 impl Quil for Instruction {
-    fn write(&self, f: &mut impl std::fmt::Write) -> Result<(), crate::quil::ToQuilError> {
+    fn write(
+        &self,
+        f: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
+    ) -> Result<(), crate::quil::ToQuilError> {
         match self {
-            Instruction::Arithmetic(arithmetic) => arithmetic.write(f),
-            Instruction::CalibrationDefinition(calibration) => calibration.write(f),
-            Instruction::Capture(capture) => capture.write(f),
-            Instruction::CircuitDefinition(circuit) => circuit.write(f),
-            Instruction::Convert(convert) => convert.write(f),
-            Instruction::Declaration(declaration) => declaration.write(f),
-            Instruction::Delay(delay) => delay.write(f),
-            Instruction::Fence(fence) => fence.write(f),
-            Instruction::FrameDefinition(frame_definition) => frame_definition.write(f),
-            Instruction::Gate(gate) => gate.write(f),
-            Instruction::GateDefinition(gate_definition) => gate_definition.write(f),
-            Instruction::Include(include) => include.write(f),
-            Instruction::MeasureCalibrationDefinition(measure_calibration) => {
-                measure_calibration.write(f)
+            Instruction::Arithmetic(arithmetic) => arithmetic.write(f, fall_back_to_debug),
+            Instruction::CalibrationDefinition(calibration) => {
+                calibration.write(f, fall_back_to_debug)
             }
-            Instruction::Measurement(measurement) => measurement.write(f),
-            Instruction::Move(r#move) => r#move.write(f),
-            Instruction::Exchange(exchange) => exchange.write(f),
-            Instruction::Load(load) => load.write(f),
-            Instruction::Store(store) => store.write(f),
-            Instruction::Pulse(pulse) => pulse.write(f),
-            Instruction::Pragma(pragma) => pragma.write(f),
-            Instruction::RawCapture(raw_capture) => raw_capture.write(f),
-            Instruction::Reset(reset) => reset.write(f),
-            Instruction::SetFrequency(set_frequency) => set_frequency.write(f),
-            Instruction::SetPhase(set_phase) => set_phase.write(f),
-            Instruction::SetScale(set_scale) => set_scale.write(f),
-            Instruction::ShiftFrequency(shift_frequency) => shift_frequency.write(f),
-            Instruction::ShiftPhase(shift_phase) => shift_phase.write(f),
-            Instruction::SwapPhases(swap_phases) => swap_phases.write(f),
-            Instruction::WaveformDefinition(waveform_definition) => waveform_definition.write(f),
+            Instruction::Capture(capture) => capture.write(f, fall_back_to_debug),
+            Instruction::CircuitDefinition(circuit) => circuit.write(f, fall_back_to_debug),
+            Instruction::Convert(convert) => convert.write(f, fall_back_to_debug),
+            Instruction::Declaration(declaration) => declaration.write(f, fall_back_to_debug),
+            Instruction::Delay(delay) => delay.write(f, fall_back_to_debug),
+            Instruction::Fence(fence) => fence.write(f, fall_back_to_debug),
+            Instruction::FrameDefinition(frame_definition) => {
+                frame_definition.write(f, fall_back_to_debug)
+            }
+            Instruction::Gate(gate) => gate.write(f, fall_back_to_debug),
+            Instruction::GateDefinition(gate_definition) => {
+                gate_definition.write(f, fall_back_to_debug)
+            }
+            Instruction::Include(include) => include.write(f, fall_back_to_debug),
+            Instruction::MeasureCalibrationDefinition(measure_calibration) => {
+                measure_calibration.write(f, fall_back_to_debug)
+            }
+            Instruction::Measurement(measurement) => measurement.write(f, fall_back_to_debug),
+            Instruction::Move(r#move) => r#move.write(f, fall_back_to_debug),
+            Instruction::Exchange(exchange) => exchange.write(f, fall_back_to_debug),
+            Instruction::Load(load) => load.write(f, fall_back_to_debug),
+            Instruction::Store(store) => store.write(f, fall_back_to_debug),
+            Instruction::Pulse(pulse) => pulse.write(f, fall_back_to_debug),
+            Instruction::Pragma(pragma) => pragma.write(f, fall_back_to_debug),
+            Instruction::RawCapture(raw_capture) => raw_capture.write(f, fall_back_to_debug),
+            Instruction::Reset(reset) => reset.write(f, fall_back_to_debug),
+            Instruction::SetFrequency(set_frequency) => set_frequency.write(f, fall_back_to_debug),
+            Instruction::SetPhase(set_phase) => set_phase.write(f, fall_back_to_debug),
+            Instruction::SetScale(set_scale) => set_scale.write(f, fall_back_to_debug),
+            Instruction::ShiftFrequency(shift_frequency) => {
+                shift_frequency.write(f, fall_back_to_debug)
+            }
+            Instruction::ShiftPhase(shift_phase) => shift_phase.write(f, fall_back_to_debug),
+            Instruction::SwapPhases(swap_phases) => swap_phases.write(f, fall_back_to_debug),
+            Instruction::WaveformDefinition(waveform_definition) => {
+                waveform_definition.write(f, fall_back_to_debug)
+            }
             Instruction::Halt => write!(f, "HALT").map_err(Into::into),
             Instruction::Nop => write!(f, "NOP").map_err(Into::into),
             Instruction::Wait => write!(f, "WAIT").map_err(Into::into),
@@ -327,15 +352,15 @@ impl Quil for Instruction {
             Instruction::JumpWhen(JumpWhen { condition, target }) => {
                 write!(f, "JUMP-WHEN @{target} {condition}").map_err(Into::into)
             }
-            Instruction::Label(label) => label.write(f),
-            Instruction::Comparison(comparison) => comparison.write(f),
-            Instruction::BinaryLogic(binary_logic) => binary_logic.write(f),
-            Instruction::UnaryLogic(unary_logic) => unary_logic.write(f),
+            Instruction::Label(label) => label.write(f, fall_back_to_debug),
+            Instruction::Comparison(comparison) => comparison.write(f, fall_back_to_debug),
+            Instruction::BinaryLogic(binary_logic) => binary_logic.write(f, fall_back_to_debug),
+            Instruction::UnaryLogic(unary_logic) => unary_logic.write(f, fall_back_to_debug),
         }
     }
 }
 
-impl_quil_for_ref!(Instruction);
+impl_quil_from_display_for_ref!(Instruction);
 
 #[cfg(test)]
 mod test_instruction_display {

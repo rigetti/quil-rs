@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fmt};
 
-use crate::{expression::Expression, impl_quil};
+use crate::{expression::Expression, impl_quil_from_display};
 
 use super::{write_join, write_parameter_string};
 
@@ -37,7 +37,7 @@ impl fmt::Display for WaveformDefinition {
     }
 }
 
-impl_quil!(WaveformDefinition);
+impl_quil_from_display!(WaveformDefinition);
 
 #[cfg(test)]
 mod test_waveform_definition {
@@ -110,7 +110,7 @@ impl fmt::Display for WaveformInvocation {
     }
 }
 
-impl_quil!(WaveformInvocation);
+impl_quil_from_display!(WaveformInvocation);
 
 #[cfg(test)]
 mod waveform_invocation_tests {

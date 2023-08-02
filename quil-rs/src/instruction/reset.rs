@@ -14,11 +14,15 @@ impl Reset {
 }
 
 impl Quil for Reset {
-    fn write(&self, writer: &mut impl std::fmt::Write) -> crate::quil::ToQuilResult<()> {
+    fn write(
+        &self,
+        writer: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
+    ) -> crate::quil::ToQuilResult<()> {
         match &self.qubit {
             Some(qubit) => {
                 write!(writer, "RESET ")?;
-                qubit.write(writer)
+                qubit.write(writer, fall_back_to_debug)
             }
             None => write!(writer, "RESET").map_err(Into::into),
         }

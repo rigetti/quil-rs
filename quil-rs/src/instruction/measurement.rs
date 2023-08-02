@@ -15,17 +15,21 @@ impl Measurement {
 }
 
 impl Quil for Measurement {
-    fn write(&self, writer: &mut impl std::fmt::Write) -> Result<(), crate::quil::ToQuilError> {
+    fn write(
+        &self,
+        writer: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
+    ) -> Result<(), crate::quil::ToQuilError> {
         match &self.target {
             Some(reference) => {
                 write!(writer, "MEASURE ",)?;
-                self.qubit.write(writer)?;
+                self.qubit.write(writer, fall_back_to_debug)?;
                 write!(writer, " ")?;
-                reference.write(writer)
+                reference.write(writer, fall_back_to_debug)
             }
             None => {
                 write!(writer, "MEASURE ")?;
-                self.qubit.write(writer)
+                self.qubit.write(writer, fall_back_to_debug)
             }
         }
     }
