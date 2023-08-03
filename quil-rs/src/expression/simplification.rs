@@ -483,8 +483,7 @@ static RULES: Lazy<Vec<Rewrite>> = Lazy::new(|| {
         rw!("div one"       ; "(/ ?a 1)"                => "?a"),
         rw!("div cancel"    ; "(/ ?a ?a)"               => "1" if is_not_zero("?a")),
         rw!("d neg cancel"  ; "(/ ?a (neg ?a))"         => "-1" if is_not_zero("?a")),
-        rw!("div mul r"     ; "(/ ?a (* ?b ?a))"        => "?b" if is_not_zero("?a")),
-        rw!("div mul l"     ; "(/ (* ?b ?a) ?a)"        => "?b" if is_not_zero("?a")),
+        rw!("div mul"       ; "(/ (* ?b ?a) ?a)"        => "?b" if is_not_zero("?a")),
         rw!("mul div r"     ; "(* ?a (/ ?b ?a))"        => "?b" if is_not_zero("?a")),
         rw!("mul div l"     ; "(* (/ ?b ?a) ?a)"        => "?b" if is_not_zero("?a")),
         // commutativity
