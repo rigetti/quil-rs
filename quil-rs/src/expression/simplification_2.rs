@@ -1,9 +1,13 @@
 /// Complex machinery for simplifying [`Expression`]s.
 use crate::expression::{
-    imag, is_small, real, Expression, ExpressionFunction, FunctionCallExpression, InfixExpression,
+    imag, real, Expression, ExpressionFunction, FunctionCallExpression, InfixExpression,
     InfixOperator, PrefixExpression, PrefixOperator,
 };
-use std::f64::consts::PI;
+
+const PI: num_complex::Complex64 = real!(std::f64::consts::PI);
+const ZERO: num_complex::Complex64 = real!(0.0);
+const ONE: num_complex::Complex64 = real!(1.0);
+const I: num_complex::Complex64 = imag!(1.0);
 
 /// Simplify an [`Expression`].
 pub(super) fn run(expression: Expression) -> Expression {
@@ -33,25 +37,22 @@ fn simplify(e: Expression) -> Expression {
 }
 
 fn simplify_function_call(func: ExpressionFunction, expr: Expression) -> Expression {
-    // Evaluate numbers and π; pass through otherwise
+    // Evaluate numbers and π
+    // Pass through otherwise
     match (func, simplify(expr)) {
         (ExpressionFunction::Cis, Expression::Number(x)) => {
-            // num_complex::Complex::<f64>::cis only accpets f64 :-(
-            Expression::Number(x.cos() + imag!(1f64) * x.sin())
+            // num_complex::Complex64::cis only accpets f64 :-(
+            Expression::Number(x.cos() + imag!(1.0) * x.sin())
         }
-        (ExpressionFunction::Cis, Expression::PiConstant) => Expression::Number(real!(-1f64)),
+        (ExpressionFunction::Cis, Expression::PiConstant) => Expression::Number(-ONE),
         (ExpressionFunction::Cosine, Expression::Number(x)) => Expression::Number(x.cos()),
-        (ExpressionFunction::Cosine, Expression::PiConstant) => Expression::Number(real!(-1f64)),
+        (ExpressionFunction::Cosine, Expression::PiConstant) => Expression::Number(-ONE),
         (ExpressionFunction::Exponent, Expression::Number(x)) => Expression::Number(x.exp()),
-        (ExpressionFunction::Exponent, Expression::PiConstant) => {
-            Expression::Number(real!(PI).exp())
-        }
+        (ExpressionFunction::Exponent, Expression::PiConstant) => Expression::Number(PI.exp()),
         (ExpressionFunction::Sine, Expression::Number(x)) => Expression::Number(x.sin()),
-        (ExpressionFunction::Sine, Expression::PiConstant) => Expression::Number(real!(PI).sin()),
+        (ExpressionFunction::Sine, Expression::PiConstant) => Expression::Number(PI.sin()),
         (ExpressionFunction::SquareRoot, Expression::Number(x)) => Expression::Number(x.sqrt()),
-        (ExpressionFunction::SquareRoot, Expression::PiConstant) => {
-            Expression::Number(real!(PI).sqrt())
-        }
+        (ExpressionFunction::SquareRoot, Expression::PiConstant) => Expression::Number(PI.sqrt()),
         (function, expression) => Expression::FunctionCall(FunctionCallExpression {
             function,
             expression: expression.into(),
@@ -59,8 +60,83 @@ fn simplify_function_call(func: ExpressionFunction, expr: Expression) -> Express
     }
 }
 
+#[inline]
+fn is_zero(x: num_complex::Complex64) -> bool {
+    x.norm() < 1e-10
+}
+
+#[inline]
+fn is_one(x: num_complex::Complex64) -> bool {
+    (x - 1.0).norm() < 1e-10
+}
+
 fn simplify_infix(l: Expression, op: InfixOperator, r: Expression) -> Expression {
+    // There are … many cases here
     match (simplify(l), op, simplify(r)) {
+        // + & -
+
+        // Adding with zero
+        (Expression::Number(x), InfixOperator::Plus, right) if is_zero(x) => right,
+        (left, InfixOperator::Plus, Expression::Number(x)) if is_zero(x) => left,
+        // Adding numbers or π
+        (Expression::Number(x), InfixOperator::Plus, Expression::Number(y)) => {
+            Expression::Number(x + y)
+        }
+        (Expression::Number(x), InfixOperator::Plus, Expression::PiConstant) => {
+            Expression::Number(x + PI)
+        }
+        (Expression::PiConstant, InfixOperator::Plus, Expression::Number(y)) => {
+            Expression::Number(PI + y)
+        }
+        (Expression::PiConstant, InfixOperator::Plus, Expression::PiConstant) => {
+            Expression::Number(2.0 * PI)
+        }
+        // Subtracting with zero
+        (Expression::Number(x), InfixOperator::Minus, right) if is_zero(x) => {
+            simplify(Expression::Prefix(PrefixExpression {
+                operator: PrefixOperator::Minus,
+                expression: right.into(),
+            }))
+        }
+        (left, InfixOperator::Minus, Expression::Number(y)) if is_zero(y) => left,
+        // Subtracting self
+        (left, InfixOperator::Minus, right) if left == right => Expression::Number(real!(0.0)),
+        // Subtracting numbers or π (π - π already covered)
+        (Expression::Number(x), InfixOperator::Minus, Expression::Number(y)) => {
+            Expression::Number(x - y)
+        }
+        (Expression::Number(x), InfixOperator::Minus, Expression::PiConstant) => {
+            Expression::Number(x - PI)
+        }
+        (Expression::PiConstant, InfixOperator::Minus, Expression::Number(y)) => {
+            Expression::Number(PI - y)
+        }
+
+        // * & /
+
+        // Multiplication with zero
+        (Expression::Number(x), InfixOperator::Star, _) if is_zero(x) => Expression::Number(ZERO),
+        (_, InfixOperator::Star, Expression::Number(y)) if is_zero(y) => Expression::Number(ZERO),
+        // Multiplication with one
+        (Expression::Number(x), InfixOperator::Star, right) if is_one(x) => right,
+        (left, InfixOperator::Star, Expression::Number(y)) if is_one(y) => left,
+        // Multiplying with numbers or π
+        (Expression::Number(x), InfixOperator::Star, Expression::Number(y)) => {
+            Expression::Number(x * y)
+        }
+        (Expression::Number(x), InfixOperator::Star, Expression::PiConstant) => {
+            Expression::Number(x * PI)
+        }
+        (Expression::PiConstant, InfixOperator::Star, Expression::Number(y)) => {
+            Expression::Number(PI * y)
+        }
+        (Expression::PiConstant, InfixOperator::Star, Expression::PiConstant) => {
+            Expression::Number(PI * PI)
+        }
+        // Division with zero
+        (Expression::Number(x), InfixOperator::Slash, _) if is_zero(x) => Expression::Number(ZERO),
+
+        // Catch-all
         (left, operator, right) => Expression::Infix(InfixExpression {
             left: left.into(),
             operator,
@@ -70,7 +146,9 @@ fn simplify_infix(l: Expression, op: InfixOperator, r: Expression) -> Expression
 }
 
 fn simplify_prefix(op: PrefixOperator, expr: Expression) -> Expression {
-    // Remove +; push - into numbers & π; pass through otherwise
+    // Remove +
+    // Push - into numbers & π
+    // Pass through otherwise
     match (op, simplify(expr)) {
         (PrefixOperator::Plus, expression) => expression,
         (PrefixOperator::Minus, Expression::Number(x)) => Expression::Number(-x),
@@ -88,7 +166,7 @@ mod tests {
     use std::str::FromStr;
 
     macro_rules! test_simplify {
-        ($name:ident, $input:expr, $expected:expr$(,)?) => {
+        ($name:ident, $input:expr, $expected:expr) => {
             #[test]
             fn $name() {
                 let parsed_input = Expression::from_str($input);
@@ -161,15 +239,9 @@ mod tests {
     }
 
     test_simplify! {
-        neg_imag,
-        "-(9.48e42i)",
-        "-9.48e42i"
-    }
-
-    test_simplify! {
         pow_neg_address,
         "(-(9.48e42i))^A[9]",
-        "(-9.48e42i)^A[9]",
+        "(-9.48e42i)^A[9]"
     }
 
     test_simplify! {
