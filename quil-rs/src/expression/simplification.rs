@@ -1,11 +1,11 @@
 /// Complex machinery for simplifying [`Expression`]s.
 use crate::{
     expression::{
-        format_complex, hash_to_u64, imag, is_small, real, Expression, ExpressionFunction,
+        format_complex, imag, is_small, real, Expression, ExpressionFunction,
         FunctionCallExpression, InfixExpression, InfixOperator, MemoryReference, PrefixExpression,
         PrefixOperator,
     },
-    hash::hash_f64,
+    hash::{hash_f64, hash_to_u64},
 };
 use egg::{define_language, rewrite as rw, Id, Language, RecExpr};
 use once_cell::sync::Lazy;

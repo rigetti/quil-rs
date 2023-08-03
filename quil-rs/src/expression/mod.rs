@@ -36,6 +36,7 @@ use std::{
 use proptest_derive::Arbitrary;
 
 mod simplification;
+mod simplification_2;
 
 /// The different possible types of errors that could occur during expression evaluation.
 #[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
