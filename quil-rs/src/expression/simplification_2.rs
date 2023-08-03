@@ -409,10 +409,10 @@ fn simplify_infix(l: &Expression, op: &InfixOperator, r: &Expression) -> Express
         }
 
         //----------------------------------------------------------------
-        // After that: commutation, association, distribution
+        // After that: association, distribution
         //----------------------------------------------------------------
 
-        // Addition Associative
+        // Addition Associative, right
         (
             a,
             InfixOperator::Plus,
@@ -428,10 +428,10 @@ fn simplify_infix(l: &Expression, op: &InfixOperator, r: &Expression) -> Express
             min_by_key(original, new, size)
         }
 
-        // Multipliation Associative
+        // Multipliation Associative, right
         (
             a,
-            InfixOperator::Plus,
+            InfixOperator::Star,
             right @ Expression::Infix(InfixExpression {
                 left: ref b,
                 operator: InfixOperator::Star,
@@ -536,8 +536,8 @@ fn simplify_infix(l: &Expression, op: &InfixOperator, r: &Expression) -> Express
             denominator,
         ) => {
             let original = div!(numerator.clone(), denominator.clone());
-            let new_multiplier = simplify_infix(multiplier, &InfixOperator::Slash, denominator);
-            let new = simplify_infix(&new_multiplier, &InfixOperator::Star, multiplicand);
+            let new_multiplicand = simplify_infix(multiplicand, &InfixOperator::Slash, denominator);
+            let new = simplify_infix(&multiplier, &InfixOperator::Star, &new_multiplicand);
             min_by_key(original, new, size)
         }
 
