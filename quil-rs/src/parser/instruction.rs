@@ -150,6 +150,7 @@ pub(crate) fn parse_block_instruction<'a>(
 mod tests {
     use std::collections::HashMap;
     use std::str::FromStr;
+    use std::sync::Arc;
 
     use nom_locate::LocatedSpan;
     use num_complex::Complex;
@@ -724,40 +725,40 @@ mod tests {
             specification: GateSpecification::Matrix(vec![
                 vec![
                     Expression::Infix(InfixExpression {
-                        left: Box::new(Expression::Number(real!(1.0))),
+                        left: Arc::new(Expression::Number(real!(1.0))),
                         operator: InfixOperator::Slash,
-                        right: Box::new(Expression::FunctionCall(FunctionCallExpression {
+                        right: Arc::new(Expression::FunctionCall(FunctionCallExpression {
                             function: crate::expression::ExpressionFunction::SquareRoot,
-                            expression: Box::new(Expression::Number(real!(2.0))),
+                            expression: Arc::new(Expression::Number(real!(2.0))),
                         })),
                     }),
                     Expression::Infix(InfixExpression {
-                        left: Box::new(Expression::Number(real!(1.0))),
+                        left: Arc::new(Expression::Number(real!(1.0))),
                         operator: InfixOperator::Slash,
-                        right: Box::new(Expression::FunctionCall(FunctionCallExpression {
+                        right: Arc::new(Expression::FunctionCall(FunctionCallExpression {
                             function: crate::expression::ExpressionFunction::SquareRoot,
-                            expression: Box::new(Expression::Number(real!(2.0))),
+                            expression: Arc::new(Expression::Number(real!(2.0))),
                         })),
                     }),
                 ],
                 vec![
                     Expression::Infix(InfixExpression {
-                        left: Box::new(Expression::Number(real!(1.0))),
+                        left: Arc::new(Expression::Number(real!(1.0))),
                         operator: InfixOperator::Slash,
-                        right: Box::new(Expression::FunctionCall(FunctionCallExpression {
+                        right: Arc::new(Expression::FunctionCall(FunctionCallExpression {
                             function: crate::expression::ExpressionFunction::SquareRoot,
-                            expression: Box::new(Expression::Number(real!(2.0))),
+                            expression: Arc::new(Expression::Number(real!(2.0))),
                         })),
                     }),
                     Expression::Infix(InfixExpression {
-                        left: Box::new(Expression::Prefix(PrefixExpression {
+                        left: Arc::new(Expression::Prefix(PrefixExpression {
                             operator: PrefixOperator::Minus,
-                            expression: Box::new(Expression::Number(real!(1.0))),
+                            expression: Arc::new(Expression::Number(real!(1.0))),
                         })),
                         operator: InfixOperator::Slash,
-                        right: Box::new(Expression::FunctionCall(FunctionCallExpression {
+                        right: Arc::new(Expression::FunctionCall(FunctionCallExpression {
                             function: crate::expression::ExpressionFunction::SquareRoot,
-                            expression: Box::new(Expression::Number(real!(2.0))),
+                            expression: Arc::new(Expression::Number(real!(2.0))),
                         })),
                     }),
                 ],
@@ -776,50 +777,50 @@ mod tests {
                 vec![
                     Expression::FunctionCall(FunctionCallExpression {
                         function: ExpressionFunction::Cosine,
-                        expression: Box::new(Expression::Infix(InfixExpression {
-                            left: Box::new(Expression::Variable("theta".to_string())),
+                        expression: Arc::new(Expression::Infix(InfixExpression {
+                            left: Arc::new(Expression::Variable("theta".to_string())),
                             operator: InfixOperator::Slash,
-                            right: Box::new(Expression::Number(Complex { re: 2.0, im: 0.0 })),
+                            right: Arc::new(Expression::Number(Complex { re: 2.0, im: 0.0 })),
                         }))
                     }),
                     Expression::Infix(InfixExpression {
-                        left: Box::new(Expression::Prefix(PrefixExpression {
+                        left: Arc::new(Expression::Prefix(PrefixExpression {
                             operator: PrefixOperator::Minus,
-                            expression: Box::new(Expression::Number(Complex { re: 0.0, im: 1.0 })),
+                            expression: Arc::new(Expression::Number(Complex { re: 0.0, im: 1.0 })),
                         })),
                         operator: InfixOperator::Star,
-                        right: Box::new(Expression::FunctionCall(FunctionCallExpression {
+                        right: Arc::new(Expression::FunctionCall(FunctionCallExpression {
                             function: ExpressionFunction::Sine,
-                            expression: Box::new(Expression::Infix(InfixExpression {
-                                left: Box::new(Expression::Variable("theta".to_string())),
+                            expression: Arc::new(Expression::Infix(InfixExpression {
+                                left: Arc::new(Expression::Variable("theta".to_string())),
                                 operator: InfixOperator::Slash,
-                                right: Box::new(Expression::Number(Complex { re: 2.0, im: 0.0 })),
+                                right: Arc::new(Expression::Number(Complex { re: 2.0, im: 0.0 })),
                             }))
                         }))
                     }),
                 ],
                 vec![
                     Expression::Infix(InfixExpression {
-                        left: Box::new(Expression::Prefix(PrefixExpression {
+                        left: Arc::new(Expression::Prefix(PrefixExpression {
                             operator: PrefixOperator::Minus,
-                            expression: Box::new(Expression::Number(Complex { re: 0.0, im: 1.0 }))
+                            expression: Arc::new(Expression::Number(Complex { re: 0.0, im: 1.0 }))
                         })),
                         operator: InfixOperator::Star,
-                        right: Box::new(Expression::FunctionCall(FunctionCallExpression {
+                        right: Arc::new(Expression::FunctionCall(FunctionCallExpression {
                             function: ExpressionFunction::Sine,
-                            expression: Box::new(Expression::Infix(InfixExpression {
-                                left: Box::new(Expression::Variable("theta".to_string())),
+                            expression: Arc::new(Expression::Infix(InfixExpression {
+                                left: Arc::new(Expression::Variable("theta".to_string())),
                                 operator: InfixOperator::Slash,
-                                right: Box::new(Expression::Number(Complex { re: 2.0, im: 0.0 }))
+                                right: Arc::new(Expression::Number(Complex { re: 2.0, im: 0.0 }))
                             }))
                         }))
                     }),
                     Expression::FunctionCall(FunctionCallExpression {
                         function: ExpressionFunction::Cosine,
-                        expression: Box::new(Expression::Infix(InfixExpression {
-                            left: Box::new(Expression::Variable("theta".to_string())),
+                        expression: Arc::new(Expression::Infix(InfixExpression {
+                            left: Arc::new(Expression::Variable("theta".to_string())),
                             operator: InfixOperator::Slash,
-                            right: Box::new(Expression::Number(Complex { re: 2.0, im: 0.0 })),
+                            right: Arc::new(Expression::Number(Complex { re: 2.0, im: 0.0 })),
                         }))
                     }),
                 ],

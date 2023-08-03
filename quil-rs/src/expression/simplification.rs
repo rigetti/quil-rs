@@ -15,6 +15,7 @@ use std::{
     hash::{Hash, Hasher},
     ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign},
     str::FromStr,
+    sync::Arc,
 };
 
 /// Simplify an [`Expression`]:
@@ -272,57 +273,57 @@ fn recexpr_to_expression(recexpr: RecExpr<Expr>) -> Result<Expression, Simplific
             Expr::Pi => Ok(Expression::Number(PI.into())),
             Expr::Number(x) => Ok(Expression::Number(x.0)),
             Expr::Cis(id) => {
-                let expression = Box::new(helper(nodes, id.into())?);
+                let expression = Arc::new(helper(nodes, id.into())?);
                 Ok(Expression::FunctionCall(FunctionCallExpression {
                     function: ExpressionFunction::Cis,
                     expression,
                 }))
             }
             Expr::Cos(id) => {
-                let expression = Box::new(helper(nodes, id.into())?);
+                let expression = Arc::new(helper(nodes, id.into())?);
                 Ok(Expression::FunctionCall(FunctionCallExpression {
                     function: ExpressionFunction::Cosine,
                     expression,
                 }))
             }
             Expr::Exp(id) => {
-                let expression = Box::new(helper(nodes, id.into())?);
+                let expression = Arc::new(helper(nodes, id.into())?);
                 Ok(Expression::FunctionCall(FunctionCallExpression {
                     function: ExpressionFunction::Exponent,
                     expression,
                 }))
             }
             Expr::Sin(id) => {
-                let expression = Box::new(helper(nodes, id.into())?);
+                let expression = Arc::new(helper(nodes, id.into())?);
                 Ok(Expression::FunctionCall(FunctionCallExpression {
                     function: ExpressionFunction::Sine,
                     expression,
                 }))
             }
             Expr::Sqrt(id) => {
-                let expression = Box::new(helper(nodes, id.into())?);
+                let expression = Arc::new(helper(nodes, id.into())?);
                 Ok(Expression::FunctionCall(FunctionCallExpression {
                     function: ExpressionFunction::SquareRoot,
                     expression,
                 }))
             }
             Expr::Pos(id) => {
-                let expression = Box::new(helper(nodes, id.into())?);
+                let expression = Arc::new(helper(nodes, id.into())?);
                 Ok(Expression::Prefix(PrefixExpression {
                     operator: PrefixOperator::Plus,
                     expression,
                 }))
             }
             Expr::Neg(id) => {
-                let expression = Box::new(helper(nodes, id.into())?);
+                let expression = Arc::new(helper(nodes, id.into())?);
                 Ok(Expression::Prefix(PrefixExpression {
                     operator: PrefixOperator::Minus,
                     expression,
                 }))
             }
             Expr::Pow([left_id, right_id]) => {
-                let left = Box::new(helper(nodes, left_id.into())?);
-                let right = Box::new(helper(nodes, right_id.into())?);
+                let left = Arc::new(helper(nodes, left_id.into())?);
+                let right = Arc::new(helper(nodes, right_id.into())?);
                 Ok(Expression::Infix(InfixExpression {
                     operator: InfixOperator::Caret,
                     left,
@@ -330,8 +331,8 @@ fn recexpr_to_expression(recexpr: RecExpr<Expr>) -> Result<Expression, Simplific
                 }))
             }
             Expr::Mul([left_id, right_id]) => {
-                let left = Box::new(helper(nodes, left_id.into())?);
-                let right = Box::new(helper(nodes, right_id.into())?);
+                let left = Arc::new(helper(nodes, left_id.into())?);
+                let right = Arc::new(helper(nodes, right_id.into())?);
                 Ok(Expression::Infix(InfixExpression {
                     operator: InfixOperator::Star,
                     left,
@@ -339,8 +340,8 @@ fn recexpr_to_expression(recexpr: RecExpr<Expr>) -> Result<Expression, Simplific
                 }))
             }
             Expr::Div([left_id, right_id]) => {
-                let left = Box::new(helper(nodes, left_id.into())?);
-                let right = Box::new(helper(nodes, right_id.into())?);
+                let left = Arc::new(helper(nodes, left_id.into())?);
+                let right = Arc::new(helper(nodes, right_id.into())?);
                 Ok(Expression::Infix(InfixExpression {
                     operator: InfixOperator::Slash,
                     left,
@@ -348,8 +349,8 @@ fn recexpr_to_expression(recexpr: RecExpr<Expr>) -> Result<Expression, Simplific
                 }))
             }
             Expr::Add([left_id, right_id]) => {
-                let left = Box::new(helper(nodes, left_id.into())?);
-                let right = Box::new(helper(nodes, right_id.into())?);
+                let left = Arc::new(helper(nodes, left_id.into())?);
+                let right = Arc::new(helper(nodes, right_id.into())?);
                 Ok(Expression::Infix(InfixExpression {
                     operator: InfixOperator::Plus,
                     left,
@@ -357,8 +358,8 @@ fn recexpr_to_expression(recexpr: RecExpr<Expr>) -> Result<Expression, Simplific
                 }))
             }
             Expr::Sub([left_id, right_id]) => {
-                let left = Box::new(helper(nodes, left_id.into())?);
-                let right = Box::new(helper(nodes, right_id.into())?);
+                let left = Arc::new(helper(nodes, left_id.into())?);
+                let right = Arc::new(helper(nodes, right_id.into())?);
                 Ok(Expression::Infix(InfixExpression {
                     operator: InfixOperator::Minus,
                     left,

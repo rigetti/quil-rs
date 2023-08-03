@@ -469,6 +469,8 @@ mod describe_skip_newlines_and_comments {
 
 #[cfg(test)]
 pub mod tests {
+    use std::sync::Arc;
+
     use crate::{
         expression::{
             Expression, InfixExpression, InfixOperator, PrefixExpression, PrefixOperator,
@@ -611,28 +613,28 @@ SWAP-PHASES 2 3 \"xy\" 3 4 \"xy\"";
                     (PauliGate::Z, "q".to_string()),
                 ],
                 expression: Expression::Infix(InfixExpression {
-                    left: Box::new(Expression::Prefix(PrefixExpression {
+                    left: Arc::new(Expression::Prefix(PrefixExpression {
                         operator: PrefixOperator::Minus,
-                        expression: Box::new(Expression::Variable("theta".to_string())),
+                        expression: Arc::new(Expression::Variable("theta".to_string())),
                     })),
                     operator: InfixOperator::Slash,
-                    right: Box::new(Expression::Number(real!(4.0))),
+                    right: Arc::new(Expression::Number(real!(4.0))),
                 }),
             },
             PauliTerm {
                 arguments: vec![(PauliGate::Y, "p".to_string())],
                 expression: Expression::Infix(InfixExpression {
-                    left: Box::new(Expression::Variable("theta".to_string())),
+                    left: Arc::new(Expression::Variable("theta".to_string())),
                     operator: InfixOperator::Slash,
-                    right: Box::new(Expression::Number(real!(4.0))),
+                    right: Arc::new(Expression::Number(real!(4.0))),
                 }),
             },
             PauliTerm {
                 arguments: vec![(PauliGate::X, "q".to_string())],
                 expression: Expression::Infix(InfixExpression {
-                    left: Box::new(Expression::Variable("theta".to_string())),
+                    left: Arc::new(Expression::Variable("theta".to_string())),
                     operator: InfixOperator::Slash,
-                    right: Box::new(Expression::Number(real!(4.0))),
+                    right: Arc::new(Expression::Number(real!(4.0))),
                 }),
             },
         ];

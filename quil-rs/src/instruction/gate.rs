@@ -939,6 +939,7 @@ mod test_gate_definition {
     use crate::{imag, real};
     use insta::assert_snapshot;
     use rstest::rstest;
+    use std::sync::Arc;
 
     #[rstest]
     #[case(
@@ -959,50 +960,50 @@ mod test_gate_definition {
                 vec![
                     Expression::FunctionCall(FunctionCallExpression {
                         function: crate::expression::ExpressionFunction::Cosine,
-                        expression: Box::new(Expression::Infix(InfixExpression {
-                            left: Box::new(Expression::Variable("theta".to_string())),
+                        expression: Arc::new(Expression::Infix(InfixExpression {
+                            left: Arc::new(Expression::Variable("theta".to_string())),
                             operator: InfixOperator::Slash,
-                            right: Box::new(Expression::Number(real!(2.0))),
+                            right: Arc::new(Expression::Number(real!(2.0))),
                         })),
                     }),
                     Expression::Infix(InfixExpression {
-                        left: Box::new(Expression::Prefix(PrefixExpression {
+                        left: Arc::new(Expression::Prefix(PrefixExpression {
                             operator: PrefixOperator::Minus,
-                            expression: Box::new(Expression::Number(imag!(1f64)))
+                            expression: Arc::new(Expression::Number(imag!(1f64)))
                         })),
                         operator: InfixOperator::Star,
-                        right: Box::new(Expression::FunctionCall(FunctionCallExpression {
+                        right: Arc::new(Expression::FunctionCall(FunctionCallExpression {
                             function: ExpressionFunction::Sine,
-                            expression: Box::new(Expression::Infix(InfixExpression {
-                                left: Box::new(Expression::Variable("theta".to_string())),
+                            expression: Arc::new(Expression::Infix(InfixExpression {
+                                left: Arc::new(Expression::Variable("theta".to_string())),
                                 operator: InfixOperator::Slash,
-                                right: Box::new(Expression::Number(real!(2.0))),
+                                right: Arc::new(Expression::Number(real!(2.0))),
                             })),
                         })),
                     })
                 ],
                 vec![
                     Expression::Infix(InfixExpression {
-                        left: Box::new(Expression::Prefix(PrefixExpression {
+                        left: Arc::new(Expression::Prefix(PrefixExpression {
                             operator: PrefixOperator::Minus,
-                            expression: Box::new(Expression::Number(imag!(1f64)))
+                            expression: Arc::new(Expression::Number(imag!(1f64)))
                         })),
                         operator: InfixOperator::Star,
-                        right: Box::new(Expression::FunctionCall(FunctionCallExpression {
+                        right: Arc::new(Expression::FunctionCall(FunctionCallExpression {
                             function: ExpressionFunction::Sine,
-                            expression: Box::new(Expression::Infix(InfixExpression {
-                                left: Box::new(Expression::Variable("theta".to_string())),
+                            expression: Arc::new(Expression::Infix(InfixExpression {
+                                left: Arc::new(Expression::Variable("theta".to_string())),
                                 operator: InfixOperator::Slash,
-                                right: Box::new(Expression::Number(real!(2.0))),
+                                right: Arc::new(Expression::Number(real!(2.0))),
                             })),
                         })),
                     }),
                     Expression::FunctionCall(FunctionCallExpression {
                         function: crate::expression::ExpressionFunction::Cosine,
-                        expression: Box::new(Expression::Infix(InfixExpression {
-                            left: Box::new(Expression::Variable("theta".to_string())),
+                        expression: Arc::new(Expression::Infix(InfixExpression {
+                            left: Arc::new(Expression::Variable("theta".to_string())),
                             operator: InfixOperator::Slash,
-                            right: Box::new(Expression::Number(real!(2.0))),
+                            right: Arc::new(Expression::Number(real!(2.0))),
                         })),
                     }),
                 ],
@@ -1019,28 +1020,28 @@ mod test_gate_definition {
                 PauliTerm {
                     arguments: vec![(PauliGate::Z, "p".to_string()), (PauliGate::Z, "q".to_string())],
                     expression: Expression::Infix(InfixExpression {
-                        left: Box::new(Expression::Prefix(PrefixExpression {
+                        left: Arc::new(Expression::Prefix(PrefixExpression {
                             operator: PrefixOperator::Minus,
-                            expression: Box::new(Expression::Variable("theta".to_string()))
+                            expression: Arc::new(Expression::Variable("theta".to_string()))
                         })),
                         operator: InfixOperator::Slash,
-                        right: Box::new(Expression::Number(real!(4.0)))
+                        right: Arc::new(Expression::Number(real!(4.0)))
                     }),
                 },
                 PauliTerm {
                     arguments: vec![(PauliGate::Y, "p".to_string())],
                     expression: Expression::Infix(InfixExpression {
-                        left: Box::new(Expression::Variable("theta".to_string())),
+                        left: Arc::new(Expression::Variable("theta".to_string())),
                         operator: InfixOperator::Slash,
-                        right: Box::new(Expression::Number(real!(4.0)))
+                        right: Arc::new(Expression::Number(real!(4.0)))
                     }),
                 },
                 PauliTerm {
                     arguments: vec![(PauliGate::X, "q".to_string())],
                     expression: Expression::Infix(InfixExpression {
-                        left: Box::new(Expression::Variable("theta".to_string())),
+                        left: Arc::new(Expression::Variable("theta".to_string())),
                         operator: InfixOperator::Slash,
-                        right: Box::new(Expression::Number(real!(4.0)))
+                        right: Arc::new(Expression::Number(real!(4.0)))
                     }),
                 },
             ]})

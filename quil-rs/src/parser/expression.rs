@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::sync::Arc;
+
 use nom::combinator::opt;
 
 use crate::expression::{FunctionCallExpression, InfixExpression, PrefixExpression};
@@ -103,7 +105,7 @@ fn parse(input: ParserInput, precedence: Precedence) -> InternalParserResult<Exp
     if let Some(prefix) = prefix {
         left = Expression::Prefix(PrefixExpression {
             operator: prefix,
-            expression: Box::new(left),
+            expression: Arc::new(left),
         });
     }
 
@@ -143,7 +145,7 @@ fn parse_function_call<'a>(
         input,
         Expression::FunctionCall(FunctionCallExpression {
             function,
-            expression: Box::new(expression),
+            expression: Arc::new(expression),
         }),
     ))
 }
@@ -212,9 +214,9 @@ fn parse_infix(input: ParserInput, left: Expression) -> InternalParserResult<Exp
             let precedence = Precedence::from(token_operator);
             let (remainder, right) = parse(remainder, precedence)?;
             let infix_expression = Expression::Infix(InfixExpression {
-                left: Box::new(left),
+                left: Arc::new(left),
                 operator: expression_operator,
-                right: Box::new(right),
+                right: Arc::new(right),
             });
             Ok((remainder, infix_expression))
         }
@@ -235,6 +237,8 @@ fn parse_prefix(input: ParserInput) -> InternalParserResult<PrefixOperator> {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use crate::expression::{
         Expression, ExpressionFunction, FunctionCallExpression, InfixExpression, InfixOperator,
         PrefixExpression, PrefixOperator,
@@ -302,7 +306,7 @@ mod tests {
         "sin(1)",
         Expression::FunctionCall(FunctionCallExpression {
             function: ExpressionFunction::Sine,
-            expression: Box::new(Expression::Number(real!(1f64))),
+            expression: Arc::new(Expression::Number(real!(1f64))),
         })
     );
 
@@ -312,9 +316,9 @@ mod tests {
         "sin(sin(1))",
         Expression::FunctionCall(FunctionCallExpression {
             function: ExpressionFunction::Sine,
-            expression: Box::new(Expression::FunctionCall(FunctionCallExpression {
+            expression: Arc::new(Expression::FunctionCall(FunctionCallExpression {
                 function: ExpressionFunction::Sine,
-                expression: Box::new(Expression::Number(real!(1f64))),
+                expression: Arc::new(Expression::Number(real!(1f64))),
             })),
         })
     );
@@ -324,9 +328,9 @@ mod tests {
         parse_expression,
         "1+2",
         Expression::Infix(InfixExpression {
-            left: Box::new(Expression::Number(real!(1f64))),
+            left: Arc::new(Expression::Number(real!(1f64))),
             operator: InfixOperator::Plus,
-            right: Box::new(Expression::Number(real!(2f64))),
+            right: Arc::new(Expression::Number(real!(2f64))),
         })
     );
 
@@ -335,17 +339,17 @@ mod tests {
         parse_expression,
         "-i*sin(%theta/2)",
         Expression::Infix(InfixExpression {
-            left: Box::new(Expression::Prefix(PrefixExpression {
+            left: Arc::new(Expression::Prefix(PrefixExpression {
                 operator: PrefixOperator::Minus,
-                expression: Box::new(Expression::Number(imag!(1f64))),
+                expression: Arc::new(Expression::Number(imag!(1f64))),
             })),
             operator: InfixOperator::Star,
-            right: Box::new(Expression::FunctionCall(FunctionCallExpression {
+            right: Arc::new(Expression::FunctionCall(FunctionCallExpression {
                 function: ExpressionFunction::Sine,
-                expression: Box::new(Expression::Infix(InfixExpression {
-                    left: Box::new(Expression::Variable("theta".to_owned())),
+                expression: Arc::new(Expression::Infix(InfixExpression {
+                    left: Arc::new(Expression::Variable("theta".to_owned())),
                     operator: InfixOperator::Slash,
-                    right: Box::new(Expression::Number(real!(2f64))),
+                    right: Arc::new(Expression::Number(real!(2f64))),
                 })),
             })),
         })
@@ -356,13 +360,13 @@ mod tests {
         parse_expression,
         "(1+2i)*%a",
         Expression::Infix(InfixExpression {
-            left: Box::new(Expression::Infix(InfixExpression {
-                left: Box::new(Expression::Number(real!(1f64))),
+            left: Arc::new(Expression::Infix(InfixExpression {
+                left: Arc::new(Expression::Number(real!(1f64))),
                 operator: InfixOperator::Plus,
-                right: Box::new(Expression::Number(imag!(2f64))),
+                right: Arc::new(Expression::Number(imag!(2f64))),
             })),
             operator: InfixOperator::Star,
-            right: Box::new(Expression::Variable("a".to_owned())),
+            right: Arc::new(Expression::Variable("a".to_owned())),
         })
     );
 
@@ -371,16 +375,16 @@ mod tests {
         parse_expression,
         "pi/2 + 2*theta[0]",
         Expression::Infix(InfixExpression {
-            left: Box::new(Expression::Infix(InfixExpression {
-                left: Box::new(Expression::PiConstant),
+            left: Arc::new(Expression::Infix(InfixExpression {
+                left: Arc::new(Expression::PiConstant),
                 operator: InfixOperator::Slash,
-                right: Box::new(Expression::Number(real!(2f64))),
+                right: Arc::new(Expression::Number(real!(2f64))),
             })),
             operator: InfixOperator::Plus,
-            right: Box::new(Expression::Infix(InfixExpression {
-                left: Box::new(Expression::Number(real!(2f64))),
+            right: Arc::new(Expression::Infix(InfixExpression {
+                left: Arc::new(Expression::Number(real!(2f64))),
                 operator: InfixOperator::Star,
-                right: Box::new(Expression::Address(MemoryReference {
+                right: Arc::new(Expression::Address(MemoryReference {
                     name: "theta".to_string(),
                     index: 0,
                 })),
@@ -393,14 +397,14 @@ mod tests {
         parse_expression,
         "-3 - -2",
         Expression::Infix(InfixExpression {
-            left: Box::new(Expression::Prefix(PrefixExpression {
+            left: Arc::new(Expression::Prefix(PrefixExpression {
                 operator: PrefixOperator::Minus,
-                expression: Box::new(Expression::Number(real!(3f64))),
+                expression: Arc::new(Expression::Number(real!(3f64))),
             })),
             operator: InfixOperator::Minus,
-            right: Box::new(Expression::Prefix(PrefixExpression {
+            right: Arc::new(Expression::Prefix(PrefixExpression {
                 operator: PrefixOperator::Minus,
-                expression: Box::new(Expression::Number(real!(2f64)))
+                expression: Arc::new(Expression::Number(real!(2f64)))
             }))
         })
     );
@@ -411,44 +415,44 @@ mod tests {
             (
                 "1 + ( 2 + 3 )",
                 Expression::Infix(InfixExpression {
-                    left: Box::new(Expression::Number(real!(1f64))),
+                    left: Arc::new(Expression::Number(real!(1f64))),
                     operator: InfixOperator::Plus,
-                    right: Box::new(Expression::Infix(InfixExpression {
-                        left: Box::new(Expression::Number(real!(2f64))),
+                    right: Arc::new(Expression::Infix(InfixExpression {
+                        left: Arc::new(Expression::Number(real!(2f64))),
                         operator: InfixOperator::Plus,
-                        right: Box::new(Expression::Number(real!(3f64))),
+                        right: Arc::new(Expression::Number(real!(3f64))),
                     })),
                 }),
             ),
             (
                 "1+(2+3)",
                 Expression::Infix(InfixExpression {
-                    left: Box::new(Expression::Number(real!(1f64))),
+                    left: Arc::new(Expression::Number(real!(1f64))),
                     operator: InfixOperator::Plus,
-                    right: Box::new(Expression::Infix(InfixExpression {
-                        left: Box::new(Expression::Number(real!(2f64))),
+                    right: Arc::new(Expression::Infix(InfixExpression {
+                        left: Arc::new(Expression::Number(real!(2f64))),
                         operator: InfixOperator::Plus,
-                        right: Box::new(Expression::Number(real!(3f64))),
+                        right: Arc::new(Expression::Number(real!(3f64))),
                     })),
                 }),
             ),
             (
                 "(1+2)+3",
                 Expression::Infix(InfixExpression {
-                    left: Box::new(Expression::Infix(InfixExpression {
-                        left: Box::new(Expression::Number(real!(1f64))),
+                    left: Arc::new(Expression::Infix(InfixExpression {
+                        left: Arc::new(Expression::Number(real!(1f64))),
                         operator: InfixOperator::Plus,
-                        right: Box::new(Expression::Number(real!(2f64))),
+                        right: Arc::new(Expression::Number(real!(2f64))),
                     })),
                     operator: InfixOperator::Plus,
-                    right: Box::new(Expression::Number(real!(3f64))),
+                    right: Arc::new(Expression::Number(real!(3f64))),
                 }),
             ),
             (
                 "(((cos(((pi))))))",
                 Expression::FunctionCall(FunctionCallExpression {
                     function: ExpressionFunction::Cosine,
-                    expression: Box::new(Expression::PiConstant),
+                    expression: Arc::new(Expression::PiConstant),
                 }),
             ),
         ];
