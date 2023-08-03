@@ -95,7 +95,7 @@ fn size(expr: &Expression) -> usize {
     }
 }
 
-// It's  ̶d̶a̶n̶g̶e̶r̶o̶u̶s̶ verbose to go alone! Take this.
+// It's verbose to go alone! Take this.
 macro_rules! infix {
     ($left:expr, $op:expr, $right:expr) => {
         Expression::Infix(InfixExpression {
@@ -365,7 +365,51 @@ fn simplify_infix(l: &Expression, op: &InfixOperator, r: &Expression) -> Express
         }
 
         //----------------------------------------------------------------
-        // After that: association, distribution
+        // Also: Affine relationships
+        //----------------------------------------------------------------
+
+        // (a1 * x) + (a2 * x) = (a1 + a2) * x
+        (
+            Expression::Infix(InfixExpression {
+                left: ref left_a,
+                operator: InfixOperator::Star,
+                right: ref left_x,
+            }),
+            InfixOperator::Plus,
+            Expression::Infix(InfixExpression {
+                left: ref right_a,
+                operator: InfixOperator::Star,
+                right: ref right_x,
+            }),
+        ) if left_x == right_x => {
+            mul!(
+                simplify_infix(left_a, &InfixOperator::Plus, right_a),
+                left_x.clone()
+            )
+        }
+
+        // (x + b1) + (x + b2) = x + (b1 + b2)
+        (
+            Expression::Infix(InfixExpression {
+                left: ref left_x,
+                operator: InfixOperator::Plus,
+                right: ref left_b,
+            }),
+            InfixOperator::Plus,
+            Expression::Infix(InfixExpression {
+                left: ref right_x,
+                operator: InfixOperator::Plus,
+                right: ref right_b,
+            }),
+        ) if left_x == right_x => {
+            add!(
+                mul!(Expression::Number(ONE + ONE), left_x.clone()),
+                simplify_infix(left_b, &InfixOperator::Plus, right_b)
+            )
+        }
+
+        //----------------------------------------------------------------
+        // After that: commutation, association, distribution
         //----------------------------------------------------------------
 
         // Addition Associative
@@ -380,7 +424,7 @@ fn simplify_infix(l: &Expression, op: &InfixOperator, r: &Expression) -> Express
         ) => {
             let original = add!(a.clone(), right.clone());
             let new_ab = simplify_infix(a, &InfixOperator::Plus, b);
-            let new = add!(new_ab, c.clone());
+            let new = simplify_infix(&new_ab, &InfixOperator::Plus, c);
             min_by_key(original, new, size)
         }
 
@@ -396,7 +440,7 @@ fn simplify_infix(l: &Expression, op: &InfixOperator, r: &Expression) -> Express
         ) => {
             let original = mul!(a.clone(), right.clone());
             let new_ab = simplify_infix(a, &InfixOperator::Star, b);
-            let new = mul!(new_ab, c.clone());
+            let new = simplify_infix(&new_ab, &InfixOperator::Star, c);
             min_by_key(original, new, size)
         }
 
@@ -412,7 +456,7 @@ fn simplify_infix(l: &Expression, op: &InfixOperator, r: &Expression) -> Express
         ) => {
             let original = sub!(a.clone(), right.clone());
             let new_left = simplify_infix(a, &InfixOperator::Plus, c);
-            let new = sub!(new_left, b.clone());
+            let new = simplify_infix(&new_left, &InfixOperator::Minus, b);
             min_by_key(original, new, size)
         }
 
@@ -428,11 +472,9 @@ fn simplify_infix(l: &Expression, op: &InfixOperator, r: &Expression) -> Express
         ) => {
             let original = div!(a.clone(), right.clone());
             let new_left = simplify_infix(a, &InfixOperator::Star, c);
-            let new = div!(new_left, b.clone());
+            let new = simplify_infix(&new_left, &InfixOperator::Slash, b);
             min_by_key(original, new, size)
         }
-
-
 
         // Right distribution
         (
@@ -447,7 +489,7 @@ fn simplify_infix(l: &Expression, op: &InfixOperator, r: &Expression) -> Express
             let original = mul!(a.clone(), right.clone());
             let ab = simplify_infix(a, &InfixOperator::Star, b);
             let ac = simplify_infix(a, &InfixOperator::Star, c);
-            let new = add!(ab, ac);
+            let new = simplify_infix(&ab, &InfixOperator::Plus, &ac);
             min_by_key(original, new, size)
         }
 
@@ -464,7 +506,7 @@ fn simplify_infix(l: &Expression, op: &InfixOperator, r: &Expression) -> Express
             let original = mul!(left.clone(), c.clone());
             let ac = simplify_infix(a, &InfixOperator::Star, c);
             let bc = simplify_infix(b, &InfixOperator::Star, c);
-            let new = add!(ac, bc);
+            let new = simplify_infix(&ac, &InfixOperator::Plus, &bc);
             min_by_key(original, new, size)
         }
 
@@ -472,14 +514,70 @@ fn simplify_infix(l: &Expression, op: &InfixOperator, r: &Expression) -> Express
         // Finally: other parenthesis manipulation
         //----------------------------------------------------------------
 
-        // Div Mul Right
-        (a,
-         InfixOperator::Slash,
-         Expression::Infix(InfixExpression{
-             ref left,
-             InfixOperator::Star,
-             ref right
-        })) if a == right => 
+        // Mul inside Div on left, multiplicand = denominator
+        (
+            Expression::Infix(InfixExpression {
+                left: ref multiplier,
+                operator: InfixOperator::Star,
+                right: ref multiplicand,
+            }),
+            InfixOperator::Slash,
+            denominator,
+        ) if **multiplicand == *denominator => *multiplier.clone(),
+
+        // Mul inside Div on left
+        (
+            numerator @ &Expression::Infix(InfixExpression {
+                left: ref multiplier,
+                operator: InfixOperator::Star,
+                right: ref multiplicand,
+            }),
+            InfixOperator::Slash,
+            denominator,
+        ) => {
+            let original = div!(numerator.clone(), denominator.clone());
+            let new_multiplier = simplify_infix(multiplier, &InfixOperator::Slash, denominator);
+            let new = simplify_infix(&new_multiplier, &InfixOperator::Star, multiplicand);
+            min_by_key(original, new, size)
+        }
+
+        // Mul inside Div on right
+        (
+            numerator,
+            InfixOperator::Slash,
+            denominator @ &Expression::Infix(InfixExpression {
+                left: ref multiplier,
+                operator: InfixOperator::Star,
+                right: ref multiplicand,
+            }),
+        ) => {
+            let original = div!(numerator.clone(), denominator.clone());
+            let new_multiplier = simplify_infix(numerator, &InfixOperator::Slash, multiplier);
+            let new = simplify_infix(&new_multiplier, &InfixOperator::Star, multiplicand);
+            min_by_key(original, new, size)
+        }
+
+        // Div inside Mul on left, denominator = multiplicand
+        (
+            Expression::Infix(InfixExpression {
+                left: ref numerator,
+                operator: InfixOperator::Slash,
+                right: ref denominator,
+            }),
+            InfixOperator::Star,
+            multiplicand,
+        ) if **denominator == *multiplicand => *numerator.clone(),
+
+        // Div inside Mul on right, denominator = multiplicand
+        (
+            multiplicand,
+            InfixOperator::Star,
+            Expression::Infix(InfixExpression {
+                left: ref numerator,
+                operator: InfixOperator::Slash,
+                right: ref denominator,
+            }),
+        ) if **denominator == *multiplicand => *numerator.clone(),
 
         // Catch-all
         (left, operator, right) => Expression::Infix(InfixExpression {
@@ -641,5 +739,11 @@ mod tests {
         affine_3,
         "2 * x[0] + 4 * x[0]",
         "6 * x[0]"
+    }
+
+    test_simplify! {
+        affine_4,
+        "(x[0] + 3) + (x[0] + 5)",
+        "2 * x[0] + 8"
     }
 }
