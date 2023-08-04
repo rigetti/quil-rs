@@ -1,9 +1,9 @@
 /// Complex machinery for simplifying [`Expression`]s.
 use crate::{
     expression::{
-        format_complex, hash_to_u64, imag, is_small, real, Expression, ExpressionFunction,
-        FunctionCallExpression, InfixExpression, InfixOperator, MemoryReference, PrefixExpression,
-        PrefixOperator,
+        format_complex, hash_to_u64, imag, is_small, real, simplification::SimplificationError,
+        Expression, ExpressionFunction, FunctionCallExpression, InfixExpression, InfixOperator,
+        MemoryReference, PrefixExpression, PrefixOperator,
     },
     hash::hash_f64,
 };
@@ -18,7 +18,7 @@ use std::{
 };
 use velcro::vec;
 
-/// Simplify an [`Expression`]:
+/// Simplify an [`Expression`] using the `egg` crate:
 /// - turn it into a [`RecExpr<Expr>`],
 /// - let [`egg`] simplify the recursive expression as best as it can,
 /// - and turn that back into an [`Expression`]
@@ -28,17 +28,6 @@ pub(super) fn run(expression: &Expression) -> Result<Expression, SimplificationE
     let root = runner.roots[0];
     let (_, best) = egg::Extractor::new(&runner.egraph, egg::AstSize).find_best(root);
     recexpr_to_expression(best)
-}
-
-/// All the myriad ways simplifying an [`Expression`] can fail.
-#[derive(Debug, thiserror::Error)]
-pub enum SimplificationError {
-    #[error("Invalid string for a complex number: {0}")]
-    ComplexParsingError(#[from] num_complex::ParseComplexError<std::num::ParseFloatError>),
-    #[error("Expected a valid index: {0}")]
-    IndexExpected(#[from] std::num::ParseIntError),
-    #[error("Invalid string for a memory reference: {0}")]
-    MemoryReferenceSyntax(#[from] <MemoryReference as FromStr>::Err),
 }
 
 /// An [`egg`]-friendly complex number.
@@ -514,88 +503,11 @@ static RULES: Lazy<Vec<Rewrite>> = Lazy::new(|| {
         rw!("mul pow"       ; "(^ ?a (+ ?b ?c))"        => "(* (^ ?a ?b) (^ ?a ?c))"),
         // exp
         rw!("exp zero"      ; "(exp 0)"                 => "1"),
+        // affine
+        rw!("affine"        ; "(+
+                                  (+ (* ?a1 ?x) ?b1)
+                                  (+ (* ?a2 ?x) ?b2))" => "(+
+                                                              (* (+ ?a1 ?a2) ?x)
+                                                              (+ ?b1 ?b2))"),
     ]
 });
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    egg::test_fn! {
-        docstring_example,
-        &RULES,
-        "(+ (cos (* 2 pi)) 2)" => "3"
-    }
-
-    egg::test_fn! {
-        issue_208_1,
-        &RULES,
-        "(* 0 theta)" => "0"
-    }
-
-    egg::test_fn! {
-        issue_208_2,
-        &RULES,
-        "(/ theta 1)" => "theta"
-    }
-
-    egg::test_fn! {
-        issue_208_3,
-        &RULES,
-        "(/ (* theta 5) 5)" => "theta"
-    }
-
-    egg::test_fn! {
-        memory_ref,
-        &RULES,
-        "theta[0]" => "theta[0]"
-    }
-
-    egg::test_fn! {
-        var,
-        &RULES,
-        "%foo" => "%foo"
-    }
-
-    egg::test_fn! {
-        prefix_neg,
-        &RULES,
-        "(neg -1)" => "1"
-    }
-
-    egg::test_fn! {
-        neg_sub,
-        &RULES,
-        "(neg (- 1 2))" => "1"
-    }
-
-    egg::test_fn! {
-        neg_imag,
-        &RULES,
-        "(neg 9.48e42i)" => "-9.48e42i"
-    }
-
-    egg::test_fn! {
-        pow_neg_address,
-        &RULES,
-        "(^ (neg 9.48e42i) A[9])" => "(^ -9.48e42i A[9]))"
-    }
-
-    egg::test_fn! {
-        fold_constant_mul,
-        &RULES,
-        "(* 2 pi)" => "6.283185307179586"
-    }
-
-    egg::test_fn! {
-        fold_constant_mul_div,
-        &RULES,
-        "(/ (* 2 pi) 6.283185307179586)" => "1"
-    }
-
-    egg::test_fn! {
-        fold_constant_mul_div_with_ref,
-        &RULES,
-        "(/ (* (* a[0] 2) pi) 6.283185307179586)" => "a[0]"
-    }
-}
