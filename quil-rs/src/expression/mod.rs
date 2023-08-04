@@ -35,6 +35,7 @@ use std::{
 #[cfg(test)]
 use proptest_derive::Arbitrary;
 
+mod arena;
 mod simplification;
 
 /// The different possible types of errors that could occur during expression evaluation.
