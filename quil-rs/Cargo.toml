@@ -13,6 +13,7 @@ categories = ["parser-implementations", "science", "compilers", "emulators"]
 approx = { version = "0.5.1", features = ["num-complex"] }
 dot-writer = { version = "0.1.2", optional = true }
 egg = { version = "0.9.4", features = ["deterministic"] }
+generational-arena = "0.2.9"
 indexmap = "1.6.1"
 itertools = "0.11.0"
 lexical = "6.1.1"
