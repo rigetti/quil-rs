@@ -1,3 +1,9 @@
+## 0.20.1-rc.0
+
+### Features
+
+- MemoryReference implements Ord (#275)
+
 ## 0.20.0
 
 ### Breaking Changes
