@@ -29,7 +29,7 @@ thiserror = "1.0.37"
 
 [dev-dependencies]
 clap = { version = "4.3.19", features = ["derive", "string"] }
-criterion = { version = "0.4.0", features = ["html_reports"] }
+criterion = { version = "0.5.1", features = ["html_reports"] }
 insta = "1.7.1"
 petgraph = "0.6.2"
 proptest = "1.0.0"
