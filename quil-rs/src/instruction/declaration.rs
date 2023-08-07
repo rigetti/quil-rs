@@ -160,7 +160,7 @@ mod test_declaration {
     }
 }
 
-#[derive(Clone, Debug, Hash, PartialEq)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct MemoryReference {
     pub name: String,
     pub index: u64,
@@ -171,8 +171,6 @@ impl MemoryReference {
         Self { name, index }
     }
 }
-
-impl Eq for MemoryReference {}
 
 impl fmt::Display for MemoryReference {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
