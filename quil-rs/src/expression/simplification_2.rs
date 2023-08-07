@@ -44,15 +44,15 @@ impl ExpressionCache {
 }
 
 /// Simplify an [`Expression`].
-pub(super) fn run(expression: &Expression) -> Expression {
+pub(super) fn run(expression: Expression) -> Expression {
     let mut cache = ExpressionCache::default();
     let simplified = simplify(&mut cache, expression);
     cache.remove(simplified)
 }
 
 /// Recursively simplify an [`Expression`], breaking into cases to make things more manageable.
-fn simplify(cache: &mut ExpressionCache, e: &Expression) -> Index {
-    if let Some(index) = cache.get_index(e) {
+fn simplify(cache: &mut ExpressionCache, e: Expression) -> Index {
+    if let Some(index) = cache.get_index(&e) {
         index
     } else {
         let simplified = match e {
@@ -63,12 +63,12 @@ fn simplify(cache: &mut ExpressionCache, e: &Expression) -> Index {
             Expression::FunctionCall(FunctionCallExpression {
                 function,
                 expression,
-            }) => simplify_function_call(cache, function, expression),
+            }) => simplify_function_call(cache, function, *expression),
             Expression::Infix(InfixExpression {
                 left,
                 operator,
                 right,
-            }) => simplify_infix(cache, left, operator, right),
+            }) => simplify_infix(cache, *left, operator, *right),
             Expression::Prefix(PrefixExpression {
                 operator,
                 expression,
@@ -86,8 +86,8 @@ const I: num_complex::Complex64 = imag!(1.0);
 
 fn simplify_function_call(
     cache: &mut ExpressionCache,
-    func: &ExpressionFunction,
-    expr: &Expression,
+    func: ExpressionFunction,
+    expr: Expression,
 ) -> Expression {
     // Evaluate numbers and π
     // Pass through otherwise
@@ -109,19 +109,19 @@ fn simplify_function_call(
         (ExpressionFunction::SquareRoot, Expression::Number(x)) => Expression::Number(x.sqrt()),
         (ExpressionFunction::SquareRoot, Expression::PiConstant) => Expression::Number(PI.sqrt()),
         (function, expression) => Expression::FunctionCall(FunctionCallExpression {
-            function: *function,
+            function,
             expression: expression.clone().into(),
         }),
     }
 }
 
 #[inline]
-fn is_zero(x: &num_complex::Complex64) -> bool {
+fn is_zero(x: num_complex::Complex64) -> bool {
     x.norm() < 1e-10
 }
 
 #[inline]
-fn is_one(x: &num_complex::Complex64) -> bool {
+fn is_one(x: num_complex::Complex64) -> bool {
     (x - 1.0).norm() < 1e-10
 }
 
@@ -181,14 +181,14 @@ macro_rules! div {
 
 fn simplify_infix(
     cache: &mut ExpressionCache,
-    l: &Expression,
-    op: &InfixOperator,
-    r: &Expression,
+    l: Expression,
+    op: InfixOperator,
+    r: Expression,
 ) -> Expression {
     let left = simplify(cache, l);
     let right = simplify(cache, r);
-    let left = cache.get(left);
-    let right = cache.get(right);
+    let left = cache.get(left).clone();
+    let right = cache.get(right).clone();
     // There are … many cases here
     match (left, op, right) {
         //----------------------------------------------------------------
@@ -199,8 +199,8 @@ fn simplify_infix(
         // Addition and Subtraction
 
         // Adding with zero
-        (Expression::Number(x), InfixOperator::Plus, right) if is_zero(x) => right.clone(),
-        (left, InfixOperator::Plus, Expression::Number(x)) if is_zero(x) => left.clone(),
+        (Expression::Number(x), InfixOperator::Plus, right) if is_zero(x) => right,
+        (left, InfixOperator::Plus, Expression::Number(x)) if is_zero(x) => left,
         // Adding numbers or π
         (Expression::Number(x), InfixOperator::Plus, Expression::Number(y)) => {
             Expression::Number(x + y)
@@ -217,7 +217,7 @@ fn simplify_infix(
 
         // Subtracting with zero
         (Expression::Number(x), InfixOperator::Minus, right) if is_zero(x) => {
-            simplify_prefix(cache, &PrefixOperator::Minus, right)
+            simplify_prefix(cache, PrefixOperator::Minus, right)
         }
         (left, InfixOperator::Minus, Expression::Number(y)) if is_zero(y) => left.clone(),
         // Subtracting self
@@ -294,17 +294,17 @@ fn simplify_infix(
             InfixOperator::Plus,
             Expression::Prefix(PrefixExpression {
                 operator: PrefixOperator::Minus,
-                ref expression,
+                expression,
             }),
-        ) => simplify_infix(cache, left, &InfixOperator::Minus, expression),
+        ) => simplify_infix(cache, left, InfixOperator::Minus, *expression),
         (
             Expression::Prefix(PrefixExpression {
                 operator: PrefixOperator::Minus,
-                ref expression,
+                expression,
             }),
             InfixOperator::Plus,
             right,
-        ) => simplify_infix(cache, right, &InfixOperator::Minus, expression),
+        ) => simplify_infix(cache, right, InfixOperator::Minus, *expression),
 
         // Subtraction with negation
         (
@@ -312,12 +312,12 @@ fn simplify_infix(
             InfixOperator::Minus,
             Expression::Prefix(PrefixExpression {
                 operator: PrefixOperator::Minus,
-                ref expression,
+                expression,
             }),
-        ) => simplify_infix(cache, left, &InfixOperator::Plus, expression),
+        ) => simplify_infix(cache, left, InfixOperator::Plus, *expression),
         (
             // -expression - right => smaller of (-expression) - right & -(expression + right)
-            left @ &Expression::Prefix(PrefixExpression {
+            left @ Expression::Prefix(PrefixExpression {
                 operator: PrefixOperator::Minus,
                 ref expression,
             }),
@@ -327,8 +327,8 @@ fn simplify_infix(
             let original = sub!(left.clone(), right.clone());
             let new = simplify_prefix(
                 cache,
-                &PrefixOperator::Minus,
-                &add!(expression.clone(), right.clone()),
+                PrefixOperator::Minus,
+                add!(expression.clone(), right),
             );
             min_by_key(original, new, size)
         }
@@ -337,38 +337,38 @@ fn simplify_infix(
         (
             Expression::Prefix(PrefixExpression {
                 operator: PrefixOperator::Minus,
-                expression: ref left,
+                expression: left,
             }),
             InfixOperator::Star,
             Expression::Prefix(PrefixExpression {
                 operator: PrefixOperator::Minus,
-                expression: ref right,
+                expression: right,
             }),
-        ) => simplify_infix(cache, left, &InfixOperator::Star, right),
+        ) => simplify_infix(cache, *left, InfixOperator::Star, *right),
         (
             left,
             InfixOperator::Star,
-            right @ &Expression::Prefix(PrefixExpression {
+            right @ Expression::Prefix(PrefixExpression {
                 operator: PrefixOperator::Minus,
-                ref expression,
+                expression,
             }),
         ) => {
             let original = mul!(left.clone(), right.clone());
-            let neg_left = simplify_prefix(cache, &PrefixOperator::Minus, left);
-            let new = mul!(neg_left, expression.clone());
+            let neg_left = simplify_prefix(cache, PrefixOperator::Minus, left);
+            let new = mul!(neg_left, *expression);
             min_by_key(original, new, size)
         }
         (
-            left @ &Expression::Prefix(PrefixExpression {
+            left @ Expression::Prefix(PrefixExpression {
                 operator: PrefixOperator::Minus,
-                ref expression,
+                expression,
             }),
             InfixOperator::Star,
             right,
         ) => {
             let original = mul!(left.clone(), right.clone());
-            let neg_right = simplify_prefix(cache, &PrefixOperator::Minus, right);
-            let new = mul!(expression.clone(), neg_right);
+            let neg_right = simplify_prefix(cache, PrefixOperator::Minus, right);
+            let new = mul!(*expression, neg_right);
             min_by_key(original, new, size)
         }
 
@@ -600,8 +600,8 @@ fn simplify_infix(
         ) => {
             let original = div!(numerator.clone(), denominator.clone());
             let new_multiplicand =
-                simplify_infix(cache, multiplicand, &InfixOperator::Slash, denominator);
-            let new = simplify_infix(cache, &multiplier, &InfixOperator::Star, &new_multiplicand);
+                simplify_infix(cache, multiplicand, InfixOperator::Slash, denominator);
+            let new = simplify_infix(cache, &multiplier, InfixOperator::Star, &new_multiplicand);
             min_by_key(original, new, size)
         }
 
@@ -616,9 +616,8 @@ fn simplify_infix(
             }),
         ) => {
             let original = div!(numerator.clone(), denominator.clone());
-            let new_multiplier =
-                simplify_infix(cache, numerator, &InfixOperator::Slash, multiplier);
-            let new = simplify_infix(cache, &new_multiplier, &InfixOperator::Star, multiplicand);
+            let new_multiplier = simplify_infix(cache, numerator, InfixOperator::Slash, multiplier);
+            let new = simplify_infix(cache, &new_multiplier, InfixOperator::Star, multiplicand);
             min_by_key(original, new, size)
         }
 
@@ -647,7 +646,7 @@ fn simplify_infix(
         // Catch-all
         (left, operator, right) => Expression::Infix(InfixExpression {
             left: left.clone().into(),
-            operator: *operator,
+            operator,
             right: right.clone().into(),
         }),
     }
@@ -655,8 +654,8 @@ fn simplify_infix(
 
 fn simplify_prefix(
     cache: &mut ExpressionCache,
-    op: &PrefixOperator,
-    expr: &Expression,
+    op: PrefixOperator,
+    expr: Expression,
 ) -> Expression {
     // Remove +
     // Push - into numbers & π
@@ -669,7 +668,7 @@ fn simplify_prefix(
         (PrefixOperator::Minus, Expression::Number(x)) => Expression::Number(-x),
         (PrefixOperator::Minus, Expression::PiConstant) => Expression::Number(-PI),
         (operator, expression) => Expression::Prefix(PrefixExpression {
-            operator: *operator,
+            operator,
             expression: expression.clone().into(),
         }),
     }
