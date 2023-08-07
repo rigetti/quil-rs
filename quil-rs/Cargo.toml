@@ -35,7 +35,7 @@ petgraph = "0.6.2"
 proptest = "1.0.0"
 proptest-derive = "0.3.0"
 rand = "0.8.5"
-rstest = "0.17.0"
+rstest = "0.18.1"
 
 # These are described in the crate README.md
 [features]
