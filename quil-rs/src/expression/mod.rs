@@ -35,7 +35,7 @@ use std::{
 #[cfg(test)]
 use proptest_derive::Arbitrary;
 
-mod simplification;
+//mod simplification;
 mod simplification_2;
 
 /// The different possible types of errors that could occur during expression evaluation.
@@ -60,7 +60,7 @@ pub enum Expression {
     Variable(String),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FunctionCallExpression {
     pub function: ExpressionFunction,
     pub expression: Box<Expression>,
@@ -75,7 +75,7 @@ impl FunctionCallExpression {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct InfixExpression {
     pub left: Box<Expression>,
     pub operator: InfixOperator,
@@ -92,7 +92,7 @@ impl InfixExpression {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PrefixExpression {
     pub operator: PrefixOperator,
     pub expression: Box<Expression>,
@@ -135,15 +135,15 @@ impl Hash for Expression {
                 "Infix".hash(state);
                 operator.hash(state);
                 match operator {
-                    InfixOperator::Plus | InfixOperator::Star => {
-                        // commutative, so put left & right in decreasing order by hash value
-                        let (a, b) = (
-                            min_by_key(&left, &right, hash_to_u64),
-                            max_by_key(&left, &right, hash_to_u64),
-                        );
-                        a.hash(state);
-                        b.hash(state);
-                    }
+                    //InfixOperator::Plus | InfixOperator::Star => {
+                    //    // commutative, so put left & right in decreasing order by hash value
+                    //    let (a, b) = (
+                    //        min_by_key(&left, &right, hash_to_u64),
+                    //        max_by_key(&left, &right, hash_to_u64),
+                    //    );
+                    //    a.hash(state);
+                    //    b.hash(state);
+                    //}
                     _ => {
                         left.hash(state);
                         right.hash(state);
@@ -181,7 +181,17 @@ impl Hash for Expression {
 impl PartialEq for Expression {
     // Partial equality by hash value
     fn eq(&self, other: &Self) -> bool {
-        hash_to_u64(self) == hash_to_u64(other)
+        // hash_to_u64(self) == hash_to_u64(other)
+        match (self, other) {
+            (Self::Address(left), Self::Address(right)) => left == right,
+            (Self::Infix(left), Self::Infix(right)) => left == right,
+            (Self::Number(left), Self::Number(right)) => left == right,
+            (Self::Prefix(left), Self::Prefix(right)) => left == right,
+            (Self::FunctionCall(left), Self::FunctionCall(right)) => left == right,
+            (Self::Variable(left), Self::Variable(right)) => left == right,
+            (Self::PiConstant, Self::PiConstant) => true,
+            _ => false,
+        }
     }
 }
 
@@ -274,9 +284,8 @@ impl Expression {
                 *self = Expression::Number(Complex64::from(PI));
             }
             _ => {
-                if let Ok(simpler) = simplification::run(self) {
-                    *self = simpler;
-                }
+                let temp = std::mem::replace(self, Expression::PiConstant);
+                *self = simplification_2::run(temp);
             }
         }
     }
