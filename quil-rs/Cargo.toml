@@ -28,11 +28,13 @@ strum.workspace = true
 thiserror = "1.0.37"
 
 [dev-dependencies]
-criterion = { version = "0.4.0", features = ["html_reports"] }
+clap = { version = "4.3.19", features = ["derive", "string"] }
+criterion = { version = "0.5.1", features = ["html_reports"] }
 insta = "1.7.1"
 petgraph = "0.6.2"
 proptest = "1.0.0"
 proptest-derive = "0.3.0"
+rand = "0.8.5"
 rstest = "0.18.1"
 
 # These are described in the crate README.md
@@ -51,3 +53,10 @@ harness = false
 [[bench]]
 name = "scheduled_program_from_program"
 harness = false
+
+[[bench]]
+name = "simplification"
+harness = false
+
+[[example]]
+name = "generate_test_expressions"
