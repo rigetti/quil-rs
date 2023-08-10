@@ -1,3 +1,13 @@
+## 0.21.0-rc.0
+
+### Breaking Changes
+
+- Decouple expression hashing and equality (#277)
+
+### Features
+
+- MemoryReference implements Ord (#275)
+
 ## 0.20.1-rc.1
 
 ### Features

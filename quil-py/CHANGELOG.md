@@ -1,3 +1,9 @@
+## 0.5.0-rc.0
+
+### Breaking Changes
+
+- Decouple expression hashing and equality (#277)
+
 ## 0.4.0
 
 ### Breaking Changes
