@@ -131,11 +131,11 @@ impl Hash for Expression {
     // Implemented by hand since we can't derive with f64s hidden inside.
     fn hash<H: Hasher>(&self, state: &mut H) {
         match self {
-            Expression::Address(m) => {
+            Self::Address(m) => {
                 "Address".hash(state);
                 m.hash(state);
             }
-            Expression::FunctionCall(FunctionCallExpression {
+            Self::FunctionCall(FunctionCallExpression {
                 function,
                 expression,
             }) => {
@@ -143,7 +143,7 @@ impl Hash for Expression {
                 function.hash(state);
                 expression.hash(state);
             }
-            Expression::Infix(InfixExpression {
+            Self::Infix(InfixExpression {
                 left,
                 operator,
                 right,
@@ -153,11 +153,9 @@ impl Hash for Expression {
                 left.hash(state);
                 right.hash(state);
             }
-            Expression::Number(n) => {
+            Self::Number(n) => {
                 "Number".hash(state);
                 // Skip zero values (akin to `format_complex`).
-                // Also, since f64 isn't hashable, use the u64 binary representation.
-                // The docs claim this is rather portable: https://doc.rust-lang.org/std/primitive.f64.html#method.to_bits
                 if n.re.abs() > 0f64 {
                     hash_f64(n.re, state)
                 }
@@ -165,15 +163,15 @@ impl Hash for Expression {
                     hash_f64(n.im, state)
                 }
             }
-            Expression::PiConstant => {
+            Self::PiConstant => {
                 "PiConstant".hash(state);
             }
-            Expression::Prefix(p) => {
+            Self::Prefix(p) => {
                 "Prefix".hash(state);
                 p.operator.hash(state);
                 p.expression.hash(state);
             }
-            Expression::Variable(v) => {
+            Self::Variable(v) => {
                 "Variable".hash(state);
                 v.hash(state);
             }
