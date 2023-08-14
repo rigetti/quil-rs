@@ -52,7 +52,7 @@ impl LabelPlaceholder {
         Self(Arc::new(base_label))
     }
 
-    pub fn as_inner(&self) -> &String {
+    pub fn as_inner(&self) -> &str {
         &self.0
     }
 
