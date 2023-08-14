@@ -33,8 +33,7 @@ impl Quil for Arithmetic {
         write!(f, " ")?;
         self.destination.write(f, fall_back_to_debug)?;
         write!(f, " ")?;
-        self.source.write(f, fall_back_to_debug)?;
-        Ok(())
+        self.source.write(f, fall_back_to_debug)
     }
 }
 

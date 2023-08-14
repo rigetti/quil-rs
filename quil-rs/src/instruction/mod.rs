@@ -261,6 +261,7 @@ pub fn format_integer_vector(values: &[u64]) -> String {
         .join(" ")
 }
 
+/// Write a list of qubits, with each prefixed by a space (including the first)
 fn write_qubits(
     f: &mut impl std::fmt::Write,
     fall_back_to_debug: bool,
