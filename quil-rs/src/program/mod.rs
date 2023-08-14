@@ -360,6 +360,13 @@ impl Program {
         Ok(expanded_program)
     }
 
+    /// Resolve [`LabelPlaceholder`]s and [`QubitPlaceholder`]s within the program using default resolvers.
+    ///
+    /// See [`Program::resolve_placeholders`] for more information.
+    pub fn resolve_placeholders(&mut self) {
+        self.resolve_placeholders_with_custom_resolvers(None, None)
+    }
+
     /// Resolve [`LabelPlaceholder`]s and [`QubitPlaceholder`]s within the program such that the resolved values
     /// will remain unique to that placeholder within the scope of the program.
     ///
@@ -370,7 +377,7 @@ impl Program {
     /// for that placeholder within the scope of the program using an auto-incrementing value (for qubit) or suffix (for label)
     /// while ensuring that unique value is not already in use within the program.
     #[allow(clippy::type_complexity)]
-    pub fn resolve_placeholders(
+    pub fn resolve_placeholders_with_custom_resolvers(
         &mut self,
         label_resolver: Option<Box<dyn Fn(&LabelPlaceholder) -> Option<String>>>,
         qubit_resolver: Option<Box<dyn Fn(&QubitPlaceholder) -> Option<u64>>>,
@@ -390,7 +397,7 @@ impl Program {
                     Qubit::Placeholder(placeholder) => {
                         qubit_placeholders.insert(placeholder.clone());
                     }
-                    _ => {}
+                    Qubit::Variable(_) => {}
                 }
             }
 
@@ -1027,7 +1034,7 @@ I 0
         }));
 
         let mut auto_increment_resolved = program.clone();
-        auto_increment_resolved.resolve_placeholders(None, None);
+        auto_increment_resolved.resolve_placeholders();
         assert_eq!(
             auto_increment_resolved.instructions,
             vec![
@@ -1054,7 +1061,7 @@ I 0
             (label_placeholder_2, "other_new_label".to_string()),
         ]);
         let custom_qubit_resolutions = HashMap::from([(placeholder_1, 42), (placeholder_2, 10000)]);
-        custom_resolved.resolve_placeholders(
+        custom_resolved.resolve_placeholders_with_custom_resolvers(
             Some(Box::new(move |placeholder| {
                 custom_label_resolutions.get(placeholder).cloned()
             })),

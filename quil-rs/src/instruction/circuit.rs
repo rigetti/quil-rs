@@ -33,16 +33,15 @@ impl Quil for CircuitDefinition {
         writer: &mut impl std::fmt::Write,
         fall_back_to_debug: bool,
     ) -> Result<(), crate::quil::ToQuilError> {
-
         write!(writer, "DEFCIRCUIT {}", self.name)?;
         if !self.parameters.is_empty() {
             write!(writer, "(")?;
             let mut iter = self.parameters.iter();
             if let Some(p) = iter.next() {
-                write!("%{}", p)?;
+                write!(writer, "%{}", p)?;
             }
             for p in iter {
-                write!(", %{}", p)?;
+                write!(writer, "%{}", p)?;
             }
             write!(writer, ")")?;
         }

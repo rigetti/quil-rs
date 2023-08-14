@@ -604,26 +604,6 @@ impl Instruction {
         }
     }
 
-    /// Return immutable references to the [`Qubit`]s contained within an instruction
-    /// TODO: replace the logic in Program::get_used_qubits with this
-    #[allow(dead_code)]
-    pub(crate) fn get_qubits(&self) -> Vec<&Qubit> {
-        match self {
-            Instruction::Gate(gate) => gate.qubits.iter().collect(),
-            Instruction::Measurement(measurement) => vec![&measurement.qubit],
-            Instruction::Reset(reset) => match &reset.qubit {
-                Some(qubit) => vec![qubit],
-                None => vec![],
-            },
-            Instruction::Delay(delay) => delay.qubits.iter().collect(),
-            Instruction::Fence(fence) => fence.qubits.iter().collect(),
-            Instruction::Capture(capture) => capture.frame.qubits.iter().collect(),
-            Instruction::Pulse(pulse) => pulse.frame.qubits.iter().collect(),
-            Instruction::RawCapture(raw_capture) => raw_capture.frame.qubits.iter().collect(),
-            _ => vec![],
-        }
-    }
-
     /// Return mutable references to the [`Qubit`]s contained within an instruction
     pub(crate) fn get_qubits_mut(&mut self) -> Vec<&mut Qubit> {
         match self {
