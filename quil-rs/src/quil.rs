@@ -14,8 +14,7 @@ pub trait Quil: std::fmt::Debug {
     /// Return a string in valid Quil syntax if possible. Any individual component of this object
     /// which cannot be represented in Quil will be replaced with a `Debug` representation of that
     /// component.
-    fn to_quil_or_debug(&self) -> String
-    {
+    fn to_quil_or_debug(&self) -> String {
         let mut buffer = String::new();
         self.write(&mut buffer, true).ok();
         buffer

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::ops;
 use std::str::FromStr;
 
@@ -128,6 +128,9 @@ impl Program {
 
     /// Add an instruction to the end of the program.
     pub fn add_instruction(&mut self, instruction: Instruction) {
+        self.used_qubits
+            .extend(instruction.get_qubits().into_iter().cloned());
+
         match instruction {
             Instruction::CalibrationDefinition(calibration) => {
                 self.calibrations.push_calibration(calibration);
@@ -153,38 +156,28 @@ impl Program {
                 self.waveforms.insert(name, definition);
             }
             Instruction::Gate(gate) => {
-                self.used_qubits.extend(gate.qubits.clone());
                 self.instructions.push(Instruction::Gate(gate));
             }
             Instruction::Measurement(measurement) => {
-                self.used_qubits.insert(measurement.qubit.clone());
                 self.instructions
                     .push(Instruction::Measurement(measurement));
             }
             Instruction::Reset(reset) => {
-                if let Some(qubit) = &reset.qubit {
-                    self.used_qubits.insert(qubit.clone());
-                }
                 self.instructions.push(Instruction::Reset(reset));
             }
             Instruction::Delay(delay) => {
-                self.used_qubits.extend(delay.qubits.clone());
                 self.instructions.push(Instruction::Delay(delay));
             }
             Instruction::Fence(fence) => {
-                self.used_qubits.extend(fence.qubits.clone());
                 self.instructions.push(Instruction::Fence(fence));
             }
             Instruction::Capture(capture) => {
-                self.used_qubits.extend(capture.frame.qubits.clone());
                 self.instructions.push(Instruction::Capture(capture));
             }
             Instruction::Pulse(pulse) => {
-                self.used_qubits.extend(pulse.frame.qubits.clone());
                 self.instructions.push(Instruction::Pulse(pulse));
             }
             Instruction::RawCapture(raw_capture) => {
-                self.used_qubits.extend(raw_capture.frame.qubits.clone());
                 self.instructions.push(Instruction::RawCapture(raw_capture));
             }
             other => self.instructions.push(other),
@@ -387,17 +380,19 @@ impl Program {
             let mut qubit_placeholders: IndexSet<QubitPlaceholder> = IndexSet::new();
 
             // Stable iteration order makes placeholder resolution deterministic
-            let sorted_qubits = self.get_used_qubits().iter().collect::<BTreeSet<_>>();
+            for instruction in &self.instructions {
+                let qubits = instruction.get_qubits();
 
-            for qubit in sorted_qubits {
-                match qubit {
-                    Qubit::Fixed(index) => {
-                        qubits_used.insert(*index);
+                for qubit in qubits {
+                    match qubit {
+                        Qubit::Fixed(index) => {
+                            qubits_used.insert(*index);
+                        }
+                        Qubit::Placeholder(placeholder) => {
+                            qubit_placeholders.insert(placeholder.clone());
+                        }
+                        Qubit::Variable(_) => {}
                     }
-                    Qubit::Placeholder(placeholder) => {
-                        qubit_placeholders.insert(placeholder.clone());
-                    }
-                    Qubit::Variable(_) => {}
                 }
             }
 
