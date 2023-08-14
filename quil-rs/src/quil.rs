@@ -3,7 +3,7 @@
 /// If you want to serialize an object to string and fail if it can't be represented as valid Quil, then use
 /// `to_quil()`. If you want to serialize an object to string infallibly, and can tolerate invalid Quil, then
 /// use `to_quil_or_debug()`.
-pub trait Quil {
+pub trait Quil: std::fmt::Debug {
     /// Return a string in valid Quil syntax or an error if the item cannot be represented with valid Quil.
     fn to_quil(&self) -> Result<String, ToQuilError> {
         let mut buffer = String::new();
@@ -15,8 +15,6 @@ pub trait Quil {
     /// which cannot be represented in Quil will be replaced with a `Debug` representation of that
     /// component.
     fn to_quil_or_debug(&self) -> String
-    where
-        Self: std::fmt::Debug,
     {
         let mut buffer = String::new();
         self.write(&mut buffer, true).ok();
