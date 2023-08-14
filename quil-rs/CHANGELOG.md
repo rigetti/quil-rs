@@ -1,3 +1,58 @@
+## 0.21.0-rc.0
+
+### Breaking Changes
+
+- Decouple expression hashing and equality (#277)
+
+### Features
+
+- MemoryReference implements Ord (#275)
+
+## 0.20.1-rc.1
+
+### Features
+
+- MemoryReference implements Ord (#275)
+
+## 0.20.1-rc.0
+
+### Features
+
+- MemoryReference implements Ord (#275)
+
+## 0.20.0
+
+### Breaking Changes
+
+- allow overriding Instruction getters (#260)
+
+### Fixes
+
+- infix expression parenthesization (#262)
+- escape Quil strings for display (#258)
+
+## 0.20.0-rc.2
+
+### Breaking Changes
+
+- allow overriding Instruction getters (#260)
+
+### Fixes
+
+- infix expression parenthesization (#262)
+- escape Quil strings for display (#258)
+
+## 0.20.0-rc.1
+
+### Breaking Changes
+
+- allow overriding Instruction getters (#260)
+
+### Fixes
+
+- infix expression parenthesization (#262)
+- escape Quil strings for display (#258)
+
 ## 0.20.0-rc.0
 
 ### Breaking Changes

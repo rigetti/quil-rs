@@ -183,7 +183,7 @@ mod test_declaration {
     }
 }
 
-#[derive(Clone, Debug, Hash, PartialEq)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct MemoryReference {
     pub name: String,
     pub index: u64,
@@ -195,8 +195,6 @@ impl MemoryReference {
     }
 }
 
-impl Eq for MemoryReference {}
-
 impl Quil for MemoryReference {
     fn write(
         &self,
@@ -204,6 +202,12 @@ impl Quil for MemoryReference {
         _fall_back_to_debug: bool,
     ) -> crate::quil::ToQuilResult<()> {
         write!(f, "{}[{}]", self.name, self.index).map_err(Into::into)
+    }
+}
+
+impl std::fmt::Display for MemoryReference {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}[{}]", self.name, self.index)
     }
 }
 

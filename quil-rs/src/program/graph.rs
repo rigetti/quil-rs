@@ -471,7 +471,7 @@ impl<'a> InstructionBlock<'a> {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum BlockTerminator<'a> {
     Conditional {
         condition: &'a MemoryReference,
@@ -698,5 +698,155 @@ impl<'a> ScheduledProgram<'a> {
             label = format!("block_{suffix}");
         }
         label
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::instruction::Pragma;
+    use crate::program::{MatchedFrames, MemoryAccesses};
+
+    #[cfg(feature = "graphviz-dot")]
+    mod custom_handler {
+        use super::*;
+        use crate::instruction::PragmaArgument;
+        use crate::program::frame::FrameMatchCondition;
+        use crate::program::graphviz_dot::tests::build_dot_format_snapshot_test_case;
+
+        /// Generates a custom [`InstructionHandler`] that specially handles two `PRAGMA` instructions:
+        ///
+        /// - `NO-OP` is considered a `ClassicalCompute` instruction that does nothing
+        /// - `RAW-INSTRUCTION` is an `RFControl` instruction that is scheduled on all frames by default
+        ///   or the frame names specified as arguments, and reads from `ro`.
+        ///
+        /// Note that any program being tested must define at least one frame for `RAW-INSTRUCTION` to
+        /// have any effect.
+        fn get_custom_handler() -> InstructionHandler {
+            const NO_OP: &str = "NO-OP";
+            const RAW_INSTRUCTION: &str = "RAW-INSTRUCTION";
+
+            InstructionHandler::default()
+                .set_is_scheduled(|instruction| match instruction {
+                    Instruction::Pragma(Pragma { name, .. }) if name == NO_OP => Some(false),
+                    Instruction::Pragma(Pragma { name, .. }) if name == RAW_INSTRUCTION => {
+                        Some(true)
+                    }
+                    _ => None,
+                })
+                .set_role_for_instruction(|instruction| match instruction {
+                    Instruction::Pragma(Pragma { name, .. }) if name == NO_OP => {
+                        Some(InstructionRole::ClassicalCompute)
+                    }
+                    Instruction::Pragma(Pragma { name, .. }) if name == RAW_INSTRUCTION => {
+                        Some(InstructionRole::RFControl)
+                    }
+                    _ => None,
+                })
+                .set_matching_frames(|instruction, program| match instruction {
+                    Instruction::Pragma(Pragma { name, .. }) if name == NO_OP => Some(None),
+                    Instruction::Pragma(Pragma {
+                        name, arguments, ..
+                    }) if name == RAW_INSTRUCTION => Some(Some({
+                        let frame_condition = if arguments.is_empty() {
+                            FrameMatchCondition::All
+                        } else {
+                            FrameMatchCondition::AnyOfNames(
+                                arguments
+                                    .iter()
+                                    .filter_map(|arg| match arg {
+                                        PragmaArgument::Identifier(name) => Some(name.as_str()),
+                                        PragmaArgument::Integer(_) => None,
+                                    })
+                                    .collect(),
+                            )
+                        };
+
+                        let used = program
+                            .frames
+                            .get_matching_keys_for_condition(frame_condition);
+
+                        MatchedFrames {
+                            used,
+                            blocked: HashSet::new(),
+                        }
+                    })),
+                    _ => None,
+                })
+                .set_memory_accesses(|instruction| match instruction {
+                    Instruction::Pragma(Pragma { name, .. }) if name == NO_OP => {
+                        Some(MemoryAccesses::default())
+                    }
+                    Instruction::Pragma(Pragma { name, .. }) if name == RAW_INSTRUCTION => Some({
+                        MemoryAccesses {
+                            captures: HashSet::new(),
+                            reads: [String::from("ro")].into(),
+                            writes: HashSet::new(),
+                        }
+                    }),
+                    _ => None,
+                })
+        }
+
+        build_dot_format_snapshot_test_case! {
+            only_pragmas_without_frames,
+            r#"
+DEFFRAME 0 "quux":
+    SAMPLE-RATE: 1.0
+    INITIAL-FREQUENCY: 1e8
+PRAGMA NO-OP
+PRAGMA RAW-INSTRUCTION
+PRAGMA RAW-INSTRUCTION
+PRAGMA NO-OP
+PRAGMA RAW-INSTRUCTION
+"#,
+            &mut get_custom_handler(),
+        }
+
+        build_dot_format_snapshot_test_case! {
+            only_pragmas_with_frames,
+            r#"
+DEFFRAME 0 "foo":
+    SAMPLE-RATE: 1.0
+    INITIAL-FREQUENCY: 1e8
+DEFFRAME 1 "bar":
+    SAMPLE-RATE: 1.0
+    INITIAL-FREQUENCY: 1e8
+
+PRAGMA NO-OP
+PRAGMA RAW-INSTRUCTION foo
+PRAGMA RAW-INSTRUCTION bar
+PRAGMA NO-OP
+PRAGMA RAW-INSTRUCTION foo bar
+PRAGMA NO-OP
+PRAGMA RAW-INSTRUCTION foo
+"#,
+            &mut get_custom_handler(),
+        }
+
+        build_dot_format_snapshot_test_case! {
+            mixed_pragmas_and_pulses,
+            r#"
+DEFFRAME 0 "foo":
+    SAMPLE-RATE: 1.0
+    INITIAL-FREQUENCY: 1e8
+DEFFRAME 1 "bar":
+    SAMPLE-RATE: 1.0
+    INITIAL-FREQUENCY: 1e8
+
+PRAGMA NO-OP
+PRAGMA RAW-INSTRUCTION foo
+PULSE 1 "bar" gaussian(duration: 1, fwhm: 2, t0: 3)
+PRAGMA RAW-INSTRUCTION foo bar
+PRAGMA NO-OP
+PULSE 0 "foo" gaussian(duration: 1, fwhm: 2, t0: 3)
+PRAGMA RAW-INSTRUCTION bar
+PULSE 0 "foo" gaussian(duration: 1, fwhm: 2, t0: 3)
+PULSE 1 "bar" gaussian(duration: 1, fwhm: 2, t0: 3)
+PRAGMA NO-OP
+PRAGMA RAW-INSTRUCTION foo
+"#,
+            &mut get_custom_handler(),
+        }
     }
 }

@@ -166,6 +166,7 @@ impl FrameSet {
     }
 }
 
+#[derive(Debug)]
 pub(crate) enum FrameMatchCondition<'a> {
     /// Match all frames in the set
     All,

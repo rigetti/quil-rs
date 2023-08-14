@@ -41,7 +41,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with: 
           command: bench
-          args: --bench parser -- --warm-up-time=2 --measurement-time=3 --sample-size=500 --color=always
+          args: --bench parser --bench simplification -- --warm-up-time=2 --measurement-time=3 --sample-size=500 --color=always
       
       - name: Archive benchmark results
         if: ${{ github.ref == 'refs/heads/main'}}
