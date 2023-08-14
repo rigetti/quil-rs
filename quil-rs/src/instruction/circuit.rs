@@ -33,16 +33,18 @@ impl Quil for CircuitDefinition {
         writer: &mut impl std::fmt::Write,
         fall_back_to_debug: bool,
     ) -> Result<(), crate::quil::ToQuilError> {
-        let parameter_str: String = self
-            .parameters
-            .iter()
-            .map(|p| format!("%{}", p))
-            .collect::<Vec<String>>()
-            .join(", ");
 
         write!(writer, "DEFCIRCUIT {}", self.name)?;
-        if !parameter_str.is_empty() {
-            write!(writer, "({})", parameter_str)?;
+        if !self.parameters.is_empty() {
+            write!(writer, "(")?;
+            let mut iter = self.parameters.iter();
+            if let Some(p) = iter.next() {
+                write!("%{}", p)?;
+            }
+            for p in iter {
+                write!(", %{}", p)?;
+            }
+            write!(writer, ")")?;
         }
         for qubit_variable in &self.qubit_variables {
             write!(writer, " {}", qubit_variable)?;
