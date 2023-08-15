@@ -723,6 +723,15 @@ impl Instruction {
             Instruction::Label(label) => {
                 label.resolve_placeholder(label_resolver);
             }
+            Instruction::Jump(jump) => {
+                jump.target.resolve_placeholder(label_resolver);
+            }
+            Instruction::JumpWhen(jump_when) => {
+                jump_when.target.resolve_placeholder(label_resolver);
+            }
+            Instruction::JumpUnless(jump_unless) => {
+                jump_unless.target.resolve_placeholder(label_resolver);
+            }
             other => {
                 for qubit in other.get_qubits_mut() {
                     qubit.resolve_placeholder(&qubit_resolver);
