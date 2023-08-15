@@ -1,7 +1,7 @@
-use quil_rs::instruction::Qubit;
+use quil_rs::instruction::{Qubit, QubitPlaceholder};
 
 use rigetti_pyo3::{
-    impl_hash, impl_repr, py_wrap_union_enum,
+    impl_compare, impl_hash, impl_repr, py_wrap_type, py_wrap_union_enum,
     pyo3::{
         pyclass::CompareOp,
         pymethods,
@@ -17,7 +17,8 @@ py_wrap_union_enum! {
     #[derive(Debug, Eq, Hash, PartialEq)]
     PyQubit(Qubit) as "Qubit" {
         fixed: Fixed => Py<PyLong>,
-        variable: Variable => Py<PyString>
+        variable: Variable => Py<PyString>,
+        placeholder: Placeholder => PyQubitPlaceholder
     }
 }
 impl_repr!(PyQubit);
@@ -31,5 +32,22 @@ impl PyQubit {
             CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
             _ => py.NotImplemented(),
         }
+    }
+}
+
+py_wrap_type! {
+    #[pyo3(subclass)]
+    #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+    PyQubitPlaceholder(QubitPlaceholder) as "QubitPlaceholder"
+}
+impl_repr!(PyQubitPlaceholder);
+impl_hash!(PyQubitPlaceholder);
+impl_compare!(PyQubitPlaceholder);
+
+#[pymethods]
+impl PyQubitPlaceholder {
+    #[new]
+    fn new() -> Self {
+        Self(QubitPlaceholder::default())
     }
 }

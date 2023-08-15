@@ -1,4 +1,4 @@
-from typing import Dict, FrozenSet, Set, final, List, Optional, Sequence
+from typing import Dict, FrozenSet, Set, final, List, Optional, Sequence, Callable
 
 import numpy as np
 from numpy.typing import NDArray
@@ -16,6 +16,8 @@ from quil.instructions import (
     Sharing,
     Vector,
     Waveform,
+    LabelPlaceholder,
+    QubitPlaceholder,
 )
 
 @final
@@ -112,6 +114,30 @@ class Program:
         the instruction can't be converted to valid Quil, a debug
         implementation will be used.
         """
+    def resolve_placeholders(self):
+        """
+        Resolve ``LabelPlaceholder``s and ``QubitPlaceholder``s within the program using default resolvers.
+        The default resolveers
+        """
+        ...
+    def resolve_placeholders_with_custom_resolvers(
+        self,
+        *,
+        label_resolver: Optional[Callable[[LabelPlaceholder], Optional[str]]] = None,
+        qubit_resolver: Optional[Callable[[QubitPlaceholder], Optional[int]]] = None,
+    ):
+        """
+        Resolve ``LabelPlaceholder``s and ``QubitPlaceholder``s within the program such that the resolved values
+        will remain unique to that placeholder within the scope of the program.
+
+        If you provide ``label_resolver`` and/or ``qubit_resolver``, those will be used to resolve those values respectively.
+        If your placeholder returns `None` for a particular placeholder, it will not be replaced but will be left as a placeholder.
+
+        If you do not provide a resolver for a placeholder, a default resolver will be used which will generate a unique value
+        for that placeholder within the scope of the program using an auto-incrementing value (for qubit) or suffix (for label)
+        while ensuring that unique value is not already in use within the program.
+        """
+        ...
 
 @final
 class CalibrationSet:

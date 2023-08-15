@@ -15,6 +15,7 @@ pub use self::{
         PyBinaryOperands, PyBinaryOperator, PyComparison, PyComparisonOperand,
         PyComparisonOperator, PyConvert, PyExchange, PyMove, PyUnaryLogic, PyUnaryOperator,
     },
+    control_flow::{PyJump, PyJumpUnless, PyJumpWhen, PyLabel, PyLabelPlaceholder},
     declaration::{
         ParseMemoryReferenceError, PyDeclaration, PyLoad, PyMemoryReference, PyOffset,
         PyScalarType, PySharing, PyStore, PyVector,
@@ -30,7 +31,7 @@ pub use self::{
     },
     measurement::PyMeasurement,
     pragma::{PyInclude, PyPragma, PyPragmaArgument},
-    qubit::PyQubit,
+    qubit::{PyQubit, PyQubitPlaceholder},
     reset::PyReset,
     timing::{PyDelay, PyFence},
     waveform::{PyWaveform, PyWaveformDefinition, PyWaveformInvocation},
@@ -39,6 +40,7 @@ pub use self::{
 mod calibration;
 mod circuit;
 mod classical;
+mod control_flow;
 mod declaration;
 mod frame;
 mod gate;
@@ -68,6 +70,10 @@ py_wrap_union_enum! {
         gate_definition: GateDefinition => PyGateDefinition,
         halt: Halt,
         include: Include => PyInclude,
+        jump: Jump => PyJump,
+        jump_when: JumpWhen => PyJumpWhen,
+        jump_unless: JumpUnless => PyJumpUnless,
+        label: Label => PyLabel,
         load: Load => PyLoad,
         measure_calibration_definition: MeasureCalibrationDefinition => PyMeasureCalibrationDefinition,
         measurement: Measurement => PyMeasurement,
@@ -153,9 +159,15 @@ create_init_submodule! {
         PyPauliGate,
         PyPauliTerm,
         PyPauliSum,
+        PyJump,
+        PyJumpWhen,
+        PyJumpUnless,
+        PyLabel,
+        PyLabelPlaceholder,
         PyMeasurement,
         PyMemoryReference,
         PyQubit,
+        PyQubitPlaceholder,
         PyReset,
         PyDelay,
         PyFence,

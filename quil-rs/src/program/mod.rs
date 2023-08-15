@@ -358,95 +358,104 @@ impl Program {
 
     /// Resolve [`LabelPlaceholder`]s and [`QubitPlaceholder`]s within the program using default resolvers.
     ///
-    /// See [`Program::resolve_placeholders`] for more information.
+    /// See [`resolve_placeholders_with_custom_resolvers`](Self::resolve_placeholders_with_custom_resolvers),
+    /// [`default_label_resolver`](Self::default_label_resolver),
+    /// and [`default_qubit_resolver`](Self::default_qubit_resolver) for more information.
     pub fn resolve_placeholders(&mut self) {
-        self.resolve_placeholders_with_custom_resolvers(None, None)
+        self.resolve_placeholders_with_custom_resolvers(
+            self.default_label_resolver(),
+            self.default_qubit_resolver(),
+        )
     }
 
     /// Resolve [`LabelPlaceholder`]s and [`QubitPlaceholder`]s within the program such that the resolved values
     /// will remain unique to that placeholder within the scope of the program.
     ///
-    /// If you provide `label_resolver` and/or `qubit_resolver`, those will be used to resolve those values respectively.
+    /// The provided `label_resolver` and `qubit_resolver`, will be used to resolve those values respectively.
     /// If your placeholder returns `None` for a particular placeholder, it will not be replaced but will be left as a placeholder.
     ///
-    /// If you do not provide a resolver for a placeholder, a default resolver will be used which will generate a unique value
-    /// for that placeholder within the scope of the program using an auto-incrementing value (for qubit) or suffix (for label)
-    /// while ensuring that unique value is not already in use within the program.
+    /// If you wish to provide a resolver for either labels or qubits, but want to rely on the
+    /// default behavior for the other, considering using either
+    /// [`default_qubit_resolver`](Self::default_qubit_resolver) or [`default_label_resolver`](Self::default_label_resolver).
     #[allow(clippy::type_complexity)]
     pub fn resolve_placeholders_with_custom_resolvers(
         &mut self,
-        label_resolver: Option<Box<dyn Fn(&LabelPlaceholder) -> Option<String>>>,
-        qubit_resolver: Option<Box<dyn Fn(&QubitPlaceholder) -> Option<u64>>>,
+        label_resolver: Box<dyn Fn(&LabelPlaceholder) -> Option<String>>,
+        qubit_resolver: Box<dyn Fn(&QubitPlaceholder) -> Option<u64>>,
     ) {
-        let qubit_resolver = qubit_resolver.unwrap_or_else(|| {
-            let mut qubits_used: HashSet<u64> = HashSet::new();
-            let mut qubit_placeholders: IndexSet<QubitPlaceholder> = IndexSet::new();
-
-            // Stable iteration order makes placeholder resolution deterministic
-            for instruction in &self.instructions {
-                let qubits = instruction.get_qubits();
-
-                for qubit in qubits {
-                    match qubit {
-                        Qubit::Fixed(index) => {
-                            qubits_used.insert(*index);
-                        }
-                        Qubit::Placeholder(placeholder) => {
-                            qubit_placeholders.insert(placeholder.clone());
-                        }
-                        Qubit::Variable(_) => {}
-                    }
-                }
-            }
-
-            let mut qubit_iterator = (0u64..).filter(|index| !qubits_used.contains(index));
-            let qubit_resolutions: HashMap<QubitPlaceholder, u64> = qubit_placeholders
-                .into_iter()
-                .map(|p| (p, qubit_iterator.next().unwrap()))
-                .collect();
-
-            Box::new(move |key| qubit_resolutions.get(key).copied())
-        });
-
-        let label_resolver = label_resolver.unwrap_or_else(|| {
-            let mut fixed_labels = HashSet::new();
-            let mut label_placeholders = IndexSet::new();
-            for label in self.get_labels() {
-                match label {
-                    Label::Fixed(fixed) => {
-                        fixed_labels.insert(fixed.clone());
-                    }
-                    Label::Placeholder(placeholder) => {
-                        label_placeholders.insert(placeholder.clone());
-                    }
-                }
-            }
-
-            let label_resolutions: HashMap<LabelPlaceholder, String> = label_placeholders
-                .into_iter()
-                .map(|p| {
-                    let base_label = p.as_inner();
-                    let mut next_suffix = 0;
-
-                    loop {
-                        let next_label = format!("{base_label}_{next_suffix}");
-
-                        if !fixed_labels.contains(&next_label) {
-                            fixed_labels.insert(next_label.clone());
-                            break (p, next_label);
-                        }
-
-                        next_suffix += 1;
-                    }
-                })
-                .collect();
-
-            Box::new(move |key| label_resolutions.get(key).cloned())
-        });
-
         for instruction in &mut self.instructions {
             instruction.resolve_placeholders(&label_resolver, &qubit_resolver);
         }
+    }
+
+    /// The default label resolver will resolve each [`LabelPlaceholder`] in the program to a unique label
+    /// by applying an auto-incrementing suffix to the base label.
+    pub fn default_label_resolver(&self) -> Box<dyn Fn(&LabelPlaceholder) -> Option<String>> {
+        let mut fixed_labels = HashSet::new();
+        let mut label_placeholders = IndexSet::new();
+        for label in self.get_labels() {
+            match label {
+                Label::Fixed(fixed) => {
+                    fixed_labels.insert(fixed.clone());
+                }
+                Label::Placeholder(placeholder) => {
+                    label_placeholders.insert(placeholder.clone());
+                }
+            }
+        }
+
+        let label_resolutions: HashMap<LabelPlaceholder, String> = label_placeholders
+            .into_iter()
+            .map(|p| {
+                let base_label = p.as_inner();
+                let mut next_suffix = 0;
+
+                loop {
+                    let next_label = format!("{base_label}_{next_suffix}");
+
+                    if !fixed_labels.contains(&next_label) {
+                        fixed_labels.insert(next_label.clone());
+                        break (p, next_label);
+                    }
+
+                    next_suffix += 1;
+                }
+            })
+            .collect();
+
+        Box::new(move |key| label_resolutions.get(key).cloned())
+    }
+
+    /// The default qubit resolver will resolve each [`QubitPlaceholder`] in the program to
+    /// a unique fixed qubit by incrementing to the next available index.
+    pub fn default_qubit_resolver(&self) -> Box<dyn Fn(&QubitPlaceholder) -> Option<u64>> {
+        let mut qubits_used: HashSet<u64> = HashSet::new();
+        let mut qubit_placeholders: IndexSet<QubitPlaceholder> = IndexSet::new();
+
+        // Stable iteration order makes placeholder resolution deterministic
+        for instruction in &self.instructions {
+            let qubits = instruction.get_qubits();
+
+            for qubit in qubits {
+                match qubit {
+                    Qubit::Fixed(index) => {
+                        qubits_used.insert(*index);
+                    }
+                    Qubit::Placeholder(placeholder) => {
+                        qubit_placeholders.insert(placeholder.clone());
+                    }
+                    Qubit::Variable(_) => {}
+                }
+            }
+        }
+
+        let mut qubit_iterator = (0u64..).filter(|index| !qubits_used.contains(index));
+        let qubit_resolutions: HashMap<QubitPlaceholder, u64> = qubit_placeholders
+            .into_iter()
+            .map(|p| (p, qubit_iterator.next().unwrap()))
+            .collect();
+
+        Box::new(move |key| qubit_resolutions.get(key).copied())
     }
 
     /// Return a copy of all of the instructions which constitute this [`Program`].
@@ -1093,12 +1102,8 @@ I 0
         ]);
         let custom_qubit_resolutions = HashMap::from([(placeholder_1, 42), (placeholder_2, 10000)]);
         custom_resolved.resolve_placeholders_with_custom_resolvers(
-            Some(Box::new(move |placeholder| {
-                custom_label_resolutions.get(placeholder).cloned()
-            })),
-            Some(Box::new(move |placeholder| {
-                custom_qubit_resolutions.get(placeholder).copied()
-            })),
+            Box::new(move |placeholder| custom_label_resolutions.get(placeholder).cloned()),
+            Box::new(move |placeholder| custom_qubit_resolutions.get(placeholder).copied()),
         );
         assert_eq!(
             custom_resolved.instructions,

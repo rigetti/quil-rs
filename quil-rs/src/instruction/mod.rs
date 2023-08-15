@@ -29,10 +29,10 @@ use nom_locate::LocatedSpan;
 mod calibration;
 mod circuit;
 mod classical;
+mod control_flow;
 mod declaration;
 mod frame;
 mod gate;
-mod label;
 mod measurement;
 mod pragma;
 mod qubit;
@@ -47,6 +47,7 @@ pub use self::classical::{
     BinaryOperator, Comparison, ComparisonOperand, ComparisonOperator, Convert, Exchange, Move,
     UnaryLogic, UnaryOperator,
 };
+pub use self::control_flow::{Jump, JumpUnless, JumpWhen, Label, LabelPlaceholder};
 pub use self::declaration::{
     Declaration, Load, MemoryReference, Offset, ScalarType, Sharing, Store, Vector,
 };
@@ -58,7 +59,6 @@ pub use self::gate::{
     Gate, GateDefinition, GateError, GateModifier, GateSpecification, GateType, Matrix, PauliGate,
     PauliSum, PauliTerm,
 };
-pub use self::label::{Label, LabelPlaceholder};
 pub use self::measurement::Measurement;
 pub use self::pragma::{Include, Pragma, PragmaArgument};
 pub use self::qubit::{Qubit, QubitPlaceholder};
@@ -70,61 +70,6 @@ pub use self::waveform::{Waveform, WaveformDefinition, WaveformInvocation};
 pub enum ValidationError {
     #[error(transparent)]
     GateError(#[from] GateError),
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Jump {
-    pub target: Label,
-}
-
-impl Quil for Jump {
-    fn write(
-        &self,
-        writer: &mut impl std::fmt::Write,
-        fall_back_to_debug: bool,
-    ) -> Result<(), crate::quil::ToQuilError> {
-        write!(writer, "JUMP  ")?;
-        self.target.write(writer, fall_back_to_debug)?;
-        Ok(())
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct JumpWhen {
-    pub target: Label,
-    pub condition: MemoryReference,
-}
-
-impl Quil for JumpWhen {
-    fn write(
-        &self,
-        writer: &mut impl std::fmt::Write,
-        fall_back_to_debug: bool,
-    ) -> Result<(), crate::quil::ToQuilError> {
-        write!(writer, "JUMP-WHEN ")?;
-        self.target.write(writer, fall_back_to_debug)?;
-        write!(writer, " ")?;
-        Ok(())
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct JumpUnless {
-    pub target: Label,
-    pub condition: MemoryReference,
-}
-
-impl Quil for JumpUnless {
-    fn write(
-        &self,
-        writer: &mut impl std::fmt::Write,
-        fall_back_to_debug: bool,
-    ) -> Result<(), crate::quil::ToQuilError> {
-        write!(writer, "JUMP-UNLESS ")?;
-        self.target.write(writer, fall_back_to_debug)?;
-        write!(writer, " ")?;
-        Ok(())
-    }
 }
 
 #[derive(Clone, Debug, PartialEq)]

@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use super::MemoryReference;
 use crate::quil::{Quil, ToQuilError};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -85,13 +86,90 @@ impl PartialEq for LabelPlaceholder {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Jump {
+    pub target: Label,
+}
+
+impl Quil for Jump {
+    fn write(
+        &self,
+        writer: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
+    ) -> Result<(), crate::quil::ToQuilError> {
+        write!(writer, "JUMP  ")?;
+        self.target.write(writer, fall_back_to_debug)?;
+        Ok(())
+    }
+}
+
+impl Jump {
+    pub fn new(target: Label) -> Self {
+        Self { target }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct JumpWhen {
+    pub target: Label,
+    pub condition: MemoryReference,
+}
+
+impl JumpWhen {
+    pub fn new(target: Label, condition: MemoryReference) -> Self {
+        Self { target, condition }
+    }
+}
+
+impl Quil for JumpWhen {
+    fn write(
+        &self,
+        writer: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
+    ) -> Result<(), crate::quil::ToQuilError> {
+        write!(writer, "JUMP-WHEN ")?;
+        self.target.write(writer, fall_back_to_debug)?;
+        write!(writer, " ")?;
+        Ok(())
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct JumpUnless {
+    pub target: Label,
+    pub condition: MemoryReference,
+}
+
+impl JumpUnless {
+    pub fn new(target: Label, condition: MemoryReference) -> Self {
+        Self { target, condition }
+    }
+}
+
+impl Quil for JumpUnless {
+    fn write(
+        &self,
+        writer: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
+    ) -> Result<(), crate::quil::ToQuilError> {
+        write!(writer, "JUMP-UNLESS ")?;
+        self.target.write(writer, fall_back_to_debug)?;
+        write!(writer, " ")?;
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use rstest::rstest;
 
     #[test]
-    fn resolve_placeholder() {}
+    fn resolve_placeholder() {
+        let mut label = Label::Placeholder(LabelPlaceholder::new("base".to_string()));
+        label.resolve_placeholder(|_| Some("test".to_string()));
+        assert_eq!(label, Label::Fixed("test".to_string()))
+    }
 
     #[rstest]
     #[case(Label::Fixed(String::from("test")), Ok("@test"), "@test")]

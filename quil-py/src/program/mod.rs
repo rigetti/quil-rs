@@ -5,7 +5,7 @@ use std::{
 
 use numpy::{PyArray2, ToPyArray};
 use quil_rs::{
-    instruction::{Instruction, Waveform},
+    instruction::{Instruction, LabelPlaceholder, QubitPlaceholder, Waveform},
     program::{CalibrationSet, FrameSet, MemoryRegion},
     Program,
 };
@@ -17,7 +17,7 @@ use rigetti_pyo3::{
         exceptions::PyValueError,
         prelude::*,
         pyclass::CompareOp,
-        types::{PyBytes, PyList},
+        types::{PyBytes, PyFunction, PyList},
         IntoPy,
     },
     wrap_error, PyTryFrom, PyWrapper, PyWrapperMut, ToPython, ToPythonError,
@@ -223,6 +223,75 @@ impl PyProgram {
             .map_err(ProgramError::to_py_err)?
             .to_pyarray(py)
             .to_owned())
+    }
+
+    pub fn resolve_placeholders(&mut self) {
+        self.as_inner_mut().resolve_placeholders();
+    }
+
+    // TODO: Pre-resolve placeholders into a map so a non-panic error can be raised?
+    #[args("*", label_resolver = "None", qubit_resolver = "None")]
+    pub fn resolve_placeholders_with_custom_resolvers(
+        &mut self,
+        label_resolver: Option<Py<PyFunction>>,
+        qubit_resolver: Option<Py<PyFunction>>,
+    ) {
+        let rs_qubit_resolver: Box<dyn Fn(&QubitPlaceholder) -> Option<u64>> =
+            if let Some(resolver) = qubit_resolver {
+                Box::new(move |placeholder: &QubitPlaceholder| -> Option<u64> {
+                    Python::with_gil(|py| {
+                        let resolved_qubit =
+                            resolver.call1(py, (placeholder.to_python(py).unwrap(),));
+                        assert!(
+                            resolved_qubit.is_ok(),
+                            "qubit_resolver returned an error: {resolved_qubit:?}"
+                        );
+
+                        let resolved_qubit: PyResult<Option<u64>> = resolved_qubit
+                            .expect("asserted that resolved_qubit is ok")
+                            .extract(py);
+                        assert!(
+                            resolved_qubit.is_ok(),
+                            "qubit_resolver must return None or int: {resolved_qubit:?}"
+                        );
+
+                        resolved_qubit.expect("asserted that resolved_qubit is ok")
+                    })
+                })
+            } else {
+                self.as_inner().default_qubit_resolver()
+            };
+
+        let rs_label_resolver: Box<dyn Fn(&LabelPlaceholder) -> Option<String>> =
+            if let Some(resolver) = label_resolver {
+                Box::new(move |placeholder: &LabelPlaceholder| -> Option<String> {
+                    Python::with_gil(|py| {
+                        let resolved_label =
+                            resolver.call1(py, (placeholder.to_python(py).unwrap(),));
+                        dbg!(&resolved_label);
+
+                        assert!(
+                            resolved_label.is_ok(),
+                            "label_resolver returned an error: {resolved_label:?}"
+                        );
+
+                        let resolved_label: PyResult<Option<String>> = resolved_label
+                            .expect("asserted that resolved_label is ok")
+                            .extract(py);
+                        assert!(
+                            resolved_label.is_ok(),
+                            "label_resolver must return None or str: {resolved_label:?}"
+                        );
+
+                        resolved_label.expect("asserted that resolved_label is ok")
+                    })
+                })
+            } else {
+                self.as_inner().default_label_resolver()
+            };
+
+        self.as_inner_mut()
+            .resolve_placeholders_with_custom_resolvers(rs_label_resolver, rs_qubit_resolver);
     }
 
     pub fn __add__(&self, py: Python<'_>, rhs: Self) -> PyResult<Self> {
