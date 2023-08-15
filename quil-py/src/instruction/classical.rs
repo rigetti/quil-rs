@@ -5,8 +5,8 @@ use quil_rs::instruction::{
 };
 
 use rigetti_pyo3::{
-    impl_as_mut_for_wrapper, impl_hash, impl_repr, impl_str, py_wrap_data_struct,
-    py_wrap_simple_enum, py_wrap_type, py_wrap_union_enum,
+    impl_as_mut_for_wrapper, impl_hash, impl_repr, py_wrap_data_struct, py_wrap_simple_enum,
+    py_wrap_type, py_wrap_union_enum,
     pyo3::{
         pyclass::CompareOp,
         pymethods,
@@ -17,6 +17,7 @@ use rigetti_pyo3::{
 };
 
 use super::PyMemoryReference;
+use crate::impl_quil;
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq)]
@@ -28,7 +29,7 @@ py_wrap_data_struct! {
     }
 }
 impl_repr!(PyArithmetic);
-impl_str!(PyArithmetic);
+impl_quil!(PyArithmetic);
 impl_hash!(PyArithmetic);
 
 #[pymethods]
@@ -64,7 +65,7 @@ py_wrap_union_enum! {
     }
 }
 impl_repr!(PyArithmeticOperand);
-impl_str!(PyArithmeticOperand);
+impl_quil!(PyArithmeticOperand);
 impl_hash!(PyArithmeticOperand);
 
 #[pymethods]
@@ -87,7 +88,7 @@ py_wrap_simple_enum! {
     }
 }
 impl_repr!(PyArithmeticOperator);
-impl_str!(PyArithmeticOperator);
+impl_quil!(PyArithmeticOperator);
 impl_hash!(PyArithmeticOperator);
 
 #[pymethods]
@@ -109,7 +110,7 @@ py_wrap_union_enum! {
     }
 }
 impl_repr!(PyBinaryOperand);
-impl_str!(PyBinaryOperand);
+impl_quil!(PyBinaryOperand);
 impl_hash!(PyBinaryOperand);
 
 #[pymethods]
@@ -188,7 +189,7 @@ py_wrap_simple_enum! {
     }
 }
 impl_repr!(PyBinaryOperator);
-impl_str!(PyBinaryOperator);
+impl_quil!(PyBinaryOperator);
 impl_hash!(PyBinaryOperator);
 
 #[pymethods]
@@ -210,7 +211,7 @@ py_wrap_data_struct! {
     }
 }
 impl_repr!(PyBinaryLogic);
-impl_str!(PyBinaryLogic);
+impl_quil!(PyBinaryLogic);
 
 #[pymethods]
 impl PyBinaryLogic {
@@ -243,7 +244,7 @@ py_wrap_data_struct! {
     }
 }
 impl_repr!(PyConvert);
-impl_str!(PyConvert);
+impl_quil!(PyConvert);
 impl_hash!(PyConvert);
 
 #[pymethods]
@@ -277,7 +278,7 @@ py_wrap_data_struct! {
     }
 }
 impl_repr!(PyMove);
-impl_str!(PyMove);
+impl_quil!(PyMove);
 impl_hash!(PyMove);
 
 #[pymethods]
@@ -311,7 +312,7 @@ py_wrap_data_struct! {
     }
 }
 impl_repr!(PyExchange);
-impl_str!(PyExchange);
+impl_quil!(PyExchange);
 impl_hash!(PyExchange);
 
 #[pymethods]
@@ -346,7 +347,7 @@ py_wrap_union_enum! {
     }
 }
 impl_repr!(PyComparisonOperand);
-impl_str!(PyComparisonOperand);
+impl_quil!(PyComparisonOperand);
 impl_hash!(PyComparisonOperand);
 
 py_wrap_simple_enum! {
@@ -390,7 +391,7 @@ py_wrap_data_struct! {
     }
 }
 impl_repr!(PyComparison);
-impl_str!(PyComparison);
+impl_quil!(PyComparison);
 impl_hash!(PyComparison);
 
 #[pymethods]
@@ -454,7 +455,7 @@ py_wrap_simple_enum! {
     }
 }
 impl_repr!(PyUnaryOperator);
-impl_str!(PyUnaryOperator);
+impl_quil!(PyUnaryOperator);
 impl_hash!(PyUnaryOperator);
 
 py_wrap_data_struct! {
@@ -466,7 +467,7 @@ py_wrap_data_struct! {
     }
 }
 impl_repr!(PyUnaryLogic);
-impl_str!(PyUnaryLogic);
+impl_quil!(PyUnaryLogic);
 impl_hash!(PyUnaryLogic);
 
 #[pymethods]

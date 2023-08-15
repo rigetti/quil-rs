@@ -329,6 +329,18 @@ class Instruction:
     def to_swap_phases(self) -> SwapPhases: ...
     def as_waveform_definition(self) -> Optional[WaveformDefinition]: ...
     def to_waveform_definition(self) -> WaveformDefinition: ...
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 @final
 class ArithmeticOperand:
@@ -369,6 +381,18 @@ class ArithmeticOperand:
     def from_memory_reference(
         memory_reference: MemoryReference,
     ) -> "ArithmeticOperand": ...
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 @final
 class ArithmeticOperator(Enum):
@@ -376,6 +400,18 @@ class ArithmeticOperator(Enum):
     Subtract = "Subtract"
     Divide = "Divide"
     Multiply = "Multiply"
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 class Arithmetic:
     def __new__(
@@ -396,6 +432,18 @@ class Arithmetic:
     def source(self) -> ArithmeticOperand: ...
     @source.setter
     def source(self, operand: ArithmeticOperand): ...
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 @final
 class BinaryOperand:
@@ -430,12 +478,36 @@ class BinaryOperand:
     def from_memory_reference(
         memory_reference: MemoryReference,
     ) -> "BinaryOperand": ...
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 @final
 class BinaryOperator(Enum):
     And = "AND"
     Ior = "IOR"
     Xor = "XOR"
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 class BinaryOperands:
     def __new__(
@@ -466,6 +538,18 @@ class BinaryLogic:
     def operands(self) -> BinaryOperands: ...
     @operands.setter
     def operands(self, operands: BinaryOperands): ...
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 class Convert:
     def __new__(cls, destination: MemoryReference, source: MemoryReference) -> Self: ...
@@ -477,6 +561,18 @@ class Convert:
     def source(self) -> MemoryReference: ...
     @source.setter
     def source(self, source: MemoryReference): ...
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 class Move:
     def __new__(cls, destination: MemoryReference, source: ArithmeticOperand) -> Self: ...
@@ -488,6 +584,18 @@ class Move:
     def source(self) -> ArithmeticOperand: ...
     @source.setter
     def source(self, source: ArithmeticOperand): ...
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 class Exchange:
     def __new__(cls, left: MemoryReference, right: MemoryReference) -> Self: ...
@@ -499,6 +607,18 @@ class Exchange:
     def right(self) -> MemoryReference: ...
     @right.setter
     def right(self, right: MemoryReference): ...
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 @final
 class ComparisonOperand:
@@ -539,6 +659,18 @@ class ComparisonOperand:
     def from_memory_reference(
         memory_reference: MemoryReference,
     ) -> "ComparisonOperand": ...
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 @final
 class ComparisonOperator(Enum):
@@ -564,11 +696,35 @@ class Comparison:
     ) -> Tuple[MemoryReference, MemoryReference, ComparisonOperand]: ...
     @operands.setter
     def operands(self, operands: Tuple[MemoryReference, MemoryReference, ComparisonOperand]): ...
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 @final
 class UnaryOperator(Enum):
     Neg = "NEG"
     Not = "NOT"
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 class UnaryLogic:
     def __new__(cls, operator: UnaryOperator, operand: MemoryReference) -> Self: ...
@@ -580,6 +736,18 @@ class UnaryLogic:
     def operand(self) -> MemoryReference: ...
     @operand.setter
     def operand(self, operand: MemoryReference): ...
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 class Calibration:
     def __new__(
@@ -610,6 +778,18 @@ class Calibration:
     def modifiers(self) -> List[GateModifier]: ...
     @modifiers.setter
     def modifiers(self, modifiers: Sequence[GateModifier]): ...
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 class MeasureCalibrationDefinition:
     def __new__(
@@ -630,6 +810,18 @@ class MeasureCalibrationDefinition:
     def instructions(self) -> List[Instruction]: ...
     @instructions.setter
     def instructions(self, instructions: Sequence[Instruction]): ...
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 class CircuitDefinition:
     def __new__(
@@ -655,6 +847,18 @@ class CircuitDefinition:
     def instructions(self) -> List[Instruction]: ...
     @instructions.setter
     def instructions(self, instructions: Sequence[Instruction]): ...
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 class Offset:
     def __new__(
@@ -670,6 +874,18 @@ class Offset:
     def data_type(self) -> ScalarType: ...
     @data_type.setter
     def data_type(self, data_type: ScalarType): ...
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 class Sharing:
     def __new__(
@@ -700,6 +916,18 @@ class Declaration:
     def sharing(self) -> Optional[Sharing]: ...
     @sharing.setter
     def sharing(self, sharing: Optional[Sharing]): ...
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 class Vector:
     def __new__(cls, data_type: ScalarType, length: int) -> Self: ...
@@ -711,6 +939,18 @@ class Vector:
     def length(self) -> int: ...
     @length.setter
     def length(self, data_type: int): ...
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 @final
 class ScalarType(Enum):
@@ -718,6 +958,18 @@ class ScalarType(Enum):
     Integer = "INTEGER"
     Octet = "OCTET"
     Real = "REAL"
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 @final
 class AttributeValue:
@@ -751,6 +1003,18 @@ class AttributeValue:
     def to_string(self) -> str: ...
     def as_expression(self) -> Optional[Expression]: ...
     def to_expression(self) -> Expression: ...
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 class FrameDefinition:
     def __new__(
@@ -766,6 +1030,18 @@ class FrameDefinition:
     def attributes(self) -> Dict[str, AttributeValue]: ...
     @attributes.setter
     def attributes(self, identifier: Dict[str, AttributeValue]): ...
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 class FrameIdentifier:
     def __new__(cls, name: str, qubits: Sequence[Qubit]) -> Self: ...
@@ -777,6 +1053,18 @@ class FrameIdentifier:
     def qubits(self) -> List[Qubit]: ...
     @qubits.setter
     def qubits(self, qubits: Sequence[Qubit]): ...
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 class Capture:
     def __new__(
@@ -802,6 +1090,18 @@ class Capture:
     def waveform(self) -> WaveformInvocation: ...
     @waveform.setter
     def waveform(self, waveform: WaveformInvocation): ...
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 class Pulse:
     def __new__(
@@ -822,6 +1122,18 @@ class Pulse:
     def waveform(self) -> WaveformInvocation: ...
     @waveform.setter
     def waveform(self, waveform: WaveformInvocation): ...
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 class RawCapture:
     def __new__(
@@ -847,6 +1159,18 @@ class RawCapture:
     def memory_reference(self) -> MemoryReference: ...
     @memory_reference.setter
     def memory_reference(self, memory_reference: MemoryReference): ...
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 class SetFrequency:
     def __new__(cls, frame: FrameIdentifier, frequency: Expression) -> Self: ...
@@ -858,6 +1182,18 @@ class SetFrequency:
     def frequency(self) -> Expression: ...
     @frequency.setter
     def frequency(self, frequency: Expression): ...
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 class SetPhase:
     def __new__(cls, frame: FrameIdentifier, phase: Expression) -> Self: ...
@@ -869,6 +1205,18 @@ class SetPhase:
     def phase(self) -> Expression: ...
     @phase.setter
     def phase(self, phase: Expression): ...
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 class SetScale:
     def __new__(cls, frame: FrameIdentifier, phase: Expression) -> Self: ...
@@ -880,6 +1228,18 @@ class SetScale:
     def scale(self) -> Expression: ...
     @scale.setter
     def scale(self, scale: Expression): ...
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 class ShiftFrequency:
     def __new__(cls, frame: FrameIdentifier, frequency: Expression) -> Self: ...
@@ -891,6 +1251,18 @@ class ShiftFrequency:
     def frequency(self) -> Expression: ...
     @frequency.setter
     def frequency(self, frequency: Expression): ...
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 class ShiftPhase:
     def __new__(cls, frame: FrameIdentifier, phase: Expression) -> Self: ...
@@ -902,6 +1274,18 @@ class ShiftPhase:
     def phase(self) -> Expression: ...
     @phase.setter
     def phase(self, phase: Expression): ...
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 class SwapPhases:
     def __new__(cls, frame_1: FrameIdentifier, frame_2: FrameIdentifier) -> Self: ...
@@ -913,6 +1297,18 @@ class SwapPhases:
     def frame_2(self) -> FrameIdentifier: ...
     @frame_2.setter
     def frame_2(self, frame_2: FrameIdentifier): ...
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 class GateError(ValueError):
     """An error that may occur when performing operations on a ``Gate``"""
@@ -924,6 +1320,18 @@ class GateModifier(Enum):
     Controlled = "CONTROLLED"
     Dagger = "DAGGER"
     Forked = "FORKED"
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 class Gate:
     def __new__(
@@ -975,6 +1383,18 @@ class Gate:
         gate is unknown, or if there are an unexpected number of parameters.
         """
         ...
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 @final
 class PauliGate(Enum):
@@ -1052,6 +1472,18 @@ class GateSpecification:
     def from_permutation(permutation: Sequence[int]) -> "GateSpecification": ...
     @staticmethod
     def from_pauli_sum(pauli_term: PauliSum) -> "GateSpecification": ...
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 class GateDefinition:
     def __new__(
@@ -1072,6 +1504,18 @@ class GateDefinition:
     def specification(self) -> GateSpecification: ...
     @specification.setter
     def specification(self, specification: GateSpecification): ...
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 @final
 class Qubit:
@@ -1104,6 +1548,18 @@ class Qubit:
     def from_fixed(index: int) -> "Qubit": ...
     @staticmethod
     def from_variable(name: str) -> "Qubit": ...
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 class Reset:
     def __new__(cls, qubit: Optional[Qubit]) -> Self: ...
@@ -1111,6 +1567,18 @@ class Reset:
     def qubit(self) -> Optional[Qubit]: ...
     @qubit.setter
     def qubit(self, qubit: Optional[Qubit]): ...
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 class Delay:
     def __new__(cls, duration: Expression, frame_names: Sequence[str], qubits: Sequence[Qubit]) -> Self: ...
@@ -1126,6 +1594,18 @@ class Delay:
     def qubits(self) -> List[Qubit]: ...
     @qubits.setter
     def qubits(self, qubits: Sequence[Qubit]): ...
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 class Fence:
     def __new__(cls, qubits: Sequence[Qubit]) -> Self: ...
@@ -1133,6 +1613,18 @@ class Fence:
     def qubits(self) -> List[Qubit]: ...
     @qubits.setter
     def qubits(self, qubits: Sequence[Qubit]): ...
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 @final
 class PragmaArgument:
@@ -1164,6 +1656,18 @@ class PragmaArgument:
     def from_identifier(identifier: str) -> "PragmaArgument": ...
     @staticmethod
     def from_integer(integer: int) -> "PragmaArgument": ...
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 class Include:
     def __new__(cls, filename: str) -> Self: ...
@@ -1171,6 +1675,18 @@ class Include:
     def filename(self) -> str: ...
     @filename.setter
     def filename(self, filename: str): ...
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 class Pragma:
     def __new__(cls, name: str, arguments: Sequence[PragmaArgument], data: Optional[str]) -> Self: ...
@@ -1186,6 +1702,18 @@ class Pragma:
     def data(self) -> Optional[str]: ...
     @data.setter
     def data(self, data: Optional[str]): ...
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 class Measurement:
     def __new__(cls, qubit: Qubit, target: Optional[MemoryReference]) -> Self: ...
@@ -1197,6 +1725,18 @@ class Measurement:
     def target(self) -> Optional[MemoryReference]: ...
     @target.setter
     def target(self, target: Optional[MemoryReference]): ...
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 class ParseMemoryReferenceError(ValueError):
     """Errors that may occur while parsing a ``MemoryReference``"""
@@ -1218,6 +1758,18 @@ class MemoryReference:
     def index(self) -> int: ...
     @index.setter
     def index(self, index: int): ...
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 class Load:
     def __new__(cls, destination: MemoryReference, source: str, offset: MemoryReference) -> Self: ...
@@ -1233,6 +1785,18 @@ class Load:
     def offset(self) -> MemoryReference: ...
     @offset.setter
     def offset(self, offset: MemoryReference): ...
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 class Store:
     def __new__(cls, destination: str, offset: MemoryReference, source: ArithmeticOperand) -> Self: ...
@@ -1248,6 +1812,18 @@ class Store:
     def source(self) -> ArithmeticOperand: ...
     @source.setter
     def source(self, source: ArithmeticOperand): ...
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 class Waveform:
     def __new__(cls, matrix: Sequence[Expression], parameters: Sequence[str]) -> Self: ...
@@ -1270,6 +1846,18 @@ class WaveformDefinition:
     def definition(self) -> Waveform: ...
     @definition.setter
     def definition(self, definition: Waveform): ...
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 class WaveformInvocation:
     def __new__(cls, name: str, parameters: Dict[str, Expression]) -> Self: ...
@@ -1281,3 +1869,15 @@ class WaveformInvocation:
     def parameters(self) -> Dict[str, Expression]: ...
     @parameters.setter
     def parameters(self, parameters: Dict[str, Expression]): ...
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """

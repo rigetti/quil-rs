@@ -1,9 +1,11 @@
 use quil_rs::instruction::Instruction;
 use rigetti_pyo3::{
-    create_init_submodule, impl_repr, impl_str, py_wrap_union_enum,
+    create_init_submodule, impl_repr, py_wrap_union_enum,
     pyo3::{pyclass::CompareOp, pymethods, IntoPy, PyObject, Python},
     PyWrapper,
 };
+
+use crate::impl_quil;
 
 pub use self::{
     calibration::{PyCalibration, PyMeasureCalibrationDefinition},
@@ -88,7 +90,7 @@ py_wrap_union_enum! {
     }
 }
 impl_repr!(PyInstruction);
-impl_str!(PyInstruction);
+impl_quil!(PyInstruction);
 
 #[pymethods]
 impl PyInstruction {

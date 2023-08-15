@@ -2,7 +2,7 @@ use quil_rs::expression::Expression;
 use quil_rs::instruction::{Delay, Fence, Qubit};
 
 use rigetti_pyo3::{
-    impl_hash, impl_repr, impl_str, py_wrap_data_struct,
+    impl_hash, impl_repr, py_wrap_data_struct,
     pyo3::{
         pyclass::CompareOp, pymethods, types::PyString, IntoPy, Py, PyObject, PyResult, Python,
     },
@@ -10,7 +10,7 @@ use rigetti_pyo3::{
 };
 
 use super::PyQubit;
-use crate::expression::PyExpression;
+use crate::{expression::PyExpression, impl_quil};
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
@@ -22,7 +22,7 @@ py_wrap_data_struct! {
     }
 }
 impl_repr!(PyDelay);
-impl_str!(PyDelay);
+impl_quil!(PyDelay);
 impl_hash!(PyDelay);
 
 #[pymethods]
@@ -57,7 +57,7 @@ py_wrap_data_struct! {
     }
 }
 impl_repr!(PyFence);
-impl_str!(PyFence);
+impl_quil!(PyFence);
 impl_hash!(PyFence);
 
 #[pymethods]

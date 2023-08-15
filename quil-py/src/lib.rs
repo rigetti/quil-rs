@@ -25,3 +25,22 @@ pub fn init_quil_submodule(name: &str, py: Python<'_>, m: &PyModule) -> PyResult
     init_submodule(name, py, m)?;
     Ok(())
 }
+
+/// Implement `to_quil` and `to_quil_or_debug` methods for wrapper types whose inner type
+/// implements [`Quil`](quil_rs::quil::Quil).
+#[macro_export]
+macro_rules! impl_quil {
+    ($name: ident) => {
+        #[pyo3::pymethods]
+        impl $name {
+            pub fn to_quil(&self) -> pyo3::PyResult<String> {
+                quil_rs::quil::Quil::to_quil(rigetti_pyo3::PyWrapper::as_inner(self))
+                    .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
+            }
+
+            pub fn to_quil_or_debug(&self) -> String {
+                quil_rs::quil::Quil::to_quil_or_debug(rigetti_pyo3::PyWrapper::as_inner(self))
+            }
+        }
+    };
+}

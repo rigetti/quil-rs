@@ -10,7 +10,7 @@ use quil_rs::{
     },
 };
 use rigetti_pyo3::{
-    impl_hash, impl_repr, impl_str, py_wrap_data_struct, py_wrap_union_enum,
+    impl_hash, impl_repr, py_wrap_data_struct, py_wrap_union_enum,
     pyo3::{
         pyclass::CompareOp,
         pymethods,
@@ -23,6 +23,7 @@ use rigetti_pyo3::{
 use super::PyQubit;
 use crate::{
     expression::PyExpression,
+    impl_quil,
     instruction::{PyMemoryReference, PyWaveformInvocation},
 };
 
@@ -34,7 +35,7 @@ py_wrap_union_enum! {
     }
 }
 impl_repr!(PyAttributeValue);
-impl_str!(PyAttributeValue);
+impl_quil!(PyAttributeValue);
 impl_hash!(PyAttributeValue);
 
 #[pymethods]
@@ -58,7 +59,7 @@ py_wrap_data_struct! {
     }
 }
 impl_repr!(PyFrameDefinition);
-impl_str!(PyFrameDefinition);
+impl_quil!(PyFrameDefinition);
 
 #[pymethods]
 impl PyFrameDefinition {
@@ -91,7 +92,7 @@ py_wrap_data_struct! {
     }
 }
 impl_repr!(PyFrameIdentifier);
-impl_str!(PyFrameIdentifier);
+impl_quil!(PyFrameIdentifier);
 impl_hash!(PyFrameIdentifier);
 
 #[pymethods]
@@ -123,7 +124,7 @@ py_wrap_data_struct! {
     }
 }
 impl_repr!(PyCapture);
-impl_str!(PyCapture);
+impl_quil!(PyCapture);
 
 #[pymethods]
 impl PyCapture {
@@ -162,7 +163,7 @@ py_wrap_data_struct! {
 }
 
 impl_repr!(PyPulse);
-impl_str!(PyPulse);
+impl_quil!(PyPulse);
 
 #[pymethods]
 impl PyPulse {
@@ -200,7 +201,7 @@ py_wrap_data_struct! {
 }
 
 impl_repr!(PyRawCapture);
-impl_str!(PyRawCapture);
+impl_quil!(PyRawCapture);
 impl_hash!(PyRawCapture);
 
 #[pymethods]
@@ -238,7 +239,7 @@ py_wrap_data_struct! {
     }
 }
 impl_repr!(PySetFrequency);
-impl_str!(PySetFrequency);
+impl_quil!(PySetFrequency);
 impl_hash!(PySetFrequency);
 
 #[pymethods]
@@ -272,7 +273,7 @@ py_wrap_data_struct! {
     }
 }
 impl_repr!(PySetPhase);
-impl_str!(PySetPhase);
+impl_quil!(PySetPhase);
 impl_hash!(PySetPhase);
 
 #[pymethods]
@@ -302,7 +303,7 @@ py_wrap_data_struct! {
     }
 }
 impl_repr!(PySetScale);
-impl_str!(PySetScale);
+impl_quil!(PySetScale);
 impl_hash!(PySetScale);
 
 #[pymethods]
@@ -332,7 +333,7 @@ py_wrap_data_struct! {
     }
 }
 impl_repr!(PyShiftFrequency);
-impl_str!(PyShiftFrequency);
+impl_quil!(PyShiftFrequency);
 impl_hash!(PyShiftFrequency);
 
 #[pymethods]
@@ -366,7 +367,7 @@ py_wrap_data_struct! {
     }
 }
 impl_repr!(PyShiftPhase);
-impl_str!(PyShiftPhase);
+impl_quil!(PyShiftPhase);
 impl_hash!(PyShiftPhase);
 
 #[pymethods]
@@ -396,7 +397,7 @@ py_wrap_data_struct! {
     }
 }
 impl_repr!(PySwapPhases);
-impl_str!(PySwapPhases);
+impl_quil!(PySwapPhases);
 impl_hash!(PySwapPhases);
 
 #[pymethods]

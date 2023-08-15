@@ -1,5 +1,8 @@
-pub use self::{calibration::PyCalibrationSet, frame::PyFrameSet, memory::PyMemoryRegion};
-use crate::instruction::{PyDeclaration, PyGateDefinition, PyInstruction, PyQubit, PyWaveform};
+use std::{
+    collections::{BTreeMap, HashMap, HashSet},
+    str::FromStr,
+};
+
 use numpy::{PyArray2, ToPyArray};
 use quil_rs::{
     instruction::{Instruction, Waveform},
@@ -19,10 +22,13 @@ use rigetti_pyo3::{
     },
     wrap_error, PyTryFrom, PyWrapper, PyWrapperMut, ToPython, ToPythonError,
 };
-use std::{
-    collections::{BTreeMap, HashMap, HashSet},
-    str::FromStr,
+
+use crate::{
+    impl_quil,
+    instruction::{PyDeclaration, PyGateDefinition, PyInstruction, PyQubit, PyWaveform},
 };
+
+pub use self::{calibration::PyCalibrationSet, frame::PyFrameSet, memory::PyMemoryRegion};
 
 mod calibration;
 mod frame;
@@ -41,6 +47,7 @@ impl_as_mut_for_wrapper!(PyProgram);
 impl_repr!(PyProgram);
 impl_from_str!(PyProgram, ProgramError);
 impl_parse!(PyProgram);
+impl_quil!(PyProgram);
 
 impl Default for PyProgram {
     fn default() -> Self {
@@ -218,10 +225,6 @@ impl PyProgram {
             .to_owned())
     }
 
-    pub fn __str__(&self) -> String {
-        self.as_inner().to_string()
-    }
-
     pub fn __add__(&self, py: Python<'_>, rhs: Self) -> PyResult<Self> {
         let new = self.as_inner().clone() + rhs.as_inner().clone();
         new.to_python(py)
@@ -234,12 +237,12 @@ impl PyProgram {
         }
     }
 
-    // This is infallible now, but will raise an error once placeholders are
-    // supported. This is because placeholders can't be converted to valid Quil,
-    // nor be reliably serialized by something like serde using the current
-    // quil-rs data model.
-    pub fn __getstate__<'a>(&self, py: Python<'a>) -> &'a PyBytes {
-        PyBytes::new(py, self.as_inner().to_string().as_bytes())
+    // This will raise an error if the program contains placeholders any
+    // unresolved placeholders. This is because they can't be converted to
+    // valid quil, nor can they be serialized and deserialized in a consistent
+    // way.
+    pub fn __getstate__<'a>(&self, py: Python<'a>) -> PyResult<&'a PyBytes> {
+        Ok(PyBytes::new(py, self.to_quil()?.as_bytes()))
     }
 
     pub fn __setstate__(&mut self, py: Python<'_>, state: &PyBytes) -> PyResult<()> {

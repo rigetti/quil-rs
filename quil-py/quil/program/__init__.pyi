@@ -100,6 +100,18 @@ class Program:
         Creates a clone of this ``Program`` with an empty body instructions list.
         """
     def __add__(self, rhs: Program) -> Program: ...
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of
+        the instruction can't be converted to valid Quil, a debug
+        implementation will be used.
+        """
 
 @final
 class CalibrationSet:

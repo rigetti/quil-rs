@@ -1,11 +1,14 @@
 use quil_rs::instruction::{Measurement, MemoryReference, Qubit};
 use rigetti_pyo3::{
-    impl_hash, impl_repr, impl_str, py_wrap_data_struct,
+    impl_hash, impl_repr, py_wrap_data_struct,
     pyo3::{pyclass::CompareOp, pymethods, IntoPy, PyObject, PyResult, Python},
     PyTryFrom, PyWrapper,
 };
 
-use crate::instruction::{PyMemoryReference, PyQubit};
+use crate::{
+    impl_quil,
+    instruction::{PyMemoryReference, PyQubit},
+};
 
 py_wrap_data_struct! {
     #[pyo3(subclass)]
@@ -15,7 +18,7 @@ py_wrap_data_struct! {
         target: Option<MemoryReference> => Option<PyMemoryReference>
     }
 }
-impl_str!(PyMeasurement);
+impl_quil!(PyMeasurement);
 impl_hash!(PyMeasurement);
 impl_repr!(PyMeasurement);
 

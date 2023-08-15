@@ -1,12 +1,12 @@
 use quil_rs::instruction::{Qubit, Reset};
 
 use rigetti_pyo3::{
-    impl_hash, impl_repr, impl_str, py_wrap_data_struct,
+    impl_hash, impl_repr, py_wrap_data_struct,
     pyo3::{pyclass::CompareOp, pymethods, IntoPy, PyObject, PyResult, Python},
     PyTryFrom, PyWrapper,
 };
 
-use crate::instruction::PyQubit;
+use crate::{impl_quil, instruction::PyQubit};
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
@@ -16,7 +16,7 @@ py_wrap_data_struct! {
     }
 }
 impl_repr!(PyReset);
-impl_str!(PyReset);
+impl_quil!(PyReset);
 impl_hash!(PyReset);
 
 #[pymethods]

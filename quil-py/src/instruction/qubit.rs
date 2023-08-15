@@ -1,7 +1,7 @@
 use quil_rs::instruction::Qubit;
 
 use rigetti_pyo3::{
-    impl_hash, impl_repr, impl_str, py_wrap_union_enum,
+    impl_hash, impl_repr, py_wrap_union_enum,
     pyo3::{
         pyclass::CompareOp,
         pymethods,
@@ -11,6 +11,8 @@ use rigetti_pyo3::{
     PyWrapper,
 };
 
+use crate::impl_quil;
+
 py_wrap_union_enum! {
     #[derive(Debug, Eq, Hash, PartialEq)]
     PyQubit(Qubit) as "Qubit" {
@@ -19,7 +21,7 @@ py_wrap_union_enum! {
     }
 }
 impl_repr!(PyQubit);
-impl_str!(PyQubit);
+impl_quil!(PyQubit);
 impl_hash!(PyQubit);
 
 #[pymethods]
