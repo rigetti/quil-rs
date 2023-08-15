@@ -236,6 +236,7 @@ impl PyProgram {
         label_resolver: Option<Py<PyFunction>>,
         qubit_resolver: Option<Py<PyFunction>>,
     ) {
+        #[allow(clippy::type_complexity)]
         let rs_qubit_resolver: Box<dyn Fn(&QubitPlaceholder) -> Option<u64>> =
             if let Some(resolver) = qubit_resolver {
                 Box::new(move |placeholder: &QubitPlaceholder| -> Option<u64> {
@@ -262,6 +263,7 @@ impl PyProgram {
                 self.as_inner().default_qubit_resolver()
             };
 
+        #[allow(clippy::type_complexity)]
         let rs_label_resolver: Box<dyn Fn(&LabelPlaceholder) -> Option<String>> =
             if let Some(resolver) = label_resolver {
                 Box::new(move |placeholder: &LabelPlaceholder| -> Option<String> {
