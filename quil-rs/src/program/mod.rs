@@ -281,6 +281,9 @@ impl Program {
             .iter()
             .filter_map(|i| match i {
                 Instruction::Label(label) => Some(label),
+                Instruction::Jump(jump) => Some(&jump.target),
+                Instruction::JumpWhen(jump_when) => Some(&jump_when.target),
+                Instruction::JumpUnless(jump_unless) => Some(&jump_unless.target),
                 _ => None,
             })
             .collect()
@@ -561,7 +564,8 @@ mod tests {
     use crate::{
         imag,
         instruction::{
-            Gate, Instruction, Label, LabelPlaceholder, Matrix, Qubit, QubitPlaceholder,
+            Gate, Instruction, Jump, JumpUnless, JumpWhen, Label, LabelPlaceholder, Matrix,
+            MemoryReference, Qubit, QubitPlaceholder,
         },
         quil::Quil,
         real,
@@ -1010,9 +1014,25 @@ I 0
             label_placeholder_1.clone(),
         )));
 
-        program.add_instruction(Instruction::Label(Label::Placeholder(
-            label_placeholder_2.clone(),
-        )));
+        program.add_instruction(Instruction::Jump(Jump {
+            target: Label::Placeholder(label_placeholder_2.clone()),
+        }));
+
+        program.add_instruction(Instruction::JumpWhen(JumpWhen {
+            target: Label::Placeholder(label_placeholder_2.clone()),
+            condition: MemoryReference {
+                name: "ro".to_string(),
+                index: 0,
+            },
+        }));
+
+        program.add_instruction(Instruction::JumpUnless(JumpUnless {
+            target: Label::Placeholder(label_placeholder_2.clone()),
+            condition: MemoryReference {
+                name: "ro".to_string(),
+                index: 0,
+            },
+        }));
 
         program.add_instruction(Instruction::Gate(Gate {
             name: "X".to_string(),
@@ -1034,7 +1054,23 @@ I 0
             auto_increment_resolved.instructions,
             vec![
                 Instruction::Label(Label::Fixed("custom_label_0".to_string())),
-                Instruction::Label(Label::Fixed("custom_label_1".to_string())),
+                Instruction::Jump(Jump {
+                    target: Label::Fixed("custom_label_1".to_string()),
+                }),
+                Instruction::JumpWhen(JumpWhen {
+                    target: Label::Fixed("custom_label_1".to_string()),
+                    condition: MemoryReference {
+                        name: "ro".to_string(),
+                        index: 0,
+                    },
+                }),
+                Instruction::JumpUnless(JumpUnless {
+                    target: Label::Fixed("custom_label_1".to_string()),
+                    condition: MemoryReference {
+                        name: "ro".to_string(),
+                        index: 0,
+                    },
+                }),
                 Instruction::Gate(Gate {
                     name: "X".to_string(),
                     qubits: vec![Qubit::Fixed(0)],
@@ -1068,7 +1104,23 @@ I 0
             custom_resolved.instructions,
             vec![
                 Instruction::Label(Label::Fixed("new_label".to_string())),
-                Instruction::Label(Label::Fixed("other_new_label".to_string())),
+                Instruction::Jump(Jump {
+                    target: Label::Fixed("other_new_label".to_string()),
+                }),
+                Instruction::JumpWhen(JumpWhen {
+                    target: Label::Fixed("other_new_label".to_string()),
+                    condition: MemoryReference {
+                        name: "ro".to_string(),
+                        index: 0,
+                    },
+                }),
+                Instruction::JumpUnless(JumpUnless {
+                    target: Label::Fixed("other_new_label".to_string()),
+                    condition: MemoryReference {
+                        name: "ro".to_string(),
+                        index: 0,
+                    },
+                }),
                 Instruction::Gate(Gate {
                     name: "X".to_string(),
                     qubits: vec![Qubit::Fixed(42)],
