@@ -390,6 +390,7 @@ impl Program {
 
     /// The default label resolver will resolve each [`LabelPlaceholder`] in the program to a unique label
     /// by applying an auto-incrementing suffix to the base label.
+    #[allow(clippy::type_complexity)]
     pub fn default_label_resolver(&self) -> Box<dyn Fn(&LabelPlaceholder) -> Option<String>> {
         let mut fixed_labels = HashSet::new();
         let mut label_placeholders = IndexSet::new();
@@ -428,6 +429,7 @@ impl Program {
 
     /// The default qubit resolver will resolve each [`QubitPlaceholder`] in the program to
     /// a unique fixed qubit by incrementing to the next available index.
+    #[allow(clippy::type_complexity)]
     pub fn default_qubit_resolver(&self) -> Box<dyn Fn(&QubitPlaceholder) -> Option<u64>> {
         let mut qubits_used: HashSet<u64> = HashSet::new();
         let mut qubit_placeholders: IndexSet<QubitPlaceholder> = IndexSet::new();
