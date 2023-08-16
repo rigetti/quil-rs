@@ -1045,8 +1045,8 @@ mod tests {
             r#"DEFCAL MEASURE 0 dest:
 	DECLARE iq REAL[2]
 	CAPTURE 0 "out" flat(duration: 1.0, iqs: (2.0+3.0i)) iq[0]"#,
-            //             r#"LABEL @target
-            // JUMP @target"#,
+            r#"LABEL @target
+JUMP @target"#,
         ];
 
         for input in inputs {

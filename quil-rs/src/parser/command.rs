@@ -365,7 +365,7 @@ pub(crate) fn parse_fence(input: ParserInput) -> InternalParserResult<Instructio
 
 /// Parse the contents of a `JUMP` instruction.
 pub(crate) fn parse_jump<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Instruction> {
-    let (input, target) = token!(Label(v))(input)?;
+    let (input, target) = token!(Target(v))(input)?;
     Ok((
         input,
         Instruction::Jump(Jump {
@@ -376,7 +376,7 @@ pub(crate) fn parse_jump<'a>(input: ParserInput<'a>) -> InternalParserResult<'a,
 
 /// Parse the contents of a `JUMP-WHEN` instruction.
 pub(crate) fn parse_jump_when<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Instruction> {
-    let (input, target) = token!(Label(v))(input)?;
+    let (input, target) = token!(Target(v))(input)?;
     let (input, condition) = parse_memory_reference(input)?;
     Ok((
         input,
@@ -391,7 +391,7 @@ pub(crate) fn parse_jump_when<'a>(input: ParserInput<'a>) -> InternalParserResul
 pub(crate) fn parse_jump_unless<'a>(
     input: ParserInput<'a>,
 ) -> InternalParserResult<'a, Instruction> {
-    let (input, target) = token!(Label(v))(input)?;
+    let (input, target) = token!(Target(v))(input)?;
     let (input, condition) = parse_memory_reference(input)?;
     Ok((
         input,
@@ -404,7 +404,7 @@ pub(crate) fn parse_jump_unless<'a>(
 
 /// Parse the contents of a `DECLARE` instruction.
 pub(crate) fn parse_label<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Instruction> {
-    let (input, name) = token!(Label(v))(input)?;
+    let (input, name) = token!(Target(v))(input)?;
     Ok((
         input,
         Instruction::Label(Label {
