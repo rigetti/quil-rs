@@ -164,7 +164,7 @@ mod tests {
         ComparisonOperator, Convert, FrameDefinition, FrameIdentifier, Gate, GateDefinition,
         GateSpecification, Include, Instruction, Jump, JumpWhen, Label, MemoryReference, Move,
         Pulse, Qubit, RawCapture, Reset, SetFrequency, SetPhase, SetScale, ShiftFrequency,
-        ShiftPhase, SwapPhases, UnaryLogic, UnaryOperator, Waveform, WaveformDefinition,
+        ShiftPhase, SwapPhases, Target, UnaryLogic, UnaryOperator, Waveform, WaveformDefinition,
         WaveformInvocation,
     };
     use crate::parser::common::tests::KITCHEN_SINK_QUIL;
@@ -616,12 +616,14 @@ mod tests {
         parse_instructions,
         "LABEL @hello\nJUMP @hello\nJUMP-WHEN @hello ro",
         vec![
-            Instruction::Label(Label::Fixed("hello".to_owned())),
+            Instruction::Label(Label {
+                target: Target::Fixed("hello".to_owned())
+            }),
             Instruction::Jump(Jump {
-                target: Label::Fixed("hello".to_owned())
+                target: Target::Fixed("hello".to_owned())
             }),
             Instruction::JumpWhen(JumpWhen {
-                target: Label::Fixed("hello".to_owned()),
+                target: Target::Fixed("hello".to_owned()),
                 condition: MemoryReference {
                     name: "ro".to_owned(),
                     index: 0
@@ -1043,6 +1045,8 @@ mod tests {
             r#"DEFCAL MEASURE 0 dest:
 	DECLARE iq REAL[2]
 	CAPTURE 0 "out" flat(duration: 1.0, iqs: (2.0+3.0i)) iq[0]"#,
+            //             r#"LABEL @target
+            // JUMP @target"#,
         ];
 
         for input in inputs {

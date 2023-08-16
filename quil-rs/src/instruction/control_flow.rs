@@ -4,21 +4,13 @@ use super::MemoryReference;
 use crate::quil::{Quil, ToQuilError};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum Label {
-    Fixed(String),
-    Placeholder(LabelPlaceholder),
+pub struct Label {
+    pub target: Target,
 }
 
 impl Label {
-    pub(crate) fn resolve_placeholder<R>(&mut self, resolver: R)
-    where
-        R: Fn(&LabelPlaceholder) -> Option<String>,
-    {
-        if let Label::Placeholder(placeholder) = self {
-            if let Some(resolved) = resolver(placeholder) {
-                *self = Label::Fixed(resolved);
-            }
-        }
+    pub fn new(target: Target) -> Self {
+        Label { target }
     }
 }
 
@@ -28,9 +20,39 @@ impl Quil for Label {
         writer: &mut impl std::fmt::Write,
         fall_back_to_debug: bool,
     ) -> crate::quil::ToQuilResult<()> {
+        write!(writer, "LABEL ")?;
+        self.target.write(writer, fall_back_to_debug)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum Target {
+    Fixed(String),
+    Placeholder(TargetPlaceholder),
+}
+
+impl Target {
+    pub(crate) fn resolve_placeholder<R>(&mut self, resolver: R)
+    where
+        R: Fn(&TargetPlaceholder) -> Option<String>,
+    {
+        if let Target::Placeholder(placeholder) = self {
+            if let Some(resolved) = resolver(placeholder) {
+                *self = Target::Fixed(resolved);
+            }
+        }
+    }
+}
+
+impl Quil for Target {
+    fn write(
+        &self,
+        writer: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
+    ) -> crate::quil::ToQuilResult<()> {
         match self {
-            Label::Fixed(label) => write!(writer, "@{}", label).map_err(Into::into),
-            Label::Placeholder(_) => {
+            Target::Fixed(label) => write!(writer, "@{}", label).map_err(Into::into),
+            Target::Placeholder(_) => {
                 if fall_back_to_debug {
                     write!(writer, "@{:?}", self).map_err(Into::into)
                 } else {
@@ -41,14 +63,14 @@ impl Quil for Label {
     }
 }
 
-type LabelPlaceholderInner = Arc<String>;
+type TargetPlaceholderInner = Arc<String>;
 
-/// An opaque placeholder for a qubit whose index may be assigned
+/// An opaque placeholder for a label whose index may be assigned
 /// at a later time.
 #[derive(Clone, Debug, Eq)]
-pub struct LabelPlaceholder(LabelPlaceholderInner);
+pub struct TargetPlaceholder(TargetPlaceholderInner);
 
-impl LabelPlaceholder {
+impl TargetPlaceholder {
     pub fn new(base_label: String) -> Self {
         Self(Arc::new(base_label))
     }
@@ -62,25 +84,25 @@ impl LabelPlaceholder {
     }
 }
 
-impl std::hash::Hash for LabelPlaceholder {
+impl std::hash::Hash for TargetPlaceholder {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.address().hash(state);
     }
 }
 
-impl PartialOrd for LabelPlaceholder {
+impl PartialOrd for TargetPlaceholder {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         self.address().partial_cmp(&other.address())
     }
 }
 
-impl Ord for LabelPlaceholder {
+impl Ord for TargetPlaceholder {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.address().cmp(&other.address())
     }
 }
 
-impl PartialEq for LabelPlaceholder {
+impl PartialEq for TargetPlaceholder {
     fn eq(&self, other: &Self) -> bool {
         Arc::<std::string::String>::ptr_eq(&self.0, &other.0)
     }
@@ -88,7 +110,7 @@ impl PartialEq for LabelPlaceholder {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Jump {
-    pub target: Label,
+    pub target: Target,
 }
 
 impl Quil for Jump {
@@ -104,19 +126,19 @@ impl Quil for Jump {
 }
 
 impl Jump {
-    pub fn new(target: Label) -> Self {
+    pub fn new(target: Target) -> Self {
         Self { target }
     }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct JumpWhen {
-    pub target: Label,
+    pub target: Target,
     pub condition: MemoryReference,
 }
 
 impl JumpWhen {
-    pub fn new(target: Label, condition: MemoryReference) -> Self {
+    pub fn new(target: Target, condition: MemoryReference) -> Self {
         Self { target, condition }
     }
 }
@@ -136,12 +158,12 @@ impl Quil for JumpWhen {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct JumpUnless {
-    pub target: Label,
+    pub target: Target,
     pub condition: MemoryReference,
 }
 
 impl JumpUnless {
-    pub fn new(target: Label, condition: MemoryReference) -> Self {
+    pub fn new(target: Target, condition: MemoryReference) -> Self {
         Self { target, condition }
     }
 }
@@ -166,20 +188,20 @@ mod tests {
 
     #[test]
     fn resolve_placeholder() {
-        let mut label = Label::Placeholder(LabelPlaceholder::new("base".to_string()));
+        let mut label = Target::Placeholder(TargetPlaceholder::new("base".to_string()));
         label.resolve_placeholder(|_| Some("test".to_string()));
-        assert_eq!(label, Label::Fixed("test".to_string()))
+        assert_eq!(label, Target::Fixed("test".to_string()))
     }
 
     #[rstest]
-    #[case(Label::Fixed(String::from("test")), Ok("@test"), "@test")]
+    #[case(Target::Fixed(String::from("test")), Ok("@test"), "@test")]
     #[case(
-        Label::Placeholder(LabelPlaceholder::new(String::from("test-placeholder"))),
+        Target::Placeholder(TargetPlaceholder::new(String::from("test-placeholder"))),
         Err(ToQuilError::UnresolvedLabelPlaceholder),
-        "@Placeholder(LabelPlaceholder(\"test-placeholder\"))"
+        "@Placeholder(TargetPlaceholder(\"test-placeholder\"))"
     )]
     fn quil_format(
-        #[case] input: Label,
+        #[case] input: Target,
         #[case] expected_quil: crate::quil::ToQuilResult<&str>,
         #[case] expected_debug: &str,
     ) {

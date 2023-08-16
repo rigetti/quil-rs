@@ -15,7 +15,7 @@ pub use self::{
         PyBinaryOperands, PyBinaryOperator, PyComparison, PyComparisonOperand,
         PyComparisonOperator, PyConvert, PyExchange, PyMove, PyUnaryLogic, PyUnaryOperator,
     },
-    control_flow::{PyJump, PyJumpUnless, PyJumpWhen, PyLabel, PyLabelPlaceholder},
+    control_flow::{PyJump, PyJumpUnless, PyJumpWhen, PyLabel, PyTarget, PyTargetPlaceholder},
     declaration::{
         ParseMemoryReferenceError, PyDeclaration, PyLoad, PyMemoryReference, PyOffset,
         PyScalarType, PySharing, PyStore, PyVector,
@@ -163,7 +163,8 @@ create_init_submodule! {
         PyJumpWhen,
         PyJumpUnless,
         PyLabel,
-        PyLabelPlaceholder,
+        PyTarget,
+        PyTargetPlaceholder,
         PyMeasurement,
         PyMemoryReference,
         PyQubit,

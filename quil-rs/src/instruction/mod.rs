@@ -47,7 +47,7 @@ pub use self::classical::{
     BinaryOperator, Comparison, ComparisonOperand, ComparisonOperator, Convert, Exchange, Move,
     UnaryLogic, UnaryOperator,
 };
-pub use self::control_flow::{Jump, JumpUnless, JumpWhen, Label, LabelPlaceholder};
+pub use self::control_flow::{Jump, JumpUnless, JumpWhen, Label, Target, TargetPlaceholder};
 pub use self::declaration::{
     Declaration, Load, MemoryReference, Offset, ScalarType, Sharing, Store, Vector,
 };
@@ -659,23 +659,23 @@ impl Instruction {
         }
     }
 
-    pub(crate) fn resolve_placeholders<LR, QR>(&mut self, label_resolver: LR, qubit_resolver: QR)
+    pub(crate) fn resolve_placeholders<TR, QR>(&mut self, target_resolver: TR, qubit_resolver: QR)
     where
-        LR: Fn(&LabelPlaceholder) -> Option<String>,
+        TR: Fn(&TargetPlaceholder) -> Option<String>,
         QR: Fn(&QubitPlaceholder) -> Option<u64>,
     {
         match self {
             Instruction::Label(label) => {
-                label.resolve_placeholder(label_resolver);
+                label.target.resolve_placeholder(target_resolver);
             }
             Instruction::Jump(jump) => {
-                jump.target.resolve_placeholder(label_resolver);
+                jump.target.resolve_placeholder(target_resolver);
             }
             Instruction::JumpWhen(jump_when) => {
-                jump_when.target.resolve_placeholder(label_resolver);
+                jump_when.target.resolve_placeholder(target_resolver);
             }
             Instruction::JumpUnless(jump_unless) => {
-                jump_unless.target.resolve_placeholder(label_resolver);
+                jump_unless.target.resolve_placeholder(target_resolver);
             }
             other => {
                 for qubit in other.get_qubits_mut() {
@@ -893,14 +893,14 @@ RX(%a) 0",
     mod placeholders {
         use std::collections::HashMap;
 
-        use crate::instruction::{Label, LabelPlaceholder, Qubit, QubitPlaceholder};
+        use crate::instruction::{Label, Qubit, QubitPlaceholder, Target, TargetPlaceholder};
 
         #[allow(clippy::redundant_clone)]
         #[test]
-        fn label() {
-            let placeholder_1 = LabelPlaceholder::new(String::from("label"));
-            let placeholder_2 = LabelPlaceholder::new(String::from("label"));
-            let placeholder_3 = LabelPlaceholder::new(String::from("other"));
+        fn target() {
+            let placeholder_1 = TargetPlaceholder::new(String::from("label"));
+            let placeholder_2 = TargetPlaceholder::new(String::from("label"));
+            let placeholder_3 = TargetPlaceholder::new(String::from("other"));
 
             assert_eq!(placeholder_1, placeholder_1);
             assert_eq!(placeholder_1, placeholder_1.clone());
@@ -911,19 +911,27 @@ RX(%a) 0",
         }
 
         #[test]
-        fn label_resolution() {
-            let placeholder_1 = LabelPlaceholder::new(String::from("label"));
-            let placeholder_2 = LabelPlaceholder::new(String::from("label"));
+        fn target_resolution() {
+            let placeholder_1 = TargetPlaceholder::new(String::from("label"));
+            let placeholder_2 = TargetPlaceholder::new(String::from("label"));
 
             let resolver = HashMap::from([(placeholder_1.clone(), String::from("label_1"))]);
 
-            let mut label_1 = Label::Placeholder(placeholder_1);
-            label_1.resolve_placeholder(|k| resolver.get(k).cloned());
-            assert_eq!(label_1, Label::Fixed(String::from("label_1")));
+            let mut label_1 = Label {
+                target: Target::Placeholder(placeholder_1),
+            };
+            label_1
+                .target
+                .resolve_placeholder(|k| resolver.get(k).cloned());
+            assert_eq!(label_1.target, Target::Fixed(String::from("label_1")));
 
-            let mut label_2 = Label::Placeholder(placeholder_2.clone());
-            label_2.resolve_placeholder(|k| resolver.get(k).cloned());
-            assert_eq!(label_2, Label::Placeholder(placeholder_2));
+            let mut label_2 = Label {
+                target: Target::Placeholder(placeholder_2.clone()),
+            };
+            label_2
+                .target
+                .resolve_placeholder(|k| resolver.get(k).cloned());
+            assert_eq!(label_2.target, Target::Placeholder(placeholder_2));
         }
 
         #[allow(clippy::redundant_clone)]

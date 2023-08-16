@@ -22,7 +22,7 @@ use petgraph::Directed;
 
 use crate::instruction::{
     FrameIdentifier, Instruction, InstructionHandler, Jump, JumpUnless, JumpWhen, Label,
-    MemoryReference,
+    MemoryReference, Target,
 };
 use crate::{instruction::InstructionRole, program::Program};
 
@@ -533,7 +533,9 @@ fn terminate_working_block<'a>(
     if blocks.insert(label.clone(), block).is_some() {
         return Err(ScheduleError {
             instruction_index,
-            instruction: Instruction::Label(Label::Fixed(label)),
+            instruction: Instruction::Label(Label {
+                target: Target::Fixed(label),
+            }),
             variant: ScheduleErrorVariant::DuplicateLabel,
         });
     }
@@ -591,7 +593,9 @@ impl<'a> ScheduledProgram<'a> {
                 Instruction::Pragma(_) => {
                     working_instructions.push(instruction);
                 }
-                Instruction::Label(Label::Fixed(value)) => {
+                Instruction::Label(Label {
+                    target: Target::Fixed(value),
+                }) => {
                     terminate_working_block(
                         None as Option<BlockTerminator>,
                         &mut working_instructions,
@@ -605,7 +609,7 @@ impl<'a> ScheduledProgram<'a> {
                     working_label = Some(value);
                 }
                 Instruction::Jump(Jump {
-                    target: Label::Fixed(target),
+                    target: Target::Fixed(target),
                 }) => {
                     terminate_working_block(
                         Some(BlockTerminator::Unconditional { target }),
@@ -618,7 +622,7 @@ impl<'a> ScheduledProgram<'a> {
                     )?;
                 }
                 Instruction::JumpWhen(JumpWhen {
-                    target: Label::Fixed(target),
+                    target: Target::Fixed(target),
                     condition,
                 }) => {
                     terminate_working_block(
@@ -636,7 +640,7 @@ impl<'a> ScheduledProgram<'a> {
                     )?;
                 }
                 Instruction::JumpUnless(JumpUnless {
-                    target: Label::Fixed(target),
+                    target: Target::Fixed(target),
                     condition,
                 }) => {
                     terminate_working_block(
@@ -664,7 +668,9 @@ impl<'a> ScheduledProgram<'a> {
                 )?,
                 Instruction::Gate(_)
                 | Instruction::Measurement(_)
-                | Instruction::Label(Label::Placeholder(_))
+                | Instruction::Label(Label {
+                    target: Target::Placeholder(_),
+                })
                 | Instruction::Jump(_)
                 | Instruction::JumpWhen(_)
                 | Instruction::JumpUnless(_) => {

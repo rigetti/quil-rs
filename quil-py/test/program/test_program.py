@@ -3,7 +3,7 @@ import pytest
 from typing import Optional
 
 from quil.program import Program
-from quil.instructions import Instruction, QubitPlaceholder, LabelPlaceholder, Gate, Qubit, Jump, Label
+from quil.instructions import Instruction, QubitPlaceholder, TargetPlaceholder, Gate, Qubit, Jump, Target
 
 
 def test_pickle():
@@ -27,24 +27,24 @@ def test_custom_resolver():
     def qubit_resolver(qubit: QubitPlaceholder) -> Optional[int]:
         return {qubit_placeholder: 9}.get(qubit)
 
-    label_placeholder = LabelPlaceholder("base-label")
+    target_placeholder = TargetPlaceholder("base-target")
 
-    def label_resolver(label: LabelPlaceholder) -> Optional[str]:
-        print("resolving label", label)
-        return {label_placeholder: "test"}.get(label)
+    def target_resolver(target: TargetPlaceholder) -> Optional[str]:
+        print("resolving target", target)
+        return {target_placeholder: "test"}.get(target)
 
     program = Program()
     program.add_instructions(
         [
             Instruction.from_gate(Gate("H", [], [Qubit.from_placeholder(qubit_placeholder)], [])),
-            Instruction.from_jump(Jump(Label.from_placeholder(label_placeholder))),
+            Instruction.from_jump(Jump(Target.from_placeholder(target_placeholder))),
         ]
     )
 
     with pytest.raises(ValueError):
         program.to_quil()
 
-    program.resolve_placeholders_with_custom_resolvers(label_resolver=label_resolver, qubit_resolver=qubit_resolver)
+    program.resolve_placeholders_with_custom_resolvers(target_resolver=target_resolver, qubit_resolver=qubit_resolver)
 
     print(program.to_quil_or_debug())
 

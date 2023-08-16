@@ -1,4 +1,6 @@
-use quil_rs::instruction::{Jump, JumpUnless, JumpWhen, Label, LabelPlaceholder, MemoryReference};
+use quil_rs::instruction::{
+    Jump, JumpUnless, JumpWhen, Label, MemoryReference, Target, TargetPlaceholder,
+};
 use rigetti_pyo3::{
     impl_compare, impl_hash, impl_repr, py_wrap_data_struct, py_wrap_type, py_wrap_union_enum,
     pyo3::{pyclass::CompareOp, pymethods, types::PyString, IntoPy, Py, PyObject, Python},
@@ -7,11 +9,11 @@ use rigetti_pyo3::{
 
 use crate::{impl_quil, instruction::PyMemoryReference};
 
-py_wrap_union_enum! {
+py_wrap_data_struct! {
+    #[pyo3(subclass)]
     #[derive(Debug, Hash, PartialEq, Eq)]
     PyLabel(Label) as "Label" {
-        fixed: Fixed => Py<PyString>,
-        placeholder: Placeholder => PyLabelPlaceholder
+        target: Target => PyTarget
     }
 }
 impl_repr!(PyLabel);
@@ -28,20 +30,41 @@ impl PyLabel {
     }
 }
 
+py_wrap_union_enum! {
+    #[derive(Debug, Hash, PartialEq, Eq)]
+    PyTarget(Target) as "Target" {
+        fixed: Fixed => Py<PyString>,
+        placeholder: Placeholder => PyTargetPlaceholder
+    }
+}
+impl_repr!(PyTarget);
+impl_hash!(PyTarget);
+impl_quil!(PyTarget);
+
+#[pymethods]
+impl PyTarget {
+    fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
+        match op {
+            CompareOp::Eq => (self == other).into_py(py),
+            _ => py.NotImplemented(),
+        }
+    }
+}
+
 py_wrap_type! {
     #[pyo3(subclass)]
     #[derive(Debug, Hash, PartialOrd, Ord, PartialEq, Eq)]
-    PyLabelPlaceholder(LabelPlaceholder) as "LabelPlaceholder"
+    PyTargetPlaceholder(TargetPlaceholder) as "TargetPlaceholder"
 }
-impl_repr!(PyLabelPlaceholder);
-impl_hash!(PyLabelPlaceholder);
-impl_compare!(PyLabelPlaceholder);
+impl_repr!(PyTargetPlaceholder);
+impl_hash!(PyTargetPlaceholder);
+impl_compare!(PyTargetPlaceholder);
 
 #[pymethods]
-impl PyLabelPlaceholder {
+impl PyTargetPlaceholder {
     #[new]
     pub fn new(base_label: String) -> Self {
-        Self(LabelPlaceholder::new(base_label))
+        Self(TargetPlaceholder::new(base_label))
     }
 
     #[getter]
@@ -53,7 +76,7 @@ impl PyLabelPlaceholder {
 py_wrap_data_struct! {
     #[pyo3(subclass)]
     PyJump(Jump) as "Jump" {
-        target: Label => PyLabel
+        target: Target => PyTarget
     }
 }
 impl_repr!(PyJump);
@@ -62,7 +85,7 @@ impl_quil!(PyJump);
 #[pymethods]
 impl PyJump {
     #[new]
-    fn new(target: PyLabel) -> Self {
+    fn new(target: PyTarget) -> Self {
         Self(Jump::new(target.into_inner()))
     }
 }
@@ -70,7 +93,7 @@ impl PyJump {
 py_wrap_data_struct! {
     #[pyo3(subclass)]
     PyJumpWhen(JumpWhen) as "JumpWhen" {
-        target: Label => PyLabel,
+        target: Target => PyTarget,
         condition: MemoryReference => PyMemoryReference
     }
 }
@@ -80,7 +103,7 @@ impl_quil!(PyJumpWhen);
 #[pymethods]
 impl PyJumpWhen {
     #[new]
-    fn new(target: PyLabel, condition: PyMemoryReference) -> Self {
+    fn new(target: PyTarget, condition: PyMemoryReference) -> Self {
         Self(JumpWhen::new(target.into_inner(), condition.into_inner()))
     }
 }
@@ -88,7 +111,7 @@ impl PyJumpWhen {
 py_wrap_data_struct! {
     #[pyo3(subclass)]
     PyJumpUnless(JumpUnless) as "JumpUnless" {
-        target: Label => PyLabel,
+        target: Target => PyTarget,
         condition: MemoryReference => PyMemoryReference
     }
 }
@@ -98,7 +121,7 @@ impl_quil!(PyJumpUnless);
 #[pymethods]
 impl PyJumpUnless {
     #[new]
-    fn new(target: PyLabel, condition: PyMemoryReference) -> Self {
+    fn new(target: PyTarget, condition: PyMemoryReference) -> Self {
         Self(JumpUnless::new(target.into_inner(), condition.into_inner()))
     }
 }

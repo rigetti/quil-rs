@@ -21,8 +21,8 @@ use ndarray::Array2;
 use nom_locate::LocatedSpan;
 
 use crate::instruction::{
-    Declaration, FrameDefinition, FrameIdentifier, GateError, Instruction, Label, LabelPlaceholder,
-    Matrix, Qubit, QubitPlaceholder, Waveform, WaveformDefinition,
+    Declaration, FrameDefinition, FrameIdentifier, GateError, Instruction, Matrix, Qubit,
+    QubitPlaceholder, Target, TargetPlaceholder, Waveform, WaveformDefinition,
 };
 use crate::parser::{lex, parse_instructions, ParseError};
 use crate::quil::Quil;
@@ -275,12 +275,12 @@ impl Program {
             .map(|condition| self.frames.get_matching_keys_for_conditions(condition))
     }
 
-    /// Return references to all labels used in the program.
-    fn get_labels(&self) -> Vec<&Label> {
+    /// Return references to all targets used in the program.
+    fn get_targets(&self) -> Vec<&Target> {
         self.instructions
             .iter()
             .filter_map(|i| match i {
-                Instruction::Label(label) => Some(label),
+                Instruction::Label(label) => Some(&label.target),
                 Instruction::Jump(jump) => Some(&jump.target),
                 Instruction::JumpWhen(jump_when) => Some(&jump_when.target),
                 Instruction::JumpUnless(jump_unless) => Some(&jump_unless.target),
@@ -359,53 +359,53 @@ impl Program {
     /// Resolve [`LabelPlaceholder`]s and [`QubitPlaceholder`]s within the program using default resolvers.
     ///
     /// See [`resolve_placeholders_with_custom_resolvers`](Self::resolve_placeholders_with_custom_resolvers),
-    /// [`default_label_resolver`](Self::default_label_resolver),
+    /// [`default_target_resolver`](Self::default_target_resolver),
     /// and [`default_qubit_resolver`](Self::default_qubit_resolver) for more information.
     pub fn resolve_placeholders(&mut self) {
         self.resolve_placeholders_with_custom_resolvers(
-            self.default_label_resolver(),
+            self.default_target_resolver(),
             self.default_qubit_resolver(),
         )
     }
 
-    /// Resolve [`LabelPlaceholder`]s and [`QubitPlaceholder`]s within the program such that the resolved values
+    /// Resolve [`TargetPlaceholder`]s and [`QubitPlaceholder`]s within the program such that the resolved values
     /// will remain unique to that placeholder within the scope of the program.
     ///
-    /// The provided `label_resolver` and `qubit_resolver`, will be used to resolve those values respectively.
+    /// The provided `target_resolver` and `qubit_resolver`, will be used to resolve those values respectively.
     /// If your placeholder returns `None` for a particular placeholder, it will not be replaced but will be left as a placeholder.
     ///
     /// If you wish to provide a resolver for either labels or qubits, but want to rely on the
     /// default behavior for the other, considering using either
-    /// [`default_qubit_resolver`](Self::default_qubit_resolver) or [`default_label_resolver`](Self::default_label_resolver).
+    /// [`default_qubit_resolver`](Self::default_qubit_resolver) or [`default_target_resolver`](Self::default_target_resolver).
     #[allow(clippy::type_complexity)]
     pub fn resolve_placeholders_with_custom_resolvers(
         &mut self,
-        label_resolver: Box<dyn Fn(&LabelPlaceholder) -> Option<String>>,
+        target_resolver: Box<dyn Fn(&TargetPlaceholder) -> Option<String>>,
         qubit_resolver: Box<dyn Fn(&QubitPlaceholder) -> Option<u64>>,
     ) {
         for instruction in &mut self.instructions {
-            instruction.resolve_placeholders(&label_resolver, &qubit_resolver);
+            instruction.resolve_placeholders(&target_resolver, &qubit_resolver);
         }
     }
 
-    /// The default label resolver will resolve each [`LabelPlaceholder`] in the program to a unique label
-    /// by applying an auto-incrementing suffix to the base label.
+    /// The default target resolver will resolve each [`TargetPlaceholder`] in the program to a unique target
+    /// by applying an auto-incrementing suffix to the base target.
     #[allow(clippy::type_complexity)]
-    pub fn default_label_resolver(&self) -> Box<dyn Fn(&LabelPlaceholder) -> Option<String>> {
+    pub fn default_target_resolver(&self) -> Box<dyn Fn(&TargetPlaceholder) -> Option<String>> {
         let mut fixed_labels = HashSet::new();
         let mut label_placeholders = IndexSet::new();
-        for label in self.get_labels() {
-            match label {
-                Label::Fixed(fixed) => {
+        for target in self.get_targets() {
+            match target {
+                Target::Fixed(fixed) => {
                     fixed_labels.insert(fixed.clone());
                 }
-                Label::Placeholder(placeholder) => {
+                Target::Placeholder(placeholder) => {
                     label_placeholders.insert(placeholder.clone());
                 }
             }
         }
 
-        let label_resolutions: HashMap<LabelPlaceholder, String> = label_placeholders
+        let target_resolutions: HashMap<TargetPlaceholder, String> = label_placeholders
             .into_iter()
             .map(|p| {
                 let base_label = p.as_inner();
@@ -424,7 +424,7 @@ impl Program {
             })
             .collect();
 
-        Box::new(move |key| label_resolutions.get(key).cloned())
+        Box::new(move |key| target_resolutions.get(key).cloned())
     }
 
     /// The default qubit resolver will resolve each [`QubitPlaceholder`] in the program to
@@ -575,8 +575,8 @@ mod tests {
     use crate::{
         imag,
         instruction::{
-            Gate, Instruction, Jump, JumpUnless, JumpWhen, Label, LabelPlaceholder, Matrix,
-            MemoryReference, Qubit, QubitPlaceholder,
+            Gate, Instruction, Jump, JumpUnless, JumpWhen, Label, Matrix, MemoryReference, Qubit,
+            QubitPlaceholder, Target, TargetPlaceholder,
         },
         quil::Quil,
         real,
@@ -1016,21 +1016,21 @@ I 0
     fn placeholder_replacement() {
         let placeholder_1 = QubitPlaceholder::default();
         let placeholder_2 = QubitPlaceholder::default();
-        let label_placeholder_1 = LabelPlaceholder::new(String::from("custom_label"));
-        let label_placeholder_2 = LabelPlaceholder::new(String::from("custom_label"));
+        let label_placeholder_1 = TargetPlaceholder::new(String::from("custom_label"));
+        let label_placeholder_2 = TargetPlaceholder::new(String::from("custom_label"));
 
         let mut program = Program::new();
 
-        program.add_instruction(Instruction::Label(Label::Placeholder(
-            label_placeholder_1.clone(),
-        )));
+        program.add_instruction(Instruction::Label(Label {
+            target: Target::Placeholder(label_placeholder_1.clone()),
+        }));
 
         program.add_instruction(Instruction::Jump(Jump {
-            target: Label::Placeholder(label_placeholder_2.clone()),
+            target: Target::Placeholder(label_placeholder_2.clone()),
         }));
 
         program.add_instruction(Instruction::JumpWhen(JumpWhen {
-            target: Label::Placeholder(label_placeholder_2.clone()),
+            target: Target::Placeholder(label_placeholder_2.clone()),
             condition: MemoryReference {
                 name: "ro".to_string(),
                 index: 0,
@@ -1038,7 +1038,7 @@ I 0
         }));
 
         program.add_instruction(Instruction::JumpUnless(JumpUnless {
-            target: Label::Placeholder(label_placeholder_2.clone()),
+            target: Target::Placeholder(label_placeholder_2.clone()),
             condition: MemoryReference {
                 name: "ro".to_string(),
                 index: 0,
@@ -1064,19 +1064,21 @@ I 0
         assert_eq!(
             auto_increment_resolved.instructions,
             vec![
-                Instruction::Label(Label::Fixed("custom_label_0".to_string())),
+                Instruction::Label(Label {
+                    target: Target::Fixed("custom_label_0".to_string())
+                }),
                 Instruction::Jump(Jump {
-                    target: Label::Fixed("custom_label_1".to_string()),
+                    target: Target::Fixed("custom_label_1".to_string()),
                 }),
                 Instruction::JumpWhen(JumpWhen {
-                    target: Label::Fixed("custom_label_1".to_string()),
+                    target: Target::Fixed("custom_label_1".to_string()),
                     condition: MemoryReference {
                         name: "ro".to_string(),
                         index: 0,
                     },
                 }),
                 Instruction::JumpUnless(JumpUnless {
-                    target: Label::Fixed("custom_label_1".to_string()),
+                    target: Target::Fixed("custom_label_1".to_string()),
                     condition: MemoryReference {
                         name: "ro".to_string(),
                         index: 0,
@@ -1098,31 +1100,33 @@ I 0
         );
 
         let mut custom_resolved = program.clone();
-        let custom_label_resolutions = HashMap::from([
+        let custom_target_resolutions = HashMap::from([
             (label_placeholder_1, "new_label".to_string()),
             (label_placeholder_2, "other_new_label".to_string()),
         ]);
         let custom_qubit_resolutions = HashMap::from([(placeholder_1, 42), (placeholder_2, 10000)]);
         custom_resolved.resolve_placeholders_with_custom_resolvers(
-            Box::new(move |placeholder| custom_label_resolutions.get(placeholder).cloned()),
+            Box::new(move |placeholder| custom_target_resolutions.get(placeholder).cloned()),
             Box::new(move |placeholder| custom_qubit_resolutions.get(placeholder).copied()),
         );
         assert_eq!(
             custom_resolved.instructions,
             vec![
-                Instruction::Label(Label::Fixed("new_label".to_string())),
+                Instruction::Label(Label {
+                    target: Target::Fixed("new_label".to_string())
+                }),
                 Instruction::Jump(Jump {
-                    target: Label::Fixed("other_new_label".to_string()),
+                    target: Target::Fixed("other_new_label".to_string()),
                 }),
                 Instruction::JumpWhen(JumpWhen {
-                    target: Label::Fixed("other_new_label".to_string()),
+                    target: Target::Fixed("other_new_label".to_string()),
                     condition: MemoryReference {
                         name: "ro".to_string(),
                         index: 0,
                     },
                 }),
                 Instruction::JumpUnless(JumpUnless {
-                    target: Label::Fixed("other_new_label".to_string()),
+                    target: Target::Fixed("other_new_label".to_string()),
                     condition: MemoryReference {
                         name: "ro".to_string(),
                         index: 0,

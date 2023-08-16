@@ -5,7 +5,7 @@ use std::{
 
 use numpy::{PyArray2, ToPyArray};
 use quil_rs::{
-    instruction::{Instruction, LabelPlaceholder, QubitPlaceholder, Waveform},
+    instruction::{Instruction, QubitPlaceholder, TargetPlaceholder, Waveform},
     program::{CalibrationSet, FrameSet, MemoryRegion},
     Program,
 };
@@ -230,10 +230,10 @@ impl PyProgram {
     }
 
     // TODO: Pre-resolve placeholders into a map so a non-panic error can be raised?
-    #[args("*", label_resolver = "None", qubit_resolver = "None")]
+    #[args("*", target_resolver = "None", qubit_resolver = "None")]
     pub fn resolve_placeholders_with_custom_resolvers(
         &mut self,
-        label_resolver: Option<Py<PyFunction>>,
+        target_resolver: Option<Py<PyFunction>>,
         qubit_resolver: Option<Py<PyFunction>>,
     ) {
         #[allow(clippy::type_complexity)]
@@ -264,17 +264,16 @@ impl PyProgram {
             };
 
         #[allow(clippy::type_complexity)]
-        let rs_label_resolver: Box<dyn Fn(&LabelPlaceholder) -> Option<String>> =
-            if let Some(resolver) = label_resolver {
-                Box::new(move |placeholder: &LabelPlaceholder| -> Option<String> {
+        let rs_target_resolver: Box<dyn Fn(&TargetPlaceholder) -> Option<String>> =
+            if let Some(resolver) = target_resolver {
+                Box::new(move |placeholder: &TargetPlaceholder| -> Option<String> {
                     Python::with_gil(|py| {
                         let resolved_label =
                             resolver.call1(py, (placeholder.to_python(py).unwrap(),));
-                        dbg!(&resolved_label);
 
                         assert!(
                             resolved_label.is_ok(),
-                            "label_resolver returned an error: {resolved_label:?}"
+                            "target_resolver returned an error: {resolved_label:?}"
                         );
 
                         let resolved_label: PyResult<Option<String>> = resolved_label
@@ -282,18 +281,18 @@ impl PyProgram {
                             .extract(py);
                         assert!(
                             resolved_label.is_ok(),
-                            "label_resolver must return None or str: {resolved_label:?}"
+                            "target_resolver must return None or str: {resolved_label:?}"
                         );
 
                         resolved_label.expect("asserted that resolved_label is ok")
                     })
                 })
             } else {
-                self.as_inner().default_label_resolver()
+                self.as_inner().default_target_resolver()
             };
 
         self.as_inner_mut()
-            .resolve_placeholders_with_custom_resolvers(rs_label_resolver, rs_qubit_resolver);
+            .resolve_placeholders_with_custom_resolvers(rs_target_resolver, rs_qubit_resolver);
     }
 
     pub fn __add__(&self, py: Python<'_>, rhs: Self) -> PyResult<Self> {

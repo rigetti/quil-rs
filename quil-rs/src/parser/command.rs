@@ -10,8 +10,8 @@ use crate::instruction::{
     Exchange, Fence, FrameDefinition, GateDefinition, GateSpecification, GateType, Include,
     Instruction, Jump, JumpUnless, JumpWhen, Label, Load, MeasureCalibrationDefinition,
     Measurement, Move, PauliSum, Pragma, PragmaArgument, Pulse, Qubit, RawCapture, Reset,
-    SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, Store, SwapPhases, UnaryLogic,
-    UnaryOperator, ValidationError, Waveform, WaveformDefinition,
+    SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, Store, SwapPhases, Target,
+    UnaryLogic, UnaryOperator, ValidationError, Waveform, WaveformDefinition,
 };
 
 use crate::parser::instruction::parse_block;
@@ -369,7 +369,7 @@ pub(crate) fn parse_jump<'a>(input: ParserInput<'a>) -> InternalParserResult<'a,
     Ok((
         input,
         Instruction::Jump(Jump {
-            target: Label::Fixed(target),
+            target: Target::Fixed(target),
         }),
     ))
 }
@@ -381,7 +381,7 @@ pub(crate) fn parse_jump_when<'a>(input: ParserInput<'a>) -> InternalParserResul
     Ok((
         input,
         Instruction::JumpWhen(JumpWhen {
-            target: Label::Fixed(target),
+            target: Target::Fixed(target),
             condition,
         }),
     ))
@@ -396,7 +396,7 @@ pub(crate) fn parse_jump_unless<'a>(
     Ok((
         input,
         Instruction::JumpUnless(JumpUnless {
-            target: Label::Fixed(target),
+            target: Target::Fixed(target),
             condition,
         }),
     ))
@@ -405,7 +405,12 @@ pub(crate) fn parse_jump_unless<'a>(
 /// Parse the contents of a `DECLARE` instruction.
 pub(crate) fn parse_label<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Instruction> {
     let (input, name) = token!(Label(v))(input)?;
-    Ok((input, Instruction::Label(Label::Fixed(name))))
+    Ok((
+        input,
+        Instruction::Label(Label {
+            target: Target::Fixed(name),
+        }),
+    ))
 }
 
 /// Parse the contents of a `MOVE` instruction.

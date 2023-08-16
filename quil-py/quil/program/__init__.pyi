@@ -16,7 +16,7 @@ from quil.instructions import (
     Sharing,
     Vector,
     Waveform,
-    LabelPlaceholder,
+    TargetPlaceholder,
     QubitPlaceholder,
 )
 
@@ -116,25 +116,25 @@ class Program:
         """
     def resolve_placeholders(self):
         """
-        Resolve ``LabelPlaceholder``s and ``QubitPlaceholder``s within the program using default resolvers.
+        Resolve ``TargetPlaceholder``s and ``QubitPlaceholder``s within the program using default resolvers.
         The default resolveers
         """
         ...
     def resolve_placeholders_with_custom_resolvers(
         self,
         *,
-        label_resolver: Optional[Callable[[LabelPlaceholder], Optional[str]]] = None,
+        target_resolver: Optional[Callable[[TargetPlaceholder], Optional[str]]] = None,
         qubit_resolver: Optional[Callable[[QubitPlaceholder], Optional[int]]] = None,
     ):
         """
-        Resolve ``LabelPlaceholder``s and ``QubitPlaceholder``s within the program such that the resolved values
+        Resolve ``TargetPlaceholder``s and ``QubitPlaceholder``s within the program such that the resolved values
         will remain unique to that placeholder within the scope of the program.
 
-        If you provide ``label_resolver`` and/or ``qubit_resolver``, those will be used to resolve those values respectively.
+        If you provide ``target_resolver`` and/or ``qubit_resolver``, those will be used to resolve those values respectively.
         If your placeholder returns `None` for a particular placeholder, it will not be replaced but will be left as a placeholder.
 
         If you do not provide a resolver for a placeholder, a default resolver will be used which will generate a unique value
-        for that placeholder within the scope of the program using an auto-incrementing value (for qubit) or suffix (for label)
+        for that placeholder within the scope of the program using an auto-incrementing value (for qubit) or suffix (for target)
         while ensuring that unique value is not already in use within the program.
         """
         ...
