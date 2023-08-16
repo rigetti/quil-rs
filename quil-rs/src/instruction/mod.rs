@@ -260,7 +260,7 @@ fn write_parameter_string(f: &mut impl std::fmt::Write, parameters: &[String]) -
     }
 
     write!(f, "(")?;
-    write_join(f, parameters, ",", "%")?;
+    write_join(f, parameters, ", ", "%")?;
     write!(f, ")")
 }
 

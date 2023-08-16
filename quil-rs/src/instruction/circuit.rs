@@ -50,9 +50,13 @@ impl Quil for CircuitDefinition {
         }
         writeln!(writer, ":")?;
         for instruction in &self.instructions {
-            write!(writer, "\t")?;
-            instruction.write(writer, fall_back_to_debug)?;
-            writeln!(writer)?;
+            let lines = match fall_back_to_debug {
+                true => instruction.to_quil_or_debug(),
+                false => instruction.to_quil()?,
+            };
+            for line in lines.split('\n') {
+                writeln!(writer, "\t{line}")?;
+            }
         }
 
         Ok(())
