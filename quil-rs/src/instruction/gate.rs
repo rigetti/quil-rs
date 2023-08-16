@@ -584,6 +584,7 @@ impl Quil for Gate {
     ) -> crate::quil::ToQuilResult<()> {
         for modifier in &self.modifiers {
             modifier.write(f, fall_back_to_debug)?;
+            write!(f, " ")?;
         }
 
         write!(f, "{}", self.name)?;
