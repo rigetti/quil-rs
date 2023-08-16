@@ -1,20 +1,32 @@
 use quil_rs::instruction::{Jump, JumpUnless, JumpWhen, Label, LabelPlaceholder, MemoryReference};
 use rigetti_pyo3::{
     impl_compare, impl_hash, impl_repr, py_wrap_data_struct, py_wrap_type, py_wrap_union_enum,
-    pyo3::{pymethods, types::PyString, Py},
+    pyo3::{pyclass::CompareOp, pymethods, types::PyString, IntoPy, Py, PyObject, Python},
     PyWrapper,
 };
 
 use crate::{impl_quil, instruction::PyMemoryReference};
 
 py_wrap_union_enum! {
+    #[derive(Debug, Hash, PartialEq, Eq)]
     PyLabel(Label) as "Label" {
         fixed: Fixed => Py<PyString>,
         placeholder: Placeholder => PyLabelPlaceholder
     }
 }
 impl_repr!(PyLabel);
+impl_hash!(PyLabel);
 impl_quil!(PyLabel);
+
+#[pymethods]
+impl PyLabel {
+    fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
+        match op {
+            CompareOp::Eq => (self == other).into_py(py),
+            _ => py.NotImplemented(),
+        }
+    }
+}
 
 py_wrap_type! {
     #[pyo3(subclass)]

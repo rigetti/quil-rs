@@ -3,7 +3,7 @@ use std::sync::Arc;
 use super::MemoryReference;
 use crate::quil::{Quil, ToQuilError};
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Label {
     Fixed(String),
     Placeholder(LabelPlaceholder),
