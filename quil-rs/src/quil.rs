@@ -56,7 +56,7 @@ where
 {
     let mut iter = values.into_iter();
     if let Some(first) = iter.next() {
-        write!(writer, "{}", prefix)?;
+        write!(writer, "{prefix}")?;
         first.write(writer, fall_back_to_debug)?;
 
         for value in iter {
