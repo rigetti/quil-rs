@@ -307,9 +307,9 @@ impl PyProgram {
         }
     }
 
-    // This will raise an error if the program contains placeholders any
-    // unresolved placeholders. This is because they can't be converted to
-    // valid quil, nor can they be serialized and deserialized in a consistent
+    // This will raise an error if the program contains any unresolved
+    // placeholders. This is because they can't be converted to valid quil,
+    // nor can they be serialized and deserialized in a consistent
     // way.
     pub fn __getstate__<'a>(&self, py: Python<'a>) -> PyResult<&'a PyBytes> {
         Ok(PyBytes::new(py, self.to_quil()?.as_bytes()))

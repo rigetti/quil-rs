@@ -42,7 +42,7 @@ pub enum ToQuilError {
     UnresolvedQubitPlaceholder,
 }
 
-/// Write a sequencer of Quil items to the given writer, joined with the provided `joiner`.
+/// Write an iterator of Quil items to the given writer, joined with the provided `joiner`.
 pub(crate) fn write_join_quil<'i, I, T>(
     writer: &mut impl std::fmt::Write,
     fall_back_to_debug: bool,

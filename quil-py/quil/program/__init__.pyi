@@ -117,7 +117,10 @@ class Program:
     def resolve_placeholders(self):
         """
         Resolve ``TargetPlaceholder``s and ``QubitPlaceholder``s within the program using default resolvers.
-        The default resolveers
+
+        The default resolver will be used to generate a unique value for that placeholder within the scope of
+        the program using an auto-incrementing value (for qubit) or suffix (for target)
+        while ensuring that unique value is not already in use within the program.
         """
         ...
     def resolve_placeholders_with_custom_resolvers(

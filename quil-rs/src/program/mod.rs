@@ -428,7 +428,7 @@ impl Program {
     }
 
     /// The default qubit resolver will resolve each [`QubitPlaceholder`] in the program to
-    /// a unique fixed qubit by incrementing to the next available index.
+    /// a unique fixed qubit index by incrementing to the next available index.
     #[allow(clippy::type_complexity)]
     pub fn default_qubit_resolver(&self) -> Box<dyn Fn(&QubitPlaceholder) -> Option<u64>> {
         let mut qubits_used: HashSet<u64> = HashSet::new();
