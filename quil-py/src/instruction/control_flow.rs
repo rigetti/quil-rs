@@ -22,6 +22,11 @@ impl_to_quil!(PyLabel);
 
 #[pymethods]
 impl PyLabel {
+    #[new]
+    fn new(target: PyTarget) -> Self {
+        PyLabel(Label::new(target.into_inner()))
+    }
+
     fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
         match op {
             CompareOp::Eq => (self == other).into_py(py),
