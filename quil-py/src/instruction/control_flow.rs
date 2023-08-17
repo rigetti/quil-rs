@@ -7,7 +7,7 @@ use rigetti_pyo3::{
     PyWrapper,
 };
 
-use crate::{impl_quil, instruction::PyMemoryReference};
+use crate::{impl_to_quil, instruction::PyMemoryReference};
 
 py_wrap_data_struct! {
     #[pyo3(subclass)]
@@ -18,7 +18,7 @@ py_wrap_data_struct! {
 }
 impl_repr!(PyLabel);
 impl_hash!(PyLabel);
-impl_quil!(PyLabel);
+impl_to_quil!(PyLabel);
 
 #[pymethods]
 impl PyLabel {
@@ -39,7 +39,7 @@ py_wrap_union_enum! {
 }
 impl_repr!(PyTarget);
 impl_hash!(PyTarget);
-impl_quil!(PyTarget);
+impl_to_quil!(PyTarget);
 
 #[pymethods]
 impl PyTarget {
@@ -80,7 +80,7 @@ py_wrap_data_struct! {
     }
 }
 impl_repr!(PyJump);
-impl_quil!(PyJump);
+impl_to_quil!(PyJump);
 
 #[pymethods]
 impl PyJump {
@@ -98,7 +98,7 @@ py_wrap_data_struct! {
     }
 }
 impl_repr!(PyJumpWhen);
-impl_quil!(PyJumpWhen);
+impl_to_quil!(PyJumpWhen);
 
 #[pymethods]
 impl PyJumpWhen {
@@ -116,7 +116,7 @@ py_wrap_data_struct! {
     }
 }
 impl_repr!(PyJumpUnless);
-impl_quil!(PyJumpUnless);
+impl_to_quil!(PyJumpUnless);
 
 #[pymethods]
 impl PyJumpUnless {

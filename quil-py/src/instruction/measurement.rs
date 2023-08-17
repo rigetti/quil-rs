@@ -6,7 +6,7 @@ use rigetti_pyo3::{
 };
 
 use crate::{
-    impl_quil,
+    impl_to_quil,
     instruction::{PyMemoryReference, PyQubit},
 };
 
@@ -18,7 +18,7 @@ py_wrap_data_struct! {
         target: Option<MemoryReference> => Option<PyMemoryReference>
     }
 }
-impl_quil!(PyMeasurement);
+impl_to_quil!(PyMeasurement);
 impl_hash!(PyMeasurement);
 impl_repr!(PyMeasurement);
 

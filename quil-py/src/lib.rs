@@ -29,7 +29,7 @@ pub fn init_quil_submodule(name: &str, py: Python<'_>, m: &PyModule) -> PyResult
 /// Implement `to_quil` and `to_quil_or_debug` methods for wrapper types whose inner type
 /// implements [`Quil`](quil_rs::quil::Quil).
 #[macro_export]
-macro_rules! impl_quil {
+macro_rules! impl_to_quil {
     ($name: ident) => {
         #[pyo3::pymethods]
         impl $name {

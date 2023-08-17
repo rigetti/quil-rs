@@ -10,7 +10,7 @@ use rigetti_pyo3::{
 };
 
 use super::PyQubit;
-use crate::{expression::PyExpression, impl_quil};
+use crate::{expression::PyExpression, impl_to_quil};
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
@@ -22,7 +22,7 @@ py_wrap_data_struct! {
     }
 }
 impl_repr!(PyDelay);
-impl_quil!(PyDelay);
+impl_to_quil!(PyDelay);
 impl_hash!(PyDelay);
 
 #[pymethods]
@@ -57,7 +57,7 @@ py_wrap_data_struct! {
     }
 }
 impl_repr!(PyFence);
-impl_quil!(PyFence);
+impl_to_quil!(PyFence);
 impl_hash!(PyFence);
 
 #[pymethods]

@@ -13,7 +13,7 @@ use rigetti_pyo3::{
 
 use crate::{
     expression::PyExpression,
-    impl_quil,
+    impl_to_quil,
     instruction::{PyGateModifier, PyInstruction, PyQubit},
     validation::identifier::RustIdentifierValidationError,
 };
@@ -30,7 +30,7 @@ py_wrap_data_struct! {
     }
 }
 impl_repr!(PyCalibration);
-impl_quil!(PyCalibration);
+impl_to_quil!(PyCalibration);
 
 #[pymethods]
 impl PyCalibration {
@@ -74,7 +74,7 @@ py_wrap_data_struct! {
     }
 }
 impl_repr!(PyMeasureCalibrationDefinition);
-impl_quil!(PyMeasureCalibrationDefinition);
+impl_to_quil!(PyMeasureCalibrationDefinition);
 
 #[pymethods]
 impl PyMeasureCalibrationDefinition {

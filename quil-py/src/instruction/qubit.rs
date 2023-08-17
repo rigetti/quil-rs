@@ -11,7 +11,7 @@ use rigetti_pyo3::{
     PyWrapper,
 };
 
-use crate::impl_quil;
+use crate::impl_to_quil;
 
 py_wrap_union_enum! {
     #[derive(Debug, Eq, Hash, PartialEq)]
@@ -22,7 +22,7 @@ py_wrap_union_enum! {
     }
 }
 impl_repr!(PyQubit);
-impl_quil!(PyQubit);
+impl_to_quil!(PyQubit);
 impl_hash!(PyQubit);
 
 #[pymethods]

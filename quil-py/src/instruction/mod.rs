@@ -5,7 +5,7 @@ use rigetti_pyo3::{
     PyWrapper,
 };
 
-use crate::impl_quil;
+use crate::impl_to_quil;
 
 pub use self::{
     calibration::{PyCalibration, PyMeasureCalibrationDefinition},
@@ -96,7 +96,7 @@ py_wrap_union_enum! {
     }
 }
 impl_repr!(PyInstruction);
-impl_quil!(PyInstruction);
+impl_to_quil!(PyInstruction);
 
 #[pymethods]
 impl PyInstruction {

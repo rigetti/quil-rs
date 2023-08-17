@@ -19,7 +19,7 @@ use rigetti_pyo3::{
     wrap_error, PyTryFrom, PyWrapper, PyWrapperMut, ToPython, ToPythonError,
 };
 
-use crate::{impl_quil, instruction::PyMemoryReference};
+use crate::{impl_to_quil, instruction::PyMemoryReference};
 
 wrap_error!(RustEvaluationError(quil_rs::expression::EvaluationError));
 py_wrap_error!(quil, RustEvaluationError, EvaluationError, PyValueError);
@@ -45,7 +45,7 @@ py_wrap_union_enum! {
     }
 }
 impl_repr!(PyExpression);
-impl_quil!(PyExpression);
+impl_to_quil!(PyExpression);
 impl_from_str!(PyExpression, RustParseExpressionError);
 impl_hash!(PyExpression);
 impl_parse!(PyExpression);

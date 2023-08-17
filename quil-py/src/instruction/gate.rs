@@ -21,7 +21,7 @@ use rigetti_pyo3::{
 };
 use strum;
 
-use crate::{expression::PyExpression, impl_quil, instruction::PyQubit};
+use crate::{expression::PyExpression, impl_to_quil, instruction::PyQubit};
 
 wrap_error!(RustGateError(quil_rs::instruction::GateError));
 py_wrap_error!(quil, RustGateError, GateError, PyValueError);
@@ -39,7 +39,7 @@ py_wrap_data_struct! {
     }
 }
 impl_repr!(PyGate);
-impl_quil!(PyGate);
+impl_to_quil!(PyGate);
 impl_hash!(PyGate);
 
 #[pymethods]
@@ -123,7 +123,7 @@ py_wrap_simple_enum! {
     }
 }
 impl_repr!(PyGateModifier);
-impl_quil!(PyGateModifier);
+impl_to_quil!(PyGateModifier);
 impl_hash!(PyGateModifier);
 
 #[pymethods]
@@ -271,7 +271,7 @@ py_wrap_union_enum! {
     }
 }
 impl_repr!(PyGateSpecification);
-impl_quil!(PyGateSpecification);
+impl_to_quil!(PyGateSpecification);
 impl_hash!(PyGateSpecification);
 
 #[pymethods]
@@ -294,7 +294,7 @@ py_wrap_data_struct! {
     }
 }
 impl_repr!(PyGateDefinition);
-impl_quil!(PyGateDefinition);
+impl_to_quil!(PyGateDefinition);
 impl_hash!(PyGateDefinition);
 
 #[pymethods]

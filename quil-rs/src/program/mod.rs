@@ -409,18 +409,16 @@ impl Program {
             .into_iter()
             .map(|p| {
                 let base_label = p.as_inner();
-                let mut next_suffix = 0;
+                let mut next_label = format!("{base_label}_0");
+                let mut next_suffix = 1;
 
-                loop {
-                    let next_label = format!("{base_label}_{next_suffix}");
-
-                    if !fixed_labels.contains(&next_label) {
-                        fixed_labels.insert(next_label.clone());
-                        break (p, next_label);
-                    }
-
+                while fixed_labels.contains(&next_label) {
+                    next_label = format!("{base_label}_{next_suffix}");
                     next_suffix += 1;
                 }
+                fixed_labels.insert(next_label.clone());
+
+                (p, next_label)
             })
             .collect();
 
@@ -451,11 +449,9 @@ impl Program {
             }
         }
 
-        let mut qubit_iterator = (0u64..).filter(|index| !qubits_used.contains(index));
-        let qubit_resolutions: HashMap<QubitPlaceholder, u64> = qubit_placeholders
-            .into_iter()
-            .map(|p| (p, qubit_iterator.next().unwrap()))
-            .collect();
+        let qubit_iterator = (0u64..).filter(|index| !qubits_used.contains(index));
+        let qubit_resolutions: HashMap<QubitPlaceholder, u64> =
+            qubit_placeholders.into_iter().zip(qubit_iterator).collect();
 
         Box::new(move |key| qubit_resolutions.get(key).copied())
     }

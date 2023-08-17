@@ -6,7 +6,7 @@ use rigetti_pyo3::{
     PyTryFrom, PyWrapper,
 };
 
-use crate::{impl_quil, instruction::PyQubit};
+use crate::{impl_to_quil, instruction::PyQubit};
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
@@ -16,7 +16,7 @@ py_wrap_data_struct! {
     }
 }
 impl_repr!(PyReset);
-impl_quil!(PyReset);
+impl_to_quil!(PyReset);
 impl_hash!(PyReset);
 
 #[pymethods]

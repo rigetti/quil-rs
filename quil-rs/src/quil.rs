@@ -16,11 +16,12 @@ pub trait Quil: std::fmt::Debug {
     /// component.
     fn to_quil_or_debug(&self) -> String {
         let mut buffer = String::new();
-        self.write(&mut buffer, true).ok();
+        let _ = self.write(&mut buffer, true);
         buffer
     }
 
-    /// Write the Quil representation of the item to the given writer.
+    /// Write the Quil representation of the item to the given writer. If `fall_back_to_debug`
+    /// is `true`, then it must not return an error.
     fn write(
         &self,
         writer: &mut impl std::fmt::Write,

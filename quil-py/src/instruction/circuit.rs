@@ -9,7 +9,7 @@ use rigetti_pyo3::{
 };
 
 use super::PyInstruction;
-use crate::impl_quil;
+use crate::impl_to_quil;
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq)]
@@ -22,7 +22,7 @@ py_wrap_data_struct! {
     }
 }
 impl_repr!(PyCircuitDefinition);
-impl_quil!(PyCircuitDefinition);
+impl_to_quil!(PyCircuitDefinition);
 
 #[pymethods]
 impl PyCircuitDefinition {

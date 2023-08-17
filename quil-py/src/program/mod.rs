@@ -24,7 +24,7 @@ use rigetti_pyo3::{
 };
 
 use crate::{
-    impl_quil,
+    impl_to_quil,
     instruction::{PyDeclaration, PyGateDefinition, PyInstruction, PyQubit, PyWaveform},
 };
 
@@ -47,7 +47,7 @@ impl_as_mut_for_wrapper!(PyProgram);
 impl_repr!(PyProgram);
 impl_from_str!(PyProgram, ProgramError);
 impl_parse!(PyProgram);
-impl_quil!(PyProgram);
+impl_to_quil!(PyProgram);
 
 impl Default for PyProgram {
     fn default() -> Self {
@@ -229,7 +229,10 @@ impl PyProgram {
         self.as_inner_mut().resolve_placeholders();
     }
 
-    // TODO: Pre-resolve placeholders into a map so a non-panic error can be raised?
+    // Because we can't bubble up an error from inside the closures, they panic when the given
+    // Python functions return an error or an unexpected type. This is unusual, but in a Python
+    // program, this function will only raise because [`pyo3`] wraps Rust panics in a
+    // `PanicException`.
     #[args("*", target_resolver = "None", qubit_resolver = "None")]
     pub fn resolve_placeholders_with_custom_resolvers(
         &mut self,
@@ -241,22 +244,20 @@ impl PyProgram {
             if let Some(resolver) = qubit_resolver {
                 Box::new(move |placeholder: &QubitPlaceholder| -> Option<u64> {
                     Python::with_gil(|py| {
-                        let resolved_qubit =
-                            resolver.call1(py, (placeholder.to_python(py).unwrap(),));
-                        assert!(
-                            resolved_qubit.is_ok(),
-                            "qubit_resolver returned an error: {resolved_qubit:?}"
-                        );
+                        let resolved_qubit = resolver
+                            .call1(
+                                py,
+                                (placeholder
+                                    .to_python(py)
+                                    .expect("QubitPlaceholder.to_python() should be infallible"),),
+                            )
+                            .unwrap_or_else(|err| {
+                                panic!("qubit_resolver returned an error: {err}")
+                            });
 
-                        let resolved_qubit: PyResult<Option<u64>> = resolved_qubit
-                            .expect("asserted that resolved_qubit is ok")
-                            .extract(py);
-                        assert!(
-                            resolved_qubit.is_ok(),
-                            "qubit_resolver must return None or int: {resolved_qubit:?}"
-                        );
-
-                        resolved_qubit.expect("asserted that resolved_qubit is ok")
+                        resolved_qubit.extract(py).unwrap_or_else(|err| {
+                            panic!("qubit_resolver must return None or int: {err}")
+                        })
                     })
                 })
             } else {
@@ -268,23 +269,20 @@ impl PyProgram {
             if let Some(resolver) = target_resolver {
                 Box::new(move |placeholder: &TargetPlaceholder| -> Option<String> {
                     Python::with_gil(|py| {
-                        let resolved_label =
-                            resolver.call1(py, (placeholder.to_python(py).unwrap(),));
+                        let resolved_label = resolver
+                            .call1(
+                                py,
+                                (placeholder
+                                    .to_python(py)
+                                    .expect("TargetPlaceholder.to_python() should be infallibe"),),
+                            )
+                            .unwrap_or_else(|err| {
+                                panic!("label_resolver returned an error: {err}")
+                            });
 
-                        assert!(
-                            resolved_label.is_ok(),
-                            "target_resolver returned an error: {resolved_label:?}"
-                        );
-
-                        let resolved_label: PyResult<Option<String>> = resolved_label
-                            .expect("asserted that resolved_label is ok")
-                            .extract(py);
-                        assert!(
-                            resolved_label.is_ok(),
-                            "target_resolver must return None or str: {resolved_label:?}"
-                        );
-
-                        resolved_label.expect("asserted that resolved_label is ok")
+                        resolved_label.extract(py).unwrap_or_else(|err| {
+                            panic!("label_resolver must return None or str: {err}")
+                        })
                     })
                 })
             } else {

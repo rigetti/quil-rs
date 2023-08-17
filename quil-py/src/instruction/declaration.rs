@@ -4,7 +4,7 @@ use quil_rs::instruction::{
 };
 
 use super::PyArithmeticOperand;
-use crate::impl_quil;
+use crate::impl_to_quil;
 
 use rigetti_pyo3::{
     impl_from_str, impl_hash, impl_parse, impl_repr, py_wrap_data_struct, py_wrap_error,
@@ -36,7 +36,7 @@ py_wrap_simple_enum! {
     }
 }
 impl_repr!(PyScalarType);
-impl_quil!(PyScalarType);
+impl_to_quil!(PyScalarType);
 impl_hash!(PyScalarType);
 
 py_wrap_data_struct! {
@@ -48,7 +48,7 @@ py_wrap_data_struct! {
     }
 }
 impl_repr!(PyVector);
-impl_quil!(PyVector);
+impl_to_quil!(PyVector);
 impl_hash!(PyVector);
 
 #[pymethods]
@@ -78,7 +78,7 @@ py_wrap_data_struct! {
     }
 }
 impl_repr!(PyOffset);
-impl_quil!(PyOffset);
+impl_to_quil!(PyOffset);
 impl_hash!(PyOffset);
 
 #[pymethods]
@@ -138,7 +138,7 @@ py_wrap_data_struct! {
     }
 }
 impl_repr!(PyDeclaration);
-impl_quil!(PyDeclaration);
+impl_to_quil!(PyDeclaration);
 impl_hash!(PyDeclaration);
 
 #[pymethods]
@@ -175,7 +175,7 @@ py_wrap_data_struct! {
 }
 impl_hash!(PyMemoryReference);
 impl_repr!(PyMemoryReference);
-impl_quil!(PyMemoryReference);
+impl_to_quil!(PyMemoryReference);
 impl_from_str!(PyMemoryReference, RustParseMemoryReferenceError);
 impl_parse!(PyMemoryReference);
 
@@ -204,7 +204,7 @@ py_wrap_data_struct! {
     }
 }
 impl_repr!(PyLoad);
-impl_quil!(PyLoad);
+impl_to_quil!(PyLoad);
 impl_hash!(PyLoad);
 
 #[pymethods]
@@ -241,7 +241,7 @@ py_wrap_data_struct! {
     }
 }
 impl_repr!(PyStore);
-impl_quil!(PyStore);
+impl_to_quil!(PyStore);
 impl_hash!(PyStore);
 
 #[pymethods]
