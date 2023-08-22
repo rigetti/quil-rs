@@ -294,6 +294,15 @@ impl Program {
         &self.used_qubits
     }
 
+    /// Rebuilds the used_qubits cache from scratch
+    fn rebuild_used_qubits(&mut self) {
+        self.used_qubits = self
+            .to_instructions()
+            .iter()
+            .flat_map(|instruction| instruction.get_qubits().into_iter().cloned())
+            .collect()
+    }
+
     /// Consume the [`Program`] to return all of the instructions which constitute it.
     pub fn into_instructions(self) -> Vec<Instruction> {
         let capacity = self.memory_regions.len()
@@ -386,6 +395,7 @@ impl Program {
         for instruction in &mut self.instructions {
             instruction.resolve_placeholders(&target_resolver, &qubit_resolver);
         }
+        self.rebuild_used_qubits()
     }
 
     /// The default target resolver will resolve each [`TargetPlaceholder`] in the program to a unique target
