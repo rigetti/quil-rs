@@ -677,6 +677,9 @@ impl Instruction {
             Instruction::JumpUnless(jump_unless) => {
                 jump_unless.target.resolve_placeholder(target_resolver);
             }
+            Instruction::Pragma(pragma) => {
+                pragma.resolve_placeholders(qubit_resolver);
+            }
             other => {
                 for qubit in other.get_qubits_mut() {
                     qubit.resolve_placeholder(&qubit_resolver);
