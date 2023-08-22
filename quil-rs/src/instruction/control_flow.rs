@@ -119,7 +119,7 @@ impl Quil for Jump {
         writer: &mut impl std::fmt::Write,
         fall_back_to_debug: bool,
     ) -> Result<(), crate::quil::ToQuilError> {
-        write!(writer, "JUMP  ")?;
+        write!(writer, "JUMP ")?;
         self.target.write(writer, fall_back_to_debug)?;
         Ok(())
     }
