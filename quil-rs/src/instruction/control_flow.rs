@@ -176,7 +176,6 @@ impl Quil for JumpUnless {
     ) -> Result<(), crate::quil::ToQuilError> {
         write!(writer, "JUMP-UNLESS ")?;
         self.target.write(writer, fall_back_to_debug)?;
-        write!(writer, " ")?;
         write!(writer, " {}", self.condition)?;
         Ok(())
     }
