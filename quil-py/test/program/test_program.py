@@ -48,4 +48,4 @@ def test_custom_resolver():
 
     print(program.to_quil_or_debug())
 
-    assert program.to_quil() == "H 9\nJUMP  @test\n"
+    assert program.to_quil() == "H 9\nJUMP @test\n"
