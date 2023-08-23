@@ -66,7 +66,7 @@ impl PyProgram {
         Self(self.as_inner().clone_without_body_instructions())
     }
 
-    pub fn clone(&self) -> Self {
+    pub fn copy(&self) -> Self {
         Self(self.as_inner().clone())
     }
 

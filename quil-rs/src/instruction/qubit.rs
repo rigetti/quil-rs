@@ -96,6 +96,7 @@ impl Ord for QubitPlaceholder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use regex::Regex;
     use rstest::rstest;
 
     #[test]
@@ -115,7 +116,7 @@ mod tests {
     #[case(
         Qubit::Placeholder(QubitPlaceholder::default()),
         Err(ToQuilError::UnresolvedQubitPlaceholder),
-        "Placeholder(QubitPlaceholder(()))"
+        r"Placeholder\(QubitPlaceholder\(0x[0-9,A-Z]+\)\)"
     )]
     fn quil_format(
         #[case] input: Qubit,
@@ -123,6 +124,7 @@ mod tests {
         #[case] expected_debug: &str,
     ) {
         assert_eq!(input.to_quil(), expected_quil.map(|s| s.to_string()));
-        assert_eq!(input.to_quil_or_debug(), expected_debug);
+        let re = Regex::new(expected_debug).unwrap();
+        assert!(re.is_match(&input.to_quil_or_debug()));
     }
 }
