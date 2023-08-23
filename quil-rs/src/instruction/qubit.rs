@@ -47,7 +47,7 @@ type QubitPlaceholderInner = Arc<()>;
 
 /// An opaque placeholder for a qubit whose index may be assigned
 /// at a later time.
-#[derive(Clone, Debug, Eq)]
+#[derive(Clone, Eq)]
 pub struct QubitPlaceholder(QubitPlaceholderInner);
 
 impl QubitPlaceholder {
@@ -59,6 +59,12 @@ impl QubitPlaceholder {
 impl Default for QubitPlaceholder {
     fn default() -> Self {
         Self(Arc::new(()))
+    }
+}
+
+impl std::fmt::Debug for QubitPlaceholder {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "QubitPlaceholder({:#X})", self.address())
     }
 }
 

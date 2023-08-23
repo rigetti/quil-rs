@@ -97,7 +97,7 @@ class Program:
         """
     def to_instructions(self) -> Sequence[Instruction]: ...
     def to_unitary(self) -> NDArray[np.complex_]: ...
-    def clone(self) -> "Program":
+    def copy(self) -> "Program":
         """
         Creates a clone of this ``Program``.
         """
