@@ -142,7 +142,7 @@ impl Instruction {
                 destination,
                 source,
             }) => MemoryAccesses {
-                writes: set_from_memory_references![vec![destination]],
+                writes: set_from_memory_references![[destination]],
                 reads: set_from_optional_memory_reference![source.get_memory_reference()],
                 ..Default::default()
             },
@@ -162,7 +162,7 @@ impl Instruction {
                 waveform,
                 ..
             }) => MemoryAccesses {
-                captures: set_from_memory_references!(vec![memory_reference]),
+                captures: set_from_memory_references!([memory_reference]),
                 reads: set_from_memory_references!(waveform.get_memory_references()),
                 ..Default::default()
             },
@@ -183,7 +183,7 @@ impl Instruction {
                 ..Default::default()
             },
             Instruction::Exchange(Exchange { left, right }) => MemoryAccesses {
-                writes: set_from_memory_references![vec![left, right]],
+                writes: set_from_memory_references![[left, right]],
                 ..Default::default()
             },
             Instruction::Gate(Gate { parameters, .. }) => MemoryAccesses {
@@ -215,7 +215,7 @@ impl Instruction {
                 target: _,
                 condition,
             }) => MemoryAccesses {
-                reads: set_from_memory_references!(vec![condition]),
+                reads: set_from_memory_references!([condition]),
                 ..Default::default()
             },
             Instruction::Load(Load {
@@ -223,7 +223,7 @@ impl Instruction {
                 source,
                 offset,
             }) => MemoryAccesses {
-                writes: set_from_memory_references![vec![destination]],
+                writes: set_from_memory_references![[destination]],
                 reads: set_from_reference_vec![vec![source, &offset.name]],
                 ..Default::default()
             },
@@ -241,7 +241,7 @@ impl Instruction {
                 ..
             }) => MemoryAccesses {
                 reads: set_from_memory_references![duration.get_memory_references()],
-                captures: set_from_memory_references![vec![memory_reference]],
+                captures: set_from_memory_references![[memory_reference]],
                 ..Default::default()
             },
             Instruction::SetPhase(SetPhase { phase: expr, .. })
