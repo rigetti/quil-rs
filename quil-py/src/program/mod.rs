@@ -71,7 +71,7 @@ impl PyProgram {
     }
 
     #[getter]
-    pub fn instructions<'a>(&self, py: Python<'a>) -> PyResult<&'a PyList> {
+    pub fn body_instructions<'a>(&self, py: Python<'a>) -> PyResult<&'a PyList> {
         Ok(PyList::new(
             py,
             self.as_inner()
