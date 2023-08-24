@@ -709,9 +709,9 @@ impl<'a> ScheduledProgram<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::instruction::Pragma;
-    use crate::program::{MatchedFrames, MemoryAccesses};
+    
+    
+    
 
     #[cfg(feature = "graphviz-dot")]
     mod custom_handler {
