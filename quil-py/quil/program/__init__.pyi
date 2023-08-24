@@ -120,7 +120,7 @@ class Program:
         the instruction can't be converted to valid Quil, a debug
         implementation will be used.
         """
-    def resolve_placeholders(self):
+    def resolve_placeholders(self) -> None:
         """
         Resolve ``TargetPlaceholder``s and ``QubitPlaceholder``s within the program using default resolvers.
 
@@ -140,7 +140,7 @@ class Program:
         will remain unique to that placeholder within the scope of the program.
 
         If you provide ``target_resolver`` and/or ``qubit_resolver``, those will be used to resolve those values respectively.
-        If your placeholder returns `None` for a particular placeholder, it will not be replaced but will be left as a placeholder.
+        If your resolver returns `None` for a particular placeholder, it will not be replaced but will be left as a placeholder.
 
         If you do not provide a resolver for a placeholder, a default resolver will be used which will generate a unique value
         for that placeholder within the scope of the program using an auto-incrementing value (for qubit) or suffix (for target)
