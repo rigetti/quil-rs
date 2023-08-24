@@ -709,13 +709,14 @@ impl<'a> ScheduledProgram<'a> {
 
 #[cfg(test)]
 mod tests {
-    
-    
-    
+    use super::*;
+    use crate::instruction::Pragma;
+    use crate::program::{MatchedFrames, MemoryAccesses};
 
     #[cfg(feature = "graphviz-dot")]
     mod custom_handler {
         use super::*;
+
         use crate::instruction::PragmaArgument;
         use crate::program::frame::FrameMatchCondition;
         use crate::program::graphviz_dot::tests::build_dot_format_snapshot_test_case;
