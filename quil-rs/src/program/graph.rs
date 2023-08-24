@@ -762,8 +762,7 @@ mod tests {
                                     .iter()
                                     .filter_map(|arg| match arg {
                                         PragmaArgument::Identifier(name) => Some(name.as_str()),
-                                        PragmaArgument::Integer(_)
-                                        | PragmaArgument::Placeholder(_) => None,
+                                        PragmaArgument::Integer(_) => None,
                                     })
                                     .collect(),
                             )

@@ -11,7 +11,7 @@ use rigetti_pyo3::{
     PyTryFrom, PyWrapper,
 };
 
-use crate::{impl_to_quil, instruction::PyQubitPlaceholder};
+use crate::impl_to_quil;
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
@@ -54,8 +54,7 @@ py_wrap_union_enum! {
     #[derive(Debug, PartialEq, Eq)]
     PyPragmaArgument(PragmaArgument) as "PragmaArgument" {
         identifier: Identifier => Py<PyString>,
-        integer: Integer => Py<PyInt>,
-        placeholder: Placeholder => PyQubitPlaceholder
+        integer: Integer => Py<PyInt>
     }
 }
 impl_repr!(PyPragmaArgument);

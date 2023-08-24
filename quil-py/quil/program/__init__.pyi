@@ -106,7 +106,6 @@ class Program:
         """
         Creates a clone of this ``Program`` with an empty body instructions list.
         """
-        ...
     def __add__(self, rhs: Program) -> Program: ...
     def to_quil(self) -> str:
         """
