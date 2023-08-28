@@ -369,9 +369,8 @@ class Instruction:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 @final
@@ -421,9 +420,8 @@ class ArithmeticOperand:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 @final
@@ -440,9 +438,8 @@ class ArithmeticOperator(Enum):
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class Arithmetic:
@@ -472,9 +469,8 @@ class Arithmetic:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 @final
@@ -518,9 +514,8 @@ class BinaryOperand:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 @final
@@ -536,9 +531,8 @@ class BinaryOperator(Enum):
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class BinaryOperands:
@@ -578,9 +572,8 @@ class BinaryLogic:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class Convert:
@@ -601,9 +594,8 @@ class Convert:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class Move:
@@ -624,9 +616,8 @@ class Move:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class Exchange:
@@ -647,9 +638,8 @@ class Exchange:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 @final
@@ -699,9 +689,8 @@ class ComparisonOperand:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 @final
@@ -736,9 +725,8 @@ class Comparison:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 @final
@@ -753,9 +741,8 @@ class UnaryOperator(Enum):
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class UnaryLogic:
@@ -776,9 +763,8 @@ class UnaryLogic:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class Calibration:
@@ -818,9 +804,8 @@ class Calibration:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class MeasureCalibrationDefinition:
@@ -850,9 +835,8 @@ class MeasureCalibrationDefinition:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class CircuitDefinition:
@@ -887,9 +871,8 @@ class CircuitDefinition:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class Offset:
@@ -914,9 +897,8 @@ class Offset:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class Sharing:
@@ -956,9 +938,8 @@ class Declaration:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class Vector:
@@ -979,9 +960,8 @@ class Vector:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 @final
@@ -998,9 +978,8 @@ class ScalarType(Enum):
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 @final
@@ -1043,9 +1022,8 @@ class AttributeValue:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class FrameDefinition:
@@ -1070,9 +1048,8 @@ class FrameDefinition:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class FrameIdentifier:
@@ -1093,9 +1070,8 @@ class FrameIdentifier:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class Capture:
@@ -1130,9 +1106,8 @@ class Capture:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class Pulse:
@@ -1162,9 +1137,8 @@ class Pulse:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class RawCapture:
@@ -1199,9 +1173,8 @@ class RawCapture:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class SetFrequency:
@@ -1222,9 +1195,8 @@ class SetFrequency:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class SetPhase:
@@ -1245,9 +1217,8 @@ class SetPhase:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class SetScale:
@@ -1268,9 +1239,8 @@ class SetScale:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class ShiftFrequency:
@@ -1291,9 +1261,8 @@ class ShiftFrequency:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class ShiftPhase:
@@ -1314,9 +1283,8 @@ class ShiftPhase:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class SwapPhases:
@@ -1337,9 +1305,8 @@ class SwapPhases:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class GateError(ValueError):
@@ -1360,9 +1327,8 @@ class GateModifier(Enum):
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class Gate:
@@ -1423,9 +1389,8 @@ class Gate:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 @final
@@ -1512,9 +1477,8 @@ class GateSpecification:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class GateDefinition:
@@ -1544,9 +1508,8 @@ class GateDefinition:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 @final
@@ -1593,9 +1556,8 @@ class Qubit:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class QubitPlaceholder:
@@ -1603,6 +1565,7 @@ class QubitPlaceholder:
     A qubit that can be used as a placeholder. Must be resolved before converting
     a program to valid Quil. See ``quil.program.Program#resolve_placeholders``.
     """
+
     def __new__(cls) -> Self: ...
     def __lt__(self, other: QubitPlaceholder) -> bool: ...
 
@@ -1620,9 +1583,8 @@ class Reset:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class Delay:
@@ -1647,9 +1609,8 @@ class Delay:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class Fence:
@@ -1666,9 +1627,8 @@ class Fence:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 @final
@@ -1709,9 +1669,8 @@ class PragmaArgument:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class Include:
@@ -1728,9 +1687,8 @@ class Include:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class Pragma:
@@ -1755,9 +1713,8 @@ class Pragma:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class Measurement:
@@ -1778,9 +1735,8 @@ class Measurement:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class ParseMemoryReferenceError(ValueError):
@@ -1811,9 +1767,8 @@ class MemoryReference:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class Load:
@@ -1838,9 +1793,8 @@ class Load:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class Store:
@@ -1865,9 +1819,8 @@ class Store:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class Waveform:
@@ -1899,9 +1852,8 @@ class WaveformDefinition:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class WaveformInvocation:
@@ -1922,9 +1874,8 @@ class WaveformInvocation:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class Label:
@@ -1941,9 +1892,8 @@ class Label:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 @final
@@ -1982,9 +1932,8 @@ class Target:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class TargetPlaceholder:
@@ -2013,9 +1962,8 @@ class Jump:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class JumpWhen:
@@ -2036,9 +1984,8 @@ class JumpWhen:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class JumpUnless:
@@ -2059,7 +2006,6 @@ class JumpUnless:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """

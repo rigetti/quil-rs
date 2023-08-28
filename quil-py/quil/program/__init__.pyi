@@ -115,9 +115,8 @@ class Program:
         ...
     def to_quil_or_debug(self) -> str:
         """
-        Convert the instruction to a Quil string. If any part of
-        the instruction can't be converted to valid Quil, a debug
-        implementation will be used.
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
         """
     def resolve_placeholders(self) -> None:
         """
