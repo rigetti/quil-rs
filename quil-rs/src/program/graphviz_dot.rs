@@ -16,9 +16,12 @@
 
 use dot_writer::{Attributes, DotWriter, Shape, Style};
 
-use crate::program::graph::{
-    BlockTerminator, ExecutionDependency, InstructionBlock, MemoryAccessType, ScheduledGraphNode,
-    ScheduledProgram,
+use crate::{
+    program::graph::{
+        BlockTerminator, ExecutionDependency, InstructionBlock, MemoryAccessType,
+        ScheduledGraphNode, ScheduledProgram,
+    },
+    quil::Quil,
 };
 
 impl<'a> InstructionBlock<'a> {
@@ -47,7 +50,7 @@ impl<'a> InstructionBlock<'a> {
                         .set_label(&escape_label(&format!(
                             "[{}] {}",
                             index,
-                            self.instructions.get(*index).unwrap()
+                            self.instructions.get(*index).unwrap().to_quil_or_debug()
                         )));
                 }
             };
@@ -137,7 +140,12 @@ impl<'a> ScheduledProgram<'a> {
                             )
                             .attributes()
                             .set_label(
-                                format!("if {} {} 0", condition, equality_operators.0).as_str(),
+                                format!(
+                                    "if {} {} 0",
+                                    condition.to_quil_or_debug(),
+                                    equality_operators.0
+                                )
+                                .as_str(),
                             );
                         if let Some(next_label) = next_block_label {
                             digraph
@@ -147,7 +155,12 @@ impl<'a> ScheduledProgram<'a> {
                                 )
                                 .attributes()
                                 .set_label(
-                                    format!("if {} {} 0", condition, equality_operators.1).as_str(),
+                                    format!(
+                                        "if {} {} 0",
+                                        condition.to_quil_or_debug(),
+                                        equality_operators.1
+                                    )
+                                    .as_str(),
                                 );
                         };
                     }

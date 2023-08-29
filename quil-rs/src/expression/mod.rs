@@ -18,6 +18,7 @@ use crate::{
     instruction::MemoryReference,
     parser::{lex, parse_expression, ParseError},
     program::{disallow_leftover, ParseProgramError},
+    quil::Quil,
     real,
 };
 use lexical::{format, to_string_with_options, WriteFloatOptions};
@@ -487,41 +488,54 @@ fn format_complex(value: &Complex64) -> String {
     }
 }
 
-impl fmt::Display for Expression {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl Quil for Expression {
+    fn write(
+        &self,
+        f: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
+    ) -> Result<(), crate::quil::ToQuilError> {
         use Expression::*;
         match self {
-            Address(memory_reference) => write!(f, "{memory_reference}"),
+            Address(memory_reference) => memory_reference.write(f, fall_back_to_debug),
             FunctionCall(FunctionCallExpression {
                 function,
                 expression,
-            }) => write!(f, "{function}({expression})"),
+            }) => {
+                write!(f, "{function}(")?;
+                expression.write(f, fall_back_to_debug)?;
+                write!(f, ")")?;
+                Ok(())
+            }
             Infix(InfixExpression {
                 left,
                 operator,
                 right,
             }) => {
-                format_inner_expression(f, left)?;
+                format_inner_expression(f, fall_back_to_debug, left)?;
                 write!(f, "{}", operator)?;
-                format_inner_expression(f, right)
+                format_inner_expression(f, fall_back_to_debug, right)
             }
-            Number(value) => write!(f, "{}", format_complex(value)),
-            PiConstant => write!(f, "pi"),
+            Number(value) => write!(f, "{}", format_complex(value)).map_err(Into::into),
+            PiConstant => write!(f, "pi").map_err(Into::into),
             Prefix(PrefixExpression {
                 operator,
                 expression,
             }) => {
                 write!(f, "{}", operator)?;
-                format_inner_expression(f, expression)
+                format_inner_expression(f, fall_back_to_debug, expression)
             }
-            Variable(identifier) => write!(f, "%{}", identifier),
+            Variable(identifier) => write!(f, "%{}", identifier).map_err(Into::into),
         }
     }
 }
 
 /// Utility function to wrap infix expressions that are part of an expression in parentheses, so
 /// that correct precedence rules are enforced.
-fn format_inner_expression(f: &mut fmt::Formatter, expression: &Expression) -> fmt::Result {
+fn format_inner_expression(
+    f: &mut impl std::fmt::Write,
+    fall_back_to_debug: bool,
+    expression: &Expression,
+) -> crate::quil::ToQuilResult<()> {
     match expression {
         Expression::Infix(InfixExpression {
             left,
@@ -529,12 +543,13 @@ fn format_inner_expression(f: &mut fmt::Formatter, expression: &Expression) -> f
             right,
         }) => {
             write!(f, "(")?;
-            format_inner_expression(f, left)?;
+            format_inner_expression(f, fall_back_to_debug, left)?;
             write!(f, "{operator}")?;
-            format_inner_expression(f, right)?;
-            write!(f, ")")
+            format_inner_expression(f, fall_back_to_debug, right)?;
+            write!(f, ")")?;
+            Ok(())
         }
-        _ => write!(f, "{expression}"),
+        _ => expression.write(f, fall_back_to_debug),
     }
 }
 
@@ -544,6 +559,7 @@ mod test {
         expression::{
             Expression, InfixExpression, InfixOperator, PrefixExpression, PrefixOperator,
         },
+        quil::Quil,
         real,
     };
 
@@ -562,7 +578,7 @@ mod test {
             })),
         });
 
-        assert_eq!(expression.to_string(), "-3*(pi/2)");
+        assert_eq!(expression.to_quil_or_debug(), "-3*(pi/2)");
     }
 }
 
@@ -645,6 +661,9 @@ impl fmt::Display for InfixOperator {
 }
 
 #[cfg(test)]
+// This lint should be re-enabled once this proptest issue is resolved
+// https://github.com/proptest-rs/proptest/issues/364
+#[allow(clippy::arc_with_non_send_sync)]
 mod tests {
     use super::*;
     use crate::hash::hash_to_u64;
@@ -743,7 +762,7 @@ mod tests {
     fn parenthesized(expression: &Expression) -> String {
         use Expression::*;
         match expression {
-            Address(memory_reference) => format!("({memory_reference})"),
+            Address(memory_reference) => memory_reference.to_quil_or_debug(),
             FunctionCall(FunctionCallExpression {
                 function,
                 expression,
@@ -973,11 +992,11 @@ mod tests {
                 simple_p.clone(),
                 simple_e.clone(),
                 "Simplified expressions should be equal:\nparenthesized {p} ({p:?}) extracted from {s} simplified to {simple_p}\nvs original {e} ({e:?}) simplified to {simple_e}",
-                p=p,
+                p=p.to_quil_or_debug(),
                 s=s,
-                e=e,
-                simple_p=simple_p,
-                simple_e=simple_e
+                e=e.to_quil_or_debug(),
+                simple_p=simple_p.to_quil_or_debug(),
+                simple_e=simple_e.to_quil_or_debug()
             );
         }
 
@@ -993,7 +1012,7 @@ mod tests {
         ] {
             let parsed = Expression::from_str(input);
             let parsed = parsed.unwrap();
-            let restring = parsed.to_string();
+            let restring = parsed.to_quil_or_debug();
             assert_eq!(input, &restring);
         }
     }

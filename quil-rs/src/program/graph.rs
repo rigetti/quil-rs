@@ -22,7 +22,7 @@ use petgraph::Directed;
 
 use crate::instruction::{
     FrameIdentifier, Instruction, InstructionHandler, Jump, JumpUnless, JumpWhen, Label,
-    MemoryReference,
+    MemoryReference, Target,
 };
 use crate::{instruction::InstructionRole, program::Program};
 
@@ -33,10 +33,6 @@ pub enum ScheduleErrorVariant {
     DuplicateLabel,
     UncalibratedInstruction,
     UnschedulableInstruction,
-    // Note: these may be restored once enforced
-    // DurationNotRealConstant,
-    // DurationNotApplicable,
-    // InvalidFrame,
 }
 
 #[derive(Debug, Clone)]
@@ -537,7 +533,9 @@ fn terminate_working_block<'a>(
     if blocks.insert(label.clone(), block).is_some() {
         return Err(ScheduleError {
             instruction_index,
-            instruction: Instruction::Label(Label(label)),
+            instruction: Instruction::Label(Label {
+                target: Target::Fixed(label),
+            }),
             variant: ScheduleErrorVariant::DuplicateLabel,
         });
     }
@@ -585,13 +583,6 @@ impl<'a> ScheduledProgram<'a> {
                 | Instruction::Wait => {
                     working_instructions.push(instruction);
                 }
-                Instruction::Gate(_) | Instruction::Measurement(_) => {
-                    return Err(ScheduleError {
-                        instruction_index,
-                        instruction: instruction.clone(),
-                        variant: ScheduleErrorVariant::UncalibratedInstruction,
-                    })
-                }
                 Instruction::CalibrationDefinition(_)
                 | Instruction::CircuitDefinition(_)
                 | Instruction::Declaration(_)
@@ -602,7 +593,9 @@ impl<'a> ScheduledProgram<'a> {
                 Instruction::Pragma(_) => {
                     working_instructions.push(instruction);
                 }
-                Instruction::Label(Label(value)) => {
+                Instruction::Label(Label {
+                    target: Target::Fixed(value),
+                }) => {
                     terminate_working_block(
                         None as Option<BlockTerminator>,
                         &mut working_instructions,
@@ -615,7 +608,9 @@ impl<'a> ScheduledProgram<'a> {
 
                     working_label = Some(value);
                 }
-                Instruction::Jump(Jump { target }) => {
+                Instruction::Jump(Jump {
+                    target: Target::Fixed(target),
+                }) => {
                     terminate_working_block(
                         Some(BlockTerminator::Unconditional { target }),
                         &mut working_instructions,
@@ -626,7 +621,10 @@ impl<'a> ScheduledProgram<'a> {
                         custom_handler,
                     )?;
                 }
-                Instruction::JumpWhen(JumpWhen { target, condition }) => {
+                Instruction::JumpWhen(JumpWhen {
+                    target: Target::Fixed(target),
+                    condition,
+                }) => {
                     terminate_working_block(
                         Some(BlockTerminator::Conditional {
                             target,
@@ -641,7 +639,10 @@ impl<'a> ScheduledProgram<'a> {
                         custom_handler,
                     )?;
                 }
-                Instruction::JumpUnless(JumpUnless { target, condition }) => {
+                Instruction::JumpUnless(JumpUnless {
+                    target: Target::Fixed(target),
+                    condition,
+                }) => {
                     terminate_working_block(
                         Some(BlockTerminator::Conditional {
                             target,
@@ -665,6 +666,20 @@ impl<'a> ScheduledProgram<'a> {
                     instruction_index,
                     custom_handler,
                 )?,
+                Instruction::Gate(_)
+                | Instruction::Measurement(_)
+                | Instruction::Label(Label {
+                    target: Target::Placeholder(_),
+                })
+                | Instruction::Jump(_)
+                | Instruction::JumpWhen(_)
+                | Instruction::JumpUnless(_) => {
+                    return Err(ScheduleError {
+                        instruction_index,
+                        instruction: instruction.clone(),
+                        variant: ScheduleErrorVariant::UncalibratedInstruction,
+                    })
+                }
             };
         }
 
@@ -701,6 +716,7 @@ mod tests {
     #[cfg(feature = "graphviz-dot")]
     mod custom_handler {
         use super::*;
+
         use crate::instruction::PragmaArgument;
         use crate::program::frame::FrameMatchCondition;
         use crate::program::graphviz_dot::tests::build_dot_format_snapshot_test_case;

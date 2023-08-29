@@ -11,6 +11,7 @@ use quil_rs::{
         PrefixExpression, PrefixOperator,
     },
     instruction::MemoryReference,
+    quil::Quil,
     reserved::ReservedToken,
 };
 use rand::{distributions::Alphanumeric, rngs::StdRng, Rng, SeedableRng};
@@ -66,7 +67,7 @@ fn parenthesized(expression: &Expression) -> String {
             operator,
             parenthesized(right)
         ),
-        Number(_) => format!("({})", expression),
+        Number(_) => format!("({})", expression.to_quil_or_debug()),
         PiConstant => "pi".to_string(),
         Prefix(PrefixExpression {
             operator,

@@ -6,14 +6,14 @@ use quil_rs::{
 };
 
 use rigetti_pyo3::{
-    impl_hash, impl_repr, impl_str, py_wrap_data_struct,
+    impl_hash, impl_repr, py_wrap_data_struct,
     pyo3::{
         pyclass::CompareOp, pymethods, types::PyString, IntoPy, Py, PyObject, PyResult, Python,
     },
     PyTryFrom, PyWrapper,
 };
 
-use crate::expression::PyExpression;
+use crate::{expression::PyExpression, impl_to_quil};
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
@@ -57,7 +57,7 @@ py_wrap_data_struct! {
     }
 }
 impl_repr!(PyWaveformDefinition);
-impl_str!(PyWaveformDefinition);
+impl_to_quil!(PyWaveformDefinition);
 impl_hash!(PyWaveformDefinition);
 
 #[pymethods]
@@ -87,7 +87,7 @@ py_wrap_data_struct! {
     }
 }
 impl_repr!(PyWaveformInvocation);
-impl_str!(PyWaveformInvocation);
+impl_to_quil!(PyWaveformInvocation);
 
 #[pymethods]
 impl PyWaveformInvocation {

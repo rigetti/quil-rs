@@ -1,4 +1,4 @@
-use std::fmt;
+use crate::quil::Quil;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Pragma {
@@ -17,11 +17,16 @@ impl Pragma {
     }
 }
 
-impl fmt::Display for Pragma {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl Quil for Pragma {
+    fn write(
+        &self,
+        f: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
+    ) -> crate::quil::ToQuilResult<()> {
         write!(f, "PRAGMA {}", self.name)?;
         for arg in &self.arguments {
-            write!(f, " {arg}")?;
+            write!(f, " ")?;
+            arg.write(f, fall_back_to_debug)?;
         }
         if let Some(data) = &self.data {
             write!(f, " {data:?}")?;
@@ -36,12 +41,17 @@ pub enum PragmaArgument {
     Integer(u64),
 }
 
-impl fmt::Display for PragmaArgument {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl Quil for PragmaArgument {
+    fn write(
+        &self,
+        f: &mut impl std::fmt::Write,
+        _fall_back_to_debug: bool,
+    ) -> crate::quil::ToQuilResult<()> {
         match self {
             PragmaArgument::Identifier(i) => write!(f, "{i}"),
             PragmaArgument::Integer(i) => write!(f, "{i}"),
         }
+        .map_err(Into::into)
     }
 }
 
@@ -50,9 +60,13 @@ pub struct Include {
     pub filename: String,
 }
 
-impl fmt::Display for Include {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, r#"INCLUDE {:?}"#, self.filename)
+impl Quil for Include {
+    fn write(
+        &self,
+        f: &mut impl std::fmt::Write,
+        _fall_back_to_debug: bool,
+    ) -> crate::quil::ToQuilResult<()> {
+        write!(f, r#"INCLUDE {:?}"#, self.filename).map_err(Into::into)
     }
 }
 

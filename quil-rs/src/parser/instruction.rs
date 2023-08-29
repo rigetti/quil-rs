@@ -164,11 +164,12 @@ mod tests {
         ComparisonOperator, Convert, FrameDefinition, FrameIdentifier, Gate, GateDefinition,
         GateSpecification, Include, Instruction, Jump, JumpWhen, Label, MemoryReference, Move,
         Pulse, Qubit, RawCapture, Reset, SetFrequency, SetPhase, SetScale, ShiftFrequency,
-        ShiftPhase, SwapPhases, UnaryLogic, UnaryOperator, Waveform, WaveformDefinition,
+        ShiftPhase, SwapPhases, Target, UnaryLogic, UnaryOperator, Waveform, WaveformDefinition,
         WaveformInvocation,
     };
     use crate::parser::common::tests::KITCHEN_SINK_QUIL;
     use crate::parser::lexer::lex;
+    use crate::quil::Quil;
     use crate::{make_test, real, Program};
 
     use super::parse_instructions;
@@ -615,12 +616,14 @@ mod tests {
         parse_instructions,
         "LABEL @hello\nJUMP @hello\nJUMP-WHEN @hello ro",
         vec![
-            Instruction::Label(Label("hello".to_owned())),
+            Instruction::Label(Label {
+                target: Target::Fixed("hello".to_owned())
+            }),
             Instruction::Jump(Jump {
-                target: "hello".to_owned()
+                target: Target::Fixed("hello".to_owned())
             }),
             Instruction::JumpWhen(JumpWhen {
-                target: "hello".to_owned(),
+                target: Target::Fixed("hello".to_owned()),
                 condition: MemoryReference {
                     name: "ro".to_owned(),
                     index: 0
@@ -1042,13 +1045,15 @@ mod tests {
             r#"DEFCAL MEASURE 0 dest:
 	DECLARE iq REAL[2]
 	CAPTURE 0 "out" flat(duration: 1.0, iqs: (2.0+3.0i)) iq[0]"#,
+            r#"LABEL @target
+JUMP @target"#,
         ];
 
         for input in inputs {
             let program = Program::from_str(input).unwrap();
-            let output = program.to_string();
+            let output = program.to_quil().unwrap();
             let roundtrip = Program::from_str(&output).unwrap();
-            assert_eq!(output, roundtrip.to_string());
+            assert_eq!(output, roundtrip.to_quil().unwrap());
         }
     }
 }

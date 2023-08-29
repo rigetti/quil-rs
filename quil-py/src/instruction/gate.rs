@@ -1,4 +1,3 @@
-use crate::{expression::PyExpression, instruction::PyQubit};
 use numpy::{PyArray2, ToPyArray};
 use quil_rs::{
     expression::Expression,
@@ -22,6 +21,8 @@ use rigetti_pyo3::{
 };
 use strum;
 
+use crate::{expression::PyExpression, impl_to_quil, instruction::PyQubit};
+
 wrap_error!(RustGateError(quil_rs::instruction::GateError));
 py_wrap_error!(quil, RustGateError, GateError, PyValueError);
 wrap_error!(RustParseEnumError(strum::ParseError));
@@ -38,7 +39,7 @@ py_wrap_data_struct! {
     }
 }
 impl_repr!(PyGate);
-impl_str!(PyGate);
+impl_to_quil!(PyGate);
 impl_hash!(PyGate);
 
 #[pymethods]
@@ -122,7 +123,7 @@ py_wrap_simple_enum! {
     }
 }
 impl_repr!(PyGateModifier);
-impl_str!(PyGateModifier);
+impl_to_quil!(PyGateModifier);
 impl_hash!(PyGateModifier);
 
 #[pymethods]
@@ -270,7 +271,7 @@ py_wrap_union_enum! {
     }
 }
 impl_repr!(PyGateSpecification);
-impl_str!(PyGateSpecification);
+impl_to_quil!(PyGateSpecification);
 impl_hash!(PyGateSpecification);
 
 #[pymethods]
@@ -293,7 +294,7 @@ py_wrap_data_struct! {
     }
 }
 impl_repr!(PyGateDefinition);
-impl_str!(PyGateDefinition);
+impl_to_quil!(PyGateDefinition);
 impl_hash!(PyGateDefinition);
 
 #[pymethods]

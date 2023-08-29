@@ -1,9 +1,11 @@
 use quil_rs::instruction::Instruction;
 use rigetti_pyo3::{
-    create_init_submodule, impl_repr, impl_str, py_wrap_union_enum,
+    create_init_submodule, impl_repr, py_wrap_union_enum,
     pyo3::{pyclass::CompareOp, pymethods, IntoPy, PyObject, Python},
     PyWrapper,
 };
+
+use crate::impl_to_quil;
 
 pub use self::{
     calibration::{PyCalibration, PyMeasureCalibrationDefinition},
@@ -13,6 +15,7 @@ pub use self::{
         PyBinaryOperands, PyBinaryOperator, PyComparison, PyComparisonOperand,
         PyComparisonOperator, PyConvert, PyExchange, PyMove, PyUnaryLogic, PyUnaryOperator,
     },
+    control_flow::{PyJump, PyJumpUnless, PyJumpWhen, PyLabel, PyTarget, PyTargetPlaceholder},
     declaration::{
         ParseMemoryReferenceError, PyDeclaration, PyLoad, PyMemoryReference, PyOffset,
         PyScalarType, PySharing, PyStore, PyVector,
@@ -28,7 +31,7 @@ pub use self::{
     },
     measurement::PyMeasurement,
     pragma::{PyInclude, PyPragma, PyPragmaArgument},
-    qubit::PyQubit,
+    qubit::{PyQubit, PyQubitPlaceholder},
     reset::PyReset,
     timing::{PyDelay, PyFence},
     waveform::{PyWaveform, PyWaveformDefinition, PyWaveformInvocation},
@@ -37,6 +40,7 @@ pub use self::{
 mod calibration;
 mod circuit;
 mod classical;
+mod control_flow;
 mod declaration;
 mod frame;
 mod gate;
@@ -66,6 +70,10 @@ py_wrap_union_enum! {
         gate_definition: GateDefinition => PyGateDefinition,
         halt: Halt,
         include: Include => PyInclude,
+        jump: Jump => PyJump,
+        jump_when: JumpWhen => PyJumpWhen,
+        jump_unless: JumpUnless => PyJumpUnless,
+        label: Label => PyLabel,
         load: Load => PyLoad,
         measure_calibration_definition: MeasureCalibrationDefinition => PyMeasureCalibrationDefinition,
         measurement: Measurement => PyMeasurement,
@@ -88,7 +96,7 @@ py_wrap_union_enum! {
     }
 }
 impl_repr!(PyInstruction);
-impl_str!(PyInstruction);
+impl_to_quil!(PyInstruction);
 
 #[pymethods]
 impl PyInstruction {
@@ -151,9 +159,16 @@ create_init_submodule! {
         PyPauliGate,
         PyPauliTerm,
         PyPauliSum,
+        PyJump,
+        PyJumpWhen,
+        PyJumpUnless,
+        PyLabel,
+        PyTarget,
+        PyTargetPlaceholder,
         PyMeasurement,
         PyMemoryReference,
         PyQubit,
+        PyQubitPlaceholder,
         PyReset,
         PyDelay,
         PyFence,

@@ -156,7 +156,7 @@ fn lex_token(input: LexInput) -> InternalLexResult<TokenWithLocation> {
             token_with_location(lex_data_type),
             token_with_location(lex_modifier),
             token_with_location(lex_punctuation),
-            token_with_location(lex_label),
+            token_with_location(lex_target),
             token_with_location(lex_string),
             // Operator must come before number (or it may be parsed as a prefix)
             token_with_location(lex_operator),
@@ -285,10 +285,10 @@ fn lex_command_or_identifier(input: LexInput) -> InternalLexResult {
     Ok((input, token))
 }
 
-fn lex_label(input: LexInput) -> InternalLexResult {
+fn lex_target(input: LexInput) -> InternalLexResult {
     let (input, _) = tag("@")(input)?;
     let (input, label) = lex_identifier_raw(input)?;
-    Ok((input, Token::Label(label)))
+    Ok((input, Token::Target(label)))
 }
 
 fn lex_non_blocking(input: LexInput) -> InternalLexResult {
@@ -487,9 +487,9 @@ mod tests {
         assert_eq!(
             tokens,
             vec![
-                Token::Label("hello".to_owned()),
+                Token::Target("hello".to_owned()),
                 Token::NewLine,
-                Token::Label("world".to_owned())
+                Token::Target("world".to_owned())
             ]
         )
     }

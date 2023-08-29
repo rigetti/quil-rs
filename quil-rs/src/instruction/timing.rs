@@ -1,7 +1,5 @@
-use std::fmt;
-
 use super::Qubit;
-use crate::expression::Expression;
+use crate::{expression::Expression, quil::Quil};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Delay {
@@ -20,16 +18,22 @@ impl Delay {
     }
 }
 
-impl fmt::Display for Delay {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "DELAY")?;
+impl Quil for Delay {
+    fn write(
+        &self,
+        writer: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
+    ) -> crate::quil::ToQuilResult<()> {
+        write!(writer, "DELAY")?;
         for qubit in &self.qubits {
-            write!(f, " {qubit}")?
+            write!(writer, " ")?;
+            qubit.write(writer, fall_back_to_debug)?;
         }
         for frame_name in &self.frame_names {
-            write!(f, " \"{frame_name}\"")?;
+            write!(writer, " \"{}\"", frame_name)?;
         }
-        write!(f, " {}", self.duration)
+        write!(writer, " ",)?;
+        self.duration.write(writer, fall_back_to_debug)
     }
 }
 
@@ -38,11 +42,16 @@ pub struct Fence {
     pub qubits: Vec<Qubit>,
 }
 
-impl fmt::Display for Fence {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "FENCE")?;
+impl Quil for Fence {
+    fn write(
+        &self,
+        writer: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
+    ) -> Result<(), crate::quil::ToQuilError> {
+        write!(writer, "FENCE")?;
         for qubit in &self.qubits {
-            write!(f, " {qubit}")?
+            write!(writer, " ")?;
+            qubit.write(writer, fall_back_to_debug)?;
         }
         Ok(())
     }
