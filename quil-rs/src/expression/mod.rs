@@ -32,7 +32,7 @@ use std::{
     hash::{Hash, Hasher},
     num::NonZeroI32,
     ops::{Add, AddAssign, BitXor, BitXorAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign},
-    str::FromStr,
+    str::FromStr, mem,
 };
 
 #[cfg(test)]
@@ -258,6 +258,39 @@ impl Expression {
             Expression::Address(_) | Expression::Number(_) | Expression::Variable(_) => {}
             Expression::PiConstant => {
                 *self = Expression::Number(Complex64::from(PI));
+            }
+            Expression::Prefix(PrefixExpression{
+                operator: PrefixOperator::Minus,
+                expression,
+            }) if expression.as_ref() == &Expression::PiConstant => {
+                *self = Expression::Number(Complex64::from(-PI));
+            }
+            Expression::Infix(InfixExpression {
+                operator: InfixOperator::Slash,
+                left,
+                right,
+            }) if left.as_ref() == &Expression::PiConstant &&
+               mem::discriminant(right.as_ref()) == mem::discriminant(&Expression::Number(Complex64::i())) => {
+                if let Expression::Number(x) = right.as_ref() {
+                    *self = Expression::Number(Complex64::from(PI/x));
+                } else {
+                    unreachable!()
+                }
+            }
+            Expression::Infix(InfixExpression {
+                operator: InfixOperator::Slash,
+                left,
+                right,
+            }) if left.as_ref() == &Expression::Prefix(PrefixExpression {
+                                            operator: PrefixOperator::Minus,
+                                            expression: Box::new(Expression::PiConstant)}) 
+                            &&
+                       mem::discriminant(right.as_ref()) == mem::discriminant(&Expression::Number(Complex64::i())) => {
+                if let Expression::Number(x) = right.as_ref() {
+                    *self = Expression::Number(Complex64::from(-PI/x));
+                } else {
+                    unreachable!()
+                }
             }
             _ => {
                 if let Ok(simpler) = simplification::run(self) {
