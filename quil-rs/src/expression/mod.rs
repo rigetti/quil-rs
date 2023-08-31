@@ -662,10 +662,18 @@ impl fmt::Display for InfixOperator {
 #[allow(clippy::arc_with_non_send_sync)]
 mod tests {
     use super::*;
-    use crate::hash::hash_to_u64;
     use crate::reserved::ReservedToken;
     use proptest::prelude::*;
+    use std::collections::hash_map::DefaultHasher;
     use std::collections::HashSet;
+
+    /// Hash value helper: turn a hashable thing into a u64.
+    #[inline]
+    pub(crate) fn hash_to_u64<T: Hash>(t: &T) -> u64 {
+        let mut s = DefaultHasher::new();
+        t.hash(&mut s);
+        s.finish()
+    }
 
     #[test]
     fn simplify_and_evaluate() {
