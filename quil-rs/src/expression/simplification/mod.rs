@@ -28,7 +28,7 @@ mod tests {
                 assert_eq!(
                     parsed_expected.unwrap(),
                     computed,
-                    "Simplifying `{}` yielded `{}` instead of the expected `{}`",
+                    "Simplifying `{}` yielded `{:?}` instead of the expected `{}`",
                     $input,
                     computed,
                     $expected
