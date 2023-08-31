@@ -1066,7 +1066,6 @@ dependencies = [
  "serde",
  "strum",
  "thiserror",
- "velcro",
 ]
 
 [[package]]
@@ -1501,36 +1500,6 @@ name = "unindent"
 version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e1766d682d402817b5ac4490b3c3002d91dfa0d22812f341609f97b08757359c"
-
-[[package]]
-name = "velcro"
-version = "0.5.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "31c6a51883ba1034757307e06dc4856cd5439ecf6804ce6c90d13d49496196fc"
-dependencies = [
- "velcro_macros",
-]
-
-[[package]]
-name = "velcro_core"
-version = "0.5.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "742cf45d07989b7614877e083602a8973890c75a81f47216b238d2f326ec916c"
-dependencies = [
- "proc-macro2 1.0.63",
- "quote 1.0.28",
- "syn 1.0.109",
-]
-
-[[package]]
-name = "velcro_macros"
-version = "0.5.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b23c806d7b49977e6e12ee6d120ac01dcab702b51c652fdf1a6709ab5b8868c"
-dependencies = [
- "syn 1.0.109",
- "velcro_core",
-]
 
 [[package]]
 name = "version_check"
