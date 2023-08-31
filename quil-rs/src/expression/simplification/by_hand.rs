@@ -437,37 +437,38 @@ fn simplify_infix(l: &Expression, op: &InfixOperator, r: &Expression, limit: u64
         //----------------------------------------------------------------
 
         // TODO: SYNTAX ERRORS
-        //         // (a1 * x + b1) + (a2 * x + b2) = (a1 + a2) * x + (b1 + b2)
-        //         (
-        //             Expression::Infix(InfixExpression {
-        //                 left:
-        //                     Expression::Infix(InfixExpression {
-        //                         left: ref left_a,
-        //                         operator: InfixOperator::Star,
-        //                         right: ref left_x,
-        //                     }),
-        //                 operator: InfixOperator::Plus,
-        //                 right: ref left_b,
+        // // (a1 * x + b1) + (a2 * x + b2) = (a1 + a2) * x + (b1 + b2)
+        // (
+        //     Expression::Infix(InfixExpression {
+        //         left:
+        //             ref Expression::Infix(InfixExpression {
+        //                 left: ref left_a,
+        //                 operator: InfixOperator::Star,
+        //                 right: ref left_x,
         //             }),
-        //             InfixOperator::Plus,
+        //         operator: InfixOperator::Plus,
+        //         right: ref left_b,
+        //     }),
+        //     InfixOperator::Plus,
+        //     Expression::Infix(InfixExpression {
+        //         left:
         //             Expression::Infix(InfixExpression {
-        //                 left:
-        //                     Expression::Infix(InfixExpression {
-        //                         left: ref right_a,
-        //                         operator: InfixOperator::Star,
-        //                         right: ref right_x,
-        //                     }),
-        //                 operator: InfixOperator::Plus,
-        //                 right: ref right_b,
+        //                 left: ref right_a,
+        //                 operator: InfixOperator::Star,
+        //                 right: ref right_x,
         //             }),
-        //         ) if left_x == right_x => simplify_infix(
-        //             &mul!(
-        //                 simplify_infix(&left_a, &InfixOperator::Plus, &right_a),
-        //                 *left_x.clone()
-        //             ),
-        //             &InfixOperator::Plus,
-        //             &simplify_infix(&left_b, &InfixOperator::Plus, &right_b),
-        //         ),
+        //         operator: InfixOperator::Plus,
+        //         right: ref right_b,
+        //     }),
+        // ) if left_x == right_x => simplify_infix(
+        //     &mul!(
+        //         simplify_infix(&left_a, &InfixOperator::Plus, &right_a, limit.saturating_sub(1)),
+        //         *left_x.clone()
+        //     ),
+        //     &InfixOperator::Plus,
+        //     &simplify_infix(&left_b, &InfixOperator::Plus, &right_b, limit.saturating_sub(1)),
+        //     limit.saturating_sub(1),
+        // ),
 
         // (a1 * x) + (a2 * x) = (a1 + a2) * x
         (
