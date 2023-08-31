@@ -141,6 +141,25 @@ macro_rules! div {
     };
 }
 
+// Are these both of the form something * x for the _same_ x?
+fn mul_matches(left_ax: &Expression, right_ax: &Expression) -> bool {
+    match (left_ax, right_ax) {
+        (
+            Expression::Infix(InfixExpression {
+                left: ref ll,
+                operator: InfixOperator::Star,
+                right: ref lr,
+            }),
+            Expression::Infix(InfixExpression {
+                left: ref rl,
+                operator: InfixOperator::Star,
+                right: ref rr,
+            }),
+        ) => **ll == **rl || **ll == **rr || **lr == **rl || **lr == **rr,
+        _ => false,
+    }
+}
+
 fn simplify_infix(l: &Expression, op: InfixOperator, r: &Expression, limit: u64) -> Expression {
     if limit == 0 {
         // bail
@@ -436,51 +455,68 @@ fn simplify_infix(l: &Expression, op: InfixOperator, r: &Expression, limit: u64)
         // Also: Affine relationships
         //----------------------------------------------------------------
 
-        //         // TODO: SYNTAX ERRORS
-        //         // (a1 * x + b1) + (a2 * x + b2) = (a1 + a2) * x + (b1 + b2)
-        //         (
-        //             Expression::Infix(InfixExpression {
-        //                 left:
-        //                     Expression::Infix(InfixExpression {
-        //                         left: ref left_a,
-        //                         operator: InfixOperator::Star,
-        //                         right: ref left_x,
-        //                     }),
-        //                 operator: InfixOperator::Plus,
-        //                 right: ref left_b,
-        //             }),
-        //             InfixOperator::Plus,
-        //             Expression::Infix(InfixExpression {
-        //                 left:
-        //                     Expression::Infix(InfixExpression {
-        //                         left: ref right_a,
-        //                         operator: InfixOperator::Star,
-        //                         right: ref right_x,
-        //                     }),
-        //                 operator: InfixOperator::Plus,
-        //                 right: ref right_b,
-        //             }),
-        //         ) if left_x == right_x => simplify_infix(
-        //             &simplify_infix(
-        //                 &simplify_infix(
-        //                     &left_a,
-        //                     InfixOperator::Plus,
-        //                     &right_a,
-        //                     limit.saturating_sub(2),
-        //                 ),
-        //                 InfixOperator::Star,
-        //                 &left_x,
-        //                 limit.saturating_sub(1),
-        //             ),
-        //             InfixOperator::Plus,
-        //             &simplify_infix(
-        //                 &left_b,
-        //                 InfixOperator::Plus,
-        //                 &right_b,
-        //                 limit.saturating_sub(1),
-        //             ),
-        //             limit.saturating_sub(1),
-        //         ),
+        // (a1 * x + b1) + (a2 * x + b2) = (a1 + a2) * x + (b1 + b2)
+        (
+            Expression::Infix(InfixExpression {
+                left: ref left_ax,
+                operator: InfixOperator::Plus,
+                right: ref left_b,
+            }),
+            InfixOperator::Plus,
+            Expression::Infix(InfixExpression {
+                left: ref right_ax,
+                operator: InfixOperator::Plus,
+                right: ref right_b,
+            }),
+        ) if mul_matches(left_ax, right_ax) => {
+            let &Expression::Infix(InfixExpression {
+                left: ref ll,
+                operator: InfixOperator::Star,
+                right: ref lr,
+            }) = &**left_ax
+            else {
+                unreachable!("This is handled by mul_matches")
+            };
+            let &Expression::Infix(InfixExpression {
+                left: ref rl,
+                operator: InfixOperator::Star,
+                right: ref rr,
+            }) = &**right_ax
+            else {
+                unreachable!("This is handled by mul_matches")
+            };
+            let (left_a, right_a, x) = if **ll == **rl {
+                (lr, rr, ll)
+            } else if **ll == **rr {
+                (lr, rl, ll)
+            } else if **lr == **rl {
+                (ll, rr, lr)
+            } else {
+                (ll, rl, rr)
+            };
+
+            simplify_infix(
+                &simplify_infix(
+                    &simplify_infix(
+                        left_a,
+                        InfixOperator::Plus,
+                        right_a,
+                        limit.saturating_sub(2),
+                    ),
+                    InfixOperator::Star,
+                    x,
+                    limit.saturating_sub(1),
+                ),
+                InfixOperator::Plus,
+                &simplify_infix(
+                    left_b,
+                    InfixOperator::Plus,
+                    right_b,
+                    limit.saturating_sub(1),
+                ),
+                limit.saturating_sub(1),
+            )
+        }
 
         // (a1 * x) + (a2 * x) = (a1 + a2) * x
         (
