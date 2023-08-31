@@ -28,16 +28,16 @@ fn simplify(e: &Expression, limit: u64) -> Expression {
         Expression::FunctionCall(FunctionCallExpression {
             function,
             expression,
-        }) => simplify_function_call(function, expression, limit.saturating_sub(1)),
+        }) => simplify_function_call(*function, expression, limit.saturating_sub(1)),
         Expression::Infix(InfixExpression {
             left,
             operator,
             right,
-        }) => simplify_infix(left, operator, right, limit.saturating_sub(1)),
+        }) => simplify_infix(left, *operator, right, limit.saturating_sub(1)),
         Expression::Prefix(PrefixExpression {
             operator,
             expression,
-        }) => simplify_prefix(operator, expression, limit.saturating_sub(1)),
+        }) => simplify_prefix(*operator, expression, limit.saturating_sub(1)),
     }
 }
 
@@ -46,11 +46,11 @@ const ZERO: num_complex::Complex64 = real!(0.0);
 const ONE: num_complex::Complex64 = real!(1.0);
 const I: num_complex::Complex64 = imag!(1.0);
 
-fn simplify_function_call(func: &ExpressionFunction, expr: &Expression, limit: u64) -> Expression {
+fn simplify_function_call(func: ExpressionFunction, expr: &Expression, limit: u64) -> Expression {
     if limit == 0 {
         // bail
         return Expression::FunctionCall(FunctionCallExpression {
-            function: *func,
+            function: func,
             expression: expr.clone().into(),
         });
     }
@@ -71,19 +71,19 @@ fn simplify_function_call(func: &ExpressionFunction, expr: &Expression, limit: u
         (ExpressionFunction::SquareRoot, Expression::Number(x)) => Expression::Number(x.sqrt()),
         (ExpressionFunction::SquareRoot, Expression::PiConstant) => Expression::Number(PI.sqrt()),
         (function, expression) => Expression::FunctionCall(FunctionCallExpression {
-            function: *function,
+            function,
             expression: expression.into(),
         }),
     }
 }
 
 #[inline]
-fn is_zero(x: &num_complex::Complex64) -> bool {
+fn is_zero(x: num_complex::Complex64) -> bool {
     x.norm() < 1e-10
 }
 
 #[inline]
-fn is_one(x: &num_complex::Complex64) -> bool {
+fn is_one(x: num_complex::Complex64) -> bool {
     (x - 1.0).norm() < 1e-10
 }
 
@@ -141,20 +141,20 @@ macro_rules! div {
     };
 }
 
-fn simplify_infix(l: &Expression, op: &InfixOperator, r: &Expression, limit: u64) -> Expression {
+fn simplify_infix(l: &Expression, op: InfixOperator, r: &Expression, limit: u64) -> Expression {
     if limit == 0 {
         // bail
         return Expression::Infix(InfixExpression {
             left: l.clone().into(),
-            operator: *op,
+            operator: op,
             right: r.clone().into(),
         });
     }
     // There are … many cases here
     match (
-        &simplify(l, limit.saturating_sub(1)),
+        simplify(l, limit.saturating_sub(1)),
         op,
-        &simplify(r, limit.saturating_sub(1)),
+        simplify(r, limit.saturating_sub(1)),
     ) {
         //----------------------------------------------------------------
         // First: only diving one deep, pattern matching on the operation
@@ -164,8 +164,8 @@ fn simplify_infix(l: &Expression, op: &InfixOperator, r: &Expression, limit: u64
         // Addition and Subtraction
 
         // Adding with zero
-        (Expression::Number(x), InfixOperator::Plus, right) if is_zero(x) => right.clone(),
-        (left, InfixOperator::Plus, Expression::Number(x)) if is_zero(x) => left.clone(),
+        (Expression::Number(x), InfixOperator::Plus, right) if is_zero(x) => right,
+        (left, InfixOperator::Plus, Expression::Number(x)) if is_zero(x) => left,
         // Adding numbers or π
         (Expression::Number(x), InfixOperator::Plus, Expression::Number(y)) => {
             Expression::Number(x + y)
@@ -182,9 +182,9 @@ fn simplify_infix(l: &Expression, op: &InfixOperator, r: &Expression, limit: u64
 
         // Subtracting with zero
         (Expression::Number(x), InfixOperator::Minus, right) if is_zero(x) => {
-            simplify_prefix(&PrefixOperator::Minus, right, limit.saturating_sub(2))
+            simplify_prefix(PrefixOperator::Minus, &right, limit.saturating_sub(2))
         }
-        (left, InfixOperator::Minus, Expression::Number(y)) if is_zero(y) => left.clone(),
+        (left, InfixOperator::Minus, Expression::Number(y)) if is_zero(y) => left,
         // Subtracting self
         (left, InfixOperator::Minus, right) if left == right => Expression::Number(real!(0.0)),
         // Subtracting numbers or π (π - π already covered)
@@ -204,8 +204,8 @@ fn simplify_infix(l: &Expression, op: &InfixOperator, r: &Expression, limit: u64
         (Expression::Number(x), InfixOperator::Star, _) if is_zero(x) => Expression::Number(ZERO),
         (_, InfixOperator::Star, Expression::Number(y)) if is_zero(y) => Expression::Number(ZERO),
         // Multiplication with one
-        (Expression::Number(x), InfixOperator::Star, right) if is_one(x) => right.clone(),
-        (left, InfixOperator::Star, Expression::Number(y)) if is_one(y) => left.clone(),
+        (Expression::Number(x), InfixOperator::Star, right) if is_one(x) => right,
+        (left, InfixOperator::Star, Expression::Number(y)) if is_one(y) => left,
         // Multiplying with numbers or π
         (Expression::Number(x), InfixOperator::Star, Expression::Number(y)) => {
             Expression::Number(x * y)
@@ -226,7 +226,7 @@ fn simplify_infix(l: &Expression, op: &InfixOperator, r: &Expression, limit: u64
             Expression::Number(real!(f64::NAN)) // TODO Is this OK?
         }
         // Division with one
-        (left, InfixOperator::Slash, Expression::Number(y)) if is_one(y) => left.clone(),
+        (left, InfixOperator::Slash, Expression::Number(y)) if is_one(y) => left,
         // Division with self
         (left, InfixOperator::Slash, right) if left == right => Expression::Number(ONE),
         // Division with numbers or π (π / π already covered)
@@ -247,7 +247,7 @@ fn simplify_infix(l: &Expression, op: &InfixOperator, r: &Expression, limit: u64
         (_, InfixOperator::Caret, Expression::Number(y)) if is_zero(y) => Expression::Number(ONE),
         // Exponentiation with one
         (Expression::Number(x), InfixOperator::Caret, _) if is_one(x) => Expression::Number(ONE),
-        (left, InfixOperator::Caret, Expression::Number(y)) if is_one(y) => left.clone(),
+        (left, InfixOperator::Caret, Expression::Number(y)) if is_one(y) => left,
 
         //----------------------------------------------------------------
         // Next: dealing with negation in subexpressions
@@ -255,7 +255,7 @@ fn simplify_infix(l: &Expression, op: &InfixOperator, r: &Expression, limit: u64
 
         // Addition with negation
         (
-            left,
+            ref left,
             InfixOperator::Plus,
             Expression::Prefix(PrefixExpression {
                 operator: PrefixOperator::Minus,
@@ -263,7 +263,7 @@ fn simplify_infix(l: &Expression, op: &InfixOperator, r: &Expression, limit: u64
             }),
         ) => simplify_infix(
             left,
-            &InfixOperator::Minus,
+            InfixOperator::Minus,
             expression,
             limit.saturating_sub(2),
         ),
@@ -273,17 +273,17 @@ fn simplify_infix(l: &Expression, op: &InfixOperator, r: &Expression, limit: u64
                 ref expression,
             }),
             InfixOperator::Plus,
-            right,
+            ref right,
         ) => simplify_infix(
             right,
-            &InfixOperator::Minus,
+            InfixOperator::Minus,
             expression,
             limit.saturating_sub(2),
         ),
 
         // Subtraction with negation
         (
-            left,
+            ref left,
             InfixOperator::Minus,
             Expression::Prefix(PrefixExpression {
                 operator: PrefixOperator::Minus,
@@ -291,25 +291,25 @@ fn simplify_infix(l: &Expression, op: &InfixOperator, r: &Expression, limit: u64
             }),
         ) => simplify_infix(
             left,
-            &InfixOperator::Plus,
+            InfixOperator::Plus,
             expression,
             limit.saturating_sub(2),
         ),
         (
             // -expression - right => smaller of (-expression) - right & -(expression + right)
-            left @ &Expression::Prefix(PrefixExpression {
+            ref left @ Expression::Prefix(PrefixExpression {
                 operator: PrefixOperator::Minus,
                 ref expression,
             }),
             InfixOperator::Minus,
-            right,
+            ref right,
         ) => {
             let original = sub!(left.clone(), right.clone());
             let new = simplify_prefix(
-                &PrefixOperator::Minus,
+                PrefixOperator::Minus,
                 &simplify_infix(
                     expression,
-                    &InfixOperator::Plus,
+                    InfixOperator::Plus,
                     right,
                     limit.saturating_sub(2),
                 ),
@@ -329,38 +329,38 @@ fn simplify_infix(l: &Expression, op: &InfixOperator, r: &Expression, limit: u64
                 operator: PrefixOperator::Minus,
                 expression: ref right,
             }),
-        ) => simplify_infix(left, &InfixOperator::Star, right, limit.saturating_sub(2)),
+        ) => simplify_infix(left, InfixOperator::Star, right, limit.saturating_sub(2)),
         (
-            left,
+            ref left,
             InfixOperator::Star,
-            right @ &Expression::Prefix(PrefixExpression {
+            ref right @ Expression::Prefix(PrefixExpression {
                 operator: PrefixOperator::Minus,
                 ref expression,
             }),
         ) => {
             let original = mul!(left.clone(), right.clone());
-            let neg_left = simplify_prefix(&PrefixOperator::Minus, left, limit.saturating_sub(2));
+            let neg_left = simplify_prefix(PrefixOperator::Minus, left, limit.saturating_sub(2));
             let new = simplify_infix(
                 &neg_left,
-                &InfixOperator::Star,
+                InfixOperator::Star,
                 expression,
                 limit.saturating_sub(2),
             );
             min_by_key(original, new, size)
         }
         (
-            left @ &Expression::Prefix(PrefixExpression {
+            ref left @ Expression::Prefix(PrefixExpression {
                 operator: PrefixOperator::Minus,
                 ref expression,
             }),
             InfixOperator::Star,
-            right,
+            ref right,
         ) => {
             let original = mul!(left.clone(), right.clone());
-            let neg_right = simplify_prefix(&PrefixOperator::Minus, right, limit.saturating_sub(2));
+            let neg_right = simplify_prefix(PrefixOperator::Minus, right, limit.saturating_sub(2));
             let new = simplify_infix(
                 expression,
-                &InfixOperator::Star,
+                InfixOperator::Star,
                 &neg_right,
                 limit.saturating_sub(2),
             );
@@ -378,9 +378,9 @@ fn simplify_infix(l: &Expression, op: &InfixOperator, r: &Expression, limit: u64
                 operator: PrefixOperator::Minus,
                 expression: ref right,
             }),
-        ) => simplify_infix(left, &InfixOperator::Slash, right, limit.saturating_sub(2)),
+        ) => simplify_infix(left, InfixOperator::Slash, right, limit.saturating_sub(2)),
         (
-            left,
+            ref left,
             InfixOperator::Slash,
             Expression::Prefix(PrefixExpression {
                 operator: PrefixOperator::Minus,
@@ -388,18 +388,18 @@ fn simplify_infix(l: &Expression, op: &InfixOperator, r: &Expression, limit: u64
             }),
         ) if *left == **expression => Expression::Number(-ONE),
         (
-            left,
+            ref left,
             InfixOperator::Slash,
-            right @ &Expression::Prefix(PrefixExpression {
+            ref right @ Expression::Prefix(PrefixExpression {
                 operator: PrefixOperator::Minus,
                 ref expression,
             }),
         ) => {
             let original = div!(left.clone(), right.clone());
-            let neg_left = simplify_prefix(&PrefixOperator::Minus, left, limit.saturating_sub(2));
+            let neg_left = simplify_prefix(PrefixOperator::Minus, left, limit.saturating_sub(2));
             let new = simplify_infix(
                 &neg_left,
-                &InfixOperator::Slash,
+                InfixOperator::Slash,
                 expression,
                 limit.saturating_sub(2),
             );
@@ -411,21 +411,21 @@ fn simplify_infix(l: &Expression, op: &InfixOperator, r: &Expression, limit: u64
                 ref expression,
             }),
             InfixOperator::Slash,
-            right,
+            ref right,
         ) if **expression == *right => Expression::Number(-ONE),
         (
-            left @ &Expression::Prefix(PrefixExpression {
+            ref left @ Expression::Prefix(PrefixExpression {
                 operator: PrefixOperator::Minus,
                 ref expression,
             }),
             InfixOperator::Slash,
-            right,
+            ref right,
         ) => {
             let original = div!(left.clone(), right.clone());
-            let neg_right = simplify_prefix(&PrefixOperator::Minus, right, limit.saturating_sub(2));
+            let neg_right = simplify_prefix(PrefixOperator::Minus, right, limit.saturating_sub(2));
             let new = simplify_infix(
                 expression,
-                &InfixOperator::Slash,
+                InfixOperator::Slash,
                 &neg_right,
                 limit.saturating_sub(2),
             );
@@ -436,39 +436,51 @@ fn simplify_infix(l: &Expression, op: &InfixOperator, r: &Expression, limit: u64
         // Also: Affine relationships
         //----------------------------------------------------------------
 
-        // TODO: SYNTAX ERRORS
-        // // (a1 * x + b1) + (a2 * x + b2) = (a1 + a2) * x + (b1 + b2)
-        // (
-        //     Expression::Infix(InfixExpression {
-        //         left:
-        //             ref Expression::Infix(InfixExpression {
-        //                 left: ref left_a,
-        //                 operator: InfixOperator::Star,
-        //                 right: ref left_x,
-        //             }),
-        //         operator: InfixOperator::Plus,
-        //         right: ref left_b,
-        //     }),
-        //     InfixOperator::Plus,
-        //     Expression::Infix(InfixExpression {
-        //         left:
+        //         // TODO: SYNTAX ERRORS
+        //         // (a1 * x + b1) + (a2 * x + b2) = (a1 + a2) * x + (b1 + b2)
+        //         (
         //             Expression::Infix(InfixExpression {
-        //                 left: ref right_a,
-        //                 operator: InfixOperator::Star,
-        //                 right: ref right_x,
+        //                 left:
+        //                     Expression::Infix(InfixExpression {
+        //                         left: ref left_a,
+        //                         operator: InfixOperator::Star,
+        //                         right: ref left_x,
+        //                     }),
+        //                 operator: InfixOperator::Plus,
+        //                 right: ref left_b,
         //             }),
-        //         operator: InfixOperator::Plus,
-        //         right: ref right_b,
-        //     }),
-        // ) if left_x == right_x => simplify_infix(
-        //     &mul!(
-        //         simplify_infix(&left_a, &InfixOperator::Plus, &right_a, limit.saturating_sub(1)),
-        //         *left_x.clone()
-        //     ),
-        //     &InfixOperator::Plus,
-        //     &simplify_infix(&left_b, &InfixOperator::Plus, &right_b, limit.saturating_sub(1)),
-        //     limit.saturating_sub(1),
-        // ),
+        //             InfixOperator::Plus,
+        //             Expression::Infix(InfixExpression {
+        //                 left:
+        //                     Expression::Infix(InfixExpression {
+        //                         left: ref right_a,
+        //                         operator: InfixOperator::Star,
+        //                         right: ref right_x,
+        //                     }),
+        //                 operator: InfixOperator::Plus,
+        //                 right: ref right_b,
+        //             }),
+        //         ) if left_x == right_x => simplify_infix(
+        //             &simplify_infix(
+        //                 &simplify_infix(
+        //                     &left_a,
+        //                     InfixOperator::Plus,
+        //                     &right_a,
+        //                     limit.saturating_sub(2),
+        //                 ),
+        //                 InfixOperator::Star,
+        //                 &left_x,
+        //                 limit.saturating_sub(1),
+        //             ),
+        //             InfixOperator::Plus,
+        //             &simplify_infix(
+        //                 &left_b,
+        //                 InfixOperator::Plus,
+        //                 &right_b,
+        //                 limit.saturating_sub(1),
+        //             ),
+        //             limit.saturating_sub(1),
+        //         ),
 
         // (a1 * x) + (a2 * x) = (a1 + a2) * x
         (
@@ -486,11 +498,11 @@ fn simplify_infix(l: &Expression, op: &InfixOperator, r: &Expression, limit: u64
         ) if left_x == right_x => simplify_infix(
             &simplify_infix(
                 left_a,
-                &InfixOperator::Plus,
+                InfixOperator::Plus,
                 right_a,
                 limit.saturating_sub(2),
             ),
-            &InfixOperator::Star,
+            InfixOperator::Star,
             left_x,
             limit.saturating_sub(2),
         ),
@@ -510,10 +522,10 @@ fn simplify_infix(l: &Expression, op: &InfixOperator, r: &Expression, limit: u64
             }),
         ) if left_x == right_x => simplify_infix(
             &mul!(Expression::Number(ONE + ONE), left_x.clone()),
-            &InfixOperator::Plus,
+            InfixOperator::Plus,
             &simplify_infix(
                 left_b,
-                &InfixOperator::Plus,
+                InfixOperator::Plus,
                 right_b,
                 limit.saturating_sub(2),
             ),
@@ -526,131 +538,131 @@ fn simplify_infix(l: &Expression, op: &InfixOperator, r: &Expression, limit: u64
 
         // Addition Associative, right
         (
-            a,
+            ref a,
             InfixOperator::Plus,
-            right @ Expression::Infix(InfixExpression {
+            ref right @ Expression::Infix(InfixExpression {
                 left: ref b,
                 operator: InfixOperator::Plus,
                 right: ref c,
             }),
         ) => {
             let original = add!(a.clone(), right.clone());
-            let new_ab = simplify_infix(a, &InfixOperator::Plus, b, limit.saturating_sub(2));
-            let new = simplify_infix(&new_ab, &InfixOperator::Plus, c, limit.saturating_sub(2));
+            let new_ab = simplify_infix(a, InfixOperator::Plus, b, limit.saturating_sub(2));
+            let new = simplify_infix(&new_ab, InfixOperator::Plus, c, limit.saturating_sub(2));
             min_by_key(original, new, size)
         }
 
         // Addition Associative, left
         (
-            left @ Expression::Infix(InfixExpression {
+            ref left @ Expression::Infix(InfixExpression {
                 left: ref a,
                 operator: InfixOperator::Plus,
                 right: ref b,
             }),
             InfixOperator::Plus,
-            c,
+            ref c,
         ) => {
             let original = mul!(left.clone(), c.clone());
-            let bc = simplify_infix(b, &InfixOperator::Plus, c, limit.saturating_sub(2));
-            let new = simplify_infix(a, &InfixOperator::Plus, &bc, limit.saturating_sub(2));
+            let bc = simplify_infix(b, InfixOperator::Plus, c, limit.saturating_sub(2));
+            let new = simplify_infix(a, InfixOperator::Plus, &bc, limit.saturating_sub(2));
             min_by_key(original, new, size)
         }
 
         // Multiplication Associative, right
         (
-            a,
+            ref a,
             InfixOperator::Star,
-            right @ Expression::Infix(InfixExpression {
+            ref right @ Expression::Infix(InfixExpression {
                 left: ref b,
                 operator: InfixOperator::Star,
                 right: ref c,
             }),
         ) => {
             let original = mul!(a.clone(), right.clone());
-            let ab = simplify_infix(a, &InfixOperator::Star, b, limit.saturating_sub(2));
-            let new = simplify_infix(&ab, &InfixOperator::Star, c, limit.saturating_sub(2));
+            let ab = simplify_infix(a, InfixOperator::Star, b, limit.saturating_sub(2));
+            let new = simplify_infix(&ab, InfixOperator::Star, c, limit.saturating_sub(2));
             min_by_key(original, new, size)
         }
 
         // Multiplication Associative, left
         (
-            left @ Expression::Infix(InfixExpression {
+            ref left @ Expression::Infix(InfixExpression {
                 left: ref a,
                 operator: InfixOperator::Star,
                 right: ref b,
             }),
             InfixOperator::Star,
-            c,
+            ref c,
         ) => {
             let original = mul!(left.clone(), c.clone());
-            let bc = simplify_infix(b, &InfixOperator::Star, c, limit.saturating_sub(2));
-            let new = simplify_infix(a, &InfixOperator::Star, &bc, limit.saturating_sub(2));
+            let bc = simplify_infix(b, InfixOperator::Star, c, limit.saturating_sub(2));
+            let new = simplify_infix(a, InfixOperator::Star, &bc, limit.saturating_sub(2));
             min_by_key(original, new, size)
         }
 
         // Subtraction "association" (not really), right
         (
-            a,
+            ref a,
             InfixOperator::Minus,
-            right @ Expression::Infix(InfixExpression {
+            ref right @ Expression::Infix(InfixExpression {
                 left: ref b,
                 operator: InfixOperator::Minus,
                 right: ref c,
             }),
         ) => {
             let original = sub!(a.clone(), right.clone());
-            let new_left = simplify_infix(a, &InfixOperator::Plus, c, limit.saturating_sub(2));
-            let new = simplify_infix(&new_left, &InfixOperator::Minus, b, limit.saturating_sub(2));
+            let new_left = simplify_infix(a, InfixOperator::Plus, c, limit.saturating_sub(2));
+            let new = simplify_infix(&new_left, InfixOperator::Minus, b, limit.saturating_sub(2));
             min_by_key(original, new, size)
         }
 
         // Division "association" (not really), right
         (
-            a,
+            ref a,
             InfixOperator::Slash,
-            right @ Expression::Infix(InfixExpression {
+            ref right @ Expression::Infix(InfixExpression {
                 left: ref b,
                 operator: InfixOperator::Slash,
                 right: ref c,
             }),
         ) => {
             let original = div!(a.clone(), right.clone());
-            let new_left = simplify_infix(a, &InfixOperator::Star, c, limit.saturating_sub(2));
-            let new = simplify_infix(&new_left, &InfixOperator::Slash, b, limit.saturating_sub(2));
+            let new_left = simplify_infix(a, InfixOperator::Star, c, limit.saturating_sub(2));
+            let new = simplify_infix(&new_left, InfixOperator::Slash, b, limit.saturating_sub(2));
             min_by_key(original, new, size)
         }
 
         // Right distribution
         (
-            a,
+            ref a,
             InfixOperator::Star,
-            right @ Expression::Infix(InfixExpression {
+            ref right @ Expression::Infix(InfixExpression {
                 left: ref b,
                 operator: InfixOperator::Plus,
                 right: ref c,
             }),
         ) => {
             let original = mul!(a.clone(), right.clone());
-            let ab = simplify_infix(a, &InfixOperator::Star, b, limit.saturating_sub(2));
-            let ac = simplify_infix(a, &InfixOperator::Star, c, limit.saturating_sub(2));
-            let new = simplify_infix(&ab, &InfixOperator::Plus, &ac, limit.saturating_sub(2));
+            let ab = simplify_infix(a, InfixOperator::Star, b, limit.saturating_sub(2));
+            let ac = simplify_infix(a, InfixOperator::Star, c, limit.saturating_sub(2));
+            let new = simplify_infix(&ab, InfixOperator::Plus, &ac, limit.saturating_sub(2));
             min_by_key(original, new, size)
         }
 
         // Left distribution
         (
-            left @ Expression::Infix(InfixExpression {
+            ref left @ Expression::Infix(InfixExpression {
                 left: ref a,
                 operator: InfixOperator::Plus,
                 right: ref b,
             }),
             InfixOperator::Star,
-            c,
+            ref c,
         ) => {
             let original = mul!(left.clone(), c.clone());
-            let ac = simplify_infix(a, &InfixOperator::Star, c, limit.saturating_sub(2));
-            let bc = simplify_infix(b, &InfixOperator::Star, c, limit.saturating_sub(2));
-            let new = simplify_infix(&ac, &InfixOperator::Plus, &bc, limit.saturating_sub(2));
+            let ac = simplify_infix(a, InfixOperator::Star, c, limit.saturating_sub(2));
+            let bc = simplify_infix(b, InfixOperator::Star, c, limit.saturating_sub(2));
+            let new = simplify_infix(&ac, InfixOperator::Plus, &bc, limit.saturating_sub(2));
             min_by_key(original, new, size)
         }
 
@@ -666,29 +678,29 @@ fn simplify_infix(l: &Expression, op: &InfixOperator, r: &Expression, limit: u64
                 right: ref multiplicand,
             }),
             InfixOperator::Slash,
-            denominator,
+            ref denominator,
         ) if **multiplicand == *denominator => *multiplier.clone(),
 
         // Mul inside Div on left
         (
-            numerator @ &Expression::Infix(InfixExpression {
+            ref numerator @ Expression::Infix(InfixExpression {
                 left: ref multiplier,
                 operator: InfixOperator::Star,
                 right: ref multiplicand,
             }),
             InfixOperator::Slash,
-            denominator,
+            ref denominator,
         ) => {
             let original = div!(numerator.clone(), denominator.clone());
             let new_multiplicand = simplify_infix(
                 multiplicand,
-                &InfixOperator::Slash,
+                InfixOperator::Slash,
                 denominator,
                 limit.saturating_sub(2),
             );
             let new = simplify_infix(
                 multiplier,
-                &InfixOperator::Star,
+                InfixOperator::Star,
                 &new_multiplicand,
                 limit.saturating_sub(2),
             );
@@ -697,9 +709,9 @@ fn simplify_infix(l: &Expression, op: &InfixOperator, r: &Expression, limit: u64
 
         // Mul inside Div on right
         (
-            numerator,
+            ref numerator,
             InfixOperator::Slash,
-            denominator @ &Expression::Infix(InfixExpression {
+            ref denominator @ Expression::Infix(InfixExpression {
                 left: ref multiplier,
                 operator: InfixOperator::Star,
                 right: ref multiplicand,
@@ -708,13 +720,13 @@ fn simplify_infix(l: &Expression, op: &InfixOperator, r: &Expression, limit: u64
             let original = div!(numerator.clone(), denominator.clone());
             let new_multiplier = simplify_infix(
                 numerator,
-                &InfixOperator::Slash,
+                InfixOperator::Slash,
                 multiplier,
                 limit.saturating_sub(2),
             );
             let new = simplify_infix(
                 &new_multiplier,
-                &InfixOperator::Star,
+                InfixOperator::Star,
                 multiplicand,
                 limit.saturating_sub(2),
             );
@@ -729,12 +741,12 @@ fn simplify_infix(l: &Expression, op: &InfixOperator, r: &Expression, limit: u64
                 right: ref denominator,
             }),
             InfixOperator::Star,
-            multiplicand,
+            ref multiplicand,
         ) if **denominator == *multiplicand => *numerator.clone(),
 
         // Div inside Mul on right, denominator = multiplicand
         (
-            multiplicand,
+            ref multiplicand,
             InfixOperator::Star,
             Expression::Infix(InfixExpression {
                 left: ref numerator,
@@ -745,18 +757,18 @@ fn simplify_infix(l: &Expression, op: &InfixOperator, r: &Expression, limit: u64
 
         // Catch-all
         (left, operator, right) => Expression::Infix(InfixExpression {
-            left: left.clone().into(),
-            operator: *operator,
-            right: right.clone().into(),
+            left: left.into(),
+            operator,
+            right: right.into(),
         }),
     }
 }
 
-fn simplify_prefix(op: &PrefixOperator, expr: &Expression, limit: u64) -> Expression {
+fn simplify_prefix(op: PrefixOperator, expr: &Expression, limit: u64) -> Expression {
     if limit == 0 {
         // bail
         return Expression::Prefix(PrefixExpression {
-            operator: *op,
+            operator: op,
             expression: expr.clone().into(),
         });
     }
@@ -768,7 +780,7 @@ fn simplify_prefix(op: &PrefixOperator, expr: &Expression, limit: u64) -> Expres
         (PrefixOperator::Minus, Expression::Number(x)) => Expression::Number(-x),
         (PrefixOperator::Minus, Expression::PiConstant) => Expression::Number(-PI),
         (operator, expression) => Expression::Prefix(PrefixExpression {
-            operator: *operator,
+            operator,
             expression: expression.into(),
         }),
     }

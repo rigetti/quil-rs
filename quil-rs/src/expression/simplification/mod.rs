@@ -25,14 +25,7 @@ mod tests {
                     $expected
                 );
                 let computed = run(&parsed_input.unwrap());
-                assert_eq!(
-                    parsed_expected.unwrap(),
-                    computed,
-                    "Simplifying `{}` yielded `{:?}` instead of the expected `{}`",
-                    $input,
-                    computed,
-                    $expected
-                );
+                assert_eq!(parsed_expected.unwrap(), computed);
             }
         };
     }
