@@ -1,10 +1,11 @@
-use std::{fmt, str::FromStr};
+use std::str::FromStr;
 
 use nom_locate::LocatedSpan;
 
 use crate::{
     parser::{common::parse_memory_reference, lex, ParseError},
     program::{disallow_leftover, SyntaxError},
+    quil::Quil,
 };
 
 use super::ArithmeticOperand;
@@ -17,8 +18,12 @@ pub enum ScalarType {
     Real,
 }
 
-impl fmt::Display for ScalarType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl Quil for ScalarType {
+    fn write(
+        &self,
+        f: &mut impl std::fmt::Write,
+        _fall_back_to_debug: bool,
+    ) -> crate::quil::ToQuilResult<()> {
         use ScalarType::*;
         write!(
             f,
@@ -30,6 +35,7 @@ impl fmt::Display for ScalarType {
                 Real => "REAL",
             }
         )
+        .map_err(Into::into)
     }
 }
 
@@ -45,9 +51,14 @@ impl Vector {
     }
 }
 
-impl fmt::Display for Vector {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}[{}]", self.data_type, self.length)
+impl Quil for Vector {
+    fn write(
+        &self,
+        f: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
+    ) -> crate::quil::ToQuilResult<()> {
+        self.data_type.write(f, fall_back_to_debug)?;
+        write!(f, "[{}]", self.length).map_err(Into::into)
     }
 }
 
@@ -75,9 +86,14 @@ impl Offset {
     }
 }
 
-impl fmt::Display for Offset {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} {}", self.offset, self.data_type)
+impl Quil for Offset {
+    fn write(
+        &self,
+        f: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
+    ) -> crate::quil::ToQuilResult<()> {
+        write!(f, "{} ", self.offset)?;
+        self.data_type.write(f, fall_back_to_debug)
     }
 }
 
@@ -98,15 +114,21 @@ impl Declaration {
     }
 }
 
-impl fmt::Display for Declaration {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "DECLARE {} {}", self.name, self.size)?;
+impl Quil for Declaration {
+    fn write(
+        &self,
+        f: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
+    ) -> crate::quil::ToQuilResult<()> {
+        write!(f, "DECLARE {} ", self.name)?;
+        self.size.write(f, fall_back_to_debug)?;
         if let Some(shared) = &self.sharing {
             write!(f, " SHARING {}", shared.name)?;
             if !shared.offsets.is_empty() {
                 write!(f, " OFFSET")?;
                 for offset in shared.offsets.iter() {
-                    write!(f, " {offset}")?
+                    write!(f, " ")?;
+                    offset.write(f, fall_back_to_debug)?;
                 }
             }
         }
@@ -117,6 +139,7 @@ impl fmt::Display for Declaration {
 #[cfg(test)]
 mod test_declaration {
     use super::{Declaration, Offset, ScalarType, Sharing, Vector};
+    use crate::quil::Quil;
     use insta::assert_snapshot;
     use rstest::rstest;
 
@@ -155,12 +178,12 @@ mod test_declaration {
         insta::with_settings!({
             snapshot_suffix => description,
         }, {
-            assert_snapshot!(declaration.to_string())
+            assert_snapshot!(declaration.to_quil_or_debug())
         })
     }
 }
 
-#[derive(Clone, Debug, Hash, PartialEq)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct MemoryReference {
     pub name: String,
     pub index: u64,
@@ -172,10 +195,18 @@ impl MemoryReference {
     }
 }
 
-impl Eq for MemoryReference {}
+impl Quil for MemoryReference {
+    fn write(
+        &self,
+        f: &mut impl std::fmt::Write,
+        _fall_back_to_debug: bool,
+    ) -> crate::quil::ToQuilResult<()> {
+        write!(f, "{}[{}]", self.name, self.index).map_err(Into::into)
+    }
+}
 
-impl fmt::Display for MemoryReference {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl std::fmt::Display for MemoryReference {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{}[{}]", self.name, self.index)
     }
 }
@@ -209,13 +240,17 @@ impl Load {
     }
 }
 
-impl fmt::Display for Load {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "LOAD {} {} {}",
-            self.destination, self.source, self.offset
-        )
+impl Quil for Load {
+    fn write(
+        &self,
+        f: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
+    ) -> crate::quil::ToQuilResult<()> {
+        write!(f, "LOAD ")?;
+        self.destination.write(f, fall_back_to_debug)?;
+        write!(f, " {} ", self.source)?;
+        self.offset.write(f, fall_back_to_debug)?;
+        Ok(())
     }
 }
 
@@ -236,12 +271,16 @@ impl Store {
     }
 }
 
-impl fmt::Display for Store {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "STORE {} {} {}",
-            self.destination, self.offset, self.source
-        )
+impl Quil for Store {
+    fn write(
+        &self,
+        f: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
+    ) -> crate::quil::ToQuilResult<()> {
+        write!(f, "STORE {} ", self.destination)?;
+        self.offset.write(f, fall_back_to_debug)?;
+        write!(f, " ")?;
+        self.source.write(f, fall_back_to_debug)?;
+        Ok(())
     }
 }

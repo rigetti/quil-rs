@@ -1,3 +1,47 @@
+## 0.21.0
+
+### Breaking Changes
+
+- Support for Qubit and Target Placeholdres have been added. Converting programs and instructions to a string has been removed and replaced with a fallible to_quil() method. The `Label` struct has been repurposed to support `Label` instructions specifically. The `Target` enum has been added to express `@targets` as part of an instruction. (#266)
+- Decouple expression hashing and equality (#277)
+
+### Features
+
+- MemoryReference implements Ord (#275)
+
+## 0.21.0-rc.1
+
+### Breaking Changes
+
+- Support for Qubit and Target Placeholdres have been added. Converting programs and instructions to a string has been removed and replaced with a fallible to_quil() method. The `Label` struct has been repurposed to support `Label` instructions specifically. The `Target` enum has been added to express `@targets` as part of an instruction. (#266)
+- Decouple expression hashing and equality (#277)
+
+### Features
+
+- MemoryReference implements Ord (#275)
+
+## 0.21.0-rc.0
+
+### Breaking Changes
+
+- Decouple expression hashing and equality (#277)
+
+### Features
+
+- MemoryReference implements Ord (#275)
+
+## 0.20.1-rc.1
+
+### Features
+
+- MemoryReference implements Ord (#275)
+
+## 0.20.1-rc.0
+
+### Features
+
+- MemoryReference implements Ord (#275)
+
 ## 0.20.0
 
 ### Breaking Changes

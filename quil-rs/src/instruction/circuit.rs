@@ -1,6 +1,6 @@
-use std::fmt;
+use crate::quil::Quil;
 
-use super::{write_parameter_string, Instruction};
+use super::Instruction;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct CircuitDefinition {
@@ -27,19 +27,38 @@ impl CircuitDefinition {
     }
 }
 
-impl fmt::Display for CircuitDefinition {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "DEFCIRCUIT {}", self.name)?;
-        write_parameter_string(f, &self.parameters)?;
-        for qubit_variable in &self.qubit_variables {
-            write!(f, " {qubit_variable}")?;
+impl Quil for CircuitDefinition {
+    fn write(
+        &self,
+        writer: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
+    ) -> Result<(), crate::quil::ToQuilError> {
+        write!(writer, "DEFCIRCUIT {}", self.name)?;
+        if !self.parameters.is_empty() {
+            write!(writer, "(")?;
+            let mut iter = self.parameters.iter();
+            if let Some(p) = iter.next() {
+                write!(writer, "%{}", p)?;
+            }
+            for p in iter {
+                write!(writer, "%{}", p)?;
+            }
+            write!(writer, ")")?;
         }
-        writeln!(f, ":")?;
+        for qubit_variable in &self.qubit_variables {
+            write!(writer, " {}", qubit_variable)?;
+        }
+        writeln!(writer, ":")?;
         for instruction in &self.instructions {
-            for line in instruction.to_string().split('\n') {
-                writeln!(f, "\t{line}")?;
+            let lines = match fall_back_to_debug {
+                true => instruction.to_quil_or_debug(),
+                false => instruction.to_quil()?,
+            };
+            for line in lines.split('\n') {
+                writeln!(writer, "\t{line}")?;
             }
         }
+
         Ok(())
     }
 }
@@ -48,6 +67,7 @@ impl fmt::Display for CircuitDefinition {
 mod test_circuit_definition {
     use crate::expression::Expression;
     use crate::instruction::{Gate, Instruction, Qubit};
+    use crate::quil::Quil;
 
     use super::CircuitDefinition;
 
@@ -121,7 +141,7 @@ mod test_circuit_definition {
         insta::with_settings!({
             snapshot_suffix => description,
         }, {
-            assert_snapshot!(circuit_def.to_string())
+            assert_snapshot!(circuit_def.to_quil_or_debug())
         })
     }
 }

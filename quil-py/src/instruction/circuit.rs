@@ -1,7 +1,7 @@
 use quil_rs::instruction::{CircuitDefinition, Instruction};
 
 use rigetti_pyo3::{
-    impl_repr, impl_str, py_wrap_data_struct,
+    impl_repr, py_wrap_data_struct,
     pyo3::{
         pyclass::CompareOp, pymethods, types::PyString, IntoPy, Py, PyObject, PyResult, Python,
     },
@@ -9,6 +9,7 @@ use rigetti_pyo3::{
 };
 
 use super::PyInstruction;
+use crate::impl_to_quil;
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq)]
@@ -21,7 +22,7 @@ py_wrap_data_struct! {
     }
 }
 impl_repr!(PyCircuitDefinition);
-impl_str!(PyCircuitDefinition);
+impl_to_quil!(PyCircuitDefinition);
 
 #[pymethods]
 impl PyCircuitDefinition {

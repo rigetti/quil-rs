@@ -1,4 +1,4 @@
-from typing import Dict, FrozenSet, Set, final, List, Optional, Sequence
+from typing import Dict, FrozenSet, Set, final, List, Optional, Sequence, Callable
 
 import numpy as np
 from numpy.typing import NDArray
@@ -16,6 +16,8 @@ from quil.instructions import (
     Sharing,
     Vector,
     Waveform,
+    TargetPlaceholder,
+    QubitPlaceholder,
 )
 
 @final
@@ -23,7 +25,7 @@ class Program:
     @staticmethod
     def __new__(cls) -> "Program": ...
     @property
-    def instructions(self) -> List[Instruction]: ...
+    def body_instructions(self) -> List[Instruction]: ...
     @property
     def calibrations(self) -> CalibrationSet: ...
     @calibrations.setter
@@ -95,11 +97,54 @@ class Program:
         """
     def to_instructions(self) -> Sequence[Instruction]: ...
     def to_unitary(self) -> NDArray[np.complex_]: ...
+    def copy(self) -> "Program":
+        """
+        Creates a clone of this ``Program``.
+        """
+        ...
     def clone_without_body_instructions(self) -> "Program":
         """
         Creates a clone of this ``Program`` with an empty body instructions list.
         """
     def __add__(self, rhs: Program) -> Program: ...
+    def to_quil(self) -> str:
+        """
+        Attempt to convert the instruction to a valid Quil string. Raises
+        an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """
+        Convert the instruction to a Quil string. If any part of the instruction can't
+        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """
+    def resolve_placeholders(self) -> None:
+        """
+        Resolve ``TargetPlaceholder``s and ``QubitPlaceholder``s within the program using default resolvers.
+
+        The default resolver will be used to generate a unique value for that placeholder within the scope of
+        the program using an auto-incrementing value (for qubit) or suffix (for target)
+        while ensuring that unique value is not already in use within the program.
+        """
+        ...
+    def resolve_placeholders_with_custom_resolvers(
+        self,
+        *,
+        target_resolver: Optional[Callable[[TargetPlaceholder], Optional[str]]] = None,
+        qubit_resolver: Optional[Callable[[QubitPlaceholder], Optional[int]]] = None,
+    ):
+        """
+        Resolve ``TargetPlaceholder``s and ``QubitPlaceholder``s within the program such that the resolved values
+        will remain unique to that placeholder within the scope of the program.
+
+        If you provide ``target_resolver`` and/or ``qubit_resolver``, those will be used to resolve those values respectively.
+        If your resolver returns `None` for a particular placeholder, it will not be replaced but will be left as a placeholder.
+
+        If you do not provide a resolver for a placeholder, a default resolver will be used which will generate a unique value
+        for that placeholder within the scope of the program using an auto-incrementing value (for qubit) or suffix (for target)
+        while ensuring that unique value is not already in use within the program.
+        """
+        ...
 
 @final
 class CalibrationSet:

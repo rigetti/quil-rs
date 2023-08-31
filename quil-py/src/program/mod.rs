@@ -1,8 +1,11 @@
-pub use self::{calibration::PyCalibrationSet, frame::PyFrameSet, memory::PyMemoryRegion};
-use crate::instruction::{PyDeclaration, PyGateDefinition, PyInstruction, PyQubit, PyWaveform};
+use std::{
+    collections::{BTreeMap, HashMap, HashSet},
+    str::FromStr,
+};
+
 use numpy::{PyArray2, ToPyArray};
 use quil_rs::{
-    instruction::{Instruction, Waveform},
+    instruction::{Instruction, QubitPlaceholder, TargetPlaceholder, Waveform},
     program::{CalibrationSet, FrameSet, MemoryRegion},
     Program,
 };
@@ -14,15 +17,18 @@ use rigetti_pyo3::{
         exceptions::PyValueError,
         prelude::*,
         pyclass::CompareOp,
-        types::{PyBytes, PyList},
+        types::{PyBytes, PyFunction, PyList},
         IntoPy,
     },
     wrap_error, PyTryFrom, PyWrapper, PyWrapperMut, ToPython, ToPythonError,
 };
-use std::{
-    collections::{BTreeMap, HashMap, HashSet},
-    str::FromStr,
+
+use crate::{
+    impl_to_quil,
+    instruction::{PyDeclaration, PyGateDefinition, PyInstruction, PyQubit, PyWaveform},
 };
+
+pub use self::{calibration::PyCalibrationSet, frame::PyFrameSet, memory::PyMemoryRegion};
 
 mod calibration;
 mod frame;
@@ -41,6 +47,7 @@ impl_as_mut_for_wrapper!(PyProgram);
 impl_repr!(PyProgram);
 impl_from_str!(PyProgram, ProgramError);
 impl_parse!(PyProgram);
+impl_to_quil!(PyProgram);
 
 impl Default for PyProgram {
     fn default() -> Self {
@@ -59,8 +66,12 @@ impl PyProgram {
         Self(self.as_inner().clone_without_body_instructions())
     }
 
+    pub fn copy(&self) -> Self {
+        Self(self.as_inner().clone())
+    }
+
     #[getter]
-    pub fn instructions<'a>(&self, py: Python<'a>) -> PyResult<&'a PyList> {
+    pub fn body_instructions<'a>(&self, py: Python<'a>) -> PyResult<&'a PyList> {
         Ok(PyList::new(
             py,
             self.as_inner()
@@ -218,8 +229,72 @@ impl PyProgram {
             .to_owned())
     }
 
-    pub fn __str__(&self) -> String {
-        self.as_inner().to_string()
+    pub fn resolve_placeholders(&mut self) {
+        self.as_inner_mut().resolve_placeholders();
+    }
+
+    // Because we can't bubble up an error from inside the closures, they panic when the given
+    // Python functions return an error or an unexpected type. This is unusual, but in a Python
+    // program, this function will only raise because [`pyo3`] wraps Rust panics in a
+    // `PanicException`.
+    #[args("*", target_resolver = "None", qubit_resolver = "None")]
+    pub fn resolve_placeholders_with_custom_resolvers(
+        &mut self,
+        target_resolver: Option<Py<PyFunction>>,
+        qubit_resolver: Option<Py<PyFunction>>,
+    ) {
+        #[allow(clippy::type_complexity)]
+        let rs_qubit_resolver: Box<dyn Fn(&QubitPlaceholder) -> Option<u64>> =
+            if let Some(resolver) = qubit_resolver {
+                Box::new(move |placeholder: &QubitPlaceholder| -> Option<u64> {
+                    Python::with_gil(|py| {
+                        let resolved_qubit = resolver
+                            .call1(
+                                py,
+                                (placeholder
+                                    .to_python(py)
+                                    .expect("QubitPlaceholder.to_python() should be infallible"),),
+                            )
+                            .unwrap_or_else(|err| {
+                                panic!("qubit_resolver returned an error: {err}")
+                            });
+
+                        resolved_qubit.extract(py).unwrap_or_else(|err| {
+                            panic!("qubit_resolver must return None or int: {err}")
+                        })
+                    })
+                })
+            } else {
+                self.as_inner().default_qubit_resolver()
+            };
+
+        #[allow(clippy::type_complexity)]
+        let rs_target_resolver: Box<dyn Fn(&TargetPlaceholder) -> Option<String>> =
+            if let Some(resolver) = target_resolver {
+                Box::new(move |placeholder: &TargetPlaceholder| -> Option<String> {
+                    Python::with_gil(|py| {
+                        let resolved_label = resolver
+                            .call1(
+                                py,
+                                (placeholder
+                                    .to_python(py)
+                                    .expect("TargetPlaceholder.to_python() should be infallibe"),),
+                            )
+                            .unwrap_or_else(|err| {
+                                panic!("label_resolver returned an error: {err}")
+                            });
+
+                        resolved_label.extract(py).unwrap_or_else(|err| {
+                            panic!("label_resolver must return None or str: {err}")
+                        })
+                    })
+                })
+            } else {
+                self.as_inner().default_target_resolver()
+            };
+
+        self.as_inner_mut()
+            .resolve_placeholders_with_custom_resolvers(rs_target_resolver, rs_qubit_resolver);
     }
 
     pub fn __add__(&self, py: Python<'_>, rhs: Self) -> PyResult<Self> {
@@ -234,12 +309,12 @@ impl PyProgram {
         }
     }
 
-    // This is infallible now, but will raise an error once placeholders are
-    // supported. This is because placeholders can't be converted to valid Quil,
-    // nor be reliably serialized by something like serde using the current
-    // quil-rs data model.
-    pub fn __getstate__<'a>(&self, py: Python<'a>) -> &'a PyBytes {
-        PyBytes::new(py, self.as_inner().to_string().as_bytes())
+    // This will raise an error if the program contains any unresolved
+    // placeholders. This is because they can't be converted to valid quil,
+    // nor can they be serialized and deserialized in a consistent
+    // way.
+    pub fn __getstate__<'a>(&self, py: Python<'a>) -> PyResult<&'a PyBytes> {
+        Ok(PyBytes::new(py, self.to_quil()?.as_bytes()))
     }
 
     pub fn __setstate__(&mut self, py: Python<'_>, state: &PyBytes) -> PyResult<()> {

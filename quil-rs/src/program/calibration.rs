@@ -17,6 +17,7 @@ use std::collections::HashMap;
 use itertools::FoldWhile::{Continue, Done};
 use itertools::Itertools;
 
+use crate::quil::Quil;
 use crate::{
     expression::Expression,
     instruction::{
@@ -49,7 +50,7 @@ impl<'a> MatchedCalibration<'a> {
                 .iter()
                 .filter(|q| match q {
                     Qubit::Fixed(_) => true,
-                    Qubit::Variable(_) => false,
+                    Qubit::Placeholder(_) | Qubit::Variable(_) => false,
                 })
                 .count(),
         }
@@ -154,7 +155,7 @@ impl CalibrationSet {
                                                     *qubit = expansion.clone();
                                                 }
                                             }
-                                            Qubit::Fixed(_) => {}
+                                            Qubit::Fixed(_) | Qubit::Placeholder(_) => {}
                                         }
                                     }
                                 }
@@ -185,7 +186,7 @@ impl CalibrationSet {
                                         && pragma.data.as_ref() == Some(&calibration.parameter)
                                     {
                                         if let Some(target) = &measurement.target {
-                                            pragma.data = Some(target.to_string())
+                                            pragma.data = Some(target.to_quil_or_debug())
                                         }
                                     }
                                 }
@@ -303,6 +304,8 @@ impl CalibrationSet {
                             &calibration.qubits[calibration_index],
                             &gate.qubits[calibration_index],
                         ) {
+                            // Placeholders never match
+                            (Qubit::Placeholder(_), _) | (_, Qubit::Placeholder(_)) => false,
                             // If they're both fixed, test if they're fixed to the same qubit
                             (
                                 Qubit::Fixed(calibration_fixed_qubit),
@@ -423,6 +426,7 @@ mod tests {
     use std::str::FromStr;
 
     use crate::program::Program;
+    use crate::quil::Quil;
 
     use insta::assert_snapshot;
     use rstest::rstest;
@@ -539,7 +543,7 @@ mod tests {
         insta::with_settings!({
             snapshot_suffix => description,
         }, {
-            assert_snapshot!(calibrated_program.to_string())
+            assert_snapshot!(calibrated_program.to_quil_or_debug())
         })
     }
 

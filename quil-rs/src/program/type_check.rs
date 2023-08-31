@@ -10,6 +10,7 @@ use crate::{
         SetScale, ShiftFrequency, ShiftPhase, Store, UnaryLogic, UnaryOperator,
     },
     program::MemoryRegion,
+    quil::Quil,
     Program,
 };
 use std::collections::BTreeMap;
@@ -19,14 +20,14 @@ use thiserror::Error;
 /// Different types of errors that can occur during type checking.
 #[derive(Debug, Error)]
 pub enum TypeError {
-    #[error("In instruction {instruction}: undefined memory reference {reference}.")]
+    #[error("In instruction {instruction}: undefined memory reference {reference}.", instruction=.instruction.to_quil_or_debug())]
     UndefinedMemoryReference {
         instruction: Instruction,
         reference: String,
     },
 
     #[error(
-        "In instruction {instruction}: data type mismatch; {dst} is of type {dst_type}, while {src} is of type {src_type}."
+        "In instruction {instruction}: data type mismatch; {dst} is of type {dst_type}, while {src} is of type {src_type}.", instruction=.instruction.to_quil_or_debug()
     )]
     DataTypeMismatch {
         instruction: Instruction,
@@ -37,7 +38,7 @@ pub enum TypeError {
     },
 
     #[error(
-        "In instruction {instruction}: required a real value, but {value} has type {data_type}."
+        "In instruction {instruction}: required a real value, but {value} has type {data_type}.", instruction=.instruction.to_quil_or_debug()
     )]
     RealValueRequired {
         instruction: Instruction,
@@ -46,7 +47,7 @@ pub enum TypeError {
     },
 
     #[error(
-        "In instruction {instruction}: {operator} can only work with {correct_type} data, but operand {operand} has type {data_type}."
+        "In instruction {instruction}: {operator} can only work with {correct_type} data, but operand {operand} has type {data_type}.", instruction=.instruction.to_quil_or_debug()
     )]
     OperatorOperandMismatch {
         instruction: Instruction,

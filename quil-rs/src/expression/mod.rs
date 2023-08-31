@@ -13,10 +13,13 @@
 // limitations under the License.
 
 use crate::{
-    hash::{hash_f64, hash_to_u64},
+    hash::hash_f64,
+    imag,
+    instruction::MemoryReference,
     parser::{lex, parse_expression, ParseError},
     program::{disallow_leftover, ParseProgramError},
-    {imag, instruction::MemoryReference, real},
+    quil::Quil,
+    real,
 };
 use lexical::{format, to_string_with_options, WriteFloatOptions};
 use nom_locate::LocatedSpan;
@@ -53,13 +56,13 @@ pub enum Expression {
     Address(MemoryReference),
     FunctionCall(FunctionCallExpression),
     Infix(InfixExpression),
-    Number(num_complex::Complex64),
+    Number(Complex64),
     PiConstant,
     Prefix(PrefixExpression),
     Variable(String),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct FunctionCallExpression {
     pub function: ExpressionFunction,
     pub expression: Box<Expression>,
@@ -74,7 +77,7 @@ impl FunctionCallExpression {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct InfixExpression {
     pub left: Box<Expression>,
     pub operator: InfixOperator,
@@ -91,7 +94,7 @@ impl InfixExpression {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct PrefixExpression {
     pub operator: PrefixOperator,
     pub expression: Box<Expression>,
@@ -106,19 +109,34 @@ impl PrefixExpression {
     }
 }
 
+impl PartialEq for Expression {
+    // Implemented by hand since we can't derive with f64s hidden inside.
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Address(left), Self::Address(right)) => left == right,
+            (Self::Infix(left), Self::Infix(right)) => left == right,
+            (Self::Number(left), Self::Number(right)) => left == right,
+            (Self::Prefix(left), Self::Prefix(right)) => left == right,
+            (Self::FunctionCall(left), Self::FunctionCall(right)) => left == right,
+            (Self::Variable(left), Self::Variable(right)) => left == right,
+            (Self::PiConstant, Self::PiConstant) => true,
+            _ => false,
+        }
+    }
+}
+
+// Implemented by hand since we can't derive with f64s hidden inside.
+impl Eq for Expression {}
+
 impl Hash for Expression {
     // Implemented by hand since we can't derive with f64s hidden inside.
-    // Also to understand when things should be the same, like with commutativity (`1 + 2 == 2 + 1`).
-    // See https://github.com/rigetti/quil-rust/issues/27
     fn hash<H: Hasher>(&self, state: &mut H) {
-        use std::cmp::{max_by_key, min_by_key};
-        use Expression::*;
         match self {
-            Address(m) => {
+            Self::Address(m) => {
                 "Address".hash(state);
                 m.hash(state);
             }
-            FunctionCall(FunctionCallExpression {
+            Self::FunctionCall(FunctionCallExpression {
                 function,
                 expression,
             }) => {
@@ -126,34 +144,19 @@ impl Hash for Expression {
                 function.hash(state);
                 expression.hash(state);
             }
-            Infix(InfixExpression {
+            Self::Infix(InfixExpression {
                 left,
                 operator,
                 right,
             }) => {
                 "Infix".hash(state);
                 operator.hash(state);
-                match operator {
-                    InfixOperator::Plus | InfixOperator::Star => {
-                        // commutative, so put left & right in decreasing order by hash value
-                        let (a, b) = (
-                            min_by_key(&left, &right, hash_to_u64),
-                            max_by_key(&left, &right, hash_to_u64),
-                        );
-                        a.hash(state);
-                        b.hash(state);
-                    }
-                    _ => {
-                        left.hash(state);
-                        right.hash(state);
-                    }
-                }
+                left.hash(state);
+                right.hash(state);
             }
-            Number(n) => {
+            Self::Number(n) => {
                 "Number".hash(state);
                 // Skip zero values (akin to `format_complex`).
-                // Also, since f64 isn't hashable, use the u64 binary representation.
-                // The docs claim this is rather portable: https://doc.rust-lang.org/std/primitive.f64.html#method.to_bits
                 if n.re.abs() > 0f64 {
                     hash_f64(n.re, state)
                 }
@@ -161,30 +164,21 @@ impl Hash for Expression {
                     hash_f64(n.im, state)
                 }
             }
-            PiConstant => {
+            Self::PiConstant => {
                 "PiConstant".hash(state);
             }
-            Prefix(p) => {
+            Self::Prefix(p) => {
                 "Prefix".hash(state);
                 p.operator.hash(state);
                 p.expression.hash(state);
             }
-            Variable(v) => {
+            Self::Variable(v) => {
                 "Variable".hash(state);
                 v.hash(state);
             }
         }
     }
 }
-
-impl PartialEq for Expression {
-    // Partial equality by hash value
-    fn eq(&self, other: &Self) -> bool {
-        hash_to_u64(self) == hash_to_u64(other)
-    }
-}
-
-impl Eq for Expression {}
 
 macro_rules! impl_expr_op {
     ($name:ident, $name_assign:ident, $function:ident, $function_assign:ident, $operator:ident) => {
@@ -215,11 +209,7 @@ impl_expr_op!(Mul, MulAssign, mul, mul_assign, Star);
 impl_expr_op!(Div, DivAssign, div, div_assign, Slash);
 
 /// Compute the result of an infix expression where both operands are complex.
-fn calculate_infix(
-    left: &num_complex::Complex64,
-    operator: &InfixOperator,
-    right: &num_complex::Complex64,
-) -> num_complex::Complex64 {
+fn calculate_infix(left: &Complex64, operator: &InfixOperator, right: &Complex64) -> Complex64 {
     use InfixOperator::*;
     match operator {
         Caret => left.powc(*right),
@@ -231,10 +221,7 @@ fn calculate_infix(
 }
 
 /// Compute the result of a Quil-defined expression function where the operand is complex.
-fn calculate_function(
-    function: &ExpressionFunction,
-    argument: &num_complex::Complex64,
-) -> num_complex::Complex64 {
+fn calculate_function(function: &ExpressionFunction, argument: &Complex64) -> Complex64 {
     use ExpressionFunction::*;
     match function {
         Sine => argument.sin(),
@@ -319,9 +306,9 @@ impl Expression {
     /// ```
     pub fn evaluate(
         &self,
-        variables: &HashMap<String, num_complex::Complex64>,
+        variables: &HashMap<String, Complex64>,
         memory_references: &HashMap<&str, Vec<f64>>,
-    ) -> Result<num_complex::Complex64, EvaluationError> {
+    ) -> Result<Complex64, EvaluationError> {
         use Expression::*;
 
         match self {
@@ -497,41 +484,54 @@ fn format_complex(value: &Complex64) -> String {
     }
 }
 
-impl fmt::Display for Expression {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl Quil for Expression {
+    fn write(
+        &self,
+        f: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
+    ) -> Result<(), crate::quil::ToQuilError> {
         use Expression::*;
         match self {
-            Address(memory_reference) => write!(f, "{memory_reference}"),
+            Address(memory_reference) => memory_reference.write(f, fall_back_to_debug),
             FunctionCall(FunctionCallExpression {
                 function,
                 expression,
-            }) => write!(f, "{function}({expression})"),
+            }) => {
+                write!(f, "{function}(")?;
+                expression.write(f, fall_back_to_debug)?;
+                write!(f, ")")?;
+                Ok(())
+            }
             Infix(InfixExpression {
                 left,
                 operator,
                 right,
             }) => {
-                format_inner_expression(f, left)?;
+                format_inner_expression(f, fall_back_to_debug, left)?;
                 write!(f, "{}", operator)?;
-                format_inner_expression(f, right)
+                format_inner_expression(f, fall_back_to_debug, right)
             }
-            Number(value) => write!(f, "{}", format_complex(value)),
-            PiConstant => write!(f, "pi"),
+            Number(value) => write!(f, "{}", format_complex(value)).map_err(Into::into),
+            PiConstant => write!(f, "pi").map_err(Into::into),
             Prefix(PrefixExpression {
                 operator,
                 expression,
             }) => {
                 write!(f, "{}", operator)?;
-                format_inner_expression(f, expression)
+                format_inner_expression(f, fall_back_to_debug, expression)
             }
-            Variable(identifier) => write!(f, "%{}", identifier),
+            Variable(identifier) => write!(f, "%{}", identifier).map_err(Into::into),
         }
     }
 }
 
 /// Utility function to wrap infix expressions that are part of an expression in parentheses, so
 /// that correct precedence rules are enforced.
-fn format_inner_expression(f: &mut fmt::Formatter, expression: &Expression) -> fmt::Result {
+fn format_inner_expression(
+    f: &mut impl std::fmt::Write,
+    fall_back_to_debug: bool,
+    expression: &Expression,
+) -> crate::quil::ToQuilResult<()> {
     match expression {
         Expression::Infix(InfixExpression {
             left,
@@ -539,12 +539,13 @@ fn format_inner_expression(f: &mut fmt::Formatter, expression: &Expression) -> f
             right,
         }) => {
             write!(f, "(")?;
-            format_inner_expression(f, left)?;
+            format_inner_expression(f, fall_back_to_debug, left)?;
             write!(f, "{operator}")?;
-            format_inner_expression(f, right)?;
-            write!(f, ")")
+            format_inner_expression(f, fall_back_to_debug, right)?;
+            write!(f, ")")?;
+            Ok(())
         }
-        _ => write!(f, "{expression}"),
+        _ => expression.write(f, fall_back_to_debug),
     }
 }
 
@@ -554,6 +555,7 @@ mod test {
         expression::{
             Expression, InfixExpression, InfixOperator, PrefixExpression, PrefixOperator,
         },
+        quil::Quil,
         real,
     };
 
@@ -572,7 +574,7 @@ mod test {
             })),
         });
 
-        assert_eq!(expression.to_string(), "-3*(pi/2)");
+        assert_eq!(expression.to_quil_or_debug(), "-3*(pi/2)");
     }
 }
 
@@ -655,19 +657,15 @@ impl fmt::Display for InfixOperator {
 }
 
 #[cfg(test)]
+// This lint should be re-enabled once this proptest issue is resolved
+// https://github.com/proptest-rs/proptest/issues/364
+#[allow(clippy::arc_with_non_send_sync)]
 mod tests {
-    use std::collections::{hash_map::DefaultHasher, HashSet};
-
-    use num_complex::Complex64;
-    use proptest::prelude::*;
-
-    use crate::{
-        expression::{EvaluationError, Expression, ExpressionFunction},
-        real,
-        reserved::ReservedToken,
-    };
-
     use super::*;
+    use crate::hash::hash_to_u64;
+    use crate::reserved::ReservedToken;
+    use proptest::prelude::*;
+    use std::collections::HashSet;
 
     #[test]
     fn simplify_and_evaluate() {
@@ -760,7 +758,7 @@ mod tests {
     fn parenthesized(expression: &Expression) -> String {
         use Expression::*;
         match expression {
-            Address(memory_reference) => format!("({memory_reference})"),
+            Address(memory_reference) => memory_reference.to_quil_or_debug(),
             FunctionCall(FunctionCallExpression {
                 function,
                 expression,
@@ -857,21 +855,6 @@ mod tests {
         }
 
         #[test]
-        fn eq_commutative(a in any::<f64>(), b in any::<f64>()) {
-            let first = Expression::Infix(InfixExpression {
-                left: Box::new(Expression::Number(real!(a))),
-                operator: InfixOperator::Plus,
-                right: Box::new(Expression::Number(real!(b))),
-            } );
-            let second = Expression::Infix(InfixExpression {
-                left: Box::new(Expression::Number(real!(b))),
-                operator: InfixOperator::Plus,
-                right: Box::new(Expression::Number(real!(a))),
-            });
-            prop_assert_eq!(first, second);
-        }
-
-        #[test]
         fn hash(a in any::<f64>(), b in any::<f64>()) {
             let first = Expression::Infix (InfixExpression {
                 left: Box::new(Expression::Number(real!(a))),
@@ -887,35 +870,8 @@ mod tests {
         }
 
         #[test]
-        fn hash_commutative(a in any::<f64>(), b in any::<f64>()) {
-            let first = Expression::Infix(InfixExpression {
-                left: Box::new(Expression::Number(real!(a))),
-                operator: InfixOperator::Plus,
-                right: Box::new(Expression::Number(real!(b))),
-            } );
-            let second = Expression::Infix(InfixExpression {
-                left: Box::new(Expression::Number(real!(b))),
-                operator: InfixOperator::Plus,
-                right: Box::new(Expression::Number(real!(a))),
-            } );
-            let mut set = HashSet::new();
-            set.insert(first);
-            assert!(set.contains(&second));
-        }
-
-        #[test]
         fn eq_iff_hash_eq(x in arb_expr(), y in arb_expr()) {
-            let h_x = {
-                let mut s = DefaultHasher::new();
-                x.hash(&mut s);
-                s.finish()
-            };
-            let h_y = {
-                let mut s = DefaultHasher::new();
-                y.hash(&mut s);
-                s.finish()
-            };
-            prop_assert_eq!(x == y, h_x == h_y);
+            prop_assert_eq!(x == y, hash_to_u64(&x) == hash_to_u64(&y));
         }
 
         #[test]
@@ -1030,11 +986,11 @@ mod tests {
                 simple_p.clone(),
                 simple_e.clone(),
                 "Simplified expressions should be equal:\nparenthesized {p} ({p:?}) extracted from {s} simplified to {simple_p}\nvs original {e} ({e:?}) simplified to {simple_e}",
-                p=p,
+                p=p.to_quil_or_debug(),
                 s=s,
-                e=e,
-                simple_p=simple_p,
-                simple_e=simple_e
+                e=e.to_quil_or_debug(),
+                simple_p=simple_p.to_quil_or_debug(),
+                simple_e=simple_e.to_quil_or_debug()
             );
         }
 
@@ -1050,7 +1006,7 @@ mod tests {
         ] {
             let parsed = Expression::from_str(input);
             let parsed = parsed.unwrap();
-            let restring = parsed.to_string();
+            let restring = parsed.to_quil_or_debug();
             assert_eq!(input, &restring);
         }
     }

@@ -22,6 +22,7 @@ use std::fmt::Formatter;
 
 use crate::instruction::Instruction;
 use crate::parser::{LexError, ParseError};
+use crate::quil::Quil;
 pub use leftover::LeftoverError;
 pub use result::{disallow_leftover, map_parsed, recover};
 pub use syntax::SyntaxError;
@@ -88,7 +89,11 @@ where
             Self::InvalidCalibration {
                 instruction,
                 message,
-            } => write!(f, "invalid calibration `{instruction}`: {message}"),
+            } => write!(
+                f,
+                "invalid calibration `{instruction}`: {message}",
+                instruction = instruction.to_quil_or_debug()
+            ),
             Self::Syntax(err) => fmt::Display::fmt(err, f),
         }
     }
