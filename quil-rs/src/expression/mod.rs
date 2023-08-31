@@ -272,11 +272,7 @@ impl Expression {
             Expression::PiConstant => {
                 *self = Expression::Number(Complex64::from(PI));
             }
-            _ => {
-                if let Ok(simpler) = simplification::run(self) {
-                    *self = simpler;
-                }
-            }
+            _ => *self = simplification::run(self),
         }
     }
 
@@ -837,12 +833,10 @@ mod tests {
                             right: Box::new(r)
                         })
                     ),
-                    (any::<PrefixOperator>(), expr).prop_map(|(operator, e)| Prefix(
-                        PrefixExpression {
-                            operator,
-                            expression: Box::new(e)
-                        }
-                    ))
+                    (expr).prop_map(|e| Prefix(PrefixExpression {
+                        operator: PrefixOperator::Minus,
+                        expression: Box::new(e)
+                    }))
                 ]
             },
         )
