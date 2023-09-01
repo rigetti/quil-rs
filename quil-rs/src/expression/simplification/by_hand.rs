@@ -21,14 +21,12 @@ fn simplify(e: &Expression, limit: u64) -> Expression {
         return e.clone();
     }
     match e {
-        Expression::Address(_)
-        | Expression::Number(_)
-        | Expression::PiConstant
-        | Expression::Variable(_) => e.clone(),
+        Expression::Address(_) | Expression::Number(_) | Expression::Variable(_) => e.clone(),
         Expression::FunctionCall(FunctionCallExpression {
             function,
             expression,
         }) => simplify_function_call(*function, expression, limit.saturating_sub(1)),
+        Expression::PiConstant => Expression::Number(std::f64::consts::PI.into()),
         Expression::Infix(InfixExpression {
             left,
             operator,
