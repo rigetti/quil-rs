@@ -11,6 +11,12 @@ pub(super) fn run(expression: &Expression) -> Expression {
 }
 
 /// Keep stack sizes under control
+///
+/// If this limit is allowed to be too large (100, in local testing on my laptop), the recursive
+/// nature of `simplify` and friends (below) will build up large callstacks and then crash with an
+/// "I've overflowed my stack" error. Except for exceedingly large expressions (`the_big_one` test
+/// case in `mod.rs`, for example), a larger limit here doesn't seem to be of practical value in
+/// anecdotal testing.
 const LIMIT: u64 = 10;
 
 /// Recursively simplify an [`Expression`] by hand, breaking into cases to make things more
