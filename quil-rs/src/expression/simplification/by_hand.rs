@@ -42,6 +42,7 @@ fn simplify(e: &Expression, limit: u64) -> Expression {
 const PI: num_complex::Complex64 = real!(std::f64::consts::PI);
 const ZERO: num_complex::Complex64 = real!(0.0);
 const ONE: num_complex::Complex64 = real!(1.0);
+const TWO: num_complex::Complex64 = real!(2.0);
 const I: num_complex::Complex64 = imag!(1.0);
 
 fn simplify_function_call(func: ExpressionFunction, expr: &Expression, limit: u64) -> Expression {
@@ -82,7 +83,7 @@ fn is_zero(x: num_complex::Complex64) -> bool {
 
 #[inline]
 fn is_one(x: num_complex::Complex64) -> bool {
-    (x - 1.0).norm() < 1e-10
+    is_zero(x - 1.0)
 }
 
 /// Helper: in simplification, we'll bias towards smaller expressions
@@ -203,7 +204,7 @@ fn simplify_infix(l: &Expression, op: InfixOperator, r: &Expression, limit: u64)
         }
         (left, InfixOperator::Minus, Expression::Number(y)) if is_zero(y) => left,
         // Subtracting self
-        (left, InfixOperator::Minus, right) if left == right => Expression::Number(real!(0.0)),
+        (left, InfixOperator::Minus, right) if left == right => Expression::Number(ZERO),
         // Subtracting numbers or π (π - π already covered)
         (Expression::Number(x), InfixOperator::Minus, Expression::Number(y)) => {
             Expression::Number(x - y)
@@ -282,7 +283,7 @@ fn simplify_infix(l: &Expression, op: InfixOperator, r: &Expression, limit: u64)
             left,
             InfixOperator::Minus,
             expression,
-            limit.saturating_sub(2),
+            limit.saturating_sub(1),
         ),
         (
             Expression::Prefix(PrefixExpression {
@@ -295,7 +296,7 @@ fn simplify_infix(l: &Expression, op: InfixOperator, r: &Expression, limit: u64)
             right,
             InfixOperator::Minus,
             expression,
-            limit.saturating_sub(2),
+            limit.saturating_sub(1),
         ),
 
         // Subtraction with negation
@@ -310,7 +311,7 @@ fn simplify_infix(l: &Expression, op: InfixOperator, r: &Expression, limit: u64)
             left,
             InfixOperator::Plus,
             expression,
-            limit.saturating_sub(2),
+            limit.saturating_sub(1),
         ),
         (
             // -expression - right => smaller of (-expression) - right & -(expression + right)
@@ -330,7 +331,7 @@ fn simplify_infix(l: &Expression, op: InfixOperator, r: &Expression, limit: u64)
                     right,
                     limit.saturating_sub(2),
                 ),
-                limit.saturating_sub(2),
+                limit.saturating_sub(1),
             );
             min_by_key(original, new, size)
         }
@@ -346,7 +347,7 @@ fn simplify_infix(l: &Expression, op: InfixOperator, r: &Expression, limit: u64)
                 operator: PrefixOperator::Minus,
                 expression: ref right,
             }),
-        ) => simplify_infix(left, InfixOperator::Star, right, limit.saturating_sub(2)),
+        ) => simplify_infix(left, InfixOperator::Star, right, limit.saturating_sub(1)),
         (
             ref left,
             InfixOperator::Star,
@@ -356,12 +357,12 @@ fn simplify_infix(l: &Expression, op: InfixOperator, r: &Expression, limit: u64)
             }),
         ) => {
             let original = mul!(left.clone(), right.clone());
-            let neg_left = simplify_prefix(PrefixOperator::Minus, left, limit.saturating_sub(2));
+            let neg_left = simplify_prefix(PrefixOperator::Minus, left, limit.saturating_sub(1));
             let new = simplify_infix(
                 &neg_left,
                 InfixOperator::Star,
                 expression,
-                limit.saturating_sub(2),
+                limit.saturating_sub(1),
             );
             min_by_key(original, new, size)
         }
@@ -374,12 +375,12 @@ fn simplify_infix(l: &Expression, op: InfixOperator, r: &Expression, limit: u64)
             ref right,
         ) => {
             let original = mul!(left.clone(), right.clone());
-            let neg_right = simplify_prefix(PrefixOperator::Minus, right, limit.saturating_sub(2));
+            let neg_right = simplify_prefix(PrefixOperator::Minus, right, limit.saturating_sub(1));
             let new = simplify_infix(
                 expression,
                 InfixOperator::Star,
                 &neg_right,
-                limit.saturating_sub(2),
+                limit.saturating_sub(1),
             );
             min_by_key(original, new, size)
         }
@@ -395,7 +396,7 @@ fn simplify_infix(l: &Expression, op: InfixOperator, r: &Expression, limit: u64)
                 operator: PrefixOperator::Minus,
                 expression: ref right,
             }),
-        ) => simplify_infix(left, InfixOperator::Slash, right, limit.saturating_sub(2)),
+        ) => simplify_infix(left, InfixOperator::Slash, right, limit.saturating_sub(1)),
         (
             ref left,
             InfixOperator::Slash,
@@ -413,12 +414,12 @@ fn simplify_infix(l: &Expression, op: InfixOperator, r: &Expression, limit: u64)
             }),
         ) => {
             let original = div!(left.clone(), right.clone());
-            let neg_left = simplify_prefix(PrefixOperator::Minus, left, limit.saturating_sub(2));
+            let neg_left = simplify_prefix(PrefixOperator::Minus, left, limit.saturating_sub(1));
             let new = simplify_infix(
                 &neg_left,
                 InfixOperator::Slash,
                 expression,
-                limit.saturating_sub(2),
+                limit.saturating_sub(1),
             );
             min_by_key(original, new, size)
         }
@@ -439,12 +440,12 @@ fn simplify_infix(l: &Expression, op: InfixOperator, r: &Expression, limit: u64)
             ref right,
         ) => {
             let original = div!(left.clone(), right.clone());
-            let neg_right = simplify_prefix(PrefixOperator::Minus, right, limit.saturating_sub(2));
+            let neg_right = simplify_prefix(PrefixOperator::Minus, right, limit.saturating_sub(1));
             let new = simplify_infix(
                 expression,
                 InfixOperator::Slash,
                 &neg_right,
-                limit.saturating_sub(2),
+                limit.saturating_sub(1),
             );
             min_by_key(original, new, size)
         }
@@ -454,6 +455,9 @@ fn simplify_infix(l: &Expression, op: InfixOperator, r: &Expression, limit: u64)
         //----------------------------------------------------------------
 
         // (a1 * x + b1) + (a2 * x + b2) = (a1 + a2) * x + (b1 + b2)
+        //
+        // Apologies for this one; I couldn't get the compiler to let me match two levels deep in a
+        // recursive data type, and `if let` in a match guard isn't stabilized.
         (
             Expression::Infix(InfixExpression {
                 left: ref left_ax,
@@ -492,25 +496,24 @@ fn simplify_infix(l: &Expression, op: InfixOperator, r: &Expression, limit: u64)
             } else {
                 (ll, rl, rr)
             };
-
             simplify_infix(
                 &simplify_infix(
                     &simplify_infix(
                         left_a,
                         InfixOperator::Plus,
                         right_a,
-                        limit.saturating_sub(2),
+                        limit.saturating_sub(3),
                     ),
                     InfixOperator::Star,
                     x,
-                    limit.saturating_sub(1),
+                    limit.saturating_sub(2),
                 ),
                 InfixOperator::Plus,
                 &simplify_infix(
                     left_b,
                     InfixOperator::Plus,
                     right_b,
-                    limit.saturating_sub(1),
+                    limit.saturating_sub(2),
                 ),
                 limit.saturating_sub(1),
             )
@@ -538,7 +541,7 @@ fn simplify_infix(l: &Expression, op: InfixOperator, r: &Expression, limit: u64)
             ),
             InfixOperator::Star,
             left_x,
-            limit.saturating_sub(2),
+            limit.saturating_sub(1),
         ),
 
         // (x + b1) + (x + b2) = x + (b1 + b2)
@@ -555,7 +558,7 @@ fn simplify_infix(l: &Expression, op: InfixOperator, r: &Expression, limit: u64)
                 right: ref right_b,
             }),
         ) if left_x == right_x => simplify_infix(
-            &mul!(Expression::Number(ONE + ONE), left_x.clone()),
+            &mul!(Expression::Number(TWO), left_x.clone()),
             InfixOperator::Plus,
             &simplify_infix(
                 left_b,
@@ -563,7 +566,7 @@ fn simplify_infix(l: &Expression, op: InfixOperator, r: &Expression, limit: u64)
                 right_b,
                 limit.saturating_sub(2),
             ),
-            limit.saturating_sub(2),
+            limit.saturating_sub(1),
         ),
 
         //----------------------------------------------------------------
@@ -581,8 +584,8 @@ fn simplify_infix(l: &Expression, op: InfixOperator, r: &Expression, limit: u64)
             }),
         ) => {
             let original = add!(a.clone(), right.clone());
-            let new_ab = simplify_infix(a, InfixOperator::Plus, b, limit.saturating_sub(2));
-            let new = simplify_infix(&new_ab, InfixOperator::Plus, c, limit.saturating_sub(2));
+            let new_ab = simplify_infix(a, InfixOperator::Plus, b, limit.saturating_sub(1));
+            let new = simplify_infix(&new_ab, InfixOperator::Plus, c, limit.saturating_sub(1));
             min_by_key(original, new, size)
         }
 
@@ -597,8 +600,8 @@ fn simplify_infix(l: &Expression, op: InfixOperator, r: &Expression, limit: u64)
             ref c,
         ) => {
             let original = mul!(left.clone(), c.clone());
-            let bc = simplify_infix(b, InfixOperator::Plus, c, limit.saturating_sub(2));
-            let new = simplify_infix(a, InfixOperator::Plus, &bc, limit.saturating_sub(2));
+            let bc = simplify_infix(b, InfixOperator::Plus, c, limit.saturating_sub(1));
+            let new = simplify_infix(a, InfixOperator::Plus, &bc, limit.saturating_sub(1));
             min_by_key(original, new, size)
         }
 
@@ -613,8 +616,8 @@ fn simplify_infix(l: &Expression, op: InfixOperator, r: &Expression, limit: u64)
             }),
         ) => {
             let original = mul!(a.clone(), right.clone());
-            let ab = simplify_infix(a, InfixOperator::Star, b, limit.saturating_sub(2));
-            let new = simplify_infix(&ab, InfixOperator::Star, c, limit.saturating_sub(2));
+            let ab = simplify_infix(a, InfixOperator::Star, b, limit.saturating_sub(1));
+            let new = simplify_infix(&ab, InfixOperator::Star, c, limit.saturating_sub(1));
             min_by_key(original, new, size)
         }
 
@@ -629,8 +632,8 @@ fn simplify_infix(l: &Expression, op: InfixOperator, r: &Expression, limit: u64)
             ref c,
         ) => {
             let original = mul!(left.clone(), c.clone());
-            let bc = simplify_infix(b, InfixOperator::Star, c, limit.saturating_sub(2));
-            let new = simplify_infix(a, InfixOperator::Star, &bc, limit.saturating_sub(2));
+            let bc = simplify_infix(b, InfixOperator::Star, c, limit.saturating_sub(1));
+            let new = simplify_infix(a, InfixOperator::Star, &bc, limit.saturating_sub(1));
             min_by_key(original, new, size)
         }
 
@@ -645,8 +648,8 @@ fn simplify_infix(l: &Expression, op: InfixOperator, r: &Expression, limit: u64)
             }),
         ) => {
             let original = sub!(a.clone(), right.clone());
-            let new_left = simplify_infix(a, InfixOperator::Plus, c, limit.saturating_sub(2));
-            let new = simplify_infix(&new_left, InfixOperator::Minus, b, limit.saturating_sub(2));
+            let new_left = simplify_infix(a, InfixOperator::Plus, c, limit.saturating_sub(1));
+            let new = simplify_infix(&new_left, InfixOperator::Minus, b, limit.saturating_sub(1));
             min_by_key(original, new, size)
         }
 
@@ -661,8 +664,8 @@ fn simplify_infix(l: &Expression, op: InfixOperator, r: &Expression, limit: u64)
             }),
         ) => {
             let original = div!(a.clone(), right.clone());
-            let new_left = simplify_infix(a, InfixOperator::Star, c, limit.saturating_sub(2));
-            let new = simplify_infix(&new_left, InfixOperator::Slash, b, limit.saturating_sub(2));
+            let new_left = simplify_infix(a, InfixOperator::Star, c, limit.saturating_sub(1));
+            let new = simplify_infix(&new_left, InfixOperator::Slash, b, limit.saturating_sub(1));
             min_by_key(original, new, size)
         }
 
@@ -677,9 +680,9 @@ fn simplify_infix(l: &Expression, op: InfixOperator, r: &Expression, limit: u64)
             }),
         ) => {
             let original = mul!(a.clone(), right.clone());
-            let ab = simplify_infix(a, InfixOperator::Star, b, limit.saturating_sub(2));
-            let ac = simplify_infix(a, InfixOperator::Star, c, limit.saturating_sub(2));
-            let new = simplify_infix(&ab, InfixOperator::Plus, &ac, limit.saturating_sub(2));
+            let ab = simplify_infix(a, InfixOperator::Star, b, limit.saturating_sub(1));
+            let ac = simplify_infix(a, InfixOperator::Star, c, limit.saturating_sub(1));
+            let new = simplify_infix(&ab, InfixOperator::Plus, &ac, limit.saturating_sub(1));
             min_by_key(original, new, size)
         }
 
@@ -694,9 +697,9 @@ fn simplify_infix(l: &Expression, op: InfixOperator, r: &Expression, limit: u64)
             ref c,
         ) => {
             let original = mul!(left.clone(), c.clone());
-            let ac = simplify_infix(a, InfixOperator::Star, c, limit.saturating_sub(2));
-            let bc = simplify_infix(b, InfixOperator::Star, c, limit.saturating_sub(2));
-            let new = simplify_infix(&ac, InfixOperator::Plus, &bc, limit.saturating_sub(2));
+            let ac = simplify_infix(a, InfixOperator::Star, c, limit.saturating_sub(1));
+            let bc = simplify_infix(b, InfixOperator::Star, c, limit.saturating_sub(1));
+            let new = simplify_infix(&ac, InfixOperator::Plus, &bc, limit.saturating_sub(1));
             min_by_key(original, new, size)
         }
 
@@ -730,13 +733,13 @@ fn simplify_infix(l: &Expression, op: InfixOperator, r: &Expression, limit: u64)
                 multiplicand,
                 InfixOperator::Slash,
                 denominator,
-                limit.saturating_sub(2),
+                limit.saturating_sub(1),
             );
             let new = simplify_infix(
                 multiplier,
                 InfixOperator::Star,
                 &new_multiplicand,
-                limit.saturating_sub(2),
+                limit.saturating_sub(1),
             );
             min_by_key(original, new, size)
         }
@@ -756,13 +759,13 @@ fn simplify_infix(l: &Expression, op: InfixOperator, r: &Expression, limit: u64)
                 numerator,
                 InfixOperator::Slash,
                 multiplier,
-                limit.saturating_sub(2),
+                limit.saturating_sub(1),
             );
             let new = simplify_infix(
                 &new_multiplier,
                 InfixOperator::Star,
                 multiplicand,
-                limit.saturating_sub(2),
+                limit.saturating_sub(1),
             );
             min_by_key(original, new, size)
         }
