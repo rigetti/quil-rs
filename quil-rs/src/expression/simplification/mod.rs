@@ -16,16 +16,16 @@ mod tests {
         ($name:ident, $input:expr, $expected:expr) => {
             #[test]
             fn $name() {
-                let parsed_input = Expression::from_str($input);
-                assert!(parsed_input.is_ok(), "Parsing input `{}` failed!", $input);
-                let parsed_expected = Expression::from_str($expected);
-                assert!(
-                    parsed_expected.is_ok(),
-                    "Parsing expected expression `{}` failed!",
-                    $expected
-                );
-                let computed = run(&parsed_input.unwrap());
-                assert_eq!(parsed_expected.unwrap(), computed);
+                let parsed_input = Expression::from_str($input)
+                    .unwrap_or_else(|error| panic!("Parsing input `{}` failed: {error}", $input));
+                let parsed_expected = Expression::from_str($expected).unwrap_or_else(|error| {
+                    panic!(
+                        "Parsing expected expression `{}` failed: {error}",
+                        $expected
+                    )
+                });
+                let computed = run(&parsed_input);
+                assert_eq!(parsed_expected, computed);
             }
         };
     }
