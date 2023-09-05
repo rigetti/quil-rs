@@ -40,7 +40,7 @@ compatibility = "linux"
 sdist-include = ["README.md"]
 
 [build-system]
-requires = ["maturin>=0.13,<0.14"]
+requires = ["maturin>=0.14,<0.15"]
 build-backend = "maturin"
 
 [tool.black]
