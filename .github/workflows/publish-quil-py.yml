@@ -5,6 +5,8 @@ on:
     types: [published]
   workflow_dispatch:
     description: "Manually publish release"
+  push:
+    branches: [ 279-quil-py-distribute-wheels-for-windows ]
 
 jobs:
   is-python-release:
@@ -14,6 +16,7 @@ jobs:
       - run: echo "Release tag starts with quil-py/v, proceeding with release"
 
   macos:
+    if: false
     runs-on: macos-12
     needs: is-python-release
     strategy:
@@ -46,6 +49,7 @@ jobs:
           path: dist
 
   linux:
+    if: false
     runs-on: ubuntu-22.04
     needs: is-python-release
     env:
@@ -81,16 +85,60 @@ jobs:
         name: wheels
         path: dist
 
+  windows: 
+    runs-on: windows-latest 
+    strategy: 
+      matrix: 
+        python-version: ['3.7', '3.8', '3.9', '3.10'] 
+        target: [x64, x86] 
+    steps: 
+      - uses: actions/checkout@v2 
+      - uses: actions/setup-python@v2 
+        with: 
+          python-version: ${{ matrix.python-version }} 
+          architecture: ${{ matrix.target }} 
+      - name: Update rustup 
+        run: rustup self update 
+      - name: Install Rust toolchain 
+        uses: actions-rs/toolchain@v1 
+        with: 
+          toolchain: stable 
+          target: x86_64-pc-windows-msvc 
+          profile: minimal 
+          default: true 
+      - name: Install compiler
+        id: install_cc
+        uses: rlalik/setup-cpp-compiler@master
+        with:
+          compiler: latest
+      - name: Build 
+        if: matrix.target == 'x64' 
+        run: cargo build --release 
+      - name: Build wheels 
+        uses: messense/maturin-action@v1 
+        with: 
+          target: ${{ matrix.target }} 
+          args: -i python --release --manifest-path crates/python/Cargo.toml --out dist 
+      - name: Install built wheel 
+        run: | 
+          pip install quil --find-links dist --force-reinstall --no-deps --no-index
+      - name: Upload wheels 
+        uses: actions/upload-artifact@v2 
+        with: 
+          name: wheels 
+          path: dist 
+
   publish-python-package:
     name: Release
+    if: false
     runs-on: ubuntu-latest
-    needs: [ macos, linux ]
+    needs: [ macos, linux, windows ]
     steps:
       - uses: actions/download-artifact@v3
       - name: Publish to PyPi
-        env:
-          MATURIN_USERNAME: ${{ secrets.PYPI_USERNAME }}
-          MATURIN_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+        # env:
+        #   MATURIN_USERNAME: ${{ secrets.PYPI_USERNAME }}
+        #   MATURIN_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
         uses: messense/maturin-action@v1
         with:
           command: upload 
@@ -98,6 +146,7 @@ jobs:
 
   publish-rust-crate:
     name: Release
+    if: false
     runs-on: ubuntu-latest
     needs: [ publish-python-package ]
     steps:
