@@ -89,7 +89,7 @@ jobs:
     runs-on: windows-latest 
     strategy: 
       matrix: 
-        python-version: ['3.7', '3.8', '3.9', '3.10'] 
+        python-version: ['3.8', '3.9', '3.10', '3.11'] 
         target: [x64, x86] 
     steps: 
       - uses: actions/checkout@v2 
@@ -118,7 +118,7 @@ jobs:
         uses: messense/maturin-action@v1 
         with: 
           target: ${{ matrix.target }} 
-          args: -i python --release --manifest-path crates/python/Cargo.toml --out dist 
+          args: -i python --release --manifest-path quil-py/Cargo.toml --out dist 
       - name: Install built wheel 
         run: | 
           pip install quil --find-links dist --force-reinstall --no-deps --no-index
