@@ -90,10 +90,10 @@ jobs:
     strategy: 
       matrix: 
         python-version: ['3.8', '3.9', '3.10', '3.11'] 
-        target: [x64, x86] 
+        target: [x64] 
     steps: 
       - uses: actions/checkout@v2 
-      - uses: actions/setup-python@v2 
+      - uses: actions/setup-python@v4 
         with: 
           python-version: ${{ matrix.python-version }} 
           architecture: ${{ matrix.target }} 
@@ -106,11 +106,6 @@ jobs:
           target: x86_64-pc-windows-gnu
           profile: minimal 
           default: true 
-      - name: Install compiler
-        id: install_cc
-        uses: rlalik/setup-cpp-compiler@master
-        with:
-          compiler: latest
       - name: Build 
         if: matrix.target == 'x64' 
         run: cargo build --release 
