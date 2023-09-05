@@ -106,14 +106,12 @@ jobs:
           target: x86_64-pc-windows-gnu
           profile: minimal 
           default: true 
-      - name: Build 
-        if: matrix.target == 'x64' 
-        run: cargo build --release 
       - name: Build wheels 
         uses: messense/maturin-action@v1 
         with: 
           target: ${{ matrix.target }} 
           args: -i python --release --manifest-path quil-py/Cargo.toml --out dist 
+          rust-toolchain: x86_64-pc-windows-gnu
       - name: Install built wheel 
         run: | 
           pip install quil --find-links dist --force-reinstall --no-deps --no-index
