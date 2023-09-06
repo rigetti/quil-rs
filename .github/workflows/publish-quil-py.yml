@@ -100,7 +100,6 @@ jobs:
       - name: Update rustup 
         run: |
           rustup self update 
-          rustup toolchain install stable-gnu
       - name: Install Rust toolchain 
         uses: actions-rs/toolchain@v1 
         with: 
@@ -112,7 +111,6 @@ jobs:
         with: 
           target: ${{ matrix.target }} 
           args: -i python --release --manifest-path quil-py/Cargo.toml --out dist 
-          rust-toolchain: stable-x86_64-pc-windows-gnu
       - name: Install built wheel 
         run: | 
           pip install quil --find-links dist --force-reinstall --no-deps --no-index
