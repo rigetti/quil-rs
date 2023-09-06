@@ -1286,7 +1286,7 @@ checksum = "4bf2521270932c3c7bed1a59151222bd7643c79310f2916f01925e1e16255698"
 [[package]]
 name = "rigetti-pyo3"
 version = "0.1.0"
-source = "git+https://github.com/rigetti/rigetti-pyo3.git?branch=29-update-pyo3-to-019#d77377efac825a22d2276a6453ef0d880b891322"
+source = "git+https://github.com/rigetti/rigetti-pyo3.git?branch=29-update-pyo3-to-019#42c46bcc155150fd1b69ff90ef48f632383e5032"
 dependencies = [
  "num-complex",
  "num-traits",
