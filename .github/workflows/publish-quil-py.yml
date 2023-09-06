@@ -5,8 +5,6 @@ on:
     types: [published]
   workflow_dispatch:
     description: "Manually publish release"
-  push:
-    branches: [ 279-quil-py-distribute-wheels-for-windows ]
 
 jobs:
   is-python-release:
@@ -16,7 +14,6 @@ jobs:
       - run: echo "Release tag starts with quil-py/v, proceeding with release"
 
   macos:
-    if: false
     runs-on: macos-12
     needs: is-python-release
     strategy:
@@ -49,7 +46,6 @@ jobs:
           path: dist
 
   linux:
-    if: false
     runs-on: ubuntu-22.04
     needs: is-python-release
     env:
@@ -117,15 +113,14 @@ jobs:
 
   publish-python-package:
     name: Release
-    if: false
     runs-on: ubuntu-latest
     needs: [ macos, linux, windows ]
     steps:
       - uses: actions/download-artifact@v3
       - name: Publish to PyPi
-        # env:
-        #   MATURIN_USERNAME: ${{ secrets.PYPI_USERNAME }}
-        #   MATURIN_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+        env:
+          MATURIN_USERNAME: ${{ secrets.PYPI_USERNAME }}
+          MATURIN_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
         uses: messense/maturin-action@v1
         with:
           command: upload 
@@ -133,7 +128,6 @@ jobs:
 
   publish-rust-crate:
     name: Release
-    if: false
     runs-on: ubuntu-latest
     needs: [ publish-python-package ]
     steps:
