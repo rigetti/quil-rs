@@ -100,10 +100,12 @@ jobs:
           architecture: ${{ matrix.target }} 
       - name: Build wheels 
         uses: messense/maturin-action@v1 
+        env:
+          RUSTFLAGS: "-Z macro-backtrace"
         with: 
           target: ${{ matrix.target }} 
           rust-toolchain: nightly
-          args: -i python --release --manifest-path quil-py/Cargo.toml --out dist -Z macro-backtrace
+          args: -i python --release --manifest-path quil-py/Cargo.toml --out dist
       - name: Install built wheel 
         run: | 
           pip install quil --find-links dist --force-reinstall --no-deps --no-index
