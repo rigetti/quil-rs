@@ -29,7 +29,7 @@ numpy = "^1.21"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"
-maturin = "^0.14.15"
+maturin = "^1.2.3"
 mypy = "^1.1.1"
 pytest = "^7.2.2"
 
@@ -40,7 +40,7 @@ compatibility = "linux"
 sdist-include = ["README.md"]
 
 [build-system]
-requires = ["maturin>=0.14,<0.15"]
+requires = ["maturin>=1.0.0,<2.0.0"]
 build-backend = "maturin"
 
 [tool.black]
