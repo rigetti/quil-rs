@@ -103,14 +103,15 @@ jobs:
       - name: Install Rust toolchain 
         uses: actions-rs/toolchain@v1 
         with: 
-          toolchain: stable 
+          toolchain: nightly 
           profile: minimal 
           default: true 
       - name: Build wheels 
         uses: messense/maturin-action@v1 
         with: 
           target: ${{ matrix.target }} 
-          args: -i python --release --manifest-path quil-py/Cargo.toml --out dist 
+          rust-toolchain: nightly
+          args: -i python --release --manifest-path quil-py/Cargo.toml --out dist -Z macro-backtrace
       - name: Install built wheel 
         run: | 
           pip install quil --find-links dist --force-reinstall --no-deps --no-index

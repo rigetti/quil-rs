@@ -30,4 +30,4 @@ pyo3 = { version = "0.19" }
 rigetti-pyo3 = { git = "https://github.com/rigetti/rigetti-pyo3.git", branch = "29-update-pyo3-to-019" }
 
 [build-dependencies]
-pyo3-build-config = { version = "0.17" }
+pyo3-build-config = { version = "0.19" }

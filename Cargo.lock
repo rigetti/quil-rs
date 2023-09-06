@@ -1051,20 +1051,10 @@ dependencies = [
  "memoffset",
  "num-complex",
  "parking_lot",
- "pyo3-build-config 0.19.2",
+ "pyo3-build-config",
  "pyo3-ffi",
  "pyo3-macros",
  "unindent",
-]
-
-[[package]]
-name = "pyo3-build-config"
-version = "0.17.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "28fcd1e73f06ec85bf3280c48c67e731d8290ad3d730f8be9dc07946923005c8"
-dependencies = [
- "once_cell",
- "target-lexicon",
 ]
 
 [[package]]
@@ -1084,7 +1074,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e53cee42e77ebe256066ba8aa77eff722b3bb91f3419177cf4cd0f304d3284d9"
 dependencies = [
  "libc",
- "pyo3-build-config 0.19.2",
+ "pyo3-build-config",
 ]
 
 [[package]]
@@ -1123,7 +1113,7 @@ dependencies = [
  "ndarray",
  "numpy",
  "pyo3",
- "pyo3-build-config 0.17.3",
+ "pyo3-build-config",
  "quil-rs",
  "rigetti-pyo3",
  "strum",
