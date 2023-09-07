@@ -79,13 +79,13 @@ impl PyGate {
         &self,
         py: Python<'_>,
         fork_qubit: PyQubit,
-        params: Vec<PyExpression>,
+        alt_params: Vec<PyExpression>,
     ) -> PyResult<Self> {
         self.as_inner()
             .clone()
             .forked(
                 Qubit::py_try_from(py, &fork_qubit)?,
-                Vec::<Expression>::py_try_from(py, &params)?,
+                Vec::<Expression>::py_try_from(py, &alt_params)?,
             )
             .map_err(RustGateError::from)
             .map_err(RustGateError::to_py_err)?

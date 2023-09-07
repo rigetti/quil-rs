@@ -84,19 +84,19 @@ class Program:
         Add an instruction to the end of the program.
         """
         ...
-    def add_instructions(self, instruction: Sequence[Instruction]):
+    def add_instructions(self, instructions: Sequence[Instruction]):
         """
         Add a list of instructions to the end of the program.
         """
         ...
     @staticmethod
-    def parse(quil: str) -> "Program":
+    def parse(input: str) -> "Program":
         """
         Parses the given Quil string and returns a new ``Program``.
         Raises a ``ProgramError`` if the given string isn't valid Quil.
         """
     def to_instructions(self) -> Sequence[Instruction]: ...
-    def to_unitary(self) -> NDArray[np.complex_]: ...
+    def to_unitary(self, n_qubits: int) -> NDArray[np.complex_]: ...
     def copy(self) -> "Program":
         """
         Creates a clone of this ``Program``.
@@ -197,7 +197,7 @@ class CalibrationSet:
         """
         Add another ``MeasureCalibrationDefinition`` (`DEFCAL MEASURE`) to the set
         """
-    def extend(self, calibration_set: CalibrationSet):
+    def extend(self, other: CalibrationSet):
         """
         Append another [`CalibrationSet`] onto this one
         """
