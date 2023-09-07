@@ -1,3 +1,9 @@
+## 0.5.1-rc.0
+
+### Features
+
+- Build & publish wheels for Windows (#280)
+
 ## 0.5.0
 
 ### Breaking Changes
