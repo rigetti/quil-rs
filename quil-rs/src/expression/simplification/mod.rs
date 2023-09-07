@@ -31,6 +31,192 @@ mod tests {
     }
 
     test_simplify! {
+        function_cis,
+        "cis(0)",
+        "1"
+    }
+
+    test_simplify! {
+        function_cos,
+        "cis(0)",
+        "1"
+    }
+
+    test_simplify! {
+        function_exp,
+        "exp(1)",
+        "2.718281828459045"
+    }
+
+    test_simplify! {
+        function_sin,
+        "sin(0)",
+        "0"
+    }
+
+    test_simplify! {
+        function_sqrt,
+        "sqrt(9)",
+        "3"
+    }
+
+    test_simplify! {
+        infix_add_0_r,
+        "x + 0",
+        "x"
+    }
+
+    test_simplify! {
+        infix_add_0_l,
+        "0 + x",
+        "x"
+    }
+
+    test_simplify! {
+        infix_add,
+        "1 + 2",
+        "3"
+    }
+
+    test_simplify! {
+        infix_sub_0_r,
+        "x - 0",
+        "x"
+    }
+
+    test_simplify! {
+        infix_sub_self,
+        "x - x",
+        "0"
+    }
+
+    test_simplify! {
+        infix_mul_0_r,
+        "x * 0",
+        "0"
+    }
+
+    test_simplify! {
+        infix_mul_0_l,
+        "0 * x",
+        "0"
+    }
+
+    test_simplify! {
+        infix_mul_1_r,
+        "x * 1",
+        "x"
+    }
+
+    test_simplify! {
+        infix_mul_1_l,
+        "1 * x",
+        "x"
+    }
+
+    test_simplify! {
+        infix_div_0_l,
+        "0 / x",
+        "0"
+    }
+
+    test_simplify! {
+        infix_div_1_r,
+        "x / 1",
+        "x"
+    }
+
+    test_simplify! {
+        infix_div_self,
+        "x / x",
+        "1"
+    }
+
+    test_simplify! {
+        infix_exp_0_r,
+        "0^x",
+        "0"
+    }
+
+    test_simplify! {
+        infix_exp_0_l,
+        "x^0",
+        "1"
+    }
+
+    test_simplify! {
+        infix_sub_neg,
+        "x - (-y)",
+        "x + y"
+    }
+
+    test_simplify! {
+        infix_mul_double_neg,
+        "(-x) * (-y)",
+        "x * y"
+    }
+
+    test_simplify! {
+        infix_div_double_neg,
+        "(-x) / (-y)",
+        "x / y"
+    }
+
+    test_simplify! {
+        infix_affine_full,
+        "(a1 * x + b1) + (a2 * x + b2)",
+        "(a1 + a2) * x + (b1 + b2)"
+    }
+
+    test_simplify! {
+        infix_affine_coeffs,
+        "(a1 * x) + (a2 * x)",
+        "(a1 + a2) * x"
+    }
+
+    test_simplify! {
+        infix_affine_constants,
+        "(x + b1) + (x + b2)",
+        "(2 * x) + (b1 + b2)"
+    }
+
+    test_simplify! {
+        infix_mul_div_ll,
+        "(y * x) / x",
+        "y"
+    }
+
+    test_simplify! {
+        infix_mul_div_lr,
+        "(x * y) / x",
+        "y"
+    }
+
+    test_simplify! {
+        infix_mul_div_rl,
+        "x / (y * x)",
+        "1 / y"
+    }
+
+    test_simplify! {
+        infix_mul_div_rr,
+        "x / (x * y)",
+        "1 / y"
+    }
+
+    test_simplify! {
+        infix_div_mul_l,
+        "(x / y) * y",
+        "x"
+    }
+
+    test_simplify! {
+        infix_div_mul_r,
+        "y * (x / y)",
+        "x"
+    }
+
+    test_simplify! {
         docstring_example,
         "cos(2 * pi) + 2",
         "3"
