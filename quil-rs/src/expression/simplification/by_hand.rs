@@ -194,7 +194,7 @@ fn simplify_infix(l: &Expression, op: InfixOperator, r: &Expression, limit: u64)
         | (other, InfixOperator::Plus, Expression::Number(x))
             if is_zero(x) =>
         {
-            other
+            simplify(&other, limit.saturating_sub(1))
         }
         // Adding numbers or π
         (Expression::Number(x), InfixOperator::Plus, Expression::Number(y)) => {
@@ -210,9 +210,11 @@ fn simplify_infix(l: &Expression, op: InfixOperator, r: &Expression, limit: u64)
 
         // Subtracting with zero
         (Expression::Number(x), InfixOperator::Minus, right) if is_zero(x) => {
-            simplify_prefix(PrefixOperator::Minus, &right, limit.saturating_sub(2))
+            simplify_prefix(PrefixOperator::Minus, &right, limit.saturating_sub(1))
         }
-        (left, InfixOperator::Minus, Expression::Number(y)) if is_zero(y) => left,
+        (left, InfixOperator::Minus, Expression::Number(y)) if is_zero(y) => {
+            simplify(&left, limit.saturating_sub(1))
+        }
         // Subtracting self
         (left, InfixOperator::Minus, right) if left == right => Expression::Number(ZERO),
         // Subtracting numbers or π (π - π already covered)
@@ -240,7 +242,7 @@ fn simplify_infix(l: &Expression, op: InfixOperator, r: &Expression, limit: u64)
         | (other, InfixOperator::Star, Expression::Number(x))
             if is_one(x) =>
         {
-            other
+            simplify(&other, limit.saturating_sub(1))
         }
         // Multiplying with numbers or π
         (Expression::Number(x), InfixOperator::Star, Expression::Number(y)) => {
@@ -260,7 +262,9 @@ fn simplify_infix(l: &Expression, op: InfixOperator, r: &Expression, limit: u64)
             Expression::Number(real!(f64::NAN))
         }
         // Division with one
-        (left, InfixOperator::Slash, Expression::Number(y)) if is_one(y) => left,
+        (left, InfixOperator::Slash, Expression::Number(y)) if is_one(y) => {
+            simplify(&left, limit.saturating_sub(1))
+        }
         // Division with self
         (left, InfixOperator::Slash, right) if left == right => Expression::Number(ONE),
         // Division with numbers or π (π / π already covered)
@@ -281,7 +285,9 @@ fn simplify_infix(l: &Expression, op: InfixOperator, r: &Expression, limit: u64)
         (_, InfixOperator::Caret, Expression::Number(y)) if is_zero(y) => Expression::Number(ONE),
         // Exponentiation with one
         (Expression::Number(x), InfixOperator::Caret, _) if is_one(x) => Expression::Number(ONE),
-        (left, InfixOperator::Caret, Expression::Number(y)) if is_one(y) => left,
+        (left, InfixOperator::Caret, Expression::Number(y)) if is_one(y) => {
+            simplify(&left, limit.saturating_sub(1))
+        }
 
         //----------------------------------------------------------------
         // Next: dealing with negation in subexpressions
@@ -586,7 +592,12 @@ fn simplify_infix(l: &Expression, op: InfixOperator, r: &Expression, limit: u64)
                 right: ref right_b,
             }),
         ) if left_x == right_x => simplify_infix(
-            &mul!(Expression::Number(TWO), left_x.clone()),
+            &simplify_infix(
+                &Expression::Number(TWO),
+                InfixOperator::Star,
+                left_x,
+                limit.saturating_sub(2),
+            ),
             InfixOperator::Plus,
             &simplify_infix(
                 left_b,
@@ -785,7 +796,7 @@ fn simplify_infix(l: &Expression, op: InfixOperator, r: &Expression, limit: u64)
             }),
             InfixOperator::Slash,
             ref same_2,
-        ) if **same_1 == *same_2 => *other.clone(),
+        ) if **same_1 == *same_2 => simplify(other, limit.saturating_sub(1)),
 
         // Mul inside Div on right with cancellation
         (
@@ -805,7 +816,12 @@ fn simplify_infix(l: &Expression, op: InfixOperator, r: &Expression, limit: u64)
                 operator: InfixOperator::Star,
                 right: ref same_2,
             }),
-        ) if *same_1 == **same_2 => div!(Expression::Number(ONE), *other.clone()),
+        ) if *same_1 == **same_2 => simplify_infix(
+            &Expression::Number(ONE),
+            InfixOperator::Slash,
+            other,
+            limit.saturating_sub(1),
+        ),
 
         // Mul inside Div on left
         (
@@ -877,7 +893,7 @@ fn simplify_infix(l: &Expression, op: InfixOperator, r: &Expression, limit: u64)
                 operator: InfixOperator::Slash,
                 right: ref same_1,
             }),
-        ) if **same_1 == *same_2 => *other.clone(),
+        ) if **same_1 == *same_2 => simplify(other, limit.saturating_sub(1)),
 
         // Catch-all
         (left, operator, right) => Expression::Infix(InfixExpression {
