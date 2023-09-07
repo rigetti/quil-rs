@@ -79,6 +79,7 @@ impl_to_quil!(PyMeasureCalibrationDefinition);
 #[pymethods]
 impl PyMeasureCalibrationDefinition {
     #[new]
+    #[pyo3(signature = (qubit, parameter, instructions))]
     pub fn new(
         py: Python<'_>,
         qubit: Option<PyQubit>,

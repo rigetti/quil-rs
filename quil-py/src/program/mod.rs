@@ -237,7 +237,7 @@ impl PyProgram {
     // Python functions return an error or an unexpected type. This is unusual, but in a Python
     // program, this function will only raise because [`pyo3`] wraps Rust panics in a
     // `PanicException`.
-    #[args("*", target_resolver = "None", qubit_resolver = "None")]
+    #[pyo3(signature = (*, target_resolver = None, qubit_resolver = None))]
     pub fn resolve_placeholders_with_custom_resolvers(
         &mut self,
         target_resolver: Option<Py<PyFunction>>,

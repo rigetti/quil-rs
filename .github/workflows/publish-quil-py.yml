@@ -35,7 +35,7 @@ jobs:
         # universal2 supports both x86_64 and aarch64
         uses: messense/maturin-action@v1
         with:
-          args: -i python --release --universal2 --manifest-path quil-py/Cargo.toml --out dist
+          args: -i python --release --target universal2-apple-darwin --manifest-path quil-py/Cargo.toml --out dist
       - name: Install wheel
         run: |
           pip install quil --no-index --find-links dist --force-reinstall
@@ -81,10 +81,41 @@ jobs:
         name: wheels
         path: dist
 
+  windows: 
+    runs-on: windows-latest 
+    strategy: 
+      matrix: 
+        python-version: ['3.8', '3.9', '3.10', '3.11'] 
+        target: [x64, x86] 
+    steps: 
+      - uses: actions/checkout@v2 
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          default: true
+      - uses: actions/setup-python@v4 
+        with: 
+          python-version: ${{ matrix.python-version }} 
+          architecture: ${{ matrix.target }} 
+      - name: Build wheels 
+        uses: messense/maturin-action@v1 
+        with: 
+          target: ${{ matrix.target }} 
+          args: -i python --release --manifest-path quil-py/Cargo.toml --out dist
+      - name: Install built wheel 
+        run: | 
+          pip install quil --find-links dist --force-reinstall --no-deps --no-index
+      - name: Upload wheels 
+        uses: actions/upload-artifact@v2 
+        with: 
+          name: wheels 
+          path: dist 
+
   publish-python-package:
     name: Release
     runs-on: ubuntu-latest
-    needs: [ macos, linux ]
+    needs: [ macos, linux, windows ]
     steps:
       - uses: actions/download-artifact@v3
       - name: Publish to PyPi
