@@ -194,7 +194,7 @@ fn simplify_infix(l: &Expression, op: InfixOperator, r: &Expression, limit: u64)
             | (other, InfixOperator::Plus, Expression::Number(x))
                 if is_zero(x) =>
             {
-                simplify(&other, limit - 1)
+                other
             }
             // Adding numbers or π
             (Expression::Number(x), InfixOperator::Plus, Expression::Number(y)) => {
@@ -212,9 +212,7 @@ fn simplify_infix(l: &Expression, op: InfixOperator, r: &Expression, limit: u64)
             (Expression::Number(x), InfixOperator::Minus, right) if is_zero(x) => {
                 simplify_prefix(PrefixOperator::Minus, &right, limit - 1)
             }
-            (left, InfixOperator::Minus, Expression::Number(y)) if is_zero(y) => {
-                simplify(&left, limit - 1)
-            }
+            (left, InfixOperator::Minus, Expression::Number(y)) if is_zero(y) => left,
             // Subtracting self
             (left, InfixOperator::Minus, right) if left == right => Expression::Number(ZERO),
             // Subtracting numbers or π (π - π already covered)
@@ -242,7 +240,7 @@ fn simplify_infix(l: &Expression, op: InfixOperator, r: &Expression, limit: u64)
             | (other, InfixOperator::Star, Expression::Number(x))
                 if is_one(x) =>
             {
-                simplify(&other, limit - 1)
+                other
             }
             // Multiplying with numbers or π
             (Expression::Number(x), InfixOperator::Star, Expression::Number(y)) => {
@@ -264,9 +262,7 @@ fn simplify_infix(l: &Expression, op: InfixOperator, r: &Expression, limit: u64)
                 Expression::Number(real!(f64::NAN))
             }
             // Division with one
-            (left, InfixOperator::Slash, Expression::Number(y)) if is_one(y) => {
-                simplify(&left, limit - 1)
-            }
+            (left, InfixOperator::Slash, Expression::Number(y)) if is_one(y) => left,
             // Division with self
             (left, InfixOperator::Slash, right) if left == right => Expression::Number(ONE),
             // Division with numbers or π (π / π already covered)
@@ -293,9 +289,7 @@ fn simplify_infix(l: &Expression, op: InfixOperator, r: &Expression, limit: u64)
             (Expression::Number(x), InfixOperator::Caret, _) if is_one(x) => {
                 Expression::Number(ONE)
             }
-            (left, InfixOperator::Caret, Expression::Number(y)) if is_one(y) => {
-                simplify(&left, limit - 1)
-            }
+            (left, InfixOperator::Caret, Expression::Number(y)) if is_one(y) => left,
 
             //----------------------------------------------------------------
             // Second: dealing with negation in subexpressions
@@ -591,7 +585,7 @@ fn simplify_infix(l: &Expression, op: InfixOperator, r: &Expression, limit: u64)
                 InfixOperator::Plus,
                 ref c,
             ) => {
-                let original = mul!(left.clone(), c.clone());
+                let original = add!(left.clone(), c.clone());
                 let bc = simplify_infix(b, InfixOperator::Plus, c, limit - 1);
                 let new = simplify_infix(a, InfixOperator::Plus, &bc, limit - 1);
                 min_by_key(original, new, size)
