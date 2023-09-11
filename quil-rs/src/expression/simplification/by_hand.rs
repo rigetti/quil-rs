@@ -290,6 +290,19 @@ fn simplify_infix(l: &Expression, op: InfixOperator, r: &Expression, limit: u64)
                 Expression::Number(ONE)
             }
             (left, InfixOperator::Caret, Expression::Number(y)) if is_one(y) => left,
+            // Exponentiation with numbers or π
+            (Expression::Number(x), InfixOperator::Caret, Expression::Number(y)) => {
+                Expression::Number(x.powc(y))
+            }
+            (Expression::Number(x), InfixOperator::Caret, Expression::PiConstant) => {
+                Expression::Number(x.powc(PI))
+            }
+            (Expression::PiConstant, InfixOperator::Caret, Expression::Number(y)) => {
+                Expression::Number(PI.powc(y))
+            }
+            (Expression::PiConstant, InfixOperator::Caret, Expression::PiConstant) => {
+                Expression::Number(PI.powc(PI))
+            }
 
             //----------------------------------------------------------------
             // Second: dealing with negation in subexpressions
