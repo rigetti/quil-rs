@@ -652,22 +652,6 @@ fn simplify_infix(l: &Expression, op: InfixOperator, r: &Expression, limit: u64)
                 min_by_key(original, new, size)
             }
 
-            // Subtraction "associative" (not really), left: (a - b) - c = (a + c) - b
-            (
-                ref left @ Expression::Infix(InfixExpression {
-                    left: ref a,
-                    operator: InfixOperator::Minus,
-                    right: ref b,
-                }),
-                InfixOperator::Minus,
-                ref c,
-            ) => {
-                let original = sub!(left.clone(), c.clone());
-                let ac = simplify_infix(a, InfixOperator::Plus, c, limit - 1);
-                let new = simplify_infix(&ac, InfixOperator::Minus, b, limit - 1);
-                min_by_key(original, new, size)
-            }
-
             // Division "associative" (not really), right: a / (b / c) = (a * c) / b
             (
                 ref a,
