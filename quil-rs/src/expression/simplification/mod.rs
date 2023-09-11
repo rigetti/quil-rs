@@ -330,6 +330,12 @@ mod tests {
         "2 * x[0] + 8"
     }
 
+    test_simplify! {
+        double_subtraction,
+        "3 - 2 - 1",
+        "0"
+    }
+
     // TODO doesn't fully simplify in a reasonable amount of recursion
     //     test_simplify! {
     //         the_big_one,
