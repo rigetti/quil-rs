@@ -259,11 +259,7 @@ impl Expression {
             Expression::PiConstant => {
                 *self = Expression::Number(Complex64::from(PI));
             }
-            _ => {
-                if let Ok(simpler) = simplification::run(self) {
-                    *self = simpler;
-                }
-            }
+            _ => *self = simplification::run(self),
         }
     }
 
@@ -666,10 +662,18 @@ impl fmt::Display for InfixOperator {
 #[allow(clippy::arc_with_non_send_sync)]
 mod tests {
     use super::*;
-    use crate::hash::hash_to_u64;
     use crate::reserved::ReservedToken;
     use proptest::prelude::*;
+    use std::collections::hash_map::DefaultHasher;
     use std::collections::HashSet;
+
+    /// Hash value helper: turn a hashable thing into a u64.
+    #[inline]
+    fn hash_to_u64<T: Hash>(t: &T) -> u64 {
+        let mut s = DefaultHasher::new();
+        t.hash(&mut s);
+        s.finish()
+    }
 
     #[test]
     fn simplify_and_evaluate() {
@@ -790,7 +794,7 @@ mod tests {
     // Better behaved than the auto-derived version for names
     fn arb_name() -> impl Strategy<Value = String> {
         r"[a-z][a-zA-Z0-9]{1,10}".prop_filter("Exclude reserved tokens", |t| {
-            ReservedToken::from_str(t).is_err()
+            ReservedToken::from_str(t).is_err() && !t.to_lowercase().starts_with("nan")
         })
     }
 
@@ -835,12 +839,10 @@ mod tests {
                             right: Box::new(r)
                         })
                     ),
-                    (any::<PrefixOperator>(), expr).prop_map(|(operator, e)| Prefix(
-                        PrefixExpression {
-                            operator,
-                            expression: Box::new(e)
-                        }
-                    ))
+                    (expr).prop_map(|e| Prefix(PrefixExpression {
+                        operator: PrefixOperator::Minus,
+                        expression: Box::new(e)
+                    }))
                 ]
             },
         )

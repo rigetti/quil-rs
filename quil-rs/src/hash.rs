@@ -1,15 +1,5 @@
-use std::{
-    collections::hash_map::DefaultHasher,
-    hash::{Hash, Hasher},
-};
+use std::hash::{Hash, Hasher};
 
-/// Hash value helper: turn a hashable thing into a u64.
-#[inline]
-pub(crate) fn hash_to_u64<T: Hash>(t: &T) -> u64 {
-    let mut s = DefaultHasher::new();
-    t.hash(&mut s);
-    s.finish()
-}
 /// Hashes a f64 using its u64 representation.
 ///
 /// Notes:
