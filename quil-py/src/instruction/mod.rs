@@ -252,8 +252,8 @@ macro_rules! impl_copy_for_instruction {
                     .expect("a copy of a type should extract to the same type"))
             }
 
-            pub fn __copy__(&self, py: Python<'_>) -> pyo3::PyObject {
-                pyo3::ToPyObject::to_object(&self, py).clone_ref(py)
+            pub fn __copy__(&self) -> Self {
+                self.clone()
             }
         }
     };
