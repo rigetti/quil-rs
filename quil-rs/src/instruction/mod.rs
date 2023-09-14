@@ -552,7 +552,7 @@ impl Instruction {
 
     /// Return immutable references to the [`Qubit`]s contained within an instruction
     #[allow(dead_code)]
-    pub(crate) fn get_qubits(&self) -> Vec<&Qubit> {
+    pub fn get_qubits(&self) -> Vec<&Qubit> {
         match self {
             Instruction::Gate(gate) => gate.qubits.iter().collect(),
             Instruction::Measurement(measurement) => vec![&measurement.qubit],
@@ -570,7 +570,7 @@ impl Instruction {
     }
 
     /// Return mutable references to the [`Qubit`]s contained within an instruction
-    pub(crate) fn get_qubits_mut(&mut self) -> Vec<&mut Qubit> {
+    pub fn get_qubits_mut(&mut self) -> Vec<&mut Qubit> {
         match self {
             Instruction::Gate(gate) => gate.qubits.iter_mut().collect(),
             Instruction::Measurement(measurement) => vec![&mut measurement.qubit],

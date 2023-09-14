@@ -10,7 +10,7 @@ use rigetti_pyo3::{
 };
 
 use super::PyQubit;
-use crate::{expression::PyExpression, impl_to_quil};
+use crate::{expression::PyExpression, impl_copy_for_instruction, impl_to_quil};
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
@@ -23,6 +23,7 @@ py_wrap_data_struct! {
 }
 impl_repr!(PyDelay);
 impl_to_quil!(PyDelay);
+impl_copy_for_instruction!(PyDelay);
 impl_hash!(PyDelay);
 
 #[pymethods]
@@ -58,6 +59,7 @@ py_wrap_data_struct! {
 }
 impl_repr!(PyFence);
 impl_to_quil!(PyFence);
+impl_copy_for_instruction!(PyFence);
 impl_hash!(PyFence);
 
 #[pymethods]

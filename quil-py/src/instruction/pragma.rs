@@ -11,7 +11,7 @@ use rigetti_pyo3::{
     PyTryFrom, PyWrapper,
 };
 
-use crate::impl_to_quil;
+use crate::{impl_copy_for_instruction, impl_to_quil};
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
@@ -24,6 +24,7 @@ py_wrap_data_struct! {
 }
 impl_repr!(PyPragma);
 impl_to_quil!(PyPragma);
+impl_copy_for_instruction!(PyPragma);
 impl_hash!(PyPragma);
 
 #[pymethods]
@@ -95,4 +96,5 @@ impl PyInclude {
 }
 impl_repr!(PyInclude);
 impl_to_quil!(PyInclude);
+impl_copy_for_instruction!(PyInclude);
 impl_hash!(PyInclude);

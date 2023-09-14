@@ -17,7 +17,7 @@ use rigetti_pyo3::{
 };
 
 use super::PyMemoryReference;
-use crate::impl_to_quil;
+use crate::{impl_copy_for_instruction, impl_to_quil};
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq)]
@@ -30,6 +30,7 @@ py_wrap_data_struct! {
 }
 impl_repr!(PyArithmetic);
 impl_to_quil!(PyArithmetic);
+impl_copy_for_instruction!(PyArithmetic);
 impl_hash!(PyArithmetic);
 
 #[pymethods]
@@ -212,6 +213,7 @@ py_wrap_data_struct! {
 }
 impl_repr!(PyBinaryLogic);
 impl_to_quil!(PyBinaryLogic);
+impl_copy_for_instruction!(PyBinaryLogic);
 
 #[pymethods]
 impl PyBinaryLogic {
@@ -245,6 +247,7 @@ py_wrap_data_struct! {
 }
 impl_repr!(PyConvert);
 impl_to_quil!(PyConvert);
+impl_copy_for_instruction!(PyConvert);
 impl_hash!(PyConvert);
 
 #[pymethods]
@@ -279,6 +282,7 @@ py_wrap_data_struct! {
 }
 impl_repr!(PyMove);
 impl_to_quil!(PyMove);
+impl_copy_for_instruction!(PyMove);
 impl_hash!(PyMove);
 
 #[pymethods]
@@ -313,6 +317,7 @@ py_wrap_data_struct! {
 }
 impl_repr!(PyExchange);
 impl_to_quil!(PyExchange);
+impl_copy_for_instruction!(PyExchange);
 impl_hash!(PyExchange);
 
 #[pymethods]
@@ -392,6 +397,7 @@ py_wrap_data_struct! {
 }
 impl_repr!(PyComparison);
 impl_to_quil!(PyComparison);
+impl_copy_for_instruction!(PyComparison);
 impl_hash!(PyComparison);
 
 #[pymethods]
@@ -468,6 +474,7 @@ py_wrap_data_struct! {
 }
 impl_repr!(PyUnaryLogic);
 impl_to_quil!(PyUnaryLogic);
+impl_copy_for_instruction!(PyUnaryLogic);
 impl_hash!(PyUnaryLogic);
 
 #[pymethods]

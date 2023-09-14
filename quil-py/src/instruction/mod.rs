@@ -1,7 +1,7 @@
 use quil_rs::instruction::Instruction;
 use rigetti_pyo3::{
     create_init_submodule, impl_repr, py_wrap_union_enum,
-    pyo3::{pyclass::CompareOp, pymethods, IntoPy, PyObject, Python},
+    pyo3::{pyclass::CompareOp, pymethods, types::PyDict, IntoPy, PyObject, PyResult, Python},
     PyWrapper,
 };
 
@@ -106,6 +106,32 @@ impl PyInstruction {
             _ => py.NotImplemented(),
         }
     }
+
+    pub fn copy(&self, py: Python<'_>) -> PyResult<Self> {
+        match self.inner(py) {
+            Ok(inner) => Ok(PyInstruction::new(
+                py,
+                inner
+                    .call_method1(py, "__deepcopy__", (PyDict::new(py),))?
+                    .as_ref(py),
+            )?),
+            Err(_) => Ok(self.clone()),
+        }
+    }
+
+    pub fn __copy__(&self, py: Python<'_>) -> PyResult<Self> {
+        self.copy(py)
+    }
+
+    pub fn __deepcopy__(&self, py: Python<'_>, memo: &PyDict) -> PyResult<Self> {
+        match self.inner(py) {
+            Ok(inner) => Ok(PyInstruction::new(
+                py,
+                inner.call_method1(py, "__deepcopy__", (memo,))?.as_ref(py),
+            )?),
+            Err(_) => Ok(self.clone()),
+        }
+    }
 }
 
 create_init_submodule! {
@@ -177,4 +203,57 @@ create_init_submodule! {
         PyWaveformInvocation
     ],
     errors: [ GateError, ParseMemoryReferenceError ],
+}
+
+/// Implements a copy method, as well as __copy__ and __deepcopy__ for use with Python's copy
+/// module, on any type that is a variant of the PyInstruction class.
+///
+/// Both `copy` and `__deepcopy__` are deep copies. They check the instruction for
+/// [`QubitPlaceholder`]s and create new placeholders in place of them in the copy.
+///
+/// The `__copy__` method [`Clone`]s the instruction. This means resolving [`QubitPlaceholder`]s
+/// in a copy created with Python's ``copy.copy`` will also resolve them in the original.
+#[macro_export]
+macro_rules! impl_copy_for_instruction {
+    ($py_name: ident) => {
+        #[pyo3::pymethods]
+        impl $py_name {
+            pub fn copy(&self, py: Python<'_>) -> pyo3::PyResult<Self> {
+                self.__deepcopy__(py, &pyo3::types::PyDict::new(py))
+            }
+
+            pub fn __deepcopy__(
+                &self,
+                py: Python<'_>,
+                _memo: &pyo3::types::PyDict,
+            ) -> pyo3::PyResult<Self> {
+                let mut instruction = $crate::instruction::PyInstruction::new(
+                    py,
+                    pyo3::ToPyObject::to_object(&self, py).as_ref(py),
+                )?;
+
+                use quil_rs::instruction::{Qubit, QubitPlaceholder};
+                for qubit in
+                    rigetti_pyo3::PyWrapperMut::as_inner_mut(&mut instruction).get_qubits_mut()
+                {
+                    match qubit {
+                        Qubit::Fixed(_) | Qubit::Variable(_) => *qubit = qubit.clone(),
+                        Qubit::Placeholder(_) => {
+                            *qubit = Qubit::Placeholder(QubitPlaceholder::default())
+                        }
+                    }
+                }
+
+                Ok(instruction
+                    .inner(py)
+                    .unwrap()
+                    .extract::<$py_name>(py)
+                    .expect("a copy of a type should extract to the same type"))
+            }
+
+            pub fn __copy__(&self) -> Self {
+                self.clone()
+            }
+        }
+    };
 }

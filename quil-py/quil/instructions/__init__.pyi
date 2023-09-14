@@ -372,6 +372,12 @@ class Instruction:
         Convert the instruction to a Quil string. If any part of the instruction can't
         be converted to valid Quil, it will be printed in a human-readable debug format.
         """
+    def copy(self) -> Self:
+        """Creates and returns a deep copy of the class."""
+    def __deepcopy__(self) -> Self:
+        """Creates and returns a deep copy of the class."""
+    def __copy__(self) -> Self:
+        """Creates and returns a copy of the class."""
 
 @final
 class ArithmeticOperand:
