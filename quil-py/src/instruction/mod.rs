@@ -205,23 +205,19 @@ create_init_submodule! {
     errors: [ GateError, ParseMemoryReferenceError ],
 }
 
-/// Implements a copy method, as well as __copy__ and __deepcopy__ for use with Python's copy
-/// module, on any type that is a variant of the PyInstruction class.
+/// Implements __copy__ and __deepcopy__ on any variant of the [`PyInstruction`] class, making
+/// them compatible with Python's `copy` module.
 ///
-/// Both `copy` and `__deepcopy__` are deep copies. They check the instruction for
-/// [`QubitPlaceholder`]s and create new placeholders in place of them in the copy.
+/// The `__copy__` method returns a reference to the instruction, making it shallow: any changes
+/// to the copy will update the original.
 ///
-/// The `__copy__` method [`Clone`]s the instruction. This means resolving [`QubitPlaceholder`]s
-/// in a copy created with Python's ``copy.copy`` will also resolve them in the original.
+/// The `__deepcopy__` method returns a deep copy. Because [`QubitPlaceholder`]s are implemented
+/// with [`Arc`], the implementation will find and replace any [`QubitPlaceholder`]s with new ones.
 #[macro_export]
 macro_rules! impl_copy_for_instruction {
     ($py_name: ident) => {
         #[pyo3::pymethods]
         impl $py_name {
-            pub fn copy(&self, py: Python<'_>) -> pyo3::PyResult<Self> {
-                self.__deepcopy__(py, &pyo3::types::PyDict::new(py))
-            }
-
             pub fn __deepcopy__(
                 &self,
                 py: Python<'_>,
@@ -233,13 +229,18 @@ macro_rules! impl_copy_for_instruction {
                 )?;
 
                 use quil_rs::instruction::{Qubit, QubitPlaceholder};
+                use std::collections::HashMap;
+                let mut placeholders: HashMap<QubitPlaceholder, QubitPlaceholder> = HashMap::new();
+
                 for qubit in
                     rigetti_pyo3::PyWrapperMut::as_inner_mut(&mut instruction).get_qubits_mut()
                 {
                     match qubit {
                         Qubit::Fixed(_) | Qubit::Variable(_) => *qubit = qubit.clone(),
-                        Qubit::Placeholder(_) => {
-                            *qubit = Qubit::Placeholder(QubitPlaceholder::default())
+                        Qubit::Placeholder(placeholder) => {
+                            *qubit = Qubit::Placeholder(
+                                placeholders.entry(placeholder.clone()).or_default().clone(),
+                            )
                         }
                     }
                 }
@@ -251,8 +252,8 @@ macro_rules! impl_copy_for_instruction {
                     .expect("a copy of a type should extract to the same type"))
             }
 
-            pub fn __copy__(&self) -> Self {
-                self.clone()
+            pub fn __copy__(&self, py: Python<'_>) -> pyo3::PyObject {
+                pyo3::ToPyObject::to_object(&self, py).clone_ref(py)
             }
         }
     };
