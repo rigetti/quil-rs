@@ -1,3 +1,9 @@
+## 0.5.2-rc.0
+
+### Features
+
+- Instruction classes now implement `__copy__`, and `__deepcopy__`, making them compatible with Python's `copy` module. (#283)
+
 ## 0.5.1
 
 ### Features
