@@ -4,7 +4,7 @@ use quil_rs::instruction::{
 };
 
 use super::PyArithmeticOperand;
-use crate::impl_to_quil;
+use crate::{impl_copy_for_instruction, impl_to_quil};
 
 use rigetti_pyo3::{
     impl_from_str, impl_hash, impl_parse, impl_repr, py_wrap_data_struct, py_wrap_error,
@@ -139,6 +139,7 @@ py_wrap_data_struct! {
 }
 impl_repr!(PyDeclaration);
 impl_to_quil!(PyDeclaration);
+impl_copy_for_instruction!(PyDeclaration);
 impl_hash!(PyDeclaration);
 
 #[pymethods]
@@ -205,6 +206,7 @@ py_wrap_data_struct! {
 }
 impl_repr!(PyLoad);
 impl_to_quil!(PyLoad);
+impl_copy_for_instruction!(PyLoad);
 impl_hash!(PyLoad);
 
 #[pymethods]
@@ -242,6 +244,7 @@ py_wrap_data_struct! {
 }
 impl_repr!(PyStore);
 impl_to_quil!(PyStore);
+impl_copy_for_instruction!(PyStore);
 impl_hash!(PyStore);
 
 #[pymethods]

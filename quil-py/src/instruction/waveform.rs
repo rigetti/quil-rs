@@ -13,7 +13,7 @@ use rigetti_pyo3::{
     PyTryFrom, PyWrapper,
 };
 
-use crate::{expression::PyExpression, impl_to_quil};
+use crate::{expression::PyExpression, impl_copy_for_instruction, impl_to_quil};
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
@@ -58,6 +58,7 @@ py_wrap_data_struct! {
 }
 impl_repr!(PyWaveformDefinition);
 impl_to_quil!(PyWaveformDefinition);
+impl_copy_for_instruction!(PyWaveformDefinition);
 impl_hash!(PyWaveformDefinition);
 
 #[pymethods]

@@ -23,7 +23,7 @@ use rigetti_pyo3::{
 use super::PyQubit;
 use crate::{
     expression::PyExpression,
-    impl_to_quil,
+    impl_copy_for_instruction, impl_to_quil,
     instruction::{PyMemoryReference, PyWaveformInvocation},
 };
 
@@ -60,6 +60,7 @@ py_wrap_data_struct! {
 }
 impl_repr!(PyFrameDefinition);
 impl_to_quil!(PyFrameDefinition);
+impl_copy_for_instruction!(PyFrameDefinition);
 
 #[pymethods]
 impl PyFrameDefinition {
@@ -125,6 +126,7 @@ py_wrap_data_struct! {
 }
 impl_repr!(PyCapture);
 impl_to_quil!(PyCapture);
+impl_copy_for_instruction!(PyCapture);
 
 #[pymethods]
 impl PyCapture {
@@ -164,6 +166,7 @@ py_wrap_data_struct! {
 
 impl_repr!(PyPulse);
 impl_to_quil!(PyPulse);
+impl_copy_for_instruction!(PyPulse);
 
 #[pymethods]
 impl PyPulse {
@@ -202,6 +205,7 @@ py_wrap_data_struct! {
 
 impl_repr!(PyRawCapture);
 impl_to_quil!(PyRawCapture);
+impl_copy_for_instruction!(PyRawCapture);
 impl_hash!(PyRawCapture);
 
 #[pymethods]
@@ -240,6 +244,7 @@ py_wrap_data_struct! {
 }
 impl_repr!(PySetFrequency);
 impl_to_quil!(PySetFrequency);
+impl_copy_for_instruction!(PySetFrequency);
 impl_hash!(PySetFrequency);
 
 #[pymethods]
@@ -274,6 +279,7 @@ py_wrap_data_struct! {
 }
 impl_repr!(PySetPhase);
 impl_to_quil!(PySetPhase);
+impl_copy_for_instruction!(PySetPhase);
 impl_hash!(PySetPhase);
 
 #[pymethods]
@@ -304,6 +310,7 @@ py_wrap_data_struct! {
 }
 impl_repr!(PySetScale);
 impl_to_quil!(PySetScale);
+impl_copy_for_instruction!(PySetScale);
 impl_hash!(PySetScale);
 
 #[pymethods]
@@ -334,6 +341,7 @@ py_wrap_data_struct! {
 }
 impl_repr!(PyShiftFrequency);
 impl_to_quil!(PyShiftFrequency);
+impl_copy_for_instruction!(PyShiftFrequency);
 impl_hash!(PyShiftFrequency);
 
 #[pymethods]
@@ -368,6 +376,7 @@ py_wrap_data_struct! {
 }
 impl_repr!(PyShiftPhase);
 impl_to_quil!(PyShiftPhase);
+impl_copy_for_instruction!(PyShiftPhase);
 impl_hash!(PyShiftPhase);
 
 #[pymethods]
@@ -398,6 +407,7 @@ py_wrap_data_struct! {
 }
 impl_repr!(PySwapPhases);
 impl_to_quil!(PySwapPhases);
+impl_copy_for_instruction!(PySwapPhases);
 impl_hash!(PySwapPhases);
 
 #[pymethods]

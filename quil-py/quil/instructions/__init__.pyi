@@ -372,6 +372,10 @@ class Instruction:
         Convert the instruction to a Quil string. If any part of the instruction can't
         be converted to valid Quil, it will be printed in a human-readable debug format.
         """
+    def __deepcopy__(self, _: Dict) -> Self:
+        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+    def __copy__(self) -> Self:
+        """Returns a shallow copy of the class."""
 
 @final
 class ArithmeticOperand:
@@ -472,6 +476,10 @@ class Arithmetic:
         Convert the instruction to a Quil string. If any part of the instruction can't
         be converted to valid Quil, it will be printed in a human-readable debug format.
         """
+    def __deepcopy__(self, _: Dict) -> Self:
+        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+    def __copy__(self) -> Self:
+        """Returns a shallow copy of the class."""
 
 @final
 class BinaryOperand:
@@ -575,6 +583,10 @@ class BinaryLogic:
         Convert the instruction to a Quil string. If any part of the instruction can't
         be converted to valid Quil, it will be printed in a human-readable debug format.
         """
+    def __deepcopy__(self, _: Dict) -> Self:
+        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+    def __copy__(self) -> Self:
+        """Returns a shallow copy of the class."""
 
 class Convert:
     def __new__(cls, destination: MemoryReference, source: MemoryReference) -> Self: ...
@@ -597,6 +609,10 @@ class Convert:
         Convert the instruction to a Quil string. If any part of the instruction can't
         be converted to valid Quil, it will be printed in a human-readable debug format.
         """
+    def __deepcopy__(self, _: Dict) -> Self:
+        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+    def __copy__(self) -> Self:
+        """Returns a shallow copy of the class."""
 
 class Move:
     def __new__(cls, destination: MemoryReference, source: ArithmeticOperand) -> Self: ...
@@ -619,6 +635,10 @@ class Move:
         Convert the instruction to a Quil string. If any part of the instruction can't
         be converted to valid Quil, it will be printed in a human-readable debug format.
         """
+    def __deepcopy__(self, _: Dict) -> Self:
+        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+    def __copy__(self) -> Self:
+        """Returns a shallow copy of the class."""
 
 class Exchange:
     def __new__(cls, left: MemoryReference, right: MemoryReference) -> Self: ...
@@ -641,6 +661,10 @@ class Exchange:
         Convert the instruction to a Quil string. If any part of the instruction can't
         be converted to valid Quil, it will be printed in a human-readable debug format.
         """
+    def __deepcopy__(self, _: Dict) -> Self:
+        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+    def __copy__(self) -> Self:
+        """Returns a shallow copy of the class."""
 
 @final
 class ComparisonOperand:
@@ -728,6 +752,10 @@ class Comparison:
         Convert the instruction to a Quil string. If any part of the instruction can't
         be converted to valid Quil, it will be printed in a human-readable debug format.
         """
+    def __deepcopy__(self, _: Dict) -> Self:
+        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+    def __copy__(self) -> Self:
+        """Returns a shallow copy of the class."""
 
 @final
 class UnaryOperator(Enum):
@@ -766,6 +794,10 @@ class UnaryLogic:
         Convert the instruction to a Quil string. If any part of the instruction can't
         be converted to valid Quil, it will be printed in a human-readable debug format.
         """
+    def __deepcopy__(self, _: Dict) -> Self:
+        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+    def __copy__(self) -> Self:
+        """Returns a shallow copy of the class."""
 
 class Calibration:
     def __new__(
@@ -807,6 +839,10 @@ class Calibration:
         Convert the instruction to a Quil string. If any part of the instruction can't
         be converted to valid Quil, it will be printed in a human-readable debug format.
         """
+    def __deepcopy__(self, _: Dict) -> Self:
+        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+    def __copy__(self) -> Self:
+        """Returns a shallow copy of the class."""
 
 class MeasureCalibrationDefinition:
     def __new__(
@@ -838,6 +874,10 @@ class MeasureCalibrationDefinition:
         Convert the instruction to a Quil string. If any part of the instruction can't
         be converted to valid Quil, it will be printed in a human-readable debug format.
         """
+    def __deepcopy__(self, _: Dict) -> Self:
+        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+    def __copy__(self) -> Self:
+        """Returns a shallow copy of the class."""
 
 class CircuitDefinition:
     def __new__(
@@ -874,6 +914,10 @@ class CircuitDefinition:
         Convert the instruction to a Quil string. If any part of the instruction can't
         be converted to valid Quil, it will be printed in a human-readable debug format.
         """
+    def __deepcopy__(self, _: Dict) -> Self:
+        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+    def __copy__(self) -> Self:
+        """Returns a shallow copy of the class."""
 
 class Offset:
     def __new__(
@@ -941,6 +985,10 @@ class Declaration:
         Convert the instruction to a Quil string. If any part of the instruction can't
         be converted to valid Quil, it will be printed in a human-readable debug format.
         """
+    def __deepcopy__(self, _: Dict) -> Self:
+        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+    def __copy__(self) -> Self:
+        """Returns a shallow copy of the class."""
 
 class Vector:
     def __new__(cls, data_type: ScalarType, length: int) -> Self: ...
@@ -1051,6 +1099,10 @@ class FrameDefinition:
         Convert the instruction to a Quil string. If any part of the instruction can't
         be converted to valid Quil, it will be printed in a human-readable debug format.
         """
+    def __deepcopy__(self, _: Dict) -> Self:
+        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+    def __copy__(self) -> Self:
+        """Returns a shallow copy of the class."""
 
 class FrameIdentifier:
     def __new__(cls, name: str, qubits: Sequence[Qubit]) -> Self: ...
@@ -1109,6 +1161,10 @@ class Capture:
         Convert the instruction to a Quil string. If any part of the instruction can't
         be converted to valid Quil, it will be printed in a human-readable debug format.
         """
+    def __deepcopy__(self, _: Dict) -> Self:
+        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+    def __copy__(self) -> Self:
+        """Returns a shallow copy of the class."""
 
 class Pulse:
     def __new__(
@@ -1140,6 +1196,10 @@ class Pulse:
         Convert the instruction to a Quil string. If any part of the instruction can't
         be converted to valid Quil, it will be printed in a human-readable debug format.
         """
+    def __deepcopy__(self, _: Dict) -> Self:
+        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+    def __copy__(self) -> Self:
+        """Returns a shallow copy of the class."""
 
 class RawCapture:
     def __new__(
@@ -1176,6 +1236,10 @@ class RawCapture:
         Convert the instruction to a Quil string. If any part of the instruction can't
         be converted to valid Quil, it will be printed in a human-readable debug format.
         """
+    def __deepcopy__(self, _: Dict) -> Self:
+        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+    def __copy__(self) -> Self:
+        """Returns a shallow copy of the class."""
 
 class SetFrequency:
     def __new__(cls, frame: FrameIdentifier, frequency: Expression) -> Self: ...
@@ -1198,6 +1262,10 @@ class SetFrequency:
         Convert the instruction to a Quil string. If any part of the instruction can't
         be converted to valid Quil, it will be printed in a human-readable debug format.
         """
+    def __deepcopy__(self, _: Dict) -> Self:
+        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+    def __copy__(self) -> Self:
+        """Returns a shallow copy of the class."""
 
 class SetPhase:
     def __new__(cls, frame: FrameIdentifier, phase: Expression) -> Self: ...
@@ -1220,6 +1288,10 @@ class SetPhase:
         Convert the instruction to a Quil string. If any part of the instruction can't
         be converted to valid Quil, it will be printed in a human-readable debug format.
         """
+    def __deepcopy__(self, _: Dict) -> Self:
+        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+    def __copy__(self) -> Self:
+        """Returns a shallow copy of the class."""
 
 class SetScale:
     def __new__(cls, frame: FrameIdentifier, phase: Expression) -> Self: ...
@@ -1242,6 +1314,10 @@ class SetScale:
         Convert the instruction to a Quil string. If any part of the instruction can't
         be converted to valid Quil, it will be printed in a human-readable debug format.
         """
+    def __deepcopy__(self, _: Dict) -> Self:
+        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+    def __copy__(self) -> Self:
+        """Returns a shallow copy of the class."""
 
 class ShiftFrequency:
     def __new__(cls, frame: FrameIdentifier, frequency: Expression) -> Self: ...
@@ -1264,6 +1340,10 @@ class ShiftFrequency:
         Convert the instruction to a Quil string. If any part of the instruction can't
         be converted to valid Quil, it will be printed in a human-readable debug format.
         """
+    def __deepcopy__(self, _: Dict) -> Self:
+        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+    def __copy__(self) -> Self:
+        """Returns a shallow copy of the class."""
 
 class ShiftPhase:
     def __new__(cls, frame: FrameIdentifier, phase: Expression) -> Self: ...
@@ -1286,6 +1366,10 @@ class ShiftPhase:
         Convert the instruction to a Quil string. If any part of the instruction can't
         be converted to valid Quil, it will be printed in a human-readable debug format.
         """
+    def __deepcopy__(self, _: Dict) -> Self:
+        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+    def __copy__(self) -> Self:
+        """Returns a shallow copy of the class."""
 
 class SwapPhases:
     def __new__(cls, frame_1: FrameIdentifier, frame_2: FrameIdentifier) -> Self: ...
@@ -1308,6 +1392,10 @@ class SwapPhases:
         Convert the instruction to a Quil string. If any part of the instruction can't
         be converted to valid Quil, it will be printed in a human-readable debug format.
         """
+    def __deepcopy__(self, _: Dict) -> Self:
+        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+    def __copy__(self) -> Self:
+        """Returns a shallow copy of the class."""
 
 class GateError(ValueError):
     """An error that may occur when performing operations on a ``Gate``"""
@@ -1392,6 +1480,10 @@ class Gate:
         Convert the instruction to a Quil string. If any part of the instruction can't
         be converted to valid Quil, it will be printed in a human-readable debug format.
         """
+    def __deepcopy__(self, _: Dict) -> Self:
+        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+    def __copy__(self) -> Self:
+        """Returns a shallow copy of the class."""
 
 @final
 class PauliGate(Enum):
@@ -1511,6 +1603,10 @@ class GateDefinition:
         Convert the instruction to a Quil string. If any part of the instruction can't
         be converted to valid Quil, it will be printed in a human-readable debug format.
         """
+    def __deepcopy__(self, _: Dict) -> Self:
+        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+    def __copy__(self) -> Self:
+        """Returns a shallow copy of the class."""
 
 @final
 class Qubit:
@@ -1586,6 +1682,10 @@ class Reset:
         Convert the instruction to a Quil string. If any part of the instruction can't
         be converted to valid Quil, it will be printed in a human-readable debug format.
         """
+    def __deepcopy__(self, _: Dict) -> Self:
+        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+    def __copy__(self) -> Self:
+        """Returns a shallow copy of the class."""
 
 class Delay:
     def __new__(cls, duration: Expression, frame_names: Sequence[str], qubits: Sequence[Qubit]) -> Self: ...
@@ -1612,6 +1712,10 @@ class Delay:
         Convert the instruction to a Quil string. If any part of the instruction can't
         be converted to valid Quil, it will be printed in a human-readable debug format.
         """
+    def __deepcopy__(self, _: Dict) -> Self:
+        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+    def __copy__(self) -> Self:
+        """Returns a shallow copy of the class."""
 
 class Fence:
     def __new__(cls, qubits: Sequence[Qubit]) -> Self: ...
@@ -1630,6 +1734,10 @@ class Fence:
         Convert the instruction to a Quil string. If any part of the instruction can't
         be converted to valid Quil, it will be printed in a human-readable debug format.
         """
+    def __deepcopy__(self, _: Dict) -> Self:
+        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+    def __copy__(self) -> Self:
+        """Returns a shallow copy of the class."""
 
 @final
 class PragmaArgument:
@@ -1690,6 +1798,10 @@ class Include:
         Convert the instruction to a Quil string. If any part of the instruction can't
         be converted to valid Quil, it will be printed in a human-readable debug format.
         """
+    def __deepcopy__(self, _: Dict) -> Self:
+        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+    def __copy__(self) -> Self:
+        """Returns a shallow copy of the class."""
 
 class Pragma:
     def __new__(cls, name: str, arguments: Sequence[PragmaArgument], data: Optional[str]) -> Self: ...
@@ -1716,6 +1828,10 @@ class Pragma:
         Convert the instruction to a Quil string. If any part of the instruction can't
         be converted to valid Quil, it will be printed in a human-readable debug format.
         """
+    def __deepcopy__(self, _: Dict) -> Self:
+        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+    def __copy__(self) -> Self:
+        """Returns a shallow copy of the class."""
 
 class Measurement:
     def __new__(cls, qubit: Qubit, target: Optional[MemoryReference]) -> Self: ...
@@ -1738,6 +1854,10 @@ class Measurement:
         Convert the instruction to a Quil string. If any part of the instruction can't
         be converted to valid Quil, it will be printed in a human-readable debug format.
         """
+    def __deepcopy__(self, _: Dict) -> Self:
+        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+    def __copy__(self) -> Self:
+        """Returns a shallow copy of the class."""
 
 class ParseMemoryReferenceError(ValueError):
     """Errors that may occur while parsing a ``MemoryReference``"""
@@ -1796,6 +1916,10 @@ class Load:
         Convert the instruction to a Quil string. If any part of the instruction can't
         be converted to valid Quil, it will be printed in a human-readable debug format.
         """
+    def __deepcopy__(self, _: Dict) -> Self:
+        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+    def __copy__(self) -> Self:
+        """Returns a shallow copy of the class."""
 
 class Store:
     def __new__(cls, destination: str, offset: MemoryReference, source: ArithmeticOperand) -> Self: ...
@@ -1822,6 +1946,10 @@ class Store:
         Convert the instruction to a Quil string. If any part of the instruction can't
         be converted to valid Quil, it will be printed in a human-readable debug format.
         """
+    def __deepcopy__(self, _: Dict) -> Self:
+        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+    def __copy__(self) -> Self:
+        """Returns a shallow copy of the class."""
 
 class Waveform:
     def __new__(cls, matrix: Sequence[Expression], parameters: Sequence[str]) -> Self: ...
@@ -1855,6 +1983,10 @@ class WaveformDefinition:
         Convert the instruction to a Quil string. If any part of the instruction can't
         be converted to valid Quil, it will be printed in a human-readable debug format.
         """
+    def __deepcopy__(self, _: Dict) -> Self:
+        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+    def __copy__(self) -> Self:
+        """Returns a shallow copy of the class."""
 
 class WaveformInvocation:
     def __new__(cls, name: str, parameters: Dict[str, Expression]) -> Self: ...
@@ -1895,6 +2027,10 @@ class Label:
         Convert the instruction to a Quil string. If any part of the instruction can't
         be converted to valid Quil, it will be printed in a human-readable debug format.
         """
+    def __deepcopy__(self, _: Dict) -> Self:
+        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+    def __copy__(self) -> Self:
+        """Returns a shallow copy of the class."""
 
 @final
 class Target:
@@ -1965,6 +2101,10 @@ class Jump:
         Convert the instruction to a Quil string. If any part of the instruction can't
         be converted to valid Quil, it will be printed in a human-readable debug format.
         """
+    def __deepcopy__(self, _: Dict) -> Self:
+        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+    def __copy__(self) -> Self:
+        """Returns a shallow copy of the class."""
 
 class JumpWhen:
     def __new__(cls, target: Target, condition: MemoryReference) -> Self: ...
@@ -1987,6 +2127,10 @@ class JumpWhen:
         Convert the instruction to a Quil string. If any part of the instruction can't
         be converted to valid Quil, it will be printed in a human-readable debug format.
         """
+    def __deepcopy__(self, _: Dict) -> Self:
+        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+    def __copy__(self) -> Self:
+        """Returns a shallow copy of the class."""
 
 class JumpUnless:
     def __new__(cls, target: Target, condition: MemoryReference) -> Self: ...
@@ -2009,3 +2153,7 @@ class JumpUnless:
         Convert the instruction to a Quil string. If any part of the instruction can't
         be converted to valid Quil, it will be printed in a human-readable debug format.
         """
+    def __deepcopy__(self, _: Dict) -> Self:
+        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+    def __copy__(self) -> Self:
+        """Returns a shallow copy of the class."""
