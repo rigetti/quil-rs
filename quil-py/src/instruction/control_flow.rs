@@ -12,7 +12,10 @@ use crate::{impl_to_quil, instruction::PyMemoryReference};
 /// Implements __copy__ and __deepcopy__ for instructions containing a [`Target`].
 ///
 /// __copy__ implements a shallow copy by returning a reference to the object.
-/// __deepcopy__
+///
+/// __deepcopy__ performs a deep copy by cloning the Rust reference, and replacing
+/// any [`TargetPlaceholder`]s from the original intruction with new instances so
+/// that resolving placeholders on the copy does not affect the original.
 macro_rules! impl_copy_for_target_containing_instructions {
     ($name: ident) => {
         #[pyo3::pymethods]

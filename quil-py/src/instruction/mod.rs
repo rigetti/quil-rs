@@ -208,8 +208,10 @@ create_init_submodule! {
 /// The `__copy__` method returns a reference to the instruction, making it shallow: any changes
 /// to the copy will update the original.
 ///
-/// The `__deepcopy__` method returns a deep copy. Because [`QubitPlaceholder`]s are implemented
-/// with [`Arc`], the implementation will find and replace any [`QubitPlaceholder`]s with new ones.
+/// The `__deepcopy__` method creates a deep copy by cloning the inner instruction, querying its
+/// qubits, and replacing any [`quil_rs::instruction::QubitPlaceholder`]s with new instances so
+/// that resolving them in one copy doesn't affect the other. Duplicates of the same instruction in
+/// the original instruction will be replaced with the same copy in the new instruction.
 #[macro_export]
 macro_rules! impl_copy_for_instruction {
     ($py_name: ident) => {
