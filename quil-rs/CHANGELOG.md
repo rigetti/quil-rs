@@ -1,3 +1,9 @@
+## 0.21.1-rc.0
+
+### Features
+
+- Add get_qubits method to Instruction
+
 ## 0.21.0
 
 ### Breaking Changes
