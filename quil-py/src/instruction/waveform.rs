@@ -23,7 +23,6 @@ py_wrap_data_struct! {
         parameters: Vec<String> => Vec<Py<PyString>>
     }
 }
-impl_copy_for_instruction!(PyWaveform);
 impl_repr!(PyWaveform);
 impl_hash!(PyWaveform);
 
@@ -90,7 +89,6 @@ py_wrap_data_struct! {
 }
 impl_repr!(PyWaveformInvocation);
 impl_to_quil!(PyWaveformInvocation);
-impl_copy_for_instruction!(PyWaveformInvocation);
 
 #[pymethods]
 impl PyWaveformInvocation {

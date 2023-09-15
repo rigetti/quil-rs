@@ -36,7 +36,6 @@ py_wrap_union_enum! {
 }
 impl_repr!(PyAttributeValue);
 impl_to_quil!(PyAttributeValue);
-impl_copy_for_instruction!(PyAttributeValue);
 impl_hash!(PyAttributeValue);
 
 #[pymethods]

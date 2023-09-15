@@ -298,6 +298,7 @@ py_wrap_data_struct! {
 }
 impl_repr!(PyGateDefinition);
 impl_to_quil!(PyGateDefinition);
+impl_copy_for_instruction!(PyGateDefinition);
 impl_hash!(PyGateDefinition);
 
 #[pymethods]

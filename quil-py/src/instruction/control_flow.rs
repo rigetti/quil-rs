@@ -7,7 +7,34 @@ use rigetti_pyo3::{
     PyWrapper,
 };
 
-use crate::{impl_copy_for_instruction, impl_to_quil, instruction::PyMemoryReference};
+use crate::{impl_to_quil, instruction::PyMemoryReference};
+
+/// Implements __copy__ and __deepcopy__ for instructions containing a [`Target`].
+///
+/// __copy__ implements a shallow copy by returning a reference to the object.
+/// __deepcopy__
+macro_rules! impl_copy_for_target_containing_instructions {
+    ($name: ident) => {
+        #[pyo3::pymethods]
+        impl $name {
+            pub fn __copy__(&self) -> Self {
+                self.clone()
+            }
+
+            pub fn __deepcopy__(&self, _memo: &pyo3::types::PyDict) -> Self {
+                use quil_rs::instruction::{Target, TargetPlaceholder};
+                let mut copy = rigetti_pyo3::PyWrapper::into_inner(self.clone());
+                if let Target::Placeholder(placeholder) = copy.target {
+                    copy.target = Target::Placeholder(TargetPlaceholder::new(
+                        placeholder.as_inner().to_string(),
+                    ))
+                }
+
+                Self(copy)
+            }
+        }
+    };
+}
 
 py_wrap_data_struct! {
     #[pyo3(subclass)]
@@ -19,7 +46,7 @@ py_wrap_data_struct! {
 impl_repr!(PyLabel);
 impl_hash!(PyLabel);
 impl_to_quil!(PyLabel);
-impl_copy_for_instruction!(PyLabel);
+impl_copy_for_target_containing_instructions!(PyLabel);
 
 #[pymethods]
 impl PyLabel {
@@ -87,7 +114,7 @@ py_wrap_data_struct! {
 }
 impl_repr!(PyJump);
 impl_to_quil!(PyJump);
-impl_copy_for_instruction!(PyJump);
+impl_copy_for_target_containing_instructions!(PyJump);
 
 #[pymethods]
 impl PyJump {
@@ -106,7 +133,7 @@ py_wrap_data_struct! {
 }
 impl_repr!(PyJumpWhen);
 impl_to_quil!(PyJumpWhen);
-impl_copy_for_instruction!(PyJumpWhen);
+impl_copy_for_target_containing_instructions!(PyJumpWhen);
 
 #[pymethods]
 impl PyJumpWhen {
@@ -125,6 +152,7 @@ py_wrap_data_struct! {
 }
 impl_repr!(PyJumpUnless);
 impl_to_quil!(PyJumpUnless);
+impl_copy_for_target_containing_instructions!(PyJumpUnless);
 
 #[pymethods]
 impl PyJumpUnless {

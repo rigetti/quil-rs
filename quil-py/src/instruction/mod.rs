@@ -107,20 +107,16 @@ impl PyInstruction {
         }
     }
 
-    pub fn copy(&self, py: Python<'_>) -> PyResult<Self> {
-        match self.inner(py) {
-            Ok(inner) => Ok(PyInstruction::new(
-                py,
-                inner
-                    .call_method1(py, "__deepcopy__", (PyDict::new(py),))?
-                    .as_ref(py),
-            )?),
-            Err(_) => Ok(self.clone()),
-        }
-    }
-
-    pub fn __copy__(&self, py: Python<'_>) -> PyResult<Self> {
-        self.copy(py)
+    // Implement the __copy__ and __deepcopy__ dunder methods, which are used by Python's
+    // `copy` module.
+    //
+    // If the instruction contains some inner data, then the implementation for __deepcopy__
+    // is delegated to that inner type so that each type can define its own copy behavior.
+    // This comes with the caveat that this implementation will error if the inner type doesn't
+    // implement __deepcopy__ itself. See [`impl_copy_for_instruction!`] for an easy way to
+    // implement these methods on any variant of [`PyInstruction`].
+    pub fn __copy__(&self) -> Self {
+        self.clone()
     }
 
     pub fn __deepcopy__(&self, py: Python<'_>, memo: &PyDict) -> PyResult<Self> {
@@ -129,7 +125,8 @@ impl PyInstruction {
                 py,
                 inner.call_method1(py, "__deepcopy__", (memo,))?.as_ref(py),
             )?),
-            Err(_) => Ok(self.clone()),
+            Err(_) => Ok(self.clone()), // No inner data implies this is a simple instruction, safe to
+                                        // just clone.
         }
     }
 }
