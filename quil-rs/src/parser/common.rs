@@ -178,7 +178,10 @@ pub(crate) fn parse_matrix<'a>(
             token!(NewLine),
             preceded(
                 token!(Indentation),
-                separated_list0(token!(Comma), parse_expression),
+                separated_list0(
+                    pair(token!(Comma), many0(token!(Indentation))),
+                    parse_expression,
+                ),
             ),
         ),
     )(input)
@@ -577,6 +580,24 @@ SWAP-PHASES 2 3 \"xy\" 3 4 \"xy\"";
             "expected remainder to be empty, got {remainder:?}"
         );
         assert_eq!(matrix.len(), 2);
+    }
+
+    #[test]
+    fn test_parse_matrix_inline_whitespace() {
+        let input = LocatedSpan::new(
+            "
+    cis(%alpha), 0, 0, 0
+    0,           1, 0, 0
+    0,           0, 1, 0
+    0,           0, 0, 1",
+        );
+        let lexed = lex(input).unwrap();
+        let (remainder, matrix) = parse_matrix(&lexed).unwrap();
+        assert!(
+            remainder.is_empty(),
+            "expected remainder to be empty, got {remainder:?}"
+        );
+        assert_eq!(matrix.len(), 4);
     }
 
     #[test]
