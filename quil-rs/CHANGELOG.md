@@ -1,3 +1,9 @@
+## 0.21.2-rc.0
+
+### Fixes
+
+- Allow whitespace to delimit matrix specifications, better support parsing (#286)
+
 ## 0.21.1
 
 ### Features
