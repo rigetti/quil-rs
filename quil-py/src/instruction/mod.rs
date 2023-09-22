@@ -1,11 +1,10 @@
 use quil_rs::instruction::Instruction;
 use rigetti_pyo3::{
     create_init_submodule, impl_repr, py_wrap_union_enum,
-    pyo3::{pyclass::CompareOp, pymethods, types::PyDict, IntoPy, PyObject, PyResult, Python},
-    PyWrapper,
+    pyo3::{pymethods, types::PyDict, PyResult, Python},
 };
 
-use crate::impl_to_quil;
+use crate::{impl_eq, impl_to_quil};
 
 pub use self::{
     calibration::{PyCalibration, PyMeasureCalibrationDefinition},
@@ -97,16 +96,10 @@ py_wrap_union_enum! {
 }
 impl_repr!(PyInstruction);
 impl_to_quil!(PyInstruction);
+impl_eq!(PyInstruction);
 
 #[pymethods]
 impl PyInstruction {
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
-    }
-
     // Implement the __copy__ and __deepcopy__ dunder methods, which are used by Python's
     // `copy` module.
     //

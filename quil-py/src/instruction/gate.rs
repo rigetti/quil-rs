@@ -12,17 +12,17 @@ use rigetti_pyo3::{
     py_wrap_data_struct, py_wrap_error, py_wrap_simple_enum, py_wrap_type, py_wrap_union_enum,
     pyo3::{
         exceptions::PyValueError,
-        pyclass::CompareOp,
         pymethods,
         types::{PyInt, PyString},
-        IntoPy, Py, PyErr, PyObject, PyResult, Python,
+        Py, PyErr, PyResult, Python,
     },
     wrap_error, PyTryFrom, PyWrapper, PyWrapperMut, ToPython, ToPythonError,
 };
 use strum;
 
 use crate::{
-    expression::PyExpression, impl_copy_for_instruction, impl_to_quil, instruction::PyQubit,
+    expression::PyExpression, impl_copy_for_instruction, impl_eq, impl_to_quil,
+    instruction::PyQubit,
 };
 
 wrap_error!(RustGateError(quil_rs::instruction::GateError));
@@ -44,6 +44,7 @@ impl_repr!(PyGate);
 impl_copy_for_instruction!(PyGate);
 impl_to_quil!(PyGate);
 impl_hash!(PyGate);
+impl_eq!(PyGate);
 
 #[pymethods]
 impl PyGate {
@@ -108,13 +109,6 @@ impl PyGate {
             .to_pyarray(py)
             .to_owned())
     }
-
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
-    }
 }
 
 py_wrap_simple_enum! {
@@ -128,16 +122,7 @@ py_wrap_simple_enum! {
 impl_repr!(PyGateModifier);
 impl_to_quil!(PyGateModifier);
 impl_hash!(PyGateModifier);
-
-#[pymethods]
-impl PyGateModifier {
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
-    }
-}
+impl_eq!(PyGateModifier);
 
 py_wrap_simple_enum! {
     #[derive(Debug, PartialEq, Eq)]
@@ -245,6 +230,7 @@ py_wrap_data_struct! {
     }
 }
 impl_repr!(PyPauliSum);
+impl_eq!(PyPauliSum);
 
 #[pymethods]
 impl PyPauliSum {
@@ -255,13 +241,6 @@ impl PyPauliSum {
                 .map_err(RustGateError::from)
                 .map_err(RustGateError::to_py_err)?,
         ))
-    }
-
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
     }
 }
 
@@ -276,16 +255,7 @@ py_wrap_union_enum! {
 impl_repr!(PyGateSpecification);
 impl_to_quil!(PyGateSpecification);
 impl_hash!(PyGateSpecification);
-
-#[pymethods]
-impl PyGateSpecification {
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
-    }
-}
+impl_eq!(PyGateSpecification);
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
@@ -300,6 +270,7 @@ impl_repr!(PyGateDefinition);
 impl_to_quil!(PyGateDefinition);
 impl_copy_for_instruction!(PyGateDefinition);
 impl_hash!(PyGateDefinition);
+impl_eq!(PyGateDefinition);
 
 #[pymethods]
 impl PyGateDefinition {
@@ -319,12 +290,5 @@ impl PyGateDefinition {
             .map_err(RustGateError::from)
             .map_err(RustGateError::to_py_err)?,
         ))
-    }
-
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
     }
 }

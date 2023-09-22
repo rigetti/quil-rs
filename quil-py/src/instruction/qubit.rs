@@ -3,15 +3,13 @@ use quil_rs::instruction::{Qubit, QubitPlaceholder};
 use rigetti_pyo3::{
     impl_compare, impl_hash, impl_repr, py_wrap_type, py_wrap_union_enum,
     pyo3::{
-        pyclass::CompareOp,
         pymethods,
         types::{PyLong, PyString},
-        IntoPy, Py, PyObject, Python,
+        Py,
     },
-    PyWrapper,
 };
 
-use crate::impl_to_quil;
+use crate::{impl_eq, impl_to_quil};
 
 py_wrap_union_enum! {
     #[derive(Debug, Eq, Hash, PartialEq)]
@@ -24,16 +22,7 @@ py_wrap_union_enum! {
 impl_repr!(PyQubit);
 impl_to_quil!(PyQubit);
 impl_hash!(PyQubit);
-
-#[pymethods]
-impl PyQubit {
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
-    }
-}
+impl_eq!(PyQubit);
 
 py_wrap_type! {
     #[pyo3(subclass)]

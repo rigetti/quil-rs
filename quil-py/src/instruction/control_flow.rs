@@ -3,11 +3,11 @@ use quil_rs::instruction::{
 };
 use rigetti_pyo3::{
     impl_compare, impl_hash, impl_repr, py_wrap_data_struct, py_wrap_type, py_wrap_union_enum,
-    pyo3::{pyclass::CompareOp, pymethods, types::PyString, IntoPy, Py, PyObject, Python},
+    pyo3::{pymethods, types::PyString, Py},
     PyWrapper,
 };
 
-use crate::{impl_to_quil, instruction::PyMemoryReference};
+use crate::{impl_eq, impl_to_quil, instruction::PyMemoryReference};
 
 /// Implements __copy__ and __deepcopy__ for instructions containing a [`Target`].
 ///
@@ -50,19 +50,13 @@ impl_repr!(PyLabel);
 impl_hash!(PyLabel);
 impl_to_quil!(PyLabel);
 impl_copy_for_target_containing_instructions!(PyLabel);
+impl_eq!(PyLabel);
 
 #[pymethods]
 impl PyLabel {
     #[new]
     fn new(target: PyTarget) -> Self {
         PyLabel(Label::new(target.into_inner()))
-    }
-
-    fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self == other).into_py(py),
-            _ => py.NotImplemented(),
-        }
     }
 }
 
@@ -76,16 +70,7 @@ py_wrap_union_enum! {
 impl_repr!(PyTarget);
 impl_hash!(PyTarget);
 impl_to_quil!(PyTarget);
-
-#[pymethods]
-impl PyTarget {
-    fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self == other).into_py(py),
-            _ => py.NotImplemented(),
-        }
-    }
-}
+impl_eq!(PyTarget);
 
 py_wrap_type! {
     #[pyo3(subclass)]
@@ -110,6 +95,7 @@ impl PyTargetPlaceholder {
 }
 
 py_wrap_data_struct! {
+    #[derive(Debug, PartialEq)]
     #[pyo3(subclass)]
     PyJump(Jump) as "Jump" {
         target: Target => PyTarget
@@ -118,6 +104,7 @@ py_wrap_data_struct! {
 impl_repr!(PyJump);
 impl_to_quil!(PyJump);
 impl_copy_for_target_containing_instructions!(PyJump);
+impl_eq!(PyJump);
 
 #[pymethods]
 impl PyJump {
@@ -128,6 +115,7 @@ impl PyJump {
 }
 
 py_wrap_data_struct! {
+    #[derive(Debug, PartialEq)]
     #[pyo3(subclass)]
     PyJumpWhen(JumpWhen) as "JumpWhen" {
         target: Target => PyTarget,
@@ -137,6 +125,7 @@ py_wrap_data_struct! {
 impl_repr!(PyJumpWhen);
 impl_to_quil!(PyJumpWhen);
 impl_copy_for_target_containing_instructions!(PyJumpWhen);
+impl_eq!(PyJumpWhen);
 
 #[pymethods]
 impl PyJumpWhen {
@@ -147,6 +136,7 @@ impl PyJumpWhen {
 }
 
 py_wrap_data_struct! {
+    #[derive(Debug, PartialEq)]
     #[pyo3(subclass)]
     PyJumpUnless(JumpUnless) as "JumpUnless" {
         target: Target => PyTarget,
@@ -156,6 +146,7 @@ py_wrap_data_struct! {
 impl_repr!(PyJumpUnless);
 impl_to_quil!(PyJumpUnless);
 impl_copy_for_target_containing_instructions!(PyJumpUnless);
+impl_eq!(PyJumpUnless);
 
 #[pymethods]
 impl PyJumpUnless {

@@ -2,14 +2,12 @@ use quil_rs::instruction::{CircuitDefinition, Instruction};
 
 use rigetti_pyo3::{
     impl_repr, py_wrap_data_struct,
-    pyo3::{
-        pyclass::CompareOp, pymethods, types::PyString, IntoPy, Py, PyObject, PyResult, Python,
-    },
-    PyTryFrom, PyWrapper,
+    pyo3::{pymethods, types::PyString, Py, PyResult, Python},
+    PyTryFrom,
 };
 
 use super::PyInstruction;
-use crate::{impl_copy_for_instruction, impl_to_quil};
+use crate::{impl_copy_for_instruction, impl_eq, impl_to_quil};
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq)]
@@ -24,6 +22,7 @@ py_wrap_data_struct! {
 impl_repr!(PyCircuitDefinition);
 impl_to_quil!(PyCircuitDefinition);
 impl_copy_for_instruction!(PyCircuitDefinition);
+impl_eq!(PyCircuitDefinition);
 
 #[pymethods]
 impl PyCircuitDefinition {
@@ -41,12 +40,5 @@ impl PyCircuitDefinition {
             qubit_variables,
             Vec::<Instruction>::py_try_from(py, &instructions)?,
         )))
-    }
-
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
     }
 }

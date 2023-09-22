@@ -3,15 +3,14 @@ use quil_rs::instruction::{Include, Pragma, PragmaArgument};
 use rigetti_pyo3::{
     impl_hash, impl_repr, py_wrap_data_struct, py_wrap_union_enum,
     pyo3::{
-        pyclass::CompareOp,
         pymethods,
         types::{PyInt, PyString},
-        IntoPy, Py, PyObject, PyResult, Python,
+        Py, PyResult, Python,
     },
-    PyTryFrom, PyWrapper,
+    PyTryFrom,
 };
 
-use crate::{impl_copy_for_instruction, impl_to_quil};
+use crate::{impl_copy_for_instruction, impl_eq, impl_to_quil};
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
@@ -26,6 +25,7 @@ impl_repr!(PyPragma);
 impl_to_quil!(PyPragma);
 impl_copy_for_instruction!(PyPragma);
 impl_hash!(PyPragma);
+impl_eq!(PyPragma);
 
 #[pymethods]
 impl PyPragma {
@@ -42,13 +42,6 @@ impl PyPragma {
             data,
         )))
     }
-
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
-    }
 }
 
 py_wrap_union_enum! {
@@ -61,16 +54,7 @@ py_wrap_union_enum! {
 impl_repr!(PyPragmaArgument);
 impl_to_quil!(PyPragmaArgument);
 impl_hash!(PyPragmaArgument);
-
-#[pymethods]
-impl PyPragmaArgument {
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
-    }
-}
+impl_eq!(PyPragmaArgument);
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
@@ -79,6 +63,11 @@ py_wrap_data_struct! {
         filename: String => Py<PyString>
     }
 }
+impl_repr!(PyInclude);
+impl_to_quil!(PyInclude);
+impl_copy_for_instruction!(PyInclude);
+impl_hash!(PyInclude);
+impl_eq!(PyInclude);
 
 #[pymethods]
 impl PyInclude {
@@ -86,15 +75,4 @@ impl PyInclude {
     pub fn new(filename: String) -> Self {
         Self(Include::new(filename))
     }
-
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
-    }
 }
-impl_repr!(PyInclude);
-impl_to_quil!(PyInclude);
-impl_copy_for_instruction!(PyInclude);
-impl_hash!(PyInclude);

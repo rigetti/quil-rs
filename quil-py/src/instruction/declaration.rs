@@ -4,19 +4,18 @@ use quil_rs::instruction::{
 };
 
 use super::PyArithmeticOperand;
-use crate::{impl_copy_for_instruction, impl_to_quil};
+use crate::{impl_copy_for_instruction, impl_eq, impl_to_quil};
 
 use rigetti_pyo3::{
     impl_from_str, impl_hash, impl_parse, impl_repr, py_wrap_data_struct, py_wrap_error,
     py_wrap_simple_enum,
     pyo3::{
         exceptions::PyValueError,
-        pyclass::CompareOp,
         pymethods,
         types::{PyInt, PyString},
-        IntoPy, Py, PyObject, PyResult, Python,
+        Py, PyResult, Python,
     },
-    wrap_error, PyTryFrom, PyWrapper,
+    wrap_error, PyTryFrom,
 };
 
 wrap_error!(RustParseMemoryReferenceError(quil_rs::program::SyntaxError<MemoryReference>));
@@ -50,6 +49,7 @@ py_wrap_data_struct! {
 impl_repr!(PyVector);
 impl_to_quil!(PyVector);
 impl_hash!(PyVector);
+impl_eq!(PyVector);
 
 #[pymethods]
 impl PyVector {
@@ -59,13 +59,6 @@ impl PyVector {
             ScalarType::py_try_from(py, &data_type)?,
             length,
         )))
-    }
-
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
     }
 }
 
@@ -80,6 +73,7 @@ py_wrap_data_struct! {
 impl_repr!(PyOffset);
 impl_to_quil!(PyOffset);
 impl_hash!(PyOffset);
+impl_eq!(PyOffset);
 
 #[pymethods]
 impl PyOffset {
@@ -89,13 +83,6 @@ impl PyOffset {
             offset,
             ScalarType::py_try_from(py, &data_type)?,
         )))
-    }
-
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
     }
 }
 
@@ -109,6 +96,7 @@ py_wrap_data_struct! {
 }
 impl_repr!(PySharing);
 impl_hash!(PySharing);
+impl_eq!(PySharing);
 
 #[pymethods]
 impl PySharing {
@@ -118,13 +106,6 @@ impl PySharing {
             name,
             Vec::<Offset>::py_try_from(py, &offsets)?,
         )))
-    }
-
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
     }
 }
 
@@ -141,6 +122,7 @@ impl_repr!(PyDeclaration);
 impl_to_quil!(PyDeclaration);
 impl_copy_for_instruction!(PyDeclaration);
 impl_hash!(PyDeclaration);
+impl_eq!(PyDeclaration);
 
 #[pymethods]
 impl PyDeclaration {
@@ -157,13 +139,6 @@ impl PyDeclaration {
             Option::<Sharing>::py_try_from(py, &sharing)?,
         )))
     }
-
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
-    }
 }
 
 py_wrap_data_struct! {
@@ -179,19 +154,13 @@ impl_repr!(PyMemoryReference);
 impl_to_quil!(PyMemoryReference);
 impl_from_str!(PyMemoryReference, RustParseMemoryReferenceError);
 impl_parse!(PyMemoryReference);
+impl_eq!(PyMemoryReference);
 
 #[pymethods]
 impl PyMemoryReference {
     #[new]
     pub fn new(name: String, index: u64) -> Self {
         Self(MemoryReference::new(name, index))
-    }
-
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
     }
 }
 
@@ -208,6 +177,7 @@ impl_repr!(PyLoad);
 impl_to_quil!(PyLoad);
 impl_copy_for_instruction!(PyLoad);
 impl_hash!(PyLoad);
+impl_eq!(PyLoad);
 
 #[pymethods]
 impl PyLoad {
@@ -224,13 +194,6 @@ impl PyLoad {
             MemoryReference::py_try_from(py, &offset)?,
         )))
     }
-
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
-    }
 }
 
 py_wrap_data_struct! {
@@ -246,6 +209,7 @@ impl_repr!(PyStore);
 impl_to_quil!(PyStore);
 impl_copy_for_instruction!(PyStore);
 impl_hash!(PyStore);
+impl_eq!(PyStore);
 
 #[pymethods]
 impl PyStore {
@@ -261,12 +225,5 @@ impl PyStore {
             MemoryReference::py_try_from(py, &offset)?,
             ArithmeticOperand::py_try_from(py, &source)?,
         )))
-    }
-
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
     }
 }

@@ -8,11 +8,14 @@ use quil_rs::{
 };
 use rigetti_pyo3::{
     impl_as_mut_for_wrapper, impl_repr, py_wrap_type,
-    pyo3::{pyclass::CompareOp, pymethods, IntoPy, PyObject, PyResult, Python},
+    pyo3::{pymethods, PyResult, Python},
     PyTryFrom, PyWrapper, PyWrapperMut, ToPython,
 };
 
-use crate::instruction::{PyFrameAttributes, PyFrameIdentifier, PyInstruction};
+use crate::{
+    impl_eq,
+    instruction::{PyFrameAttributes, PyFrameIdentifier, PyInstruction},
+};
 
 py_wrap_type! {
     #[derive(Debug, PartialEq, Eq)]
@@ -20,6 +23,7 @@ py_wrap_type! {
 }
 impl_repr!(PyFrameSet);
 impl_as_mut_for_wrapper!(PyFrameSet);
+impl_eq!(PyFrameSet);
 
 #[pymethods]
 impl PyFrameSet {
@@ -96,13 +100,6 @@ impl PyFrameSet {
 
     pub fn __len__(&self) -> usize {
         self.as_inner().len()
-    }
-
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
     }
 }
 

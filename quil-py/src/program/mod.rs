@@ -16,7 +16,6 @@ use rigetti_pyo3::{
     pyo3::{
         exceptions::PyValueError,
         prelude::*,
-        pyclass::CompareOp,
         types::{PyBytes, PyFunction, PyList},
         IntoPy,
     },
@@ -24,7 +23,7 @@ use rigetti_pyo3::{
 };
 
 use crate::{
-    impl_to_quil,
+    impl_eq, impl_to_quil,
     instruction::{PyDeclaration, PyGateDefinition, PyInstruction, PyQubit, PyWaveform},
 };
 
@@ -48,6 +47,7 @@ impl_repr!(PyProgram);
 impl_from_str!(PyProgram, ProgramError);
 impl_parse!(PyProgram);
 impl_to_quil!(PyProgram);
+impl_eq!(PyProgram);
 
 impl Default for PyProgram {
     fn default() -> Self {
@@ -300,13 +300,6 @@ impl PyProgram {
     pub fn __add__(&self, py: Python<'_>, rhs: Self) -> PyResult<Self> {
         let new = self.as_inner().clone() + rhs.as_inner().clone();
         new.to_python(py)
-    }
-
-    fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
     }
 
     // This will raise an error if the program contains any unresolved

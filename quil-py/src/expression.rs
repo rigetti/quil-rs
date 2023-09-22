@@ -11,15 +11,14 @@ use rigetti_pyo3::{
     py_wrap_data_struct, py_wrap_error, py_wrap_simple_enum, py_wrap_union_enum,
     pyo3::{
         exceptions::PyValueError,
-        pyclass::CompareOp,
         pymethods,
         types::{PyComplex, PyString},
-        IntoPy, Py, PyObject, PyResult, Python,
+        Py, PyResult, Python,
     },
     wrap_error, PyTryFrom, PyWrapper, PyWrapperMut, ToPython, ToPythonError,
 };
 
-use crate::{impl_to_quil, instruction::PyMemoryReference};
+use crate::{impl_eq, impl_to_quil, instruction::PyMemoryReference};
 
 wrap_error!(RustEvaluationError(quil_rs::expression::EvaluationError));
 py_wrap_error!(quil, RustEvaluationError, EvaluationError, PyValueError);
@@ -49,6 +48,7 @@ impl_to_quil!(PyExpression);
 impl_from_str!(PyExpression, RustParseExpressionError);
 impl_hash!(PyExpression);
 impl_parse!(PyExpression);
+impl_eq!(PyExpression);
 
 #[pymethods]
 impl PyExpression {
@@ -102,13 +102,6 @@ impl PyExpression {
 
     pub fn __truediv__(&self, other: PyExpression) -> Self {
         PyExpression(self.as_inner().clone() / other.as_inner().clone())
-    }
-
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
     }
 }
 
@@ -202,15 +195,7 @@ py_wrap_simple_enum! {
 impl_repr!(PyExpressionFunction);
 impl_str!(PyExpressionFunction);
 impl_hash!(PyExpressionFunction);
-
-impl PyExpressionFunction {
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
-    }
-}
+impl_eq!(PyExpressionFunction);
 
 py_wrap_simple_enum! {
     #[derive(Debug, PartialEq, Eq, Hash)]
@@ -222,15 +207,7 @@ py_wrap_simple_enum! {
 impl_repr!(PyPrefixOperator);
 impl_str!(PyPrefixOperator);
 impl_hash!(PyPrefixOperator);
-
-impl PyPrefixOperator {
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
-    }
-}
+impl_eq!(PyPrefixOperator);
 
 py_wrap_simple_enum! {
     #[derive(Debug, PartialEq, Eq, Hash)]
@@ -245,15 +222,7 @@ py_wrap_simple_enum! {
 impl_repr!(PyInfixOperator);
 impl_str!(PyInfixOperator);
 impl_hash!(PyInfixOperator);
-
-impl PyInfixOperator {
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
-    }
-}
+impl_eq!(PyInfixOperator);
 
 create_init_submodule! {
     classes: [PyExpression, PyFunctionCallExpression, PyInfixExpression, PyPrefixExpression, PyExpressionFunction, PyPrefixOperator, PyInfixOperator],

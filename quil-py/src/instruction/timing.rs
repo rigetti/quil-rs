@@ -3,14 +3,12 @@ use quil_rs::instruction::{Delay, Fence, Qubit};
 
 use rigetti_pyo3::{
     impl_hash, impl_repr, py_wrap_data_struct,
-    pyo3::{
-        pyclass::CompareOp, pymethods, types::PyString, IntoPy, Py, PyObject, PyResult, Python,
-    },
-    PyTryFrom, PyWrapper,
+    pyo3::{pymethods, types::PyString, Py, PyResult, Python},
+    PyTryFrom,
 };
 
 use super::PyQubit;
-use crate::{expression::PyExpression, impl_copy_for_instruction, impl_to_quil};
+use crate::{expression::PyExpression, impl_copy_for_instruction, impl_eq, impl_to_quil};
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
@@ -25,6 +23,7 @@ impl_repr!(PyDelay);
 impl_to_quil!(PyDelay);
 impl_copy_for_instruction!(PyDelay);
 impl_hash!(PyDelay);
+impl_eq!(PyDelay);
 
 #[pymethods]
 impl PyDelay {
@@ -41,13 +40,6 @@ impl PyDelay {
             Vec::<Qubit>::py_try_from(py, &qubits)?,
         )))
     }
-
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
-    }
 }
 
 py_wrap_data_struct! {
@@ -61,18 +53,12 @@ impl_repr!(PyFence);
 impl_to_quil!(PyFence);
 impl_copy_for_instruction!(PyFence);
 impl_hash!(PyFence);
+impl_eq!(PyFence);
 
 #[pymethods]
 impl PyFence {
     #[new]
     pub fn new(py: Python<'_>, qubits: Vec<PyQubit>) -> PyResult<Self> {
         Ok(Self(Fence::new(Vec::<Qubit>::py_try_from(py, &qubits)?)))
-    }
-
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
     }
 }

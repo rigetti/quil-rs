@@ -1,12 +1,12 @@
 use quil_rs::instruction::{Measurement, MemoryReference, Qubit};
 use rigetti_pyo3::{
     impl_hash, impl_repr, py_wrap_data_struct,
-    pyo3::{pyclass::CompareOp, pymethods, IntoPy, PyObject, PyResult, Python},
-    PyTryFrom, PyWrapper,
+    pyo3::{pymethods, PyResult, Python},
+    PyTryFrom,
 };
 
 use crate::{
-    impl_copy_for_instruction, impl_to_quil,
+    impl_copy_for_instruction, impl_eq, impl_to_quil,
     instruction::{PyMemoryReference, PyQubit},
 };
 
@@ -22,6 +22,7 @@ impl_to_quil!(PyMeasurement);
 impl_copy_for_instruction!(PyMeasurement);
 impl_hash!(PyMeasurement);
 impl_repr!(PyMeasurement);
+impl_eq!(PyMeasurement);
 
 #[pymethods]
 impl PyMeasurement {
@@ -35,12 +36,5 @@ impl PyMeasurement {
             Qubit::py_try_from(py, &qubit)?,
             Option::<MemoryReference>::py_try_from(py, &target)?,
         )))
-    }
-
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
     }
 }

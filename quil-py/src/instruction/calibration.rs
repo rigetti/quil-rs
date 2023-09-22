@@ -5,15 +5,13 @@ use quil_rs::{
 
 use rigetti_pyo3::{
     impl_repr, py_wrap_data_struct,
-    pyo3::{
-        pyclass::CompareOp, pymethods, types::PyString, IntoPy, Py, PyObject, PyResult, Python,
-    },
-    PyTryFrom, PyWrapper, ToPythonError,
+    pyo3::{pymethods, types::PyString, Py, PyResult, Python},
+    PyTryFrom, ToPythonError,
 };
 
 use crate::{
     expression::PyExpression,
-    impl_copy_for_instruction, impl_to_quil,
+    impl_copy_for_instruction, impl_eq, impl_to_quil,
     instruction::{PyGateModifier, PyInstruction, PyQubit},
     validation::identifier::RustIdentifierValidationError,
 };
@@ -32,6 +30,7 @@ py_wrap_data_struct! {
 impl_repr!(PyCalibration);
 impl_to_quil!(PyCalibration);
 impl_copy_for_instruction!(PyCalibration);
+impl_eq!(PyCalibration);
 
 #[pymethods]
 impl PyCalibration {
@@ -56,13 +55,6 @@ impl PyCalibration {
             .map_err(RustIdentifierValidationError::to_py_err)?,
         ))
     }
-
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
-    }
 }
 
 py_wrap_data_struct! {
@@ -77,6 +69,7 @@ py_wrap_data_struct! {
 impl_repr!(PyMeasureCalibrationDefinition);
 impl_to_quil!(PyMeasureCalibrationDefinition);
 impl_copy_for_instruction!(PyMeasureCalibrationDefinition);
+impl_eq!(PyMeasureCalibrationDefinition);
 
 #[pymethods]
 impl PyMeasureCalibrationDefinition {
@@ -93,12 +86,5 @@ impl PyMeasureCalibrationDefinition {
             parameter,
             Vec::<Instruction>::py_try_from(py, &instructions)?,
         )))
-    }
-
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
     }
 }

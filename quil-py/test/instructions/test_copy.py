@@ -45,5 +45,3 @@ def test_instruction_with_duplicate_placeholders():
     assert calibration_deepcopy != calibration
 
     assert calibration_deepcopy.qubits == calibration_deepcopy.instructions[0].to_delay().qubits
-
-
