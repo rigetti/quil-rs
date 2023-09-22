@@ -1,3 +1,9 @@
+## 0.5.4-rc.0
+
+### Fixes
+
+- Implement not equal comparisons (#289)
+
 ## 0.5.3
 
 ### Fixes
