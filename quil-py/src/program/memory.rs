@@ -4,11 +4,14 @@ use quil_rs::{
 };
 use rigetti_pyo3::{
     impl_hash, impl_repr, py_wrap_data_struct,
-    pyo3::{pyclass::CompareOp, pymethods, IntoPy, PyObject, PyResult, Python},
-    PyTryFrom, PyWrapper,
+    pyo3::{pymethods, PyResult, Python},
+    PyTryFrom,
 };
 
-use crate::instruction::{PySharing, PyVector};
+use crate::{
+    impl_eq,
+    instruction::{PySharing, PyVector},
+};
 
 py_wrap_data_struct! {
     #[derive(Debug, Eq, PartialEq, Hash)]
@@ -20,6 +23,7 @@ py_wrap_data_struct! {
 }
 impl_repr!(PyMemoryRegion);
 impl_hash!(PyMemoryRegion);
+impl_eq!(PyMemoryRegion);
 
 #[pymethods]
 impl PyMemoryRegion {
@@ -29,12 +33,5 @@ impl PyMemoryRegion {
             Vector::py_try_from(py, &size)?,
             Option::<Sharing>::py_try_from(py, &sharing)?,
         )))
-    }
-
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
     }
 }

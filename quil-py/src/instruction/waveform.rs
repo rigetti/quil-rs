@@ -7,13 +7,11 @@ use quil_rs::{
 
 use rigetti_pyo3::{
     impl_hash, impl_repr, py_wrap_data_struct,
-    pyo3::{
-        pyclass::CompareOp, pymethods, types::PyString, IntoPy, Py, PyObject, PyResult, Python,
-    },
-    PyTryFrom, PyWrapper,
+    pyo3::{pymethods, types::PyString, Py, PyResult, Python},
+    PyTryFrom,
 };
 
-use crate::{expression::PyExpression, impl_copy_for_instruction, impl_to_quil};
+use crate::{expression::PyExpression, impl_copy_for_instruction, impl_eq, impl_to_quil};
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
@@ -25,6 +23,7 @@ py_wrap_data_struct! {
 }
 impl_repr!(PyWaveform);
 impl_hash!(PyWaveform);
+impl_eq!(PyWaveform);
 
 #[pymethods]
 impl PyWaveform {
@@ -38,13 +37,6 @@ impl PyWaveform {
             Vec::<Expression>::py_try_from(py, &matrix)?,
             parameters,
         )))
-    }
-
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
     }
 }
 
@@ -60,6 +52,7 @@ impl_repr!(PyWaveformDefinition);
 impl_to_quil!(PyWaveformDefinition);
 impl_copy_for_instruction!(PyWaveformDefinition);
 impl_hash!(PyWaveformDefinition);
+impl_eq!(PyWaveformDefinition);
 
 #[pymethods]
 impl PyWaveformDefinition {
@@ -69,13 +62,6 @@ impl PyWaveformDefinition {
             name,
             Waveform::py_try_from(py, &definition)?,
         )))
-    }
-
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
     }
 }
 
@@ -89,6 +75,7 @@ py_wrap_data_struct! {
 }
 impl_repr!(PyWaveformInvocation);
 impl_to_quil!(PyWaveformInvocation);
+impl_eq!(PyWaveformInvocation);
 
 #[pymethods]
 impl PyWaveformInvocation {
@@ -102,12 +89,5 @@ impl PyWaveformInvocation {
             name,
             HashMap::<String, Expression>::py_try_from(py, &parameters)?,
         )))
-    }
-
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
     }
 }

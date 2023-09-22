@@ -12,18 +12,17 @@ use quil_rs::{
 use rigetti_pyo3::{
     impl_hash, impl_repr, py_wrap_data_struct, py_wrap_union_enum,
     pyo3::{
-        pyclass::CompareOp,
         pymethods,
         types::{PyBool, PyString},
-        IntoPy, Py, PyObject, PyResult, Python,
+        Py, PyResult, Python,
     },
-    PyTryFrom, PyWrapper,
+    PyTryFrom,
 };
 
 use super::PyQubit;
 use crate::{
     expression::PyExpression,
-    impl_copy_for_instruction, impl_to_quil,
+    impl_copy_for_instruction, impl_eq, impl_to_quil,
     instruction::{PyMemoryReference, PyWaveformInvocation},
 };
 
@@ -37,16 +36,7 @@ py_wrap_union_enum! {
 impl_repr!(PyAttributeValue);
 impl_to_quil!(PyAttributeValue);
 impl_hash!(PyAttributeValue);
-
-#[pymethods]
-impl PyAttributeValue {
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
-    }
-}
+impl_eq!(PyAttributeValue);
 
 pub type PyFrameAttributes = HashMap<String, PyAttributeValue>;
 
@@ -61,6 +51,7 @@ py_wrap_data_struct! {
 impl_repr!(PyFrameDefinition);
 impl_to_quil!(PyFrameDefinition);
 impl_copy_for_instruction!(PyFrameDefinition);
+impl_eq!(PyFrameDefinition);
 
 #[pymethods]
 impl PyFrameDefinition {
@@ -75,13 +66,6 @@ impl PyFrameDefinition {
             FrameAttributes::py_try_from(py, &attributes)?,
         )))
     }
-
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
-    }
 }
 
 py_wrap_data_struct! {
@@ -95,6 +79,7 @@ py_wrap_data_struct! {
 impl_repr!(PyFrameIdentifier);
 impl_to_quil!(PyFrameIdentifier);
 impl_hash!(PyFrameIdentifier);
+impl_eq!(PyFrameIdentifier);
 
 #[pymethods]
 impl PyFrameIdentifier {
@@ -104,13 +89,6 @@ impl PyFrameIdentifier {
             name,
             Vec::<Qubit>::py_try_from(py, &qubits)?,
         )))
-    }
-
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
     }
 }
 
@@ -127,6 +105,7 @@ py_wrap_data_struct! {
 impl_repr!(PyCapture);
 impl_to_quil!(PyCapture);
 impl_copy_for_instruction!(PyCapture);
+impl_eq!(PyCapture);
 
 #[pymethods]
 impl PyCapture {
@@ -145,13 +124,6 @@ impl PyCapture {
             WaveformInvocation::py_try_from(py, &waveform)?,
         )))
     }
-
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
-    }
 }
 
 py_wrap_data_struct! {
@@ -163,10 +135,10 @@ py_wrap_data_struct! {
         waveform: WaveformInvocation => PyWaveformInvocation
     }
 }
-
 impl_repr!(PyPulse);
 impl_to_quil!(PyPulse);
 impl_copy_for_instruction!(PyPulse);
+impl_eq!(PyPulse);
 
 #[pymethods]
 impl PyPulse {
@@ -182,13 +154,6 @@ impl PyPulse {
             FrameIdentifier::py_try_from(py, &frame)?,
             WaveformInvocation::py_try_from(py, &waveform)?,
         )))
-    }
-
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
     }
 }
 
@@ -207,6 +172,7 @@ impl_repr!(PyRawCapture);
 impl_to_quil!(PyRawCapture);
 impl_copy_for_instruction!(PyRawCapture);
 impl_hash!(PyRawCapture);
+impl_eq!(PyRawCapture);
 
 #[pymethods]
 impl PyRawCapture {
@@ -225,13 +191,6 @@ impl PyRawCapture {
             MemoryReference::py_try_from(py, &memory_reference)?,
         )))
     }
-
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
-    }
 }
 
 py_wrap_data_struct! {
@@ -246,6 +205,7 @@ impl_repr!(PySetFrequency);
 impl_to_quil!(PySetFrequency);
 impl_copy_for_instruction!(PySetFrequency);
 impl_hash!(PySetFrequency);
+impl_eq!(PySetFrequency);
 
 #[pymethods]
 impl PySetFrequency {
@@ -259,13 +219,6 @@ impl PySetFrequency {
             FrameIdentifier::py_try_from(py, &frame)?,
             Expression::py_try_from(py, &frequency)?,
         )))
-    }
-
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
     }
 }
 
@@ -281,6 +234,7 @@ impl_repr!(PySetPhase);
 impl_to_quil!(PySetPhase);
 impl_copy_for_instruction!(PySetPhase);
 impl_hash!(PySetPhase);
+impl_eq!(PySetPhase);
 
 #[pymethods]
 impl PySetPhase {
@@ -290,13 +244,6 @@ impl PySetPhase {
             FrameIdentifier::py_try_from(py, &frame)?,
             Expression::py_try_from(py, &phase)?,
         )))
-    }
-
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
     }
 }
 
@@ -312,6 +259,7 @@ impl_repr!(PySetScale);
 impl_to_quil!(PySetScale);
 impl_copy_for_instruction!(PySetScale);
 impl_hash!(PySetScale);
+impl_eq!(PySetScale);
 
 #[pymethods]
 impl PySetScale {
@@ -321,13 +269,6 @@ impl PySetScale {
             FrameIdentifier::py_try_from(py, &frame)?,
             Expression::py_try_from(py, &scale)?,
         )))
-    }
-
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
     }
 }
 
@@ -343,6 +284,7 @@ impl_repr!(PyShiftFrequency);
 impl_to_quil!(PyShiftFrequency);
 impl_copy_for_instruction!(PyShiftFrequency);
 impl_hash!(PyShiftFrequency);
+impl_eq!(PyShiftFrequency);
 
 #[pymethods]
 impl PyShiftFrequency {
@@ -356,13 +298,6 @@ impl PyShiftFrequency {
             FrameIdentifier::py_try_from(py, &frame)?,
             Expression::py_try_from(py, &frequency)?,
         )))
-    }
-
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
     }
 }
 
@@ -378,6 +313,7 @@ impl_repr!(PyShiftPhase);
 impl_to_quil!(PyShiftPhase);
 impl_copy_for_instruction!(PyShiftPhase);
 impl_hash!(PyShiftPhase);
+impl_eq!(PyShiftPhase);
 
 #[pymethods]
 impl PyShiftPhase {
@@ -387,13 +323,6 @@ impl PyShiftPhase {
             FrameIdentifier::py_try_from(py, &frame)?,
             Expression::py_try_from(py, &phase)?,
         )))
-    }
-
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
     }
 }
 
@@ -409,6 +338,7 @@ impl_repr!(PySwapPhases);
 impl_to_quil!(PySwapPhases);
 impl_copy_for_instruction!(PySwapPhases);
 impl_hash!(PySwapPhases);
+impl_eq!(PySwapPhases);
 
 #[pymethods]
 impl PySwapPhases {
@@ -422,12 +352,5 @@ impl PySwapPhases {
             FrameIdentifier::py_try_from(py, &frame_1)?,
             FrameIdentifier::py_try_from(py, &frame_2)?,
         )))
-    }
-
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
     }
 }

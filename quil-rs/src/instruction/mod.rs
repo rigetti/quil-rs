@@ -555,6 +555,26 @@ impl Instruction {
     pub fn get_qubits(&self) -> Vec<&Qubit> {
         match self {
             Instruction::Gate(gate) => gate.qubits.iter().collect(),
+            Instruction::CalibrationDefinition(calibration) => calibration
+                .qubits
+                .iter()
+                .chain(
+                    calibration
+                        .instructions
+                        .iter()
+                        .flat_map(|inst| inst.get_qubits()),
+                )
+                .collect(),
+            Instruction::MeasureCalibrationDefinition(measurement) => measurement
+                .qubit
+                .iter()
+                .chain(
+                    measurement
+                        .instructions
+                        .iter()
+                        .flat_map(|inst| inst.get_qubits()),
+                )
+                .collect(),
             Instruction::Measurement(measurement) => vec![&measurement.qubit],
             Instruction::Reset(reset) => match &reset.qubit {
                 Some(qubit) => vec![qubit],
@@ -573,6 +593,26 @@ impl Instruction {
     pub fn get_qubits_mut(&mut self) -> Vec<&mut Qubit> {
         match self {
             Instruction::Gate(gate) => gate.qubits.iter_mut().collect(),
+            Instruction::CalibrationDefinition(calibration) => calibration
+                .qubits
+                .iter_mut()
+                .chain(
+                    calibration
+                        .instructions
+                        .iter_mut()
+                        .flat_map(|inst| inst.get_qubits_mut()),
+                )
+                .collect(),
+            Instruction::MeasureCalibrationDefinition(measurement) => measurement
+                .qubit
+                .iter_mut()
+                .chain(
+                    measurement
+                        .instructions
+                        .iter_mut()
+                        .flat_map(|inst| inst.get_qubits_mut()),
+                )
+                .collect(),
             Instruction::Measurement(measurement) => vec![&mut measurement.qubit],
             Instruction::Reset(reset) => match &mut reset.qubit {
                 Some(qubit) => vec![qubit],

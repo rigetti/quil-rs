@@ -4,12 +4,15 @@ use quil_rs::{
 };
 use rigetti_pyo3::{
     impl_as_mut_for_wrapper, impl_repr, py_wrap_type,
-    pyo3::{pyclass::CompareOp, pymethods, IntoPy, PyObject, PyResult, Python},
+    pyo3::{pymethods, PyResult, Python},
     PyTryFrom, PyWrapper, PyWrapperMut, ToPython, ToPythonError,
 };
 
-use crate::instruction::{
-    PyCalibration, PyGate, PyInstruction, PyMeasureCalibrationDefinition, PyMeasurement,
+use crate::{
+    impl_eq,
+    instruction::{
+        PyCalibration, PyGate, PyInstruction, PyMeasureCalibrationDefinition, PyMeasurement,
+    },
 };
 
 use super::ProgramError;
@@ -20,6 +23,7 @@ py_wrap_type! {
 }
 impl_as_mut_for_wrapper!(PyCalibrationSet);
 impl_repr!(PyCalibrationSet);
+impl_eq!(PyCalibrationSet);
 
 #[pymethods]
 impl PyCalibrationSet {
@@ -119,12 +123,5 @@ impl PyCalibrationSet {
 
     pub fn to_instructions(&self, py: Python<'_>) -> PyResult<Vec<PyInstruction>> {
         self.as_inner().to_instructions().to_python(py)
-    }
-
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
     }
 }

@@ -44,3 +44,25 @@ macro_rules! impl_to_quil {
         }
     };
 }
+
+#[macro_export]
+macro_rules! impl_eq {
+    ($name: ident) => {
+        #[pyo3::pymethods]
+        impl $name {
+            pub fn __richcmp__(
+                &self,
+                py: pyo3::Python<'_>,
+                other: &Self,
+                op: pyo3::pyclass::CompareOp,
+            ) -> pyo3::PyObject {
+                use pyo3::IntoPy;
+                match op {
+                    pyo3::pyclass::CompareOp::Eq => (self == other).into_py(py),
+                    pyo3::pyclass::CompareOp::Ne => (self != other).into_py(py),
+                    _ => py.NotImplemented(),
+                }
+            }
+        }
+    };
+}

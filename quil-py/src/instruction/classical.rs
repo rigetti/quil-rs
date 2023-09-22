@@ -8,16 +8,15 @@ use rigetti_pyo3::{
     impl_as_mut_for_wrapper, impl_hash, impl_repr, py_wrap_data_struct, py_wrap_simple_enum,
     py_wrap_type, py_wrap_union_enum,
     pyo3::{
-        pyclass::CompareOp,
         pymethods,
         types::{PyFloat, PyInt},
-        IntoPy, Py, PyObject, PyResult, Python,
+        Py, PyResult, Python,
     },
     PyTryFrom, PyWrapper, PyWrapperMut, ToPython,
 };
 
 use super::PyMemoryReference;
-use crate::{impl_copy_for_instruction, impl_to_quil};
+use crate::{impl_copy_for_instruction, impl_eq, impl_to_quil};
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq)]
@@ -32,6 +31,7 @@ impl_repr!(PyArithmetic);
 impl_to_quil!(PyArithmetic);
 impl_copy_for_instruction!(PyArithmetic);
 impl_hash!(PyArithmetic);
+impl_eq!(PyArithmetic);
 
 #[pymethods]
 impl PyArithmetic {
@@ -48,13 +48,6 @@ impl PyArithmetic {
             ArithmeticOperand::py_try_from(py, &source)?,
         )))
     }
-
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
-    }
 }
 
 py_wrap_union_enum! {
@@ -68,16 +61,7 @@ py_wrap_union_enum! {
 impl_repr!(PyArithmeticOperand);
 impl_to_quil!(PyArithmeticOperand);
 impl_hash!(PyArithmeticOperand);
-
-#[pymethods]
-impl PyArithmeticOperand {
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
-    }
-}
+impl_eq!(PyArithmeticOperand);
 
 py_wrap_simple_enum! {
     #[derive(Debug, PartialEq)]
@@ -91,16 +75,7 @@ py_wrap_simple_enum! {
 impl_repr!(PyArithmeticOperator);
 impl_to_quil!(PyArithmeticOperator);
 impl_hash!(PyArithmeticOperator);
-
-#[pymethods]
-impl PyArithmeticOperator {
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
-    }
-}
+impl_eq!(PyArithmeticOperator);
 
 py_wrap_union_enum! {
     #[derive(Debug, PartialEq, Eq)]
@@ -113,16 +88,7 @@ py_wrap_union_enum! {
 impl_repr!(PyBinaryOperand);
 impl_to_quil!(PyBinaryOperand);
 impl_hash!(PyBinaryOperand);
-
-#[pymethods]
-impl PyBinaryOperand {
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
-    }
-}
+impl_eq!(PyBinaryOperand);
 
 py_wrap_type! {
     #[derive(Debug, PartialEq, Eq)]
@@ -132,6 +98,7 @@ py_wrap_type! {
 impl_repr!(PyBinaryOperands);
 impl_hash!(PyBinaryOperands);
 impl_as_mut_for_wrapper!(PyBinaryOperands);
+impl_eq!(PyBinaryOperands);
 
 #[pymethods]
 impl PyBinaryOperands {
@@ -172,13 +139,6 @@ impl PyBinaryOperands {
         self.as_inner_mut().1 = BinaryOperand::py_try_from(py, &binary_operand)?;
         Ok(())
     }
-
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
-    }
 }
 
 py_wrap_simple_enum! {
@@ -192,16 +152,7 @@ py_wrap_simple_enum! {
 impl_repr!(PyBinaryOperator);
 impl_to_quil!(PyBinaryOperator);
 impl_hash!(PyBinaryOperator);
-
-#[pymethods]
-impl PyBinaryOperator {
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
-    }
-}
+impl_eq!(PyBinaryOperator);
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
@@ -214,6 +165,7 @@ py_wrap_data_struct! {
 impl_repr!(PyBinaryLogic);
 impl_to_quil!(PyBinaryLogic);
 impl_copy_for_instruction!(PyBinaryLogic);
+impl_eq!(PyBinaryLogic);
 
 #[pymethods]
 impl PyBinaryLogic {
@@ -227,13 +179,6 @@ impl PyBinaryLogic {
             BinaryOperator::py_try_from(py, &operator)?,
             BinaryOperands::py_try_from(py, &operands)?,
         )))
-    }
-
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
     }
 }
 
@@ -249,6 +194,7 @@ impl_repr!(PyConvert);
 impl_to_quil!(PyConvert);
 impl_copy_for_instruction!(PyConvert);
 impl_hash!(PyConvert);
+impl_eq!(PyConvert);
 
 #[pymethods]
 impl PyConvert {
@@ -262,13 +208,6 @@ impl PyConvert {
             MemoryReference::py_try_from(py, &destination)?,
             MemoryReference::py_try_from(py, &source)?,
         )))
-    }
-
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
     }
 }
 
@@ -284,6 +223,7 @@ impl_repr!(PyMove);
 impl_to_quil!(PyMove);
 impl_copy_for_instruction!(PyMove);
 impl_hash!(PyMove);
+impl_eq!(PyMove);
 
 #[pymethods]
 impl PyMove {
@@ -297,13 +237,6 @@ impl PyMove {
             MemoryReference::py_try_from(py, &destination)?,
             ArithmeticOperand::py_try_from(py, &source)?,
         )))
-    }
-
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
     }
 }
 
@@ -319,6 +252,7 @@ impl_repr!(PyExchange);
 impl_to_quil!(PyExchange);
 impl_copy_for_instruction!(PyExchange);
 impl_hash!(PyExchange);
+impl_eq!(PyExchange);
 
 #[pymethods]
 impl PyExchange {
@@ -332,13 +266,6 @@ impl PyExchange {
             MemoryReference::py_try_from(py, &left)?,
             MemoryReference::py_try_from(py, &right)?,
         )))
-    }
-
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
     }
 }
 
@@ -399,6 +326,7 @@ impl_repr!(PyComparison);
 impl_to_quil!(PyComparison);
 impl_copy_for_instruction!(PyComparison);
 impl_hash!(PyComparison);
+impl_eq!(PyComparison);
 
 #[pymethods]
 impl PyComparison {
@@ -444,13 +372,6 @@ impl PyComparison {
         )?;
         Ok(())
     }
-
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
-    }
 }
 
 py_wrap_simple_enum! {
@@ -476,6 +397,7 @@ impl_repr!(PyUnaryLogic);
 impl_to_quil!(PyUnaryLogic);
 impl_copy_for_instruction!(PyUnaryLogic);
 impl_hash!(PyUnaryLogic);
+impl_eq!(PyUnaryLogic);
 
 #[pymethods]
 impl PyUnaryLogic {
@@ -489,12 +411,5 @@ impl PyUnaryLogic {
             UnaryOperator::py_try_from(py, &operator)?,
             MemoryReference::py_try_from(py, &operand)?,
         )))
-    }
-
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
     }
 }

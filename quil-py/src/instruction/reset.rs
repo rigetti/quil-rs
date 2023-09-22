@@ -2,11 +2,11 @@ use quil_rs::instruction::{Qubit, Reset};
 
 use rigetti_pyo3::{
     impl_hash, impl_repr, py_wrap_data_struct,
-    pyo3::{pyclass::CompareOp, pymethods, IntoPy, PyObject, PyResult, Python},
-    PyTryFrom, PyWrapper,
+    pyo3::{pymethods, PyResult, Python},
+    PyTryFrom,
 };
 
-use crate::{impl_copy_for_instruction, impl_to_quil, instruction::PyQubit};
+use crate::{impl_copy_for_instruction, impl_eq, impl_to_quil, instruction::PyQubit};
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
@@ -19,18 +19,12 @@ impl_repr!(PyReset);
 impl_copy_for_instruction!(PyReset);
 impl_to_quil!(PyReset);
 impl_hash!(PyReset);
+impl_eq!(PyReset);
 
 #[pymethods]
 impl PyReset {
     #[new]
     fn new(py: Python<'_>, qubit: Option<PyQubit>) -> PyResult<Self> {
         Ok(Self(Reset::new(Option::<Qubit>::py_try_from(py, &qubit)?)))
-    }
-
-    pub fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> PyObject {
-        match op {
-            CompareOp::Eq => (self.as_inner() == other.as_inner()).into_py(py),
-            _ => py.NotImplemented(),
-        }
     }
 }
