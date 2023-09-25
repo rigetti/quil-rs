@@ -575,6 +575,17 @@ impl ops::Add<Program> for Program {
     }
 }
 
+impl ops::AddAssign<Program> for Program {
+    fn add_assign(&mut self, rhs: Program) {
+        self.calibrations.extend(rhs.calibrations);
+        self.memory_regions.extend(rhs.memory_regions);
+        self.frames.merge(rhs.frames);
+        self.waveforms.extend(rhs.waveforms);
+        self.instructions.extend(rhs.instructions);
+        self.used_qubits.extend(rhs.used_qubits);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::Program;

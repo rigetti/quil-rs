@@ -302,6 +302,10 @@ impl PyProgram {
         new.to_python(py)
     }
 
+    pub fn __iadd__(&mut self, rhs: Self) {
+        *self.as_inner_mut() += rhs.as_inner().clone()
+    }
+
     // This will raise an error if the program contains any unresolved
     // placeholders. This is because they can't be converted to valid quil,
     // nor can they be serialized and deserialized in a consistent
