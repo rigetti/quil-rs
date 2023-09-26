@@ -1,3 +1,9 @@
+## 0.5.5-rc.0
+
+### Features
+
+- Make in-place addition of Program more efficient (#290)
+
 ## 0.5.4
 
 ### Fixes
