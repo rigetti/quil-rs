@@ -1,3 +1,9 @@
+## 0.21.4
+
+### Features
+
+- Make in-place addition of Program more efficient (#290)
+
 ## 0.21.4-rc.0
 
 ### Features
