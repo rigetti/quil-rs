@@ -25,7 +25,7 @@ jobs:
 
   macos:
     runs-on: macos-12
-    needs: is-python-release
+    needs: [ is-python-release, should-publish-wheels ]
     strategy:
       matrix:
         python-version: ['3.8', '3.9', '3.10', '3.11']
@@ -57,7 +57,7 @@ jobs:
 
   linux:
     runs-on: ubuntu-22.04
-    needs: is-python-release
+    needs: [ is-python-release, should-publish-wheels ]
     env:
       CXXFLAGS: "-std=c++11"
     strategy:
@@ -93,10 +93,11 @@ jobs:
 
   windows: 
     runs-on: windows-latest 
+    needs: [ is-python-release, should-publish-wheels ]
     strategy: 
       matrix: 
         python-version: ['3.8', '3.9', '3.10', '3.11'] 
-        target: [x64, x86] 
+        target: [x64] 
     steps: 
       - uses: actions/checkout@v2 
       - uses: actions-rs/toolchain@v1
