@@ -1,3 +1,9 @@
+## 0.5.6-rc.0
+
+### Fixes
+
+- no percent symbol in variable qubit outputs
+
 ## 0.5.5
 
 ### Features
