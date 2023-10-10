@@ -219,23 +219,16 @@ fn write_qubits(
     Ok(())
 }
 
-/// Write qubits as a Quil parameter list, where each variable qubit must be prefixed with a `%`
-/// and all are prefixed with ` `. Return an error if any is a qubit placeholder.
+/// Write qubits as a Quil parameter list, where all are prefixed with ` `.
 fn write_qubit_parameters(
     f: &mut impl std::fmt::Write,
     fall_back_to_debug: bool,
     qubits: &[Qubit],
 ) -> ToQuilResult<()> {
     for qubit in qubits.iter() {
-        match qubit {
-            Qubit::Variable(var) => write!(f, " %{var}")?,
-            other => {
-                write!(f, " ")?;
-                other.write(f, fall_back_to_debug)?;
-            }
-        }
+        write!(f, " ")?;
+        qubit.write(f, fall_back_to_debug)?;
     }
-
     Ok(())
 }
 
