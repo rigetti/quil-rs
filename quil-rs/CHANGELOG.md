@@ -1,3 +1,10 @@
+## 0.21.5-rc.1
+
+### Fixes
+
+- implement PartialOrd correctly for types implementing Ord (#295)
+- no percent symbol in variable qubit outputs
+
 ## 0.21.5-rc.0
 
 ### Fixes
