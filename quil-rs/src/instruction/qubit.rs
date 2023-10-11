@@ -83,7 +83,7 @@ impl PartialEq for QubitPlaceholder {
 
 impl PartialOrd for QubitPlaceholder {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.address().partial_cmp(&other.address())
+        Some(self.cmp(other))
     }
 }
 
