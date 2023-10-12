@@ -548,26 +548,6 @@ impl Instruction {
     pub fn get_qubits(&self) -> Vec<&Qubit> {
         match self {
             Instruction::Gate(gate) => gate.qubits.iter().collect(),
-            Instruction::CalibrationDefinition(calibration) => calibration
-                .qubits
-                .iter()
-                .chain(
-                    calibration
-                        .instructions
-                        .iter()
-                        .flat_map(|inst| inst.get_qubits()),
-                )
-                .collect(),
-            Instruction::MeasureCalibrationDefinition(measurement) => measurement
-                .qubit
-                .iter()
-                .chain(
-                    measurement
-                        .instructions
-                        .iter()
-                        .flat_map(|inst| inst.get_qubits()),
-                )
-                .collect(),
             Instruction::Measurement(measurement) => vec![&measurement.qubit],
             Instruction::Reset(reset) => match &reset.qubit {
                 Some(qubit) => vec![qubit],
