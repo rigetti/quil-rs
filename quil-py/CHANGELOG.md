@@ -1,3 +1,9 @@
+## 0.5.7
+
+### Fixes
+
+- trigger release
+
 ## 0.5.7-rc.0
 
 ### Fixes
