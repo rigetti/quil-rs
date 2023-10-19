@@ -800,7 +800,13 @@ DEFFRAME 0 1 \"2q\":
             (r#"DELAY 0 1.0"#, vec![r#"0 "a""#, r#"0 "b""#], vec![]),
             (r#"DELAY 1 1.0"#, vec![r#"1 "c""#], vec![]),
             (r#"DELAY 1 "c" 1.0"#, vec![r#"1 "c""#], vec![]),
-            (r#"DELAY 0 1 1.0"#, vec![r#"0 1 "2q""#], vec![]),
+            (r#"DELAY 0 1 "2q" 1.0"#, vec![r#"0 1 "2q""#], vec![]),
+            (r#"DELAY 0 1.0"#, vec![r#"0 "a""#, r#"0 "b""#], vec![]),
+            (
+                r#"DELAY 0 1 0.6"#,
+                vec![r#"0 "a""#, r#"0 "b""#, r#"1 "c""#],
+                vec![],
+            ),
             (
                 r#"SWAP-PHASES 0 "a" 0 "b""#,
                 vec![r#"0 "a""#, r#"0 "b""#],

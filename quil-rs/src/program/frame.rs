@@ -77,6 +77,9 @@ impl FrameSet {
             FrameMatchCondition::AnyOfQubits(qubits) => keys
                 .filter(|&f| f.qubits.iter().any(|q| qubits.contains(&q)))
                 .collect(),
+            FrameMatchCondition::ExactQubit(qubits) => keys
+                .filter(|&f| f.qubits.len() == 1 && qubits.contains(&f.qubits[0]))
+                .collect(),
             FrameMatchCondition::ExactQubits(qubits) => keys
                 .filter(|&f| f.qubits.iter().collect::<HashSet<_>>() == qubits)
                 .collect(),
@@ -176,6 +179,9 @@ pub(crate) enum FrameMatchCondition<'a> {
 
     /// Match all frames which contain any of these qubits
     AnyOfQubits(HashSet<&'a Qubit>),
+
+    /// Match all frames which use exactly one of these qubits
+    ExactQubit(HashSet<&'a Qubit>),
 
     /// Match all frames which contain exactly these qubits
     ExactQubits(HashSet<&'a Qubit>),
