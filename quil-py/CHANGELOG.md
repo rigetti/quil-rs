@@ -1,3 +1,9 @@
+## 0.5.8-rc.0
+
+### Fixes
+
+- match exactly one qubit for DELAYs without frame specifier (#300)
+
 ## 0.5.7
 
 ### Fixes
