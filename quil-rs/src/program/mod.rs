@@ -719,18 +719,24 @@ DECLARE ec BIT
 
     #[test]
     fn frame_blocking() {
-        let input = "DEFFRAME 0 \"a\":
-\tHARDWARE-OBJECT: \"hardware\"
+        let input = r#"DEFFRAME 0 "a":
+    HARDWARE-OBJECT: "hardware"
 
-DEFFRAME 0 \"b\":
-\tHARDWARE-OBJECT: \"hardware\"
+DEFFRAME 0 "b":
+    HARDWARE-OBJECT: "hardware"
 
-DEFFRAME 1 \"c\":
-\tHARDWARE-OBJECT: \"hardware\"
+DEFFRAME 1 "c":
+    HARDWARE-OBJECT: "hardware"
 
-DEFFRAME 0 1 \"2q\":
-\tHARDWARE-OBJECT: \"hardware\"
-";
+DEFFRAME 0 1 "0-1 2q":
+    HARDWARE-OBJECT: "hardware"
+
+DEFFRAME 2 "d":
+    HARDWARE-OBJECT: "hardware"
+
+DEFFRAME 0 2 "0-2 2q":
+    HARDWARE-OBJECT: "hardware"
+"#;
 
         let program = Program::from_str(input).unwrap();
 
@@ -739,39 +745,39 @@ DEFFRAME 0 1 \"2q\":
             (
                 r#"PULSE 0 "a" custom_waveform"#,
                 vec![r#"0 "a""#],
-                vec![r#"0 "b""#, r#"0 1 "2q""#],
+                vec![r#"0 "b""#, r#"0 1 "0-1 2q""#, r#"0 2 "0-2 2q""#],
             ),
             (
                 r#"PULSE 1 "c" custom_waveform"#,
                 vec![r#"1 "c""#],
-                vec![r#"0 1 "2q""#],
+                vec![r#"0 1 "0-1 2q""#],
             ),
             // Pulses on non-declared frames and unused qubits do not use or block any frames in the program
-            (r#"PULSE 2 "a" custom_waveform"#, vec![], vec![]),
+            (r#"PULSE 3 "a" custom_waveform"#, vec![], vec![]),
             // Captures work identically to Pulses
             (
                 r#"CAPTURE 0 "a" custom_waveform ro[0]"#,
                 vec![r#"0 "a""#],
-                vec![r#"0 "b""#, r#"0 1 "2q""#],
+                vec![r#"0 "b""#, r#"0 1 "0-1 2q""#, r#"0 2 "0-2 2q""#],
             ),
             (
                 r#"CAPTURE 1 "c" custom_waveform ro[0]"#,
                 vec![r#"1 "c""#],
-                vec![r#"0 1 "2q""#],
+                vec![r#"0 1 "0-1 2q""#],
             ),
-            (r#"CAPTURE 2 "a" custom_waveform ro[0]"#, vec![], vec![]),
+            (r#"CAPTURE 3 "a" custom_waveform ro[0]"#, vec![], vec![]),
             // Raw Captures work identically to Pulses
             (
                 r#"RAW-CAPTURE 0 "a" 1e-6 ro[0]"#,
                 vec![r#"0 "a""#],
-                vec![r#"0 "b""#, r#"0 1 "2q""#],
+                vec![r#"0 "b""#, r#"0 1 "0-1 2q""#, r#"0 2 "0-2 2q""#],
             ),
             (
                 r#"RAW-CAPTURE 1 "c" 1e-6 ro[0]"#,
                 vec![r#"1 "c""#],
-                vec![r#"0 1 "2q""#],
+                vec![r#"0 1 "0-1 2q""#],
             ),
-            (r#"RAW-CAPTURE 2 "a" 1e-6 ro[0]"#, vec![], vec![]),
+            (r#"RAW-CAPTURE 3 "a" 1e-6 ro[0]"#, vec![], vec![]),
             // A non-blocking pulse blocks only its precise frame, not other frames on the same qubits
             (
                 r#"NONBLOCKING PULSE 0 "a" custom_waveform"#,
@@ -784,23 +790,36 @@ DEFFRAME 0 1 \"2q\":
                 vec![],
             ),
             (
-                r#"NONBLOCKING PULSE 0 1 "2q" custom_waveform"#,
-                vec![r#"0 1 "2q""#],
+                r#"NONBLOCKING PULSE 0 1 "0-1 2q" custom_waveform"#,
+                vec![r#"0 1 "0-1 2q""#],
                 vec![],
             ),
             // A Fence with qubits specified uses and blocks all frames intersecting that qubit
-            (r#"FENCE 1"#, vec![], vec![r#"1 "c""#, r#"0 1 "2q""#]),
+            (r#"FENCE 1"#, vec![], vec![r#"1 "c""#, r#"0 1 "0-1 2q""#]),
             // Fence-all uses and blocks all frames declared in the program
             (
                 r#"FENCE"#,
                 vec![],
-                vec![r#"0 "a""#, r#"0 "b""#, r#"1 "c""#, r#"0 1 "2q""#],
+                vec![
+                    r#"0 "a""#,
+                    r#"0 "b""#,
+                    r#"1 "c""#,
+                    r#"0 1 "0-1 2q""#,
+                    r#"0 2 "0-2 2q""#,
+                    r#"2 "d""#,
+                ],
             ),
             // Delay uses and blocks frames on exactly the given qubits and with any of the given names
             (r#"DELAY 0 1.0"#, vec![r#"0 "a""#, r#"0 "b""#], vec![]),
             (r#"DELAY 1 1.0"#, vec![r#"1 "c""#], vec![]),
             (r#"DELAY 1 "c" 1.0"#, vec![r#"1 "c""#], vec![]),
-            (r#"DELAY 0 1 1.0"#, vec![r#"0 1 "2q""#], vec![]),
+            (r#"DELAY 0 1 "0-1 2q" 1.0"#, vec![r#"0 1 "0-1 2q""#], vec![]),
+            (r#"DELAY 0 1.0"#, vec![r#"0 "a""#, r#"0 "b""#], vec![]),
+            (
+                r#"DELAY 0 1 0.6"#,
+                vec![r#"0 "a""#, r#"0 "b""#, r#"1 "c""#, r#"0 1 "0-1 2q""#],
+                vec![],
+            ),
             (
                 r#"SWAP-PHASES 0 "a" 0 "b""#,
                 vec![r#"0 "a""#, r#"0 "b""#],
