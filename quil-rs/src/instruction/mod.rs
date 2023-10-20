@@ -462,7 +462,7 @@ impl Instruction {
                 ..
             }) => Some(FrameMatchConditions {
                 used: Some(if frame_names.is_empty() {
-                    FrameMatchCondition::ExactQubit(qubits.iter().collect())
+                    FrameMatchCondition::ExactQubits(qubits.iter().collect())
                 } else {
                     FrameMatchCondition::And(vec![
                         FrameMatchCondition::ExactQubits(qubits.iter().collect()),
