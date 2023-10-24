@@ -460,7 +460,13 @@ pub(crate) fn parse_store<'a>(input: ParserInput<'a>) -> InternalParserResult<'a
 
 /// Parse the contents of a `PRAGMA` instruction.
 pub(crate) fn parse_pragma<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Instruction> {
-    let (input, pragma_type) = token!(Identifier(v))(input)?;
+    let (input, pragma_type) = token!(Identifier(v))(input).or_else(|err| {
+        // If the pragma's type is the name of a command (e.g. "DELAY"),
+        // it will be lexed as a command token instead of an identifier.
+        token!(Command(v))(input)
+            .map(|(input, command)| (input, command.to_string()))
+            .map_err(|_| err)
+    })?;
     let (input, arguments) = many0(alt((
         map(token!(Identifier(v)), PragmaArgument::Identifier),
         map(token!(Integer(i)), PragmaArgument::Integer),
@@ -787,9 +793,7 @@ mod tests {
         "DELAY 0 \"0.1\"",
         Instruction::Pragma(Pragma {
             name: "DELAY".to_string(),
-            arguments: vec![
-                PragmaArgument::Integer(0)
-            ],
+            arguments: vec![PragmaArgument::Integer(0)],
             data: Some("0.1".to_string()),
         })
     );
