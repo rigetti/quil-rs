@@ -460,7 +460,7 @@ pub(crate) fn parse_store<'a>(input: ParserInput<'a>) -> InternalParserResult<'a
 
 /// Parse the contents of a `PRAGMA` instruction.
 pub(crate) fn parse_pragma<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Instruction> {
-    let (input, pragma_type) = token!(Identifier(v))(input)?;
+    let (input, pragma_type) = token!(Command(v))(input)?;
     let (input, arguments) = many0(alt((
         map(token!(Identifier(v)), PragmaArgument::Identifier),
         map(token!(Integer(i)), PragmaArgument::Integer),
@@ -469,7 +469,7 @@ pub(crate) fn parse_pragma<'a>(input: ParserInput<'a>) -> InternalParserResult<'
     Ok((
         input,
         Instruction::Pragma(Pragma {
-            name: pragma_type,
+            name: pragma_type.to_string(),
             arguments,
             data,
         }),
