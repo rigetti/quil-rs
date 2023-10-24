@@ -1187,7 +1187,7 @@ I 0
     #[rstest]
     #[case(r#"PRAGMA DELAY 0 "0.1""#)]
     #[case("DELAY 0 0.1")]
-    fn compile_delays(#[case] quil_input: &str) {
+    fn parse_pragma_and_command_delay(#[case] quil_input: &str) {
         let program = Program::from_str(quil_input).expect("Should compile.");
         let quil_output = program.to_quil().expect("Should have valid quil output.");
 
