@@ -616,7 +616,7 @@ mod tests {
         imag,
         instruction::{
             Gate, Instruction, Jump, JumpUnless, JumpWhen, Label, Matrix, MemoryReference, Qubit,
-            QubitPlaceholder, ScalarType, Target, TargetPlaceholder, Vector,
+            QubitPlaceholder, Target, TargetPlaceholder,
         },
         quil::Quil,
         real,
@@ -1078,7 +1078,8 @@ I 0
         assert_abs_diff_eq!(matrix.as_ref().unwrap(), expected);
     }
 
-    /// Test
+    /// Tests that the various methods of getting the instructions from a Program produce
+    /// consistent results.
     #[test]
     fn test_to_instructions() {
         let input = "DECLARE foo REAL[1]
