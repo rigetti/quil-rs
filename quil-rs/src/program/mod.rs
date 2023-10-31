@@ -991,21 +991,27 @@ DEFGATE BAR:
         let lhs = Program::from_str(lhs_input).unwrap();
         let rhs = Program::from_str(rhs_input).unwrap();
 
-        let sum = lhs + rhs;
-        assert_eq!(sum.calibrations.len(), 2);
-        assert_eq!(sum.memory_regions.len(), 2);
-        assert_eq!(sum.frames.len(), 2);
-        assert_eq!(sum.waveforms.len(), 2);
-        assert_eq!(sum.instructions.len(), 5);
-        let expected_owned = vec![
+        let sum = lhs.clone() + rhs.clone();
+        let mut in_place_sum = lhs.clone();
+        in_place_sum += rhs;
+
+        let expected_qubits = vec![
             Qubit::Fixed(0),
             Qubit::Fixed(1),
             Qubit::Fixed(2),
             Qubit::Fixed(3),
             Qubit::Variable("q".to_string()),
         ];
-        let expected = expected_owned.iter().collect::<HashSet<_>>();
-        assert_eq!(expected, sum.get_used_qubits().iter().collect())
+
+        let expected_qubits = expected_qubits.iter().collect::<HashSet<_>>();
+        for program in [&sum, &in_place_sum] {
+            assert_eq!(program.calibrations.len(), 2);
+            assert_eq!(program.memory_regions.len(), 2);
+            assert_eq!(program.frames.len(), 2);
+            assert_eq!(program.waveforms.len(), 2);
+            assert_eq!(program.instructions.len(), 5);
+            assert_eq!(expected_qubits, sum.get_used_qubits().iter().collect());
+        }
     }
 
     #[test]
