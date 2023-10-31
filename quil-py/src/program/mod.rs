@@ -159,24 +159,20 @@ impl PyProgram {
     }
 
     #[getter]
-    pub fn defined_gates(&self, py: Python<'_>) -> PyResult<Vec<PyGateDefinition>> {
-        self.as_inner()
-            .to_instructions()
-            .iter()
-            .filter_map(|inst| match inst {
-                Instruction::GateDefinition(gate_def) => Some(gate_def.to_python(py)),
-                _ => None,
-            })
-            .collect()
-    }
-
-    #[getter]
     pub fn gate_definitions(&self, py: Python<'_>) -> PyResult<BTreeMap<String, PyGateDefinition>> {
         self.as_inner()
             .gate_definitions
             .iter()
             .map(|(name, gate_def)| Ok((name.to_python(py)?, gate_def.to_python(py)?)))
             .collect()
+    }
+
+    #[setter]
+    pub fn set_gate_definitions(&mut self, definitions: BTreeMap<String, PyGateDefinition>) {
+        self.as_inner_mut().gate_definitions = definitions
+            .into_iter()
+            .map(|(name, gate_def)| (name, gate_def.into_inner()))
+            .collect();
     }
 
     pub fn dagger(&self) -> PyResult<Self> {
