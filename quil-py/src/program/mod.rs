@@ -170,6 +170,15 @@ impl PyProgram {
             .collect()
     }
 
+    #[getter]
+    pub fn gate_definitions(&self, py: Python<'_>) -> PyResult<BTreeMap<String, PyGateDefinition>> {
+        self.as_inner()
+            .gate_definitions
+            .iter()
+            .map(|(name, gate_def)| Ok((name.to_python(py)?, gate_def.to_python(py)?)))
+            .collect()
+    }
+
     pub fn dagger(&self) -> PyResult<Self> {
         self.as_inner()
             .dagger()

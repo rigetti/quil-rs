@@ -1,0 +1,16 @@
+---
+source: quil-rs/src/program/calibration.rs
+expression: calibrated_program.to_quil_or_debug()
+---
+DEFCAL CCZ 0 1 2:
+	RX(pi) 0
+	CNOT 0 1
+	RX(pi) 1
+	CNOT 1 2
+	RX(pi) 2
+RX(pi) 0
+CNOT 0 1
+RX(pi) 1
+CNOT 1 2
+RX(pi) 2
+
