@@ -21,8 +21,8 @@ use ndarray::Array2;
 use nom_locate::LocatedSpan;
 
 use crate::instruction::{
-    Declaration, FrameDefinition, FrameIdentifier, GateError, Instruction, Matrix, Qubit,
-    QubitPlaceholder, Target, TargetPlaceholder, Waveform, WaveformDefinition,
+    Declaration, FrameDefinition, FrameIdentifier, GateDefinition, GateError, Instruction, Matrix,
+    Qubit, QubitPlaceholder, Target, TargetPlaceholder, Waveform, WaveformDefinition,
 };
 use crate::parser::{lex, parse_instructions, ParseError};
 use crate::quil::Quil;
@@ -74,6 +74,7 @@ pub struct Program {
     pub frames: FrameSet,
     pub memory_regions: BTreeMap<String, MemoryRegion>,
     pub waveforms: BTreeMap<String, Waveform>,
+    pub gate_definitions: BTreeMap<String, GateDefinition>,
     instructions: Vec<Instruction>,
     // private field used for caching operations
     used_qubits: HashSet<Qubit>,
@@ -86,6 +87,7 @@ impl Program {
             frames: FrameSet::new(),
             memory_regions: BTreeMap::new(),
             waveforms: BTreeMap::new(),
+            gate_definitions: BTreeMap::new(),
             instructions: vec![],
             used_qubits: HashSet::new(),
         }
@@ -121,6 +123,7 @@ impl Program {
             calibrations: self.calibrations.clone(),
             frames: self.frames.clone(),
             memory_regions: self.memory_regions.clone(),
+            gate_definitions: self.gate_definitions.clone(),
             waveforms: self.waveforms.clone(),
             used_qubits: HashSet::new(),
         }
@@ -148,6 +151,10 @@ impl Program {
             }) => {
                 self.memory_regions
                     .insert(name, MemoryRegion { size, sharing });
+            }
+            Instruction::GateDefinition(gate_definition) => {
+                self.gate_definitions
+                    .insert(gate_definition.name.clone(), gate_definition);
             }
             Instruction::MeasureCalibrationDefinition(calibration) => {
                 self.calibrations.push_measurement_calibration(calibration);
@@ -236,6 +243,7 @@ impl Program {
             frames: self.frames.clone(),
             memory_regions: self.memory_regions.clone(),
             waveforms: self.waveforms.clone(),
+            gate_definitions: self.gate_definitions.clone(),
             instructions: Vec::new(),
             used_qubits: HashSet::new(),
         };
@@ -308,6 +316,7 @@ impl Program {
         let capacity = self.memory_regions.len()
             + self.frames.len()
             + self.waveforms.len()
+            + self.gate_definitions.len()
             + self.instructions.len();
 
         let mut instructions: Vec<Instruction> = Vec::with_capacity(capacity);
@@ -324,6 +333,11 @@ impl Program {
             Instruction::WaveformDefinition(WaveformDefinition { name, definition })
         }));
         instructions.extend(self.calibrations.into_instructions());
+        instructions.extend(
+            self.gate_definitions
+                .into_values()
+                .map(Instruction::GateDefinition),
+        );
         instructions.extend(self.instructions);
         instructions
     }
@@ -471,6 +485,7 @@ impl Program {
         let capacity = self.memory_regions.len()
             + self.frames.len()
             + self.waveforms.len()
+            + self.gate_definitions.len()
             + self.instructions.len();
 
         let mut instructions: Vec<Instruction> = Vec::with_capacity(capacity);
@@ -490,6 +505,12 @@ impl Program {
             })
         }));
         instructions.extend(self.calibrations.to_instructions());
+        instructions.extend(
+            self.gate_definitions
+                .values()
+                .cloned()
+                .map(Instruction::GateDefinition),
+        );
         instructions.extend(self.instructions.clone());
         instructions
     }
@@ -569,6 +590,7 @@ impl ops::Add<Program> for Program {
         new_program.memory_regions.extend(rhs.memory_regions);
         new_program.frames.merge(rhs.frames);
         new_program.waveforms.extend(rhs.waveforms);
+        new_program.gate_definitions.extend(rhs.gate_definitions);
         new_program.instructions.extend(rhs.instructions);
         new_program.used_qubits.extend(rhs.used_qubits);
         new_program
@@ -581,6 +603,7 @@ impl ops::AddAssign<Program> for Program {
         self.memory_regions.extend(rhs.memory_regions);
         self.frames.merge(rhs.frames);
         self.waveforms.extend(rhs.waveforms);
+        self.gate_definitions.extend(rhs.gate_definitions);
         self.instructions.extend(rhs.instructions);
         self.used_qubits.extend(rhs.used_qubits);
     }
@@ -599,6 +622,7 @@ mod tests {
         real,
     };
     use approx::assert_abs_diff_eq;
+    use insta::assert_debug_snapshot;
     use ndarray::{array, linalg::kron, Array2};
     use num_complex::Complex64;
     use once_cell::sync::Lazy;
@@ -944,6 +968,9 @@ DEFFRAME 0 \"rx\":
     HARDWARE-OBJECT: \"hardware\"
 DEFWAVEFORM custom:
     1,2
+DEFGATE FOO:
+    1, 0
+    0, 1
 I 0
 ";
         let rhs_input = "
@@ -957,25 +984,34 @@ DEFFRAME 1 \"rx\":
     HARDWARE-OBJECT: \"hardware\"
 DEFWAVEFORM custom2:
     1,2
+DEFGATE BAR:
+    0, 1
+    1, 0
 ";
         let lhs = Program::from_str(lhs_input).unwrap();
         let rhs = Program::from_str(rhs_input).unwrap();
 
-        let sum = lhs + rhs;
-        assert_eq!(sum.calibrations.len(), 2);
-        assert_eq!(sum.memory_regions.len(), 2);
-        assert_eq!(sum.frames.len(), 2);
-        assert_eq!(sum.waveforms.len(), 2);
-        assert_eq!(sum.instructions.len(), 5);
-        let expected_owned = vec![
+        let sum = lhs.clone() + rhs.clone();
+        let mut in_place_sum = lhs.clone();
+        in_place_sum += rhs;
+
+        let expected_qubits = vec![
             Qubit::Fixed(0),
             Qubit::Fixed(1),
             Qubit::Fixed(2),
             Qubit::Fixed(3),
             Qubit::Variable("q".to_string()),
         ];
-        let expected = expected_owned.iter().collect::<HashSet<_>>();
-        assert_eq!(expected, sum.get_used_qubits().iter().collect())
+
+        let expected_qubits = expected_qubits.iter().collect::<HashSet<_>>();
+        for program in [&sum, &in_place_sum] {
+            assert_eq!(program.calibrations.len(), 2);
+            assert_eq!(program.memory_regions.len(), 2);
+            assert_eq!(program.frames.len(), 2);
+            assert_eq!(program.waveforms.len(), 2);
+            assert_eq!(program.instructions.len(), 5);
+            assert_eq!(expected_qubits, sum.get_used_qubits().iter().collect());
+        }
     }
 
     #[test]
@@ -1046,6 +1082,30 @@ I 0
         let matrix = program.unwrap().to_unitary(n_qubits);
         assert!(matrix.is_ok());
         assert_abs_diff_eq!(matrix.as_ref().unwrap(), expected);
+    }
+
+    /// Tests that the various methods of getting the instructions from a Program produce
+    /// consistent results.
+    #[test]
+    fn test_to_instructions() {
+        let input = "DECLARE foo REAL[1]
+DEFFRAME 1 \"rx\":
+\tHARDWARE-OBJECT: \"hardware\"
+DEFWAVEFORM custom2:
+\t1, 2
+DEFCAL I 1:
+\tDELAY 0 1
+DEFGATE BAR AS MATRIX:
+\t0, 1
+\t1, 0
+
+H 1
+CNOT 2 3
+";
+        let program = Program::from_str(input).unwrap();
+        assert_debug_snapshot!(program.to_instructions());
+        assert_eq!(program.to_quil().unwrap(), input);
+        assert_eq!(program.to_instructions(), program.into_instructions());
     }
 
     #[test]
