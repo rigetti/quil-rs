@@ -1,3 +1,9 @@
+## 0.6.0
+
+### Breaking Changes
+
+- Program now has a gate_definitions property that stores all DEFGATEs in a program. These instructions will no longer appear in body_instructions. (#306)
+
 ## 0.6.0-rc.0
 
 ### Breaking Changes
