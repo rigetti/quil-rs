@@ -31,6 +31,14 @@ dependencies = [
     "pytest",
 ]
 
+[tasks.py-docs]
+dependencies = [
+    "poetry-install",
+    "install-quil"
+]
+command = "poetry"
+args = ["run", "python", "make_docs.py"]
+
 [tasks.dev-flow]
 dependencies = ["dev-test-flow", "pytest-flow", "stubtest"]
 
