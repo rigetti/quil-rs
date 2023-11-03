@@ -1046,7 +1046,7 @@ checksum = "a1d01941d82fa2ab50be1e79e6714289dd7cde78eba4c074bc5a4374f650dfe0"
 
 [[package]]
 name = "quil-py"
-version = "0.5.6"
+version = "0.6.0"
 dependencies = [
  "ndarray",
  "numpy",
@@ -1059,7 +1059,7 @@ dependencies = [
 
 [[package]]
 name = "quil-rs"
-version = "0.21.5"
+version = "0.22.0"
 dependencies = [
  "approx",
  "clap",
@@ -1223,8 +1223,6 @@ checksum = "4bf2521270932c3c7bed1a59151222bd7643c79310f2916f01925e1e16255698"
 [[package]]
 name = "rigetti-pyo3"
 version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "19ada0e718c50ee8e934a1791207fcb6543e237cd439d76d47eaf4dbcfa329fd"
 dependencies = [
  "num-complex",
  "num-traits",
