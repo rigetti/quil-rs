@@ -68,7 +68,7 @@ jobs:
     - uses: actions/checkout@v1
     - uses: snok/install-poetry@v1
     - name: Run quil-py tests
-      run: cargo make --makefile quil-py/Makefile.toml
+      run: cargo make --cwd quil-py
 
   fmt:
     name: Rustfmt
