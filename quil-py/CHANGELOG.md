@@ -1,3 +1,9 @@
+## 0.6.1-rc.0
+
+### Fixes
+
+- misc instruction memory accesses (#304)
+
 ## 0.6.0
 
 ### Breaking Changes
