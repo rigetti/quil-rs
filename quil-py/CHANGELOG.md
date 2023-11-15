@@ -1,3 +1,13 @@
+## 0.6.1-rc.1
+
+### Features
+
+- Support Python 3.12 (#310)
+
+### Fixes
+
+- misc instruction memory accesses (#304)
+
 ## 0.6.1-rc.0
 
 ### Fixes

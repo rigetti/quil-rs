@@ -1,3 +1,9 @@
+## 0.22.1-rc.1
+
+### Fixes
+
+- misc instruction memory accesses (#304)
+
 ## 0.22.1-rc.0
 
 ### Fixes
