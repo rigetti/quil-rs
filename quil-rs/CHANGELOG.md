@@ -1,3 +1,9 @@
+## 0.22.2-rc.0
+
+### Features
+
+- impl FromStr for FrameIdentifier (#312)
+
 ## 0.22.1
 
 ### Fixes
