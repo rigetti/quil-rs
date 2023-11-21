@@ -1224,8 +1224,6 @@ checksum = "4bf2521270932c3c7bed1a59151222bd7643c79310f2916f01925e1e16255698"
 [[package]]
 name = "rigetti-pyo3"
 version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c8e75f9f76a8b8898607379b62c89d94dd43f924b377327fb9a2861f7c8cf2db"
 dependencies = [
  "num-complex",
  "num-traits",

@@ -32,6 +32,7 @@ black = "^23.1.0"
 maturin = "^1.2.3"
 mypy = "^1.1.1"
 pytest = "^7.2.2"
+pdoc = "^14.1.0"
 
 [tool.maturin]
 features = ["pyo3/extension-module"]
