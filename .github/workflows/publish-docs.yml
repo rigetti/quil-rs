@@ -23,10 +23,10 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: make
-          args: --cwd quil-py --makefile Makefile.toml ci-flow
+          args: --cwd quil-py --makefile Makefile.toml docs
       - uses: actions/upload-pages-artifact@v2
         with:
-          path: build/docs/
+          path: quil-py/build/docs
 
   deploy-docs:
     needs: publish-docs
