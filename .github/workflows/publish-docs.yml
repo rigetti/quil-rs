@@ -23,7 +23,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: make
-          args: --cwd crates/python --makefile Makefile.toml ci-flow
+          args: --cwd quil-py --makefile Makefile.toml ci-flow
       - uses: actions/upload-pages-artifact@v2
         with:
           path: quil-py/build/docs/
