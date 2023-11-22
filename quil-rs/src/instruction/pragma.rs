@@ -1,5 +1,7 @@
 use crate::quil::Quil;
 
+use super::QuotedString;
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Pragma {
     pub name: String,
@@ -29,7 +31,7 @@ impl Quil for Pragma {
             arg.write(f, fall_back_to_debug)?;
         }
         if let Some(data) = &self.data {
-            write!(f, " {data:?}")?;
+            write!(f, " {}", QuotedString(data))?;
         }
         Ok(())
     }
@@ -66,7 +68,7 @@ impl Quil for Include {
         f: &mut impl std::fmt::Write,
         _fall_back_to_debug: bool,
     ) -> crate::quil::ToQuilResult<()> {
-        write!(f, r#"INCLUDE {:?}"#, self.filename).map_err(Into::into)
+        write!(f, r#"INCLUDE {}"#, QuotedString(&self.filename)).map_err(Into::into)
     }
 }
 

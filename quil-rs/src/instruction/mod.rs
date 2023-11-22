@@ -319,6 +319,25 @@ impl Quil for Instruction {
     }
 }
 
+pub(crate) struct QuotedString<S>(pub(crate) S);
+
+impl<S> fmt::Display for QuotedString<S>
+where
+    S: AsRef<str>,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "\"")?;
+        for c in self.0.as_ref().chars() {
+            match c {
+                '"' => write!(f, "\\\"")?,
+                '\\' => write!(f, "\\\\")?,
+                c => write!(f, "{}", c)?,
+            }
+        }
+        write!(f, "\"")
+    }
+}
+
 #[cfg(test)]
 mod test_instruction_display {
     use crate::{instruction::PragmaArgument, quil::Quil};
