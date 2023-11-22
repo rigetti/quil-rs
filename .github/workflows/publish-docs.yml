@@ -31,10 +31,11 @@ jobs:
   deploy-docs:
     needs: publish-docs
     runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.PAT }}
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-      GITHUB_TOKEN: ${{ secrets.PAT }}
     steps:
       - id: deployment
         uses: actions/deploy-pages@v2
