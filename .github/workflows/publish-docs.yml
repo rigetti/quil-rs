@@ -1,0 +1,35 @@
+name: Publish quil-py
+
+on:
+  pull_request:
+
+  publish-docs:
+    runs-on: ubuntu-latest
+    needs: publish-python-package
+    if: github.event_name == 'release' && !github.event.release.prerelease
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install poetry
+        uses: snok/install-poetry@v1
+      - uses: Swatinem/rust-cache@v2
+      - name: Build quil-py documentation
+        uses: actions-rs/cargo@v1
+        with:
+          command: make
+          args: --cwd crates/python --makefile Makefile.toml ci-flow
+      - uses: actions/upload-pages-artifact@v2
+        with:
+          path: quil-py/build/docs/
+
+  deploy-docs:
+    needs: publish-docs
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v2
