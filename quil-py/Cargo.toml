@@ -27,8 +27,7 @@ strum.workspace = true
 # pyo3 dependencies should be updated together
 numpy = "0.20.0"
 pyo3 = "0.20.0"
-# rigetti-pyo3 = "0.3"
-rigetti-pyo3 = { path = "../../../rigetti-pyo3" }
+rigetti-pyo3 = "0.3.1"
 
 [build-dependencies]
 pyo3-build-config = "0.20.0"
