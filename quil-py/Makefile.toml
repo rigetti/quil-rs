@@ -32,6 +32,7 @@ dependencies = [
 ]
 
 [tasks.docs]
+dependencies = ["poetry-install", "install-quil"]
 command = "poetry"
 args = ["run", "pdoc", "-o", "build/docs", "quil", "!quil.quil"]
 
