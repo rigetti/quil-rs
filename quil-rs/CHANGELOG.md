@@ -1,3 +1,13 @@
+## 0.22.2-rc.1
+
+### Features
+
+- impl FromStr for FrameIdentifier (#312)
+
+### Fixes
+
+- use internal QuotedString wrapper to quote Quil strings correctly (#317)
+
 ## 0.22.2-rc.0
 
 ### Features
