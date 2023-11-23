@@ -1,3 +1,9 @@
+## 0.6.2
+
+### Fixes
+
+- use internal QuotedString wrapper to quote Quil strings correctly (#317)
+
 ## 0.6.2-rc.0
 
 ### Fixes
