@@ -95,6 +95,7 @@ fn surrounded(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::instruction::QuotedString;
     use nom::Finish;
     use nom_locate::LocatedSpan;
     use rstest::rstest;
@@ -107,12 +108,17 @@ mod tests {
     #[case("\"foo bar (baz) 123\" after", "foo bar (baz) 123", " after")]
     #[case(r#""{\"name\": \"quoted json\"}""#, r#"{"name": "quoted json"}"#, "")]
     #[case(r#""hello"\n"world""#, "hello", "\\n\"world\"")]
+    #[case(
+        "\"a \\\"string\\\" \n with newlines\"",
+        "a \"string\" \n with newlines",
+        ""
+    )]
     fn string_parser(#[case] input: &str, #[case] output: &str, #[case] leftover: &str) {
         let span = LocatedSpan::new(input);
         let (remaining, parsed) = unescaped_quoted_string(span).finish().unwrap();
         assert_eq!(parsed, output);
         assert_eq!(remaining.fragment(), &leftover);
-        let round_tripped = format!("{:?}", parsed);
+        let round_tripped = QuotedString(&parsed).to_string();
         assert!(
             input.starts_with(&round_tripped),
             "expected `{}` to start with `{}`",
