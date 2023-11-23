@@ -115,7 +115,10 @@ impl PartialEq for Expression {
         match (self, other) {
             (Self::Address(left), Self::Address(right)) => left == right,
             (Self::Infix(left), Self::Infix(right)) => left == right,
-            (Self::Number(left), Self::Number(right)) => left == right,
+            (Self::Number(left), Self::Number(right)) => {
+                (left.re == right.re || left.re.is_nan() && right.re.is_nan())
+                    && (left.im == right.im || left.im.is_nan() && right.im.is_nan())
+            }
             (Self::Prefix(left), Self::Prefix(right)) => left == right,
             (Self::FunctionCall(left), Self::FunctionCall(right)) => left == right,
             (Self::Variable(left), Self::Variable(right)) => left == right,
@@ -1010,6 +1013,7 @@ mod tests {
             prop_assert!(p.is_ok());
             let p = p.unwrap();
             let simple_p = p.clone().into_simplified();
+
             prop_assert_eq!(
                 simple_p.clone(),
                 simple_e.clone(),
@@ -1040,11 +1044,19 @@ mod tests {
     }
 
     #[test]
+    fn test_nan_is_equal() {
+        let left = Expression::Number(f64::NAN.into());
+        let right = left.clone();
+        assert_eq!(left, right);
+    }
+
+    #[test]
     fn specific_simplification_tests() {
         for (input, expected) in [
             ("pi", Expression::Number(PI.into())),
             ("pi/2", Expression::Number((PI / 2.0).into())),
             ("pi * pi", Expression::Number((PI.powi(2)).into())),
+            ("1.0/(1.0-1.0)", Expression::Number(f64::NAN.into())),
             (
                 "(a[0]*2*pi)/6.283185307179586",
                 Expression::Address(MemoryReference {
