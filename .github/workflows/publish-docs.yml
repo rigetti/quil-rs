@@ -37,6 +37,7 @@ jobs:
         uses: rossjrw/pr-preview-action@v1
         with:
           source-dir: quil-py/build/docs
+          preview-branch: main
       - name: Upload pages artifact
         uses: actions/upload-pages-artifact@v2
         if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.event.release.tag_name, 'quil-py/v') }}
