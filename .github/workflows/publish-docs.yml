@@ -1,7 +1,13 @@
-name: Publish quil-py
+name: Publish quil-py documentation
 
 on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    description: "Manually build and publish quil-py documentation to GitHub pages."
   pull_request:
+
+concurrency: preview-${{ github.ref }}
 
 jobs:
   publish-docs:
@@ -24,12 +30,20 @@ jobs:
         with:
           command: make
           args: --cwd quil-py --makefile Makefile.toml docs
+      - name: Deploy preview
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: rossjrw/pr-preview-action@v1
+        with:
+          source-dir: quiil-py/build/docs
+      - name: Upload pages artifact
+        if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.event.release.tag_name, 'quil-py/v') }}
       - uses: actions/upload-pages-artifact@v2
         with:
           path: quil-py/build/docs
 
   deploy-docs:
     needs: publish-docs
+    if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.event.release.tag_name, 'quil-py/v') }}
     runs-on: ubuntu-latest
     permissions:
       pages: write
