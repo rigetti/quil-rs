@@ -8,4 +8,4 @@ This package is still in early development and breaking changes should be expect
 
 # Documentation
 
-Documentation for the current release of `quil` is published [here](). Every version of `quil` ships [with type stubs](https://github.com/rigetti/quil-rs/tree/main/quil-py/quil) that provide type hints and documentation to Python tooling and editors that support the [Language Server Protocol](https://microsoft.github.io/language-server-protocol/) or similar.
+Documentation for the current release of `quil` is published [here](https://rigetti.github.io/quil-rs/quil.html). Every version of `quil` ships [with type stubs](https://github.com/rigetti/quil-rs/tree/main/quil-py/quil) that provide type hints and documentation to Python tooling and editors that support the [Language Server Protocol](https://microsoft.github.io/language-server-protocol/) or similar.
