@@ -12,7 +12,7 @@ on:
       - closed
 
 jobs:
-  publish-docs:
+  deploy-preview:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -37,7 +37,7 @@ jobs:
         uses: rossjrw/pr-preview-action@v1
         with:
           source-dir: quil-py/build/docs
-          preview-branch: main
+          preview-branch: quil-py-docs
       - name: Upload pages artifact
         uses: actions/upload-pages-artifact@v2
         if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.event.release.tag_name, 'quil-py/v') }}
