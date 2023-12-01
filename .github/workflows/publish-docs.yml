@@ -36,15 +36,15 @@ jobs:
           command: make
           args: --cwd quil-py --makefile Makefile.toml docs
       - name: Deploy preview
+      - uses: rossjrw/pr-preview-action@v1
         if: ${{ github.event_name == 'pull_request' }}
-        uses: rossjrw/pr-preview-action@v1
         with:
           source-dir: quil-py/build/docs
           preview-branch: main
           umbrella-dir: docs/pr-preview
       - name: Upload pages artifact
-        if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.event.release.tag_name, 'quil-py/v') }}
       - uses: actions/upload-pages-artifact@v2
+        if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.event.release.tag_name, 'quil-py/v') }}
         with:
           path: quil-py/build/docs
 
