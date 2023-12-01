@@ -12,10 +12,8 @@ on:
       - synchronize
       - closed
 
-concurrency: preview-${{ github.ref }}
-
 jobs:
-  publish-docs:
+  build-docs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -35,18 +33,30 @@ jobs:
         with:
           command: make
           args: --cwd quil-py --makefile Makefile.toml docs
-      - name: Deploy preview
-      - uses: rossjrw/pr-preview-action@v1
-        if: ${{ github.event_name == 'pull_request' }}
+      - uses: actions/upload-artifact@v3
         with:
-          source-dir: quil-py/build/docs
-          preview-branch: main
-          umbrella-dir: docs/pr-preview
+          name: docs-artifact
+          path: quil-py/build/docs
       - name: Upload pages artifact
       - uses: actions/upload-pages-artifact@v2
-        if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.event.release.tag_name, 'quil-py/v') }}
         with:
           path: quil-py/build/docs
+        
+  publish-preview:
+    runs-on: ubuntu-latest
+    needs: build-docs
+    if: ${{ github.event_name == 'pull_request' }}
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          name: docs-artifact
+          path: docs
+      - name: Deploy preview
+      - uses: rossjrw/pr-preview-action@v1
+        with:
+          source-dir: docs
+          preview-branch: main
+          umbrella-dir: docs/pr-preview
 
   deploy-docs:
     needs: publish-docs
