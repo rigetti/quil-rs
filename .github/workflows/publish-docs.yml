@@ -6,6 +6,11 @@ on:
   workflow_dispatch:
     description: "Manually build and publish quil-py documentation to GitHub pages."
   pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - closed
 
 concurrency: preview-${{ github.ref }}
 
@@ -34,7 +39,9 @@ jobs:
         if: ${{ github.event_name == 'pull_request' }}
         uses: rossjrw/pr-preview-action@v1
         with:
-          source-dir: quiil-py/build/docs
+          source-dir: quil-py/build/docs
+          preview-branch: main
+          umbrella-dir: docs/pr-preview
       - name: Upload pages artifact
         if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.event.release.tag_name, 'quil-py/v') }}
       - uses: actions/upload-pages-artifact@v2
