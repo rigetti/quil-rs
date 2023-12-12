@@ -31,6 +31,11 @@ dependencies = [
     "pytest",
 ]
 
+[tasks.docs]
+dependencies = ["poetry-install", "install-quil"]
+command = "poetry"
+args = ["run", "pdoc", "-o", "build/docs", "quil", "!quil.quil", "--logo", "https://qcs.rigetti.com/static/img/rigetti-logo.svg"]
+
 [tasks.dev-flow]
 dependencies = ["dev-test-flow", "pytest-flow", "stubtest"]
 

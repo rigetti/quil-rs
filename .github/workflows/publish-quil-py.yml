@@ -176,7 +176,7 @@ jobs:
   publish-rust-crate:
     name: Release
     runs-on: ubuntu-latest
-    needs: [ publish-python-package ]
+    needs: publish-python-package
     steps:
       - uses: actions/checkout@v3
         with:

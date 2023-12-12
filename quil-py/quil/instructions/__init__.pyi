@@ -11,49 +11,49 @@ class Instruction:
     """
     A Quil instruction. Each variant corresponds to a possible type of Quil instruction.
 
-    Variants:
-        ``arithmetic``: An arithmetic expression defined by an ``Arithmetic``.
-        ``binary_logic``: A binary expression defined by a ``BinaryLogic``.
-        ``calibration_definition``: Corresponds to a `DEFCAL` instruction (not `DEFCAL MEASURE`)
-            defined by a ``Calibration``.
-        ``capture``: Corresponds to a `CAPTURE` instruction
-        ``calibration``: Corresponds to a `DEFCAL` instruction.
-        ``circuit_definition``: Corresponds to a `DEFCIRCUIT` instruction and its body,
-            defined by a ``CircuitDefinition``.
-        ``convert``: Corresponds to a `CONVERT` instruction.
-        ``comparison``: Corresponds to a comparison of two `MemoryReference`s
-        ``declaration``: Corresponds to a `DECLARE` statement defined by a ``Declaration``.
-        ``delay``: Corresponds to a `DELAY` instruction.
-        ``exchange``: Corresponds to an `EXCHANGE` instruction.
-        ``fence``: Corresponds to a `FENCE` instruction.
-        ``frame_definition``: Corresponds to a `DEFFRAME` statement, defined by a ``FrameDefinition``.
-        ``gate``: A Quil quantum gate instruction defined by a ``Gate``.
-        ``gate_definition``: A quantum gate definition defined by a ``GateDefinition``.
-        ``halt``: Corresponds to the `HALT` instruction. No inner data.
-        ``include``: Corresponds to an `INCLUDE` directive.
-        ``jump``: Corresponds to a `JUMP` instruction
-        ``jump_when``: Corresponds to a `JUMP-WHEN` instruction
-        ``jump_unless``: Corresponds to a `JUMP-UNLESS` instruction
-        ``label``: Corresponds to a `LABEL`
-        ``load``: Corresponds to a `LOAD` instruction.
-        ``measure_calibration_definition``: Corresponds to a `DEFCAL MEASURE` instruction. Defined by a ``MeasureCalibrationDefinition``.
-        ``measurement``: Corresponds to a `MEASURE` instruction.
-        ``move``: Corresponds to a `MOVE` instruction.
-        ``nop``: Corresponds to the `NOP` instruction. No inner data.
-        ``pragma``: Corresponds to a `PRAGMA` instruction.
-        ``pulse``: Corresponds to a `PULSE` instruction.
-        ``raw_capture``: Corresponds to a `RAW-CAPTURE` instruction.
-        ``reset``: Corresponds to a `RESET` instruction.
-        ``set_frequency``: Corresponds to a `SET-FREQUENCY` instruction.
-        ``set_phase``: Corresponds to a `SET-PHASE` instruction.
-        ``set_scale``: Corresponds to a `SET-SCALE` instruction.
-        ``shift_frequency``: Corresponds to a `SHIFT-FREQUENCY` instruction.
-        ``shift_phase``: Corresponds to a `SHIFT-PHASE` instruction.
-        ``store``: Corresponds to a `STORE` instruction.
-        ``swap_phases``: Corresponds to a `SWAP-PHASES` instruction.
-        ``unary_logic``: Corresponds to a unary operation on a `MemoryReference`.
-        ``waveform_definition``: A waveform defined by a ``WaveformDefinition``.
-        ``wait``: Corresponds to a `WAIT` instruction. No inner data.
+    # Variants:
+    - ``arithmetic``: An arithmetic expression defined by an ``Arithmetic``.
+    - ``binary_logic``: A binary expression defined by a ``BinaryLogic``.
+    - ``calibration_definition``: Corresponds to a `DEFCAL` instruction (not `DEFCAL MEASURE`)
+    -     defined by a ``Calibration``.
+    - ``capture``: Corresponds to a `CAPTURE` instruction
+    - ``calibration``: Corresponds to a `DEFCAL` instruction.
+    - ``circuit_definition``: Corresponds to a `DEFCIRCUIT` instruction and its body,
+    -     defined by a ``CircuitDefinition``.
+    - ``convert``: Corresponds to a `CONVERT` instruction.
+    - ``comparison``: Corresponds to a comparison of two `MemoryReference`s
+    - ``declaration``: Corresponds to a `DECLARE` statement defined by a ``Declaration``.
+    - ``delay``: Corresponds to a `DELAY` instruction.
+    - ``exchange``: Corresponds to an `EXCHANGE` instruction.
+    - ``fence``: Corresponds to a `FENCE` instruction.
+    - ``frame_definition``: Corresponds to a `DEFFRAME` statement, defined by a ``FrameDefinition``.
+    - ``gate``: A Quil quantum gate instruction defined by a ``Gate``.
+    - ``gate_definition``: A quantum gate definition defined by a ``GateDefinition``.
+    - ``halt``: Corresponds to the `HALT` instruction. No inner data.
+    - ``include``: Corresponds to an `INCLUDE` directive.
+    - ``jump``: Corresponds to a `JUMP` instruction
+    - ``jump_when``: Corresponds to a `JUMP-WHEN` instruction
+    - ``jump_unless``: Corresponds to a `JUMP-UNLESS` instruction
+    - ``label``: Corresponds to a `LABEL`
+    - ``load``: Corresponds to a `LOAD` instruction.
+    - ``measure_calibration_definition``: Corresponds to a `DEFCAL MEASURE` instruction. Defined by a ``MeasureCalibrationDefinition``.
+    - ``measurement``: Corresponds to a `MEASURE` instruction.
+    - ``move``: Corresponds to a `MOVE` instruction.
+    - ``nop``: Corresponds to the `NOP` instruction. No inner data.
+    - ``pragma``: Corresponds to a `PRAGMA` instruction.
+    - ``pulse``: Corresponds to a `PULSE` instruction.
+    - ``raw_capture``: Corresponds to a `RAW-CAPTURE` instruction.
+    - ``reset``: Corresponds to a `RESET` instruction.
+    - ``set_frequency``: Corresponds to a `SET-FREQUENCY` instruction.
+    - ``set_phase``: Corresponds to a `SET-PHASE` instruction.
+    - ``set_scale``: Corresponds to a `SET-SCALE` instruction.
+    - ``shift_frequency``: Corresponds to a `SHIFT-FREQUENCY` instruction.
+    - ``shift_phase``: Corresponds to a `SHIFT-PHASE` instruction.
+    - ``store``: Corresponds to a `STORE` instruction.
+    - ``swap_phases``: Corresponds to a `SWAP-PHASES` instruction.
+    - ``unary_logic``: Corresponds to a unary operation on a `MemoryReference`.
+    - ``waveform_definition``: A waveform defined by a ``WaveformDefinition``.
+    - ``wait``: Corresponds to a `WAIT` instruction. No inner data.
 
     As seen above, some variants contain inner data that fully specify the instruction.
     For example, the ``gate`` variant contains a ``Gate``. This is in contrast to variants like
@@ -61,15 +61,15 @@ class Instruction:
     This difference is important for determining which methods are available for each variant.
 
     Methods (for each variant):
-        ``is_*``: Returns ``True`` if the instruction is that variant, ``False`` otherwise.
+    - ``is_*``: Returns ``True`` if the instruction is that variant, ``False`` otherwise.
 
-        If the variant has inner data (e.g. ``gate``):
-            ``as_*``: Returns the inner data if it is the given variant, ``None`` otherwise.
-            ``to_*``: Returns the inner data if it is the given variant, raises ``ValueError`` otherwise.
-            ``from_*``: Creates a new ``Instruction`` of the given variant from an instance of the inner type.
+    If the variant has inner data (e.g. ``gate``):
+    - ``as_*``: Returns the inner data if it is the given variant, ``None`` otherwise.
+    - ``to_*``: Returns the inner data if it is the given variant, raises ``ValueError`` otherwise.
+    - ``from_*``: Creates a new ``Instruction`` of the given variant from an instance of the inner type.
 
-        If the variant doesn't have inner data (e.g. ``halt``)
-            ``new_*``: Creates a new ``Instruction`` for the variant.
+    If the variant doesn't have inner data (e.g. ``halt``)
+    - ``new_*``: Creates a new ``Instruction`` for the variant.
     """
 
     def __new__(
@@ -382,16 +382,16 @@ class ArithmeticOperand:
     """
     A Quil arithmetic operand.
 
-    Variants:
-        ``literal_integer``: An integer literal.
-        ``literal_real``: A real numbered literal.
-        ``memory_reference``: A Quil ``MemoryReference``.
+    # Variants:
+    - ``literal_integer``: An integer literal.
+    - ``literal_real``: A real numbered literal.
+    - ``memory_reference``: A Quil ``MemoryReference``.
 
     Methods (for each variant):
-        ``is_*``: Returns ``True`` if the operand is that variant, ``False`` otherwise.
-        ``as_*``: Returns the inner data if it is the given variant, ``None`` otherwise.
-        ``to_*``: Returns the inner data if it is the given variant, raises ``ValueError`` otherwise.
-        ``from_*``: Creates a new ``ArithmeticOperand`` of the given variant from an instance of the inner type.
+    - ``is_*``: Returns ``True`` if the operand is that variant, ``False`` otherwise.
+    - ``as_*``: Returns the inner data if it is the given variant, ``None`` otherwise.
+    - ``to_*``: Returns the inner data if it is the given variant, raises ``ValueError`` otherwise.
+    - ``from_*``: Creates a new ``ArithmeticOperand`` of the given variant from an instance of the inner type.
     """
 
     def inner(self) -> Union[int, float, MemoryReference]:
@@ -486,15 +486,15 @@ class BinaryOperand:
     """
     A Quil binary operand.
 
-    Variants:
-        ``literal_integer``: An integer literal.
-        ``memory_reference``: A Quil ``MemoryReference``.
+    # Variants:
+    - ``literal_integer``: An integer literal.
+    - ``memory_reference``: A Quil ``MemoryReference``.
 
     Methods (for each variant):
-        ``is_*``: Returns ``True`` if the operand is that variant, ``False`` otherwise.
-        ``as_*``: Returns the inner data if it is the given variant, ``None`` otherwise.
-        ``to_*``: Returns the inner data if it is the given variant, raises ``ValueError`` otherwise.
-        ``from_*``: Creates a new ``BinaryOperand`` of the given variant from an instance of the inner type.
+    - ``is_*``: Returns ``True`` if the operand is that variant, ``False`` otherwise.
+    - ``as_*``: Returns the inner data if it is the given variant, ``None`` otherwise.
+    - ``to_*``: Returns the inner data if it is the given variant, raises ``ValueError`` otherwise.
+    - ``from_*``: Creates a new ``BinaryOperand`` of the given variant from an instance of the inner type.
     """
 
     def inner(self) -> Union[int, MemoryReference]:
@@ -671,16 +671,16 @@ class ComparisonOperand:
     """
     A Quil binary operand.
 
-    Variants:
-        ``literal_integer``: An integer literal.
-        ``literal_real``: A floating point literal.
-        ``memory_reference``: A Quil ``MemoryReference``.
+    # Variants:
+    - ``literal_integer``: An integer literal.
+    - ``literal_real``: A floating point literal.
+    - ``memory_reference``: A Quil ``MemoryReference``.
 
     Methods (for each variant):
-        ``is_*``: Returns ``True`` if the operand is that variant, ``False`` otherwise.
-        ``as_*``: Returns the inner data if it is the given variant, ``None`` otherwise.
-        ``to_*``: Returns the inner data if it is the given variant, raises ``ValueError`` otherwise.
-        ``from_*``: Creates a new ``BinaryOperand`` of the given variant from an instance of the inner type.
+    - ``is_*``: Returns ``True`` if the operand is that variant, ``False`` otherwise.
+    - ``as_*``: Returns the inner data if it is the given variant, ``None`` otherwise.
+    - ``to_*``: Returns the inner data if it is the given variant, raises ``ValueError`` otherwise.
+    - ``from_*``: Creates a new ``BinaryOperand`` of the given variant from an instance of the inner type.
     """
 
     def inner(self) -> Union[int, float, MemoryReference]:
@@ -1035,16 +1035,15 @@ class AttributeValue:
     """
     A frame attribute value.
 
-    Variants:
-        ``string``: A string attribute containing a ``str``.
-        ``expression``: An expression attribute containing an ``Expression``.
+    # Variants:
+    - ``string``: A string attribute containing a ``str``.
+    - ``expression``: An expression attribute containing an ``Expression``.
 
     Methods (for each variant):
-        ``is_*``: Returns ``True`` if the ``AttributeValue`` is that variant, ``False`` otherwise.
-
-        ``as_*``: Returns the inner data if it is the given variant, ``None`` otherwise.
-        ``to_*``: Returns the inner data if it is the given variant, raises ``ValueError`` otherwise.
-        ``from_*``: Creates a new ``AttributeValue`` of the given variant from an instance of the inner type.
+    - ``is_*``: Returns ``True`` if the ``AttributeValue`` is that variant, ``False`` otherwise.
+    - ``as_*``: Returns the inner data if it is the given variant, ``None`` otherwise.
+    - ``to_*``: Returns the inner data if it is the given variant, raises ``ValueError`` otherwise.
+    - ``from_*``: Creates a new ``AttributeValue`` of the given variant from an instance of the inner type.
     """
 
     def inner(self) -> Union[str, Expression]:
@@ -1530,15 +1529,15 @@ class GateSpecification:
     """
     A specification for a gate definition.
 
-    Variants:
-        ``matrix``: A gate specificied by a matrix of ``Expression``s representing a unitary operation.
-        ``permutation``: A gate specified by a vector of integers that defines a permutation.
+    # Variants:
+    - ``matrix``: A gate specificied by a matrix of ``Expression``s representing a unitary operation.
+    - ``permutation``: A gate specified by a vector of integers that defines a permutation.
 
     Methods (for each variant):
-        - is_*: Returns ``True`` if the inner type is of that variant.
-        - as_*: Returns the inner data if it is the given variant, ``None`` otherwise.
-        - to_*: Returns the inner data if it is the given variant, raises ``ValueError`` otherwise.
-        - from_*: Creates a new ``GateSpecification`` using an instance of the inner type for the variant.
+    - is_*: Returns ``True`` if the inner type is of that variant.
+    - as_*: Returns the inner data if it is the given variant, ``None`` otherwise.
+    - to_*: Returns the inner data if it is the given variant, raises ``ValueError`` otherwise.
+    - from_*: Creates a new ``GateSpecification`` using an instance of the inner type for the variant.
     """
 
     def inner(self) -> Union[List[List[Expression]], List[int], PauliSum]:
@@ -1613,15 +1612,15 @@ class Qubit:
     """
     A Qubit
 
-    Variants:
-        ``fixed``: A qubit represented as a fixed integer index.
-        ``variable``: A qubit represented by a name.
+    # Variants:
+    - ``fixed``: A qubit represented as a fixed integer index.
+    - ``variable``: A qubit represented by a name.
 
     Methods (for each variant):
-        - is_*: Returns ``True`` if the inner type is of that variant.
-        - as_*: Returns the inner data if it is the given variant, ``None`` otherwise.
-        - to_*: Returns the inner data if it is the given variant, raises ``ValueError`` otherwise.
-        - from_*: Creates a new ``Qubit`` using an instance of the inner type for the variant.
+    - ``is_*``: Returns ``True`` if the inner type is of that variant.
+    - ``as_*``: Returns the inner data if it is the given variant, ``None`` otherwise.
+    - ``to_*``: Returns the inner data if it is the given variant, raises ``ValueError`` otherwise.
+    - ``from_*``: Creates a new ``Qubit`` using an instance of the inner type for the variant.
     """
 
     def inner(self) -> Union[int, str]:
@@ -1743,15 +1742,15 @@ class Fence:
 class PragmaArgument:
     """
 
-    Variants:
-        ``identifier``: A Pragma argument defined by a Quil identifier
-        ``integer``: A Pragma argument defined by an integer
+    # Variants:
+    - ``identifier``: A Pragma argument defined by a Quil identifier
+    - ``integer``: A Pragma argument defined by an integer
 
     Methods (for each variant):
-        - is_*: Returns ``True`` if the inner type is of that variant.
-        - as_*: Returns the inner data if it is the given variant, ``None`` otherwise.
-        - to_*: Returns the inner data if it is the given variant, raises ``ValueError`` otherwise.
-        - from_*: Creates a new ``PragmaArgument`` using an instance of the inner type for the variant.
+    - ``is_*``: Returns ``True`` if the inner type is of that variant.
+    - ``as_*``: Returns the inner data if it is the given variant, ``None`` otherwise.
+    - ``to_*``: Returns the inner data if it is the given variant, raises ``ValueError`` otherwise.
+    - ``from_*``: Creates a new ``PragmaArgument`` using an instance of the inner type for the variant.
     """
 
     def inner(self) -> Union[str, int]:
@@ -2037,15 +2036,15 @@ class Target:
     """
     Represents a Quil target.
 
-    Variants:
-        ``fixed``: A fixed target defined by a Quil identifier
-        ``placeholder``: A placeholder target that can be assigned a new name at a later time.
+    # Variants:
+    - ``fixed``: A fixed target defined by a Quil identifier
+    - ``placeholder``: A placeholder target that can be assigned a new name at a later time.
 
     Methods (for each variant):
-        - is_*: Returns ``True`` if the inner type is of that variant.
-        - as_*: Returns the inner data if it is the given variant, ``None`` otherwise.
-        - to_*: Returns the inner data if it is the given variant, raises ``ValueError`` otherwise.
-        - from_*: Creates a new ``PragmaArgument`` using an instance of the inner type for the variant.
+    - ``is_*``: Returns ``True`` if the inner type is of that variant.
+    - ``as_*``: Returns the inner data if it is the given variant, ``None`` otherwise.
+    - ``to_*``: Returns the inner data if it is the given variant, raises ``ValueError`` otherwise.
+    - ``from_*``: Creates a new ``PragmaArgument`` using an instance of the inner type for the variant.
     """
 
     def __new__(cls, inner: Union[str, TargetPlaceholder]) -> "Target": ...
