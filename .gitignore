@@ -12,6 +12,8 @@ node_modules
 # Python artifacts
 *.so
 __pycache__
+**./.null-ls-cache*
 
 # quil-py documentation
 quil-py/build
+
