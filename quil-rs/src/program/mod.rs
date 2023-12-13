@@ -424,26 +424,23 @@ impl Program {
             ]
             .into_iter()
             .chain(self.body_instructions().cloned())
-            .chain(
-                vec![
-                    Instruction::Arithmetic(Arithmetic {
-                        operator: ArithmeticOperator::Subtract,
-                        destination: ArithmeticOperand::MemoryReference(MemoryReference {
-                            name: "__loop-count".to_string(),
-                            index: 0,
-                        }),
-                        source: ArithmeticOperand::LiteralInteger(1),
+            .chain(vec![
+                Instruction::Arithmetic(Arithmetic {
+                    operator: ArithmeticOperator::Subtract,
+                    destination: ArithmeticOperand::MemoryReference(MemoryReference {
+                        name: "__loop-count".to_string(),
+                        index: 0,
                     }),
-                    Instruction::JumpUnless(JumpUnless {
-                        target: Target::Placeholder(end_target.clone()),
-                        condition: loop_count_reference,
-                    }),
-                    Instruction::Jump(Jump {
-                        target: Target::Placeholder(start_target),
-                    }),
-                ]
-                .into_iter(),
-            )
+                    source: ArithmeticOperand::LiteralInteger(1),
+                }),
+                Instruction::JumpUnless(JumpUnless {
+                    target: Target::Placeholder(end_target.clone()),
+                    condition: loop_count_reference,
+                }),
+                Instruction::Jump(Jump {
+                    target: Target::Placeholder(start_target),
+                }),
+            ])
             .collect::<Vec<Instruction>>(),
         );
 
