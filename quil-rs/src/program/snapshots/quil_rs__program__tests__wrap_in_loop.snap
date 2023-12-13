@@ -1,0 +1,23 @@
+---
+source: quil-rs/src/program/mod.rs
+expression: program.to_quil().unwrap()
+---
+DECLARE ro BIT[1]
+DECLARE shot_count INTEGER[1]
+DEFFRAME 0 "rx":
+	HARDWARE-OBJECT: "hardware"
+DEFWAVEFORM custom:
+	1, 2
+DEFCAL I 0:
+	DELAY 0 1
+MOVE shot_count[0] 10
+LABEL @__loop-start_0
+MEASURE q ro[0]
+JUMP-UNLESS @end-reset ro[0]
+X q
+LABEL @end-reset
+I 0
+SUB __loop-count[0] 1
+JUMP-UNLESS @__loop-end_0 shot_count[0]
+JUMP @__loop-start_0
+

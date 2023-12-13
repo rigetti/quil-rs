@@ -21,8 +21,10 @@ use ndarray::Array2;
 use nom_locate::LocatedSpan;
 
 use crate::instruction::{
-    Declaration, FrameDefinition, FrameIdentifier, GateDefinition, GateError, Instruction, Matrix,
-    Qubit, QubitPlaceholder, Target, TargetPlaceholder, Waveform, WaveformDefinition,
+    Arithmetic, ArithmeticOperand, ArithmeticOperator, Declaration, FrameDefinition,
+    FrameIdentifier, GateDefinition, GateError, Instruction, Jump, JumpUnless, Label, Matrix,
+    MemoryReference, Move, Qubit, QubitPlaceholder, ScalarType, Target, TargetPlaceholder, Vector,
+    Waveform, WaveformDefinition,
 };
 use crate::parser::{lex, parse_instructions, ParseError};
 use crate::quil::Quil;
@@ -379,6 +381,77 @@ impl Program {
         Ok(expanded_program)
     }
 
+    /// Return a copy of the [`Program`] wrapped in a loop that repeats `iterations` times.
+    ///
+    /// The loop is constructed by wrapping the body of the program in classical Quil instructions.
+    /// The given `loop_count_reference` must refer to an INTEGER memory region. The value at the
+    /// reference given will be set to `iterations` and decremented in the loop. The loop will
+    /// terminate when the reference reaches 0. For this reason your program should not itself
+    /// modify the value at the reference unless you intend to modify the remaining number of
+    /// iterations (i.e. to break the loop).
+    ///
+    /// The loop is constructed with [`TargetPlaceholder`]s in order to prevent conflicts
+    /// with existing label names in the program. These placeholders are resolved before
+    /// returning the program.
+    ///
+    /// If `iterations` is 0, then a copy of the program is returned without any changes.
+    pub fn wrap_in_loop(&self, loop_count_reference: MemoryReference, iterations: u32) -> Self {
+        if iterations == 0 {
+            return self.clone();
+        }
+
+        let mut looped_program = self.clone_without_body_instructions();
+        let start_target = TargetPlaceholder::new("__loop-start".to_string());
+        let end_target = TargetPlaceholder::new("__loop-end".to_string());
+
+        looped_program.add_instructions(
+            vec![
+                Instruction::Declaration(Declaration {
+                    name: loop_count_reference.name.clone(),
+                    size: Vector {
+                        data_type: ScalarType::Integer,
+                        length: 1,
+                    },
+                    sharing: None,
+                }),
+                Instruction::Move(Move {
+                    destination: loop_count_reference.clone(),
+                    source: ArithmeticOperand::LiteralInteger(iterations.into()),
+                }),
+                Instruction::Label(Label {
+                    target: Target::Placeholder(start_target.clone()),
+                }),
+            ]
+            .into_iter()
+            .chain(self.body_instructions().cloned())
+            .chain(
+                vec![
+                    Instruction::Arithmetic(Arithmetic {
+                        operator: ArithmeticOperator::Subtract,
+                        destination: ArithmeticOperand::MemoryReference(MemoryReference {
+                            name: "__loop-count".to_string(),
+                            index: 0,
+                        }),
+                        source: ArithmeticOperand::LiteralInteger(1),
+                    }),
+                    Instruction::JumpUnless(JumpUnless {
+                        target: Target::Placeholder(end_target.clone()),
+                        condition: loop_count_reference,
+                    }),
+                    Instruction::Jump(Jump {
+                        target: Target::Placeholder(start_target),
+                    }),
+                ]
+                .into_iter(),
+            )
+            .collect::<Vec<Instruction>>(),
+        );
+
+        looped_program.resolve_placeholders();
+
+        looped_program
+    }
+
     /// Resolve [`LabelPlaceholder`]s and [`QubitPlaceholder`]s within the program using default resolvers.
     ///
     /// See [`resolve_placeholders_with_custom_resolvers`](Self::resolve_placeholders_with_custom_resolvers),
@@ -622,7 +695,7 @@ mod tests {
         real,
     };
     use approx::assert_abs_diff_eq;
-    use insta::assert_debug_snapshot;
+    use insta::{assert_debug_snapshot, assert_snapshot};
     use ndarray::{array, linalg::kron, Array2};
     use num_complex::Complex64;
     use once_cell::sync::Lazy;
@@ -1242,5 +1315,33 @@ CNOT 2 3
                 }),
             ]
         );
+    }
+
+    #[test]
+    fn test_wrap_in_loop() {
+        let input = "DECLARE ro BIT
+DECLARE shot_count INTEGER
+MEASURE q ro
+JUMP-UNLESS @end-reset ro
+X q
+LABEL @end-reset
+
+DEFCAL I 0:
+    DELAY 0 1.0
+DEFFRAME 0 \"rx\":
+    HARDWARE-OBJECT: \"hardware\"
+DEFWAVEFORM custom:
+    1,2
+I 0
+";
+        let program = Program::from_str(input).unwrap().wrap_in_loop(
+            MemoryReference {
+                name: "shot_count".to_string(),
+                index: 0,
+            },
+            10,
+        );
+
+        assert_snapshot!(program.to_quil().unwrap())
     }
 }

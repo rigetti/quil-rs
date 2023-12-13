@@ -12,6 +12,7 @@ from quil.instructions import (
     Instruction,
     MeasureCalibrationDefinition,
     Measurement,
+    MemoryReference,
     Qubit,
     Sharing,
     Vector,
@@ -120,6 +121,24 @@ class Program:
         Convert the instruction to a Quil string. If any part of the instruction can't
         be converted to valid Quil, it will be printed in a human-readable debug format.
         """
+    def wrap_in_loop(self, loop_count_reference: MemoryReference, iterations: int) -> "Program":
+        """
+        Return a copy of the `Program` wrapped in a loop that repeats ``iterations`` times.
+
+        The loop is constructed by wrapping the body of the program in classical Quil instructions.
+        The given ``loop_count_reference`` must refer to an INTEGER memory region. The value at the
+        reference given will be set to `iterations` and decremented in the loop. The loop will
+        terminate when the reference reaches 0. For this reason your program should not itself
+        modify the value at the reference unless you intend to modify the remaining number of
+        iterations (e.g. to break the loop).
+
+        The loop is constructed with `quil.instructions.TargetPlaceholder`s in order to prevent
+        conflicts with existing label names in the program. These placeholders are resolved before
+        returning the program.
+
+        If ``iterations`` is 0, then a copy of the program is returned without any changes.
+        """
+        ...
     def resolve_placeholders(self) -> None:
         """
         Resolve ``TargetPlaceholder``s and ``QubitPlaceholder``s within the program using default resolvers.
