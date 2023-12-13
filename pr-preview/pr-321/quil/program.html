@@ -116,22 +116,22 @@
                                 <a class="variable" href="#Program.waveforms">waveforms</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.declarations">declarations</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#Program.gate_definitions">gate_definitions</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Program.frames">frames</a>
                         </li>
                         <li>
+                                <a class="variable" href="#Program.declarations">declarations</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#Program.calibrations">calibrations</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.memory_regions">memory_regions</a>
+                                <a class="variable" href="#Program.body_instructions">body_instructions</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.body_instructions">body_instructions</a>
+                                <a class="variable" href="#Program.memory_regions">memory_regions</a>
                         </li>
                 </ul>
 
@@ -176,10 +176,10 @@
                     <a class="class" href="#MemoryRegion">MemoryRegion</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#MemoryRegion.size">size</a>
+                                <a class="variable" href="#MemoryRegion.sharing">sharing</a>
                         </li>
                         <li>
-                                <a class="variable" href="#MemoryRegion.sharing">sharing</a>
+                                <a class="variable" href="#MemoryRegion.size">size</a>
                         </li>
                 </ul>
 
@@ -581,7 +581,7 @@ while ensuring that unique value is not already in use within the program.</p>
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">wrap_in_loop</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="n">loop_count_reference</span><span class="p">:</span> <span class="n">MemoryReference</span>,</span><span class="param">	<span class="n">iterations</span><span class="p">:</span> <span class="nb">int</span></span><span class="return-annotation">) -> <span class="n"><a href="#Program">Program</a></span>:</span></span>
+        <span class="name">wrap_in_loop</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="n">loop_count_reference</span><span class="p">:</span> <span class="n">MemoryReference</span>,</span><span class="param">	<span class="n">start_target</span><span class="p">:</span> <span class="n">Target</span>,</span><span class="param">	<span class="n">end_target</span><span class="p">:</span> <span class="n">Target</span>,</span><span class="param">	<span class="n">iterations</span><span class="p">:</span> <span class="nb">int</span></span><span class="return-annotation">) -> <span class="n"><a href="#Program">Program</a></span>:</span></span>
 
         
     </div>
@@ -594,11 +594,11 @@ The given <code>loop_count_reference</code> must refer to an INTEGER memory regi
 reference given will be set to <code>iterations</code> and decremented in the loop. The loop will
 terminate when the reference reaches 0. For this reason your program should not itself
 modify the value at the reference unless you intend to modify the remaining number of
-iterations (e.g. to break the loop).</p>
+iterations (i.e. to break the loop).</p>
 
-<p>The loop is constructed with <code><a href="instructions.html#TargetPlaceholder">quil.instructions.TargetPlaceholder</a></code>s in order to prevent
-conflicts with existing label names in the program. These placeholders are resolved before
-returning the program.</p>
+<p>The given <code>start_target</code> and <code>end_target</code> will be used as the entry and exit points for
+the loop, respectively. You should provide unique <code><a href="instructions.html#Target">quil.instructions.Target</a></code>s that won't be
+used elsewhere in the program.</p>
 
 <p>If <code>iterations</code> is 0, then a copy of the program is returned without any changes.</p>
 </div>
@@ -639,17 +639,6 @@ while ensuring that unique value is not already in use within the program.</p>
     
 
                             </div>
-                            <div id="Program.declarations" class="classattr">
-                                <div class="attr variable">
-            <span class="name">declarations</span><span class="annotation">: Dict[str, Declaration]</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.declarations"></a>
-    
-    
-
-                            </div>
                             <div id="Program.gate_definitions" class="classattr">
                                 <div class="attr variable">
             <span class="name">gate_definitions</span><span class="annotation">: Dict[str, GateDefinition]</span>
@@ -672,6 +661,17 @@ while ensuring that unique value is not already in use within the program.</p>
     
 
                             </div>
+                            <div id="Program.declarations" class="classattr">
+                                <div class="attr variable">
+            <span class="name">declarations</span><span class="annotation">: Dict[str, Declaration]</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.declarations"></a>
+    
+    
+
+                            </div>
                             <div id="Program.calibrations" class="classattr">
                                 <div class="attr variable">
             <span class="name">calibrations</span><span class="annotation">: <a href="#CalibrationSet">quil.program.CalibrationSet</a></span>
@@ -683,17 +683,6 @@ while ensuring that unique value is not already in use within the program.</p>
     
 
                             </div>
-                            <div id="Program.memory_regions" class="classattr">
-                                <div class="attr variable">
-            <span class="name">memory_regions</span><span class="annotation">: Dict[str, <a href="#MemoryRegion">quil.program.MemoryRegion</a>]</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.memory_regions"></a>
-    
-    
-
-                            </div>
                             <div id="Program.body_instructions" class="classattr">
                                 <div class="attr variable">
             <span class="name">body_instructions</span><span class="annotation">: List[Instruction]</span>
@@ -701,6 +690,17 @@ while ensuring that unique value is not already in use within the program.</p>
         
     </div>
     <a class="headerlink" href="#Program.body_instructions"></a>
+    
+    
+
+                            </div>
+                            <div id="Program.memory_regions" class="classattr">
+                                <div class="attr variable">
+            <span class="name">memory_regions</span><span class="annotation">: Dict[str, <a href="#MemoryRegion">quil.program.MemoryRegion</a>]</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.memory_regions"></a>
     
     
 
@@ -887,17 +887,6 @@ qubit (if any), or otherwise the last-specified one that specified no qubit.</p>
     
     
 
-                            <div id="MemoryRegion.size" class="classattr">
-                                <div class="attr variable">
-            <span class="name">size</span><span class="annotation">: Vector</span>
-
-        
-    </div>
-    <a class="headerlink" href="#MemoryRegion.size"></a>
-    
-    
-
-                            </div>
                             <div id="MemoryRegion.sharing" class="classattr">
                                 <div class="attr variable">
             <span class="name">sharing</span><span class="annotation">: Optional[Sharing]</span>
@@ -905,6 +894,17 @@ qubit (if any), or otherwise the last-specified one that specified no qubit.</p>
         
     </div>
     <a class="headerlink" href="#MemoryRegion.sharing"></a>
+    
+    
+
+                            </div>
+                            <div id="MemoryRegion.size" class="classattr">
+                                <div class="attr variable">
+            <span class="name">size</span><span class="annotation">: Vector</span>
+
+        
+    </div>
+    <a class="headerlink" href="#MemoryRegion.size"></a>
     
     
 
