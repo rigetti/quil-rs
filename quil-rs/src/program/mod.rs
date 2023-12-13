@@ -390,19 +390,23 @@ impl Program {
     /// modify the value at the reference unless you intend to modify the remaining number of
     /// iterations (i.e. to break the loop).
     ///
-    /// The loop is constructed with [`TargetPlaceholder`]s in order to prevent conflicts
-    /// with existing label names in the program. These placeholders are resolved before
-    /// returning the program.
+    /// The given `start_target` and `end_target` will be used as the entry and exit points for the
+    /// loop, respectively. You should provide unique [`Target`]s that won't be used elsewhere in
+    /// the program.
     ///
     /// If `iterations` is 0, then a copy of the program is returned without any changes.
-    pub fn wrap_in_loop(&self, loop_count_reference: MemoryReference, iterations: u32) -> Self {
+    pub fn wrap_in_loop(
+        &self,
+        loop_count_reference: MemoryReference,
+        start_target: Target,
+        end_target: Target,
+        iterations: u32,
+    ) -> Self {
         if iterations == 0 {
             return self.clone();
         }
 
         let mut looped_program = self.clone_without_body_instructions();
-        let start_target = TargetPlaceholder::new("__loop-start".to_string());
-        let end_target = TargetPlaceholder::new("__loop-end".to_string());
 
         looped_program.add_instructions(
             vec![
@@ -419,7 +423,7 @@ impl Program {
                     source: ArithmeticOperand::LiteralInteger(iterations.into()),
                 }),
                 Instruction::Label(Label {
-                    target: Target::Placeholder(start_target.clone()),
+                    target: start_target.clone(),
                 }),
             ]
             .into_iter()
@@ -434,17 +438,15 @@ impl Program {
                     source: ArithmeticOperand::LiteralInteger(1),
                 }),
                 Instruction::JumpUnless(JumpUnless {
-                    target: Target::Placeholder(end_target.clone()),
+                    target: end_target.clone(),
                     condition: loop_count_reference,
                 }),
                 Instruction::Jump(Jump {
-                    target: Target::Placeholder(start_target),
+                    target: start_target,
                 }),
             ])
             .collect::<Vec<Instruction>>(),
         );
-
-        looped_program.resolve_placeholders();
 
         looped_program
     }
@@ -1336,6 +1338,8 @@ I 0
                 name: "shot_count".to_string(),
                 index: 0,
             },
+            Target::Fixed("loop-start".to_string()),
+            Target::Fixed("loop-end".to_string()),
             10,
         );
 
