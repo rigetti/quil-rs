@@ -116,11 +116,6 @@ class Instruction:
         """
         Returns a new ``Instruction`` from the given inner data.
         """
-    def is_quil_t(self) -> bool:
-        """
-        Returns ``True`` if the instruction is a Quil-T instruction, ``False`` otherwise.
-        """
-        ...
     def inner(
         self,
     ) -> Union[
