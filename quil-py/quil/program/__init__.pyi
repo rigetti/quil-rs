@@ -139,7 +139,8 @@ class Program:
         the loop, respectively. You should provide unique `quil.instructions.Target`s that won't be
         used elsewhere in the program.
 
-        If `iterations` is 0, then a copy of the program is returned without any changes.
+        If `iterations` is 0, then a copy of the program is returned without any changes. Raises a
+        `TypeError` if `iterations` is negative.
         """
         ...
     def resolve_placeholders(self) -> None:

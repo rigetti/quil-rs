@@ -17,7 +17,7 @@ JUMP-UNLESS @end-reset ro[0]
 X q
 LABEL @end-reset
 I 0
-SUB __loop-count[0] 1
+SUB shot_count[0] 1
 JUMP-UNLESS @loop-end shot_count[0]
 JUMP @loop-start
 
