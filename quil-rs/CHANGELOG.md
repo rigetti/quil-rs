@@ -1,3 +1,9 @@
+## 0.22.3-rc.0
+
+### Features
+
+- Add methods for identifying Quil-T instructions and filtering instructions from Programs
+
 ## 0.22.2
 
 ### Features
