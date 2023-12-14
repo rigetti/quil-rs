@@ -1,3 +1,11 @@
+## 0.22.3-rc.1
+
+### Features
+
+- Add methods for identifying Quil-T instructions and filtering instructions from `Program`s (#323)
+- Add `Program.wrap_in_loop()` method (#321)
+- Add methods for identifying Quil-T instructions and filtering instructions from Programs
+
 ## 0.22.3-rc.0
 
 ### Features
