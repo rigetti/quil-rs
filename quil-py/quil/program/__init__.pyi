@@ -122,6 +122,11 @@ class Program:
         Convert the instruction to a Quil string. If any part of the instruction can't
         be converted to valid Quil, it will be printed in a human-readable debug format.
         """
+    def filter_instructions(self, predicate: Callable[[Instruction], bool]) -> "Program":
+        """
+        Return a new ``Program`` containing only the instructions for which ``predicate`` returns ``True``.
+        """
+        ...
     def wrap_in_loop(
         self, loop_count_reference: MemoryReference, start_target: Target, end_target: Target, iterations: int
     ) -> "Program":

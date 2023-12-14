@@ -202,6 +202,17 @@ impl Program {
             .for_each(|i| self.add_instruction(i));
     }
 
+    /// Return a new [`Program`] containing only the instructions for which `predicate` returns
+    /// true.
+    pub fn filter_instructions(&self, predicate: impl FnMut(&Instruction) -> bool) -> Program {
+        Program::from_instructions(
+            self.to_instructions()
+                .into_iter()
+                .filter(predicate)
+                .collect(),
+        )
+    }
+
     /// Creates a new conjugate transpose of the [`Program`] by reversing the order of gate
     /// instructions and applying the DAGGER modifier to each.
     ///
@@ -1314,6 +1325,26 @@ CNOT 2 3
                 }),
             ]
         );
+    }
+
+    #[test]
+    fn test_filter_instructions() {
+        let input = "DECLARE foo REAL[1]
+DEFFRAME 1 \"rx\":
+\tHARDWARE-OBJECT: \"hardware\"
+DEFCAL I 1:
+\tDELAY 0 1
+DEFGATE BAR AS MATRIX:
+\t0, 1
+\t1, 0
+
+H 1
+CNOT 2 3";
+
+        let program = Program::from_str(input).unwrap();
+        let program_without_quil_t =
+            program.filter_instructions(|instruction| !instruction.is_quil_t());
+        assert_snapshot!(program_without_quil_t.to_quil().unwrap())
     }
 
     #[test]

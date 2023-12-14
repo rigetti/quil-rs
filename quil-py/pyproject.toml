@@ -33,6 +33,7 @@ maturin = "^1.2.3"
 mypy = "^1.1.1"
 pytest = "^7.2.2"
 pdoc = "^14.1.0"
+syrupy = "^3.0.6"
 
 [tool.maturin]
 features = ["pyo3/extension-module"]
