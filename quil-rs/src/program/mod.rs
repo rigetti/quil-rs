@@ -1347,6 +1347,7 @@ CNOT 2 3";
         assert_snapshot!(program_without_quil_t.to_quil().unwrap())
     }
 
+    #[test]
     fn test_wrap_in_loop() {
         let input = "DECLARE ro BIT
 DECLARE shot_count INTEGER
