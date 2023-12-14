@@ -244,7 +244,7 @@ impl PyProgram {
                     .unwrap_or_else(|err| panic!("predicate function must return a bool: {err}"))
             })
         });
-        Ok(filtered.to_python(py)?)
+        filtered.to_python(py)
     }
 
     pub fn resolve_placeholders(&mut self) {
