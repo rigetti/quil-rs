@@ -2,6 +2,7 @@ use quil_rs::instruction::Instruction;
 use rigetti_pyo3::{
     create_init_submodule, impl_repr, py_wrap_union_enum,
     pyo3::{pymethods, types::PyDict, PyResult, Python},
+    PyWrapper,
 };
 
 use crate::{impl_eq, impl_to_quil};
@@ -100,6 +101,10 @@ impl_eq!(PyInstruction);
 
 #[pymethods]
 impl PyInstruction {
+    pub fn is_quil_t(&self) -> bool {
+        self.as_inner().is_quil_t()
+    }
+
     // Implement the __copy__ and __deepcopy__ dunder methods, which are used by Python's
     // `copy` module.
     //

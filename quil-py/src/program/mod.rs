@@ -234,6 +234,19 @@ impl PyProgram {
             .to_owned())
     }
 
+    pub fn filter_instructions(&self, py: Python, predicate: Py<PyFunction>) -> PyResult<Self> {
+        let filtered = self.as_inner().filter_instructions(|inst| {
+            Python::with_gil(|py| {
+                predicate
+                    .call1(py, (inst.to_python(py).unwrap(),))
+                    .unwrap_or_else(|err| panic!("predicate function returned an error: {err}"))
+                    .extract(py)
+                    .unwrap_or_else(|err| panic!("predicate function must return a bool: {err}"))
+            })
+        });
+        Ok(filtered.to_python(py)?)
+    }
+
     pub fn resolve_placeholders(&mut self) {
         self.as_inner_mut().resolve_placeholders();
     }

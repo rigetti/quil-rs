@@ -120,6 +120,11 @@ class Program:
         Convert the instruction to a Quil string. If any part of the instruction can't
         be converted to valid Quil, it will be printed in a human-readable debug format.
         """
+    def filter_instructions(self, predicate: Callable[[Instruction], bool]) -> "Program":
+        """
+        Return a new ``Program`` containing only the instructions for which ``predicate`` returns ``True``.
+        """
+        ...
     def resolve_placeholders(self) -> None:
         """
         Resolve ``TargetPlaceholder``s and ``QubitPlaceholder``s within the program using default resolvers.
