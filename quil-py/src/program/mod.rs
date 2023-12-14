@@ -24,7 +24,10 @@ use rigetti_pyo3::{
 
 use crate::{
     impl_eq, impl_to_quil,
-    instruction::{PyDeclaration, PyGateDefinition, PyInstruction, PyQubit, PyWaveform},
+    instruction::{
+        PyDeclaration, PyGateDefinition, PyInstruction, PyMemoryReference, PyQubit, PyTarget,
+        PyWaveform,
+    },
 };
 
 pub use self::{calibration::PyCalibrationSet, frame::PyFrameSet, memory::PyMemoryRegion};
@@ -236,6 +239,21 @@ impl PyProgram {
 
     pub fn resolve_placeholders(&mut self) {
         self.as_inner_mut().resolve_placeholders();
+    }
+
+    pub fn wrap_in_loop(
+        &self,
+        loop_count_reference: PyMemoryReference,
+        start_target: PyTarget,
+        end_target: PyTarget,
+        iterations: u32,
+    ) -> Self {
+        PyProgram(self.as_inner().wrap_in_loop(
+            loop_count_reference.into_inner(),
+            start_target.into_inner(),
+            end_target.into_inner(),
+            iterations,
+        ))
     }
 
     // Because we can't bubble up an error from inside the closures, they panic when the given
