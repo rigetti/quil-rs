@@ -104,22 +104,10 @@
                                 <a class="function" href="#Program.to_unitary">to_unitary</a>
                         </li>
                         <li>
-                                <a class="function" href="#Program.filter_instructions">filter_instructions</a>
-                        </li>
-                        <li>
                                 <a class="function" href="#Program.resolve_placeholders">resolve_placeholders</a>
                         </li>
                         <li>
                                 <a class="function" href="#Program.resolve_placeholders_with_custom_resolvers">resolve_placeholders_with_custom_resolvers</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Program.waveforms">waveforms</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Program.memory_regions">memory_regions</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Program.gate_definitions">gate_definitions</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Program.calibrations">calibrations</a>
@@ -128,7 +116,16 @@
                                 <a class="variable" href="#Program.body_instructions">body_instructions</a>
                         </li>
                         <li>
+                                <a class="variable" href="#Program.memory_regions">memory_regions</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Program.gate_definitions">gate_definitions</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#Program.frames">frames</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Program.waveforms">waveforms</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Program.declarations">declarations</a>
@@ -176,10 +173,10 @@
                     <a class="class" href="#MemoryRegion">MemoryRegion</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#MemoryRegion.size">size</a>
+                                <a class="variable" href="#MemoryRegion.sharing">sharing</a>
                         </li>
                         <li>
-                                <a class="variable" href="#MemoryRegion.sharing">sharing</a>
+                                <a class="variable" href="#MemoryRegion.size">size</a>
                         </li>
                 </ul>
 
@@ -558,21 +555,6 @@ and definitions which are executed; effectively, perform dead code removal.</p>
     
 
                             </div>
-                            <div id="Program.filter_instructions" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">filter_instructions</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">predicate</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Instruction</span><span class="p">],</span> <span class="nb">bool</span><span class="p">]</span></span><span class="return-annotation">) -> <span class="n"><a href="#Program">Program</a></span>:</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.filter_instructions"></a>
-    
-            <div class="docstring"><p>Return a new <code><a href="#Program">Program</a></code> containing only the instructions for which <code>predicate</code> returns <code>True</code>.</p>
-</div>
-
-
-                            </div>
                             <div id="Program.resolve_placeholders" class="classattr">
                                 <div class="attr function">
             
@@ -615,13 +597,24 @@ while ensuring that unique value is not already in use within the program.</p>
 
 
                             </div>
-                            <div id="Program.waveforms" class="classattr">
+                            <div id="Program.calibrations" class="classattr">
                                 <div class="attr variable">
-            <span class="name">waveforms</span><span class="annotation">: Dict[str, Waveform]</span>
+            <span class="name">calibrations</span><span class="annotation">: <a href="#CalibrationSet">quil.program.CalibrationSet</a></span>
 
         
     </div>
-    <a class="headerlink" href="#Program.waveforms"></a>
+    <a class="headerlink" href="#Program.calibrations"></a>
+    
+    
+
+                            </div>
+                            <div id="Program.body_instructions" class="classattr">
+                                <div class="attr variable">
+            <span class="name">body_instructions</span><span class="annotation">: List[Instruction]</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.body_instructions"></a>
     
     
 
@@ -648,28 +641,6 @@ while ensuring that unique value is not already in use within the program.</p>
     
 
                             </div>
-                            <div id="Program.calibrations" class="classattr">
-                                <div class="attr variable">
-            <span class="name">calibrations</span><span class="annotation">: <a href="#CalibrationSet">quil.program.CalibrationSet</a></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.calibrations"></a>
-    
-    
-
-                            </div>
-                            <div id="Program.body_instructions" class="classattr">
-                                <div class="attr variable">
-            <span class="name">body_instructions</span><span class="annotation">: List[Instruction]</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.body_instructions"></a>
-    
-    
-
-                            </div>
                             <div id="Program.frames" class="classattr">
                                 <div class="attr variable">
             <span class="name">frames</span><span class="annotation">: <a href="#FrameSet">quil.program.FrameSet</a></span>
@@ -677,6 +648,17 @@ while ensuring that unique value is not already in use within the program.</p>
         
     </div>
     <a class="headerlink" href="#Program.frames"></a>
+    
+    
+
+                            </div>
+                            <div id="Program.waveforms" class="classattr">
+                                <div class="attr variable">
+            <span class="name">waveforms</span><span class="annotation">: Dict[str, Waveform]</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.waveforms"></a>
     
     
 
@@ -874,17 +856,6 @@ qubit (if any), or otherwise the last-specified one that specified no qubit.</p>
     
     
 
-                            <div id="MemoryRegion.size" class="classattr">
-                                <div class="attr variable">
-            <span class="name">size</span><span class="annotation">: Vector</span>
-
-        
-    </div>
-    <a class="headerlink" href="#MemoryRegion.size"></a>
-    
-    
-
-                            </div>
                             <div id="MemoryRegion.sharing" class="classattr">
                                 <div class="attr variable">
             <span class="name">sharing</span><span class="annotation">: Optional[Sharing]</span>
@@ -892,6 +863,17 @@ qubit (if any), or otherwise the last-specified one that specified no qubit.</p>
         
     </div>
     <a class="headerlink" href="#MemoryRegion.sharing"></a>
+    
+    
+
+                            </div>
+                            <div id="MemoryRegion.size" class="classattr">
+                                <div class="attr variable">
+            <span class="name">size</span><span class="annotation">: Vector</span>
+
+        
+    </div>
+    <a class="headerlink" href="#MemoryRegion.size"></a>
     
     
 
