@@ -644,6 +644,51 @@ impl Instruction {
         Ok(instruction)
     }
 
+    /// Returns true if the instruction is a Quil-T instruction.
+    pub fn is_quil_t(&self) -> bool {
+        match self {
+            Instruction::Capture(_)
+            | Instruction::CalibrationDefinition(_)
+            | Instruction::Delay(_)
+            | Instruction::Fence(_)
+            | Instruction::FrameDefinition(_)
+            | Instruction::MeasureCalibrationDefinition(_)
+            | Instruction::Pulse(_)
+            | Instruction::RawCapture(_)
+            | Instruction::SetFrequency(_)
+            | Instruction::SetPhase(_)
+            | Instruction::SetScale(_)
+            | Instruction::ShiftFrequency(_)
+            | Instruction::ShiftPhase(_)
+            | Instruction::SwapPhases(_)
+            | Instruction::Wait
+            | Instruction::WaveformDefinition(_) => true,
+            Instruction::Arithmetic(_)
+            | Instruction::BinaryLogic(_)
+            | Instruction::CircuitDefinition(_)
+            | Instruction::Convert(_)
+            | Instruction::Comparison(_)
+            | Instruction::Declaration(_)
+            | Instruction::Exchange(_)
+            | Instruction::Gate(_)
+            | Instruction::GateDefinition(_)
+            | Instruction::Halt
+            | Instruction::Include(_)
+            | Instruction::Jump(_)
+            | Instruction::JumpUnless(_)
+            | Instruction::JumpWhen(_)
+            | Instruction::Label(_)
+            | Instruction::Load(_)
+            | Instruction::Measurement(_)
+            | Instruction::Move(_)
+            | Instruction::Nop
+            | Instruction::Pragma(_)
+            | Instruction::Reset(_)
+            | Instruction::Store(_)
+            | Instruction::UnaryLogic(_) => false,
+        }
+    }
+
     /// Per the Quil-T spec, whether this instruction's timing within the pulse
     /// program must be precisely controlled so as to begin exactly on the end of
     /// the latest preceding timed instruction
