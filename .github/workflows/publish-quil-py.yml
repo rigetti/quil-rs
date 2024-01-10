@@ -162,12 +162,11 @@ jobs:
     # can be published.
     needs: [ macos, linux, windows, sdist ]
     if: always() && needs.sdist.result == 'success'
+    permissions:
+      id-token: write
     steps:
       - uses: actions/download-artifact@v3
       - name: Publish to PyPi
-        env:
-          MATURIN_USERNAME: ${{ secrets.PYPI_USERNAME }}
-          MATURIN_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
         uses: messense/maturin-action@v1
         with:
           command: upload 
