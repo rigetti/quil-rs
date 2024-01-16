@@ -1,3 +1,9 @@
+## 0.22.4
+
+### Fixes
+
+- The `wrap_in_loop` method now applies the end target to the program (#329)
+
 ## 0.22.4-rc.0
 
 ### Fixes
