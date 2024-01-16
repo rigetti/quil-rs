@@ -455,6 +455,7 @@ impl Program {
                 Instruction::Jump(Jump {
                     target: start_target,
                 }),
+                Instruction::Label(Label { target: end_target }),
             ])
             .collect::<Vec<Instruction>>(),
         );
