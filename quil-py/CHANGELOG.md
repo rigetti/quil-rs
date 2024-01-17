@@ -1,3 +1,9 @@
+## 0.6.5
+
+### Fixes
+
+- `is_quil_t()` now correctly returns false for WAIT instructions (#331)
+
 ## 0.6.5-rc.0
 
 ### Fixes
