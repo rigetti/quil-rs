@@ -211,7 +211,7 @@ pub(crate) struct FrameMatchConditions<'a> {
 }
 
 /// The product of evaluating  [`FrameMatchConditions`] in the scope of available frames (such as within a [`crate::Program`]).
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct MatchedFrames<'a> {
     /// Which concrete frames are blocked and not used.
     /// This set is mutually exclusive with `used`.
