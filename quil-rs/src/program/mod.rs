@@ -285,10 +285,10 @@ impl Program {
     ///
     /// See the [Quil-T spec](https://github.com/quil-lang/quil/blob/master/rfcs/analog/proposal.md)
     /// for more information.
-    pub fn get_frames_for_instruction<'a>(
-        &'a self,
-        instruction: &'a Instruction,
-    ) -> Option<MatchedFrames<'a>> {
+    pub fn get_frames_for_instruction<'i, 'p>(
+        &'p self,
+        instruction: &'i Instruction,
+    ) -> Option<MatchedFrames<'p>> {
         let qubits_used_by_program = self.get_used_qubits();
 
         instruction
