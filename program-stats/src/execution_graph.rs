@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use petgraph::{graph::DiGraph, Direction};
-use quil_rs::instruction::Instruction;
+use quil_rs::instruction::{Instruction, InstructionHandler, InstructionRole};
 use quil_rs::quil::Quil;
 
 #[derive(Debug, thiserror::Error)]
@@ -19,13 +19,30 @@ impl ExecutionGraph {
     pub fn new(instructions: impl IntoIterator<Item = Instruction>) -> Result<Self, Error> {
         let mut last_instruction_for_qubit = HashMap::new();
         let mut graph = DiGraph::new();
+        let mut handler = InstructionHandler::default();
 
         for instruction in instructions.into_iter() {
-            let qubits = if let Instruction::Gate(gate) = &instruction {
-                gate.qubits.clone()
-            } else {
-                return Err(Error::UnsupportedInstruction(instruction));
-            };
+            match handler.role_for_instruction(&instruction) {
+                InstructionRole::ClassicalCompute => {
+                    if let Instruction::Pragma(_) = instruction {
+                        return Err(Error::UnsupportedInstruction(instruction));
+                    }
+                } // Valid, mostly ignored
+                InstructionRole::ControlFlow => match &instruction {
+                    Instruction::Jump(_)
+                    | Instruction::JumpWhen(_)
+                    | Instruction::JumpUnless(_) => {
+                        return Err(Error::UnsupportedInstruction(instruction))
+                    }
+                    _ => {}
+                },
+                InstructionRole::ProgramComposition => {} // Valid, includes Gate, etc.,
+                InstructionRole::RFControl => {
+                    return Err(Error::UnsupportedInstruction(instruction))
+                }
+            }
+
+            let qubits: Vec<_> = instruction.get_qubits().into_iter().cloned().collect();
 
             let node = graph.add_node(instruction);
 
@@ -122,7 +139,7 @@ impl ExecutionGraph {
                 if let Instruction::Gate(_) = instruction {
                     Ok(depth + 1)
                 } else {
-                    Err(Error::UnsupportedInstruction(instruction.clone()))
+                    Ok(depth)
                 }
             },
         )?;
@@ -136,13 +153,10 @@ impl ExecutionGraph {
             |depth: usize, instruction: &Instruction| -> Result<usize, Error> {
                 if let Instruction::Gate(gate) = instruction {
                     if gate.qubits.len() > 1 {
-                        Ok(depth + 1)
-                    } else {
-                        Ok(depth)
+                        return Ok(depth + 1);
                     }
-                } else {
-                    Err(Error::UnsupportedInstruction(instruction.clone()))
                 }
+                Ok(depth)
             },
         )?;
         Ok(path_lengths.into_iter().max().unwrap_or_default())
@@ -181,11 +195,52 @@ X 0
 X 0
 X 0";
 
+    pub const KITCHEN_SINK_QUIL: &str = "DECLARE ro BIT[1]
+DEFGATE HADAMARD AS MATRIX:
+\t(1/sqrt(2)),(1/sqrt(2))
+\t(1/sqrt(2)),((-1)/sqrt(2))
+
+DEFGATE RX(%theta) AS MATRIX:
+\tcos((%theta/2)),((-1i)*sin((%theta/2)))
+\t((-1i)*sin((%theta/2))),cos((%theta/2))
+
+DEFGATE Name AS PERMUTATION:
+\t1, 0
+
+DEFCIRCUIT SIMPLE:
+\tX 0
+\tX 1
+
+RX 0
+CZ 0 1
+MEASURE 0 ro[0]
+DEFCAL X 0:
+\tPULSE 0 \"xy\" my_waveform()
+
+DEFCAL RX(%theta) 0:
+\tPULSE 0 \"xy\" my_waveform()
+
+DEFCAL MEASURE 0 dest:
+\tDECLARE iq REAL[2]
+\tCAPTURE 0 \"out\" flat(duration: 1000000, iqs: (2+3i)) iq[0]
+
+DEFFRAME 0 \"xy\":
+\tSAMPLE-RATE: 3000
+
+DEFFRAME 0 \"xy\":
+\tDIRECTION: \"rx\"
+\tCENTER-FREQUENCY: 1000
+\tHARDWARE-OBJECT: \"some object\"
+\tINITIAL-FREQUENCY: 2000
+\tSAMPLE-RATE: 3000
+";
+
     #[rstest]
     #[case(QUIL_AS_TREE, 2)]
     #[case(QUIL_AS_INVERSE_TREE, 2)]
     #[case(QUIL_AS_LINEAR, 4)]
     #[case(QUIL_WITH_DIAMOND, 6)]
+    #[case(KITCHEN_SINK_QUIL, 2)]
     fn gate_depth(#[case] input: &str, #[case] expected: usize) {
         let program: Program = input.parse().unwrap();
         let graph = ExecutionGraph::new(program.to_instructions()).unwrap();
@@ -198,6 +253,7 @@ X 0";
     #[case(QUIL_AS_INVERSE_TREE, 1)]
     #[case(QUIL_AS_LINEAR, 0)]
     #[case(QUIL_WITH_DIAMOND, 2)]
+    #[case(KITCHEN_SINK_QUIL, 1)]
     fn multiqubit_gate_depth(#[case] input: &str, #[case] expected: usize) {
         let program: Program = input.parse().unwrap();
         let graph = ExecutionGraph::new(program.to_instructions()).unwrap();
