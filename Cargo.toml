@@ -1,5 +1,5 @@
 [workspace]
-members = ["quil-rs", "quil-py"]
+members = ["quil-rs", "quil-py", "program-stats"]
 resolver = "2"
 
 [profile.release]
