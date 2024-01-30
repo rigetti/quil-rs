@@ -4,7 +4,7 @@ mod execution_graph;
 
 // Use quil_rs::program::graph for pulse-level programs, but not qubit programs.
 
-use execution_graph::ExecutionGraph;
+use execution_graph::{Error as ExecutionGraphError, ExecutionGraph};
 use quil_rs::{
     instruction::{Instruction, Qubit},
     Program,
@@ -26,13 +26,13 @@ pub trait QuilProgramStats {
     fn instruction_count(&self) -> usize;
 
     /// The maximum number of *successive* gates in the native Quil program.
-    fn gate_depth(&self) -> usize;
+    fn gate_depth(&self) -> Option<usize>;
 
     /// The total number of gates in the program. Also called the "gate volume".
     fn gate_volume(&self) -> usize;
 
     /// The maximum number of two-qubit gates in the native Quil program.
-    fn multiqubit_gate_depth(&self) -> Option<u64>;
+    fn multiqubit_gate_depth(&self) -> Option<usize>;
 
     /// A list of all qubits used in the program.
     fn qubits_used(&self) -> Vec<Qubit>; // Hash or BTreeSet?
@@ -53,9 +53,9 @@ pub trait QuilProgramStats {
     fn has_dynamic_control_flow(&self) -> bool;
 }
 
-// fn make_execution_graph(program: &Program) -> Result<ExecutionGraph, Error> {
-//     ExecutionGraph::new(program.to_instructions())
-// }
+fn make_execution_graph(program: &Program) -> Result<ExecutionGraph, ExecutionGraphError> {
+    ExecutionGraph::new(program.to_instructions())
+}
 
 impl QuilProgramStats for Program {
     fn body_instruction_count(&self) -> usize {
@@ -66,23 +66,8 @@ impl QuilProgramStats for Program {
         self.to_instructions().len()
     }
 
-    fn gate_depth(&self) -> usize {
-        let mut max_depth = 0;
-        let mut current_depth = 0;
-        for instruction in self.body_instructions() {
-            match instruction {
-                Instruction::Gate(_) => {
-                    current_depth += 1;
-                    if current_depth > max_depth {
-                        max_depth = current_depth;
-                    }
-                }
-                _ => {
-                    current_depth = 0;
-                }
-            }
-        }
-        max_depth
+    fn gate_depth(&self) -> Option<usize> {
+        make_execution_graph(self).ok()?.gate_depth().ok()
     }
 
     fn gate_volume(&self) -> usize {
@@ -92,8 +77,11 @@ impl QuilProgramStats for Program {
             .count()
     }
 
-    fn multiqubit_gate_depth(&self) -> Option<u64> {
-        todo!()
+    fn multiqubit_gate_depth(&self) -> Option<usize> {
+        make_execution_graph(self)
+            .ok()?
+            .multi_qubit_gate_depth()
+            .ok()
     }
 
     fn qubits_used(&self) -> Vec<Qubit> {
