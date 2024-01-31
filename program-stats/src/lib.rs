@@ -54,7 +54,7 @@ pub trait QuilProgramStats {
 }
 
 fn make_execution_graph(program: &Program) -> Result<ExecutionGraph, ExecutionGraphError> {
-    ExecutionGraph::new(program.to_instructions())
+    ExecutionGraph::new(program.body_instructions().cloned())
 }
 
 impl QuilProgramStats for Program {
@@ -72,7 +72,6 @@ impl QuilProgramStats for Program {
 
     fn gate_volume(&self) -> usize {
         self.body_instructions()
-            //? .filter(|i| matches!(i, Instruction::GateDefinition(_)))
             .filter(|i| matches!(i, Instruction::Gate(_)))
             .count()
     }
