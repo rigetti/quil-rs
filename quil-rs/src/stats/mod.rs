@@ -78,12 +78,15 @@ impl ProgramStats {
         todo!()
     }
 
-    /// The total number of swaps (i.e. `SWAP-PHASES`) in the native Quil program.
+    /// The total number of `SWAP` gates in the native Quil program.
     pub fn topological_swap_count(&self) -> usize {
-        // TODO: gate named swap
         self.program
             .body_instructions()
-            .filter(|i| matches!(i, Instruction::SwapPhases(_)))
+            .filter_map(|i| match i {
+                Instruction::Gate(gate) => Some(gate),
+                _ => None,
+            })
+            .filter(|gate| gate.name.eq_ignore_ascii_case("SWAP"))
             .count()
     }
 
