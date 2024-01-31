@@ -1,14 +1,12 @@
-#![warn(clippy::all)]
-
 mod execution_graph;
 
 // Use quil_rs::program::graph for pulse-level programs, but not qubit programs.
 
-use execution_graph::{Error as ExecutionGraphError, ExecutionGraph};
-use quil_rs::{
+use crate::{
     instruction::{Instruction, Qubit},
     Program,
 };
+use execution_graph::{Error as ExecutionGraphError, ExecutionGraph};
 
 pub trait QuilProgramStats {
     /// The total number of instructions in the program *body*.

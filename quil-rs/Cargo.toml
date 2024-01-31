@@ -20,11 +20,11 @@ nom = "7.1.1"
 nom_locate = "4.0.0"
 num-complex = "0.4.0"
 once_cell = "1.17.1"
-petgraph = "0.6.2"
+petgraph = "0.6.4"
 regex = "1.7.1"
 serde = { version = "1.0.125", features = ["derive"] }
 strum.workspace = true
-thiserror = "1.0.37"
+thiserror = "1.0.56"
 
 [dev-dependencies]
 clap = { version = "4.3.19", features = ["derive", "string"] }
@@ -34,7 +34,7 @@ petgraph = "0.6.2"
 proptest = "1.0.0"
 proptest-derive = "0.3.0"
 rand = "0.8.5"
-rstest = "0.18.1"
+rstest = "0.18.2"
 
 # These are described in the crate README.md
 [features]

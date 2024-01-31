@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
+use crate::instruction::{Instruction, InstructionHandler, InstructionRole};
+use crate::quil::Quil;
 use petgraph::{graph::DiGraph, Direction};
-use quil_rs::instruction::{Instruction, InstructionHandler, InstructionRole};
-use quil_rs::quil::Quil;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -165,7 +165,7 @@ impl ExecutionGraph {
 
 #[cfg(test)]
 mod tests {
-    use quil_rs::Program;
+    use crate::Program;
     use rstest::rstest;
 
     use super::*;
