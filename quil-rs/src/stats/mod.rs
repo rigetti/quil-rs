@@ -8,7 +8,29 @@ use crate::{
 };
 use execution_graph::{Error as ExecutionGraphError, ExecutionGraph};
 
-pub trait QuilProgramStats {
+pub struct ProgramStats {
+    program: Program,
+    execution_graph: ExecutionGraph,
+}
+
+fn make_execution_graph(program: &Program) -> Result<ExecutionGraph, ExecutionGraphError> {
+    ExecutionGraph::new(program.body_instructions().cloned())
+}
+
+impl ProgramStats {
+    pub fn new(program: Program) -> Result<Self, ExecutionGraphError> {
+        let execution_graph = make_execution_graph(&program)?;
+
+        Ok(Self {
+            program,
+            execution_graph,
+        })
+    }
+
+    fn execution_graph(&self) -> &ExecutionGraph {
+        &self.execution_graph
+    }
+
     /// The total number of instructions in the program *body*.
     ///
     /// This does not include:
@@ -16,30 +38,54 @@ pub trait QuilProgramStats {
     /// - frame definitions
     /// - waveform definitions
     /// - gate definitions
-    fn body_instruction_count(&self) -> usize;
+    pub fn body_instruction_count(&self) -> usize {
+        self.program.body_instructions().count()
+    }
 
     /// The total number of instructions in the program.
     ///
     /// This includes all definitions excluded by [`Program::instruction_count`].
-    fn instruction_count(&self) -> usize;
+    pub fn instruction_count(&self) -> usize {
+        self.program.to_instructions().len()
+    }
 
     /// The maximum number of *successive* gates in the native Quil program.
-    fn gate_depth(&self) -> Option<usize>;
+    pub fn gate_depth(&self) -> Option<usize> {
+        self.execution_graph().gate_depth().ok()
+    }
 
     /// The total number of gates in the program. Also called the "gate volume".
-    fn gate_volume(&self) -> usize;
+    pub fn gate_volume(&self) -> usize {
+        self.program
+            .body_instructions()
+            .filter(|i| matches!(i, Instruction::Gate(_)))
+            .count()
+    }
 
     /// The maximum number of two-qubit gates in the native Quil program.
-    fn multiqubit_gate_depth(&self) -> Option<usize>;
+    pub fn multiqubit_gate_depth(&self) -> Option<usize> {
+        self.execution_graph().multi_qubit_gate_depth().ok()
+    }
 
     /// A list of all qubits used in the program.
-    fn qubits_used(&self) -> Vec<Qubit>; // Hash or BTreeSet?
+    pub fn qubits_used(&self) -> Vec<Qubit> {
+        // TODO: return a set instead?
+        self.program.get_used_qubits().iter().cloned().collect()
+    }
 
     /// Rough estimate of fidelity of the native Quil program.
-    fn fidelity_estimate(&self) -> Option<f64>;
+    pub fn fidelity_estimate(&self) -> Option<f64> {
+        todo!()
+    }
 
     /// The total number of swaps (i.e. `SWAP-PHASES`) in the native Quil program.
-    fn topological_swap_count(&self) -> usize;
+    pub fn topological_swap_count(&self) -> usize {
+        // TODO: gate named swap
+        self.program
+            .body_instructions()
+            .filter(|i| matches!(i, Instruction::SwapPhases(_)))
+            .count()
+    }
 
     /// Output qubit index relabeling due to SWAP insertion.
     // fn final_rewriting(&self) -> Vec<u64>;
@@ -48,55 +94,9 @@ pub trait QuilProgramStats {
     /// The estimated runtime of the program on a Rigetti QPU, in milliseconds. Available only for
     /// protoquil compliant programs.
     // fn qpu_runtime_estimation(&self) -> Option<f64>;
-    fn has_dynamic_control_flow(&self) -> bool;
-}
 
-fn make_execution_graph(program: &Program) -> Result<ExecutionGraph, ExecutionGraphError> {
-    ExecutionGraph::new(program.body_instructions().cloned())
-}
-
-impl QuilProgramStats for Program {
-    fn body_instruction_count(&self) -> usize {
-        self.body_instructions().count()
-    }
-
-    fn instruction_count(&self) -> usize {
-        self.to_instructions().len()
-    }
-
-    fn gate_depth(&self) -> Option<usize> {
-        make_execution_graph(self).ok()?.gate_depth().ok()
-    }
-
-    fn gate_volume(&self) -> usize {
-        self.body_instructions()
-            .filter(|i| matches!(i, Instruction::Gate(_)))
-            .count()
-    }
-
-    fn multiqubit_gate_depth(&self) -> Option<usize> {
-        make_execution_graph(self)
-            .ok()?
-            .multi_qubit_gate_depth()
-            .ok()
-    }
-
-    fn qubits_used(&self) -> Vec<Qubit> {
-        self.get_used_qubits().iter().cloned().collect()
-    }
-
-    fn fidelity_estimate(&self) -> Option<f64> {
-        todo!()
-    }
-
-    fn topological_swap_count(&self) -> usize {
-        // TODO: gate named swap
-        self.body_instructions()
-            .filter(|i| matches!(i, Instruction::SwapPhases(_)))
-            .count()
-    }
-
-    fn has_dynamic_control_flow(&self) -> bool {
+    /// Whether the program uses dynamic control flow.
+    pub fn has_dynamic_control_flow(&self) -> bool {
         false // TODO
     }
 }
