@@ -2,14 +2,16 @@ mod execution_graph;
 
 // Use quil_rs::program::graph for pulse-level programs, but not qubit programs.
 
+use std::ops::Neg;
+
 use crate::{
     instruction::{Instruction, Qubit},
     Program,
 };
 use execution_graph::{Error as ExecutionGraphError, ExecutionGraph};
 
-pub struct ProgramStats {
-    program: Program,
+pub struct ProgramStats<'a> {
+    program: &'a Program,
     execution_graph: ExecutionGraph,
 }
 
@@ -17,9 +19,9 @@ fn make_execution_graph(program: &Program) -> Result<ExecutionGraph, ExecutionGr
     ExecutionGraph::new(program.body_instructions().cloned())
 }
 
-impl ProgramStats {
-    pub fn new(program: Program) -> Result<Self, ExecutionGraphError> {
-        let execution_graph = make_execution_graph(&program)?;
+impl<'a> ProgramStats<'a> {
+    pub fn new(program: &'a Program) -> Result<Self, ExecutionGraphError> {
+        let execution_graph = make_execution_graph(program)?;
 
         Ok(Self {
             program,
@@ -74,8 +76,17 @@ impl ProgramStats {
     }
 
     /// Rough estimate of fidelity of the native Quil program.
-    pub fn fidelity_estimate(&self) -> Option<f64> {
-        todo!()
+    pub fn fidelity_estimate<F>(&self, get_fidelity: F) -> f64
+        where F: Fn(&Instruction) -> Option<f64>,
+    {
+        // TODO: double check implementation (#335)
+        self.program.body_instructions()
+            .filter_map(get_fidelity)
+            .map(|f: f64| f.ln().powi(2))
+            .sum::<f64>()
+            .sqrt()
+            .neg()
+            .exp()
     }
 
     /// The total number of `SWAP` gates in the native Quil program.
