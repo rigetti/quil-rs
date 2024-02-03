@@ -480,13 +480,17 @@ impl Program {
         Box::new(move |key| qubit_resolutions.get(key).copied())
     }
 
-    /// Return a copy of all of the instructions which constitute this [`Program`].
-    pub fn to_instructions(&self) -> Vec<Instruction> {
-        let capacity = self.memory_regions.len()
+    pub fn num_instructions(&self) -> usize {
+        self.memory_regions.len()
             + self.frames.len()
             + self.waveforms.len()
             + self.gate_definitions.len()
-            + self.instructions.len();
+            + self.instructions.len()
+    }
+
+    /// Return a copy of all of the instructions which constitute this [`Program`].
+    pub fn to_instructions(&self) -> Vec<Instruction> {
+        let capacity = self.num_instructions();
 
         let mut instructions: Vec<Instruction> = Vec::with_capacity(capacity);
 
