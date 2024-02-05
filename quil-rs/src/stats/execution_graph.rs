@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::convert::Infallible;
 
 use crate::instruction::{Instruction, InstructionHandler, InstructionRole};
 use crate::quil::Quil;
@@ -10,7 +11,7 @@ pub enum Error {
     UnsupportedInstruction(Instruction),
 }
 
-/// ExecutionGraph is a logical execution/dependency graph of instructions. (Currently only 'gate' is supported.) It is a directed graph *from* the first instructions (the set of instructions that do not depend on prior instructions) *to* the last instructions (the set of instructions that are not prerequisites for any later instructions).
+/// ExecutionGraph is a logical execution/dependency graph of instructions. Pragma, RF Control, and Jump instructions are not supported. It is a directed graph *from* the first instructions (the set of instructions that do not depend on prior instructions) *to* the last instructions (the set of instructions that are not prerequisites for any later instructions).
 pub struct ExecutionGraph {
     graph: DiGraph<Instruction, ()>,
 }
@@ -56,7 +57,6 @@ impl ExecutionGraph {
         Ok(Self { graph })
     }
 
-    // TODO: TEST THIS WELL
     /// Fold over all paths over the graph, starting from nodes with no incoming edges, and ending at nodes with no
     /// outgoing edges.
     ///
@@ -100,11 +100,11 @@ impl ExecutionGraph {
     /// # Errors
     ///
     /// Any error returned from a call to `f` will be returned immediately.
-    // TBD: visibility
-    fn path_fold<T, F>(&self, initial_value: T, mut f: F) -> Result<Vec<T>, Error>
+    fn path_fold<T, F, E>(&self, initial_value: T, mut f: F) -> Result<Vec<T>, E>
     where
         T: Clone + std::fmt::Debug,
-        F: FnMut(T, &Instruction) -> Result<T, Error>,
+        F: FnMut(T, &Instruction) -> Result<T, E>,
+        E: std::error::Error,
     {
         let nodes: Vec<_> = self.graph.externals(Direction::Incoming).collect();
         let mut stack = vec![(initial_value, nodes)];
@@ -132,34 +132,46 @@ impl ExecutionGraph {
     }
 
     /// Returns the longest path from an initial instruction (one with no prerequisite instructions) to a final instruction (one with no dependent instructions).
-    pub fn gate_depth(&self) -> Result<usize, Error> {
-        let path_lengths = self.path_fold(
-            0,
-            |depth: usize, instruction: &Instruction| -> Result<usize, Error> {
-                if let Instruction::Gate(_) = instruction {
-                    Ok(depth + 1)
-                } else {
-                    Ok(depth)
-                }
-            },
-        )?;
-        Ok(path_lengths.into_iter().max().unwrap_or_default())
+    pub fn gate_depth(&self) -> usize {
+        let path_lengths = self
+            .path_fold(
+                0,
+                |depth: usize, instruction: &Instruction| -> Result<usize, Infallible> {
+                    if let Instruction::Gate(_) = instruction {
+                        Ok(depth + 1)
+                    } else {
+                        Ok(depth)
+                    }
+                },
+            )
+            .unwrap_or_else(|_| {
+                unreachable!(
+                    "'gate_depth' callback is infallible, so path_fold should not return an error"
+                )
+            });
+        path_lengths.into_iter().max().unwrap_or_default()
     }
 
     /// Returns the longest path through the execution graph (like `gate_depth`), only counting instructions corresponding to multi-qubit gates.
-    pub fn multi_qubit_gate_depth(&self) -> Result<usize, Error> {
-        let path_lengths = self.path_fold(
-            0,
-            |depth: usize, instruction: &Instruction| -> Result<usize, Error> {
-                if let Instruction::Gate(gate) = instruction {
-                    if gate.qubits.len() > 1 {
-                        return Ok(depth + 1);
+    pub fn multi_qubit_gate_depth(&self) -> usize {
+        let path_lengths = self
+            .path_fold(
+                0,
+                |depth: usize, instruction: &Instruction| -> Result<usize, Error> {
+                    if let Instruction::Gate(gate) = instruction {
+                        if gate.qubits.len() > 1 {
+                            return Ok(depth + 1);
+                        }
                     }
-                }
-                Ok(depth)
-            },
-        )?;
-        Ok(path_lengths.into_iter().max().unwrap_or_default())
+                    Ok(depth)
+                },
+            )
+            .unwrap_or_else(|_| {
+                unreachable!(
+                    "'multi_qubit_gate_depth' callback is infallible, so path_fold should not return an error"
+                )
+            });
+        path_lengths.into_iter().max().unwrap_or_default()
     }
 }
 
@@ -181,7 +193,7 @@ mod tests {
     fn gate_depth(#[case] input: &str, #[case] expected: usize) {
         let program: Program = input.parse().unwrap();
         let graph = ExecutionGraph::new(program.to_instructions()).unwrap();
-        let depth = graph.gate_depth().unwrap();
+        let depth = graph.gate_depth();
         assert_eq!(expected, depth);
     }
 
@@ -194,7 +206,7 @@ mod tests {
     fn multiqubit_gate_depth(#[case] input: &str, #[case] expected: usize) {
         let program: Program = input.parse().unwrap();
         let graph = ExecutionGraph::new(program.to_instructions()).unwrap();
-        let depth = graph.multi_qubit_gate_depth().unwrap();
+        let depth = graph.multi_qubit_gate_depth();
         assert_eq!(expected, depth);
     }
 }

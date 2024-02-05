@@ -313,13 +313,7 @@ impl Program {
 
     /// Consume the [`Program`] to return all of the instructions which constitute it.
     pub fn into_instructions(self) -> Vec<Instruction> {
-        let capacity = self.memory_regions.len()
-            + self.frames.len()
-            + self.waveforms.len()
-            + self.gate_definitions.len()
-            + self.instructions.len();
-
-        let mut instructions: Vec<Instruction> = Vec::with_capacity(capacity);
+        let mut instructions: Vec<Instruction> = Vec::with_capacity(self.len());
 
         instructions.extend(self.memory_regions.into_iter().map(|(name, descriptor)| {
             Instruction::Declaration(Declaration {
@@ -480,7 +474,7 @@ impl Program {
         Box::new(move |key| qubit_resolutions.get(key).copied())
     }
 
-    pub fn num_instructions(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.memory_regions.len()
             + self.frames.len()
             + self.waveforms.len()
@@ -490,9 +484,7 @@ impl Program {
 
     /// Return a copy of all of the instructions which constitute this [`Program`].
     pub fn to_instructions(&self) -> Vec<Instruction> {
-        let capacity = self.num_instructions();
-
-        let mut instructions: Vec<Instruction> = Vec::with_capacity(capacity);
+        let mut instructions: Vec<Instruction> = Vec::with_capacity(self.len());
 
         instructions.extend(self.memory_regions.iter().map(|(name, descriptor)| {
             Instruction::Declaration(Declaration {

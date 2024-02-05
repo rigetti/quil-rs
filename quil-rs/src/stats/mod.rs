@@ -15,18 +15,18 @@ use crate::{
 use execution_graph::{Error as ExecutionGraphError, ExecutionGraph};
 
 pub trait InstructionsSource {
+    fn len(&self) -> usize;
     fn body_instructions(&self) -> impl Iterator<Item = &Instruction> + '_;
-    fn num_instructions(&self) -> usize;
     fn get_used_qubits(&self) -> impl IntoIterator<Item = &Qubit>;
 }
 
 impl InstructionsSource for Program {
-    fn body_instructions(&self) -> impl Iterator<Item = &Instruction> + '_ {
-        Program::body_instructions(self)
+    fn len(&self) -> usize {
+        Program::len(self)
     }
 
-    fn num_instructions(&self) -> usize {
-        Program::num_instructions(self)
+    fn body_instructions(&self) -> impl Iterator<Item = &Instruction> + '_ {
+        Program::body_instructions(self)
     }
 
     // There's no generic trait for "set-like" types, so we return a concrete
@@ -39,12 +39,12 @@ impl InstructionsSource for Program {
 }
 
 impl InstructionsSource for &Program {
-    fn body_instructions(&self) -> impl Iterator<Item = &Instruction> + '_ {
-        (*self).body_instructions()
+    fn len(&self) -> usize {
+        (*self).len()
     }
 
-    fn num_instructions(&self) -> usize {
-        (*self).num_instructions()
+    fn body_instructions(&self) -> impl Iterator<Item = &Instruction> + '_ {
+        (*self).body_instructions()
     }
 
     // See note on `Program` impl above.
@@ -87,6 +87,13 @@ impl<S: InstructionsSource> ProgramStats<S> {
         &self.execution_graph
     }
 
+    /// The total number of instructions in the program.
+    ///
+    /// This includes all definitions excluded by [`Program::instruction_count`].
+    pub fn len(&self) -> usize {
+        self.source.len()
+    }
+
     /// The total number of instructions in the program *body*.
     ///
     /// This does not include:
@@ -98,16 +105,9 @@ impl<S: InstructionsSource> ProgramStats<S> {
         self.source.body_instructions().count()
     }
 
-    /// The total number of instructions in the program.
-    ///
-    /// This includes all definitions excluded by [`Program::instruction_count`].
-    pub fn instruction_count(&self) -> usize {
-        self.source.num_instructions()
-    }
-
     /// The maximum number of *successive* gates in the native Quil program.
-    pub fn gate_depth(&self) -> Option<usize> {
-        self.execution_graph().gate_depth().ok()
+    pub fn gate_depth(&self) -> usize {
+        self.execution_graph().gate_depth()
     }
 
     /// The total number of gates in the program. Also called the "gate volume".
@@ -119,8 +119,8 @@ impl<S: InstructionsSource> ProgramStats<S> {
     }
 
     /// The maximum number of two-qubit gates in the native Quil program.
-    pub fn multiqubit_gate_depth(&self) -> Option<usize> {
-        self.execution_graph().multi_qubit_gate_depth().ok()
+    pub fn multiqubit_gate_depth(&self) -> usize {
+        self.execution_graph().multi_qubit_gate_depth()
     }
 
     /// A list of all qubits used in the program.
