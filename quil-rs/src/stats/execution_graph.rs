@@ -100,11 +100,10 @@ impl ExecutionGraph {
     /// # Errors
     ///
     /// Any error returned from a call to `f` will be returned immediately.
-    fn path_fold<T, F, E>(&self, initial_value: T, mut f: F) -> Result<Vec<T>, E>
+    fn path_fold<T, F>(&self, initial_value: T, mut f: F) -> Vec<T>
     where
         T: Clone + std::fmt::Debug,
-        F: FnMut(T, &Instruction) -> Result<T, E>,
-        E: std::error::Error,
+        F: FnMut(T, &Instruction) -> T,
     {
         let nodes: Vec<_> = self.graph.externals(Direction::Incoming).collect();
         let mut stack = vec![(initial_value, nodes)];
@@ -118,7 +117,7 @@ impl ExecutionGraph {
 
             for node in nodes {
                 let instruction = &self.graph[node];
-                let value = f(acc.clone(), instruction)?;
+                let value = f(acc.clone(), instruction);
                 stack.push((
                     value,
                     self.graph
@@ -128,7 +127,7 @@ impl ExecutionGraph {
             }
         }
 
-        Ok(result)
+        result
     }
 
     /// Returns the longest path from an initial instruction (one with no prerequisite instructions) to a final instruction (one with no dependent instructions).
@@ -136,19 +135,14 @@ impl ExecutionGraph {
         let path_lengths = self
             .path_fold(
                 0,
-                |depth: usize, instruction: &Instruction| -> Result<usize, Infallible> {
+                |depth: usize, instruction: &Instruction| -> usize {
                     if let Instruction::Gate(_) = instruction {
-                        Ok(depth + 1)
+                        depth + 1
                     } else {
-                        Ok(depth)
+                        depth
                     }
                 },
-            )
-            .unwrap_or_else(|_| {
-                unreachable!(
-                    "'gate_depth' callback is infallible, so path_fold should not return an error"
-                )
-            });
+            );
         path_lengths.into_iter().max().unwrap_or_default()
     }
 
@@ -157,20 +151,15 @@ impl ExecutionGraph {
         let path_lengths = self
             .path_fold(
                 0,
-                |depth: usize, instruction: &Instruction| -> Result<usize, Error> {
+                |depth: usize, instruction: &Instruction| -> usize {
                     if let Instruction::Gate(gate) = instruction {
                         if gate.qubits.len() > 1 {
-                            return Ok(depth + 1);
+                            return depth + 1;
                         }
                     }
-                    Ok(depth)
+                    depth
                 },
-            )
-            .unwrap_or_else(|_| {
-                unreachable!(
-                    "'multi_qubit_gate_depth' callback is infallible, so path_fold should not return an error"
-                )
-            });
+            );
         path_lengths.into_iter().max().unwrap_or_default()
     }
 }
