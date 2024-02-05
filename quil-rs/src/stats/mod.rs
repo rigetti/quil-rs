@@ -174,8 +174,11 @@ impl<S: InstructionsSource> ProgramStats<S> {
             .count()
     }
 
+    // TODO #334: additional statistics
     /// Output qubit index relabeling due to SWAP insertion.
     // fn final_rewriting(&self) -> Vec<u64>;
+
+    // TODO #325: duration estimates
     /// Rough estimate of native quil program length in seconds.
     // fn program_duration_seconds(&self) -> Option<f64>;
     /// The estimated runtime of the program on a Rigetti QPU, in milliseconds. Available only for
