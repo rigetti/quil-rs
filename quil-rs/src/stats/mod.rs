@@ -56,7 +56,8 @@ impl InstructionsSource for &Program {
 
 pub struct ProgramStats<S: InstructionsSource> {
     source: S,
-    execution_graph: ExecutionGraph,
+    // Programs with dynamic control flow, pragmas, or RF controls are not supported for execution-graph operations.
+    execution_graph: Result<ExecutionGraph, ExecutionGraphError>,
 }
 
 fn make_execution_graph<S: InstructionsSource>(
@@ -66,13 +67,13 @@ fn make_execution_graph<S: InstructionsSource>(
 }
 
 impl<'a> ProgramStats<&'a Program> {
-    pub fn from_program(program: &'a Program) -> Result<Self, ExecutionGraphError> {
-        let execution_graph = make_execution_graph(program)?;
+    pub fn from_program(program: &'a Program) -> Self {
+        let execution_graph = make_execution_graph(program);
 
-        Ok(Self {
+        Self {
             source: program,
             execution_graph,
-        })
+        }
     }
 
     // Provided because Program specifically returns a hash-set, but in general
@@ -83,8 +84,8 @@ impl<'a> ProgramStats<&'a Program> {
 }
 
 impl<S: InstructionsSource> ProgramStats<S> {
-    fn execution_graph(&self) -> &ExecutionGraph {
-        &self.execution_graph
+    fn execution_graph(&self) -> Result<&ExecutionGraph, &ExecutionGraphError> {
+        self.execution_graph.as_ref()
     }
 
     /// The total number of instructions in the program.
@@ -106,8 +107,10 @@ impl<S: InstructionsSource> ProgramStats<S> {
     }
 
     /// The maximum number of *successive* gates in the native Quil program.
-    pub fn gate_depth(&self) -> usize {
-        self.execution_graph().gate_depth()
+    /// If the program does not have a valid ExecutionGraph, this will return
+    /// `None`; use `execution_graph()` to see why the graph is invalid.
+    pub fn gate_depth(&self) -> Option<usize> {
+        self.execution_graph().map(ExecutionGraph::gate_depth).ok()
     }
 
     /// The total number of gates in the program. Also called the "gate volume".
@@ -119,8 +122,10 @@ impl<S: InstructionsSource> ProgramStats<S> {
     }
 
     /// The maximum number of two-qubit gates in the native Quil program.
-    pub fn multiqubit_gate_depth(&self) -> usize {
-        self.execution_graph().multi_qubit_gate_depth()
+    /// If the program does not have a valid ExecutionGraph, this will return
+    /// `None`; use `execution_graph()` to see why the graph is invalid.
+    pub fn multiqubit_gate_depth(&self) -> Option<usize> {
+        self.execution_graph().map(ExecutionGraph::multi_qubit_gate_depth).ok()
     }
 
     /// A list of all qubits used in the program.
@@ -194,7 +199,7 @@ mod tests {
     #[case(KITCHEN_SINK_QUIL, 2)]
     fn gate_volume(#[case] input: &str, #[case] expected: usize) {
         let program: Program = input.parse().unwrap();
-        let stats = ProgramStats::from_program(&program).unwrap();
+        let stats = ProgramStats::from_program(&program);
         let volume = stats.gate_volume();
         assert_eq!(expected, volume);
     }
@@ -208,7 +213,7 @@ mod tests {
     #[case(KITCHEN_SINK_QUIL)]
     fn fidelity_estimate_all100percent(#[case] input: &str) {
         let program: Program = input.parse().unwrap();
-        let stats = ProgramStats::from_program(&program).unwrap();
+        let stats = ProgramStats::from_program(&program);
         let all_100p = |_: &Instruction| Some(1.0);
         let fidelity = stats.fidelity_estimate(all_100p);
         assert_eq!(1.0, fidelity);
@@ -223,7 +228,7 @@ mod tests {
     #[case(KITCHEN_SINK_QUIL)]
     fn fidelity_estimate_all0percent(#[case] input: &str) {
         let program: Program = input.parse().unwrap();
-        let stats = ProgramStats::from_program(&program).unwrap();
+        let stats = ProgramStats::from_program(&program);
         let all_0p = |_: &Instruction| Some(0.0);
         let fidelity = stats.fidelity_estimate(all_0p);
         assert_eq!(0.0, fidelity);
@@ -238,7 +243,7 @@ mod tests {
     #[case(KITCHEN_SINK_QUIL)]
     fn fidelity_estimate_all90percent(#[case] input: &str) {
         let program: Program = input.parse().unwrap();
-        let stats = ProgramStats::from_program(&program).unwrap();
+        let stats = ProgramStats::from_program(&program);
         let all_90p = |_: &Instruction| Some(0.9);
         let fidelity = stats.fidelity_estimate(all_90p);
         let fidelity_sum = stats.body_instruction_count() as f64 * 0.9_f64.ln().powi(2);
@@ -255,7 +260,7 @@ mod tests {
     #[case(KITCHEN_SINK_QUIL, 0)]
     fn topological_swap_count(#[case] input: &str, #[case] expected: usize) {
         let program: Program = input.parse().unwrap();
-        let stats = ProgramStats::from_program(&program).unwrap();
+        let stats = ProgramStats::from_program(&program);
         let count = stats.topological_swap_count();
         assert_eq!(expected, count);
     }
@@ -271,7 +276,7 @@ mod tests {
     #[case(QUIL_WITH_JUMP_UNLESS, true)]
     fn has_dynamic_control_flow(#[case] input: &str, #[case] expected: bool) {
         let program: Program = input.parse().unwrap();
-        let stats = ProgramStats::from_program(&program).unwrap();
+        let stats = ProgramStats::from_program(&program);
         let dynamic = stats.has_dynamic_control_flow();
         assert_eq!(expected, dynamic);
     }
