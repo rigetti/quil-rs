@@ -280,4 +280,21 @@ mod tests {
         let dynamic = stats.has_dynamic_control_flow();
         assert_eq!(expected, dynamic);
     }
+
+    #[rstest]
+    #[case(QUIL_AS_TREE, Some(2))]
+    #[case(QUIL_AS_INVERSE_TREE, Some(2))]
+    #[case(QUIL_AS_LINEAR, Some(4))]
+    #[case(QUIL_WITH_DIAMOND, Some(6))]
+    #[case(QUIL_WITH_SWAP, Some(3))]
+    #[case(KITCHEN_SINK_QUIL, Some(2))]
+    #[case(QUIL_WITH_JUMP, None)]
+    #[case(QUIL_WITH_JUMP_WHEN, None)]
+    #[case(QUIL_WITH_JUMP_UNLESS, None)]
+    fn gate_depth_conditional(#[case] input: &str, #[case] expected: Option<usize>) {
+        let program: Program = input.parse().unwrap();
+        let stats = ProgramStats::from_program(&program);
+        let depth = stats.gate_depth();
+        assert_eq!(expected, depth);
+    }
 }
