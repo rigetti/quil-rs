@@ -474,6 +474,10 @@ impl Program {
         Box::new(move |key| qubit_resolutions.get(key).copied())
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     pub fn len(&self) -> usize {
         self.memory_regions.len()
             + self.frames.len()

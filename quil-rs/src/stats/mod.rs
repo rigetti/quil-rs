@@ -15,12 +15,17 @@ use crate::{
 use execution_graph::{Error as ExecutionGraphError, ExecutionGraph};
 
 pub trait InstructionsSource {
+    fn is_empty(&self) -> bool;
     fn len(&self) -> usize;
     fn body_instructions(&self) -> impl Iterator<Item = &Instruction> + '_;
     fn get_used_qubits(&self) -> impl IntoIterator<Item = &Qubit>;
 }
 
 impl InstructionsSource for Program {
+    fn is_empty(&self) -> bool {
+        Program::is_empty(self)
+    }
+
     fn len(&self) -> usize {
         Program::len(self)
     }
@@ -39,6 +44,10 @@ impl InstructionsSource for Program {
 }
 
 impl InstructionsSource for &Program {
+    fn is_empty(&self) -> bool {
+        (*self).is_empty()
+    }
+
     fn len(&self) -> usize {
         (*self).len()
     }
