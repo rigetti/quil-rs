@@ -10,6 +10,7 @@ use std::ops::Neg;
 
 use crate::{
     instruction::{Instruction, Qubit},
+    program::graph::InstructionBlock,
     Program,
 };
 use execution_graph::{Error as ExecutionGraphError, ExecutionGraph};
@@ -21,6 +22,28 @@ pub trait InstructionsSource {
     fn len(&self) -> usize;
     fn body_instructions(&self) -> impl Iterator<Item = &Instruction> + '_;
     fn get_used_qubits(&self) -> &Self::QubitSet;
+}
+
+// Blanket-impl to ensure that if an owned type implements `InstructionsSource`,
+// then a reference to that type does as well
+impl<S: InstructionsSource> InstructionsSource for &S {
+    type QubitSet = S::QubitSet;
+
+    fn is_empty(&self) -> bool {
+        (*self).is_empty()
+    }
+
+    fn len(&self) -> usize {
+        (*self).len()
+    }
+
+    fn body_instructions(&self) -> impl Iterator<Item = &Instruction> + '_ {
+        (*self).body_instructions()
+    }
+
+    fn get_used_qubits(&self) -> &Self::QubitSet {
+        (*self).get_used_qubits()
+    }
 }
 
 impl InstructionsSource for Program {
@@ -38,30 +61,49 @@ impl InstructionsSource for Program {
         Program::body_instructions(self)
     }
 
-    #[allow(refining_impl_trait)]
     fn get_used_qubits(&self) -> &Self::QubitSet {
         Program::get_used_qubits(self)
     }
 }
 
-impl InstructionsSource for &Program {
-    type QubitSet = HashSet<Qubit>;
+struct InstructionBlockWithQubitSet<'a, 'b> {
+    block: &'a InstructionBlock<'b>,
+    qubits: HashSet<&'a Qubit>,
+}
+
+impl<'a, 'b> From<&'a InstructionBlock<'b>> for InstructionBlockWithQubitSet<'a, 'b> {
+    fn from(block: &'a InstructionBlock<'b>) -> Self {
+        let qubits = block
+            .instructions
+            .iter()
+            .flat_map(|i| match i {
+                // XXX need to count anything other than Gates?
+                Instruction::Gate(gate) => gate.qubits.iter(),
+                _ => [].iter(),
+            })
+            .collect();
+        Self { block, qubits }
+    }
+}
+
+impl<'a> InstructionsSource for InstructionBlockWithQubitSet<'a, '_> {
+    type QubitSet = HashSet<&'a Qubit>;
 
     fn is_empty(&self) -> bool {
-        (*self).is_empty()
+        self.block.is_empty()
     }
 
     fn len(&self) -> usize {
-        (*self).len()
+        self.block.len()
     }
 
     fn body_instructions(&self) -> impl Iterator<Item = &Instruction> + '_ {
-        (*self).body_instructions()
+        // 'copied' converts the iterator of `&&Instruction` to an iterator of `&Instruction`
+        self.block.instructions.iter().copied()
     }
 
-    #[allow(refining_impl_trait)]
     fn get_used_qubits(&self) -> &Self::QubitSet {
-        (*self).get_used_qubits()
+        &self.qubits
     }
 }
 
@@ -86,11 +128,17 @@ impl<'a> ProgramStats<&'a Program> {
             execution_graph,
         }
     }
+}
 
-    // Provided because Program specifically returns a hash-set, but in general
-    // `InstructionsSource` may not provide that feature.
-    pub fn set_of_qubits_used(&self) -> &HashSet<Qubit> {
-        self.source.get_used_qubits()
+impl<'a, 'b> ProgramStats<InstructionBlockWithQubitSet<'a, 'b>> {
+    pub fn from_block(block: &'a InstructionBlock<'b>) -> Self {
+        let source = block.into();
+        let execution_graph = make_execution_graph(&source);
+
+        Self {
+            source,
+            execution_graph,
+        }
     }
 }
 
@@ -120,6 +168,10 @@ impl<S: InstructionsSource> ProgramStats<S> {
     /// - gate definitions
     pub fn body_instruction_count(&self) -> usize {
         self.source.body_instructions().count()
+    }
+
+    pub fn set_of_qubits_used(&self) -> &S::QubitSet {
+        self.source.get_used_qubits()
     }
 
     /// The maximum number of *successive* gates in the native Quil program.
@@ -183,12 +235,12 @@ impl<S: InstructionsSource> ProgramStats<S> {
     /// Output qubit index relabeling due to SWAP insertion.
     // fn final_rewriting(&self) -> Vec<u64>;
 
-    // TODO #325: duration estimates
-    /// Rough estimate of native quil program length in seconds.
-    // fn program_duration_seconds(&self) -> Option<f64>;
+    // TODO #325: duration estimate
     /// The estimated runtime of the program on a Rigetti QPU, in milliseconds. Available only for
     /// protoquil compliant programs.
-    // fn qpu_runtime_estimation(&self) -> Option<f64>;
+    // fn qpu_runtime_estimate<F>(&self, get_duration: F) -> Option<f64>
+    // where
+    //    F: Fn(&Instruction) -> Option<f64>;
 
     /// Whether the program uses dynamic control flow.
     pub fn has_dynamic_control_flow(&self) -> bool {
