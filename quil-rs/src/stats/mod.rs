@@ -166,9 +166,11 @@ impl<S: InstructionsSource> ProgramStats<S> {
 
     /// Whether the program uses dynamic control flow.
     pub fn has_dynamic_control_flow(&self) -> bool {
-        self.source.body_instructions().any(|i| match i {
-            Instruction::Jump(_) | Instruction::JumpWhen(_) | Instruction::JumpUnless(_) => true,
-            _ => false,
+        self.source.body_instructions().any(|i| {
+            matches!(
+                i,
+                Instruction::Jump(_) | Instruction::JumpWhen(_) | Instruction::JumpUnless(_)
+            )
         })
     }
 }
