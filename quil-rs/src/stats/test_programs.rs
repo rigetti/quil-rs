@@ -23,6 +23,37 @@ X 0
 X 0
 X 0";
 
+pub const QUIL_WITH_SWAP: &str = r"
+X 0
+X 1
+SWAP 0 1
+X 1
+X 0";
+
+pub const QUIL_WITH_JUMP: &str = r"
+LABEL @label
+X 0
+X 1
+JUMP @label
+X 1
+X 0";
+
+pub const QUIL_WITH_JUMP_WHEN: &str = r"
+LABEL @label
+X 0
+X 1
+JUMP-WHEN @label ro
+X 1
+X 0";
+
+pub const QUIL_WITH_JUMP_UNLESS: &str = r"
+LABEL @label
+X 0
+X 1
+JUMP-UNLESS @label ro
+X 1
+X 0";
+
 pub const KITCHEN_SINK_QUIL: &str = "DECLARE ro BIT[1]
 DEFGATE HADAMARD AS MATRIX:
 \t(1/sqrt(2)),(1/sqrt(2))

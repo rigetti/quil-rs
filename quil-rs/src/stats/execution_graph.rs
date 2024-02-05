@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::convert::Infallible;
 
 use crate::instruction::{Instruction, InstructionHandler, InstructionRole};
 use crate::quil::Quil;
@@ -12,6 +11,7 @@ pub enum Error {
 }
 
 /// ExecutionGraph is a logical execution/dependency graph of instructions. Pragma, RF Control, and Jump instructions are not supported. It is a directed graph *from* the first instructions (the set of instructions that do not depend on prior instructions) *to* the last instructions (the set of instructions that are not prerequisites for any later instructions).
+#[derive(Debug)]
 pub struct ExecutionGraph {
     graph: DiGraph<Instruction, ()>,
 }
@@ -132,34 +132,26 @@ impl ExecutionGraph {
 
     /// Returns the longest path from an initial instruction (one with no prerequisite instructions) to a final instruction (one with no dependent instructions).
     pub fn gate_depth(&self) -> usize {
-        let path_lengths = self
-            .path_fold(
-                0,
-                |depth: usize, instruction: &Instruction| -> usize {
-                    if let Instruction::Gate(_) = instruction {
-                        depth + 1
-                    } else {
-                        depth
-                    }
-                },
-            );
+        let path_lengths = self.path_fold(0, |depth: usize, instruction: &Instruction| -> usize {
+            if let Instruction::Gate(_) = instruction {
+                depth + 1
+            } else {
+                depth
+            }
+        });
         path_lengths.into_iter().max().unwrap_or_default()
     }
 
     /// Returns the longest path through the execution graph (like `gate_depth`), only counting instructions corresponding to multi-qubit gates.
     pub fn multi_qubit_gate_depth(&self) -> usize {
-        let path_lengths = self
-            .path_fold(
-                0,
-                |depth: usize, instruction: &Instruction| -> usize {
-                    if let Instruction::Gate(gate) = instruction {
-                        if gate.qubits.len() > 1 {
-                            return depth + 1;
-                        }
-                    }
-                    depth
-                },
-            );
+        let path_lengths = self.path_fold(0, |depth: usize, instruction: &Instruction| -> usize {
+            if let Instruction::Gate(gate) = instruction {
+                if gate.qubits.len() > 1 {
+                    return depth + 1;
+                }
+            }
+            depth
+        });
         path_lengths.into_iter().max().unwrap_or_default()
     }
 }
@@ -178,6 +170,7 @@ mod tests {
     #[case(QUIL_AS_INVERSE_TREE, 2)]
     #[case(QUIL_AS_LINEAR, 4)]
     #[case(QUIL_WITH_DIAMOND, 6)]
+    #[case(QUIL_WITH_SWAP, 3)]
     #[case(KITCHEN_SINK_QUIL, 2)]
     fn gate_depth(#[case] input: &str, #[case] expected: usize) {
         let program: Program = input.parse().unwrap();
@@ -191,11 +184,21 @@ mod tests {
     #[case(QUIL_AS_INVERSE_TREE, 1)]
     #[case(QUIL_AS_LINEAR, 0)]
     #[case(QUIL_WITH_DIAMOND, 2)]
+    #[case(QUIL_WITH_SWAP, 1)]
     #[case(KITCHEN_SINK_QUIL, 1)]
     fn multiqubit_gate_depth(#[case] input: &str, #[case] expected: usize) {
         let program: Program = input.parse().unwrap();
         let graph = ExecutionGraph::new(program.to_instructions()).unwrap();
         let depth = graph.multi_qubit_gate_depth();
         assert_eq!(expected, depth);
+    }
+
+    #[rstest]
+    #[case(QUIL_WITH_JUMP)]
+    #[case(QUIL_WITH_JUMP_WHEN)]
+    #[case(QUIL_WITH_JUMP_UNLESS)]
+    fn dynamic_control_flow_not_supported(#[case] input: &str) {
+        let program: Program = input.parse().unwrap();
+        let _ = ExecutionGraph::new(program.to_instructions()).unwrap_err();
     }
 }

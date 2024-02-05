@@ -89,7 +89,7 @@ impl<S: InstructionsSource> ProgramStats<S> {
 
     /// The total number of instructions in the program.
     ///
-    /// This includes all definitions excluded by [`Program::instruction_count`].
+    /// This includes all definitions excluded by [`Program::body_instruction_count`].
     pub fn len(&self) -> usize {
         self.source.len()
     }
@@ -190,6 +190,7 @@ mod tests {
     #[case(QUIL_AS_INVERSE_TREE, 3)]
     #[case(QUIL_AS_LINEAR, 4)]
     #[case(QUIL_WITH_DIAMOND, 7)]
+    #[case(QUIL_WITH_SWAP, 5)]
     #[case(KITCHEN_SINK_QUIL, 2)]
     fn gate_volume(#[case] input: &str, #[case] expected: usize) {
         let program: Program = input.parse().unwrap();
@@ -203,6 +204,7 @@ mod tests {
     #[case(QUIL_AS_INVERSE_TREE)]
     #[case(QUIL_AS_LINEAR)]
     #[case(QUIL_WITH_DIAMOND)]
+    #[case(QUIL_WITH_SWAP)]
     #[case(KITCHEN_SINK_QUIL)]
     fn fidelity_estimate_all100percent(#[case] input: &str) {
         let program: Program = input.parse().unwrap();
@@ -217,6 +219,7 @@ mod tests {
     #[case(QUIL_AS_INVERSE_TREE)]
     #[case(QUIL_AS_LINEAR)]
     #[case(QUIL_WITH_DIAMOND)]
+    #[case(QUIL_WITH_SWAP)]
     #[case(KITCHEN_SINK_QUIL)]
     fn fidelity_estimate_all0percent(#[case] input: &str) {
         let program: Program = input.parse().unwrap();
@@ -231,6 +234,7 @@ mod tests {
     #[case(QUIL_AS_INVERSE_TREE)]
     #[case(QUIL_AS_LINEAR)]
     #[case(QUIL_WITH_DIAMOND)]
+    #[case(QUIL_WITH_SWAP)]
     #[case(KITCHEN_SINK_QUIL)]
     fn fidelity_estimate_all90percent(#[case] input: &str) {
         let program: Program = input.parse().unwrap();
@@ -247,6 +251,7 @@ mod tests {
     #[case(QUIL_AS_INVERSE_TREE, 0)]
     #[case(QUIL_AS_LINEAR, 0)]
     #[case(QUIL_WITH_DIAMOND, 0)]
+    #[case(QUIL_WITH_SWAP, 1)]
     #[case(KITCHEN_SINK_QUIL, 0)]
     fn topological_swap_count(#[case] input: &str, #[case] expected: usize) {
         let program: Program = input.parse().unwrap();
@@ -261,6 +266,9 @@ mod tests {
     #[case(QUIL_AS_LINEAR, false)]
     #[case(QUIL_WITH_DIAMOND, false)]
     #[case(KITCHEN_SINK_QUIL, false)]
+    #[case(QUIL_WITH_JUMP, true)]
+    #[case(QUIL_WITH_JUMP_WHEN, true)]
+    #[case(QUIL_WITH_JUMP_UNLESS, true)]
     fn has_dynamic_control_flow(#[case] input: &str, #[case] expected: bool) {
         let program: Program = input.parse().unwrap();
         let stats = ProgramStats::from_program(&program).unwrap();
