@@ -99,6 +99,11 @@ impl<S: InstructionsSource> ProgramStats<S> {
         self.execution_graph.as_ref()
     }
 
+    /// Whether the program contains no instructions
+    pub fn is_empty(&self) -> bool {
+        self.source.is_empty()
+    }
+
     /// The total number of instructions in the program.
     ///
     /// This includes all definitions excluded by [`Program::body_instruction_count`].
