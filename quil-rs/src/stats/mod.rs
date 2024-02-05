@@ -15,13 +15,17 @@ use crate::{
 use execution_graph::{Error as ExecutionGraphError, ExecutionGraph};
 
 pub trait InstructionsSource {
+    type QubitSet;
+
     fn is_empty(&self) -> bool;
     fn len(&self) -> usize;
     fn body_instructions(&self) -> impl Iterator<Item = &Instruction> + '_;
-    fn get_used_qubits(&self) -> impl IntoIterator<Item = &Qubit>;
+    fn get_used_qubits(&self) -> &Self::QubitSet;
 }
 
 impl InstructionsSource for Program {
+    type QubitSet = HashSet<Qubit>;
+
     fn is_empty(&self) -> bool {
         Program::is_empty(self)
     }
@@ -34,16 +38,15 @@ impl InstructionsSource for Program {
         Program::body_instructions(self)
     }
 
-    // There's no generic trait for "set-like" types, so we return a concrete
-    // type here (as an API convenience) but do not require this type in the
-    // trait definition.
     #[allow(refining_impl_trait)]
-    fn get_used_qubits(&self) -> &HashSet<Qubit> {
+    fn get_used_qubits(&self) -> &Self::QubitSet {
         Program::get_used_qubits(self)
     }
 }
 
 impl InstructionsSource for &Program {
+    type QubitSet = HashSet<Qubit>;
+
     fn is_empty(&self) -> bool {
         (*self).is_empty()
     }
@@ -56,9 +59,8 @@ impl InstructionsSource for &Program {
         (*self).body_instructions()
     }
 
-    // See note on `Program` impl above.
     #[allow(refining_impl_trait)]
-    fn get_used_qubits(&self) -> &HashSet<Qubit> {
+    fn get_used_qubits(&self) -> &Self::QubitSet {
         (*self).get_used_qubits()
     }
 }
@@ -134,11 +136,13 @@ impl<S: InstructionsSource> ProgramStats<S> {
     /// If the program does not have a valid ExecutionGraph, this will return
     /// `None`; use `execution_graph()` to see why the graph is invalid.
     pub fn multiqubit_gate_depth(&self) -> Option<usize> {
-        self.execution_graph().map(ExecutionGraph::multi_qubit_gate_depth).ok()
+        self.execution_graph()
+            .map(ExecutionGraph::multi_qubit_gate_depth)
+            .ok()
     }
 
-    /// A list of all qubits used in the program.
-    pub fn qubits_used(&self) -> impl IntoIterator<Item = &Qubit> {
+    /// The set of all qubits used in the program.
+    pub fn qubits_used(&self) -> &S::QubitSet {
         self.source.get_used_qubits()
     }
 
