@@ -41,7 +41,7 @@ impl Quil for CircuitDefinition {
                 write!(writer, "%{}", p)?;
             }
             for p in iter {
-                write!(writer, "%{}", p)?;
+                write!(writer, ", %{}", p)?;
             }
             write!(writer, ")")?;
         }
@@ -102,6 +102,49 @@ mod test_circuit_definition {
     )]
     #[case(
         "CircuitDefinition With Params",
+        CircuitDefinition {
+            name: "BELL".to_owned(),
+            parameters: vec!["a".to_owned(), "b".to_owned()],
+            qubit_variables: vec!["a".to_owned(), "b".to_owned()],
+            instructions: vec![
+                Instruction::Gate(Gate {
+                    name: "RZ".to_owned(),
+                    parameters: vec![Expression::Variable("a".to_owned())],
+                    qubits: vec![Qubit::Variable("a".to_owned())],
+                    modifiers: vec![],
+                }),
+                Instruction::Gate(Gate {
+                    name: "RZ".to_owned(),
+                    parameters: vec![Expression::Variable("b".to_owned())],
+                    qubits: vec![Qubit::Variable("a".to_owned())],
+                    modifiers: vec![],
+                }),
+                Instruction::Gate(Gate {
+                    name: "RX".to_owned(),
+                    parameters: vec![Expression::Variable("a".to_owned())],
+                    qubits: vec![Qubit::Variable("a".to_owned())],
+                    modifiers: vec![],
+                }),
+                Instruction::Gate(Gate {
+                    name: "RZ".to_owned(),
+                    parameters: vec![Expression::Variable("a".to_owned())],
+                    qubits: vec![Qubit::Variable("a".to_owned())],
+                    modifiers: vec![],
+                }),
+                Instruction::Gate(Gate {
+                    name: "CNOT".to_owned(),
+                    parameters: vec![],
+                    qubits: vec![
+                        Qubit::Variable("a".to_owned()),
+                        Qubit::Variable("b".to_owned())
+                    ],
+                    modifiers: vec![],
+                })
+            ]
+        }
+    )]
+    #[case(
+        "CircuitDefinition With Single Param",
         CircuitDefinition {
             name: "BELL".to_owned(),
             parameters: vec!["a".to_owned()],
