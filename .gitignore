@@ -6,8 +6,9 @@ node_modules
 # unreviewed insta snapshots
 *.snap.new
 
-# JetBrains Editors
+# IDEs and editors
 .idea/
+.vscode/
 
 # Python artifacts
 *.so
