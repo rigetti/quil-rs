@@ -74,6 +74,12 @@ impl<'a> ProgramStats<&'a Program> {
             execution_graph,
         })
     }
+
+    // Provided because Program specifically returns a hash-set, but in general
+    // `InstructionsSource` may not provide that feature.
+    pub fn set_of_qubits_used(&self) -> &HashSet<Qubit> {
+        self.source.get_used_qubits()
+    }
 }
 
 impl<S: InstructionsSource> ProgramStats<S> {
@@ -119,7 +125,6 @@ impl<S: InstructionsSource> ProgramStats<S> {
 
     /// A list of all qubits used in the program.
     pub fn qubits_used(&self) -> impl IntoIterator<Item = &Qubit> {
-        // TODO: return a set instead?
         self.source.get_used_qubits()
     }
 
@@ -161,7 +166,14 @@ impl<S: InstructionsSource> ProgramStats<S> {
 
     /// Whether the program uses dynamic control flow.
     pub fn has_dynamic_control_flow(&self) -> bool {
-        false // TODO
+        self.source
+            .body_instructions()
+            .any(|i| match i {
+                Instruction::Jump(_) | Instruction::JumpWhen(_) | Instruction::JumpUnless(_) => {
+                    true
+                }
+                _ => false,
+            })
     }
 }
 
@@ -173,15 +185,86 @@ mod tests {
     use super::test_programs::*;
     use super::*;
 
+    #[rstest]
+    #[case(QUIL_AS_TREE, 3)]
+    #[case(QUIL_AS_INVERSE_TREE, 3)]
+    #[case(QUIL_AS_LINEAR, 4)]
+    #[case(QUIL_WITH_DIAMOND, 7)]
+    #[case(KITCHEN_SINK_QUIL, 2)]
+    fn gate_volume(#[case] input: &str, #[case] expected: usize) {
+        let program: Program = input.parse().unwrap();
+        let stats = ProgramStats::from_program(&program).unwrap();
+        let volume = stats.gate_volume();
+        assert_eq!(expected, volume);
+    }
+
     /*
+    #[rstest]
+    #[case(QUIL_AS_TREE, )]
+    #[case(QUIL_AS_INVERSE_TREE, )]
+    #[case(QUIL_AS_LINEAR, )]
+    #[case(QUIL_WITH_DIAMOND, )]
+    #[case(KITCHEN_SINK_QUIL, )]
+    fn fidelity_estimate_all100percent(#[case] input: &str, #[case] expected: f64) {
+        let program: Program = input.parse().unwrap();
+        let stats = ProgramStats::from_program(&program).unwrap();
+        let all_100p = |_: &Instruction| Some(1.0);
+        let fidelity = stats.fidelity_estimate(all_100p);
+        assert_eq!(expected, fidelity);
+    }
+
     #[rstest]
     #[case(QUIL_AS_TREE, 2)]
     #[case(QUIL_AS_INVERSE_TREE, 2)]
     #[case(QUIL_AS_LINEAR, 4)]
     #[case(QUIL_WITH_DIAMOND, 6)]
     #[case(KITCHEN_SINK_QUIL, 2)]
-    fn XXX(#[case] input: &str, #[case] expected: usize) {
-        unimplemented!("test")
+    fn fidelity_estimate_all0percent(#[case] input: &str, #[case] expected: f64) {
+        let program: Program = input.parse().unwrap();
+        let stats = ProgramStats::from_program(&program).unwrap();
+        let all_100p = |_: &Instruction| Some(1.0);
+        let fidelity = stats.fidelity_estimate(all_100p);
+        assert_eq!(expected, fidelity);
+    }
+
+    #[rstest]
+    #[case(QUIL_AS_TREE, 2)]
+    #[case(QUIL_AS_INVERSE_TREE, 2)]
+    #[case(QUIL_AS_LINEAR, 4)]
+    #[case(QUIL_WITH_DIAMOND, 6)]
+    #[case(KITCHEN_SINK_QUIL, 2)]
+    fn fidelity_estimate_all90percent(#[case] input: &str, #[case] expected: f64) {
+        let program: Program = input.parse().unwrap();
+        let stats = ProgramStats::from_program(&program).unwrap();
+        let all_100p = |_: &Instruction| Some(1.0);
+        let fidelity = stats.fidelity_estimate(all_100p);
+        assert_eq!(expected, fidelity);
     }
     */
+
+    #[rstest]
+    #[case(QUIL_AS_TREE, 0)]
+    #[case(QUIL_AS_INVERSE_TREE, 0)]
+    #[case(QUIL_AS_LINEAR, 0)]
+    #[case(QUIL_WITH_DIAMOND, 0)]
+    #[case(KITCHEN_SINK_QUIL, 0)]
+    fn topological_swap_count(#[case] input: &str, #[case] expected: usize) {
+        let program: Program = input.parse().unwrap();
+        let stats = ProgramStats::from_program(&program).unwrap();
+        let count = stats.topological_swap_count();
+        assert_eq!(expected, count);
+    }
+
+    #[rstest]
+    #[case(QUIL_AS_TREE, false)]
+    #[case(QUIL_AS_INVERSE_TREE, false)]
+    #[case(QUIL_AS_LINEAR, false)]
+    #[case(QUIL_WITH_DIAMOND, false)]
+    #[case(KITCHEN_SINK_QUIL, false)]
+    fn has_dynamic_control_flow(#[case] input: &str, #[case] expected: bool) {
+        let program: Program = input.parse().unwrap();
+        let stats = ProgramStats::from_program(&program).unwrap();
+        let dynamic = stats.has_dynamic_control_flow();
+        assert_eq!(expected, dynamic);
+    }
 }
