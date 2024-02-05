@@ -76,11 +76,11 @@ impl<'a, 'b> From<&'a InstructionBlock<'b>> for InstructionBlockWithQubitSet<'a,
         let qubits = block
             .instructions
             .iter()
-            .flat_map(|i| match i {
-                // XXX need to count anything other than Gates?
-                Instruction::Gate(gate) => gate.qubits.iter(),
-                _ => [].iter(),
+            .filter_map(|i| match i {
+                Instruction::Gate(_) | Instruction::Measurement(_) => Some(i.get_qubits()),
+                _ => None,
             })
+            .flatten()
             .collect();
         Self { block, qubits }
     }
@@ -257,11 +257,48 @@ impl<S: InstructionsSource> ProgramStats<S> {
 mod tests {
     use std::f64::consts;
 
+    use crate::instruction::InstructionHandler;
+    use crate::program::graph::ScheduledProgram;
     use crate::Program;
+
     use rstest::rstest;
 
     use super::test_programs::*;
     use super::*;
+
+    #[rstest]
+    // #[case(QUIL_AS_TREE, Some(2))]
+    // #[case(QUIL_AS_INVERSE_TREE, Some(2))]
+    // #[case(QUIL_AS_LINEAR, Some(4))]
+    // #[case(QUIL_WITH_DIAMOND, Some(6))]
+    // #[case(QUIL_WITH_SWAP, Some(3))]
+    #[case(KITCHEN_SINK_QUIL, &[Qubit::Fixed(0), Qubit::Fixed(1)])]
+    fn block_instructions_from_program(#[case] input: &str, #[case] expected: &[Qubit]) {
+        let program: Program = input.parse().unwrap();
+        let scheduled =
+            ScheduledProgram::from_program(&program, &mut InstructionHandler::default()).unwrap();
+        let block = scheduled.blocks.first().unwrap().1;
+        let stats = ProgramStats::from_block(block);
+        let qubits = stats.qubits_used();
+        let expected = expected.iter().collect::<HashSet<_>>();
+
+        assert_eq!(&expected, qubits);
+    }
+
+    #[rstest]
+    #[case(QUIL_WITH_JUMP)]
+    #[case(QUIL_WITH_JUMP_WHEN)]
+    #[case(QUIL_WITH_JUMP_UNLESS)]
+    fn program_with_jumps_cannot_be_used_as_block(#[case] input: &str) {
+        let program: Program = input.parse().unwrap();
+        InstructionBlock::build(
+            program.body_instructions().collect(),
+            None,
+            &program,
+            &mut InstructionHandler::default(),
+        )
+        .unwrap_err();
+    }
 
     #[rstest]
     #[case(QUIL_AS_TREE, 3)]
