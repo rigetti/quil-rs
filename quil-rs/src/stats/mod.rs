@@ -166,19 +166,17 @@ impl<S: InstructionsSource> ProgramStats<S> {
 
     /// Whether the program uses dynamic control flow.
     pub fn has_dynamic_control_flow(&self) -> bool {
-        self.source
-            .body_instructions()
-            .any(|i| match i {
-                Instruction::Jump(_) | Instruction::JumpWhen(_) | Instruction::JumpUnless(_) => {
-                    true
-                }
-                _ => false,
-            })
+        self.source.body_instructions().any(|i| match i {
+            Instruction::Jump(_) | Instruction::JumpWhen(_) | Instruction::JumpUnless(_) => true,
+            _ => false,
+        })
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::f64::consts;
+
     use crate::Program;
     use rstest::rstest;
 
@@ -198,49 +196,49 @@ mod tests {
         assert_eq!(expected, volume);
     }
 
-    /*
     #[rstest]
-    #[case(QUIL_AS_TREE, )]
-    #[case(QUIL_AS_INVERSE_TREE, )]
-    #[case(QUIL_AS_LINEAR, )]
-    #[case(QUIL_WITH_DIAMOND, )]
-    #[case(KITCHEN_SINK_QUIL, )]
-    fn fidelity_estimate_all100percent(#[case] input: &str, #[case] expected: f64) {
+    #[case(QUIL_AS_TREE)]
+    #[case(QUIL_AS_INVERSE_TREE)]
+    #[case(QUIL_AS_LINEAR)]
+    #[case(QUIL_WITH_DIAMOND)]
+    #[case(KITCHEN_SINK_QUIL)]
+    fn fidelity_estimate_all100percent(#[case] input: &str) {
         let program: Program = input.parse().unwrap();
         let stats = ProgramStats::from_program(&program).unwrap();
         let all_100p = |_: &Instruction| Some(1.0);
         let fidelity = stats.fidelity_estimate(all_100p);
-        assert_eq!(expected, fidelity);
+        assert_eq!(1.0, fidelity);
     }
 
     #[rstest]
-    #[case(QUIL_AS_TREE, 2)]
-    #[case(QUIL_AS_INVERSE_TREE, 2)]
-    #[case(QUIL_AS_LINEAR, 4)]
-    #[case(QUIL_WITH_DIAMOND, 6)]
-    #[case(KITCHEN_SINK_QUIL, 2)]
-    fn fidelity_estimate_all0percent(#[case] input: &str, #[case] expected: f64) {
+    #[case(QUIL_AS_TREE)]
+    #[case(QUIL_AS_INVERSE_TREE)]
+    #[case(QUIL_AS_LINEAR)]
+    #[case(QUIL_WITH_DIAMOND)]
+    #[case(KITCHEN_SINK_QUIL)]
+    fn fidelity_estimate_all0percent(#[case] input: &str) {
         let program: Program = input.parse().unwrap();
         let stats = ProgramStats::from_program(&program).unwrap();
-        let all_100p = |_: &Instruction| Some(1.0);
-        let fidelity = stats.fidelity_estimate(all_100p);
-        assert_eq!(expected, fidelity);
+        let all_0p = |_: &Instruction| Some(0.0);
+        let fidelity = stats.fidelity_estimate(all_0p);
+        assert_eq!(0.0, fidelity);
     }
 
     #[rstest]
-    #[case(QUIL_AS_TREE, 2)]
-    #[case(QUIL_AS_INVERSE_TREE, 2)]
-    #[case(QUIL_AS_LINEAR, 4)]
-    #[case(QUIL_WITH_DIAMOND, 6)]
-    #[case(KITCHEN_SINK_QUIL, 2)]
-    fn fidelity_estimate_all90percent(#[case] input: &str, #[case] expected: f64) {
+    #[case(QUIL_AS_TREE)]
+    #[case(QUIL_AS_INVERSE_TREE)]
+    #[case(QUIL_AS_LINEAR)]
+    #[case(QUIL_WITH_DIAMOND)]
+    #[case(KITCHEN_SINK_QUIL)]
+    fn fidelity_estimate_all90percent(#[case] input: &str) {
         let program: Program = input.parse().unwrap();
         let stats = ProgramStats::from_program(&program).unwrap();
-        let all_100p = |_: &Instruction| Some(1.0);
-        let fidelity = stats.fidelity_estimate(all_100p);
+        let all_90p = |_: &Instruction| Some(0.9);
+        let fidelity = stats.fidelity_estimate(all_90p);
+        let fidelity_sum = stats.body_instruction_count() as f64 * 0.9_f64.ln().powi(2);
+        let expected = consts::E.powf(fidelity_sum.sqrt().neg());
         assert_eq!(expected, fidelity);
     }
-    */
 
     #[rstest]
     #[case(QUIL_AS_TREE, 0)]
