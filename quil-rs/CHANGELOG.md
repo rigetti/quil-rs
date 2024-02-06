@@ -1,3 +1,9 @@
+## 0.22.6
+
+### Fixes
+
+- include separators between DEFCIRCUIT parameters (#338)
+
 ## 0.22.6-rc.0
 
 ### Fixes
