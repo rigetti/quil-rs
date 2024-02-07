@@ -1,5 +1,5 @@
 ---
-source: src/program/graphviz_dot.rs
+source: quil-rs/src/program/graphviz_dot.rs
 expression: dot_format
 ---
 digraph {
@@ -15,7 +15,6 @@ timing"];
 timing"];
     "block_0_start" -> "block_0_2" [label="ordering
 timing"];
-    "block_0_start" -> "block_0_end" [label="ordering"];
     "block_0_0" [shape=rectangle, label="[0] NONBLOCKING PULSE 0 \"rf\" test(duration: 1000000)"];
     "block_0_0" -> "block_0_end" [label="ordering
 timing"];

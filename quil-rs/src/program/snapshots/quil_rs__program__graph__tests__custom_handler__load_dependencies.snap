@@ -1,0 +1,126 @@
+---
+source: quil-rs/src/program/graph.rs
+expression: dot_format
+---
+digraph {
+  entry -> "block_0_start";
+  entry [label="Entry Point"];
+  subgraph cluster_0 {
+    label="block_0";
+    node [style="filled"];
+    "block_0_start" [shape=circle, label="start"];
+    "block_0_start" -> "block_0_2" [label="ordering
+timing"];
+    "block_0_start" -> "block_0_3" [label="ordering
+timing"];
+    "block_0_start" -> "block_0_9" [label="ordering
+timing"];
+    "block_0_start" -> "block_0_10" [label="ordering
+timing"];
+    "block_0_start" -> "block_0_end" [label="ordering"];
+    "block_0_0" [shape=rectangle, label="[0] LOAD param01[0] params01 shot_index0[0]"];
+    "block_0_0" -> "block_0_5" [label="await write"];
+    "block_0_0" -> "block_0_end" [label="await read"];
+    "block_0_1" [shape=rectangle, label="[1] LOAD param02[0] params02 shot_index1[0]"];
+    "block_0_1" -> "block_0_10" [label="await write"];
+    "block_0_1" -> "block_0_end" [label="await read"];
+    "block_0_2" [shape=rectangle, label="[2] FENCE 0"];
+    "block_0_2" -> "block_0_3" [label="ordering
+timing"];
+    "block_0_3" [shape=rectangle, label="[3] SHIFT-PHASE 0 \"rf\" -0.14945171144281807"];
+    "block_0_3" -> "block_0_4" [label="ordering
+timing"];
+    "block_0_4" [shape=rectangle, label="[4] SHIFT-PHASE 0 \"rf\" -0.17773989418736816"];
+    "block_0_4" -> "block_0_5" [label="ordering
+timing"];
+    "block_0_5" [shape=rectangle, label="[5] SHIFT-PHASE 0 \"rf\" -1*param01[0]"];
+    "block_0_5" -> "block_0_8" [label="ordering
+timing"];
+    "block_0_5" -> "block_0_15" [label="ordering
+timing"];
+    "block_0_5" -> "block_0_16" [label="ordering
+timing"];
+    "block_0_5" -> "block_0_24" [label="ordering
+timing"];
+    "block_0_5" -> "block_0_25" [label="ordering
+timing"];
+    "block_0_5" -> "block_0_end" [label="await read
+ordering
+timing"];
+    "block_0_6" [shape=rectangle, label="[6] SHIFT-PHASE 0 1 \"xy\" -0.5*param01[0]"];
+    "block_0_6" -> "block_0_end" [label="await read"];
+    "block_0_7" [shape=rectangle, label="[7] SHIFT-PHASE 0 7 \"xy\" -0.5*param01[0]"];
+    "block_0_7" -> "block_0_end" [label="await read"];
+    "block_0_8" [shape=rectangle, label="[8] FENCE 0"];
+    "block_0_8" -> "block_0_end" [label="ordering
+timing"];
+    "block_0_9" [shape=rectangle, label="[9] FENCE 1"];
+    "block_0_9" -> "block_0_10" [label="ordering
+timing"];
+    "block_0_10" [shape=rectangle, label="[10] SHIFT-PHASE 1 \"rf\" -1*param02[0]"];
+    "block_0_10" -> "block_0_14" [label="ordering
+timing"];
+    "block_0_10" -> "block_0_26" [label="ordering
+timing"];
+    "block_0_10" -> "block_0_27" [label="ordering
+timing"];
+    "block_0_10" -> "block_0_35" [label="ordering
+timing"];
+    "block_0_10" -> "block_0_36" [label="ordering
+timing"];
+    "block_0_10" -> "block_0_end" [label="await read
+ordering
+timing"];
+    "block_0_11" [shape=rectangle, label="[11] SHIFT-PHASE 0 1 \"xy\" 0.5*param02[0]"];
+    "block_0_11" -> "block_0_end" [label="await read"];
+    "block_0_12" [shape=rectangle, label="[12] SHIFT-PHASE 1 16 \"xy\" 0.5*param02[0]"];
+    "block_0_12" -> "block_0_end" [label="await read"];
+    "block_0_13" [shape=rectangle, label="[13] SHIFT-PHASE 1 2 \"xy\" 0.5*param02[0]"];
+    "block_0_13" -> "block_0_end" [label="await read"];
+    "block_0_14" [shape=rectangle, label="[14] FENCE 1"];
+    "block_0_14" -> "block_0_end" [label="ordering
+timing"];
+    "block_0_15" [shape=rectangle, label="[15] FENCE 0"];
+    "block_0_15" -> "block_0_end" [label="ordering
+timing"];
+    "block_0_16" [shape=rectangle, label="[16] PULSE 0 \"rf_f12\" gaussian(detuning: 0, duration: 6.000000000000001e-8, fwhm: 1.5000000000000002e-8, phase: 0, scale: 0.16297407445283926, t0: 3.0000000000000004e-8)"];
+    "block_0_16" -> "block_0_end" [label="ordering
+timing"];
+    "block_0_17" [shape=rectangle, label="[17] NONBLOCKING PULSE 0 \"ro_tx\" flat(detuning: 0, duration: 1.48e-6, iq: 1, phase: 0, scale: 0.070794578438414)"];
+    "block_0_18" [shape=rectangle, label="[18] NONBLOCKING CAPTURE 0 \"ro_rx\" boxcar_kernel(detuning: 0, duration: 1.48e-6, phase: -2.399526580341531, scale: 1) ro[0]"];
+    "block_0_18" -> "block_0_29" [label="await capture"];
+    "block_0_19" [shape=rectangle, label="[19] PRAGMA FILTER-NODE q0_unclassified \"{'module':'lodgepole.filters.io','filter_type':'DataBuffer','source':'q0_ro_rx/filter','publish':true,'params':{},'_type':'FilterNode'}\""];
+    "block_0_20" [shape=rectangle, label="[20] PRAGMA LOAD-MEMORY q0_unclassified \"q0_unclassified[0]\""];
+    "block_0_21" [shape=rectangle, label="[21] PRAGMA FILTER-NODE q0_classified \"{'module':'lodgepole.filters.classifiers','filter_type':'SingleQLinear','source':'q0_ro_rx/filter','publish':false,'params':{'a':[1.0,0.0],'threshold':0.0004483948973233858},'_type':'FilterNode'}\""];
+    "block_0_22" [shape=rectangle, label="[22] PRAGMA FILTER-NODE q0 \"{'module':'lodgepole.filters.io','filter_type':'DataBuffer','source':'q0_classified','publish':true,'params':{},'_type':'FilterNode'}\""];
+    "block_0_23" [shape=rectangle, label="[23] PRAGMA LOAD-MEMORY q0 \"ro[0]\""];
+    "block_0_24" [shape=rectangle, label="[24] PULSE 0 \"rf_f12\" gaussian(detuning: 0, duration: 6.000000000000001e-8, fwhm: 1.5000000000000002e-8, phase: 0, scale: 0.16297407445283926, t0: 3.0000000000000004e-8)"];
+    "block_0_24" -> "block_0_end" [label="ordering
+timing"];
+    "block_0_25" [shape=rectangle, label="[25] FENCE 0"];
+    "block_0_25" -> "block_0_end" [label="ordering
+timing"];
+    "block_0_26" [shape=rectangle, label="[26] FENCE 1"];
+    "block_0_26" -> "block_0_end" [label="ordering
+timing"];
+    "block_0_27" [shape=rectangle, label="[27] PULSE 1 \"rf_f12\" gaussian(detuning: 0, duration: 6.000000000000001e-8, fwhm: 1.5000000000000002e-8, phase: 0, scale: 0.14420836465022144, t0: 3.0000000000000004e-8)"];
+    "block_0_27" -> "block_0_end" [label="ordering
+timing"];
+    "block_0_28" [shape=rectangle, label="[28] NONBLOCKING PULSE 1 \"ro_tx\" flat(detuning: 0, duration: 2e-6, iq: 1, phase: 0, scale: 0.0891250938133745)"];
+    "block_0_29" [shape=rectangle, label="[29] NONBLOCKING CAPTURE 1 \"ro_rx\" boxcar_kernel(detuning: 0, duration: 2e-6, phase: 0.8107443195373324, scale: 1) ro[1]"];
+    "block_0_29" -> "block_0_end" [label="await capture"];
+    "block_0_30" [shape=rectangle, label="[30] PRAGMA FILTER-NODE q1_unclassified \"{'module':'lodgepole.filters.io','filter_type':'DataBuffer','source':'q1_ro_rx/filter','publish':true,'params':{},'_type':'FilterNode'}\""];
+    "block_0_31" [shape=rectangle, label="[31] PRAGMA LOAD-MEMORY q1_unclassified \"q1_unclassified[0]\""];
+    "block_0_32" [shape=rectangle, label="[32] PRAGMA FILTER-NODE q1_classified \"{'module':'lodgepole.filters.classifiers','filter_type':'SingleQLinear','source':'q1_ro_rx/filter','publish':false,'params':{'a':[1.0,0.0],'threshold':5.6536894061896907e-05},'_type':'FilterNode'}\""];
+    "block_0_33" [shape=rectangle, label="[33] PRAGMA FILTER-NODE q1 \"{'module':'lodgepole.filters.io','filter_type':'DataBuffer','source':'q1_classified','publish':true,'params':{},'_type':'FilterNode'}\""];
+    "block_0_34" [shape=rectangle, label="[34] PRAGMA LOAD-MEMORY q1 \"ro[1]\""];
+    "block_0_35" [shape=rectangle, label="[35] PULSE 1 \"rf_f12\" gaussian(detuning: 0, duration: 6.000000000000001e-8, fwhm: 1.5000000000000002e-8, phase: 0, scale: 0.14420836465022144, t0: 3.0000000000000004e-8)"];
+    "block_0_35" -> "block_0_end" [label="ordering
+timing"];
+    "block_0_36" [shape=rectangle, label="[36] FENCE 1"];
+    "block_0_36" -> "block_0_end" [label="ordering
+timing"];
+    "block_0_end" [shape=circle, label="end"];
+  }
+}
+

@@ -1,5 +1,5 @@
 ---
-source: src/program/graphviz_dot.rs
+source: quil-rs/src/program/graphviz_dot.rs
 expression: dot_format
 ---
 digraph {
@@ -25,8 +25,7 @@ ordering
 timing"];
     "block_0_0" -> "block_0_3" [label="ordering
 timing"];
-    "block_0_0" -> "block_0_end" [label="await read
-ordering
+    "block_0_0" -> "block_0_end" [label="ordering
 timing"];
     "block_0_1" [shape=rectangle, label="[1] NONBLOCKING PULSE 0 \"rf\" test(a: ro[0])"];
     "block_0_1" -> "block_0_3" [label="await read
@@ -42,16 +41,13 @@ timing"];
     "block_0_3" -> "block_0_4" [label="await capture
 ordering
 timing"];
-    "block_0_3" -> "block_0_end" [label="await read
-ordering
+    "block_0_3" -> "block_0_end" [label="ordering
 timing"];
     "block_0_4" [shape=rectangle, label="[4] NONBLOCKING PULSE 0 \"rf\" test(a: ro[0])"];
-    "block_0_4" -> "block_0_end" [label="await read
-ordering
+    "block_0_4" -> "block_0_end" [label="ordering
 timing"];
     "block_0_5" [shape=rectangle, label="[5] NONBLOCKING PULSE 1 \"rf\" test(a: ro[0])"];
-    "block_0_5" -> "block_0_end" [label="await read
-ordering
+    "block_0_5" -> "block_0_end" [label="ordering
 timing"];
     "block_0_end" [shape=circle, label="end"];
   }
