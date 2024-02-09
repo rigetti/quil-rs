@@ -15,6 +15,8 @@ use crate::{
 };
 use execution_graph::{Error as ExecutionGraphError, ExecutionGraph};
 
+use super::control_flow_graph::BasicBlock;
+
 pub trait InstructionsSource {
     type QubitSet;
 
@@ -63,6 +65,26 @@ impl InstructionsSource for Program {
 
     fn get_used_qubits(&self) -> &Self::QubitSet {
         Program::get_used_qubits(self)
+    }
+}
+
+impl<'p> InstructionsSource for BasicBlock<'p> {
+    type QubitSet = HashSet<&'p Qubit>;
+
+    fn is_empty(&self) -> bool {
+        self.instructions().is_empty()
+    }
+
+    fn len(&self) -> usize {
+        self.instructions().len()
+    }
+
+    fn body_instructions(&self) -> impl Iterator<Item = &Instruction> + '_ {
+        self.instructions().into_iter().map(|&i| i)
+    }
+
+    fn get_used_qubits(&self) -> &Self::QubitSet {
+        todo!()
     }
 }
 
