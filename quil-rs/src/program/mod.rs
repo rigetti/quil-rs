@@ -34,6 +34,7 @@ pub use self::frame::MatchedFrames;
 pub use self::memory::{MemoryAccesses, MemoryRegion};
 
 mod calibration;
+mod control_flow_graph;
 mod error;
 pub(crate) mod frame;
 pub mod graph;
