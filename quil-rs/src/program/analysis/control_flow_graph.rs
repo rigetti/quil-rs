@@ -149,5 +149,5 @@ impl Program {
 }
 
 #[derive(Debug, thiserror::Error)]
-#[error("Program contains multiple basic blocks")]
+#[error("Program is empty or contains multiple basic blocks")]
 pub struct ProgramContainsMultipleBasicBlocks;
