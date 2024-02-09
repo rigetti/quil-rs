@@ -33,11 +33,12 @@ pub use self::frame::FrameSet;
 pub use self::frame::MatchedFrames;
 pub use self::memory::{MemoryAccesses, MemoryRegion};
 
+pub mod analysis;
 mod calibration;
 mod error;
 pub(crate) mod frame;
-pub mod graph;
 mod memory;
+pub mod scheduling;
 pub mod type_check;
 
 #[derive(Debug, thiserror::Error, PartialEq)]
@@ -59,9 +60,6 @@ pub enum ProgramError {
 }
 
 type Result<T> = std::result::Result<T, ProgramError>;
-
-#[cfg(feature = "graphviz-dot")]
-pub mod graphviz_dot;
 
 /// A Quil Program instance describes a quantum program with metadata used in execution.
 ///

@@ -10,10 +10,12 @@ use std::ops::Neg;
 
 use crate::{
     instruction::{Instruction, Qubit},
-    program::graph::InstructionBlock,
+    program::scheduling::graph::ScheduledBasicBlock,
     Program,
 };
 use execution_graph::{Error as ExecutionGraphError, ExecutionGraph};
+
+use super::control_flow_graph::BasicBlock;
 
 pub trait InstructionsSource {
     type QubitSet;
@@ -66,15 +68,41 @@ impl InstructionsSource for Program {
     }
 }
 
+impl<'p> InstructionsSource for BasicBlock<'p> {
+    type QubitSet = HashSet<&'p Qubit>;
+
+    fn is_empty(&self) -> bool {
+        self.instructions().is_empty()
+    }
+
+    fn len(&self) -> usize {
+        self.instructions().len()
+    }
+
+    fn body_instructions(&self) -> impl Iterator<Item = &Instruction> + '_ {
+        self.instructions().iter().copied()
+    }
+
+    fn get_used_qubits(&self) -> &Self::QubitSet {
+        todo!()
+    }
+}
+
 struct InstructionBlockWithQubitSet<'a, 'b> {
-    block: &'a InstructionBlock<'b>,
+    block: &'a BasicBlock<'b>,
     qubits: HashSet<&'a Qubit>,
 }
 
-impl<'a, 'b> From<&'a InstructionBlock<'b>> for InstructionBlockWithQubitSet<'a, 'b> {
-    fn from(block: &'a InstructionBlock<'b>) -> Self {
+impl<'a, 'b> From<&'a ScheduledBasicBlock<'b>> for InstructionBlockWithQubitSet<'a, 'b> {
+    fn from(block: &'a ScheduledBasicBlock<'b>) -> Self {
+        block.basic_block().into()
+    }
+}
+
+impl<'a, 'b> From<&'a BasicBlock<'b>> for InstructionBlockWithQubitSet<'a, 'b> {
+    fn from(block: &'a BasicBlock<'b>) -> Self {
         let qubits = block
-            .instructions
+            .instructions()
             .iter()
             .filter_map(|i| match i {
                 Instruction::Gate(_) | Instruction::Measurement(_) => Some(i.get_qubits()),
@@ -99,7 +127,7 @@ impl<'a> InstructionsSource for InstructionBlockWithQubitSet<'a, '_> {
 
     fn body_instructions(&self) -> impl Iterator<Item = &Instruction> + '_ {
         // 'copied' converts the iterator of `&&Instruction` to an iterator of `&Instruction`
-        self.block.instructions.iter().copied()
+        self.block.instructions().iter().copied()
     }
 
     fn get_used_qubits(&self) -> &Self::QubitSet {
@@ -131,7 +159,19 @@ impl<'a> ProgramStats<&'a Program> {
 }
 
 impl<'a, 'b> ProgramStats<InstructionBlockWithQubitSet<'a, 'b>> {
-    pub fn from_block(block: &'a InstructionBlock<'b>) -> Self {
+    pub fn from_basic_block(block: &'a BasicBlock<'b>) -> Self {
+        let source = block.into();
+        let execution_graph = make_execution_graph(&source);
+
+        Self {
+            source,
+            execution_graph,
+        }
+    }
+}
+
+impl<'a, 'b> ProgramStats<InstructionBlockWithQubitSet<'a, 'b>> {
+    pub fn from_scheduled_basic_block(block: &'a ScheduledBasicBlock<'b>) -> Self {
         let source = block.into();
         let execution_graph = make_execution_graph(&source);
 
@@ -257,8 +297,6 @@ impl<S: InstructionsSource> ProgramStats<S> {
 mod tests {
     use std::f64::consts;
 
-    use crate::instruction::InstructionHandler;
-    use crate::program::graph::ScheduledProgram;
     use crate::Program;
 
     use rstest::rstest;
@@ -275,29 +313,12 @@ mod tests {
     #[case(KITCHEN_SINK_QUIL, &[Qubit::Fixed(0), Qubit::Fixed(1)])]
     fn block_instructions_from_program(#[case] input: &str, #[case] expected: &[Qubit]) {
         let program: Program = input.parse().unwrap();
-        let scheduled =
-            ScheduledProgram::from_program(&program, &mut InstructionHandler::default()).unwrap();
-        let block = scheduled.blocks.first().unwrap().1;
-        let stats = ProgramStats::from_block(block);
+        let block = program.get_first_basic_block().unwrap();
+        let stats = ProgramStats::from_basic_block(&block);
         let qubits = stats.qubits_used();
         let expected = expected.iter().collect::<HashSet<_>>();
 
         assert_eq!(&expected, qubits);
-    }
-
-    #[rstest]
-    #[case(QUIL_WITH_JUMP)]
-    #[case(QUIL_WITH_JUMP_WHEN)]
-    #[case(QUIL_WITH_JUMP_UNLESS)]
-    fn program_with_jumps_cannot_be_used_as_block(#[case] input: &str) {
-        let program: Program = input.parse().unwrap();
-        InstructionBlock::build(
-            program.body_instructions().collect(),
-            None,
-            &program,
-            &mut InstructionHandler::default(),
-        )
-        .unwrap_err();
     }
 
     #[rstest]
