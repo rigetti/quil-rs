@@ -5,46 +5,51 @@ use crate::instruction::{Instruction, InstructionHandler, InstructionRole};
 use crate::quil::Quil;
 use petgraph::{graph::DiGraph, Direction};
 
+use super::BasicBlock;
+
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("Unsupported instruction: {}", .0.to_quil_or_debug())]
     UnsupportedInstruction(Instruction),
 }
 
-/// ExecutionGraph is a logical execution/dependency graph of instructions. Pragma, RF Control, and Jump instructions are not supported. It is a directed graph *from* the first instructions (the set of instructions that do not depend on prior instructions) *to* the last instructions (the set of instructions that are not prerequisites for any later instructions).
+/// QubitGraph is a logical execution/dependency graph of instructions.  Pragma, RF Control, and Jump instructions
+/// are not supported. It is a directed graph *from* the first instructions (the set of instructions that do not depend
+/// on prior instructions) *to* the last instructions (the set of instructions that are not prerequisites for any later
+/// instructions).
 #[derive(Debug)]
-pub struct ExecutionGraph {
-    graph: DiGraph<Instruction, ()>,
+pub struct QubitGraph<'a> {
+    graph: DiGraph<&'a Instruction, ()>,
 }
 
-impl ExecutionGraph {
-    pub fn new(instructions: impl IntoIterator<Item = Instruction>) -> Result<Self, Error> {
+impl<'a> QubitGraph<'a> {
+    pub(crate) fn new(instructions: impl Iterator<Item = &'a Instruction>) -> Result<Self, Error> {
         let mut last_instruction_for_qubit = HashMap::new();
         let mut graph = DiGraph::new();
         let mut handler = InstructionHandler::default();
 
-        for instruction in instructions.into_iter() {
+        for instruction in instructions {
             match handler.role_for_instruction(&instruction) {
                 InstructionRole::ClassicalCompute => {
                     if let Instruction::Pragma(_) = instruction {
-                        return Err(Error::UnsupportedInstruction(instruction));
+                        return Err(Error::UnsupportedInstruction(instruction.clone()));
                     }
                 } // Valid, mostly ignored
                 InstructionRole::ControlFlow => match &instruction {
                     Instruction::Jump(_)
                     | Instruction::JumpWhen(_)
                     | Instruction::JumpUnless(_) => {
-                        return Err(Error::UnsupportedInstruction(instruction))
+                        return Err(Error::UnsupportedInstruction(instruction.clone()))
                     }
                     _ => {}
                 },
                 InstructionRole::ProgramComposition => {} // Valid, includes Gate, etc.,
                 InstructionRole::RFControl => {
-                    return Err(Error::UnsupportedInstruction(instruction))
+                    return Err(Error::UnsupportedInstruction(instruction.clone()))
                 }
             }
 
-            let qubits: Vec<_> = instruction.get_qubits().into_iter().cloned().collect();
+            let qubits: Vec<_> = instruction.get_qubits().into_iter().collect();
 
             let node = graph.add_node(instruction);
 
@@ -61,8 +66,8 @@ impl ExecutionGraph {
     /// Fold over all paths over the graph, starting from nodes with no incoming edges, and ending at nodes with no
     /// outgoing edges.
     ///
-    /// The `f` function is called for each instruction in each path, with the current accumulator value and the
-    /// current instruction.
+    /// The `f` function is called for each instruction in each path, with the current accumulator value and the current
+    /// instruction.
     ///
     /// # Examples
     ///
@@ -132,7 +137,8 @@ impl ExecutionGraph {
         Ok(result)
     }
 
-    /// Returns the longest path from an initial instruction (one with no prerequisite instructions) to a final instruction (one with no dependent instructions).
+    /// Returns the longest path from an initial instruction (one with no prerequisite instructions) to a final
+    /// instruction (one with no dependent instructions).
     pub fn gate_depth(&self) -> usize {
         let path_lengths = self
             .path_fold(
@@ -153,7 +159,8 @@ impl ExecutionGraph {
         path_lengths.into_iter().max().unwrap_or_default()
     }
 
-    /// Returns the longest path through the execution graph (like `gate_depth`), only counting instructions corresponding to multi-qubit gates.
+    /// Returns the longest path through the execution graph (like `gate_depth`), only counting instructions
+    /// corresponding to multi-qubit gates.
     pub fn multi_qubit_gate_depth(&self) -> usize {
         let path_lengths = self
             .path_fold(
@@ -176,6 +183,14 @@ impl ExecutionGraph {
     }
 }
 
+impl<'a> TryFrom<&'_ BasicBlock<'a>> for QubitGraph<'a> {
+    type Error = Error;
+
+    fn try_from(block: &BasicBlock<'a>) -> Result<Self, Self::Error> {
+        QubitGraph::new(block.instructions().into_iter().copied())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::Program;
@@ -194,7 +209,8 @@ mod tests {
     #[case(KITCHEN_SINK_QUIL, 2)]
     fn gate_depth(#[case] input: &str, #[case] expected: usize) {
         let program: Program = input.parse().unwrap();
-        let graph = ExecutionGraph::new(program.to_instructions()).unwrap();
+        let block: BasicBlock = (&program).try_into().unwrap();
+        let graph: QubitGraph = (&block).try_into().unwrap();
         let depth = graph.gate_depth();
         assert_eq!(expected, depth);
     }
@@ -208,17 +224,20 @@ mod tests {
     #[case(KITCHEN_SINK_QUIL, 1)]
     fn multiqubit_gate_depth(#[case] input: &str, #[case] expected: usize) {
         let program: Program = input.parse().unwrap();
-        let graph = ExecutionGraph::new(program.to_instructions()).unwrap();
+        let block: BasicBlock = (&program).try_into().unwrap();
+        let graph: QubitGraph = (&block).try_into().unwrap();
         let depth = graph.multi_qubit_gate_depth();
         assert_eq!(expected, depth);
     }
 
     #[rstest]
-    #[case(QUIL_WITH_JUMP)]
     #[case(QUIL_WITH_JUMP_WHEN)]
     #[case(QUIL_WITH_JUMP_UNLESS)]
     fn dynamic_control_flow_not_supported(#[case] input: &str) {
         let program: Program = input.parse().unwrap();
-        let _ = ExecutionGraph::new(program.to_instructions()).unwrap_err();
+        let blocks = program.as_control_flow_graph().into_blocks();
+        let maybe_graph: Result<QubitGraph, _> =
+            blocks.first().expect("expected multiple blocks").try_into();
+        maybe_graph.expect_err("expected dynamic control flow");
     }
 }

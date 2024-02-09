@@ -22,11 +22,11 @@ pub struct BasicBlock<'p> {
 }
 
 impl<'p> BasicBlock<'p> {
-    pub fn label(&self) -> Option<&Target> {
+    pub fn label(&self) -> Option<&'p Target> {
         self.label
     }
 
-    pub fn instructions(&self) -> &[&Instruction] {
+    pub fn instructions(&self) -> &[&'p Instruction] {
         self.instructions.as_ref()
     }
 
@@ -45,7 +45,17 @@ pub enum BasicBlockTerminator<'p> {
     Halt,
 }
 
+impl BasicBlockTerminator<'_> {
+    pub fn is_dynamic(&self) -> bool {
+        matches!(
+            self,
+            BasicBlockTerminator::JumpWhen(_) | BasicBlockTerminator::JumpUnless(_)
+        )
+    }
+}
+
 impl Program {
+    // TODO consider `Into<ControlFlowGraph> for &Program` instead
     pub fn as_control_flow_graph(&self) -> ControlFlowGraph {
         let mut graph = ControlFlowGraph::default();
 
@@ -133,13 +143,13 @@ impl Program {
 
         graph
     }
+}
 
-    pub fn get_first_basic_block(&self) -> Option<BasicBlock> {
-        self.as_control_flow_graph().blocks.into_iter().next()
-    }
+impl<'a> TryFrom<&'a Program> for BasicBlock<'a> {
+    type Error = ProgramContainsMultipleBasicBlocks;
 
-    pub fn get_only_basic_block(&self) -> Result<BasicBlock, ProgramContainsMultipleBasicBlocks> {
-        let blocks = self.as_control_flow_graph().blocks;
+    fn try_from(value: &'a Program) -> Result<Self, Self::Error> {
+        let blocks = value.as_control_flow_graph().blocks;
         if blocks.len() == 1 {
             Ok(blocks.into_iter().next().unwrap())
         } else {
@@ -151,3 +161,26 @@ impl Program {
 #[derive(Debug, thiserror::Error)]
 #[error("Program is empty or contains multiple basic blocks")]
 pub struct ProgramContainsMultipleBasicBlocks;
+
+#[cfg(test)]
+mod tests {
+    use crate::Program;
+    use rstest::rstest;
+
+    use super::*;
+
+    use super::super::test_programs::*;
+
+    #[rstest]
+    #[case(QUIL_AS_TREE)]
+    #[case(QUIL_AS_INVERSE_TREE)]
+    #[case(QUIL_AS_LINEAR)]
+    #[case(QUIL_WITH_DIAMOND)]
+    #[case(QUIL_WITH_SWAP)]
+    #[case(KITCHEN_SINK_QUIL)]
+    #[case(QUIL_WITH_JUMP)]
+    fn expect_single_basic_block(#[case] input: &str) {
+        let program: Program = input.parse().unwrap();
+        let _: BasicBlock = (&program).try_into().unwrap();
+    }
+}
