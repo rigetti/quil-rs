@@ -33,7 +33,7 @@ pub use self::frame::FrameSet;
 pub use self::frame::MatchedFrames;
 pub use self::memory::{MemoryAccesses, MemoryRegion};
 
-mod analysis;
+pub mod analysis;
 mod calibration;
 mod error;
 pub(crate) mod frame;

@@ -142,7 +142,7 @@ impl<'a> ScheduledProgram<'a> {
 
             let blocks = self.basic_blocks();
             println!("blocks: {:?}", blocks);
-            let mut iter = blocks.into_iter().enumerate().peekable();
+            let mut iter = blocks.iter().enumerate().peekable();
             if let Some((index, first_block)) = iter.peek() {
                 let block_node_label = first_block
                     .basic_block()

@@ -138,12 +138,16 @@ impl Program {
         self.as_control_flow_graph().blocks.into_iter().next()
     }
 
-    pub fn get_only_basic_block(&self) -> Result<BasicBlock, ()> {
+    pub fn get_only_basic_block(&self) -> Result<BasicBlock, ProgramContainsMultipleBasicBlocks> {
         let blocks = self.as_control_flow_graph().blocks;
         if blocks.len() == 1 {
             Ok(blocks.into_iter().next().unwrap())
         } else {
-            Err(())
+            Err(ProgramContainsMultipleBasicBlocks)
         }
     }
 }
+
+#[derive(Debug, thiserror::Error)]
+#[error("Program contains multiple basic blocks")]
+pub struct ProgramContainsMultipleBasicBlocks;

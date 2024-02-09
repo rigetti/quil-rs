@@ -80,7 +80,7 @@ impl<'p> InstructionsSource for BasicBlock<'p> {
     }
 
     fn body_instructions(&self) -> impl Iterator<Item = &Instruction> + '_ {
-        self.instructions().into_iter().copied()
+        self.instructions().iter().copied()
     }
 
     fn get_used_qubits(&self) -> &Self::QubitSet {
@@ -127,7 +127,7 @@ impl<'a> InstructionsSource for InstructionBlockWithQubitSet<'a, '_> {
 
     fn body_instructions(&self) -> impl Iterator<Item = &Instruction> + '_ {
         // 'copied' converts the iterator of `&&Instruction` to an iterator of `&Instruction`
-        self.block.instructions().into_iter().copied()
+        self.block.instructions().iter().copied()
     }
 
     fn get_used_qubits(&self) -> &Self::QubitSet {

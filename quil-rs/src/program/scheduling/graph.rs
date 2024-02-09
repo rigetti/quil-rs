@@ -16,13 +16,10 @@
 
 use std::collections::{HashMap, HashSet};
 
-use indexmap::IndexMap;
 use petgraph::graphmap::GraphMap;
 use petgraph::Directed;
 
-use crate::instruction::{
-    FrameIdentifier, Instruction, InstructionHandler, Jump, JumpUnless, JumpWhen, Label, Target,
-};
+use crate::instruction::{FrameIdentifier, Instruction, InstructionHandler, Target};
 use crate::program::analysis::{BasicBlock, BasicBlockTerminator};
 use crate::{instruction::InstructionRole, program::Program};
 
@@ -297,7 +294,7 @@ impl<'a> ScheduledBasicBlock<'a> {
         // NOTE: this may be refined to serialize by memory region offset rather than by entire region.
         let mut pending_memory_access: HashMap<String, MemoryAccessQueue> = HashMap::new();
 
-        for (index, &instruction) in basic_block.instructions().into_iter().enumerate() {
+        for (index, &instruction) in basic_block.instructions().iter().enumerate() {
             let node = graph.add_node(ScheduledGraphNode::InstructionIndex(index));
 
             match custom_handler.role_for_instruction(instruction) {
@@ -485,18 +482,6 @@ impl<'a> ScheduledProgram<'a> {
                 .map(|block| ScheduledBasicBlock::build(block, program, custom_handler))
                 .collect::<ScheduleResult<Vec<_>>>()?,
         })
-    }
-
-    fn generate_autoincremented_label(
-        block_labels: &IndexMap<String, ScheduledBasicBlock>,
-    ) -> String {
-        let mut suffix = 0;
-        let mut label = format!("block_{suffix}");
-        while block_labels.get(&label).is_some() {
-            suffix += 1;
-            label = format!("block_{suffix}");
-        }
-        label
     }
 
     pub fn basic_blocks(&self) -> &[ScheduledBasicBlock<'_>] {
