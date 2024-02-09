@@ -140,7 +140,9 @@ impl<'a> ScheduledProgram<'a> {
             writer.set_pretty_print(true);
             let mut digraph = writer.digraph();
 
-            let mut iter = self.basic_blocks().into_iter().enumerate().peekable();
+            let blocks = self.basic_blocks();
+            println!("blocks: {:?}", blocks);
+            let mut iter = blocks.into_iter().enumerate().peekable();
             if let Some((index, first_block)) = iter.peek() {
                 let block_node_label = first_block
                     .basic_block()

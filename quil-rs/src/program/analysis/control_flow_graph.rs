@@ -108,12 +108,12 @@ impl Program {
                         Instruction::Halt => (BasicBlockTerminator::Halt, None),
                         _ => unreachable!(),
                     };
-                    let block = BasicBlock {
-                        label: current_label.take(),
-                        instructions: std::mem::take(&mut current_block_instructions),
-                        terminator,
-                    };
                     if !current_block_instructions.is_empty() {
+                        let block = BasicBlock {
+                            label: current_label.take(),
+                            instructions: std::mem::take(&mut current_block_instructions),
+                            terminator,
+                        };
                         graph.blocks.push(block);
                         current_block_instructions = Vec::new();
                     }
@@ -122,7 +122,7 @@ impl Program {
             }
         }
 
-        if !current_block_instructions.is_empty() && current_label.is_none() {
+        if !current_block_instructions.is_empty() || current_label.is_some() {
             let block = BasicBlock {
                 label: current_label.take(),
                 instructions: current_block_instructions,
