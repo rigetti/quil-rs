@@ -127,4 +127,17 @@ impl Program {
 
         graph
     }
+
+    fn get_first_basic_block(&self) -> Option<BasicBlock> {
+        self.as_control_flow_graph().blocks.into_iter().next()
+    }
+
+    fn get_only_basic_block(&self) -> Result<BasicBlock, ()> {
+        let blocks = self.as_control_flow_graph().blocks;
+        if blocks.len() == 1 {
+            Ok(blocks.into_iter().next().unwrap())
+        } else {
+            Err(())
+        }
+    }
 }
