@@ -26,7 +26,7 @@ use crate::instruction::{
 };
 use crate::{instruction::InstructionRole, program::Program};
 
-pub use super::memory::MemoryAccessType;
+pub use crate::program::memory::MemoryAccessType;
 
 #[derive(Debug, Clone)]
 pub enum ScheduleErrorVariant {
@@ -719,7 +719,7 @@ mod tests {
 
         use crate::instruction::PragmaArgument;
         use crate::program::frame::FrameMatchCondition;
-        use crate::program::graphviz_dot::tests::build_dot_format_snapshot_test_case;
+        use crate::program::scheduling::graphviz_dot::tests::build_dot_format_snapshot_test_case;
 
         /// Generates a custom [`InstructionHandler`] that specially handles two `PRAGMA` instructions:
         ///

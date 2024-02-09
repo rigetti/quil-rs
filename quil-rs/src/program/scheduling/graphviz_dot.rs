@@ -17,7 +17,7 @@
 use dot_writer::{Attributes, DotWriter, Shape, Style};
 
 use crate::{
-    program::graph::{
+    program::scheduling::graph::{
         BlockTerminator, ExecutionDependency, InstructionBlock, MemoryAccessType,
         ScheduledGraphNode, ScheduledProgram,
     },
@@ -232,7 +232,7 @@ pub(crate) mod tests {
         /// diffs closely to determine if it's only a matter of reformatting.
         macro_rules! build_dot_format_snapshot_test_case {
             ($name: ident, $input: expr) => {
-                crate::program::graphviz_dot::tests::build_dot_format_snapshot_test_case!(
+                crate::program::scheduling::graphviz_dot::tests::build_dot_format_snapshot_test_case!(
                     $name,
                     $input,
                     &mut InstructionHandler::default(),
@@ -241,7 +241,7 @@ pub(crate) mod tests {
             ($name: ident, $input:expr, $handler: expr $(,)?) => {
                 #[test]
                 fn $name() {
-                    use crate::program::graph::ScheduledProgram;
+                    use crate::program::scheduling::graph::ScheduledProgram;
                     const FRAME_DEFINITIONS: &'static str = "
 DEFFRAME 0 \"rf\":
     INITIAL-FREQUENCY: 1e6

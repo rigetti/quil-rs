@@ -43,7 +43,6 @@ pub(crate) mod parser;
 pub mod program;
 pub mod quil;
 pub mod reserved;
-pub mod stats;
 pub mod validation;
 
 pub use program::Program;

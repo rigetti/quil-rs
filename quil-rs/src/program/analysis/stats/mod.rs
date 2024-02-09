@@ -10,7 +10,7 @@ use std::ops::Neg;
 
 use crate::{
     instruction::{Instruction, Qubit},
-    program::graph::InstructionBlock,
+    program::scheduling::graph::InstructionBlock,
     Program,
 };
 use execution_graph::{Error as ExecutionGraphError, ExecutionGraph};
@@ -258,7 +258,7 @@ mod tests {
     use std::f64::consts;
 
     use crate::instruction::InstructionHandler;
-    use crate::program::graph::ScheduledProgram;
+    use crate::program::scheduling::graph::ScheduledProgram;
     use crate::Program;
 
     use rstest::rstest;
