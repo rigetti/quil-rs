@@ -17,14 +17,19 @@
 use dot_writer::{Attributes, DotWriter, Shape, Style};
 
 use crate::{
-    program::scheduling::graph::{
-        BlockTerminator, ExecutionDependency, InstructionBlock, MemoryAccessType,
-        ScheduledGraphNode, ScheduledProgram,
+    instruction::{Jump, JumpUnless, JumpWhen, Target},
+    program::{
+        analysis::BasicBlockTerminator,
+        scheduling::graph::{
+            ExecutionDependency, MemoryAccessType, ScheduledBasicBlock, ScheduledGraphNode,
+        },
     },
     quil::Quil,
 };
 
-impl<'a> InstructionBlock<'a> {
+use super::graph::ScheduledProgram;
+
+impl<'a> ScheduledBasicBlock<'a> {
     /// Given a [`dot_writer::Scope`] representing a subgraph/cluster, write the timing graph for this block into it.
     /// Uses the `node_prefix` argument for namespacing so that node IDs remain unique within the overall graph.
     fn write_dot_format(&self, cluster: &mut dot_writer::Scope, node_prefix: &str) {
@@ -50,7 +55,7 @@ impl<'a> InstructionBlock<'a> {
                         .set_label(&escape_label(&format!(
                             "[{}] {}",
                             index,
-                            self.instructions.get(*index).unwrap().to_quil_or_debug()
+                            self.instructions().get(*index).unwrap().to_quil_or_debug()
                         )));
                 }
             };
@@ -83,6 +88,41 @@ impl<'a> InstructionBlock<'a> {
     }
 }
 
+#[derive(Debug, PartialEq)]
+enum DotFormatBlockLabel<'p> {
+    Unlabeled { index: usize },
+    Labeled(&'p Target),
+}
+
+impl<'p> DotFormatBlockLabel<'p> {
+    fn from_label_or_index(label: Option<&'p Target>, index: usize) -> Self {
+        label
+            .map(DotFormatBlockLabel::Labeled)
+            .unwrap_or(DotFormatBlockLabel::Unlabeled { index })
+    }
+}
+
+impl<'p> From<&'p Target> for DotFormatBlockLabel<'p> {
+    fn from(target: &'p Target) -> Self {
+        DotFormatBlockLabel::Labeled(target)
+    }
+}
+
+impl<'p> From<usize> for DotFormatBlockLabel<'p> {
+    fn from(index: usize) -> Self {
+        DotFormatBlockLabel::Unlabeled { index }
+    }
+}
+
+impl std::fmt::Display for DotFormatBlockLabel<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            DotFormatBlockLabel::Unlabeled { index } => write!(f, "block_{}", index),
+            DotFormatBlockLabel::Labeled(label) => write!(f, "{}", label.to_quil_or_debug()),
+        }
+    }
+}
+
 impl<'a> ScheduledProgram<'a> {
     /// Return a DOT format string (as bytes) for use with Graphviz.
     ///
@@ -100,91 +140,180 @@ impl<'a> ScheduledProgram<'a> {
             writer.set_pretty_print(true);
             let mut digraph = writer.digraph();
 
-            let mut iter = self.blocks.iter().peekable();
-            if let Some((first_label, _)) = iter.peek() {
+            let mut iter = self.basic_blocks().into_iter().enumerate().peekable();
+            if let Some((index, first_block)) = iter.peek() {
+                let block_node_label = first_block
+                    .basic_block()
+                    .label()
+                    .map(DotFormatBlockLabel::from)
+                    .unwrap_or(DotFormatBlockLabel::from(*index));
                 digraph.edge(
                     "entry",
-                    get_node_id(&ScheduledGraphNode::BlockStart, first_label),
+                    get_node_id(
+                        &ScheduledGraphNode::BlockStart,
+                        &block_node_label.to_string(),
+                    ),
                 );
             }
             digraph.node_named("entry").set_label("Entry Point");
 
-            while let Some((label, block)) = iter.next() {
-                let node_prefix = label;
+            while let Some((index, scheduled_basic_block)) = iter.next() {
+                let block_node_label = scheduled_basic_block
+                    .basic_block()
+                    .label()
+                    .map(DotFormatBlockLabel::from)
+                    .unwrap_or(DotFormatBlockLabel::from(index));
+                let string_label = block_node_label.to_string();
                 {
                     let mut cluster = digraph.cluster();
-                    cluster.set_label(label);
+                    cluster.set_label(&string_label);
                     cluster.node_attributes().set_style(Style::Filled);
 
-                    block.write_dot_format(&mut cluster, node_prefix);
+                    scheduled_basic_block.write_dot_format(&mut cluster, &string_label);
                 }
 
-                let next_block_label = iter.peek().map(|(next_label, _)| (*next_label).clone());
+                let next_index_and_block = iter.peek();
                 let terminator_source_label =
-                    get_node_id(&ScheduledGraphNode::BlockEnd, node_prefix);
-                match &block.terminator {
-                    BlockTerminator::Conditional {
-                        condition,
-                        target,
-                        jump_if_condition_true,
-                    } => {
-                        let equality_operators = if *jump_if_condition_true {
-                            ("==", "!=")
-                        } else {
-                            ("!=", "==")
-                        };
+                    get_node_id(&ScheduledGraphNode::BlockEnd, &string_label);
+                match &scheduled_basic_block.terminator() {
+                    BasicBlockTerminator::JumpWhen(JumpWhen { target, condition }) => {
                         digraph
                             .edge(
                                 &terminator_source_label,
-                                get_node_id(&ScheduledGraphNode::BlockStart, target),
+                                get_node_id(
+                                    &ScheduledGraphNode::BlockStart,
+                                    &DotFormatBlockLabel::from(target).to_string(),
+                                ),
                             )
                             .attributes()
                             .set_label(
-                                format!(
-                                    "if {} {} 0",
-                                    condition.to_quil_or_debug(),
-                                    equality_operators.0
-                                )
-                                .as_str(),
+                                format!("if {} == 0", condition.to_quil_or_debug(),).as_str(),
                             );
-                        if let Some(next_label) = next_block_label {
+                        if let Some((next_index, next_block)) = next_index_and_block {
                             digraph
                                 .edge(
                                     &terminator_source_label,
-                                    get_node_id(&ScheduledGraphNode::BlockStart, &next_label),
+                                    get_node_id(
+                                        &ScheduledGraphNode::BlockStart,
+                                        &DotFormatBlockLabel::from_label_or_index(
+                                            next_block.label(),
+                                            *next_index,
+                                        )
+                                        .to_string(),
+                                    ),
                                 )
                                 .attributes()
                                 .set_label(
-                                    format!(
-                                        "if {} {} 0",
-                                        condition.to_quil_or_debug(),
-                                        equality_operators.1
-                                    )
-                                    .as_str(),
+                                    format!("if {} != 0", condition.to_quil_or_debug(),).as_str(),
                                 );
                         };
                     }
-                    BlockTerminator::Unconditional { target } => {
+                    BasicBlockTerminator::JumpUnless(JumpUnless { target, condition }) => {
                         digraph
                             .edge(
                                 &terminator_source_label,
-                                get_node_id(&ScheduledGraphNode::BlockStart, target),
+                                get_node_id(
+                                    &ScheduledGraphNode::BlockStart,
+                                    &DotFormatBlockLabel::from(target).to_string(),
+                                ),
+                            )
+                            .attributes()
+                            .set_label(
+                                format!("if {} != 0", condition.to_quil_or_debug(),).as_str(),
+                            );
+                        if let Some((next_index, next_block)) = next_index_and_block {
+                            digraph
+                                .edge(
+                                    &terminator_source_label,
+                                    get_node_id(
+                                        &ScheduledGraphNode::BlockStart,
+                                        &DotFormatBlockLabel::from_label_or_index(
+                                            next_block.label(),
+                                            *next_index,
+                                        )
+                                        .to_string(),
+                                    ),
+                                )
+                                .attributes()
+                                .set_label(
+                                    format!("if {} == 0", condition.to_quil_or_debug(),).as_str(),
+                                );
+                        };
+                    }
+                    // BasicBlockTerminator::Conditional {
+                    //     condition,
+                    //     target,
+                    //     jump_if_condition_true,
+                    // } => {
+                    //     let equality_operators = if *jump_if_condition_true {
+                    //         ("==", "!=")
+                    //     } else {
+                    //         ("!=", "==")
+                    //     };
+                    // digraph
+                    //     .edge(
+                    //         &terminator_source_label,
+                    //         get_node_id(&ScheduledGraphNode::BlockStart, target),
+                    //     )
+                    //     .attributes()
+                    //     .set_label(
+                    //         format!(
+                    //             "if {} {} 0",
+                    //             condition.to_quil_or_debug(),
+                    //             equality_operators.0
+                    //         )
+                    //         .as_str(),
+                    //     );
+                    // if let Some(next_label) = next_block_label {
+                    //     digraph
+                    //         .edge(
+                    //             &terminator_source_label,
+                    //             get_node_id(&ScheduledGraphNode::BlockStart, &next_label),
+                    //         )
+                    //         .attributes()
+                    //         .set_label(
+                    //             format!(
+                    //                 "if {} {} 0",
+                    //                 condition.to_quil_or_debug(),
+                    //                 equality_operators.1
+                    //             )
+                    //             .as_str(),
+                    //         );
+                    // };
+                    // }
+                    BasicBlockTerminator::Jump(Jump { target }) => {
+                        digraph
+                            .edge(
+                                &terminator_source_label,
+                                get_node_id(
+                                    &ScheduledGraphNode::BlockStart,
+                                    &DotFormatBlockLabel::from(target).to_string(),
+                                ),
                             )
                             .attributes()
                             .set_label("always");
                     }
-                    BlockTerminator::Continue => {
-                        if let Some(next_label) = next_block_label {
+                    BasicBlockTerminator::Continue => {
+                        if let Some((next_index, next_block)) = next_index_and_block {
+                            let node_label: DotFormatBlockLabel<'_> =
+                                DotFormatBlockLabel::from_label_or_index(
+                                    next_block.label(),
+                                    *next_index,
+                                );
+
                             digraph
                                 .edge(
                                     &terminator_source_label,
-                                    get_node_id(&ScheduledGraphNode::BlockStart, &next_label),
+                                    get_node_id(
+                                        &ScheduledGraphNode::BlockStart,
+                                        &node_label.to_string(),
+                                    ),
                                 )
                                 .attributes()
                                 .set_label("always");
                         };
                     }
-                    BlockTerminator::Halt => {}
+                    BasicBlockTerminator::Halt => {}
                 }
             }
         }
@@ -263,7 +392,7 @@ DEFFRAME 0 1 \"cz\":
                     let scheduled_program =
                         ScheduledProgram::from_program(&program, $handler).unwrap();
 
-                    for block in scheduled_program.blocks.values() {
+                    for block in scheduled_program.basic_blocks() {
                         let graph = block.get_dependency_graph();
                         assert!(
                             !petgraph::algo::is_cyclic_directed(graph),

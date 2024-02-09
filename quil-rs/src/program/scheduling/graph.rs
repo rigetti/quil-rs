@@ -21,9 +21,9 @@ use petgraph::graphmap::GraphMap;
 use petgraph::Directed;
 
 use crate::instruction::{
-    FrameIdentifier, Instruction, InstructionHandler, Jump, JumpUnless, JumpWhen, Label,
-    MemoryReference, Target,
+    FrameIdentifier, Instruction, InstructionHandler, Jump, JumpUnless, JumpWhen, Label, Target,
 };
+use crate::program::analysis::{BasicBlock, BasicBlockTerminator};
 use crate::{instruction::InstructionRole, program::Program};
 
 pub use crate::program::memory::MemoryAccessType;
@@ -191,26 +191,13 @@ macro_rules! add_dependency {
 
 pub type DependencyGraph = GraphMap<ScheduledGraphNode, HashSet<ExecutionDependency>, Directed>;
 
-/// An InstructionBlock of a ScheduledProgram is a group of instructions, identified by a string label,
-/// which include no control flow instructions aside from an (optional) terminating control
-/// flow instruction.
+/// A [`ScheduledBasicBlock`] is a wrapper around a [`BasicBlock`] which includes a graph expressing the vector clock
+/// among the instructions according to the Quil specification.
 #[derive(Clone, Debug)]
-pub struct InstructionBlock<'a> {
-    pub instructions: Vec<&'a Instruction>,
+pub struct ScheduledBasicBlock<'a> {
+    basic_block: BasicBlock<'a>,
     pub(super) graph: DependencyGraph,
-    pub terminator: BlockTerminator<'a>,
 }
-
-impl<'a> Default for InstructionBlock<'a> {
-    fn default() -> Self {
-        Self {
-            instructions: Default::default(),
-            graph: Default::default(),
-            terminator: BlockTerminator::Continue,
-        }
-    }
-}
-
 /// PreviousNodes is a structure which helps maintain ordering among instructions which operate on a given frame.
 /// It works similarly to a multiple-reader-single-writer queue, where an instruction which "uses" a frame is like
 /// a writer and an instruction which blocks that frame is like a reader. Multiple instructions may concurrently
@@ -289,11 +276,9 @@ impl PreviousNodes {
     }
 }
 
-impl<'a> InstructionBlock<'a> {
+impl<'a> ScheduledBasicBlock<'a> {
     pub fn build(
-        // The set of instructions in the block, a subset of the `program`.
-        instructions: Vec<&'a Instruction>,
-        terminator: Option<BlockTerminator<'a>>,
+        basic_block: BasicBlock<'a>,
         program: &'a Program,
         custom_handler: &mut InstructionHandler,
     ) -> ScheduleResult<Self> {
@@ -312,7 +297,7 @@ impl<'a> InstructionBlock<'a> {
         // NOTE: this may be refined to serialize by memory region offset rather than by entire region.
         let mut pending_memory_access: HashMap<String, MemoryAccessQueue> = HashMap::new();
 
-        for (index, &instruction) in instructions.iter().enumerate() {
+        for (index, &instruction) in basic_block.instructions().into_iter().enumerate() {
             let node = graph.add_node(ScheduledGraphNode::InstructionIndex(index));
 
             match custom_handler.role_for_instruction(instruction) {
@@ -440,107 +425,49 @@ impl<'a> InstructionBlock<'a> {
             add_dependency!(graph, dependency.node_id => ScheduledGraphNode::BlockEnd, execution_dependency);
         }
 
-        Ok(InstructionBlock {
-            graph,
-            instructions,
-            terminator: terminator.unwrap_or(BlockTerminator::Continue),
-        })
+        Ok(ScheduledBasicBlock { graph, basic_block })
     }
 
     pub fn get_dependency_graph(&self) -> &DependencyGraph {
         &self.graph
     }
 
+    pub fn instructions(&'a self) -> &[&'a Instruction] {
+        self.basic_block.instructions()
+    }
+
     /// Return a particular-indexed instruction (if present).
     pub fn get_instruction(&self, node_id: usize) -> Option<&Instruction> {
-        self.instructions.get(node_id).copied()
+        self.instructions().get(node_id).copied()
+    }
+
+    pub fn label(&self) -> Option<&Target> {
+        self.basic_block.label()
     }
 
     /// Return the count of executable instructions in this block.
     pub fn len(&self) -> usize {
-        self.instructions.len()
+        self.instructions().len()
     }
 
     /// Return true if this block contains no executable instructions.
     pub fn is_empty(&self) -> bool {
-        self.instructions.is_empty()
+        self.instructions().is_empty()
     }
 
-    pub fn set_exit_condition(&mut self, terminator: BlockTerminator<'a>) {
-        self.terminator = terminator;
+    pub fn terminator(&self) -> &BasicBlockTerminator {
+        self.basic_block.terminator()
     }
-}
 
-#[derive(Clone, Debug, PartialEq)]
-pub enum BlockTerminator<'a> {
-    Conditional {
-        condition: &'a MemoryReference,
-        target: &'a str,
-        jump_if_condition_true: bool,
-    },
-    Unconditional {
-        target: &'a str,
-    },
-    Continue,
-    Halt,
+    pub fn basic_block(&self) -> &BasicBlock<'a> {
+        &self.basic_block
+    }
 }
 
 #[derive(Clone, Debug)]
 pub struct ScheduledProgram<'a> {
-    /// All blocks within the ScheduledProgram, keyed on string label.
-    pub blocks: IndexMap<String, InstructionBlock<'a>>,
-}
-
-/// Builds an [`InstructionBlock`] from provided instructions, terminator, and program, then tracks
-/// the block and its label, and resets the instruction list and label for a future block to use.
-///
-/// The "working block" is that being traversed within the program, accumulating instructions located
-/// between control instructions (such as `LABEL` and 'JUMP`). When such a control instruction is reached,
-/// this function performs the work to close out and store the instructions in the current "working block"
-/// and then reset the state to prepare for the next block.
-///
-/// # Errors
-///
-/// If an error occurs, `working_instructions` and/or `working_label` may have been emptied and
-/// cannot be relied on to be unchanged.
-fn terminate_working_block<'a>(
-    terminator: Option<BlockTerminator<'a>>,
-    working_instructions: &mut Vec<&'a Instruction>,
-    blocks: &mut IndexMap<String, InstructionBlock<'a>>,
-    working_label: &mut Option<&'a str>,
-    program: &'a Program,
-    instruction_index: Option<usize>,
-    custom_handler: &mut InstructionHandler,
-) -> ScheduleResult<()> {
-    // If this "block" has no instructions and no terminator, it's not worth storing - skip it
-    if working_instructions.is_empty() && terminator.is_none() && working_label.is_none() {
-        return Ok(());
-    }
-
-    // This leaves working_instructions and working_label in their respective "empty" states.
-    let block = InstructionBlock::build(
-        std::mem::take(working_instructions),
-        terminator,
-        program,
-        custom_handler,
-    )?;
-
-    let label = working_label
-        .take()
-        .map(String::from)
-        .unwrap_or_else(|| ScheduledProgram::generate_autoincremented_label(blocks));
-
-    if blocks.insert(label.clone(), block).is_some() {
-        return Err(ScheduleError {
-            instruction_index,
-            instruction: Instruction::Label(Label {
-                target: Target::Fixed(label),
-            }),
-            variant: ScheduleErrorVariant::DuplicateLabel,
-        });
-    }
-
-    Ok(())
+    // todo needs getter
+    basic_blocks: Vec<ScheduledBasicBlock<'a>>,
 }
 
 impl<'a> ScheduledProgram<'a> {
@@ -550,153 +477,19 @@ impl<'a> ScheduledProgram<'a> {
         program: &'a Program,
         custom_handler: &mut InstructionHandler,
     ) -> ScheduleResult<Self> {
-        let mut working_label = None;
-        let mut working_instructions: Vec<&'a Instruction> = vec![];
-        let mut blocks = IndexMap::new();
-
-        for (index, instruction) in program.body_instructions().enumerate() {
-            let instruction_index = Some(index);
-            match instruction {
-                Instruction::Arithmetic(_)
-                | Instruction::Comparison(_)
-                | Instruction::BinaryLogic(_)
-                | Instruction::Convert(_)
-                | Instruction::UnaryLogic(_)
-                | Instruction::Capture(_)
-                | Instruction::Delay(_)
-                | Instruction::Fence(_)
-                | Instruction::Include(_)
-                | Instruction::Move(_)
-                | Instruction::Nop
-                | Instruction::Exchange(_)
-                | Instruction::Load(_)
-                | Instruction::Store(_)
-                | Instruction::Pulse(_)
-                | Instruction::SetFrequency(_)
-                | Instruction::SetPhase(_)
-                | Instruction::SetScale(_)
-                | Instruction::ShiftFrequency(_)
-                | Instruction::ShiftPhase(_)
-                | Instruction::SwapPhases(_)
-                | Instruction::RawCapture(_)
-                | Instruction::Reset(_)
-                | Instruction::Wait => {
-                    working_instructions.push(instruction);
-                }
-                Instruction::CalibrationDefinition(_)
-                | Instruction::CircuitDefinition(_)
-                | Instruction::Declaration(_)
-                | Instruction::GateDefinition(_)
-                | Instruction::FrameDefinition(_)
-                | Instruction::MeasureCalibrationDefinition(_)
-                | Instruction::WaveformDefinition(_) => {}
-                Instruction::Pragma(_) => {
-                    working_instructions.push(instruction);
-                }
-                Instruction::Label(Label {
-                    target: Target::Fixed(value),
-                }) => {
-                    terminate_working_block(
-                        None as Option<BlockTerminator>,
-                        &mut working_instructions,
-                        &mut blocks,
-                        &mut working_label,
-                        program,
-                        instruction_index,
-                        custom_handler,
-                    )?;
-
-                    working_label = Some(value);
-                }
-                Instruction::Jump(Jump {
-                    target: Target::Fixed(target),
-                }) => {
-                    terminate_working_block(
-                        Some(BlockTerminator::Unconditional { target }),
-                        &mut working_instructions,
-                        &mut blocks,
-                        &mut working_label,
-                        program,
-                        instruction_index,
-                        custom_handler,
-                    )?;
-                }
-                Instruction::JumpWhen(JumpWhen {
-                    target: Target::Fixed(target),
-                    condition,
-                }) => {
-                    terminate_working_block(
-                        Some(BlockTerminator::Conditional {
-                            target,
-                            condition,
-                            jump_if_condition_true: true,
-                        }),
-                        &mut working_instructions,
-                        &mut blocks,
-                        &mut working_label,
-                        program,
-                        instruction_index,
-                        custom_handler,
-                    )?;
-                }
-                Instruction::JumpUnless(JumpUnless {
-                    target: Target::Fixed(target),
-                    condition,
-                }) => {
-                    terminate_working_block(
-                        Some(BlockTerminator::Conditional {
-                            target,
-                            condition,
-                            jump_if_condition_true: false,
-                        }),
-                        &mut working_instructions,
-                        &mut blocks,
-                        &mut working_label,
-                        program,
-                        instruction_index,
-                        custom_handler,
-                    )?;
-                }
-                Instruction::Halt => terminate_working_block(
-                    Some(BlockTerminator::Halt),
-                    &mut working_instructions,
-                    &mut blocks,
-                    &mut working_label,
-                    program,
-                    instruction_index,
-                    custom_handler,
-                )?,
-                Instruction::Gate(_)
-                | Instruction::Measurement(_)
-                | Instruction::Label(Label {
-                    target: Target::Placeholder(_),
-                })
-                | Instruction::Jump(_)
-                | Instruction::JumpWhen(_)
-                | Instruction::JumpUnless(_) => {
-                    return Err(ScheduleError {
-                        instruction_index,
-                        instruction: instruction.clone(),
-                        variant: ScheduleErrorVariant::UncalibratedInstruction,
-                    })
-                }
-            };
-        }
-
-        terminate_working_block(
-            None as Option<BlockTerminator>,
-            &mut working_instructions,
-            &mut blocks,
-            &mut working_label,
-            program,
-            None,
-            custom_handler,
-        )?;
-
-        Ok(ScheduledProgram { blocks })
+        let control_flow_graph = program.as_control_flow_graph();
+        Ok(Self {
+            basic_blocks: control_flow_graph
+                .into_blocks()
+                .into_iter()
+                .map(|block| ScheduledBasicBlock::build(block, program, custom_handler))
+                .collect::<ScheduleResult<Vec<_>>>()?,
+        })
     }
 
-    fn generate_autoincremented_label(block_labels: &IndexMap<String, InstructionBlock>) -> String {
+    fn generate_autoincremented_label(
+        block_labels: &IndexMap<String, ScheduledBasicBlock>,
+    ) -> String {
         let mut suffix = 0;
         let mut label = format!("block_{suffix}");
         while block_labels.get(&label).is_some() {
@@ -704,6 +497,10 @@ impl<'a> ScheduledProgram<'a> {
             label = format!("block_{suffix}");
         }
         label
+    }
+
+    pub fn basic_blocks(&self) -> &[ScheduledBasicBlock<'_>] {
+        self.basic_blocks.as_ref()
     }
 }
 

@@ -3,12 +3,18 @@ use crate::{
     Program,
 };
 
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct ControlFlowGraph<'p> {
     blocks: Vec<BasicBlock<'p>>,
 }
 
-#[derive(Debug, Default)]
+impl<'p> ControlFlowGraph<'p> {
+    pub fn into_blocks(self) -> Vec<BasicBlock<'p>> {
+        self.blocks
+    }
+}
+
+#[derive(Clone, Debug, Default)]
 pub struct BasicBlock<'p> {
     label: Option<&'p Target>,
     instructions: Vec<&'p Instruction>,
@@ -29,7 +35,7 @@ impl<'p> BasicBlock<'p> {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub enum BasicBlockTerminator<'p> {
     #[default]
     Continue,
@@ -128,11 +134,11 @@ impl Program {
         graph
     }
 
-    fn get_first_basic_block(&self) -> Option<BasicBlock> {
+    pub fn get_first_basic_block(&self) -> Option<BasicBlock> {
         self.as_control_flow_graph().blocks.into_iter().next()
     }
 
-    fn get_only_basic_block(&self) -> Result<BasicBlock, ()> {
+    pub fn get_only_basic_block(&self) -> Result<BasicBlock, ()> {
         let blocks = self.as_control_flow_graph().blocks;
         if blocks.len() == 1 {
             Ok(blocks.into_iter().next().unwrap())

@@ -38,7 +38,7 @@ mod calibration;
 mod error;
 pub(crate) mod frame;
 mod memory;
-mod scheduling;
+pub mod scheduling;
 pub mod type_check;
 
 #[derive(Debug, thiserror::Error, PartialEq)]
