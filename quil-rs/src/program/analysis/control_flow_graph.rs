@@ -1,20 +1,41 @@
+//! Construction and analysis of a control flow graph (CFG) for a Quil program.
+
+// Copyright 2024 Rigetti Computing
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use crate::{
     instruction::{Instruction, Jump, JumpUnless, JumpWhen, Label, Target},
     Program,
 };
 
+/// A control flow graph (CFG) is a representation of a program's control flow as a directed graph.
+/// Each node in the graph is a basic block, a sequence of instructions with a single entry point
+/// and a single exit point. The edges in the graph represent control flow between basic blocks.
 #[derive(Clone, Debug, Default)]
 pub struct ControlFlowGraph<'p> {
     blocks: Vec<BasicBlock<'p>>,
 }
 
 impl<'p> ControlFlowGraph<'p> {
+    /// Returns `true` if the program contains dynamic control flow, i.e. `JUMP-WHEN` or `JUMP-UNLESS`
     pub fn has_dynamic_control_flow(&self) -> bool {
         self.blocks
             .iter()
             .any(|block| block.terminator().is_dynamic())
     }
 
+    /// Returns the basic blocks in the control flow graph.
     pub fn into_blocks(self) -> Vec<BasicBlock<'p>> {
         self.blocks
     }
@@ -22,8 +43,14 @@ impl<'p> ControlFlowGraph<'p> {
 
 #[derive(Clone, Debug, Default)]
 pub struct BasicBlock<'p> {
+    /// The label of the basic block, if any. An unlabeled basic block cannot be a target of a jump, but can
+    /// be entered by a [`BasicBlockTerminator::Continue`] from the preceding block or program start.
     label: Option<&'p Target>,
+
+    /// The instructions within the basic block, not including its terminator.
     instructions: Vec<&'p Instruction>,
+
+    /// The terminator of the basic block, which determines the control flow to the next basic block.
     terminator: BasicBlockTerminator<'p>,
 }
 
@@ -41,6 +68,7 @@ impl<'p> BasicBlock<'p> {
     }
 }
 
+/// The terminator of a basic block, which determines the control flow to the next basic block.
 #[derive(Clone, Debug, Default)]
 pub enum BasicBlockTerminator<'p> {
     #[default]
@@ -52,6 +80,10 @@ pub enum BasicBlockTerminator<'p> {
 }
 
 impl BasicBlockTerminator<'_> {
+    /// Returns `true` if the terminator is dynamic, i.e. `JUMP-WHEN` or `JUMP-UNLESS`.
+    ///
+    /// Dynamic terminators are those that can change the control flow based on the state of the
+    /// program at runtime, as opposed to static terminators like `JUMP` and `HALT`.
     pub fn is_dynamic(&self) -> bool {
         matches!(
             self,

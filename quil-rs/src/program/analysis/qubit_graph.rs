@@ -1,3 +1,19 @@
+//! The `QubitGraph` is a logical execution/dependency graph of
+//! instructions with respect to gates on shared qubits.
+
+// Copyright 2024 Rigetti Computing
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 use std::collections::HashMap;
 
 use crate::instruction::{Instruction, InstructionHandler, InstructionRole};
@@ -12,12 +28,12 @@ pub enum Error {
     UnsupportedInstruction(Instruction),
 }
 
-/// QubitGraph is a logical execution/dependency graph of instructions.  Pragma, RF Control, and Jump instructions
+/// QubitGraph is a logical execution/dependency graph of instructions.  Pragma, RF Control, and Control Flow instructions
 /// are not supported. It is a directed graph *from* the first instructions (the set of instructions that do not depend
 /// on prior instructions) *to* the last instructions (the set of instructions that are not prerequisites for any later
 /// instructions).
 ///
-/// Nodes are instructions; edges link subsequent instructions which use the same qubit.
+/// Nodes are instructions; edges link subsequent instructions which use a shared qubit.
 #[derive(Debug)]
 pub struct QubitGraph<'a> {
     graph: DiGraph<&'a Instruction, ()>,
@@ -133,8 +149,8 @@ impl<'a> QubitGraph<'a> {
         result
     }
 
-    /// Returns the longest path from an initial instruction (one with no prerequisite instructions) to a final
-    /// instruction (one with no dependent instructions).
+    /// Returns the length of the longest path from an initial instruction (one with no prerequisite instructions) to a final
+    /// instruction (one with no dependent instructions), where the length of a path is the number of gate instructions in the path.
     pub fn gate_depth(&self) -> usize {
         let path_lengths = self.path_fold(0, |depth: usize, instruction: &Instruction| -> usize {
             if let Instruction::Gate(_) = instruction {

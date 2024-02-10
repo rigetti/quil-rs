@@ -190,6 +190,9 @@ pub type DependencyGraph = GraphMap<ScheduledGraphNode, HashSet<ExecutionDepende
 
 /// A [`ScheduledBasicBlock`] is a wrapper around a [`BasicBlock`] which includes a graph expressing the vector clock
 /// among the instructions according to the Quil specification.
+///
+/// If instruction A blocks instruction B (because of shared use of a frame), then there will be an edge from A to B
+/// in the graph.
 #[derive(Clone, Debug)]
 pub struct ScheduledBasicBlock<'a> {
     basic_block: BasicBlock<'a>,
@@ -274,6 +277,7 @@ impl PreviousNodes {
 }
 
 impl<'a> ScheduledBasicBlock<'a> {
+    /// Build a scheduled basic block from a basic block and a program.
     pub fn build(
         basic_block: BasicBlock<'a>,
         program: &'a Program,
