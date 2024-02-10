@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::convert::Infallible;
 
 use crate::instruction::{Instruction, InstructionHandler, InstructionRole};
 use crate::quil::Quil;
@@ -31,7 +30,7 @@ impl<'a> QubitGraph<'a> {
         let mut handler = InstructionHandler::default();
 
         for instruction in instructions {
-            match handler.role_for_instruction(&instruction) {
+            match handler.role_for_instruction(instruction) {
                 InstructionRole::ClassicalCompute => {
                     if let Instruction::Pragma(_) = instruction {
                         return Err(Error::UnsupportedInstruction(instruction.clone()));
@@ -134,43 +133,6 @@ impl<'a> QubitGraph<'a> {
         result
     }
 
-    /// Fallible equivalent of [`path_fold`](#method.path_fold).
-    ///
-    /// # Errors
-    ///
-    /// Any error returned from a call to `f` will be returned immediately without further iteration
-    /// through the graph.
-    fn try_path_fold<T, F, E>(&self, initial_value: T, mut f: F) -> Result<Vec<T>, E>
-    where
-        T: Clone + std::fmt::Debug,
-        F: FnMut(T, &Instruction) -> Result<T, E>,
-        E: std::error::Error,
-    {
-        let nodes: Vec<_> = self.graph.externals(Direction::Incoming).collect();
-        let mut stack = vec![(initial_value, nodes)];
-        let mut result = Vec::new();
-
-        while let Some((acc, nodes)) = stack.pop() {
-            if nodes.is_empty() {
-                result.push(acc);
-                continue;
-            }
-
-            for node in nodes {
-                let instruction = &self.graph[node];
-                let value = f(acc.clone(), instruction)?;
-                stack.push((
-                    value,
-                    self.graph
-                        .neighbors_directed(node, Direction::Outgoing)
-                        .collect(),
-                ));
-            }
-        }
-
-        Ok(result)
-    }
-
     /// Returns the longest path from an initial instruction (one with no prerequisite instructions) to a final
     /// instruction (one with no dependent instructions).
     pub fn gate_depth(&self) -> usize {
@@ -203,7 +165,7 @@ impl<'a> TryFrom<&'_ BasicBlock<'a>> for QubitGraph<'a> {
     type Error = Error;
 
     fn try_from(block: &BasicBlock<'a>) -> Result<Self, Self::Error> {
-        QubitGraph::new(block.instructions().into_iter().copied())
+        QubitGraph::new(block.instructions().iter().copied())
     }
 }
 
