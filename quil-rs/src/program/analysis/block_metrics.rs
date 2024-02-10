@@ -54,18 +54,6 @@ impl<'a> BasicBlock<'a> {
             .filter(|gate| gate.name.eq_ignore_ascii_case("SWAP"))
             .count()
     }
-
-    /* TODO #340: additional statistics
-    /// Output qubit index relabeling due to SWAP insertion.
-    // fn final_rewriting(&self) -> Vec<u64>;
-
-    // TODO #325: duration estimate
-    /// The estimated runtime of the program on a Rigetti QPU, in milliseconds. Available only for
-    /// protoquil compliant programs.
-    // fn qpu_runtime_estimate<F>(&self, get_duration: F) -> Option<f64>
-    // where
-    //    F: Fn(&Instruction) -> Option<f64>;
-    */
 }
 
 #[cfg(test)]
