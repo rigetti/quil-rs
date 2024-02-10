@@ -9,6 +9,12 @@ pub struct ControlFlowGraph<'p> {
 }
 
 impl<'p> ControlFlowGraph<'p> {
+    pub fn has_dynamic_control_flow(&self) -> bool {
+        self.blocks
+            .iter()
+            .any(|block| block.terminator().is_dynamic())
+    }
+
     pub fn into_blocks(self) -> Vec<BasicBlock<'p>> {
         self.blocks
     }
@@ -54,14 +60,13 @@ impl BasicBlockTerminator<'_> {
     }
 }
 
-impl Program {
-    // TODO consider `Into<ControlFlowGraph> for &Program` instead
-    pub fn as_control_flow_graph(&self) -> ControlFlowGraph {
+impl<'p> From<&'p Program> for ControlFlowGraph<'p> {
+    fn from(value: &'p Program) -> Self {
         let mut graph = ControlFlowGraph::default();
 
         let mut current_label = None;
         let mut current_block_instructions = Vec::new();
-        for instruction in &self.instructions {
+        for instruction in &value.instructions {
             match instruction {
                 Instruction::Arithmetic(_)
                 | Instruction::BinaryLogic(_)
@@ -149,7 +154,7 @@ impl<'a> TryFrom<&'a Program> for BasicBlock<'a> {
     type Error = ProgramContainsMultipleBasicBlocks;
 
     fn try_from(value: &'a Program) -> Result<Self, Self::Error> {
-        let blocks = value.as_control_flow_graph().blocks;
+        let blocks = ControlFlowGraph::from(value).blocks;
         if blocks.len() == 1 {
             Ok(blocks.into_iter().next().unwrap())
         } else {
@@ -178,9 +183,24 @@ mod tests {
     #[case(QUIL_WITH_DIAMOND)]
     #[case(QUIL_WITH_SWAP)]
     #[case(KITCHEN_SINK_QUIL)]
-    #[case(QUIL_WITH_JUMP)]
     fn expect_single_basic_block(#[case] input: &str) {
         let program: Program = input.parse().unwrap();
         let _: BasicBlock = (&program).try_into().unwrap();
+    }
+
+    #[rstest]
+    #[case(QUIL_AS_TREE, false)]
+    #[case(QUIL_AS_INVERSE_TREE, false)]
+    #[case(QUIL_AS_LINEAR, false)]
+    #[case(QUIL_WITH_DIAMOND, false)]
+    #[case(KITCHEN_SINK_QUIL, false)]
+    #[case(QUIL_WITH_JUMP, false)]
+    #[case(QUIL_WITH_JUMP_WHEN, true)]
+    #[case(QUIL_WITH_JUMP_UNLESS, true)]
+    fn has_dynamic_control_flow(#[case] input: &str, #[case] expected: bool) {
+        let program: Program = input.parse().unwrap();
+        let graph = ControlFlowGraph::from(&program);
+        let dynamic = graph.has_dynamic_control_flow();
+        assert_eq!(expected, dynamic);
     }
 }
