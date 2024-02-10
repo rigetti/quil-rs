@@ -491,6 +491,10 @@ impl<'a> ScheduledProgram<'a> {
     pub fn basic_blocks(&self) -> &[ScheduledBasicBlock<'_>] {
         self.basic_blocks.as_ref()
     }
+
+    pub fn into_basic_blocks(self) -> Vec<ScheduledBasicBlock<'a>> {
+        self.basic_blocks
+    }
 }
 
 #[cfg(test)]
