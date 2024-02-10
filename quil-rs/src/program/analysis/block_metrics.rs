@@ -72,7 +72,7 @@ impl<'a> BasicBlock<'a> {
 mod tests {
     use std::f64::consts;
 
-    use crate::program::analysis::qubit_graph;
+    use crate::program::analysis::qubit_graph::QubitGraph;
     use crate::Program;
 
     use rstest::rstest;
