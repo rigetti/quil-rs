@@ -20,7 +20,7 @@ use petgraph::graphmap::GraphMap;
 use petgraph::Directed;
 
 use crate::instruction::{FrameIdentifier, Instruction, InstructionHandler, Target};
-use crate::program::analysis::{BasicBlock, BasicBlockTerminator};
+use crate::program::analysis::{BasicBlock, BasicBlockTerminator, ControlFlowGraph};
 use crate::{instruction::InstructionRole, program::Program};
 
 pub use crate::program::memory::MemoryAccessType;
@@ -474,7 +474,7 @@ impl<'a> ScheduledProgram<'a> {
         program: &'a Program,
         custom_handler: &mut InstructionHandler,
     ) -> ScheduleResult<Self> {
-        let control_flow_graph = program.as_control_flow_graph();
+        let control_flow_graph = ControlFlowGraph::from(program);
         Ok(Self {
             basic_blocks: control_flow_graph
                 .into_blocks()
