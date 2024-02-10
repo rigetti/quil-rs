@@ -1,15 +1,8 @@
 use std::collections::HashSet;
 use std::ops::Neg;
 
-use super::{
-    qubit_graph::{Error as QubitGraphError, QubitGraph},
-    BasicBlock,
-};
-use crate::{
-    instruction::{Instruction, Qubit},
-    program::scheduling::graph::ScheduledBasicBlock,
-    Program,
-};
+use super::BasicBlock;
+use crate::instruction::{Instruction, Qubit};
 
 impl<'a> BasicBlock<'a> {
     /// The total number of gates in the program.
@@ -60,11 +53,6 @@ impl<'a> BasicBlock<'a> {
             })
             .filter(|gate| gate.name.eq_ignore_ascii_case("SWAP"))
             .count()
-    }
-
-    /// Whether the program uses dynamic control flow.
-    pub fn has_dynamic_control_flow(&self) -> bool {
-        self.terminator().is_dynamic()
     }
 
     /* TODO #340: additional statistics
@@ -179,35 +167,29 @@ mod tests {
     }
 
     #[rstest]
-    #[case(QUIL_AS_TREE, false)]
-    #[case(QUIL_AS_INVERSE_TREE, false)]
-    #[case(QUIL_AS_LINEAR, false)]
-    #[case(QUIL_WITH_DIAMOND, false)]
-    #[case(KITCHEN_SINK_QUIL, false)]
-    #[case(QUIL_WITH_JUMP, false)]
-    #[case(QUIL_WITH_JUMP_WHEN, true)]
-    #[case(QUIL_WITH_JUMP_UNLESS, true)]
-    fn has_dynamic_control_flow(#[case] input: &str, #[case] expected: bool) {
-        let program: Program = input.parse().unwrap();
-        let block: BasicBlock = (&program).try_into().unwrap();
-        let dynamic = block.has_dynamic_control_flow();
-        assert_eq!(expected, dynamic);
-    }
-
-    #[rstest]
     #[case(QUIL_AS_TREE, Some(2))]
     #[case(QUIL_AS_INVERSE_TREE, Some(2))]
     #[case(QUIL_AS_LINEAR, Some(4))]
     #[case(QUIL_WITH_DIAMOND, Some(6))]
     #[case(QUIL_WITH_SWAP, Some(3))]
     #[case(KITCHEN_SINK_QUIL, Some(2))]
-    // TODO: jumps are actually valid?
     #[case(QUIL_WITH_JUMP, None)]
     #[case(QUIL_WITH_JUMP_WHEN, None)]
     #[case(QUIL_WITH_JUMP_UNLESS, None)]
     fn gate_depth_conditional(#[case] input: &str, #[case] expected: Option<usize>) {
         let program: Program = input.parse().unwrap();
-        let block: BasicBlock = (&program).try_into().unwrap();
+        let block = (&program).try_into();
+        let block: BasicBlock = match block {
+            Ok(block) => block,
+            Err(_) => {
+                if expected.is_none() {
+                    return;
+                } else {
+                    panic!("Expected block, got error");
+                }
+            }
+        };
+
         let maybe_graph: Result<QubitGraph, _> = (&block).try_into();
         match maybe_graph {
             Ok(graph) => {
