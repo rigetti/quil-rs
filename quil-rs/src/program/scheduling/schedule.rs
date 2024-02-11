@@ -1,7 +1,7 @@
 //! A Schedule represents a flattening of the [`DependencyGraph`] into a linear sequence of
 //! instructions, with each instruction assigned a start time and duration.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use itertools::Itertools;
 use petgraph::{
@@ -19,7 +19,6 @@ use crate::{
 
 use super::{ExecutionDependency, ScheduledBasicBlock, ScheduledGraphNode};
 
-// #[derive(derive_more::Add)] todo when I have internet back
 #[derive(Clone, Default, PartialEq, PartialOrd)]
 pub struct Seconds(pub f64);
 
@@ -31,9 +30,23 @@ impl std::ops::Add<Seconds> for Seconds {
     }
 }
 
+// todo: rather than Default, it should require Time::zero. For primitives those are the same,
+// but not so for Expression
 #[derive(Debug, Default)]
 pub struct Schedule<Time: Default> {
-    pub(crate) items: Vec<ComputedScheduleItem<Time>>,
+    items: Vec<ComputedScheduleItem<Time>>,
+    /// The total duration of the block. This is the end time of the schedule when it starts at Time::zero()
+    duration: Time,
+}
+
+impl<Time: Default> Schedule<Time> {
+    pub fn duration(&self) -> &Time {
+        &self.duration
+    }
+
+    pub fn items(&self) -> &[ComputedScheduleItem<Time>] {
+        self.items.as_ref()
+    }
 }
 
 pub type FixedSchedule = Schedule<Seconds>;
@@ -68,6 +81,13 @@ pub struct TimeSpan<Time> {
 impl<'p> ScheduledBasicBlock<'p> {
     // todo create more restricted subtype of instruction for ScheduledBasicBlock so we don't have
     // to handle unreachable instructions here
+    /// Return the duration of a scheduled Quil instruction:
+    ///
+    /// * For PULSE and CAPTURE, this is the duration of the waveform at the frame's sample rate
+    /// * For DELAY and RAW-CAPTURE, it's the named duration
+    /// * For supporting instructions like SET-*, SHIFT-*, and FENCE, it's 0
+    ///
+    /// Return `None` for other instructions.
     fn get_fixed_instruction_duration(
         program: &Program,
         instruction: &Instruction,
@@ -93,6 +113,13 @@ impl<'p> ScheduledBasicBlock<'p> {
         }
     }
 
+    /// Return the duration of a Quil waveform:
+    ///
+    /// If the waveform is defined in the program with `DEFWAVEFORM`, the duration is the sample count
+    /// divided by the sample rate.
+    ///
+    /// Otherwise, it's the `duration` parameter of the waveform invocation. This relies on the assumption that
+    /// all template waveforms in use have such a parameter in units of seconds.
     fn get_fixed_waveform_duration(
         program: &Program,
         instruction: &Instruction,
@@ -136,10 +163,16 @@ impl<'p> ScheduledBasicBlock<'p> {
         }
     }
 
+    /// Compute the flattened schedule for this [`ScheduledBasicBlock`] in terms of seconds,
+    /// using a default built-in calculation for the duration of scheduled instructions.
     pub fn as_fixed_schedule(&self, program: &Program) -> ComputedScheduleResult<FixedSchedule> {
         self.as_schedule(program, Self::get_fixed_instruction_duration)
     }
 
+    /// Compute the flattened schedule for this [`ScheduledBasicBlock`] using a user-provided
+    /// closure for computation of instruction duration.
+    ///
+    /// Return an error if the schedule cannot be computed from the information provided.
     pub fn as_schedule<F, Time: Clone + Default + PartialOrd + std::ops::Add<Time, Output = Time>>(
         &self,
         program: &'p Program,
@@ -199,6 +232,9 @@ impl<'p> ScheduledBasicBlock<'p> {
 
                 let start_time = latest_previous_instruction_scheduler_end_time;
                 let end_time = start_time.clone() + duration.clone();
+                if schedule.duration < end_time {
+                    schedule.duration = end_time.clone();
+                }
 
                 end_time_by_instruction_index.insert(index, end_time);
                 schedule.items.push(ComputedScheduleItem {
