@@ -15,7 +15,7 @@
 // limitations under the License.
 
 use crate::{
-    instruction::{Instruction, Jump, JumpUnless, JumpWhen, Label, Target},
+    instruction::{Instruction, Label, MemoryReference, Target},
     Program,
 };
 
@@ -71,11 +71,16 @@ impl<'p> BasicBlock<'p> {
 /// The terminator of a basic block, which determines the control flow to the next basic block.
 #[derive(Clone, Debug, Default)]
 pub enum BasicBlockTerminator<'p> {
+    ConditionalJump {
+        condition: &'p MemoryReference,
+        target: &'p Target,
+        jump_if_condition_zero: bool,
+    },
     #[default]
     Continue,
-    Jump(&'p Jump),
-    JumpWhen(&'p JumpWhen),
-    JumpUnless(&'p JumpUnless),
+    Jump {
+        target: &'p Target,
+    },
     Halt,
 }
 
@@ -85,10 +90,7 @@ impl BasicBlockTerminator<'_> {
     /// Dynamic terminators are those that can change the control flow based on the state of the
     /// program at runtime, as opposed to static terminators like `JUMP` and `HALT`.
     pub fn is_dynamic(&self) -> bool {
-        matches!(
-            self,
-            BasicBlockTerminator::JumpWhen(_) | BasicBlockTerminator::JumpUnless(_)
-        )
+        matches!(self, BasicBlockTerminator::ConditionalJump { .. })
     }
 }
 
@@ -142,13 +144,28 @@ impl<'p> From<&'p Program> for ControlFlowGraph<'p> {
                 | Instruction::Label(_)
                 | Instruction::Halt => {
                     let (terminator, new_label) = match instruction {
-                        Instruction::Jump(jump) => (BasicBlockTerminator::Jump(jump), None),
-                        Instruction::JumpUnless(jump_unless) => {
-                            (BasicBlockTerminator::JumpUnless(jump_unless), None)
-                        }
-                        Instruction::JumpWhen(jump_when) => {
-                            (BasicBlockTerminator::JumpWhen(jump_when), None)
-                        }
+                        Instruction::Jump(jump) => (
+                            BasicBlockTerminator::Jump {
+                                target: &jump.target,
+                            },
+                            None,
+                        ),
+                        Instruction::JumpUnless(jump_unless) => (
+                            BasicBlockTerminator::ConditionalJump {
+                                condition: &jump_unless.condition,
+                                target: &jump_unless.target,
+                                jump_if_condition_zero: true,
+                            },
+                            None,
+                        ),
+                        Instruction::JumpWhen(jump_when) => (
+                            BasicBlockTerminator::ConditionalJump {
+                                condition: &jump_when.condition,
+                                target: &jump_when.target,
+                                jump_if_condition_zero: false,
+                            },
+                            None,
+                        ),
                         Instruction::Label(Label { target }) => {
                             (BasicBlockTerminator::Continue, Some(target))
                         }
