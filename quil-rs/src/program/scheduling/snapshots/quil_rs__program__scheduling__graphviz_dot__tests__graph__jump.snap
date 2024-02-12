@@ -18,8 +18,8 @@ timing"];
 timing"];
     "@first-block_end" [shape=circle, label="end"];
   }
-  "@first-block_end" -> "@third-block_start" [label="if ro[0] != 0"];
-  "@first-block_end" -> "@second-block_start" [label="if ro[0] == 0"];
+  "@first-block_end" -> "@third-block_start" [label="if ro[0] == 0"];
+  "@first-block_end" -> "@second-block_start" [label="if ro[0] != 0"];
   subgraph cluster_1 {
     label="@second-block";
     node [style="filled"];

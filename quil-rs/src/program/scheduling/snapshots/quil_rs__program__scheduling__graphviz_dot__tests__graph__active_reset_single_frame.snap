@@ -23,8 +23,8 @@ ordering
 timing"];
     "@measure_end" [shape=circle, label="end"];
   }
-  "@measure_end" -> "@end_start" [label="if ro[0] == 0"];
-  "@measure_end" -> "@feedback_start" [label="if ro[0] != 0"];
+  "@measure_end" -> "@end_start" [label="if ro[0] != 0"];
+  "@measure_end" -> "@feedback_start" [label="if ro[0] == 0"];
   subgraph cluster_1 {
     label="@feedback";
     node [style="filled"];

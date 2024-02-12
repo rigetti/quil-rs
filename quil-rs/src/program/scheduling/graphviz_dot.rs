@@ -183,10 +183,10 @@ impl<'a> ScheduledProgram<'a> {
                         target,
                         jump_if_condition_zero,
                     } => {
-                        let equality_operators = if *jump_if_condition_zero {
-                            ("==", "!=")
+                        let (condition_met, condition_unmet) = if *jump_if_condition_zero {
+                            ("== 0", "!= 0")
                         } else {
-                            ("!=", "==")
+                            ("!= 0", "== 0")
                         };
                         digraph
                             .edge(
@@ -198,12 +198,8 @@ impl<'a> ScheduledProgram<'a> {
                             )
                             .attributes()
                             .set_label(
-                                format!(
-                                    "if {} {} 0",
-                                    condition.to_quil_or_debug(),
-                                    equality_operators.0
-                                )
-                                .as_str(),
+                                format!("if {} {}", condition.to_quil_or_debug(), condition_met)
+                                    .as_str(),
                             );
                         if let Some((next_index, next_block)) = next_index_and_block {
                             let next_block_prefix = DotFormatBlockLabel::from_label_or_index(
@@ -222,9 +218,9 @@ impl<'a> ScheduledProgram<'a> {
                                 .attributes()
                                 .set_label(
                                     format!(
-                                        "if {} {} 0",
+                                        "if {} {}",
                                         condition.to_quil_or_debug(),
-                                        equality_operators.1
+                                        condition_unmet
                                     )
                                     .as_str(),
                                 );
