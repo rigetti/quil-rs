@@ -278,6 +278,7 @@ impl PreviousNodes {
 
 impl<'a> ScheduledBasicBlock<'a> {
     /// Build a scheduled basic block from a basic block and a program.
+    /// TODO create a ScheduledBasicBlockBuilder so that the inputs may be optional
     pub fn build(
         basic_block: BasicBlock<'a>,
         program: &'a Program,

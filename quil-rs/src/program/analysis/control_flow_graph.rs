@@ -183,21 +183,21 @@ impl<'p> From<&'p Program> for ControlFlowGraph<'p> {
 }
 
 impl<'a> TryFrom<&'a Program> for BasicBlock<'a> {
-    type Error = ProgramContainsMultipleBasicBlocks;
+    type Error = ProgramEmptyOrContainsMultipleBasicBlocks;
 
     fn try_from(value: &'a Program) -> Result<Self, Self::Error> {
         let blocks = ControlFlowGraph::from(value).blocks;
         if blocks.len() == 1 {
             Ok(blocks.into_iter().next().unwrap())
         } else {
-            Err(ProgramContainsMultipleBasicBlocks)
+            Err(ProgramEmptyOrContainsMultipleBasicBlocks)
         }
     }
 }
 
 #[derive(Debug, thiserror::Error)]
 #[error("Program is empty or contains multiple basic blocks")]
-pub struct ProgramContainsMultipleBasicBlocks;
+pub struct ProgramEmptyOrContainsMultipleBasicBlocks;
 
 #[cfg(test)]
 mod tests {

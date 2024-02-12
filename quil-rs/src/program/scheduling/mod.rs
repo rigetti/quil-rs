@@ -8,3 +8,5 @@ pub use graph::{
     DependencyGraph, ExecutionDependency, MemoryAccessType, ScheduleError, ScheduleErrorVariant,
     ScheduleResult, ScheduledBasicBlock, ScheduledGraphNode, ScheduledProgram,
 };
+
+pub use schedule::TimeSpan;

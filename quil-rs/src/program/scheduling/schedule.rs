@@ -30,22 +30,41 @@ impl std::ops::Add<Seconds> for Seconds {
     }
 }
 
+pub trait Zero {
+    fn zero() -> Self;
+}
+
+impl Zero for Seconds {
+    fn zero() -> Self {
+        Self(0.0)
+    }
+}
+
 // todo: rather than Default, it should require Time::zero. For primitives those are the same,
 // but not so for Expression
-#[derive(Debug, Default)]
-pub struct Schedule<Time: Default> {
+#[derive(Debug)]
+pub struct Schedule<Time> {
     items: Vec<ComputedScheduleItem<Time>>,
     /// The total duration of the block. This is the end time of the schedule when it starts at Time::zero()
     duration: Time,
 }
 
-impl<Time: Default> Schedule<Time> {
+impl<Time> Schedule<Time> {
     pub fn duration(&self) -> &Time {
         &self.duration
     }
 
     pub fn items(&self) -> &[ComputedScheduleItem<Time>] {
         self.items.as_ref()
+    }
+}
+
+impl<Time: Zero> Default for Schedule<Time> {
+    fn default() -> Self {
+        Self {
+            items: Default::default(),
+            duration: Time::zero(),
+        }
     }
 }
 
@@ -76,6 +95,16 @@ pub struct TimeSpan<Time> {
 
     /// The described item's continuous duration
     duration: Time,
+}
+
+impl<Time> TimeSpan<Time> {
+    pub fn start_time(&self) -> &Time {
+        &self.start_time
+    }
+
+    pub fn duration(&self) -> &Time {
+        &self.duration
+    }
 }
 
 impl<'p> ScheduledBasicBlock<'p> {
@@ -173,7 +202,7 @@ impl<'p> ScheduledBasicBlock<'p> {
     /// closure for computation of instruction duration.
     ///
     /// Return an error if the schedule cannot be computed from the information provided.
-    pub fn as_schedule<F, Time: Clone + Default + PartialOrd + std::ops::Add<Time, Output = Time>>(
+    pub fn as_schedule<F, Time: Clone + PartialOrd + std::ops::Add<Time, Output = Time> + Zero>(
         &self,
         program: &'p Program,
         get_duration: F,
@@ -190,13 +219,12 @@ impl<'p> ScheduledBasicBlock<'p> {
         let mut topo = Topo::new(&graph_filtered);
 
         while let Some(instruction_node) = topo.next(&graph_filtered) {
-            // todo also handle the end node so as to capture the whole schedule duration
             if let ScheduledGraphNode::InstructionIndex(index) = instruction_node {
                 let instruction = *self
                     .basic_block()
                     .instructions()
                     .get(index)
-                    .expect("todo error");
+                    .ok_or_else(|| ComputedScheduleError::InvalidDependencyGraph)?;
                 let duration = get_duration(program, instruction).ok_or(
                     ComputedScheduleError::UnknownDuration {
                         instruction: instruction.clone(),
@@ -209,7 +237,7 @@ impl<'p> ScheduledBasicBlock<'p> {
                     .filter_map(|(source, _, dependencies)| {
                         if dependencies.contains(&ExecutionDependency::Scheduled) {
                             match source {
-                                ScheduledGraphNode::BlockStart => Ok(Some(Time::default())),
+                                ScheduledGraphNode::BlockStart => Ok(Some(Time::zero())),
                                 ScheduledGraphNode::InstructionIndex(previous_index) => {
                                     end_time_by_instruction_index
                                         .get(&previous_index)
@@ -228,7 +256,7 @@ impl<'p> ScheduledBasicBlock<'p> {
                     .into_iter()
                     // this implementation allows us to require PartialOrd instead of Ord (required for `.max()`),
                     // which is convenient for f64
-                    .fold(Time::default(), |acc, el| if el > acc { el } else { acc });
+                    .fold(Time::zero(), |acc, el| if el > acc { el } else { acc });
 
                 let start_time = latest_previous_instruction_scheduler_end_time;
                 let end_time = start_time.clone() + duration.clone();
@@ -248,5 +276,92 @@ impl<'p> ScheduledBasicBlock<'p> {
         }
 
         Ok(schedule)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use core::panic;
+
+    use crate::{instruction::InstructionHandler, Program};
+
+    #[rstest::rstest]
+    #[case(
+        r#"FENCE
+FENCE
+FENCE
+"#,
+        Ok(vec![0.0, 0.0, 0.0])
+    )]
+    #[case(
+        r#"DEFFRAME 0 "a":
+    SAMPLE-RATE: 1e9
+PULSE 0 "a" flat(duration: 1.0)
+PULSE 0 "a" flat(duration: 1.0)
+PULSE 0 "a" flat(duration: 1.0)
+"#,
+        Ok(vec![0.0, 1.0, 2.0])
+    )]
+    #[case(
+        r#"DEFFRAME 0 "a":
+    SAMPLE-RATE: 1e9
+DEFFRAME 0 "b":
+    SAMPLE-RATE: 1e9
+NONBLOCKING PULSE 0 "a" flat(duration: 1.0)
+NONBLOCKING PULSE 0 "b" flat(duration: 10.0)
+FENCE
+PULSE 0 "a" flat(duration: 1.0)
+FENCE
+PULSE 0 "a" flat(duration: 1.0)
+"#,
+        Ok(vec![0.0, 0.0, 10.0, 10.0, 11.0, 11.0])
+    )]
+    #[case(
+        r#"DEFFRAME 0 "a":
+    SAMPLE-RATE: 1e9
+DEFFRAME 0 "b":
+    SAMPLE-RATE: 1e9
+DELAY 0 "a" 1.0
+SET-PHASE 0 "a" 1.0
+SHIFT-PHASE 0 "a" 1.0
+SWAP-PHASES 0 "a" 0 "b"
+SET-FREQUENCY 0 "a" 1.0
+SHIFT-FREQUENCY 0 "a" 1.0
+SET-SCALE 0 "a" 1.0
+FENCE
+PULSE 0 "a" flat(duration: 1.0)
+"#,
+        Ok(vec![0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
+    )]
+    #[case("RESET", Err(()))]
+    fn fixed_schedule(#[case] input_program: &str, #[case] expected_times: Result<Vec<f64>, ()>) {
+        let program: Program = input_program.parse().unwrap();
+        let block: crate::program::analysis::BasicBlock = (&program).try_into().unwrap();
+        let mut handler = InstructionHandler::default();
+        let scheduled_block =
+            crate::program::scheduling::ScheduledBasicBlock::build(block, &program, &mut handler)
+                .unwrap();
+        match (scheduled_block.as_fixed_schedule(&program), expected_times) {
+            (Ok(schedule), Ok(expected_times)) => {
+                let times = schedule
+                    .items()
+                    .iter()
+                    .map(|item| item.time_span.start_time.0)
+                    .collect::<Vec<_>>();
+                assert_eq!(expected_times, times);
+            }
+            (Err(_), Err(_)) => {}
+            (Ok(schedule), Err(_)) => {
+                let times = schedule
+                    .items()
+                    .iter()
+                    .map(|item| item.time_span.start_time.0)
+                    .collect::<Vec<_>>();
+                panic!("expected error, got {:?}", times);
+            }
+            (Err(error), Ok(_)) => {
+                panic!("expected success, got error: {error}")
+            }
+        }
     }
 }
