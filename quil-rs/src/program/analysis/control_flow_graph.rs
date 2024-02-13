@@ -50,6 +50,13 @@ pub struct BasicBlock<'p> {
     /// The instructions within the basic block, not including its terminator.
     instructions: Vec<&'p Instruction>,
 
+    /// The offset of the start of this block from the containing program, in instruction count.
+    /// For the first block in the program, this is `0`. This counts only "body" instructions, not
+    /// `DEFCAL`, `DEFFRAME`, et al.
+    ///
+    /// This is intended for use in debugging and source mapping.
+    instruction_index_offset: usize,
+
     /// The terminator of the basic block, which determines the control flow to the next basic block.
     terminator: BasicBlockTerminator<'p>,
 }
@@ -57,6 +64,10 @@ pub struct BasicBlock<'p> {
 impl<'p> BasicBlock<'p> {
     pub fn label(&self) -> Option<&'p Target> {
         self.label
+    }
+
+    pub fn instruction_index_offset(&self) -> usize {
+        self.instruction_index_offset
     }
 
     pub fn instructions(&self) -> &[&'p Instruction] {
@@ -100,6 +111,7 @@ impl<'p> From<&'p Program> for ControlFlowGraph<'p> {
 
         let mut current_label = None;
         let mut current_block_instructions = Vec::new();
+        let mut instruction_index_offset = 0;
         for instruction in &value.instructions {
             match instruction {
                 Instruction::Arithmetic(_)
@@ -138,50 +150,58 @@ impl<'p> From<&'p Program> for ControlFlowGraph<'p> {
                 | Instruction::MeasureCalibrationDefinition(_)
                 | Instruction::WaveformDefinition(_) => {}
 
+                Instruction::Label(Label { target }) => {
+                    if !current_block_instructions.is_empty() || current_label.is_some() {
+                        let block = BasicBlock {
+                            label: current_label.take(),
+                            instructions: std::mem::take(&mut current_block_instructions),
+                            instruction_index_offset,
+                            terminator: BasicBlockTerminator::Continue,
+                        };
+                        // +1 for the label
+                        instruction_index_offset += block.instructions.len() + 1;
+                        graph.blocks.push(block);
+                    }
+
+                    current_label = Some(target);
+                }
+
                 Instruction::Jump(_)
                 | Instruction::JumpUnless(_)
                 | Instruction::JumpWhen(_)
-                | Instruction::Label(_)
                 | Instruction::Halt => {
-                    let (terminator, new_label) = match instruction {
-                        Instruction::Jump(jump) => (
-                            BasicBlockTerminator::Jump {
-                                target: &jump.target,
-                            },
-                            None,
-                        ),
-                        Instruction::JumpUnless(jump_unless) => (
+                    let terminator = match instruction {
+                        Instruction::Jump(jump) => BasicBlockTerminator::Jump {
+                            target: &jump.target,
+                        },
+                        Instruction::JumpUnless(jump_unless) => {
                             BasicBlockTerminator::ConditionalJump {
                                 condition: &jump_unless.condition,
                                 target: &jump_unless.target,
                                 jump_if_condition_zero: true,
-                            },
-                            None,
-                        ),
-                        Instruction::JumpWhen(jump_when) => (
-                            BasicBlockTerminator::ConditionalJump {
-                                condition: &jump_when.condition,
-                                target: &jump_when.target,
-                                jump_if_condition_zero: false,
-                            },
-                            None,
-                        ),
-                        Instruction::Label(Label { target }) => {
-                            (BasicBlockTerminator::Continue, Some(target))
+                            }
                         }
-                        Instruction::Halt => (BasicBlockTerminator::Halt, None),
+                        Instruction::JumpWhen(jump_when) => BasicBlockTerminator::ConditionalJump {
+                            condition: &jump_when.condition,
+                            target: &jump_when.target,
+                            jump_if_condition_zero: false,
+                        },
+                        Instruction::Halt => BasicBlockTerminator::Halt,
                         _ => unreachable!(),
                     };
-                    if !current_block_instructions.is_empty() {
-                        let block = BasicBlock {
-                            label: current_label.take(),
-                            instructions: std::mem::take(&mut current_block_instructions),
-                            terminator,
-                        };
-                        graph.blocks.push(block);
-                        current_block_instructions = Vec::new();
-                    }
-                    current_label = new_label;
+                    let block = BasicBlock {
+                        label: current_label.take(),
+                        instructions: std::mem::take(&mut current_block_instructions),
+                        instruction_index_offset,
+                        terminator,
+                    };
+
+                    let label_instruction_offset = if block.label().is_some() { 1 } else { 0 };
+                    // +1 for this terminator instruction
+                    instruction_index_offset +=
+                        block.instructions.len() + 1 + label_instruction_offset;
+
+                    graph.blocks.push(block);
                 }
             }
         }
@@ -190,6 +210,7 @@ impl<'p> From<&'p Program> for ControlFlowGraph<'p> {
             let block = BasicBlock {
                 label: current_label.take(),
                 instructions: current_block_instructions,
+                instruction_index_offset,
                 terminator: BasicBlockTerminator::Continue,
             };
             graph.blocks.push(block);
@@ -251,5 +272,37 @@ mod tests {
         let graph = ControlFlowGraph::from(&program);
         let dynamic = graph.has_dynamic_control_flow();
         assert_eq!(expected, dynamic);
+    }
+
+    #[rstest]
+    #[case(r#"LABEL @a
+JUMP @a
+LABEL @b
+JUMP @b
+LABEL @c
+JUMP @c
+"#, vec![0, 2, 4])]
+    #[case(r#"LABEL @a
+LABEL @b
+LABEL @c
+JUMP @c
+"#, vec![0, 1, 2])]
+    #[case(r#"DEFFRAME 0 "rf":
+    ATTRIBUTE: 1
+DEFCAL X 0:
+    Y 0
+X 0
+"#, vec![0])]
+    fn instruction_index_offset(#[case] input: &str, #[case] expected_block_offsets: Vec<usize>) {
+        let program: Program = input.parse().unwrap();
+        let graph = ControlFlowGraph::from(&program);
+        let blocks = graph.into_blocks();
+        println!("blocks: {:#?}", blocks);
+        let actual = blocks
+            .iter()
+            .map(|block| block.instruction_index_offset())
+            .collect::<Vec<_>>();
+
+        assert_eq!(expected_block_offsets, actual);
     }
 }

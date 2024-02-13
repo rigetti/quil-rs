@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::quil::{Quil, ToQuilError};
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord, strum::EnumTryAs)]
 pub enum Qubit {
     Fixed(u64),
     Placeholder(QubitPlaceholder),
