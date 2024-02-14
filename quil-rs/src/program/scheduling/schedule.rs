@@ -42,7 +42,7 @@ impl Zero for Seconds {
 
 // todo: rather than Default, it should require Time::zero. For primitives those are the same,
 // but not so for Expression
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Schedule<Time> {
     items: Vec<ComputedScheduleItem<Time>>,
     /// The total duration of the block. This is the end time of the schedule when it starts at Time::zero()
@@ -70,7 +70,7 @@ impl<Time: Zero> Default for Schedule<Time> {
 
 pub type FixedSchedule = Schedule<Seconds>;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct ComputedScheduleItem<Time> {
     pub time_span: TimeSpan<Time>,
     pub instruction_index: usize,
@@ -88,13 +88,13 @@ pub enum ComputedScheduleError {
 pub type ComputedScheduleResult<T> = Result<T, ComputedScheduleError>;
 
 /// Represents a span of time, for some unit of time
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct TimeSpan<Time> {
     /// The inclusive start time of the described item
-    start_time: Time,
+    pub start_time: Time,
 
     /// The described item's continuous duration
-    duration: Time,
+    pub duration: Time,
 }
 
 impl<Time> TimeSpan<Time> {

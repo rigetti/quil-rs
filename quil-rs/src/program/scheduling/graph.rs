@@ -20,7 +20,9 @@ use petgraph::graphmap::GraphMap;
 use petgraph::Directed;
 
 use crate::instruction::{FrameIdentifier, Instruction, InstructionHandler, Target};
-use crate::program::analysis::{BasicBlock, BasicBlockTerminator, ControlFlowGraph};
+use crate::program::analysis::{
+    BasicBlock, BasicBlockOwned, BasicBlockTerminator, ControlFlowGraph,
+};
 use crate::{instruction::InstructionRole, program::Program};
 
 pub use crate::program::memory::MemoryAccessType;
@@ -468,7 +470,6 @@ impl<'a> ScheduledBasicBlock<'a> {
 
 #[derive(Clone, Debug)]
 pub struct ScheduledProgram<'a> {
-    // todo needs getter
     basic_blocks: Vec<ScheduledBasicBlock<'a>>,
 }
 
@@ -495,6 +496,65 @@ impl<'a> ScheduledProgram<'a> {
 
     pub fn into_basic_blocks(self) -> Vec<ScheduledBasicBlock<'a>> {
         self.basic_blocks
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct ScheduledProgramOwned {
+    basic_blocks: Vec<ScheduledBasicBlockOwned>,
+}
+
+impl From<ScheduledProgram<'_>> for ScheduledProgramOwned {
+    fn from(program: ScheduledProgram) -> Self {
+        Self {
+            basic_blocks: program
+                .basic_blocks
+                .into_iter()
+                .map(|block| ScheduledBasicBlockOwned {
+                    basic_block: block.basic_block.into(),
+                    graph: block.graph,
+                })
+                .collect(),
+        }
+    }
+}
+
+impl<'a> From<&'a ScheduledProgram<'a>> for ScheduledProgramOwned {
+    fn from(program: &'a ScheduledProgram) -> Self {
+        Self {
+            basic_blocks: program
+                .basic_blocks
+                .iter()
+                .map(|block| ScheduledBasicBlockOwned {
+                    basic_block: block.basic_block.clone().into(),
+                    graph: block.graph.clone(),
+                })
+                .collect(),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct ScheduledBasicBlockOwned {
+    basic_block: BasicBlockOwned,
+    graph: DependencyGraph,
+}
+
+impl<'a> From<&'a ScheduledBasicBlockOwned> for ScheduledBasicBlock<'a> {
+    fn from(block: &'a ScheduledBasicBlockOwned) -> Self {
+        Self {
+            basic_block: (&block.basic_block).into(),
+            graph: block.graph.clone(),
+        }
+    }
+}
+
+impl<'a> From<&'a ScheduledBasicBlock<'a>> for ScheduledBasicBlockOwned {
+    fn from(block: &'a ScheduledBasicBlock) -> Self {
+        Self {
+            basic_block: block.basic_block.clone().into(),
+            graph: block.graph.clone(),
+        }
     }
 }
 

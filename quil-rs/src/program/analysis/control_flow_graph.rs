@@ -41,6 +41,29 @@ impl<'p> ControlFlowGraph<'p> {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct ControlFlowGraphOwned {
+    blocks: Vec<BasicBlockOwned>,
+}
+
+impl From<&ControlFlowGraph<'_>> for ControlFlowGraphOwned {
+    fn from(value: &ControlFlowGraph) -> Self {
+        let blocks = value
+            .blocks
+            .iter()
+            .map(BasicBlockOwned::from)
+            .collect();
+        ControlFlowGraphOwned { blocks }
+    }
+}
+
+impl<'p> From<&'p ControlFlowGraphOwned> for ControlFlowGraph<'p> {
+    fn from(value: &'p ControlFlowGraphOwned) -> Self {
+        let blocks = value.blocks.iter().map(BasicBlock::from).collect();
+        ControlFlowGraph { blocks }
+    }
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct BasicBlock<'p> {
     /// The label of the basic block, if any. An unlabeled basic block cannot be a target of a jump, but can
@@ -79,6 +102,44 @@ impl<'p> BasicBlock<'p> {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct BasicBlockOwned {
+    label: Option<Target>,
+    instructions: Vec<Instruction>,
+    instruction_index_offset: usize,
+    terminator: BasicBlockTerminatorOwned,
+}
+
+impl From<&BasicBlock<'_>> for BasicBlockOwned {
+    fn from(value: &BasicBlock) -> Self {
+        let label = value.label.cloned();
+        let instructions = value.instructions.into_iter().cloned().collect();
+        let instruction_index_offset = value.instruction_index_offset;
+        let terminator = value.terminator.into();
+        BasicBlockOwned {
+            label,
+            instructions,
+            instruction_index_offset,
+            terminator,
+        }
+    }
+}
+
+impl<'b> From<&'b BasicBlockOwned> for BasicBlock<'b> {
+    fn from(value: &'b BasicBlockOwned) -> Self {
+        let label = value.label.as_ref();
+        let instructions = value.instructions.iter().collect();
+        let instruction_index_offset = value.instruction_index_offset;
+        let terminator = (&value.terminator).into();
+        BasicBlock {
+            label,
+            instructions,
+            instruction_index_offset,
+            terminator,
+        }
+    }
+}
+
 /// The terminator of a basic block, which determines the control flow to the next basic block.
 #[derive(Clone, Debug, Default)]
 pub enum BasicBlockTerminator<'p> {
@@ -102,6 +163,60 @@ impl BasicBlockTerminator<'_> {
     /// program at runtime, as opposed to static terminators like `JUMP` and `HALT`.
     pub fn is_dynamic(&self) -> bool {
         matches!(self, BasicBlockTerminator::ConditionalJump { .. })
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct BasicBlockTerminatorOwned {
+    condition: Option<MemoryReference>,
+    target: Option<Target>,
+    jump_if_condition_zero: bool,
+}
+
+impl From<BasicBlockTerminator<'_>> for BasicBlockTerminatorOwned {
+    fn from(value: BasicBlockTerminator) -> Self {
+        match value {
+            BasicBlockTerminator::ConditionalJump {
+                condition,
+                target,
+                jump_if_condition_zero,
+            } => BasicBlockTerminatorOwned {
+                condition: Some(condition.clone()),
+                target: Some(target.clone()),
+                jump_if_condition_zero,
+            },
+            BasicBlockTerminator::Continue => BasicBlockTerminatorOwned {
+                condition: None,
+                target: None,
+                jump_if_condition_zero: false,
+            },
+            BasicBlockTerminator::Jump { target } => BasicBlockTerminatorOwned {
+                condition: None,
+                target: Some(target.clone()),
+                jump_if_condition_zero: false,
+            },
+            BasicBlockTerminator::Halt => BasicBlockTerminatorOwned {
+                condition: None,
+                target: None,
+                jump_if_condition_zero: false,
+            },
+        }
+    }
+}
+
+impl<'t> From<&'t BasicBlockTerminatorOwned> for BasicBlockTerminator<'t> {
+    fn from(value: &'t BasicBlockTerminatorOwned) -> Self {
+        if let Some(condition) = &value.condition {
+            BasicBlockTerminator::ConditionalJump {
+                condition,
+                target: value.target.as_ref().unwrap(),
+                jump_if_condition_zero: value.jump_if_condition_zero,
+            }
+        } else if let Some(target) = &value.target {
+            BasicBlockTerminator::Jump { target }
+        } else {
+            BasicBlockTerminator::Halt
+        }
     }
 }
 

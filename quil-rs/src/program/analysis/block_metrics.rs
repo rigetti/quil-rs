@@ -13,15 +13,11 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
-use std::collections::HashSet;
-use std::ops::Neg;
-
 use super::BasicBlock;
-use crate::instruction::{Instruction, Qubit};
+use crate::instruction::Instruction;
 
 impl<'a> BasicBlock<'a> {
-    /// The total number of gates in the program.
+    /// The total number of gates in the block.
     pub fn gate_volume(&self) -> usize {
         self.instructions()
             .iter()
@@ -29,37 +25,7 @@ impl<'a> BasicBlock<'a> {
             .count()
     }
 
-    /// Qubits used in gates and measurements in the program.
-    pub fn qubits_used(&self) -> HashSet<&Qubit> {
-        self.instructions()
-            .iter()
-            .filter_map(|i| match i {
-                Instruction::Gate(_) | Instruction::Measurement(_) => Some(i.get_qubits()),
-                _ => None,
-            })
-            .flatten()
-            .collect()
-    }
-
-    /// Rough estimate of fidelity of the native Quil program. If the provided callback returns `None`, the instruction
-    /// will be ignored for the purpose of the estimate.
-    pub fn fidelity_estimate<F>(&self, get_fidelity: F) -> f64
-    where
-        F: Fn(&Instruction) -> Option<f64>,
-    {
-        // TODO: double check implementation (#335)
-        self.instructions()
-            .iter()
-            .copied()
-            .filter_map(get_fidelity)
-            .map(|f: f64| f.ln().powi(2))
-            .sum::<f64>()
-            .sqrt()
-            .neg()
-            .exp()
-    }
-
-    /// The total number of `SWAP` gates in the native Quil program.
+    /// The total number of `SWAP` gates in the block.
     pub fn topological_swap_count(&self) -> usize {
         self.instructions()
             .iter()
@@ -74,8 +40,6 @@ impl<'a> BasicBlock<'a> {
 
 #[cfg(test)]
 mod tests {
-    use std::f64::consts;
-
     use crate::program::analysis::qubit_graph::QubitGraph;
     use crate::Program;
 
@@ -83,17 +47,6 @@ mod tests {
 
     use super::super::test_programs::*;
     use super::*;
-
-    #[rstest]
-    #[case(KITCHEN_SINK_QUIL, &[Qubit::Fixed(0), Qubit::Fixed(1)])]
-    fn block_instructions_from_program(#[case] input: &str, #[case] expected: &[Qubit]) {
-        let program: Program = input.parse().unwrap();
-        let block: BasicBlock = (&program).try_into().unwrap();
-        let qubits = block.qubits_used();
-        let expected = expected.iter().collect::<HashSet<_>>();
-
-        assert_eq!(expected, qubits);
-    }
 
     #[rstest]
     #[case(QUIL_AS_TREE, 3)]
@@ -107,53 +60,6 @@ mod tests {
         let block: BasicBlock = (&program).try_into().unwrap();
         let volume = block.gate_volume();
         assert_eq!(expected, volume);
-    }
-
-    #[rstest]
-    #[case(QUIL_AS_TREE)]
-    #[case(QUIL_AS_INVERSE_TREE)]
-    #[case(QUIL_AS_LINEAR)]
-    #[case(QUIL_WITH_DIAMOND)]
-    #[case(QUIL_WITH_SWAP)]
-    #[case(KITCHEN_SINK_QUIL)]
-    fn fidelity_estimate_all100percent(#[case] input: &str) {
-        let program: Program = input.parse().unwrap();
-        let block: BasicBlock = (&program).try_into().unwrap();
-        let all_100p = |_: &Instruction| Some(1.0);
-        let fidelity = block.fidelity_estimate(all_100p);
-        assert_eq!(1.0, fidelity);
-    }
-
-    #[rstest]
-    #[case(QUIL_AS_TREE)]
-    #[case(QUIL_AS_INVERSE_TREE)]
-    #[case(QUIL_AS_LINEAR)]
-    #[case(QUIL_WITH_DIAMOND)]
-    #[case(QUIL_WITH_SWAP)]
-    #[case(KITCHEN_SINK_QUIL)]
-    fn fidelity_estimate_all0percent(#[case] input: &str) {
-        let program: Program = input.parse().unwrap();
-        let block: BasicBlock = (&program).try_into().unwrap();
-        let all_0p = |_: &Instruction| Some(0.0);
-        let fidelity = block.fidelity_estimate(all_0p);
-        assert_eq!(0.0, fidelity);
-    }
-
-    #[rstest]
-    #[case(QUIL_AS_TREE)]
-    #[case(QUIL_AS_INVERSE_TREE)]
-    #[case(QUIL_AS_LINEAR)]
-    #[case(QUIL_WITH_DIAMOND)]
-    #[case(QUIL_WITH_SWAP)]
-    #[case(KITCHEN_SINK_QUIL)]
-    fn fidelity_estimate_all90percent(#[case] input: &str) {
-        let program: Program = input.parse().unwrap();
-        let block: BasicBlock = (&program).try_into().unwrap();
-        let all_90p = |_: &Instruction| Some(0.9);
-        let fidelity = block.fidelity_estimate(all_90p);
-        let fidelity_sum = block.instructions().len() as f64 * 0.9_f64.ln().powi(2);
-        let expected = consts::E.powf(fidelity_sum.sqrt().neg());
-        assert_eq!(expected, fidelity);
     }
 
     #[rstest]

@@ -6,7 +6,8 @@ pub(crate) mod graphviz_dot;
 
 pub use graph::{
     DependencyGraph, ExecutionDependency, MemoryAccessType, ScheduleError, ScheduleErrorVariant,
-    ScheduleResult, ScheduledBasicBlock, ScheduledGraphNode, ScheduledProgram,
+    ScheduleResult, ScheduledBasicBlock, ScheduledBasicBlockOwned, ScheduledGraphNode,
+    ScheduledProgram, ScheduledProgramOwned,
 };
 
-pub use schedule::TimeSpan;
+pub use schedule::{ComputedScheduleItem, FixedSchedule, Schedule, Seconds, TimeSpan};
