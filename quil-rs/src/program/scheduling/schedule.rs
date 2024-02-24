@@ -52,12 +52,10 @@ impl Zero for Seconds {
     }
 }
 
-// todo: rather than Default, it should require Time::zero. For primitives those are the same,
-// but not so for Expression
 #[derive(Clone, Debug)]
 pub struct Schedule<Time> {
     items: Vec<ComputedScheduleItem<Time>>,
-    /// The total duration of the block. This is the end time of the schedule when it starts at Time::zero()
+    /// The total duration of the block. This is the end time of the schedule when it starts at `Time::zero()`
     duration: Time,
 }
 
@@ -165,8 +163,6 @@ impl<
 }
 
 impl<'p> ScheduledBasicBlock<'p> {
-    // todo create more restricted subtype of instruction for ScheduledBasicBlock so we don't have
-    // to handle unreachable instructions here
     /// Return the duration of a scheduled Quil instruction:
     ///
     /// * For PULSE and CAPTURE, this is the duration of the waveform at the frame's sample rate
@@ -194,7 +190,6 @@ impl<'p> ScheduledBasicBlock<'p> {
             | Instruction::ShiftFrequency(_)
             | Instruction::ShiftPhase(_)
             | Instruction::SwapPhases(_) => Some(Seconds(0.0)),
-            // Todo should this tolerate classical instructions? how about reset?
             _ => None,
         }
     }
@@ -227,9 +222,10 @@ impl<'p> ScheduledBasicBlock<'p> {
                                     .and_then(|frame_definition| {
                                         frame_definition.get("SAMPLE-RATE")
                                     })
-                                    .map(|sample_rate_expression| match sample_rate_expression {
-                                        AttributeValue::String(_) => todo!("handle error"),
-                                        AttributeValue::Expression(expression) => expression,
+                                    .and_then(|sample_rate_expression| match sample_rate_expression
+                                    {
+                                        AttributeValue::String(_) => None,
+                                        AttributeValue::Expression(expression) => Some(expression),
                                     })
                                     .and_then(|expression| expression.to_real().ok())
                             })
@@ -339,8 +335,42 @@ impl<'p> ScheduledBasicBlock<'p> {
 #[cfg(test)]
 mod tests {
     use core::panic;
+    use std::str::FromStr;
 
     use crate::{instruction::InstructionHandler, program::scheduling::TimeSpan, Program};
+
+    #[rstest::rstest]
+    #[case("CAPTURE 0 \"a\" flat(duration: 1.0) ro", Some(1.0))]
+    #[case("DELAY 0 \"a\" 1.0", Some(1.0))]
+    #[case("FENCE", Some(0.0))]
+    #[case("PULSE 0 \"a\" flat(duration: 1.0)", Some(1.0))]
+    #[case("RAW-CAPTURE 0 \"a\" 1.0 ro", Some(1.0))]
+    #[case("RESET", None)]
+    #[case("SET-FREQUENCY 0 \"a\" 1.0", Some(0.0))]
+    #[case("SET-PHASE 0 \"a\" 1.0", Some(0.0))]
+    #[case("SET-SCALE 0 \"a\" 1.0", Some(0.0))]
+    #[case("SHIFT-FREQUENCY 0 \"a\" 1.0", Some(0.0))]
+    #[case("SHIFT-PHASE 0 \"a\" 1.0", Some(0.0))]
+    #[case("SWAP-PHASES 0 \"a\" 0 \"b\"", Some(0.0))]
+    fn fixed_instruction_duration(
+        #[case] input_program: &str,
+        #[case] expected_duration: Option<f64>,
+    ) {
+        let empty_program = Program::new();
+        let program = Program::from_str(input_program)
+            .map_err(|e| e.to_string())
+            .unwrap();
+        let instruction = program.into_instructions().remove(0);
+        let duration =
+            crate::program::scheduling::ScheduledBasicBlock::get_fixed_instruction_duration(
+                &empty_program,
+                &instruction,
+            );
+        assert_eq!(
+            expected_duration.map(crate::program::scheduling::Seconds),
+            duration
+        );
+    }
 
     #[rstest::rstest]
     #[case(

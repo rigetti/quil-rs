@@ -151,23 +151,14 @@ impl<'a> QubitGraph<'a> {
 
     /// Returns the length of the longest path from an initial instruction (one with no prerequisite instructions) to a final
     /// instruction (one with no dependent instructions), where the length of a path is the number of gate instructions in the path.
-    pub fn gate_depth(&self) -> usize {
-        let path_lengths = self.path_fold(0, |depth: usize, instruction: &Instruction| -> usize {
-            if let Instruction::Gate(_) = instruction {
-                depth + 1
-            } else {
-                depth
-            }
-        });
-        path_lengths.into_iter().max().unwrap_or_default()
-    }
-
-    /// Returns the longest path through the execution graph (like `gate_depth`), only counting instructions
-    /// corresponding to multi-qubit gates.
-    pub fn multi_qubit_gate_depth(&self) -> usize {
+    ///
+    /// # Arguments
+    ///
+    /// * `gate_minimum_qubit_count` - The minimum number of qubits in a gate for it to be counted in the depth.
+    pub fn gate_depth(&self, gate_minimum_qubit_count: usize) -> usize {
         let path_lengths = self.path_fold(0, |depth: usize, instruction: &Instruction| -> usize {
             if let Instruction::Gate(gate) = instruction {
-                if gate.qubits.len() > 1 {
+                if gate.qubits.len() >= gate_minimum_qubit_count {
                     return depth + 1;
                 }
             }
@@ -205,7 +196,7 @@ mod tests {
         let program: Program = input.parse().unwrap();
         let block: BasicBlock = (&program).try_into().unwrap();
         let graph: QubitGraph = (&block).try_into().unwrap();
-        let depth = graph.gate_depth();
+        let depth = graph.gate_depth(1);
         assert_eq!(expected, depth);
     }
 
@@ -220,7 +211,7 @@ mod tests {
         let program: Program = input.parse().unwrap();
         let block: BasicBlock = (&program).try_into().unwrap();
         let graph: QubitGraph = (&block).try_into().unwrap();
-        let depth = graph.multi_qubit_gate_depth();
+        let depth = graph.gate_depth(2);
         assert_eq!(expected, depth);
     }
 }

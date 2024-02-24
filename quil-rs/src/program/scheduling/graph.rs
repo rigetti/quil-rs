@@ -281,7 +281,6 @@ impl PreviousNodes {
 
 impl<'a> ScheduledBasicBlock<'a> {
     /// Build a scheduled basic block from a basic block and a program.
-    /// TODO create a ScheduledBasicBlockBuilder so that the inputs may be optional
     pub fn build(
         basic_block: BasicBlock<'a>,
         program: &'a Program,
@@ -500,24 +499,6 @@ impl<'a> ScheduledProgram<'a> {
     }
 }
 
-// #[derive(Clone, Debug)]
-// pub struct ScheduledProgramOwned {
-//     #[allow(dead_code)]
-//     basic_blocks: Vec<ScheduledBasicBlockOwned>,
-// }
-
-// impl<'a> From<ScheduledProgram<'a>> for ScheduledProgramOwned {
-//     fn from(program: ScheduledProgram) -> Self {
-//         Self {
-//             basic_blocks: program
-//                 .basic_blocks
-//                 .into_iter()
-//                 .map(ScheduledBasicBlockOwned::from)
-//                 .collect(),
-//         }
-//     }
-// }
-
 #[derive(Clone, Debug)]
 pub struct ScheduledBasicBlockOwned {
     basic_block: BasicBlockOwned,
@@ -544,17 +525,15 @@ impl<'a> From<ScheduledBasicBlock<'a>> for ScheduledBasicBlockOwned {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::instruction::Pragma;
-    use crate::program::{MatchedFrames, MemoryAccesses};
-
     #[cfg(feature = "graphviz-dot")]
     mod custom_handler {
-        use super::*;
+        use super::super::*;
 
+        use crate::instruction::Pragma;
         use crate::instruction::PragmaArgument;
         use crate::program::frame::FrameMatchCondition;
         use crate::program::scheduling::graphviz_dot::tests::build_dot_format_snapshot_test_case;
+        use crate::program::{MatchedFrames, MemoryAccesses};
 
         /// Generates a custom [`InstructionHandler`] that specially handles two `PRAGMA` instructions:
         ///

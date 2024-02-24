@@ -30,7 +30,6 @@ use crate::{
         },
         ProgramError,
     },
-    quil::Quil,
     Program,
 };
 
@@ -132,7 +131,11 @@ impl<'p> BasicBlock<'p> {
         program: &Program,
         include_zero_time_instructions: bool,
     ) -> Result<Schedule<Seconds>, BasicBlockScheduleError> {
-        self.as_schedule(program, ScheduledBasicBlock::get_fixed_instruction_duration, include_zero_time_instructions)
+        self.as_schedule(
+            program,
+            ScheduledBasicBlock::get_fixed_instruction_duration,
+            include_zero_time_instructions,
+        )
     }
 
     /// Compute the schedule for this [`BasicBlock`] in terms of a generic unit of time,

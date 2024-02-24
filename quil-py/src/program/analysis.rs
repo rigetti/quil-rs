@@ -1,6 +1,6 @@
 use pyo3::exceptions::PyValueError;
 use quil_rs::program::analysis::{
-    BasicBlock, BasicBlockOwned, ControlFlowGraph, ControlFlowGraphOwned,
+    BasicBlock, BasicBlockOwned, ControlFlowGraph, ControlFlowGraphOwned, QubitGraph,
 };
 use rigetti_pyo3::{py_wrap_type, pyo3::prelude::*};
 
@@ -34,8 +34,26 @@ py_wrap_type! {
 
 #[pymethods]
 impl PyBasicBlock {
-    pub fn label(&self) -> Option<PyTarget> {
-        BasicBlock::from(&self.0).label().map(|l| l.into())
+    pub fn as_fixed_schedule(
+        &self,
+        program: &PyProgram,
+        include_zero_duration_instructions: bool,
+    ) -> PyResult<PyFixedSchedule> {
+        BasicBlock::from(&self.0)
+            .as_fixed_schedule(&program.0, include_zero_duration_instructions)
+            .map(|v| v.into())
+            .map_err(|e| PyValueError::new_err(e.to_string()).into())
+    }
+
+    pub fn gate_depth(&self, gate_minimum_qubit_count: usize) -> PyResult<usize> {
+        let block = BasicBlock::from(&self.0);
+        QubitGraph::try_from(&block)
+            .map(|graph| graph.gate_depth(gate_minimum_qubit_count))
+            .map_err(|e| PyValueError::new_err(e.to_string()).into())
+    }
+
+    pub fn gate_volume(&self) -> usize {
+        BasicBlock::from(&self.0).gate_volume()
     }
 
     pub fn instructions(&self) -> Vec<PyInstruction> {
@@ -47,6 +65,10 @@ impl PyBasicBlock {
             .collect()
     }
 
+    pub fn label(&self) -> Option<PyTarget> {
+        BasicBlock::from(&self.0).label().map(|l| l.into())
+    }
+
     pub fn terminator(&self) -> Option<PyInstruction> {
         BasicBlock::from(&self.0)
             .terminator()
@@ -55,10 +77,7 @@ impl PyBasicBlock {
             .map(PyInstruction::from)
     }
 
-    pub fn as_fixed_schedule(&self, program: &PyProgram) -> PyResult<PyFixedSchedule> {
-        BasicBlock::from(&self.0)
-            .as_fixed_schedule(&program.0)
-            .map(|v| v.into())
-            .map_err(|e| PyValueError::new_err(e.to_string()).into())
+    pub fn topological_swap_count(&self) -> usize {
+        BasicBlock::from(&self.0).topological_swap_count()
     }
 }

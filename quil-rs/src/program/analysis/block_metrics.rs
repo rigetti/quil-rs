@@ -103,7 +103,7 @@ mod tests {
         let maybe_graph: Result<QubitGraph, _> = (&block).try_into();
         match maybe_graph {
             Ok(graph) => {
-                let depth = graph.gate_depth();
+                let depth = graph.gate_depth(1);
                 assert_eq!(expected, Some(depth));
             }
             Err(_) => {
