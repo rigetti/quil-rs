@@ -236,6 +236,7 @@ impl<'p> BasicBlock<'p> {
     }
 }
 
+#[allow(clippy::enum_variant_names)]
 #[derive(Debug, thiserror::Error)]
 pub enum BasicBlockScheduleError {
     #[error(transparent)]
@@ -383,8 +384,8 @@ impl<'p> From<&'p BasicBlockTerminatorOwned> for BasicBlockTerminator<'p> {
                 target,
                 jump_if_condition_zero,
             } => BasicBlockTerminator::ConditionalJump {
-                condition: &condition,
-                target: &target,
+                condition,
+                target,
                 jump_if_condition_zero: *jump_if_condition_zero,
             },
             BasicBlockTerminatorOwned::Continue => BasicBlockTerminator::Continue,

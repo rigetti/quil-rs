@@ -42,14 +42,14 @@ impl PyBasicBlock {
         BasicBlock::from(&self.0)
             .as_fixed_schedule(&program.0, include_zero_duration_instructions)
             .map(|v| v.into())
-            .map_err(|e| PyValueError::new_err(e.to_string()).into())
+            .map_err(|e| PyValueError::new_err(e.to_string()))
     }
 
     pub fn gate_depth(&self, gate_minimum_qubit_count: usize) -> PyResult<usize> {
         let block = BasicBlock::from(&self.0);
         QubitGraph::try_from(&block)
             .map(|graph| graph.gate_depth(gate_minimum_qubit_count))
-            .map_err(|e| PyValueError::new_err(e.to_string()).into())
+            .map_err(|e| PyValueError::new_err(e.to_string()))
     }
 
     pub fn gate_volume(&self) -> usize {
