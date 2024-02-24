@@ -2,6 +2,8 @@ import pickle
 import pytest
 from typing import Optional
 
+from syrupy.assertion import SnapshotAssertion
+
 from quil.program import Program
 from quil.instructions import Instruction, QubitPlaceholder, TargetPlaceholder, Gate, Qubit, Jump, Target
 
@@ -157,3 +159,20 @@ CZ 0 2
     # The third CZ should start when the first and second ones end and be of the same duration
     assert items[0].time_span.start + items[0].time_span.duration == items[2].time_span.start
     assert items[0].time_span.duration == items[2].time_span.duration
+
+def test_filter_instructions(snapshot: SnapshotAssertion):
+    input = """DECLARE foo REAL[1]
+DEFFRAME 1 "rx":
+\tHARDWARE-OBJECT: "hardware"
+DEFCAL I 1:
+\tDELAY 0 1
+DEFGATE BAR AS MATRIX:
+\t0, 1
+\t1, 0
+
+H 1
+CNOT 2 3
+"""
+    program = Program.parse(input)
+    program_without_quil_t = program.filter_instructions(lambda instruction: not instruction.is_quil_t())
+    assert program_without_quil_t.to_quil() == snapshot

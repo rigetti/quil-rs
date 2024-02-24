@@ -18,7 +18,7 @@ classifiers = [
 # We can remove this table once this issue is resolved: https://github.com/python-poetry/poetry/issues/3332
 [tool.poetry]
 name = "quil"
-version = "0.6.1"
+version = "0.6.6"
 description = "A Python package for building and parsing Quil programs."
 readme = "README-py.md"
 authors = ["Rigetti Computing <softapps@rigetti.com>"]
@@ -32,6 +32,8 @@ black = "^23.1.0"
 maturin = "^1.2.3"
 mypy = "^1.1.1"
 pytest = "^7.2.2"
+pdoc = "^14.1.0"
+syrupy = "^3.0.6"
 
 [tool.maturin]
 features = ["pyo3/extension-module"]

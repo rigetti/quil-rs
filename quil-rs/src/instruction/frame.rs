@@ -2,7 +2,7 @@ use std::{collections::HashMap, str::FromStr};
 
 use nom_locate::LocatedSpan;
 
-use super::{MemoryReference, Qubit, WaveformInvocation};
+use super::{MemoryReference, Qubit, QuotedString, WaveformInvocation};
 use crate::{
     expression::Expression,
     parser::{common::parse_frame_identifier, lex, ParseError},
@@ -24,7 +24,7 @@ impl Quil for AttributeValue {
     ) -> crate::quil::ToQuilResult<()> {
         use AttributeValue::*;
         match self {
-            String(value) => write!(f, "{value:?}").map_err(Into::into),
+            String(value) => write!(f, "{}", QuotedString(value)).map_err(Into::into),
             Expression(value) => value.write(f, fall_back_to_debug),
         }
     }
@@ -87,7 +87,7 @@ impl Quil for FrameIdentifier {
             qubit.write(writer, fall_back_to_debug)?;
             write!(writer, " ")?;
         }
-        write!(writer, "{:?}", self.name).map_err(Into::into)
+        write!(writer, "{}", QuotedString(&self.name)).map_err(Into::into)
     }
 }
 

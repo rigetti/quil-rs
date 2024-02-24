@@ -1,3 +1,4 @@
+use crate::instruction::QuotedString;
 use crate::parser::lexer::{Command, DataType, LexInput, LexResult, Modifier, Operator};
 use std::fmt;
 use std::fmt::Formatter;
@@ -125,7 +126,7 @@ impl fmt::Display for Token {
             Token::RParenthesis => write!(f, ")"),
             Token::Semicolon => write!(f, ";"),
             Token::Sharing => write!(f, "SHARING"),
-            Token::String(s) => write!(f, "{s:?}"),
+            Token::String(s) => write!(f, "{}", QuotedString(s)),
             Token::Variable(v) => write!(f, "{v}"),
         }
     }

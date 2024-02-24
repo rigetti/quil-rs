@@ -1,3 +1,6 @@
+"""
+The ``expression`` module contains classes for representing Quil expressions.
+"""
 from enum import Enum
 from typing import Dict, final, Sequence, Optional, Union
 
@@ -14,30 +17,30 @@ class Expression:
     """
     A Quil expression.
 
-    Variants:
-        ``address``: An address defined by a ``MemoryReference``.
-        ``function_call``: A ``FunctionCall``.
-        ``infix``: An ``InfixExpression``.
-        ``number``: A number defined as a ``complex``.
-        ``pi``: The constant `pi`. No inner data.
-        ``prefix``: A ``PrefixExpression``.
-        ``variable``: A variable defined as a ``str``.
+    # Variants:
+    - ``address``: An address defined by a `quil.instructions.MemoryReference`.
+    - ``function_call``: A `FunctionCallExpression`.
+    - ``infix``: An `InfixExpression`.
+    - ``number``: A number defined as a `complex`.
+    - ``pi``: The constant ``pi``. No inner data.
+    - ``prefix``: A `PrefixExpression`.
+    - ``variable``: A variable defined as a `str`.
 
     As seen above, some variants contain inner data that fully specify the expression.
     For example, the ``number`` variant contains an ``int``. This is in contrast to variants like
     ``pi`` that have no inner data because they require none to fully specify the expression.
     This difference is important for determining which methods are available for each variant.
 
-    Methods (for each variant):
-        ``is_*``: Returns ``True`` if the expression is that variant, ``False`` otherwise.
+    Methods (for every variant):
+    - ``is_*``: Returns ``True`` if the expression is that variant, ``False`` otherwise.
 
-        If the variant has inner data:
-            ``as_*``: returns the inner data if it is the given variant, ``None`` otherwise.
-            ``to_*``: returns the inner data if it is the given variant, raises ``ValueError`` otherwise.
-            ``from_*``: Creates a new ``Expression`` of the given variant from an instance of the inner type.
+    If the variant has inner data:
+    - ``as_*``: returns the inner data if it is the given variant, ``None`` otherwise.
+    - ``to_*``: returns the inner data if it is the given variant, raises ``ValueError`` otherwise.
+    - ``from_*``: Creates a new ``Expression`` of the given variant from an instance of the inner type.
 
-        If the variant doesn't have inner data (e.g. ``pi``)
-            ``new_*``: Creates a new ``Expression`` for the variant
+    If the variant doesn't have inner data (e.g. ``pi``)
+    - ``new_*``: Creates a new ``Expression`` for the variant
     """
 
     def inner(
@@ -113,7 +116,7 @@ class Expression:
         ...
     def to_real(self) -> float:
         """
-        If this is a number with imaginary part "equal to" zero (of _small_ absolute value), return
+        If this is a number with imaginary part "equal to" zero (of <em>small</em> absolute value), return
         that number. Otherwise, raises an ``EvaluationError``
         """
     def __add__(self, other: "Expression") -> "Expression": ...
@@ -134,6 +137,9 @@ class Expression:
         """
 
 class FunctionCallExpression:
+    """
+    A Quil function call.
+    """
     @staticmethod
     def __new__(cls, function: ExpressionFunction, expression: Expression) -> "FunctionCallExpression": ...
     @property
@@ -146,6 +152,9 @@ class FunctionCallExpression:
     def expression(self, expression: Expression): ...
 
 class InfixExpression:
+    """
+    A Quil infix expression.
+    """
     @staticmethod
     def __new__(cls, left: Expression, operator: InfixOperator, right: Expression): ...
     @property
@@ -162,6 +171,9 @@ class InfixExpression:
     def right(self, expression: Expression): ...
 
 class PrefixExpression:
+    """
+    A Quil prefix expression.
+    """
     @staticmethod
     def __new__(cls, operator: PrefixOperator, expression: Expression): ...
     @property
@@ -175,6 +187,9 @@ class PrefixExpression:
 
 @final
 class ExpressionFunction(Enum):
+    """
+    An enum representing a Quil function that can be applied to an expression.
+    """
     Cis = "CIS"
     Cosine = "COSINE"
     Exponent = "EXPONENT"
@@ -183,11 +198,17 @@ class ExpressionFunction(Enum):
 
 @final
 class PrefixOperator(Enum):
+    """
+    An enum that represents the operators supported on a prefix expression.
+    """
     Plus = "PLUS"
     Minus = "MINUS"
 
 @final
 class InfixOperator(Enum):
+    """
+    An enum that represents the operators supported on an infix expression.
+    """
     Caret = "CARET"
     Plus = "PLUS"
     Minus = "MINUS"

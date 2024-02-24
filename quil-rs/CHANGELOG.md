@@ -1,3 +1,82 @@
+## 0.22.6
+
+### Fixes
+
+- include separators between DEFCIRCUIT parameters (#338)
+
+## 0.22.6-rc.0
+
+### Fixes
+
+- include separators between DEFCIRCUIT parameters (#338)
+
+## 0.22.5
+
+### Fixes
+
+- `is_quil_t()` now correctly returns false for WAIT instructions (#331)
+
+## 0.22.5-rc.0
+
+### Fixes
+
+- `is_quil_t()` now correctly returns false for WAIT instructions (#331)
+
+## 0.22.4
+
+### Fixes
+
+- The `wrap_in_loop` method now applies the end target to the program (#329)
+
+## 0.22.4-rc.0
+
+### Fixes
+
+- The `wrap_in_loop` method now applies the end target to the program (#329)
+
+## 0.22.3
+
+### Features
+
+- Add methods for identifying Quil-T instructions and filtering instructions from `Program`s (#323)
+- Add `Program.wrap_in_loop()` method (#321)
+- Add methods for identifying Quil-T instructions and filtering instructions from Programs
+
+## 0.22.3-rc.1
+
+### Features
+
+- Add methods for identifying Quil-T instructions and filtering instructions from `Program`s (#323)
+- Add `Program.wrap_in_loop()` method (#321)
+- Add methods for identifying Quil-T instructions and filtering instructions from Programs
+
+## 0.22.3-rc.0
+
+### Features
+
+- Add `Program.wrap_in_loop()` method (#321)
+- Add methods for identifying Quil-T instructions and filtering instructions from Programs
+
+## 0.22.2
+
+### Features
+
+- impl FromStr for FrameIdentifier (#312)
+
+### Fixes
+
+- use internal QuotedString wrapper to quote Quil strings correctly (#317)
+
+## 0.22.2-rc.1
+
+### Features
+
+- impl FromStr for FrameIdentifier (#312)
+
+### Fixes
+
+- use internal QuotedString wrapper to quote Quil strings correctly (#317)
+
 ## 0.22.2-rc.0
 
 ### Features

@@ -1,0 +1,12 @@
+---
+source: quil-rs/src/program/mod.rs
+expression: program_without_quil_t.to_quil().unwrap()
+---
+DECLARE foo REAL[1]
+DEFGATE BAR AS MATRIX:
+	0, 1
+	1, 0
+
+H 1
+CNOT 2 3
+
