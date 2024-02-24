@@ -15,7 +15,7 @@
 // limitations under the License.
 
 use crate::{
-    instruction::{Instruction, Label, MemoryReference, Target},
+    instruction::{Instruction, Jump, JumpUnless, JumpWhen, Label, MemoryReference, Target},
     Program,
 };
 
@@ -46,11 +46,11 @@ pub struct ControlFlowGraphOwned {
     blocks: Vec<BasicBlockOwned>,
 }
 
-impl From<&ControlFlowGraph<'_>> for ControlFlowGraphOwned {
-    fn from(value: &ControlFlowGraph) -> Self {
+impl From<ControlFlowGraph<'_>> for ControlFlowGraphOwned {
+    fn from(value: ControlFlowGraph) -> Self {
         let blocks = value
             .blocks
-            .iter()
+            .into_iter()
             .map(BasicBlockOwned::from)
             .collect();
         ControlFlowGraphOwned { blocks }
@@ -110,8 +110,8 @@ pub struct BasicBlockOwned {
     terminator: BasicBlockTerminatorOwned,
 }
 
-impl From<&BasicBlock<'_>> for BasicBlockOwned {
-    fn from(value: &BasicBlock) -> Self {
+impl From<BasicBlock<'_>> for BasicBlockOwned {
+    fn from(value: BasicBlock) -> Self {
         let label = value.label.cloned();
         let instructions = value.instructions.into_iter().cloned().collect();
         let instruction_index_offset = value.instruction_index_offset;
@@ -164,58 +164,86 @@ impl BasicBlockTerminator<'_> {
     pub fn is_dynamic(&self) -> bool {
         matches!(self, BasicBlockTerminator::ConditionalJump { .. })
     }
+
+    pub fn into_instruction(self) -> Option<Instruction> {
+        match self {
+            BasicBlockTerminator::ConditionalJump {
+                condition,
+                target,
+                jump_if_condition_zero,
+            } => {
+                if jump_if_condition_zero {
+                    Some(Instruction::JumpUnless(JumpUnless {
+                        condition: condition.clone(),
+                        target: target.clone(),
+                    }))
+                } else {
+                    Some(Instruction::JumpWhen(JumpWhen {
+                        condition: condition.clone(),
+                        target: target.clone(),
+                    }))
+                }
+            }
+            BasicBlockTerminator::Continue => None,
+            BasicBlockTerminator::Jump { target } => Some(Instruction::Jump(Jump {
+                target: target.clone(),
+            })),
+            BasicBlockTerminator::Halt => Some(Instruction::Halt),
+        }
+    }
 }
 
-#[derive(Clone, Debug)]
-pub struct BasicBlockTerminatorOwned {
-    condition: Option<MemoryReference>,
-    target: Option<Target>,
-    jump_if_condition_zero: bool,
+#[derive(Clone, Debug, Default)]
+pub enum BasicBlockTerminatorOwned {
+    ConditionalJump {
+        condition: MemoryReference,
+        target: Target,
+        jump_if_condition_zero: bool,
+    },
+    #[default]
+    Continue,
+    Jump {
+        target: Target,
+    },
+    Halt,
 }
 
-impl From<BasicBlockTerminator<'_>> for BasicBlockTerminatorOwned {
+impl<'p> From<BasicBlockTerminator<'p>> for BasicBlockTerminatorOwned {
     fn from(value: BasicBlockTerminator) -> Self {
         match value {
             BasicBlockTerminator::ConditionalJump {
                 condition,
                 target,
                 jump_if_condition_zero,
-            } => BasicBlockTerminatorOwned {
-                condition: Some(condition.clone()),
-                target: Some(target.clone()),
+            } => BasicBlockTerminatorOwned::ConditionalJump {
+                condition: condition.clone(),
+                target: target.clone(),
                 jump_if_condition_zero,
             },
-            BasicBlockTerminator::Continue => BasicBlockTerminatorOwned {
-                condition: None,
-                target: None,
-                jump_if_condition_zero: false,
+            BasicBlockTerminator::Continue => BasicBlockTerminatorOwned::Continue,
+            BasicBlockTerminator::Jump { target } => BasicBlockTerminatorOwned::Jump {
+                target: target.clone(),
             },
-            BasicBlockTerminator::Jump { target } => BasicBlockTerminatorOwned {
-                condition: None,
-                target: Some(target.clone()),
-                jump_if_condition_zero: false,
-            },
-            BasicBlockTerminator::Halt => BasicBlockTerminatorOwned {
-                condition: None,
-                target: None,
-                jump_if_condition_zero: false,
-            },
+            BasicBlockTerminator::Halt => BasicBlockTerminatorOwned::Halt,
         }
     }
 }
 
-impl<'t> From<&'t BasicBlockTerminatorOwned> for BasicBlockTerminator<'t> {
-    fn from(value: &'t BasicBlockTerminatorOwned) -> Self {
-        if let Some(condition) = &value.condition {
-            BasicBlockTerminator::ConditionalJump {
+impl<'p> From<&'p BasicBlockTerminatorOwned> for BasicBlockTerminator<'p> {
+    fn from(value: &'p BasicBlockTerminatorOwned) -> Self {
+        match value {
+            BasicBlockTerminatorOwned::ConditionalJump {
                 condition,
-                target: value.target.as_ref().unwrap(),
-                jump_if_condition_zero: value.jump_if_condition_zero,
-            }
-        } else if let Some(target) = &value.target {
-            BasicBlockTerminator::Jump { target }
-        } else {
-            BasicBlockTerminator::Halt
+                target,
+                jump_if_condition_zero,
+            } => BasicBlockTerminator::ConditionalJump {
+                condition: &condition,
+                target: &target,
+                jump_if_condition_zero: *jump_if_condition_zero,
+            },
+            BasicBlockTerminatorOwned::Continue => BasicBlockTerminator::Continue,
+            BasicBlockTerminatorOwned::Jump { target } => BasicBlockTerminator::Jump { target },
+            BasicBlockTerminatorOwned::Halt => BasicBlockTerminator::Halt,
         }
     }
 }

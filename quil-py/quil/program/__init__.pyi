@@ -14,6 +14,7 @@ from quil.instructions import (
     Measurement,
     Qubit,
     Sharing,
+    Target,
     Vector,
     Waveform,
     TargetPlaceholder,
@@ -147,6 +148,17 @@ class Program:
         while ensuring that unique value is not already in use within the program.
         """
         ...
+    def control_flow_graph(self) -> "ControlFlowGraph":
+        """
+        Returns the control flow graph of the program.
+        """
+        ...
+
+@final
+class BasicBlock:
+    def label(self) -> Optional[Target]: ...
+    def instructions(self) -> List[Instruction]: ...
+    def terminator(self) -> Optional[Instruction]: ...
 
 @final
 class CalibrationSet:
@@ -207,6 +219,19 @@ class CalibrationSet:
     def to_instructions(self):
         """
         Return the Quil instructions which describe the contained calibrations
+        """
+        ...
+
+@final
+class ControlFlowGraph:
+    def has_dynamic_control_flow(self) -> bool: 
+        """
+        Return ``True`` if the program has dynamic control flow, i.e. contains a conditional branch instruction.
+        """
+        ...
+    def basic_blocks(self) -> List["BasicBlock"]: 
+        """
+        Return a list of all the basic blocks in the control flow graph, in order of definition.
         """
         ...
 

@@ -504,31 +504,13 @@ pub struct ScheduledProgramOwned {
     basic_blocks: Vec<ScheduledBasicBlockOwned>,
 }
 
-impl From<ScheduledProgram<'_>> for ScheduledProgramOwned {
+impl<'a> From<ScheduledProgram<'a>> for ScheduledProgramOwned {
     fn from(program: ScheduledProgram) -> Self {
         Self {
             basic_blocks: program
                 .basic_blocks
                 .into_iter()
-                .map(|block| ScheduledBasicBlockOwned {
-                    basic_block: block.basic_block.into(),
-                    graph: block.graph,
-                })
-                .collect(),
-        }
-    }
-}
-
-impl<'a> From<&'a ScheduledProgram<'a>> for ScheduledProgramOwned {
-    fn from(program: &'a ScheduledProgram) -> Self {
-        Self {
-            basic_blocks: program
-                .basic_blocks
-                .iter()
-                .map(|block| ScheduledBasicBlockOwned {
-                    basic_block: block.basic_block.clone().into(),
-                    graph: block.graph.clone(),
-                })
+                .map(ScheduledBasicBlockOwned::from)
                 .collect(),
         }
     }
@@ -549,10 +531,10 @@ impl<'a> From<&'a ScheduledBasicBlockOwned> for ScheduledBasicBlock<'a> {
     }
 }
 
-impl<'a> From<&'a ScheduledBasicBlock<'a>> for ScheduledBasicBlockOwned {
-    fn from(block: &'a ScheduledBasicBlock) -> Self {
+impl<'a> From<ScheduledBasicBlock<'a>> for ScheduledBasicBlockOwned {
+    fn from(block: ScheduledBasicBlock) -> Self {
         Self {
-            basic_block: block.basic_block.clone().into(),
+            basic_block: block.basic_block.into(),
             graph: block.graph.clone(),
         }
     }

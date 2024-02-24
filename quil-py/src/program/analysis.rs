@@ -15,7 +15,7 @@ impl PyControlFlowGraph {
         ControlFlowGraph::from(&self.0).has_dynamic_control_flow()
     }
 
-    pub fn blocks(&self) -> Vec<PyBasicBlock> {
+    pub fn basic_blocks(&self) -> Vec<PyBasicBlock> {
         ControlFlowGraph::from(&self.0)
             .into_blocks()
             .into_iter()
@@ -42,5 +42,13 @@ impl PyBasicBlock {
             .copied()
             .map(PyInstruction::from)
             .collect()
+    }
+
+    pub fn terminator(&self) -> Option<PyInstruction> {
+        BasicBlock::from(&self.0)
+            .terminator()
+            .clone()
+            .into_instruction()
+            .map(PyInstruction::from)
     }
 }
