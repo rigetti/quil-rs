@@ -159,6 +159,7 @@ class BasicBlock:
     def label(self) -> Optional[Target]: ...
     def instructions(self) -> List[Instruction]: ...
     def terminator(self) -> Optional[Instruction]: ...
+    def as_fixed_schedule(self) -> FixedSchedule: ...
 
 @final
 class CalibrationSet:
@@ -222,6 +223,13 @@ class CalibrationSet:
         """
         ...
 
+
+@final
+class FixedScheduleItem:
+    def instruction_index(self) -> int: ...
+    def time_span(self) -> FixedTimeSpan: ...
+
+
 @final
 class ControlFlowGraph:
     def has_dynamic_control_flow(self) -> bool: 
@@ -234,6 +242,19 @@ class ControlFlowGraph:
         Return a list of all the basic blocks in the control flow graph, in order of definition.
         """
         ...
+
+@final
+class FixedSchedule:
+    def items(self) -> List[FixedScheduleItem]: ...
+    def duration(self) -> float: ...
+
+@final
+class FixedTimeSpan:
+    """
+    Representation of a time span in seconds.
+    """
+    def start(self) -> float: ...
+    def duration(self) -> float: ...
 
 @final
 class FrameSet:

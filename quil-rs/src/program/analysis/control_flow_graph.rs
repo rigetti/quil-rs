@@ -14,8 +14,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::{
+    collections::{BTreeMap, HashMap},
+    fmt::Debug,
+};
+
 use crate::{
-    instruction::{Instruction, Jump, JumpUnless, JumpWhen, Label, MemoryReference, Target},
+    instruction::{
+        Instruction, InstructionHandler, Jump, JumpUnless, JumpWhen, Label, MemoryReference, Target,
+    },
+    program::{
+        scheduling::{
+            schedule::{ComputedScheduleError, ComputedScheduleItem, Schedule, TimeSpan, Zero},
+            ScheduleError, ScheduledBasicBlock, Seconds,
+        },
+        ProgramError,
+    },
+    quil::Quil,
     Program,
 };
 
@@ -100,6 +115,134 @@ impl<'p> BasicBlock<'p> {
     pub fn terminator(&self) -> &BasicBlockTerminator<'p> {
         &self.terminator
     }
+
+    /// Compute the flattened schedule for this [`BasicBlock`] in terms of seconds,
+    /// using a default built-in calculation for the duration of scheduled instructions.
+    ///
+    /// # Arguments
+    ///
+    /// * `program` - The program containing this basic block. This is used to retrieve frame
+    ///   and calibration information.
+    /// * `include_zero_time_instructions` - If `true`, include instructions with zero duration
+    ///   (such as `FENCE`) in the returned schedule. Note: This may cause gate times to be
+    ///   overestimated, because the "clock" begins when the FENCE plays rather than when a PULSE
+    ///   plays, and those may be different due to the structure of the program.
+    pub fn as_fixed_schedule(
+        &self,
+        program: &Program,
+        include_zero_time_instructions: bool,
+    ) -> Result<Schedule<Seconds>, BasicBlockScheduleError> {
+        self.as_schedule(program, ScheduledBasicBlock::get_fixed_instruction_duration, include_zero_time_instructions)
+    }
+
+    /// Compute the schedule for this [`BasicBlock`] in terms of a generic unit of time,
+    /// using a provided function to calculate the duration of scheduled instructions in that unit.
+    ///
+    /// # Arguments
+    ///
+    /// * `program` - The program containing this basic block. This is used to retrieve frame
+    ///   and calibration information.
+    /// * `get_duration` - A function that takes a program and an instruction and returns the
+    ///   duration of the instruction in the desired time unit, or `None` if the instruction's
+    ///   duration is not known.
+    /// * `include_zero_time_instructions` - If `true`, include instructions with zero duration
+    ///   (such as `FENCE`) in the returned schedule. Note: This may cause gate times to be
+    ///   overestimated, because the "clock" begins when the FENCE plays rather than when a PULSE
+    ///   plays, and those may be different due to the structure of the program.
+    pub fn as_schedule<F, Time>(
+        &self,
+        program: &'p Program,
+        get_duration: F,
+        include_zero_time_instructions: bool,
+    ) -> Result<Schedule<Time>, BasicBlockScheduleError>
+    where
+        F: Fn(&Program, &Instruction) -> Option<Time>,
+        Time: Clone
+            + Debug
+            + PartialOrd
+            + std::ops::Add<Time, Output = Time>
+            + std::ops::Sub<Time, Output = Time>
+            + Zero,
+    {
+        // 1: expand calibrations and track the source mapping
+        let mut calibrated_to_uncalibrated_instruction_source_mapping = BTreeMap::new();
+        let mut calibrated_block_instructions = Vec::new();
+
+        for (uncalibrated_instruction_index, instruction) in self.instructions.iter().enumerate() {
+            let first_calibrated_instruction_index = calibrated_block_instructions.len();
+            if let Some(expanded) = program.calibrations.expand(instruction, &[])? {
+                calibrated_block_instructions.extend(expanded.into_iter());
+            } else {
+                calibrated_block_instructions.push((*instruction).clone());
+            }
+            calibrated_to_uncalibrated_instruction_source_mapping.insert(
+                first_calibrated_instruction_index,
+                uncalibrated_instruction_index,
+            );
+        }
+
+        let calibrated_block = BasicBlock {
+            label: self.label,
+            instructions: calibrated_block_instructions.iter().collect(),
+            instruction_index_offset: self.instruction_index_offset,
+            terminator: self.terminator.clone(),
+        };
+
+        // 2: attempt to schedule the newly-expanded block
+        let mut instruction_handler = InstructionHandler::default();
+        let scheduled_self =
+            ScheduledBasicBlock::build(calibrated_block, program, &mut instruction_handler)?;
+        let schedule = scheduled_self.as_schedule(program, get_duration)?;
+
+        // 3: map that schedule back to the original instructions from this basic block using the source mapping
+        let uncalibrated_schedule_items_by_instruction_index = schedule
+            .into_items()
+            .into_iter()
+            .fold(HashMap::<usize, TimeSpan<Time>>::new(), |mut map, item| {
+                // this skips fences and such since the user _probably_ is not interested in
+                // that timing information
+                if !include_zero_time_instructions && item.time_span.duration.is_zero() {
+                    return map;
+                }
+
+                if let Some((_, uncalibrated_instruction_index)) =
+                    calibrated_to_uncalibrated_instruction_source_mapping
+                        .range(..=item.instruction_index)
+                        .next_back()
+                {
+                    if let Some(existing_time_span) = map.get_mut(uncalibrated_instruction_index) {
+                        *existing_time_span = existing_time_span.clone().union(item.time_span);
+                    } else {
+                        map.insert(*uncalibrated_instruction_index, item.time_span.clone());
+                    }
+                }
+
+                map
+            });
+
+        let schedule_items = uncalibrated_schedule_items_by_instruction_index
+            .into_iter()
+            .map(|(instruction_index, time_span)| ComputedScheduleItem {
+                instruction_index,
+                time_span,
+            })
+            .collect::<Vec<_>>();
+
+        let schedule = Schedule::from(schedule_items);
+        Ok(schedule)
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum BasicBlockScheduleError {
+    #[error(transparent)]
+    ScheduleError(#[from] ScheduleError),
+
+    #[error(transparent)]
+    ComputedScheduleError(#[from] ComputedScheduleError),
+
+    #[error(transparent)]
+    ProgramError(#[from] ProgramError),
 }
 
 #[derive(Clone, Debug)]
@@ -447,5 +590,125 @@ X 0
             .collect::<Vec<_>>();
 
         assert_eq!(expected_block_offsets, actual);
+    }
+
+    #[test]
+    fn schedule_uncalibrated() {
+        let input = r#"DEFFRAME 0 "a":
+    ATTRIBUTE: 1
+
+DEFFRAME 0 "b":
+    ATTRIBUTE: 1
+
+DEFCAL A 0:
+    NONBLOCKING PULSE 0 "a" flat(duration: 1.0)
+    NONBLOCKING PULSE 0 "a" flat(duration: 1.0)
+    NONBLOCKING PULSE 0 "a" flat(duration: 1.0)
+
+DEFCAL B 0:
+    NONBLOCKING PULSE 0 "b" flat(duration: 10.0)
+
+A 0
+B 0
+FENCE
+B 0
+PULSE 0 "a" flat(duration: 1.0)
+"#;
+
+        let program: Program = input.parse().unwrap();
+        let graph = ControlFlowGraph::from(&program);
+        let blocks = graph.into_blocks();
+        println!("blocks: {:#?}", blocks);
+
+        let schedule = blocks[0].as_fixed_schedule(&program, false).unwrap();
+        println!("schedule: {:#?}", schedule);
+        assert_eq!(schedule.duration().0, 21.0);
+        let mut schedule_items = schedule.into_items();
+        schedule_items.sort_by_key(|item| item.instruction_index);
+        println!("schedule_items: {:#?}", schedule_items);
+
+        assert_eq!(schedule_items.len(), 4);
+        // `A 0` backed by multiple consecutive instructions should capture all of their times
+        assert_eq!(schedule_items[0].instruction_index, 0);
+        assert_eq!(schedule_items[0].time_span.start_time().0, 0.0);
+        assert_eq!(schedule_items[0].time_span.duration().0, 3.0);
+
+        // `B 0` should be scheduled concurrently with `A 0`
+        assert_eq!(schedule_items[1].instruction_index, 1);
+        assert_eq!(schedule_items[1].time_span.start_time().0, 0.0);
+        assert_eq!(schedule_items[1].time_span.duration().0, 10.0);
+
+        // nvm, FENCE is omitted
+        // `FENCE` should be scheduled after `A 0` and `B 0` and take no time.
+        // It should still be present in the schedule even though it is not expanded by calibrations.
+        // assert_eq!(schedule_items[2].instruction_index, 2);
+        // assert_eq!(schedule_items[2].time_span.start_time().0, 10.0);
+        // assert_eq!(schedule_items[2].time_span.duration().0, 0.0);
+
+        // `B 0` should be scheduled after `FENCE`
+        assert_eq!(schedule_items[2].instruction_index, 3);
+        assert_eq!(schedule_items[2].time_span.start_time().0, 10.0);
+        assert_eq!(schedule_items[2].time_span.duration().0, 10.0);
+
+        // `PULSE 0 "a" flat(duration: 1.0)` should be scheduled after `B 0` as a blocking pulse.
+        assert_eq!(schedule_items[3].instruction_index, 4);
+        assert_eq!(schedule_items[3].time_span.start_time().0, 20.0);
+        assert_eq!(schedule_items[3].time_span.duration().0, 1.0);
+    }
+
+    #[test]
+    fn schedule_uncalibrated_cz() {
+        let input = r#"DEFFRAME 0 "flux_tx_cz":
+    TEST: 1
+
+DEFFRAME 1 "flux_tx_iswap":
+    TEST: 1
+
+DEFFRAME 1 "flux_tx_cz":
+    TEST: 1
+
+DEFFRAME 1 "flux_tx_iswap":
+    TEST: 1
+
+DEFFRAME 2 "flux_tx_cz":
+    TEST: 1
+
+DEFFRAME 2 "flux_tx_iswap":
+    TEST: 1
+
+DEFFRAME 3 "flux_tx_cz":
+    TEST: 1
+
+DEFFRAME 3 "flux_tx_iswap":
+    TEST: 1
+
+# Simplified version
+DEFCAL CZ q0 q1:
+    FENCE q0 q1
+    SET-PHASE q0 "flux_tx_cz" 0.0
+    SET-PHASE q1 "flux_tx_iswap" 0.0
+    NONBLOCKING PULSE q0 "flux_tx_cz" erf_square(duration: 6.000000000000001e-08)
+    NONBLOCKING PULSE q1 "flux_tx_iswap" erf_square(duration: 6.000000000000001e-08)
+    SHIFT-PHASE q0 "flux_tx_cz" 1.0
+    SHIFT-PHASE q1 "flux_tx_iswap" 1.0
+    FENCE q0 q1
+
+CZ 0 1
+CZ 2 3
+CZ 0 2
+"#;
+
+        let program: Program = input.parse().unwrap();
+        let graph = ControlFlowGraph::from(&program);
+        let blocks = graph.into_blocks();
+        println!("blocks: {:#?}", blocks);
+
+        let schedule = blocks[0].as_fixed_schedule(&program, false).unwrap();
+        let mut schedule_items = schedule.into_items();
+        schedule_items.sort_by_key(|item| item.instruction_index);
+
+        assert_eq!(schedule_items.len(), 3);
+
+        insta::assert_debug_snapshot!(schedule_items);
     }
 }

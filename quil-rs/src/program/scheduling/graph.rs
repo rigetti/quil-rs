@@ -23,7 +23,7 @@ use crate::instruction::{FrameIdentifier, Instruction, InstructionHandler, Targe
 use crate::program::analysis::{
     BasicBlock, BasicBlockOwned, BasicBlockTerminator, ControlFlowGraph,
 };
-use crate::{instruction::InstructionRole, program::Program};
+use crate::{instruction::InstructionRole, program::Program, quil::Quil};
 
 pub use crate::program::memory::MemoryAccessType;
 
@@ -34,7 +34,8 @@ pub enum ScheduleErrorVariant {
     UnschedulableInstruction,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, thiserror::Error)]
+#[error("Error scheduling instruction {}: {}: {variant:?}", .instruction_index.map(|i| i.to_string()).unwrap_or(String::from("")), .instruction.to_quil_or_debug())]
 pub struct ScheduleError {
     pub instruction_index: Option<usize>,
     pub instruction: Instruction,
@@ -499,22 +500,23 @@ impl<'a> ScheduledProgram<'a> {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct ScheduledProgramOwned {
-    basic_blocks: Vec<ScheduledBasicBlockOwned>,
-}
+// #[derive(Clone, Debug)]
+// pub struct ScheduledProgramOwned {
+//     #[allow(dead_code)]
+//     basic_blocks: Vec<ScheduledBasicBlockOwned>,
+// }
 
-impl<'a> From<ScheduledProgram<'a>> for ScheduledProgramOwned {
-    fn from(program: ScheduledProgram) -> Self {
-        Self {
-            basic_blocks: program
-                .basic_blocks
-                .into_iter()
-                .map(ScheduledBasicBlockOwned::from)
-                .collect(),
-        }
-    }
-}
+// impl<'a> From<ScheduledProgram<'a>> for ScheduledProgramOwned {
+//     fn from(program: ScheduledProgram) -> Self {
+//         Self {
+//             basic_blocks: program
+//                 .basic_blocks
+//                 .into_iter()
+//                 .map(ScheduledBasicBlockOwned::from)
+//                 .collect(),
+//         }
+//     }
+// }
 
 #[derive(Clone, Debug)]
 pub struct ScheduledBasicBlockOwned {

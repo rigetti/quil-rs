@@ -1,9 +1,12 @@
+use pyo3::exceptions::PyValueError;
 use quil_rs::program::analysis::{
     BasicBlock, BasicBlockOwned, ControlFlowGraph, ControlFlowGraphOwned,
 };
 use rigetti_pyo3::{py_wrap_type, pyo3::prelude::*};
 
 use crate::instruction::{PyInstruction, PyTarget};
+
+use super::{scheduling::PyFixedSchedule, PyProgram};
 
 py_wrap_type! {
     PyControlFlowGraph(ControlFlowGraphOwned) as "ControlFlowGraph"
@@ -50,5 +53,12 @@ impl PyBasicBlock {
             .clone()
             .into_instruction()
             .map(PyInstruction::from)
+    }
+
+    pub fn as_fixed_schedule(&self, program: &PyProgram) -> PyResult<PyFixedSchedule> {
+        BasicBlock::from(&self.0)
+            .as_fixed_schedule(&program.0)
+            .map(|v| v.into())
+            .map_err(|e| PyValueError::new_err(e.to_string()).into())
     }
 }

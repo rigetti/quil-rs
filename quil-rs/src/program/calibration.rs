@@ -17,6 +17,7 @@ use std::collections::HashMap;
 use itertools::FoldWhile::{Continue, Done};
 use itertools::Itertools;
 
+use crate::instruction::Fence;
 use crate::quil::Quil;
 use crate::{
     expression::Expression,
@@ -145,7 +146,8 @@ impl CalibrationSet {
                                 | Instruction::Pulse(Pulse {
                                     frame: FrameIdentifier { qubits, .. },
                                     ..
-                                }) => {
+                                })
+                                | Instruction::Fence(Fence { qubits }) => {
                                     // Swap all qubits for their concrete implementations
                                     for qubit in qubits {
                                         match qubit {
@@ -535,6 +537,15 @@ mod tests {
             "DEFCAL RZ(%theta) %q:\n",
             "    SHIFT-PHASE %q \"rf\" -%theta\n",
             "RZ(pi) 0\n",
+        )
+    )]
+    #[case(
+        "FenceVariableQubit",
+        concat!(
+            "DEFCAL FENCES q0 q1:\n",
+            "    FENCE q0\n",
+            "    FENCE q1\n",
+            "FENCES 0 1\n",
         )
     )]
     fn test_expansion(#[case] description: &str, #[case] input: &str) {

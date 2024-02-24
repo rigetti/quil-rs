@@ -2,7 +2,7 @@ use quil_rs::program::scheduling::{
     ComputedScheduleItem, FixedSchedule, ScheduledBasicBlock, ScheduledBasicBlockOwned, Seconds,
     TimeSpan,
 };
-use rigetti_pyo3::{py_wrap_data_struct, py_wrap_type, pyo3::prelude::*};
+use rigetti_pyo3::{py_wrap_type, pyo3::prelude::*};
 
 use super::PyProgram;
 
@@ -25,11 +25,11 @@ py_wrap_type! {
 
 #[pymethods]
 impl PyFixedSchedule {
-    pub fn items(&self) -> Vec<PyComputedFixedScheduleItem> {
+    pub fn items(&self) -> Vec<PyFixedScheduleItem> {
         self.0
             .items()
             .iter()
-            .map(PyComputedFixedScheduleItem::from)
+            .map(PyFixedScheduleItem::from)
             .collect()
     }
 
@@ -38,11 +38,21 @@ impl PyFixedSchedule {
     }
 }
 
-py_wrap_data_struct! {
-    PyComputedFixedScheduleItem(ComputedScheduleItem<Seconds>) as "ComputedFixedScheduleItem" {
-        time_span: TimeSpan<Seconds> => PyFixedTimeSpan
+py_wrap_type! {
+    PyFixedScheduleItem(ComputedScheduleItem<Seconds>) as "FixedScheduleItem"
+}
+
+#[pymethods]
+impl PyFixedScheduleItem {
+    #[getter]
+    pub fn time_span(&self) -> PyFixedTimeSpan {
+        (&self.0.time_span).into()
     }
 
+    #[getter]
+    pub fn instruction_index(&self) -> usize {
+        self.0.instruction_index
+    }
 }
 
 py_wrap_type! {

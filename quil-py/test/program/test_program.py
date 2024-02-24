@@ -88,3 +88,72 @@ HALT
     cfg = program.control_flow_graph()
     blocks = cfg.basic_blocks()
     assert len(blocks) == 3
+
+def test_basic_block_fixed_schedule():
+    """
+    Test that a simple, realistic program can be scheduled as expected.
+    """
+
+    program = Program.parse(
+        """DEFFRAME 0 "flux_tx_cz":
+    TEST: 1
+
+DEFFRAME 1 "flux_tx_iswap":
+    TEST: 1
+
+DEFFRAME 1 "flux_tx_cz":
+    TEST: 1
+
+DEFFRAME 1 "flux_tx_iswap":
+    TEST: 1
+
+DEFFRAME 2 "flux_tx_cz":
+    TEST: 1
+
+DEFFRAME 2 "flux_tx_iswap":
+    TEST: 1
+
+DEFFRAME 3 "flux_tx_cz":
+    TEST: 1
+
+DEFFRAME 3 "flux_tx_iswap":
+    TEST: 1
+
+# Simplified version
+DEFCAL CZ q0 q1:
+    FENCE q0 q1
+    SET-PHASE q0 "flux_tx_cz" 0.0
+    SET-PHASE q1 "flux_tx_iswap" 0.0
+    NONBLOCKING PULSE q0 "flux_tx_cz" erf_square(duration: 6.000000000000001e-08)
+    NONBLOCKING PULSE q1 "flux_tx_iswap" erf_square(duration: 6.000000000000001e-08)
+    SHIFT-PHASE q0 "flux_tx_cz" 1.0
+    SHIFT-PHASE q1 "flux_tx_iswap" 1.0
+    FENCE q0 q1
+
+CZ 0 1
+CZ 2 3
+CZ 0 2
+""")
+    cfg = program.control_flow_graph()
+    blocks = cfg.basic_blocks()
+    assert len(blocks) == 1
+    block = blocks[0]
+
+    schedule = block.as_fixed_schedule(program)
+    items = schedule.items()
+
+    # One for each CZ
+    assert len(items) == 3
+
+    items.sort(key=lambda x: x.instruction_index)
+
+    # The first CZ should start at 0
+    assert items[0].time_span.start == 0.0
+
+    # The first CZ should start and end at the same times
+    assert items[0].time_span.start == items[1].time_span.start
+    assert items[0].time_span.duration == items[1].time_span.duration
+
+    # The third CZ should start when the first and second ones end and be of the same duration
+    assert items[0].time_span.start + items[0].time_span.duration == items[2].time_span.start
+    assert items[0].time_span.duration == items[2].time_span.duration

@@ -19,7 +19,7 @@ use crate::{
 
 use super::{ExecutionDependency, ScheduledBasicBlock, ScheduledGraphNode};
 
-#[derive(Clone, Default, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Default, PartialEq, PartialOrd)]
 pub struct Seconds(pub f64);
 
 impl std::ops::Add<Seconds> for Seconds {
@@ -30,8 +30,20 @@ impl std::ops::Add<Seconds> for Seconds {
     }
 }
 
-pub trait Zero {
+impl std::ops::Sub<Seconds> for Seconds {
+    type Output = Seconds;
+
+    fn sub(self, rhs: Seconds) -> Self::Output {
+        Self(self.0 - rhs.0)
+    }
+}
+
+pub trait Zero: PartialEq + Sized {
     fn zero() -> Self;
+
+    fn is_zero(&self) -> bool {
+        self == &Self::zero()
+    }
 }
 
 impl Zero for Seconds {
@@ -56,6 +68,22 @@ impl<Time> Schedule<Time> {
 
     pub fn items(&self) -> &[ComputedScheduleItem<Time>] {
         self.items.as_ref()
+    }
+
+    pub fn into_items(self) -> Vec<ComputedScheduleItem<Time>> {
+        self.items
+    }
+}
+
+impl<Time: Clone + PartialOrd + std::ops::Add<Time, Output = Time> + Zero>
+    From<Vec<ComputedScheduleItem<Time>>> for Schedule<Time>
+{
+    fn from(items: Vec<ComputedScheduleItem<Time>>) -> Self {
+        let duration = items
+            .iter()
+            .map(|item| item.time_span.start_time.clone() + item.time_span.duration.clone())
+            .fold(Time::zero(), |acc, el| if el > acc { el } else { acc });
+        Self { items, duration }
     }
 }
 
@@ -88,7 +116,7 @@ pub enum ComputedScheduleError {
 pub type ComputedScheduleResult<T> = Result<T, ComputedScheduleError>;
 
 /// Represents a span of time, for some unit of time
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct TimeSpan<Time> {
     /// The inclusive start time of the described item
     pub start_time: Time,
@@ -107,6 +135,35 @@ impl<Time> TimeSpan<Time> {
     }
 }
 
+impl<
+        Time: Clone
+            + PartialOrd
+            + std::ops::Add<Time, Output = Time>
+            + std::ops::Sub<Time, Output = Time>,
+    > TimeSpan<Time>
+{
+    pub(crate) fn union(self, rhs: Self) -> Self {
+        let start_time = if rhs.start_time < self.start_time {
+            rhs.start_time.clone()
+        } else {
+            self.start_time.clone()
+        };
+
+        let self_end_time = self.start_time.clone() + self.duration;
+        let rhs_end_time = rhs.start_time + rhs.duration;
+        let end_time = if self_end_time < rhs_end_time {
+            rhs_end_time
+        } else {
+            self_end_time
+        };
+
+        Self {
+            duration: end_time - start_time.clone(),
+            start_time,
+        }
+    }
+}
+
 impl<'p> ScheduledBasicBlock<'p> {
     // todo create more restricted subtype of instruction for ScheduledBasicBlock so we don't have
     // to handle unreachable instructions here
@@ -117,7 +174,7 @@ impl<'p> ScheduledBasicBlock<'p> {
     /// * For supporting instructions like SET-*, SHIFT-*, and FENCE, it's 0
     ///
     /// Return `None` for other instructions.
-    fn get_fixed_instruction_duration(
+    pub(crate) fn get_fixed_instruction_duration(
         program: &Program,
         instruction: &Instruction,
     ) -> Option<Seconds> {
@@ -283,7 +340,7 @@ impl<'p> ScheduledBasicBlock<'p> {
 mod tests {
     use core::panic;
 
-    use crate::{instruction::InstructionHandler, Program};
+    use crate::{instruction::InstructionHandler, program::scheduling::TimeSpan, Program};
 
     #[rstest::rstest]
     #[case(
@@ -363,5 +420,30 @@ PULSE 0 "a" flat(duration: 1.0)
                 panic!("expected success, got error: {error}")
             }
         }
+    }
+
+    #[rstest::rstest]
+    #[case::identical((0, 10), (0, 10), (0, 10))]
+    #[case::adjacent((0, 1), (1, 1), (0, 2))]
+    #[case::disjoint((0, 10), (20, 10), (0, 30))]
+    #[case::disjoint_reverse((20, 10), (0, 10), (0, 30))]
+    fn time_span_union(
+        #[case] a: (usize, usize),
+        #[case] b: (usize, usize),
+        #[case] expected: (usize, usize),
+    ) {
+        let a = TimeSpan {
+            start_time: a.0,
+            duration: a.1,
+        };
+        let b = TimeSpan {
+            start_time: b.0,
+            duration: b.1,
+        };
+        let expected = TimeSpan {
+            start_time: expected.0,
+            duration: expected.1,
+        };
+        assert_eq!(expected, a.union(b));
     }
 }
