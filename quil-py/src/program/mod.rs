@@ -33,7 +33,10 @@ use crate::{
     },
 };
 
-use self::analysis::PyControlFlowGraph;
+use self::{
+    analysis::{PyBasicBlock, PyControlFlowGraph},
+    scheduling::{PyFixedSchedule, PyFixedScheduleItem, PyFixedTimeSpan},
+};
 pub use self::{calibration::PyCalibrationSet, frame::PyFrameSet, memory::PyMemoryRegion};
 
 mod analysis;
@@ -370,5 +373,5 @@ impl PyProgram {
 }
 
 create_init_submodule! {
-    classes: [ PyFrameSet, PyProgram, PyCalibrationSet, PyMemoryRegion ],
+    classes: [ PyFrameSet, PyProgram, PyCalibrationSet, PyMemoryRegion, PyBasicBlock, PyControlFlowGraph, PyFixedSchedule, PyFixedScheduleItem, PyFixedTimeSpan ],
 }
