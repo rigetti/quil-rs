@@ -122,7 +122,7 @@
                                 <a class="variable" href="#Program.declarations">declarations</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.gate_definitions">gate_definitions</a>
+                                <a class="variable" href="#Program.body_instructions">body_instructions</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Program.waveforms">waveforms</a>
@@ -131,7 +131,7 @@
                                 <a class="variable" href="#Program.frames">frames</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.body_instructions">body_instructions</a>
+                                <a class="variable" href="#Program.gate_definitions">gate_definitions</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Program.calibrations">calibrations</a>
@@ -182,10 +182,10 @@
                     <a class="class" href="#MemoryRegion">MemoryRegion</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#MemoryRegion.sharing">sharing</a>
+                                <a class="variable" href="#MemoryRegion.size">size</a>
                         </li>
                         <li>
-                                <a class="variable" href="#MemoryRegion.size">size</a>
+                                <a class="variable" href="#MemoryRegion.sharing">sharing</a>
                         </li>
                 </ul>
 
@@ -245,10 +245,10 @@
                     <a class="class" href="#FixedScheduleItem">FixedScheduleItem</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#FixedScheduleItem.instruction_index">instruction_index</a>
+                                <a class="variable" href="#FixedScheduleItem.time_span">time_span</a>
                         </li>
                         <li>
-                                <a class="variable" href="#FixedScheduleItem.time_span">time_span</a>
+                                <a class="variable" href="#FixedScheduleItem.instruction_index">instruction_index</a>
                         </li>
                 </ul>
 
@@ -257,10 +257,10 @@
                     <a class="class" href="#FixedTimeSpan">FixedTimeSpan</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#FixedTimeSpan.duration">duration</a>
+                                <a class="variable" href="#FixedTimeSpan.start">start</a>
                         </li>
                         <li>
-                                <a class="variable" href="#FixedTimeSpan.start">start</a>
+                                <a class="variable" href="#FixedTimeSpan.duration">duration</a>
                         </li>
                 </ul>
 
@@ -751,13 +751,13 @@ while ensuring that unique value is not already in use within the program.</p>
     
 
                             </div>
-                            <div id="Program.gate_definitions" class="classattr">
+                            <div id="Program.body_instructions" class="classattr">
                                 <div class="attr variable">
-            <span class="name">gate_definitions</span><span class="annotation">: Dict[str, GateDefinition]</span>
+            <span class="name">body_instructions</span><span class="annotation">: List[Instruction]</span>
 
         
     </div>
-    <a class="headerlink" href="#Program.gate_definitions"></a>
+    <a class="headerlink" href="#Program.body_instructions"></a>
     
     
 
@@ -784,13 +784,13 @@ while ensuring that unique value is not already in use within the program.</p>
     
 
                             </div>
-                            <div id="Program.body_instructions" class="classattr">
+                            <div id="Program.gate_definitions" class="classattr">
                                 <div class="attr variable">
-            <span class="name">body_instructions</span><span class="annotation">: List[Instruction]</span>
+            <span class="name">gate_definitions</span><span class="annotation">: Dict[str, GateDefinition]</span>
 
         
     </div>
-    <a class="headerlink" href="#Program.body_instructions"></a>
+    <a class="headerlink" href="#Program.gate_definitions"></a>
     
     
 
@@ -999,17 +999,6 @@ qubit (if any), or otherwise the last-specified one that specified no qubit.</p>
     
     
 
-                            <div id="MemoryRegion.sharing" class="classattr">
-                                <div class="attr variable">
-            <span class="name">sharing</span><span class="annotation">: Optional[Sharing]</span>
-
-        
-    </div>
-    <a class="headerlink" href="#MemoryRegion.sharing"></a>
-    
-    
-
-                            </div>
                             <div id="MemoryRegion.size" class="classattr">
                                 <div class="attr variable">
             <span class="name">size</span><span class="annotation">: Vector</span>
@@ -1017,6 +1006,17 @@ qubit (if any), or otherwise the last-specified one that specified no qubit.</p>
         
     </div>
     <a class="headerlink" href="#MemoryRegion.size"></a>
+    
+    
+
+                            </div>
+                            <div id="MemoryRegion.sharing" class="classattr">
+                                <div class="attr variable">
+            <span class="name">sharing</span><span class="annotation">: Optional[Sharing]</span>
+
+        
+    </div>
+    <a class="headerlink" href="#MemoryRegion.sharing"></a>
     
     
 
@@ -1051,7 +1051,7 @@ qubit (if any), or otherwise the last-specified one that specified no qubit.</p>
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">gate_depth</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">minimum_qubit_count</span><span class="p">:</span> <span class="nb">int</span></span><span class="return-annotation">) -> <span class="nb">int</span>:</span></span>
+        <span class="name">gate_depth</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">gate_minimum_qubit_count</span><span class="p">:</span> <span class="nb">int</span></span><span class="return-annotation">) -> <span class="nb">int</span>:</span></span>
 
         
     </div>
@@ -1220,17 +1220,6 @@ qubit (if any), or otherwise the last-specified one that specified no qubit.</p>
     
     
 
-                            <div id="FixedScheduleItem.instruction_index" class="classattr">
-                                <div class="attr variable">
-            <span class="name">instruction_index</span><span class="annotation">: int</span>
-
-        
-    </div>
-    <a class="headerlink" href="#FixedScheduleItem.instruction_index"></a>
-    
-    
-
-                            </div>
                             <div id="FixedScheduleItem.time_span" class="classattr">
                                 <div class="attr variable">
             <span class="name">time_span</span><span class="annotation">: <a href="#FixedTimeSpan">quil.program.FixedTimeSpan</a></span>
@@ -1238,6 +1227,17 @@ qubit (if any), or otherwise the last-specified one that specified no qubit.</p>
         
     </div>
     <a class="headerlink" href="#FixedScheduleItem.time_span"></a>
+    
+    
+
+                            </div>
+                            <div id="FixedScheduleItem.instruction_index" class="classattr">
+                                <div class="attr variable">
+            <span class="name">instruction_index</span><span class="annotation">: int</span>
+
+        
+    </div>
+    <a class="headerlink" href="#FixedScheduleItem.instruction_index"></a>
     
     
 
@@ -1257,17 +1257,6 @@ qubit (if any), or otherwise the last-specified one that specified no qubit.</p>
 </div>
 
 
-                            <div id="FixedTimeSpan.duration" class="classattr">
-                                <div class="attr variable">
-            <span class="name">duration</span><span class="annotation">: float</span>
-
-        
-    </div>
-    <a class="headerlink" href="#FixedTimeSpan.duration"></a>
-    
-    
-
-                            </div>
                             <div id="FixedTimeSpan.start" class="classattr">
                                 <div class="attr variable">
             <span class="name">start</span><span class="annotation">: float</span>
@@ -1275,6 +1264,17 @@ qubit (if any), or otherwise the last-specified one that specified no qubit.</p>
         
     </div>
     <a class="headerlink" href="#FixedTimeSpan.start"></a>
+    
+    
+
+                            </div>
+                            <div id="FixedTimeSpan.duration" class="classattr">
+                                <div class="attr variable">
+            <span class="name">duration</span><span class="annotation">: float</span>
+
+        
+    </div>
+    <a class="headerlink" href="#FixedTimeSpan.duration"></a>
     
     
 
