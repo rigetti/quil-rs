@@ -209,14 +209,21 @@ class BasicBlock:
 
             .. code-block:: python
 
-                from pyquil import Program
-                from pyquil.gates import CZ
+                from quil.program import Program
 
-                program = Program(CZ(0, 1), CZ(0, 2))
-                cfg = program.control_flow_graph()
-                blocks = cfg.basic_blocks()
+                program = Program.parse("CZ 0 1; CZ 0 2")
+
+                print(program.to_quil())
+
+                control_flow_graph = program.control_flow_graph()
+                assert control_flow_graph.has_dynamic_control_flow() == False
+
+                basic_blocks = control_flow_graph.basic_blocks()
+                assert len(basic_blocks) == 1
 
                 schedule = blocks[0].as_fixed_schedule(program, False)
+                print(f"Duration = {schedule.duration()}")
+
                 print(schedule.items())
         """
     def gate_depth(self, gate_minimum_qubit_count: int) -> int:
