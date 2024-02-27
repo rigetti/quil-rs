@@ -119,25 +119,25 @@
                                 <a class="function" href="#Program.resolve_placeholders_with_custom_resolvers">resolve_placeholders_with_custom_resolvers</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.calibrations">calibrations</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Program.frames">frames</a>
+                                <a class="variable" href="#Program.gate_definitions">gate_definitions</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Program.memory_regions">memory_regions</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.declarations">declarations</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Program.gate_definitions">gate_definitions</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#Program.waveforms">waveforms</a>
                         </li>
                         <li>
+                                <a class="variable" href="#Program.calibrations">calibrations</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#Program.body_instructions">body_instructions</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Program.declarations">declarations</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Program.frames">frames</a>
                         </li>
                 </ul>
 
@@ -182,10 +182,10 @@
                     <a class="class" href="#MemoryRegion">MemoryRegion</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#MemoryRegion.sharing">sharing</a>
+                                <a class="variable" href="#MemoryRegion.size">size</a>
                         </li>
                         <li>
-                                <a class="variable" href="#MemoryRegion.size">size</a>
+                                <a class="variable" href="#MemoryRegion.sharing">sharing</a>
                         </li>
                 </ul>
 
@@ -260,10 +260,10 @@
                                 <a class="variable" href="#FixedTimeSpan.duration">duration</a>
                         </li>
                         <li>
-                                <a class="variable" href="#FixedTimeSpan.start">start</a>
+                                <a class="variable" href="#FixedTimeSpan.end">end</a>
                         </li>
                         <li>
-                                <a class="variable" href="#FixedTimeSpan.end">end</a>
+                                <a class="variable" href="#FixedTimeSpan.start">start</a>
                         </li>
                 </ul>
 
@@ -743,24 +743,13 @@ while ensuring that unique value is not already in use within the program.</p>
 
 
                             </div>
-                            <div id="Program.calibrations" class="classattr">
+                            <div id="Program.gate_definitions" class="classattr">
                                 <div class="attr variable">
-            <span class="name">calibrations</span><span class="annotation">: <a href="#CalibrationSet">quil.program.CalibrationSet</a></span>
+            <span class="name">gate_definitions</span><span class="annotation">: Dict[str, GateDefinition]</span>
 
         
     </div>
-    <a class="headerlink" href="#Program.calibrations"></a>
-    
-    
-
-                            </div>
-                            <div id="Program.frames" class="classattr">
-                                <div class="attr variable">
-            <span class="name">frames</span><span class="annotation">: <a href="#FrameSet">quil.program.FrameSet</a></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.frames"></a>
+    <a class="headerlink" href="#Program.gate_definitions"></a>
     
     
 
@@ -776,28 +765,6 @@ while ensuring that unique value is not already in use within the program.</p>
     
 
                             </div>
-                            <div id="Program.declarations" class="classattr">
-                                <div class="attr variable">
-            <span class="name">declarations</span><span class="annotation">: Dict[str, Declaration]</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.declarations"></a>
-    
-    
-
-                            </div>
-                            <div id="Program.gate_definitions" class="classattr">
-                                <div class="attr variable">
-            <span class="name">gate_definitions</span><span class="annotation">: Dict[str, GateDefinition]</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.gate_definitions"></a>
-    
-    
-
-                            </div>
                             <div id="Program.waveforms" class="classattr">
                                 <div class="attr variable">
             <span class="name">waveforms</span><span class="annotation">: Dict[str, Waveform]</span>
@@ -809,6 +776,17 @@ while ensuring that unique value is not already in use within the program.</p>
     
 
                             </div>
+                            <div id="Program.calibrations" class="classattr">
+                                <div class="attr variable">
+            <span class="name">calibrations</span><span class="annotation">: <a href="#CalibrationSet">quil.program.CalibrationSet</a></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.calibrations"></a>
+    
+    
+
+                            </div>
                             <div id="Program.body_instructions" class="classattr">
                                 <div class="attr variable">
             <span class="name">body_instructions</span><span class="annotation">: List[Instruction]</span>
@@ -816,6 +794,28 @@ while ensuring that unique value is not already in use within the program.</p>
         
     </div>
     <a class="headerlink" href="#Program.body_instructions"></a>
+    
+    
+
+                            </div>
+                            <div id="Program.declarations" class="classattr">
+                                <div class="attr variable">
+            <span class="name">declarations</span><span class="annotation">: Dict[str, Declaration]</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.declarations"></a>
+    
+    
+
+                            </div>
+                            <div id="Program.frames" class="classattr">
+                                <div class="attr variable">
+            <span class="name">frames</span><span class="annotation">: <a href="#FrameSet">quil.program.FrameSet</a></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.frames"></a>
     
     
 
@@ -1002,17 +1002,6 @@ qubit (if any), or otherwise the last-specified one that specified no qubit.</p>
     
     
 
-                            <div id="MemoryRegion.sharing" class="classattr">
-                                <div class="attr variable">
-            <span class="name">sharing</span><span class="annotation">: Optional[Sharing]</span>
-
-        
-    </div>
-    <a class="headerlink" href="#MemoryRegion.sharing"></a>
-    
-    
-
-                            </div>
                             <div id="MemoryRegion.size" class="classattr">
                                 <div class="attr variable">
             <span class="name">size</span><span class="annotation">: Vector</span>
@@ -1020,6 +1009,17 @@ qubit (if any), or otherwise the last-specified one that specified no qubit.</p>
         
     </div>
     <a class="headerlink" href="#MemoryRegion.size"></a>
+    
+    
+
+                            </div>
+                            <div id="MemoryRegion.sharing" class="classattr">
+                                <div class="attr variable">
+            <span class="name">sharing</span><span class="annotation">: Optional[Sharing]</span>
+
+        
+    </div>
+    <a class="headerlink" href="#MemoryRegion.sharing"></a>
     
     
 
@@ -1076,14 +1076,21 @@ flow (and thus with only one basic block):</p>
 
 <pre><code>.. code-block:: python
 
-    from pyquil import Program
-    from pyquil.gates import CZ
+    from <a href="">quil.program</a> import Program
 
-    program = Program(CZ(0, 1), CZ(0, 2))
-    cfg = program.control_flow_graph()
-    blocks = cfg.basic_blocks()
+    program = <a href="#Program.parse">Program.parse</a>("CZ 0 1; CZ 0 2")
+
+    print(program.to_quil())
+
+    control_flow_graph = program.control_flow_graph()
+    assert control_flow_graph.has_dynamic_control_flow() == False
+
+    basic_blocks = control_flow_graph.basic_blocks()
+    assert len(basic_blocks) == 1
 
     schedule = blocks[0].as_fixed_schedule(program, False)
+    print(f"Duration = {schedule.duration()}")
+
     print(schedule.items())
 </code></pre>
 </div>
@@ -1220,6 +1227,10 @@ transition between two basic blocks.</p>
     <a class="headerlink" href="#ControlFlowGraph.has_dynamic_control_flow"></a>
     
             <div class="docstring"><p>Return <code>True</code> if the program has dynamic control flow, i.e. contains a conditional branch instruction.</p>
+
+<p><code>False</code> does not imply that there is only one basic block in the program. Multiple basic blocks may have
+non-conditional control flow among them, in which the execution order is deterministic and does not depend
+on program state. This may be a sequence of basic blocks with fixed <code>JUMP</code>s or without explicit terminators.</p>
 </div>
 
 
@@ -1353,21 +1364,6 @@ transition between two basic blocks.</p>
 
 
                             </div>
-                            <div id="FixedTimeSpan.start" class="classattr">
-                                <div class="attr variable">
-            <span class="name">start</span><span class="annotation">: float</span>
-
-        
-    </div>
-    <a class="headerlink" href="#FixedTimeSpan.start"></a>
-    
-            <div class="docstring"><p>The start time of the time span, in seconds.</p>
-
-<p>This is relative to the start of the scheduling context (such as the basic block).</p>
-</div>
-
-
-                            </div>
                             <div id="FixedTimeSpan.end" class="classattr">
                                 <div class="attr variable">
             <span class="name">end</span><span class="annotation">: float</span>
@@ -1379,6 +1375,21 @@ transition between two basic blocks.</p>
             <div class="docstring"><p>The end time of the time span, in seconds.</p>
 
 <p>This is the sum of the start time and duration.</p>
+</div>
+
+
+                            </div>
+                            <div id="FixedTimeSpan.start" class="classattr">
+                                <div class="attr variable">
+            <span class="name">start</span><span class="annotation">: float</span>
+
+        
+    </div>
+    <a class="headerlink" href="#FixedTimeSpan.start"></a>
+    
+            <div class="docstring"><p>The start time of the time span, in seconds.</p>
+
+<p>This is relative to the start of the scheduling context (such as the basic block).</p>
 </div>
 
 
