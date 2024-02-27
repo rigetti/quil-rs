@@ -53,43 +53,43 @@ impl Zero for Seconds {
 }
 
 #[derive(Clone, Debug)]
-pub struct Schedule<Time> {
-    items: Vec<ComputedScheduleItem<Time>>,
-    /// The total duration of the block. This is the end time of the schedule when it starts at `Time::zero()`
-    duration: Time,
+pub struct Schedule<TimeUnit> {
+    items: Vec<ComputedScheduleItem<TimeUnit>>,
+    /// The total duration of the block. This is the end time of the schedule when it starts at `TimeUnit::zero()`
+    duration: TimeUnit,
 }
 
-impl<Time> Schedule<Time> {
-    pub fn duration(&self) -> &Time {
+impl<TimeUnit> Schedule<TimeUnit> {
+    pub fn duration(&self) -> &TimeUnit {
         &self.duration
     }
 
-    pub fn items(&self) -> &[ComputedScheduleItem<Time>] {
+    pub fn items(&self) -> &[ComputedScheduleItem<TimeUnit>] {
         self.items.as_ref()
     }
 
-    pub fn into_items(self) -> Vec<ComputedScheduleItem<Time>> {
+    pub fn into_items(self) -> Vec<ComputedScheduleItem<TimeUnit>> {
         self.items
     }
 }
 
-impl<Time: Clone + PartialOrd + std::ops::Add<Time, Output = Time> + Zero>
-    From<Vec<ComputedScheduleItem<Time>>> for Schedule<Time>
+impl<TimeUnit: Clone + PartialOrd + std::ops::Add<TimeUnit, Output = TimeUnit> + Zero>
+    From<Vec<ComputedScheduleItem<TimeUnit>>> for Schedule<TimeUnit>
 {
-    fn from(items: Vec<ComputedScheduleItem<Time>>) -> Self {
+    fn from(items: Vec<ComputedScheduleItem<TimeUnit>>) -> Self {
         let duration = items
             .iter()
             .map(|item| item.time_span.start_time.clone() + item.time_span.duration.clone())
-            .fold(Time::zero(), |acc, el| if el > acc { el } else { acc });
+            .fold(TimeUnit::zero(), |acc, el| if el > acc { el } else { acc });
         Self { items, duration }
     }
 }
 
-impl<Time: Zero> Default for Schedule<Time> {
+impl<TimeUnit: Zero> Default for Schedule<TimeUnit> {
     fn default() -> Self {
         Self {
             items: Default::default(),
-            duration: Time::zero(),
+            duration: TimeUnit::zero(),
         }
     }
 }
@@ -97,8 +97,8 @@ impl<Time: Zero> Default for Schedule<Time> {
 pub type FixedSchedule = Schedule<Seconds>;
 
 #[derive(Clone, Debug)]
-pub struct ComputedScheduleItem<Time> {
-    pub time_span: TimeSpan<Time>,
+pub struct ComputedScheduleItem<TimeUnit> {
+    pub time_span: TimeSpan<TimeUnit>,
     pub instruction_index: usize,
 }
 
@@ -115,30 +115,30 @@ pub type ComputedScheduleResult<T> = Result<T, ComputedScheduleError>;
 
 /// Represents a span of time, for some unit of time
 #[derive(Clone, Debug, PartialEq)]
-pub struct TimeSpan<Time> {
+pub struct TimeSpan<TimeUnit> {
     /// The inclusive start time of the described item
-    pub start_time: Time,
+    pub start_time: TimeUnit,
 
     /// The described item's continuous duration
-    pub duration: Time,
+    pub duration: TimeUnit,
 }
 
-impl<Time> TimeSpan<Time> {
-    pub fn start_time(&self) -> &Time {
+impl<TimeUnit> TimeSpan<TimeUnit> {
+    pub fn start_time(&self) -> &TimeUnit {
         &self.start_time
     }
 
-    pub fn duration(&self) -> &Time {
+    pub fn duration(&self) -> &TimeUnit {
         &self.duration
     }
 }
 
 impl<
-        Time: Clone
+        TimeUnit: Clone
             + PartialOrd
-            + std::ops::Add<Time, Output = Time>
-            + std::ops::Sub<Time, Output = Time>,
-    > TimeSpan<Time>
+            + std::ops::Add<TimeUnit, Output = TimeUnit>
+            + std::ops::Sub<TimeUnit, Output = TimeUnit>,
+    > TimeSpan<TimeUnit>
 {
     pub(crate) fn union(self, rhs: Self) -> Self {
         let start_time = if rhs.start_time < self.start_time {
@@ -255,16 +255,19 @@ impl<'p> ScheduledBasicBlock<'p> {
     /// closure for computation of instruction duration.
     ///
     /// Return an error if the schedule cannot be computed from the information provided.
-    pub fn as_schedule<F, Time: Clone + PartialOrd + std::ops::Add<Time, Output = Time> + Zero>(
+    pub fn as_schedule<
+        F,
+        TimeUnit: Clone + PartialOrd + std::ops::Add<TimeUnit, Output = TimeUnit> + Zero,
+    >(
         &self,
         program: &'p Program,
         get_duration: F,
-    ) -> ComputedScheduleResult<Schedule<Time>>
+    ) -> ComputedScheduleResult<Schedule<TimeUnit>>
     where
-        F: Fn(&'p Program, &'p Instruction) -> Option<Time>,
+        F: Fn(&'p Program, &'p Instruction) -> Option<TimeUnit>,
     {
         let mut schedule = Schedule::default();
-        let mut end_time_by_instruction_index = HashMap::<usize, Time>::new();
+        let mut end_time_by_instruction_index = HashMap::<usize, TimeUnit>::new();
 
         let graph_filtered = EdgeFiltered::from_fn(&self.graph, |(_, _, dependencies)| {
             dependencies.contains(&ExecutionDependency::Scheduled)
@@ -290,7 +293,7 @@ impl<'p> ScheduledBasicBlock<'p> {
                     .filter_map(|(source, _, dependencies)| {
                         if dependencies.contains(&ExecutionDependency::Scheduled) {
                             match source {
-                                ScheduledGraphNode::BlockStart => Ok(Some(Time::zero())),
+                                ScheduledGraphNode::BlockStart => Ok(Some(TimeUnit::zero())),
                                 ScheduledGraphNode::InstructionIndex(previous_index) => {
                                     end_time_by_instruction_index
                                         .get(&previous_index)
@@ -305,11 +308,11 @@ impl<'p> ScheduledBasicBlock<'p> {
                         }
                         .transpose()
                     })
-                    .collect::<Result<Vec<Time>, _>>()?
+                    .collect::<Result<Vec<TimeUnit>, _>>()?
                     .into_iter()
                     // this implementation allows us to require PartialOrd instead of Ord (required for `.max()`),
                     // which is convenient for f64
-                    .fold(Time::zero(), |acc, el| if el > acc { el } else { acc });
+                    .fold(TimeUnit::zero(), |acc, el| if el > acc { el } else { acc });
 
                 let start_time = latest_previous_instruction_scheduler_end_time;
                 let end_time = start_time.clone() + duration.clone();

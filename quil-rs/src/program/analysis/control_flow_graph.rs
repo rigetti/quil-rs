@@ -642,12 +642,8 @@ PULSE 0 "a" flat(duration: 1.0)
         assert_eq!(schedule_items[1].time_span.start_time().0, 0.0);
         assert_eq!(schedule_items[1].time_span.duration().0, 10.0);
 
-        // nvm, FENCE is omitted
         // `FENCE` should be scheduled after `A 0` and `B 0` and take no time.
-        // It should still be present in the schedule even though it is not expanded by calibrations.
-        // assert_eq!(schedule_items[2].instruction_index, 2);
-        // assert_eq!(schedule_items[2].time_span.start_time().0, 10.0);
-        // assert_eq!(schedule_items[2].time_span.duration().0, 0.0);
+        // It is not included in the schedule items because it has zero duration.
 
         // `B 0` should be scheduled after `FENCE`
         assert_eq!(schedule_items[2].instruction_index, 3);
