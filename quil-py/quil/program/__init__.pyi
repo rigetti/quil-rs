@@ -351,6 +351,10 @@ class ControlFlowGraph:
     def has_dynamic_control_flow(self) -> bool: 
         """
         Return ``True`` if the program has dynamic control flow, i.e. contains a conditional branch instruction.
+
+        ``False`` does not imply that there is only one basic block in the program. Multiple basic blocks may have
+        non-conditional control flow among them, in which the execution order is deterministic and does not depend
+        on program state. This may be a sequence of basic blocks with fixed `JUMP`s or without explicit terminators.
         """
     def basic_blocks(self) -> List["BasicBlock"]: 
         """
