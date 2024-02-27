@@ -2,13 +2,15 @@ use quil_rs::program::scheduling::{
     ComputedScheduleItem, FixedSchedule, ScheduledBasicBlock, ScheduledBasicBlockOwned, Seconds,
     TimeSpan,
 };
-use rigetti_pyo3::{py_wrap_type, pyo3::prelude::*};
+use rigetti_pyo3::{impl_repr, py_wrap_type, pyo3::prelude::*};
 
 use super::PyProgram;
 
 py_wrap_type! {
     PyScheduledBasicBlock(ScheduledBasicBlockOwned) as "ScheduledBasicBlock"
 }
+
+impl_repr!(PyScheduledBasicBlock);
 
 impl PyScheduledBasicBlock {
     pub fn as_fixed_schedule(&self, program: &PyProgram) -> PyFixedSchedule {
@@ -22,6 +24,8 @@ impl PyScheduledBasicBlock {
 py_wrap_type! {
     PyFixedSchedule(FixedSchedule) as "FixedSchedule"
 }
+
+impl_repr!(PyFixedSchedule);
 
 #[pymethods]
 impl PyFixedSchedule {
@@ -42,6 +46,8 @@ py_wrap_type! {
     PyFixedScheduleItem(ComputedScheduleItem<Seconds>) as "FixedScheduleItem"
 }
 
+impl_repr!(PyFixedScheduleItem);
+
 #[pymethods]
 impl PyFixedScheduleItem {
     #[getter]
@@ -58,6 +64,8 @@ impl PyFixedScheduleItem {
 py_wrap_type! {
     PyFixedTimeSpan(TimeSpan<Seconds>) as "FixedTimeSpan"
 }
+
+impl_repr!(PyFixedTimeSpan);
 
 #[pymethods]
 impl PyFixedTimeSpan {

@@ -2,7 +2,7 @@ use pyo3::exceptions::PyValueError;
 use quil_rs::program::analysis::{
     BasicBlock, BasicBlockOwned, ControlFlowGraph, ControlFlowGraphOwned, QubitGraph,
 };
-use rigetti_pyo3::{py_wrap_type, pyo3::prelude::*};
+use rigetti_pyo3::{impl_repr, py_wrap_type, pyo3::prelude::*};
 
 use crate::instruction::{PyInstruction, PyTarget};
 
@@ -11,6 +11,8 @@ use super::{scheduling::PyFixedSchedule, PyProgram};
 py_wrap_type! {
     PyControlFlowGraph(ControlFlowGraphOwned) as "ControlFlowGraph"
 }
+
+impl_repr!(PyControlFlowGraph);
 
 #[pymethods]
 impl PyControlFlowGraph {
@@ -31,6 +33,8 @@ impl PyControlFlowGraph {
 py_wrap_type! {
     PyBasicBlock(BasicBlockOwned) as "BasicBlock"
 }
+
+impl_repr!(PyBasicBlock);
 
 #[pymethods]
 impl PyBasicBlock {
