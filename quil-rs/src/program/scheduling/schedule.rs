@@ -133,6 +133,12 @@ impl<TimeUnit> TimeSpan<TimeUnit> {
     }
 }
 
+impl<TimeUnit: Clone + std::ops::Add<TimeUnit, Output = TimeUnit>> TimeSpan<TimeUnit> {
+    pub fn end(&self) -> TimeUnit {
+        self.start_time.clone() + self.duration.clone()
+    }
+}
+
 impl<
         TimeUnit: Clone
             + PartialOrd

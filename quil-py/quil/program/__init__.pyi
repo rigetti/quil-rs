@@ -380,6 +380,13 @@ class FixedTimeSpan:
         """
         The duration of the time span, in seconds.
         """
+    @property
+    def end(self) -> float:
+        """
+        The end time of the time span, in seconds.
+
+        This is the sum of the start time and duration.
+        """
 
 @final
 class FrameSet:

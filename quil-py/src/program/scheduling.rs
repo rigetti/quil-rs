@@ -70,4 +70,9 @@ impl PyFixedTimeSpan {
     pub fn duration(&self) -> f64 {
         self.0.duration().0
     }
+
+    #[getter]
+    pub fn end(&self) -> f64 {
+        self.0.end().0
+    }
 }
