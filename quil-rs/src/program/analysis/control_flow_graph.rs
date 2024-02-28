@@ -122,19 +122,19 @@ impl<'p> BasicBlock<'p> {
     ///
     /// * `program` - The program containing this basic block. This is used to retrieve frame
     ///   and calibration information.
-    /// * `include_zero_time_instructions` - If `true`, include instructions with zero duration
+    /// * `include_zero_duration_instructions` - If `true`, include instructions with zero duration
     ///   (such as `FENCE`) in the returned schedule. Note: This may cause gate times to be
     ///   overestimated, because the "clock" begins when the FENCE plays rather than when a PULSE
     ///   plays, and those may be different due to the structure of the program.
     pub fn as_fixed_schedule(
         &self,
         program: &Program,
-        include_zero_time_instructions: bool,
+        include_zero_duration_instructions: bool,
     ) -> Result<Schedule<Seconds>, BasicBlockScheduleError> {
         self.as_schedule(
             program,
             ScheduledBasicBlock::get_fixed_instruction_duration,
-            include_zero_time_instructions,
+            include_zero_duration_instructions,
         )
     }
 
@@ -148,15 +148,42 @@ impl<'p> BasicBlock<'p> {
     /// * `get_duration` - A function that takes a program and an instruction and returns the
     ///   duration of the instruction in the desired time unit, or `None` if the instruction's
     ///   duration is not known.
-    /// * `include_zero_time_instructions` - If `true`, include instructions with zero duration
+    /// * `include_zero_duration_instructions` - If `true`, include instructions with zero duration
     ///   (such as `FENCE`) in the returned schedule. Note: This may cause gate times to be
     ///   overestimated, because the "clock" begins when the FENCE plays rather than when a PULSE
     ///   plays, and those may be different due to the structure of the program.
+    ///
+    /// To understand why `include_zero_duration_instructions` is useful, consider a program like this:
+    ///
+    /// ```text
+    /// # Two-qubit frame
+    /// DEFFRAME 0 1 "a":
+    ///     ATTRIBUTE: 1
+    ///
+    /// # One-qubit frame
+    /// DEFFRAME 1 "a":
+    ///     ATTRIBUTE: 1
+    ///
+    /// DEFCAL A 0:
+    ///     PULSE 1 "a" flat(duration: 1.0)
+    ///
+    /// DEFCAL B 0:
+    ///     FENCE 0 # This FENCE "plays" immediately upon program start
+    ///     PULSE 0 1 "a" flat(duration: 1.0) # This `PULSE` is blocked by the `PULSE` of `A 0` on intersecting frame 1 "a"
+    ///
+    /// A 0
+    /// B 0
+    /// ```
+    ///
+    /// Thus, if `include_zero_duration_instructions` is set, `B 0` will be scheduled from time 0 to time 2.
+
+    /// If not, it will be from time 1 to time 2, considering only the non-zero duration instructions
+    /// (here, `PULSE`) within the calibration
     pub fn as_schedule<F, Time>(
         &self,
         program: &'p Program,
         get_duration: F,
-        include_zero_time_instructions: bool,
+        include_zero_duration_instructions: bool,
     ) -> Result<Schedule<Time>, BasicBlockScheduleError>
     where
         F: Fn(&Program, &Instruction) -> Option<Time>,
@@ -204,7 +231,7 @@ impl<'p> BasicBlock<'p> {
             .fold(HashMap::<usize, TimeSpan<Time>>::new(), |mut map, item| {
                 // this skips fences and such since the user _probably_ is not interested in
                 // that timing information
-                if !include_zero_time_instructions && item.time_span.duration.is_zero() {
+                if !include_zero_duration_instructions && item.time_span.duration.is_zero() {
                     return map;
                 }
 
@@ -624,36 +651,82 @@ PULSE 0 "a" flat(duration: 1.0)
         let blocks = graph.into_blocks();
         println!("blocks: {:#?}", blocks);
 
-        let schedule = blocks[0].as_fixed_schedule(&program, false).unwrap();
+        let schedule = blocks[0].as_fixed_schedule(&program, true).unwrap();
         println!("schedule: {:#?}", schedule);
         assert_eq!(schedule.duration().0, 21.0);
-        let mut schedule_items = schedule.into_items();
-        schedule_items.sort_by_key(|item| item.instruction_index);
-        println!("schedule_items: {:#?}", schedule_items);
+        let schedule_items = schedule.into_items();
 
-        assert_eq!(schedule_items.len(), 4);
+        let schedule_items_by_instruction_index = schedule_items
+            .iter()
+            .map(|item| (item.instruction_index, item.clone()))
+            .collect::<HashMap<_, _>>();
+
         // `A 0` backed by multiple consecutive instructions should capture all of their times
-        assert_eq!(schedule_items[0].instruction_index, 0);
-        assert_eq!(schedule_items[0].time_span.start_time().0, 0.0);
-        assert_eq!(schedule_items[0].time_span.duration().0, 3.0);
+        assert_eq!(
+            schedule_items_by_instruction_index[&0]
+                .time_span
+                .start_time()
+                .0,
+            0.0
+        );
+        assert_eq!(
+            schedule_items_by_instruction_index[&0]
+                .time_span
+                .duration()
+                .0,
+            3.0
+        );
 
         // `B 0` should be scheduled concurrently with `A 0`
-        assert_eq!(schedule_items[1].instruction_index, 1);
-        assert_eq!(schedule_items[1].time_span.start_time().0, 0.0);
-        assert_eq!(schedule_items[1].time_span.duration().0, 10.0);
+        assert_eq!(
+            schedule_items_by_instruction_index[&1]
+                .time_span
+                .start_time()
+                .0,
+            0.0
+        );
+        assert_eq!(
+            schedule_items_by_instruction_index[&1]
+                .time_span
+                .duration()
+                .0,
+            10.0
+        );
 
         // `FENCE` should be scheduled after `A 0` and `B 0` and take no time.
         // It is not included in the schedule items because it has zero duration.
 
         // `B 0` should be scheduled after `FENCE`
-        assert_eq!(schedule_items[2].instruction_index, 3);
-        assert_eq!(schedule_items[2].time_span.start_time().0, 10.0);
-        assert_eq!(schedule_items[2].time_span.duration().0, 10.0);
+        assert_eq!(
+            schedule_items_by_instruction_index[&3]
+                .time_span
+                .start_time()
+                .0,
+            10.0
+        );
+        assert_eq!(
+            schedule_items_by_instruction_index[&3]
+                .time_span
+                .duration()
+                .0,
+            10.0
+        );
 
         // `PULSE 0 "a" flat(duration: 1.0)` should be scheduled after `B 0` as a blocking pulse.
-        assert_eq!(schedule_items[3].instruction_index, 4);
-        assert_eq!(schedule_items[3].time_span.start_time().0, 20.0);
-        assert_eq!(schedule_items[3].time_span.duration().0, 1.0);
+        assert_eq!(
+            schedule_items_by_instruction_index[&4]
+                .time_span
+                .start_time()
+                .0,
+            20.0
+        );
+        assert_eq!(
+            schedule_items_by_instruction_index[&4]
+                .time_span
+                .duration()
+                .0,
+            1.0
+        );
     }
 
     #[test]
@@ -703,12 +776,60 @@ CZ 0 2
         let blocks = graph.into_blocks();
         println!("blocks: {:#?}", blocks);
 
-        let schedule = blocks[0].as_fixed_schedule(&program, false).unwrap();
+        let schedule = blocks[0].as_fixed_schedule(&program, true).unwrap();
         let mut schedule_items = schedule.into_items();
         schedule_items.sort_by_key(|item| item.instruction_index);
 
         assert_eq!(schedule_items.len(), 3);
 
         insta::assert_debug_snapshot!(schedule_items);
+    }
+
+    /// Assert that, for a pathological case, that excluding zero-duration instructions from uncalibrated program
+    /// schedule computation affects the resulting schedule.
+    #[test]
+    fn schedule_uncalibrated_intervening_zero_time_instruction() {
+        let input = r#"DEFFRAME 0 1 "a":
+    ATTRIBUTE: 1
+
+DEFFRAME 1 "a":
+    ATTRIBUTE: 1
+
+# Simplified version
+DEFCAL A 0:
+    PULSE 1 "a" flat(duration: 1.0)
+
+# This FENCE should schedule immediately upon program start
+# This PULSE should be blocked by the preceding PULSE on intersecting frame 1 "a"
+DEFCAL B 0:
+    FENCE 0
+    PULSE 0 1 "a" flat(duration: 1.0)
+
+A 0
+B 0
+"#;
+
+        let program: Program = input.parse().unwrap();
+        let graph = ControlFlowGraph::from(&program);
+        let blocks = graph.into_blocks();
+        println!("blocks: {:#?}", blocks);
+
+        let schedule_with_zero_duration_instructions =
+            blocks[0].as_fixed_schedule(&program, true).unwrap();
+        let schedule_without_zero_duration_instructions =
+            blocks[0].as_fixed_schedule(&program, false).unwrap();
+        println!(
+            "schedule_with_zero_duration_instructions: {:#?}",
+            schedule_with_zero_duration_instructions
+        );
+        println!(
+            "schedule_without_zero_duration_instructions: {:#?}",
+            schedule_without_zero_duration_instructions
+        );
+
+        assert_ne!(
+            schedule_with_zero_duration_instructions,
+            schedule_without_zero_duration_instructions
+        );
     }
 }

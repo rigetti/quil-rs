@@ -88,6 +88,9 @@ HALT
 """)
     assert program.get_used_qubits() == {Qubit.from_fixed(0)}
     cfg = program.control_flow_graph()
+
+    assert cfg.has_dynamic_control_flow()
+
     blocks = cfg.basic_blocks()
     assert len(blocks) == 3
 
@@ -147,7 +150,7 @@ CZ 0 2
     # One for each CZ
     assert len(items) == 3
 
-    items.sort(key=lambda x: x.instruction_index)
+    items = { item.instruction_index: item for item in items }
 
     # The first CZ should start at 0
     assert items[0].time_span.start == 0.0

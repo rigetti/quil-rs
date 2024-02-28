@@ -52,7 +52,7 @@ impl Zero for Seconds {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Schedule<TimeUnit> {
     items: Vec<ComputedScheduleItem<TimeUnit>>,
     /// The total duration of the block. This is the end time of the schedule when it starts at `TimeUnit::zero()`
@@ -96,7 +96,7 @@ impl<TimeUnit: Zero> Default for Schedule<TimeUnit> {
 
 pub type FixedSchedule = Schedule<Seconds>;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ComputedScheduleItem<TimeUnit> {
     pub time_span: TimeSpan<TimeUnit>,
     pub instruction_index: usize,

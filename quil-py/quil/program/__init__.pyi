@@ -225,6 +225,38 @@ class BasicBlock:
                 print(f"Duration = {schedule.duration()}")
 
                 print(schedule.items())
+
+
+         To understand why `include_zero_duration_instructions` is useful, consider a program like this:
+
+         .. example-code::
+
+            .. code-block:: text
+
+                # Two-qubit frame
+                DEFFRAME 0 1 "a":
+                    ATTRIBUTE: 1
+
+                # One-qubit frame
+                DEFFRAME 1 "a":
+                    ATTRIBUTE: 1
+
+                DEFCAL A 0:
+                    PULSE 1 "a" flat(duration: 1.0)
+
+                # The FENCE "plays" immediately upon program start at time 0
+                # The `PULSE` is blocked by the `PULSE` of `A 0` on intersecting frame 1 "a", and does not play until time 1
+                DEFCAL B 0:
+                    FENCE 0
+                    PULSE 0 1 "a" flat(duration: 1.0)
+
+                A 0
+                B 0
+
+        If ``include_zero_duration_instructions`` is ``True``, ``B 0`` will be scheduled from time 0 to time 2, because it includes the time
+        of the FENCE.
+
+        If not, it will be from time 1 to time 2, considering only the non-zero duration instructions (here, ``PULSE``) within the calibration.
         """
     def gate_depth(self, gate_minimum_qubit_count: int) -> int:
         """
