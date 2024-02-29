@@ -4,7 +4,7 @@ use quil_rs::program::scheduling::{
     ScheduledBasicBlockOwned, Seconds, TimeSpan,
 };
 use rigetti_pyo3::{
-    impl_repr, py_wrap_error, py_wrap_type, pyo3::prelude::*, wrap_error, ToPythonError,
+    impl_repr, py_wrap_error, py_wrap_type, pyo3::prelude::*, wrap_error, PyWrapper, ToPythonError,
 };
 
 use super::PyProgram;
@@ -42,7 +42,7 @@ impl_repr!(PyFixedSchedule);
 #[pymethods]
 impl PyFixedSchedule {
     pub fn items(&self) -> Vec<PyFixedScheduleItem> {
-        self.0
+        self.as_inner()
             .items()
             .iter()
             .map(PyFixedScheduleItem::from)
@@ -50,7 +50,7 @@ impl PyFixedSchedule {
     }
 
     pub fn duration(&self) -> f64 {
-        self.0.duration().0
+        self.as_inner().duration().0
     }
 }
 
@@ -64,12 +64,12 @@ impl_repr!(PyFixedScheduleItem);
 impl PyFixedScheduleItem {
     #[getter]
     pub fn time_span(&self) -> PyFixedTimeSpan {
-        (&self.0.time_span).into()
+        (&self.as_inner().time_span).into()
     }
 
     #[getter]
     pub fn instruction_index(&self) -> usize {
-        self.0.instruction_index
+        self.as_inner().instruction_index
     }
 }
 
@@ -83,16 +83,16 @@ impl_repr!(PyFixedTimeSpan);
 impl PyFixedTimeSpan {
     #[getter]
     pub fn start(&self) -> f64 {
-        self.0.start_time().0
+        self.as_inner().start_time().0
     }
 
     #[getter]
     pub fn duration(&self) -> f64 {
-        self.0.duration().0
+        self.as_inner().duration().0
     }
 
     #[getter]
     pub fn end(&self) -> f64 {
-        self.0.end().0
+        self.as_inner().end().0
     }
 }

@@ -4,7 +4,7 @@ use quil_rs::program::analysis::{
     QubitGraph, QubitGraphError,
 };
 use rigetti_pyo3::{
-    impl_repr, py_wrap_error, py_wrap_type, pyo3::prelude::*, wrap_error, ToPythonError,
+    impl_repr, py_wrap_error, py_wrap_type, pyo3::prelude::*, wrap_error, PyWrapper, ToPythonError,
 };
 
 use crate::instruction::{PyInstruction, PyTarget};
@@ -20,11 +20,11 @@ impl_repr!(PyControlFlowGraph);
 #[pymethods]
 impl PyControlFlowGraph {
     pub fn has_dynamic_control_flow(&self) -> bool {
-        ControlFlowGraph::from(&self.0).has_dynamic_control_flow()
+        ControlFlowGraph::from(self.as_inner()).has_dynamic_control_flow()
     }
 
     pub fn basic_blocks(&self) -> Vec<PyBasicBlock> {
-        ControlFlowGraph::from(&self.0)
+        ControlFlowGraph::from(self.as_inner())
             .into_blocks()
             .into_iter()
             .map(BasicBlockOwned::from)
@@ -56,7 +56,7 @@ impl PyBasicBlock {
         program: &PyProgram,
         include_zero_duration_instructions: bool,
     ) -> PyResult<PyFixedSchedule> {
-        BasicBlock::from(&self.0)
+        BasicBlock::from(self.as_inner())
             .as_fixed_schedule(&program.0, include_zero_duration_instructions)
             .map(|v| v.into())
             .map_err(RustBasicBlockScheduleError::from)
@@ -64,7 +64,7 @@ impl PyBasicBlock {
     }
 
     pub fn gate_depth(&self, gate_minimum_qubit_count: usize) -> PyResult<usize> {
-        let block = BasicBlock::from(&self.0);
+        let block = BasicBlock::from(self.as_inner());
         QubitGraph::try_from(&block)
             .map(|graph| graph.gate_depth(gate_minimum_qubit_count))
             .map_err(RustQubitGraphError::from)
@@ -72,11 +72,11 @@ impl PyBasicBlock {
     }
 
     pub fn gate_volume(&self) -> usize {
-        BasicBlock::from(&self.0).gate_volume()
+        BasicBlock::from(self.as_inner()).gate_volume()
     }
 
     pub fn instructions(&self) -> Vec<PyInstruction> {
-        BasicBlock::from(&self.0)
+        BasicBlock::from(self.as_inner())
             .instructions()
             .iter()
             .copied()
@@ -85,11 +85,11 @@ impl PyBasicBlock {
     }
 
     pub fn label(&self) -> Option<PyTarget> {
-        BasicBlock::from(&self.0).label().map(|l| l.into())
+        BasicBlock::from(self.as_inner()).label().map(|l| l.into())
     }
 
     pub fn terminator(&self) -> Option<PyInstruction> {
-        BasicBlock::from(&self.0)
+        BasicBlock::from(self.as_inner())
             .terminator()
             .clone()
             .into_instruction()
@@ -97,6 +97,6 @@ impl PyBasicBlock {
     }
 
     pub fn topological_swap_count(&self) -> usize {
-        BasicBlock::from(&self.0).topological_swap_count()
+        BasicBlock::from(self.as_inner()).topological_swap_count()
     }
 }
