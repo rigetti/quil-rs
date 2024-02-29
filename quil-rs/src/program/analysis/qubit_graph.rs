@@ -23,7 +23,7 @@ use petgraph::{graph::DiGraph, Direction};
 use super::BasicBlock;
 
 #[derive(Debug, thiserror::Error)]
-pub enum Error {
+pub enum QubitGraphError {
     #[error("Unsupported instruction: {}", .0.to_quil_or_debug())]
     UnsupportedInstruction(Instruction),
 }
@@ -40,7 +40,9 @@ pub struct QubitGraph<'a> {
 }
 
 impl<'a> QubitGraph<'a> {
-    pub(crate) fn new(instructions: impl Iterator<Item = &'a Instruction>) -> Result<Self, Error> {
+    pub(crate) fn new(
+        instructions: impl Iterator<Item = &'a Instruction>,
+    ) -> Result<Self, QubitGraphError> {
         let mut last_instruction_for_qubit = HashMap::new();
         let mut graph = DiGraph::new();
         let mut handler = InstructionHandler::default();
@@ -49,20 +51,20 @@ impl<'a> QubitGraph<'a> {
             match handler.role_for_instruction(instruction) {
                 InstructionRole::ClassicalCompute => {
                     if let Instruction::Pragma(_) = instruction {
-                        return Err(Error::UnsupportedInstruction(instruction.clone()));
+                        return Err(QubitGraphError::UnsupportedInstruction(instruction.clone()));
                     }
                 } // Valid, mostly ignored
                 InstructionRole::ControlFlow => match &instruction {
                     Instruction::Jump(_)
                     | Instruction::JumpWhen(_)
                     | Instruction::JumpUnless(_) => {
-                        return Err(Error::UnsupportedInstruction(instruction.clone()))
+                        return Err(QubitGraphError::UnsupportedInstruction(instruction.clone()))
                     }
                     _ => {}
                 },
                 InstructionRole::ProgramComposition => {} // Valid, includes Gate, etc.,
                 InstructionRole::RFControl => {
-                    return Err(Error::UnsupportedInstruction(instruction.clone()))
+                    return Err(QubitGraphError::UnsupportedInstruction(instruction.clone()))
                 }
             }
 
@@ -169,7 +171,7 @@ impl<'a> QubitGraph<'a> {
 }
 
 impl<'a> TryFrom<&'_ BasicBlock<'a>> for QubitGraph<'a> {
-    type Error = Error;
+    type Error = QubitGraphError;
 
     fn try_from(block: &BasicBlock<'a>) -> Result<Self, Self::Error> {
         QubitGraph::new(block.instructions().iter().copied())

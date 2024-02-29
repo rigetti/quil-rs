@@ -10,4 +10,6 @@ pub use graph::{
     ScheduledProgram,
 };
 
-pub use schedule::{ComputedScheduleItem, FixedSchedule, Schedule, Seconds, TimeSpan};
+pub use schedule::{
+    ComputedScheduleError, ComputedScheduleItem, FixedSchedule, Schedule, Seconds, TimeSpan,
+};

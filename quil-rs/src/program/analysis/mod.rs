@@ -19,10 +19,10 @@ mod control_flow_graph;
 mod qubit_graph;
 
 pub use control_flow_graph::{
-    BasicBlock, BasicBlockOwned, BasicBlockTerminator, BasicBlockTerminatorOwned, ControlFlowGraph,
-    ControlFlowGraphOwned,
+    BasicBlock, BasicBlockOwned, BasicBlockScheduleError, BasicBlockTerminator,
+    BasicBlockTerminatorOwned, ControlFlowGraph, ControlFlowGraphOwned,
 };
-pub use qubit_graph::QubitGraph;
+pub use qubit_graph::{QubitGraph, QubitGraphError};
 
 #[cfg(test)]
 pub(crate) mod test_programs;

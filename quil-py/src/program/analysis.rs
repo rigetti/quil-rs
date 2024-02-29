@@ -1,8 +1,11 @@
 use pyo3::exceptions::PyValueError;
 use quil_rs::program::analysis::{
-    BasicBlock, BasicBlockOwned, ControlFlowGraph, ControlFlowGraphOwned, QubitGraph,
+    BasicBlock, BasicBlockOwned, BasicBlockScheduleError, ControlFlowGraph, ControlFlowGraphOwned,
+    QubitGraph, QubitGraphError,
 };
-use rigetti_pyo3::{impl_repr, py_wrap_type, pyo3::prelude::*};
+use rigetti_pyo3::{
+    impl_repr, py_wrap_error, py_wrap_type, pyo3::prelude::*, wrap_error, ToPythonError,
+};
 
 use crate::instruction::{PyInstruction, PyTarget};
 
@@ -33,8 +36,18 @@ impl PyControlFlowGraph {
 py_wrap_type! {
     PyBasicBlock(BasicBlockOwned) as "BasicBlock"
 }
-
 impl_repr!(PyBasicBlock);
+
+wrap_error!(RustBasicBlockScheduleError(BasicBlockScheduleError));
+py_wrap_error!(
+    quil,
+    RustBasicBlockScheduleError,
+    PyBasicBlockScheduleError,
+    PyValueError
+);
+
+wrap_error!(RustQubitGraphError(QubitGraphError));
+py_wrap_error!(quil, RustQubitGraphError, PyQubitGraphError, PyValueError);
 
 #[pymethods]
 impl PyBasicBlock {
@@ -46,14 +59,16 @@ impl PyBasicBlock {
         BasicBlock::from(&self.0)
             .as_fixed_schedule(&program.0, include_zero_duration_instructions)
             .map(|v| v.into())
-            .map_err(|e| PyValueError::new_err(e.to_string()))
+            .map_err(RustBasicBlockScheduleError::from)
+            .map_err(RustBasicBlockScheduleError::to_py_err)
     }
 
     pub fn gate_depth(&self, gate_minimum_qubit_count: usize) -> PyResult<usize> {
         let block = BasicBlock::from(&self.0);
         QubitGraph::try_from(&block)
             .map(|graph| graph.gate_depth(gate_minimum_qubit_count))
-            .map_err(|e| PyValueError::new_err(e.to_string()))
+            .map_err(RustQubitGraphError::from)
+            .map_err(RustQubitGraphError::to_py_err)
     }
 
     pub fn gate_volume(&self) -> usize {

@@ -1,8 +1,11 @@
+use pyo3::exceptions::PyValueError;
 use quil_rs::program::scheduling::{
-    ComputedScheduleItem, FixedSchedule, ScheduledBasicBlock, ScheduledBasicBlockOwned, Seconds,
-    TimeSpan,
+    ComputedScheduleError, ComputedScheduleItem, FixedSchedule, ScheduledBasicBlock,
+    ScheduledBasicBlockOwned, Seconds, TimeSpan,
 };
-use rigetti_pyo3::{impl_repr, py_wrap_type, pyo3::prelude::*};
+use rigetti_pyo3::{
+    impl_repr, py_wrap_error, py_wrap_type, pyo3::prelude::*, wrap_error, ToPythonError,
+};
 
 use super::PyProgram;
 
@@ -12,12 +15,21 @@ py_wrap_type! {
 
 impl_repr!(PyScheduledBasicBlock);
 
+wrap_error!(RustComputedScheduleError(ComputedScheduleError));
+py_wrap_error!(
+    quil,
+    RustComputedScheduleError,
+    PyComputedScheduleError,
+    PyValueError
+);
+
 impl PyScheduledBasicBlock {
-    pub fn as_fixed_schedule(&self, program: &PyProgram) -> PyFixedSchedule {
+    pub fn as_fixed_schedule(&self, program: &PyProgram) -> PyResult<PyFixedSchedule> {
         ScheduledBasicBlock::from(&self.0)
             .as_fixed_schedule(&program.0)
-            .expect("todo handle error")
-            .into()
+            .map(Into::into)
+            .map_err(RustComputedScheduleError::from)
+            .map_err(RustComputedScheduleError::to_py_err)
     }
 }
 
