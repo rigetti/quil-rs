@@ -71,10 +71,6 @@ impl PyBasicBlock {
             .map_err(RustQubitGraphError::to_py_err)
     }
 
-    pub fn gate_volume(&self) -> usize {
-        BasicBlock::from(self.as_inner()).gate_volume()
-    }
-
     pub fn instructions(&self) -> Vec<PyInstruction> {
         BasicBlock::from(self.as_inner())
             .instructions()
@@ -94,9 +90,5 @@ impl PyBasicBlock {
             .clone()
             .into_instruction()
             .map(PyInstruction::from)
-    }
-
-    pub fn topological_swap_count(&self) -> usize {
-        BasicBlock::from(self.as_inner()).topological_swap_count()
     }
 }

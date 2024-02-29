@@ -265,10 +265,6 @@ class BasicBlock:
 
         :param gate_minimum_qubit_count: The minimum number of qubits in a gate for it to be counted in the depth.
         """
-    def gate_volume(self) -> int:
-        """
-        Return the total number of gates in the block.
-        """
     def label(self) -> Optional[Target]:
         """
         Return the label of the block, if any. This is used to target this block in control flow.
@@ -285,11 +281,6 @@ class BasicBlock:
 
         If this is ``None``, the implicit behavior is to "continue" to the subsequent block.
         """
-    def topological_swap_count(self) -> int:
-        """
-        The total number of ``SWAP`` gates in the block.
-        """
-
 
 @final
 class CalibrationSet:

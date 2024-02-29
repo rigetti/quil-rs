@@ -14,7 +14,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod block_metrics;
 mod control_flow_graph;
 mod qubit_graph;
 

@@ -216,4 +216,40 @@ mod tests {
         let depth = graph.gate_depth(2);
         assert_eq!(expected, depth);
     }
+
+    #[rstest]
+    #[case(QUIL_AS_TREE, Some(2))]
+    #[case(QUIL_AS_INVERSE_TREE, Some(2))]
+    #[case(QUIL_AS_LINEAR, Some(4))]
+    #[case(QUIL_WITH_DIAMOND, Some(6))]
+    #[case(QUIL_WITH_SWAP, Some(3))]
+    #[case(KITCHEN_SINK_QUIL, Some(2))]
+    #[case(QUIL_WITH_JUMP, None)]
+    #[case(QUIL_WITH_JUMP_WHEN, None)]
+    #[case(QUIL_WITH_JUMP_UNLESS, None)]
+    fn gate_depth_conditional(#[case] input: &str, #[case] expected: Option<usize>) {
+        let program: Program = input.parse().unwrap();
+        let block = (&program).try_into();
+        let block: BasicBlock = match block {
+            Ok(block) => block,
+            Err(_) => {
+                if expected.is_none() {
+                    return;
+                } else {
+                    panic!("Expected block, got error");
+                }
+            }
+        };
+
+        let maybe_graph: Result<QubitGraph, _> = (&block).try_into();
+        match maybe_graph {
+            Ok(graph) => {
+                let depth = graph.gate_depth(1);
+                assert_eq!(expected, Some(depth));
+            }
+            Err(_) => {
+                assert_eq!(expected, None)
+            }
+        }
+    }
 }
