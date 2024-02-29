@@ -51,13 +51,9 @@ py_wrap_error!(quil, RustQubitGraphError, PyQubitGraphError, PyValueError);
 
 #[pymethods]
 impl PyBasicBlock {
-    pub fn as_fixed_schedule(
-        &self,
-        program: &PyProgram,
-        include_zero_duration_instructions: bool,
-    ) -> PyResult<PyFixedSchedule> {
+    pub fn as_schedule_seconds(&self, program: &PyProgram) -> PyResult<PyFixedSchedule> {
         BasicBlock::from(self.as_inner())
-            .as_fixed_schedule(&program.0, include_zero_duration_instructions)
+            .as_schedule_seconds(program.as_inner())
             .map(|v| v.into())
             .map_err(RustBasicBlockScheduleError::from)
             .map_err(RustBasicBlockScheduleError::to_py_err)

@@ -1,6 +1,6 @@
 use pyo3::exceptions::PyValueError;
 use quil_rs::program::scheduling::{
-    ComputedScheduleError, ComputedScheduleItem, FixedSchedule, ScheduledBasicBlock,
+    ComputedScheduleError, ComputedScheduleItem, ScheduleSeconds, ScheduledBasicBlock,
     ScheduledBasicBlockOwned, Seconds, TimeSpan,
 };
 use rigetti_pyo3::{
@@ -26,7 +26,7 @@ py_wrap_error!(
 impl PyScheduledBasicBlock {
     pub fn as_fixed_schedule(&self, program: &PyProgram) -> PyResult<PyFixedSchedule> {
         ScheduledBasicBlock::from(&self.0)
-            .as_fixed_schedule(&program.0)
+            .as_schedule_seconds(&program.0)
             .map(Into::into)
             .map_err(RustComputedScheduleError::from)
             .map_err(RustComputedScheduleError::to_py_err)
@@ -34,7 +34,7 @@ impl PyScheduledBasicBlock {
 }
 
 py_wrap_type! {
-    PyFixedSchedule(FixedSchedule) as "FixedSchedule"
+    PyFixedSchedule(ScheduleSeconds) as "FixedSchedule"
 }
 
 impl_repr!(PyFixedSchedule);

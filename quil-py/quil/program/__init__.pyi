@@ -184,23 +184,21 @@ class Program:
 
 @final
 class BasicBlock:
-    def as_fixed_schedule(self, program: Program, include_zero_duration_instructions: bool) -> FixedSchedule:
+    def as_schedule_seconds(self, program: Program) -> ScheduleSeconds:
         """
-        Return the ``FixedSchedule`` representing the timing of the instructions within the block.
+        Return the ``ScheduleSeconds`` representing the timing of the instructions within the block.
 
         This schedule is computed by:
 
         * Expanding each instruction within the block using the program's calibration definitions
-        * Resolving the `FixedSchedule` of the expanded instructions
+        * Resolving the `ScheduleSeconds` of the expanded instructions
         * Mapping calibrated instructions back to the original instructions within this block, such that the
           block's instruction is represented as a timespan encompassing all of its expanded instructions
 
-        If `include_zero_duration_instructions` is `True`, then the schedule will include instructions with zero duration
-        (such as `FENCE`). This may cause certain instructions to appear as unexpectedly long in duration.
+        Note: the schedule will not include instructions with zero duration (such as `FENCE`).
 
         :param program: The program containing the calibrations to be used to schedule this block. Generally,
-            this should be the program from which the block was extracted
-        :param include_zero_duration_instructions: Whether to include instructions with zero duration in the schedule
+            this should be the program from which the block was extracted.
 
         The following example demonstrates construction of such a schedule for a simple program without explicit control
         flow (and thus with only one basic block):
@@ -221,40 +219,38 @@ class BasicBlock:
                 basic_blocks = control_flow_graph.basic_blocks()
                 assert len(basic_blocks) == 1
 
-                schedule = blocks[0].as_fixed_schedule(program, False)
+                schedule = blocks[0].as_schedule_seconds(program, False)
                 print(f"Duration = {schedule.duration()}")
 
                 print(schedule.items())
 
 
-         To understand why `include_zero_duration_instructions` is useful, consider a program like this:
+         To understand why zero-duration instructions are omitted, consider a (contrived) program like this:
 
          .. example-code::
 
             .. code-block:: text
 
-                # Two-qubit frame
-                DEFFRAME 0 1 "a":
+                # One-qubit frame
+                DEFFRAME 0 "a":
                     ATTRIBUTE: 1
 
-                # One-qubit frame
-                DEFFRAME 1 "a":
+                # Two-qubit frame
+                DEFFRAME 0 1 "b":
                     ATTRIBUTE: 1
 
                 DEFCAL A 0:
-                    PULSE 1 "a" flat(duration: 1.0)
+                    PULSE 0 "a" flat(duration: 1.0)
 
-                # The FENCE "plays" immediately upon program start at time 0
-                # The `PULSE` is blocked by the `PULSE` of `A 0` on intersecting frame 1 "a", and does not play until time 1
-                DEFCAL B 0:
-                    FENCE 0
-                    PULSE 0 1 "a" flat(duration: 1.0)
+                DEFCAL B 0 1:
+                    FENCE 1
+                    PULSE 0 1 "b" flat(duration: 1.0)
 
                 A 0
-                B 0
+                B 0 1
 
-        If ``include_zero_duration_instructions`` is ``True``, ``B 0`` will be scheduled from time 0 to time 2, because it includes the time
-        of the FENCE.
+        If zero-duration instructions are considered, ``B 0`` will be scheduled from time 0 to time 2, because it includes the time
+        of the FENCE at time 0.
 
         If not, it will be from time 1 to time 2, considering only the non-zero duration instructions (here, ``PULSE``) within the calibration.
         """
@@ -346,7 +342,7 @@ class CalibrationSet:
 
 
 @final
-class FixedScheduleItem:
+class ScheduleSecondsItem:
     """
     A single item within a fixed schedule, representing a single instruction within a basic block.
     """
@@ -385,8 +381,8 @@ class ControlFlowGraph:
         """
 
 @final
-class FixedSchedule:
-    def items(self) -> List[FixedScheduleItem]:
+class ScheduleSeconds:
+    def items(self) -> List[ScheduleSecondsItem]:
         """
         All the items in the schedule, in unspecified order.
         """

@@ -144,7 +144,7 @@ CZ 0 2
     assert len(blocks) == 1
     block = blocks[0]
 
-    schedule = block.as_fixed_schedule(program, False)
+    schedule = block.as_schedule_seconds(program)
     items = schedule.items()
 
     # One for each CZ

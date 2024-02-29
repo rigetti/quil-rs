@@ -126,15 +126,13 @@ impl<'p> BasicBlock<'p> {
     ///   (such as `FENCE`) in the returned schedule. Note: This may cause gate times to be
     ///   overestimated, because the "clock" begins when the FENCE plays rather than when a PULSE
     ///   plays, and those may be different due to the structure of the program.
-    pub fn as_fixed_schedule(
+    pub fn as_schedule_seconds(
         &self,
         program: &Program,
-        include_zero_duration_instructions: bool,
     ) -> Result<Schedule<Seconds>, BasicBlockScheduleError> {
         self.as_schedule(
             program,
-            ScheduledBasicBlock::get_fixed_instruction_duration,
-            include_zero_duration_instructions,
+            ScheduledBasicBlock::get_instruction_duration_seconds,
         )
     }
 
@@ -183,7 +181,6 @@ impl<'p> BasicBlock<'p> {
         &self,
         program: &'p Program,
         get_duration: F,
-        include_zero_duration_instructions: bool,
     ) -> Result<Schedule<Time>, BasicBlockScheduleError>
     where
         F: Fn(&Program, &Instruction) -> Option<Time>,
@@ -231,7 +228,7 @@ impl<'p> BasicBlock<'p> {
             .fold(HashMap::<usize, TimeSpan<Time>>::new(), |mut map, item| {
                 // this skips fences and such since the user _probably_ is not interested in
                 // that timing information
-                if !include_zero_duration_instructions && item.time_span.duration.is_zero() {
+                if item.time_span.duration.is_zero() {
                     return map;
                 }
 
@@ -651,7 +648,7 @@ PULSE 0 "a" flat(duration: 1.0)
         let blocks = graph.into_blocks();
         println!("blocks: {:#?}", blocks);
 
-        let schedule = blocks[0].as_fixed_schedule(&program, true).unwrap();
+        let schedule = blocks[0].as_schedule_seconds(&program).unwrap();
         println!("schedule: {:#?}", schedule);
         assert_eq!(schedule.duration().0, 21.0);
         let schedule_items = schedule.into_items();
@@ -776,60 +773,12 @@ CZ 0 2
         let blocks = graph.into_blocks();
         println!("blocks: {:#?}", blocks);
 
-        let schedule = blocks[0].as_fixed_schedule(&program, true).unwrap();
+        let schedule = blocks[0].as_schedule_seconds(&program).unwrap();
         let mut schedule_items = schedule.into_items();
         schedule_items.sort_by_key(|item| item.instruction_index);
 
         assert_eq!(schedule_items.len(), 3);
 
         insta::assert_debug_snapshot!(schedule_items);
-    }
-
-    /// Assert that, for a pathological case, that excluding zero-duration instructions from uncalibrated program
-    /// schedule computation affects the resulting schedule.
-    #[test]
-    fn schedule_uncalibrated_intervening_zero_time_instruction() {
-        let input = r#"DEFFRAME 0 1 "a":
-    ATTRIBUTE: 1
-
-DEFFRAME 1 "a":
-    ATTRIBUTE: 1
-
-# Simplified version
-DEFCAL A 0:
-    PULSE 1 "a" flat(duration: 1.0)
-
-# This FENCE should schedule immediately upon program start
-# This PULSE should be blocked by the preceding PULSE on intersecting frame 1 "a"
-DEFCAL B 0:
-    FENCE 0
-    PULSE 0 1 "a" flat(duration: 1.0)
-
-A 0
-B 0
-"#;
-
-        let program: Program = input.parse().unwrap();
-        let graph = ControlFlowGraph::from(&program);
-        let blocks = graph.into_blocks();
-        println!("blocks: {:#?}", blocks);
-
-        let schedule_with_zero_duration_instructions =
-            blocks[0].as_fixed_schedule(&program, true).unwrap();
-        let schedule_without_zero_duration_instructions =
-            blocks[0].as_fixed_schedule(&program, false).unwrap();
-        println!(
-            "schedule_with_zero_duration_instructions: {:#?}",
-            schedule_with_zero_duration_instructions
-        );
-        println!(
-            "schedule_without_zero_duration_instructions: {:#?}",
-            schedule_without_zero_duration_instructions
-        );
-
-        assert_ne!(
-            schedule_with_zero_duration_instructions,
-            schedule_without_zero_duration_instructions
-        );
     }
 }

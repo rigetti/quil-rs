@@ -94,7 +94,7 @@ impl<TimeUnit: Zero> Default for Schedule<TimeUnit> {
     }
 }
 
-pub type FixedSchedule = Schedule<Seconds>;
+pub type ScheduleSeconds = Schedule<Seconds>;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ComputedScheduleItem<TimeUnit> {
@@ -176,14 +176,14 @@ impl<'p> ScheduledBasicBlock<'p> {
     /// * For supporting instructions like SET-*, SHIFT-*, and FENCE, it's 0
     ///
     /// Return `None` for other instructions.
-    pub(crate) fn get_fixed_instruction_duration(
+    pub(crate) fn get_instruction_duration_seconds(
         program: &Program,
         instruction: &Instruction,
     ) -> Option<Seconds> {
         match instruction {
             Instruction::Capture(Capture { waveform, .. })
             | Instruction::Pulse(Pulse { waveform, .. }) => {
-                Self::get_fixed_waveform_duration(program, instruction, waveform)
+                Self::get_waveform_duration_seconds(program, instruction, waveform)
             }
             Instruction::Delay(Delay { duration, .. })
             | Instruction::RawCapture(RawCapture { duration, .. }) => {
@@ -207,7 +207,7 @@ impl<'p> ScheduledBasicBlock<'p> {
     ///
     /// Otherwise, it's the `duration` parameter of the waveform invocation. This relies on the assumption that
     /// all template waveforms in use have such a parameter in units of seconds.
-    fn get_fixed_waveform_duration(
+    fn get_waveform_duration_seconds(
         program: &Program,
         instruction: &Instruction,
         waveform_invocation: &WaveformInvocation,
@@ -253,8 +253,11 @@ impl<'p> ScheduledBasicBlock<'p> {
 
     /// Compute the flattened schedule for this [`ScheduledBasicBlock`] in terms of seconds,
     /// using a default built-in calculation for the duration of scheduled instructions.
-    pub fn as_fixed_schedule(&self, program: &Program) -> ComputedScheduleResult<FixedSchedule> {
-        self.as_schedule(program, Self::get_fixed_instruction_duration)
+    pub fn as_schedule_seconds(
+        &self,
+        program: &Program,
+    ) -> ComputedScheduleResult<ScheduleSeconds> {
+        self.as_schedule(program, Self::get_instruction_duration_seconds)
     }
 
     /// Compute the flattened schedule for this [`ScheduledBasicBlock`] using a user-provided
@@ -361,7 +364,7 @@ mod tests {
     #[case("SHIFT-FREQUENCY 0 \"a\" 1.0", Some(0.0))]
     #[case("SHIFT-PHASE 0 \"a\" 1.0", Some(0.0))]
     #[case("SWAP-PHASES 0 \"a\" 0 \"b\"", Some(0.0))]
-    fn fixed_instruction_duration(
+    fn instruction_duration_seconds(
         #[case] input_program: &str,
         #[case] expected_duration: Option<f64>,
     ) {
@@ -371,7 +374,7 @@ mod tests {
             .unwrap();
         let instruction = program.into_instructions().remove(0);
         let duration =
-            crate::program::scheduling::ScheduledBasicBlock::get_fixed_instruction_duration(
+            crate::program::scheduling::ScheduledBasicBlock::get_instruction_duration_seconds(
                 &empty_program,
                 &instruction,
             );
@@ -430,14 +433,17 @@ PULSE 0 "a" flat(duration: 1.0)
         Ok(vec![0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
     )]
     #[case("RESET", Err(()))]
-    fn fixed_schedule(#[case] input_program: &str, #[case] expected_times: Result<Vec<f64>, ()>) {
+    fn schedule_seconds(#[case] input_program: &str, #[case] expected_times: Result<Vec<f64>, ()>) {
         let program: Program = input_program.parse().unwrap();
         let block: crate::program::analysis::BasicBlock = (&program).try_into().unwrap();
         let mut handler = InstructionHandler::default();
         let scheduled_block =
             crate::program::scheduling::ScheduledBasicBlock::build(block, &program, &mut handler)
                 .unwrap();
-        match (scheduled_block.as_fixed_schedule(&program), expected_times) {
+        match (
+            scheduled_block.as_schedule_seconds(&program),
+            expected_times,
+        ) {
             (Ok(schedule), Ok(expected_times)) => {
                 let times = schedule
                     .items()

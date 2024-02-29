@@ -11,5 +11,5 @@ pub use graph::{
 };
 
 pub use schedule::{
-    ComputedScheduleError, ComputedScheduleItem, FixedSchedule, Schedule, Seconds, TimeSpan,
+    ComputedScheduleError, ComputedScheduleItem, Schedule, ScheduleSeconds, Seconds, TimeSpan,
 };
