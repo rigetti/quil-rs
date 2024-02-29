@@ -24,7 +24,7 @@ py_wrap_error!(
 );
 
 impl PyScheduledBasicBlock {
-    pub fn as_fixed_schedule(&self, program: &PyProgram) -> PyResult<PyFixedSchedule> {
+    pub fn as_schedule_seconds(&self, program: &PyProgram) -> PyResult<PyScheduleSeconds> {
         ScheduledBasicBlock::from(&self.0)
             .as_schedule_seconds(&program.0)
             .map(Into::into)
@@ -34,18 +34,18 @@ impl PyScheduledBasicBlock {
 }
 
 py_wrap_type! {
-    PyFixedSchedule(ScheduleSeconds) as "FixedSchedule"
+    PyScheduleSeconds(ScheduleSeconds) as "ScheduleSeconds"
 }
 
-impl_repr!(PyFixedSchedule);
+impl_repr!(PyScheduleSeconds);
 
 #[pymethods]
-impl PyFixedSchedule {
-    pub fn items(&self) -> Vec<PyFixedScheduleItem> {
+impl PyScheduleSeconds {
+    pub fn items(&self) -> Vec<PyScheduleSecondsItem> {
         self.as_inner()
             .items()
             .iter()
-            .map(PyFixedScheduleItem::from)
+            .map(PyScheduleSecondsItem::from)
             .collect()
     }
 
@@ -55,15 +55,15 @@ impl PyFixedSchedule {
 }
 
 py_wrap_type! {
-    PyFixedScheduleItem(ComputedScheduleItem<Seconds>) as "FixedScheduleItem"
+    PyScheduleSecondsItem(ComputedScheduleItem<Seconds>) as "ScheduleSecondsItem"
 }
 
-impl_repr!(PyFixedScheduleItem);
+impl_repr!(PyScheduleSecondsItem);
 
 #[pymethods]
-impl PyFixedScheduleItem {
+impl PyScheduleSecondsItem {
     #[getter]
-    pub fn time_span(&self) -> PyFixedTimeSpan {
+    pub fn time_span(&self) -> PyTimeSpanSeconds {
         (&self.as_inner().time_span).into()
     }
 
@@ -74,13 +74,13 @@ impl PyFixedScheduleItem {
 }
 
 py_wrap_type! {
-    PyFixedTimeSpan(TimeSpan<Seconds>) as "FixedTimeSpan"
+    PyTimeSpanSeconds(TimeSpan<Seconds>) as "TimeSpanSeconds"
 }
 
-impl_repr!(PyFixedTimeSpan);
+impl_repr!(PyTimeSpanSeconds);
 
 #[pymethods]
-impl PyFixedTimeSpan {
+impl PyTimeSpanSeconds {
     #[getter]
     pub fn start(&self) -> f64 {
         self.as_inner().start_time().0

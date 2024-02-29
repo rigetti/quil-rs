@@ -9,7 +9,7 @@ use rigetti_pyo3::{
 
 use crate::instruction::{PyInstruction, PyTarget};
 
-use super::{scheduling::PyFixedSchedule, PyProgram};
+use super::{scheduling::PyScheduleSeconds, PyProgram};
 
 py_wrap_type! {
     PyControlFlowGraph(ControlFlowGraphOwned) as "ControlFlowGraph"
@@ -51,7 +51,7 @@ py_wrap_error!(quil, RustQubitGraphError, PyQubitGraphError, PyValueError);
 
 #[pymethods]
 impl PyBasicBlock {
-    pub fn as_schedule_seconds(&self, program: &PyProgram) -> PyResult<PyFixedSchedule> {
+    pub fn as_schedule_seconds(&self, program: &PyProgram) -> PyResult<PyScheduleSeconds> {
         BasicBlock::from(self.as_inner())
             .as_schedule_seconds(program.as_inner())
             .map(|v| v.into())

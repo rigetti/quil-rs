@@ -352,7 +352,7 @@ class ScheduleSecondsItem:
         The index of the instruction within the basic block.
         """
     @property
-    def time_span(self) -> FixedTimeSpan:
+    def time_span(self) -> TimeSpanSeconds:
         """
         The time span during which the instruction is scheduled.
         """
@@ -394,7 +394,7 @@ class ScheduleSeconds:
         """
 
 @final
-class FixedTimeSpan:
+class TimeSpanSeconds:
     """
     Representation of a time span in seconds.
     """
