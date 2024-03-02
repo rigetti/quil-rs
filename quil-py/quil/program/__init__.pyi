@@ -225,9 +225,13 @@ class BasicBlock:
                 print(schedule.items())
 
 
-         To understand why zero-duration instructions are omitted, consider a (contrived) program like this:
+        Note: when an instruction is expanded, the "time" of that original instruction includes
+        the times of all of the resulting instructions. This may cause gate times to be
+        longer than a user might expect.
 
-         .. example-code::
+        To understand why, consider a program like this:
+
+        .. example-code::
 
             .. code-block:: text
 
@@ -249,10 +253,8 @@ class BasicBlock:
                 A 0
                 B 0 1
 
-        If zero-duration instructions are considered, ``B 0`` will be scheduled from time 0 to time 2, because it includes the time
-        of the FENCE at time 0.
-
-        If not, it will be from time 1 to time 2, considering only the non-zero duration instructions (here, ``PULSE``) within the calibration.
+        `B 0` will be scheduled from time 0 to time 2, because its inner `FENCE` is scheduled for time 0.
+        This may be unexpected if the user expects to see only the timing of the inner `PULSE`.
         """
     def gate_depth(self, gate_minimum_qubit_count: int) -> int:
         """

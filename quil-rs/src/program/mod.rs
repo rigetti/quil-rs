@@ -237,7 +237,6 @@ impl Program {
     pub fn expand_calibrations(&self) -> Result<Self> {
         let mut expanded_instructions: Vec<Instruction> = vec![];
 
-        // TODO: Do this more efficiently, possibly with Vec::splice
         for instruction in &self.instructions {
             match self.calibrations.expand(instruction, &[])? {
                 Some(expanded) => {

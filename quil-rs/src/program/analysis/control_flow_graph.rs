@@ -122,10 +122,6 @@ impl<'p> BasicBlock<'p> {
     ///
     /// * `program` - The program containing this basic block. This is used to retrieve frame
     ///   and calibration information.
-    /// * `include_zero_duration_instructions` - If `true`, include instructions with zero duration
-    ///   (such as `FENCE`) in the returned schedule. Note: This may cause gate times to be
-    ///   overestimated, because the "clock" begins when the FENCE plays rather than when a PULSE
-    ///   plays, and those may be different due to the structure of the program.
     pub fn as_schedule_seconds(
         &self,
         program: &Program,
@@ -146,37 +142,35 @@ impl<'p> BasicBlock<'p> {
     /// * `get_duration` - A function that takes a program and an instruction and returns the
     ///   duration of the instruction in the desired time unit, or `None` if the instruction's
     ///   duration is not known.
-    /// * `include_zero_duration_instructions` - If `true`, include instructions with zero duration
-    ///   (such as `FENCE`) in the returned schedule. Note: This may cause gate times to be
-    ///   overestimated, because the "clock" begins when the FENCE plays rather than when a PULSE
-    ///   plays, and those may be different due to the structure of the program.
     ///
-    /// To understand why `include_zero_duration_instructions` is useful, consider a program like this:
+    /// Note: when an instruction is expanded, the "time" of that original instruction includes
+    /// the times of all of the resulting instructions. This may cause gate times to be
+    /// longer than a user might expect.
+    ///
+    /// To understand why, consider a program like this:
     ///
     /// ```text
-    /// # Two-qubit frame
-    /// DEFFRAME 0 1 "a":
+    /// # One-qubit frame
+    /// DEFFRAME 0 "a":
     ///     ATTRIBUTE: 1
     ///
-    /// # One-qubit frame
-    /// DEFFRAME 1 "a":
+    /// # Two-qubit frame
+    /// DEFFRAME 0 1 "b":
     ///     ATTRIBUTE: 1
     ///
     /// DEFCAL A 0:
-    ///     PULSE 1 "a" flat(duration: 1.0)
+    ///     PULSE 0 "a" flat(duration: 1.0)
     ///
-    /// DEFCAL B 0:
-    ///     FENCE 0 # This FENCE "plays" immediately upon program start
-    ///     PULSE 0 1 "a" flat(duration: 1.0) # This `PULSE` is blocked by the `PULSE` of `A 0` on intersecting frame 1 "a"
+    /// DEFCAL B 0 1:
+    ///     FENCE 1
+    ///     PULSE 0 1 "b" flat(duration: 1.0)
     ///
     /// A 0
-    /// B 0
+    /// B 0 1
     /// ```
     ///
-    /// Thus, if `include_zero_duration_instructions` is set, `B 0` will be scheduled from time 0 to time 2.
-
-    /// If not, it will be from time 1 to time 2, considering only the non-zero duration instructions
-    /// (here, `PULSE`) within the calibration
+    /// `B 0` will be scheduled from time 0 to time 2, because its inner `FENCE` is scheduled for time 0.
+    /// This may be unexpected if the user expects to see only the timing of the inner `PULSE`.
     pub fn as_schedule<F, Time>(
         &self,
         program: &'p Program,
@@ -226,12 +220,6 @@ impl<'p> BasicBlock<'p> {
             .into_items()
             .into_iter()
             .fold(HashMap::<usize, TimeSpan<Time>>::new(), |mut map, item| {
-                // this skips fences and such since the user _probably_ is not interested in
-                // that timing information
-                if item.time_span.duration.is_zero() {
-                    return map;
-                }
-
                 if let Some((_, uncalibrated_instruction_index)) =
                     calibrated_to_uncalibrated_instruction_source_mapping
                         .range(..=item.instruction_index)
