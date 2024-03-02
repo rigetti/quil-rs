@@ -35,11 +35,12 @@ pub use self::frame::FrameSet;
 pub use self::frame::MatchedFrames;
 pub use self::memory::{MemoryAccesses, MemoryRegion};
 
+pub mod analysis;
 mod calibration;
 mod error;
 pub(crate) mod frame;
-pub mod graph;
 mod memory;
+pub mod scheduling;
 pub mod type_check;
 
 #[derive(Debug, thiserror::Error, PartialEq)]
@@ -61,9 +62,6 @@ pub enum ProgramError {
 }
 
 type Result<T> = std::result::Result<T, ProgramError>;
-
-#[cfg(feature = "graphviz-dot")]
-pub mod graphviz_dot;
 
 /// A Quil Program instance describes a quantum program with metadata used in execution.
 ///
@@ -239,7 +237,6 @@ impl Program {
     pub fn expand_calibrations(&self) -> Result<Self> {
         let mut expanded_instructions: Vec<Instruction> = vec![];
 
-        // TODO: Do this more efficiently, possibly with Vec::splice
         for instruction in &self.instructions {
             match self.calibrations.expand(instruction, &[])? {
                 Some(expanded) => {
@@ -326,13 +323,7 @@ impl Program {
 
     /// Consume the [`Program`] to return all of the instructions which constitute it.
     pub fn into_instructions(self) -> Vec<Instruction> {
-        let capacity = self.memory_regions.len()
-            + self.frames.len()
-            + self.waveforms.len()
-            + self.gate_definitions.len()
-            + self.instructions.len();
-
-        let mut instructions: Vec<Instruction> = Vec::with_capacity(capacity);
+        let mut instructions: Vec<Instruction> = Vec::with_capacity(self.len());
 
         instructions.extend(self.memory_regions.into_iter().map(|(name, descriptor)| {
             Instruction::Declaration(Declaration {
@@ -564,15 +555,21 @@ impl Program {
         Box::new(move |key| qubit_resolutions.get(key).copied())
     }
 
-    /// Return a copy of all of the instructions which constitute this [`Program`].
-    pub fn to_instructions(&self) -> Vec<Instruction> {
-        let capacity = self.memory_regions.len()
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    pub fn len(&self) -> usize {
+        self.memory_regions.len()
             + self.frames.len()
             + self.waveforms.len()
             + self.gate_definitions.len()
-            + self.instructions.len();
+            + self.instructions.len()
+    }
 
-        let mut instructions: Vec<Instruction> = Vec::with_capacity(capacity);
+    /// Return a copy of all of the instructions which constitute this [`Program`].
+    pub fn to_instructions(&self) -> Vec<Instruction> {
+        let mut instructions: Vec<Instruction> = Vec::with_capacity(self.len());
 
         instructions.extend(self.memory_regions.iter().map(|(name, descriptor)| {
             Instruction::Declaration(Declaration {

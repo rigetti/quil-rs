@@ -1,5 +1,5 @@
 use criterion::{black_box, criterion_group, criterion_main, BatchSize, Criterion};
-use quil_rs::{instruction::InstructionHandler, program::graph::ScheduledProgram};
+use quil_rs::{instruction::InstructionHandler, program::scheduling::ScheduledProgram};
 use std::str::FromStr;
 
 mod corpus;
