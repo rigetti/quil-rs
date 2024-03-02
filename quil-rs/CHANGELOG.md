@@ -1,3 +1,9 @@
+## 0.23.0-rc.0
+
+### Breaking Changes
+
+- #334: program scheduling and analysis utilities (#336)
+
 ## 0.22.6
 
 ### Fixes

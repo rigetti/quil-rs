@@ -1,3 +1,9 @@
+## 0.7.0-rc.0
+
+### Breaking Changes
+
+- #334: program scheduling and analysis utilities (#336)
+
 ## 0.6.6
 
 ### Fixes
