@@ -1,7 +1,7 @@
 [package]
 name = "quil-py"
 description = "Python bindings for quil-rs"
-version = "0.7.0-rc.0"
+version = "0.7.0-rc.1"
 edition = "2021"
 license = "Apache-2.0"
 repository = "https://github.com/rigetti/quil-rs"
@@ -22,7 +22,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 ndarray.workspace = true
-quil-rs = { path = "../quil-rs", version = "0.23.0-rc.0" }
+quil-rs = { path = "../quil-rs", version = "0.23.0-rc.1" }
 strum.workspace = true
 # pyo3 dependencies should be updated together
 numpy = "0.20.0"
