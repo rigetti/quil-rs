@@ -1,3 +1,13 @@
+## 0.7.0
+
+### Breaking Changes
+
+- #334: program scheduling and analysis utilities (#336)
+
+### Fixes
+
+- Revert "match exactly one qubit for DELAYs without frame specifier" (#342)
+
 ## 0.7.0-rc.1
 
 ### Breaking Changes
