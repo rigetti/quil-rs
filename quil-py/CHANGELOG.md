@@ -1,3 +1,9 @@
+## 0.7.1
+
+### Features
+
+- linux ppc64le wheel
+
 ## 0.7.1-rc.0
 
 ### Features
