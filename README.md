@@ -10,7 +10,6 @@ It serves three purposes:
 
 It should be considered unstable until the release of v1.0.
 
-
 ## Testing
 
 When testing this crate, you should run with the `--all-features` flag to ensure all tests are executed.

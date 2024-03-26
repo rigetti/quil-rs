@@ -13,6 +13,7 @@ pub enum ReservedToken {
 }
 
 #[derive(Clone, Debug)]
+#[allow(dead_code)] // clippy 0.1.77 incorrectly identifies this NewType as dead code.
 pub struct NotReservedToken(String);
 
 impl FromStr for ReservedToken {
