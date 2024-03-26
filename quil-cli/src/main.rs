@@ -11,6 +11,7 @@ struct Cli {
 
 #[derive(Subcommand, Clone, Debug)]
 pub enum Command {
+    /// Parse a Quil program or expression
     Parse {
         #[arg(short = 't', long = "type")]
         input_type: Option<InputType>,
@@ -20,8 +21,10 @@ pub enum Command {
 
 #[derive(ValueEnum, Clone, Debug, Default)]
 pub enum InputType {
+    /// Parse a Quil program (default)
     #[default]
     Program,
+    /// Parse a Quil expression
     Expression,
 }
 
