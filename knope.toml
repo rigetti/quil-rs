@@ -8,6 +8,11 @@ versioned_files = ["quil-py/Cargo.toml", "quil-py/pyproject.toml"]
 changelog = "quil-py/CHANGELOG.md"
 scopes = ["py", "python", "quil-py"]
 
+[packages.quil-cli]
+versioned_files = ["quil-cli/Cargo.toml"]
+changelog = "quil-cli/CHANGELOG.md"
+scopes = ["cli", "quil-cli"]
+
 [[workflows]]
 name = "release"
 
