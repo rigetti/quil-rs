@@ -2,10 +2,11 @@
 name = "cli"
 version = "0.1.0"
 edition = "2021"
+license = "Apache-2.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-quil-rs = {path = "../quil-rs"}
+quil-rs = { path = "../quil-rs", version = "0.23.0" }
 clap =  {version = "4.5.4", features = ["derive"]}
 anyhow = "1.0.81"
