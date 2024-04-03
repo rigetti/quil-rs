@@ -35,11 +35,12 @@ pub use self::frame::FrameSet;
 pub use self::frame::MatchedFrames;
 pub use self::memory::{MemoryAccesses, MemoryRegion};
 
+pub mod analysis;
 mod calibration;
 mod error;
 pub(crate) mod frame;
-pub mod graph;
 mod memory;
+pub mod scheduling;
 pub mod type_check;
 
 #[derive(Debug, thiserror::Error, PartialEq)]
@@ -61,9 +62,6 @@ pub enum ProgramError {
 }
 
 type Result<T> = std::result::Result<T, ProgramError>;
-
-#[cfg(feature = "graphviz-dot")]
-pub mod graphviz_dot;
 
 /// A Quil Program instance describes a quantum program with metadata used in execution.
 ///
@@ -239,7 +237,6 @@ impl Program {
     pub fn expand_calibrations(&self) -> Result<Self> {
         let mut expanded_instructions: Vec<Instruction> = vec![];
 
-        // TODO: Do this more efficiently, possibly with Vec::splice
         for instruction in &self.instructions {
             match self.calibrations.expand(instruction, &[])? {
                 Some(expanded) => {
@@ -326,13 +323,7 @@ impl Program {
 
     /// Consume the [`Program`] to return all of the instructions which constitute it.
     pub fn into_instructions(self) -> Vec<Instruction> {
-        let capacity = self.memory_regions.len()
-            + self.frames.len()
-            + self.waveforms.len()
-            + self.gate_definitions.len()
-            + self.instructions.len();
-
-        let mut instructions: Vec<Instruction> = Vec::with_capacity(capacity);
+        let mut instructions: Vec<Instruction> = Vec::with_capacity(self.len());
 
         instructions.extend(self.memory_regions.into_iter().map(|(name, descriptor)| {
             Instruction::Declaration(Declaration {
@@ -455,6 +446,7 @@ impl Program {
                 Instruction::Jump(Jump {
                     target: start_target,
                 }),
+                Instruction::Label(Label { target: end_target }),
             ])
             .collect::<Vec<Instruction>>(),
         );
@@ -563,15 +555,21 @@ impl Program {
         Box::new(move |key| qubit_resolutions.get(key).copied())
     }
 
-    /// Return a copy of all of the instructions which constitute this [`Program`].
-    pub fn to_instructions(&self) -> Vec<Instruction> {
-        let capacity = self.memory_regions.len()
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    pub fn len(&self) -> usize {
+        self.memory_regions.len()
             + self.frames.len()
             + self.waveforms.len()
             + self.gate_definitions.len()
-            + self.instructions.len();
+            + self.instructions.len()
+    }
 
-        let mut instructions: Vec<Instruction> = Vec::with_capacity(capacity);
+    /// Return a copy of all of the instructions which constitute this [`Program`].
+    pub fn to_instructions(&self) -> Vec<Instruction> {
+        let mut instructions: Vec<Instruction> = Vec::with_capacity(self.len());
 
         instructions.extend(self.memory_regions.iter().map(|(name, descriptor)| {
             Instruction::Declaration(Declaration {
@@ -826,24 +824,18 @@ DECLARE ec BIT
 
     #[test]
     fn frame_blocking() {
-        let input = r#"DEFFRAME 0 "a":
-    HARDWARE-OBJECT: "hardware"
+        let input = "DEFFRAME 0 \"a\":
+\tHARDWARE-OBJECT: \"hardware\"
 
-DEFFRAME 0 "b":
-    HARDWARE-OBJECT: "hardware"
+DEFFRAME 0 \"b\":
+\tHARDWARE-OBJECT: \"hardware\"
 
-DEFFRAME 1 "c":
-    HARDWARE-OBJECT: "hardware"
+DEFFRAME 1 \"c\":
+\tHARDWARE-OBJECT: \"hardware\"
 
-DEFFRAME 0 1 "0-1 2q":
-    HARDWARE-OBJECT: "hardware"
-
-DEFFRAME 2 "d":
-    HARDWARE-OBJECT: "hardware"
-
-DEFFRAME 0 2 "0-2 2q":
-    HARDWARE-OBJECT: "hardware"
-"#;
+DEFFRAME 0 1 \"2q\":
+\tHARDWARE-OBJECT: \"hardware\"
+";
 
         let program = Program::from_str(input).unwrap();
 
@@ -852,39 +844,39 @@ DEFFRAME 0 2 "0-2 2q":
             (
                 r#"PULSE 0 "a" custom_waveform"#,
                 vec![r#"0 "a""#],
-                vec![r#"0 "b""#, r#"0 1 "0-1 2q""#, r#"0 2 "0-2 2q""#],
+                vec![r#"0 "b""#, r#"0 1 "2q""#],
             ),
             (
                 r#"PULSE 1 "c" custom_waveform"#,
                 vec![r#"1 "c""#],
-                vec![r#"0 1 "0-1 2q""#],
+                vec![r#"0 1 "2q""#],
             ),
             // Pulses on non-declared frames and unused qubits do not use or block any frames in the program
-            (r#"PULSE 3 "a" custom_waveform"#, vec![], vec![]),
+            (r#"PULSE 2 "a" custom_waveform"#, vec![], vec![]),
             // Captures work identically to Pulses
             (
                 r#"CAPTURE 0 "a" custom_waveform ro[0]"#,
                 vec![r#"0 "a""#],
-                vec![r#"0 "b""#, r#"0 1 "0-1 2q""#, r#"0 2 "0-2 2q""#],
+                vec![r#"0 "b""#, r#"0 1 "2q""#],
             ),
             (
                 r#"CAPTURE 1 "c" custom_waveform ro[0]"#,
                 vec![r#"1 "c""#],
-                vec![r#"0 1 "0-1 2q""#],
+                vec![r#"0 1 "2q""#],
             ),
-            (r#"CAPTURE 3 "a" custom_waveform ro[0]"#, vec![], vec![]),
+            (r#"CAPTURE 2 "a" custom_waveform ro[0]"#, vec![], vec![]),
             // Raw Captures work identically to Pulses
             (
                 r#"RAW-CAPTURE 0 "a" 1e-6 ro[0]"#,
                 vec![r#"0 "a""#],
-                vec![r#"0 "b""#, r#"0 1 "0-1 2q""#, r#"0 2 "0-2 2q""#],
+                vec![r#"0 "b""#, r#"0 1 "2q""#],
             ),
             (
                 r#"RAW-CAPTURE 1 "c" 1e-6 ro[0]"#,
                 vec![r#"1 "c""#],
-                vec![r#"0 1 "0-1 2q""#],
+                vec![r#"0 1 "2q""#],
             ),
-            (r#"RAW-CAPTURE 3 "a" 1e-6 ro[0]"#, vec![], vec![]),
+            (r#"RAW-CAPTURE 2 "a" 1e-6 ro[0]"#, vec![], vec![]),
             // A non-blocking pulse blocks only its precise frame, not other frames on the same qubits
             (
                 r#"NONBLOCKING PULSE 0 "a" custom_waveform"#,
@@ -897,36 +889,23 @@ DEFFRAME 0 2 "0-2 2q":
                 vec![],
             ),
             (
-                r#"NONBLOCKING PULSE 0 1 "0-1 2q" custom_waveform"#,
-                vec![r#"0 1 "0-1 2q""#],
+                r#"NONBLOCKING PULSE 0 1 "2q" custom_waveform"#,
+                vec![r#"0 1 "2q""#],
                 vec![],
             ),
             // A Fence with qubits specified uses and blocks all frames intersecting that qubit
-            (r#"FENCE 1"#, vec![], vec![r#"1 "c""#, r#"0 1 "0-1 2q""#]),
+            (r#"FENCE 1"#, vec![], vec![r#"1 "c""#, r#"0 1 "2q""#]),
             // Fence-all uses and blocks all frames declared in the program
             (
                 r#"FENCE"#,
                 vec![],
-                vec![
-                    r#"0 "a""#,
-                    r#"0 "b""#,
-                    r#"1 "c""#,
-                    r#"0 1 "0-1 2q""#,
-                    r#"0 2 "0-2 2q""#,
-                    r#"2 "d""#,
-                ],
+                vec![r#"0 "a""#, r#"0 "b""#, r#"1 "c""#, r#"0 1 "2q""#],
             ),
             // Delay uses and blocks frames on exactly the given qubits and with any of the given names
             (r#"DELAY 0 1.0"#, vec![r#"0 "a""#, r#"0 "b""#], vec![]),
             (r#"DELAY 1 1.0"#, vec![r#"1 "c""#], vec![]),
             (r#"DELAY 1 "c" 1.0"#, vec![r#"1 "c""#], vec![]),
-            (r#"DELAY 0 1 "0-1 2q" 1.0"#, vec![r#"0 1 "0-1 2q""#], vec![]),
-            (r#"DELAY 0 1.0"#, vec![r#"0 "a""#, r#"0 "b""#], vec![]),
-            (
-                r#"DELAY 0 1 0.6"#,
-                vec![r#"0 "a""#, r#"0 "b""#, r#"1 "c""#, r#"0 1 "0-1 2q""#],
-                vec![],
-            ),
+            (r#"DELAY 0 1 1.0"#, vec![r#"0 1 "2q""#], vec![]),
             (
                 r#"SWAP-PHASES 0 "a" 0 "b""#,
                 vec![r#"0 "a""#, r#"0 "b""#],

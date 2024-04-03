@@ -1021,7 +1021,7 @@ mod tests {
 
     #[test]
     fn specific_simplification_tests() {
-        for (input, expected) in vec![
+        for (input, expected) in [
             ("pi", Expression::Number(PI.into())),
             ("pi/2", Expression::Number((PI / 2.0).into())),
             ("pi * pi", Expression::Number((PI.powi(2)).into())),
@@ -1042,7 +1042,7 @@ mod tests {
 
     #[test]
     fn specific_to_real_tests() {
-        for (input, expected) in vec![
+        for (input, expected) in [
             (Expression::PiConstant, Ok(PI)),
             (Expression::Number(Complex64 { re: 1.0, im: 0.0 }), Ok(1.0)),
             (

@@ -1,3 +1,77 @@
+## 0.7.1
+
+### Features
+
+- linux ppc64le wheel
+
+## 0.7.1-rc.0
+
+### Features
+
+- linux ppc64le wheel
+
+## 0.7.0
+
+### Breaking Changes
+
+- #334: program scheduling and analysis utilities (#336)
+
+### Fixes
+
+- Revert "match exactly one qubit for DELAYs without frame specifier" (#342)
+
+## 0.7.0-rc.1
+
+### Breaking Changes
+
+- #334: program scheduling and analysis utilities (#336)
+
+### Fixes
+
+- Revert "match exactly one qubit for DELAYs without frame specifier" (#342)
+
+## 0.7.0-rc.0
+
+### Breaking Changes
+
+- #334: program scheduling and analysis utilities (#336)
+
+## 0.6.6
+
+### Fixes
+
+- include separators between DEFCIRCUIT parameters (#338)
+
+## 0.6.6-rc.0
+
+### Fixes
+
+- include separators between DEFCIRCUIT parameters (#338)
+
+## 0.6.5
+
+### Fixes
+
+- `is_quil_t()` now correctly returns false for WAIT instructions (#331)
+
+## 0.6.5-rc.0
+
+### Fixes
+
+- `is_quil_t()` now correctly returns false for WAIT instructions (#331)
+
+## 0.6.4
+
+### Fixes
+
+- The `wrap_in_loop` method now applies the end target to the program (#329)
+
+## 0.6.4-rc.0
+
+### Fixes
+
+- The `wrap_in_loop` method now applies the end target to the program (#329)
+
 ## 0.6.3
 
 ### Features

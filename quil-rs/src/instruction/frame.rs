@@ -10,7 +10,7 @@ use crate::{
     quil::Quil,
 };
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, strum::EnumTryAs)]
 pub enum AttributeValue {
     String(String),
     Expression(Expression),

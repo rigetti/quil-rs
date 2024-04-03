@@ -20,4 +20,5 @@ I 0
 SUB shot_count[0] 1
 JUMP-UNLESS @loop-end shot_count[0]
 JUMP @loop-start
+LABEL @loop-end
 

@@ -63,7 +63,7 @@ jobs:
     strategy:
       matrix:
         python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
-        target: [x86_64, aarch64]
+        target: [x86_64, aarch64, ppc64le]
     steps:
     - uses: actions/checkout@v2
     - name: Install Rust
@@ -162,12 +162,11 @@ jobs:
     # can be published.
     needs: [ macos, linux, windows, sdist ]
     if: always() && needs.sdist.result == 'success'
+    permissions:
+      id-token: write
     steps:
       - uses: actions/download-artifact@v3
       - name: Publish to PyPi
-        env:
-          MATURIN_USERNAME: ${{ secrets.PYPI_USERNAME }}
-          MATURIN_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
         uses: messense/maturin-action@v1
         with:
           command: upload 

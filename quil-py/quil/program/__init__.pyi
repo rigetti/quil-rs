@@ -175,6 +175,110 @@ class Program:
         while ensuring that unique value is not already in use within the program.
         """
         ...
+    def control_flow_graph(self) -> "ControlFlowGraph":
+        """
+        Return the `control flow graph`_ of the program.
+
+        .. _control flow graph: https://en.wikipedia.org/wiki/Control-flow_graph
+        """
+
+@final
+class BasicBlock:
+    def as_schedule_seconds(self, program: Program) -> ScheduleSeconds:
+        """
+        Return the ``ScheduleSeconds`` representing the timing of the instructions within the block.
+
+        This schedule is computed by:
+
+        * Expanding each instruction within the block using the program's calibration definitions
+        * Resolving the `ScheduleSeconds` of the expanded instructions
+        * Mapping calibrated instructions back to the original instructions within this block, such that the
+          block's instruction is represented as a timespan encompassing all of its expanded instructions
+
+        Note: the schedule will not include instructions with zero duration (such as `FENCE`).
+
+        :param program: The program containing the calibrations to be used to schedule this block. Generally,
+            this should be the program from which the block was extracted.
+
+        The following example demonstrates construction of such a schedule for a simple program without explicit control
+        flow (and thus with only one basic block):
+
+        .. example-code::
+
+            .. code-block:: python
+
+                from quil.program import Program
+
+                program = Program.parse("CZ 0 1; CZ 0 2")
+
+                print(program.to_quil())
+
+                control_flow_graph = program.control_flow_graph()
+                assert control_flow_graph.has_dynamic_control_flow() == False
+
+                basic_blocks = control_flow_graph.basic_blocks()
+                assert len(basic_blocks) == 1
+
+                schedule = blocks[0].as_schedule_seconds(program, False)
+                print(f"Duration = {schedule.duration()}")
+
+                print(schedule.items())
+
+
+        Note: when an instruction is expanded, the "time" of that original instruction includes
+        the times of all of the resulting instructions. This may cause gate times to be
+        longer than a user might expect.
+
+        To understand why, consider a program like this:
+
+        .. example-code::
+
+            .. code-block:: text
+
+                # One-qubit frame
+                DEFFRAME 0 "a":
+                    ATTRIBUTE: 1
+
+                # Two-qubit frame
+                DEFFRAME 0 1 "b":
+                    ATTRIBUTE: 1
+
+                DEFCAL A 0:
+                    PULSE 0 "a" flat(duration: 1.0)
+
+                DEFCAL B 0 1:
+                    FENCE 1
+                    PULSE 0 1 "b" flat(duration: 1.0)
+
+                A 0
+                B 0 1
+
+        `B 0` will be scheduled from time 0 to time 2, because its inner `FENCE` is scheduled for time 0.
+        This may be unexpected if the user expects to see only the timing of the inner `PULSE`.
+        """
+    def gate_depth(self, gate_minimum_qubit_count: int) -> int:
+        """
+        Returns the length of the longest path from an initial instruction (one with no prerequisite instructions) to a final
+        instruction (one with no dependent instructions), where the length of a path is the number of gate instructions in the path.
+
+        :param gate_minimum_qubit_count: The minimum number of qubits in a gate for it to be counted in the depth.
+        """
+    def label(self) -> Optional[Target]:
+        """
+        Return the label of the block, if any. This is used to target this block in control flow.
+        """
+    def instructions(self) -> List[Instruction]:
+        """
+        Return a list of the instructions in the block, in order of definition.
+
+        This does not include the label or terminator instructions.
+        """
+    def terminator(self) -> Optional[Instruction]:
+        """
+        Return the control flow terminator instruction of the block, if any.
+
+        If this is ``None``, the implicit behavior is to "continue" to the subsequent block.
+        """
 
 @final
 class CalibrationSet:
@@ -237,6 +341,84 @@ class CalibrationSet:
         Return the Quil instructions which describe the contained calibrations
         """
         ...
+
+
+@final
+class ScheduleSecondsItem:
+    """
+    A single item within a fixed schedule, representing a single instruction within a basic block.
+    """
+    @property
+    def instruction_index(self) -> int:
+        """
+        The index of the instruction within the basic block.
+        """
+    @property
+    def time_span(self) -> TimeSpanSeconds:
+        """
+        The time span during which the instruction is scheduled.
+        """
+
+
+@final
+class ControlFlowGraph:
+    """
+    Representation of a control flow graph (CFG) for a Quil program.
+
+    The CFG is a directed graph where each node is a basic block and each edge is a control flow
+    transition between two basic blocks.
+    """
+
+    def has_dynamic_control_flow(self) -> bool: 
+        """
+        Return ``True`` if the program has dynamic control flow, i.e. contains a conditional branch instruction.
+
+        ``False`` does not imply that there is only one basic block in the program. Multiple basic blocks may have
+        non-conditional control flow among them, in which the execution order is deterministic and does not depend
+        on program state. This may be a sequence of basic blocks with fixed `JUMP`s or without explicit terminators.
+        """
+    def basic_blocks(self) -> List["BasicBlock"]: 
+        """
+        Return a list of all the basic blocks in the control flow graph, in order of definition.
+        """
+
+@final
+class ScheduleSeconds:
+    def items(self) -> List[ScheduleSecondsItem]:
+        """
+        All the items in the schedule, in unspecified order.
+        """
+    def duration(self) -> float:
+        """
+        The duration of the schedule, in seconds.
+
+        This is the maximum of the end time of all the items.
+        """
+
+@final
+class TimeSpanSeconds:
+    """
+    Representation of a time span in seconds.
+    """
+    @property
+    def start(self) -> float:
+        """
+        The start time of the time span, in seconds.
+
+        This is relative to the start of the scheduling context (such as the basic block).
+        """
+    @property
+    def duration(self) -> float:
+        """
+        The duration of the time span, in seconds.
+        """
+    @property
+    def end(self) -> float:
+        """
+        The end time of the time span, in seconds.
+
+        This is the sum of the start time and duration.
+        """
 
 @final
 class FrameSet:

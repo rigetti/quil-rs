@@ -25,7 +25,7 @@ impl Quil for Label {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, strum::EnumTryAs)]
 pub enum Target {
     Fixed(String),
     Placeholder(TargetPlaceholder),

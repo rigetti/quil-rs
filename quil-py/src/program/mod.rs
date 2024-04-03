@@ -6,7 +6,10 @@ use std::{
 use numpy::{PyArray2, ToPyArray};
 use quil_rs::{
     instruction::{Instruction, QubitPlaceholder, TargetPlaceholder, Waveform},
-    program::{CalibrationSet, FrameSet, MemoryRegion},
+    program::{
+        analysis::{ControlFlowGraph, ControlFlowGraphOwned},
+        CalibrationSet, FrameSet, MemoryRegion,
+    },
     Program,
 };
 use rigetti_pyo3::{
@@ -30,11 +33,17 @@ use crate::{
     },
 };
 
+use self::{
+    analysis::{PyBasicBlock, PyControlFlowGraph},
+    scheduling::{PyScheduleSeconds, PyScheduleSecondsItem, PyTimeSpanSeconds},
+};
 pub use self::{calibration::PyCalibrationSet, frame::PyFrameSet, memory::PyMemoryRegion};
 
+mod analysis;
 mod calibration;
 mod frame;
 mod memory;
+mod scheduling;
 
 wrap_error!(ProgramError(quil_rs::program::ProgramError));
 py_wrap_error!(quil, ProgramError, PyProgramError, PyValueError);
@@ -71,6 +80,10 @@ impl PyProgram {
 
     pub fn copy(&self) -> Self {
         Self(self.as_inner().clone())
+    }
+
+    pub fn control_flow_graph(&self) -> PyControlFlowGraph {
+        ControlFlowGraphOwned::from(ControlFlowGraph::from(self.as_inner())).into()
     }
 
     #[getter]
@@ -360,5 +373,5 @@ impl PyProgram {
 }
 
 create_init_submodule! {
-    classes: [ PyFrameSet, PyProgram, PyCalibrationSet, PyMemoryRegion ],
+    classes: [ PyFrameSet, PyProgram, PyCalibrationSet, PyMemoryRegion, PyBasicBlock, PyControlFlowGraph, PyScheduleSeconds, PyScheduleSecondsItem, PyTimeSpanSeconds ],
 }

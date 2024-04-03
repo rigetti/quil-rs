@@ -661,7 +661,6 @@ impl Instruction {
             | Instruction::ShiftFrequency(_)
             | Instruction::ShiftPhase(_)
             | Instruction::SwapPhases(_)
-            | Instruction::Wait
             | Instruction::WaveformDefinition(_) => true,
             Instruction::Arithmetic(_)
             | Instruction::BinaryLogic(_)
@@ -685,6 +684,7 @@ impl Instruction {
             | Instruction::Pragma(_)
             | Instruction::Reset(_)
             | Instruction::Store(_)
+            | Instruction::Wait
             | Instruction::UnaryLogic(_) => false,
         }
     }
