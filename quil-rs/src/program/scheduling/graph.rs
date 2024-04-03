@@ -432,7 +432,7 @@ impl<'a> ScheduledBasicBlock<'a> {
         }
 
         // Maintain the invariant that the block start node has a connecting path to the block end node.
-        if instructions.is_empty() {
+        if basic_block.instructions().is_empty() {
             add_dependency!(graph, ScheduledGraphNode::BlockStart => ScheduledGraphNode::BlockEnd, ExecutionDependency::StableOrdering);
         }
 
@@ -533,11 +533,12 @@ impl<'a> From<ScheduledBasicBlock<'a>> for ScheduledBasicBlockOwned {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::program::graphviz_dot::tests::build_dot_format_snapshot_test_case;
+    #[cfg(feature = "graphviz-dot")]
+    use crate::program::scheduling::graphviz_dot::tests::build_dot_format_snapshot_test_case;
 
     #[cfg(feature = "graphviz-dot")]
     mod custom_handler {
-        use super::super::*;
+        use super::*;
 
         use crate::instruction::Pragma;
         use crate::instruction::PragmaArgument;
@@ -682,6 +683,7 @@ PRAGMA RAW-INSTRUCTION foo
 
     // Because any instruction that reads a particular region must be preceded by any earlier instructions that write to/ capture that memory region,
     // we expect an edge from the first load to the second (0 -> 1).
+    #[cfg(feature = "graphviz-dot")]
     build_dot_format_snapshot_test_case! {
         classical_write_read_load_load,
         r#"
@@ -696,6 +698,7 @@ LOAD params1[0] params2 integers[0] # reads params2
 
     // Because any instruction that reads a particular region must be preceded by any earlier instructions that write to/ capture that memory region,
     // we expect an edge from the mul to the load (0 -> 1).
+    #[cfg(feature = "graphviz-dot")]
     build_dot_format_snapshot_test_case! {
         classical_write_read_mul_load,
         r#"
@@ -710,6 +713,7 @@ LOAD params1[0] params2 integers[0] # just reads params2
 
     // Because any instruction that reads a particular region must be preceded by any earlier instructions that write to/ capture that memory region,
     // we expect an edge from the mul to the add (0 -> 1).
+    #[cfg(feature = "graphviz-dot")]
     build_dot_format_snapshot_test_case! {
         classical_write_read_add_mul,
         r#"
@@ -724,6 +728,7 @@ MUL params1[0] 2 # this reads and writes params1
 
     // Because any instruction that reads a particular region must precede any later instructions that write to/ capture that memory region,
     // we expect an edge from the first load to the second (0, 1).
+    #[cfg(feature = "graphviz-dot")]
     build_dot_format_snapshot_test_case! {
         classical_read_write_load_load,
         r#"
@@ -738,6 +743,7 @@ LOAD params2[0] params3 integers[0] # writes params2
 
     // Because any instruction that reads a particular region must precede any later instructions that write to/ capture that memory region,
     // we expect an edge from the load to the mul (0, 1).
+    #[cfg(feature = "graphviz-dot")]
     build_dot_format_snapshot_test_case! {
         classical_read_write_load_mul,
         r#"
@@ -753,6 +759,7 @@ MUL params2[0] 2                    # reads and writes params2
     // Because memory reading and writing dependencies also apply to RfControl instructions, we
     // expect edges from the first load to the first shift-phase (0 -> 1), the first shift-phase
     // to the second load (1 -> 2), and the second load to the second shift-phase (2 -> 3).
+    #[cfg(feature = "graphviz-dot")]
     build_dot_format_snapshot_test_case! {
         quantum_write_parameterized_operations,
         r#"
@@ -773,11 +780,13 @@ SHIFT-PHASE 1 "rf" params2[0]       # reads params2
     }
 
     // Because a pragma by default will have no memory accesses, it should only have edges from the block start and to the block end.
+    #[cfg(feature = "graphviz-dot")]
     build_dot_format_snapshot_test_case! {
         classical_no_memory_pragma,
         r#"PRAGMA example"#
     }
 
+    #[cfg(feature = "graphviz-dot")]
     build_dot_format_snapshot_test_case! {
         write_capture_read,
         r#"
@@ -789,6 +798,7 @@ LOAD bits3[0] bits integers[0] # read
 "#
     }
 
+    #[cfg(feature = "graphviz-dot")]
     build_dot_format_snapshot_test_case! {
         write_write_read,
         r#"
