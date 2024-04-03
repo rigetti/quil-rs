@@ -322,6 +322,7 @@ impl<'a> ScheduledBasicBlock<'a> {
                             // the instruction node.
                             .get_blocking_nodes(node, access_type)
                     })
+                    // Collecting is necessary to avoid "captured variable cannot escape FnMut closure body" errors
                     .collect::<Vec<_>>()
             })
             .collect::<Vec<_>>();
