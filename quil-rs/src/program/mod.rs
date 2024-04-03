@@ -1057,7 +1057,7 @@ DEFGATE BAR:
         let mut in_place_sum = lhs.clone();
         in_place_sum += rhs;
 
-        let expected_qubits = vec![
+        let expected_qubits = [
             Qubit::Fixed(0),
             Qubit::Fixed(1),
             Qubit::Fixed(2),
