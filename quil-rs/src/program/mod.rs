@@ -136,7 +136,7 @@ impl Program {
 
         match instruction {
             Instruction::CalibrationDefinition(calibration) => {
-                self.calibrations.push_calibration(calibration);
+                self.calibrations.insert_calibration(calibration);
             }
             Instruction::FrameDefinition(FrameDefinition {
                 identifier,
@@ -157,7 +157,8 @@ impl Program {
                     .insert(gate_definition.name.clone(), gate_definition);
             }
             Instruction::MeasureCalibrationDefinition(calibration) => {
-                self.calibrations.push_measurement_calibration(calibration);
+                self.calibrations
+                    .insert_measurement_calibration(calibration);
             }
             Instruction::WaveformDefinition(WaveformDefinition { name, definition }) => {
                 self.waveforms.insert(name, definition);
@@ -336,7 +337,7 @@ impl Program {
         instructions.extend(self.waveforms.into_iter().map(|(name, definition)| {
             Instruction::WaveformDefinition(WaveformDefinition { name, definition })
         }));
-        instructions.extend(self.calibrations.into_instructions());
+        instructions.extend(self.calibrations.to_instructions());
         instructions.extend(
             self.gate_definitions
                 .into_values()

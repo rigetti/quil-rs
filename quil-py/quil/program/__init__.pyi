@@ -322,14 +322,20 @@ class CalibrationSet:
     def is_empty(self) -> bool:
         """Returns ``True`` if the ``CalibrationSet`` contains no data."""
         ...
-    def push_calibration(self, calibration: Calibration):
+    def insert_calibration(self, calibration: Calibration) -> Optional[Calibration]:
         """
-        Add another gate ``Calibration`` (`DEFCAL`) to the set.
+        Insert another ``Calibration`` (`DEFCAL`) to the set.
+
+        If a calibration with the same name already exists, it is overwritten and this
+        function returns the previous calibration. Otherwise, None is returned.
         """
         ...
-    def push_measurement_calibration(self, calibration: MeasureCalibrationDefinition):
+    def insert_measurement_calibration(self, calibration: MeasureCalibrationDefinition) -> Optional[MeasureCalibrationDefinition]:
         """
         Add another ``MeasureCalibrationDefinition`` (`DEFCAL MEASURE`) to the set
+
+        If a calibration with the same name already exists, it is overwritten and this
+        function returns the previous calibration. Otherwise, None is returned.
         """
     def extend(self, other: CalibrationSet):
         """

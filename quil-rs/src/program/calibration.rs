@@ -33,8 +33,8 @@ use super::ProgramError;
 /// A collection of Quil calibrations (`DEFCAL` instructions) with utility methods.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct CalibrationSet {
-    pub calibrations: Vec<Calibration>,
-    pub measure_calibrations: Vec<MeasureCalibrationDefinition>,
+    pub calibrations: HashMap<String, Calibration>,
+    pub measure_calibrations: HashMap<(String, Option<Qubit>), MeasureCalibrationDefinition>,
 }
 
 struct MatchedCalibration<'a> {
@@ -59,14 +59,24 @@ impl<'a> MatchedCalibration<'a> {
 }
 
 impl CalibrationSet {
-    /// Return all [`Calibration`]s in the set
-    pub fn calibrations(&self) -> &[Calibration] {
-        self.calibrations.as_ref()
+    /// Return a reference to all [`Calibration`]s in the set
+    pub fn calibrations(&self) -> Vec<&Calibration> {
+        self.calibrations.values().collect()
     }
 
-    /// Return all [`MeasureCalibrationDefinition`]s in the set
-    pub fn measure_calibrations(&self) -> &[MeasureCalibrationDefinition] {
-        self.measure_calibrations.as_ref()
+    /// Return a reference to all [`MeasureCalibrationDefinition`]s in the set
+    pub fn measure_calibrations(&self) -> Vec<&MeasureCalibrationDefinition> {
+        self.measure_calibrations.values().collect()
+    }
+
+    /// Iterate over all [`Calibration`]s in the set
+    pub fn iter_calibrations(&self) -> impl Iterator<Item = &Calibration> {
+        self.calibrations.values()
+    }
+
+    /// Iterate over all [`MeasureCalibrationDefinition`]s calibrations in the set
+    pub fn iter_measure_calibrations(&self) -> impl Iterator<Item = &MeasureCalibrationDefinition> {
+        self.measure_calibrations.values()
     }
 
     /// Given an instruction, return the instructions to which it is expanded if there is a match.
@@ -251,7 +261,7 @@ impl CalibrationSet {
         measurement.target.as_ref()?;
 
         self.measure_calibrations()
-            .iter()
+            .into_iter()
             .rev()
             .fold_while(None, |best_match, calibration| {
                 if let Some(qubit) = &calibration.qubit {
@@ -286,7 +296,7 @@ impl CalibrationSet {
     pub fn get_match_for_gate(&self, gate: &Gate) -> Option<&Calibration> {
         let mut matched_calibration: Option<MatchedCalibration> = None;
 
-        for calibration in &self.calibrations {
+        for (_, calibration) in &self.calibrations {
             // Filter out non-matching calibrations: check rules 1-4
             if calibration.name != gate.name
                 || calibration.modifiers != gate.modifiers
@@ -371,37 +381,46 @@ impl CalibrationSet {
         self.calibrations.is_empty()
     }
 
-    /// Add another gate calibration to the set.
-    /// Deprecated in favor of [`Self::push_calibration`]
-    #[deprecated = "use ScheduledProgram#push_calibration instead"]
-    pub fn push(&mut self, calibration: Calibration) {
-        self.push_calibration(calibration)
+    /// Insert a [`Calibration`] into the set.
+    ///
+    /// If a calibration with the same name already exists in the set, it will be replaced, and the
+    /// old Calibration is returned. Otherwise, None is returned.
+    pub fn insert_calibration(&mut self, calibration: Calibration) -> Option<Calibration> {
+        self.calibrations
+            .insert(calibration.name.clone(), calibration)
     }
 
-    /// Add another gate calibration (`DEFCAL`) to the set.
-    pub fn push_calibration(&mut self, calibration: Calibration) {
-        self.calibrations.push(calibration)
+    /// Insert a [`MeasureCalibration`] into the set.
+    ///
+    /// If a calibration with the same name already exists in the set, it will be replaced, and the
+    /// old Calibration is returned. Otherwise, None is returned.
+    pub fn insert_measurement_calibration(
+        &mut self,
+        calibration: MeasureCalibrationDefinition,
+    ) -> Option<MeasureCalibrationDefinition> {
+        self.measure_calibrations.insert(
+            (calibration.parameter.clone(), calibration.qubit.clone()),
+            calibration,
+        )
     }
 
-    /// Add another measurement calibration (`DEFCAL MEASURE`) to the set.
-    pub fn push_measurement_calibration(&mut self, calibration: MeasureCalibrationDefinition) {
-        self.measure_calibrations.push(calibration)
-    }
-
-    /// Append another [`CalibrationSet`] onto this one
+    /// Append another [`CalibrationSet`] onto this one.
+    ///
+    /// Conflicting calibrations are overwritten by the ones in the given set.
     pub fn extend(&mut self, other: CalibrationSet) {
         self.calibrations.extend(other.calibrations);
         self.measure_calibrations.extend(other.measure_calibrations);
     }
 
-    /// Return the Quil instructions which describe the contained calibrations, consuming the [`CalibrationSet`].
+    /// Return the Quil instructions which describe the contained calibrations, consuming the
+    /// [`CalibrationSet`]
     pub fn into_instructions(self) -> Vec<Instruction> {
         self.calibrations
-            .into_iter()
+            .into_values()
             .map(Instruction::CalibrationDefinition)
             .chain(
                 self.measure_calibrations
-                    .into_iter()
+                    .into_values()
                     .map(Instruction::MeasureCalibrationDefinition),
             )
             .collect()
@@ -409,13 +428,11 @@ impl CalibrationSet {
 
     /// Return the Quil instructions which describe the contained calibrations.
     pub fn to_instructions(&self) -> Vec<Instruction> {
-        self.calibrations
-            .iter()
+        self.iter_calibrations()
             .cloned()
             .map(Instruction::CalibrationDefinition)
             .chain(
-                self.measure_calibrations
-                    .iter()
+                self.iter_measure_calibrations()
                     .cloned()
                     .map(Instruction::MeasureCalibrationDefinition),
             )

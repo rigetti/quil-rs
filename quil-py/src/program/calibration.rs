@@ -29,13 +29,23 @@ impl_eq!(PyCalibrationSet);
 impl PyCalibrationSet {
     #[new]
     pub fn new(
-        py: Python<'_>,
         calibrations: Vec<PyCalibration>,
         measure_calibrations: Vec<PyMeasureCalibrationDefinition>,
     ) -> PyResult<Self> {
         Ok(Self(CalibrationSet {
-            calibrations: Vec::<_>::py_try_from(py, &calibrations)?,
-            measure_calibrations: Vec::<_>::py_try_from(py, &measure_calibrations)?,
+            calibrations: calibrations
+                .into_iter()
+                .map(|c| (c.as_inner().name.clone(), c.into_inner()))
+                .collect(),
+            measure_calibrations: measure_calibrations
+                .into_iter()
+                .map(|c| {
+                    (
+                        (c.as_inner().parameter.clone(), c.as_inner().qubit.clone()),
+                        c.into_inner(),
+                    )
+                })
+                .collect(),
         }))
     }
 
@@ -52,7 +62,7 @@ impl PyCalibrationSet {
         self.as_inner().measure_calibrations().to_python(py)
     }
 
-    pub fn expand(
+    pub fn expan(
         &self,
         py: Python<'_>,
         instruction: PyInstruction,
@@ -98,21 +108,29 @@ impl PyCalibrationSet {
         self.as_inner().is_empty()
     }
 
-    pub fn push_calibration(&mut self, py: Python<'_>, calibration: PyCalibration) -> PyResult<()> {
-        self.as_inner_mut()
-            .push_calibration(Calibration::py_try_from(py, &calibration)?);
-        Ok(())
+    pub fn insert_calibration(
+        &mut self,
+        py: Python<'_>,
+        calibration: PyCalibration,
+    ) -> PyResult<Option<PyCalibration>> {
+        Ok(self
+            .as_inner_mut()
+            .insert_calibration(Calibration::py_try_from(py, &calibration)?)
+            .map(PyCalibration::from))
     }
 
-    pub fn push_measurement_calibration(
+    pub fn insert_measurement_calibration(
         &mut self,
         py: Python<'_>,
         calibration: PyMeasureCalibrationDefinition,
-    ) -> PyResult<()> {
-        self.as_inner_mut().push_measurement_calibration(
-            MeasureCalibrationDefinition::py_try_from(py, &calibration)?,
-        );
-        Ok(())
+    ) -> PyResult<Option<PyMeasureCalibrationDefinition>> {
+        Ok(self
+            .as_inner_mut()
+            .insert_measurement_calibration(MeasureCalibrationDefinition::py_try_from(
+                py,
+                &calibration,
+            )?)
+            .map(PyMeasureCalibrationDefinition::from))
     }
 
     pub fn extend(&mut self, py: Python<'_>, other: PyCalibrationSet) -> PyResult<()> {
