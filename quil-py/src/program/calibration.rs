@@ -62,7 +62,7 @@ impl PyCalibrationSet {
         self.as_inner().measure_calibrations().to_python(py)
     }
 
-    pub fn expan(
+    pub fn expand(
         &self,
         py: Python<'_>,
         instruction: PyInstruction,
