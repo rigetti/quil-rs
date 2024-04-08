@@ -9,3 +9,4 @@ codegen-units = 1
 [workspace.dependencies]
 ndarray = { version = "0.15.6", features = ["approx-0_5"] }
 strum = { version = "0.26.0", features = ["derive"] }
+indexmap = "2.2.6"

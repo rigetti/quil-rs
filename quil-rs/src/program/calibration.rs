@@ -14,6 +14,7 @@
 
 use std::collections::HashMap;
 
+use indexmap::IndexMap;
 use itertools::FoldWhile::{Continue, Done};
 use itertools::Itertools;
 
@@ -33,8 +34,8 @@ use super::ProgramError;
 /// A collection of Quil calibrations (`DEFCAL` instructions) with utility methods.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct CalibrationSet {
-    pub calibrations: HashMap<String, Calibration>,
-    pub measure_calibrations: HashMap<(String, Option<Qubit>), MeasureCalibrationDefinition>,
+    pub calibrations: IndexMap<(String, Vec<Qubit>), Calibration>,
+    pub measure_calibrations: IndexMap<(String, Option<Qubit>), MeasureCalibrationDefinition>,
 }
 
 struct MatchedCalibration<'a> {
@@ -386,8 +387,10 @@ impl CalibrationSet {
     /// If a calibration with the same name already exists in the set, it will be replaced, and the
     /// old Calibration is returned. Otherwise, None is returned.
     pub fn insert_calibration(&mut self, calibration: Calibration) -> Option<Calibration> {
-        self.calibrations
-            .insert(calibration.name.clone(), calibration)
+        self.calibrations.insert(
+            (calibration.name.clone(), calibration.qubits.clone()),
+            calibration,
+        )
     }
 
     /// Insert a [`MeasureCalibration`] into the set.

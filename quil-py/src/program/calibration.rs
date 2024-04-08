@@ -35,7 +35,12 @@ impl PyCalibrationSet {
         Ok(Self(CalibrationSet {
             calibrations: calibrations
                 .into_iter()
-                .map(|c| (c.as_inner().name.clone(), c.into_inner()))
+                .map(|c| {
+                    (
+                        (c.as_inner().name.clone(), c.as_inner().qubits.clone()),
+                        c.into_inner(),
+                    )
+                })
                 .collect(),
             measure_calibrations: measure_calibrations
                 .into_iter()
