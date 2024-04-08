@@ -296,7 +296,7 @@ impl CalibrationSet {
     pub fn get_match_for_gate(&self, gate: &Gate) -> Option<&Calibration> {
         let mut matched_calibration: Option<MatchedCalibration> = None;
 
-        for (_, calibration) in &self.calibrations {
+        for calibration in self.iter_calibrations() {
             // Filter out non-matching calibrations: check rules 1-4
             if calibration.name != gate.name
                 || calibration.modifiers != gate.modifiers
