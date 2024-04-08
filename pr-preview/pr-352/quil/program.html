@@ -119,6 +119,12 @@
                                 <a class="function" href="#Program.resolve_placeholders_with_custom_resolvers">resolve_placeholders_with_custom_resolvers</a>
                         </li>
                         <li>
+                                <a class="variable" href="#Program.memory_regions">memory_regions</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Program.frames">frames</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#Program.declarations">declarations</a>
                         </li>
                         <li>
@@ -133,12 +139,6 @@
                         <li>
                                 <a class="variable" href="#Program.calibrations">calibrations</a>
                         </li>
-                        <li>
-                                <a class="variable" href="#Program.frames">frames</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Program.memory_regions">memory_regions</a>
-                        </li>
                 </ul>
 
             </li>
@@ -146,7 +146,7 @@
                     <a class="class" href="#CalibrationSet">CalibrationSet</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="function" href="#CalibrationSet.expan">expan</a>
+                                <a class="function" href="#CalibrationSet.expand">expand</a>
                         </li>
                         <li>
                                 <a class="function" href="#CalibrationSet.get_match_for_measurement">get_match_for_measurement</a>
@@ -254,10 +254,10 @@
                                 <a class="variable" href="#TimeSpanSeconds.start">start</a>
                         </li>
                         <li>
-                                <a class="variable" href="#TimeSpanSeconds.duration">duration</a>
+                                <a class="variable" href="#TimeSpanSeconds.end">end</a>
                         </li>
                         <li>
-                                <a class="variable" href="#TimeSpanSeconds.end">end</a>
+                                <a class="variable" href="#TimeSpanSeconds.duration">duration</a>
                         </li>
                 </ul>
 
@@ -737,6 +737,28 @@ while ensuring that unique value is not already in use within the program.</p>
 
 
                             </div>
+                            <div id="Program.memory_regions" class="classattr">
+                                <div class="attr variable">
+            <span class="name">memory_regions</span><span class="annotation">: Dict[str, <a href="#MemoryRegion">quil.program.MemoryRegion</a>]</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.memory_regions"></a>
+    
+    
+
+                            </div>
+                            <div id="Program.frames" class="classattr">
+                                <div class="attr variable">
+            <span class="name">frames</span><span class="annotation">: <a href="#FrameSet">quil.program.FrameSet</a></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.frames"></a>
+    
+    
+
+                            </div>
                             <div id="Program.declarations" class="classattr">
                                 <div class="attr variable">
             <span class="name">declarations</span><span class="annotation">: Dict[str, Declaration]</span>
@@ -792,28 +814,6 @@ while ensuring that unique value is not already in use within the program.</p>
     
 
                             </div>
-                            <div id="Program.frames" class="classattr">
-                                <div class="attr variable">
-            <span class="name">frames</span><span class="annotation">: <a href="#FrameSet">quil.program.FrameSet</a></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.frames"></a>
-    
-    
-
-                            </div>
-                            <div id="Program.memory_regions" class="classattr">
-                                <div class="attr variable">
-            <span class="name">memory_regions</span><span class="annotation">: Dict[str, <a href="#MemoryRegion">quil.program.MemoryRegion</a>]</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.memory_regions"></a>
-    
-    
-
-                            </div>
                 </section>
                 <section id="CalibrationSet">
                     <div class="attr class">
@@ -827,17 +827,21 @@ while ensuring that unique value is not already in use within the program.</p>
     
     
 
-                            <div id="CalibrationSet.expan" class="classattr">
+                            <div id="CalibrationSet.expand" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">expan</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">instruction</span>, </span><span class="param"><span class="n">previous_calibrations</span></span><span class="return-annotation">):</span></span>
+        <span class="name">expand</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="n">instruction</span><span class="p">:</span> <span class="n">Instruction</span>,</span><span class="param">	<span class="n">previous_calibrations</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Instruction</span><span class="p">]</span></span><span class="return-annotation">) -> <span class="n">List</span><span class="p">[</span><span class="n">Instruction</span><span class="p">]</span>:</span></span>
 
         
     </div>
-    <a class="headerlink" href="#CalibrationSet.expan"></a>
+    <a class="headerlink" href="#CalibrationSet.expand"></a>
     
-    
+            <div class="docstring"><p>Given an instruction, return the instructions to which it is expanded if there is a match.
+Recursively calibrate instructions, returning an error if a calibration directly or indirectly
+expands into itself.</p>
+</div>
+
 
                             </div>
                             <div id="CalibrationSet.get_match_for_measurement" class="classattr">
@@ -1362,19 +1366,6 @@ on program state. This may be a sequence of basic blocks with fixed <code>JUMP</
 
 
                             </div>
-                            <div id="TimeSpanSeconds.duration" class="classattr">
-                                <div class="attr variable">
-            <span class="name">duration</span><span class="annotation">: float</span>
-
-        
-    </div>
-    <a class="headerlink" href="#TimeSpanSeconds.duration"></a>
-    
-            <div class="docstring"><p>The duration of the time span, in seconds.</p>
-</div>
-
-
-                            </div>
                             <div id="TimeSpanSeconds.end" class="classattr">
                                 <div class="attr variable">
             <span class="name">end</span><span class="annotation">: float</span>
@@ -1386,6 +1377,19 @@ on program state. This may be a sequence of basic blocks with fixed <code>JUMP</
             <div class="docstring"><p>The end time of the time span, in seconds.</p>
 
 <p>This is the sum of the start time and duration.</p>
+</div>
+
+
+                            </div>
+                            <div id="TimeSpanSeconds.duration" class="classattr">
+                                <div class="attr variable">
+            <span class="name">duration</span><span class="annotation">: float</span>
+
+        
+    </div>
+    <a class="headerlink" href="#TimeSpanSeconds.duration"></a>
+    
+            <div class="docstring"><p>The duration of the time span, in seconds.</p>
 </div>
 
 
