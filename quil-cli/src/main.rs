@@ -43,10 +43,17 @@ fn main() -> anyhow::Result<()> {
 fn handle_parse(input_type: InputType, input: String) -> anyhow::Result<()> {
     let parsed = match input_type {
         InputType::Program => {
-            Program::from_str(&input).context("Failed to parse program from input string.")?.to_quil().expect("Parsed Program from valid Quil string, should be able to convert it back to valid Quil")
+            Program::from_str(&input)
+                .context("Failed to parse program from input string.")?
+                .to_quil()
+                .context("Parsed Program from valid Quil string, but was unable to convert it back to valid Quil. This is probably a bug in the quil-rs parser.")?
         }
-        InputType::Expression => Expression::from_str(&input)
-            .context("Failed to parse expression from input string.")?.to_quil().expect("Parsed Expression from valid Quil expression, should be able to convert it back to valid Expression"),
+        InputType::Expression => {
+             Expression::from_str(&input)
+                .context("Failed to parse expression from input string.")?
+                .to_quil()
+                .context("Parsed Expression from valid Quil expression, but was unable to convert it back to valid Expression. This is probably a bug in the quil-rs parser.")?
+        }
     };
 
     println!("{parsed}");
