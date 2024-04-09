@@ -13,8 +13,8 @@ struct Cli {
 pub enum Command {
     /// Parse a Quil program or expression
     Parse {
-        #[arg(short = 't', long = "type")]
-        input_type: Option<InputType>,
+        #[arg(short = 't', long = "type", value_enum, default_value_t)]
+        input_type: InputType,
         input: String,
     },
 }
@@ -32,9 +32,7 @@ fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
-        Command::Parse { input_type, input } => {
-            handle_parse(input_type.unwrap_or_default(), input)?
-        }
+        Command::Parse { input_type, input } => handle_parse(input_type, input)?,
     };
 
     Ok(())
