@@ -12,7 +12,8 @@ pub enum ReservedToken {
     Constant(ReservedConstant),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, thiserror::Error)]
+#[error("{0} is not a reserved token")]
 pub struct NotReservedToken(String);
 
 impl FromStr for ReservedToken {
@@ -26,7 +27,7 @@ impl FromStr for ReservedToken {
         } else if let Ok(constant) = ReservedConstant::from_str(s) {
             Ok(Self::Constant(constant))
         } else {
-            Err(NotReservedToken(format!("{s} is not a reserved token")))
+            Err(NotReservedToken(s.to_string()))
         }
     }
 }

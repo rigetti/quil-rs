@@ -29,7 +29,7 @@ indexmap.workspace = true
 [dev-dependencies]
 clap = { version = "4.3.19", features = ["derive", "string"] }
 criterion = { version = "0.5.1", features = ["html_reports"] }
-insta = "1.7.1"
+insta = "1.37.0"
 petgraph = "0.6.2"
 proptest = "1.0.0"
 proptest-derive = "0.3.0"
