@@ -27,13 +27,13 @@ use crate::{
     },
 };
 
-use super::{ProgramCalibrationSet, ProgramError};
+use super::{CalibrationSet, ProgramError};
 
 /// A collection of Quil calibrations (`DEFCAL` instructions) with utility methods.
 #[derive(Clone, Debug, Default, PartialEq)]
-pub struct CalibrationSet {
-    pub calibrations: ProgramCalibrationSet<Calibration>,
-    pub measure_calibrations: ProgramCalibrationSet<MeasureCalibrationDefinition>,
+pub struct Calibrations {
+    pub calibrations: CalibrationSet<Calibration>,
+    pub measure_calibrations: CalibrationSet<MeasureCalibrationDefinition>,
 }
 
 struct MatchedCalibration<'a> {
@@ -57,7 +57,7 @@ impl<'a> MatchedCalibration<'a> {
     }
 }
 
-impl CalibrationSet {
+impl Calibrations {
     /// Return a vector containing a reference to all [`Calibration`]s in the set.
     pub fn calibrations(&self) -> Vec<&Calibration> {
         self.calibrations.iter().collect()
@@ -404,7 +404,7 @@ impl CalibrationSet {
     ///
     /// Calibrations with conflicting [`CalibrationSignature`]s are overwritten by the ones in the
     /// given set.
-    pub fn extend(&mut self, other: CalibrationSet) {
+    pub fn extend(&mut self, other: Calibrations) {
         self.calibrations.extend(other.calibrations);
         self.measure_calibrations.extend(other.measure_calibrations);
     }

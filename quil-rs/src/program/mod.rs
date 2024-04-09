@@ -29,8 +29,8 @@ use crate::instruction::{
 use crate::parser::{lex, parse_instructions, ParseError};
 use crate::quil::Quil;
 
-pub use self::calibration::CalibrationSet;
-pub use self::calibration_set::ProgramCalibrationSet;
+pub use self::calibration::Calibrations;
+pub use self::calibration_set::CalibrationSet;
 pub use self::error::{disallow_leftover, map_parsed, recover, ParseProgramError, SyntaxError};
 pub use self::frame::FrameSet;
 pub use self::frame::MatchedFrames;
@@ -72,7 +72,7 @@ type Result<T> = std::result::Result<T, ProgramError>;
 /// and frame definitions.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Program {
-    pub calibrations: CalibrationSet,
+    pub calibrations: Calibrations,
     pub frames: FrameSet,
     pub memory_regions: BTreeMap<String, MemoryRegion>,
     pub waveforms: BTreeMap<String, Waveform>,
@@ -85,7 +85,7 @@ pub struct Program {
 impl Program {
     pub fn new() -> Self {
         Program {
-            calibrations: CalibrationSet::default(),
+            calibrations: Calibrations::default(),
             frames: FrameSet::new(),
             memory_regions: BTreeMap::new(),
             waveforms: BTreeMap::new(),
@@ -363,7 +363,7 @@ impl Program {
         // Remove calibrations such that the resulting program contains
         // only instructions. Calibrations have already been expanded, so
         // technically there is no need to keep them around anyway.
-        expanded_program.calibrations = CalibrationSet::default();
+        expanded_program.calibrations = Calibrations::default();
 
         let mut frames_used: HashSet<&FrameIdentifier> = HashSet::new();
         let mut waveforms_used: HashSet<&String> = HashSet::new();

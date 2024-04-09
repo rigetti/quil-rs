@@ -1,6 +1,6 @@
 use quil_rs::{
     instruction::{Calibration, Gate, Instruction, MeasureCalibrationDefinition, Measurement},
-    program::CalibrationSet,
+    program::Calibrations,
 };
 use rigetti_pyo3::{
     impl_as_mut_for_wrapper, impl_repr, py_wrap_type,
@@ -19,7 +19,7 @@ use super::ProgramError;
 
 py_wrap_type! {
     #[derive(Debug, PartialEq)]
-    PyCalibrationSet(CalibrationSet) as "CalibrationSet"
+    PyCalibrationSet(Calibrations) as "CalibrationSet"
 }
 impl_as_mut_for_wrapper!(PyCalibrationSet);
 impl_repr!(PyCalibrationSet);
@@ -32,7 +32,7 @@ impl PyCalibrationSet {
         calibrations: Vec<PyCalibration>,
         measure_calibrations: Vec<PyMeasureCalibrationDefinition>,
     ) -> PyResult<Self> {
-        Ok(Self(CalibrationSet {
+        Ok(Self(Calibrations {
             calibrations: calibrations
                 .into_iter()
                 .map(|c| c.into_inner())
@@ -132,7 +132,7 @@ impl PyCalibrationSet {
 
     pub fn extend(&mut self, py: Python<'_>, other: PyCalibrationSet) -> PyResult<()> {
         self.as_inner_mut()
-            .extend(CalibrationSet::py_try_from(py, &other)?);
+            .extend(Calibrations::py_try_from(py, &other)?);
         Ok(())
     }
 
