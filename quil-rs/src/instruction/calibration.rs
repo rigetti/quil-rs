@@ -9,6 +9,12 @@ use crate::{
 
 use super::write_qubit_parameters;
 
+pub trait CalibrationSignature {
+    type Signature: PartialEq;
+
+    fn signature(&self) -> Self::Signature;
+}
+
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Calibration {
     pub instructions: Vec<Instruction>,
@@ -60,6 +66,18 @@ impl Quil for Calibration {
     }
 }
 
+impl CalibrationSignature for Calibration {
+    type Signature = (String, Vec<Expression>, Vec<Qubit>);
+
+    fn signature(&self) -> Self::Signature {
+        (
+            self.name.clone(),
+            self.parameters.clone(),
+            self.qubits.clone(),
+        )
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct MeasureCalibrationDefinition {
     pub qubit: Option<Qubit>,
@@ -74,6 +92,14 @@ impl MeasureCalibrationDefinition {
             parameter,
             instructions,
         }
+    }
+}
+
+impl CalibrationSignature for MeasureCalibrationDefinition {
+    type Signature = (Option<Qubit>, String);
+
+    fn signature(&self) -> Self::Signature {
+        (self.qubit.clone(), self.parameter.clone())
     }
 }
 

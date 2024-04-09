@@ -30,6 +30,7 @@ use crate::parser::{lex, parse_instructions, ParseError};
 use crate::quil::Quil;
 
 pub use self::calibration::CalibrationSet;
+pub use self::calibration_set::ProgramCalibrationSet;
 pub use self::error::{disallow_leftover, map_parsed, recover, ParseProgramError, SyntaxError};
 pub use self::frame::FrameSet;
 pub use self::frame::MatchedFrames;
@@ -37,6 +38,7 @@ pub use self::memory::{MemoryAccesses, MemoryRegion};
 
 pub mod analysis;
 mod calibration;
+mod calibration_set;
 mod error;
 pub(crate) mod frame;
 mod memory;

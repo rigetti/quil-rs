@@ -35,22 +35,14 @@ impl PyCalibrationSet {
         Ok(Self(CalibrationSet {
             calibrations: calibrations
                 .into_iter()
-                .map(|c| {
-                    (
-                        (c.as_inner().name.clone(), c.as_inner().qubits.clone()),
-                        c.into_inner(),
-                    )
-                })
-                .collect(),
+                .map(|c| c.into_inner())
+                .collect::<Vec<Calibration>>()
+                .into(),
             measure_calibrations: measure_calibrations
                 .into_iter()
-                .map(|c| {
-                    (
-                        (c.as_inner().parameter.clone(), c.as_inner().qubit.clone()),
-                        c.into_inner(),
-                    )
-                })
-                .collect(),
+                .map(|c| c.into_inner())
+                .collect::<Vec<MeasureCalibrationDefinition>>()
+                .into(),
         }))
     }
 
