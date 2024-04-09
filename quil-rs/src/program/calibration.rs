@@ -386,7 +386,7 @@ impl Calibrations {
     /// If a calibration with the same [`CalibrationSignature`] already exists in the set, it will
     /// be replaced, and the old calibration is returned.
     pub fn insert_calibration(&mut self, calibration: Calibration) -> Option<Calibration> {
-        self.calibrations.replace_signature(calibration)
+        self.calibrations.replace(calibration)
     }
 
     /// Insert a [`MeasureCalibration`] into the set.
@@ -397,7 +397,7 @@ impl Calibrations {
         &mut self,
         calibration: MeasureCalibrationDefinition,
     ) -> Option<MeasureCalibrationDefinition> {
-        self.measure_calibrations.replace_signature(calibration)
+        self.measure_calibrations.replace(calibration)
     }
 
     /// Append another [`CalibrationSet`] onto this one.

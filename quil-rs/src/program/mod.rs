@@ -1358,4 +1358,64 @@ I 0
 
         assert_snapshot!(program.to_quil().unwrap())
     }
+
+    #[test]
+    fn test_equality() {
+        let input = "DECLARE foo REAL[1]
+DEFFRAME 1 \"rx\":
+\tHARDWARE-OBJECT: \"hardware\"
+DEFCAL I 0:
+\tDELAY 0 1
+DEFCAL I 1:
+\tDELAY 0 1
+DEFCAL I 2:
+\tDELAY 0 1
+DEFCAL MEASURE 0 addr:
+\tCAPTURE 0 \"ro_rx\" custom addr
+DEFCAL MEASURE 1 addr:
+\tCAPTURE 1 \"ro_rx\" custom addr
+DEFWAVEFORM custom:
+\t1,2
+DEFWAVEFORM custom2:
+\t3,4
+DEFWAVEFORM another1:
+\t4,5
+DEFGATE BAR AS MATRIX:
+\t0, 1
+\t1, 0
+DEFGATE FOO AS MATRIX:
+\t0, 1
+\t1, 0
+
+H 1
+CNOT 2 3";
+
+        let program = Program::from_str(input).unwrap();
+
+        // The order of definitions are global in the sense that where they are defined in a
+        // program does not matter.
+        let is_global_state_instruction = move |i: &Instruction| -> bool {
+            matches!(
+                i,
+                Instruction::CalibrationDefinition(_)
+                    | Instruction::MeasureCalibrationDefinition(_)
+                    | Instruction::WaveformDefinition(_)
+                    | Instruction::GateDefinition(_)
+                    | Instruction::FrameDefinition(_)
+            )
+        };
+        // Create a copy of the program, but insert the "global" instructions in reverse order.
+        // Since where these instructions are defined doesn't matter, this should be an
+        // equivalent program.
+        let mut program2 = program.filter_instructions(|i| !is_global_state_instruction(i));
+        let global_instructions: Vec<Instruction> = program
+            .filter_instructions(is_global_state_instruction)
+            .into_instructions()
+            .into_iter()
+            .rev()
+            .collect();
+        program2.add_instructions(global_instructions);
+
+        assert_eq!(program, program2);
+    }
 }

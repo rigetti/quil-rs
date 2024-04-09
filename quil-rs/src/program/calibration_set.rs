@@ -1,16 +1,16 @@
 use crate::instruction::CalibrationSignature;
 
-/// A [`ProgramCalibrationSet`] is a collection of calibration instructions that respect how
+/// A [`CalibrationSet`] is a collection of calibration instructions that respect how
 /// calibrations work in a Quil program.
 ///
 /// During calibration expansion, Calibrations are matched to instructions using their unique
 /// [`CalibrationSignature`]. This means only one calibration can be matched to a particular
-/// instruction. While the Quil specification doesn't explicitly define this behavior, the
-/// [`ProgramCalibrationSet`] takes the liberty of only allowing one calibration per
-/// [`CalibrationSignature`].
+/// instruction. While the Quil specification doesn't explicitly define the behavior of
+/// signature conflicts, [`CalibrationSet`] takes the liberty of only allowing one calibration
+/// per [`CalibrationSignature`].
 ///
 /// In addition, calibration instructions are global. That is, their order or location in a
-/// program make no semantic difference. This means two program [`ProgramCalibrationSet`]s
+/// program make no semantic difference. This means two program [`CalibrationSet`]s
 /// should be considered equal if they contain the same set of calibrations, regardless of
 /// order.
 ///
@@ -47,9 +47,9 @@ where
     T: CalibrationSignature,
 {
     fn from(data: Vec<T>) -> Self {
-        let mut set = Self::new();
+        let mut set = Self::with_capacity(data.len());
         for element in data {
-            set.replace_signature(element);
+            set.replace(element);
         }
         set
     }
@@ -91,9 +91,18 @@ where
         self.data.iter()
     }
 
-    /// Adds a value to the set, replacing and returning an existing value with the same
+    /// Get a reference to a value that has a matching signature, if it exists.
+    pub fn get(&self, signature: <T as CalibrationSignature>::Signature) -> Option<&T> {
+        if let Some(index) = self.signature_position(signature) {
+            Some(&self.data[index])
+        } else {
+            None
+        }
+    }
+
+    /// Adds a value to the set, replacing and returning an existing value with a matching
     /// [`CalibrationSignature`], if it exists.
-    pub fn replace_signature(&mut self, value: T) -> Option<T> {
+    pub fn replace(&mut self, value: T) -> Option<T> {
         if let Some(index) = self.signature_position(value.signature()) {
             let replaced = std::mem::replace(&mut self.data[index], value);
             Some(replaced)
@@ -104,7 +113,7 @@ where
     }
 
     /// Removes a value from the set. Returns whether the value was present in the set.
-    pub fn remove_signature(&mut self, signature: <T as CalibrationSignature>::Signature) -> bool {
+    pub fn remove(&mut self, signature: <T as CalibrationSignature>::Signature) -> bool {
         if let Some(index) = self.signature_position(signature) {
             self.data.remove(index);
             true
@@ -133,7 +142,7 @@ where
         I: IntoIterator<Item = T>,
     {
         for value in iter {
-            self.replace_signature(value);
+            self.replace(value);
         }
     }
 }
@@ -155,5 +164,92 @@ where
             .map(|element| (element.signature(), element))
             .collect();
         self_map == other_map
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::instruction::CalibrationSignature;
+
+    #[derive(Clone, Debug, PartialEq)]
+    struct TestCalibration {
+        signature: String,
+        /// Optional byte, can be used to differentiate between two TestCalibrations with the same
+        /// signature.
+        data: Option<u8>,
+    }
+
+    impl TestCalibration {
+        fn new(signature: &str, data: Option<u8>) -> Self {
+            Self {
+                signature: signature.to_string(),
+                data,
+            }
+        }
+    }
+
+    impl CalibrationSignature for TestCalibration {
+        type Signature = String;
+
+        fn signature(&self) -> Self::Signature {
+            self.signature.clone()
+        }
+    }
+
+    #[test]
+    fn test_replace() {
+        let mut set = CalibrationSet::new();
+        let calib = TestCalibration::new("Signature", None);
+        set.replace(calib.clone());
+        assert_eq!(set.len(), 1);
+        assert!(set.iter().all(|item| item == &calib));
+
+        let calib2 = TestCalibration::new("Signature", Some(42));
+        let replaced = set
+            .replace(calib2.clone())
+            .expect("The original calibration should have been replaced.");
+        assert_eq!(replaced, calib);
+        assert_eq!(set.len(), 1);
+        assert!(set.iter().all(|item| item == &calib2));
+    }
+
+    #[test]
+    fn test_remove_signature() {
+        let mut set = CalibrationSet::new();
+        let calib = TestCalibration::new("Original", None);
+        set.replace(calib.clone());
+        assert!(set.remove(calib.signature()));
+        assert!(set.is_empty());
+    }
+
+    #[test]
+    fn test_equality() {
+        let mut set1 = CalibrationSet::new();
+        let mut set2 = CalibrationSet::new();
+        let calib1 = TestCalibration::new("1", None);
+        let calib2 = TestCalibration::new("2", None);
+        set1.extend(vec![calib1.clone(), calib2.clone()]);
+        set2.extend(vec![calib2, calib1]); // Reverse order
+        assert_eq!(set1, set2); // They should be equal
+    }
+
+    #[test]
+    fn test_maintains_insert_order() {
+        let calibs = vec![
+            TestCalibration::new("1", None),
+            TestCalibration::new("2", None),
+            TestCalibration::new("3", None),
+        ];
+        let set = CalibrationSet::from(calibs.clone());
+        let calibs_from_set: Vec<TestCalibration> = set.into_iter().collect();
+        assert_eq!(calibs_from_set, calibs);
+    }
+
+    #[test]
+    fn test_with_capacity() {
+        let capacity = 10;
+        let set: CalibrationSet<TestCalibration> = CalibrationSet::with_capacity(capacity);
+        assert_eq!(set.capacity(), capacity);
     }
 }
