@@ -92,7 +92,7 @@ where
     }
 
     /// Get a reference to a value that has a matching signature, if it exists.
-    pub fn get(&self, signature: <T as CalibrationSignature>::Signature) -> Option<&T> {
+    pub fn get(&self, signature: &<T as CalibrationSignature>::Signature<'_>) -> Option<&T> {
         if let Some(index) = self.signature_position(signature) {
             Some(&self.data[index])
         } else {
@@ -103,7 +103,8 @@ where
     /// Adds a value to the set, replacing and returning an existing value with a matching
     /// [`CalibrationSignature`], if it exists.
     pub fn replace(&mut self, value: T) -> Option<T> {
-        if let Some(index) = self.signature_position(value.signature()) {
+        let position = self.signature_position(&value.signature());
+        if let Some(index) = position {
             let replaced = std::mem::replace(&mut self.data[index], value);
             Some(replaced)
         } else {
@@ -113,7 +114,7 @@ where
     }
 
     /// Removes a value from the set. Returns whether the value was present in the set.
-    pub fn remove(&mut self, signature: <T as CalibrationSignature>::Signature) -> bool {
+    pub fn remove(&mut self, signature: &<T as CalibrationSignature>::Signature<'_>) -> bool {
         if let Some(index) = self.signature_position(signature) {
             self.data.remove(index);
             true
@@ -125,11 +126,18 @@ where
     /// Returns the index of an element whose [`CalibrationSignature`] matches the given value, if one exists.
     fn signature_position(
         &self,
-        signature: <T as CalibrationSignature>::Signature,
+        signature: &<T as CalibrationSignature>::Signature<'_>,
     ) -> Option<usize> {
-        self.data
-            .iter()
-            .position(|element| element.signature() == signature)
+        for (i, element) in self.data.iter().enumerate() {
+            if element.has_signature(signature) {
+                return Some(i);
+            }
+        }
+
+        None
+        //self.data
+        //    .iter()
+        //    .position(move |element| { signature == element.signature() })
     }
 }
 
@@ -150,15 +158,15 @@ where
 impl<T> PartialEq for CalibrationSet<T>
 where
     T: CalibrationSignature + PartialEq,
-    <T as CalibrationSignature>::Signature: std::hash::Hash + Eq,
+    for<'a> <T as CalibrationSignature>::Signature<'a>: std::hash::Hash + Eq,
 {
     fn eq(&self, other: &Self) -> bool {
-        let self_map: std::collections::HashMap<T::Signature, &T> = self
+        let self_map: std::collections::HashMap<T::Signature<'_>, &T> = self
             .data
             .iter()
             .map(|element| (element.signature(), element))
             .collect();
-        let other_map: std::collections::HashMap<T::Signature, &T> = other
+        let other_map: std::collections::HashMap<T::Signature<'_>, &T> = other
             .data
             .iter()
             .map(|element| (element.signature(), element))
@@ -190,10 +198,14 @@ mod tests {
     }
 
     impl CalibrationSignature for TestCalibration {
-        type Signature = String;
+        type Signature<'a> = &'a str;
 
-        fn signature(&self) -> Self::Signature {
-            self.signature.clone()
+        fn signature(&self) -> Self::Signature<'_> {
+            self.signature.as_str()
+        }
+
+        fn has_signature(&self, signature: &Self::Signature<'_>) -> bool {
+            self.signature == *signature
         }
     }
 
@@ -219,7 +231,7 @@ mod tests {
         let mut set = CalibrationSet::new();
         let calib = TestCalibration::new("Original", None);
         set.replace(calib.clone());
-        assert!(set.remove(calib.signature()));
+        assert!(set.remove(&calib.signature()));
         assert!(set.is_empty());
     }
 

@@ -10,9 +10,10 @@ use crate::{
 use super::write_qubit_parameters;
 
 pub trait CalibrationSignature {
-    type Signature: PartialEq;
+    type Signature<'a>: where Self: 'a;
 
-    fn signature(&self) -> Self::Signature;
+    fn signature(&self) -> Self::Signature<'_>;
+    fn has_signature(&self, signature: &Self::Signature<'_>) -> bool;
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -67,14 +68,21 @@ impl Quil for Calibration {
 }
 
 impl CalibrationSignature for Calibration {
-    type Signature = (String, Vec<Expression>, Vec<Qubit>);
+    type Signature<'a> = (&'a str, &'a [Expression], &'a [Qubit]);
 
-    fn signature(&self) -> Self::Signature {
+    fn signature(&self) -> Self::Signature<'_> {
         (
-            self.name.clone(),
-            self.parameters.clone(),
-            self.qubits.clone(),
+            self.name.as_str(),
+            self.parameters.as_slice(),
+            self.qubits.as_slice(),
         )
+    }
+
+    fn has_signature(&self, signature: &Self::Signature<'_>) -> bool {
+        let (name, parameters, qubits) = signature;
+        self.name == *name
+            && self.parameters == *parameters
+            && self.qubits == *qubits
     }
 }
 
@@ -96,10 +104,15 @@ impl MeasureCalibrationDefinition {
 }
 
 impl CalibrationSignature for MeasureCalibrationDefinition {
-    type Signature = (Option<Qubit>, String);
+    type Signature<'a> = (Option<&'a Qubit>, &'a str);
 
-    fn signature(&self) -> Self::Signature {
-        (self.qubit.clone(), self.parameter.clone())
+    fn signature(&self) -> Self::Signature<'_> {
+        (self.qubit.as_ref(), self.parameter.as_str())
+    }
+
+    fn has_signature(&self, signature: &Self::Signature<'_>) -> bool {
+        let (qubit, parameter) = signature;
+        self.qubit.as_ref() == *qubit && self.parameter == *parameter
     }
 }
 
