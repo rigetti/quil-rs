@@ -60,13 +60,13 @@ impl<'a> MatchedCalibration<'a> {
 impl Calibrations {
     /// Return a vector containing a reference to all [`Calibration`]s in the set.
     pub fn calibrations(&self) -> Vec<&Calibration> {
-        self.calibrations.iter().collect()
+        self.iter_calibrations().collect()
     }
 
     /// Return a vector containing a reference to all [`MeasureCalibrationDefinition`]s
     /// in the set.
     pub fn measure_calibrations(&self) -> Vec<&MeasureCalibrationDefinition> {
-        self.measure_calibrations.iter().collect()
+        self.iter_measure_calibrations().collect()
     }
 
     /// Iterate over all [`Calibration`]s in the set
