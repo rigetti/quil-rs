@@ -40,7 +40,7 @@ mod reset;
 mod timing;
 mod waveform;
 
-pub use self::calibration::{Calibration, MeasureCalibrationDefinition};
+pub use self::calibration::{Calibration, CalibrationSignature, MeasureCalibrationDefinition};
 pub use self::circuit::CircuitDefinition;
 pub use self::classical::{
     Arithmetic, ArithmeticOperand, ArithmeticOperator, BinaryLogic, BinaryOperand, BinaryOperands,
