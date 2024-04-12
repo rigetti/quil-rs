@@ -10,7 +10,9 @@ use crate::{
 use super::write_qubit_parameters;
 
 pub trait CalibrationSignature {
-    type Signature<'a>: where Self: 'a;
+    type Signature<'a>
+    where
+        Self: 'a;
 
     fn signature(&self) -> Self::Signature<'_>;
     fn has_signature(&self, signature: &Self::Signature<'_>) -> bool;
@@ -80,9 +82,7 @@ impl CalibrationSignature for Calibration {
 
     fn has_signature(&self, signature: &Self::Signature<'_>) -> bool {
         let (name, parameters, qubits) = signature;
-        self.name == *name
-            && self.parameters == *parameters
-            && self.qubits == *qubits
+        self.name == *name && self.parameters == *parameters && self.qubits == *qubits
     }
 }
 
