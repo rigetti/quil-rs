@@ -119,25 +119,25 @@
                                 <a class="function" href="#Program.resolve_placeholders_with_custom_resolvers">resolve_placeholders_with_custom_resolvers</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.waveforms">waveforms</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Program.frames">frames</a>
+                                <a class="variable" href="#Program.gate_definitions">gate_definitions</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Program.body_instructions">body_instructions</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.calibrations">calibrations</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Program.memory_regions">memory_regions</a>
+                                <a class="variable" href="#Program.frames">frames</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Program.declarations">declarations</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.gate_definitions">gate_definitions</a>
+                                <a class="variable" href="#Program.calibrations">calibrations</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Program.waveforms">waveforms</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Program.memory_regions">memory_regions</a>
                         </li>
                 </ul>
 
@@ -158,10 +158,10 @@
                                 <a class="function" href="#CalibrationSet.is_empty">is_empty</a>
                         </li>
                         <li>
-                                <a class="function" href="#CalibrationSet.push_calibration">push_calibration</a>
+                                <a class="function" href="#CalibrationSet.insert_calibration">insert_calibration</a>
                         </li>
                         <li>
-                                <a class="function" href="#CalibrationSet.push_measurement_calibration">push_measurement_calibration</a>
+                                <a class="function" href="#CalibrationSet.insert_measurement_calibration">insert_measurement_calibration</a>
                         </li>
                         <li>
                                 <a class="function" href="#CalibrationSet.extend">extend</a>
@@ -182,10 +182,10 @@
                     <a class="class" href="#MemoryRegion">MemoryRegion</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#MemoryRegion.size">size</a>
+                                <a class="variable" href="#MemoryRegion.sharing">sharing</a>
                         </li>
                         <li>
-                                <a class="variable" href="#MemoryRegion.sharing">sharing</a>
+                                <a class="variable" href="#MemoryRegion.size">size</a>
                         </li>
                 </ul>
 
@@ -239,10 +239,10 @@
                     <a class="class" href="#ScheduleSecondsItem">ScheduleSecondsItem</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#ScheduleSecondsItem.instruction_index">instruction_index</a>
+                                <a class="variable" href="#ScheduleSecondsItem.time_span">time_span</a>
                         </li>
                         <li>
-                                <a class="variable" href="#ScheduleSecondsItem.time_span">time_span</a>
+                                <a class="variable" href="#ScheduleSecondsItem.instruction_index">instruction_index</a>
                         </li>
                 </ul>
 
@@ -251,13 +251,13 @@
                     <a class="class" href="#TimeSpanSeconds">TimeSpanSeconds</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#TimeSpanSeconds.end">end</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#TimeSpanSeconds.start">start</a>
                         </li>
                         <li>
                                 <a class="variable" href="#TimeSpanSeconds.duration">duration</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#TimeSpanSeconds.end">end</a>
                         </li>
                 </ul>
 
@@ -737,24 +737,13 @@ while ensuring that unique value is not already in use within the program.</p>
 
 
                             </div>
-                            <div id="Program.waveforms" class="classattr">
+                            <div id="Program.gate_definitions" class="classattr">
                                 <div class="attr variable">
-            <span class="name">waveforms</span><span class="annotation">: Dict[str, Waveform]</span>
+            <span class="name">gate_definitions</span><span class="annotation">: Dict[str, GateDefinition]</span>
 
         
     </div>
-    <a class="headerlink" href="#Program.waveforms"></a>
-    
-    
-
-                            </div>
-                            <div id="Program.frames" class="classattr">
-                                <div class="attr variable">
-            <span class="name">frames</span><span class="annotation">: <a href="#FrameSet">quil.program.FrameSet</a></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.frames"></a>
+    <a class="headerlink" href="#Program.gate_definitions"></a>
     
     
 
@@ -770,24 +759,13 @@ while ensuring that unique value is not already in use within the program.</p>
     
 
                             </div>
-                            <div id="Program.calibrations" class="classattr">
+                            <div id="Program.frames" class="classattr">
                                 <div class="attr variable">
-            <span class="name">calibrations</span><span class="annotation">: <a href="#CalibrationSet">quil.program.CalibrationSet</a></span>
+            <span class="name">frames</span><span class="annotation">: <a href="#FrameSet">quil.program.FrameSet</a></span>
 
         
     </div>
-    <a class="headerlink" href="#Program.calibrations"></a>
-    
-    
-
-                            </div>
-                            <div id="Program.memory_regions" class="classattr">
-                                <div class="attr variable">
-            <span class="name">memory_regions</span><span class="annotation">: Dict[str, <a href="#MemoryRegion">quil.program.MemoryRegion</a>]</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.memory_regions"></a>
+    <a class="headerlink" href="#Program.frames"></a>
     
     
 
@@ -803,13 +781,35 @@ while ensuring that unique value is not already in use within the program.</p>
     
 
                             </div>
-                            <div id="Program.gate_definitions" class="classattr">
+                            <div id="Program.calibrations" class="classattr">
                                 <div class="attr variable">
-            <span class="name">gate_definitions</span><span class="annotation">: Dict[str, GateDefinition]</span>
+            <span class="name">calibrations</span><span class="annotation">: <a href="#CalibrationSet">quil.program.CalibrationSet</a></span>
 
         
     </div>
-    <a class="headerlink" href="#Program.gate_definitions"></a>
+    <a class="headerlink" href="#Program.calibrations"></a>
+    
+    
+
+                            </div>
+                            <div id="Program.waveforms" class="classattr">
+                                <div class="attr variable">
+            <span class="name">waveforms</span><span class="annotation">: Dict[str, Waveform]</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.waveforms"></a>
+    
+    
+
+                            </div>
+                            <div id="Program.memory_regions" class="classattr">
+                                <div class="attr variable">
+            <span class="name">memory_regions</span><span class="annotation">: Dict[str, <a href="#MemoryRegion">quil.program.MemoryRegion</a>]</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.memory_regions"></a>
     
     
 
@@ -901,32 +901,38 @@ qubit (if any), or otherwise the last-specified one that specified no qubit.</p>
 
 
                             </div>
-                            <div id="CalibrationSet.push_calibration" class="classattr">
+                            <div id="CalibrationSet.insert_calibration" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">push_calibration</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">calibration</span><span class="p">:</span> <span class="n">Calibration</span></span><span class="return-annotation">):</span></span>
+        <span class="name">insert_calibration</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">calibration</span><span class="p">:</span> <span class="n">Calibration</span></span><span class="return-annotation">) -> <span class="n">Optional</span><span class="p">[</span><span class="n">Calibration</span><span class="p">]</span>:</span></span>
 
         
     </div>
-    <a class="headerlink" href="#CalibrationSet.push_calibration"></a>
+    <a class="headerlink" href="#CalibrationSet.insert_calibration"></a>
     
-            <div class="docstring"><p>Add another gate <code>Calibration</code> (<code>DEFCAL</code>) to the set.</p>
+            <div class="docstring"><p>Insert another <code>Calibration</code> (<code>DEFCAL</code>) to the set.</p>
+
+<p>If a calibration with the same name already exists, it is overwritten and this
+function returns the previous calibration. Otherwise, None is returned.</p>
 </div>
 
 
                             </div>
-                            <div id="CalibrationSet.push_measurement_calibration" class="classattr">
+                            <div id="CalibrationSet.insert_measurement_calibration" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">push_measurement_calibration</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">calibration</span><span class="p">:</span> <span class="n">MeasureCalibrationDefinition</span></span><span class="return-annotation">):</span></span>
+        <span class="name">insert_measurement_calibration</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="n">calibration</span><span class="p">:</span> <span class="n">MeasureCalibrationDefinition</span></span><span class="return-annotation">) -> <span class="n">Optional</span><span class="p">[</span><span class="n">MeasureCalibrationDefinition</span><span class="p">]</span>:</span></span>
 
         
     </div>
-    <a class="headerlink" href="#CalibrationSet.push_measurement_calibration"></a>
+    <a class="headerlink" href="#CalibrationSet.insert_measurement_calibration"></a>
     
             <div class="docstring"><p>Add another <code>MeasureCalibrationDefinition</code> (<code>DEFCAL MEASURE</code>) to the set</p>
+
+<p>If a calibration with the same name already exists, it is overwritten and this
+function returns the previous calibration. Otherwise, None is returned.</p>
 </div>
 
 
@@ -996,17 +1002,6 @@ qubit (if any), or otherwise the last-specified one that specified no qubit.</p>
     
     
 
-                            <div id="MemoryRegion.size" class="classattr">
-                                <div class="attr variable">
-            <span class="name">size</span><span class="annotation">: Vector</span>
-
-        
-    </div>
-    <a class="headerlink" href="#MemoryRegion.size"></a>
-    
-    
-
-                            </div>
                             <div id="MemoryRegion.sharing" class="classattr">
                                 <div class="attr variable">
             <span class="name">sharing</span><span class="annotation">: Optional[Sharing]</span>
@@ -1014,6 +1009,17 @@ qubit (if any), or otherwise the last-specified one that specified no qubit.</p>
         
     </div>
     <a class="headerlink" href="#MemoryRegion.sharing"></a>
+    
+    
+
+                            </div>
+                            <div id="MemoryRegion.size" class="classattr">
+                                <div class="attr variable">
+            <span class="name">size</span><span class="annotation">: Vector</span>
+
+        
+    </div>
+    <a class="headerlink" href="#MemoryRegion.size"></a>
     
     
 
@@ -1304,19 +1310,6 @@ on program state. This may be a sequence of basic blocks with fixed <code>JUMP</
 </div>
 
 
-                            <div id="ScheduleSecondsItem.instruction_index" class="classattr">
-                                <div class="attr variable">
-            <span class="name">instruction_index</span><span class="annotation">: int</span>
-
-        
-    </div>
-    <a class="headerlink" href="#ScheduleSecondsItem.instruction_index"></a>
-    
-            <div class="docstring"><p>The index of the instruction within the basic block.</p>
-</div>
-
-
-                            </div>
                             <div id="ScheduleSecondsItem.time_span" class="classattr">
                                 <div class="attr variable">
             <span class="name">time_span</span><span class="annotation">: <a href="#TimeSpanSeconds">quil.program.TimeSpanSeconds</a></span>
@@ -1326,6 +1319,19 @@ on program state. This may be a sequence of basic blocks with fixed <code>JUMP</
     <a class="headerlink" href="#ScheduleSecondsItem.time_span"></a>
     
             <div class="docstring"><p>The time span during which the instruction is scheduled.</p>
+</div>
+
+
+                            </div>
+                            <div id="ScheduleSecondsItem.instruction_index" class="classattr">
+                                <div class="attr variable">
+            <span class="name">instruction_index</span><span class="annotation">: int</span>
+
+        
+    </div>
+    <a class="headerlink" href="#ScheduleSecondsItem.instruction_index"></a>
+    
+            <div class="docstring"><p>The index of the instruction within the basic block.</p>
 </div>
 
 
@@ -1345,21 +1351,6 @@ on program state. This may be a sequence of basic blocks with fixed <code>JUMP</
 </div>
 
 
-                            <div id="TimeSpanSeconds.end" class="classattr">
-                                <div class="attr variable">
-            <span class="name">end</span><span class="annotation">: float</span>
-
-        
-    </div>
-    <a class="headerlink" href="#TimeSpanSeconds.end"></a>
-    
-            <div class="docstring"><p>The end time of the time span, in seconds.</p>
-
-<p>This is the sum of the start time and duration.</p>
-</div>
-
-
-                            </div>
                             <div id="TimeSpanSeconds.start" class="classattr">
                                 <div class="attr variable">
             <span class="name">start</span><span class="annotation">: float</span>
@@ -1384,6 +1375,21 @@ on program state. This may be a sequence of basic blocks with fixed <code>JUMP</
     <a class="headerlink" href="#TimeSpanSeconds.duration"></a>
     
             <div class="docstring"><p>The duration of the time span, in seconds.</p>
+</div>
+
+
+                            </div>
+                            <div id="TimeSpanSeconds.end" class="classattr">
+                                <div class="attr variable">
+            <span class="name">end</span><span class="annotation">: float</span>
+
+        
+    </div>
+    <a class="headerlink" href="#TimeSpanSeconds.end"></a>
+    
+            <div class="docstring"><p>The end time of the time span, in seconds.</p>
+
+<p>This is the sum of the start time and duration.</p>
 </div>
 
 
