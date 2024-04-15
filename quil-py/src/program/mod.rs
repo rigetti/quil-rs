@@ -8,7 +8,7 @@ use quil_rs::{
     instruction::{Instruction, QubitPlaceholder, TargetPlaceholder, Waveform},
     program::{
         analysis::{ControlFlowGraph, ControlFlowGraphOwned},
-        CalibrationSet, FrameSet, MemoryRegion,
+        Calibrations, FrameSet, MemoryRegion,
     },
     Program,
 };
@@ -109,7 +109,7 @@ impl PyProgram {
         calibrations: PyCalibrationSet,
     ) -> PyResult<()> {
         let program = self.as_inner_mut();
-        program.calibrations = CalibrationSet::py_try_from(py, &calibrations)?;
+        program.calibrations = Calibrations::py_try_from(py, &calibrations)?;
         Ok(())
     }
 

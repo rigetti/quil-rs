@@ -29,7 +29,8 @@ use crate::instruction::{
 use crate::parser::{lex, parse_instructions, ParseError};
 use crate::quil::Quil;
 
-pub use self::calibration::CalibrationSet;
+pub use self::calibration::Calibrations;
+pub use self::calibration_set::CalibrationSet;
 pub use self::error::{disallow_leftover, map_parsed, recover, ParseProgramError, SyntaxError};
 pub use self::frame::FrameSet;
 pub use self::frame::MatchedFrames;
@@ -37,6 +38,7 @@ pub use self::memory::{MemoryAccesses, MemoryRegion};
 
 pub mod analysis;
 mod calibration;
+mod calibration_set;
 mod error;
 pub(crate) mod frame;
 mod memory;
@@ -70,7 +72,7 @@ type Result<T> = std::result::Result<T, ProgramError>;
 /// and frame definitions.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Program {
-    pub calibrations: CalibrationSet,
+    pub calibrations: Calibrations,
     pub frames: FrameSet,
     pub memory_regions: BTreeMap<String, MemoryRegion>,
     pub waveforms: BTreeMap<String, Waveform>,
@@ -83,7 +85,7 @@ pub struct Program {
 impl Program {
     pub fn new() -> Self {
         Program {
-            calibrations: CalibrationSet::default(),
+            calibrations: Calibrations::default(),
             frames: FrameSet::new(),
             memory_regions: BTreeMap::new(),
             waveforms: BTreeMap::new(),
@@ -136,7 +138,7 @@ impl Program {
 
         match instruction {
             Instruction::CalibrationDefinition(calibration) => {
-                self.calibrations.push_calibration(calibration);
+                self.calibrations.insert_calibration(calibration);
             }
             Instruction::FrameDefinition(FrameDefinition {
                 identifier,
@@ -157,7 +159,8 @@ impl Program {
                     .insert(gate_definition.name.clone(), gate_definition);
             }
             Instruction::MeasureCalibrationDefinition(calibration) => {
-                self.calibrations.push_measurement_calibration(calibration);
+                self.calibrations
+                    .insert_measurement_calibration(calibration);
             }
             Instruction::WaveformDefinition(WaveformDefinition { name, definition }) => {
                 self.waveforms.insert(name, definition);
@@ -336,7 +339,7 @@ impl Program {
         instructions.extend(self.waveforms.into_iter().map(|(name, definition)| {
             Instruction::WaveformDefinition(WaveformDefinition { name, definition })
         }));
-        instructions.extend(self.calibrations.into_instructions());
+        instructions.extend(self.calibrations.to_instructions());
         instructions.extend(
             self.gate_definitions
                 .into_values()
@@ -360,7 +363,7 @@ impl Program {
         // Remove calibrations such that the resulting program contains
         // only instructions. Calibrations have already been expanded, so
         // technically there is no need to keep them around anyway.
-        expanded_program.calibrations = CalibrationSet::default();
+        expanded_program.calibrations = Calibrations::default();
 
         let mut frames_used: HashSet<&FrameIdentifier> = HashSet::new();
         let mut waveforms_used: HashSet<&String> = HashSet::new();
@@ -1354,5 +1357,65 @@ I 0
         );
 
         assert_snapshot!(program.to_quil().unwrap())
+    }
+
+    #[test]
+    fn test_equality() {
+        let input = "DECLARE foo REAL[1]
+DEFFRAME 1 \"rx\":
+\tHARDWARE-OBJECT: \"hardware\"
+DEFCAL I 0:
+\tDELAY 0 1
+DEFCAL I 1:
+\tDELAY 0 1
+DEFCAL I 2:
+\tDELAY 0 1
+DEFCAL MEASURE 0 addr:
+\tCAPTURE 0 \"ro_rx\" custom addr
+DEFCAL MEASURE 1 addr:
+\tCAPTURE 1 \"ro_rx\" custom addr
+DEFWAVEFORM custom:
+\t1,2
+DEFWAVEFORM custom2:
+\t3,4
+DEFWAVEFORM another1:
+\t4,5
+DEFGATE BAR AS MATRIX:
+\t0, 1
+\t1, 0
+DEFGATE FOO AS MATRIX:
+\t0, 1
+\t1, 0
+
+H 1
+CNOT 2 3";
+
+        let program = Program::from_str(input).unwrap();
+
+        // The order of definitions are global in the sense that where they are defined in a
+        // program does not matter.
+        let is_global_state_instruction = move |i: &Instruction| -> bool {
+            matches!(
+                i,
+                Instruction::CalibrationDefinition(_)
+                    | Instruction::MeasureCalibrationDefinition(_)
+                    | Instruction::WaveformDefinition(_)
+                    | Instruction::GateDefinition(_)
+                    | Instruction::FrameDefinition(_)
+            )
+        };
+        // Create a copy of the program, but insert the "global" instructions in reverse order.
+        // Since where these instructions are defined doesn't matter, this should be an
+        // equivalent program.
+        let mut program2 = program.filter_instructions(|i| !is_global_state_instruction(i));
+        let global_instructions: Vec<Instruction> = program
+            .filter_instructions(is_global_state_instruction)
+            .into_instructions()
+            .into_iter()
+            .rev()
+            .collect();
+        program2.add_instructions(global_instructions);
+
+        assert_eq!(program, program2);
     }
 }
