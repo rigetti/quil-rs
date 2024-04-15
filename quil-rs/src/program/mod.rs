@@ -1489,7 +1489,7 @@ DEFFRAME 0 \"xy\":
         let program = Program::from_str(input).unwrap();
         let quil = program.to_quil().unwrap();
 
-        // Asserts that serialization doesn't change on reperated attempts.
+        // Asserts that serialization doesn't change on repeated attempts.
         // 100 is chosen because it should be more than sufficient to reveal an
         //     issue and it has a negligible impact on execution speed on the test suite.
         let iterations = 100;
