@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::hash::Hash;
 
 use quil_rs::{
@@ -38,14 +38,14 @@ impl_to_quil!(PyAttributeValue);
 impl_hash!(PyAttributeValue);
 impl_eq!(PyAttributeValue);
 
-pub type PyFrameAttributes = HashMap<String, PyAttributeValue>;
+pub type PyFrameAttributes = BTreeMap<String, PyAttributeValue>;
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
     #[pyo3(subclass)]
     PyFrameDefinition(FrameDefinition) as "FrameDefinition" {
         identifier: FrameIdentifier => PyFrameIdentifier,
-        attributes: HashMap<String, AttributeValue> => PyFrameAttributes
+        attributes: BTreeMap<String, AttributeValue> => PyFrameAttributes
     }
 }
 impl_repr!(PyFrameDefinition);

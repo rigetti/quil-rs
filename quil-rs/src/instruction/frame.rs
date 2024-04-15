@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use super::{MemoryReference, Qubit, WaveformInvocation};
 use crate::{expression::Expression, quil::Quil};
@@ -23,12 +23,12 @@ impl Quil for AttributeValue {
     }
 }
 
-pub type FrameAttributes = HashMap<String, AttributeValue>;
+pub type FrameAttributes = BTreeMap<String, AttributeValue>;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FrameDefinition {
     pub identifier: FrameIdentifier,
-    pub attributes: HashMap<String, AttributeValue>,
+    pub attributes: FrameAttributes,
 }
 
 impl FrameDefinition {
