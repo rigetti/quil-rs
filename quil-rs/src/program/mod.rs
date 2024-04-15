@@ -1418,4 +1418,83 @@ CNOT 2 3";
 
         assert_eq!(program, program2);
     }
+
+    #[test]
+    fn test_deterministic_serialization() {
+        let input = "DECLARE foo REAL[1]
+DECLARE bar BIT[1]
+DECLARE baz BIT[1]
+RX(pi) 0
+CNOT 0 1
+DEFCAL I 0:
+\tDELAY 0 1
+\tDELAY 1 1
+DEFCAL I 1:
+\tDELAY 0 1
+\tDELAY 1 2
+DEFCAL I 2:
+\tDELAY 2 1
+\tDELAY 2 3
+DEFCAL MEASURE 0 addr:
+\tRX(pi) 0
+\tCAPTURE 0 \"ro_rx\" custom addr
+DEFCAL MEASURE 1 addr:
+\tRX(pi/2) 1
+\tCAPTURE 1 \"ro_rx\" custom addr
+DEFCAL MEASURE 2 addr:
+\tRX(pi/2) 2
+\tCAPTURE 2 \"ro_rx\" custom addr
+DEFWAVEFORM custom:
+\t1,2
+DEFWAVEFORM custom2:
+\t3,4
+DEFWAVEFORM another1(%a, %b):
+\t%a,%b
+PULSE 0 \"xy\" flat(duration: 1e-6, iq: 2+3i)
+PULSE 0 \"xy\" another1(a: 1e-6, b: 2+3i)
+DEFGATE HADAMARD AS MATRIX:
+\t(1/sqrt(2)),(1/sqrt(2))
+\t(1/sqrt(2)),((-1)/sqrt(2))
+DEFGATE RX(%theta) AS MATRIX:
+\tcos((%theta/2)),((-1i)*sin((%theta/2)))
+\t((-1i)*sin((%theta/2))),cos((%theta/2))
+DEFGATE Name AS PERMUTATION:
+\t1, 0
+DEFCIRCUIT SIMPLE:
+\tX 0
+\tX 1
+DEFGATE BAR AS MATRIX:
+\t0, 1
+\t1, 0
+DEFGATE FOO AS MATRIX:
+\t0, 1
+\t1, 0
+DEFGATE BAZ AS MATRIX:
+\t1, 0
+\t0, 1
+MEASURE 1 bar
+MEASURE 0 foo
+HALT
+DEFCIRCUIT CIRCFOO:
+\tLABEL @FOO_A
+\tJUMP @FOO_A
+DEFFRAME 0 \"xy\":
+\tSAMPLE-RATE: 3000
+DEFFRAME 0 \"xy\":
+\tDIRECTION: \"rx\"
+\tCENTER-FREQUENCY: 1000
+\tHARDWARE-OBJECT: \"some object\"
+\tINITIAL-FREQUENCY: 2000
+\tSAMPLE-RATE: 3000";
+        let program = Program::from_str(input).unwrap();
+        let quil = program.to_quil().unwrap();
+
+        // Asserts that serialization doesn't change on reperated attempts.
+        // 100 is chosen because it should be more than sufficient to reveal an
+        //     issue and it has a negligible impact on execution speed on the test suite.
+        let iterations = 100;
+        for _ in 0..iterations {
+            assert_eq!(program.to_quil().unwrap(), quil);
+        }
+    }
 }
