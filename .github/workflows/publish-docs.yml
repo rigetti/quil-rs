@@ -1,0 +1,47 @@
+name: Publish quil-py documentation
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - closed
+
+jobs:
+  publish-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install poetry
+        uses: snok/install-poetry@v1
+      - uses: Swatinem/rust-cache@v2
+      - name: Install cargo-make
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: --debug cargo-make
+      - name: Build quil-py documentation
+        uses: actions-rs/cargo@v1
+        with:
+          command: make
+          args: --cwd quil-py --makefile Makefile.toml docs
+      - name: Deploy preview
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: rossjrw/pr-preview-action@v1
+        with:
+          source-dir: quil-py/build/docs
+          preview-branch: quil-py-docs
+      - name: Deploy docs
+        if: ${{ github.event_name == 'push' }}
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: quil-py/build/docs
+          publish_branch: quil-py-docs

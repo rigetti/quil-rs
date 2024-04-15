@@ -319,6 +319,25 @@ impl Quil for Instruction {
     }
 }
 
+pub(crate) struct QuotedString<S>(pub(crate) S);
+
+impl<S> fmt::Display for QuotedString<S>
+where
+    S: AsRef<str>,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "\"")?;
+        for c in self.0.as_ref().chars() {
+            match c {
+                '"' => write!(f, "\\\"")?,
+                '\\' => write!(f, "\\\\")?,
+                c => write!(f, "{}", c)?,
+            }
+        }
+        write!(f, "\"")
+    }
+}
+
 #[cfg(test)]
 mod test_instruction_display {
     use crate::{instruction::PragmaArgument, quil::Quil};
@@ -623,6 +642,51 @@ impl Instruction {
         let (_, instruction) =
             nom::combinator::all_consuming(parse_instruction)(&lexed).map_err(|e| e.to_string())?;
         Ok(instruction)
+    }
+
+    /// Returns true if the instruction is a Quil-T instruction.
+    pub fn is_quil_t(&self) -> bool {
+        match self {
+            Instruction::Capture(_)
+            | Instruction::CalibrationDefinition(_)
+            | Instruction::Delay(_)
+            | Instruction::Fence(_)
+            | Instruction::FrameDefinition(_)
+            | Instruction::MeasureCalibrationDefinition(_)
+            | Instruction::Pulse(_)
+            | Instruction::RawCapture(_)
+            | Instruction::SetFrequency(_)
+            | Instruction::SetPhase(_)
+            | Instruction::SetScale(_)
+            | Instruction::ShiftFrequency(_)
+            | Instruction::ShiftPhase(_)
+            | Instruction::SwapPhases(_)
+            | Instruction::WaveformDefinition(_) => true,
+            Instruction::Arithmetic(_)
+            | Instruction::BinaryLogic(_)
+            | Instruction::CircuitDefinition(_)
+            | Instruction::Convert(_)
+            | Instruction::Comparison(_)
+            | Instruction::Declaration(_)
+            | Instruction::Exchange(_)
+            | Instruction::Gate(_)
+            | Instruction::GateDefinition(_)
+            | Instruction::Halt
+            | Instruction::Include(_)
+            | Instruction::Jump(_)
+            | Instruction::JumpUnless(_)
+            | Instruction::JumpWhen(_)
+            | Instruction::Label(_)
+            | Instruction::Load(_)
+            | Instruction::Measurement(_)
+            | Instruction::Move(_)
+            | Instruction::Nop
+            | Instruction::Pragma(_)
+            | Instruction::Reset(_)
+            | Instruction::Store(_)
+            | Instruction::Wait
+            | Instruction::UnaryLogic(_) => false,
+        }
     }
 
     /// Per the Quil-T spec, whether this instruction's timing within the pulse

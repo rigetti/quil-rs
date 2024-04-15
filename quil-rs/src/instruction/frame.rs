@@ -1,7 +1,14 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, str::FromStr};
 
-use super::{MemoryReference, Qubit, WaveformInvocation};
-use crate::{expression::Expression, quil::Quil};
+use nom_locate::LocatedSpan;
+
+use super::{MemoryReference, Qubit, QuotedString, WaveformInvocation};
+use crate::{
+    expression::Expression,
+    parser::{common::parse_frame_identifier, lex, ParseError},
+    program::{disallow_leftover, SyntaxError},
+    quil::Quil,
+};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum AttributeValue {
@@ -17,7 +24,7 @@ impl Quil for AttributeValue {
     ) -> crate::quil::ToQuilResult<()> {
         use AttributeValue::*;
         match self {
-            String(value) => write!(f, "{value:?}").map_err(Into::into),
+            String(value) => write!(f, "{}", QuotedString(value)).map_err(Into::into),
             Expression(value) => value.write(f, fall_back_to_debug),
         }
     }
@@ -80,7 +87,19 @@ impl Quil for FrameIdentifier {
             qubit.write(writer, fall_back_to_debug)?;
             write!(writer, " ")?;
         }
-        write!(writer, "{:?}", self.name).map_err(Into::into)
+        write!(writer, "{}", QuotedString(&self.name)).map_err(Into::into)
+    }
+}
+
+impl FromStr for FrameIdentifier {
+    type Err = SyntaxError<Self>;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let input = LocatedSpan::new(s);
+        let tokens = lex(input)?;
+        disallow_leftover(
+            parse_frame_identifier(&tokens).map_err(ParseError::from_nom_internal_err),
+        )
     }
 }
 

@@ -67,6 +67,36 @@ pub struct MeasureCalibrationDefinition {
     pub instructions: Vec<Instruction>,
 }
 
+impl MeasureCalibrationDefinition {
+    pub fn new(qubit: Option<Qubit>, parameter: String, instructions: Vec<Instruction>) -> Self {
+        Self {
+            qubit,
+            parameter,
+            instructions,
+        }
+    }
+}
+
+impl Quil for MeasureCalibrationDefinition {
+    fn write(
+        &self,
+        f: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
+    ) -> crate::quil::ToQuilResult<()> {
+        write!(f, "DEFCAL MEASURE")?;
+        if let Some(qubit) = &self.qubit {
+            write!(f, " ")?;
+            qubit.write(f, fall_back_to_debug)?;
+        }
+
+        writeln!(f, " {}:", self.parameter,)?;
+
+        write_instruction_block(f, fall_back_to_debug, &self.instructions)?;
+        writeln!(f)?;
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod test_measure_calibration_definition {
     use super::MeasureCalibrationDefinition;
@@ -111,35 +141,5 @@ mod test_measure_calibration_definition {
         }, {
             assert_snapshot!(measure_cal_def.to_quil_or_debug())
         })
-    }
-}
-
-impl MeasureCalibrationDefinition {
-    pub fn new(qubit: Option<Qubit>, parameter: String, instructions: Vec<Instruction>) -> Self {
-        Self {
-            qubit,
-            parameter,
-            instructions,
-        }
-    }
-}
-
-impl Quil for MeasureCalibrationDefinition {
-    fn write(
-        &self,
-        f: &mut impl std::fmt::Write,
-        fall_back_to_debug: bool,
-    ) -> crate::quil::ToQuilResult<()> {
-        write!(f, "DEFCAL MEASURE")?;
-        if let Some(qubit) = &self.qubit {
-            write!(f, " ")?;
-            qubit.write(f, fall_back_to_debug)?;
-        }
-
-        writeln!(f, " {}:", self.parameter,)?;
-
-        write_instruction_block(f, fall_back_to_debug, &self.instructions)?;
-        writeln!(f)?;
-        Ok(())
     }
 }
