@@ -1,4 +1,4 @@
-use std::{collections::HashMap, str::FromStr};
+use std::{collections::BTreeMap, str::FromStr};
 
 use nom_locate::LocatedSpan;
 
@@ -30,12 +30,12 @@ impl Quil for AttributeValue {
     }
 }
 
-pub type FrameAttributes = HashMap<String, AttributeValue>;
+pub type FrameAttributes = BTreeMap<String, AttributeValue>;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FrameDefinition {
     pub identifier: FrameIdentifier,
-    pub attributes: HashMap<String, AttributeValue>,
+    pub attributes: FrameAttributes,
 }
 
 impl FrameDefinition {

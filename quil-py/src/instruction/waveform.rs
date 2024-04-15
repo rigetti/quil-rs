@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use quil_rs::{
     expression::Expression,
@@ -70,7 +70,7 @@ py_wrap_data_struct! {
     #[pyo3(subclass)]
     PyWaveformInvocation(WaveformInvocation) as "WaveformInvocation" {
         name: String => Py<PyString>,
-        parameters: HashMap<String, Expression> => HashMap<String, PyExpression>
+        parameters: BTreeMap<String, Expression> => BTreeMap<String, PyExpression>
     }
 }
 impl_repr!(PyWaveformInvocation);
@@ -83,11 +83,11 @@ impl PyWaveformInvocation {
     pub fn new(
         py: Python<'_>,
         name: String,
-        parameters: HashMap<String, PyExpression>,
+        parameters: BTreeMap<String, PyExpression>,
     ) -> PyResult<Self> {
         Ok(Self(WaveformInvocation::new(
             name,
-            HashMap::<String, Expression>::py_try_from(py, &parameters)?,
+            BTreeMap::<String, Expression>::py_try_from(py, &parameters)?,
         )))
     }
 }

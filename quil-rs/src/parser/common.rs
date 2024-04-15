@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::{collections::HashMap, str::FromStr};
+use std::{collections::BTreeMap, str::FromStr};
 
 use nom::{
     branch::alt,
@@ -308,7 +308,7 @@ pub(crate) fn parse_waveform_invocation<'a>(
         token!(RParenthesis),
     ))(input)?;
     let parameter_tuples = parameter_tuples.unwrap_or_default();
-    let parameters: HashMap<_, _> = parameter_tuples.into_iter().collect();
+    let parameters: BTreeMap<_, _> = parameter_tuples.into_iter().collect();
 
     Ok((input, WaveformInvocation { name, parameters }))
 }

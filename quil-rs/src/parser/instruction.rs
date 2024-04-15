@@ -148,7 +148,7 @@ pub(crate) fn parse_block_instruction<'a>(
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
+    use std::collections::BTreeMap;
     use std::str::FromStr;
 
     use nom_locate::LocatedSpan;
@@ -472,7 +472,7 @@ mod tests {
                 },
                 waveform: WaveformInvocation {
                     name: "my_custom_waveform".to_owned(),
-                    parameters: HashMap::new()
+                    parameters: BTreeMap::new()
                 },
                 memory_reference: MemoryReference {
                     name: "ro".to_owned(),
@@ -645,7 +645,7 @@ mod tests {
                 },
                 waveform: WaveformInvocation {
                     name: "custom".to_owned(),
-                    parameters: HashMap::new()
+                    parameters: BTreeMap::new()
                 }
             }),
             Instruction::Pulse(Pulse {
@@ -656,7 +656,7 @@ mod tests {
                 },
                 waveform: WaveformInvocation {
                     name: "custom".to_owned(),
-                    parameters: HashMap::new()
+                    parameters: BTreeMap::new()
                 }
             }),
             Instruction::Pulse(Pulse {
