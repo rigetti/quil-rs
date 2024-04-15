@@ -1,3 +1,9 @@
+## 0.24.0
+
+### Breaking Changes
+
+- CalibrationSet's and Program's will be considered equal if they contain the same set of calibrations, regardless of order. (#352)
+
 ## 0.24.0-rc.0
 
 ### Breaking Changes
