@@ -22,4 +22,4 @@ patch_cargo_toml quil-cli/Cargo.toml > quil-cli/Cargo.toml.tmp
 mv quil-cli/Cargo.toml.tmp quil-cli/Cargo.toml
 
 # Validate that the new version of Cargo.toml is valid
-cargo check --manifest-path=quil-py/Cargo.toml
+cargo check --manifest-path=quil-cli/Cargo.toml
