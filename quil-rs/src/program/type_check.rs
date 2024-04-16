@@ -1,6 +1,11 @@
 //! Type check Quil programs.
 //!
 //! See the [Quil spec](https://quil-lang.github.io/).
+use std::fmt::Debug;
+
+use indexmap::IndexMap;
+use thiserror::Error;
+
 use crate::{
     expression::{Expression, FunctionCallExpression, InfixExpression, PrefixExpression},
     instruction::{
@@ -13,9 +18,6 @@ use crate::{
     quil::Quil,
     Program,
 };
-use std::collections::BTreeMap;
-use std::fmt::Debug;
-use thiserror::Error;
 
 /// Different types of errors that can occur during type checking.
 #[derive(Debug, Error)]
@@ -195,7 +197,7 @@ fn operator_operand_mismatch(
 fn should_be_real(
     instruction: &Instruction,
     this_expression: &Expression,
-    memory_regions: &BTreeMap<String, MemoryRegion>,
+    memory_regions: &IndexMap<String, MemoryRegion>,
 ) -> TypeResult<()> {
     match this_expression {
         Expression::Address(reference) => {
@@ -240,7 +242,7 @@ fn type_check_arithmetic(
     operator: &ArithmeticOperator,
     destination: &ArithmeticOperand,
     source: &ArithmeticOperand,
-    memory_regions: &BTreeMap<String, MemoryRegion>,
+    memory_regions: &IndexMap<String, MemoryRegion>,
 ) -> TypeResult<()> {
     match destination {
         ArithmeticOperand::LiteralInteger(_) | ArithmeticOperand::LiteralReal(_) => {
@@ -304,7 +306,7 @@ fn type_check_comparison(
     instruction: &Instruction,
     operator: &ComparisonOperator,
     operands: &(MemoryReference, MemoryReference, ComparisonOperand),
-    memory_regions: &BTreeMap<String, MemoryRegion>,
+    memory_regions: &IndexMap<String, MemoryRegion>,
 ) -> TypeResult<()> {
     let (x, y, z) = operands;
     match (memory_regions.get(&x.name), memory_regions.get(&y.name)) {
@@ -346,7 +348,7 @@ fn type_check_binary_logic(
     instruction: &Instruction,
     operator: &BinaryOperator,
     operands: &BinaryOperands,
-    memory_regions: &BTreeMap<String, MemoryRegion>,
+    memory_regions: &IndexMap<String, MemoryRegion>,
 ) -> TypeResult<()> {
     let (x, y) = operands;
     if let Some(x_region) = memory_regions.get(&x.name) {
@@ -380,7 +382,7 @@ fn type_check_unary_logic(
     instruction: &Instruction,
     operator: &UnaryOperator,
     operand: &MemoryReference,
-    memory_regions: &BTreeMap<String, MemoryRegion>,
+    memory_regions: &IndexMap<String, MemoryRegion>,
 ) -> TypeResult<()> {
     if let Some(MemoryRegion { size, .. }) = memory_regions.get(&operand.name) {
         let dt = &size.data_type;
@@ -414,7 +416,7 @@ fn type_check_move(
     instruction: &Instruction,
     destination: &MemoryReference,
     source: &ArithmeticOperand,
-    memory_regions: &BTreeMap<String, MemoryRegion>,
+    memory_regions: &IndexMap<String, MemoryRegion>,
 ) -> TypeResult<()> {
     if let Some(dest_region) = memory_regions.get(&destination.name) {
         let dt = &dest_region.size.data_type;
@@ -449,7 +451,7 @@ fn type_check_exchange(
     instruction: &Instruction,
     left: &MemoryReference,
     right: &MemoryReference,
-    memory_regions: &BTreeMap<String, MemoryRegion>,
+    memory_regions: &IndexMap<String, MemoryRegion>,
 ) -> TypeResult<()> {
     match (
         memory_regions.get(&left.name),
@@ -474,7 +476,7 @@ fn type_check_load(
     destination: &MemoryReference,
     source: &str,
     offset: &MemoryReference,
-    memory_regions: &BTreeMap<String, MemoryRegion>,
+    memory_regions: &IndexMap<String, MemoryRegion>,
 ) -> TypeResult<()> {
     match (
         memory_regions.get(&destination.name),
@@ -507,7 +509,7 @@ fn type_check_store(
     destination: &str,
     offset: &MemoryReference,
     source: &ArithmeticOperand,
-    memory_regions: &BTreeMap<String, MemoryRegion>,
+    memory_regions: &IndexMap<String, MemoryRegion>,
 ) -> TypeResult<()> {
     let dest_region =
         memory_regions

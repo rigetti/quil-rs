@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{HashMap, HashSet};
 use std::ops;
 use std::str::FromStr;
 
-use indexmap::IndexSet;
+use indexmap::{IndexMap, IndexSet};
 use ndarray::Array2;
 use nom_locate::LocatedSpan;
 
@@ -74,9 +74,9 @@ type Result<T> = std::result::Result<T, ProgramError>;
 pub struct Program {
     pub calibrations: Calibrations,
     pub frames: FrameSet,
-    pub memory_regions: BTreeMap<String, MemoryRegion>,
-    pub waveforms: BTreeMap<String, Waveform>,
-    pub gate_definitions: BTreeMap<String, GateDefinition>,
+    pub memory_regions: IndexMap<String, MemoryRegion>,
+    pub waveforms: IndexMap<String, Waveform>,
+    pub gate_definitions: IndexMap<String, GateDefinition>,
     instructions: Vec<Instruction>,
     // private field used for caching operations
     used_qubits: HashSet<Qubit>,
@@ -87,9 +87,9 @@ impl Program {
         Program {
             calibrations: Calibrations::default(),
             frames: FrameSet::new(),
-            memory_regions: BTreeMap::new(),
-            waveforms: BTreeMap::new(),
-            gate_definitions: BTreeMap::new(),
+            memory_regions: IndexMap::new(),
+            waveforms: IndexMap::new(),
+            gate_definitions: IndexMap::new(),
             instructions: vec![],
             used_qubits: HashSet::new(),
         }

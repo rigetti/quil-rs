@@ -476,7 +476,7 @@ pub mod tests {
         expression::{
             Expression, InfixExpression, InfixOperator, PrefixExpression, PrefixOperator,
         },
-        instruction::{MemoryReference, PauliGate, PauliTerm},
+        instruction::{MemoryReference, PauliGate, PauliTerm, WaveformParameters},
         parser::lex,
         real,
     };
@@ -566,7 +566,7 @@ SWAP-PHASES 2 3 \"xy\" 3 4 \"xy\"";
                 )
             ]
             .into_iter()
-            .collect()
+            .collect::<WaveformParameters>()
         )
     }
 
