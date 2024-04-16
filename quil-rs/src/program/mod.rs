@@ -1500,10 +1500,11 @@ DEFFRAME 0 \"xy\":
 
         // Asserts that serialization doesn't change on repeated attempts.
         // 100 is chosen because it should be more than sufficient to reveal an
-        //     issue and it has a negligible impact on execution speed on the test suite.
+        //     issue and it has a negligible impact on execution speed of the test suite.
         let iterations = 100;
         for _ in 0..iterations {
-            assert_eq!(program.to_quil().unwrap(), quil);
+            let new_program = Program::from_str(input).unwrap();
+            assert_eq!(new_program.to_quil().unwrap(), quil);
         }
     }
 }
