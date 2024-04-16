@@ -9,14 +9,8 @@ use crate::instruction::CalibrationSignature;
 /// signature conflicts, [`CalibrationSet`] takes the liberty of only allowing one calibration
 /// per [`CalibrationSignature`].
 ///
-/// In addition, calibration instructions are global. That is, their order or location in a
-/// program make no semantic difference. This means two program [`CalibrationSet`]s
-/// should be considered equal if they contain the same set of calibrations, regardless of
-/// order.
-///
-/// As a matter of convenience, the insertion order of calibrations is maintained. This
-/// allows for the same set of calibrations to be deterministically serialized to Quil.
-#[derive(Clone, Debug)]
+/// Calibrations maintain insertion order
+#[derive(Clone, Debug, PartialEq)]
 pub struct CalibrationSet<T> {
     // The amount of calibrations in a program tends to be small enough that a Vec is more
     // performant than a typical set.
@@ -155,26 +149,6 @@ where
     }
 }
 
-impl<T> PartialEq for CalibrationSet<T>
-where
-    T: CalibrationSignature + PartialEq,
-    for<'a> <T as CalibrationSignature>::Signature<'a>: std::hash::Hash + Eq,
-{
-    fn eq(&self, other: &Self) -> bool {
-        let self_map: std::collections::HashMap<T::Signature<'_>, &T> = self
-            .data
-            .iter()
-            .map(|element| (element.signature(), element))
-            .collect();
-        let other_map: std::collections::HashMap<T::Signature<'_>, &T> = other
-            .data
-            .iter()
-            .map(|element| (element.signature(), element))
-            .collect();
-        self_map == other_map
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -236,14 +210,14 @@ mod tests {
     }
 
     #[test]
-    fn test_equality() {
+    fn test_order_sensitive_equality() {
         let mut set1 = CalibrationSet::new();
         let mut set2 = CalibrationSet::new();
         let calib1 = TestCalibration::new("1", None);
         let calib2 = TestCalibration::new("2", None);
         set1.extend(vec![calib1.clone(), calib2.clone()]);
         set2.extend(vec![calib2, calib1]); // Reverse order
-        assert_eq!(set1, set2); // They should be equal
+        assert_ne!(set1, set2)
     }
 
     #[test]

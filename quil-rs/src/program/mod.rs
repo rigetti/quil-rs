@@ -1397,10 +1397,7 @@ CNOT 2 3";
         let is_global_state_instruction = move |i: &Instruction| -> bool {
             matches!(
                 i,
-                Instruction::CalibrationDefinition(_)
-                    | Instruction::MeasureCalibrationDefinition(_)
-                    | Instruction::WaveformDefinition(_)
-                    | Instruction::GateDefinition(_)
+                |Instruction::WaveformDefinition(_)| Instruction::GateDefinition(_)
                     | Instruction::FrameDefinition(_)
             )
         };
@@ -1414,9 +1411,21 @@ CNOT 2 3";
             .into_iter()
             .rev()
             .collect();
-        program2.add_instructions(global_instructions);
-
+        program2.add_instructions(global_instructions.clone());
         assert_eq!(program, program2);
+
+        // Create another copy of the program with non-global instructions inserted in reverse order.
+        // This should not be equal to the original program.
+        let mut program3 = Program::from_instructions(
+            program
+                .filter_instructions(|i| !is_global_state_instruction(i))
+                .into_instructions()
+                .into_iter()
+                .rev()
+                .collect(),
+        );
+        program3.add_instructions(global_instructions);
+        assert!(program != program3)
     }
 
     #[test]
