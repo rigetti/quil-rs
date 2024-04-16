@@ -1,3 +1,9 @@
+## 0.24.1-rc.0
+
+### Fixes
+
+- Program equality is sensitive to the order of calibration instructions. (#357)
+
 ## 0.24.0
 
 ### Breaking Changes
