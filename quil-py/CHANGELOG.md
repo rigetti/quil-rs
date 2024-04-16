@@ -1,3 +1,13 @@
+## 0.9.0-rc.0
+
+### Breaking Changes
+
+- Program instruction iteration and serialization is deterministic. (#355)
+
+### Fixes
+
+- Program equality is sensitive to the order of calibration instructions. (#357)
+
 ## 0.8.1-rc.0
 
 ### Fixes
