@@ -1,8 +1,9 @@
 use std::{
-    collections::{BTreeMap, HashMap, HashSet},
+    collections::{HashMap, HashSet},
     str::FromStr,
 };
 
+use indexmap::IndexMap;
 use numpy::{PyArray2, ToPyArray};
 use quil_rs::{
     instruction::{Instruction, QubitPlaceholder, TargetPlaceholder, Waveform},
@@ -114,7 +115,7 @@ impl PyProgram {
     }
 
     #[getter]
-    pub fn waveforms(&self, py: Python<'_>) -> PyResult<BTreeMap<String, PyWaveform>> {
+    pub fn waveforms(&self, py: Python<'_>) -> PyResult<IndexMap<String, PyWaveform>> {
         self.as_inner().waveforms.to_python(py)
     }
 
@@ -122,9 +123,9 @@ impl PyProgram {
     pub fn set_waveforms(
         &mut self,
         py: Python<'_>,
-        waveforms: BTreeMap<String, PyWaveform>,
+        waveforms: IndexMap<String, PyWaveform>,
     ) -> PyResult<()> {
-        self.as_inner_mut().waveforms = BTreeMap::<String, Waveform>::py_try_from(py, &waveforms)?;
+        self.as_inner_mut().waveforms = IndexMap::<String, Waveform>::py_try_from(py, &waveforms)?;
         Ok(())
     }
 
@@ -140,7 +141,7 @@ impl PyProgram {
     }
 
     #[getter]
-    pub fn memory_regions(&self, py: Python<'_>) -> PyResult<BTreeMap<String, PyMemoryRegion>> {
+    pub fn memory_regions(&self, py: Python<'_>) -> PyResult<IndexMap<String, PyMemoryRegion>> {
         self.as_inner()
             .memory_regions
             .iter()
@@ -152,10 +153,10 @@ impl PyProgram {
     pub fn set_memory_regions(
         &mut self,
         py: Python<'_>,
-        memory_regions: BTreeMap<String, PyMemoryRegion>,
+        memory_regions: IndexMap<String, PyMemoryRegion>,
     ) -> PyResult<()> {
         self.as_inner_mut().memory_regions =
-            BTreeMap::<String, MemoryRegion>::py_try_from(py, &memory_regions)?;
+            IndexMap::<String, MemoryRegion>::py_try_from(py, &memory_regions)?;
         Ok(())
     }
 
@@ -175,7 +176,7 @@ impl PyProgram {
     }
 
     #[getter]
-    pub fn gate_definitions(&self, py: Python<'_>) -> PyResult<BTreeMap<String, PyGateDefinition>> {
+    pub fn gate_definitions(&self, py: Python<'_>) -> PyResult<IndexMap<String, PyGateDefinition>> {
         self.as_inner()
             .gate_definitions
             .iter()
@@ -184,7 +185,7 @@ impl PyProgram {
     }
 
     #[setter]
-    pub fn set_gate_definitions(&mut self, definitions: BTreeMap<String, PyGateDefinition>) {
+    pub fn set_gate_definitions(&mut self, definitions: IndexMap<String, PyGateDefinition>) {
         self.as_inner_mut().gate_definitions = definitions
             .into_iter()
             .map(|(name, gate_def)| (name, gate_def.into_inner()))

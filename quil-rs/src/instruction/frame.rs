@@ -1,5 +1,6 @@
-use std::{collections::HashMap, str::FromStr};
+use std::str::FromStr;
 
+use indexmap::IndexMap;
 use nom_locate::LocatedSpan;
 
 use super::{MemoryReference, Qubit, QuotedString, WaveformInvocation};
@@ -30,12 +31,12 @@ impl Quil for AttributeValue {
     }
 }
 
-pub type FrameAttributes = HashMap<String, AttributeValue>;
+pub type FrameAttributes = IndexMap<String, AttributeValue>;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FrameDefinition {
     pub identifier: FrameIdentifier,
-    pub attributes: HashMap<String, AttributeValue>,
+    pub attributes: FrameAttributes,
 }
 
 impl FrameDefinition {

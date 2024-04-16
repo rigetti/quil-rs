@@ -64,7 +64,7 @@ pub use self::pragma::{Include, Pragma, PragmaArgument};
 pub use self::qubit::{Qubit, QubitPlaceholder};
 pub use self::reset::Reset;
 pub use self::timing::{Delay, Fence};
-pub use self::waveform::{Waveform, WaveformDefinition, WaveformInvocation};
+pub use self::waveform::{Waveform, WaveformDefinition, WaveformInvocation, WaveformParameters};
 
 #[derive(Clone, Debug, thiserror::Error, PartialEq, Eq)]
 pub enum ValidationError {

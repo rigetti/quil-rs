@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use indexmap::IndexMap;
 
 use crate::{
     expression::Expression,
@@ -79,14 +79,16 @@ mod test_waveform_definition {
     }
 }
 
+pub type WaveformParameters = IndexMap<String, Expression>;
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct WaveformInvocation {
     pub name: String,
-    pub parameters: HashMap<String, Expression>,
+    pub parameters: WaveformParameters,
 }
 
 impl WaveformInvocation {
-    pub fn new(name: String, parameters: HashMap<String, Expression>) -> Self {
+    pub fn new(name: String, parameters: WaveformParameters) -> Self {
         Self { name, parameters }
     }
 }
@@ -124,7 +126,7 @@ impl Quil for WaveformInvocation {
 
 #[cfg(test)]
 mod waveform_invocation_tests {
-    use std::collections::HashMap;
+    use super::WaveformParameters;
 
     use crate::{instruction::WaveformInvocation, quil::Quil};
 
@@ -132,7 +134,7 @@ mod waveform_invocation_tests {
     fn format_no_parameters() {
         let invocation = WaveformInvocation {
             name: "CZ".into(),
-            parameters: HashMap::new(),
+            parameters: WaveformParameters::new(),
         };
         assert_eq!(invocation.to_quil_or_debug(), "CZ".to_string());
     }

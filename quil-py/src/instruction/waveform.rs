@@ -1,8 +1,8 @@
-use std::collections::HashMap;
+use indexmap::IndexMap;
 
 use quil_rs::{
     expression::Expression,
-    instruction::{Waveform, WaveformDefinition, WaveformInvocation},
+    instruction::{Waveform, WaveformDefinition, WaveformInvocation, WaveformParameters},
 };
 
 use rigetti_pyo3::{
@@ -65,12 +65,14 @@ impl PyWaveformDefinition {
     }
 }
 
+pub type PyWaveformParameters = IndexMap<String, PyExpression>;
+
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
     #[pyo3(subclass)]
     PyWaveformInvocation(WaveformInvocation) as "WaveformInvocation" {
         name: String => Py<PyString>,
-        parameters: HashMap<String, Expression> => HashMap<String, PyExpression>
+        parameters: WaveformParameters => PyWaveformParameters
     }
 }
 impl_repr!(PyWaveformInvocation);
@@ -80,14 +82,10 @@ impl_eq!(PyWaveformInvocation);
 #[pymethods]
 impl PyWaveformInvocation {
     #[new]
-    pub fn new(
-        py: Python<'_>,
-        name: String,
-        parameters: HashMap<String, PyExpression>,
-    ) -> PyResult<Self> {
+    pub fn new(py: Python<'_>, name: String, parameters: PyWaveformParameters) -> PyResult<Self> {
         Ok(Self(WaveformInvocation::new(
             name,
-            HashMap::<String, Expression>::py_try_from(py, &parameters)?,
+            WaveformParameters::py_try_from(py, &parameters)?,
         )))
     }
 }
