@@ -217,7 +217,7 @@ mod tests {
         let calib2 = TestCalibration::new("2", None);
         set1.extend(vec![calib1.clone(), calib2.clone()]);
         set2.extend(vec![calib2, calib1]); // Reverse order
-        assert!(set1 != set2)
+        assert_ne!(set1, set2)
     }
 
     #[test]
