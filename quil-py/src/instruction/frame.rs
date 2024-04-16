@@ -1,5 +1,6 @@
-use std::collections::BTreeMap;
 use std::hash::Hash;
+
+use indexmap::IndexMap;
 
 use quil_rs::{
     expression::Expression,
@@ -38,14 +39,14 @@ impl_to_quil!(PyAttributeValue);
 impl_hash!(PyAttributeValue);
 impl_eq!(PyAttributeValue);
 
-pub type PyFrameAttributes = BTreeMap<String, PyAttributeValue>;
+pub type PyFrameAttributes = IndexMap<String, PyAttributeValue>;
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
     #[pyo3(subclass)]
     PyFrameDefinition(FrameDefinition) as "FrameDefinition" {
         identifier: FrameIdentifier => PyFrameIdentifier,
-        attributes: BTreeMap<String, AttributeValue> => PyFrameAttributes
+        attributes: FrameAttributes => PyFrameAttributes
     }
 }
 impl_repr!(PyFrameDefinition);

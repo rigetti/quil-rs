@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::{collections::BTreeMap, str::FromStr};
+use std::str::FromStr;
 
 use nom::{
     branch::alt,
@@ -27,7 +27,7 @@ use crate::{
     instruction::{
         ArithmeticOperand, AttributeValue, BinaryOperand, ComparisonOperand, FrameIdentifier,
         GateModifier, MemoryReference, Offset, PauliGate, PauliTerm, Qubit, ScalarType, Sharing,
-        Vector, WaveformInvocation,
+        Vector, WaveformInvocation, WaveformParameters,
     },
     parser::lexer::Operator,
     token,
@@ -308,7 +308,7 @@ pub(crate) fn parse_waveform_invocation<'a>(
         token!(RParenthesis),
     ))(input)?;
     let parameter_tuples = parameter_tuples.unwrap_or_default();
-    let parameters: BTreeMap<_, _> = parameter_tuples.into_iter().collect();
+    let parameters: WaveformParameters = parameter_tuples.into_iter().collect();
 
     Ok((input, WaveformInvocation { name, parameters }))
 }
