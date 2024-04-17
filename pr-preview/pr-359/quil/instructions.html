@@ -512,13 +512,13 @@
                                 <a class="function" href="#Arithmetic.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
+                                <a class="variable" href="#Arithmetic.destination">destination</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#Arithmetic.operator">operator</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Arithmetic.source">source</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Arithmetic.destination">destination</a>
                         </li>
                 </ul>
 
@@ -608,10 +608,10 @@
                                 <a class="function" href="#BinaryLogic.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#BinaryLogic.operands">operands</a>
+                                <a class="variable" href="#BinaryLogic.operator">operator</a>
                         </li>
                         <li>
-                                <a class="variable" href="#BinaryLogic.operator">operator</a>
+                                <a class="variable" href="#BinaryLogic.operands">operands</a>
                         </li>
                 </ul>
 
@@ -788,10 +788,10 @@
                                 <a class="function" href="#Convert.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Convert.source">source</a>
+                                <a class="variable" href="#Convert.destination">destination</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Convert.destination">destination</a>
+                                <a class="variable" href="#Convert.source">source</a>
                         </li>
                 </ul>
 
@@ -842,10 +842,10 @@
                                 <a class="function" href="#UnaryLogic.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#UnaryLogic.operator">operator</a>
+                                <a class="variable" href="#UnaryLogic.operand">operand</a>
                         </li>
                         <li>
-                                <a class="variable" href="#UnaryLogic.operand">operand</a>
+                                <a class="variable" href="#UnaryLogic.operator">operator</a>
                         </li>
                 </ul>
 
@@ -878,19 +878,19 @@
                                 <a class="function" href="#Calibration.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Calibration.parameters">parameters</a>
+                                <a class="variable" href="#Calibration.qubits">qubits</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Calibration.modifiers">modifiers</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Calibration.qubits">qubits</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Calibration.instructions">instructions</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Calibration.name">name</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Calibration.parameters">parameters</a>
                         </li>
                 </ul>
 
@@ -905,16 +905,16 @@
                                 <a class="function" href="#CircuitDefinition.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#CircuitDefinition.parameters">parameters</a>
+                                <a class="variable" href="#CircuitDefinition.qubit_variables">qubit_variables</a>
                         </li>
                         <li>
                                 <a class="variable" href="#CircuitDefinition.instructions">instructions</a>
                         </li>
                         <li>
-                                <a class="variable" href="#CircuitDefinition.qubit_variables">qubit_variables</a>
+                                <a class="variable" href="#CircuitDefinition.name">name</a>
                         </li>
                         <li>
-                                <a class="variable" href="#CircuitDefinition.name">name</a>
+                                <a class="variable" href="#CircuitDefinition.parameters">parameters</a>
                         </li>
                 </ul>
 
@@ -929,13 +929,13 @@
                                 <a class="function" href="#MeasureCalibrationDefinition.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#MeasureCalibrationDefinition.instructions">instructions</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#MeasureCalibrationDefinition.parameter">parameter</a>
                         </li>
                         <li>
                                 <a class="variable" href="#MeasureCalibrationDefinition.qubit">qubit</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#MeasureCalibrationDefinition.instructions">instructions</a>
                         </li>
                 </ul>
 
@@ -950,13 +950,13 @@
                                 <a class="function" href="#Declaration.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Declaration.sharing">sharing</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#Declaration.size">size</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Declaration.name">name</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Declaration.sharing">sharing</a>
                         </li>
                 </ul>
 
@@ -971,13 +971,13 @@
                                 <a class="function" href="#Load.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Load.source">source</a>
+                                <a class="variable" href="#Load.destination">destination</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Load.offset">offset</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Load.destination">destination</a>
+                                <a class="variable" href="#Load.source">source</a>
                         </li>
                 </ul>
 
@@ -1022,13 +1022,13 @@
                                 <a class="function" href="#Store.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Store.source">source</a>
+                                <a class="variable" href="#Store.offset">offset</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Store.destination">destination</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Store.offset">offset</a>
+                                <a class="variable" href="#Store.source">source</a>
                         </li>
                 </ul>
 
@@ -1067,10 +1067,10 @@
                                 <a class="function" href="#Vector.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Vector.data_type">data_type</a>
+                                <a class="variable" href="#Vector.length">length</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Vector.length">length</a>
+                                <a class="variable" href="#Vector.data_type">data_type</a>
                         </li>
                 </ul>
 
@@ -1118,13 +1118,13 @@
                                 <a class="function" href="#Pragma.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
+                                <a class="variable" href="#Pragma.data">data</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#Pragma.name">name</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Pragma.arguments">arguments</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Pragma.data">data</a>
                         </li>
                 </ul>
 
@@ -1217,16 +1217,16 @@
                                 <a class="function" href="#Capture.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Capture.frame">frame</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Capture.waveform">waveform</a>
+                                <a class="variable" href="#Capture.memory_reference">memory_reference</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Capture.blocking">blocking</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Capture.memory_reference">memory_reference</a>
+                                <a class="variable" href="#Capture.waveform">waveform</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Capture.frame">frame</a>
                         </li>
                 </ul>
 
@@ -1241,10 +1241,10 @@
                                 <a class="function" href="#FrameDefinition.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#FrameDefinition.attributes">attributes</a>
+                                <a class="variable" href="#FrameDefinition.identifier">identifier</a>
                         </li>
                         <li>
-                                <a class="variable" href="#FrameDefinition.identifier">identifier</a>
+                                <a class="variable" href="#FrameDefinition.attributes">attributes</a>
                         </li>
                 </ul>
 
@@ -1259,10 +1259,10 @@
                                 <a class="function" href="#FrameIdentifier.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#FrameIdentifier.name">name</a>
+                                <a class="variable" href="#FrameIdentifier.qubits">qubits</a>
                         </li>
                         <li>
-                                <a class="variable" href="#FrameIdentifier.qubits">qubits</a>
+                                <a class="variable" href="#FrameIdentifier.name">name</a>
                         </li>
                 </ul>
 
@@ -1277,13 +1277,13 @@
                                 <a class="function" href="#Pulse.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
+                                <a class="variable" href="#Pulse.waveform">waveform</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#Pulse.blocking">blocking</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Pulse.frame">frame</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Pulse.waveform">waveform</a>
                         </li>
                 </ul>
 
@@ -1298,16 +1298,16 @@
                                 <a class="function" href="#RawCapture.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#RawCapture.memory_reference">memory_reference</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#RawCapture.duration">duration</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#RawCapture.frame">frame</a>
                         </li>
                         <li>
                                 <a class="variable" href="#RawCapture.blocking">blocking</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#RawCapture.memory_reference">memory_reference</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#RawCapture.duration">duration</a>
                         </li>
                 </ul>
 
@@ -1340,10 +1340,10 @@
                                 <a class="function" href="#SetPhase.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#SetPhase.frame">frame</a>
+                                <a class="variable" href="#SetPhase.phase">phase</a>
                         </li>
                         <li>
-                                <a class="variable" href="#SetPhase.phase">phase</a>
+                                <a class="variable" href="#SetPhase.frame">frame</a>
                         </li>
                 </ul>
 
@@ -1376,10 +1376,10 @@
                                 <a class="function" href="#ShiftFrequency.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#ShiftFrequency.frame">frame</a>
+                                <a class="variable" href="#ShiftFrequency.frequency">frequency</a>
                         </li>
                         <li>
-                                <a class="variable" href="#ShiftFrequency.frequency">frequency</a>
+                                <a class="variable" href="#ShiftFrequency.frame">frame</a>
                         </li>
                 </ul>
 
@@ -1469,10 +1469,10 @@
                                 <a class="variable" href="#GateDefinition.name">name</a>
                         </li>
                         <li>
-                                <a class="variable" href="#GateDefinition.specification">specification</a>
+                                <a class="variable" href="#GateDefinition.parameters">parameters</a>
                         </li>
                         <li>
-                                <a class="variable" href="#GateDefinition.parameters">parameters</a>
+                                <a class="variable" href="#GateDefinition.specification">specification</a>
                         </li>
                 </ul>
 
@@ -1574,10 +1574,10 @@
                     <a class="class" href="#PauliTerm">PauliTerm</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#PauliTerm.arguments">arguments</a>
+                                <a class="variable" href="#PauliTerm.expression">expression</a>
                         </li>
                         <li>
-                                <a class="variable" href="#PauliTerm.expression">expression</a>
+                                <a class="variable" href="#PauliTerm.arguments">arguments</a>
                         </li>
                 </ul>
 
@@ -1586,10 +1586,10 @@
                     <a class="class" href="#PauliSum">PauliSum</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#PauliSum.arguments">arguments</a>
+                                <a class="variable" href="#PauliSum.terms">terms</a>
                         </li>
                         <li>
-                                <a class="variable" href="#PauliSum.terms">terms</a>
+                                <a class="variable" href="#PauliSum.arguments">arguments</a>
                         </li>
                 </ul>
 
@@ -1619,10 +1619,10 @@
                                 <a class="function" href="#JumpWhen.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#JumpWhen.condition">condition</a>
+                                <a class="variable" href="#JumpWhen.target">target</a>
                         </li>
                         <li>
-                                <a class="variable" href="#JumpWhen.target">target</a>
+                                <a class="variable" href="#JumpWhen.condition">condition</a>
                         </li>
                 </ul>
 
@@ -1637,10 +1637,10 @@
                                 <a class="function" href="#JumpUnless.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#JumpUnless.condition">condition</a>
+                                <a class="variable" href="#JumpUnless.target">target</a>
                         </li>
                         <li>
-                                <a class="variable" href="#JumpUnless.target">target</a>
+                                <a class="variable" href="#JumpUnless.condition">condition</a>
                         </li>
                 </ul>
 
@@ -1811,10 +1811,10 @@
                                 <a class="function" href="#Delay.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Delay.frame_names">frame_names</a>
+                                <a class="variable" href="#Delay.qubits">qubits</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Delay.qubits">qubits</a>
+                                <a class="variable" href="#Delay.frame_names">frame_names</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Delay.duration">duration</a>
@@ -3993,8 +3993,7 @@ This difference is important for determining which methods are available for eac
     </div>
     <a class="headerlink" href="#Instruction.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -4009,8 +4008,9 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#Instruction.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
 
@@ -4053,8 +4053,9 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     </div>
     <a class="headerlink" href="#Arithmetic.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -4069,10 +4070,22 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#Arithmetic.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
+
+                            </div>
+                            <div id="Arithmetic.destination" class="classattr">
+                                <div class="attr variable">
+            <span class="name">destination</span><span class="annotation">: <a href="#ArithmeticOperand">quil.instructions.ArithmeticOperand</a></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Arithmetic.destination"></a>
+    
+    
 
                             </div>
                             <div id="Arithmetic.operator" class="classattr">
@@ -4093,17 +4106,6 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
         
     </div>
     <a class="headerlink" href="#Arithmetic.source"></a>
-    
-    
-
-                            </div>
-                            <div id="Arithmetic.destination" class="classattr">
-                                <div class="attr variable">
-            <span class="name">destination</span><span class="annotation">: <a href="#ArithmeticOperand">quil.instructions.ArithmeticOperand</a></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Arithmetic.destination"></a>
     
     
 
@@ -4321,8 +4323,9 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     </div>
     <a class="headerlink" href="#ArithmeticOperand.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -4337,8 +4340,9 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#ArithmeticOperand.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
 
@@ -4427,8 +4431,9 @@ attributes -- see the documentation for details.</p>
     </div>
     <a class="headerlink" href="#ArithmeticOperator.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -4443,8 +4448,9 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#ArithmeticOperator.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
 
@@ -4520,8 +4526,9 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     </div>
     <a class="headerlink" href="#BinaryLogic.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -4536,21 +4543,11 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#BinaryLogic.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
-
-                            </div>
-                            <div id="BinaryLogic.operands" class="classattr">
-                                <div class="attr variable">
-            <span class="name">operands</span><span class="annotation">: <a href="#BinaryOperands">quil.instructions.BinaryOperands</a></span>
-
-        
-    </div>
-    <a class="headerlink" href="#BinaryLogic.operands"></a>
-    
-    
 
                             </div>
                             <div id="BinaryLogic.operator" class="classattr">
@@ -4560,6 +4557,17 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
         
     </div>
     <a class="headerlink" href="#BinaryLogic.operator"></a>
+    
+    
+
+                            </div>
+                            <div id="BinaryLogic.operands" class="classattr">
+                                <div class="attr variable">
+            <span class="name">operands</span><span class="annotation">: <a href="#BinaryOperands">quil.instructions.BinaryOperands</a></span>
+
+        
+    </div>
+    <a class="headerlink" href="#BinaryLogic.operands"></a>
     
     
 
@@ -4724,8 +4732,9 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     </div>
     <a class="headerlink" href="#BinaryOperand.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -4740,8 +4749,9 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#BinaryOperand.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
 
@@ -4865,8 +4875,9 @@ attributes -- see the documentation for details.</p>
     </div>
     <a class="headerlink" href="#BinaryOperator.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -4881,8 +4892,9 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#BinaryOperator.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
 
@@ -4946,8 +4958,9 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     </div>
     <a class="headerlink" href="#Comparison.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -4962,8 +4975,9 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#Comparison.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
 
@@ -5203,8 +5217,9 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     </div>
     <a class="headerlink" href="#ComparisonOperand.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -5219,8 +5234,9 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#ComparisonOperand.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
 
@@ -5382,8 +5398,9 @@ attributes -- see the documentation for details.</p>
     </div>
     <a class="headerlink" href="#Convert.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -5398,21 +5415,11 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#Convert.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
-
-                            </div>
-                            <div id="Convert.source" class="classattr">
-                                <div class="attr variable">
-            <span class="name">source</span><span class="annotation">: <a href="#MemoryReference">quil.instructions.MemoryReference</a></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Convert.source"></a>
-    
-    
 
                             </div>
                             <div id="Convert.destination" class="classattr">
@@ -5422,6 +5429,17 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
         
     </div>
     <a class="headerlink" href="#Convert.destination"></a>
+    
+    
+
+                            </div>
+                            <div id="Convert.source" class="classattr">
+                                <div class="attr variable">
+            <span class="name">source</span><span class="annotation">: <a href="#MemoryReference">quil.instructions.MemoryReference</a></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Convert.source"></a>
     
     
 
@@ -5449,8 +5467,9 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     </div>
     <a class="headerlink" href="#Exchange.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -5465,8 +5484,9 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#Exchange.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
 
@@ -5516,8 +5536,9 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     </div>
     <a class="headerlink" href="#Move.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -5532,8 +5553,9 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#Move.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
 
@@ -5583,8 +5605,9 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     </div>
     <a class="headerlink" href="#UnaryLogic.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -5599,21 +5622,11 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#UnaryLogic.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
-
-                            </div>
-                            <div id="UnaryLogic.operator" class="classattr">
-                                <div class="attr variable">
-            <span class="name">operator</span><span class="annotation">: <a href="#UnaryOperator">quil.instructions.UnaryOperator</a></span>
-
-        
-    </div>
-    <a class="headerlink" href="#UnaryLogic.operator"></a>
-    
-    
 
                             </div>
                             <div id="UnaryLogic.operand" class="classattr">
@@ -5623,6 +5636,17 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
         
     </div>
     <a class="headerlink" href="#UnaryLogic.operand"></a>
+    
+    
+
+                            </div>
+                            <div id="UnaryLogic.operator" class="classattr">
+                                <div class="attr variable">
+            <span class="name">operator</span><span class="annotation">: <a href="#UnaryOperator">quil.instructions.UnaryOperator</a></span>
+
+        
+    </div>
+    <a class="headerlink" href="#UnaryLogic.operator"></a>
     
     
 
@@ -5711,8 +5735,9 @@ attributes -- see the documentation for details.</p>
     </div>
     <a class="headerlink" href="#UnaryOperator.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -5727,8 +5752,9 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#UnaryOperator.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
 
@@ -5780,8 +5806,9 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     </div>
     <a class="headerlink" href="#Calibration.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -5796,19 +5823,20 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#Calibration.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
 
                             </div>
-                            <div id="Calibration.parameters" class="classattr">
+                            <div id="Calibration.qubits" class="classattr">
                                 <div class="attr variable">
-            <span class="name">parameters</span><span class="annotation">: List[<a href="expression.html#Expression">quil.expression.Expression</a>]</span>
+            <span class="name">qubits</span><span class="annotation">: List[<a href="#Qubit">quil.instructions.Qubit</a>]</span>
 
         
     </div>
-    <a class="headerlink" href="#Calibration.parameters"></a>
+    <a class="headerlink" href="#Calibration.qubits"></a>
     
     
 
@@ -5820,17 +5848,6 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
         
     </div>
     <a class="headerlink" href="#Calibration.modifiers"></a>
-    
-    
-
-                            </div>
-                            <div id="Calibration.qubits" class="classattr">
-                                <div class="attr variable">
-            <span class="name">qubits</span><span class="annotation">: List[<a href="#Qubit">quil.instructions.Qubit</a>]</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Calibration.qubits"></a>
     
     
 
@@ -5853,6 +5870,17 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
         
     </div>
     <a class="headerlink" href="#Calibration.name"></a>
+    
+    
+
+                            </div>
+                            <div id="Calibration.parameters" class="classattr">
+                                <div class="attr variable">
+            <span class="name">parameters</span><span class="annotation">: List[<a href="expression.html#Expression">quil.expression.Expression</a>]</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Calibration.parameters"></a>
     
     
 
@@ -5880,8 +5908,9 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     </div>
     <a class="headerlink" href="#CircuitDefinition.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -5896,19 +5925,20 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#CircuitDefinition.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
 
                             </div>
-                            <div id="CircuitDefinition.parameters" class="classattr">
+                            <div id="CircuitDefinition.qubit_variables" class="classattr">
                                 <div class="attr variable">
-            <span class="name">parameters</span><span class="annotation">: List[str]</span>
+            <span class="name">qubit_variables</span><span class="annotation">: List[str]</span>
 
         
     </div>
-    <a class="headerlink" href="#CircuitDefinition.parameters"></a>
+    <a class="headerlink" href="#CircuitDefinition.qubit_variables"></a>
     
     
 
@@ -5924,17 +5954,6 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     
 
                             </div>
-                            <div id="CircuitDefinition.qubit_variables" class="classattr">
-                                <div class="attr variable">
-            <span class="name">qubit_variables</span><span class="annotation">: List[str]</span>
-
-        
-    </div>
-    <a class="headerlink" href="#CircuitDefinition.qubit_variables"></a>
-    
-    
-
-                            </div>
                             <div id="CircuitDefinition.name" class="classattr">
                                 <div class="attr variable">
             <span class="name">name</span><span class="annotation">: str</span>
@@ -5942,6 +5961,17 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
         
     </div>
     <a class="headerlink" href="#CircuitDefinition.name"></a>
+    
+    
+
+                            </div>
+                            <div id="CircuitDefinition.parameters" class="classattr">
+                                <div class="attr variable">
+            <span class="name">parameters</span><span class="annotation">: List[str]</span>
+
+        
+    </div>
+    <a class="headerlink" href="#CircuitDefinition.parameters"></a>
     
     
 
@@ -5969,8 +5999,9 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     </div>
     <a class="headerlink" href="#MeasureCalibrationDefinition.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -5985,21 +6016,11 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#MeasureCalibrationDefinition.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
-
-                            </div>
-                            <div id="MeasureCalibrationDefinition.instructions" class="classattr">
-                                <div class="attr variable">
-            <span class="name">instructions</span><span class="annotation">: List[<a href="#Instruction">quil.instructions.Instruction</a>]</span>
-
-        
-    </div>
-    <a class="headerlink" href="#MeasureCalibrationDefinition.instructions"></a>
-    
-    
 
                             </div>
                             <div id="MeasureCalibrationDefinition.parameter" class="classattr">
@@ -6020,6 +6041,17 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
         
     </div>
     <a class="headerlink" href="#MeasureCalibrationDefinition.qubit"></a>
+    
+    
+
+                            </div>
+                            <div id="MeasureCalibrationDefinition.instructions" class="classattr">
+                                <div class="attr variable">
+            <span class="name">instructions</span><span class="annotation">: List[<a href="#Instruction">quil.instructions.Instruction</a>]</span>
+
+        
+    </div>
+    <a class="headerlink" href="#MeasureCalibrationDefinition.instructions"></a>
     
     
 
@@ -6047,8 +6079,9 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     </div>
     <a class="headerlink" href="#Declaration.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -6063,21 +6096,11 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#Declaration.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
-
-                            </div>
-                            <div id="Declaration.sharing" class="classattr">
-                                <div class="attr variable">
-            <span class="name">sharing</span><span class="annotation">: Optional[<a href="#Sharing">quil.instructions.Sharing</a>]</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Declaration.sharing"></a>
-    
-    
 
                             </div>
                             <div id="Declaration.size" class="classattr">
@@ -6098,6 +6121,17 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
         
     </div>
     <a class="headerlink" href="#Declaration.name"></a>
+    
+    
+
+                            </div>
+                            <div id="Declaration.sharing" class="classattr">
+                                <div class="attr variable">
+            <span class="name">sharing</span><span class="annotation">: Optional[<a href="#Sharing">quil.instructions.Sharing</a>]</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Declaration.sharing"></a>
     
     
 
@@ -6125,8 +6159,9 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     </div>
     <a class="headerlink" href="#Load.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -6141,19 +6176,20 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#Load.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
 
                             </div>
-                            <div id="Load.source" class="classattr">
+                            <div id="Load.destination" class="classattr">
                                 <div class="attr variable">
-            <span class="name">source</span><span class="annotation">: str</span>
+            <span class="name">destination</span><span class="annotation">: <a href="#MemoryReference">quil.instructions.MemoryReference</a></span>
 
         
     </div>
-    <a class="headerlink" href="#Load.source"></a>
+    <a class="headerlink" href="#Load.destination"></a>
     
     
 
@@ -6169,13 +6205,13 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     
 
                             </div>
-                            <div id="Load.destination" class="classattr">
+                            <div id="Load.source" class="classattr">
                                 <div class="attr variable">
-            <span class="name">destination</span><span class="annotation">: <a href="#MemoryReference">quil.instructions.MemoryReference</a></span>
+            <span class="name">source</span><span class="annotation">: str</span>
 
         
     </div>
-    <a class="headerlink" href="#Load.destination"></a>
+    <a class="headerlink" href="#Load.source"></a>
     
     
 
@@ -6203,8 +6239,9 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     </div>
     <a class="headerlink" href="#Offset.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -6219,8 +6256,9 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#Offset.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
 
@@ -6305,8 +6343,9 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     </div>
     <a class="headerlink" href="#Store.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -6321,19 +6360,20 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#Store.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
 
                             </div>
-                            <div id="Store.source" class="classattr">
+                            <div id="Store.offset" class="classattr">
                                 <div class="attr variable">
-            <span class="name">source</span><span class="annotation">: <a href="#ArithmeticOperand">quil.instructions.ArithmeticOperand</a></span>
+            <span class="name">offset</span><span class="annotation">: <a href="#MemoryReference">quil.instructions.MemoryReference</a></span>
 
         
     </div>
-    <a class="headerlink" href="#Store.source"></a>
+    <a class="headerlink" href="#Store.offset"></a>
     
     
 
@@ -6349,13 +6389,13 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     
 
                             </div>
-                            <div id="Store.offset" class="classattr">
+                            <div id="Store.source" class="classattr">
                                 <div class="attr variable">
-            <span class="name">offset</span><span class="annotation">: <a href="#MemoryReference">quil.instructions.MemoryReference</a></span>
+            <span class="name">source</span><span class="annotation">: <a href="#ArithmeticOperand">quil.instructions.ArithmeticOperand</a></span>
 
         
     </div>
-    <a class="headerlink" href="#Store.offset"></a>
+    <a class="headerlink" href="#Store.source"></a>
     
     
 
@@ -6444,8 +6484,9 @@ attributes -- see the documentation for details.</p>
     </div>
     <a class="headerlink" href="#ScalarType.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -6460,8 +6501,9 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#ScalarType.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
 
@@ -6537,8 +6579,9 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     </div>
     <a class="headerlink" href="#Vector.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -6553,21 +6596,11 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#Vector.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
-
-                            </div>
-                            <div id="Vector.data_type" class="classattr">
-                                <div class="attr variable">
-            <span class="name">data_type</span><span class="annotation">: <a href="#ScalarType">quil.instructions.ScalarType</a></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Vector.data_type"></a>
-    
-    
 
                             </div>
                             <div id="Vector.length" class="classattr">
@@ -6577,6 +6610,17 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
         
     </div>
     <a class="headerlink" href="#Vector.length"></a>
+    
+    
+
+                            </div>
+                            <div id="Vector.data_type" class="classattr">
+                                <div class="attr variable">
+            <span class="name">data_type</span><span class="annotation">: <a href="#ScalarType">quil.instructions.ScalarType</a></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Vector.data_type"></a>
     
     
 
@@ -6604,8 +6648,9 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     </div>
     <a class="headerlink" href="#Measurement.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -6620,8 +6665,9 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#Measurement.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
 
@@ -6671,8 +6717,9 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     </div>
     <a class="headerlink" href="#Include.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -6687,8 +6734,9 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#Include.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
 
@@ -6727,8 +6775,9 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     </div>
     <a class="headerlink" href="#Pragma.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -6743,10 +6792,22 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#Pragma.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
+
+                            </div>
+                            <div id="Pragma.data" class="classattr">
+                                <div class="attr variable">
+            <span class="name">data</span><span class="annotation">: Optional[str]</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Pragma.data"></a>
+    
+    
 
                             </div>
                             <div id="Pragma.name" class="classattr">
@@ -6771,17 +6832,6 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     
 
                             </div>
-                            <div id="Pragma.data" class="classattr">
-                                <div class="attr variable">
-            <span class="name">data</span><span class="annotation">: Optional[str]</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Pragma.data"></a>
-    
-    
-
-                            </div>
                 </section>
                 <section id="PragmaArgument">
                     <div class="attr class">
@@ -6793,7 +6843,9 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     </div>
     <a class="headerlink" href="#PragmaArgument"></a>
     
-            <div class="docstring"><h1 id="variants">Variants:</h1>
+            <div class="docstring"><p>A PRAGMA argument.</p>
+
+<p>Variants:</p>
 
 <ul>
 <li><code>identifier</code>: A Pragma argument defined by a Quil identifier</li>
@@ -6940,8 +6992,9 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     </div>
     <a class="headerlink" href="#PragmaArgument.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -6956,8 +7009,9 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#PragmaArgument.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
 
@@ -7122,8 +7176,9 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     </div>
     <a class="headerlink" href="#AttributeValue.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -7138,8 +7193,9 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#AttributeValue.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
 
@@ -7167,8 +7223,9 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     </div>
     <a class="headerlink" href="#Capture.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -7183,30 +7240,20 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#Capture.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
 
                             </div>
-                            <div id="Capture.frame" class="classattr">
+                            <div id="Capture.memory_reference" class="classattr">
                                 <div class="attr variable">
-            <span class="name">frame</span><span class="annotation">: <a href="#FrameIdentifier">quil.instructions.FrameIdentifier</a></span>
+            <span class="name">memory_reference</span><span class="annotation">: <a href="#MemoryReference">quil.instructions.MemoryReference</a></span>
 
         
     </div>
-    <a class="headerlink" href="#Capture.frame"></a>
-    
-    
-
-                            </div>
-                            <div id="Capture.waveform" class="classattr">
-                                <div class="attr variable">
-            <span class="name">waveform</span><span class="annotation">: <a href="#WaveformInvocation">quil.instructions.WaveformInvocation</a></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Capture.waveform"></a>
+    <a class="headerlink" href="#Capture.memory_reference"></a>
     
     
 
@@ -7222,13 +7269,24 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     
 
                             </div>
-                            <div id="Capture.memory_reference" class="classattr">
+                            <div id="Capture.waveform" class="classattr">
                                 <div class="attr variable">
-            <span class="name">memory_reference</span><span class="annotation">: <a href="#MemoryReference">quil.instructions.MemoryReference</a></span>
+            <span class="name">waveform</span><span class="annotation">: <a href="#WaveformInvocation">quil.instructions.WaveformInvocation</a></span>
 
         
     </div>
-    <a class="headerlink" href="#Capture.memory_reference"></a>
+    <a class="headerlink" href="#Capture.waveform"></a>
+    
+    
+
+                            </div>
+                            <div id="Capture.frame" class="classattr">
+                                <div class="attr variable">
+            <span class="name">frame</span><span class="annotation">: <a href="#FrameIdentifier">quil.instructions.FrameIdentifier</a></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Capture.frame"></a>
     
     
 
@@ -7256,8 +7314,9 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     </div>
     <a class="headerlink" href="#FrameDefinition.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -7272,21 +7331,11 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#FrameDefinition.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
-
-                            </div>
-                            <div id="FrameDefinition.attributes" class="classattr">
-                                <div class="attr variable">
-            <span class="name">attributes</span><span class="annotation">: Dict[str, <a href="#AttributeValue">quil.instructions.AttributeValue</a>]</span>
-
-        
-    </div>
-    <a class="headerlink" href="#FrameDefinition.attributes"></a>
-    
-    
 
                             </div>
                             <div id="FrameDefinition.identifier" class="classattr">
@@ -7296,6 +7345,17 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
         
     </div>
     <a class="headerlink" href="#FrameDefinition.identifier"></a>
+    
+    
+
+                            </div>
+                            <div id="FrameDefinition.attributes" class="classattr">
+                                <div class="attr variable">
+            <span class="name">attributes</span><span class="annotation">: Dict[str, <a href="#AttributeValue">quil.instructions.AttributeValue</a>]</span>
+
+        
+    </div>
+    <a class="headerlink" href="#FrameDefinition.attributes"></a>
     
     
 
@@ -7323,8 +7383,9 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     </div>
     <a class="headerlink" href="#FrameIdentifier.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -7339,21 +7400,11 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#FrameIdentifier.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
-
-                            </div>
-                            <div id="FrameIdentifier.name" class="classattr">
-                                <div class="attr variable">
-            <span class="name">name</span><span class="annotation">: str</span>
-
-        
-    </div>
-    <a class="headerlink" href="#FrameIdentifier.name"></a>
-    
-    
 
                             </div>
                             <div id="FrameIdentifier.qubits" class="classattr">
@@ -7363,6 +7414,17 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
         
     </div>
     <a class="headerlink" href="#FrameIdentifier.qubits"></a>
+    
+    
+
+                            </div>
+                            <div id="FrameIdentifier.name" class="classattr">
+                                <div class="attr variable">
+            <span class="name">name</span><span class="annotation">: str</span>
+
+        
+    </div>
+    <a class="headerlink" href="#FrameIdentifier.name"></a>
     
     
 
@@ -7390,8 +7452,9 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     </div>
     <a class="headerlink" href="#Pulse.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -7406,10 +7469,22 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#Pulse.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
+
+                            </div>
+                            <div id="Pulse.waveform" class="classattr">
+                                <div class="attr variable">
+            <span class="name">waveform</span><span class="annotation">: <a href="#WaveformInvocation">quil.instructions.WaveformInvocation</a></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Pulse.waveform"></a>
+    
+    
 
                             </div>
                             <div id="Pulse.blocking" class="classattr">
@@ -7430,17 +7505,6 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
         
     </div>
     <a class="headerlink" href="#Pulse.frame"></a>
-    
-    
-
-                            </div>
-                            <div id="Pulse.waveform" class="classattr">
-                                <div class="attr variable">
-            <span class="name">waveform</span><span class="annotation">: <a href="#WaveformInvocation">quil.instructions.WaveformInvocation</a></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Pulse.waveform"></a>
     
     
 
@@ -7468,8 +7532,9 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     </div>
     <a class="headerlink" href="#RawCapture.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -7484,32 +7549,11 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#RawCapture.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
-
-                            </div>
-                            <div id="RawCapture.memory_reference" class="classattr">
-                                <div class="attr variable">
-            <span class="name">memory_reference</span><span class="annotation">: <a href="#MemoryReference">quil.instructions.MemoryReference</a></span>
-
-        
-    </div>
-    <a class="headerlink" href="#RawCapture.memory_reference"></a>
-    
-    
-
-                            </div>
-                            <div id="RawCapture.duration" class="classattr">
-                                <div class="attr variable">
-            <span class="name">duration</span><span class="annotation">: <a href="expression.html#Expression">quil.expression.Expression</a></span>
-
-        
-    </div>
-    <a class="headerlink" href="#RawCapture.duration"></a>
-    
-    
 
                             </div>
                             <div id="RawCapture.frame" class="classattr">
@@ -7530,6 +7574,28 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
         
     </div>
     <a class="headerlink" href="#RawCapture.blocking"></a>
+    
+    
+
+                            </div>
+                            <div id="RawCapture.memory_reference" class="classattr">
+                                <div class="attr variable">
+            <span class="name">memory_reference</span><span class="annotation">: <a href="#MemoryReference">quil.instructions.MemoryReference</a></span>
+
+        
+    </div>
+    <a class="headerlink" href="#RawCapture.memory_reference"></a>
+    
+    
+
+                            </div>
+                            <div id="RawCapture.duration" class="classattr">
+                                <div class="attr variable">
+            <span class="name">duration</span><span class="annotation">: <a href="expression.html#Expression">quil.expression.Expression</a></span>
+
+        
+    </div>
+    <a class="headerlink" href="#RawCapture.duration"></a>
     
     
 
@@ -7557,8 +7623,9 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     </div>
     <a class="headerlink" href="#SetFrequency.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -7573,8 +7640,9 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#SetFrequency.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
 
@@ -7624,8 +7692,9 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     </div>
     <a class="headerlink" href="#SetPhase.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -7640,21 +7709,11 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#SetPhase.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
-
-                            </div>
-                            <div id="SetPhase.frame" class="classattr">
-                                <div class="attr variable">
-            <span class="name">frame</span><span class="annotation">: <a href="#FrameIdentifier">quil.instructions.FrameIdentifier</a></span>
-
-        
-    </div>
-    <a class="headerlink" href="#SetPhase.frame"></a>
-    
-    
 
                             </div>
                             <div id="SetPhase.phase" class="classattr">
@@ -7664,6 +7723,17 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
         
     </div>
     <a class="headerlink" href="#SetPhase.phase"></a>
+    
+    
+
+                            </div>
+                            <div id="SetPhase.frame" class="classattr">
+                                <div class="attr variable">
+            <span class="name">frame</span><span class="annotation">: <a href="#FrameIdentifier">quil.instructions.FrameIdentifier</a></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SetPhase.frame"></a>
     
     
 
@@ -7691,8 +7761,9 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     </div>
     <a class="headerlink" href="#SetScale.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -7707,8 +7778,9 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#SetScale.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
 
@@ -7758,8 +7830,9 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     </div>
     <a class="headerlink" href="#ShiftFrequency.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -7774,21 +7847,11 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#ShiftFrequency.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
-
-                            </div>
-                            <div id="ShiftFrequency.frame" class="classattr">
-                                <div class="attr variable">
-            <span class="name">frame</span><span class="annotation">: <a href="#FrameIdentifier">quil.instructions.FrameIdentifier</a></span>
-
-        
-    </div>
-    <a class="headerlink" href="#ShiftFrequency.frame"></a>
-    
-    
 
                             </div>
                             <div id="ShiftFrequency.frequency" class="classattr">
@@ -7798,6 +7861,17 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
         
     </div>
     <a class="headerlink" href="#ShiftFrequency.frequency"></a>
+    
+    
+
+                            </div>
+                            <div id="ShiftFrequency.frame" class="classattr">
+                                <div class="attr variable">
+            <span class="name">frame</span><span class="annotation">: <a href="#FrameIdentifier">quil.instructions.FrameIdentifier</a></span>
+
+        
+    </div>
+    <a class="headerlink" href="#ShiftFrequency.frame"></a>
     
     
 
@@ -7825,8 +7899,9 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     </div>
     <a class="headerlink" href="#ShiftPhase.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -7841,8 +7916,9 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#ShiftPhase.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
 
@@ -7892,8 +7968,9 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     </div>
     <a class="headerlink" href="#SwapPhases.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -7908,8 +7985,9 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#SwapPhases.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
 
@@ -7959,8 +8037,9 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     </div>
     <a class="headerlink" href="#Gate.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -7975,8 +8054,9 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#Gate.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
 
@@ -8115,8 +8195,9 @@ gate is unknown, or if there are an unexpected number of parameters.</p>
     </div>
     <a class="headerlink" href="#GateDefinition.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -8131,8 +8212,9 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#GateDefinition.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
 
@@ -8148,17 +8230,6 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     
 
                             </div>
-                            <div id="GateDefinition.specification" class="classattr">
-                                <div class="attr variable">
-            <span class="name">specification</span><span class="annotation">: <a href="#GateSpecification">quil.instructions.GateSpecification</a></span>
-
-        
-    </div>
-    <a class="headerlink" href="#GateDefinition.specification"></a>
-    
-    
-
-                            </div>
                             <div id="GateDefinition.parameters" class="classattr">
                                 <div class="attr variable">
             <span class="name">parameters</span><span class="annotation">: List[str]</span>
@@ -8166,6 +8237,17 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
         
     </div>
     <a class="headerlink" href="#GateDefinition.parameters"></a>
+    
+    
+
+                            </div>
+                            <div id="GateDefinition.specification" class="classattr">
+                                <div class="attr variable">
+            <span class="name">specification</span><span class="annotation">: <a href="#GateSpecification">quil.instructions.GateSpecification</a></span>
+
+        
+    </div>
+    <a class="headerlink" href="#GateDefinition.specification"></a>
     
     
 
@@ -8254,8 +8336,9 @@ attributes -- see the documentation for details.</p>
     </div>
     <a class="headerlink" href="#GateModifier.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -8270,8 +8353,9 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#GateModifier.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
 
@@ -8328,7 +8412,7 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
 <h1 id="variants">Variants:</h1>
 
 <ul>
-<li><code>matrix</code>: A gate specificied by a matrix of <code>Expression</code>s representing a unitary operation.</li>
+<li><code>matrix</code>: A gate specified by a matrix of <code>Expression</code>s representing a unitary operation.</li>
 <li><code>permutation</code>: A gate specified by a vector of integers that defines a permutation.</li>
 </ul>
 
@@ -8524,8 +8608,9 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     </div>
     <a class="headerlink" href="#GateSpecification.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -8540,8 +8625,9 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#GateSpecification.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
 
@@ -8630,8 +8716,7 @@ attributes -- see the documentation for details.</p>
     </div>
     <a class="headerlink" href="#PauliGate.parse"></a>
     
-            <div class="docstring"><p>Parses a <code><a href="#PauliGate">PauliGate</a></code> from a string. Raises a <code>ParseEnumError</code> if the
-string isn't a valid Pauli word.</p>
+            <div class="docstring"><p>Parses a <code><a href="#PauliGate">PauliGate</a></code> from a string. Raises a <code>ParseEnumError</code> if the string isn't a valid Pauli word.</p>
 </div>
 
 
@@ -8697,17 +8782,6 @@ string isn't a valid Pauli word.</p>
     
     
 
-                            <div id="PauliTerm.arguments" class="classattr">
-                                <div class="attr variable">
-            <span class="name">arguments</span><span class="annotation">: List[Tuple[<a href="#PauliGate">quil.instructions.PauliGate</a>, str]]</span>
-
-        
-    </div>
-    <a class="headerlink" href="#PauliTerm.arguments"></a>
-    
-    
-
-                            </div>
                             <div id="PauliTerm.expression" class="classattr">
                                 <div class="attr variable">
             <span class="name">expression</span><span class="annotation">: <a href="expression.html#Expression">quil.expression.Expression</a></span>
@@ -8715,6 +8789,17 @@ string isn't a valid Pauli word.</p>
         
     </div>
     <a class="headerlink" href="#PauliTerm.expression"></a>
+    
+    
+
+                            </div>
+                            <div id="PauliTerm.arguments" class="classattr">
+                                <div class="attr variable">
+            <span class="name">arguments</span><span class="annotation">: List[Tuple[<a href="#PauliGate">quil.instructions.PauliGate</a>, str]]</span>
+
+        
+    </div>
+    <a class="headerlink" href="#PauliTerm.arguments"></a>
     
     
 
@@ -8732,17 +8817,6 @@ string isn't a valid Pauli word.</p>
     
     
 
-                            <div id="PauliSum.arguments" class="classattr">
-                                <div class="attr variable">
-            <span class="name">arguments</span><span class="annotation">: List[str]</span>
-
-        
-    </div>
-    <a class="headerlink" href="#PauliSum.arguments"></a>
-    
-    
-
-                            </div>
                             <div id="PauliSum.terms" class="classattr">
                                 <div class="attr variable">
             <span class="name">terms</span><span class="annotation">: List[<a href="#PauliTerm">quil.instructions.PauliTerm</a>]</span>
@@ -8750,6 +8824,17 @@ string isn't a valid Pauli word.</p>
         
     </div>
     <a class="headerlink" href="#PauliSum.terms"></a>
+    
+    
+
+                            </div>
+                            <div id="PauliSum.arguments" class="classattr">
+                                <div class="attr variable">
+            <span class="name">arguments</span><span class="annotation">: List[str]</span>
+
+        
+    </div>
+    <a class="headerlink" href="#PauliSum.arguments"></a>
     
     
 
@@ -8777,8 +8862,9 @@ string isn't a valid Pauli word.</p>
     </div>
     <a class="headerlink" href="#Jump.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -8793,8 +8879,9 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#Jump.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
 
@@ -8833,8 +8920,9 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     </div>
     <a class="headerlink" href="#JumpWhen.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -8849,21 +8937,11 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#JumpWhen.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
-
-                            </div>
-                            <div id="JumpWhen.condition" class="classattr">
-                                <div class="attr variable">
-            <span class="name">condition</span><span class="annotation">: <a href="#MemoryReference">quil.instructions.MemoryReference</a></span>
-
-        
-    </div>
-    <a class="headerlink" href="#JumpWhen.condition"></a>
-    
-    
 
                             </div>
                             <div id="JumpWhen.target" class="classattr">
@@ -8873,6 +8951,17 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
         
     </div>
     <a class="headerlink" href="#JumpWhen.target"></a>
+    
+    
+
+                            </div>
+                            <div id="JumpWhen.condition" class="classattr">
+                                <div class="attr variable">
+            <span class="name">condition</span><span class="annotation">: <a href="#MemoryReference">quil.instructions.MemoryReference</a></span>
+
+        
+    </div>
+    <a class="headerlink" href="#JumpWhen.condition"></a>
     
     
 
@@ -8900,8 +8989,9 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     </div>
     <a class="headerlink" href="#JumpUnless.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -8916,21 +9006,11 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#JumpUnless.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
-
-                            </div>
-                            <div id="JumpUnless.condition" class="classattr">
-                                <div class="attr variable">
-            <span class="name">condition</span><span class="annotation">: <a href="#MemoryReference">quil.instructions.MemoryReference</a></span>
-
-        
-    </div>
-    <a class="headerlink" href="#JumpUnless.condition"></a>
-    
-    
 
                             </div>
                             <div id="JumpUnless.target" class="classattr">
@@ -8940,6 +9020,17 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
         
     </div>
     <a class="headerlink" href="#JumpUnless.target"></a>
+    
+    
+
+                            </div>
+                            <div id="JumpUnless.condition" class="classattr">
+                                <div class="attr variable">
+            <span class="name">condition</span><span class="annotation">: <a href="#MemoryReference">quil.instructions.MemoryReference</a></span>
+
+        
+    </div>
+    <a class="headerlink" href="#JumpUnless.condition"></a>
     
     
 
@@ -8967,8 +9058,9 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     </div>
     <a class="headerlink" href="#Label.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -8983,8 +9075,9 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#Label.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
 
@@ -9158,8 +9251,9 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     </div>
     <a class="headerlink" href="#Target.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -9174,8 +9268,9 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#Target.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
 
@@ -9191,8 +9286,7 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     </div>
     <a class="headerlink" href="#TargetPlaceholder"></a>
     
-            <div class="docstring"><p>A placeholder target that must be assigned a fixed name before creating a program
-with valid quil.</p>
+            <div class="docstring"><p>A placeholder target that must be assigned a fixed name before creating a program with valid quil.</p>
 
 <p>See <code><a href="program.html">quil.program</a>.Program#resolve_placeholders</code> for more information.</p>
 </div>
@@ -9232,8 +9326,9 @@ with valid quil.</p>
     </div>
     <a class="headerlink" href="#MemoryReference.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -9248,8 +9343,9 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#MemoryReference.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
 
@@ -9264,8 +9360,9 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     </div>
     <a class="headerlink" href="#MemoryReference.parse"></a>
     
-            <div class="docstring"><p>Parses a <code><a href="#MemoryReference">MemoryReference</a></code> from a string. Raises a <code>ParseMemoryReference</code> error if the
-string isn't a valid Quil memory reference.</p>
+            <div class="docstring"><p>Parses a <code><a href="#MemoryReference">MemoryReference</a></code> from a string.</p>
+
+<p>Raises a <code>ParseMemoryReference</code> error if the string isn't a valid Quil memory reference.</p>
 </div>
 
 
@@ -9303,7 +9400,7 @@ string isn't a valid Quil memory reference.</p>
     </div>
     <a class="headerlink" href="#Qubit"></a>
     
-            <div class="docstring"><p>A Qubit</p>
+            <div class="docstring"><p>A Qubit.</p>
 
 <h1 id="variants">Variants:</h1>
 
@@ -9504,8 +9601,9 @@ string isn't a valid Quil memory reference.</p>
     </div>
     <a class="headerlink" href="#Qubit.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -9520,8 +9618,9 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#Qubit.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
 
@@ -9537,8 +9636,9 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     </div>
     <a class="headerlink" href="#QubitPlaceholder"></a>
     
-            <div class="docstring"><p>A qubit that can be used as a placeholder. Must be resolved before converting
-a program to valid Quil. See <code><a href="program.html">quil.program</a>.Program#resolve_placeholders</code>.</p>
+            <div class="docstring"><p>A qubit that can be used as a placeholder.</p>
+
+<p>Placeholders must be resolved before converting a program to valid Quil. See <code><a href="program.html">quil.program</a>.Program#resolve_placeholders</code>.</p>
 </div>
 
 
@@ -9565,8 +9665,9 @@ a program to valid Quil. See <code><a href="program.html">quil.program</a>.Progr
     </div>
     <a class="headerlink" href="#Reset.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -9581,8 +9682,9 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#Reset.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
 
@@ -9621,8 +9723,9 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     </div>
     <a class="headerlink" href="#Delay.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -9637,21 +9740,11 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#Delay.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
-
-                            </div>
-                            <div id="Delay.frame_names" class="classattr">
-                                <div class="attr variable">
-            <span class="name">frame_names</span><span class="annotation">: List[str]</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Delay.frame_names"></a>
-    
-    
 
                             </div>
                             <div id="Delay.qubits" class="classattr">
@@ -9661,6 +9754,17 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
         
     </div>
     <a class="headerlink" href="#Delay.qubits"></a>
+    
+    
+
+                            </div>
+                            <div id="Delay.frame_names" class="classattr">
+                                <div class="attr variable">
+            <span class="name">frame_names</span><span class="annotation">: List[str]</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Delay.frame_names"></a>
     
     
 
@@ -9699,8 +9803,9 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     </div>
     <a class="headerlink" href="#Fence.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -9715,8 +9820,9 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#Fence.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
 
@@ -9790,8 +9896,9 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     </div>
     <a class="headerlink" href="#WaveformDefinition.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -9806,8 +9913,9 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#WaveformDefinition.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
 
@@ -9857,8 +9965,9 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     </div>
     <a class="headerlink" href="#WaveformInvocation.to_quil"></a>
     
-            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string. Raises
-an exception if the instruction can't be converted to valid Quil.</p>
+            <div class="docstring"><p>Attempt to convert the instruction to a valid Quil string.</p>
+
+<p>Raises an exception if the instruction can't be converted to valid Quil.</p>
 </div>
 
 
@@ -9873,8 +9982,9 @@ an exception if the instruction can't be converted to valid Quil.</p>
     </div>
     <a class="headerlink" href="#WaveformInvocation.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>Convert the instruction to a Quil string. If any part of the instruction can't
-be converted to valid Quil, it will be printed in a human-readable debug format.</p>
+            <div class="docstring"><p>Convert the instruction to a Quil string.</p>
+
+<p>If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.</p>
 </div>
 
 
@@ -9912,7 +10022,7 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     </div>
     <a class="headerlink" href="#GateError"></a>
     
-            <div class="docstring"><p>An error that may occur when performing operations on a <code><a href="#Gate">Gate</a></code></p>
+            <div class="docstring"><p>An error that may occur when performing operations on a <code><a href="#Gate">Gate</a></code>.</p>
 </div>
 
 
@@ -9942,7 +10052,7 @@ be converted to valid Quil, it will be printed in a human-readable debug format.
     </div>
     <a class="headerlink" href="#ParseMemoryReferenceError"></a>
     
-            <div class="docstring"><p>Errors that may occur while parsing a <code><a href="#MemoryReference">MemoryReference</a></code></p>
+            <div class="docstring"><p>Errors that may occur while parsing a <code><a href="#MemoryReference">MemoryReference</a></code>.</p>
 </div>
 
 
