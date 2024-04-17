@@ -6,6 +6,8 @@ use rigetti_pyo3::{
     impl_repr, py_wrap_error, py_wrap_type, pyo3::prelude::*, wrap_error, PyWrapper,
 };
 
+use crate::impl_eq;
+
 wrap_error!(RustComputedScheduleError(ComputedScheduleError));
 py_wrap_error!(
     quil,
@@ -14,10 +16,13 @@ py_wrap_error!(
     PyValueError
 );
 py_wrap_type! {
+    #[pyo3(subclass)]
+    #[derive(Debug, PartialEq)]
     PyScheduleSeconds(ScheduleSeconds) as "ScheduleSeconds"
 }
 
 impl_repr!(PyScheduleSeconds);
+impl_eq!(PyScheduleSeconds);
 
 #[pymethods]
 impl PyScheduleSeconds {
@@ -35,10 +40,13 @@ impl PyScheduleSeconds {
 }
 
 py_wrap_type! {
+    #[derive(Debug, PartialEq)]
+    #[pyo3(subclass)]
     PyScheduleSecondsItem(ComputedScheduleItem<Seconds>) as "ScheduleSecondsItem"
 }
 
 impl_repr!(PyScheduleSecondsItem);
+impl_eq!(PyScheduleSecondsItem);
 
 #[pymethods]
 impl PyScheduleSecondsItem {
@@ -54,10 +62,13 @@ impl PyScheduleSecondsItem {
 }
 
 py_wrap_type! {
+    #[derive(Debug, PartialEq)]
+    #[pyo3(subclass)]
     PyTimeSpanSeconds(TimeSpan<Seconds>) as "TimeSpanSeconds"
 }
 
 impl_repr!(PyTimeSpanSeconds);
+impl_eq!(PyTimeSpanSeconds);
 
 #[pymethods]
 impl PyTimeSpanSeconds {

@@ -1,10 +1,14 @@
-use pyo3::exceptions::PyValueError;
-use quil_rs::program::analysis::{
-    BasicBlock, BasicBlockOwned, BasicBlockScheduleError, ControlFlowGraph, ControlFlowGraphOwned,
-    QubitGraph, QubitGraphError,
+use pyo3::{exceptions::PyValueError, types::PyType};
+use quil_rs::{
+    instruction::Instruction,
+    program::analysis::{
+        BasicBlock, BasicBlockOwned, BasicBlockScheduleError, ControlFlowGraph,
+        ControlFlowGraphOwned, QubitGraph, QubitGraphError,
+    },
 };
 use rigetti_pyo3::{
-    impl_repr, py_wrap_error, py_wrap_type, pyo3::prelude::*, wrap_error, PyWrapper, ToPythonError,
+    impl_repr, py_wrap_error, py_wrap_type, pyo3::prelude::*, wrap_error, PyTryFrom, PyWrapper,
+    ToPythonError,
 };
 
 use crate::instruction::{PyInstruction, PyTarget};
@@ -12,6 +16,7 @@ use crate::instruction::{PyInstruction, PyTarget};
 use super::{scheduling::PyScheduleSeconds, PyProgram};
 
 py_wrap_type! {
+    #[pyo3(subclass)]
     PyControlFlowGraph(ControlFlowGraphOwned) as "ControlFlowGraph"
 }
 
@@ -34,6 +39,7 @@ impl PyControlFlowGraph {
 }
 
 py_wrap_type! {
+    #[pyo3(subclass)]
     PyBasicBlock(BasicBlockOwned) as "BasicBlock"
 }
 impl_repr!(PyBasicBlock);
@@ -51,6 +57,12 @@ py_wrap_error!(quil, RustQubitGraphError, PyQubitGraphError, PyValueError);
 
 #[pymethods]
 impl PyBasicBlock {
+    #[new]
+    #[classmethod]
+    pub fn new(_: Py<PyType>, instance: Self) -> Self {
+        instance
+    }
+
     pub fn as_schedule_seconds(&self, program: &PyProgram) -> PyResult<PyScheduleSeconds> {
         BasicBlock::from(self.as_inner())
             .as_schedule_seconds(program.as_inner())

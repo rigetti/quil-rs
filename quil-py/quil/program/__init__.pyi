@@ -1,7 +1,8 @@
-from typing import Dict, FrozenSet, Set, final, List, Optional, Sequence, Callable
+from typing import Callable, Dict, FrozenSet, List, Optional, Sequence, Set, final
 
 import numpy as np
 from numpy.typing import NDArray
+
 from quil.instructions import (
     AttributeValue,
     Calibration,
@@ -14,12 +15,12 @@ from quil.instructions import (
     Measurement,
     MemoryReference,
     Qubit,
+    QubitPlaceholder,
     Sharing,
     Target,
+    TargetPlaceholder,
     Vector,
     Waveform,
-    TargetPlaceholder,
-    QubitPlaceholder,
 )
 
 @final
@@ -182,13 +183,11 @@ class Program:
         .. _control flow graph: https://en.wikipedia.org/wiki/Control-flow_graph
         """
 
-@final
 class BasicBlock:
     def as_schedule_seconds(self, program: Program) -> ScheduleSeconds:
         """
         Return the ``ScheduleSeconds`` representing the timing of the instructions within the block.
 
-        This schedule is computed by:
 
         * Expanding each instruction within the block using the program's calibration definitions
         * Resolving the `ScheduleSeconds` of the expanded instructions
@@ -330,7 +329,9 @@ class CalibrationSet:
         function returns the previous calibration. Otherwise, None is returned.
         """
         ...
-    def insert_measurement_calibration(self, calibration: MeasureCalibrationDefinition) -> Optional[MeasureCalibrationDefinition]:
+    def insert_measurement_calibration(
+        self, calibration: MeasureCalibrationDefinition
+    ) -> Optional[MeasureCalibrationDefinition]:
         """
         Add another ``MeasureCalibrationDefinition`` (`DEFCAL MEASURE`) to the set
 
@@ -348,12 +349,11 @@ class CalibrationSet:
         """
         ...
 
-
-@final
 class ScheduleSecondsItem:
     """
     A single item within a fixed schedule, representing a single instruction within a basic block.
     """
+
     @property
     def instruction_index(self) -> int:
         """
@@ -365,8 +365,6 @@ class ScheduleSecondsItem:
         The time span during which the instruction is scheduled.
         """
 
-
-@final
 class ControlFlowGraph:
     """
     Representation of a control flow graph (CFG) for a Quil program.
@@ -375,7 +373,7 @@ class ControlFlowGraph:
     transition between two basic blocks.
     """
 
-    def has_dynamic_control_flow(self) -> bool: 
+    def has_dynamic_control_flow(self) -> bool:
         """
         Return ``True`` if the program has dynamic control flow, i.e. contains a conditional branch instruction.
 
@@ -383,12 +381,11 @@ class ControlFlowGraph:
         non-conditional control flow among them, in which the execution order is deterministic and does not depend
         on program state. This may be a sequence of basic blocks with fixed `JUMP`s or without explicit terminators.
         """
-    def basic_blocks(self) -> List["BasicBlock"]: 
+    def basic_blocks(self) -> List["BasicBlock"]:
         """
         Return a list of all the basic blocks in the control flow graph, in order of definition.
         """
 
-@final
 class ScheduleSeconds:
     def items(self) -> List[ScheduleSecondsItem]:
         """
@@ -401,11 +398,11 @@ class ScheduleSeconds:
         This is the maximum of the end time of all the items.
         """
 
-@final
 class TimeSpanSeconds:
     """
     Representation of a time span in seconds.
     """
+
     @property
     def start(self) -> float:
         """
