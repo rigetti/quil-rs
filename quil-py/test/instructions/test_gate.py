@@ -1,5 +1,5 @@
 from quil.expression import Expression
-from quil.instructions import PauliTerm, PauliGate
+from quil.instructions import PauliGate, PauliTerm
 
 
 class TestPauliTerm:

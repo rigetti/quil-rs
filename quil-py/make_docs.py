@@ -1,10 +1,9 @@
-from pathlib import Path
 import sys
+from pathlib import Path
 
 import pdoc
 
 import quil  # noqa - we need to import quil for it to appear in sys.modules
-
 
 if __name__ == "__main__":
     print(dir(sys.modules["quil"]))

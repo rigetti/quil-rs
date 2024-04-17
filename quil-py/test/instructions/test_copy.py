@@ -1,7 +1,17 @@
 from copy import copy, deepcopy
 
 from quil.expression import Expression
-from quil.instructions import Qubit, QubitPlaceholder, FrameIdentifier, Pulse, WaveformInvocation, Instruction, Calibration, Delay
+from quil.instructions import (
+    Calibration,
+    Delay,
+    FrameIdentifier,
+    Instruction,
+    Pulse,
+    Qubit,
+    QubitPlaceholder,
+    WaveformInvocation,
+)
+
 
 def test_instruction_with_qubit():
     frame_identifier = FrameIdentifier("frame", [Qubit.from_placeholder(QubitPlaceholder())])
@@ -18,7 +28,7 @@ def test_instruction_with_qubit():
     assert pulse_deepcopy.waveform == pulse.waveform
     assert pulse_deepcopy.frame.name == pulse.frame.name
     assert pulse_deepcopy.frame.qubits != pulse.frame.qubits
-    
+
     instruction = Instruction(pulse)
     instruction_deepcopy = deepcopy(instruction)
     assert instruction_deepcopy != instruction
@@ -28,15 +38,12 @@ def test_instruction_with_duplicate_placeholders():
     placeholder = Qubit.from_placeholder(QubitPlaceholder())
 
     calibration = Calibration(
-            "MYCAL",
-            [],
-            [placeholder],
-            [
-                Instruction.from_delay(
-                    Delay(Expression.from_number(complex(0.5)), [], [placeholder])
-                )
-            ],
-            [])
+        "MYCAL",
+        [],
+        [placeholder],
+        [Instruction.from_delay(Delay(Expression.from_number(complex(0.5)), [], [placeholder]))],
+        [],
+    )
 
     calibration_copy = copy(calibration)
     assert calibration_copy == calibration

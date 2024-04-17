@@ -2,9 +2,10 @@ from copy import deepcopy
 
 import numpy as np
 
-from quil.instructions import Instruction, Gate, Qubit
 from quil.expression import Expression
+from quil.instructions import Gate, Instruction, Qubit
 from quil.program import Program
+
 
 def test_instruction_eq():
     pi_expr = Expression.from_number(complex(np.pi, 0))
@@ -24,6 +25,7 @@ def test_instruction_eq():
     assert not (rx_inst != rx_inst_copy)
     assert rx_inst != ry_inst
     assert not (rx_inst == ry_inst)
+
 
 def test_program_eq():
     p1 = Program.parse("DECLARE ro BIT\nRX(pi) 0")
