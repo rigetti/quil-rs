@@ -114,7 +114,7 @@ class Program:
         """Return a new ``Program`` containing only the instructions for which ``predicate`` returns ``True``."""
         ...
     def wrap_in_loop(
-        self, loop_count_reference: MemoryReference, start_target: Target, end_target: Target, iterations: Optional[int]
+        self, loop_count_reference: MemoryReference, start_target: Target, end_target: Target, iterations: Optional[int]=None
     ) -> "Program":
         """Return a copy of the `Program` wrapped in a loop that repeats ``iterations`` times.
 
