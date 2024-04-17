@@ -1,11 +1,11 @@
 import pickle
-import pytest
 from typing import Optional
 
+import pytest
 from syrupy.assertion import SnapshotAssertion
 
+from quil.instructions import Gate, Instruction, Jump, Qubit, QubitPlaceholder, Target, TargetPlaceholder
 from quil.program import Program
-from quil.instructions import Instruction, QubitPlaceholder, TargetPlaceholder, Gate, Qubit, Jump, Target
 
 
 def test_pickle():
@@ -52,6 +52,7 @@ def test_custom_resolver():
 
     assert program.to_quil() == "H 9\nJUMP @test\n"
 
+
 def test_single_block_control_flow_analysis():
     program = Program.parse(
         """
@@ -60,19 +61,24 @@ H 0
 CNOT 0 1
 MEASURE 0 ro[0]
 MEASURE 1 ro[1]
-""")
+"""
+    )
     assert program.get_used_qubits() == {Qubit.from_fixed(0), Qubit.from_fixed(1)}
     cfg = program.control_flow_graph()
     blocks = cfg.basic_blocks()
     assert len(blocks) == 1
-    assert blocks[0].terminator() == None
+    assert blocks[0].terminator() is None
     block_program = Program()
     block_program.add_instructions(blocks[0].instructions())
-    assert block_program.to_quil() == """H 0
+    assert (
+        block_program.to_quil()
+        == """H 0
 CNOT 0 1
 MEASURE 0 ro[0]
 MEASURE 1 ro[1]
 """
+    )
+
 
 def test_multi_block_control_flow_analysis():
     program = Program.parse(
@@ -85,7 +91,8 @@ X 0
 JUMP @start
 LABEL @end
 HALT
-""")
+"""
+    )
     assert program.get_used_qubits() == {Qubit.from_fixed(0)}
     cfg = program.control_flow_graph()
 
@@ -94,11 +101,9 @@ HALT
     blocks = cfg.basic_blocks()
     assert len(blocks) == 3
 
-def test_basic_block_fixed_schedule():
-    """
-    Test that a simple, realistic program can be scheduled as expected.
-    """
 
+def test_basic_block_fixed_schedule():
+    """Test that a simple, realistic program can be scheduled as expected."""
     program = Program.parse(
         """DEFFRAME 0 "flux_tx_cz":
     TEST: 1
@@ -138,7 +143,8 @@ DEFCAL CZ q0 q1:
 CZ 0 1
 CZ 2 3
 CZ 0 2
-""")
+"""
+    )
     cfg = program.control_flow_graph()
     blocks = cfg.basic_blocks()
     assert len(blocks) == 1
@@ -150,7 +156,7 @@ CZ 0 2
     # One for each CZ
     assert len(items) == 3
 
-    items = { item.instruction_index: item for item in items }
+    items = {item.instruction_index: item for item in items}
 
     # The first CZ should start at 0
     assert items[0].time_span.start == 0.0
@@ -162,6 +168,7 @@ CZ 0 2
     # The third CZ should start when the first and second ones end and be of the same duration
     assert items[0].time_span.start + items[0].time_span.duration == items[2].time_span.start
     assert items[0].time_span.duration == items[2].time_span.duration
+
 
 def test_filter_instructions(snapshot: SnapshotAssertion):
     input = """DECLARE foo REAL[1]

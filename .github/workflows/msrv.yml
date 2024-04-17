@@ -67,7 +67,7 @@ jobs:
     - uses: davidB/rust-cargo-make@v1
     - uses: actions/checkout@v1
     - uses: snok/install-poetry@v1
-    - name: Run quil-py tests
+    - name: Run quil-py tests, lints, and formatting checks.
       run: cargo make --cwd quil-py
 
   fmt:

@@ -269,37 +269,6 @@ pub struct BasicBlockOwned {
     terminator: BasicBlockTerminatorOwned,
 }
 
-impl BasicBlockOwned {
-    pub fn new(
-        label: Option<Target>,
-        instructions: Vec<Instruction>,
-        instruction_index_offset: usize,
-        terminator: BasicBlockTerminatorOwned,
-    ) -> Self {
-        BasicBlockOwned {
-            label,
-            instructions,
-            instruction_index_offset,
-            terminator,
-        }
-    }
-    pub fn label(&self) -> Option<&Target> {
-        self.label.as_ref()
-    }
-
-    pub fn instructions(&self) -> &[Instruction] {
-        &self.instructions
-    }
-
-    pub fn instruction_index_offset(&self) -> usize {
-        self.instruction_index_offset
-    }
-
-    pub fn terminator(&self) -> &BasicBlockTerminatorOwned {
-        &self.terminator
-    }
-}
-
 impl From<BasicBlock<'_>> for BasicBlockOwned {
     fn from(value: BasicBlock) -> Self {
         let label = value.label.cloned();
