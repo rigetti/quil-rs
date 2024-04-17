@@ -1073,15 +1073,6 @@ class ScalarType(Enum):
 
         If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
-    def __deepcopy__(self, _: Dict) -> Self:
-        """Creates and returns a deep copy of the class.
-
-        If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with
-        new placeholders so resolving them in the copy will not resolve them in the original.
-        Should be used by passing an instance of the class to ``copy.deepcopy``
-        """
-    def __copy__(self) -> Self:
-        """Returns a shallow copy of the class."""
 
 @final
 class AttributeValue:
