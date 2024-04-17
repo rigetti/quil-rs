@@ -273,7 +273,7 @@ impl PyProgram {
         loop_count_reference: PyMemoryReference,
         start_target: PyTarget,
         end_target: PyTarget,
-        iterations: u32,
+        iterations: Option<u32>,
     ) -> Self {
         PyProgram(self.as_inner().wrap_in_loop(
             loop_count_reference.into_inner(),
