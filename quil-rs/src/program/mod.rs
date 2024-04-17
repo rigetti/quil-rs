@@ -393,9 +393,8 @@ impl Program {
     /// provided, then the value at the reference will be set to `iterations`. If not provided,
     /// then the user must provide a value for the memory at execution time. The value at the loop
     /// count reference will then be decremented in the loop. The loop will terminate when the
-    /// reference reaches 0. For this reason your program should not itself modify the value
-    /// at the reference unless you intend to modify the remaining number of iterations
-    /// (i.e. to break the loop).
+    /// reference reaches 0. For this reason your program should not itself modify the value at the
+    /// reference unless you intend to modify the remaining number of iterations (i.e. to break the loop).
     ///
     /// The given `start_target` and `end_target` will be used as the entry and exit points for the
     /// loop, respectively. You should provide unique [`Target`]s that won't be used elsewhere in
