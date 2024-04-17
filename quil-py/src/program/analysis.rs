@@ -1,14 +1,10 @@
 use pyo3::{exceptions::PyValueError, types::PyType};
-use quil_rs::{
-    instruction::Instruction,
-    program::analysis::{
-        BasicBlock, BasicBlockOwned, BasicBlockScheduleError, ControlFlowGraph,
-        ControlFlowGraphOwned, QubitGraph, QubitGraphError,
-    },
+use quil_rs::program::analysis::{
+    BasicBlock, BasicBlockOwned, BasicBlockScheduleError, ControlFlowGraph, ControlFlowGraphOwned,
+    QubitGraph, QubitGraphError,
 };
 use rigetti_pyo3::{
-    impl_repr, py_wrap_error, py_wrap_type, pyo3::prelude::*, wrap_error, PyTryFrom, PyWrapper,
-    ToPythonError,
+    impl_repr, py_wrap_error, py_wrap_type, pyo3::prelude::*, wrap_error, PyWrapper, ToPythonError,
 };
 
 use crate::instruction::{PyInstruction, PyTarget};
