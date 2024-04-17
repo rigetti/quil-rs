@@ -2,6 +2,7 @@ from typing import Callable, Dict, FrozenSet, List, Optional, Sequence, Set, fin
 
 import numpy as np
 from numpy.typing import NDArray
+from typing_extensions import Self
 
 from quil.instructions import (
     AttributeValue,
@@ -165,6 +166,9 @@ class Program:
         """
 
 class BasicBlock:
+    def __new__(cls, instance: "BasicBlock") -> Self:
+        """Create a new instance of a `BasicBlock` (or a subclass) using an existing instance."""
+
     def as_schedule_seconds(self, program: Program) -> ScheduleSeconds:
         """Return the ``ScheduleSeconds`` representing the timing of the instructions within the block.
 
@@ -328,6 +332,8 @@ class ControlFlowGraph:
     The CFG is a directed graph where each node is a basic block and each edge is a control flow
     transition between two basic blocks.
     """
+    def __new__(cls, instance: "ControlFlowGraph") -> Self:
+        """Create a new instance of a `ControlFlowGraph` (or a subclass) using an existing instance."""
 
     def has_dynamic_control_flow(self) -> bool:
         """Return ``True`` if the program has dynamic control flow, i.e. contains a conditional branch instruction.

@@ -20,6 +20,12 @@ impl_repr!(PyControlFlowGraph);
 
 #[pymethods]
 impl PyControlFlowGraph {
+    #[new]
+    #[classmethod]
+    pub fn new(_: Py<PyType>, instance: Self) -> Self {
+        instance
+    }
+
     pub fn has_dynamic_control_flow(&self) -> bool {
         ControlFlowGraph::from(self.as_inner()).has_dynamic_control_flow()
     }
