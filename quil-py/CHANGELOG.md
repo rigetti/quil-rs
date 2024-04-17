@@ -1,3 +1,9 @@
+## 0.9.1
+
+### Features
+
+- Support constructing ControlFlowGraph and BasicBlocks. (#359)
+
 ## 0.9.1-rc.0
 
 ### Features
