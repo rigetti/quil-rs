@@ -1,3 +1,9 @@
+## 0.2.1-rc.0
+
+### Features
+
+- Support constructing ControlFlowGraph and BasicBlocks. (#359)
+
 ## 0.2.0
 
 ### Breaking Changes
