@@ -352,7 +352,7 @@ impl BasicBlockTerminator<'_> {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default)]
 pub enum BasicBlockTerminatorOwned {
     ConditionalJump {
         condition: MemoryReference,
