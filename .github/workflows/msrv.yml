@@ -53,8 +53,8 @@ jobs:
           command: test
           args: --all-features
 
-  test-py:
-    name: Test quil-py
+  check-py:
+    name: Check quil-py
     runs-on: ubuntu-latest
     strategy:
       matrix:
