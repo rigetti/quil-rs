@@ -1,3 +1,53 @@
+## 0.25.1
+
+### Features
+
+- Support constructing ControlFlowGraph and BasicBlocks. (#359)
+
+## 0.25.1-rc.0
+
+### Features
+
+- Support constructing ControlFlowGraph and BasicBlocks. (#359)
+
+## 0.25.0
+
+### Breaking Changes
+
+- Program instruction iteration and serialization is deterministic. (#355)
+
+### Fixes
+
+- Program equality is sensitive to the order of calibration instructions. (#357)
+
+## 0.25.0-rc.0
+
+### Breaking Changes
+
+- Program instruction iteration and serialization is deterministic. (#355)
+
+### Fixes
+
+- Program equality is sensitive to the order of calibration instructions. (#357)
+
+## 0.24.1-rc.0
+
+### Fixes
+
+- Program equality is sensitive to the order of calibration instructions. (#357)
+
+## 0.24.0
+
+### Breaking Changes
+
+- CalibrationSet's and Program's will be considered equal if they contain the same set of calibrations, regardless of order. (#352)
+
+## 0.24.0-rc.0
+
+### Breaking Changes
+
+- CalibrationSet's and Program's will be considered equal if they contain the same set of calibrations, regardless of order. (#352)
+
 ## 0.23.0
 
 ### Breaking Changes

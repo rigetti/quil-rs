@@ -148,7 +148,6 @@ pub(crate) fn parse_block_instruction<'a>(
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
     use std::str::FromStr;
 
     use nom_locate::LocatedSpan;
@@ -165,7 +164,7 @@ mod tests {
         GateSpecification, Include, Instruction, Jump, JumpWhen, Label, MemoryReference, Move,
         Pulse, Qubit, RawCapture, Reset, SetFrequency, SetPhase, SetScale, ShiftFrequency,
         ShiftPhase, SwapPhases, Target, UnaryLogic, UnaryOperator, Waveform, WaveformDefinition,
-        WaveformInvocation,
+        WaveformInvocation, WaveformParameters,
     };
     use crate::parser::common::tests::KITCHEN_SINK_QUIL;
     use crate::parser::lexer::lex;
@@ -472,7 +471,7 @@ mod tests {
                 },
                 waveform: WaveformInvocation {
                     name: "my_custom_waveform".to_owned(),
-                    parameters: HashMap::new()
+                    parameters: WaveformParameters::new()
                 },
                 memory_reference: MemoryReference {
                     name: "ro".to_owned(),
@@ -645,7 +644,7 @@ mod tests {
                 },
                 waveform: WaveformInvocation {
                     name: "custom".to_owned(),
-                    parameters: HashMap::new()
+                    parameters: WaveformParameters::new()
                 }
             }),
             Instruction::Pulse(Pulse {
@@ -656,7 +655,7 @@ mod tests {
                 },
                 waveform: WaveformInvocation {
                     name: "custom".to_owned(),
-                    parameters: HashMap::new()
+                    parameters: WaveformParameters::new()
                 }
             }),
             Instruction::Pulse(Pulse {

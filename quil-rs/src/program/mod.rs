@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{HashMap, HashSet};
 use std::ops;
 use std::str::FromStr;
 
-use indexmap::IndexSet;
+use indexmap::{IndexMap, IndexSet};
 use ndarray::Array2;
 use nom_locate::LocatedSpan;
 
@@ -74,9 +74,9 @@ type Result<T> = std::result::Result<T, ProgramError>;
 pub struct Program {
     pub calibrations: Calibrations,
     pub frames: FrameSet,
-    pub memory_regions: BTreeMap<String, MemoryRegion>,
-    pub waveforms: BTreeMap<String, Waveform>,
-    pub gate_definitions: BTreeMap<String, GateDefinition>,
+    pub memory_regions: IndexMap<String, MemoryRegion>,
+    pub waveforms: IndexMap<String, Waveform>,
+    pub gate_definitions: IndexMap<String, GateDefinition>,
     instructions: Vec<Instruction>,
     // private field used for caching operations
     used_qubits: HashSet<Qubit>,
@@ -87,9 +87,9 @@ impl Program {
         Program {
             calibrations: Calibrations::default(),
             frames: FrameSet::new(),
-            memory_regions: BTreeMap::new(),
-            waveforms: BTreeMap::new(),
-            gate_definitions: BTreeMap::new(),
+            memory_regions: IndexMap::new(),
+            waveforms: IndexMap::new(),
+            gate_definitions: IndexMap::new(),
             instructions: vec![],
             used_qubits: HashSet::new(),
         }
@@ -1397,10 +1397,7 @@ CNOT 2 3";
         let is_global_state_instruction = move |i: &Instruction| -> bool {
             matches!(
                 i,
-                Instruction::CalibrationDefinition(_)
-                    | Instruction::MeasureCalibrationDefinition(_)
-                    | Instruction::WaveformDefinition(_)
-                    | Instruction::GateDefinition(_)
+                |Instruction::WaveformDefinition(_)| Instruction::GateDefinition(_)
                     | Instruction::FrameDefinition(_)
             )
         };
@@ -1414,8 +1411,100 @@ CNOT 2 3";
             .into_iter()
             .rev()
             .collect();
-        program2.add_instructions(global_instructions);
-
+        program2.add_instructions(global_instructions.clone());
         assert_eq!(program, program2);
+
+        // Create another copy of the program with non-global instructions inserted in reverse order.
+        // This should not be equal to the original program.
+        let mut program3 = Program::from_instructions(
+            program
+                .filter_instructions(|i| !is_global_state_instruction(i))
+                .into_instructions()
+                .into_iter()
+                .rev()
+                .collect(),
+        );
+        program3.add_instructions(global_instructions);
+        assert!(program != program3)
+    }
+
+    #[test]
+    fn test_deterministic_serialization() {
+        let input = "DECLARE foo REAL[1]
+DECLARE bar BIT[1]
+DECLARE baz BIT[1]
+RX(pi) 0
+CNOT 0 1
+DEFCAL I 0:
+\tDELAY 0 1
+\tDELAY 1 1
+DEFCAL I 1:
+\tDELAY 0 1
+\tDELAY 1 2
+DEFCAL I 2:
+\tDELAY 2 1
+\tDELAY 2 3
+DEFCAL MEASURE 0 addr:
+\tRX(pi) 0
+\tCAPTURE 0 \"ro_rx\" custom addr
+DEFCAL MEASURE 1 addr:
+\tRX(pi/2) 1
+\tCAPTURE 1 \"ro_rx\" custom addr
+DEFCAL MEASURE 2 addr:
+\tRX(pi/2) 2
+\tCAPTURE 2 \"ro_rx\" custom addr
+DEFWAVEFORM custom:
+\t1,2
+DEFWAVEFORM custom2:
+\t3,4
+DEFWAVEFORM another1(%a, %b):
+\t%a,%b
+PULSE 0 \"xy\" flat(duration: 1e-6, iq: 2+3i)
+PULSE 0 \"xy\" another1(a: 1e-6, b: 2+3i)
+DEFGATE HADAMARD AS MATRIX:
+\t(1/sqrt(2)),(1/sqrt(2))
+\t(1/sqrt(2)),((-1)/sqrt(2))
+DEFGATE RX(%theta) AS MATRIX:
+\tcos((%theta/2)),((-1i)*sin((%theta/2)))
+\t((-1i)*sin((%theta/2))),cos((%theta/2))
+DEFGATE Name AS PERMUTATION:
+\t1, 0
+DEFCIRCUIT SIMPLE:
+\tX 0
+\tX 1
+DEFGATE BAR AS MATRIX:
+\t0, 1
+\t1, 0
+DEFGATE FOO AS MATRIX:
+\t0, 1
+\t1, 0
+DEFGATE BAZ AS MATRIX:
+\t1, 0
+\t0, 1
+MEASURE 1 bar
+MEASURE 0 foo
+HALT
+DEFCIRCUIT CIRCFOO:
+\tLABEL @FOO_A
+\tJUMP @FOO_A
+DEFFRAME 0 \"xy\":
+\tSAMPLE-RATE: 3000
+DEFFRAME 0 \"xy\":
+\tDIRECTION: \"rx\"
+\tCENTER-FREQUENCY: 1000
+\tHARDWARE-OBJECT: \"some object\"
+\tINITIAL-FREQUENCY: 2000
+\tSAMPLE-RATE: 3000";
+        let program = Program::from_str(input).unwrap();
+        let quil = program.to_quil().unwrap();
+
+        // Asserts that serialization doesn't change on repeated attempts.
+        // 100 is chosen because it should be more than sufficient to reveal an
+        //     issue and it has a negligible impact on execution speed of the test suite.
+        let iterations = 100;
+        for _ in 0..iterations {
+            let new_program = Program::from_str(input).unwrap();
+            assert_eq!(new_program.to_quil().unwrap(), quil);
+        }
     }
 }

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::{collections::HashMap, str::FromStr};
+use std::str::FromStr;
 
 use nom::{
     branch::alt,
@@ -27,7 +27,7 @@ use crate::{
     instruction::{
         ArithmeticOperand, AttributeValue, BinaryOperand, ComparisonOperand, FrameIdentifier,
         GateModifier, MemoryReference, Offset, PauliGate, PauliTerm, Qubit, ScalarType, Sharing,
-        Vector, WaveformInvocation,
+        Vector, WaveformInvocation, WaveformParameters,
     },
     parser::lexer::Operator,
     token,
@@ -308,7 +308,7 @@ pub(crate) fn parse_waveform_invocation<'a>(
         token!(RParenthesis),
     ))(input)?;
     let parameter_tuples = parameter_tuples.unwrap_or_default();
-    let parameters: HashMap<_, _> = parameter_tuples.into_iter().collect();
+    let parameters: WaveformParameters = parameter_tuples.into_iter().collect();
 
     Ok((input, WaveformInvocation { name, parameters }))
 }
@@ -476,7 +476,7 @@ pub mod tests {
         expression::{
             Expression, InfixExpression, InfixOperator, PrefixExpression, PrefixOperator,
         },
-        instruction::{MemoryReference, PauliGate, PauliTerm},
+        instruction::{MemoryReference, PauliGate, PauliTerm, WaveformParameters},
         parser::lex,
         real,
     };
@@ -566,7 +566,7 @@ SWAP-PHASES 2 3 \"xy\" 3 4 \"xy\"";
                 )
             ]
             .into_iter()
-            .collect()
+            .collect::<WaveformParameters>()
         )
     }
 

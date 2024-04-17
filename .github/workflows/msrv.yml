@@ -53,8 +53,8 @@ jobs:
           command: test
           args: --all-features
 
-  test-py:
-    name: Test quil-py
+  check-py:
+    name: Check quil-py
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -67,7 +67,7 @@ jobs:
     - uses: davidB/rust-cargo-make@v1
     - uses: actions/checkout@v1
     - uses: snok/install-poetry@v1
-    - name: Run quil-py tests
+    - name: Run quil-py tests, lints, and formatting checks.
       run: cargo make --cwd quil-py
 
   fmt:

@@ -1,15 +1,15 @@
 from enum import Enum
+from typing import Dict, List, Optional, Sequence, Tuple, Union, final
+
 import numpy as np
 from numpy.typing import NDArray
-from typing import Dict, List, Optional, Sequence, Tuple, Union, final
 from typing_extensions import Self
 
 from quil.expression import Expression
 
 @final
 class Instruction:
-    """
-    A Quil instruction. Each variant corresponds to a possible type of Quil instruction.
+    """A Quil instruction. Each variant corresponds to a possible type of Quil instruction.
 
     # Variants:
     - ``arithmetic``: An arithmetic expression defined by an ``Arithmetic``.
@@ -113,13 +113,9 @@ class Instruction:
             WaveformDefinition,
         ],
     ) -> Self:
-        """
-        Returns a new ``Instruction`` from the given inner data.
-        """
+        """Returns a new ``Instruction`` from the given inner data."""
     def is_quil_t(self) -> bool:
-        """
-        Returns ``True`` if the instruction is a Quil-T instruction, ``False`` otherwise.
-        """
+        """Returns ``True`` if the instruction is a Quil-T instruction, ``False`` otherwise."""
         ...
     def inner(
         self,
@@ -161,9 +157,7 @@ class Instruction:
         UnaryLogic,
         WaveformDefinition,
     ]:
-        """
-        Returns the inner value of the variant. Raises a ``RuntimeError`` if inner data doesn't exist.
-        """
+        """Returns the inner value of the variant. Raises a ``RuntimeError`` if inner data doesn't exist."""
         ...
     def is_arithmetic(self) -> bool: ...
     def is_binary_logic(self) -> bool: ...
@@ -205,91 +199,91 @@ class Instruction:
     def is_waveform_definition(self) -> bool: ...
     def is_wait(self) -> bool: ...
     @staticmethod
-    def new_halt() -> "Instruction": ...
+    def new_halt() -> Instruction: ...
     @staticmethod
-    def new_nop() -> "Instruction": ...
+    def new_nop() -> Instruction: ...
     @staticmethod
-    def new_wait() -> "Instruction": ...
+    def new_wait() -> Instruction: ...
     @staticmethod
-    def from_arithmetic(inner: Arithmetic) -> "Instruction": ...
+    def from_arithmetic(inner: Arithmetic) -> Instruction: ...
     @staticmethod
-    def from_binary_logic(inner: BinaryLogic) -> "Instruction": ...
+    def from_binary_logic(inner: BinaryLogic) -> Instruction: ...
     @staticmethod
-    def from_calibration_definition(inner: Calibration) -> "Instruction": ...
+    def from_calibration_definition(inner: Calibration) -> Instruction: ...
     @staticmethod
-    def from_capture(inner: Capture) -> "Instruction": ...
+    def from_capture(inner: Capture) -> Instruction: ...
     @staticmethod
     def from_circuit_definition(
         inner: CircuitDefinition,
-    ) -> "Instruction": ...
+    ) -> Instruction: ...
     @staticmethod
-    def from_convert(inner: Convert) -> "Instruction": ...
+    def from_convert(inner: Convert) -> Instruction: ...
     @staticmethod
-    def from_comparison(inner: Comparison) -> "Instruction": ...
+    def from_comparison(inner: Comparison) -> Instruction: ...
     @staticmethod
-    def from_declaration(inner: Declaration) -> "Instruction": ...
+    def from_declaration(inner: Declaration) -> Instruction: ...
     @staticmethod
-    def from_delay(inner: Delay) -> "Instruction": ...
+    def from_delay(inner: Delay) -> Instruction: ...
     @staticmethod
-    def from_exchange(inner: Exchange) -> "Instruction": ...
+    def from_exchange(inner: Exchange) -> Instruction: ...
     @staticmethod
-    def from_fence(inner: Fence) -> "Instruction": ...
+    def from_fence(inner: Fence) -> Instruction: ...
     @staticmethod
-    def from_frame_definition(inner: FrameDefinition) -> "Instruction": ...
+    def from_frame_definition(inner: FrameDefinition) -> Instruction: ...
     @staticmethod
-    def from_gate(inner: Gate) -> "Instruction": ...
+    def from_gate(inner: Gate) -> Instruction: ...
     @staticmethod
-    def from_gate_definition(inner: GateDefinition) -> "Instruction": ...
+    def from_gate_definition(inner: GateDefinition) -> Instruction: ...
     @staticmethod
-    def from_include(inner: Include) -> "Instruction": ...
+    def from_include(inner: Include) -> Instruction: ...
     @staticmethod
-    def from_jump(inner: Jump) -> "Instruction": ...
+    def from_jump(inner: Jump) -> Instruction: ...
     @staticmethod
-    def from_jump_when(inner: JumpWhen) -> "Instruction": ...
+    def from_jump_when(inner: JumpWhen) -> Instruction: ...
     @staticmethod
-    def from_jump_unless(inner: JumpUnless) -> "Instruction": ...
+    def from_jump_unless(inner: JumpUnless) -> Instruction: ...
     @staticmethod
-    def from_label(inner: Label) -> "Instruction": ...
+    def from_label(inner: Label) -> Instruction: ...
     @staticmethod
-    def from_load(inner: Load) -> "Instruction": ...
+    def from_load(inner: Load) -> Instruction: ...
     @staticmethod
     def from_measure_calibration_definition(
         inner: MeasureCalibrationDefinition,
-    ) -> "Instruction": ...
+    ) -> Instruction: ...
     @staticmethod
     def from_measurement(
         inner: Measurement,
-    ) -> "Instruction": ...
+    ) -> Instruction: ...
     @staticmethod
-    def from_move(inner: Move) -> "Instruction": ...
+    def from_move(inner: Move) -> Instruction: ...
     @staticmethod
-    def from_pragma(inner: Pragma) -> "Instruction": ...
+    def from_pragma(inner: Pragma) -> Instruction: ...
     @staticmethod
-    def from_pulse(inner: Pulse) -> "Instruction": ...
+    def from_pulse(inner: Pulse) -> Instruction: ...
     @staticmethod
-    def from_raw_capture(inner: RawCapture) -> "Instruction": ...
+    def from_raw_capture(inner: RawCapture) -> Instruction: ...
     @staticmethod
-    def from_set_frequency(inner: SetFrequency) -> "Instruction": ...
+    def from_set_frequency(inner: SetFrequency) -> Instruction: ...
     @staticmethod
-    def from_set_phase(inner: SetPhase) -> "Instruction": ...
+    def from_set_phase(inner: SetPhase) -> Instruction: ...
     @staticmethod
-    def from_set_scale(inner: SetScale) -> "Instruction": ...
+    def from_set_scale(inner: SetScale) -> Instruction: ...
     @staticmethod
-    def from_shift_frequency(inner: ShiftFrequency) -> "Instruction": ...
+    def from_shift_frequency(inner: ShiftFrequency) -> Instruction: ...
     @staticmethod
-    def from_shift_phase(inner: ShiftPhase) -> "Instruction": ...
+    def from_shift_phase(inner: ShiftPhase) -> Instruction: ...
     @staticmethod
-    def from_unary_logic(inner: UnaryLogic) -> "Instruction": ...
+    def from_unary_logic(inner: UnaryLogic) -> Instruction: ...
     @staticmethod
-    def from_store(inner: Store) -> "Instruction": ...
+    def from_store(inner: Store) -> Instruction: ...
     @staticmethod
-    def from_swap_phases(inner: SwapPhases) -> "Instruction": ...
+    def from_swap_phases(inner: SwapPhases) -> Instruction: ...
     @staticmethod
-    def from_reset(inner: Reset) -> "Instruction": ...
+    def from_reset(inner: Reset) -> Instruction: ...
     @staticmethod
     def from_waveform_definition(
         inner: WaveformDefinition,
-    ) -> "Instruction": ...
+    ) -> Instruction: ...
     def as_arithmetic(self) -> Optional[Arithmetic]: ...
     def to_arithmetic(self) -> Arithmetic: ...
     def as_binary_logic(self) -> Optional[BinaryLogic]: ...
@@ -367,25 +361,26 @@ class Instruction:
     def as_waveform_definition(self) -> Optional[WaveformDefinition]: ...
     def to_waveform_definition(self) -> WaveformDefinition: ...
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
-        """
+        """Attempt to convert the instruction to a valid Quil string. Raises an exception if the instruction can't be converted to valid Quil."""
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
     def __deepcopy__(self, _: Dict) -> Self:
-        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+        """Creates and returns a deep copy of the class.
+
+        If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with
+        new placeholders so resolving them in the copy will not resolve them in the original.
+        Should be used by passing an instance of the class to ``copy.deepcopy``
+        """
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
 @final
 class ArithmeticOperand:
-    """
-    A Quil arithmetic operand.
+    """A Quil arithmetic operand.
 
     # Variants:
     - ``literal_integer``: An integer literal.
@@ -400,9 +395,7 @@ class ArithmeticOperand:
     """
 
     def inner(self) -> Union[int, float, MemoryReference]:
-        """
-        Returns the inner value of the variant. Raises a ``RuntimeError`` if inner data doesn't exist.
-        """
+        """Returns the inner value of the variant. Raises a ``RuntimeError`` if inner data doesn't exist."""
         ...
     def is_literal_integer(self) -> bool: ...
     def is_literal_real(self) -> bool: ...
@@ -414,23 +407,23 @@ class ArithmeticOperand:
     def to_literal_real(self) -> float: ...
     def to_memory_reference(self) -> MemoryReference: ...
     @staticmethod
-    def from_literal_integer(inner: int) -> "ArithmeticOperand": ...
+    def from_literal_integer(inner: int) -> ArithmeticOperand: ...
     @staticmethod
-    def from_literal_real(inner: float) -> "ArithmeticOperand": ...
+    def from_literal_real(inner: float) -> ArithmeticOperand: ...
     @staticmethod
     def from_memory_reference(
         inner: MemoryReference,
-    ) -> "ArithmeticOperand": ...
+    ) -> ArithmeticOperand: ...
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 @final
@@ -440,15 +433,15 @@ class ArithmeticOperator(Enum):
     Divide = "Divide"
     Multiply = "Multiply"
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class Arithmetic:
@@ -471,25 +464,28 @@ class Arithmetic:
     @source.setter
     def source(self, operand: ArithmeticOperand) -> None: ...
     def to_quil(self) -> str:
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
-        """
-        ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
     def __deepcopy__(self, _: Dict) -> Self:
-        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+        """Creates and returns a deep copy of the class.
+
+        If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with
+        new placeholders so resolving them in the copy will not resolve them in the original. Should be used by passing
+        an instance of the class to ``copy.deepcopy``
+        """
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
 @final
 class BinaryOperand:
-    """
-    A Quil binary operand.
+    """A Quil binary operand.
 
     # Variants:
     - ``literal_integer``: An integer literal.
@@ -503,9 +499,7 @@ class BinaryOperand:
     """
 
     def inner(self) -> Union[int, MemoryReference]:
-        """
-        Returns the inner value of the variant. Raises a ``RuntimeError`` if inner data doesn't exist.
-        """
+        """Returns the inner value of the variant. Raises a ``RuntimeError`` if inner data doesn't exist."""
         ...
     def is_literal_integer(self) -> bool: ...
     def is_memory_reference(self) -> bool: ...
@@ -514,21 +508,20 @@ class BinaryOperand:
     def to_literal_integer(self) -> int: ...
     def to_memory_reference(self) -> MemoryReference: ...
     @staticmethod
-    def from_literal_integer(inner: int) -> "BinaryOperand": ...
+    def from_literal_integer(inner: int) -> BinaryOperand: ...
     @staticmethod
     def from_memory_reference(
         inner: MemoryReference,
-    ) -> "BinaryOperand": ...
+    ) -> BinaryOperand: ...
     def to_quil(self) -> str:
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
-        """
-        ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 @final
@@ -537,15 +530,14 @@ class BinaryOperator(Enum):
     Ior = "IOR"
     Xor = "XOR"
     def to_quil(self) -> str:
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
-        """
-        ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class BinaryOperands:
@@ -578,18 +570,23 @@ class BinaryLogic:
     @operands.setter
     def operands(self, operands: BinaryOperands) -> None: ...
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
     def __deepcopy__(self, _: Dict) -> Self:
-        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+        """Creates and returns a deep copy of the class.
+
+        If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with
+        new placeholders so resolving them in the copy will not resolve them in the original.
+        Should be used by passing an instance of the class to ``copy.deepcopy``
+        """
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
@@ -604,18 +601,23 @@ class Convert:
     @source.setter
     def source(self, source: MemoryReference) -> None: ...
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
     def __deepcopy__(self, _: Dict) -> Self:
-        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+        """Creates and returns a deep copy of the class.
+
+        If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with
+        new placeholders so resolving them in the copy will not resolve them in the original.
+        Should be used by passing an instance of the class to ``copy.deepcopy``
+        """
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
@@ -630,18 +632,23 @@ class Move:
     @source.setter
     def source(self, source: ArithmeticOperand) -> None: ...
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
     def __deepcopy__(self, _: Dict) -> Self:
-        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+        """Creates and returns a deep copy of the class.
+
+        If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with
+        new placeholders so resolving them in the copy will not resolve them in the original.
+        Should be used by passing an instance of the class to ``copy.deepcopy``
+        """
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
@@ -656,25 +663,29 @@ class Exchange:
     @right.setter
     def right(self, right: MemoryReference) -> None: ...
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
     def __deepcopy__(self, _: Dict) -> Self:
-        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+        """Creates and returns a deep copy of the class.
+
+        If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with
+        new placeholders so resolving them in the copy will not resolve them in the original.
+        Should be used by passing an instance of the class to ``copy.deepcopy``
+        """
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
 @final
 class ComparisonOperand:
-    """
-    A Quil binary operand.
+    """A Quil binary operand.
 
     # Variants:
     - ``literal_integer``: An integer literal.
@@ -689,9 +700,7 @@ class ComparisonOperand:
     """
 
     def inner(self) -> Union[int, float, MemoryReference]:
-        """
-        Returns the inner value of the variant.
-        """
+        """Returns the inner value of the variant."""
         ...
     def is_literal_integer(self) -> bool: ...
     def is_literal_real(self) -> bool: ...
@@ -703,23 +712,23 @@ class ComparisonOperand:
     def to_literal_real(self) -> float: ...
     def to_memory_reference(self) -> MemoryReference: ...
     @staticmethod
-    def from_literal_integer(inner: int) -> "ComparisonOperand": ...
+    def from_literal_integer(inner: int) -> ComparisonOperand: ...
     @staticmethod
-    def from_literal_real(inner: float) -> "ComparisonOperand": ...
+    def from_literal_real(inner: float) -> ComparisonOperand: ...
     @staticmethod
     def from_memory_reference(
         inner: MemoryReference,
-    ) -> "ComparisonOperand": ...
+    ) -> ComparisonOperand: ...
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 @final
@@ -747,18 +756,23 @@ class Comparison:
     @operands.setter
     def operands(self, operands: Tuple[MemoryReference, MemoryReference, ComparisonOperand]) -> None: ...
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
     def __deepcopy__(self, _: Dict) -> Self:
-        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+        """Creates and returns a deep copy of the class.
+
+        If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with
+        new placeholders so resolving them in the copy will not resolve them in the original.
+        Should be used by passing an instance of the class to ``copy.deepcopy``
+        """
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
@@ -767,15 +781,15 @@ class UnaryOperator(Enum):
     Neg = "NEG"
     Not = "NOT"
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class UnaryLogic:
@@ -789,18 +803,23 @@ class UnaryLogic:
     @operand.setter
     def operand(self, operand: MemoryReference) -> None: ...
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
     def __deepcopy__(self, _: Dict) -> Self:
-        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+        """Creates and returns a deep copy of the class.
+
+        If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with
+        new placeholders so resolving them in the copy will not resolve them in the original.
+        Should be used by passing an instance of the class to ``copy.deepcopy``
+        """
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
@@ -834,18 +853,23 @@ class Calibration:
     @modifiers.setter
     def modifiers(self, modifiers: Sequence[GateModifier]) -> None: ...
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
     def __deepcopy__(self, _: Dict) -> Self:
-        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+        """Creates and returns a deep copy of the class.
+
+        If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with
+        new placeholders so resolving them in the copy will not resolve them in the original.
+        Should be used by passing an instance of the class to ``copy.deepcopy``
+        """
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
@@ -869,18 +893,23 @@ class MeasureCalibrationDefinition:
     @instructions.setter
     def instructions(self, instructions: Sequence[Instruction]) -> None: ...
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
     def __deepcopy__(self, _: Dict) -> Self:
-        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+        """Creates and returns a deep copy of the class.
+
+        If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with
+        new placeholders so resolving them in the copy will not resolve them in the original.
+        Should be used by passing an instance of the class to ``copy.deepcopy``
+        """
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
@@ -909,18 +938,23 @@ class CircuitDefinition:
     @instructions.setter
     def instructions(self, instructions: Sequence[Instruction]) -> None: ...
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
     def __deepcopy__(self, _: Dict) -> Self:
-        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+        """Creates and returns a deep copy of the class.
+
+        If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with
+        new placeholders so resolving them in the copy will not resolve them in the original.
+        Should be used by passing an instance of the class to ``copy.deepcopy``
+        """
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
@@ -939,15 +973,15 @@ class Offset:
     @data_type.setter
     def data_type(self, data_type: ScalarType) -> None: ...
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class Sharing:
@@ -980,18 +1014,23 @@ class Declaration:
     @sharing.setter
     def sharing(self, sharing: Optional[Sharing]) -> None: ...
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
     def __deepcopy__(self, _: Dict) -> Self:
-        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+        """Creates and returns a deep copy of the class.
+
+        If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with
+        new placeholders so resolving them in the copy will not resolve them in the original.
+        Should be used by passing an instance of the class to ``copy.deepcopy``
+        """
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
@@ -1006,15 +1045,15 @@ class Vector:
     @length.setter
     def length(self, data_type: int) -> None: ...
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 @final
@@ -1024,21 +1063,20 @@ class ScalarType(Enum):
     Octet = "OCTET"
     Real = "REAL"
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 @final
 class AttributeValue:
-    """
-    A frame attribute value.
+    """A frame attribute value.
 
     # Variants:
     - ``string``: A string attribute containing a ``str``.
@@ -1052,30 +1090,28 @@ class AttributeValue:
     """
 
     def inner(self) -> Union[str, Expression]:
-        """
-        Returns the inner value of the variant. Raises a ``RuntimeError`` if inner data doesn't exist.
-        """
+        """Returns the inner value of the variant. Raises a ``RuntimeError`` if inner data doesn't exist."""
         ...
     def is_string(self) -> bool: ...
     def is_expression(self) -> bool: ...
     @staticmethod
-    def from_string(inner: str) -> "AttributeValue": ...
+    def from_string(inner: str) -> AttributeValue: ...
     @staticmethod
-    def from_expression(inner: Expression) -> "AttributeValue": ...
+    def from_expression(inner: Expression) -> AttributeValue: ...
     def as_string(self) -> Optional[str]: ...
     def to_string(self) -> str: ...
     def as_expression(self) -> Optional[Expression]: ...
     def to_expression(self) -> Expression: ...
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class FrameDefinition:
@@ -1093,18 +1129,23 @@ class FrameDefinition:
     @attributes.setter
     def attributes(self, identifier: Dict[str, AttributeValue]) -> None: ...
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
     def __deepcopy__(self, _: Dict) -> Self:
-        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+        """Creates and returns a deep copy of the class.
+
+        If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with
+        new placeholders so resolving them in the copy will not resolve them in the original.
+        Should be used by passing an instance of the class to ``copy.deepcopy``
+        """
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
@@ -1119,15 +1160,15 @@ class FrameIdentifier:
     @qubits.setter
     def qubits(self, qubits: Sequence[Qubit]) -> None: ...
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class Capture:
@@ -1155,18 +1196,23 @@ class Capture:
     @waveform.setter
     def waveform(self, waveform: WaveformInvocation) -> None: ...
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
     def __deepcopy__(self, _: Dict) -> Self:
-        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+        """Creates and returns a deep copy of the class.
+
+        If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with
+        new placeholders so resolving them in the copy will not resolve them in the original.
+        Should be used by passing an instance of the class to ``copy.deepcopy``
+        """
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
@@ -1190,18 +1236,23 @@ class Pulse:
     @waveform.setter
     def waveform(self, waveform: WaveformInvocation) -> None: ...
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
     def __deepcopy__(self, _: Dict) -> Self:
-        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+        """Creates and returns a deep copy of the class.
+
+        If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with
+        new placeholders so resolving them in the copy will not resolve them in the original.
+        Should be used by passing an instance of the class to ``copy.deepcopy``
+        """
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
@@ -1230,18 +1281,23 @@ class RawCapture:
     @memory_reference.setter
     def memory_reference(self, memory_reference: MemoryReference) -> None: ...
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
     def __deepcopy__(self, _: Dict) -> Self:
-        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+        """Creates and returns a deep copy of the class.
+
+        If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with
+        new placeholders so resolving them in the copy will not resolve them in the original.
+        Should be used by passing an instance of the class to ``copy.deepcopy``
+        """
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
@@ -1256,18 +1312,23 @@ class SetFrequency:
     @frequency.setter
     def frequency(self, frequency: Expression) -> None: ...
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
     def __deepcopy__(self, _: Dict) -> Self:
-        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+        """Creates and returns a deep copy of the class.
+
+        If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with
+        new placeholders so resolving them in the copy will not resolve them in the original.
+        Should be used by passing an instance of the class to ``copy.deepcopy``
+        """
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
@@ -1282,18 +1343,23 @@ class SetPhase:
     @phase.setter
     def phase(self, phase: Expression) -> None: ...
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
     def __deepcopy__(self, _: Dict) -> Self:
-        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+        """Creates and returns a deep copy of the class.
+
+        If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with
+        new placeholders so resolving them in the copy will not resolve them in the original.
+        Should be used by passing an instance of the class to ``copy.deepcopy``
+        """
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
@@ -1308,18 +1374,23 @@ class SetScale:
     @scale.setter
     def scale(self, scale: Expression) -> None: ...
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
     def __deepcopy__(self, _: Dict) -> Self:
-        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+        """Creates and returns a deep copy of the class.
+
+        If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with
+        new placeholders so resolving them in the copy will not resolve them in the original.
+        Should be used by passing an instance of the class to ``copy.deepcopy``
+        """
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
@@ -1334,18 +1405,23 @@ class ShiftFrequency:
     @frequency.setter
     def frequency(self, frequency: Expression) -> None: ...
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
     def __deepcopy__(self, _: Dict) -> Self:
-        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+        """Creates and returns a deep copy of the class.
+
+        If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with
+        new placeholders so resolving them in the copy will not resolve them in the original.
+        Should be used by passing an instance of the class to ``copy.deepcopy``
+        """
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
@@ -1360,18 +1436,23 @@ class ShiftPhase:
     @phase.setter
     def phase(self, phase: Expression) -> None: ...
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
     def __deepcopy__(self, _: Dict) -> Self:
-        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+        """Creates and returns a deep copy of the class.
+
+        If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with
+        new placeholders so resolving them in the copy will not resolve them in the original.
+        Should be used by passing an instance of the class to ``copy.deepcopy``
+        """
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
@@ -1386,23 +1467,28 @@ class SwapPhases:
     @frame_2.setter
     def frame_2(self, frame_2: FrameIdentifier) -> None: ...
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
     def __deepcopy__(self, _: Dict) -> Self:
-        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+        """Creates and returns a deep copy of the class.
+
+        If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with
+        new placeholders so resolving them in the copy will not resolve them in the original.
+        Should be used by passing an instance of the class to ``copy.deepcopy``
+        """
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
 class GateError(ValueError):
-    """An error that may occur when performing operations on a ``Gate``"""
+    """An error that may occur when performing operations on a ``Gate``."""
 
     ...
 
@@ -1412,15 +1498,15 @@ class GateModifier(Enum):
     Dagger = "DAGGER"
     Forked = "FORKED"
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class Gate:
@@ -1448,25 +1534,19 @@ class Gate:
     @modifiers.setter
     def modifiers(self, modifiers: Sequence[GateModifier]) -> None: ...
     def dagger(self) -> Self:
-        """
-        Returns a copy of the gate with the ``DAGGER`` modifier added to it.
-        """
+        """Returns a copy of the gate with the ``DAGGER`` modifier added to it."""
         ...
     def controlled(self, control_qubit: Qubit) -> Self:
-        """
-        Returns a copy of the gate with the ``CONTROLLED`` modifier added to it.
-        """
+        """Returns a copy of the gate with the ``CONTROLLED`` modifier added to it."""
     def forked(self, fork_qubit: Qubit, alt_params: Sequence[Expression]) -> Self:
-        """
-        Returns a copy of the gate with the ``FORKED`` modifier added to it.
+        """Returns a copy of the gate with the ``FORKED`` modifier added to it.
 
         Raises a ``GateError`` if the number of provided alternate parameters don't
         equal the number of existing parameters.
         """
         ...
     def to_unitary_mut(self, n_qubits: int) -> NDArray[np.complex_]:
-        """
-        Lift a Gate to the full `n_qubits`-qubit Hilbert space.
+        """Lift a Gate to the full `n_qubits`-qubit Hilbert space.
 
         Returns a ``GateError` if any of the parameters of this gate are
         non-constant, if any of the qubits are variable, if the name of this
@@ -1474,18 +1554,23 @@ class Gate:
         """
         ...
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
     def __deepcopy__(self, _: Dict) -> Self:
-        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+        """Creates and returns a deep copy of the class.
+
+        If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with
+        new placeholders so resolving them in the copy will not resolve them in the original.
+        Should be used by passing an instance of the class to ``copy.deepcopy``
+        """
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
@@ -1496,11 +1581,8 @@ class PauliGate(Enum):
     Y = "Y"
     Z = "Z"
     @staticmethod
-    def parse(input: str) -> "PauliGate":
-        """
-        Parses a ``PauliGate`` from a string. Raises a ``ParseEnumError`` if the
-        string isn't a valid Pauli word.
-        """
+    def parse(input: str) -> PauliGate:
+        """Parses a ``PauliGate`` from a string. Raises a ``ParseEnumError`` if the string isn't a valid Pauli word."""
         ...
 
 class PauliTerm:
@@ -1531,11 +1613,10 @@ class PauliSum:
 
 @final
 class GateSpecification:
-    """
-    A specification for a gate definition.
+    """A specification for a gate definition.
 
     # Variants:
-    - ``matrix``: A gate specificied by a matrix of ``Expression``s representing a unitary operation.
+    - ``matrix``: A gate specified by a matrix of ``Expression``s representing a unitary operation.
     - ``permutation``: A gate specified by a vector of integers that defines a permutation.
 
     Methods (for each variant):
@@ -1546,9 +1627,7 @@ class GateSpecification:
     """
 
     def inner(self) -> Union[List[List[Expression]], List[int], PauliSum]:
-        """
-        Returns the inner value of the variant. Raises a ``RuntimeError`` if inner data doesn't exist.
-        """
+        """Returns the inner value of the variant. Raises a ``RuntimeError`` if inner data doesn't exist."""
         ...
     def is_matrix(self) -> bool: ...
     def is_permutation(self) -> bool: ...
@@ -1560,21 +1639,21 @@ class GateSpecification:
     def as_pauli_sum(self) -> Optional[PauliSum]: ...
     def to_pauli_sum(self) -> PauliSum: ...
     @staticmethod
-    def from_matrix(inner: Sequence[Sequence[Expression]]) -> "GateSpecification": ...
+    def from_matrix(inner: Sequence[Sequence[Expression]]) -> GateSpecification: ...
     @staticmethod
-    def from_permutation(inner: Sequence[int]) -> "GateSpecification": ...
+    def from_permutation(inner: Sequence[int]) -> GateSpecification: ...
     @staticmethod
-    def from_pauli_sum(inner: PauliSum) -> "GateSpecification": ...
+    def from_pauli_sum(inner: PauliSum) -> GateSpecification: ...
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class GateDefinition:
@@ -1597,25 +1676,29 @@ class GateDefinition:
     @specification.setter
     def specification(self, specification: GateSpecification) -> None: ...
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
     def __deepcopy__(self, _: Dict) -> Self:
-        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+        """Creates and returns a deep copy of the class.
+
+        If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with
+        new placeholders so resolving them in the copy will not resolve them in the original.
+        Should be used by passing an instance of the class to ``copy.deepcopy``
+        """
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
 @final
 class Qubit:
-    """
-    A Qubit
+    """A Qubit.
 
     # Variants:
     - ``fixed``: A qubit represented as a fixed integer index.
@@ -1629,9 +1712,7 @@ class Qubit:
     """
 
     def inner(self) -> Union[int, str]:
-        """
-        Returns the inner value of the variant. Raises a ``RuntimeError`` if inner data doesn't exist.
-        """
+        """Returns the inner value of the variant. Raises a ``RuntimeError`` if inner data doesn't exist."""
         ...
     def is_fixed(self) -> bool: ...
     def is_variable(self) -> bool: ...
@@ -1643,27 +1724,27 @@ class Qubit:
     def as_placeholder(self) -> Optional[QubitPlaceholder]: ...
     def to_placeholder(self) -> QubitPlaceholder: ...
     @staticmethod
-    def from_fixed(inner: int) -> "Qubit": ...
+    def from_fixed(inner: int) -> Qubit: ...
     @staticmethod
-    def from_variable(inner: str) -> "Qubit": ...
+    def from_variable(inner: str) -> Qubit: ...
     @staticmethod
-    def from_placeholder(inner: QubitPlaceholder) -> "Qubit": ...
+    def from_placeholder(inner: QubitPlaceholder) -> Qubit: ...
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class QubitPlaceholder:
-    """
-    A qubit that can be used as a placeholder. Must be resolved before converting
-    a program to valid Quil. See ``quil.program.Program#resolve_placeholders``.
+    """A qubit that can be used as a placeholder.
+
+    Placeholders must be resolved before converting a program to valid Quil. See ``quil.program.Program#resolve_placeholders``.
     """
 
     def __new__(cls) -> Self: ...
@@ -1676,18 +1757,23 @@ class Reset:
     @qubit.setter
     def qubit(self, qubit: Optional[Qubit]) -> None: ...
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
     def __deepcopy__(self, _: Dict) -> Self:
-        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+        """Creates and returns a deep copy of the class.
+
+        If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with
+        new placeholders so resolving them in the copy will not resolve them in the original.
+        Should be used by passing an instance of the class to ``copy.deepcopy``
+        """
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
@@ -1706,18 +1792,23 @@ class Delay:
     @qubits.setter
     def qubits(self, qubits: Sequence[Qubit]) -> None: ...
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
     def __deepcopy__(self, _: Dict) -> Self:
-        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+        """Creates and returns a deep copy of the class.
+
+        If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with
+        new placeholders so resolving them in the copy will not resolve them in the original.
+        Should be used by passing an instance of the class to ``copy.deepcopy``
+        """
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
@@ -1728,26 +1819,31 @@ class Fence:
     @qubits.setter
     def qubits(self, qubits: Sequence[Qubit]) -> None: ...
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
     def __deepcopy__(self, _: Dict) -> Self:
-        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+        """Creates and returns a deep copy of the class.
+
+        If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with
+        new placeholders so resolving them in the copy will not resolve them in the original.
+        Should be used by passing an instance of the class to ``copy.deepcopy``
+        """
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
 @final
 class PragmaArgument:
-    """
+    """A PRAGMA argument.
 
-    # Variants:
+    Variants:
     - ``identifier``: A Pragma argument defined by a Quil identifier
     - ``integer``: A Pragma argument defined by an integer
 
@@ -1759,9 +1855,7 @@ class PragmaArgument:
     """
 
     def inner(self) -> Union[str, int]:
-        """
-        Returns the inner value of the variant. Raises a ``RuntimeError`` if inner data doesn't exist.
-        """
+        """Returns the inner value of the variant. Raises a ``RuntimeError`` if inner data doesn't exist."""
         ...
     def is_identifier(self) -> bool: ...
     def is_integer(self) -> bool: ...
@@ -1770,19 +1864,19 @@ class PragmaArgument:
     def to_identifier(self) -> str: ...
     def to_integer(self) -> int: ...
     @staticmethod
-    def from_identifier(inner: str) -> "PragmaArgument": ...
+    def from_identifier(inner: str) -> PragmaArgument: ...
     @staticmethod
-    def from_integer(inner: int) -> "PragmaArgument": ...
+    def from_integer(inner: int) -> PragmaArgument: ...
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class Include:
@@ -1792,18 +1886,23 @@ class Include:
     @filename.setter
     def filename(self, filename: str) -> None: ...
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
     def __deepcopy__(self, _: Dict) -> Self:
-        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+        """Creates and returns a deep copy of the class.
+
+        If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with
+        new placeholders so resolving them in the copy will not resolve them in the original.
+        Should be used by passing an instance of the class to ``copy.deepcopy``
+        """
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
@@ -1822,18 +1921,23 @@ class Pragma:
     @data.setter
     def data(self, data: Optional[str]) -> None: ...
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
     def __deepcopy__(self, _: Dict) -> Self:
-        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+        """Creates and returns a deep copy of the class.
+
+        If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with
+        new placeholders so resolving them in the copy will not resolve them in the original.
+        Should be used by passing an instance of the class to ``copy.deepcopy``
+        """
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
@@ -1848,31 +1952,36 @@ class Measurement:
     @target.setter
     def target(self, target: Optional[MemoryReference]) -> None: ...
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
     def __deepcopy__(self, _: Dict) -> Self:
-        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+        """Creates and returns a deep copy of the class.
+
+        If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with
+        new placeholders so resolving them in the copy will not resolve them in the original.
+        Should be used by passing an instance of the class to ``copy.deepcopy``
+        """
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
 class ParseMemoryReferenceError(ValueError):
-    """Errors that may occur while parsing a ``MemoryReference``"""
+    """Errors that may occur while parsing a ``MemoryReference``."""
 
 class MemoryReference:
     def __new__(cls, name: str, index: int) -> Self: ...
     @staticmethod
-    def parse(input: str) -> "MemoryReference":
-        """
-        Parses a ``MemoryReference`` from a string. Raises a ``ParseMemoryReference`` error if the
-        string isn't a valid Quil memory reference.
+    def parse(input: str) -> MemoryReference:
+        """Parses a ``MemoryReference`` from a string.
+
+        Raises a ``ParseMemoryReference`` error if the string isn't a valid Quil memory reference.
         """
         ...
     @property
@@ -1884,15 +1993,15 @@ class MemoryReference:
     @index.setter
     def index(self, index: int) -> None: ...
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class Load:
@@ -1910,18 +2019,23 @@ class Load:
     @offset.setter
     def offset(self, offset: MemoryReference) -> None: ...
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
     def __deepcopy__(self, _: Dict) -> Self:
-        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+        """Creates and returns a deep copy of the class.
+
+        If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with
+        new placeholders so resolving them in the copy will not resolve them in the original.
+        Should be used by passing an instance of the class to ``copy.deepcopy``
+        """
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
@@ -1940,18 +2054,23 @@ class Store:
     @source.setter
     def source(self, source: ArithmeticOperand) -> None: ...
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
     def __deepcopy__(self, _: Dict) -> Self:
-        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+        """Creates and returns a deep copy of the class.
+
+        If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with
+        new placeholders so resolving them in the copy will not resolve them in the original.
+        Should be used by passing an instance of the class to ``copy.deepcopy``
+        """
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
@@ -1977,18 +2096,23 @@ class WaveformDefinition:
     @definition.setter
     def definition(self, definition: Waveform) -> None: ...
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
     def __deepcopy__(self, _: Dict) -> Self:
-        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+        """Creates and returns a deep copy of the class.
+
+        If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with
+        new placeholders so resolving them in the copy will not resolve them in the original.
+        Should be used by passing an instance of the class to ``copy.deepcopy``
+        """
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
@@ -2003,15 +2127,15 @@ class WaveformInvocation:
     @parameters.setter
     def parameters(self, parameters: Dict[str, Expression]) -> None: ...
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class Label:
@@ -2021,25 +2145,29 @@ class Label:
     @target.setter
     def target(self, target: Target) -> None: ...
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
     def __deepcopy__(self, _: Dict) -> Self:
-        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+        """Creates and returns a deep copy of the class.
+
+        If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with
+        new placeholders so resolving them in the copy will not resolve them in the original.
+        Should be used by passing an instance of the class to ``copy.deepcopy``
+        """
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
 @final
 class Target:
-    """
-    Represents a Quil target.
+    """Represents a Quil target.
 
     # Variants:
     - ``fixed``: A fixed target defined by a Quil identifier
@@ -2052,11 +2180,11 @@ class Target:
     - ``from_*``: Creates a new ``PragmaArgument`` using an instance of the inner type for the variant.
     """
 
-    def __new__(cls, inner: Union[str, TargetPlaceholder]) -> "Target": ...
+    def __new__(cls, inner: Union[str, TargetPlaceholder]) -> Target: ...
     @staticmethod
-    def from_fixed(inner: str) -> "Target": ...
+    def from_fixed(inner: str) -> Target: ...
     @staticmethod
-    def from_placeholder(inner: TargetPlaceholder) -> "Target": ...
+    def from_placeholder(inner: TargetPlaceholder) -> Target: ...
     def is_fixed(self) -> bool: ...
     def is_placeholder(self) -> bool: ...
     def as_fixed(self) -> Optional[str]: ...
@@ -2065,21 +2193,19 @@ class Target:
     def to_placeholder(self) -> TargetPlaceholder: ...
     def inner(self) -> Union[str, TargetPlaceholder]: ...
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
 class TargetPlaceholder:
-    """
-    A placeholder target that must be assigned a fixed name before creating a program
-    with valid quil.
+    """A placeholder target that must be assigned a fixed name before creating a program with valid quil.
 
     See ``quil.program.Program#resolve_placeholders`` for more information.
     """
@@ -2095,18 +2221,23 @@ class Jump:
     @target.setter
     def target(self, target: Target) -> None: ...
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
     def __deepcopy__(self, _: Dict) -> Self:
-        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+        """Creates and returns a deep copy of the class.
+
+        If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with
+        new placeholders so resolving them in the copy will not resolve them in the original.
+        Should be used by passing an instance of the class to ``copy.deepcopy``
+        """
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
@@ -2121,18 +2252,23 @@ class JumpWhen:
     @condition.setter
     def condition(self, condition: MemoryReference) -> None: ...
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
     def __deepcopy__(self, _: Dict) -> Self:
-        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+        """Creates and returns a deep copy of the class.
+
+        If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with
+        new placeholders so resolving them in the copy will not resolve them in the original.
+        Should be used by passing an instance of the class to ``copy.deepcopy``
+        """
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
@@ -2147,17 +2283,22 @@ class JumpUnless:
     @condition.setter
     def condition(self, condition: MemoryReference) -> None: ...
     def to_quil(self) -> str:
-        """
-        Attempt to convert the instruction to a valid Quil string. Raises
-        an exception if the instruction can't be converted to valid Quil.
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
         """
         ...
     def to_quil_or_debug(self) -> str:
-        """
-        Convert the instruction to a Quil string. If any part of the instruction can't
-        be converted to valid Quil, it will be printed in a human-readable debug format.
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
     def __deepcopy__(self, _: Dict) -> Self:
-        """Creates and returns a deep copy of the class. If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with new placeholders so resolving them in the copy will not resolve them in the original.  Should be used by passing an instance of the class to ``copy.deepcopy``"""
+        """Creates and returns a deep copy of the class.
+
+        If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with
+        new placeholders so resolving them in the copy will not resolve them in the original.
+        Should be used by passing an instance of the class to ``copy.deepcopy``
+        """
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
