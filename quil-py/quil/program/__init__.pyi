@@ -177,10 +177,12 @@ class BasicBlock:
         * Mapping calibrated instructions back to the original instructions within this block, such that the
           block's instruction is represented as a timespan encompassing all of its expanded instructions
 
-        Note: the schedule will not include instructions with zero duration (such as `FENCE`).
-
         :param program: The program containing the calibrations to be used to schedule this block. Generally,
             this should be the program from which the block was extracted.
+
+        Important note: If the basic block contains gates, the program must contain corresponding `DEFCAL`s for those gates.
+        Gates do not inherently have durations, but rather inherit them from the `PULSE`, `CAPTURE`, `DELAY`,
+        and other instructions within their calibrations. Without a calibration, a gate's duration cannot be computed.
 
         The following example demonstrates construction of such a schedule for a simple program without explicit control
         flow (and thus with only one basic block):
@@ -201,7 +203,7 @@ class BasicBlock:
                 basic_blocks = control_flow_graph.basic_blocks()
                 assert len(basic_blocks) == 1
 
-                schedule = blocks[0].as_schedule_seconds(program, False)
+                schedule = blocks[0].as_schedule_seconds(program)
                 print(f"Duration = {schedule.duration()}")
 
                 print(schedule.items())
