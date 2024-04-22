@@ -93,10 +93,6 @@ pub enum ExecutionDependency {
 /// A data structure to be used in the serializing of access to a memory region.
 /// This utility helps guarantee strong consistency in a single-writer, multiple-reader model.
 impl MemoryAccessQueue {
-    pub fn flush(mut self) -> Vec<MemoryAccessDependency> {
-        self.get_blocking_nodes(ScheduledGraphNode::BlockEnd, &MemoryAccessType::Capture)
-    }
-
     /// Register that a node wants access of the given type, while returning which accesses block
     /// the requested access.
     ///
@@ -290,7 +286,10 @@ impl<'a> ScheduledBasicBlock<'a> {
         // Root node
         graph.add_node(ScheduledGraphNode::BlockStart);
 
-        let mut last_classical_instruction = ScheduledGraphNode::BlockStart;
+        // The set of classical instructions that do not have outgoing edges (i.e. there are no
+        // downstream instructions that depend on them). After iterating over all instructions,
+        // the set of trailing classical instructions will need an outgoing edge to the block end.
+        let mut trailing_classical_instructions: HashSet<ScheduledGraphNode> = HashSet::new();
 
         // Store the instruction index of the last instruction to block that frame
         let mut last_instruction_by_frame: HashMap<FrameIdentifier, PreviousNodes> = HashMap::new();
@@ -304,12 +303,52 @@ impl<'a> ScheduledBasicBlock<'a> {
         for (index, &instruction) in basic_block.instructions().iter().enumerate() {
             let node = graph.add_node(ScheduledGraphNode::InstructionIndex(index));
 
+            let accesses = custom_handler.memory_accesses(instruction);
+
+            let memory_dependencies = [
+                (accesses.reads, MemoryAccessType::Read),
+                (accesses.writes, MemoryAccessType::Write),
+                (accesses.captures, MemoryAccessType::Capture),
+            ]
+            .iter()
+            .flat_map(|(regions, access_type)| {
+                regions
+                    .iter()
+                    .flat_map(|region| {
+                        pending_memory_access
+                            .entry(region.clone())
+                            .or_default()
+                            // NOTE: This mutates the underlying `MemoryAccessQueue` by registering
+                            // the instruction node.
+                            .get_blocking_nodes(node, access_type)
+                    })
+                    // Collecting is necessary to avoid "captured variable cannot escape FnMut closure body" errors
+                    .collect::<Vec<_>>()
+            })
+            .collect::<Vec<_>>();
+            let has_memory_dependencies = !memory_dependencies.is_empty();
+            for memory_dependency in memory_dependencies {
+                // Test to make sure that no instructions depend directly on themselves
+                if memory_dependency.node_id != node {
+                    let execution_dependency =
+                        ExecutionDependency::AwaitMemoryAccess(memory_dependency.access_type);
+                    add_dependency!(graph, memory_dependency.node_id => node, execution_dependency);
+                    // This memory dependency now has an outgoing edge, so it is no longer a trailing classical
+                    // instruction. If the memory dependency is not a classical instruction, this
+                    // has no effect.
+                    trailing_classical_instructions.remove(&memory_dependency.node_id);
+                }
+            }
+
             match custom_handler.role_for_instruction(instruction) {
                 // Classical instructions must be ordered by appearance in the program
                 InstructionRole::ClassicalCompute => {
-                    add_dependency!(graph, last_classical_instruction => node, ExecutionDependency::StableOrdering);
-
-                    last_classical_instruction = node;
+                    // If this instruction has no memory dependencies, it is a leading classical
+                    // instruction and needs an incoming edge from the block start.
+                    if !has_memory_dependencies {
+                        add_dependency!(graph, ScheduledGraphNode::BlockStart => node, ExecutionDependency::StableOrdering);
+                    }
+                    trailing_classical_instructions.insert(node);
                     Ok(())
                 }
                 InstructionRole::RFControl => {
@@ -373,34 +412,13 @@ impl<'a> ScheduledBasicBlock<'a> {
                     variant: ScheduleErrorVariant::UnschedulableInstruction,
                 }),
             }?;
-
-            let accesses = custom_handler.memory_accesses(instruction);
-            for (regions, access_type) in [
-                (accesses.reads, MemoryAccessType::Read),
-                (accesses.writes, MemoryAccessType::Write),
-                (accesses.captures, MemoryAccessType::Capture),
-            ] {
-                for region in regions {
-                    let memory_dependencies = pending_memory_access
-                        .entry(region.clone())
-                        .or_default()
-                        .get_blocking_nodes(node, &access_type);
-                    for memory_dependency in memory_dependencies {
-                        // Test to make sure that no instructions depend directly on themselves
-                        if memory_dependency.node_id != node {
-                            let execution_dependency = ExecutionDependency::AwaitMemoryAccess(
-                                memory_dependency.access_type,
-                            );
-                            add_dependency!(graph, memory_dependency.node_id => node, execution_dependency);
-                        }
-                    }
-                }
-            }
         }
 
         // Link all pending dependency nodes to the end of the block, to ensure that the block
         // does not terminate until these are complete
-        add_dependency!(graph, last_classical_instruction => ScheduledGraphNode::BlockEnd, ExecutionDependency::StableOrdering);
+        for trailing_classical_instruction in trailing_classical_instructions {
+            add_dependency!(graph, trailing_classical_instruction => ScheduledGraphNode::BlockEnd, ExecutionDependency::StableOrdering);
+        }
 
         for previous_nodes in last_timed_instruction_by_frame.into_values() {
             for node in previous_nodes.into_hashset() {
@@ -414,19 +432,9 @@ impl<'a> ScheduledBasicBlock<'a> {
             }
         }
 
-        // Examine all "pending" memory operations for all regions
-        let remaining_dependencies = pending_memory_access
-            .into_iter()
-            .flat_map(|(_, queue)| queue.flush())
-            .collect::<Vec<MemoryAccessDependency>>();
-
-        // For each dependency, insert or overwrite an edge in the graph connecting the node pending that
-        // operation to the end of the graph.
-        for dependency in remaining_dependencies {
-            let execution_dependency =
-                ExecutionDependency::AwaitMemoryAccess(dependency.access_type);
-
-            add_dependency!(graph, dependency.node_id => ScheduledGraphNode::BlockEnd, execution_dependency);
+        // Maintain the invariant that the block start node has a connecting path to the block end node.
+        if basic_block.instructions().is_empty() {
+            add_dependency!(graph, ScheduledGraphNode::BlockStart => ScheduledGraphNode::BlockEnd, ExecutionDependency::StableOrdering);
         }
 
         Ok(ScheduledBasicBlock { graph, basic_block })
@@ -525,14 +533,17 @@ impl<'a> From<ScheduledBasicBlock<'a>> for ScheduledBasicBlockOwned {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    #[cfg(feature = "graphviz-dot")]
+    use crate::program::scheduling::graphviz_dot::tests::build_dot_format_snapshot_test_case;
+
     #[cfg(feature = "graphviz-dot")]
     mod custom_handler {
-        use super::super::*;
+        use super::*;
 
         use crate::instruction::Pragma;
         use crate::instruction::PragmaArgument;
         use crate::program::frame::FrameMatchCondition;
-        use crate::program::scheduling::graphviz_dot::tests::build_dot_format_snapshot_test_case;
         use crate::program::{MatchedFrames, MemoryAccesses};
 
         /// Generates a custom [`InstructionHandler`] that specially handles two `PRAGMA` instructions:
@@ -669,5 +680,136 @@ PRAGMA RAW-INSTRUCTION foo
 "#,
             &mut get_custom_handler(),
         }
+    }
+
+    // Because any instruction that reads a particular region must be preceded by any earlier instructions that write to/ capture that memory region,
+    // we expect an edge from the first load to the second (0 -> 1).
+    #[cfg(feature = "graphviz-dot")]
+    build_dot_format_snapshot_test_case! {
+        classical_write_read_load_load,
+        r#"
+DECLARE params1 REAL[1]
+DECLARE params2 REAL[1]
+DECLARE params3 REAL[1]
+DECLARE integers INTEGER[1]
+LOAD params2[0] params3 integers[0] # writes params2 
+LOAD params1[0] params2 integers[0] # reads params2
+"#
+    }
+
+    // Because any instruction that reads a particular region must be preceded by any earlier instructions that write to/ capture that memory region,
+    // we expect an edge from the mul to the load (0 -> 1).
+    #[cfg(feature = "graphviz-dot")]
+    build_dot_format_snapshot_test_case! {
+        classical_write_read_mul_load,
+        r#"
+DECLARE params1 REAL[1]
+DECLARE params2 REAL[1]
+DECLARE integers INTEGER[1]
+
+MUL params2[0] 2 # reads and writes params2
+LOAD params1[0] params2 integers[0] # just reads params2
+"#
+    }
+
+    // Because any instruction that reads a particular region must be preceded by any earlier instructions that write to/ capture that memory region,
+    // we expect an edge from the mul to the add (0 -> 1).
+    #[cfg(feature = "graphviz-dot")]
+    build_dot_format_snapshot_test_case! {
+        classical_write_read_add_mul,
+        r#"
+DECLARE params1 REAL[1]
+DECLARE params2 REAL[1]
+DECLARE integers INTEGER[1]
+
+ADD params1[0] 1 # this reads and writes params1
+MUL params1[0] 2 # this reads and writes params1
+"#
+    }
+
+    // Because any instruction that reads a particular region must precede any later instructions that write to/ capture that memory region,
+    // we expect an edge from the first load to the second (0, 1).
+    #[cfg(feature = "graphviz-dot")]
+    build_dot_format_snapshot_test_case! {
+        classical_read_write_load_load,
+        r#"
+DECLARE params1 REAL[1]
+DECLARE params2 REAL[1]
+DECLARE integers INTEGER[1]
+
+LOAD params1[0] params2 integers[0] # reads params2
+LOAD params2[0] params3 integers[0] # writes params2
+"#
+    }
+
+    // Because any instruction that reads a particular region must precede any later instructions that write to/ capture that memory region,
+    // we expect an edge from the load to the mul (0, 1).
+    #[cfg(feature = "graphviz-dot")]
+    build_dot_format_snapshot_test_case! {
+        classical_read_write_load_mul,
+        r#"
+DECLARE params1 REAL[1]
+DECLARE params2 REAL[1]
+DECLARE integers INTEGER[1]
+
+LOAD params1[0] params2 integers[0] # reads params2
+MUL params2[0] 2                    # reads and writes params2
+"#
+    }
+
+    // Because memory reading and writing dependencies also apply to RfControl instructions, we
+    // expect edges from the first load to the first shift-phase (0 -> 1), the first shift-phase
+    // to the second load (1 -> 2), and the second load to the second shift-phase (2 -> 3).
+    #[cfg(feature = "graphviz-dot")]
+    build_dot_format_snapshot_test_case! {
+        quantum_write_parameterized_operations,
+        r#"
+DEFFRAME 0 "rx":
+    INITIAL-FREQUENCY: 1e8
+DEFFRAME 1 "rx":
+    INITIAL-FREQUENCY: 1e8
+
+DECLARE params1 REAL[1]
+DECLARE params2 REAL[1]
+DECLARE integers INTEGER[1]
+
+LOAD params2[0] params1 integers[0] # writes params2
+SHIFT-PHASE 0 "rf" params2[0]       # reads params2
+LOAD params2[0] params1 integers[1] # writes params2
+SHIFT-PHASE 1 "rf" params2[0]       # reads params2
+"#
+    }
+
+    // Because a pragma by default will have no memory accesses, it should only have edges from the block start and to the block end.
+    #[cfg(feature = "graphviz-dot")]
+    build_dot_format_snapshot_test_case! {
+        classical_no_memory_pragma,
+        r#"PRAGMA example"#
+    }
+
+    #[cfg(feature = "graphviz-dot")]
+    build_dot_format_snapshot_test_case! {
+        write_capture_read,
+        r#"
+DECLARE bits BIT[1]
+DECLARE integers INTEGER[1]
+LOAD bits[0] bits2 integers[0] # write
+NONBLOCKING CAPTURE 0 "Transmon-0_readout_rx" flat(duration: 2.0000000000000003e-06, iq: 1.0, scale: 1.0, phase: 0.8745492960861506, detuning: 0.0) bits[0] # capture
+LOAD bits3[0] bits integers[0] # read
+"#
+    }
+
+    #[cfg(feature = "graphviz-dot")]
+    build_dot_format_snapshot_test_case! {
+        write_write_read,
+        r#"
+DECLARE bits BIT[1]
+DECLARE bits2 BIT[1]
+DECLARE bits3 BIT[1]
+DECLARE integers INTEGER[1]
+LOAD bits[0] bits2 integers[0] # write
+LOAD bits[0] bits3 integers[0] # write
+LOAD bits4[0] bits integers[0] # read
+"#
     }
 }

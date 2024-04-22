@@ -2,6 +2,7 @@
 # This script gets the current version of quil-rs from its manifest, and uses it to update the dependency specification
 # of quil-rs in quil-py's manifset.
 #
+
 # Get current version of quil-rs
 PACKAGE_VERSION=$(cargo metadata --format-version 1 --no-deps | grep -o '"name":"quil-rs","version":"[^"]*' | cut -d '"' -f 8)
 

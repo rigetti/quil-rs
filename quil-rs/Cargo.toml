@@ -5,7 +5,7 @@ version = "0.25.1"
 edition = "2021"
 rust-version = "1.70"
 license = "Apache-2.0"
-repository = "https://github.com/rigetti/quil-rust"
+repository = "https://github.com/rigetti/quil-rs"
 keywords = ["Quil", "Quantum", "Rigetti"]
 categories = ["parser-implementations", "science", "compilers", "emulators"]
 

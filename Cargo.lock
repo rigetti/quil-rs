@@ -1086,7 +1086,7 @@ checksum = "a1d01941d82fa2ab50be1e79e6714289dd7cde78eba4c074bc5a4374f650dfe0"
 
 [[package]]
 name = "quil-cli"
-version = "0.1.1-rc.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -1095,7 +1095,7 @@ dependencies = [
 
 [[package]]
 name = "quil-py"
-version = "0.8.1-rc.0"
+version = "0.9.1"
 dependencies = [
  "indexmap",
  "ndarray",
@@ -1109,7 +1109,7 @@ dependencies = [
 
 [[package]]
 name = "quil-rs"
-version = "0.24.1-rc.0"
+version = "0.25.1"
 dependencies = [
  "approx",
  "clap",

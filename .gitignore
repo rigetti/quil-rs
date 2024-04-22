@@ -18,3 +18,5 @@ __pycache__
 # quil-py documentation
 quil-py/build
 
+# unversioned developer notes
+scratch/
