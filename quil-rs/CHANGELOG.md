@@ -1,3 +1,9 @@
+## 0.26.0
+
+### Breaking Changes
+
+- reduce number of classical instruction edges in InstructionBlock::graph
+
 ## 0.26.0-rc.0
 
 ### Breaking Changes
