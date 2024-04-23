@@ -832,13 +832,21 @@ mod tests {
                             expression: Box::new(e),
                         })
                     }),
-                    (expr.clone(), any::<InfixOperator>(), expr.clone()).prop_map(
-                        |(l, operator, r)| Infix(InfixExpression {
+                    (expr.clone(), any::<InfixOperator>(), expr.clone())
+                        // avoid division by 0 so that we can reliably assert equality
+                        .prop_filter(
+                            "division must not evaluate to NaN",
+                            |(_, operator, right)| {
+                                operator != &InfixOperator::Slash
+                                    || right.clone().into_simplified()
+                                        != Expression::Number(Complex64::new(0.0, 0.0))
+                            }
+                        )
+                        .prop_map(|(l, operator, r)| Infix(InfixExpression {
                             left: Box::new(l),
                             operator,
                             right: Box::new(r)
-                        })
-                    ),
+                        })),
                     (expr).prop_map(|e| Prefix(PrefixExpression {
                         operator: PrefixOperator::Minus,
                         expression: Box::new(e)
@@ -966,14 +974,17 @@ mod tests {
             prop_assert_eq!(x, expected);
         }
 
+
+        // Avoid division by 0 so that we can reliably assert equality
         #[test]
-        fn division_works_as_expected(left in arb_expr(), right in arb_expr()) {
+        fn division_works_as_expected(left in arb_expr(), right in arb_expr().prop_filter("avoid division by 0", |expr| expr.clone().into_simplified() != Expression::Number(Complex64::new(0.0, 0.0)))) {
             let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Slash, right: Box::new(right.clone()) } );
             prop_assert_eq!(left / right, expected);
         }
 
+        // Avoid division by 0 so that we can reliably assert equality
         #[test]
-        fn in_place_division_works_as_expected(left in arb_expr(), right in arb_expr()) {
+        fn in_place_division_works_as_expected(left in arb_expr(), right in arb_expr().prop_filter("avoid division by 0", |expr| expr.clone().into_simplified() != Expression::Number(Complex64::new(0.0, 0.0)))) {
             let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Slash, right: Box::new(right.clone()) } );
             let mut x = left;
             x /= right;
