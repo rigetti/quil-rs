@@ -29,32 +29,32 @@ pub fn apply_phase_and_detuning(
 ///
 /// To handle accumulated floating point errors in sweeps above typical floating point imprecision
 /// we make epsilon 10x larger than floating point epsilon.
-pub(super) fn ceiling_with_epsilon(value: f64) -> f64 {
+fn ceiling_with_epsilon(value: f64) -> f64 {
     let truncated = value - (value * 10.0 * std::f64::EPSILON);
     truncated.ceil()
 }
 
-pub fn polar_to_rectangular(magnitude: f64, angle: crate::units::Radians<f64>) -> Complex64 {
+/// Convert polar coordinates to rectangular coordinates.
+fn polar_to_rectangular(magnitude: f64, angle: crate::units::Radians<f64>) -> Complex64 {
     magnitude * imag!(angle.0).exp()
 }
 
-#[derive(Clone, Debug)]
-pub struct BoxcarKernelParameters {
+#[derive(Clone, Copy, Debug)]
+pub struct BoxcarKernel {
     pub phase: crate::units::Cycles<f64>,
     pub scale: f64,
     pub sample_count: u64,
 }
 
-/// Return the IQ value used for a boxcar kernel
-pub fn boxcar_kernel(parameters: BoxcarKernelParameters) -> Complex64 {
-    polar_to_rectangular(
-        parameters.scale / parameters.sample_count as f64,
-        parameters.phase.into(),
-    )
+impl BoxcarKernel {
+    pub fn into_iq_value(self) -> Complex64 {
+        polar_to_rectangular(self.scale / self.sample_count as f64, self.phase.into())
+    }
 }
 
+/// Creates a waveform with a flat top and edges that are error functions (erfs).
 #[derive(Serialize, Deserialize)]
-pub struct ErfSquareParameters {
+pub struct ErfSquare {
     /// Full duration of the pulse (s)
     pub duration: f64,
     /// Slope of erf shoulders (2x FWHM of erf in s)
@@ -75,41 +75,34 @@ pub struct ErfSquareParameters {
     pub detuning: f64,
 }
 
-/// Creates a waveform with a flat top and edges that are error functions (erfs).
-pub fn erf_square(parameters: ErfSquareParameters) -> Vec<Complex64> {
-    let length = ceiling_with_epsilon(parameters.duration * parameters.sample_rate);
-    let mut time_steps = Array::<f64, _>::range(0f64, length, 1f64) / parameters.sample_rate;
+impl ErfSquare {
+    pub fn into_iq_values(self) -> Vec<Complex64> {
+        let length = ceiling_with_epsilon(self.duration * self.sample_rate);
+        let mut time_steps = Array::<f64, _>::range(0f64, length, 1f64) / self.sample_rate;
 
-    let fwhm = 0.5 * parameters.risetime;
-    let t1 = fwhm;
-    let t2 = parameters.duration - fwhm;
-    let sigma = 0.5 * fwhm / (2f64 * 2f64.ln()).sqrt();
-    time_steps.mapv_inplace(|el| 0.5 * (erf((el - t1) / sigma) - erf((el - t2) / sigma)));
-    if !parameters.positive_polarity {
-        time_steps *= -1f64;
+        let fwhm = 0.5 * self.risetime;
+        let t1 = fwhm;
+        let t2 = self.duration - fwhm;
+        let sigma = 0.5 * fwhm / (2f64 * 2f64.ln()).sqrt();
+        time_steps.mapv_inplace(|el| 0.5 * (erf((el - t1) / sigma) - erf((el - t2) / sigma)));
+        if !self.positive_polarity {
+            time_steps *= -1f64;
+        }
+
+        let left_pad_length = (self.pad_left * self.sample_rate).ceil() as usize;
+        let mut waveform = vec![real!(0f64); left_pad_length];
+        waveform.extend(time_steps.into_iter().map(|el| self.scale * real!(el)));
+
+        let right_pad_length = (self.pad_right * self.sample_rate).ceil() as usize;
+        waveform.extend_from_slice(&vec![real!(0f64); right_pad_length]);
+        apply_phase_and_detuning(&mut waveform, self.phase, self.detuning, self.sample_rate);
+        waveform
     }
-
-    let left_pad_length = (parameters.pad_left * parameters.sample_rate).ceil() as usize;
-    let mut waveform = vec![real!(0f64); left_pad_length];
-    waveform.extend(
-        time_steps
-            .into_iter()
-            .map(|el| parameters.scale * real!(el)),
-    );
-
-    let right_pad_length = (parameters.pad_right * parameters.sample_rate).ceil() as usize;
-    waveform.extend_from_slice(&vec![real!(0f64); right_pad_length]);
-    apply_phase_and_detuning(
-        &mut waveform,
-        parameters.phase,
-        parameters.detuning,
-        parameters.sample_rate,
-    );
-    waveform
 }
 
+/// Creates a waveform with a Gaussian shape.
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct GaussianParameters {
+pub struct Gaussian {
     /// Full duration of the pulse (s)
     pub duration: f64,
     /// Full width half maximum of the pulse (s)
@@ -126,30 +119,30 @@ pub struct GaussianParameters {
     pub detuning: f64,
 }
 
-/// Creates a waveform with a Gaussian shape.
-pub fn gaussian(parameters: GaussianParameters) -> Vec<Complex64> {
-    let length = ceiling_with_epsilon(parameters.duration * parameters.sample_rate);
-    let mut time_steps = Array::<f64, _>::range(0f64, length, 1f64) / parameters.sample_rate;
+impl Gaussian {
+    pub fn into_iq_values(self) -> Vec<Complex64> {
+        let length = ceiling_with_epsilon(self.duration * self.sample_rate);
+        let mut time_steps = Array::<f64, _>::range(0f64, length, 1f64) / self.sample_rate;
 
-    let sigma = 0.5 * parameters.fwhm / (2f64 * 2f64.ln()).sqrt();
-    time_steps.mapv_inplace(|el| (-0.5 * (el - parameters.t0).powf(2f64) / sigma.powf(2f64)).exp());
+        let sigma = 0.5 * self.fwhm / (2f64 * 2f64.ln()).sqrt();
+        time_steps.mapv_inplace(|el| (-0.5 * (el - self.t0).powf(2f64) / sigma.powf(2f64)).exp());
 
-    let mut waveform = time_steps
-        .into_iter()
-        .map(|el| parameters.scale * real!(el))
-        .collect::<Vec<_>>();
-    apply_phase_and_detuning(
-        &mut waveform,
-        parameters.phase,
-        parameters.detuning,
-        parameters.sample_rate,
-    );
-    waveform
+        let mut waveform = time_steps
+            .into_iter()
+            .map(|el| self.scale * real!(el))
+            .collect::<Vec<_>>();
+        apply_phase_and_detuning(&mut waveform, self.phase, self.detuning, self.sample_rate);
+        waveform
+    }
 }
 
-/// Struct holding parameters that completely specify a DragGaussian Pulse.
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct DragGaussianParameters {
+/// Creates a waveform with a DRAG-corrected Gaussian shape.
+///
+/// This is a Gaussian shape with an additional component proportional to the time derivative of the main Gaussian pulse.
+///
+/// See Motzoi F. et al., Phys. Rev. Lett., 103 (2009) 110501. for details.
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+pub struct DragGaussian {
     /// Full duration of the pulse (s)
     pub duration: f64,
     /// Full width half maximum of the pulse (s)
@@ -170,40 +163,40 @@ pub struct DragGaussianParameters {
     pub detuning: f64,
 }
 
-/// Creates a waveform with a DRAG-corrected Gaussian shape.
-///
-/// This is a Gaussian shape with an additional component proportional to the time derivative of the main Gaussian pulse.
-///
-/// See Motzoi F. et al., Phys. Rev. Lett., 103 (2009) 110501. for details.
-pub fn drag_gaussian(parameters: DragGaussianParameters) -> Vec<Complex64> {
-    let length = ceiling_with_epsilon(parameters.duration * parameters.sample_rate);
-    let time_steps = Array::<f64, _>::range(0f64, length, 1f64) / parameters.sample_rate;
+impl DragGaussian {
+    pub fn into_iq_values(self) -> Vec<Complex64> {
+        let length = ceiling_with_epsilon(self.duration * self.sample_rate);
+        let time_steps = Array::<f64, _>::range(0f64, length, 1f64) / self.sample_rate;
 
-    let sigma = 0.5 * parameters.fwhm / (2f64 * 2f64.ln()).sqrt();
+        let sigma = 0.5 * self.fwhm / (2f64 * 2f64.ln()).sqrt();
 
-    let mut waveform = vec![Complex64::new(0f64, 0f64,); length as usize];
-    for i in 0..length as usize {
-        // Generate envelope sample
-        let env = (-0.5 * (time_steps[i] - parameters.t0).powf(2f64) / sigma.powf(2f64)).exp();
-        // Generate modified envelope sample
-        let env_mod = (parameters.alpha * (1f64 / (2f64 * PI * parameters.anh * sigma.powf(2f64))))
-            * (time_steps[i] - parameters.t0)
-            * env;
-        waveform[i] = parameters.scale * Complex64::new(env, env_mod);
+        let mut waveform = vec![Complex64::new(0f64, 0f64,); length as usize];
+        for i in 0..length as usize {
+            // Generate envelope sample
+            let env = (-0.5 * (time_steps[i] - self.t0).powf(2f64) / sigma.powf(2f64)).exp();
+            // Generate modified envelope sample
+            let env_mod = (self.alpha * (1f64 / (2f64 * PI * self.anh * sigma.powf(2f64))))
+                * (time_steps[i] - self.t0)
+                * env;
+            waveform[i] = self.scale * Complex64::new(env, env_mod);
+        }
+        apply_phase_and_detuning(&mut waveform, self.phase, self.detuning, self.sample_rate);
+
+        waveform
     }
-    apply_phase_and_detuning(
-        &mut waveform,
-        parameters.phase,
-        parameters.detuning,
-        parameters.sample_rate,
-    );
-
-    waveform
 }
 
-/// Struct holding parameters that specify a Hermite Gaussian Pulse.
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct HermiteGaussianParameters {
+/// Creates a Hermite Gaussian waveform.
+///
+/// This extends the basic DRAG pulse by adding an additional imaginary term to the pulse envelope consisting of a
+/// Gaussian pulse modified by the second order Hermite polynomial.
+///
+/// Refer to
+/// "Effects of arbitrary laser or NMR pulse shapes on population inversion and coherence"
+/// Warren S. Warren. 81, (1984); doi: 10.1063/1.447644
+/// for details.
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+pub struct HermiteGaussian {
     /// Full duration of the pulse
     pub duration: f64,
     /// Full width half maximum of the pulse
@@ -226,38 +219,28 @@ pub struct HermiteGaussianParameters {
     pub detuning: f64,
 }
 
-/// Creates a Hermite Gaussian waveform.
-///
-/// This extends the basic DRAG pulse by adding an additional imaginary term to the pulse envelope consisting of a
-/// Gaussian pulse modified by the second order Hermite polynomial. Refer to
-/// "Effects of arbitrary laser or NMR pulse shapes on population inversion and coherence"
-/// Warren S. Warren. 81, (1984); doi: 10.1063/1.447644
-/// for details.
-pub fn hermite_gaussian(parameters: HermiteGaussianParameters) -> Vec<Complex64> {
-    let length = ceiling_with_epsilon(parameters.duration * parameters.sample_rate);
-    let time_steps = Array::<f64, _>::range(0f64, length, 1f64) / parameters.sample_rate;
+impl HermiteGaussian {
+    pub fn into_iq_values(self) -> Vec<Complex64> {
+        let length = ceiling_with_epsilon(self.duration * self.sample_rate);
+        let time_steps = Array::<f64, _>::range(0f64, length, 1f64) / self.sample_rate;
 
-    let sigma = 0.5 * parameters.fwhm / (2f64 * 2f64.ln()).sqrt();
-    let deriv_prefactor = -parameters.alpha / (2f64 * PI * parameters.anh);
+        let sigma = 0.5 * self.fwhm / (2f64 * 2f64.ln()).sqrt();
+        let deriv_prefactor = -self.alpha / (2f64 * PI * self.anh);
 
-    let mut waveform = vec![Complex64::new(0f64, 0f64,); length as usize];
-    for i in 0..length as usize {
-        let exp_t = 0.5 * (time_steps[i] - parameters.t0).powf(2f64) / sigma.powf(2f64);
-        let g = (-exp_t).exp();
-        let env = (1f64 - parameters.second_order_hrm_coeff * exp_t) * g;
-        let env_derived = deriv_prefactor * (time_steps[i] - parameters.t0) / sigma.powf(2f64)
-            * g
-            * (parameters.second_order_hrm_coeff * (exp_t - 1f64) - 1f64);
-        waveform[i] = parameters.scale * Complex64::new(env, env_derived);
+        let mut waveform = vec![Complex64::new(0f64, 0f64,); length as usize];
+        for i in 0..length as usize {
+            let exp_t = 0.5 * (time_steps[i] - self.t0).powf(2f64) / sigma.powf(2f64);
+            let g = (-exp_t).exp();
+            let env = (1f64 - self.second_order_hrm_coeff * exp_t) * g;
+            let env_derived = deriv_prefactor * (time_steps[i] - self.t0) / sigma.powf(2f64)
+                * g
+                * (self.second_order_hrm_coeff * (exp_t - 1f64) - 1f64);
+            waveform[i] = self.scale * Complex64::new(env, env_derived);
+        }
+        apply_phase_and_detuning(&mut waveform, self.phase, self.detuning, self.sample_rate);
+
+        waveform
     }
-    apply_phase_and_detuning(
-        &mut waveform,
-        parameters.phase,
-        parameters.detuning,
-        parameters.sample_rate,
-    );
-
-    waveform
 }
 
 #[cfg(test)]
