@@ -98,7 +98,13 @@ jobs:
       matrix: 
         python-version: ['3.8', '3.9', '3.10', '3.11', '3.12'] 
         target: [x64] 
-    steps: 
+    steps:
+      # Some of the snapshots have long file paths, so we need to enable long file paths on Windows where the limit is 260 by default
+      - name: Allow Long File Paths
+        run: |
+          reg add HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\FileSystem /v LongPathsEnabled /t REG_DWORD /d 1 /f
+          # https://github.com/actions/checkout/issues/1285#issuecomment-2042579471
+          git config --system core.longpaths true
       - uses: actions/checkout@v2 
       - uses: actions-rs/toolchain@v1
         with:
