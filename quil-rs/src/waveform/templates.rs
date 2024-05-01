@@ -263,17 +263,64 @@ mod tests {
             .replace('.', "_")
     }
 
+    fn assert_almost_eq(left: Complex64, right: Complex64, epsilon: f64) {
+        assert!(
+            (left - right).norm() < epsilon,
+            "Expected {} to be almost equal to {} with epsilon {}",
+            left,
+            right,
+            epsilon
+        );
+    }
+
+    #[rstest::rstest]
+    #[case(BoxcarKernel {
+        phase: crate::units::Cycles(0.0),
+        scale: 1.0,
+        sample_count: 10,
+    }, Complex64::new(0.1, 0.0))]
+    #[case(BoxcarKernel {
+        phase: crate::units::Cycles(0.5),
+        scale: 1.0,
+        sample_count: 10,
+    }, Complex64::new(-0.1, 0.0))]
+    #[case(BoxcarKernel {
+        phase: crate::units::Cycles(0.0),
+        scale: -1.0,
+        sample_count: 10,
+    }, Complex64::new(-0.1, 0.0))]
+    #[case(BoxcarKernel {
+        phase: crate::units::Cycles(0.0),
+        scale: 0.0,
+        sample_count: 10,
+    }, Complex64::new(0.0, 0.0))]
+    fn boxcar_kernel(#[case] kernel: BoxcarKernel, #[case] expected: Complex64) {
+        let iq_value = kernel.into_iq_value();
+        assert_almost_eq(iq_value, expected, 1e-10);
+    }
+
+    #[rstest::rstest]
+    #[case(0.0, 0.0)]
+    #[case(0.0-std::f64::EPSILON, 0.0)]
+    #[case(0.0+std::f64::EPSILON, 1.0)]
+    // Based on a past edge case
+    #[case(8.800_000_000_000_001e-8 * 1.0e9, 88.0)]
+    fn ceiling_with_epsilon(#[case] value: f64, #[case] expected: f64) {
+        let result = super::ceiling_with_epsilon(value);
+        assert_eq!(result, expected);
+    }
+
     /// Assert that for some exemplar waveform templates, the right IQ values are generated.
     /// This is done by comparing the generated IQ values to two snapshots:
-    /// 
+    ///
     /// * one, a rendered IQ plot in ascii art format. This is mostly for the benefit of the reviewer.
     /// * two, the raw IQ values. At the end of the day this is all that matters.
-    /// 
+    ///
     /// The IQ values may not need to be inspected carefully, but the benefit of the snapshot approach is that
     /// we'll be alerted when they change. The plot is only generated for shorter lists of IQ values.
-    /// 
+    ///
     /// The plot snapshot is asserted first (before IQ values) so that the user can get a visual impression of the problem.
-    /// 
+    ///
     /// Snapshot filenames are based on the debug representation of the waveform template, so if template fields
     /// are added, removed, or renamed, then this test will fail for those cases. Additionally, if the string printing
     /// of `Complex64` changes, then the IQ values snapshot will also change.
