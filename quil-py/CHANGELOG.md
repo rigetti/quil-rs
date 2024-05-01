@@ -1,3 +1,9 @@
+## 0.10.1-rc.0
+
+### Features
+
+- add waveform templates (#369)
+
 ## 0.10.0
 
 ### Breaking Changes

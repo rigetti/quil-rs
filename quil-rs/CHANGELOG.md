@@ -1,3 +1,9 @@
+## 0.26.1-rc.0
+
+### Features
+
+- add waveform templates (#369)
+
 ## 0.26.0
 
 ### Breaking Changes
