@@ -341,8 +341,11 @@ mod tests {
         let iq_values = parameters.into_iq_values();
         let count = iq_values.len();
 
-        // This just prevents huge runaway plots if we test a long waveform
-        if count <= 200 {
+        let all_values_zero = iq_values.iter().all(|el| el == &Complex64::new(0.0, 0.0));
+
+        // count <= 200 prevents huge runaway plots if we test a long waveform
+        // !all_values_zero prevents a useless plot that appears to render differently on different platforms, making the snapshot a poor comparison
+        if count <= 200 && !all_values_zero {
             let split = iq_values.clone().into_iter().fold(
                 (vec![], vec![]),
                 |(mut reals, mut imags), el| {
@@ -359,6 +362,9 @@ mod tests {
                     .with_width(count as u32 + 10)
                     .with_height(20),
             );
+
+            // This snapshot is taken so that the developer has a visual impression of the waveform in a way that's committed to source control.
+            // however, the test should only be considered a true failure if the IQ data in the next snapshot is not equal to what's expected.
             insta::assert_snapshot!(format!("{}__plot", format_snapshot_name(parameters)), res);
         }
 
