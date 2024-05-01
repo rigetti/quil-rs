@@ -39,7 +39,11 @@ fn polar_to_rectangular(magnitude: f64, angle: crate::units::Radians<f64>) -> Co
     magnitude * imag!(angle.0).exp()
 }
 
-#[derive(Clone, Copy, Debug)]
+pub trait WaveformTemplate {
+    fn into_iq_values(self) -> Vec<Complex64>;
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct BoxcarKernel {
     pub phase: crate::units::Cycles<f64>,
     pub scale: f64,
@@ -53,7 +57,7 @@ impl BoxcarKernel {
 }
 
 /// Creates a waveform with a flat top and edges that are error functions (erfs).
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct ErfSquare {
     /// Full duration of the pulse (s)
     pub duration: f64,
@@ -75,8 +79,8 @@ pub struct ErfSquare {
     pub detuning: f64,
 }
 
-impl ErfSquare {
-    pub fn into_iq_values(self) -> Vec<Complex64> {
+impl WaveformTemplate for ErfSquare {
+    fn into_iq_values(self) -> Vec<Complex64> {
         let length = ceiling_with_epsilon(self.duration * self.sample_rate);
         let mut time_steps = Array::<f64, _>::range(0f64, length, 1f64) / self.sample_rate;
 
@@ -101,7 +105,7 @@ impl ErfSquare {
 }
 
 /// Creates a waveform with a Gaussian shape.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Gaussian {
     /// Full duration of the pulse (s)
     pub duration: f64,
@@ -119,8 +123,8 @@ pub struct Gaussian {
     pub detuning: f64,
 }
 
-impl Gaussian {
-    pub fn into_iq_values(self) -> Vec<Complex64> {
+impl WaveformTemplate for Gaussian {
+    fn into_iq_values(self) -> Vec<Complex64> {
         let length = ceiling_with_epsilon(self.duration * self.sample_rate);
         let mut time_steps = Array::<f64, _>::range(0f64, length, 1f64) / self.sample_rate;
 
@@ -141,7 +145,7 @@ impl Gaussian {
 /// This is a Gaussian shape with an additional component proportional to the time derivative of the main Gaussian pulse.
 ///
 /// See Motzoi F. et al., Phys. Rev. Lett., 103 (2009) 110501. for details.
-#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct DragGaussian {
     /// Full duration of the pulse (s)
     pub duration: f64,
@@ -163,8 +167,8 @@ pub struct DragGaussian {
     pub detuning: f64,
 }
 
-impl DragGaussian {
-    pub fn into_iq_values(self) -> Vec<Complex64> {
+impl WaveformTemplate for DragGaussian {
+    fn into_iq_values(self) -> Vec<Complex64> {
         let length = ceiling_with_epsilon(self.duration * self.sample_rate);
         let time_steps = Array::<f64, _>::range(0f64, length, 1f64) / self.sample_rate;
 
@@ -195,7 +199,7 @@ impl DragGaussian {
 /// "Effects of arbitrary laser or NMR pulse shapes on population inversion and coherence"
 /// Warren S. Warren. 81, (1984); doi: 10.1063/1.447644
 /// for details.
-#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct HermiteGaussian {
     /// Full duration of the pulse
     pub duration: f64,
@@ -219,8 +223,8 @@ pub struct HermiteGaussian {
     pub detuning: f64,
 }
 
-impl HermiteGaussian {
-    pub fn into_iq_values(self) -> Vec<Complex64> {
+impl WaveformTemplate for HermiteGaussian {
+    fn into_iq_values(self) -> Vec<Complex64> {
         let length = ceiling_with_epsilon(self.duration * self.sample_rate);
         let time_steps = Array::<f64, _>::range(0f64, length, 1f64) / self.sample_rate;
 
@@ -244,4 +248,86 @@ impl HermiteGaussian {
 }
 
 #[cfg(test)]
-mod tests {}
+mod tests {
+    use super::*;
+
+    /// Clean up a Debug representation to something more apt for a filename.
+    /// It's important that this remain stable or there'll be a mess of updating snapshot files.
+    fn format_snapshot_name(item: impl std::fmt::Debug) -> String {
+        format!("{item:?}")
+            .replace(' ', "_")
+            .replace('{', "")
+            .replace('}', "")
+            .replace(':', "")
+            .replace(',', "")
+            .replace('.', "_")
+    }
+
+    /// Assert that for some exemplar waveform templates, the right IQ values are generated.
+    /// This is done by comparing the generated IQ values to two snapshots:
+    /// 
+    /// * one, a rendered IQ plot in ascii art format. This is mostly for the benefit of the reviewer.
+    /// * two, the raw IQ values. At the end of the day this is all that matters.
+    /// 
+    /// The IQ values may not need to be inspected carefully, but the benefit of the snapshot approach is that
+    /// we'll be alerted when they change. The plot is only generated for shorter lists of IQ values.
+    /// 
+    /// The plot snapshot is asserted first (before IQ values) so that the user can get a visual impression of the problem.
+    /// 
+    /// Snapshot filenames are based on the debug representation of the waveform template, so if template fields
+    /// are added, removed, or renamed, then this test will fail for those cases. Additionally, if the string printing
+    /// of `Complex64` changes, then the IQ values snapshot will also change.
+    #[rstest::rstest]
+    #[case(ErfSquare { duration: 1e-4, risetime: 1e-5, sample_rate: 1e6, pad_left: 0.0, pad_right: 0.0, positive_polarity: true, scale: 1.0, phase: 0.0, detuning: 0.0 })]
+    #[case(ErfSquare { duration: 1e-4, risetime: 1e-5, sample_rate: 1e6, pad_left: 1e-5, pad_right: 2e-5, positive_polarity: false, scale: 1.0, phase: 0.0, detuning: 0.0 })]
+    #[case(ErfSquare { duration: 1e-4, risetime: 1e-4, sample_rate: 1e6, pad_left: 0.0, pad_right: 0.0, positive_polarity: false, scale: 1.0, phase: 0.0, detuning: 1e6 })]
+    #[case(ErfSquare { duration: 1e-4, risetime: 1e-5, sample_rate: 1e6, pad_left: 0.0, pad_right: 0.0, positive_polarity: true, scale: 1.0, phase: 0.5, detuning: 0.0 })]
+    #[case(ErfSquare { duration: 1e-4, risetime: 1e-5, sample_rate: 1e6, pad_left: 0.0, pad_right: 0.0, positive_polarity: true, scale: -1.0, phase: 0.0, detuning: 0.0 })]
+    #[case(ErfSquare { duration: 1e-4, risetime: 1e-5, sample_rate: 1e6, pad_left: 0.0, pad_right: 0.0, positive_polarity: true, scale: 0.0, phase: 0.0, detuning: 0.0 })]
+    #[case(ErfSquare { duration: 1e-4, risetime: 1e-5, sample_rate: 1e6, pad_left: 0.0, pad_right: 0.0, positive_polarity: false, scale: 0.5, phase: 0.4, detuning: -1e6 })]
+    #[case(Gaussian { duration: 1e-4, fwhm: 1e-5, t0: 0.0, sample_rate: 1e6, scale: 1.0, phase: 0.0, detuning: 0.0 })]
+    #[case(Gaussian { duration: 1e-4, fwhm: 1e-5, t0: 5e-5, sample_rate: 1e6, scale: 1.0, phase: 0.0, detuning: 1e6 })]
+    #[case(Gaussian { duration: 1e-4, fwhm: 2e-5, t0: 5e-5, sample_rate: 1e6, scale: 0.5, phase: 0.0, detuning: 0.0 })]
+    #[case(Gaussian { duration: 1e-4, fwhm: 4e-5, t0: 5e-5, sample_rate: 1e6, scale: 0.5, phase: 0.5, detuning: 0.0 })]
+    #[case(Gaussian { duration: 1e-4, fwhm: 4e-5, t0: 5e-5, sample_rate: 1e6, scale: -1.0, phase: 0.0, detuning: 0.0 })]
+    #[case(DragGaussian { duration: 1e-4, fwhm: 1e-5, t0: 0.0, anh: 1e6, alpha: 1.0, sample_rate: 1e6, scale: 1.0, phase: 0.0, detuning: 0.0 })]
+    #[case(DragGaussian { duration: 1e-4, fwhm: 1e-5, t0: 0.0, anh: 1e6, alpha: 1.0, sample_rate: 1e6, scale: 1.0, phase: 0.0, detuning: 1e6 })]
+    #[case(HermiteGaussian { duration: 1e-4, fwhm: 1e-5, t0: 0.0, anh: 1e6, alpha: 1.0, sample_rate: 1e6, second_order_hrm_coeff: 0.1, scale: 1.0, phase: 0.0, detuning: 0.0 })]
+    #[case(HermiteGaussian { duration: 1e-4, fwhm: 1e-5, t0: 0.0, anh: 1e6, alpha: 1.0, sample_rate: 1e6, second_order_hrm_coeff: 0.1, scale: 1.0, phase: 0.0, detuning: 1e6 })]
+    fn into_iq_values(#[case] parameters: impl WaveformTemplate + Copy + std::fmt::Debug) {
+        let iq_values = parameters.into_iq_values();
+        let count = iq_values.len();
+
+        // This just prevents huge runaway plots if we test a long waveform
+        if count <= 200 {
+            let split = iq_values.clone().into_iter().fold(
+                (vec![], vec![]),
+                |(mut reals, mut imags), el| {
+                    reals.push(el.re);
+                    imags.push(el.im);
+                    (reals, imags)
+                },
+            );
+            let split = vec![split.0, split.1];
+
+            let res = rasciigraph::plot_many(
+                split,
+                rasciigraph::Config::default()
+                    .with_width(count as u32 + 10)
+                    .with_height(20),
+            );
+            insta::assert_snapshot!(format!("{}__plot", format_snapshot_name(parameters)), res);
+        }
+
+        let neat_iq_values = iq_values
+            .iter()
+            .map(|el| el.to_string())
+            .collect::<Vec<_>>()
+            .join("\n");
+
+        insta::assert_snapshot!(
+            format!("{}__data", format_snapshot_name(parameters)),
+            neat_iq_values
+        )
+    }
+}
