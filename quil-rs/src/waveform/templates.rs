@@ -368,7 +368,7 @@ mod tests {
 
         let neat_iq_values = iq_values
             .iter()
-            .map(|el| el.to_string())
+            .map(|el| format!("{:+.5e}, {:+.5e}", el.re, el.im))
             .collect::<Vec<_>>()
             .join("\n");
 
