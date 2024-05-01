@@ -255,12 +255,8 @@ mod tests {
     /// It's important that this remain stable or there'll be a mess of updating snapshot files.
     fn format_snapshot_name(item: impl std::fmt::Debug) -> String {
         format!("{item:?}")
-            .replace(' ', "_")
-            .replace('{', "")
-            .replace('}', "")
-            .replace(':', "")
-            .replace(',', "")
-            .replace('.', "_")
+            .replace(&['{', '}', ':', ','], "")
+            .replace(&[' ', '.'], "_")
     }
 
     fn assert_almost_eq(left: Complex64, right: Complex64, epsilon: f64) {
