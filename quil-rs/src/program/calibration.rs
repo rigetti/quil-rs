@@ -17,6 +17,7 @@ use std::collections::HashMap;
 use itertools::FoldWhile::{Continue, Done};
 use itertools::Itertools;
 
+use crate::instruction::GateModifier;
 use crate::quil::Quil;
 use crate::{
     expression::Expression,
@@ -27,6 +28,7 @@ use crate::{
     },
 };
 
+use super::source_map::{SourceMap, SourceMapEntry, SourceMapRange};
 use super::{CalibrationSet, ProgramError};
 
 /// A collection of Quil calibrations (`DEFCAL` instructions) with utility methods.
@@ -57,6 +59,111 @@ impl<'a> MatchedCalibration<'a> {
     }
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct CalibrationExpansionOutput {
+    pub new_instructions: Vec<Instruction>,
+    pub detail: CalibrationExpansion,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct CalibrationExpansion {
+    pub calibration_used: CalibrationSource,
+    pub length: usize,
+    pub expansions: SourceMap<usize, CalibrationExpansion>,
+}
+
+impl SourceMapRange for CalibrationExpansion {
+    type Value = usize;
+
+    fn start(&self) -> &usize {
+        &0
+    }
+
+    fn contains(&self, value: &Self::Value) -> bool {
+        self.length > *value
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum MaybeCalibrationExpansion {
+    Expanded(CalibrationExpansion),
+    Unexpanded(usize),
+}
+
+impl SourceMapRange for MaybeCalibrationExpansion {
+    type Value = usize;
+
+    fn start(&self) -> &usize {
+        match self {
+            MaybeCalibrationExpansion::Expanded(expansion) => expansion.start(),
+            MaybeCalibrationExpansion::Unexpanded(index) => index,
+        }
+    }
+
+    fn contains(&self, value: &Self::Value) -> bool {
+        match self {
+            MaybeCalibrationExpansion::Expanded(expansion) => expansion.contains(value),
+            MaybeCalibrationExpansion::Unexpanded(index) => index == value,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum CalibrationSource {
+    Calibration(CalibrationIdentifier),
+    MeasureCalibration(MeasureCalibrationIdentifier),
+}
+
+impl From<CalibrationIdentifier> for CalibrationSource {
+    fn from(value: CalibrationIdentifier) -> Self {
+        Self::Calibration(value)
+    }
+}
+
+impl From<MeasureCalibrationIdentifier> for CalibrationSource {
+    fn from(value: MeasureCalibrationIdentifier) -> Self {
+        Self::MeasureCalibration(value)
+    }
+}
+
+// For review consideration: making this a structural part of Calibration would
+// (a) make some sense in principle and
+// (b) allow CalibrationExpansion to contain a reference to it instead of an owned, cloned copy
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct CalibrationIdentifier {
+    pub modifiers: Vec<GateModifier>,
+    pub name: String,
+    pub parameters: Vec<Expression>,
+    pub qubits: Vec<Qubit>,
+}
+
+impl From<&Calibration> for CalibrationIdentifier {
+    fn from(value: &Calibration) -> Self {
+        Self {
+            modifiers: value.modifiers.clone(),
+            name: value.name.clone(),
+            parameters: value.parameters.clone(),
+            qubits: value.qubits.clone(),
+        }
+    }
+}
+
+// For review: how would we feel about making this a subfield of the `MeasureCalibrationDefinition` itself?
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct MeasureCalibrationIdentifier {
+    pub qubit: Option<Qubit>,
+    pub parameter: String,
+}
+
+impl From<&MeasureCalibrationDefinition> for MeasureCalibrationIdentifier {
+    fn from(value: &MeasureCalibrationDefinition) -> Self {
+        Self {
+            qubit: value.qubit.clone(),
+            parameter: value.parameter.clone(),
+        }
+    }
+}
+
 impl Calibrations {
     /// Return a vector containing a reference to all [`Calibration`]s in the set.
     pub fn calibrations(&self) -> Vec<&Calibration> {
@@ -79,18 +186,27 @@ impl Calibrations {
         self.measure_calibrations.iter()
     }
 
-    /// Given an instruction, return the instructions to which it is expanded if there is a match.
-    /// Recursively calibrate instructions, returning an error if a calibration directly or indirectly
-    /// expands into itself.
     pub fn expand(
         &self,
         instruction: &Instruction,
         previous_calibrations: &[Instruction],
     ) -> Result<Option<Vec<Instruction>>, ProgramError> {
+        self.expand_with_detail(instruction, previous_calibrations)
+            .map(|expansion| expansion.map(|expansion| expansion.new_instructions))
+    }
+
+    /// Given an instruction, return the instructions to which it is expanded if there is a match.
+    /// Recursively calibrate instructions, returning an error if a calibration directly or indirectly
+    /// expands into itself.
+    pub fn expand_with_detail(
+        &self,
+        instruction: &Instruction,
+        previous_calibrations: &[Instruction],
+    ) -> Result<Option<CalibrationExpansionOutput>, ProgramError> {
         if previous_calibrations.contains(instruction) {
             return Err(ProgramError::RecursiveCalibration(instruction.clone()));
         }
-        let expanded_once_instructions = match instruction {
+        let calibration_result = match instruction {
             Instruction::Gate(gate) => {
                 let matching_calibration = self.get_match_for_gate(gate);
 
@@ -180,7 +296,10 @@ impl Calibrations {
                             })
                         }
 
-                        Some(instructions)
+                        Some((
+                            instructions,
+                            CalibrationSource::Calibration(calibration.into()),
+                        ))
                     }
                     None => None,
                 }
@@ -210,7 +329,10 @@ impl Calibrations {
                                 _ => {}
                             }
                         }
-                        Some(instructions)
+                        Some((
+                            instructions,
+                            CalibrationSource::MeasureCalibration(calibration.into()),
+                        ))
                     }
                     None => None,
                 }
@@ -219,25 +341,50 @@ impl Calibrations {
         };
 
         // Add this instruction to the breadcrumb trail before recursion
-        let mut downstream_previous_calibrations =
-            Vec::with_capacity(previous_calibrations.len() + 1);
-        downstream_previous_calibrations.push(instruction.clone());
-        downstream_previous_calibrations.extend_from_slice(previous_calibrations);
+        let mut calibration_path = Vec::with_capacity(previous_calibrations.len() + 1);
+        calibration_path.push(instruction.clone());
+        calibration_path.extend_from_slice(previous_calibrations);
 
-        Ok(match expanded_once_instructions {
-            Some(instructions) => {
-                let mut recursively_expanded_instructions = vec![];
+        Ok(match calibration_result {
+            Some((instructions, matched_calibration)) => {
+                let mut recursively_expanded_instructions = CalibrationExpansionOutput {
+                    new_instructions: Vec::new(),
+                    detail: CalibrationExpansion {
+                        calibration_used: matched_calibration,
+                        length: 0,
+                        expansions: SourceMap::default(),
+                    },
+                };
 
-                for instruction in instructions {
+                for (expanded_index, instruction) in instructions.into_iter().enumerate() {
                     let expanded_instructions =
-                        self.expand(&instruction, &downstream_previous_calibrations)?;
+                        self.expand_with_detail(&instruction, &calibration_path)?;
                     match expanded_instructions {
-                        Some(instructions) => {
-                            recursively_expanded_instructions.extend(instructions)
+                        Some(output) => {
+                            recursively_expanded_instructions
+                                .new_instructions
+                                .extend(output.new_instructions);
+                            recursively_expanded_instructions
+                                .detail
+                                .expansions
+                                .entries
+                                .push(SourceMapEntry {
+                                    source_location: expanded_index,
+                                    target_location: output.detail,
+                                });
                         }
-                        None => recursively_expanded_instructions.push(instruction),
+                        None => {
+                            recursively_expanded_instructions
+                                .new_instructions
+                                .push(instruction);
+                        }
                     };
                 }
+
+                // While this appears to be duplicated information at this point, it's useful when multiple
+                // source mappings are merged together.
+                recursively_expanded_instructions.detail.length =
+                    recursively_expanded_instructions.new_instructions.len();
                 Some(recursively_expanded_instructions)
             }
             None => None,
@@ -441,11 +588,15 @@ impl Calibrations {
 mod tests {
     use std::str::FromStr;
 
+    use crate::program::calibration::{CalibrationSource, MeasureCalibrationIdentifier};
+    use crate::program::source_map::{SourceMap, SourceMapEntry};
     use crate::program::Program;
     use crate::quil::Quil;
 
     use insta::assert_snapshot;
     use rstest::rstest;
+
+    use super::{CalibrationExpansion, CalibrationExpansionOutput, CalibrationIdentifier};
 
     #[rstest]
     #[case(
@@ -570,6 +721,138 @@ mod tests {
         }, {
             assert_snapshot!(calibrated_program.to_quil_or_debug())
         })
+    }
+
+    #[test]
+    fn expand_with_detail_recursive() {
+        let input = r#"
+DEFCAL X 0:
+    Y 0
+    MEASURE 0 ro
+    Y 0
+
+DEFCAL Y 0:
+    NOP
+    Z 0
+
+DEFCAL Z 0:
+    WAIT
+
+DEFCAL MEASURE 0 addr:
+    HALT
+
+X 0
+"#;
+
+        let program = Program::from_str(input).unwrap();
+        let instruction = program.instructions.last().unwrap();
+        let expansion = program
+            .calibrations
+            .expand_with_detail(instruction, &[])
+            .unwrap();
+        let expected = CalibrationExpansionOutput {
+            new_instructions: vec![
+                crate::instruction::Instruction::Nop,
+                crate::instruction::Instruction::Wait,
+                crate::instruction::Instruction::Halt,
+                crate::instruction::Instruction::Nop,
+                crate::instruction::Instruction::Wait,
+            ],
+            detail: CalibrationExpansion {
+                calibration_used: CalibrationSource::Calibration(CalibrationIdentifier {
+                    modifiers: vec![],
+                    name: "X".to_string(),
+                    parameters: vec![],
+                    qubits: vec![crate::instruction::Qubit::Fixed(0)],
+                }),
+                length: 5,
+                expansions: SourceMap {
+                    entries: vec![
+                        SourceMapEntry {
+                            source_location: 0,
+                            target_location: CalibrationExpansion {
+                                calibration_used: CalibrationSource::Calibration(
+                                    CalibrationIdentifier {
+                                        modifiers: vec![],
+                                        name: "Y".to_string(),
+                                        parameters: vec![],
+                                        qubits: vec![crate::instruction::Qubit::Fixed(0)],
+                                    },
+                                ),
+                                length: 2,
+                                expansions: SourceMap {
+                                    entries: vec![SourceMapEntry {
+                                        source_location: 1,
+                                        target_location: CalibrationExpansion {
+                                            calibration_used: CalibrationSource::Calibration(
+                                                CalibrationIdentifier {
+                                                    modifiers: vec![],
+                                                    name: "Z".to_string(),
+                                                    parameters: vec![],
+                                                    qubits: vec![crate::instruction::Qubit::Fixed(
+                                                        0,
+                                                    )],
+                                                },
+                                            ),
+                                            length: 1,
+                                            expansions: SourceMap::default(),
+                                        },
+                                    }],
+                                },
+                            },
+                        },
+                        SourceMapEntry {
+                            source_location: 1,
+                            target_location: CalibrationExpansion {
+                                calibration_used: CalibrationSource::MeasureCalibration(
+                                    MeasureCalibrationIdentifier {
+                                        qubit: Some(crate::instruction::Qubit::Fixed(0)),
+                                        parameter: "addr".to_string(),
+                                    },
+                                ),
+                                length: 1,
+                                expansions: SourceMap::default(),
+                            },
+                        },
+                        SourceMapEntry {
+                            source_location: 2,
+                            target_location: CalibrationExpansion {
+                                calibration_used: CalibrationSource::Calibration(
+                                    CalibrationIdentifier {
+                                        modifiers: vec![],
+                                        name: "Y".to_string(),
+                                        parameters: vec![],
+                                        qubits: vec![crate::instruction::Qubit::Fixed(0)],
+                                    },
+                                ),
+                                length: 2,
+                                expansions: SourceMap {
+                                    entries: vec![SourceMapEntry {
+                                        source_location: 1,
+                                        target_location: CalibrationExpansion {
+                                            calibration_used: CalibrationSource::Calibration(
+                                                CalibrationIdentifier {
+                                                    modifiers: vec![],
+                                                    name: "Z".to_string(),
+                                                    parameters: vec![],
+                                                    qubits: vec![crate::instruction::Qubit::Fixed(
+                                                        0,
+                                                    )],
+                                                },
+                                            ),
+                                            length: 1,
+                                            expansions: SourceMap::default(),
+                                        },
+                                    }],
+                                },
+                            },
+                        },
+                    ],
+                },
+            },
+        };
+
+        pretty_assertions::assert_eq!(expansion, Some(expected));
     }
 
     #[test]

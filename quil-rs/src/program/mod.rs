@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use std::collections::{HashMap, HashSet};
-use std::ops;
+use std::ops::{self};
 use std::str::FromStr;
 
 use indexmap::{IndexMap, IndexSet};
@@ -30,11 +30,13 @@ use crate::parser::{lex, parse_instructions, ParseError};
 use crate::quil::Quil;
 
 pub use self::calibration::Calibrations;
+use self::calibration::MaybeCalibrationExpansion;
 pub use self::calibration_set::CalibrationSet;
 pub use self::error::{disallow_leftover, map_parsed, recover, ParseProgramError, SyntaxError};
 pub use self::frame::FrameSet;
 pub use self::frame::MatchedFrames;
 pub use self::memory::{MemoryAccesses, MemoryRegion};
+use self::source_map::{SourceMap, SourceMapEntry};
 
 pub mod analysis;
 mod calibration;
@@ -43,6 +45,7 @@ mod error;
 pub(crate) mod frame;
 mod memory;
 pub mod scheduling;
+mod source_map;
 pub mod type_check;
 
 #[derive(Debug, thiserror::Error, PartialEq)]
@@ -235,22 +238,29 @@ impl Program {
     }
 
     /// Expand any instructions in the program which have a matching calibration, leaving the others
-    /// unchanged. Recurses though each instruction while ensuring there is no cycle in the expansion
-    /// graph (i.e. no calibration expands directly or indirectly into itself)
+    /// unchanged. Returns the expanded copy of the program and a source mapping of the expansions made.
+    ///
+    /// See [`Program::expand_calibrations_with_source_map`] for a version that returns a source mapping.
     pub fn expand_calibrations(&self) -> Result<Self> {
-        let mut expanded_instructions: Vec<Instruction> = vec![];
+        self._expand_calibrations(None)
+    }
 
-        for instruction in &self.instructions {
-            match self.calibrations.expand(instruction, &[])? {
-                Some(expanded) => {
-                    expanded_instructions.extend(expanded);
-                }
-                None => {
-                    expanded_instructions.push(instruction.clone());
-                }
-            }
-        }
+    /// Expand any instructions in the program which have a matching calibration, leaving the others
+    /// unchanged. Returns the expanded copy of the program and a source mapping of the expansions made.
+    pub fn expand_calibrations_with_source_map(&self) -> Result<ProgramCalibrationExpansion> {
+        let mut source_mapping = ProgramCalibrationExpansionSourceMapping::default();
+        let new_program = self._expand_calibrations(Some(&mut source_mapping))?;
 
+        Ok(ProgramCalibrationExpansion {
+            program: new_program,
+            source_mapping,
+        })
+    }
+
+    fn _expand_calibrations(
+        &self,
+        mut source_mapping: Option<&mut ProgramCalibrationExpansionSourceMapping>,
+    ) -> Result<Self> {
         let mut new_program = Self {
             calibrations: self.calibrations.clone(),
             frames: self.frames.clone(),
@@ -261,7 +271,37 @@ impl Program {
             used_qubits: HashSet::new(),
         };
 
-        new_program.add_instructions(expanded_instructions);
+        for (index, instruction) in self.instructions.iter().enumerate() {
+            match self.calibrations.expand_with_detail(instruction, &[])? {
+                Some(mut expanded) => {
+                    let previous_program_instruction_body_length = new_program.instructions.len();
+                    new_program.add_instructions(expanded.new_instructions);
+                    if let Some(source_mapping) = source_mapping.as_mut() {
+                        let length_considering_instructions_hoisted_to_header =
+                            new_program.instructions.len()
+                                - previous_program_instruction_body_length;
+
+                        expanded.detail.length = length_considering_instructions_hoisted_to_header;
+
+                        source_mapping.entries.push(SourceMapEntry {
+                            source_location: index,
+                            target_location: MaybeCalibrationExpansion::Expanded(expanded.detail),
+                        });
+                    }
+                }
+                None => {
+                    new_program.add_instruction(instruction.clone());
+                    if let Some(source_mapping) = source_mapping.as_mut() {
+                        source_mapping.entries.push(SourceMapEntry {
+                            source_location: index,
+                            target_location: MaybeCalibrationExpansion::Unexpanded(
+                                new_program.instructions.len() - 1,
+                            ),
+                        });
+                    }
+                }
+            }
+        }
 
         Ok(new_program)
     }
@@ -693,6 +733,16 @@ impl ops::AddAssign<Program> for Program {
     }
 }
 
+type InstructionIndex = usize;
+pub type ProgramCalibrationExpansionSourceMapping =
+    SourceMap<InstructionIndex, MaybeCalibrationExpansion>;
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ProgramCalibrationExpansion {
+    pub program: Program,
+    pub source_mapping: ProgramCalibrationExpansionSourceMapping,
+}
+
 #[cfg(test)]
 mod tests {
     use super::Program;
@@ -701,6 +751,10 @@ mod tests {
         instruction::{
             Gate, Instruction, Jump, JumpUnless, JumpWhen, Label, Matrix, MemoryReference, Qubit,
             QubitPlaceholder, Target, TargetPlaceholder,
+        },
+        program::{
+            calibration::{CalibrationExpansion, CalibrationIdentifier, MaybeCalibrationExpansion},
+            source_map::{SourceMap, SourceMapEntry},
         },
         quil::Quil,
         real,
@@ -823,6 +877,63 @@ DECLARE ec BIT
         // verify that each memory declaration in the program is in the same index as the same
         // program after being re-parsed and serialized.
         assert!(program1.lines().eq(program2.lines()));
+    }
+
+    #[test]
+    fn expand_calibrations() {
+        let input = "DEFFRAME 0 \"a\":
+\tHARDWARE-OBJECT: \"hardware\"
+
+DEFCAL I 0:
+    DECLARE ro BIT[1]
+    NOP
+    NOP
+    NOP
+
+I 0
+PULSE 0 \"a\" custom_waveform
+";
+
+        let expected = "DECLARE ro BIT[1]
+DEFFRAME 0 \"a\":
+\tHARDWARE-OBJECT: \"hardware\"
+DEFCAL I 0:
+\tDECLARE ro BIT[1]
+\tNOP
+\tNOP
+\tNOP
+NOP
+NOP
+NOP
+PULSE 0 \"a\" custom_waveform
+";
+
+        let expected_source_map = SourceMap {
+            entries: vec![
+                SourceMapEntry {
+                    source_location: 0,
+                    target_location: MaybeCalibrationExpansion::Expanded(CalibrationExpansion {
+                        calibration_used: CalibrationIdentifier {
+                            name: "I".to_string(),
+                            qubits: vec![Qubit::Fixed(0)],
+                            ..CalibrationIdentifier::default()
+                        }
+                        .into(),
+                        length: 3,
+                        expansions: SourceMap::default(),
+                    }),
+                },
+                SourceMapEntry {
+                    source_location: 1,
+                    target_location: MaybeCalibrationExpansion::Unexpanded(3),
+                },
+            ],
+        };
+
+        let program = Program::from_str(input).unwrap();
+        let expanded_program = program.expand_calibrations_with_source_map().unwrap();
+        pretty_assertions::assert_eq!(expanded_program.program.to_quil().unwrap(), expected);
+        pretty_assertions::assert_eq!(expanded_program.source_mapping, expected_source_map);
     }
 
     #[test]
