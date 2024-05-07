@@ -59,16 +59,26 @@ impl<'a> MatchedCalibration<'a> {
     }
 }
 
+/// The product of expanding an instruction using a calibration
 #[derive(Clone, Debug, PartialEq)]
 pub struct CalibrationExpansionOutput {
+    /// The new instructions resulting from the expansion
     pub new_instructions: Vec<Instruction>,
+
+    /// Details about the expansion process
     pub detail: CalibrationExpansion,
 }
 
+/// Details about the expansion of a calibration
 #[derive(Clone, Debug, PartialEq)]
 pub struct CalibrationExpansion {
+    /// The calibration used to expand the instruction
     pub calibration_used: CalibrationSource,
+
+    /// The number of instructions yielded by the expansion
     pub length: usize,
+
+    /// A map of source locations to the expansions they produced
     pub expansions: SourceMap<usize, CalibrationExpansion>,
 }
 
@@ -84,9 +94,13 @@ impl SourceMapRange for CalibrationExpansion {
     }
 }
 
+/// The result of an attempt to expand an instruction within a [`Program`]
 #[derive(Clone, Debug, PartialEq)]
 pub enum MaybeCalibrationExpansion {
+    /// The instruction was expanded into others
     Expanded(CalibrationExpansion),
+
+    /// The instruction was not expanded, but was simply copied over into the target program at the given instruction index
     Unexpanded(usize),
 }
 
@@ -108,9 +122,13 @@ impl SourceMapRange for MaybeCalibrationExpansion {
     }
 }
 
+/// A source of a calibration, either a [`Calibration`] or a [`MeasureCalibrationDefinition`]
 #[derive(Clone, Debug, PartialEq)]
 pub enum CalibrationSource {
+    /// Describes a `DEFCAL` instruction
     Calibration(CalibrationIdentifier),
+
+    /// Describes a `DEFCAL MEASURE` instruction
     MeasureCalibration(MeasureCalibrationIdentifier),
 }
 
@@ -131,9 +149,16 @@ impl From<MeasureCalibrationIdentifier> for CalibrationSource {
 // (b) allow CalibrationExpansion to contain a reference to it instead of an owned, cloned copy
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct CalibrationIdentifier {
+    /// The modifiers applied to the gate
     pub modifiers: Vec<GateModifier>,
+
+    /// The name of the gate
     pub name: String,
+
+    /// The parameters of the gate - these are the variables in the calibration definition
     pub parameters: Vec<Expression>,
+
+    /// The qubits on which the gate is applied
     pub qubits: Vec<Qubit>,
 }
 
@@ -151,7 +176,10 @@ impl From<&Calibration> for CalibrationIdentifier {
 // For review: how would we feel about making this a subfield of the `MeasureCalibrationDefinition` itself?
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct MeasureCalibrationIdentifier {
+    /// The qubit which is the target of measurement, if any
     pub qubit: Option<Qubit>,
+
+    /// The memory region name to which the measurement result is written
     pub parameter: String,
 }
 
@@ -684,7 +712,6 @@ mod tests {
             "    PRAGMA CORRECT\n",
             "MEASURE 0 ro\n",
         )
-
     )]
     #[case(
         "Precedence-No-Qubit-Match",
@@ -723,6 +750,7 @@ mod tests {
         })
     }
 
+    /// Assert that instruction expansion yields the expected [`SourceMap`] and resulting instructions.
     #[test]
     fn expand_with_detail_recursive() {
         let input = r#"

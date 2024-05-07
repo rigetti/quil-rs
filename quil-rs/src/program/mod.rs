@@ -238,7 +238,7 @@ impl Program {
     }
 
     /// Expand any instructions in the program which have a matching calibration, leaving the others
-    /// unchanged. Returns the expanded copy of the program and a source mapping of the expansions made.
+    /// unchanged. Returns the expanded copy of the program.
     ///
     /// See [`Program::expand_calibrations_with_source_map`] for a version that returns a source mapping.
     pub fn expand_calibrations(&self) -> Result<Self> {
@@ -257,6 +257,9 @@ impl Program {
         })
     }
 
+    /// Expand calibrations, writing expansions to a [`SourceMap`] if provided.
+    ///
+    /// Source map may be omitted for faster performance.
     fn _expand_calibrations(
         &self,
         mut source_mapping: Option<&mut ProgramCalibrationExpansionSourceMapping>,
