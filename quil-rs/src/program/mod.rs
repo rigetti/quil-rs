@@ -30,7 +30,9 @@ use crate::parser::{lex, parse_instructions, ParseError};
 use crate::quil::Quil;
 
 pub use self::calibration::Calibrations;
-use self::calibration::MaybeCalibrationExpansion;
+use self::calibration::{
+    CalibrationExpansion, CalibrationExpansionOutput, MaybeCalibrationExpansion,
+};
 pub use self::calibration_set::CalibrationSet;
 pub use self::error::{disallow_leftover, map_parsed, recover, ParseProgramError, SyntaxError};
 pub use self::frame::FrameSet;
@@ -276,18 +278,12 @@ impl Program {
 
         for (index, instruction) in self.instructions.iter().enumerate() {
             match self.calibrations.expand_with_detail(instruction, &[])? {
-                Some(mut expanded) => {
-                    let previous_program_instruction_body_length = new_program.instructions.len();
-                    new_program.add_instructions(expanded.new_instructions);
-                    if let Some(source_mapping) = source_mapping.as_mut() {
-                        expanded.detail.range = previous_program_instruction_body_length
-                            ..new_program.instructions.len();
-
-                        source_mapping.entries.push(SourceMapEntry {
-                            source_location: index,
-                            target_location: MaybeCalibrationExpansion::Expanded(expanded.detail),
-                        });
-                    }
+                Some(expanded) => {
+                    new_program._append_calibration_expansion_output(
+                        expanded,
+                        index,
+                        &mut source_mapping,
+                    );
                 }
                 None => {
                     new_program.add_instruction(instruction.clone());
@@ -304,6 +300,27 @@ impl Program {
         }
 
         Ok(new_program)
+    }
+
+    fn _append_calibration_expansion_output(
+        &mut self,
+        mut expansion_output: CalibrationExpansionOutput,
+        source_index: usize,
+        source_mapping: &mut Option<&mut ProgramCalibrationExpansionSourceMapping>,
+    ) {
+        let previous_program_instruction_body_length = self.instructions.len();
+        self.add_instructions(expansion_output.new_instructions);
+        if let Some(source_mapping) = source_mapping.as_mut() {
+            expansion_output.detail.range =
+                previous_program_instruction_body_length..self.instructions.len();
+
+            if expansion_output.detail.range.len() > 0 {
+                source_mapping.entries.push(SourceMapEntry {
+                    source_location: source_index,
+                    target_location: MaybeCalibrationExpansion::Expanded(expansion_output.detail),
+                });
+            }
+        }
     }
 
     /// Build a program from a list of instructions
@@ -879,15 +896,21 @@ DECLARE ec BIT
         assert!(program1.lines().eq(program2.lines()));
     }
 
+    /// Assert that a program's instructions are correctly expanded using its calibrations,
+    /// emitting the expected [`SourceMap`] for the expansion.
     #[test]
     fn expand_calibrations() {
-        let input = "DEFFRAME 0 \"a\":
+        let input = "DECLARE ro BIT[1]
+DEFFRAME 0 \"a\":
 \tHARDWARE-OBJECT: \"hardware\"
 
 DEFCAL I 0:
-    DECLARE ro BIT[1]
+    DECLAREMEM
     NOP
     NOP
+
+DEFCAL DECLAREMEM:
+    DECLARE mem BIT[1]
     NOP
 
 I 0
@@ -896,12 +919,15 @@ I 0
 ";
 
         let expected = "DECLARE ro BIT[1]
+DECLARE mem BIT[1]
 DEFFRAME 0 \"a\":
 \tHARDWARE-OBJECT: \"hardware\"
 DEFCAL I 0:
-\tDECLARE ro BIT[1]
+\tDECLAREMEM
 \tNOP
 \tNOP
+DEFCAL DECLAREMEM:
+\tDECLARE mem BIT[1]
 \tNOP
 NOP
 NOP
