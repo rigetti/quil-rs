@@ -33,7 +33,10 @@ impl<SourceIndex: SourceMapRange, TargetIndex: SourceMapRange> SourceMap<SourceI
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct SourceMapEntry<SourceIndex: SourceMapRange, TargetIndex: SourceMapRange> {
+    /// The locator within the source artifact
     pub(crate) source_location: SourceIndex,
+
+    /// The locator within the target artifact
     pub(crate) target_location: TargetIndex,
 }
 

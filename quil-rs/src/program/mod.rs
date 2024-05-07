@@ -280,11 +280,8 @@ impl Program {
                     let previous_program_instruction_body_length = new_program.instructions.len();
                     new_program.add_instructions(expanded.new_instructions);
                     if let Some(source_mapping) = source_mapping.as_mut() {
-                        let length_considering_instructions_hoisted_to_header =
-                            new_program.instructions.len()
-                                - previous_program_instruction_body_length;
-
-                        expanded.detail.length = length_considering_instructions_hoisted_to_header;
+                        expanded.detail.range = previous_program_instruction_body_length
+                            ..new_program.instructions.len();
 
                         source_mapping.entries.push(SourceMapEntry {
                             source_location: index,
@@ -895,6 +892,7 @@ DEFCAL I 0:
 
 I 0
 PULSE 0 \"a\" custom_waveform
+I 0
 ";
 
         let expected = "DECLARE ro BIT[1]
@@ -909,6 +907,9 @@ NOP
 NOP
 NOP
 PULSE 0 \"a\" custom_waveform
+NOP
+NOP
+NOP
 ";
 
         let expected_source_map = SourceMap {
@@ -922,13 +923,26 @@ PULSE 0 \"a\" custom_waveform
                             ..CalibrationIdentifier::default()
                         }
                         .into(),
-                        length: 3,
+                        range: 0..3,
                         expansions: SourceMap::default(),
                     }),
                 },
                 SourceMapEntry {
                     source_location: 1,
                     target_location: MaybeCalibrationExpansion::Unexpanded(3),
+                },
+                SourceMapEntry {
+                    source_location: 2,
+                    target_location: MaybeCalibrationExpansion::Expanded(CalibrationExpansion {
+                        calibration_used: CalibrationIdentifier {
+                            name: "I".to_string(),
+                            qubits: vec![Qubit::Fixed(0)],
+                            ..CalibrationIdentifier::default()
+                        }
+                        .into(),
+                        range: 4..7,
+                        expansions: SourceMap::default(),
+                    }),
                 },
             ],
         };

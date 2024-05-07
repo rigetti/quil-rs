@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use std::collections::HashMap;
+use std::ops::Range;
 
 use itertools::FoldWhile::{Continue, Done};
 use itertools::Itertools;
@@ -75,8 +76,8 @@ pub struct CalibrationExpansion {
     /// The calibration used to expand the instruction
     pub calibration_used: CalibrationSource,
 
-    /// The number of instructions yielded by the expansion
-    pub length: usize,
+    /// The target instruction indices produced by the expansion
+    pub range: Range<usize>,
 
     /// A map of source locations to the expansions they produced
     pub expansions: SourceMap<usize, CalibrationExpansion>,
@@ -90,7 +91,7 @@ impl SourceMapRange for CalibrationExpansion {
     }
 
     fn contains(&self, value: &Self::Value) -> bool {
-        self.length > *value
+        self.range.contains(value)
     }
 }
 
@@ -379,7 +380,7 @@ impl Calibrations {
                     new_instructions: Vec::new(),
                     detail: CalibrationExpansion {
                         calibration_used: matched_calibration,
-                        length: 0,
+                        range: 0..0,
                         expansions: SourceMap::default(),
                     },
                 };
@@ -388,10 +389,19 @@ impl Calibrations {
                     let expanded_instructions =
                         self.expand_with_detail(&instruction, &calibration_path)?;
                     match expanded_instructions {
-                        Some(output) => {
+                        Some(mut output) => {
+                            let range_start =
+                                recursively_expanded_instructions.new_instructions.len();
+
                             recursively_expanded_instructions
                                 .new_instructions
                                 .extend(output.new_instructions);
+
+                            let range_end =
+                                recursively_expanded_instructions.new_instructions.len();
+                            let target_range = range_start..range_end;
+                            output.detail.range = target_range;
+
                             recursively_expanded_instructions
                                 .detail
                                 .expansions
@@ -411,8 +421,8 @@ impl Calibrations {
 
                 // While this appears to be duplicated information at this point, it's useful when multiple
                 // source mappings are merged together.
-                recursively_expanded_instructions.detail.length =
-                    recursively_expanded_instructions.new_instructions.len();
+                recursively_expanded_instructions.detail.range =
+                    0..recursively_expanded_instructions.new_instructions.len();
                 Some(recursively_expanded_instructions)
             }
             None => None,
@@ -793,7 +803,7 @@ X 0
                     parameters: vec![],
                     qubits: vec![crate::instruction::Qubit::Fixed(0)],
                 }),
-                length: 5,
+                range: 0..5,
                 expansions: SourceMap {
                     entries: vec![
                         SourceMapEntry {
@@ -807,7 +817,7 @@ X 0
                                         qubits: vec![crate::instruction::Qubit::Fixed(0)],
                                     },
                                 ),
-                                length: 2,
+                                range: 0..2,
                                 expansions: SourceMap {
                                     entries: vec![SourceMapEntry {
                                         source_location: 1,
@@ -822,7 +832,7 @@ X 0
                                                     )],
                                                 },
                                             ),
-                                            length: 1,
+                                            range: 1..2,
                                             expansions: SourceMap::default(),
                                         },
                                     }],
@@ -838,7 +848,7 @@ X 0
                                         parameter: "addr".to_string(),
                                     },
                                 ),
-                                length: 1,
+                                range: 2..3,
                                 expansions: SourceMap::default(),
                             },
                         },
@@ -853,7 +863,7 @@ X 0
                                         qubits: vec![crate::instruction::Qubit::Fixed(0)],
                                     },
                                 ),
-                                length: 2,
+                                range: 3..5,
                                 expansions: SourceMap {
                                     entries: vec![SourceMapEntry {
                                         source_location: 1,
@@ -868,7 +878,7 @@ X 0
                                                     )],
                                                 },
                                             ),
-                                            length: 1,
+                                            range: 1..2,
                                             expansions: SourceMap::default(),
                                         },
                                     }],
