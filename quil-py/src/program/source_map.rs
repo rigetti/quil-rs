@@ -9,62 +9,9 @@ use crate::instruction::{PyCalibrationIdentifier, PyMeasureCalibrationIdentifier
 
 use super::PyProgram;
 
-py_wrap_type! {
-    #[derive(Debug, PartialEq)]
-    PyProgramCalibrationExpansion(ProgramCalibrationExpansion) as "ProgramCalibrationExpansion"
-}
-
-impl_repr!(PyProgramCalibrationExpansion);
-
-#[pymethods]
-impl PyProgramCalibrationExpansion {
-    pub fn program(&self) -> PyProgram {
-        self.as_inner().program().into()
-    }
-
-    pub fn source_mapping(&self) -> PyProgramCalibrationExpansionSourceMap {
-        self.as_inner().source_mapping().clone().into()
-    }
-}
-
-py_wrap_type! {
-    #[derive(Debug, PartialEq)]
-    PyProgramCalibrationExpansionSourceMap(ProgramCalibrationExpansionSourceMap) as "ProgramCalibrationExpansionSourceMap"
-}
-
-impl_repr!(PyProgramCalibrationExpansionSourceMap);
-
-#[pymethods]
-impl PyProgramCalibrationExpansionSourceMap {
-    pub fn entries(&self) -> Vec<PyProgramCalibrationExpansionSourceMapEntry> {
-        self.as_inner()
-            .entries()
-            .iter()
-            .map(|entry| entry.into())
-            .collect()
-    }
-}
-
-py_wrap_union_enum! {
-    #[derive(Debug, PartialEq)]
-    PyMaybeCalibrationExpansion(MaybeCalibrationExpansion) as "MaybeCalibrationExpansion" {
-        expanded: Expanded => PyCalibrationExpansion,
-        unexpanded: Unexpanded => usize => Py<PyInt>
-    }
-}
-
-// impl_repr!(PyMaybeCalibrationExpansion);
-
 type CalibrationExpansionSourceMap = SourceMap<usize, CalibrationExpansion>;
 type CalibrationExpansionSourceMapEntry = SourceMapEntry<usize, CalibrationExpansion>;
 type ProgramCalibrationExpansionSourceMapEntry = SourceMapEntry<usize, MaybeCalibrationExpansion>;
-
-py_wrap_type! {
-    #[derive(Debug, PartialEq)]
-    PyProgramCalibrationExpansionSourceMapEntry(ProgramCalibrationExpansionSourceMapEntry) as "ProgramCalibrationExpansionSourceMapEntry"
-}
-
-impl_repr!(PyProgramCalibrationExpansionSourceMapEntry);
 
 py_wrap_type! {
     #[derive(Debug, PartialEq)]
@@ -134,3 +81,56 @@ py_wrap_union_enum! {
 }
 
 impl_repr!(PyCalibrationSource);
+
+py_wrap_union_enum! {
+    #[derive(Debug, PartialEq)]
+    PyMaybeCalibrationExpansion(MaybeCalibrationExpansion) as "MaybeCalibrationExpansion" {
+        expanded: Expanded => PyCalibrationExpansion,
+        unexpanded: Unexpanded => usize => Py<PyInt>
+    }
+}
+
+impl_repr!(PyMaybeCalibrationExpansion);
+
+py_wrap_type! {
+    #[derive(Debug, PartialEq)]
+    PyProgramCalibrationExpansion(ProgramCalibrationExpansion) as "ProgramCalibrationExpansion"
+}
+
+impl_repr!(PyProgramCalibrationExpansion);
+
+#[pymethods]
+impl PyProgramCalibrationExpansion {
+    pub fn program(&self) -> PyProgram {
+        self.as_inner().program().into()
+    }
+
+    pub fn source_mapping(&self) -> PyProgramCalibrationExpansionSourceMap {
+        self.as_inner().source_mapping().clone().into()
+    }
+}
+
+py_wrap_type! {
+    #[derive(Debug, PartialEq)]
+    PyProgramCalibrationExpansionSourceMap(ProgramCalibrationExpansionSourceMap) as "ProgramCalibrationExpansionSourceMap"
+}
+
+impl_repr!(PyProgramCalibrationExpansionSourceMap);
+
+py_wrap_type! {
+    #[derive(Debug, PartialEq)]
+    PyProgramCalibrationExpansionSourceMapEntry(ProgramCalibrationExpansionSourceMapEntry) as "ProgramCalibrationExpansionSourceMapEntry"
+}
+
+impl_repr!(PyProgramCalibrationExpansionSourceMapEntry);
+
+#[pymethods]
+impl PyProgramCalibrationExpansionSourceMap {
+    pub fn entries(&self) -> Vec<PyProgramCalibrationExpansionSourceMapEntry> {
+        self.as_inner()
+            .entries()
+            .iter()
+            .map(|entry| entry.into())
+            .collect()
+    }
+}
