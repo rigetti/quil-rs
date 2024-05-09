@@ -68,7 +68,7 @@ class Program:
         """
         ...
     def expand_calibrations_with_source_map(self) -> ProgramCalibrationExpansion:
-        """Expand any instructions in the program which have a matching calibration, leaving the others unchanged. 
+        """Expand any instructions in the program which have a matching calibration, leaving the others unchanged.
 
         Return the expanded copy of the program and a source mapping describing the expansions made.
         """
@@ -338,8 +338,6 @@ class CalibrationSource:
     def from_measure_calibration(inner: MeasureCalibrationIdentifier): ...
     def inner(self) -> Union[CalibrationIdentifier, MeasureCalibrationIdentifier]: ...
 
-
-
 @final
 class CalibrationSet:
     @staticmethod
@@ -515,7 +513,6 @@ class MemoryRegion:
     def sharing(self) -> Optional[Sharing]: ...
     @sharing.setter
     def sharing(self, sharing: Optional[Sharing]): ...
-
 
 @final
 class ProgramCalibrationExpansion:
