@@ -67,6 +67,12 @@ class Program:
         expands directly or indirectly into itself)
         """
         ...
+    def expand_calibrations_with_source_map(self) -> ProgramCalibrationExpansion:
+        """Expand any instructions in the program which have a matching calibration, leaving the others unchanged. 
+
+        Return the expanded copy of the program and a source mapping describing the expansions made.
+        """
+        ...
     def into_simplified(self) -> "Program":
         """Simplify this program into a new `Program` which contains only instructions and definitions which are executed; effectively, perform dead code removal.
 
