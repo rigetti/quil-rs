@@ -83,6 +83,40 @@ pub struct CalibrationExpansion {
     pub expansions: SourceMap<usize, CalibrationExpansion>,
 }
 
+impl CalibrationExpansion {
+    /// Remove the given target index from all entries, recursively.
+    ///
+    /// This is to be used when the named index is removed from the target program
+    /// in the process of calibration expansion.
+    pub(crate) fn remove_target_index(&mut self, target_index: usize) {
+        eprintln!("Removing target index {} from\n{self:#?}", target_index);
+
+        if self.range.start >= target_index {
+            self.range.start = self.range.start.saturating_sub(1);
+
+            if self.range.end > target_index {
+                self.range.end = self.range.end.saturating_sub(1);
+            }
+        }
+
+        let target_index_offset = self.range.start;
+        eprintln!("Offset: {}", target_index_offset);
+
+        self.expansions.entries.retain_mut(
+            |entry: &mut SourceMapEntry<usize, CalibrationExpansion>| {
+                if let Some(target_with_offset) = target_index.checked_sub(target_index_offset) {
+                    eprintln!("Target with offset: {}", target_with_offset);
+                    entry
+                        .target_location
+                        .remove_target_index(target_with_offset);
+                }
+
+                entry.target_location.range.len() > 0
+            },
+        );
+    }
+}
+
 impl SourceMapRange for CalibrationExpansion {
     type Value = usize;
 

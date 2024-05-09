@@ -30,9 +30,7 @@ use crate::parser::{lex, parse_instructions, ParseError};
 use crate::quil::Quil;
 
 pub use self::calibration::Calibrations;
-use self::calibration::{
-    CalibrationExpansion, CalibrationExpansionOutput, MaybeCalibrationExpansion,
-};
+use self::calibration::{CalibrationExpansionOutput, MaybeCalibrationExpansion};
 pub use self::calibration_set::CalibrationSet;
 pub use self::error::{disallow_leftover, map_parsed, recover, ParseProgramError, SyntaxError};
 pub use self::frame::FrameSet;
@@ -302,15 +300,36 @@ impl Program {
         Ok(new_program)
     }
 
+    /// Append the result of a calibration expansion to this program, being aware of which expanded instructions
+    /// land in the program body (and thus merit inclusion within a target range) and which do not.
+    ///
+    /// For example, `DECLARE` instructions are hoisted to a specialized data structure and thus do not appear in
+    /// the program body. Thus, they should not be counted in the `target_index` range within a [`SourceMapEntry`].
     fn _append_calibration_expansion_output(
         &mut self,
         mut expansion_output: CalibrationExpansionOutput,
         source_index: usize,
         source_mapping: &mut Option<&mut ProgramCalibrationExpansionSourceMapping>,
     ) {
-        let previous_program_instruction_body_length = self.instructions.len();
-        self.add_instructions(expansion_output.new_instructions);
         if let Some(source_mapping) = source_mapping.as_mut() {
+            let previous_program_instruction_body_length = self.instructions.len();
+
+            for instruction in expansion_output.new_instructions {
+                let start_length = self.instructions.len();
+                self.add_instruction(instruction.clone());
+                let end_length = self.instructions.len();
+
+                // If the instruction was not added to the program body, remove its target index from the source map
+                // so that the map stays correct.
+                if start_length == end_length {
+                    let relative_target_index =
+                        start_length - previous_program_instruction_body_length;
+                    expansion_output
+                        .detail
+                        .remove_target_index(relative_target_index);
+                }
+            }
+
             expansion_output.detail.range =
                 previous_program_instruction_body_length..self.instructions.len();
 
@@ -320,6 +339,8 @@ impl Program {
                     target_location: MaybeCalibrationExpansion::Expanded(expansion_output.detail),
                 });
             }
+        } else {
+            self.add_instructions(expansion_output.new_instructions);
         }
     }
 
@@ -770,7 +791,10 @@ mod tests {
             QubitPlaceholder, Target, TargetPlaceholder,
         },
         program::{
-            calibration::{CalibrationExpansion, CalibrationIdentifier, MaybeCalibrationExpansion},
+            calibration::{
+                CalibrationExpansion, CalibrationIdentifier, CalibrationSource,
+                MaybeCalibrationExpansion,
+            },
             source_map::{SourceMap, SourceMapEntry},
         },
         quil::Quil,
@@ -950,7 +974,23 @@ NOP
                         }
                         .into(),
                         range: 0..3,
-                        expansions: SourceMap::default(),
+                        expansions: SourceMap {
+                            entries: vec![SourceMapEntry {
+                                source_location: 0,
+                                target_location: CalibrationExpansion {
+                                    calibration_used: CalibrationSource::Calibration(
+                                        CalibrationIdentifier {
+                                            modifiers: vec![],
+                                            name: "DECLAREMEM".to_string(),
+                                            parameters: vec![],
+                                            qubits: vec![],
+                                        },
+                                    ),
+                                    range: 0..1,
+                                    expansions: SourceMap { entries: vec![] },
+                                },
+                            }],
+                        },
                     }),
                 },
                 SourceMapEntry {
@@ -967,7 +1007,23 @@ NOP
                         }
                         .into(),
                         range: 4..7,
-                        expansions: SourceMap::default(),
+                        expansions: SourceMap {
+                            entries: vec![SourceMapEntry {
+                                source_location: 0,
+                                target_location: CalibrationExpansion {
+                                    calibration_used: CalibrationSource::Calibration(
+                                        CalibrationIdentifier {
+                                            modifiers: vec![],
+                                            name: "DECLAREMEM".to_string(),
+                                            parameters: vec![],
+                                            qubits: vec![],
+                                        },
+                                    ),
+                                    range: 0..1,
+                                    expansions: SourceMap { entries: vec![] },
+                                },
+                            }],
+                        },
                     }),
                 },
             ],
