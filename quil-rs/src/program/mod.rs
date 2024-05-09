@@ -788,7 +788,7 @@ impl ProgramCalibrationExpansion {
         &self.program
     }
 
-    pub fn source_mapping(&self) -> &ProgramCalibrationExpansionSourceMap {
+    pub fn source_map(&self) -> &ProgramCalibrationExpansionSourceMap {
         &self.source_map
     }
 }

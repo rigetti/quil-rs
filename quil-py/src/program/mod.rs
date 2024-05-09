@@ -37,7 +37,12 @@ use crate::{
 use self::{
     analysis::{PyBasicBlock, PyControlFlowGraph},
     scheduling::{PyScheduleSeconds, PyScheduleSecondsItem, PyTimeSpanSeconds},
-    source_map::PyProgramCalibrationExpansion,
+    source_map::{
+        PyCalibrationExpansion, PyCalibrationExpansionSourceMap,
+        PyCalibrationExpansionSourceMapEntry, PyCalibrationSource, PyMaybeCalibrationExpansion,
+        PyProgramCalibrationExpansion, PyProgramCalibrationExpansionSourceMap,
+        PyProgramCalibrationExpansionSourceMapEntry,
+    },
 };
 pub use self::{calibration::PyCalibrationSet, frame::PyFrameSet, memory::PyMemoryRegion};
 
@@ -385,5 +390,23 @@ impl PyProgram {
 }
 
 create_init_submodule! {
-    classes: [ PyFrameSet, PyProgram, PyCalibrationSet, PyMemoryRegion, PyBasicBlock, PyControlFlowGraph, PyScheduleSeconds, PyScheduleSecondsItem, PyTimeSpanSeconds ],
+    classes: [
+        PyFrameSet,
+        PyProgram,
+        PyCalibrationExpansion,
+        PyCalibrationExpansionSourceMap,
+        PyCalibrationExpansionSourceMapEntry,
+        PyCalibrationSource,
+        PyMaybeCalibrationExpansion,
+        PyProgramCalibrationExpansion,
+        PyProgramCalibrationExpansionSourceMap,
+        PyProgramCalibrationExpansionSourceMapEntry,
+        PyCalibrationSet,
+        PyMemoryRegion,
+        PyBasicBlock,
+        PyControlFlowGraph,
+        PyScheduleSeconds,
+        PyScheduleSecondsItem,
+        PyTimeSpanSeconds
+    ],
 }

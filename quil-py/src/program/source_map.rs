@@ -76,7 +76,7 @@ py_wrap_union_enum! {
     #[derive(Debug, PartialEq)]
     PyCalibrationSource(CalibrationSource) as "CalibrationSource" {
         calibration: Calibration => PyCalibrationIdentifier,
-        measurement_calibration: MeasureCalibration => PyMeasureCalibrationIdentifier
+        measure_calibration: MeasureCalibration => PyMeasureCalibrationIdentifier
     }
 }
 
@@ -105,8 +105,8 @@ impl PyProgramCalibrationExpansion {
         self.as_inner().program().into()
     }
 
-    pub fn source_mapping(&self) -> PyProgramCalibrationExpansionSourceMap {
-        self.as_inner().source_mapping().clone().into()
+    pub fn source_map(&self) -> PyProgramCalibrationExpansionSourceMap {
+        self.as_inner().source_map().clone().into()
     }
 }
 
@@ -117,13 +117,6 @@ py_wrap_type! {
 
 impl_repr!(PyProgramCalibrationExpansionSourceMap);
 
-py_wrap_type! {
-    #[derive(Debug, PartialEq)]
-    PyProgramCalibrationExpansionSourceMapEntry(ProgramCalibrationExpansionSourceMapEntry) as "ProgramCalibrationExpansionSourceMapEntry"
-}
-
-impl_repr!(PyProgramCalibrationExpansionSourceMapEntry);
-
 #[pymethods]
 impl PyProgramCalibrationExpansionSourceMap {
     pub fn entries(&self) -> Vec<PyProgramCalibrationExpansionSourceMapEntry> {
@@ -132,5 +125,23 @@ impl PyProgramCalibrationExpansionSourceMap {
             .iter()
             .map(|entry| entry.into())
             .collect()
+    }
+}
+
+py_wrap_type! {
+    #[derive(Debug, PartialEq)]
+    PyProgramCalibrationExpansionSourceMapEntry(ProgramCalibrationExpansionSourceMapEntry) as "ProgramCalibrationExpansionSourceMapEntry"
+}
+
+impl_repr!(PyProgramCalibrationExpansionSourceMapEntry);
+
+#[pymethods]
+impl PyProgramCalibrationExpansionSourceMapEntry {
+    pub fn source_location(&self) -> usize {
+        self.as_inner().source_location().clone().into()
+    }
+
+    pub fn target_location(&self) -> PyMaybeCalibrationExpansion {
+        self.as_inner().target_location().clone().into()
     }
 }
