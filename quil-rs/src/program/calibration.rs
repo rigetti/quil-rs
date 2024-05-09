@@ -29,7 +29,7 @@ use crate::{
     },
 };
 
-use super::source_map::{SourceMap, SourceMapEntry, SourceMapRange};
+use super::source_map::{SourceMap, SourceMapEntry};
 use super::{CalibrationSet, ProgramError};
 
 /// A collection of Quil calibrations (`DEFCAL` instructions) with utility methods.
@@ -117,18 +117,6 @@ impl CalibrationExpansion {
     }
 }
 
-impl SourceMapRange for CalibrationExpansion {
-    type Value = usize;
-
-    fn start(&self) -> &usize {
-        &0
-    }
-
-    fn contains(&self, value: &Self::Value) -> bool {
-        self.range.contains(value)
-    }
-}
-
 /// The result of an attempt to expand an instruction within a [`Program`]
 #[derive(Clone, Debug, PartialEq)]
 pub enum MaybeCalibrationExpansion {
@@ -137,24 +125,6 @@ pub enum MaybeCalibrationExpansion {
 
     /// The instruction was not expanded, but was simply copied over into the target program at the given instruction index
     Unexpanded(usize),
-}
-
-impl SourceMapRange for MaybeCalibrationExpansion {
-    type Value = usize;
-
-    fn start(&self) -> &usize {
-        match self {
-            MaybeCalibrationExpansion::Expanded(expansion) => expansion.start(),
-            MaybeCalibrationExpansion::Unexpanded(index) => index,
-        }
-    }
-
-    fn contains(&self, value: &Self::Value) -> bool {
-        match self {
-            MaybeCalibrationExpansion::Expanded(expansion) => expansion.contains(value),
-            MaybeCalibrationExpansion::Unexpanded(index) => index == value,
-        }
-    }
 }
 
 /// A source of a calibration, either a [`Calibration`] or a [`MeasureCalibrationDefinition`]
