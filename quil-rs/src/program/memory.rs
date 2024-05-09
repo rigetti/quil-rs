@@ -156,6 +156,7 @@ impl Instruction {
             },
             Instruction::CalibrationDefinition(definition) => {
                 let references: Vec<&MemoryReference> = definition
+                    .identifier
                     .parameters
                     .iter()
                     .flat_map(|expr| expr.get_memory_references())

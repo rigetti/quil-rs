@@ -1,6 +1,9 @@
 use quil_rs::{
     expression::Expression,
-    instruction::{Calibration, GateModifier, Instruction, MeasureCalibrationDefinition, Qubit},
+    instruction::{
+        Calibration, CalibrationIdentifier, GateModifier, Instruction,
+        MeasureCalibrationDefinition, MeasureCalibrationIdentifier, Qubit,
+    },
 };
 
 use rigetti_pyo3::{
@@ -20,11 +23,8 @@ py_wrap_data_struct! {
     #[derive(Debug, PartialEq)]
     #[pyo3(subclass)]
     PyCalibration(Calibration) as "Calibration" {
-        instructions: Vec<Instruction> => Vec<PyInstruction>,
-        modifiers: Vec<GateModifier> => Vec<PyGateModifier>,
-        name: String => Py<PyString>,
-        parameters: Vec<Expression> => Vec<PyExpression>,
-        qubits: Vec<Qubit> => Vec<PyQubit>
+        identifier: CalibrationIdentifier => PyCalibrationIdentifier,
+        instructions: Vec<Instruction> => Vec<PyInstruction>
     }
 }
 impl_repr!(PyCalibration);
@@ -37,19 +37,51 @@ impl PyCalibration {
     #[new]
     pub fn new(
         py: Python<'_>,
-        name: &str,
-        parameters: Vec<PyExpression>,
-        qubits: Vec<PyQubit>,
+        identifier: PyCalibrationIdentifier,
         instructions: Vec<PyInstruction>,
-        modifiers: Vec<PyGateModifier>,
     ) -> PyResult<Self> {
         Ok(Self(
             Calibration::new(
-                name,
+                CalibrationIdentifier::py_try_from(py, &identifier)?,
+                Vec::<Instruction>::py_try_from(py, &instructions)?,
+            )
+            .map_err(RustIdentifierValidationError::from)
+            .map_err(RustIdentifierValidationError::to_py_err)?,
+        ))
+    }
+}
+
+py_wrap_data_struct! {
+    #[derive(Debug, PartialEq)]
+    #[pyo3(subclass)]
+    PyCalibrationIdentifier(CalibrationIdentifier) as "CalibrationIdentifier" {
+        modifiers: Vec<GateModifier> => Vec<PyGateModifier>,
+        name: String => Py<PyString>,
+        parameters: Vec<Expression> => Vec<PyExpression>,
+        qubits: Vec<Qubit> => Vec<PyQubit>
+    }
+}
+impl_repr!(PyCalibrationIdentifier);
+impl_to_quil!(PyCalibrationIdentifier);
+impl_copy_for_instruction!(PyCalibrationIdentifier);
+impl_eq!(PyCalibrationIdentifier);
+
+#[pymethods]
+impl PyCalibrationIdentifier {
+    #[new]
+    pub fn new(
+        py: Python<'_>,
+        name: &str,
+        parameters: Vec<PyExpression>,
+        qubits: Vec<PyQubit>,
+        modifiers: Vec<PyGateModifier>,
+    ) -> PyResult<Self> {
+        Ok(Self(
+            CalibrationIdentifier::new(
+                name.to_string(),
+                Vec::<GateModifier>::py_try_from(py, &modifiers)?,
                 Vec::<Expression>::py_try_from(py, &parameters)?,
                 Vec::<Qubit>::py_try_from(py, &qubits)?,
-                Vec::<Instruction>::py_try_from(py, &instructions)?,
-                Vec::<GateModifier>::py_try_from(py, &modifiers)?,
             )
             .map_err(RustIdentifierValidationError::from)
             .map_err(RustIdentifierValidationError::to_py_err)?,
@@ -61,8 +93,7 @@ py_wrap_data_struct! {
     #[derive(Debug, PartialEq)]
     #[pyo3(subclass)]
     PyMeasureCalibrationDefinition(MeasureCalibrationDefinition) as "MeasureCalibrationDefinition" {
-        qubit: Option<Qubit> => Option<PyQubit>,
-        parameter: String => Py<PyString>,
+        identifier: MeasureCalibrationIdentifier => PyMeasureCalibrationIdentifier,
         instructions: Vec<Instruction> => Vec<PyInstruction>
     }
 }
@@ -74,6 +105,35 @@ impl_eq!(PyMeasureCalibrationDefinition);
 #[pymethods]
 impl PyMeasureCalibrationDefinition {
     #[new]
+    #[pyo3(signature = (identifier, instructions))]
+    pub fn new(
+        py: Python<'_>,
+        identifier: PyMeasureCalibrationIdentifier,
+        instructions: Vec<PyInstruction>,
+    ) -> PyResult<Self> {
+        Ok(Self(MeasureCalibrationDefinition::new(
+            MeasureCalibrationIdentifier::py_try_from(py, &identifier)?,
+            Vec::<Instruction>::py_try_from(py, &instructions)?,
+        )))
+    }
+}
+
+py_wrap_data_struct! {
+    #[derive(Debug, PartialEq)]
+    #[pyo3(subclass)]
+    PyMeasureCalibrationIdentifier(MeasureCalibrationIdentifier) as "PyMeasureCalibrationIdentifier" {
+        qubit: Option<Qubit> => Option<PyQubit>,
+        parameter: String => Py<PyString>
+    }
+}
+impl_repr!(PyMeasureCalibrationIdentifier);
+impl_to_quil!(PyMeasureCalibrationIdentifier);
+impl_copy_for_instruction!(PyMeasureCalibrationIdentifier);
+impl_eq!(PyMeasureCalibrationIdentifier);
+
+#[pymethods]
+impl PyMeasureCalibrationIdentifier {
+    #[new]
     #[pyo3(signature = (qubit, parameter, instructions))]
     pub fn new(
         py: Python<'_>,
@@ -81,10 +141,9 @@ impl PyMeasureCalibrationDefinition {
         parameter: String,
         instructions: Vec<PyInstruction>,
     ) -> PyResult<Self> {
-        Ok(Self(MeasureCalibrationDefinition::new(
+        Ok(Self(MeasureCalibrationIdentifier::new(
             Option::<Qubit>::py_try_from(py, &qubit)?,
             parameter,
-            Vec::<Instruction>::py_try_from(py, &instructions)?,
         )))
     }
 }

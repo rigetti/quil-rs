@@ -799,14 +799,11 @@ mod tests {
     use crate::{
         imag,
         instruction::{
-            Gate, Instruction, Jump, JumpUnless, JumpWhen, Label, Matrix, MemoryReference, Qubit,
-            QubitPlaceholder, Target, TargetPlaceholder,
+            CalibrationIdentifier, Gate, Instruction, Jump, JumpUnless, JumpWhen, Label, Matrix,
+            MemoryReference, Qubit, QubitPlaceholder, Target, TargetPlaceholder,
         },
         program::{
-            calibration::{
-                CalibrationExpansion, CalibrationIdentifier, CalibrationSource,
-                MaybeCalibrationExpansion,
-            },
+            calibration::{CalibrationExpansion, CalibrationSource, MaybeCalibrationExpansion},
             source_map::{SourceMap, SourceMapEntry},
         },
         quil::Quil,

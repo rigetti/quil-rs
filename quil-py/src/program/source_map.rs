@@ -5,6 +5,8 @@ use quil_rs::program::{
 };
 use rigetti_pyo3::{impl_repr, py_wrap_type, py_wrap_union_enum, pyo3::pymethods, PyWrapper};
 
+use crate::instruction::{PyCalibrationIdentifier, PyMeasureCalibrationIdentifier};
+
 use super::PyProgram;
 
 py_wrap_type! {
@@ -127,7 +129,7 @@ py_wrap_union_enum! {
     #[derive(Debug, PartialEq)]
     PyCalibrationSource(CalibrationSource) as "CalibrationSource" {
         calibration: Calibration => PyCalibrationIdentifier,
-        measurement_calibration: MeasurementCalibration => PyMeasurementCalibrationIdentifier
+        measurement_calibration: MeasureCalibration => PyMeasureCalibrationIdentifier
     }
 }
 

@@ -8,7 +8,10 @@ use rigetti_pyo3::{
 use crate::{impl_eq, impl_to_quil};
 
 pub use self::{
-    calibration::{PyCalibration, PyMeasureCalibrationDefinition},
+    calibration::{
+        PyCalibration, PyCalibrationIdentifier, PyMeasureCalibrationDefinition,
+        PyMeasureCalibrationIdentifier,
+    },
     circuit::PyCircuitDefinition,
     classical::{
         PyArithmetic, PyArithmeticOperand, PyArithmeticOperator, PyBinaryLogic, PyBinaryOperand,
