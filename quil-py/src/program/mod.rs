@@ -37,6 +37,7 @@ use crate::{
 use self::{
     analysis::{PyBasicBlock, PyControlFlowGraph},
     scheduling::{PyScheduleSeconds, PyScheduleSecondsItem, PyTimeSpanSeconds},
+    source_map::PyProgramCalibrationExpansion,
 };
 pub use self::{calibration::PyCalibrationSet, frame::PyFrameSet, memory::PyMemoryRegion};
 
@@ -45,6 +46,7 @@ mod calibration;
 mod frame;
 mod memory;
 mod scheduling;
+mod source_map;
 
 wrap_error!(ProgramError(quil_rs::program::ProgramError));
 py_wrap_error!(quil, ProgramError, PyProgramError, PyValueError);
@@ -85,6 +87,15 @@ impl PyProgram {
 
     pub fn control_flow_graph(&self) -> PyControlFlowGraph {
         ControlFlowGraphOwned::from(ControlFlowGraph::from(self.as_inner())).into()
+    }
+
+    pub fn expand_calibrations_with_source_map(&self) -> PyResult<PyProgramCalibrationExpansion> {
+        let expansion = self
+            .as_inner()
+            .expand_calibrations_with_source_map()
+            .map_err(ProgramError::from)
+            .map_err(ProgramError::to_py_err)?;
+        Ok(expansion.into())
     }
 
     #[getter]

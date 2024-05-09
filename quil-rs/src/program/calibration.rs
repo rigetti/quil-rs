@@ -74,13 +74,13 @@ pub struct CalibrationExpansionOutput {
 #[derive(Clone, Debug, PartialEq)]
 pub struct CalibrationExpansion {
     /// The calibration used to expand the instruction
-    pub calibration_used: CalibrationSource,
+    pub(crate) calibration_used: CalibrationSource,
 
     /// The target instruction indices produced by the expansion
-    pub range: Range<usize>,
+    pub(crate) range: Range<usize>,
 
     /// A map of source locations to the expansions they produced
-    pub expansions: SourceMap<usize, CalibrationExpansion>,
+    pub(crate) expansions: SourceMap<usize, CalibrationExpansion>,
 }
 
 impl CalibrationExpansion {
@@ -114,6 +114,18 @@ impl CalibrationExpansion {
                 entry.target_location.range.len() > 0
             },
         );
+    }
+
+    pub fn calibration_used(&self) -> &CalibrationSource {
+        &self.calibration_used
+    }
+
+    pub fn range(&self) -> &Range<usize> {
+        &self.range
+    }
+
+    pub fn expansions(&self) -> &SourceMap<usize, CalibrationExpansion> {
+        &self.expansions
     }
 }
 

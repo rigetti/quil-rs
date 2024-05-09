@@ -30,13 +30,15 @@ use crate::parser::{lex, parse_instructions, ParseError};
 use crate::quil::Quil;
 
 pub use self::calibration::Calibrations;
-use self::calibration::{CalibrationExpansionOutput, MaybeCalibrationExpansion};
+pub use self::calibration::{
+    CalibrationExpansion, CalibrationExpansionOutput, CalibrationSource, MaybeCalibrationExpansion,
+};
 pub use self::calibration_set::CalibrationSet;
 pub use self::error::{disallow_leftover, map_parsed, recover, ParseProgramError, SyntaxError};
 pub use self::frame::FrameSet;
 pub use self::frame::MatchedFrames;
 pub use self::memory::{MemoryAccesses, MemoryRegion};
-use self::source_map::{SourceMap, SourceMapEntry};
+pub use self::source_map::{SourceMap, SourceMapEntry};
 
 pub mod analysis;
 mod calibration;
@@ -248,12 +250,12 @@ impl Program {
     /// Expand any instructions in the program which have a matching calibration, leaving the others
     /// unchanged. Returns the expanded copy of the program and a source mapping of the expansions made.
     pub fn expand_calibrations_with_source_map(&self) -> Result<ProgramCalibrationExpansion> {
-        let mut source_mapping = ProgramCalibrationExpansionSourceMapping::default();
+        let mut source_mapping = ProgramCalibrationExpansionSourceMap::default();
         let new_program = self._expand_calibrations(Some(&mut source_mapping))?;
 
         Ok(ProgramCalibrationExpansion {
             program: new_program,
-            source_mapping,
+            source_map: source_mapping,
         })
     }
 
@@ -262,7 +264,7 @@ impl Program {
     /// Source map may be omitted for faster performance.
     fn _expand_calibrations(
         &self,
-        mut source_mapping: Option<&mut ProgramCalibrationExpansionSourceMapping>,
+        mut source_mapping: Option<&mut ProgramCalibrationExpansionSourceMap>,
     ) -> Result<Self> {
         let mut new_program = Self {
             calibrations: self.calibrations.clone(),
@@ -309,7 +311,7 @@ impl Program {
         &mut self,
         mut expansion_output: CalibrationExpansionOutput,
         source_index: usize,
-        source_mapping: &mut Option<&mut ProgramCalibrationExpansionSourceMapping>,
+        source_mapping: &mut Option<&mut ProgramCalibrationExpansionSourceMap>,
     ) {
         if let Some(source_mapping) = source_mapping.as_mut() {
             let previous_program_instruction_body_length = self.instructions.len();
@@ -772,13 +774,23 @@ impl ops::AddAssign<Program> for Program {
 }
 
 type InstructionIndex = usize;
-pub type ProgramCalibrationExpansionSourceMapping =
+pub type ProgramCalibrationExpansionSourceMap =
     SourceMap<InstructionIndex, MaybeCalibrationExpansion>;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ProgramCalibrationExpansion {
-    pub program: Program,
-    pub source_mapping: ProgramCalibrationExpansionSourceMapping,
+    program: Program,
+    source_map: ProgramCalibrationExpansionSourceMap,
+}
+
+impl ProgramCalibrationExpansion {
+    pub fn program(&self) -> &Program {
+        &self.program
+    }
+
+    pub fn source_mapping(&self) -> &ProgramCalibrationExpansionSourceMap {
+        &self.source_map
+    }
 }
 
 #[cfg(test)]
@@ -1032,7 +1044,7 @@ NOP
         let program = Program::from_str(input).unwrap();
         let expanded_program = program.expand_calibrations_with_source_map().unwrap();
         pretty_assertions::assert_eq!(expanded_program.program.to_quil().unwrap(), expected);
-        pretty_assertions::assert_eq!(expanded_program.source_mapping, expected_source_map);
+        pretty_assertions::assert_eq!(expanded_program.source_map, expected_source_map);
     }
 
     #[test]
