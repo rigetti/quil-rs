@@ -71,6 +71,17 @@ pub struct CalibrationExpansionOutput {
     pub detail: CalibrationExpansion,
 }
 
+/// The product of expanding an instruction using a calibration, possibly including
+/// `CalibrationExpansion` source map information.
+#[derive(Clone, Debug, PartialEq)]
+struct ExpandOutput {
+    /// The new instructions resulting from the expansion
+    pub new_instructions: Vec<Instruction>,
+
+    /// Details about the expansion process
+    pub detail: Option<CalibrationExpansion>,
+}
+
 /// Details about the expansion of a calibration
 #[derive(Clone, Debug, PartialEq)]
 pub struct CalibrationExpansion {
@@ -189,7 +200,7 @@ impl Calibrations {
         instruction: &Instruction,
         previous_calibrations: &[Instruction],
     ) -> Result<Option<Vec<Instruction>>, ProgramError> {
-        self.expand_with_detail(instruction, previous_calibrations)
+        self._expand(instruction, previous_calibrations, false)
             .map(|expansion| expansion.map(|expansion| expansion.new_instructions))
     }
 
@@ -201,10 +212,27 @@ impl Calibrations {
         instruction: &Instruction,
         previous_calibrations: &[Instruction],
     ) -> Result<Option<CalibrationExpansionOutput>, ProgramError> {
+        self._expand(instruction, previous_calibrations, true)
+    }
+
+    /// Expand an instruction, returning an error if a calibration directly or indirectly
+    /// expands into itself. Return `None` if there are no matching calibrations in `self`.
+    ///
+    /// # Arguments
+    ///
+    /// * `instruction` - The instruction to expand.
+    /// * `previous_calibrations` - The calibrations that were invoked to yield this current instruction.
+    /// * `build_source_map` - Whether to build a source map of the expansion.
+    fn _expand(
+        &self,
+        instruction: &Instruction,
+        previous_calibrations: &[Instruction],
+        build_source_map: bool,
+    ) -> Result<Option<CalibrationExpansionOutput>, ProgramError> {
         if previous_calibrations.contains(instruction) {
             return Err(ProgramError::RecursiveCalibration(instruction.clone()));
         }
-        let calibration_result = match instruction {
+        let expansion_result = match instruction {
             Instruction::Gate(gate) => {
                 let matching_calibration = self.get_match_for_gate(gate);
 
@@ -347,7 +375,16 @@ impl Calibrations {
         calibration_path.push(instruction.clone());
         calibration_path.extend_from_slice(previous_calibrations);
 
-        Ok(match calibration_result {
+        self._recursively_expand(expansion_result, &calibration_path, build_source_map)
+    }
+
+    fn _recursively_expand(
+        &self,
+        expansion_result: Option<(Vec<Instruction>, CalibrationSource)>,
+        calibration_path: &[Instruction],
+        build_source_map: bool,
+    ) -> Result<Option<CalibrationExpansionOutput>, ProgramError> {
+        Ok(match expansion_result {
             Some((instructions, matched_calibration)) => {
                 let mut recursively_expanded_instructions = CalibrationExpansionOutput {
                     new_instructions: Vec::new(),
@@ -360,29 +397,35 @@ impl Calibrations {
 
                 for (expanded_index, instruction) in instructions.into_iter().enumerate() {
                     let expanded_instructions =
-                        self.expand_with_detail(&instruction, &calibration_path)?;
+                        self._expand(&instruction, &calibration_path, build_source_map)?;
                     match expanded_instructions {
                         Some(mut output) => {
-                            let range_start =
-                                recursively_expanded_instructions.new_instructions.len();
+                            if build_source_map {
+                                let range_start =
+                                    recursively_expanded_instructions.new_instructions.len();
 
-                            recursively_expanded_instructions
-                                .new_instructions
-                                .extend(output.new_instructions);
+                                recursively_expanded_instructions
+                                    .new_instructions
+                                    .extend(output.new_instructions);
 
-                            let range_end =
-                                recursively_expanded_instructions.new_instructions.len();
-                            let target_range = range_start..range_end;
-                            output.detail.range = target_range;
+                                let range_end =
+                                    recursively_expanded_instructions.new_instructions.len();
+                                let target_range = range_start..range_end;
+                                output.detail.range = target_range;
 
-                            recursively_expanded_instructions
-                                .detail
-                                .expansions
-                                .entries
-                                .push(SourceMapEntry {
-                                    source_location: expanded_index,
-                                    target_location: output.detail,
-                                });
+                                recursively_expanded_instructions
+                                    .detail
+                                    .expansions
+                                    .entries
+                                    .push(SourceMapEntry {
+                                        source_location: expanded_index,
+                                        target_location: output.detail,
+                                    });
+                            } else {
+                                recursively_expanded_instructions
+                                    .new_instructions
+                                    .extend(output.new_instructions);
+                            }
                         }
                         None => {
                             recursively_expanded_instructions
@@ -392,10 +435,13 @@ impl Calibrations {
                     };
                 }
 
-                // While this appears to be duplicated information at this point, it's useful when multiple
-                // source mappings are merged together.
-                recursively_expanded_instructions.detail.range =
-                    0..recursively_expanded_instructions.new_instructions.len();
+                if build_source_map {
+                    // While this appears to be duplicated information at this point, it's useful when multiple
+                    // source mappings are merged together.
+                    recursively_expanded_instructions.detail.range =
+                        0..recursively_expanded_instructions.new_instructions.len();
+                }
+
                 Some(recursively_expanded_instructions)
             }
             None => None,

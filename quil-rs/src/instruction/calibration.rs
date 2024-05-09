@@ -215,7 +215,7 @@ impl Quil for MeasureCalibrationIdentifier {
             write!(f, " ")?;
             qubit.write(f, fall_back_to_debug)?;
         }
-        writeln!(f, " {}", self.parameter,)?;
+        write!(f, " {}", self.parameter,)?;
         Ok(())
     }
 }
