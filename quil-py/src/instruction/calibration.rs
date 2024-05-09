@@ -9,7 +9,7 @@ use quil_rs::{
 use rigetti_pyo3::{
     impl_repr, py_wrap_data_struct,
     pyo3::{pymethods, types::PyString, Py, PyResult, Python},
-    PyTryFrom, ToPythonError,
+    PyTryFrom, PyWrapper, ToPythonError,
 };
 
 use crate::{
@@ -48,6 +48,40 @@ impl PyCalibration {
             .map_err(RustIdentifierValidationError::from)
             .map_err(RustIdentifierValidationError::to_py_err)?,
         ))
+    }
+
+    pub fn name(&self) -> &str {
+        &self.as_inner().identifier.name
+    }
+
+    pub fn parameters(&self) -> Vec<PyExpression> {
+        self.as_inner()
+            .identifier
+            .parameters
+            .clone()
+            .into_iter()
+            .map(Into::into)
+            .collect()
+    }
+
+    pub fn qubits(&self) -> Vec<PyQubit> {
+        self.as_inner()
+            .identifier
+            .qubits
+            .clone()
+            .into_iter()
+            .map(Into::into)
+            .collect()
+    }
+
+    pub fn modifiers(&self) -> Vec<PyGateModifier> {
+        self.as_inner()
+            .identifier
+            .modifiers
+            .clone()
+            .into_iter()
+            .map(Into::into)
+            .collect()
     }
 }
 
@@ -116,12 +150,20 @@ impl PyMeasureCalibrationDefinition {
             Vec::<Instruction>::py_try_from(py, &instructions)?,
         )))
     }
+
+    pub fn qubit(&self) -> Option<PyQubit> {
+        self.as_inner().identifier.qubit.clone().map(Into::into)
+    }
+
+    pub fn parameter(&self) -> String {
+        self.as_inner().identifier.parameter.clone()
+    }
 }
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq)]
     #[pyo3(subclass)]
-    PyMeasureCalibrationIdentifier(MeasureCalibrationIdentifier) as "PyMeasureCalibrationIdentifier" {
+    PyMeasureCalibrationIdentifier(MeasureCalibrationIdentifier) as "MeasureCalibrationIdentifier" {
         qubit: Option<Qubit> => Option<PyQubit>,
         parameter: String => Py<PyString>
     }
@@ -134,13 +176,8 @@ impl_eq!(PyMeasureCalibrationIdentifier);
 #[pymethods]
 impl PyMeasureCalibrationIdentifier {
     #[new]
-    #[pyo3(signature = (qubit, parameter, instructions))]
-    pub fn new(
-        py: Python<'_>,
-        qubit: Option<PyQubit>,
-        parameter: String,
-        instructions: Vec<PyInstruction>,
-    ) -> PyResult<Self> {
+    #[pyo3(signature = (qubit, parameter))]
+    pub fn new(py: Python<'_>, qubit: Option<PyQubit>, parameter: String) -> PyResult<Self> {
         Ok(Self(MeasureCalibrationIdentifier::new(
             Option::<Qubit>::py_try_from(py, &qubit)?,
             parameter,
