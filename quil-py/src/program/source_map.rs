@@ -64,11 +64,11 @@ impl_repr!(PyCalibrationExpansionSourceMapEntry);
 #[pymethods]
 impl PyCalibrationExpansionSourceMapEntry {
     pub fn source_location(&self) -> usize {
-        self.as_inner().source_location().clone().into()
+        *self.as_inner().source_location()
     }
 
     pub fn target_location(&self) -> PyCalibrationExpansion {
-        self.as_inner().target_location().clone().into()
+        self.as_inner().target_location().into()
     }
 }
 
@@ -138,7 +138,7 @@ impl_repr!(PyProgramCalibrationExpansionSourceMapEntry);
 #[pymethods]
 impl PyProgramCalibrationExpansionSourceMapEntry {
     pub fn source_location(&self) -> usize {
-        self.as_inner().source_location().clone().into()
+        *self.as_inner().source_location()
     }
 
     pub fn target_location(&self) -> PyMaybeCalibrationExpansion {

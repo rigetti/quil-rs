@@ -123,7 +123,7 @@ impl CalibrationExpansion {
                         .remove_target_index(target_with_offset);
                 }
 
-                entry.target_location.range.len() > 0
+                !entry.target_location.range.is_empty()
             },
         );
     }
@@ -397,7 +397,7 @@ impl Calibrations {
 
                 for (expanded_index, instruction) in instructions.into_iter().enumerate() {
                     let expanded_instructions =
-                        self._expand(&instruction, &calibration_path, build_source_map)?;
+                        self._expand(&instruction, calibration_path, build_source_map)?;
                     match expanded_instructions {
                         Some(mut output) => {
                             if build_source_map {

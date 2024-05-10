@@ -335,7 +335,7 @@ impl Program {
             expansion_output.detail.range =
                 previous_program_instruction_body_length..self.instructions.len();
 
-            if expansion_output.detail.range.len() > 0 {
+            if !expansion_output.detail.range.is_empty() {
                 source_mapping.entries.push(SourceMapEntry {
                     source_location: source_index,
                     target_location: MaybeCalibrationExpansion::Expanded(expansion_output.detail),
