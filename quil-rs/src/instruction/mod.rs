@@ -40,7 +40,10 @@ mod reset;
 mod timing;
 mod waveform;
 
-pub use self::calibration::{Calibration, CalibrationSignature, MeasureCalibrationDefinition};
+pub use self::calibration::{
+    Calibration, CalibrationIdentifier, CalibrationSignature, MeasureCalibrationDefinition,
+    MeasureCalibrationIdentifier,
+};
 pub use self::circuit::CircuitDefinition;
 pub use self::classical::{
     Arithmetic, ArithmeticOperand, ArithmeticOperator, BinaryLogic, BinaryOperand, BinaryOperands,
@@ -402,7 +405,10 @@ impl Instruction {
     /// ```
     pub fn apply_to_expressions(&mut self, mut closure: impl FnMut(&mut Expression)) {
         match self {
-            Instruction::CalibrationDefinition(Calibration { parameters, .. })
+            Instruction::CalibrationDefinition(Calibration {
+                identifier: CalibrationIdentifier { parameters, .. },
+                ..
+            })
             | Instruction::Gate(Gate { parameters, .. }) => {
                 parameters.iter_mut().for_each(closure);
             }
@@ -586,6 +592,7 @@ impl Instruction {
         match self {
             Instruction::Gate(gate) => gate.qubits.iter_mut().collect(),
             Instruction::CalibrationDefinition(calibration) => calibration
+                .identifier
                 .qubits
                 .iter_mut()
                 .chain(
@@ -596,6 +603,7 @@ impl Instruction {
                 )
                 .collect(),
             Instruction::MeasureCalibrationDefinition(measurement) => measurement
+                .identifier
                 .qubit
                 .iter_mut()
                 .chain(

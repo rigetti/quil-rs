@@ -6,12 +6,13 @@ use nom::sequence::{delimited, pair, preceded, tuple};
 use crate::expression::Expression;
 use crate::instruction::{
     Arithmetic, ArithmeticOperand, ArithmeticOperator, BinaryLogic, BinaryOperator, Calibration,
-    Capture, CircuitDefinition, Comparison, ComparisonOperator, Convert, Declaration, Delay,
-    Exchange, Fence, FrameDefinition, GateDefinition, GateSpecification, GateType, Include,
-    Instruction, Jump, JumpUnless, JumpWhen, Label, Load, MeasureCalibrationDefinition,
-    Measurement, Move, PauliSum, Pragma, PragmaArgument, Pulse, Qubit, RawCapture, Reset,
-    SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, Store, SwapPhases, Target,
-    UnaryLogic, UnaryOperator, ValidationError, Waveform, WaveformDefinition,
+    CalibrationIdentifier, Capture, CircuitDefinition, Comparison, ComparisonOperator, Convert,
+    Declaration, Delay, Exchange, Fence, FrameDefinition, GateDefinition, GateSpecification,
+    GateType, Include, Instruction, Jump, JumpUnless, JumpWhen, Label, Load,
+    MeasureCalibrationDefinition, MeasureCalibrationIdentifier, Measurement, Move, PauliSum,
+    Pragma, PragmaArgument, Pulse, Qubit, RawCapture, Reset, SetFrequency, SetPhase, SetScale,
+    ShiftFrequency, ShiftPhase, Store, SwapPhases, Target, UnaryLogic, UnaryOperator,
+    ValidationError, Waveform, WaveformDefinition,
 };
 
 use crate::parser::instruction::parse_block;
@@ -184,11 +185,13 @@ pub(crate) fn parse_defcal_gate<'a>(
     Ok((
         input,
         Instruction::CalibrationDefinition(Calibration {
-            name,
-            parameters,
-            qubits,
+            identifier: CalibrationIdentifier {
+                name,
+                parameters,
+                qubits,
+                modifiers,
+            },
             instructions,
-            modifiers,
         }),
     ))
 }
@@ -207,8 +210,10 @@ pub(crate) fn parse_defcal_measure<'a>(
     Ok((
         input,
         Instruction::MeasureCalibrationDefinition(MeasureCalibrationDefinition {
-            qubit,
-            parameter: destination,
+            identifier: MeasureCalibrationIdentifier {
+                qubit,
+                parameter: destination,
+            },
             instructions,
         }),
     ))

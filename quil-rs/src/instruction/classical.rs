@@ -68,6 +68,12 @@ impl Quil for ArithmeticOperand {
     }
 }
 
+impl From<MemoryReference> for ArithmeticOperand {
+    fn from(memory_reference: MemoryReference) -> Self {
+        ArithmeticOperand::MemoryReference(memory_reference)
+    }
+}
+
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 pub enum ArithmeticOperator {
     Add,
