@@ -297,7 +297,18 @@ fn lex_number(input: LexInput) -> InternalLexResult {
     Ok((
         input,
         match integer_parse_result {
-            Ok(_) => Token::Integer(float_string.parse::<u64>().unwrap()),
+            Ok(_) => {
+                let parsed_int = float_string.parse::<u64>();
+                match parsed_int {
+                    Ok(int) => Token::Integer(int),
+                    Err(e) => {
+                        return Err(nom::Err::Failure(InternalLexError::from_kind(
+                            input,
+                            e.into(),
+                        )))
+                    }
+                }
+            }
             Err(_) => Token::Float(double(float_string)?.1),
         },
     ))
