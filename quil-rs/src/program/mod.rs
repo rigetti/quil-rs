@@ -34,7 +34,7 @@ pub use self::calibration_set::CalibrationSet;
 pub use self::error::{disallow_leftover, map_parsed, recover, ParseProgramError, SyntaxError};
 pub use self::frame::FrameSet;
 pub use self::frame::MatchedFrames;
-pub use self::memory::{MemoryAccesses, MemoryRegion};
+pub use self::memory::{MemoryAccess, MemoryAccesses, MemoryRegion};
 
 pub mod analysis;
 mod calibration;
