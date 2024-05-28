@@ -659,10 +659,10 @@
                     <a class="class" href="#BinaryOperands">BinaryOperands</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#BinaryOperands.operand">operand</a>
+                                <a class="variable" href="#BinaryOperands.memory_reference">memory_reference</a>
                         </li>
                         <li>
-                                <a class="variable" href="#BinaryOperands.memory_reference">memory_reference</a>
+                                <a class="variable" href="#BinaryOperands.operand">operand</a>
                         </li>
                 </ul>
 
@@ -842,10 +842,10 @@
                                 <a class="function" href="#UnaryLogic.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#UnaryLogic.operand">operand</a>
+                                <a class="variable" href="#UnaryLogic.operator">operator</a>
                         </li>
                         <li>
-                                <a class="variable" href="#UnaryLogic.operator">operator</a>
+                                <a class="variable" href="#UnaryLogic.operand">operand</a>
                         </li>
                 </ul>
 
@@ -878,19 +878,19 @@
                                 <a class="function" href="#Calibration.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Calibration.parameters">parameters</a>
+                                <a class="variable" href="#Calibration.qubits">qubits</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Calibration.instructions">instructions</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Calibration.qubits">qubits</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Calibration.modifiers">modifiers</a>
+                                <a class="variable" href="#Calibration.parameters">parameters</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Calibration.name">name</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Calibration.modifiers">modifiers</a>
                         </li>
                 </ul>
 
@@ -905,16 +905,16 @@
                                 <a class="function" href="#CircuitDefinition.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#CircuitDefinition.parameters">parameters</a>
+                                <a class="variable" href="#CircuitDefinition.qubit_variables">qubit_variables</a>
                         </li>
                         <li>
-                                <a class="variable" href="#CircuitDefinition.instructions">instructions</a>
+                                <a class="variable" href="#CircuitDefinition.parameters">parameters</a>
                         </li>
                         <li>
                                 <a class="variable" href="#CircuitDefinition.name">name</a>
                         </li>
                         <li>
-                                <a class="variable" href="#CircuitDefinition.qubit_variables">qubit_variables</a>
+                                <a class="variable" href="#CircuitDefinition.instructions">instructions</a>
                         </li>
                 </ul>
 
@@ -929,13 +929,13 @@
                                 <a class="function" href="#MeasureCalibrationDefinition.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#MeasureCalibrationDefinition.instructions">instructions</a>
+                                <a class="variable" href="#MeasureCalibrationDefinition.qubit">qubit</a>
                         </li>
                         <li>
                                 <a class="variable" href="#MeasureCalibrationDefinition.parameter">parameter</a>
                         </li>
                         <li>
-                                <a class="variable" href="#MeasureCalibrationDefinition.qubit">qubit</a>
+                                <a class="variable" href="#MeasureCalibrationDefinition.instructions">instructions</a>
                         </li>
                 </ul>
 
@@ -950,13 +950,13 @@
                                 <a class="function" href="#Declaration.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
+                                <a class="variable" href="#Declaration.name">name</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#Declaration.size">size</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Declaration.sharing">sharing</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Declaration.name">name</a>
                         </li>
                 </ul>
 
@@ -974,10 +974,10 @@
                                 <a class="variable" href="#Load.destination">destination</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Load.offset">offset</a>
+                                <a class="variable" href="#Load.source">source</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Load.source">source</a>
+                                <a class="variable" href="#Load.offset">offset</a>
                         </li>
                 </ul>
 
@@ -1004,10 +1004,10 @@
                     <a class="class" href="#Sharing">Sharing</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#Sharing.offsets">offsets</a>
+                                <a class="variable" href="#Sharing.name">name</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Sharing.name">name</a>
+                                <a class="variable" href="#Sharing.offsets">offsets</a>
                         </li>
                 </ul>
 
@@ -1022,13 +1022,13 @@
                                 <a class="function" href="#Store.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Store.offset">offset</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#Store.source">source</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Store.destination">destination</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Store.offset">offset</a>
                         </li>
                 </ul>
 
@@ -1223,10 +1223,10 @@
                                 <a class="variable" href="#Capture.memory_reference">memory_reference</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Capture.waveform">waveform</a>
+                                <a class="variable" href="#Capture.blocking">blocking</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Capture.blocking">blocking</a>
+                                <a class="variable" href="#Capture.waveform">waveform</a>
                         </li>
                 </ul>
 
@@ -1241,10 +1241,10 @@
                                 <a class="function" href="#FrameDefinition.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#FrameDefinition.attributes">attributes</a>
+                                <a class="variable" href="#FrameDefinition.identifier">identifier</a>
                         </li>
                         <li>
-                                <a class="variable" href="#FrameDefinition.identifier">identifier</a>
+                                <a class="variable" href="#FrameDefinition.attributes">attributes</a>
                         </li>
                 </ul>
 
@@ -1259,10 +1259,10 @@
                                 <a class="function" href="#FrameIdentifier.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#FrameIdentifier.name">name</a>
+                                <a class="variable" href="#FrameIdentifier.qubits">qubits</a>
                         </li>
                         <li>
-                                <a class="variable" href="#FrameIdentifier.qubits">qubits</a>
+                                <a class="variable" href="#FrameIdentifier.name">name</a>
                         </li>
                 </ul>
 
@@ -1277,13 +1277,13 @@
                                 <a class="function" href="#Pulse.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Pulse.frame">frame</a>
+                                <a class="variable" href="#Pulse.waveform">waveform</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Pulse.blocking">blocking</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Pulse.waveform">waveform</a>
+                                <a class="variable" href="#Pulse.frame">frame</a>
                         </li>
                 </ul>
 
@@ -1298,6 +1298,9 @@
                                 <a class="function" href="#RawCapture.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
+                                <a class="variable" href="#RawCapture.duration">duration</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#RawCapture.memory_reference">memory_reference</a>
                         </li>
                         <li>
@@ -1305,9 +1308,6 @@
                         </li>
                         <li>
                                 <a class="variable" href="#RawCapture.blocking">blocking</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#RawCapture.duration">duration</a>
                         </li>
                 </ul>
 
@@ -1322,10 +1322,10 @@
                                 <a class="function" href="#SetFrequency.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#SetFrequency.frequency">frequency</a>
+                                <a class="variable" href="#SetFrequency.frame">frame</a>
                         </li>
                         <li>
-                                <a class="variable" href="#SetFrequency.frame">frame</a>
+                                <a class="variable" href="#SetFrequency.frequency">frequency</a>
                         </li>
                 </ul>
 
@@ -1340,10 +1340,10 @@
                                 <a class="function" href="#SetPhase.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#SetPhase.frame">frame</a>
+                                <a class="variable" href="#SetPhase.phase">phase</a>
                         </li>
                         <li>
-                                <a class="variable" href="#SetPhase.phase">phase</a>
+                                <a class="variable" href="#SetPhase.frame">frame</a>
                         </li>
                 </ul>
 
@@ -1394,10 +1394,10 @@
                                 <a class="function" href="#ShiftPhase.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#ShiftPhase.phase">phase</a>
+                                <a class="variable" href="#ShiftPhase.frame">frame</a>
                         </li>
                         <li>
-                                <a class="variable" href="#ShiftPhase.frame">frame</a>
+                                <a class="variable" href="#ShiftPhase.phase">phase</a>
                         </li>
                 </ul>
 
@@ -1442,6 +1442,9 @@
                                 <a class="function" href="#Gate.to_unitary_mut">to_unitary_mut</a>
                         </li>
                         <li>
+                                <a class="variable" href="#Gate.qubits">qubits</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#Gate.name">name</a>
                         </li>
                         <li>
@@ -1449,9 +1452,6 @@
                         </li>
                         <li>
                                 <a class="variable" href="#Gate.modifiers">modifiers</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Gate.qubits">qubits</a>
                         </li>
                 </ul>
 
@@ -1586,10 +1586,10 @@
                     <a class="class" href="#PauliSum">PauliSum</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#PauliSum.arguments">arguments</a>
+                                <a class="variable" href="#PauliSum.terms">terms</a>
                         </li>
                         <li>
-                                <a class="variable" href="#PauliSum.terms">terms</a>
+                                <a class="variable" href="#PauliSum.arguments">arguments</a>
                         </li>
                 </ul>
 
@@ -1637,10 +1637,10 @@
                                 <a class="function" href="#JumpUnless.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#JumpUnless.target">target</a>
+                                <a class="variable" href="#JumpUnless.condition">condition</a>
                         </li>
                         <li>
-                                <a class="variable" href="#JumpUnless.condition">condition</a>
+                                <a class="variable" href="#JumpUnless.target">target</a>
                         </li>
                 </ul>
 
@@ -1721,10 +1721,10 @@
                                 <a class="function" href="#MemoryReference.parse">parse</a>
                         </li>
                         <li>
-                                <a class="variable" href="#MemoryReference.index">index</a>
+                                <a class="variable" href="#MemoryReference.name">name</a>
                         </li>
                         <li>
-                                <a class="variable" href="#MemoryReference.name">name</a>
+                                <a class="variable" href="#MemoryReference.index">index</a>
                         </li>
                 </ul>
 
@@ -1811,13 +1811,13 @@
                                 <a class="function" href="#Delay.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Delay.qubits">qubits</a>
+                                <a class="variable" href="#Delay.duration">duration</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Delay.frame_names">frame_names</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Delay.duration">duration</a>
+                                <a class="variable" href="#Delay.qubits">qubits</a>
                         </li>
                 </ul>
 
@@ -1841,10 +1841,10 @@
                     <a class="class" href="#Waveform">Waveform</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#Waveform.matrix">matrix</a>
+                                <a class="variable" href="#Waveform.parameters">parameters</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Waveform.parameters">parameters</a>
+                                <a class="variable" href="#Waveform.matrix">matrix</a>
                         </li>
                 </ul>
 
@@ -1859,10 +1859,10 @@
                                 <a class="function" href="#WaveformDefinition.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#WaveformDefinition.name">name</a>
+                                <a class="variable" href="#WaveformDefinition.definition">definition</a>
                         </li>
                         <li>
-                                <a class="variable" href="#WaveformDefinition.definition">definition</a>
+                                <a class="variable" href="#WaveformDefinition.name">name</a>
                         </li>
                 </ul>
 
@@ -1877,10 +1877,10 @@
                                 <a class="function" href="#WaveformInvocation.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#WaveformInvocation.parameters">parameters</a>
+                                <a class="variable" href="#WaveformInvocation.name">name</a>
                         </li>
                         <li>
-                                <a class="variable" href="#WaveformInvocation.name">name</a>
+                                <a class="variable" href="#WaveformInvocation.parameters">parameters</a>
                         </li>
                 </ul>
 
@@ -4769,17 +4769,6 @@ attributes -- see the documentation for details.</p>
     
     
 
-                            <div id="BinaryOperands.operand" class="classattr">
-                                <div class="attr variable">
-            <span class="name">operand</span><span class="annotation">: <a href="#BinaryOperand">quil.instructions.BinaryOperand</a></span>
-
-        
-    </div>
-    <a class="headerlink" href="#BinaryOperands.operand"></a>
-    
-    
-
-                            </div>
                             <div id="BinaryOperands.memory_reference" class="classattr">
                                 <div class="attr variable">
             <span class="name">memory_reference</span><span class="annotation">: <a href="#MemoryReference">quil.instructions.MemoryReference</a></span>
@@ -4787,6 +4776,17 @@ attributes -- see the documentation for details.</p>
         
     </div>
     <a class="headerlink" href="#BinaryOperands.memory_reference"></a>
+    
+    
+
+                            </div>
+                            <div id="BinaryOperands.operand" class="classattr">
+                                <div class="attr variable">
+            <span class="name">operand</span><span class="annotation">: <a href="#BinaryOperand">quil.instructions.BinaryOperand</a></span>
+
+        
+    </div>
+    <a class="headerlink" href="#BinaryOperands.operand"></a>
     
     
 
@@ -5629,17 +5629,6 @@ attributes -- see the documentation for details.</p>
 
 
                             </div>
-                            <div id="UnaryLogic.operand" class="classattr">
-                                <div class="attr variable">
-            <span class="name">operand</span><span class="annotation">: <a href="#MemoryReference">quil.instructions.MemoryReference</a></span>
-
-        
-    </div>
-    <a class="headerlink" href="#UnaryLogic.operand"></a>
-    
-    
-
-                            </div>
                             <div id="UnaryLogic.operator" class="classattr">
                                 <div class="attr variable">
             <span class="name">operator</span><span class="annotation">: <a href="#UnaryOperator">quil.instructions.UnaryOperator</a></span>
@@ -5647,6 +5636,17 @@ attributes -- see the documentation for details.</p>
         
     </div>
     <a class="headerlink" href="#UnaryLogic.operator"></a>
+    
+    
+
+                            </div>
+                            <div id="UnaryLogic.operand" class="classattr">
+                                <div class="attr variable">
+            <span class="name">operand</span><span class="annotation">: <a href="#MemoryReference">quil.instructions.MemoryReference</a></span>
+
+        
+    </div>
+    <a class="headerlink" href="#UnaryLogic.operand"></a>
     
     
 
@@ -5830,13 +5830,13 @@ attributes -- see the documentation for details.</p>
 
 
                             </div>
-                            <div id="Calibration.parameters" class="classattr">
+                            <div id="Calibration.qubits" class="classattr">
                                 <div class="attr variable">
-            <span class="name">parameters</span><span class="annotation">: List[<a href="expression.html#Expression">quil.expression.Expression</a>]</span>
+            <span class="name">qubits</span><span class="annotation">: List[<a href="#Qubit">quil.instructions.Qubit</a>]</span>
 
         
     </div>
-    <a class="headerlink" href="#Calibration.parameters"></a>
+    <a class="headerlink" href="#Calibration.qubits"></a>
     
     
 
@@ -5852,24 +5852,13 @@ attributes -- see the documentation for details.</p>
     
 
                             </div>
-                            <div id="Calibration.qubits" class="classattr">
+                            <div id="Calibration.parameters" class="classattr">
                                 <div class="attr variable">
-            <span class="name">qubits</span><span class="annotation">: List[<a href="#Qubit">quil.instructions.Qubit</a>]</span>
+            <span class="name">parameters</span><span class="annotation">: List[<a href="expression.html#Expression">quil.expression.Expression</a>]</span>
 
         
     </div>
-    <a class="headerlink" href="#Calibration.qubits"></a>
-    
-    
-
-                            </div>
-                            <div id="Calibration.modifiers" class="classattr">
-                                <div class="attr variable">
-            <span class="name">modifiers</span><span class="annotation">: List[<a href="#GateModifier">quil.instructions.GateModifier</a>]</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Calibration.modifiers"></a>
+    <a class="headerlink" href="#Calibration.parameters"></a>
     
     
 
@@ -5881,6 +5870,17 @@ attributes -- see the documentation for details.</p>
         
     </div>
     <a class="headerlink" href="#Calibration.name"></a>
+    
+    
+
+                            </div>
+                            <div id="Calibration.modifiers" class="classattr">
+                                <div class="attr variable">
+            <span class="name">modifiers</span><span class="annotation">: List[<a href="#GateModifier">quil.instructions.GateModifier</a>]</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Calibration.modifiers"></a>
     
     
 
@@ -5932,6 +5932,17 @@ attributes -- see the documentation for details.</p>
 
 
                             </div>
+                            <div id="CircuitDefinition.qubit_variables" class="classattr">
+                                <div class="attr variable">
+            <span class="name">qubit_variables</span><span class="annotation">: List[str]</span>
+
+        
+    </div>
+    <a class="headerlink" href="#CircuitDefinition.qubit_variables"></a>
+    
+    
+
+                            </div>
                             <div id="CircuitDefinition.parameters" class="classattr">
                                 <div class="attr variable">
             <span class="name">parameters</span><span class="annotation">: List[str]</span>
@@ -5939,17 +5950,6 @@ attributes -- see the documentation for details.</p>
         
     </div>
     <a class="headerlink" href="#CircuitDefinition.parameters"></a>
-    
-    
-
-                            </div>
-                            <div id="CircuitDefinition.instructions" class="classattr">
-                                <div class="attr variable">
-            <span class="name">instructions</span><span class="annotation">: List[<a href="#Instruction">quil.instructions.Instruction</a>]</span>
-
-        
-    </div>
-    <a class="headerlink" href="#CircuitDefinition.instructions"></a>
     
     
 
@@ -5965,13 +5965,13 @@ attributes -- see the documentation for details.</p>
     
 
                             </div>
-                            <div id="CircuitDefinition.qubit_variables" class="classattr">
+                            <div id="CircuitDefinition.instructions" class="classattr">
                                 <div class="attr variable">
-            <span class="name">qubit_variables</span><span class="annotation">: List[str]</span>
+            <span class="name">instructions</span><span class="annotation">: List[<a href="#Instruction">quil.instructions.Instruction</a>]</span>
 
         
     </div>
-    <a class="headerlink" href="#CircuitDefinition.qubit_variables"></a>
+    <a class="headerlink" href="#CircuitDefinition.instructions"></a>
     
     
 
@@ -6023,13 +6023,13 @@ attributes -- see the documentation for details.</p>
 
 
                             </div>
-                            <div id="MeasureCalibrationDefinition.instructions" class="classattr">
+                            <div id="MeasureCalibrationDefinition.qubit" class="classattr">
                                 <div class="attr variable">
-            <span class="name">instructions</span><span class="annotation">: List[<a href="#Instruction">quil.instructions.Instruction</a>]</span>
+            <span class="name">qubit</span><span class="annotation">: Optional[<a href="#Qubit">quil.instructions.Qubit</a>]</span>
 
         
     </div>
-    <a class="headerlink" href="#MeasureCalibrationDefinition.instructions"></a>
+    <a class="headerlink" href="#MeasureCalibrationDefinition.qubit"></a>
     
     
 
@@ -6045,13 +6045,13 @@ attributes -- see the documentation for details.</p>
     
 
                             </div>
-                            <div id="MeasureCalibrationDefinition.qubit" class="classattr">
+                            <div id="MeasureCalibrationDefinition.instructions" class="classattr">
                                 <div class="attr variable">
-            <span class="name">qubit</span><span class="annotation">: Optional[<a href="#Qubit">quil.instructions.Qubit</a>]</span>
+            <span class="name">instructions</span><span class="annotation">: List[<a href="#Instruction">quil.instructions.Instruction</a>]</span>
 
         
     </div>
-    <a class="headerlink" href="#MeasureCalibrationDefinition.qubit"></a>
+    <a class="headerlink" href="#MeasureCalibrationDefinition.instructions"></a>
     
     
 
@@ -6103,6 +6103,17 @@ attributes -- see the documentation for details.</p>
 
 
                             </div>
+                            <div id="Declaration.name" class="classattr">
+                                <div class="attr variable">
+            <span class="name">name</span><span class="annotation">: str</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Declaration.name"></a>
+    
+    
+
+                            </div>
                             <div id="Declaration.size" class="classattr">
                                 <div class="attr variable">
             <span class="name">size</span><span class="annotation">: <a href="#Vector">quil.instructions.Vector</a></span>
@@ -6121,17 +6132,6 @@ attributes -- see the documentation for details.</p>
         
     </div>
     <a class="headerlink" href="#Declaration.sharing"></a>
-    
-    
-
-                            </div>
-                            <div id="Declaration.name" class="classattr">
-                                <div class="attr variable">
-            <span class="name">name</span><span class="annotation">: str</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Declaration.name"></a>
     
     
 
@@ -6194,17 +6194,6 @@ attributes -- see the documentation for details.</p>
     
 
                             </div>
-                            <div id="Load.offset" class="classattr">
-                                <div class="attr variable">
-            <span class="name">offset</span><span class="annotation">: <a href="#MemoryReference">quil.instructions.MemoryReference</a></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Load.offset"></a>
-    
-    
-
-                            </div>
                             <div id="Load.source" class="classattr">
                                 <div class="attr variable">
             <span class="name">source</span><span class="annotation">: str</span>
@@ -6212,6 +6201,17 @@ attributes -- see the documentation for details.</p>
         
     </div>
     <a class="headerlink" href="#Load.source"></a>
+    
+    
+
+                            </div>
+                            <div id="Load.offset" class="classattr">
+                                <div class="attr variable">
+            <span class="name">offset</span><span class="annotation">: <a href="#MemoryReference">quil.instructions.MemoryReference</a></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Load.offset"></a>
     
     
 
@@ -6298,17 +6298,6 @@ attributes -- see the documentation for details.</p>
     
     
 
-                            <div id="Sharing.offsets" class="classattr">
-                                <div class="attr variable">
-            <span class="name">offsets</span><span class="annotation">: List[<a href="#Offset">quil.instructions.Offset</a>]</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Sharing.offsets"></a>
-    
-    
-
-                            </div>
                             <div id="Sharing.name" class="classattr">
                                 <div class="attr variable">
             <span class="name">name</span><span class="annotation">: str</span>
@@ -6316,6 +6305,17 @@ attributes -- see the documentation for details.</p>
         
     </div>
     <a class="headerlink" href="#Sharing.name"></a>
+    
+    
+
+                            </div>
+                            <div id="Sharing.offsets" class="classattr">
+                                <div class="attr variable">
+            <span class="name">offsets</span><span class="annotation">: List[<a href="#Offset">quil.instructions.Offset</a>]</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Sharing.offsets"></a>
     
     
 
@@ -6367,17 +6367,6 @@ attributes -- see the documentation for details.</p>
 
 
                             </div>
-                            <div id="Store.offset" class="classattr">
-                                <div class="attr variable">
-            <span class="name">offset</span><span class="annotation">: <a href="#MemoryReference">quil.instructions.MemoryReference</a></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Store.offset"></a>
-    
-    
-
-                            </div>
                             <div id="Store.source" class="classattr">
                                 <div class="attr variable">
             <span class="name">source</span><span class="annotation">: <a href="#ArithmeticOperand">quil.instructions.ArithmeticOperand</a></span>
@@ -6396,6 +6385,17 @@ attributes -- see the documentation for details.</p>
         
     </div>
     <a class="headerlink" href="#Store.destination"></a>
+    
+    
+
+                            </div>
+                            <div id="Store.offset" class="classattr">
+                                <div class="attr variable">
+            <span class="name">offset</span><span class="annotation">: <a href="#MemoryReference">quil.instructions.MemoryReference</a></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Store.offset"></a>
     
     
 
@@ -7269,17 +7269,6 @@ attributes -- see the documentation for details.</p>
     
 
                             </div>
-                            <div id="Capture.waveform" class="classattr">
-                                <div class="attr variable">
-            <span class="name">waveform</span><span class="annotation">: <a href="#WaveformInvocation">quil.instructions.WaveformInvocation</a></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Capture.waveform"></a>
-    
-    
-
-                            </div>
                             <div id="Capture.blocking" class="classattr">
                                 <div class="attr variable">
             <span class="name">blocking</span><span class="annotation">: bool</span>
@@ -7287,6 +7276,17 @@ attributes -- see the documentation for details.</p>
         
     </div>
     <a class="headerlink" href="#Capture.blocking"></a>
+    
+    
+
+                            </div>
+                            <div id="Capture.waveform" class="classattr">
+                                <div class="attr variable">
+            <span class="name">waveform</span><span class="annotation">: <a href="#WaveformInvocation">quil.instructions.WaveformInvocation</a></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Capture.waveform"></a>
     
     
 
@@ -7338,17 +7338,6 @@ attributes -- see the documentation for details.</p>
 
 
                             </div>
-                            <div id="FrameDefinition.attributes" class="classattr">
-                                <div class="attr variable">
-            <span class="name">attributes</span><span class="annotation">: Dict[str, <a href="#AttributeValue">quil.instructions.AttributeValue</a>]</span>
-
-        
-    </div>
-    <a class="headerlink" href="#FrameDefinition.attributes"></a>
-    
-    
-
-                            </div>
                             <div id="FrameDefinition.identifier" class="classattr">
                                 <div class="attr variable">
             <span class="name">identifier</span><span class="annotation">: <a href="#FrameIdentifier">quil.instructions.FrameIdentifier</a></span>
@@ -7356,6 +7345,17 @@ attributes -- see the documentation for details.</p>
         
     </div>
     <a class="headerlink" href="#FrameDefinition.identifier"></a>
+    
+    
+
+                            </div>
+                            <div id="FrameDefinition.attributes" class="classattr">
+                                <div class="attr variable">
+            <span class="name">attributes</span><span class="annotation">: Dict[str, <a href="#AttributeValue">quil.instructions.AttributeValue</a>]</span>
+
+        
+    </div>
+    <a class="headerlink" href="#FrameDefinition.attributes"></a>
     
     
 
@@ -7407,17 +7407,6 @@ attributes -- see the documentation for details.</p>
 
 
                             </div>
-                            <div id="FrameIdentifier.name" class="classattr">
-                                <div class="attr variable">
-            <span class="name">name</span><span class="annotation">: str</span>
-
-        
-    </div>
-    <a class="headerlink" href="#FrameIdentifier.name"></a>
-    
-    
-
-                            </div>
                             <div id="FrameIdentifier.qubits" class="classattr">
                                 <div class="attr variable">
             <span class="name">qubits</span><span class="annotation">: List[<a href="#Qubit">quil.instructions.Qubit</a>]</span>
@@ -7425,6 +7414,17 @@ attributes -- see the documentation for details.</p>
         
     </div>
     <a class="headerlink" href="#FrameIdentifier.qubits"></a>
+    
+    
+
+                            </div>
+                            <div id="FrameIdentifier.name" class="classattr">
+                                <div class="attr variable">
+            <span class="name">name</span><span class="annotation">: str</span>
+
+        
+    </div>
+    <a class="headerlink" href="#FrameIdentifier.name"></a>
     
     
 
@@ -7476,13 +7476,13 @@ attributes -- see the documentation for details.</p>
 
 
                             </div>
-                            <div id="Pulse.frame" class="classattr">
+                            <div id="Pulse.waveform" class="classattr">
                                 <div class="attr variable">
-            <span class="name">frame</span><span class="annotation">: <a href="#FrameIdentifier">quil.instructions.FrameIdentifier</a></span>
+            <span class="name">waveform</span><span class="annotation">: <a href="#WaveformInvocation">quil.instructions.WaveformInvocation</a></span>
 
         
     </div>
-    <a class="headerlink" href="#Pulse.frame"></a>
+    <a class="headerlink" href="#Pulse.waveform"></a>
     
     
 
@@ -7498,13 +7498,13 @@ attributes -- see the documentation for details.</p>
     
 
                             </div>
-                            <div id="Pulse.waveform" class="classattr">
+                            <div id="Pulse.frame" class="classattr">
                                 <div class="attr variable">
-            <span class="name">waveform</span><span class="annotation">: <a href="#WaveformInvocation">quil.instructions.WaveformInvocation</a></span>
+            <span class="name">frame</span><span class="annotation">: <a href="#FrameIdentifier">quil.instructions.FrameIdentifier</a></span>
 
         
     </div>
-    <a class="headerlink" href="#Pulse.waveform"></a>
+    <a class="headerlink" href="#Pulse.frame"></a>
     
     
 
@@ -7556,6 +7556,17 @@ attributes -- see the documentation for details.</p>
 
 
                             </div>
+                            <div id="RawCapture.duration" class="classattr">
+                                <div class="attr variable">
+            <span class="name">duration</span><span class="annotation">: <a href="expression.html#Expression">quil.expression.Expression</a></span>
+
+        
+    </div>
+    <a class="headerlink" href="#RawCapture.duration"></a>
+    
+    
+
+                            </div>
                             <div id="RawCapture.memory_reference" class="classattr">
                                 <div class="attr variable">
             <span class="name">memory_reference</span><span class="annotation">: <a href="#MemoryReference">quil.instructions.MemoryReference</a></span>
@@ -7585,17 +7596,6 @@ attributes -- see the documentation for details.</p>
         
     </div>
     <a class="headerlink" href="#RawCapture.blocking"></a>
-    
-    
-
-                            </div>
-                            <div id="RawCapture.duration" class="classattr">
-                                <div class="attr variable">
-            <span class="name">duration</span><span class="annotation">: <a href="expression.html#Expression">quil.expression.Expression</a></span>
-
-        
-    </div>
-    <a class="headerlink" href="#RawCapture.duration"></a>
     
     
 
@@ -7647,17 +7647,6 @@ attributes -- see the documentation for details.</p>
 
 
                             </div>
-                            <div id="SetFrequency.frequency" class="classattr">
-                                <div class="attr variable">
-            <span class="name">frequency</span><span class="annotation">: <a href="expression.html#Expression">quil.expression.Expression</a></span>
-
-        
-    </div>
-    <a class="headerlink" href="#SetFrequency.frequency"></a>
-    
-    
-
-                            </div>
                             <div id="SetFrequency.frame" class="classattr">
                                 <div class="attr variable">
             <span class="name">frame</span><span class="annotation">: <a href="#FrameIdentifier">quil.instructions.FrameIdentifier</a></span>
@@ -7665,6 +7654,17 @@ attributes -- see the documentation for details.</p>
         
     </div>
     <a class="headerlink" href="#SetFrequency.frame"></a>
+    
+    
+
+                            </div>
+                            <div id="SetFrequency.frequency" class="classattr">
+                                <div class="attr variable">
+            <span class="name">frequency</span><span class="annotation">: <a href="expression.html#Expression">quil.expression.Expression</a></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SetFrequency.frequency"></a>
     
     
 
@@ -7716,17 +7716,6 @@ attributes -- see the documentation for details.</p>
 
 
                             </div>
-                            <div id="SetPhase.frame" class="classattr">
-                                <div class="attr variable">
-            <span class="name">frame</span><span class="annotation">: <a href="#FrameIdentifier">quil.instructions.FrameIdentifier</a></span>
-
-        
-    </div>
-    <a class="headerlink" href="#SetPhase.frame"></a>
-    
-    
-
-                            </div>
                             <div id="SetPhase.phase" class="classattr">
                                 <div class="attr variable">
             <span class="name">phase</span><span class="annotation">: <a href="expression.html#Expression">quil.expression.Expression</a></span>
@@ -7734,6 +7723,17 @@ attributes -- see the documentation for details.</p>
         
     </div>
     <a class="headerlink" href="#SetPhase.phase"></a>
+    
+    
+
+                            </div>
+                            <div id="SetPhase.frame" class="classattr">
+                                <div class="attr variable">
+            <span class="name">frame</span><span class="annotation">: <a href="#FrameIdentifier">quil.instructions.FrameIdentifier</a></span>
+
+        
+    </div>
+    <a class="headerlink" href="#SetPhase.frame"></a>
     
     
 
@@ -7923,17 +7923,6 @@ attributes -- see the documentation for details.</p>
 
 
                             </div>
-                            <div id="ShiftPhase.phase" class="classattr">
-                                <div class="attr variable">
-            <span class="name">phase</span><span class="annotation">: <a href="expression.html#Expression">quil.expression.Expression</a></span>
-
-        
-    </div>
-    <a class="headerlink" href="#ShiftPhase.phase"></a>
-    
-    
-
-                            </div>
                             <div id="ShiftPhase.frame" class="classattr">
                                 <div class="attr variable">
             <span class="name">frame</span><span class="annotation">: <a href="#FrameIdentifier">quil.instructions.FrameIdentifier</a></span>
@@ -7941,6 +7930,17 @@ attributes -- see the documentation for details.</p>
         
     </div>
     <a class="headerlink" href="#ShiftPhase.frame"></a>
+    
+    
+
+                            </div>
+                            <div id="ShiftPhase.phase" class="classattr">
+                                <div class="attr variable">
+            <span class="name">phase</span><span class="annotation">: <a href="expression.html#Expression">quil.expression.Expression</a></span>
+
+        
+    </div>
+    <a class="headerlink" href="#ShiftPhase.phase"></a>
     
     
 
@@ -8128,6 +8128,17 @@ gate is unknown, or if there are an unexpected number of parameters.</p>
 
 
                             </div>
+                            <div id="Gate.qubits" class="classattr">
+                                <div class="attr variable">
+            <span class="name">qubits</span><span class="annotation">: List[<a href="#Qubit">quil.instructions.Qubit</a>]</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Gate.qubits"></a>
+    
+    
+
+                            </div>
                             <div id="Gate.name" class="classattr">
                                 <div class="attr variable">
             <span class="name">name</span><span class="annotation">: str</span>
@@ -8157,17 +8168,6 @@ gate is unknown, or if there are an unexpected number of parameters.</p>
         
     </div>
     <a class="headerlink" href="#Gate.modifiers"></a>
-    
-    
-
-                            </div>
-                            <div id="Gate.qubits" class="classattr">
-                                <div class="attr variable">
-            <span class="name">qubits</span><span class="annotation">: List[<a href="#Qubit">quil.instructions.Qubit</a>]</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Gate.qubits"></a>
     
     
 
@@ -8817,17 +8817,6 @@ attributes -- see the documentation for details.</p>
     
     
 
-                            <div id="PauliSum.arguments" class="classattr">
-                                <div class="attr variable">
-            <span class="name">arguments</span><span class="annotation">: List[str]</span>
-
-        
-    </div>
-    <a class="headerlink" href="#PauliSum.arguments"></a>
-    
-    
-
-                            </div>
                             <div id="PauliSum.terms" class="classattr">
                                 <div class="attr variable">
             <span class="name">terms</span><span class="annotation">: List[<a href="#PauliTerm">quil.instructions.PauliTerm</a>]</span>
@@ -8835,6 +8824,17 @@ attributes -- see the documentation for details.</p>
         
     </div>
     <a class="headerlink" href="#PauliSum.terms"></a>
+    
+    
+
+                            </div>
+                            <div id="PauliSum.arguments" class="classattr">
+                                <div class="attr variable">
+            <span class="name">arguments</span><span class="annotation">: List[str]</span>
+
+        
+    </div>
+    <a class="headerlink" href="#PauliSum.arguments"></a>
     
     
 
@@ -9013,17 +9013,6 @@ attributes -- see the documentation for details.</p>
 
 
                             </div>
-                            <div id="JumpUnless.target" class="classattr">
-                                <div class="attr variable">
-            <span class="name">target</span><span class="annotation">: <a href="#Target">quil.instructions.Target</a></span>
-
-        
-    </div>
-    <a class="headerlink" href="#JumpUnless.target"></a>
-    
-    
-
-                            </div>
                             <div id="JumpUnless.condition" class="classattr">
                                 <div class="attr variable">
             <span class="name">condition</span><span class="annotation">: <a href="#MemoryReference">quil.instructions.MemoryReference</a></span>
@@ -9031,6 +9020,17 @@ attributes -- see the documentation for details.</p>
         
     </div>
     <a class="headerlink" href="#JumpUnless.condition"></a>
+    
+    
+
+                            </div>
+                            <div id="JumpUnless.target" class="classattr">
+                                <div class="attr variable">
+            <span class="name">target</span><span class="annotation">: <a href="#Target">quil.instructions.Target</a></span>
+
+        
+    </div>
+    <a class="headerlink" href="#JumpUnless.target"></a>
     
     
 
@@ -9367,17 +9367,6 @@ attributes -- see the documentation for details.</p>
 
 
                             </div>
-                            <div id="MemoryReference.index" class="classattr">
-                                <div class="attr variable">
-            <span class="name">index</span><span class="annotation">: int</span>
-
-        
-    </div>
-    <a class="headerlink" href="#MemoryReference.index"></a>
-    
-    
-
-                            </div>
                             <div id="MemoryReference.name" class="classattr">
                                 <div class="attr variable">
             <span class="name">name</span><span class="annotation">: str</span>
@@ -9385,6 +9374,17 @@ attributes -- see the documentation for details.</p>
         
     </div>
     <a class="headerlink" href="#MemoryReference.name"></a>
+    
+    
+
+                            </div>
+                            <div id="MemoryReference.index" class="classattr">
+                                <div class="attr variable">
+            <span class="name">index</span><span class="annotation">: int</span>
+
+        
+    </div>
+    <a class="headerlink" href="#MemoryReference.index"></a>
     
     
 
@@ -9747,13 +9747,13 @@ attributes -- see the documentation for details.</p>
 
 
                             </div>
-                            <div id="Delay.qubits" class="classattr">
+                            <div id="Delay.duration" class="classattr">
                                 <div class="attr variable">
-            <span class="name">qubits</span><span class="annotation">: List[<a href="#Qubit">quil.instructions.Qubit</a>]</span>
+            <span class="name">duration</span><span class="annotation">: <a href="expression.html#Expression">quil.expression.Expression</a></span>
 
         
     </div>
-    <a class="headerlink" href="#Delay.qubits"></a>
+    <a class="headerlink" href="#Delay.duration"></a>
     
     
 
@@ -9769,13 +9769,13 @@ attributes -- see the documentation for details.</p>
     
 
                             </div>
-                            <div id="Delay.duration" class="classattr">
+                            <div id="Delay.qubits" class="classattr">
                                 <div class="attr variable">
-            <span class="name">duration</span><span class="annotation">: <a href="expression.html#Expression">quil.expression.Expression</a></span>
+            <span class="name">qubits</span><span class="annotation">: List[<a href="#Qubit">quil.instructions.Qubit</a>]</span>
 
         
     </div>
-    <a class="headerlink" href="#Delay.duration"></a>
+    <a class="headerlink" href="#Delay.qubits"></a>
     
     
 
@@ -9851,17 +9851,6 @@ attributes -- see the documentation for details.</p>
     
     
 
-                            <div id="Waveform.matrix" class="classattr">
-                                <div class="attr variable">
-            <span class="name">matrix</span><span class="annotation">: List[<a href="expression.html#Expression">quil.expression.Expression</a>]</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Waveform.matrix"></a>
-    
-    
-
-                            </div>
                             <div id="Waveform.parameters" class="classattr">
                                 <div class="attr variable">
             <span class="name">parameters</span><span class="annotation">: List[str]</span>
@@ -9869,6 +9858,17 @@ attributes -- see the documentation for details.</p>
         
     </div>
     <a class="headerlink" href="#Waveform.parameters"></a>
+    
+    
+
+                            </div>
+                            <div id="Waveform.matrix" class="classattr">
+                                <div class="attr variable">
+            <span class="name">matrix</span><span class="annotation">: List[<a href="expression.html#Expression">quil.expression.Expression</a>]</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Waveform.matrix"></a>
     
     
 
@@ -9920,17 +9920,6 @@ attributes -- see the documentation for details.</p>
 
 
                             </div>
-                            <div id="WaveformDefinition.name" class="classattr">
-                                <div class="attr variable">
-            <span class="name">name</span><span class="annotation">: str</span>
-
-        
-    </div>
-    <a class="headerlink" href="#WaveformDefinition.name"></a>
-    
-    
-
-                            </div>
                             <div id="WaveformDefinition.definition" class="classattr">
                                 <div class="attr variable">
             <span class="name">definition</span><span class="annotation">: <a href="#Waveform">quil.instructions.Waveform</a></span>
@@ -9938,6 +9927,17 @@ attributes -- see the documentation for details.</p>
         
     </div>
     <a class="headerlink" href="#WaveformDefinition.definition"></a>
+    
+    
+
+                            </div>
+                            <div id="WaveformDefinition.name" class="classattr">
+                                <div class="attr variable">
+            <span class="name">name</span><span class="annotation">: str</span>
+
+        
+    </div>
+    <a class="headerlink" href="#WaveformDefinition.name"></a>
     
     
 
@@ -9989,17 +9989,6 @@ attributes -- see the documentation for details.</p>
 
 
                             </div>
-                            <div id="WaveformInvocation.parameters" class="classattr">
-                                <div class="attr variable">
-            <span class="name">parameters</span><span class="annotation">: Dict[str, <a href="expression.html#Expression">quil.expression.Expression</a>]</span>
-
-        
-    </div>
-    <a class="headerlink" href="#WaveformInvocation.parameters"></a>
-    
-    
-
-                            </div>
                             <div id="WaveformInvocation.name" class="classattr">
                                 <div class="attr variable">
             <span class="name">name</span><span class="annotation">: str</span>
@@ -10007,6 +9996,17 @@ attributes -- see the documentation for details.</p>
         
     </div>
     <a class="headerlink" href="#WaveformInvocation.name"></a>
+    
+    
+
+                            </div>
+                            <div id="WaveformInvocation.parameters" class="classattr">
+                                <div class="attr variable">
+            <span class="name">parameters</span><span class="annotation">: Dict[str, <a href="expression.html#Expression">quil.expression.Expression</a>]</span>
+
+        
+    </div>
+    <a class="headerlink" href="#WaveformInvocation.parameters"></a>
     
     
 
