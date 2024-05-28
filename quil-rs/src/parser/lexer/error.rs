@@ -33,4 +33,6 @@ pub enum LexErrorKind {
     /// Encountered an unexpected EOF
     #[error("unexpected EOF while parsing")]
     UnexpectedEOF,
+    #[error("error parsing an integer: {0}")]
+    ParseInt(#[from] std::num::ParseIntError),
 }
