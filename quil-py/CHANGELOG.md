@@ -1,3 +1,13 @@
+## 0.10.1-rc.1
+
+### Features
+
+- add waveform templates (#369)
+
+### Fixes
+
+- Parsing programs with integers that overflow a u64 will no longer panic; instead, they will raise an error. (#372)
+
 ## 0.10.1-rc.0
 
 ### Features
