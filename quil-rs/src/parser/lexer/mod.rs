@@ -297,12 +297,11 @@ fn lex_number(input: LexInput) -> InternalLexResult {
     Ok((
         input,
         match integer_parse_result {
-            Ok(_) => {
-                float_string.parse::<u64>()
-                    .map(Token::Integer)
-                    .map_err(|e| InternalLexError::from_kind(input, e.into()))
-                    .map_err(nom::Err::Failure)?
-            }
+            Ok(_) => float_string
+                .parse::<u64>()
+                .map(Token::Integer)
+                .map_err(|e| InternalLexError::from_kind(input, e.into()))
+                .map_err(nom::Err::Failure)?,
             Err(_) => Token::Float(double(float_string)?.1),
         },
     ))
