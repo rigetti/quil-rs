@@ -2,7 +2,7 @@ use crate::quil::Quil;
 
 use super::Instruction;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct CircuitDefinition {
     pub name: String,
     pub parameters: Vec<String>,

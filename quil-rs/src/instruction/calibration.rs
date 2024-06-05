@@ -18,7 +18,7 @@ pub trait CalibrationSignature {
     fn has_signature(&self, signature: &Self::Signature<'_>) -> bool;
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
 pub struct Calibration {
     pub instructions: Vec<Instruction>,
     pub modifiers: Vec<GateModifier>,
@@ -86,7 +86,7 @@ impl CalibrationSignature for Calibration {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct MeasureCalibrationDefinition {
     pub qubit: Option<Qubit>,
     pub parameter: String,
