@@ -206,42 +206,42 @@ mod tests {
         vec![
             Instruction::Arithmetic(Arithmetic {
                 operator: ArithmeticOperator::Add,
-                destination: ArithmeticOperand::MemoryReference(MemoryReference {
+                destination: MemoryReference {
                     name: "ro".to_owned(),
                     index: 0
-                }),
+                },
                 source: ArithmeticOperand::LiteralInteger(2),
             }),
             Instruction::Arithmetic(Arithmetic {
                 operator: ArithmeticOperator::Multiply,
-                destination: ArithmeticOperand::MemoryReference(MemoryReference {
+                destination: MemoryReference {
                     name: "ro".to_owned(),
                     index: 0
-                }),
+                },
                 source: ArithmeticOperand::LiteralReal(1.0),
             }),
             Instruction::Arithmetic(Arithmetic {
                 operator: ArithmeticOperator::Subtract,
-                destination: ArithmeticOperand::MemoryReference(MemoryReference {
+                destination: MemoryReference {
                     name: "ro".to_owned(),
                     index: 1
-                }),
+                },
                 source: ArithmeticOperand::LiteralInteger(-3),
             }),
             Instruction::Arithmetic(Arithmetic {
                 operator: ArithmeticOperator::Divide,
-                destination: ArithmeticOperand::MemoryReference(MemoryReference {
+                destination: MemoryReference {
                     name: "ro".to_owned(),
                     index: 1
-                }),
+                },
                 source: ArithmeticOperand::LiteralReal(-1f64),
             }),
             Instruction::Arithmetic(Arithmetic {
                 operator: ArithmeticOperator::Add,
-                destination: ArithmeticOperand::MemoryReference(MemoryReference {
+                destination: MemoryReference {
                     name: "ro".to_owned(),
                     index: 1
-                }),
+                },
                 source: ArithmeticOperand::MemoryReference(MemoryReference {
                     name: "ro".to_owned(),
                     index: 2
@@ -257,76 +257,66 @@ mod tests {
         vec![
             Instruction::Comparison(Comparison {
                 operator: ComparisonOperator::Equal,
-                operands: (
-                    MemoryReference {
-                        name: "dest".to_owned(),
-                        index: 0
-                    },
-                    MemoryReference {
-                        name: "ro".to_owned(),
-                        index: 0
-                    },
-                    ComparisonOperand::LiteralInteger(0)
-                )
+                destination: MemoryReference {
+                    name: "dest".to_owned(),
+                    index: 0
+                },
+                lhs: MemoryReference {
+                    name: "ro".to_owned(),
+                    index: 0
+                },
+                rhs: ComparisonOperand::LiteralInteger(0)
             }),
             Instruction::Comparison(Comparison {
                 operator: ComparisonOperator::LessThan,
-                operands: (
-                    MemoryReference {
-                        name: "dest".to_owned(),
-                        index: 0
-                    },
-                    MemoryReference {
-                        name: "ro".to_owned(),
-                        index: 1
-                    },
-                    ComparisonOperand::LiteralInteger(-1)
-                )
+                destination: MemoryReference {
+                    name: "dest".to_owned(),
+                    index: 0
+                },
+                lhs: MemoryReference {
+                    name: "ro".to_owned(),
+                    index: 1
+                },
+                rhs: ComparisonOperand::LiteralInteger(-1)
             }),
             Instruction::Comparison(Comparison {
                 operator: ComparisonOperator::LessThanOrEqual,
-                operands: (
-                    MemoryReference {
-                        name: "dest".to_owned(),
-                        index: 0
-                    },
-                    MemoryReference {
-                        name: "ro".to_owned(),
-                        index: 0
-                    },
-                    ComparisonOperand::LiteralReal(1.2)
-                )
+                destination: MemoryReference {
+                    name: "dest".to_owned(),
+                    index: 0
+                },
+                lhs: MemoryReference {
+                    name: "ro".to_owned(),
+                    index: 0
+                },
+                rhs: ComparisonOperand::LiteralReal(1.2)
             }),
             Instruction::Comparison(Comparison {
                 operator: ComparisonOperator::GreaterThan,
-                operands: (
-                    MemoryReference {
-                        name: "dest".to_owned(),
-                        index: 0
-                    },
-                    MemoryReference {
-                        name: "ro".to_owned(),
-                        index: 2
-                    },
-                    ComparisonOperand::LiteralReal(0.000001)
-                )
+                destination: MemoryReference {
+                    name: "dest".to_owned(),
+                    index: 0
+                },
+                lhs: MemoryReference {
+                    name: "ro".to_owned(),
+                    index: 2
+                },
+                rhs: ComparisonOperand::LiteralReal(0.000001)
             }),
             Instruction::Comparison(Comparison {
                 operator: ComparisonOperator::GreaterThanOrEqual,
-                operands: (
-                    MemoryReference {
-                        name: "dest".to_owned(),
-                        index: 0
-                    },
-                    MemoryReference {
-                        name: "ro".to_owned(),
-                        index: 0
-                    },
-                    ComparisonOperand::MemoryReference(MemoryReference {
-                        name: "x".to_owned(),
-                        index: 0
-                    }),
-                )
+                destination: MemoryReference {
+                    name: "dest".to_owned(),
+                    index: 0
+                },
+                lhs: MemoryReference {
+                    name: "ro".to_owned(),
+                    index: 0
+                },
+                rhs: ComparisonOperand::MemoryReference(MemoryReference {
+                    name: "x".to_owned(),
+                    index: 0
+                }),
             })
         ]
     );
@@ -355,49 +345,41 @@ mod tests {
         vec![
             Instruction::BinaryLogic(BinaryLogic {
                 operator: BinaryOperator::And,
-                operands: (
-                    MemoryReference {
-                        name: "ro".to_owned(),
-                        index: 0
-                    },
-                    BinaryOperand::LiteralInteger(1)
-                )
+                destination: MemoryReference {
+                    name: "ro".to_owned(),
+                    index: 0
+                },
+                source: BinaryOperand::LiteralInteger(1)
             }),
             Instruction::BinaryLogic(BinaryLogic {
                 operator: BinaryOperator::Ior,
-                operands: (
-                    MemoryReference {
-                        name: "ro".to_owned(),
-                        index: 1
-                    },
-                    BinaryOperand::MemoryReference(MemoryReference {
-                        name: "ro".to_owned(),
-                        index: 2
-                    })
-                )
+                destination: MemoryReference {
+                    name: "ro".to_owned(),
+                    index: 1
+                },
+                source: BinaryOperand::MemoryReference(MemoryReference {
+                    name: "ro".to_owned(),
+                    index: 2
+                })
             }),
             Instruction::BinaryLogic(BinaryLogic {
                 operator: BinaryOperator::Xor,
-                operands: (
-                    MemoryReference {
-                        name: "ro".to_owned(),
-                        index: 1
-                    },
-                    BinaryOperand::LiteralInteger(0)
-                )
+                destination: MemoryReference {
+                    name: "ro".to_owned(),
+                    index: 1
+                },
+                source: BinaryOperand::LiteralInteger(0)
             }),
             Instruction::BinaryLogic(BinaryLogic {
                 operator: BinaryOperator::And,
-                operands: (
-                    MemoryReference {
-                        name: "ro".to_owned(),
-                        index: 1
-                    },
-                    BinaryOperand::MemoryReference(MemoryReference {
-                        name: "ro".to_owned(),
-                        index: 2
-                    })
-                )
+                destination: MemoryReference {
+                    name: "ro".to_owned(),
+                    index: 1
+                },
+                source: BinaryOperand::MemoryReference(MemoryReference {
+                    name: "ro".to_owned(),
+                    index: 2
+                })
             }),
         ]
     );
