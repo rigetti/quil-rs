@@ -12,8 +12,8 @@ pub use self::{
     circuit::PyCircuitDefinition,
     classical::{
         PyArithmetic, PyArithmeticOperand, PyArithmeticOperator, PyBinaryLogic, PyBinaryOperand,
-        PyBinaryOperands, PyBinaryOperator, PyComparison, PyComparisonOperand,
-        PyComparisonOperator, PyConvert, PyExchange, PyMove, PyUnaryLogic, PyUnaryOperator,
+        PyBinaryOperator, PyComparison, PyComparisonOperand, PyComparisonOperator, PyConvert,
+        PyExchange, PyMove, PyUnaryLogic, PyUnaryOperator,
     },
     control_flow::{PyJump, PyJumpUnless, PyJumpWhen, PyLabel, PyTarget, PyTargetPlaceholder},
     declaration::{
@@ -137,7 +137,6 @@ create_init_submodule! {
         PyArithmeticOperator,
         PyBinaryLogic,
         PyBinaryOperand,
-        PyBinaryOperands,
         PyBinaryOperator,
         PyComparison,
         PyComparisonOperand,
