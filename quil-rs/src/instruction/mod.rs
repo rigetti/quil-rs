@@ -43,9 +43,9 @@ mod waveform;
 pub use self::calibration::{Calibration, CalibrationSignature, MeasureCalibrationDefinition};
 pub use self::circuit::CircuitDefinition;
 pub use self::classical::{
-    Arithmetic, ArithmeticOperand, ArithmeticOperator, BinaryLogic, BinaryOperand, BinaryOperands,
-    BinaryOperator, Comparison, ComparisonOperand, ComparisonOperator, Convert, Exchange, Move,
-    UnaryLogic, UnaryOperator,
+    Arithmetic, ArithmeticOperand, ArithmeticOperator, BinaryLogic, BinaryOperand, BinaryOperator,
+    Comparison, ComparisonOperand, ComparisonOperator, Convert, Exchange, Move, UnaryLogic,
+    UnaryOperator,
 };
 pub use self::control_flow::{Jump, JumpUnless, JumpWhen, Label, Target, TargetPlaceholder};
 pub use self::declaration::{
