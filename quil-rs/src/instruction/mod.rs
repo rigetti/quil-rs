@@ -115,7 +115,7 @@ pub enum Instruction {
     Wait,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum InstructionRole {
     ClassicalCompute,
     ControlFlow,

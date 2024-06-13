@@ -43,7 +43,7 @@ impl Display for ReservedToken {
 }
 
 /// Any reserved keyword that isn't specifically a gate identifier or constant
-#[derive(Clone, Debug, PartialEq, Eq, strum::Display, strum::EnumString)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, strum::Display, strum::EnumString)]
 #[strum(serialize_all = "UPPERCASE")]
 pub enum ReservedKeyword {
     Add,
@@ -94,7 +94,7 @@ pub enum ReservedKeyword {
 }
 
 /// Every reserved Gate identifier
-#[derive(Clone, Debug, PartialEq, Eq, strum::Display, strum::EnumString)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, strum::Display, strum::EnumString)]
 #[strum(serialize_all = "UPPERCASE")]
 pub enum ReservedGate {
     CAN,
@@ -125,7 +125,7 @@ pub enum ReservedGate {
 }
 
 /// Every reserved constant
-#[derive(Clone, Debug, PartialEq, Eq, strum::Display, strum::EnumString)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, strum::Display, strum::EnumString)]
 #[strum(serialize_all = "lowercase")]
 pub enum ReservedConstant {
     #[strum(serialize = "i")]
