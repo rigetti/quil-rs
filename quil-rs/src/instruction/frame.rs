@@ -48,6 +48,16 @@ impl FrameDefinition {
     }
 }
 
+impl std::hash::Hash for FrameDefinition {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.identifier.hash(state);
+        for (k, v) in &self.attributes {
+            k.hash(state);
+            v.hash(state);
+        }
+    }
+}
+
 impl Quil for FrameDefinition {
     fn write(
         &self,
@@ -104,7 +114,7 @@ impl FromStr for FrameIdentifier {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Capture {
     pub blocking: bool,
     pub frame: FrameIdentifier,
@@ -151,7 +161,7 @@ impl Quil for Capture {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Pulse {
     pub blocking: bool,
     pub frame: FrameIdentifier,

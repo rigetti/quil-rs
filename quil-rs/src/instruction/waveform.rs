@@ -93,6 +93,16 @@ impl WaveformInvocation {
     }
 }
 
+impl std::hash::Hash for WaveformInvocation {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.name.hash(state);
+        for (k, v) in &self.parameters {
+            k.hash(state);
+            v.hash(state);
+        }
+    }
+}
+
 impl Quil for WaveformInvocation {
     fn write(
         &self,

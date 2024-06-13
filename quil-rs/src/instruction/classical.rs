@@ -2,7 +2,7 @@ use crate::{hash::hash_f64, quil::Quil};
 
 use super::MemoryReference;
 
-#[derive(Clone, Debug, Hash, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct Arithmetic {
     pub operator: ArithmeticOperator,
     pub destination: MemoryReference,
@@ -43,6 +43,8 @@ pub enum ArithmeticOperand {
     LiteralReal(f64),
     MemoryReference(MemoryReference),
 }
+
+impl std::cmp::Eq for ArithmeticOperand {}
 
 impl std::hash::Hash for ArithmeticOperand {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
@@ -198,7 +200,7 @@ impl Quil for Convert {
     }
 }
 
-#[derive(Clone, Debug, Hash, PartialEq)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct Move {
     pub destination: MemoryReference,
     pub source: ArithmeticOperand,
@@ -227,7 +229,7 @@ impl Quil for Move {
     }
 }
 
-#[derive(Clone, Debug, Hash, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Exchange {
     pub left: MemoryReference,
     pub right: MemoryReference,
@@ -253,7 +255,7 @@ impl Exchange {
     }
 }
 
-#[derive(Clone, Debug, Hash, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct Comparison {
     pub operator: ComparisonOperator,
     pub destination: MemoryReference,
@@ -300,6 +302,8 @@ pub enum ComparisonOperand {
     LiteralReal(f64),
     MemoryReference(MemoryReference),
 }
+
+impl std::cmp::Eq for ComparisonOperand {}
 
 impl Quil for ComparisonOperand {
     fn write(

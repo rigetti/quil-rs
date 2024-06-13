@@ -254,7 +254,7 @@ impl Quil for Load {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Store {
     pub destination: String,
     pub offset: MemoryReference,

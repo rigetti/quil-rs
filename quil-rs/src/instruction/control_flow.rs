@@ -108,7 +108,7 @@ impl PartialEq for TargetPlaceholder {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Jump {
     pub target: Target,
 }
@@ -131,7 +131,7 @@ impl Jump {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct JumpWhen {
     pub target: Target,
     pub condition: MemoryReference,
@@ -156,7 +156,7 @@ impl Quil for JumpWhen {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct JumpUnless {
     pub target: Target,
     pub condition: MemoryReference,
