@@ -1,3 +1,9 @@
+## 0.26.2-rc.0
+
+### Features
+
+- make all unit-only enums Copy (#377)
+
 ## 0.26.1
 
 ### Features

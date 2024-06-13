@@ -1,3 +1,9 @@
+## 0.10.2-rc.0
+
+### Features
+
+- make all unit-only enums Copy (#377)
+
 ## 0.10.1
 
 ### Features
