@@ -1,3 +1,18 @@
+## 0.11.0-rc.1
+
+### Breaking Changes
+
+- change Rust representation of classical instructions (#376)
+
+### Features
+
+- make all unit-only enums Copy (#377)
+
+### Fixes
+
+- update Python types to new representation of classical instructions
+- update tests to work with new classical instruction types
+
 ## 0.11.0-rc.0
 
 ### Breaking Changes
