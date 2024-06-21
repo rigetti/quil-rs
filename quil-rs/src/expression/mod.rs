@@ -810,6 +810,13 @@ mod tests {
         ((-tau..tau), (-tau..tau)).prop_map(|(re, im)| Complex64 { re, im })
     }
 
+    /// Filter an Expression to not be constantly zero.
+    fn nonzero(strat: impl Strategy<Value = Expression>) -> impl Strategy<Value = Expression> {
+        strat.prop_filter("Exclude constantly-zero expressions", |expr| {
+            expr.clone().into_simplified() != Expression::Number(Complex64::new(0.0, 0.0))
+        })
+    }
+
     /// Generate an arbitrary Expression for a property test.
     /// See https://docs.rs/proptest/1.0.0/proptest/prelude/trait.Strategy.html#method.prop_recursive
     fn arb_expr() -> impl Strategy<Value = Expression> {
@@ -820,11 +827,12 @@ mod tests {
             Just(PiConstant),
             arb_name().prop_map(Variable),
         ];
-        (leaf).prop_recursive(
+        leaf.prop_recursive(
             4,  // No more than 4 branch levels deep
             64, // Target around 64 total nodes
             16, // Each "collection" is up to 16 elements
             |expr| {
+                let inner = expr.clone();
                 prop_oneof![
                     (any::<ExpressionFunction>(), expr.clone()).prop_map(|(function, e)| {
                         Expression::FunctionCall(FunctionCallExpression {
@@ -832,22 +840,23 @@ mod tests {
                             expression: Box::new(e),
                         })
                     }),
-                    (expr.clone(), any::<InfixOperator>(), expr.clone())
-                        // avoid division by 0 so that we can reliably assert equality
-                        .prop_filter(
-                            "division must not evaluate to NaN",
-                            |(_, operator, right)| {
-                                operator != &InfixOperator::Slash
-                                    || right.clone().into_simplified()
-                                        != Expression::Number(Complex64::new(0.0, 0.0))
+                    (expr.clone(), any::<InfixOperator>())
+                        .prop_flat_map(move |(left, operator)| (
+                            Just(left),
+                            Just(operator),
+                            // Avoid division by 0 so that we can reliably assert equality
+                            if let InfixOperator::Slash = operator {
+                                nonzero(inner.clone()).boxed()
+                            } else {
+                                inner.clone().boxed()
                             }
-                        )
+                        ))
                         .prop_map(|(l, operator, r)| Infix(InfixExpression {
                             left: Box::new(l),
                             operator,
                             right: Box::new(r)
                         })),
-                    (expr).prop_map(|e| Prefix(PrefixExpression {
+                    expr.prop_map(|e| Prefix(PrefixExpression {
                         operator: PrefixOperator::Minus,
                         expression: Box::new(e)
                     }))
@@ -977,14 +986,14 @@ mod tests {
 
         // Avoid division by 0 so that we can reliably assert equality
         #[test]
-        fn division_works_as_expected(left in arb_expr(), right in arb_expr().prop_filter("avoid division by 0", |expr| expr.clone().into_simplified() != Expression::Number(Complex64::new(0.0, 0.0)))) {
+        fn division_works_as_expected(left in arb_expr(), right in nonzero(arb_expr())) {
             let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Slash, right: Box::new(right.clone()) } );
             prop_assert_eq!(left / right, expected);
         }
 
         // Avoid division by 0 so that we can reliably assert equality
         #[test]
-        fn in_place_division_works_as_expected(left in arb_expr(), right in arb_expr().prop_filter("avoid division by 0", |expr| expr.clone().into_simplified() != Expression::Number(Complex64::new(0.0, 0.0)))) {
+        fn in_place_division_works_as_expected(left in arb_expr(), right in nonzero(arb_expr())) {
             let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Slash, right: Box::new(right.clone()) } );
             let mut x = left;
             x /= right;
