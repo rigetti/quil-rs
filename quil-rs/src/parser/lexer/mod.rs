@@ -17,7 +17,7 @@ mod quoted_strings;
 mod wrapped_parsers;
 
 use nom::{
-    bytes::complete::{is_a, is_not, take_while, take_while1},
+    bytes::complete::{is_a, take_till, take_while, take_while1},
     character::complete::{digit1, one_of},
     combinator::{all_consuming, map, recognize, value},
     multi::many0,
@@ -183,7 +183,7 @@ fn lex_data_type(input: LexInput) -> InternalLexResult {
 
 fn lex_comment(input: LexInput) -> InternalLexResult {
     let (input, _) = tag("#")(input)?;
-    let (input, content) = is_not("\n")(input)?;
+    let (input, content) = take_till(|c| c == '\n')(input)?;
     Ok((input, Token::Comment(content.to_string())))
 }
 
