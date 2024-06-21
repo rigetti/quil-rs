@@ -393,14 +393,18 @@ mod tests {
 
     #[test]
     fn comment() {
-        let input = LocatedSpan::new("# hello\n#world");
+        let input = LocatedSpan::new("# hello\n#world\n#\n#");
         let tokens = lex(input).unwrap();
         assert_eq!(
             tokens,
             vec![
                 Token::Comment(" hello".to_owned()),
                 Token::NewLine,
-                Token::Comment("world".to_owned())
+                Token::Comment("world".to_owned()),
+                Token::NewLine,
+                Token::Comment("".to_owned()),
+                Token::NewLine,
+                Token::Comment("".to_owned())
             ]
         )
     }
