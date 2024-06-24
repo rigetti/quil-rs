@@ -1,7 +1,4 @@
-use std::{
-    collections::{BTreeMap, BTreeSet, HashSet},
-    ops::RangeInclusive,
-};
+use std::collections::{BTreeMap, BTreeSet, HashSet};
 
 use super::{
     circuit::{Circuit, CircuitElement},
@@ -44,37 +41,29 @@ macro_rules! write_many_delimited {
 ///   readable.
 #[derive(Clone, Debug)]
 enum DiagramElement {
-    /// `\lstick{\ket{q_{u32}}}`: Make a qubit "stick out" from the left.
-    /// Ryan: what's inside is not a string itself but more diagram elements
+    /// `\lstick{<contents>}`: Make a qubit "stick out" from the left.
+    ///
+    /// Example: `\lstick{\ket{q_{u32}}}`
     Lstick(Vec<DiagramElement>),
-    /// `\gate{name}`: Make a gate on the wire.
+    /// `\gate{<contents>}`: Make a gate on the wire.
     Gate(Vec<DiagramElement>),
-    /// `\phase{symbol}`: Make a phase on the wire with a rotation
+    /// `\phase{<contents>}`: Make a phase on the wire with a rotation
     Phase(Vec<DiagramElement>),
-    /// `^{\script}`: Add a superscript to a gate
+    /// `^{<contents>}`: Add a superscript to a gate
     Super(Vec<DiagramElement>),
     /// `\qw`: Connect the current cell to the previous cell i.e. "do nothing".
     Qw,
     /// `\\`: Start a new row
     Nr,
-    /// `\ctrl{wire}`: Make a control qubit--different from Control.
-    /// // Ryan: this makes more sense as an i64 since that's how it's used
+    /// `\ctrl{wire}`: Make a control qubit
     Ctrl {
         distance: i64,
     },
     /// `\targ{}`: Make a controlled-not gate.
     Targ,
 
-    /// `\vqw{distance}`: Vertical quantum (single-line) wire
-    VerticalQuantumWire {
-        distance: i64,
-    },
-
     /// `&`: Start a new cell in the same row/wire
     Ampersand,
-
-    /// `\control{}`
-    Control,
 
     /// `\meter{}` - Measurement
     Meter,
@@ -169,9 +158,7 @@ impl std::fmt::Display for DiagramElement {
             DiagramElement::Nr => write!(f, r"\\"),
             DiagramElement::Ctrl { distance } => write!(f, r#"\ctrl{{{distance}}}"#),
             DiagramElement::Targ => write!(f, r"\targ{{}}"),
-            DiagramElement::VerticalQuantumWire { distance } => write!(f, r#"\vqw{{{distance}}}"#),
             DiagramElement::Ampersand => write!(f, "&"),
-            DiagramElement::Control => write!(f, r"\control{{}}"),
             DiagramElement::Meter => write!(f, r"\meter{{}}"),
             DiagramElement::Ket(contents) => write!(f, r"\ket{{{contents}}}"),
             DiagramElement::Text(string) => write!(f, r"\text{{{string}}}"),
@@ -190,22 +177,15 @@ pub struct Diagram {
 }
 
 impl Diagram {
-    const DEFAULT_FOOTER: &str = r"\end{tikzcd}
+    const DEFAULT_FOOTER: &'static str = r"\end{tikzcd}
 \end{document}";
 
-    const DEFAULT_HEADER: &str = r"\documentclass[convert={density=300,outext=.png}]{standalone}
+    const DEFAULT_HEADER: &'static str = r"\documentclass[convert={density=300,outext=.png}]{standalone}
 \usepackage[margin=1in]{geometry}
 \usepackage{tikz}
 \usetikzlibrary{quantikz}
 \begin{document}
 \begin{tikzcd}";
-
-    fn extend_cell(&mut self, row: u64, column: u64, elements: Vec<DiagramElement>) {
-        self.wires
-            .entry(row)
-            .or_default()
-            .extend_at_column(column, elements);
-    }
 
     fn push_to_cell(&mut self, row: u64, column: u64, element: DiagramElement) {
         self.wires
@@ -361,10 +341,6 @@ struct DiagramWire {
 }
 
 impl DiagramWire {
-    fn extend_at_column(&mut self, column: u64, elements: Vec<DiagramElement>) {
-        self.elements.entry(column).or_default().extend(elements);
-    }
-
     fn push_at_column(&mut self, column: u64, element: DiagramElement) {
         self.elements.entry(column).or_default().push(element);
     }

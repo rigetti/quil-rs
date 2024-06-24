@@ -27,7 +27,8 @@ pub(super) enum CircuitElement {
 }
 
 impl Gate {
-    // TODO: use Cow to prevent allocation when the gate is already in canonical form
+    /// A single gate can be represented in multiple ways. This function converts the gate to one canonical form
+    /// for easier processing.
     fn to_canonical_form(&self) -> Self {
         let mut new = self.clone();
 
@@ -39,12 +40,16 @@ impl Gate {
             let base = captures.name("base").unwrap().as_str();
 
             new.name = base.to_string();
-            new.modifiers.extend(vec![GateModifier::Controlled; count]); // TODO: also invert qubit order for these qubits. Yikes, Quil
+            new.modifiers.extend(vec![GateModifier::Controlled; count]);
         }
 
         new
     }
 
+    /// Remove the qubits from the gate which are used as its control qubits, and
+    /// return them as a set.
+    ///
+    /// Return an error if any control qubit is also a target qubit.
     fn extract_fixed_controls(&mut self) -> BuildCircuitResult<BTreeSet<u64>> {
         let mut control_count = 0;
 
@@ -67,17 +72,21 @@ impl Gate {
             })
             .collect::<Result<BTreeSet<_>, _>>()?;
 
-        self.qubits = new_qubits;
-
-        for qubit in &self.qubits {
-            if let Qubit::Fixed(index) = qubit {
-                assert!(!controls.contains(index))
-            }
+        if let Some(overlap) = controls
+            .iter()
+            .find(|control| new_qubits.contains(&Qubit::Fixed(**control)))
+        {
+            return Err(BuildCircuitError::ControlAndTargetQubitOverlap {
+                qubit: Qubit::Fixed(*overlap),
+            });
         }
+
+        self.qubits = new_qubits;
 
         Ok(controls)
     }
 
+    /// Remove the dagger modifiers from the gate and return their count.
     fn extract_dagger_count(&mut self) -> u64 {
         let mut count = 0;
 
@@ -173,8 +182,11 @@ impl Circuit {
 
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
+#[allow(clippy::enum_variant_names)]
 pub enum BuildCircuitError {
-    // TODO: use references with 'program lifetime
+    #[error("control qubit {} is also a target qubit", qubit.to_quil_or_debug())]
+    ControlAndTargetQubitOverlap { qubit: Qubit },
+
     #[error("cannot render gate as LaTeX: {gate:?}")]
     UnsupportedGate { gate: Gate },
 
@@ -192,8 +204,10 @@ impl Circuit {
         program: &crate::Program,
         settings: RenderSettings,
     ) -> BuildCircuitResult<Self> {
-        let mut circuit = Circuit::default();
-        circuit.settings = settings; // TODO not ideal, reconsider how and when these should be used. Not all settings are inherent to the circuit's construction
+        let mut circuit = Circuit {
+            settings, // TODO not ideal, reconsider how and when these should be used. Not all settings are inherent to the circuit's construction
+            ..Default::default()
+        };
 
         for instruction in &program.to_instructions() {
             let element = match instruction {

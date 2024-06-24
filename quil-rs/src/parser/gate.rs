@@ -50,7 +50,7 @@ pub(crate) fn parse_gate<'a>(input: ParserInput<'a>) -> InternalParserResult<'a,
 mod test {
     use super::parse_gate;
     use crate::expression::Expression;
-    use crate::instruction::{Gate, GateModifier, Instruction, Qubit};
+    use crate::instruction::{Gate, GateModifier, Qubit};
     use crate::make_test;
     use crate::parser::lexer::lex;
 
