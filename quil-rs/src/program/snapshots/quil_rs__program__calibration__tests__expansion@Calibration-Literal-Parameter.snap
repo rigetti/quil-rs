@@ -1,0 +1,8 @@
+---
+source: quil-rs/src/program/calibration.rs
+expression: calibrated_program.to_string()
+---
+DEFCAL RX(3.141592653589793) 0:
+	NOP
+NOP
+

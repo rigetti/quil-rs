@@ -1,0 +1,65 @@
+[env]
+RUST_BACKTRACE = 0
+
+[tasks.poetry-install]
+command = "poetry"
+args = ["install"]
+
+[tasks.install-quil]
+command = "poetry"
+args = ["run", "maturin", "develop"]
+
+[tasks.stubtest]
+dependencies = ["poetry-install"]
+command = "poetry"
+args = ["run", "stubtest", "--allowlist", ".stubtest-allowlist", "quil"]
+
+[tasks.stubtest-flow]
+dependencies = [
+    "poetry-install",
+    "install-quil",
+    "stubtest",
+]
+
+[tasks.format]
+dependencies = ["poetry-install"]
+command = "poetry"
+args = ["run", "ruff", "format"]
+
+[tasks.check-format]
+dependencies = ["poetry-install"]
+command = "poetry"
+args = ["run", "ruff", "format", "--check"]
+
+[tasks.lint]
+dependencies = ["poetry-install"]
+command = "poetry"
+args = ["run", "ruff", "check"]
+
+[tasks.pytest]
+command = "poetry"
+args = ["run", "pytest"]
+
+[tasks.pytest-flow]
+dependencies = [
+    "poetry-install",
+    "install-quil",
+    "pytest",
+]
+
+[tasks.docs]
+dependencies = ["poetry-install", "install-quil"]
+command = "poetry"
+args = ["run", "pdoc", "-o", "build/docs", "quil", "!quil.quil", "--logo", "https://qcs.rigetti.com/static/img/rigetti-logo.svg"]
+
+[tasks.dev-flow]
+dependencies = [
+    "dev-test-flow",
+    "pytest-flow",
+    "stubtest",
+    "lint",
+    "check-format"
+]
+
+[tasks.default]
+alias = "dev-flow"

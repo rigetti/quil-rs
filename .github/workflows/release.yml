@@ -1,21 +1,39 @@
 name: Release
 
 on:
-  release:
-    types: [published]
-    
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      type:
+        description: Bump versions and trigger a new release.
+        required: true
+        default: release
+        options:
+          - release
+          - prerelease
+
 jobs:
   release:
     runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.PAT }}
     steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.PAT }}
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-      - uses: katyo/publish-crates@v1
-        with:
-          registry-token: ${{ secrets.CRATES_IO_TOKEN }}
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.PAT }}
+    - name: Install Knope
+      uses: knope-dev/action@v1
+      with:
+        version: 0.7.1 # Test before updating, breaking changes likely: https://github.com/knope-dev/action#install-latest-version
+    - run: |
+        git config --global user.name "${{ github.triggering_actor }}"
+        git config --global user.email "${{ github.triggering_actor}}@users.noreply.github.com"
+    - name: Prepare Prerelease
+      run: knope release --prerelease-label=rc
+      if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.type == 'prerelease')
+    - name: Prepare Release
+      run: knope release
+      if: github.event_name == 'workflow_dispatch' && inputs.type == 'release'

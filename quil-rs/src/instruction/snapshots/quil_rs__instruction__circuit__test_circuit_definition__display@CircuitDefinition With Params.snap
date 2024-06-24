@@ -1,0 +1,11 @@
+---
+source: quil-rs/src/instruction/circuit.rs
+expression: circuit_def.to_string()
+---
+DEFCIRCUIT BELL(%a, %b) a b:
+	RZ(%a) a
+	RZ(%b) a
+	RX(%a) a
+	RZ(%a) a
+	CNOT a b
+

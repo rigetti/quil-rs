@@ -1,0 +1,9 @@
+---
+source: quil-rs/src/program/calibration.rs
+expression: calibrated_program.to_quil_or_debug()
+---
+DEFCAL MEASURE addr:
+	PRAGMA CORRECT
+
+PRAGMA CORRECT
+

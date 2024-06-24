@@ -1,0 +1,16 @@
+---
+source: quil-rs/src/program/latex/mod.rs
+expression: "get_latex(\"CPHASE(pi/2) 1 0\\nCPHASE(cos(sin(2*pi/3))*cis(-1)*exp(i*pi)) 3 4\",\n    RenderSettings::default())"
+---
+\documentclass[convert={density=300,outext=.png}]{standalone}
+\usepackage[margin=1in]{geometry}
+\usepackage{tikz}
+\usetikzlibrary{quantikz}
+\begin{document}
+\begin{tikzcd}
+\lstick{\ket{q_{0}}} & \phase{\text{pi/2}} & \qw & \qw \\
+\lstick{\ket{q_{1}}} & \ctrl{-1} & \qw & \qw \\
+\lstick{\ket{q_{3}}} & \qw & \ctrl{1} & \qw \\
+\lstick{\ket{q_{4}}} & \qw & \phase{\text{(cos(sin((2*pi)/3))*cis(-1))*exp(1.0i*pi)}} & \qw
+\end{tikzcd}
+\end{document}

@@ -1,0 +1,38 @@
+---
+source: src/program/graphviz_dot.rs
+expression: dot_format
+---
+digraph {
+  entry -> "block_0_start";
+  entry [label="Entry Point"];
+  subgraph cluster_0 {
+    label="block_0";
+    node [style="filled"];
+    "block_0_start" [shape=circle, label="start"];
+    "block_0_start" -> "block_0_0" [label="ordering
+timing"];
+    "block_0_start" -> "block_0_1" [label="ordering
+timing"];
+    "block_0_start" -> "block_0_2" [label="ordering
+timing"];
+    "block_0_start" -> "block_0_end" [label="ordering
+timing"];
+    "block_0_0" [shape=rectangle, label="[0] NONBLOCKING PULSE 0 \"ro_tx\" test(duration: 1000000)"];
+    "block_0_0" -> "block_0_1" [label="ordering
+timing"];
+    "block_0_0" -> "block_0_2" [label="ordering
+timing"];
+    "block_0_0" -> "block_0_end" [label="ordering
+timing"];
+    "block_0_1" [shape=rectangle, label="[1] PULSE 0 \"rf\" test(duration: 1000000)"];
+    "block_0_1" -> "block_0_2" [label="ordering
+timing"];
+    "block_0_1" -> "block_0_end" [label="ordering
+timing"];
+    "block_0_2" [shape=rectangle, label="[2] PULSE 0 \"ro_rx\" test(duration: 1000000)"];
+    "block_0_2" -> "block_0_end" [label="ordering
+timing"];
+    "block_0_end" [shape=circle, label="end"];
+  }
+}
+

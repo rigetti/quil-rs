@@ -1,0 +1,9 @@
+---
+source: quil-rs/src/instruction/gate.rs
+expression: gate_def.to_string()
+---
+DEFGATE PauliSumGate(%theta) p q AS PAULI-SUM:
+	ZZ(-%theta/4) p q
+	Y(%theta/4) p
+	X(%theta/4) q
+

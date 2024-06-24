@@ -1,0 +1,34 @@
+[package]
+name = "quil-py"
+description = "Python bindings for quil-rs"
+version = "0.10.1"
+edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/rigetti/quil-rs"
+keywords = ["pyquil", "SDK", "Rigetti", "Quil", "Quantum"]
+categories = ["api-bindings", "parsers", "science", "emulators"]
+readme = "./README.md"
+
+[lib]
+# The name of the native library. This is the name which will be used in Python to import the
+# library (i.e. `import quil`). If you change this, you must also change the name of the
+# `#[pymodule]` in `src/lib.rs`.
+name = "quil"
+# "cdylib" is necessary to produce a shared library for Python to import from.
+#
+# Downstream Rust code (including code in `bin/`, `examples/`, and `tests/`) will not be able
+# to `use quil;` unless the "lib" and "rlib" crate type is also included:
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+ndarray.workspace = true
+quil-rs = { path = "../quil-rs", version = "0.26.1" }
+strum.workspace = true
+# pyo3 dependencies should be updated together
+numpy = "0.20.0"
+pyo3 = { version = "0.20.3", features = ["indexmap"] }
+rigetti-pyo3 = {version = "0.3.4", features = ["indexmap"]}
+indexmap.workspace = true
+
+[build-dependencies]
+pyo3-build-config = "0.20.0"

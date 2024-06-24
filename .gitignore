@@ -1,6 +1,22 @@
 /target
 node_modules
-Cargo.lock
+.venv
+.DS_Store
 
-# JetBrains Editors
+# unreviewed insta snapshots
+*.snap.new
+
+# IDEs and editors
 .idea/
+.vscode/
+
+# Python artifacts
+*.so
+__pycache__
+**./.null-ls-cache*
+
+# quil-py documentation
+quil-py/build
+
+# unversioned developer notes
+scratch/

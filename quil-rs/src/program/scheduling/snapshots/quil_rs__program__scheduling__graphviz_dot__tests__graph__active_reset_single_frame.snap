@@ -1,0 +1,47 @@
+---
+source: quil-rs/src/program/scheduling/graphviz_dot.rs
+expression: dot_format
+---
+digraph {
+  entry -> "@measure_start";
+  entry [label="Entry Point"];
+  subgraph cluster_0 {
+    label="@measure";
+    node [style="filled"];
+    "@measure_start" [shape=circle, label="start"];
+    "@measure_start" -> "@measure_0" [label="ordering
+timing"];
+    "@measure_start" -> "@measure_1" [label="ordering
+timing"];
+    "@measure_0" [shape=rectangle, label="[0] NONBLOCKING PULSE 0 \"ro_tx\" test(duration: 1000000)"];
+    "@measure_0" -> "@measure_end" [label="ordering
+timing"];
+    "@measure_1" [shape=rectangle, label="[1] NONBLOCKING CAPTURE 0 \"ro_rx\" test(duration: 1000000) ro[0]"];
+    "@measure_1" -> "@measure_end" [label="ordering
+timing"];
+    "@measure_end" [shape=circle, label="end"];
+  }
+  "@measure_end" -> "@end_start" [label="if ro[0] != 0"];
+  "@measure_end" -> "@feedback_start" [label="if ro[0] == 0"];
+  subgraph cluster_1 {
+    label="@feedback";
+    node [style="filled"];
+    "@feedback_start" [shape=circle, label="start"];
+    "@feedback_start" -> "@feedback_0" [label="ordering
+timing"];
+    "@feedback_start" -> "@feedback_end" [label="ordering
+timing"];
+    "@feedback_0" [shape=rectangle, label="[0] PULSE 0 \"rf\" test(duration: 1000000)"];
+    "@feedback_0" -> "@feedback_end" [label="ordering
+timing"];
+    "@feedback_end" [shape=circle, label="end"];
+  }
+  "@feedback_end" -> "@measure_start" [label="always"];
+  subgraph cluster_2 {
+    label="@end";
+    node [style="filled"];
+    "@end_start" [shape=circle, label="start"];
+    "@end_start" -> "@end_end" [label="ordering"];
+    "@end_end" [shape=circle, label="end"];
+  }
+}

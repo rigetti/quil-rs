@@ -1,0 +1,14 @@
+---
+source: quil-rs/src/program/latex/mod.rs
+expression: "get_latex(\"CPHASE(1.0) 0 1\\nCPHASE(1.0-2.0i) 1 0\", RenderSettings::default())"
+---
+\documentclass[convert={density=300,outext=.png}]{standalone}
+\usepackage[margin=1in]{geometry}
+\usepackage{tikz}
+\usetikzlibrary{quantikz}
+\begin{document}
+\begin{tikzcd}
+\lstick{\ket{q_{0}}} & \ctrl{1} & \phase{\text{1 - 2.0i}} & \qw \\
+\lstick{\ket{q_{1}}} & \phase{\text{1}} & \ctrl{-1} & \qw
+\end{tikzcd}
+\end{document}

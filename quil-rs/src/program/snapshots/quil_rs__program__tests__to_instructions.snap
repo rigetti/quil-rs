@@ -1,0 +1,150 @@
+---
+source: quil-rs/src/program/mod.rs
+expression: program.to_instructions()
+---
+[
+    Declaration(
+        Declaration {
+            name: "foo",
+            size: Vector {
+                data_type: Real,
+                length: 1,
+            },
+            sharing: None,
+        },
+    ),
+    FrameDefinition(
+        FrameDefinition {
+            identifier: FrameIdentifier {
+                name: "rx",
+                qubits: [
+                    Fixed(
+                        1,
+                    ),
+                ],
+            },
+            attributes: {
+                "HARDWARE-OBJECT": String(
+                    "hardware",
+                ),
+            },
+        },
+    ),
+    WaveformDefinition(
+        WaveformDefinition {
+            name: "custom2",
+            definition: Waveform {
+                matrix: [
+                    Number(
+                        Complex {
+                            re: 1.0,
+                            im: 0.0,
+                        },
+                    ),
+                    Number(
+                        Complex {
+                            re: 2.0,
+                            im: 0.0,
+                        },
+                    ),
+                ],
+                parameters: [],
+            },
+        },
+    ),
+    CalibrationDefinition(
+        Calibration {
+            instructions: [
+                Delay(
+                    Delay {
+                        duration: Number(
+                            Complex {
+                                re: 1.0,
+                                im: 0.0,
+                            },
+                        ),
+                        frame_names: [],
+                        qubits: [
+                            Fixed(
+                                0,
+                            ),
+                        ],
+                    },
+                ),
+            ],
+            modifiers: [],
+            name: "I",
+            parameters: [],
+            qubits: [
+                Fixed(
+                    1,
+                ),
+            ],
+        },
+    ),
+    GateDefinition(
+        GateDefinition {
+            name: "BAR",
+            parameters: [],
+            specification: Matrix(
+                [
+                    [
+                        Number(
+                            Complex {
+                                re: 0.0,
+                                im: 0.0,
+                            },
+                        ),
+                        Number(
+                            Complex {
+                                re: 1.0,
+                                im: 0.0,
+                            },
+                        ),
+                    ],
+                    [
+                        Number(
+                            Complex {
+                                re: 1.0,
+                                im: 0.0,
+                            },
+                        ),
+                        Number(
+                            Complex {
+                                re: 0.0,
+                                im: 0.0,
+                            },
+                        ),
+                    ],
+                ],
+            ),
+        },
+    ),
+    Gate(
+        Gate {
+            name: "H",
+            parameters: [],
+            qubits: [
+                Fixed(
+                    1,
+                ),
+            ],
+            modifiers: [],
+        },
+    ),
+    Gate(
+        Gate {
+            name: "CNOT",
+            parameters: [],
+            qubits: [
+                Fixed(
+                    2,
+                ),
+                Fixed(
+                    3,
+                ),
+            ],
+            modifiers: [],
+        },
+    ),
+]
