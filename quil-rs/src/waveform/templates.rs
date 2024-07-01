@@ -30,7 +30,7 @@ pub fn apply_phase_and_detuning(
 /// To handle accumulated floating point errors in sweeps above typical floating point imprecision
 /// we make epsilon 10x larger than floating point epsilon.
 fn ceiling_with_epsilon(value: f64) -> f64 {
-    let truncated = value - (value * 10.0 * std::f64::EPSILON);
+    let truncated = value - (value * 10.0 * f64::EPSILON);
     truncated.ceil()
 }
 
@@ -297,8 +297,8 @@ mod tests {
 
     #[rstest::rstest]
     #[case(0.0, 0.0)]
-    #[case(0.0-std::f64::EPSILON, 0.0)]
-    #[case(0.0+std::f64::EPSILON, 1.0)]
+    #[case(0.0-f64::EPSILON, 0.0)]
+    #[case(0.0+f64::EPSILON, 1.0)]
     // Based on a past edge case
     #[case(8.800_000_000_000_001e-8 * 1.0e9, 88.0)]
     fn ceiling_with_epsilon(#[case] value: f64, #[case] expected: f64) {

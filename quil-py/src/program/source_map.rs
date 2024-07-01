@@ -1,11 +1,19 @@
-use pyo3::{types::PyInt, Py};
+use std::ops::Range;
+
+use pyo3::{
+    types::{PyInt, PyTuple},
+    Py, PyResult, Python,
+};
 use quil_rs::program::{
     CalibrationExpansion, CalibrationSource, MaybeCalibrationExpansion,
     ProgramCalibrationExpansion, ProgramCalibrationExpansionSourceMap, SourceMap, SourceMapEntry,
 };
 use rigetti_pyo3::{impl_repr, py_wrap_type, py_wrap_union_enum, pyo3::pymethods, PyWrapper};
 
-use crate::instruction::{PyCalibrationIdentifier, PyMeasureCalibrationIdentifier};
+use crate::{
+    impl_eq,
+    instruction::{PyCalibrationIdentifier, PyMeasureCalibrationIdentifier},
+};
 
 use super::PyProgram;
 
@@ -19,6 +27,7 @@ py_wrap_type! {
 }
 
 impl_repr!(PyCalibrationExpansion);
+impl_eq!(PyCalibrationExpansion);
 
 #[pymethods]
 impl PyCalibrationExpansion {
@@ -27,8 +36,13 @@ impl PyCalibrationExpansion {
     }
 
     // Reviewer: is there a better return type?
-    pub fn range(&self) -> (usize, usize) {
-        (self.as_inner().range().start, self.as_inner().range().end)
+    pub fn range(&self) -> PyResult<(usize, usize)> {
+        Python::with_gil(|py| {
+            let range = py.import("builtins")?.get_item("range")?;
+            let Range { start, end } = self.as_inner().range();
+            let args = PyTuple::new(py, [start, end]);
+            range.call1(args)?.extract()
+        })
     }
 
     pub fn expansions(&self) -> PyCalibrationExpansionSourceMap {
@@ -42,6 +56,7 @@ py_wrap_type! {
 }
 
 impl_repr!(PyCalibrationExpansionSourceMap);
+impl_eq!(PyCalibrationExpansionSourceMap);
 
 #[pymethods]
 impl PyCalibrationExpansionSourceMap {
@@ -60,6 +75,7 @@ py_wrap_type! {
 }
 
 impl_repr!(PyCalibrationExpansionSourceMapEntry);
+impl_eq!(PyCalibrationExpansionSourceMapEntry);
 
 #[pymethods]
 impl PyCalibrationExpansionSourceMapEntry {
@@ -81,6 +97,7 @@ py_wrap_union_enum! {
 }
 
 impl_repr!(PyCalibrationSource);
+impl_eq!(PyCalibrationSource);
 
 py_wrap_union_enum! {
     #[derive(Debug, PartialEq)]
@@ -91,6 +108,7 @@ py_wrap_union_enum! {
 }
 
 impl_repr!(PyMaybeCalibrationExpansion);
+impl_eq!(PyMaybeCalibrationExpansion);
 
 py_wrap_type! {
     #[derive(Debug, PartialEq)]
@@ -98,6 +116,7 @@ py_wrap_type! {
 }
 
 impl_repr!(PyProgramCalibrationExpansion);
+impl_eq!(PyProgramCalibrationExpansion);
 
 #[pymethods]
 impl PyProgramCalibrationExpansion {
@@ -116,6 +135,7 @@ py_wrap_type! {
 }
 
 impl_repr!(PyProgramCalibrationExpansionSourceMap);
+impl_eq!(PyProgramCalibrationExpansionSourceMap);
 
 #[pymethods]
 impl PyProgramCalibrationExpansionSourceMap {
@@ -134,6 +154,7 @@ py_wrap_type! {
 }
 
 impl_repr!(PyProgramCalibrationExpansionSourceMapEntry);
+impl_eq!(PyProgramCalibrationExpansionSourceMapEntry);
 
 #[pymethods]
 impl PyProgramCalibrationExpansionSourceMapEntry {

@@ -71,17 +71,6 @@ pub struct CalibrationExpansionOutput {
     pub detail: CalibrationExpansion,
 }
 
-/// The product of expanding an instruction using a calibration, possibly including
-/// `CalibrationExpansion` source map information.
-#[derive(Clone, Debug, PartialEq)]
-struct ExpandOutput {
-    /// The new instructions resulting from the expansion
-    pub new_instructions: Vec<Instruction>,
-
-    /// Details about the expansion process
-    pub detail: Option<CalibrationExpansion>,
-}
-
 /// Details about the expansion of a calibration
 #[derive(Clone, Debug, PartialEq)]
 pub struct CalibrationExpansion {
@@ -500,64 +489,10 @@ impl Calibrations {
     pub fn get_match_for_gate(&self, gate: &Gate) -> Option<&Calibration> {
         let mut matched_calibration: Option<MatchedCalibration> = None;
 
-        for calibration in self.iter_calibrations() {
-            // Filter out non-matching calibrations: check rules 1-4
-            if calibration.identifier.name != gate.name
-                || calibration.identifier.modifiers != gate.modifiers
-                || calibration.identifier.parameters.len() != gate.parameters.len()
-                || calibration.identifier.qubits.len() != gate.qubits.len()
-            {
-                continue;
-            }
-
-            let fixed_qubits_match =
-                calibration
-                    .identifier
-                    .qubits
-                    .iter()
-                    .enumerate()
-                    .all(|(calibration_index, _)| {
-                        match (
-                            &calibration.identifier.qubits[calibration_index],
-                            &gate.qubits[calibration_index],
-                        ) {
-                            // Placeholders never match
-                            (Qubit::Placeholder(_), _) | (_, Qubit::Placeholder(_)) => false,
-                            // If they're both fixed, test if they're fixed to the same qubit
-                            (
-                                Qubit::Fixed(calibration_fixed_qubit),
-                                Qubit::Fixed(gate_fixed_qubit),
-                            ) => calibration_fixed_qubit == gate_fixed_qubit,
-                            // If the calibration is variable, it matches any fixed qubit
-                            (Qubit::Variable(_), _) => true,
-                            // If the calibration is fixed, but the gate's qubit is variable, it's not a match
-                            (Qubit::Fixed(_), _) => false,
-                        }
-                    });
-            if !fixed_qubits_match {
-                continue;
-            }
-
-            let fixed_parameters_match = calibration.identifier.parameters.iter().enumerate().all(
-                |(calibration_index, _)| {
-                    let calibration_parameters = calibration.identifier.parameters
-                        [calibration_index]
-                        .clone()
-                        .into_simplified();
-                    let gate_parameters =
-                        gate.parameters[calibration_index].clone().into_simplified();
-                    match (calibration_parameters, gate_parameters) {
-                        // If the calibration is variable, it matches any fixed qubit
-                        (Expression::Variable(_), _) => true,
-                        // If the calibration is fixed, but the gate's qubit is variable, it's not a match
-                        (calib, gate) => calib == gate,
-                    }
-                },
-            );
-            if !fixed_parameters_match {
-                continue;
-            }
-
+        for calibration in self
+            .iter_calibrations()
+            .filter(|calibration| calibration.identifier.matches(gate))
+        {
             matched_calibration = match matched_calibration {
                 None => Some(MatchedCalibration::new(calibration)),
                 Some(previous_match) => {

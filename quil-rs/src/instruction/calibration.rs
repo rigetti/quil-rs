@@ -7,7 +7,7 @@ use crate::{
     validation::identifier::{validate_identifier, IdentifierValidationError},
 };
 
-use super::write_qubit_parameters;
+use super::{write_qubit_parameters, Gate};
 
 pub trait CalibrationSignature {
     type Signature<'a>
@@ -100,6 +100,60 @@ impl CalibrationIdentifier {
             parameters,
             qubits,
         })
+    }
+
+    pub fn matches(&self, gate: &Gate) -> bool {
+        // Filter out non-matching calibrations: check rules 1-4
+        if self.name != gate.name
+            || self.modifiers != gate.modifiers
+            || self.parameters.len() != gate.parameters.len()
+            || self.qubits.len() != gate.qubits.len()
+        {
+            return false;
+        }
+
+        let fixed_qubits_match = self
+            .qubits
+            .iter()
+            .enumerate()
+            .all(|(calibration_index, _)| {
+                match (
+                    &self.qubits[calibration_index],
+                    &gate.qubits[calibration_index],
+                ) {
+                    // Placeholders never match
+                    (Qubit::Placeholder(_), _) | (_, Qubit::Placeholder(_)) => false,
+                    // If they're both fixed, test if they're fixed to the same qubit
+                    (Qubit::Fixed(calibration_fixed_qubit), Qubit::Fixed(gate_fixed_qubit)) => {
+                        calibration_fixed_qubit == gate_fixed_qubit
+                    }
+                    // If the calibration is variable, it matches any fixed qubit
+                    (Qubit::Variable(_), _) => true,
+                    // If the calibration is fixed, but the gate's qubit is variable, it's not a match
+                    (Qubit::Fixed(_), _) => false,
+                }
+            });
+        if !fixed_qubits_match {
+            return false;
+        }
+
+        let fixed_parameters_match =
+            self.parameters
+                .iter()
+                .enumerate()
+                .all(|(calibration_index, _)| {
+                    let calibration_parameters =
+                        self.parameters[calibration_index].clone().into_simplified();
+                    let gate_parameters =
+                        gate.parameters[calibration_index].clone().into_simplified();
+                    match (calibration_parameters, gate_parameters) {
+                        // If the calibration is variable, it matches any fixed qubit
+                        (Expression::Variable(_), _) => true,
+                        // If the calibration is fixed, but the gate's qubit is variable, it's not a match
+                        (calib, gate) => calib == gate,
+                    }
+                });
+        !fixed_parameters_match
     }
 }
 
