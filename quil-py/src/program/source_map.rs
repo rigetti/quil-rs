@@ -94,7 +94,7 @@ impl PyCalibrationExpansionSourceMap {
 
     /// Given a source index, return information about its expansion.
     ///
-    /// This is `O(n)` where `n` is the number of source instructions.
+    /// This is `O(n)` where `n` is the number of first-level calibration expansions performed.
     pub fn list_targets_for_source_index(
         &self,
         source_index: usize,
@@ -188,7 +188,7 @@ impl PyProgramCalibrationExpansionSourceMap {
     /// Given an instruction index within the resulting expansion, return the locations in the source
     /// which were expanded to generate that instruction.
     ///
-    /// This is `O(n)` where `n` is the number of first-level calibration expansions performed.
+    /// This is `O(n)` where `n` is the number of source instructions.
     pub fn list_sources_for_target_index(&self, target_index: usize) -> Vec<usize> {
         self.as_inner()
             .list_sources(&target_index)
@@ -200,7 +200,7 @@ impl PyProgramCalibrationExpansionSourceMap {
     /// Given a particular calibration (`DEFCAL` or `DEFCAL MEASURE`), return the locations in the source
     /// program which were expanded using that calibration.
     ///
-    /// This is `O(n)` where `n` is the number of first-level calibration expansions performed.
+    /// This is `O(n)` where `n` is the number of source instructions.
     pub fn list_sources_for_calibration_used(
         &self,
         calibration_used: PyCalibrationSource,

@@ -295,7 +295,7 @@ class CalibrationExpansionSourceMap:
     def list_targets_for_source_index(self, source_index: int) -> List[CalibrationExpansion]:
         """Given a source index, return information about its expansion.
 
-        This is `O(n)` where `n` is the number of source instructions.
+        This is `O(n)` where `n` is the number of first-level calibration expansions performed.
         """
         ...
 
@@ -547,14 +547,14 @@ class ProgramCalibrationExpansionSourceMap:
     def list_sources_for_target_index(self, target_index: int) -> List[int]:
         """Return the locations in the source which were expanded to generate that instruction.
 
-        This is `O(n)` where `n` is the number of first-level calibration expansions performed.
+        This is `O(n)` where `n` is the number of source instructions.
         """
         ...
 
     def list_sources_for_calibration_used(self, calibration_used: CalibrationSource) -> List[int]:
         """Return the locations in the source program which were expanded using a calibration.
 
-        This is `O(n)` where `n` is the number of first-level calibration expansions performed.
+        This is `O(n)` where `n` is the number of source instructions.
         """
         ...
 

@@ -16,7 +16,7 @@ pub struct SourceMap<SourceIndex, TargetIndex> {
 impl<SourceIndex, TargetIndex> SourceMap<SourceIndex, TargetIndex> {
     /// Return all source ranges in the source map which were used to generate the target range.
     ///
-    /// This is `O(n)` where `n` is the number of target entries in the map.
+    /// This is `O(n)` where `n` is the number of entries in the map.
     pub fn list_sources<QueryIndex>(&self, target_index: &QueryIndex) -> Vec<&SourceIndex>
     where
         TargetIndex: SourceMapIndexable<QueryIndex>,
@@ -35,7 +35,7 @@ impl<SourceIndex, TargetIndex> SourceMap<SourceIndex, TargetIndex> {
 
     /// Return all target ranges in the source map which were used to generate the source range.
     ///
-    /// This is `O(n)` where `n` is the number of source entries in the map.
+    /// This is `O(n)` where `n` is the number of entries in the map.
     pub fn list_targets<QueryIndex>(&self, source_index: &QueryIndex) -> Vec<&TargetIndex>
     where
         SourceIndex: SourceMapIndexable<QueryIndex>,
