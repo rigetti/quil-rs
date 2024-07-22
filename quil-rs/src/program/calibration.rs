@@ -87,8 +87,8 @@ pub struct CalibrationExpansion {
 impl CalibrationExpansion {
     /// Remove the given target index from all entries, recursively.
     ///
-    /// This is to be used when the named index is removed from the target program
-    /// in the process of calibration expansion.
+    /// This is to be used when the given index is removed from the target program
+    /// in the process of calibration expansion (for example, a `DECLARE`).
     pub(crate) fn remove_target_index(&mut self, target_index: usize) {
         // Adjust the start of the range if the target index is within the range
         if self.range.start >= target_index {
@@ -100,18 +100,20 @@ impl CalibrationExpansion {
             self.range.end = self.range.end.saturating_sub(1);
         }
 
-        let target_index_offset = self.range.start;
-        self.expansions.entries.retain_mut(
-            |entry: &mut SourceMapEntry<usize, CalibrationExpansion>| {
-                if let Some(target_with_offset) = target_index.checked_sub(target_index_offset) {
+        // Then walk through all entries expanded for this calibration and remove the
+        // index as well. This is needed when a recursively-expanded instruction contains
+        // an instruction which is excised from the overall calibration.
+        if let Some(target_within_expansion) = target_index.checked_sub(self.range.start) {
+            self.expansions.entries.retain_mut(
+                |entry: &mut SourceMapEntry<usize, CalibrationExpansion>| {
                     entry
                         .target_location
-                        .remove_target_index(target_with_offset);
-                }
+                        .remove_target_index(target_within_expansion);
 
-                !entry.target_location.range.is_empty()
-            },
-        );
+                    !entry.target_location.range.is_empty()
+                },
+            );
+        }
     }
 
     pub fn calibration_used(&self) -> &CalibrationSource {
