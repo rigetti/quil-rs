@@ -221,13 +221,14 @@ Z 0
     assert len(targets) == 1
     expanded = targets[0].as_expanded()
     assert expanded.range() == range(0, 1)
+    assert source_map.list_sources_for_target_index(0) == [0]
 
     # The Y at index 1 should have been replaced with a Z at index 1
     targets = source_map.list_targets_for_source_index(1)
     assert len(targets) == 1
     expanded = targets[0].as_expanded()
     assert expanded.range() == range(1, 2)
+    assert source_map.list_sources_for_target_index(1) == [1]
 
     # There is no source index 2 and so there should be no mapping
     assert source_map.list_targets_for_source_index(2) == []
-    assert source_map.list_sources_for_target_index(0) == [0]
