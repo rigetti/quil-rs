@@ -1,8 +1,8 @@
 use std::ops::Range;
 
 use pyo3::{
-    types::{PyInt, PyTuple},
-    Py, PyResult, Python,
+    types::{PyInt, PyModule, PyTuple},
+    Py, PyAny, PyResult, Python,
 };
 use quil_rs::program::{
     CalibrationExpansion, CalibrationSource, MaybeCalibrationExpansion,
@@ -35,14 +35,11 @@ impl PyCalibrationExpansion {
         self.as_inner().calibration_used().into()
     }
 
-    // Reviewer: is there a better return type?
-    pub fn range(&self) -> PyResult<(usize, usize)> {
-        Python::with_gil(|py| {
-            let range = py.import("builtins")?.get_item("range")?;
-            let Range { start, end } = self.as_inner().range();
-            let args = PyTuple::new(py, [start, end]);
-            range.call1(args)?.extract()
-        })
+    pub fn range<'py>(&self, py: Python<'py>) -> PyResult<&'py PyAny> {
+        let range = PyModule::import(py, "builtins")?.getattr("range")?;
+        let Range { start, end } = self.as_inner().range();
+        let tuple = PyTuple::new(py, [start, end]);
+        range.call1(tuple)?.extract()
     }
 
     pub fn expansions(&self) -> PyCalibrationExpansionSourceMap {
