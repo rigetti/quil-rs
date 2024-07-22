@@ -242,16 +242,18 @@ impl Program {
     /// Expand any instructions in the program which have a matching calibration, leaving the others
     /// unchanged. Return the expanded copy of the program.
     ///
+    /// Return an error if any instruction expands into itself.
+    ///
     /// See [`Program::expand_calibrations_with_source_map`] for a version that returns a source mapping.
     pub fn expand_calibrations(&self) -> Result<Self> {
-        self._expand_calibrations(None)
+        self.expand_calibrations_inner(None)
     }
 
     // / Expand any instructions in the program which have a matching calibration, leaving the others
     // / unchanged. Return the expanded copy of the program and a source mapping of the expansions made.
     pub fn expand_calibrations_with_source_map(&self) -> Result<ProgramCalibrationExpansion> {
         let mut source_mapping = ProgramCalibrationExpansionSourceMap::default();
-        let new_program = self._expand_calibrations(Some(&mut source_mapping))?;
+        let new_program = self.expand_calibrations_inner(Some(&mut source_mapping))?;
 
         Ok(ProgramCalibrationExpansion {
             program: new_program,
@@ -261,8 +263,10 @@ impl Program {
 
     /// Expand calibrations, writing expansions to a [`SourceMap`] if provided.
     ///
+    /// Return an error if any instruction expands into itself.
+    ///
     /// Source map may be omitted for faster performance.
-    fn _expand_calibrations(
+    fn expand_calibrations_inner(
         &self,
         mut source_mapping: Option<&mut ProgramCalibrationExpansionSourceMap>,
     ) -> Result<Self> {
@@ -279,7 +283,7 @@ impl Program {
         for (index, instruction) in self.instructions.iter().enumerate() {
             match self.calibrations.expand_with_detail(instruction, &[])? {
                 Some(expanded) => {
-                    new_program._append_calibration_expansion_output(
+                    new_program.append_calibration_expansion_output_inner(
                         expanded,
                         index,
                         &mut source_mapping,
@@ -307,7 +311,7 @@ impl Program {
     ///
     /// For example, `DECLARE` instructions are hoisted to a specialized data structure and thus do not appear in
     /// the program body. Thus, they should not be counted in the `target_index` range within a [`SourceMapEntry`].
-    fn _append_calibration_expansion_output(
+    fn append_calibration_expansion_output_inner(
         &mut self,
         mut expansion_output: CalibrationExpansionOutput,
         source_index: usize,
@@ -933,9 +937,9 @@ DECLARE ec BIT
     /// emitting the expected [`SourceMap`] for the expansion.
     #[test]
     fn expand_calibrations() {
-        let input = "DECLARE ro BIT[1]
-DEFFRAME 0 \"a\":
-\tHARDWARE-OBJECT: \"hardware\"
+        let input = r#"DECLARE ro BIT[1]
+DEFFRAME 0 "a":
+    HARDWARE-OBJECT: "hardware"
 
 DEFCAL I 0:
     DECLAREMEM
@@ -947,9 +951,9 @@ DEFCAL DECLAREMEM:
     NOP
 
 I 0
-PULSE 0 \"a\" custom_waveform
+PULSE 0 "a" custom_waveform
 I 0
-";
+"#;
 
         let expected = "DECLARE ro BIT[1]
 DECLARE mem BIT[1]
