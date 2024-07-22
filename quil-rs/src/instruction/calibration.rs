@@ -153,7 +153,7 @@ impl CalibrationIdentifier {
                         (calib, gate) => calib == gate,
                     }
                 });
-        !fixed_parameters_match
+        fixed_parameters_match
     }
 }
 
