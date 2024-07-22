@@ -249,8 +249,8 @@ impl Program {
         self.expand_calibrations_inner(None)
     }
 
-    // / Expand any instructions in the program which have a matching calibration, leaving the others
-    // / unchanged. Return the expanded copy of the program and a source mapping of the expansions made.
+    /// Expand any instructions in the program which have a matching calibration, leaving the others
+    /// unchanged. Return the expanded copy of the program and a source mapping of the expansions made.
     pub fn expand_calibrations_with_source_map(&self) -> Result<ProgramCalibrationExpansion> {
         let mut source_mapping = ProgramCalibrationExpansionSourceMap::default();
         let new_program = self.expand_calibrations_inner(Some(&mut source_mapping))?;

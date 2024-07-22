@@ -90,23 +90,20 @@ impl CalibrationExpansion {
     /// This is to be used when the named index is removed from the target program
     /// in the process of calibration expansion.
     pub(crate) fn remove_target_index(&mut self, target_index: usize) {
-        eprintln!("Removing target index {} from\n{self:#?}", target_index);
-
+        // Adjust the start of the range if the target index is within the range
         if self.range.start >= target_index {
             self.range.start = self.range.start.saturating_sub(1);
+        }
 
-            if self.range.end > target_index {
-                self.range.end = self.range.end.saturating_sub(1);
-            }
+        // Adjust the end of the range if the target index is within the range
+        if self.range.end > target_index {
+            self.range.end = self.range.end.saturating_sub(1);
         }
 
         let target_index_offset = self.range.start;
-        eprintln!("Offset: {}", target_index_offset);
-
         self.expansions.entries.retain_mut(
             |entry: &mut SourceMapEntry<usize, CalibrationExpansion>| {
                 if let Some(target_with_offset) = target_index.checked_sub(target_index_offset) {
-                    eprintln!("Target with offset: {}", target_with_offset);
                     entry
                         .target_location
                         .remove_target_index(target_with_offset);
@@ -214,24 +211,32 @@ impl Calibrations {
         self.measure_calibrations.iter()
     }
 
+    /// Given an instruction, return the instructions to which it is expanded if there is a match.
+    /// Recursively calibrate instructions, returning an error if a calibration directly or indirectly
+    /// expands into itself.
+    ///
+    /// Return only the expanded instructions; for more information about the expansion process,
+    /// see [`Self::expand_with_detail`].
     pub fn expand(
         &self,
         instruction: &Instruction,
         previous_calibrations: &[Instruction],
     ) -> Result<Option<Vec<Instruction>>, ProgramError> {
-        self._expand(instruction, previous_calibrations, false)
+        self.expand_inner(instruction, previous_calibrations, false)
             .map(|expansion| expansion.map(|expansion| expansion.new_instructions))
     }
 
     /// Given an instruction, return the instructions to which it is expanded if there is a match.
     /// Recursively calibrate instructions, returning an error if a calibration directly or indirectly
     /// expands into itself.
+    ///
+    /// Also return information about the expansion.
     pub fn expand_with_detail(
         &self,
         instruction: &Instruction,
         previous_calibrations: &[Instruction],
     ) -> Result<Option<CalibrationExpansionOutput>, ProgramError> {
-        self._expand(instruction, previous_calibrations, true)
+        self.expand_inner(instruction, previous_calibrations, true)
     }
 
     /// Expand an instruction, returning an error if a calibration directly or indirectly
@@ -242,7 +247,7 @@ impl Calibrations {
     /// * `instruction` - The instruction to expand.
     /// * `previous_calibrations` - The calibrations that were invoked to yield this current instruction.
     /// * `build_source_map` - Whether to build a source map of the expansion.
-    fn _expand(
+    fn expand_inner(
         &self,
         instruction: &Instruction,
         previous_calibrations: &[Instruction],
@@ -394,10 +399,10 @@ impl Calibrations {
         calibration_path.push(instruction.clone());
         calibration_path.extend_from_slice(previous_calibrations);
 
-        self._recursively_expand(expansion_result, &calibration_path, build_source_map)
+        self.recursively_expand_inner(expansion_result, &calibration_path, build_source_map)
     }
 
-    fn _recursively_expand(
+    fn recursively_expand_inner(
         &self,
         expansion_result: Option<(Vec<Instruction>, CalibrationSource)>,
         calibration_path: &[Instruction],
@@ -416,7 +421,7 @@ impl Calibrations {
 
                 for (expanded_index, instruction) in instructions.into_iter().enumerate() {
                     let expanded_instructions =
-                        self._expand(&instruction, calibration_path, build_source_map)?;
+                        self.expand_inner(&instruction, calibration_path, build_source_map)?;
                     match expanded_instructions {
                         Some(mut output) => {
                             if build_source_map {
@@ -429,8 +434,7 @@ impl Calibrations {
 
                                 let range_end =
                                     recursively_expanded_instructions.new_instructions.len();
-                                let target_range = range_start..range_end;
-                                output.detail.range = target_range;
+                                output.detail.range = range_start..range_end;
 
                                 recursively_expanded_instructions
                                     .detail

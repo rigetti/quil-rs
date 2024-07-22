@@ -229,7 +229,7 @@ impl Quil for MeasureCalibrationDefinition {
     }
 }
 
-// For review: how would we feel about making this a subfield of the `MeasureCalibrationDefinition` itself?
+/// A unique identifier for a measurement calibration definition within a program
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct MeasureCalibrationIdentifier {
     /// The qubit which is the target of measurement, if any
