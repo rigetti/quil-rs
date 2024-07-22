@@ -29,7 +29,7 @@ use crate::{
     },
 };
 
-use super::source_map::{SourceMap, SourceMapEntry};
+use super::source_map::{SourceMap, SourceMapEntry, SourceMapIndexable};
 use super::{CalibrationSet, ProgramError};
 
 /// A collection of Quil calibrations (`DEFCAL` instructions) with utility methods.
@@ -130,6 +130,18 @@ impl CalibrationExpansion {
     }
 }
 
+impl SourceMapIndexable<usize> for CalibrationExpansion {
+    fn intersects(&self, other: &usize) -> bool {
+        self.range.contains(other)
+    }
+}
+
+impl SourceMapIndexable<CalibrationSource> for CalibrationExpansion {
+    fn intersects(&self, other: &CalibrationSource) -> bool {
+        self.calibration_used() == other
+    }
+}
+
 /// The result of an attempt to expand an instruction within a [`Program`]
 #[derive(Clone, Debug, PartialEq)]
 pub enum MaybeCalibrationExpansion {
@@ -138,6 +150,24 @@ pub enum MaybeCalibrationExpansion {
 
     /// The instruction was not expanded, but was simply copied over into the target program at the given instruction index
     Unexpanded(usize),
+}
+
+impl SourceMapIndexable<usize> for MaybeCalibrationExpansion {
+    fn intersects(&self, other: &usize) -> bool {
+        match self {
+            MaybeCalibrationExpansion::Expanded(expansion) => expansion.intersects(other),
+            MaybeCalibrationExpansion::Unexpanded(index) => index == other,
+        }
+    }
+}
+
+impl SourceMapIndexable<CalibrationSource> for MaybeCalibrationExpansion {
+    fn intersects(&self, other: &CalibrationSource) -> bool {
+        match self {
+            MaybeCalibrationExpansion::Expanded(expansion) => expansion.intersects(other),
+            MaybeCalibrationExpansion::Unexpanded(_) => false,
+        }
+    }
 }
 
 /// A source of a calibration, either a [`Calibration`] or a [`MeasureCalibrationDefinition`]

@@ -278,11 +278,30 @@ class CalibrationExpansion:
 @final
 class CalibrationExpansionSourceMap:
     def entries(self) -> List[CalibrationExpansionSourceMapEntry]: ...
+    def list_sources_for_target_index(self, target_index: int) -> List[int]:
+        """Return the locations in the source which were expanded to generate that instruction.
+
+        This is `O(n)` where `n` is the number of first-level calibration expansions performed.
+        """
+        ...
+
+    def list_sources_for_calibration_used(self, calibration_used: CalibrationSource) -> List[int]:
+        """Return the locations in the source program which were expanded using a calibration.
+
+        This is `O(n)` where `n` is the number of first-level calibration expansions performed.
+        """
+        ...
+
+    def list_targets_for_source_index(self, source_index: int) -> List[CalibrationExpansion]:
+        """Given a source index, return information about its expansion.
+
+        This is `O(n)` where `n` is the number of source instructions.
+        """
+        ...
 
 @final
 class CalibrationExpansionSourceMapEntry:
-    """
-    A description of the expansion of one instruction into other instructions.
+    """A description of the expansion of one instruction into other instructions.
 
     If present, the instruction located at `source_location` was expanded using calibrations
     into the instructions located at `target_location`.
@@ -322,9 +341,9 @@ class CalibrationExpansionSourceMapEntry:
 
 @final
 class CalibrationSource:
-    """
-    The source of a calibration expansion, which can be either a calibration (`DEFCAL`)
-    or a measure calibration (`DEFCAL MEASURE`).
+    """The source of a calibration expansion.
+
+    Can be either a calibration (`DEFCAL`) or a measure calibration (`DEFCAL MEASURE`).
     """
     def as_calibration(self) -> CalibrationIdentifier: ...
     def as_measure_calibration(self) -> MeasureCalibrationIdentifier: ...
@@ -400,8 +419,9 @@ class CalibrationSet:
 
 @final
 class MaybeCalibrationExpansion:
-    """
-    The result of having expanded a certain instruction within a program. Has two variants:
+    """The result of having expanded a certain instruction within a program.
+
+    Has two variants:
 
     - `expanded`: The instruction was expanded into other instructions, described by a `CalibrationExpansion`.
     - `int`: The instruction was not expanded and is described by an integer, the index of the instruction
@@ -524,12 +544,32 @@ class ProgramCalibrationExpansion:
 @final
 class ProgramCalibrationExpansionSourceMap:
     def entries(self) -> List[ProgramCalibrationExpansionSourceMapEntry]: ...
+    def list_sources_for_target_index(self, target_index: int) -> List[int]:
+        """Return the locations in the source which were expanded to generate that instruction.
+
+        This is `O(n)` where `n` is the number of first-level calibration expansions performed.
+        """
+        ...
+
+    def list_sources_for_calibration_used(self, calibration_used: CalibrationSource) -> List[int]:
+        """Return the locations in the source program which were expanded using a calibration.
+
+        This is `O(n)` where `n` is the number of first-level calibration expansions performed.
+        """
+        ...
+
+    def list_targets_for_source_index(self, source_index: int) -> List[CalibrationExpansion]:
+        """Given a source index, return information about its expansion.
+
+        This is `O(n)` where `n` is the number of source instructions.
+        """
+        ...
 
 @final
 class ProgramCalibrationExpansionSourceMapEntry:
-    """
-    A description of the possible expansion of one instruction into other instructions
-    within the scope of a program's calibrations.
+    """A description of the possible expansion of one instruction into other instructions.
+
+    Valid within the scope of a program's calibrations.
     """
     def source_location(self) -> int: ...
     """The instruction index within the source program's body instructions."""
