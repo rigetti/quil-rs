@@ -28,7 +28,7 @@ pub use result::{disallow_leftover, map_parsed, recover};
 pub use syntax::SyntaxError;
 
 /// Errors that may occur while parsing a [`Program`](crate::program::Program).
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum ParseProgramError<T> {
     InvalidCalibration {
         instruction: Instruction,

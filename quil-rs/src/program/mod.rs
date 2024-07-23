@@ -45,7 +45,7 @@ mod memory;
 pub mod scheduling;
 pub mod type_check;
 
-#[derive(Debug, thiserror::Error, PartialEq)]
+#[derive(Clone, Debug, PartialEq, thiserror::Error)]
 pub enum ProgramError {
     #[error("{0}")]
     ParsingError(#[from] ParseProgramError<Program>),
