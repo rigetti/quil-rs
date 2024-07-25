@@ -23,12 +23,13 @@ use rigetti_pyo3::{
 use super::PyQubit;
 use crate::{
     expression::PyExpression,
-    impl_copy_for_instruction, impl_eq, impl_to_quil,
+    impl_copy_for_instruction, impl_eq, impl_pickle_for_instruction, impl_to_quil,
     instruction::{PyMemoryReference, PyWaveformInvocation},
 };
 
 py_wrap_union_enum! {
     #[derive(Debug, PartialEq, Eq)]
+    #[pyo3(module = "quil.instructions")]
     PyAttributeValue(AttributeValue) as "AttributeValue" {
         string: String => Py<PyString>,
         expression: Expression => PyExpression
@@ -43,7 +44,7 @@ pub type PyFrameAttributes = IndexMap<String, PyAttributeValue>;
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyFrameDefinition(FrameDefinition) as "FrameDefinition" {
         identifier: FrameIdentifier => PyFrameIdentifier,
         attributes: FrameAttributes => PyFrameAttributes
@@ -53,6 +54,7 @@ impl_repr!(PyFrameDefinition);
 impl_to_quil!(PyFrameDefinition);
 impl_copy_for_instruction!(PyFrameDefinition);
 impl_eq!(PyFrameDefinition);
+impl_pickle_for_instruction!(PyFrameDefinition);
 
 #[pymethods]
 impl PyFrameDefinition {
@@ -71,7 +73,7 @@ impl PyFrameDefinition {
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq, Hash)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyFrameIdentifier(FrameIdentifier) as "FrameIdentifier" {
         name: String => Py<PyString>,
         qubits: Vec<Qubit> => Vec<PyQubit>

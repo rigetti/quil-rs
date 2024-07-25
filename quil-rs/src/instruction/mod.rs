@@ -26,6 +26,8 @@ use crate::Program;
 #[cfg(test)]
 use nom_locate::LocatedSpan;
 
+pub use crate::parser::ParseInstructionError;
+
 mod calibration;
 mod circuit;
 mod classical;
@@ -760,6 +762,14 @@ impl Instruction {
                 }
             }
         }
+    }
+}
+
+impl std::str::FromStr for Instruction {
+    type Err = ParseInstructionError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        crate::parser::parse_instruction(s)
     }
 }
 
