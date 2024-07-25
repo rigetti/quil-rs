@@ -33,26 +33,8 @@ pub use error::{ParseError, ParserErrorKind};
 pub use lexer::LexError;
 pub use token::{Token, TokenWithLocation};
 
-use crate::instruction::Instruction;
-
 type ParserInput<'a> = &'a [TokenWithLocation<'a>];
 type InternalParserResult<'a, R, E = InternalParseError<'a>> = IResult<ParserInput<'a>, R, E>;
-
-#[derive(Debug, thiserror::Error)]
-pub enum ParseInstructionError {
-    #[error("{0}")]
-    Lex(String),
-    #[error("{0}")]
-    Parse(String),
-}
-
-pub(crate) fn parse_instruction(instruction: &str) -> Result<Instruction, ParseInstructionError> {
-    let tokens =
-        lex(instruction.into()).map_err(|e| ParseInstructionError::Lex(format!("{e:#}")))?;
-    let (_, instruction) = instruction::parse_instruction(tokens.as_slice())
-        .map_err(|e| ParseInstructionError::Parse(format!("{e:#}")))?;
-    Ok(instruction)
-}
 
 /// Pops the first token off of the `input` and returns it and the remaining input.
 ///
