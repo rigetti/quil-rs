@@ -110,7 +110,7 @@ impl PyInstruction {
 
     #[staticmethod]
     pub fn parse(string: &str) -> PyResult<Self> {
-        match Instruction::from_str(&string) {
+        match Instruction::from_str(string) {
             Ok(instruction) => Ok(Self(instruction)),
             Err(err) => Err(PyValueError::new_err(err.to_string())),
         }

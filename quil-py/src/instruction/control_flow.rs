@@ -7,7 +7,7 @@ use rigetti_pyo3::{
     PyWrapper,
 };
 
-use crate::{impl_eq, impl_to_quil, instruction::PyMemoryReference};
+use crate::{impl_eq, impl_pickle_for_instruction, impl_to_quil, instruction::PyMemoryReference};
 
 /// Implements __copy__ and __deepcopy__ for instructions containing a [`Target`].
 ///
@@ -51,6 +51,7 @@ impl_hash!(PyLabel);
 impl_to_quil!(PyLabel);
 impl_copy_for_target_containing_instructions!(PyLabel);
 impl_eq!(PyLabel);
+impl_pickle_for_instruction!(PyLabel);
 
 #[pymethods]
 impl PyLabel {
@@ -105,6 +106,7 @@ impl_repr!(PyJump);
 impl_to_quil!(PyJump);
 impl_copy_for_target_containing_instructions!(PyJump);
 impl_eq!(PyJump);
+impl_pickle_for_instruction!(PyJump);
 
 #[pymethods]
 impl PyJump {
@@ -126,6 +128,7 @@ impl_repr!(PyJumpWhen);
 impl_to_quil!(PyJumpWhen);
 impl_copy_for_target_containing_instructions!(PyJumpWhen);
 impl_eq!(PyJumpWhen);
+impl_pickle_for_instruction!(PyJumpWhen);
 
 #[pymethods]
 impl PyJumpWhen {
@@ -147,6 +150,7 @@ impl_repr!(PyJumpUnless);
 impl_to_quil!(PyJumpUnless);
 impl_copy_for_target_containing_instructions!(PyJumpUnless);
 impl_eq!(PyJumpUnless);
+impl_pickle_for_instruction!(PyJumpUnless);
 
 #[pymethods]
 impl PyJumpUnless {

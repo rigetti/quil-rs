@@ -109,6 +109,7 @@ impl_repr!(PyCapture);
 impl_to_quil!(PyCapture);
 impl_copy_for_instruction!(PyCapture);
 impl_eq!(PyCapture);
+impl_pickle_for_instruction!(PyCapture);
 
 #[pymethods]
 impl PyCapture {
@@ -142,6 +143,7 @@ impl_repr!(PyPulse);
 impl_to_quil!(PyPulse);
 impl_copy_for_instruction!(PyPulse);
 impl_eq!(PyPulse);
+impl_pickle_for_instruction!(PyPulse);
 
 #[pymethods]
 impl PyPulse {
@@ -176,6 +178,7 @@ impl_to_quil!(PyRawCapture);
 impl_copy_for_instruction!(PyRawCapture);
 impl_hash!(PyRawCapture);
 impl_eq!(PyRawCapture);
+impl_pickle_for_instruction!(PyRawCapture);
 
 #[pymethods]
 impl PyRawCapture {
@@ -209,6 +212,7 @@ impl_to_quil!(PySetFrequency);
 impl_copy_for_instruction!(PySetFrequency);
 impl_hash!(PySetFrequency);
 impl_eq!(PySetFrequency);
+impl_pickle_for_instruction!(PySetFrequency);
 
 #[pymethods]
 impl PySetFrequency {
@@ -238,6 +242,7 @@ impl_to_quil!(PySetPhase);
 impl_copy_for_instruction!(PySetPhase);
 impl_hash!(PySetPhase);
 impl_eq!(PySetPhase);
+impl_pickle_for_instruction!(PySetPhase);
 
 #[pymethods]
 impl PySetPhase {
@@ -263,6 +268,7 @@ impl_to_quil!(PySetScale);
 impl_copy_for_instruction!(PySetScale);
 impl_hash!(PySetScale);
 impl_eq!(PySetScale);
+impl_pickle_for_instruction!(PySetScale);
 
 #[pymethods]
 impl PySetScale {
@@ -288,6 +294,7 @@ impl_to_quil!(PyShiftFrequency);
 impl_copy_for_instruction!(PyShiftFrequency);
 impl_hash!(PyShiftFrequency);
 impl_eq!(PyShiftFrequency);
+impl_pickle_for_instruction!(PyShiftFrequency);
 
 #[pymethods]
 impl PyShiftFrequency {
@@ -317,6 +324,7 @@ impl_to_quil!(PyShiftPhase);
 impl_copy_for_instruction!(PyShiftPhase);
 impl_hash!(PyShiftPhase);
 impl_eq!(PyShiftPhase);
+impl_pickle_for_instruction!(PyShiftPhase);
 
 #[pymethods]
 impl PyShiftPhase {
@@ -342,6 +350,7 @@ impl_to_quil!(PySwapPhases);
 impl_copy_for_instruction!(PySwapPhases);
 impl_hash!(PySwapPhases);
 impl_eq!(PySwapPhases);
+impl_pickle_for_instruction!(PySwapPhases);
 
 #[pymethods]
 impl PySwapPhases {

@@ -8,6 +8,7 @@ use rigetti_pyo3::{
 };
 
 use super::PyQubit;
+use crate::impl_pickle_for_instruction;
 use crate::{expression::PyExpression, impl_copy_for_instruction, impl_eq, impl_to_quil};
 
 py_wrap_data_struct! {
@@ -24,6 +25,7 @@ impl_to_quil!(PyDelay);
 impl_copy_for_instruction!(PyDelay);
 impl_hash!(PyDelay);
 impl_eq!(PyDelay);
+impl_pickle_for_instruction!(PyDelay);
 
 #[pymethods]
 impl PyDelay {
@@ -54,6 +56,7 @@ impl_to_quil!(PyFence);
 impl_copy_for_instruction!(PyFence);
 impl_hash!(PyFence);
 impl_eq!(PyFence);
+impl_pickle_for_instruction!(PyFence);
 
 #[pymethods]
 impl PyFence {

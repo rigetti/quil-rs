@@ -21,8 +21,8 @@ use rigetti_pyo3::{
 use strum;
 
 use crate::{
-    expression::PyExpression, impl_copy_for_instruction, impl_eq, impl_to_quil,
-    instruction::PyQubit,
+    expression::PyExpression, impl_copy_for_instruction, impl_eq, impl_pickle_for_instruction,
+    impl_to_quil, instruction::PyQubit,
 };
 
 wrap_error!(RustGateError(quil_rs::instruction::GateError));
@@ -45,6 +45,7 @@ impl_copy_for_instruction!(PyGate);
 impl_to_quil!(PyGate);
 impl_hash!(PyGate);
 impl_eq!(PyGate);
+impl_pickle_for_instruction!(PyGate);
 
 #[pymethods]
 impl PyGate {
@@ -271,6 +272,7 @@ impl_to_quil!(PyGateDefinition);
 impl_copy_for_instruction!(PyGateDefinition);
 impl_hash!(PyGateDefinition);
 impl_eq!(PyGateDefinition);
+impl_pickle_for_instruction!(PyGateDefinition);
 
 #[pymethods]
 impl PyGateDefinition {

@@ -75,7 +75,10 @@ macro_rules! impl_pickle_for_instruction {
             // generateed by __getstate__.
             //
             // See [Python's __reduce__ documentation](https://docs.python.org/3/library/pickle.html#object.__reduce__)
-            fn __reduce__<'py>(&'py self, py: Python<'py>) -> pyo3::PyResult<&'py pyo3::PyAny> {
+            fn __reduce__<'py>(
+                &'py self,
+                py: pyo3::Python<'py>,
+            ) -> pyo3::PyResult<&'py pyo3::PyAny> {
                 use pyo3::IntoPy;
                 let callable = py.get_type::<Self>().getattr("_from_state")?;
                 let state = self.__getstate__(py)?;
