@@ -1,3 +1,9 @@
+## 0.11.1
+
+### Features
+
+- Initialize `Instruction`s from a Quil string. Python `Instruction`s support the `pickle` module. (#382)
+
 ## 0.11.1-rc.0
 
 ### Features
