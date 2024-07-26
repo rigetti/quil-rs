@@ -118,7 +118,7 @@ class Instruction:
         """Returns ``True`` if the instruction is a Quil-T instruction, ``False`` otherwise."""
         ...
     @staticmethod
-    def parse(input: str) -> Instruction:
+    def parse(string: str) -> Instruction:
         """Parses a Quil ``Instruction`` from a string.
 
         Raises an error if there is leftover input after parsing, or if there wasn't exactly 1 instruction.
