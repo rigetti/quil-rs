@@ -119,25 +119,25 @@
                                 <a class="function" href="#Program.resolve_placeholders_with_custom_resolvers">resolve_placeholders_with_custom_resolvers</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.memory_regions">memory_regions</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#Program.body_instructions">body_instructions</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Program.calibrations">calibrations</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Program.frames">frames</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.gate_definitions">gate_definitions</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Program.waveforms">waveforms</a>
+                                <a class="variable" href="#Program.memory_regions">memory_regions</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Program.declarations">declarations</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Program.gate_definitions">gate_definitions</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Program.calibrations">calibrations</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Program.waveforms">waveforms</a>
                         </li>
                 </ul>
 
@@ -170,10 +170,10 @@
                                 <a class="function" href="#CalibrationSet.to_instructions">to_instructions</a>
                         </li>
                         <li>
-                                <a class="variable" href="#CalibrationSet.measure_calibrations">measure_calibrations</a>
+                                <a class="variable" href="#CalibrationSet.calibrations">calibrations</a>
                         </li>
                         <li>
-                                <a class="variable" href="#CalibrationSet.calibrations">calibrations</a>
+                                <a class="variable" href="#CalibrationSet.measure_calibrations">measure_calibrations</a>
                         </li>
                 </ul>
 
@@ -257,10 +257,10 @@
                     <a class="class" href="#TimeSpanSeconds">TimeSpanSeconds</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#TimeSpanSeconds.duration">duration</a>
+                                <a class="variable" href="#TimeSpanSeconds.start">start</a>
                         </li>
                         <li>
-                                <a class="variable" href="#TimeSpanSeconds.start">start</a>
+                                <a class="variable" href="#TimeSpanSeconds.duration">duration</a>
                         </li>
                         <li>
                                 <a class="variable" href="#TimeSpanSeconds.end">end</a>
@@ -305,7 +305,7 @@
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">get</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">identifier</span><span class="p">:</span> <span class="n">FrameIdentifier</span></span><span class="return-annotation">) -> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">AttributeValue</span><span class="p">]]</span>:</span></span>
+        <span class="name">get</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="n">identifier</span><span class="p">:</span> <span class="n"><a href="instructions.html#FrameIdentifier">quil.instructions.FrameIdentifier</a></span></span><span class="return-annotation">) -> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n"><a href="instructions.html#AttributeValue">quil.instructions.AttributeValue</a></span><span class="p">]]</span>:</span></span>
 
         
     </div>
@@ -320,7 +320,7 @@
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">get_keys</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span></span><span class="return-annotation">) -> <span class="n">List</span><span class="p">[</span><span class="n">FrameIdentifier</span><span class="p">]</span>:</span></span>
+        <span class="name">get_keys</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span></span><span class="return-annotation">) -> <span class="n">List</span><span class="p">[</span><span class="n"><a href="instructions.html#FrameIdentifier">quil.instructions.FrameIdentifier</a></span><span class="p">]</span>:</span></span>
 
         
     </div>
@@ -335,7 +335,7 @@
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">get_all_frames</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span></span><span class="return-annotation">) -> <span class="n">Dict</span><span class="p">[</span><span class="n">FrameIdentifier</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">AttributeValue</span><span class="p">]]</span>:</span></span>
+        <span class="name">get_all_frames</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span></span><span class="return-annotation">) -> <span class="n">Dict</span><span class="p">[</span><span class="n"><a href="instructions.html#FrameIdentifier">quil.instructions.FrameIdentifier</a></span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n"><a href="instructions.html#AttributeValue">quil.instructions.AttributeValue</a></span><span class="p">]]</span>:</span></span>
 
         
     </div>
@@ -348,7 +348,7 @@
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">insert</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="n">identifier</span><span class="p">:</span> <span class="n">FrameIdentifier</span>,</span><span class="param">	<span class="n">attributes</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">AttributeValue</span><span class="p">]</span></span><span class="return-annotation">):</span></span>
+        <span class="name">insert</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="n">identifier</span><span class="p">:</span> <span class="n"><a href="instructions.html#FrameIdentifier">quil.instructions.FrameIdentifier</a></span>,</span><span class="param">	<span class="n">attributes</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n"><a href="instructions.html#AttributeValue">quil.instructions.AttributeValue</a></span><span class="p">]</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
@@ -378,7 +378,7 @@
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">intersection</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">identifiers</span><span class="p">:</span> <span class="n">FrozenSet</span><span class="p">[</span><span class="n">FrameIdentifier</span><span class="p">]</span></span><span class="return-annotation">) -> <span class="n"><a href="#FrameSet">quil.program.FrameSet</a></span>:</span></span>
+        <span class="name">intersection</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="n">identifiers</span><span class="p">:</span> <span class="n">FrozenSet</span><span class="p">[</span><span class="n"><a href="instructions.html#FrameIdentifier">quil.instructions.FrameIdentifier</a></span><span class="p">]</span></span><span class="return-annotation">) -> <span class="n"><a href="#FrameSet">quil.program.FrameSet</a></span>:</span></span>
 
         
     </div>
@@ -592,7 +592,7 @@ expands directly or indirectly into itself)</p>
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">get_used_qubits</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span></span><span class="return-annotation">) -> <span class="n">Set</span><span class="p">[</span><span class="n">Qubit</span><span class="p">]</span>:</span></span>
+        <span class="name">get_used_qubits</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span></span><span class="return-annotation">) -> <span class="n">Set</span><span class="p">[</span><span class="n"><a href="instructions.html#Qubit">quil.instructions.Qubit</a></span><span class="p">]</span>:</span></span>
 
         
     </div>
@@ -726,7 +726,7 @@ used elsewhere in the program.</p>
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">resolve_placeholders_with_custom_resolvers</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="o">*</span>,</span><span class="param">	<span class="n">target_resolver</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="n">TargetPlaceholder</span><span class="p">],</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">qubit_resolver</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="n">QubitPlaceholder</span><span class="p">],</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span></span><span class="return-annotation">):</span></span>
+        <span class="name">resolve_placeholders_with_custom_resolvers</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="o">*</span>,</span><span class="param">	<span class="n">target_resolver</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="n">TargetPlaceholder</span><span class="p">],</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">qubit_resolver</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="n"><a href="instructions.html#QubitPlaceholder">quil.instructions.QubitPlaceholder</a></span><span class="p">],</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
@@ -746,17 +746,6 @@ while ensuring that unique value is not already in use within the program.</p>
 
 
                             </div>
-                            <div id="Program.memory_regions" class="classattr">
-                                <div class="attr variable">
-            <span class="name">memory_regions</span><span class="annotation">: Dict[str, <a href="#MemoryRegion">quil.program.MemoryRegion</a>]</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.memory_regions"></a>
-    
-    
-
-                            </div>
                             <div id="Program.body_instructions" class="classattr">
                                 <div class="attr variable">
             <span class="name">body_instructions</span><span class="annotation">: List[Instruction]</span>
@@ -764,17 +753,6 @@ while ensuring that unique value is not already in use within the program.</p>
         
     </div>
     <a class="headerlink" href="#Program.body_instructions"></a>
-    
-    
-
-                            </div>
-                            <div id="Program.calibrations" class="classattr">
-                                <div class="attr variable">
-            <span class="name">calibrations</span><span class="annotation">: <a href="#CalibrationSet">quil.program.CalibrationSet</a></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.calibrations"></a>
     
     
 
@@ -790,24 +768,13 @@ while ensuring that unique value is not already in use within the program.</p>
     
 
                             </div>
-                            <div id="Program.gate_definitions" class="classattr">
+                            <div id="Program.memory_regions" class="classattr">
                                 <div class="attr variable">
-            <span class="name">gate_definitions</span><span class="annotation">: Dict[str, GateDefinition]</span>
+            <span class="name">memory_regions</span><span class="annotation">: Dict[str, <a href="#MemoryRegion">quil.program.MemoryRegion</a>]</span>
 
         
     </div>
-    <a class="headerlink" href="#Program.gate_definitions"></a>
-    
-    
-
-                            </div>
-                            <div id="Program.waveforms" class="classattr">
-                                <div class="attr variable">
-            <span class="name">waveforms</span><span class="annotation">: Dict[str, Waveform]</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.waveforms"></a>
+    <a class="headerlink" href="#Program.memory_regions"></a>
     
     
 
@@ -819,6 +786,39 @@ while ensuring that unique value is not already in use within the program.</p>
         
     </div>
     <a class="headerlink" href="#Program.declarations"></a>
+    
+    
+
+                            </div>
+                            <div id="Program.gate_definitions" class="classattr">
+                                <div class="attr variable">
+            <span class="name">gate_definitions</span><span class="annotation">: Dict[str, GateDefinition]</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.gate_definitions"></a>
+    
+    
+
+                            </div>
+                            <div id="Program.calibrations" class="classattr">
+                                <div class="attr variable">
+            <span class="name">calibrations</span><span class="annotation">: <a href="#CalibrationSet">quil.program.CalibrationSet</a></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.calibrations"></a>
+    
+    
+
+                            </div>
+                            <div id="Program.waveforms" class="classattr">
+                                <div class="attr variable">
+            <span class="name">waveforms</span><span class="annotation">: Dict[str, Waveform]</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.waveforms"></a>
     
     
 
@@ -976,17 +976,6 @@ function returns the previous calibration. Otherwise, None is returned.</p>
 
 
                             </div>
-                            <div id="CalibrationSet.measure_calibrations" class="classattr">
-                                <div class="attr variable">
-            <span class="name">measure_calibrations</span><span class="annotation">: List[MeasureCalibrationDefinition]</span>
-
-        
-    </div>
-    <a class="headerlink" href="#CalibrationSet.measure_calibrations"></a>
-    
-    
-
-                            </div>
                             <div id="CalibrationSet.calibrations" class="classattr">
                                 <div class="attr variable">
             <span class="name">calibrations</span><span class="annotation">: List[Calibration]</span>
@@ -994,6 +983,17 @@ function returns the previous calibration. Otherwise, None is returned.</p>
         
     </div>
     <a class="headerlink" href="#CalibrationSet.calibrations"></a>
+    
+    
+
+                            </div>
+                            <div id="CalibrationSet.measure_calibrations" class="classattr">
+                                <div class="attr variable">
+            <span class="name">measure_calibrations</span><span class="annotation">: List[MeasureCalibrationDefinition]</span>
+
+        
+    </div>
+    <a class="headerlink" href="#CalibrationSet.measure_calibrations"></a>
     
     
 
@@ -1387,19 +1387,6 @@ on program state. This may be a sequence of basic blocks with fixed <code>JUMP</
 </div>
 
 
-                            <div id="TimeSpanSeconds.duration" class="classattr">
-                                <div class="attr variable">
-            <span class="name">duration</span><span class="annotation">: float</span>
-
-        
-    </div>
-    <a class="headerlink" href="#TimeSpanSeconds.duration"></a>
-    
-            <div class="docstring"><p>The duration of the time span, in seconds.</p>
-</div>
-
-
-                            </div>
                             <div id="TimeSpanSeconds.start" class="classattr">
                                 <div class="attr variable">
             <span class="name">start</span><span class="annotation">: float</span>
@@ -1411,6 +1398,19 @@ on program state. This may be a sequence of basic blocks with fixed <code>JUMP</
             <div class="docstring"><p>The start time of the time span, in seconds.</p>
 
 <p>This is relative to the start of the scheduling context (such as the basic block).</p>
+</div>
+
+
+                            </div>
+                            <div id="TimeSpanSeconds.duration" class="classattr">
+                                <div class="attr variable">
+            <span class="name">duration</span><span class="annotation">: float</span>
+
+        
+    </div>
+    <a class="headerlink" href="#TimeSpanSeconds.duration"></a>
+    
+            <div class="docstring"><p>The duration of the time span, in seconds.</p>
 </div>
 
 
