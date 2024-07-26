@@ -15,16 +15,15 @@
 use std::collections::HashSet;
 use std::fmt;
 
+use nom_locate::LocatedSpan;
+
 use crate::expression::Expression;
-#[cfg(test)]
 use crate::parser::lex;
+use crate::parser::parse_instructions;
 use crate::program::frame::{FrameMatchCondition, FrameMatchConditions};
 use crate::program::{MatchedFrames, MemoryAccesses};
 use crate::quil::{write_join_quil, Quil, ToQuilResult};
 use crate::Program;
-
-#[cfg(test)]
-use nom_locate::LocatedSpan;
 
 mod calibration;
 mod circuit;
@@ -760,6 +759,29 @@ impl Instruction {
                 }
             }
         }
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum ParseInstructionError {
+    #[error("Failed to parse instruction: {0}")]
+    Parse(String),
+    #[error("Expected to parse exactly one instruction but got {0}")]
+    ZeroOrMany(usize),
+}
+
+impl std::str::FromStr for Instruction {
+    type Err = ParseInstructionError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let input = LocatedSpan::new(s);
+        let lexed = lex(input).map_err(|e| ParseInstructionError::Parse(e.to_string()))?;
+        let instructions =
+            parse_instructions(&lexed).map_err(|e| ParseInstructionError::Parse(e.to_string()))?;
+        if instructions.1.len() != 1 {
+            return Err(ParseInstructionError::ZeroOrMany(instructions.1.len()));
+        }
+        Ok(instructions.1[0].to_owned())
     }
 }
 
