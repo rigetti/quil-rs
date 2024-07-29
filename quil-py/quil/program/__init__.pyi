@@ -27,7 +27,7 @@ program = Program.parse(program_text)
 expansion = program.expand_calibrations_with_source_map()
 source_map = expansion.source_map()
 
-# This is what we expect the expanded program to be. X and Y have been replaced by Z
+# This is what we expect the expanded program to be. X and Y have each been replaced by Z.
 expected_program_text = inspect.cleandoc(
     \"\"\"
     DEFCAL X 0:
@@ -40,20 +40,22 @@ expected_program_text = inspect.cleandoc(
     Z 0 # This instruction is index 1
     \"\"\"
 )
+assert expansion.program().to_quil() == Program.parse(expected_program_text).to_quil()
 
-# In order to discover _which_ calibration led to each Z in the resulting program, we
-# can interrogate the expansion source mapping:
+# In order to discover _which_ calibration led to the first Z in the resulting program, we
+# can interrogate the expansion source mapping.
+# 
+# For instance, the X at index 0 should have been replaced with a Z at index 0.
+# Here's how we can confirm that:
 
-# The X at index 0 should have been replaced with a Z at index 0:
-
-# ...first, we list the calibration expansion targets for that first instruction...
+# First, we list the calibration expansion targets for that first instruction...
 targets = source_map.list_targets_for_source_index(0)
 
 # ...then we extract the expanded instruction.
 # If the instruction had _not_ been expanded (i.e. there was no matching calibration), then `as_expanded()` would return `None`.
 expanded = targets[0].as_expanded()
 
-# ...This line shows how that `X 0` was expanded into instruction index 0 (only) within the expanded program.
+# This line shows how that `X 0` was expanded into instruction index 0 (only) within the expanded program.
 # The end of the range is exclusive.
 assert expanded.range() == range(0, 1)
 
@@ -61,7 +63,7 @@ assert expanded.range() == range(0, 1)
 # This is useful for understanding the provenance of instructions in the expanded program.
 sources = source_map.list_sources_for_target_index(1)
 
-# ... in this case, the instruction was expanded from the source program at index 1.
+# In this case, the instruction was expanded from the source program at index 1.
 assert sources == [1]
 ```
 """
