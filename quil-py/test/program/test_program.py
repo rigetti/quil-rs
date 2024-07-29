@@ -223,10 +223,7 @@ def test_calibration_expansion():
         """
     )
 
-    assert (
-        expansion.program().to_quil()
-        == Program.parse(expected_program_text).to_quil()
-    )
+    assert expansion.program().to_quil() == Program.parse(expected_program_text).to_quil()
 
     # The X at index 0 should have been replaced with a Z at index 0
     targets = source_map.list_targets_for_source_index(0)

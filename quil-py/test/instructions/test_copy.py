@@ -39,12 +39,7 @@ def test_instruction_with_duplicate_placeholders():
     placeholder = Qubit.from_placeholder(QubitPlaceholder())
 
     calibration = Calibration(
-        CalibrationIdentifier(
-            "MYCAL",
-            [],
-            [placeholder],
-            []
-        ),
+        CalibrationIdentifier("MYCAL", [], [placeholder], []),
         [Instruction.from_delay(Delay(Expression.from_number(complex(0.5)), [], [placeholder]))],
     )
 
