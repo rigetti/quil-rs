@@ -18,7 +18,7 @@ use std::fmt;
 /// The parser returned success, but there was unexpected leftover input.
 ///
 /// This error contains the parsed item, which can be accessed using [`LeftoverError::recover`].
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LeftoverError<O> {
     line: u32,
     column: usize,

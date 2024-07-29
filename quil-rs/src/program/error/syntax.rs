@@ -27,7 +27,7 @@ use super::LeftoverError;
 /// see a backtrace of errors that caused this one.
 ///
 /// See also [`Error`](crate::parser::Error).
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum SyntaxError<T> {
     LexError(LexError),
     ParseError(ParseError),

@@ -19,7 +19,7 @@ pub(crate) type InternalLexError<'a> = InternalError<super::LexInput<'a>, LexErr
 pub type LexError = Error<LexErrorKind>;
 
 /// Kinds of errors that may occur while lexing Quil input.
-#[derive(Debug, thiserror::Error, PartialEq, Eq)]
+#[derive(Clone, Debug, thiserror::Error, PartialEq, Eq)]
 pub enum LexErrorKind {
     /// Expected this particular raw string.
     #[error("expected {0:?}")]
