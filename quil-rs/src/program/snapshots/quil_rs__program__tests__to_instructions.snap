@@ -54,6 +54,16 @@ expression: program.to_instructions()
     ),
     CalibrationDefinition(
         Calibration {
+            identifier: CalibrationIdentifier {
+                modifiers: [],
+                name: "I",
+                parameters: [],
+                qubits: [
+                    Fixed(
+                        1,
+                    ),
+                ],
+            },
             instructions: [
                 Delay(
                     Delay {
@@ -70,14 +80,6 @@ expression: program.to_instructions()
                             ),
                         ],
                     },
-                ),
-            ],
-            modifiers: [],
-            name: "I",
-            parameters: [],
-            qubits: [
-                Fixed(
-                    1,
                 ),
             ],
         },

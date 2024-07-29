@@ -3,6 +3,7 @@ from copy import copy, deepcopy
 from quil.expression import Expression
 from quil.instructions import (
     Calibration,
+    CalibrationIdentifier,
     Delay,
     FrameIdentifier,
     Instruction,
@@ -38,11 +39,8 @@ def test_instruction_with_duplicate_placeholders():
     placeholder = Qubit.from_placeholder(QubitPlaceholder())
 
     calibration = Calibration(
-        "MYCAL",
-        [],
-        [placeholder],
+        CalibrationIdentifier("MYCAL", [], [placeholder], []),
         [Instruction.from_delay(Delay(Expression.from_number(complex(0.5)), [], [placeholder]))],
-        [],
     )
 
     calibration_copy = copy(calibration)
@@ -51,4 +49,4 @@ def test_instruction_with_duplicate_placeholders():
     calibration_deepcopy = deepcopy(calibration)
     assert calibration_deepcopy != calibration
 
-    assert calibration_deepcopy.qubits == calibration_deepcopy.instructions[0].to_delay().qubits
+    assert calibration_deepcopy.identifier.qubits == calibration_deepcopy.instructions[0].to_delay().qubits
