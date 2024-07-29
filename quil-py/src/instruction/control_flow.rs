@@ -40,8 +40,8 @@ macro_rules! impl_copy_for_target_containing_instructions {
 }
 
 py_wrap_data_struct! {
-    #[pyo3(subclass)]
     #[derive(Debug, Hash, PartialEq, Eq)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyLabel(Label) as "Label" {
         target: Target => PyTarget
     }
@@ -97,7 +97,7 @@ impl PyTargetPlaceholder {
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyJump(Jump) as "Jump" {
         target: Target => PyTarget
     }
@@ -118,7 +118,7 @@ impl PyJump {
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyJumpWhen(JumpWhen) as "JumpWhen" {
         target: Target => PyTarget,
         condition: MemoryReference => PyMemoryReference
@@ -140,7 +140,7 @@ impl PyJumpWhen {
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyJumpUnless(JumpUnless) as "JumpUnless" {
         target: Target => PyTarget,
         condition: MemoryReference => PyMemoryReference

@@ -14,7 +14,7 @@ use crate::{impl_copy_for_instruction, impl_eq, impl_pickle_for_instruction, imp
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyPragma(Pragma) as "Pragma" {
         name: String => Py<PyString>,
         arguments: Vec<PragmaArgument> => Vec<PyPragmaArgument>,
@@ -59,7 +59,7 @@ impl_eq!(PyPragmaArgument);
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyInclude(Include) as "Include" {
         filename: String => Py<PyString>
     }

@@ -13,7 +13,7 @@ use crate::{
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyReset(Reset) as "Reset" {
         qubit: Option<Qubit> => Option<PyQubit>
     }

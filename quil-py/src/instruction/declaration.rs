@@ -111,7 +111,7 @@ impl PySharing {
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyDeclaration(Declaration) as "Declaration" {
         name: String => Py<PyString>,
         size: Vector => PyVector,
@@ -167,7 +167,7 @@ impl PyMemoryReference {
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyLoad(Load) as "Load" {
         destination: MemoryReference => PyMemoryReference,
         source: String => Py<PyString>,
@@ -200,7 +200,7 @@ impl PyLoad {
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyStore(Store) as "Store" {
         destination: String => Py<PyString>,
         offset: MemoryReference => PyMemoryReference,

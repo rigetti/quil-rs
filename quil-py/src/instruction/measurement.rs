@@ -11,8 +11,8 @@ use crate::{
 };
 
 py_wrap_data_struct! {
-    #[pyo3(subclass)]
     #[derive(Debug, PartialEq, Eq)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyMeasurement(Measurement) as "Measurement" {
         qubit: Qubit => PyQubit,
         target: Option<MemoryReference> => Option<PyMemoryReference>

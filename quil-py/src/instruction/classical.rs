@@ -19,7 +19,7 @@ use crate::{impl_copy_for_instruction, impl_eq, impl_pickle_for_instruction, imp
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyArithmetic(Arithmetic) as "Arithmetic" {
         operator: ArithmeticOperator => PyArithmeticOperator,
         destination: MemoryReference => PyMemoryReference,
@@ -105,7 +105,7 @@ impl_eq!(PyBinaryOperator);
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyBinaryLogic(BinaryLogic) as "BinaryLogic" {
         operator: BinaryOperator => PyBinaryOperator,
         destination: MemoryReference => PyMemoryReference,
@@ -137,7 +137,7 @@ impl PyBinaryLogic {
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyConvert(Convert) as "Convert" {
         destination: MemoryReference => PyMemoryReference,
         source: MemoryReference => PyMemoryReference
@@ -167,7 +167,7 @@ impl PyConvert {
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyMove(Move) as "Move" {
         destination: MemoryReference => PyMemoryReference,
         source: ArithmeticOperand => PyArithmeticOperand
@@ -197,7 +197,7 @@ impl PyMove {
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyExchange(Exchange) as "Exchange" {
         left: MemoryReference => PyMemoryReference,
         right: MemoryReference => PyMemoryReference
@@ -251,7 +251,7 @@ py_wrap_simple_enum! {
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyComparison(Comparison) as "Comparison" {
         operator: ComparisonOperator => PyComparisonOperator,
         destination: MemoryReference => PyMemoryReference,
@@ -298,7 +298,7 @@ impl_hash!(PyUnaryOperator);
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyUnaryLogic(UnaryLogic) as "UnaryLogic" {
         operator: UnaryOperator => PyUnaryOperator,
         operand: MemoryReference => PyMemoryReference

@@ -97,7 +97,7 @@ impl PyFrameIdentifier {
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyCapture(Capture) as "Capture" {
         blocking: bool => Py<PyBool>,
         frame: FrameIdentifier => PyFrameIdentifier,
@@ -132,7 +132,7 @@ impl PyCapture {
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyPulse(Pulse) as "Pulse" {
         blocking: bool => Py<PyBool>,
         frame: FrameIdentifier => PyFrameIdentifier,
@@ -164,7 +164,7 @@ impl PyPulse {
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyRawCapture(RawCapture) as "RawCapture" {
         blocking: bool => Py<PyBool>,
         frame: FrameIdentifier => PyFrameIdentifier,
@@ -201,7 +201,7 @@ impl PyRawCapture {
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PySetFrequency(SetFrequency) as "SetFrequency" {
         frame: FrameIdentifier => PyFrameIdentifier,
         frequency: Expression => PyExpression
@@ -231,7 +231,7 @@ impl PySetFrequency {
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PySetPhase(SetPhase) as "SetPhase" {
         frame: FrameIdentifier => PyFrameIdentifier,
         phase: Expression => PyExpression
@@ -257,7 +257,7 @@ impl PySetPhase {
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PySetScale(SetScale) as "SetScale" {
         frame: FrameIdentifier => PyFrameIdentifier,
         scale: Expression => PyExpression
@@ -283,7 +283,7 @@ impl PySetScale {
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyShiftFrequency(ShiftFrequency) as "ShiftFrequency" {
         frame: FrameIdentifier => PyFrameIdentifier,
         frequency: Expression => PyExpression
@@ -313,7 +313,7 @@ impl PyShiftFrequency {
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyShiftPhase(ShiftPhase) as "ShiftPhase" {
         frame: FrameIdentifier => PyFrameIdentifier,
         phase: Expression => PyExpression
@@ -339,7 +339,7 @@ impl PyShiftPhase {
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PySwapPhases(SwapPhases) as "SwapPhases" {
         frame_1: FrameIdentifier => PyFrameIdentifier,
         frame_2: FrameIdentifier => PyFrameIdentifier

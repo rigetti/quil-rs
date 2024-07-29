@@ -32,7 +32,7 @@ py_wrap_error!(quil, RustParseEnumError, EnumParseError, PyValueError);
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyGate(Gate) as "Gate" {
         name: String => Py<PyString>,
         parameters: Vec<Expression> => Vec<PyExpression>,
@@ -260,7 +260,7 @@ impl_eq!(PyGateSpecification);
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyGateDefinition(GateDefinition) as "GateDefinition" {
         name: String => Py<PyString>,
         parameters: Vec<String> => Vec<Py<PyString>>,

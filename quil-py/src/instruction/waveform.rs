@@ -45,7 +45,7 @@ impl PyWaveform {
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyWaveformDefinition(WaveformDefinition) as "WaveformDefinition" {
         name: String => Py<PyString>,
         definition: Waveform => PyWaveform

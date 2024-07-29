@@ -13,7 +13,7 @@ use crate::{expression::PyExpression, impl_copy_for_instruction, impl_eq, impl_t
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyDelay(Delay) as "Delay" {
         duration: Expression => PyExpression,
         frame_names: Vec<String> => Vec<Py<PyString>>,
@@ -46,7 +46,7 @@ impl PyDelay {
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyFence(Fence) as "Fence" {
         qubits: Vec<Qubit> => Vec<PyQubit>
     }
