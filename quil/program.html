@@ -122,6 +122,15 @@
                                 <a class="variable" href="#Program.body_instructions">body_instructions</a>
                         </li>
                         <li>
+                                <a class="variable" href="#Program.calibrations">calibrations</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Program.gate_definitions">gate_definitions</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Program.waveforms">waveforms</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#Program.frames">frames</a>
                         </li>
                         <li>
@@ -129,15 +138,6 @@
                         </li>
                         <li>
                                 <a class="variable" href="#Program.declarations">declarations</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Program.gate_definitions">gate_definitions</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Program.calibrations">calibrations</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Program.waveforms">waveforms</a>
                         </li>
                 </ul>
 
@@ -757,6 +757,39 @@ while ensuring that unique value is not already in use within the program.</p>
     
 
                             </div>
+                            <div id="Program.calibrations" class="classattr">
+                                <div class="attr variable">
+            <span class="name">calibrations</span><span class="annotation">: <a href="#CalibrationSet">quil.program.CalibrationSet</a></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.calibrations"></a>
+    
+    
+
+                            </div>
+                            <div id="Program.gate_definitions" class="classattr">
+                                <div class="attr variable">
+            <span class="name">gate_definitions</span><span class="annotation">: Dict[str, <a href="instructions.html#GateDefinition">quil.instructions.GateDefinition</a>]</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.gate_definitions"></a>
+    
+    
+
+                            </div>
+                            <div id="Program.waveforms" class="classattr">
+                                <div class="attr variable">
+            <span class="name">waveforms</span><span class="annotation">: Dict[str, Waveform]</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.waveforms"></a>
+    
+    
+
+                            </div>
                             <div id="Program.frames" class="classattr">
                                 <div class="attr variable">
             <span class="name">frames</span><span class="annotation">: <a href="#FrameSet">quil.program.FrameSet</a></span>
@@ -781,44 +814,11 @@ while ensuring that unique value is not already in use within the program.</p>
                             </div>
                             <div id="Program.declarations" class="classattr">
                                 <div class="attr variable">
-            <span class="name">declarations</span><span class="annotation">: Dict[str, Declaration]</span>
+            <span class="name">declarations</span><span class="annotation">: Dict[str, <a href="instructions.html#Declaration">quil.instructions.Declaration</a>]</span>
 
         
     </div>
     <a class="headerlink" href="#Program.declarations"></a>
-    
-    
-
-                            </div>
-                            <div id="Program.gate_definitions" class="classattr">
-                                <div class="attr variable">
-            <span class="name">gate_definitions</span><span class="annotation">: Dict[str, GateDefinition]</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.gate_definitions"></a>
-    
-    
-
-                            </div>
-                            <div id="Program.calibrations" class="classattr">
-                                <div class="attr variable">
-            <span class="name">calibrations</span><span class="annotation">: <a href="#CalibrationSet">quil.program.CalibrationSet</a></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.calibrations"></a>
-    
-    
-
-                            </div>
-                            <div id="Program.waveforms" class="classattr">
-                                <div class="attr variable">
-            <span class="name">waveforms</span><span class="annotation">: Dict[str, Waveform]</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.waveforms"></a>
     
     
 
@@ -858,7 +858,7 @@ expands into itself.</p>
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">get_match_for_measurement</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">measurement</span><span class="p">:</span> <span class="n">Measurement</span></span><span class="return-annotation">) -> <span class="n">Optional</span><span class="p">[</span><span class="n">MeasureCalibrationDefinition</span><span class="p">]</span>:</span></span>
+        <span class="name">get_match_for_measurement</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="n">measurement</span><span class="p">:</span> <span class="n"><a href="instructions.html#Measurement">quil.instructions.Measurement</a></span></span><span class="return-annotation">) -> <span class="n">Optional</span><span class="p">[</span><span class="n"><a href="instructions.html#MeasureCalibrationDefinition">quil.instructions.MeasureCalibrationDefinition</a></span><span class="p">]</span>:</span></span>
 
         
     </div>
@@ -873,7 +873,7 @@ expands into itself.</p>
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">get_match_for_gate</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">gate</span><span class="p">:</span> <span class="n">Gate</span></span><span class="return-annotation">) -> <span class="n">Optional</span><span class="p">[</span><span class="n">Calibration</span><span class="p">]</span>:</span></span>
+        <span class="name">get_match_for_gate</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="n">gate</span><span class="p">:</span> <span class="n"><a href="instructions.html#Gate">quil.instructions.Gate</a></span></span><span class="return-annotation">) -> <span class="n">Optional</span><span class="p">[</span><span class="n"><a href="instructions.html#Calibration">quil.instructions.Calibration</a></span><span class="p">]</span>:</span></span>
 
         
     </div>
@@ -914,7 +914,7 @@ expands into itself.</p>
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">insert_calibration</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">calibration</span><span class="p">:</span> <span class="n">Calibration</span></span><span class="return-annotation">) -> <span class="n">Optional</span><span class="p">[</span><span class="n">Calibration</span><span class="p">]</span>:</span></span>
+        <span class="name">insert_calibration</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="n">calibration</span><span class="p">:</span> <span class="n"><a href="instructions.html#Calibration">quil.instructions.Calibration</a></span></span><span class="return-annotation">) -> <span class="n">Optional</span><span class="p">[</span><span class="n"><a href="instructions.html#Calibration">quil.instructions.Calibration</a></span><span class="p">]</span>:</span></span>
 
         
     </div>
@@ -932,7 +932,7 @@ function returns the previous calibration. Otherwise, None is returned.</p>
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">insert_measurement_calibration</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="n">calibration</span><span class="p">:</span> <span class="n">MeasureCalibrationDefinition</span></span><span class="return-annotation">) -> <span class="n">Optional</span><span class="p">[</span><span class="n">MeasureCalibrationDefinition</span><span class="p">]</span>:</span></span>
+        <span class="name">insert_measurement_calibration</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="n">calibration</span><span class="p">:</span> <span class="n"><a href="instructions.html#MeasureCalibrationDefinition">quil.instructions.MeasureCalibrationDefinition</a></span></span><span class="return-annotation">) -> <span class="n">Optional</span><span class="p">[</span><span class="n"><a href="instructions.html#MeasureCalibrationDefinition">quil.instructions.MeasureCalibrationDefinition</a></span><span class="p">]</span>:</span></span>
 
         
     </div>
@@ -978,7 +978,7 @@ function returns the previous calibration. Otherwise, None is returned.</p>
                             </div>
                             <div id="CalibrationSet.calibrations" class="classattr">
                                 <div class="attr variable">
-            <span class="name">calibrations</span><span class="annotation">: List[Calibration]</span>
+            <span class="name">calibrations</span><span class="annotation">: List[<a href="instructions.html#Calibration">quil.instructions.Calibration</a>]</span>
 
         
     </div>
@@ -989,7 +989,7 @@ function returns the previous calibration. Otherwise, None is returned.</p>
                             </div>
                             <div id="CalibrationSet.measure_calibrations" class="classattr">
                                 <div class="attr variable">
-            <span class="name">measure_calibrations</span><span class="annotation">: List[MeasureCalibrationDefinition]</span>
+            <span class="name">measure_calibrations</span><span class="annotation">: List[<a href="instructions.html#MeasureCalibrationDefinition">quil.instructions.MeasureCalibrationDefinition</a>]</span>
 
         
     </div>
