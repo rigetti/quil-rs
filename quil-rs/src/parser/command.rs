@@ -5,7 +5,7 @@ use nom::sequence::{delimited, pair, preceded, tuple};
 
 use crate::expression::Expression;
 use crate::instruction::{
-    Arithmetic, ArithmeticOperand, ArithmeticOperator, BinaryLogic, BinaryOperator, Calibration,
+    Arithmetic, ArithmeticOperator, BinaryLogic, BinaryOperator, Calibration,
     CalibrationIdentifier, Capture, CircuitDefinition, Comparison, ComparisonOperator, Convert,
     Declaration, Delay, Exchange, Fence, FrameDefinition, GateDefinition, GateSpecification,
     GateType, Include, Instruction, Jump, JumpUnless, JumpWhen, Label, Load,

@@ -37,12 +37,6 @@ impl MemoryRegion {
 
 impl Eq for MemoryRegion {}
 
-#[derive(Clone, Debug)]
-pub struct MemoryAccess {
-    pub regions: HashSet<String>,
-    pub access_type: MemoryAccessType,
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct MemoryAccesses {
     pub captures: HashSet<String>,
