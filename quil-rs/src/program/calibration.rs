@@ -90,12 +90,12 @@ impl CalibrationExpansion {
     /// This is to be used when the given index is removed from the target program
     /// in the process of calibration expansion (for example, a `DECLARE`).
     pub(crate) fn remove_target_index(&mut self, target_index: usize) {
-        // Adjust the start of the range if the target index is within the range
+        // Adjust the start of the range if the target index is before the range
         if self.range.start >= target_index {
             self.range.start = self.range.start.saturating_sub(1);
         }
 
-        // Adjust the end of the range if the target index is within the range
+        // Adjust the end of the range if the target index is before the end of the range
         if self.range.end > target_index {
             self.range.end = self.range.end.saturating_sub(1);
         }
