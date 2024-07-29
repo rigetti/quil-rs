@@ -1,3 +1,9 @@
+## 0.11.2-rc.0
+
+### Fixes
+
+- Define correct module path for each instruction type
+
 ## 0.11.1
 
 ### Features
