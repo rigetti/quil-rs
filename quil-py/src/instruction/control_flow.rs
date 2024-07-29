@@ -7,7 +7,7 @@ use rigetti_pyo3::{
     PyWrapper,
 };
 
-use crate::{impl_eq, impl_to_quil, instruction::PyMemoryReference};
+use crate::{impl_eq, impl_pickle_for_instruction, impl_to_quil, instruction::PyMemoryReference};
 
 /// Implements __copy__ and __deepcopy__ for instructions containing a [`Target`].
 ///
@@ -40,8 +40,8 @@ macro_rules! impl_copy_for_target_containing_instructions {
 }
 
 py_wrap_data_struct! {
-    #[pyo3(subclass)]
     #[derive(Debug, Hash, PartialEq, Eq)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyLabel(Label) as "Label" {
         target: Target => PyTarget
     }
@@ -51,6 +51,7 @@ impl_hash!(PyLabel);
 impl_to_quil!(PyLabel);
 impl_copy_for_target_containing_instructions!(PyLabel);
 impl_eq!(PyLabel);
+impl_pickle_for_instruction!(PyLabel);
 
 #[pymethods]
 impl PyLabel {
@@ -96,7 +97,7 @@ impl PyTargetPlaceholder {
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyJump(Jump) as "Jump" {
         target: Target => PyTarget
     }
@@ -105,6 +106,7 @@ impl_repr!(PyJump);
 impl_to_quil!(PyJump);
 impl_copy_for_target_containing_instructions!(PyJump);
 impl_eq!(PyJump);
+impl_pickle_for_instruction!(PyJump);
 
 #[pymethods]
 impl PyJump {
@@ -116,7 +118,7 @@ impl PyJump {
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyJumpWhen(JumpWhen) as "JumpWhen" {
         target: Target => PyTarget,
         condition: MemoryReference => PyMemoryReference
@@ -126,6 +128,7 @@ impl_repr!(PyJumpWhen);
 impl_to_quil!(PyJumpWhen);
 impl_copy_for_target_containing_instructions!(PyJumpWhen);
 impl_eq!(PyJumpWhen);
+impl_pickle_for_instruction!(PyJumpWhen);
 
 #[pymethods]
 impl PyJumpWhen {
@@ -137,7 +140,7 @@ impl PyJumpWhen {
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyJumpUnless(JumpUnless) as "JumpUnless" {
         target: Target => PyTarget,
         condition: MemoryReference => PyMemoryReference
@@ -147,6 +150,7 @@ impl_repr!(PyJumpUnless);
 impl_to_quil!(PyJumpUnless);
 impl_copy_for_target_containing_instructions!(PyJumpUnless);
 impl_eq!(PyJumpUnless);
+impl_pickle_for_instruction!(PyJumpUnless);
 
 #[pymethods]
 impl PyJumpUnless {

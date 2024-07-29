@@ -1,29 +1,28 @@
 use quil_rs::instruction::{
-    Arithmetic, ArithmeticOperand, ArithmeticOperator, BinaryLogic, BinaryOperand, BinaryOperands,
-    BinaryOperator, Comparison, ComparisonOperand, ComparisonOperator, Convert, Exchange,
-    MemoryReference, Move, UnaryLogic, UnaryOperator,
+    Arithmetic, ArithmeticOperand, ArithmeticOperator, BinaryLogic, BinaryOperand, BinaryOperator,
+    Comparison, ComparisonOperand, ComparisonOperator, Convert, Exchange, MemoryReference, Move,
+    UnaryLogic, UnaryOperator,
 };
 
 use rigetti_pyo3::{
-    impl_as_mut_for_wrapper, impl_hash, impl_repr, py_wrap_data_struct, py_wrap_simple_enum,
-    py_wrap_type, py_wrap_union_enum,
+    impl_hash, impl_repr, py_wrap_data_struct, py_wrap_simple_enum, py_wrap_union_enum,
     pyo3::{
         pymethods,
         types::{PyFloat, PyInt},
         Py, PyResult, Python,
     },
-    PyTryFrom, PyWrapper, PyWrapperMut, ToPython,
+    PyTryFrom,
 };
 
 use super::PyMemoryReference;
-use crate::{impl_copy_for_instruction, impl_eq, impl_to_quil};
+use crate::{impl_copy_for_instruction, impl_eq, impl_pickle_for_instruction, impl_to_quil};
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyArithmetic(Arithmetic) as "Arithmetic" {
         operator: ArithmeticOperator => PyArithmeticOperator,
-        destination: ArithmeticOperand => PyArithmeticOperand,
+        destination: MemoryReference => PyMemoryReference,
         source: ArithmeticOperand => PyArithmeticOperand
     }
 }
@@ -32,6 +31,7 @@ impl_to_quil!(PyArithmetic);
 impl_copy_for_instruction!(PyArithmetic);
 impl_hash!(PyArithmetic);
 impl_eq!(PyArithmetic);
+impl_pickle_for_instruction!(PyArithmetic);
 
 #[pymethods]
 impl PyArithmetic {
@@ -39,12 +39,12 @@ impl PyArithmetic {
     pub fn new(
         py: Python<'_>,
         operator: PyArithmeticOperator,
-        destination: PyArithmeticOperand,
+        destination: PyMemoryReference,
         source: PyArithmeticOperand,
     ) -> PyResult<Self> {
         Ok(PyArithmetic(Arithmetic::new(
             ArithmeticOperator::py_try_from(py, &operator)?,
-            ArithmeticOperand::py_try_from(py, &destination)?,
+            MemoryReference::py_try_from(py, &destination)?,
             ArithmeticOperand::py_try_from(py, &source)?,
         )))
     }
@@ -90,57 +90,6 @@ impl_to_quil!(PyBinaryOperand);
 impl_hash!(PyBinaryOperand);
 impl_eq!(PyBinaryOperand);
 
-py_wrap_type! {
-    #[derive(Debug, PartialEq, Eq)]
-    #[pyo3(subclass)]
-    PyBinaryOperands(BinaryOperands) as "BinaryOperands"
-}
-impl_repr!(PyBinaryOperands);
-impl_hash!(PyBinaryOperands);
-impl_as_mut_for_wrapper!(PyBinaryOperands);
-impl_eq!(PyBinaryOperands);
-
-#[pymethods]
-impl PyBinaryOperands {
-    #[new]
-    pub fn new(
-        py: Python<'_>,
-        memory_reference: PyMemoryReference,
-        operand: PyBinaryOperand,
-    ) -> PyResult<Self> {
-        Ok(Self((
-            MemoryReference::py_try_from(py, &memory_reference)?,
-            BinaryOperand::py_try_from(py, &operand)?,
-        )))
-    }
-
-    #[getter]
-    pub fn get_memory_reference(&self, py: Python<'_>) -> PyResult<PyMemoryReference> {
-        self.as_inner().0.to_python(py)
-    }
-
-    #[setter]
-    pub fn set_memory_reference(
-        &mut self,
-        py: Python<'_>,
-        memory_reference: PyMemoryReference,
-    ) -> PyResult<()> {
-        self.as_inner_mut().0 = MemoryReference::py_try_from(py, &memory_reference)?;
-        Ok(())
-    }
-
-    #[getter]
-    pub fn get_operand(&self, py: Python<'_>) -> PyResult<PyBinaryOperand> {
-        self.as_inner().1.to_python(py)
-    }
-
-    #[setter]
-    pub fn set_operand(&mut self, py: Python<'_>, binary_operand: PyBinaryOperand) -> PyResult<()> {
-        self.as_inner_mut().1 = BinaryOperand::py_try_from(py, &binary_operand)?;
-        Ok(())
-    }
-}
-
 py_wrap_simple_enum! {
     #[derive(Debug, PartialEq, Eq)]
     PyBinaryOperator(BinaryOperator) as "BinaryOperator" {
@@ -156,16 +105,18 @@ impl_eq!(PyBinaryOperator);
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyBinaryLogic(BinaryLogic) as "BinaryLogic" {
         operator: BinaryOperator => PyBinaryOperator,
-        operands: BinaryOperands => PyBinaryOperands
+        destination: MemoryReference => PyMemoryReference,
+        source: BinaryOperand => PyBinaryOperand
     }
 }
 impl_repr!(PyBinaryLogic);
 impl_to_quil!(PyBinaryLogic);
 impl_copy_for_instruction!(PyBinaryLogic);
 impl_eq!(PyBinaryLogic);
+impl_pickle_for_instruction!(PyBinaryLogic);
 
 #[pymethods]
 impl PyBinaryLogic {
@@ -173,18 +124,20 @@ impl PyBinaryLogic {
     pub fn new(
         py: Python<'_>,
         operator: PyBinaryOperator,
-        operands: PyBinaryOperands,
+        destination: PyMemoryReference,
+        source: PyBinaryOperand,
     ) -> PyResult<Self> {
         Ok(PyBinaryLogic(BinaryLogic::new(
             BinaryOperator::py_try_from(py, &operator)?,
-            BinaryOperands::py_try_from(py, &operands)?,
+            MemoryReference::py_try_from(py, &destination)?,
+            BinaryOperand::py_try_from(py, &source)?,
         )))
     }
 }
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyConvert(Convert) as "Convert" {
         destination: MemoryReference => PyMemoryReference,
         source: MemoryReference => PyMemoryReference
@@ -195,6 +148,7 @@ impl_to_quil!(PyConvert);
 impl_copy_for_instruction!(PyConvert);
 impl_hash!(PyConvert);
 impl_eq!(PyConvert);
+impl_pickle_for_instruction!(PyConvert);
 
 #[pymethods]
 impl PyConvert {
@@ -213,7 +167,7 @@ impl PyConvert {
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyMove(Move) as "Move" {
         destination: MemoryReference => PyMemoryReference,
         source: ArithmeticOperand => PyArithmeticOperand
@@ -224,6 +178,7 @@ impl_to_quil!(PyMove);
 impl_copy_for_instruction!(PyMove);
 impl_hash!(PyMove);
 impl_eq!(PyMove);
+impl_pickle_for_instruction!(PyMove);
 
 #[pymethods]
 impl PyMove {
@@ -242,7 +197,7 @@ impl PyMove {
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyExchange(Exchange) as "Exchange" {
         left: MemoryReference => PyMemoryReference,
         right: MemoryReference => PyMemoryReference
@@ -253,6 +208,7 @@ impl_to_quil!(PyExchange);
 impl_copy_for_instruction!(PyExchange);
 impl_hash!(PyExchange);
 impl_eq!(PyExchange);
+impl_pickle_for_instruction!(PyExchange);
 
 #[pymethods]
 impl PyExchange {
@@ -293,33 +249,14 @@ py_wrap_simple_enum! {
     }
 }
 
-type RustComparisonOperands = (MemoryReference, MemoryReference, ComparisonOperand);
-
-// This is a helper type to manage easy conversion of the inner tuple
-// with the macros. It should not be exposed directly.
-py_wrap_type! {
-    PyComparisonOperands(RustComparisonOperands)
-}
-
-impl PyComparisonOperands {
-    pub(crate) fn from_py_tuple(
-        py: Python<'_>,
-        tuple: (PyMemoryReference, PyMemoryReference, PyComparisonOperand),
-    ) -> PyResult<Self> {
-        Ok(Self((
-            MemoryReference::py_try_from(py, &tuple.0)?,
-            MemoryReference::py_try_from(py, &tuple.1)?,
-            ComparisonOperand::py_try_from(py, &tuple.2)?,
-        )))
-    }
-}
-
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyComparison(Comparison) as "Comparison" {
         operator: ComparisonOperator => PyComparisonOperator,
-        operands: RustComparisonOperands => PyComparisonOperands
+        destination: MemoryReference => PyMemoryReference,
+        lhs: MemoryReference => PyMemoryReference,
+        rhs: ComparisonOperand => PyComparisonOperand
     }
 }
 impl_repr!(PyComparison);
@@ -327,6 +264,7 @@ impl_to_quil!(PyComparison);
 impl_copy_for_instruction!(PyComparison);
 impl_hash!(PyComparison);
 impl_eq!(PyComparison);
+impl_pickle_for_instruction!(PyComparison);
 
 #[pymethods]
 impl PyComparison {
@@ -334,43 +272,16 @@ impl PyComparison {
     pub fn new(
         py: Python<'_>,
         operator: PyComparisonOperator,
-        operands: (PyMemoryReference, PyMemoryReference, PyComparisonOperand),
+        destination: PyMemoryReference,
+        lhs: PyMemoryReference,
+        rhs: PyComparisonOperand,
     ) -> PyResult<Self> {
         Ok(Self(Comparison::new(
             ComparisonOperator::py_try_from(py, &operator)?,
-            RustComparisonOperands::py_try_from(
-                py,
-                &PyComparisonOperands::from_py_tuple(py, operands)?,
-            )?,
+            MemoryReference::py_try_from(py, &destination)?,
+            MemoryReference::py_try_from(py, &lhs)?,
+            ComparisonOperand::py_try_from(py, &rhs)?,
         )))
-    }
-
-    // Override the getters/setters generated by [`py_wrap_data_struct!`] so that they
-    // return/take tuples instead of the wrapping [`PyComparisonOperands`] type.
-    #[getter(operands)]
-    fn get_operands_as_tuple(
-        &self,
-        py: Python<'_>,
-    ) -> PyResult<(PyMemoryReference, PyMemoryReference, PyComparisonOperand)> {
-        let operands = &self.as_inner().operands;
-        Ok((
-            operands.0.to_python(py)?,
-            operands.1.to_python(py)?,
-            operands.2.to_python(py)?,
-        ))
-    }
-
-    #[setter(operands)]
-    fn set_operands_from_tuple(
-        &mut self,
-        py: Python<'_>,
-        operands: (PyMemoryReference, PyMemoryReference, PyComparisonOperand),
-    ) -> PyResult<()> {
-        self.as_inner_mut().operands = RustComparisonOperands::py_try_from(
-            py,
-            &PyComparisonOperands::from_py_tuple(py, operands)?,
-        )?;
-        Ok(())
     }
 }
 
@@ -387,7 +298,7 @@ impl_hash!(PyUnaryOperator);
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyUnaryLogic(UnaryLogic) as "UnaryLogic" {
         operator: UnaryOperator => PyUnaryOperator,
         operand: MemoryReference => PyMemoryReference
@@ -398,6 +309,7 @@ impl_to_quil!(PyUnaryLogic);
 impl_copy_for_instruction!(PyUnaryLogic);
 impl_hash!(PyUnaryLogic);
 impl_eq!(PyUnaryLogic);
+impl_pickle_for_instruction!(PyUnaryLogic);
 
 #[pymethods]
 impl PyUnaryLogic {

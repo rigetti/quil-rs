@@ -38,8 +38,7 @@ pub(crate) fn parse_arithmetic(
     operator: ArithmeticOperator,
     input: ParserInput,
 ) -> InternalParserResult<Instruction> {
-    let (input, destination_memory_reference) = parse_memory_reference(input)?;
-    let destination = ArithmeticOperand::MemoryReference(destination_memory_reference);
+    let (input, destination) = parse_memory_reference(input)?;
     let (input, source) = parse_arithmetic_operand(input)?;
 
     Ok((
@@ -59,14 +58,16 @@ pub(crate) fn parse_comparison(
     input: ParserInput,
 ) -> InternalParserResult<Instruction> {
     let (input, destination) = parse_memory_reference(input)?;
-    let (input, left) = parse_memory_reference(input)?;
-    let (input, right) = parse_comparison_operand(input)?;
+    let (input, lhs) = parse_memory_reference(input)?;
+    let (input, rhs) = parse_comparison_operand(input)?;
 
     Ok((
         input,
         Instruction::Comparison(Comparison {
             operator,
-            operands: (destination, left, right),
+            destination,
+            lhs,
+            rhs,
         }),
     ))
 }
@@ -77,14 +78,15 @@ pub(crate) fn parse_logical_binary(
     operator: BinaryOperator,
     input: ParserInput,
 ) -> InternalParserResult<Instruction> {
-    let (input, left) = parse_memory_reference(input)?;
-    let (input, right) = parse_binary_logic_operand(input)?;
+    let (input, destination) = parse_memory_reference(input)?;
+    let (input, source) = parse_binary_logic_operand(input)?;
 
     Ok((
         input,
         Instruction::BinaryLogic(BinaryLogic {
             operator,
-            operands: (left, right),
+            destination,
+            source,
         }),
     ))
 }

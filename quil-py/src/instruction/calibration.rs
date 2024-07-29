@@ -14,14 +14,14 @@ use rigetti_pyo3::{
 
 use crate::{
     expression::PyExpression,
-    impl_copy_for_instruction, impl_eq, impl_to_quil,
+    impl_copy_for_instruction, impl_eq, impl_pickle_for_instruction, impl_to_quil,
     instruction::{PyGateModifier, PyInstruction, PyQubit},
     validation::identifier::RustIdentifierValidationError,
 };
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyCalibration(Calibration) as "Calibration" {
         identifier: CalibrationIdentifier => PyCalibrationIdentifier,
         instructions: Vec<Instruction> => Vec<PyInstruction>
@@ -31,6 +31,7 @@ impl_repr!(PyCalibration);
 impl_to_quil!(PyCalibration);
 impl_copy_for_instruction!(PyCalibration);
 impl_eq!(PyCalibration);
+impl_pickle_for_instruction!(PyCalibration);
 
 #[pymethods]
 impl PyCalibration {
@@ -125,7 +126,7 @@ impl PyCalibrationIdentifier {
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyMeasureCalibrationDefinition(MeasureCalibrationDefinition) as "MeasureCalibrationDefinition" {
         identifier: MeasureCalibrationIdentifier => PyMeasureCalibrationIdentifier,
         instructions: Vec<Instruction> => Vec<PyInstruction>
@@ -135,6 +136,7 @@ impl_repr!(PyMeasureCalibrationDefinition);
 impl_to_quil!(PyMeasureCalibrationDefinition);
 impl_copy_for_instruction!(PyMeasureCalibrationDefinition);
 impl_eq!(PyMeasureCalibrationDefinition);
+impl_pickle_for_instruction!(PyMeasureCalibrationDefinition);
 
 #[pymethods]
 impl PyMeasureCalibrationDefinition {

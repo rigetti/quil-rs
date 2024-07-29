@@ -10,11 +10,11 @@ use rigetti_pyo3::{
     PyTryFrom,
 };
 
-use crate::{impl_copy_for_instruction, impl_eq, impl_to_quil};
+use crate::{impl_copy_for_instruction, impl_eq, impl_pickle_for_instruction, impl_to_quil};
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyPragma(Pragma) as "Pragma" {
         name: String => Py<PyString>,
         arguments: Vec<PragmaArgument> => Vec<PyPragmaArgument>,
@@ -26,6 +26,7 @@ impl_to_quil!(PyPragma);
 impl_copy_for_instruction!(PyPragma);
 impl_hash!(PyPragma);
 impl_eq!(PyPragma);
+impl_pickle_for_instruction!(PyPragma);
 
 #[pymethods]
 impl PyPragma {
@@ -58,7 +59,7 @@ impl_eq!(PyPragmaArgument);
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyInclude(Include) as "Include" {
         filename: String => Py<PyString>
     }
@@ -68,6 +69,7 @@ impl_to_quil!(PyInclude);
 impl_copy_for_instruction!(PyInclude);
 impl_hash!(PyInclude);
 impl_eq!(PyInclude);
+impl_pickle_for_instruction!(PyInclude);
 
 #[pymethods]
 impl PyInclude {

@@ -10,9 +10,9 @@ use crate::{
     expression::{Expression, FunctionCallExpression, InfixExpression, PrefixExpression},
     instruction::{
         Arithmetic, ArithmeticOperand, ArithmeticOperator, BinaryLogic, BinaryOperand,
-        BinaryOperands, BinaryOperator, Comparison, ComparisonOperand, ComparisonOperator,
-        Exchange, Instruction, Load, MemoryReference, Move, ScalarType, SetFrequency, SetPhase,
-        SetScale, ShiftFrequency, ShiftPhase, Store, UnaryLogic, UnaryOperator,
+        BinaryOperator, Comparison, ComparisonOperand, ComparisonOperator, Exchange, Instruction,
+        Load, MemoryReference, Move, ScalarType, SetFrequency, SetPhase, SetScale, ShiftFrequency,
+        ShiftPhase, Store, UnaryLogic, UnaryOperator,
     },
     program::MemoryRegion,
     quil::Quil,
@@ -94,12 +94,30 @@ pub fn type_check(program: &Program) -> TypeResult<()> {
                 source,
                 &program.memory_regions,
             )?,
-            Instruction::Comparison(Comparison { operator, operands }) => {
-                type_check_comparison(instruction, operator, operands, &program.memory_regions)?
-            }
-            Instruction::BinaryLogic(BinaryLogic { operator, operands }) => {
-                type_check_binary_logic(instruction, operator, operands, &program.memory_regions)?
-            }
+            Instruction::Comparison(Comparison {
+                operator,
+                destination,
+                lhs,
+                rhs,
+            }) => type_check_comparison(
+                instruction,
+                operator,
+                destination,
+                lhs,
+                rhs,
+                &program.memory_regions,
+            )?,
+            Instruction::BinaryLogic(BinaryLogic {
+                operator,
+                destination,
+                source,
+            }) => type_check_binary_logic(
+                instruction,
+                operator,
+                destination,
+                source,
+                &program.memory_regions,
+            )?,
             Instruction::UnaryLogic(UnaryLogic { operator, operand }) => {
                 type_check_unary_logic(instruction, operator, operand, &program.memory_regions)?
             }
@@ -240,64 +258,51 @@ fn should_be_real(
 fn type_check_arithmetic(
     instruction: &Instruction,
     operator: &ArithmeticOperator,
-    destination: &ArithmeticOperand,
+    destination: &MemoryReference,
     source: &ArithmeticOperand,
     memory_regions: &IndexMap<String, MemoryRegion>,
 ) -> TypeResult<()> {
-    match destination {
-        ArithmeticOperand::LiteralInteger(_) | ArithmeticOperand::LiteralReal(_) => {
-            operator_operand_mismatch(
+    if let Some(dest_region) = memory_regions.get(&destination.name) {
+        let dt = &dest_region.size.data_type;
+        match (source, dt) {
+            (ArithmeticOperand::LiteralInteger(_), ScalarType::Integer) => Ok(()),
+            (ArithmeticOperand::LiteralReal(_), ScalarType::Real) => Ok(()),
+            (ArithmeticOperand::LiteralInteger(_), ScalarType::Real) => {
+                data_type_mismatch(instruction, destination, dt, source, "`literal integer`")
+            }
+            (ArithmeticOperand::LiteralReal(_), _) => {
+                data_type_mismatch(instruction, destination, dt, source, "`literal real`")
+            }
+            (_, ScalarType::Bit) | (_, ScalarType::Octet) => operator_operand_mismatch(
                 instruction,
-                "operation",
-                "memory reference",
+                operator,
+                "real or integral-valued",
                 destination,
-                "`literal value`",
-            )
-        }
-        ArithmeticOperand::MemoryReference(dest_ref) => {
-            if let Some(dest_region) = memory_regions.get(&dest_ref.name) {
-                let dt = &dest_region.size.data_type;
-                match (source, dt) {
-                    (ArithmeticOperand::LiteralInteger(_), ScalarType::Integer) => Ok(()),
-                    (ArithmeticOperand::LiteralReal(_), ScalarType::Real) => Ok(()),
-                    (ArithmeticOperand::LiteralInteger(_), ScalarType::Real) => {
-                        data_type_mismatch(instruction, dest_ref, dt, source, "`literal integer`")
-                    }
-                    (ArithmeticOperand::LiteralReal(_), _) => {
-                        data_type_mismatch(instruction, dest_ref, dt, source, "`literal real`")
-                    }
-                    (_, ScalarType::Bit) | (_, ScalarType::Octet) => operator_operand_mismatch(
-                        instruction,
-                        operator,
-                        "real or integral-valued",
-                        dest_ref,
-                        dt,
-                    ),
-                    (ArithmeticOperand::MemoryReference(src_ref), _) => {
-                        if let Some(src_region) = memory_regions.get(&src_ref.name) {
-                            let st = &src_region.size.data_type;
-                            match st {
-                                ScalarType::Bit | ScalarType::Octet => operator_operand_mismatch(
-                                    instruction,
-                                    operator,
-                                    "real or integral-valued",
-                                    src_ref,
-                                    st,
-                                ),
-                                st if dt != st => {
-                                    data_type_mismatch(instruction, dest_ref, dt, src_ref, st)
-                                }
-                                _ => Ok(()),
-                            }
-                        } else {
-                            undefined_memory_reference(instruction, src_ref)
+                dt,
+            ),
+            (ArithmeticOperand::MemoryReference(src_ref), _) => {
+                if let Some(src_region) = memory_regions.get(&src_ref.name) {
+                    let st = &src_region.size.data_type;
+                    match st {
+                        ScalarType::Bit | ScalarType::Octet => operator_operand_mismatch(
+                            instruction,
+                            operator,
+                            "real or integral-valued",
+                            src_ref,
+                            st,
+                        ),
+                        st if dt != st => {
+                            data_type_mismatch(instruction, destination, dt, src_ref, st)
                         }
+                        _ => Ok(()),
                     }
+                } else {
+                    undefined_memory_reference(instruction, src_ref)
                 }
-            } else {
-                undefined_memory_reference(instruction, dest_ref)
             }
         }
+    } else {
+        undefined_memory_reference(instruction, destination)
     }
 }
 
@@ -305,41 +310,71 @@ fn type_check_arithmetic(
 fn type_check_comparison(
     instruction: &Instruction,
     operator: &ComparisonOperator,
-    operands: &(MemoryReference, MemoryReference, ComparisonOperand),
+    destination: &MemoryReference,
+    lhs: &MemoryReference,
+    rhs: &ComparisonOperand,
     memory_regions: &IndexMap<String, MemoryRegion>,
 ) -> TypeResult<()> {
-    let (x, y, z) = operands;
-    match (memory_regions.get(&x.name), memory_regions.get(&y.name)) {
-        (None, _) => undefined_memory_reference(instruction, x),
-        (_, None) => undefined_memory_reference(instruction, y),
-        (Some(x_region), Some(y_region)) => {
-            let (xt, yt) = (&x_region.size.data_type, &y_region.size.data_type);
-            if xt != &ScalarType::Bit {
-                operator_operand_mismatch(instruction, operator, "bit", x, xt)
-            } else {
-                match (yt, z) {
-                    (ScalarType::Real, ComparisonOperand::LiteralInteger(_)) => {
-                        data_type_mismatch(instruction, y, yt, z, "`literal integer`")
-                    }
-                    (_, ComparisonOperand::LiteralReal(_)) if yt != &ScalarType::Real => {
-                        data_type_mismatch(instruction, y, yt, z, "`literal real`")
-                    }
-                    (_, ComparisonOperand::MemoryReference(z_ref)) => {
-                        if let Some(z_region) = memory_regions.get(&z_ref.name) {
-                            let zt = &z_region.size.data_type;
-                            if yt != zt {
-                                data_type_mismatch(instruction, y, yt, z, zt)
-                            } else {
-                                Ok(())
-                            }
-                        } else {
-                            undefined_memory_reference(instruction, z_ref)
-                        }
-                    }
-                    _ => Ok(()),
+    match (
+        memory_regions.get(&destination.name),
+        memory_regions.get(&lhs.name),
+    ) {
+        (None, _) => undefined_memory_reference(instruction, destination),
+        (_, None) => undefined_memory_reference(instruction, lhs),
+        (Some(destination_region), Some(lhs_region)) => {
+            match destination_region.size.data_type {
+                ScalarType::Bit => (),
+                destination_ty @ (ScalarType::Integer | ScalarType::Octet | ScalarType::Real) => {
+                    operator_operand_mismatch(
+                        instruction,
+                        operator,
+                        "bit",
+                        destination,
+                        destination_ty,
+                    )?
                 }
+            };
+            let lhs_ty = &lhs_region.size.data_type;
+            match (lhs_ty, rhs) {
+                (ScalarType::Real, ComparisonOperand::LiteralInteger(_)) => {
+                    data_type_mismatch(instruction, lhs, lhs_ty, rhs, "`literal integer`")
+                }
+                (_, ComparisonOperand::LiteralReal(_)) if lhs_ty != &ScalarType::Real => {
+                    data_type_mismatch(instruction, lhs, lhs_ty, rhs, "`literal real`")
+                }
+                (_, ComparisonOperand::MemoryReference(rhs_ref)) => {
+                    if let Some(rhs_region) = memory_regions.get(&rhs_ref.name) {
+                        let rhs_ty = &rhs_region.size.data_type;
+                        if lhs_ty != rhs_ty {
+                            data_type_mismatch(instruction, lhs, lhs_ty, rhs, rhs_ty)
+                        } else {
+                            Ok(())
+                        }
+                    } else {
+                        undefined_memory_reference(instruction, rhs_ref)
+                    }
+                }
+                _ => Ok(()),
             }
         }
+    }
+}
+
+fn type_check_binary_logic_memory_reference(
+    instruction: &Instruction,
+    operator: &BinaryOperator,
+    reference: &MemoryReference,
+    memory_regions: &IndexMap<String, MemoryRegion>,
+) -> TypeResult<()> {
+    if let Some(region) = memory_regions.get(&reference.name) {
+        match &region.size.data_type {
+            ScalarType::Bit | ScalarType::Integer | ScalarType::Octet => Ok(()),
+            ty @ ScalarType::Real => {
+                operator_operand_mismatch(instruction, operator, "integral", reference, ty)
+            }
+        }
+    } else {
+        undefined_memory_reference(instruction, reference)
     }
 }
 
@@ -347,33 +382,19 @@ fn type_check_comparison(
 fn type_check_binary_logic(
     instruction: &Instruction,
     operator: &BinaryOperator,
-    operands: &BinaryOperands,
+    destination: &MemoryReference,
+    source: &BinaryOperand,
     memory_regions: &IndexMap<String, MemoryRegion>,
 ) -> TypeResult<()> {
-    let (x, y) = operands;
-    if let Some(x_region) = memory_regions.get(&x.name) {
-        let xt = &x_region.size.data_type;
-        if xt == &ScalarType::Real {
-            operator_operand_mismatch(instruction, operator, "integral", x, xt)
-        } else {
-            match y {
-                BinaryOperand::LiteralInteger(_) => Ok(()),
-                BinaryOperand::MemoryReference(y_ref) => {
-                    if let Some(y_region) = memory_regions.get(&y_ref.name) {
-                        let yt = &y_region.size.data_type;
-                        if yt == &ScalarType::Real {
-                            operator_operand_mismatch(instruction, operator, "integral", y, yt)
-                        } else {
-                            Ok(())
-                        }
-                    } else {
-                        undefined_memory_reference(instruction, y_ref)
-                    }
-                }
-            }
-        }
-    } else {
-        undefined_memory_reference(instruction, x)
+    type_check_binary_logic_memory_reference(instruction, operator, destination, memory_regions)?;
+    match source {
+        BinaryOperand::LiteralInteger(_) => Ok(()),
+        BinaryOperand::MemoryReference(source_ref) => type_check_binary_logic_memory_reference(
+            instruction,
+            operator,
+            source_ref,
+            memory_regions,
+        ),
     }
 }
 

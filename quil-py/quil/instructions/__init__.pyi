@@ -117,6 +117,12 @@ class Instruction:
     def is_quil_t(self) -> bool:
         """Returns ``True`` if the instruction is a Quil-T instruction, ``False`` otherwise."""
         ...
+    @staticmethod
+    def parse(string: str) -> Instruction:
+        """Parses a Quil ``Instruction`` from a string.
+
+        Raises an error if there is leftover input after parsing, or if there wasn't exactly 1 instruction.
+        """
     def inner(
         self,
     ) -> Union[
@@ -448,7 +454,7 @@ class Arithmetic:
     def __new__(
         cls,
         operator: ArithmeticOperator,
-        destination: ArithmeticOperand,
+        destination: MemoryReference,
         source: ArithmeticOperand,
     ) -> Self: ...
     @property
@@ -456,9 +462,9 @@ class Arithmetic:
     @operator.setter
     def operator(self, operator: ArithmeticOperator) -> None: ...
     @property
-    def destination(self) -> ArithmeticOperand: ...
+    def destination(self) -> MemoryReference: ...
     @destination.setter
-    def destination(self, operand: ArithmeticOperand) -> None: ...
+    def destination(self, operand: MemoryReference) -> None: ...
     @property
     def source(self) -> ArithmeticOperand: ...
     @source.setter
@@ -540,35 +546,25 @@ class BinaryOperator(Enum):
         If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
-class BinaryOperands:
-    def __new__(
-        cls,
-        memory_reference: MemoryReference,
-        operand: BinaryOperand,
-    ) -> Self: ...
-    @property
-    def memory_reference(self) -> MemoryReference: ...
-    @memory_reference.setter
-    def memory_reference(self, memory_reference: MemoryReference) -> None: ...
-    @property
-    def operand(self) -> BinaryOperand: ...
-    @operand.setter
-    def operand(self, operand: BinaryOperand) -> None: ...
-
 class BinaryLogic:
     def __new__(
         cls,
         operator: BinaryOperator,
-        operands: BinaryOperands,
+        destination: MemoryReference,
+        source: BinaryOperand,
     ) -> Self: ...
     @property
     def operator(self) -> BinaryOperator: ...
     @operator.setter
     def operator(self, operator: BinaryOperator) -> None: ...
     @property
-    def operands(self) -> BinaryOperands: ...
-    @operands.setter
-    def operands(self, operands: BinaryOperands) -> None: ...
+    def destination(self) -> MemoryReference: ...
+    @destination.setter
+    def destination(self, operand: MemoryReference) -> None: ...
+    @property
+    def source(self) -> BinaryOperand: ...
+    @source.setter
+    def source(self, operand: BinaryOperand) -> None: ...
     def to_quil(self) -> str:
         """Attempt to convert the instruction to a valid Quil string.
 
@@ -743,18 +739,26 @@ class Comparison:
     def __new__(
         cls,
         operator: ComparisonOperator,
-        operands: Tuple[MemoryReference, MemoryReference, ComparisonOperand],
+        destination: MemoryReference,
+        lhs: MemoryReference,
+        rhs: ComparisonOperand,
     ) -> Self: ...
     @property
     def operator(self) -> ComparisonOperator: ...
     @operator.setter
     def operator(self, operator: ComparisonOperator) -> None: ...
     @property
-    def operands(
-        self,
-    ) -> Tuple[MemoryReference, MemoryReference, ComparisonOperand]: ...
-    @operands.setter
-    def operands(self, operands: Tuple[MemoryReference, MemoryReference, ComparisonOperand]) -> None: ...
+    def destination(self) -> MemoryReference: ...
+    @destination.setter
+    def destination(self, operand: MemoryReference) -> None: ...
+    @property
+    def lhs(self) -> MemoryReference: ...
+    @lhs.setter
+    def lhs(self, operand: MemoryReference) -> None: ...
+    @property
+    def rhs(self) -> ComparisonOperand: ...
+    @rhs.setter
+    def rhs(self, operand: ComparisonOperand) -> None: ...
     def to_quil(self) -> str:
         """Attempt to convert the instruction to a valid Quil string.
 

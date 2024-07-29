@@ -27,7 +27,7 @@ use crate::{instruction::InstructionRole, program::Program, quil::Quil};
 
 pub use crate::program::memory::MemoryAccessType;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum ScheduleErrorVariant {
     DuplicateLabel,
     UncalibratedInstruction,

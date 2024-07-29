@@ -23,12 +23,13 @@ use rigetti_pyo3::{
 use super::PyQubit;
 use crate::{
     expression::PyExpression,
-    impl_copy_for_instruction, impl_eq, impl_to_quil,
+    impl_copy_for_instruction, impl_eq, impl_pickle_for_instruction, impl_to_quil,
     instruction::{PyMemoryReference, PyWaveformInvocation},
 };
 
 py_wrap_union_enum! {
     #[derive(Debug, PartialEq, Eq)]
+    #[pyo3(module = "quil.instructions")]
     PyAttributeValue(AttributeValue) as "AttributeValue" {
         string: String => Py<PyString>,
         expression: Expression => PyExpression
@@ -43,7 +44,7 @@ pub type PyFrameAttributes = IndexMap<String, PyAttributeValue>;
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyFrameDefinition(FrameDefinition) as "FrameDefinition" {
         identifier: FrameIdentifier => PyFrameIdentifier,
         attributes: FrameAttributes => PyFrameAttributes
@@ -53,6 +54,7 @@ impl_repr!(PyFrameDefinition);
 impl_to_quil!(PyFrameDefinition);
 impl_copy_for_instruction!(PyFrameDefinition);
 impl_eq!(PyFrameDefinition);
+impl_pickle_for_instruction!(PyFrameDefinition);
 
 #[pymethods]
 impl PyFrameDefinition {
@@ -71,7 +73,7 @@ impl PyFrameDefinition {
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq, Hash)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyFrameIdentifier(FrameIdentifier) as "FrameIdentifier" {
         name: String => Py<PyString>,
         qubits: Vec<Qubit> => Vec<PyQubit>
@@ -95,7 +97,7 @@ impl PyFrameIdentifier {
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyCapture(Capture) as "Capture" {
         blocking: bool => Py<PyBool>,
         frame: FrameIdentifier => PyFrameIdentifier,
@@ -107,6 +109,7 @@ impl_repr!(PyCapture);
 impl_to_quil!(PyCapture);
 impl_copy_for_instruction!(PyCapture);
 impl_eq!(PyCapture);
+impl_pickle_for_instruction!(PyCapture);
 
 #[pymethods]
 impl PyCapture {
@@ -129,7 +132,7 @@ impl PyCapture {
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyPulse(Pulse) as "Pulse" {
         blocking: bool => Py<PyBool>,
         frame: FrameIdentifier => PyFrameIdentifier,
@@ -140,6 +143,7 @@ impl_repr!(PyPulse);
 impl_to_quil!(PyPulse);
 impl_copy_for_instruction!(PyPulse);
 impl_eq!(PyPulse);
+impl_pickle_for_instruction!(PyPulse);
 
 #[pymethods]
 impl PyPulse {
@@ -160,7 +164,7 @@ impl PyPulse {
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyRawCapture(RawCapture) as "RawCapture" {
         blocking: bool => Py<PyBool>,
         frame: FrameIdentifier => PyFrameIdentifier,
@@ -174,6 +178,7 @@ impl_to_quil!(PyRawCapture);
 impl_copy_for_instruction!(PyRawCapture);
 impl_hash!(PyRawCapture);
 impl_eq!(PyRawCapture);
+impl_pickle_for_instruction!(PyRawCapture);
 
 #[pymethods]
 impl PyRawCapture {
@@ -196,7 +201,7 @@ impl PyRawCapture {
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PySetFrequency(SetFrequency) as "SetFrequency" {
         frame: FrameIdentifier => PyFrameIdentifier,
         frequency: Expression => PyExpression
@@ -207,6 +212,7 @@ impl_to_quil!(PySetFrequency);
 impl_copy_for_instruction!(PySetFrequency);
 impl_hash!(PySetFrequency);
 impl_eq!(PySetFrequency);
+impl_pickle_for_instruction!(PySetFrequency);
 
 #[pymethods]
 impl PySetFrequency {
@@ -225,7 +231,7 @@ impl PySetFrequency {
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PySetPhase(SetPhase) as "SetPhase" {
         frame: FrameIdentifier => PyFrameIdentifier,
         phase: Expression => PyExpression
@@ -236,6 +242,7 @@ impl_to_quil!(PySetPhase);
 impl_copy_for_instruction!(PySetPhase);
 impl_hash!(PySetPhase);
 impl_eq!(PySetPhase);
+impl_pickle_for_instruction!(PySetPhase);
 
 #[pymethods]
 impl PySetPhase {
@@ -250,7 +257,7 @@ impl PySetPhase {
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PySetScale(SetScale) as "SetScale" {
         frame: FrameIdentifier => PyFrameIdentifier,
         scale: Expression => PyExpression
@@ -261,6 +268,7 @@ impl_to_quil!(PySetScale);
 impl_copy_for_instruction!(PySetScale);
 impl_hash!(PySetScale);
 impl_eq!(PySetScale);
+impl_pickle_for_instruction!(PySetScale);
 
 #[pymethods]
 impl PySetScale {
@@ -275,7 +283,7 @@ impl PySetScale {
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyShiftFrequency(ShiftFrequency) as "ShiftFrequency" {
         frame: FrameIdentifier => PyFrameIdentifier,
         frequency: Expression => PyExpression
@@ -286,6 +294,7 @@ impl_to_quil!(PyShiftFrequency);
 impl_copy_for_instruction!(PyShiftFrequency);
 impl_hash!(PyShiftFrequency);
 impl_eq!(PyShiftFrequency);
+impl_pickle_for_instruction!(PyShiftFrequency);
 
 #[pymethods]
 impl PyShiftFrequency {
@@ -304,7 +313,7 @@ impl PyShiftFrequency {
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyShiftPhase(ShiftPhase) as "ShiftPhase" {
         frame: FrameIdentifier => PyFrameIdentifier,
         phase: Expression => PyExpression
@@ -315,6 +324,7 @@ impl_to_quil!(PyShiftPhase);
 impl_copy_for_instruction!(PyShiftPhase);
 impl_hash!(PyShiftPhase);
 impl_eq!(PyShiftPhase);
+impl_pickle_for_instruction!(PyShiftPhase);
 
 #[pymethods]
 impl PyShiftPhase {
@@ -329,7 +339,7 @@ impl PyShiftPhase {
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PySwapPhases(SwapPhases) as "SwapPhases" {
         frame_1: FrameIdentifier => PyFrameIdentifier,
         frame_2: FrameIdentifier => PyFrameIdentifier
@@ -340,6 +350,7 @@ impl_to_quil!(PySwapPhases);
 impl_copy_for_instruction!(PySwapPhases);
 impl_hash!(PySwapPhases);
 impl_eq!(PySwapPhases);
+impl_pickle_for_instruction!(PySwapPhases);
 
 #[pymethods]
 impl PySwapPhases {

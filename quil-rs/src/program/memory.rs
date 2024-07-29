@@ -51,7 +51,7 @@ pub struct MemoryAccesses {
 }
 
 /// Express a mode of memory access.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum MemoryAccessType {
     /// Read from a memory location
     Read,
@@ -104,10 +104,15 @@ impl Instruction {
                 writes: set_from_memory_references![[destination]],
                 ..Default::default()
             },
-            Instruction::Comparison(Comparison { operands, .. }) => {
-                let mut reads = HashSet::from([operands.1.name.clone()]);
-                let writes = HashSet::from([operands.0.name.clone()]);
-                if let ComparisonOperand::MemoryReference(mem) = &operands.2 {
+            Instruction::Comparison(Comparison {
+                destination,
+                lhs,
+                rhs,
+                operator: _,
+            }) => {
+                let mut reads = HashSet::from([lhs.name.clone()]);
+                let writes = HashSet::from([destination.name.clone()]);
+                if let ComparisonOperand::MemoryReference(mem) = &rhs {
                     reads.insert(mem.name.clone());
                 }
 
@@ -117,12 +122,16 @@ impl Instruction {
                     ..Default::default()
                 }
             }
-            Instruction::BinaryLogic(BinaryLogic { operands, .. }) => {
+            Instruction::BinaryLogic(BinaryLogic {
+                destination,
+                source,
+                operator: _,
+            }) => {
                 let mut reads = HashSet::new();
                 let mut writes = HashSet::new();
-                reads.insert(operands.0.name.clone());
-                writes.insert(operands.0.name.clone());
-                if let BinaryOperand::MemoryReference(mem) = &operands.1 {
+                reads.insert(destination.name.clone());
+                writes.insert(destination.name.clone());
+                if let BinaryOperand::MemoryReference(mem) = &source {
                     reads.insert(mem.name.clone());
                 }
 
@@ -142,7 +151,7 @@ impl Instruction {
                 source,
                 ..
             }) => MemoryAccesses {
-                writes: set_from_optional_memory_reference![destination.get_memory_reference()],
+                writes: HashSet::from([destination.name.clone()]),
                 reads: set_from_optional_memory_reference![source.get_memory_reference()],
                 ..Default::default()
             },

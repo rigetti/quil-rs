@@ -13,6 +13,7 @@ use crate::{impl_eq, impl_to_quil};
 
 py_wrap_union_enum! {
     #[derive(Debug, Eq, Hash, PartialEq)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyQubit(Qubit) as "Qubit" {
         fixed: Fixed => Py<PyLong>,
         variable: Variable => Py<PyString>,
@@ -25,8 +26,8 @@ impl_hash!(PyQubit);
 impl_eq!(PyQubit);
 
 py_wrap_type! {
-    #[pyo3(subclass)]
     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyQubitPlaceholder(QubitPlaceholder) as "QubitPlaceholder"
 }
 impl_repr!(PyQubitPlaceholder);

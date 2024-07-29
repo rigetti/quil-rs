@@ -520,10 +520,10 @@ impl Program {
             .chain(vec![
                 Instruction::Arithmetic(Arithmetic {
                     operator: ArithmeticOperator::Subtract,
-                    destination: ArithmeticOperand::MemoryReference(MemoryReference {
+                    destination: MemoryReference {
                         name: loop_count_reference.name.clone(),
                         index: 0,
-                    }),
+                    },
                     source: ArithmeticOperand::LiteralInteger(1),
                 }),
                 Instruction::JumpUnless(JumpUnless {

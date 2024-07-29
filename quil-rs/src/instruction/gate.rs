@@ -1079,7 +1079,7 @@ mod test_gate_definition {
 }
 
 /// The type of a [`GateDefinition`]
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum GateType {
     Matrix,
     Permutation,

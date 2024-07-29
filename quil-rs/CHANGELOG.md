@@ -1,3 +1,86 @@
+## 0.27.1
+
+### Features
+
+- Initialize `Instruction`s from a Quil string. Python `Instruction`s support the `pickle` module. (#382)
+
+## 0.27.1-rc.0
+
+### Features
+
+- Initialize `Instruction`s from a Quil string. Python `Instruction`s support the `pickle` module. (#382)
+
+## 0.27.0
+
+### Breaking Changes
+
+- change Rust representation of classical instructions (#376)
+
+### Features
+
+- make all unit-only enums Copy (#377)
+
+### Fixes
+
+- update Python types to new representation of classical instructions
+- update tests to work with new classical instruction types
+
+## 0.27.0-rc.1
+
+### Breaking Changes
+
+- change Rust representation of classical instructions (#376)
+
+### Features
+
+- make all unit-only enums Copy (#377)
+
+### Fixes
+
+- update Python types to new representation of classical instructions
+- update tests to work with new classical instruction types
+
+## 0.27.0-rc.0
+
+### Breaking Changes
+
+- change Rust representation of classical instructions (#376)
+
+### Features
+
+- make all unit-only enums Copy (#377)
+
+### Fixes
+
+- update Python types to new representation of classical instructions
+- update tests to work with new classical instruction types
+
+## 0.26.2-rc.0
+
+### Features
+
+- make all unit-only enums Copy (#377)
+
+## 0.26.1
+
+### Features
+
+- add waveform templates (#369)
+
+### Fixes
+
+- Parsing programs with integers that overflow a u64 will no longer panic; instead, they will raise an error. (#372)
+
+## 0.26.1-rc.1
+
+### Features
+
+- add waveform templates (#369)
+
+### Fixes
+
+- Parsing programs with integers that overflow a u64 will no longer panic; instead, they will raise an error. (#372)
+
 ## 0.26.1-rc.0
 
 ### Features

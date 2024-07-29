@@ -5,14 +5,14 @@ use super::MemoryReference;
 #[derive(Clone, Debug, Hash, PartialEq)]
 pub struct Arithmetic {
     pub operator: ArithmeticOperator,
-    pub destination: ArithmeticOperand,
+    pub destination: MemoryReference,
     pub source: ArithmeticOperand,
 }
 
 impl Arithmetic {
     pub fn new(
         operator: ArithmeticOperator,
-        destination: ArithmeticOperand,
+        destination: MemoryReference,
         source: ArithmeticOperand,
     ) -> Self {
         Self {
@@ -117,8 +117,6 @@ impl Quil for BinaryOperand {
     }
 }
 
-pub type BinaryOperands = (MemoryReference, BinaryOperand);
-
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 pub enum BinaryOperator {
     And,
@@ -144,7 +142,8 @@ impl Quil for BinaryOperator {
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct BinaryLogic {
     pub operator: BinaryOperator,
-    pub operands: BinaryOperands,
+    pub destination: MemoryReference,
+    pub source: BinaryOperand,
 }
 
 impl Quil for BinaryLogic {
@@ -155,16 +154,24 @@ impl Quil for BinaryLogic {
     ) -> crate::quil::ToQuilResult<()> {
         self.operator.write(f, fall_back_to_debug)?;
         write!(f, " ")?;
-        self.operands.0.write(f, fall_back_to_debug)?;
+        self.destination.write(f, fall_back_to_debug)?;
         write!(f, " ")?;
-        self.operands.1.write(f, fall_back_to_debug)?;
+        self.source.write(f, fall_back_to_debug)?;
         Ok(())
     }
 }
 
 impl BinaryLogic {
-    pub fn new(operator: BinaryOperator, operands: BinaryOperands) -> Self {
-        Self { operator, operands }
+    pub fn new(
+        operator: BinaryOperator,
+        destination: MemoryReference,
+        source: BinaryOperand,
+    ) -> Self {
+        Self {
+            operator,
+            destination,
+            source,
+        }
     }
 }
 
@@ -255,15 +262,24 @@ impl Exchange {
 #[derive(Clone, Debug, Hash, PartialEq)]
 pub struct Comparison {
     pub operator: ComparisonOperator,
-    pub operands: (MemoryReference, MemoryReference, ComparisonOperand),
+    pub destination: MemoryReference,
+    pub lhs: MemoryReference,
+    pub rhs: ComparisonOperand,
 }
 
 impl Comparison {
     pub fn new(
         operator: ComparisonOperator,
-        operands: (MemoryReference, MemoryReference, ComparisonOperand),
+        destination: MemoryReference,
+        lhs: MemoryReference,
+        rhs: ComparisonOperand,
     ) -> Self {
-        Self { operator, operands }
+        Self {
+            operator,
+            destination,
+            lhs,
+            rhs,
+        }
     }
 }
 
@@ -275,11 +291,11 @@ impl Quil for Comparison {
     ) -> crate::quil::ToQuilResult<()> {
         self.operator.write(f, fall_back_to_debug)?;
         write!(f, " ")?;
-        self.operands.0.write(f, fall_back_to_debug)?;
+        self.destination.write(f, fall_back_to_debug)?;
         write!(f, " ")?;
-        self.operands.1.write(f, fall_back_to_debug)?;
+        self.lhs.write(f, fall_back_to_debug)?;
         write!(f, " ")?;
-        self.operands.2.write(f, fall_back_to_debug)?;
+        self.rhs.write(f, fall_back_to_debug)?;
         Ok(())
     }
 }
