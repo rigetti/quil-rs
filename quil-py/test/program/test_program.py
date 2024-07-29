@@ -189,31 +189,43 @@ CNOT 2 3
 
 
 def test_calibration_expansion():
-    program = Program.parse(
-        """DEFCAL X 0:
-    Y 0
+    """
+    Assert that program calibration expansion happens as expected and that the source map is correct.
+    """
+    import inspect
 
-DEFCAL Y 0:
-    Z 0
+    program_text = inspect.cleandoc(
+        """
+        DEFCAL X 0:
+            Y 0
 
-X 0
-Y 0
-"""
+        DEFCAL Y 0:
+            Z 0
+
+        X 0
+        Y 0
+        """
     )
+    program = Program.parse(program_text)
     expansion = program.expand_calibrations_with_source_map()
     source_map = expansion.source_map()
 
+    expected_program_text = inspect.cleandoc(
+        """
+        DEFCAL X 0:
+            Y 0
+
+        DEFCAL Y 0:
+            Z 0
+
+        Z 0
+        Z 0
+        """
+    )
+
     assert (
         expansion.program().to_quil()
-        == Program.parse("""DEFCAL X 0:
-    Y 0
-
-DEFCAL Y 0:
-    Z 0
-
-Z 0
-Z 0
-""").to_quil()
+        == Program.parse(expected_program_text).to_quil()
     )
 
     # The X at index 0 should have been replaced with a Z at index 0
