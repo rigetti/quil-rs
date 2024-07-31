@@ -52,6 +52,9 @@ class Program:
     def memory_regions(self, memory_regions: Dict[str, MemoryRegion]): ...
     @property
     def declarations(self) -> Dict[str, Declaration]: ...
+    def freeze(self) -> FrozenProgram:
+        """Return a copy of this `Program` as an immutable `FrozenProgram`."""
+
     def dagger(self) -> "Program":
         """Creates a new conjugate transpose of the ``Program`` by reversing the order of gate instructions and applying the DAGGER modifier to each.
 
@@ -164,6 +167,35 @@ class Program:
 
         .. _control flow graph: https://en.wikipedia.org/wiki/Control-flow_graph
         """
+
+@final
+class FrozenProgram:
+    """This class is an immutable version of the `Program` class. Once an instance of this class is created, its contents cannot be modified.
+
+    Immutability is ensured by not providing any methods that could alter the instance, either in Python or through underlying Rust bindings.
+    """
+
+    def __new__(cls, program: Program) -> "FrozenProgram":
+        """Create a new instance of a `FrozenProgram` using a `Program`."""
+
+    @staticmethod
+    def from_quil(quil: str) -> "FrozenProgram":
+        """Create a new instance of a `FrozenProgram` using a Quil string. Raises an error if the Quil program is not valid."""
+
+    def to_quil(self) -> str:
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
+        """
+        ...
+    def as_mutable_program(self) -> Program:
+        """Return a copy of this `FrozenProgram` as a mutable `Program`."""
 
 class BasicBlock:
     def __new__(cls, instance: "BasicBlock") -> Self:

@@ -5,7 +5,7 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 
 from quil.instructions import Gate, Instruction, Jump, Qubit, QubitPlaceholder, Target, TargetPlaceholder
-from quil.program import Program
+from quil.program import FrozenProgram, Program
 
 
 def test_pickle():
@@ -186,3 +186,12 @@ CNOT 2 3
     program = Program.parse(input)
     program_without_quil_t = program.filter_instructions(lambda instruction: not instruction.is_quil_t())
     assert program_without_quil_t.to_quil() == snapshot
+
+
+class TestFrozenProgram:
+    def test_freeze_program(self):
+        program = Program.parse("H 0")
+        frozen = program.freeze()
+        assert isinstance(frozen, FrozenProgram)
+        assert frozen.to_quil() == program.to_quil()
+        assert frozen.as_mutable_program() == program
