@@ -53,7 +53,7 @@ class Program:
     @property
     def declarations(self) -> Dict[str, Declaration]: ...
     def freeze(self) -> FrozenProgram:
-        """Return a copy of this `Program` as an immutable `FrozenProgram`"""
+        """Return a copy of this `Program` as an immutable `FrozenProgram`."""
 
     def dagger(self) -> "Program":
         """Creates a new conjugate transpose of the ``Program`` by reversing the order of gate instructions and applying the DAGGER modifier to each.
