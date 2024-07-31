@@ -5,7 +5,7 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 
 from quil.instructions import Gate, Instruction, Jump, Qubit, QubitPlaceholder, Target, TargetPlaceholder
-from quil.program import Program, FrozenProgram
+from quil.program import FrozenProgram, Program
 
 
 def test_pickle():
