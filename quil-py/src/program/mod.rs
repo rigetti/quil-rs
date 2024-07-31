@@ -5,6 +5,7 @@ use std::{
 
 use indexmap::IndexMap;
 use numpy::{PyArray2, ToPyArray};
+use pyo3::types::PyTuple;
 use quil_rs::{
     instruction::{Instruction, QubitPlaceholder, TargetPlaceholder, Waveform},
     program::{
@@ -347,6 +348,10 @@ impl PyProgram {
             .resolve_placeholders_with_custom_resolvers(rs_target_resolver, rs_qubit_resolver);
     }
 
+    pub fn freeze(&self) -> FrozenProgram {
+        FrozenProgram::new(self.clone())
+    }
+
     pub fn __add__(&self, py: Python<'_>, rhs: Self) -> PyResult<Self> {
         let new = self.as_inner().clone() + rhs.as_inner().clone();
         new.to_python(py)
@@ -373,6 +378,58 @@ impl PyProgram {
     }
 }
 
+#[pyclass]
+#[derive(Debug, Clone, PartialEq)]
+pub struct FrozenProgram {
+    program: PyProgram,
+}
+impl_eq!(FrozenProgram);
+
+#[pymethods]
+impl FrozenProgram {
+    #[new]
+    fn new(program: PyProgram) -> Self {
+        Self { program }
+    }
+
+    #[staticmethod]
+    fn from_quil(quil: &str) -> PyResult<Self> {
+        Ok(Self {
+            program: PyProgram(
+                Program::from_str(quil).map_err(|e| PyValueError::new_err(e.to_string()))?,
+            ),
+        })
+    }
+
+    fn to_quil(&self) -> PyResult<String> {
+        self.program.to_quil().map_err(|e| {
+            PyValueError::new_err(format!("Program could not be converted to valid quil: {e}"))
+        })
+    }
+
+    fn to_quil_or_debug(&self) -> String {
+        self.program.to_quil_or_debug()
+    }
+
+    fn as_mutable_program(&self) -> PyProgram {
+        self.program.clone()
+    }
+
+    fn __reduce__<'py>(&'py self, py: Python<'py>) -> PyResult<&'py PyAny> {
+        let callable = py.get_type::<Self>().getattr("from_quil")?;
+        let args = pyo3::types::PyTuple::new(py, &[self.to_quil()?.into_py(py)]);
+        Ok(PyTuple::new(py, [callable, args]))
+    }
+
+    fn __repr__(&self) -> String {
+        format!("{self:?}")
+    }
+
+    fn __str__(&self) -> String {
+        self.to_quil_or_debug()
+    }
+}
+
 create_init_submodule! {
-    classes: [ PyFrameSet, PyProgram, PyCalibrationSet, PyMemoryRegion, PyBasicBlock, PyControlFlowGraph, PyScheduleSeconds, PyScheduleSecondsItem, PyTimeSpanSeconds ],
+    classes: [ PyFrameSet, PyProgram, PyCalibrationSet, PyMemoryRegion, PyBasicBlock, PyControlFlowGraph, PyScheduleSeconds, PyScheduleSecondsItem, PyTimeSpanSeconds, FrozenProgram ],
 }
