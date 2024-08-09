@@ -13,7 +13,6 @@ categories = ["parser-implementations", "science", "compilers", "emulators"]
 approx = { version = "0.5.1", features = ["num-complex"] }
 dot-writer = { version = "0.1.2", optional = true }
 itertools = "0.12.1"
-lexical = "6.1.1"
 ndarray.workspace = true
 nom = "7.1.1"
 nom_locate = "4.0.0"
@@ -26,6 +25,7 @@ strum.workspace = true
 thiserror = "1.0.56"
 indexmap.workspace = true
 statrs = "0.16.0"
+ryu = "1.0.18"
 
 [dev-dependencies]
 clap = { version = "4.3.19", features = ["derive", "string"] }

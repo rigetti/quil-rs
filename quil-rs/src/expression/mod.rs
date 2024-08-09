@@ -21,16 +21,14 @@ use crate::{
     quil::Quil,
     real,
 };
-use lexical::{format, to_string_with_options, WriteFloatOptions};
 use nom_locate::LocatedSpan;
 use num_complex::Complex64;
-use once_cell::sync::Lazy;
+use ryu;
 use std::{
     collections::HashMap,
     f64::consts::PI,
     fmt,
     hash::{Hash, Hasher},
-    num::NonZeroI32,
     ops::{Add, AddAssign, BitXor, BitXorAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign},
     str::FromStr,
 };
@@ -437,49 +435,36 @@ impl FromStr for Expression {
     }
 }
 
-static FORMAT_REAL_OPTIONS: Lazy<WriteFloatOptions> = Lazy::new(|| {
-    WriteFloatOptions::builder()
-        .negative_exponent_break(NonZeroI32::new(-5))
-        .positive_exponent_break(NonZeroI32::new(15))
-        .trim_floats(true)
-        .build()
-        .expect("options are valid")
-});
-
-static FORMAT_IMAGINARY_OPTIONS: Lazy<WriteFloatOptions> = Lazy::new(|| {
-    WriteFloatOptions::builder()
-        .negative_exponent_break(NonZeroI32::new(-5))
-        .positive_exponent_break(NonZeroI32::new(15))
-        .trim_floats(false) // Per the quil spec, the imaginary part of a complex number is always a floating point number
-        .build()
-        .expect("options are valid")
-});
-
 /// Format a num_complex::Complex64 value in a way that omits the real or imaginary part when
 /// reasonable. That is:
 ///
 /// - When imaginary is set but real is 0, show only imaginary
 /// - When imaginary is 0, show real only
 /// - When both are non-zero, show with the correct operator in between
+///
+/// `ryu` formats exponents from -5 to 15 in standard notation, and larger magnitudes in scientific
+/// notation.
 #[inline(always)]
 fn format_complex(value: &Complex64) -> String {
-    const FORMAT: u128 = format::STANDARD;
     if value.re == 0f64 && value.im == 0f64 {
         "0".to_owned()
-    } else if value.im == 0f64 {
-        to_string_with_options::<_, FORMAT>(value.re, &FORMAT_REAL_OPTIONS)
     } else if value.re == 0f64 {
-        to_string_with_options::<_, FORMAT>(value.im, &FORMAT_IMAGINARY_OPTIONS) + "i"
+        ryu::Buffer::new().format(value.im).to_owned() + "i"
     } else {
-        let mut out = to_string_with_options::<_, FORMAT>(value.re, &FORMAT_REAL_OPTIONS);
-        if value.im > 0f64 {
-            out.push('+')
+        let mut out = ryu::Buffer::new().format(value.re).to_owned();
+        match value.im {
+            0f64 => {}
+            im if im > 0f64 => {
+                out.push('+');
+                out.push_str(ryu::Buffer::new().format(im));
+                out.push('i');
+            }
+            im => {
+                // The `-` is included in the formatted output
+                out.push_str(ryu::Buffer::new().format(im));
+                out.push('i');
+            }
         }
-        out.push_str(&to_string_with_options::<_, FORMAT>(
-            value.im,
-            &FORMAT_IMAGINARY_OPTIONS,
-        ));
-        out.push('i');
         out
     }
 }
