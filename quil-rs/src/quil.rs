@@ -29,6 +29,10 @@ pub trait Quil: std::fmt::Debug {
     ) -> Result<(), ToQuilError>;
 }
 
+/// Per the Quil specification, an indentation is exactly 4 spaces.
+/// See [Quil 3-2](https://quil-lang.github.io/#3-2Syntactic-Rudiments)
+pub(crate) const INDENTATION: &str = "    ";
+
 pub type ToQuilResult<T> = Result<T, ToQuilError>;
 
 /// Errors which can occur when converting a Quil item to a string.

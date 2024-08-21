@@ -135,6 +135,13 @@ pub(crate) fn lex(input: LexInput) -> Result<Vec<TokenWithLocation>, LexError> {
         .map_err(LexError::from)
 }
 
+/// TODO: Discuss:
+///     * Should we make indentation exactly 4 spaces, rather than 4-7?
+///     * Should we allow for multiple levels of indentation? The Quil spec implies that only a
+///       single level indentation is possible, as each indentation must be preceded by a newline
+///     * What are the implications of using spaces instead of tabs for program serialization?
+///       It is technically 4x the bytes for indentations in serialized program. Seems minor, but
+///       maybe tabs were chosen for a reason?
 fn _lex(input: LexInput) -> InternalLexResult<Vec<TokenWithLocation>> {
     terminated(
         many0(alt(
