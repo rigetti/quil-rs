@@ -1,4 +1,4 @@
-use crate::quil::{Quil, INDENTATION};
+use crate::quil::{Quil, INDENT};
 
 use super::Instruction;
 
@@ -55,7 +55,7 @@ impl Quil for CircuitDefinition {
                 false => instruction.to_quil()?,
             };
             for line in lines.split('\n') {
-                writeln!(writer, "{INDENTATION}{line}")?;
+                writeln!(writer, "{INDENT}{line}")?;
             }
         }
 

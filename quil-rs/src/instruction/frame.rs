@@ -8,7 +8,7 @@ use crate::{
     expression::Expression,
     parser::{common::parse_frame_identifier, lex, ParseError},
     program::{disallow_leftover, SyntaxError},
-    quil::{Quil, INDENTATION},
+    quil::{Quil, INDENT},
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, strum::EnumTryAs)]
@@ -58,7 +58,7 @@ impl Quil for FrameDefinition {
         self.identifier.write(writer, fall_back_to_debug)?;
         write!(writer, ":")?;
         for (key, value) in &self.attributes {
-            write!(writer, "\n{INDENTATION}{key}: ")?;
+            write!(writer, "\n{INDENT}{key}: ")?;
             value.write(writer, fall_back_to_debug)?;
         }
 

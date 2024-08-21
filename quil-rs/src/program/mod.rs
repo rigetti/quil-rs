@@ -702,7 +702,7 @@ mod tests {
             Gate, Instruction, Jump, JumpUnless, JumpWhen, Label, Matrix, MemoryReference, Qubit,
             QubitPlaceholder, Target, TargetPlaceholder,
         },
-        quil::{Quil, INDENTATION as INDENT},
+        quil::{Quil, INDENT},
         real,
     };
     use approx::assert_abs_diff_eq;

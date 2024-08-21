@@ -2,7 +2,7 @@ use crate::{
     expression::Expression,
     imag,
     instruction::{write_expression_parameter_string, write_parameter_string, write_qubits, Qubit},
-    quil::{write_join_quil, Quil, INDENTATION},
+    quil::{write_join_quil, Quil, INDENT},
     real,
     validation::identifier::{
         validate_identifier, validate_user_identifier, IdentifierValidationError,
@@ -870,13 +870,13 @@ impl Quil for GateSpecification {
         match self {
             GateSpecification::Matrix(matrix) => {
                 for row in matrix {
-                    write!(f, "{INDENTATION}")?;
+                    write!(f, "{INDENT}")?;
                     write_join_quil(f, fall_back_to_debug, row.iter(), ", ", "")?;
                     writeln!(f)?;
                 }
             }
             GateSpecification::Permutation(permutation) => {
-                write!(f, "{INDENTATION}")?;
+                write!(f, "{INDENT}")?;
                 if let Some(i) = permutation.first() {
                     write!(f, "{i}")?;
                 }
@@ -887,7 +887,7 @@ impl Quil for GateSpecification {
             }
             GateSpecification::PauliSum(pauli_sum) => {
                 for term in &pauli_sum.terms {
-                    write!(f, "{INDENTATION}")?;
+                    write!(f, "{INDENT}")?;
                     for word in term.word() {
                         write!(f, "{word}")?;
                     }
