@@ -146,13 +146,14 @@ impl Program {
                 let p = Program::from_instructions(cal.instructions.to_owned());
                 let cfg = ControlFlowGraph::from(&p);
                 let blocks = cfg.into_blocks();
-                let block = blocks.get(0)?;
-                Some((
-                    gate.to_owned(),
-                    // TODO: handle error
-                    // NOTE: we need full program to expand calibrations
-                    block.as_schedule_seconds(self).ok()?.duration().to_owned(),
-                ))
+                let block = blocks.first()?;
+                // TODO: handle error
+                // NOTE: we need full program to expand calibrations
+                let duration = block.as_schedule_seconds(self).ok()?.duration().to_owned();
+
+                let gate = gate.to_owned();
+
+                Some((gate, duration))
             })
             .collect::<HashMap<_, _>>())
     }
