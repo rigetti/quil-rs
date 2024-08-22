@@ -16,13 +16,15 @@ use std::collections::{HashMap, HashSet};
 use std::ops;
 use std::str::FromStr;
 
+use analysis::ControlFlowGraph;
 use indexmap::{IndexMap, IndexSet};
 use ndarray::Array2;
 use nom_locate::LocatedSpan;
+use scheduling::Seconds;
 
 use crate::instruction::{
     Arithmetic, ArithmeticOperand, ArithmeticOperator, Declaration, FrameDefinition,
-    FrameIdentifier, GateDefinition, GateError, Instruction, Jump, JumpUnless, Label, Matrix,
+    FrameIdentifier, Gate, GateDefinition, GateError, Instruction, Jump, JumpUnless, Label, Matrix,
     MemoryReference, Move, Qubit, QubitPlaceholder, ScalarType, Target, TargetPlaceholder, Vector,
     Waveform, WaveformDefinition,
 };
@@ -129,6 +131,30 @@ impl Program {
             waveforms: self.waveforms.clone(),
             used_qubits: HashSet::new(),
         }
+    }
+
+    pub fn get_gates_duration(&self) -> Result<HashMap<Gate, Seconds>> {
+        Ok(self
+            .instructions
+            .iter()
+            .filter_map(|ins| match ins {
+                Instruction::Gate(gate) => Some(gate),
+                _ => None,
+            })
+            .filter_map(|gate| {
+                let cal = self.calibrations.get_match_for_gate(gate)?;
+                let p = Program::from_instructions(cal.instructions.to_owned());
+                let cfg = ControlFlowGraph::from(&p);
+                let blocks = cfg.into_blocks();
+                let block = blocks.get(0)?;
+                Some((
+                    gate.to_owned(),
+                    // TODO: handle error
+                    // NOTE: we need full program to expand calibrations
+                    block.as_schedule_seconds(self).ok()?.duration().to_owned(),
+                ))
+            })
+            .collect::<HashMap<_, _>>())
     }
 
     /// Add an instruction to the end of the program.
