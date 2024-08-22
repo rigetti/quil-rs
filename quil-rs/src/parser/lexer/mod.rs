@@ -18,9 +18,9 @@ mod wrapped_parsers;
 
 use nom::{
     bytes::complete::{is_a, take_till, take_while, take_while1},
-    character::complete::{digit1, one_of, space0},
+    character::complete::{digit1, one_of},
     combinator::{all_consuming, map, recognize, value},
-    multi::{many0, many_m_n},
+    multi::many0,
     number::complete::double,
     sequence::{pair, preceded, terminated, tuple},
     Finish, IResult,
