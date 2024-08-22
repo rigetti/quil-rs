@@ -18,9 +18,9 @@ mod wrapped_parsers;
 
 use nom::{
     bytes::complete::{is_a, take_till, take_while, take_while1},
-    character::complete::{digit1, one_of},
+    character::complete::{digit1, one_of, space0},
     combinator::{all_consuming, map, recognize, value},
-    multi::many0,
+    multi::{many0, many_m_n},
     number::complete::double,
     sequence::{pair, preceded, terminated, tuple},
     Finish, IResult,
@@ -135,23 +135,25 @@ pub(crate) fn lex(input: LexInput) -> Result<Vec<TokenWithLocation>, LexError> {
         .map_err(LexError::from)
 }
 
-/// TODO: Discuss:
-///     * Should we make indentation exactly 4 spaces, rather than 4-7?
-///     * Should we allow for multiple levels of indentation? The Quil spec implies that only a
-///       single level indentation is possible, as each indentation must be preceded by a newline
-///     * What are the implications of using spaces instead of tabs for program serialization?
-///       It is technically 4x the bytes for indentations in serialized program. Seems minor, but
-///       maybe tabs were chosen for a reason?
 fn _lex(input: LexInput) -> InternalLexResult<Vec<TokenWithLocation>> {
     terminated(
         many0(alt(
             "indentation or a token preceded by whitespace",
-            (
-                token_with_location(value(Token::Indentation, tag("    "))),
-                preceded(many0(tag(" ")), lex_token),
-            ),
+            (lex_indent, preceded(many0(tag(" ")), lex_token)),
         )),
         many0(one_of("\n\t ")),
+    )(input)
+}
+
+/// The Quil spec defines an indent as exactly 4 spaces. However, the lexer recognizes tabs as well
+/// to allow for more flexible formatting.
+fn lex_indent(input: LexInput) -> InternalLexResult<TokenWithLocation> {
+    alt(
+        "indentation",
+        (
+            token_with_location(value(Token::Indentation, tag("    "))),
+            token_with_location(value(Token::Indentation, tag("\t"))),
+        ),
     )(input)
 }
 
