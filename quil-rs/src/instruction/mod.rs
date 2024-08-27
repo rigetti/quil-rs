@@ -31,6 +31,7 @@ mod circuit;
 mod classical;
 mod control_flow;
 mod declaration;
+mod extern_call;
 mod frame;
 mod gate;
 mod measurement;
@@ -51,6 +52,7 @@ pub use self::control_flow::{Jump, JumpUnless, JumpWhen, Label, Target, TargetPl
 pub use self::declaration::{
     Declaration, Load, MemoryReference, Offset, ScalarType, Sharing, Store, Vector,
 };
+pub use self::extern_call::*;
 pub use self::frame::{
     AttributeValue, Capture, FrameAttributes, FrameDefinition, FrameIdentifier, Pulse, RawCapture,
     SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, SwapPhases,
@@ -60,7 +62,7 @@ pub use self::gate::{
     PauliSum, PauliTerm,
 };
 pub use self::measurement::Measurement;
-pub use self::pragma::{Include, Pragma, PragmaArgument};
+pub use self::pragma::{Include, Pragma, PragmaArgument, ReservedPragma, RESERVED_PRAGMA_EXTERN};
 pub use self::qubit::{Qubit, QubitPlaceholder};
 pub use self::reset::Reset;
 pub use self::timing::{Delay, Fence};
@@ -77,6 +79,7 @@ pub enum Instruction {
     Arithmetic(Arithmetic),
     BinaryLogic(BinaryLogic),
     CalibrationDefinition(Calibration),
+    Call(Call),
     Capture(Capture),
     CircuitDefinition(CircuitDefinition),
     Convert(Convert),
@@ -102,6 +105,7 @@ pub enum Instruction {
     Pragma(Pragma),
     Pulse(Pulse),
     RawCapture(RawCapture),
+    ReservedPragma(ReservedPragma),
     Reset(Reset),
     SetFrequency(SetFrequency),
     SetPhase(SetPhase),
@@ -150,6 +154,7 @@ impl From<&Instruction> for InstructionRole {
             | Instruction::ShiftPhase(_)
             | Instruction::SwapPhases(_) => InstructionRole::RFControl,
             Instruction::Arithmetic(_)
+            | Instruction::Call(_)
             | Instruction::Comparison(_)
             | Instruction::Convert(_)
             | Instruction::BinaryLogic(_)
@@ -159,6 +164,7 @@ impl From<&Instruction> for InstructionRole {
             | Instruction::Load(_)
             | Instruction::Nop
             | Instruction::Pragma(_)
+            | Instruction::ReservedPragma(ReservedPragma::Extern(_))
             | Instruction::Store(_) => InstructionRole::ClassicalCompute,
             Instruction::Halt
             | Instruction::Jump(_)
@@ -268,6 +274,7 @@ impl Quil for Instruction {
             Instruction::CalibrationDefinition(calibration) => {
                 calibration.write(f, fall_back_to_debug)
             }
+            Instruction::Call(call) => call.write(f, fall_back_to_debug),
             Instruction::Capture(capture) => capture.write(f, fall_back_to_debug),
             Instruction::CircuitDefinition(circuit) => circuit.write(f, fall_back_to_debug),
             Instruction::Convert(convert) => convert.write(f, fall_back_to_debug),
@@ -293,6 +300,9 @@ impl Quil for Instruction {
             Instruction::Pulse(pulse) => pulse.write(f, fall_back_to_debug),
             Instruction::Pragma(pragma) => pragma.write(f, fall_back_to_debug),
             Instruction::RawCapture(raw_capture) => raw_capture.write(f, fall_back_to_debug),
+            Instruction::ReservedPragma(reserved_pragma) => {
+                reserved_pragma.write(f, fall_back_to_debug)
+            }
             Instruction::Reset(reset) => reset.write(f, fall_back_to_debug),
             Instruction::SetFrequency(set_frequency) => set_frequency.write(f, fall_back_to_debug),
             Instruction::SetPhase(set_phase) => set_phase.write(f, fall_back_to_debug),
@@ -535,6 +545,7 @@ impl Instruction {
             Instruction::Arithmetic(_)
             | Instruction::BinaryLogic(_)
             | Instruction::CalibrationDefinition(_)
+            | Instruction::Call(_)
             | Instruction::CircuitDefinition(_)
             | Instruction::Comparison(_)
             | Instruction::Convert(_)
@@ -555,6 +566,7 @@ impl Instruction {
             | Instruction::Move(_)
             | Instruction::Nop
             | Instruction::Pragma(_)
+            | Instruction::ReservedPragma(ReservedPragma::Extern(_))
             | Instruction::Store(_)
             | Instruction::UnaryLogic(_)
             | Instruction::WaveformDefinition(_)
@@ -664,6 +676,7 @@ impl Instruction {
             | Instruction::WaveformDefinition(_) => true,
             Instruction::Arithmetic(_)
             | Instruction::BinaryLogic(_)
+            | Instruction::Call(_)
             | Instruction::CircuitDefinition(_)
             | Instruction::Convert(_)
             | Instruction::Comparison(_)
@@ -682,6 +695,7 @@ impl Instruction {
             | Instruction::Move(_)
             | Instruction::Nop
             | Instruction::Pragma(_)
+            | Instruction::ReservedPragma(ReservedPragma::Extern(_))
             | Instruction::Reset(_)
             | Instruction::Store(_)
             | Instruction::Wait
@@ -709,6 +723,7 @@ impl Instruction {
             Instruction::Arithmetic(_)
             | Instruction::BinaryLogic(_)
             | Instruction::CalibrationDefinition(_)
+            | Instruction::Call(_)
             | Instruction::CircuitDefinition(_)
             | Instruction::Convert(_)
             | Instruction::Comparison(_)
@@ -729,6 +744,7 @@ impl Instruction {
             | Instruction::Move(_)
             | Instruction::Nop
             | Instruction::Pragma(_)
+            | Instruction::ReservedPragma(ReservedPragma::Extern(_))
             | Instruction::Reset(_)
             | Instruction::Store(_)
             | Instruction::UnaryLogic(_)
@@ -918,10 +934,14 @@ impl InstructionHandler {
     /// This uses the return value of the override function, if set and returns `Some`. If not set
     /// or the function returns `None`, defaults to the return value of
     /// [`Instruction::get_memory_accesses`].
-    pub fn memory_accesses(&mut self, instruction: &Instruction) -> MemoryAccesses {
+    pub fn memory_accesses(
+        &mut self,
+        instruction: &Instruction,
+    ) -> crate::program::MemoryAccessesResult {
         self.get_memory_accesses
             .as_mut()
             .and_then(|f| f(instruction))
+            .map(Ok)
             .unwrap_or_else(|| instruction.get_memory_accesses())
     }
 

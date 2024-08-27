@@ -31,6 +31,7 @@ pub use crate::program::memory::MemoryAccessType;
 pub enum ScheduleErrorVariant {
     DuplicateLabel,
     UncalibratedInstruction,
+    UnresolvedCallInstruction,
     UnschedulableInstruction,
 }
 
@@ -303,7 +304,14 @@ impl<'a> ScheduledBasicBlock<'a> {
         for (index, &instruction) in basic_block.instructions().iter().enumerate() {
             let node = graph.add_node(ScheduledGraphNode::InstructionIndex(index));
 
-            let accesses = custom_handler.memory_accesses(instruction);
+            let accesses =
+                custom_handler
+                    .memory_accesses(instruction)
+                    .map_err(|_| ScheduleError {
+                        instruction_index: Some(index),
+                        instruction: instruction.clone(),
+                        variant: ScheduleErrorVariant::UnresolvedCallInstruction,
+                    })?;
 
             let memory_dependencies = [
                 (accesses.reads, MemoryAccessType::Read),

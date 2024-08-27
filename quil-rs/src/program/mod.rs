@@ -21,20 +21,25 @@ use ndarray::Array2;
 use nom_locate::LocatedSpan;
 
 use crate::instruction::{
-    Arithmetic, ArithmeticOperand, ArithmeticOperator, Declaration, FrameDefinition,
-    FrameIdentifier, GateDefinition, GateError, Instruction, InstructionHandler, Jump, JumpUnless,
-    Label, Matrix, MemoryReference, Move, Qubit, QubitPlaceholder, ScalarType, Target,
-    TargetPlaceholder, Vector, Waveform, WaveformDefinition,
+    Arithmetic, ArithmeticOperand, ArithmeticOperator, CallResolutionError, Declaration,
+    ExternDefinition, ExternValidationError, FrameDefinition, FrameIdentifier, GateDefinition,
+    GateError, Instruction, InstructionHandler, Jump, JumpUnless, Label, Matrix, MemoryReference,
+    Move, Qubit, QubitPlaceholder, ScalarType, Target, TargetPlaceholder, Vector, Waveform,
+    WaveformDefinition,
 };
 use crate::parser::{lex, parse_instructions, ParseError};
 use crate::quil::Quil;
 
 pub use self::calibration::Calibrations;
 pub use self::calibration_set::CalibrationSet;
-pub use self::error::{disallow_leftover, map_parsed, recover, ParseProgramError, SyntaxError};
+pub use self::error::{
+    disallow_leftover, map_parsed, recover, LeftoverError, ParseProgramError, SyntaxError,
+};
 pub use self::frame::FrameSet;
 pub use self::frame::MatchedFrames;
-pub use self::memory::{MemoryAccess, MemoryAccesses, MemoryRegion};
+pub use self::memory::{
+    MemoryAccess, MemoryAccesses, MemoryAccessesError, MemoryAccessesResult, MemoryRegion,
+};
 
 pub mod analysis;
 mod calibration;
@@ -61,6 +66,12 @@ pub enum ProgramError {
 
     #[error("can only compute program unitary for programs composed of `Gate`s; found unsupported instruction: {}", .0.to_quil_or_debug())]
     UnsupportedForUnitary(Instruction),
+
+    #[error("failed to resolve call instructions: {0}")]
+    CallResolution(#[from] CallResolutionError),
+
+    #[error(transparent)]
+    ExternValidation(#[from] ExternValidationError),
 }
 
 type Result<T> = std::result::Result<T, ProgramError>;
@@ -636,6 +647,47 @@ impl Program {
     pub fn get_instruction(&self, index: usize) -> Option<&Instruction> {
         self.instructions.get(index)
     }
+
+    pub fn resolve_call_instructions(&mut self) -> Result<()> {
+        if !self
+            .instructions
+            .iter()
+            .any(|instruction| matches!(instruction, Instruction::Call(_)))
+        {
+            return Ok(());
+        }
+
+        let extern_definitions = self
+            .instructions
+            .iter()
+            .filter_map(|instruction| {
+                if let Instruction::ReservedPragma(ReservedPragma::Extern(extern_definition)) =
+                    instruction
+                {
+                    Some(extern_definition.clone())
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+        ExternDefinition::validate_all(extern_definitions.as_slice())?;
+
+        let calls = self
+            .instructions
+            .iter_mut()
+            .filter_map(|instruction| {
+                if let Instruction::Call(call) = instruction {
+                    Some(call)
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+        for call in calls {
+            call.resolve(&self.memory_regions, extern_definitions.as_slice())?;
+        }
+        Ok(())
+    }
 }
 
 impl Quil for Program {
@@ -713,9 +765,12 @@ mod tests {
     use crate::{
         imag,
         instruction::{
-            Gate, Instruction, Jump, JumpUnless, JumpWhen, Label, Matrix, MemoryReference, Qubit,
-            QubitPlaceholder, Target, TargetPlaceholder,
+            Call, CallArguments, Declaration, ExternDefinition, ExternParameter,
+            ExternParameterType, ExternSignature, Gate, Instruction, Jump, JumpUnless, JumpWhen,
+            Label, Matrix, MemoryReference, Qubit, QubitPlaceholder, ReservedPragma, ScalarType,
+            Target, TargetPlaceholder, UnresolvedCallArgument, Vector,
         },
+        program::MemoryAccesses,
         quil::{Quil, INDENT},
         real,
     };
@@ -1522,5 +1577,82 @@ DEFFRAME 0 \"xy\":
             let new_program = Program::from_str(input).unwrap();
             assert_eq!(new_program.to_quil().unwrap(), quil);
         }
+    }
+
+    /// Test that a program with a `CALL` instruction can be parsed and properly resolved to
+    /// the corresponding `EXTERN` instruction. Finally, test that the memory accesses are
+    /// correctly calculated with the resolved `CALL` instruction.
+    #[test]
+    fn test_extern_call() {
+        let input = r#"DECLARE reals REAL[3]
+DECLARE octets OCTET[3]
+PRAGMA EXTERN foo "OCTET (params : mut REAL[3])"
+CALL foo octets[1] reals
+"#;
+        let mut program = Program::from_str(input).expect("should be able to parse program");
+        let reserialized = program
+            .to_quil()
+            .expect("should be able to serialize program");
+        assert_eq!(input, reserialized);
+
+        let expected_program = Program::from_instructions(vec![
+            Instruction::Declaration(Declaration::new(
+                "reals".to_string(),
+                Vector::new(ScalarType::Real, 3),
+                None,
+            )),
+            Instruction::Declaration(Declaration::new(
+                "octets".to_string(),
+                Vector::new(ScalarType::Octet, 3),
+                None,
+            )),
+            Instruction::ReservedPragma(ReservedPragma::Extern(ExternDefinition {
+                name: "foo".to_string(),
+                signature: Some(ExternSignature {
+                    return_type: Some(ScalarType::Octet),
+                    parameters: vec![ExternParameter {
+                        name: "params".to_string(),
+                        mutable: true,
+                        data_type: ExternParameterType::FixedLengthVector(Vector::new(
+                            ScalarType::Real,
+                            3,
+                        )),
+                    }],
+                }),
+            })),
+            Instruction::Call(Call {
+                name: "foo".to_string(),
+                arguments: CallArguments::Unresolved(vec![
+                    UnresolvedCallArgument::MemoryReference(MemoryReference {
+                        name: "octets".to_string(),
+                        index: 1,
+                    }),
+                    UnresolvedCallArgument::Identifier("reals".to_string()),
+                ]),
+            }),
+        ]);
+        assert_eq!(expected_program, program);
+
+        program
+            .resolve_call_instructions()
+            .expect("should be able to resolve calls");
+
+        assert_eq!(
+            program.instructions[0]
+                .get_memory_accesses()
+                .expect("should be able to get memory accesses"),
+            MemoryAccesses::default()
+        );
+
+        assert_eq!(
+            program.instructions[1]
+                .get_memory_accesses()
+                .expect("should be able to get memory accesses"),
+            MemoryAccesses {
+                reads: ["octets", "reals"].into_iter().map(String::from).collect(),
+                writes: ["octets", "reals"].into_iter().map(String::from).collect(),
+                ..MemoryAccesses::default()
+            }
+        );
     }
 }

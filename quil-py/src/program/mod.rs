@@ -268,6 +268,13 @@ impl PyProgram {
         self.as_inner_mut().resolve_placeholders();
     }
 
+    pub fn resolve_call_instructions(&mut self) -> PyResult<()> {
+        self.as_inner_mut()
+            .resolve_call_instructions()
+            .map_err(ProgramError::from)
+            .map_err(ProgramError::to_py_err)
+    }
+
     pub fn wrap_in_loop(
         &self,
         loop_count_reference: PyMemoryReference,

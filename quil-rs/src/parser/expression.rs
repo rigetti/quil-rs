@@ -25,6 +25,7 @@ use crate::{
     token, unexpected_eof,
 };
 
+use super::common::parse_i;
 use super::lexer::{Operator, Token};
 use super::ParserInput;
 
@@ -120,15 +121,6 @@ fn parse(input: ParserInput, precedence: Precedence) -> InternalParserResult<Exp
     }
 
     Ok((input, left))
-}
-
-/// Returns successfully if the head of input is the identifier `i`, returns error otherwise.
-fn parse_i(input: ParserInput) -> InternalParserResult<()> {
-    match super::split_first_token(input) {
-        None => unexpected_eof!(input),
-        Some((Token::Identifier(v), remainder)) if v == "i" => Ok((remainder, ())),
-        Some((other_token, _)) => expected_token!(input, other_token, "i".to_owned()),
-    }
 }
 
 /// Given an expression function, parse the expression within its parentheses.

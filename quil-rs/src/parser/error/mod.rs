@@ -18,6 +18,8 @@ mod input;
 mod internal;
 mod kind;
 
+use crate::instruction::ExternSignatureError;
+
 use super::lexer::{Command, Token};
 
 pub use error::Error;
@@ -74,4 +76,7 @@ pub enum ParserErrorKind {
         "expected a Pauli term with a word length of {word_length} to match the number of arguments, {num_args}"
     )]
     PauliTermArgumentMismatch { word_length: usize, num_args: usize },
+
+    #[error(transparent)]
+    ExternSignature(#[from] Box<ExternSignatureError>),
 }

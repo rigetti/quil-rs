@@ -26,6 +26,7 @@ mod error;
 mod expression;
 pub(crate) mod instruction;
 mod lexer;
+pub(crate) mod reserved_pragma_extern;
 mod token;
 
 pub(crate) use error::{ErrorInput, InternalParseError};
@@ -33,7 +34,7 @@ pub use error::{ParseError, ParserErrorKind};
 pub use lexer::LexError;
 pub use token::{Token, TokenWithLocation};
 
-type ParserInput<'a> = &'a [TokenWithLocation<'a>];
+pub(crate) type ParserInput<'a> = &'a [TokenWithLocation<'a>];
 type InternalParserResult<'a, R, E = InternalParseError<'a>> = IResult<ParserInput<'a>, R, E>;
 
 /// Pops the first token off of the `input` and returns it and the remaining input.

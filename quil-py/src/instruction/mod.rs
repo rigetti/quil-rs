@@ -23,6 +23,10 @@ pub use self::{
         ParseMemoryReferenceError, PyDeclaration, PyLoad, PyMemoryReference, PyOffset,
         PyScalarType, PySharing, PyStore, PyVector,
     },
+    extern_call::{
+        CallValidationError, ExternValidationError, PyCall, PyCallArgument, PyCallArguments,
+        PyExternDefinition, PyExternParameter, PyExternParameterType, PyExternSignature,
+    },
     frame::{
         PyAttributeValue, PyCapture, PyFrameAttributes, PyFrameDefinition, PyFrameIdentifier,
         PyPulse, PyRawCapture, PySetFrequency, PySetPhase, PySetScale, PyShiftFrequency,
@@ -33,7 +37,7 @@ pub use self::{
         PyPauliSum, PyPauliTerm,
     },
     measurement::PyMeasurement,
-    pragma::{PyInclude, PyPragma, PyPragmaArgument},
+    pragma::{PyInclude, PyPragma, PyPragmaArgument, PyReservedPragma},
     qubit::{PyQubit, PyQubitPlaceholder},
     reset::PyReset,
     timing::{PyDelay, PyFence},
@@ -45,6 +49,7 @@ mod circuit;
 mod classical;
 mod control_flow;
 mod declaration;
+mod extern_call;
 mod frame;
 mod gate;
 mod measurement;
@@ -60,6 +65,7 @@ py_wrap_union_enum! {
         arithmetic: Arithmetic => PyArithmetic,
         binary_logic: BinaryLogic => PyBinaryLogic,
         calibration_definition: CalibrationDefinition => PyCalibration,
+        call: Call => PyCall,
         capture: Capture => PyCapture,
         circuit_definition: CircuitDefinition => PyCircuitDefinition,
         convert: Convert => PyConvert,
@@ -85,6 +91,7 @@ py_wrap_union_enum! {
         pragma: Pragma => PyPragma,
         pulse: Pulse => PyPulse,
         raw_capture: RawCapture => PyRawCapture,
+        reserved_pragma: ReservedPragma => PyReservedPragma,
         reset: Reset => PyReset,
         set_frequency: SetFrequency => PySetFrequency,
         set_phase: SetPhase => PySetPhase,
@@ -149,11 +156,18 @@ create_init_submodule! {
         PyBinaryLogic,
         PyBinaryOperand,
         PyBinaryOperator,
+        PyCall,
+        PyCallArgument,
+        PyCallArguments,
         PyComparison,
         PyComparisonOperand,
         PyComparisonOperator,
         PyConvert,
         PyExchange,
+        PyExternDefinition,
+        PyExternParameter,
+        PyExternParameterType,
+        PyExternSignature,
         PyMove,
         PyUnaryLogic,
         PyUnaryOperator,
@@ -176,6 +190,7 @@ create_init_submodule! {
         PyFrameDefinition,
         PyFrameIdentifier,
         PyPulse,
+        PyReservedPragma,
         PyRawCapture,
         PySetFrequency,
         PySetPhase,
@@ -207,7 +222,7 @@ create_init_submodule! {
         PyWaveformDefinition,
         PyWaveformInvocation
     ],
-    errors: [ GateError, ParseMemoryReferenceError ],
+    errors: [ CallValidationError, ExternValidationError, GateError, ParseMemoryReferenceError ],
 }
 
 /// Implements __copy__ and __deepcopy__ on any variant of the [`PyInstruction`] class, making

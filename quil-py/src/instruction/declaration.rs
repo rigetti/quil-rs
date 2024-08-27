@@ -38,6 +38,22 @@ impl_repr!(PyScalarType);
 impl_to_quil!(PyScalarType);
 impl_hash!(PyScalarType);
 
+impl rigetti_pyo3::PyTryFrom<pyo3::PyAny> for PyScalarType {
+    fn py_try_from(_py: Python, item: &pyo3::PyAny) -> PyResult<Self> {
+        let item = item.extract::<String>()?;
+        match item.as_str() {
+            "BIT" => Ok(Self::Bit),
+            "INTEGER" => Ok(Self::Integer),
+            "OCTET" => Ok(Self::Octet),
+            "REAL" => Ok(Self::Real),
+            _ => Err(PyValueError::new_err(format!(
+                "Invalid value for ScalarType: {}",
+                item
+            ))),
+        }
+    }
+}
+
 py_wrap_data_struct! {
     #[derive(Debug, Hash, PartialEq, Eq)]
     #[pyo3(subclass)]

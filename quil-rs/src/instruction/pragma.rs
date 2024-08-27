@@ -1,6 +1,6 @@
 use crate::quil::Quil;
 
-use super::QuotedString;
+use super::{extern_call::ExternDefinition, QuotedString};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Pragma {
@@ -75,5 +75,28 @@ impl Quil for Include {
 impl Include {
     pub fn new(filename: String) -> Self {
         Self { filename }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum ReservedPragma {
+    Extern(ExternDefinition),
+}
+
+pub const RESERVED_PRAGMA_EXTERN: &str = "EXTERN";
+
+impl Quil for ReservedPragma {
+    fn write(
+        &self,
+        f: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
+    ) -> crate::quil::ToQuilResult<()> {
+        write!(f, "PRAGMA ")?;
+        match self {
+            ReservedPragma::Extern(extern_definition) => {
+                write!(f, "{} ", RESERVED_PRAGMA_EXTERN)?;
+                extern_definition.write(f, fall_back_to_debug)
+            }
+        }
     }
 }

@@ -2,24 +2,27 @@ use nom::branch::alt;
 use nom::combinator::{map, map_res, opt};
 use nom::multi::{many0, many1, separated_list0, separated_list1};
 use nom::sequence::{delimited, pair, preceded, tuple};
+use num_complex::Complex64;
 
 use crate::expression::Expression;
 use crate::instruction::{
-    Arithmetic, ArithmeticOperator, BinaryLogic, BinaryOperator, Calibration, Capture,
-    CircuitDefinition, Comparison, ComparisonOperator, Convert, Declaration, Delay, Exchange,
-    Fence, FrameDefinition, GateDefinition, GateSpecification, GateType, Include, Instruction,
-    Jump, JumpUnless, JumpWhen, Label, Load, MeasureCalibrationDefinition, Measurement, Move,
-    PauliSum, Pragma, PragmaArgument, Pulse, Qubit, RawCapture, Reset, SetFrequency, SetPhase,
-    SetScale, ShiftFrequency, ShiftPhase, Store, SwapPhases, Target, UnaryLogic, UnaryOperator,
-    ValidationError, Waveform, WaveformDefinition,
+    Arithmetic, ArithmeticOperator, BinaryLogic, BinaryOperator, Calibration, Call, CallArguments,
+    Capture, CircuitDefinition, Comparison, ComparisonOperator, Convert, Declaration, Delay,
+    Exchange, Fence, FrameDefinition, GateDefinition, GateSpecification, GateType, Include,
+    Instruction, Jump, JumpUnless, JumpWhen, Label, Load, MeasureCalibrationDefinition,
+    Measurement, Move, PauliSum, Pragma, PragmaArgument, Pulse, Qubit, RawCapture, Reset,
+    SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, Store, SwapPhases, Target,
+    UnaryLogic, UnaryOperator, UnresolvedCallArgument, ValidationError, Waveform,
+    WaveformDefinition, RESERVED_PRAGMA_EXTERN,
 };
 
 use crate::parser::instruction::parse_block;
 use crate::parser::InternalParserResult;
 use crate::quil::Quil;
-use crate::{real, token};
+use crate::{expected_token, real, token, unexpected_eof};
 
-use super::common::parse_variable_qubit;
+use super::common::{parse_i, parse_memory_reference_with_brackets, parse_variable_qubit};
+use super::Token;
 use super::{
     common::{
         parse_arithmetic_operand, parse_binary_logic_operand, parse_comparison_operand,
@@ -118,6 +121,61 @@ pub(crate) fn parse_declare<'a>(input: ParserInput<'a>) -> InternalParserResult<
             sharing,
         }),
     ))
+}
+
+/// Parse the contents of a `CALL` instruction.
+///
+/// Note, the `CALL` instruction here is unresolved; it may only be resolved within the
+/// full context of a program. See [`crate::Program::resolve_call_instructions`].
+///
+/// Call instructions are of the form:
+///     `CALL @ms{Identifier} @rep[:min 1]{@group{@ms{Identifier} @alt @ms{Memory Reference} @alt @ms{Complex}}}`
+///
+/// For additional detail, see the [Quil specification "Call"](https://github.com/quil-lang/quil/blob/7f532c7cdde9f51eae6abe7408cc868fba9f91f6/specgen/spec/sec-other.s).
+pub(crate) fn parse_call<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Instruction> {
+    let (input, name) = token!(Identifier(v))(input)?;
+
+    let (input, arguments) = many0(parse_call_argument)(input)?;
+    let call = Call {
+        name,
+        arguments: CallArguments::Unresolved(arguments),
+    };
+
+    Ok((input, Instruction::Call(call)))
+}
+
+fn parse_call_argument<'a>(
+    input: ParserInput<'a>,
+) -> InternalParserResult<'a, UnresolvedCallArgument> {
+    alt((
+        map(
+            parse_memory_reference_with_brackets,
+            UnresolvedCallArgument::MemoryReference,
+        ),
+        map(token!(Identifier(v)), UnresolvedCallArgument::Identifier),
+        map(parse_immediate_value, UnresolvedCallArgument::Immediate),
+    ))(input)
+}
+
+fn parse_immediate_value(input: ParserInput) -> InternalParserResult<Complex64> {
+    match super::split_first_token(input) {
+        Some((Token::Integer(value), remainder)) => {
+            let (remainder, imaginary) = opt(parse_i)(remainder)?;
+            match imaginary {
+                None => Ok((remainder, crate::real!(*value as f64))),
+                Some(_) => Ok((remainder, crate::imag!(*value as f64))),
+            }
+        }
+        Some((Token::Float(value), remainder)) => {
+            let (remainder, imaginary) = opt(parse_i)(remainder)?;
+            match imaginary {
+                None => Ok((remainder, crate::real!(*value))),
+                Some(_) => Ok((remainder, crate::imag!(*value))),
+            }
+        }
+        Some((token, _)) => expected_token!(input, token, "integer or float".to_owned()),
+        None => unexpected_eof!(input),
+    }
 }
 
 /// Parse the contents of a `CAPTURE` instruction.
@@ -463,6 +521,9 @@ pub(crate) fn parse_store<'a>(input: ParserInput<'a>) -> InternalParserResult<'a
 /// Parse the contents of a `PRAGMA` instruction.
 pub(crate) fn parse_pragma<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Instruction> {
     let (input, pragma_type) = token!(Identifier(v))(input)?;
+    if pragma_type == RESERVED_PRAGMA_EXTERN {
+        return super::reserved_pragma_extern::parse_reserved_pragma_extern(input);
+    }
     let (input, arguments) = many0(alt((
         map(token!(Identifier(v)), PragmaArgument::Identifier),
         map(token!(Integer(i)), PragmaArgument::Integer),
@@ -604,10 +665,11 @@ mod tests {
         PrefixExpression, PrefixOperator,
     };
     use crate::instruction::{
-        GateDefinition, GateSpecification, Offset, PauliGate, PauliSum, PauliTerm, PragmaArgument,
-        Sharing,
+        Call, CallArguments, GateDefinition, GateSpecification, Offset, PauliGate, PauliSum,
+        PauliTerm, PragmaArgument, Sharing, UnresolvedCallArgument,
     };
     use crate::parser::lexer::lex;
+    use crate::parser::Token;
     use crate::{imag, real};
     use crate::{
         instruction::{
@@ -616,6 +678,7 @@ mod tests {
         },
         make_test,
     };
+    use rstest::*;
 
     use super::{parse_declare, parse_defcircuit, parse_defgate, parse_measurement, parse_pragma};
 
@@ -1021,4 +1084,111 @@ mod tests {
             })
         })
     );
+
+    /// Test case for parsing a `CALL` instruction.
+    struct ParseCallTestCase {
+        /// The input to parse.
+        input: &'static str,
+        /// The remaining tokens after parsing.
+        remainder: Vec<Token>,
+        /// The expected result.
+        expected: Result<Call, String>,
+    }
+
+    impl ParseCallTestCase {
+        /// Basic call with arguments.
+        fn case_01() -> Self {
+            Self {
+                input: "foo integer[0] 1.0 bar",
+                remainder: vec![],
+                expected: Ok(Call {
+                    name: "foo".to_string(),
+                    arguments: CallArguments::Unresolved(vec![
+                        UnresolvedCallArgument::MemoryReference(MemoryReference {
+                            name: "integer".to_string(),
+                            index: 0,
+                        }),
+                        UnresolvedCallArgument::Immediate(real!(1.0)),
+                        UnresolvedCallArgument::Identifier("bar".to_string()),
+                    ]),
+                }),
+            }
+        }
+
+        /// No arguments does in fact parse.
+        fn case_02() -> Self {
+            Self {
+                input: "foo",
+                remainder: vec![],
+                expected: Ok(Call {
+                    name: "foo".to_string(),
+                    arguments: CallArguments::Unresolved(vec![]),
+                }),
+            }
+        }
+
+        /// Invalid identifier.
+        fn case_03() -> Self {
+            Self {
+                input: "INCLUDE",
+                remainder: vec![],
+                expected: Err(
+                    "ExpectedToken { actual: COMMAND(INCLUDE), expected: \"Identifier\" }"
+                        .to_string(),
+                ),
+            }
+        }
+
+        /// Valid with leftover
+        fn case_04() -> Self {
+            Self {
+                input: "foo integer[0] 1.0 bar; baz",
+                remainder: vec![Token::Semicolon, Token::Identifier("baz".to_string())],
+                expected: Ok(Call {
+                    name: "foo".to_string(),
+                    arguments: CallArguments::Unresolved(vec![
+                        UnresolvedCallArgument::MemoryReference(MemoryReference {
+                            name: "integer".to_string(),
+                            index: 0,
+                        }),
+                        UnresolvedCallArgument::Immediate(real!(1.0)),
+                        UnresolvedCallArgument::Identifier("bar".to_string()),
+                    ]),
+                }),
+            }
+        }
+    }
+
+    /// Test that the `parse_call` function works as expected.
+    #[rstest]
+    #[case(ParseCallTestCase::case_01())]
+    #[case(ParseCallTestCase::case_02())]
+    #[case(ParseCallTestCase::case_03())]
+    #[case(ParseCallTestCase::case_04())]
+    fn test_parse_call(#[case] test_case: ParseCallTestCase) {
+        let input = ::nom_locate::LocatedSpan::new(test_case.input);
+        let tokens = lex(input).unwrap();
+        match (test_case.expected, super::parse_call(&tokens)) {
+            (Ok(expected), Ok((remainder, parsed))) => {
+                assert_eq!(parsed, Instruction::Call(expected));
+                let remainder: Vec<_> = remainder.iter().map(|t| t.as_token().clone()).collect();
+                assert_eq!(remainder, test_case.remainder);
+            }
+            (Ok(expected), Err(e)) => {
+                panic!("Expected {:?}, got error: {:?}", expected, e);
+            }
+            (Err(expected), Ok((_, parsed))) => {
+                panic!("Expected error: {:?}, got {:?}", expected, parsed);
+            }
+            (Err(expected), Err(found)) => {
+                let found = format!("{found:?}");
+                assert!(
+                    found.contains(&expected),
+                    "`{}` not in `{}`",
+                    expected,
+                    found
+                );
+            }
+        }
+    }
 }

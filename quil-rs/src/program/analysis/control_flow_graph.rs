@@ -21,7 +21,8 @@ use std::{
 
 use crate::{
     instruction::{
-        Instruction, InstructionHandler, Jump, JumpUnless, JumpWhen, Label, MemoryReference, Target,
+        Instruction, InstructionHandler, Jump, JumpUnless, JumpWhen, Label, MemoryReference,
+        ReservedPragma, Target,
     },
     program::{
         scheduling::{
@@ -418,6 +419,7 @@ impl<'p> From<&'p Program> for ControlFlowGraph<'p> {
             match instruction {
                 Instruction::Arithmetic(_)
                 | Instruction::BinaryLogic(_)
+                | Instruction::Call(_)
                 | Instruction::Capture(_)
                 | Instruction::Convert(_)
                 | Instruction::Comparison(_)
@@ -432,6 +434,7 @@ impl<'p> From<&'p Program> for ControlFlowGraph<'p> {
                 | Instruction::Nop
                 | Instruction::Pulse(_)
                 | Instruction::RawCapture(_)
+                | Instruction::ReservedPragma(ReservedPragma::Extern(_))
                 | Instruction::Reset(_)
                 | Instruction::SetFrequency(_)
                 | Instruction::SetPhase(_)

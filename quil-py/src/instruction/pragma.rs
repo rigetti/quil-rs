@@ -1,4 +1,4 @@
-use quil_rs::instruction::{Include, Pragma, PragmaArgument};
+use quil_rs::instruction::{Include, Pragma, PragmaArgument, ReservedPragma};
 
 use rigetti_pyo3::{
     impl_hash, impl_repr, py_wrap_data_struct, py_wrap_union_enum,
@@ -56,6 +56,17 @@ impl_repr!(PyPragmaArgument);
 impl_to_quil!(PyPragmaArgument);
 impl_hash!(PyPragmaArgument);
 impl_eq!(PyPragmaArgument);
+
+py_wrap_union_enum! {
+    #[derive(Debug, PartialEq, Eq)]
+    PyReservedPragma(ReservedPragma) as "ReservedPragma" {
+        extern_definition: Extern => super::extern_call::PyExternDefinition
+    }
+}
+impl_repr!(PyReservedPragma);
+impl_to_quil!(PyReservedPragma);
+impl_hash!(PyReservedPragma);
+impl_eq!(PyReservedPragma);
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
