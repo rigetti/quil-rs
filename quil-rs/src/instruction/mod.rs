@@ -21,6 +21,7 @@ use crate::expression::Expression;
 use crate::parser::lex;
 use crate::parser::parse_instructions;
 use crate::program::frame::{FrameMatchCondition, FrameMatchConditions};
+use crate::program::ProgramError;
 use crate::program::{MatchedFrames, MemoryAccesses};
 use crate::quil::{write_join_quil, Quil, ToQuilResult};
 use crate::Program;
@@ -922,6 +923,11 @@ impl InstructionHandler {
             .as_mut()
             .and_then(|f| f(instruction))
             .unwrap_or_else(|| instruction.get_memory_accesses())
+    }
+
+    /// Like [`Program::into_simplified`], but using custom instruction handling.
+    pub fn simplify_program(&mut self, program: &Program) -> Result<Program, ProgramError> {
+        program.simplify_with_handler(self)
     }
 }
 
