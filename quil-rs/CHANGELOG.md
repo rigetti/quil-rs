@@ -1,3 +1,9 @@
+## 0.27.2
+
+### Features
+
+- allow using instruction handler when simplifying program (#395)
+
 ## 0.27.2-rc.0
 
 ### Features
