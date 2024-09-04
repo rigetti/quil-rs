@@ -1067,4 +1067,37 @@ RX(%a) 0",
             assert_eq!(qubit_2, Qubit::Placeholder(placeholder_2));
         }
     }
+
+    mod instruction_handler {
+        use super::super::*;
+
+        #[test]
+        fn it_considers_custom_instruction_frames() {
+            let program = r#"DEFFRAME 0 "rf":
+    CENTER-FREQUENCY: 3e9
+
+PRAGMA USES-ALL-FRAMES
+"#
+            .parse::<Program>()
+            .unwrap();
+
+            // This test assumes that the default simplification behavior will not assign frames to
+            // `PRAGMA` instructions. This is verified below.
+            assert!(program.into_simplified().unwrap().frames.is_empty());
+
+            let mut handler =
+                InstructionHandler::default().set_matching_frames(|instruction, program| {
+                    if let Instruction::Pragma(_) = instruction {
+                        Some(Some(MatchedFrames {
+                            used: program.frames.get_keys().into_iter().collect(),
+                            blocked: HashSet::new(),
+                        }))
+                    } else {
+                        None
+                    }
+                });
+
+            assert_eq!(handler.simplify_program(&program).unwrap().frames.len(), 1);
+        }
+    }
 }

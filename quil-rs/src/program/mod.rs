@@ -21,7 +21,10 @@ use ndarray::Array2;
 use nom_locate::LocatedSpan;
 
 use crate::instruction::{
-    Arithmetic, ArithmeticOperand, ArithmeticOperator, Declaration, FrameDefinition, FrameIdentifier, GateDefinition, GateError, Instruction, InstructionHandler, Jump, JumpUnless, Label, Matrix, MemoryReference, Move, Qubit, QubitPlaceholder, ScalarType, Target, TargetPlaceholder, Vector, Waveform, WaveformDefinition
+    Arithmetic, ArithmeticOperand, ArithmeticOperator, Declaration, FrameDefinition,
+    FrameIdentifier, GateDefinition, GateError, Instruction, InstructionHandler, Jump, JumpUnless,
+    Label, Matrix, MemoryReference, Move, Qubit, QubitPlaceholder, ScalarType, Target,
+    TargetPlaceholder, Vector, Waveform, WaveformDefinition,
 };
 use crate::parser::{lex, parse_instructions, ParseError};
 use crate::quil::Quil;
@@ -346,7 +349,10 @@ impl Program {
         instructions
     }
 
-    pub(crate) fn simplify_with_handler(&self, instruction_handler: &mut InstructionHandler) -> Result<Self> {
+    pub(crate) fn simplify_with_handler(
+        &self,
+        instruction_handler: &mut InstructionHandler,
+    ) -> Result<Self> {
         let mut expanded_program = self.expand_calibrations()?;
         // Remove calibrations such that the resulting program contains
         // only instructions. Calibrations have already been expanded, so
@@ -357,7 +363,9 @@ impl Program {
         let mut waveforms_used: HashSet<&String> = HashSet::new();
 
         for instruction in &expanded_program.instructions {
-            if let Some(matched_frames) = instruction_handler.matching_frames(instruction, &expanded_program) {
+            if let Some(matched_frames) =
+                instruction_handler.matching_frames(instruction, &expanded_program)
+            {
                 frames_used.extend(matched_frames.used())
             }
 
