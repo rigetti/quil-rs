@@ -1,3 +1,9 @@
+## 0.11.3-rc.0
+
+### Features
+
+- allow using instruction handler when simplifying program (#395)
+
 ## 0.11.2
 
 ### Fixes
