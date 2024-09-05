@@ -1,3 +1,9 @@
+## 0.11.4
+
+### Fixes
+
+- derive Clone for ParseProgramError and lower-level errors (#383)
+
 ## 0.11.4-rc.0
 
 ### Fixes
