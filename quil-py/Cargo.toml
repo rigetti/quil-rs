@@ -6,7 +6,7 @@ edition = "2021"
 license = "Apache-2.0"
 repository = "https://github.com/rigetti/quil-rs"
 keywords = ["pyquil", "SDK", "Rigetti", "Quil", "Quantum"]
-categories = ["api-bindings", "parser-implementations", "science", "emulators"]
+categories = ["api-bindings", "parsers", "science", "emulators"]
 readme = "./README.md"
 
 [lib]
