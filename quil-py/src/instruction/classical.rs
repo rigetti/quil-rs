@@ -15,11 +15,11 @@ use rigetti_pyo3::{
 };
 
 use super::PyMemoryReference;
-use crate::{impl_copy_for_instruction, impl_eq, impl_to_quil};
+use crate::{impl_copy_for_instruction, impl_eq, impl_pickle_for_instruction, impl_to_quil};
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyArithmetic(Arithmetic) as "Arithmetic" {
         operator: ArithmeticOperator => PyArithmeticOperator,
         destination: MemoryReference => PyMemoryReference,
@@ -31,6 +31,7 @@ impl_to_quil!(PyArithmetic);
 impl_copy_for_instruction!(PyArithmetic);
 impl_hash!(PyArithmetic);
 impl_eq!(PyArithmetic);
+impl_pickle_for_instruction!(PyArithmetic);
 
 #[pymethods]
 impl PyArithmetic {
@@ -104,7 +105,7 @@ impl_eq!(PyBinaryOperator);
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyBinaryLogic(BinaryLogic) as "BinaryLogic" {
         operator: BinaryOperator => PyBinaryOperator,
         destination: MemoryReference => PyMemoryReference,
@@ -115,6 +116,7 @@ impl_repr!(PyBinaryLogic);
 impl_to_quil!(PyBinaryLogic);
 impl_copy_for_instruction!(PyBinaryLogic);
 impl_eq!(PyBinaryLogic);
+impl_pickle_for_instruction!(PyBinaryLogic);
 
 #[pymethods]
 impl PyBinaryLogic {
@@ -135,7 +137,7 @@ impl PyBinaryLogic {
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyConvert(Convert) as "Convert" {
         destination: MemoryReference => PyMemoryReference,
         source: MemoryReference => PyMemoryReference
@@ -146,6 +148,7 @@ impl_to_quil!(PyConvert);
 impl_copy_for_instruction!(PyConvert);
 impl_hash!(PyConvert);
 impl_eq!(PyConvert);
+impl_pickle_for_instruction!(PyConvert);
 
 #[pymethods]
 impl PyConvert {
@@ -164,7 +167,7 @@ impl PyConvert {
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyMove(Move) as "Move" {
         destination: MemoryReference => PyMemoryReference,
         source: ArithmeticOperand => PyArithmeticOperand
@@ -175,6 +178,7 @@ impl_to_quil!(PyMove);
 impl_copy_for_instruction!(PyMove);
 impl_hash!(PyMove);
 impl_eq!(PyMove);
+impl_pickle_for_instruction!(PyMove);
 
 #[pymethods]
 impl PyMove {
@@ -193,7 +197,7 @@ impl PyMove {
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyExchange(Exchange) as "Exchange" {
         left: MemoryReference => PyMemoryReference,
         right: MemoryReference => PyMemoryReference
@@ -204,6 +208,7 @@ impl_to_quil!(PyExchange);
 impl_copy_for_instruction!(PyExchange);
 impl_hash!(PyExchange);
 impl_eq!(PyExchange);
+impl_pickle_for_instruction!(PyExchange);
 
 #[pymethods]
 impl PyExchange {
@@ -246,7 +251,7 @@ py_wrap_simple_enum! {
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyComparison(Comparison) as "Comparison" {
         operator: ComparisonOperator => PyComparisonOperator,
         destination: MemoryReference => PyMemoryReference,
@@ -259,6 +264,7 @@ impl_to_quil!(PyComparison);
 impl_copy_for_instruction!(PyComparison);
 impl_hash!(PyComparison);
 impl_eq!(PyComparison);
+impl_pickle_for_instruction!(PyComparison);
 
 #[pymethods]
 impl PyComparison {
@@ -292,7 +298,7 @@ impl_hash!(PyUnaryOperator);
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyUnaryLogic(UnaryLogic) as "UnaryLogic" {
         operator: UnaryOperator => PyUnaryOperator,
         operand: MemoryReference => PyMemoryReference
@@ -303,6 +309,7 @@ impl_to_quil!(PyUnaryLogic);
 impl_copy_for_instruction!(PyUnaryLogic);
 impl_hash!(PyUnaryLogic);
 impl_eq!(PyUnaryLogic);
+impl_pickle_for_instruction!(PyUnaryLogic);
 
 #[pymethods]
 impl PyUnaryLogic {

@@ -22,9 +22,9 @@ use nom_locate::LocatedSpan;
 
 use crate::instruction::{
     Arithmetic, ArithmeticOperand, ArithmeticOperator, Declaration, FrameDefinition,
-    FrameIdentifier, GateDefinition, GateError, Instruction, Jump, JumpUnless, Label, Matrix,
-    MemoryReference, Move, Qubit, QubitPlaceholder, ScalarType, Target, TargetPlaceholder, Vector,
-    Waveform, WaveformDefinition,
+    FrameIdentifier, GateDefinition, GateError, Instruction, InstructionHandler, Jump, JumpUnless,
+    Label, Matrix, MemoryReference, Move, Qubit, QubitPlaceholder, ScalarType, Target,
+    TargetPlaceholder, Vector, Waveform, WaveformDefinition,
 };
 use crate::parser::{lex, parse_instructions, ParseError};
 use crate::quil::Quil;
@@ -349,16 +349,10 @@ impl Program {
         instructions
     }
 
-    /// Simplify this program into a new [`Program`] which contains only instructions
-    /// and definitions which are executed; effectively, perform dead code removal.
-    ///
-    /// Removes:
-    /// - All calibrations, following calibration expansion
-    /// - Frame definitions which are not used by any instruction such as `PULSE` or `CAPTURE`
-    /// - Waveform definitions which are not used by any instruction
-    ///
-    /// When a valid program is simplified, it remains valid.
-    pub fn into_simplified(&self) -> Result<Self> {
+    pub(crate) fn simplify_with_handler(
+        &self,
+        instruction_handler: &mut InstructionHandler,
+    ) -> Result<Self> {
         let mut expanded_program = self.expand_calibrations()?;
         // Remove calibrations such that the resulting program contains
         // only instructions. Calibrations have already been expanded, so
@@ -369,7 +363,9 @@ impl Program {
         let mut waveforms_used: HashSet<&String> = HashSet::new();
 
         for instruction in &expanded_program.instructions {
-            if let Some(matched_frames) = expanded_program.get_frames_for_instruction(instruction) {
+            if let Some(matched_frames) =
+                instruction_handler.matching_frames(instruction, &expanded_program)
+            {
                 frames_used.extend(matched_frames.used())
             }
 
@@ -384,6 +380,24 @@ impl Program {
             .retain(|name, _definition| waveforms_used.contains(name));
 
         Ok(expanded_program)
+    }
+
+    /// Simplify this program into a new [`Program`] which contains only instructions
+    /// and definitions which are executed; effectively, perform dead code removal.
+    ///
+    /// Removes:
+    /// - All calibrations, following calibration expansion
+    /// - Frame definitions which are not used by any instruction such as `PULSE` or `CAPTURE`
+    /// - Waveform definitions which are not used by any instruction
+    ///
+    /// When a valid program is simplified, it remains valid.
+    ///
+    /// # Note
+    ///
+    /// If you need custom instruction handling during simplification, using
+    /// [`InstructionHandler::simplify_program`] instead.
+    pub fn into_simplified(&self) -> Result<Self> {
+        self.simplify_with_handler(&mut InstructionHandler::default())
     }
 
     /// Return a copy of the [`Program`] wrapped in a loop that repeats `iterations` times.

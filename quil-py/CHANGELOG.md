@@ -1,3 +1,39 @@
+## 0.11.3
+
+### Features
+
+- allow using instruction handler when simplifying program (#395)
+
+## 0.11.3-rc.0
+
+### Features
+
+- allow using instruction handler when simplifying program (#395)
+
+## 0.11.2
+
+### Fixes
+
+- Define correct module path for each instruction type
+
+## 0.11.2-rc.0
+
+### Fixes
+
+- Define correct module path for each instruction type
+
+## 0.11.1
+
+### Features
+
+- Initialize `Instruction`s from a Quil string. Python `Instruction`s support the `pickle` module. (#382)
+
+## 0.11.1-rc.0
+
+### Features
+
+- Initialize `Instruction`s from a Quil string. Python `Instruction`s support the `pickle` module. (#382)
+
 ## 0.11.0
 
 ### Breaking Changes

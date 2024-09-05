@@ -7,11 +7,11 @@ use rigetti_pyo3::{
 };
 
 use super::PyInstruction;
-use crate::{impl_copy_for_instruction, impl_eq, impl_to_quil};
+use crate::{impl_copy_for_instruction, impl_eq, impl_pickle_for_instruction, impl_to_quil};
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyCircuitDefinition(CircuitDefinition) as "CircuitDefinition" {
         name: String => Py<PyString>,
         parameters: Vec<String> => Vec<Py<PyString>>,
@@ -23,6 +23,7 @@ impl_repr!(PyCircuitDefinition);
 impl_to_quil!(PyCircuitDefinition);
 impl_copy_for_instruction!(PyCircuitDefinition);
 impl_eq!(PyCircuitDefinition);
+impl_pickle_for_instruction!(PyCircuitDefinition);
 
 #[pymethods]
 impl PyCircuitDefinition {

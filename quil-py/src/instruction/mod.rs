@@ -1,3 +1,6 @@
+use std::str::FromStr;
+
+use pyo3::exceptions::PyValueError;
 use quil_rs::instruction::Instruction;
 use rigetti_pyo3::{
     create_init_submodule, impl_repr, py_wrap_union_enum,
@@ -103,6 +106,14 @@ impl_eq!(PyInstruction);
 impl PyInstruction {
     pub fn is_quil_t(&self) -> bool {
         self.as_inner().is_quil_t()
+    }
+
+    #[staticmethod]
+    pub fn parse(string: &str) -> PyResult<Self> {
+        match Instruction::from_str(string) {
+            Ok(instruction) => Ok(Self(instruction)),
+            Err(err) => Err(PyValueError::new_err(err.to_string())),
+        }
     }
 
     // Implement the __copy__ and __deepcopy__ dunder methods, which are used by Python's

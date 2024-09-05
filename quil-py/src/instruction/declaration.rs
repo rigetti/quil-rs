@@ -4,7 +4,7 @@ use quil_rs::instruction::{
 };
 
 use super::PyArithmeticOperand;
-use crate::{impl_copy_for_instruction, impl_eq, impl_to_quil};
+use crate::{impl_copy_for_instruction, impl_eq, impl_pickle_for_instruction, impl_to_quil};
 
 use rigetti_pyo3::{
     impl_from_str, impl_hash, impl_parse, impl_repr, py_wrap_data_struct, py_wrap_error,
@@ -111,7 +111,7 @@ impl PySharing {
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyDeclaration(Declaration) as "Declaration" {
         name: String => Py<PyString>,
         size: Vector => PyVector,
@@ -123,6 +123,7 @@ impl_to_quil!(PyDeclaration);
 impl_copy_for_instruction!(PyDeclaration);
 impl_hash!(PyDeclaration);
 impl_eq!(PyDeclaration);
+impl_pickle_for_instruction!(PyDeclaration);
 
 #[pymethods]
 impl PyDeclaration {
@@ -166,7 +167,7 @@ impl PyMemoryReference {
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq, Eq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyLoad(Load) as "Load" {
         destination: MemoryReference => PyMemoryReference,
         source: String => Py<PyString>,
@@ -178,6 +179,7 @@ impl_to_quil!(PyLoad);
 impl_copy_for_instruction!(PyLoad);
 impl_hash!(PyLoad);
 impl_eq!(PyLoad);
+impl_pickle_for_instruction!(PyLoad);
 
 #[pymethods]
 impl PyLoad {
@@ -198,7 +200,7 @@ impl PyLoad {
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq)]
-    #[pyo3(subclass)]
+    #[pyo3(subclass, module = "quil.instructions")]
     PyStore(Store) as "Store" {
         destination: String => Py<PyString>,
         offset: MemoryReference => PyMemoryReference,
@@ -210,6 +212,7 @@ impl_to_quil!(PyStore);
 impl_copy_for_instruction!(PyStore);
 impl_hash!(PyStore);
 impl_eq!(PyStore);
+impl_pickle_for_instruction!(PyStore);
 
 #[pymethods]
 impl PyStore {

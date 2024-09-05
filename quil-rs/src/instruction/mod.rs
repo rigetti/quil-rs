@@ -15,16 +15,16 @@
 use std::collections::HashSet;
 use std::fmt;
 
+use nom_locate::LocatedSpan;
+
 use crate::expression::Expression;
-#[cfg(test)]
 use crate::parser::lex;
+use crate::parser::parse_instructions;
 use crate::program::frame::{FrameMatchCondition, FrameMatchConditions};
+use crate::program::ProgramError;
 use crate::program::{MatchedFrames, MemoryAccesses};
 use crate::quil::{write_join_quil, Quil, ToQuilResult};
 use crate::Program;
-
-#[cfg(test)]
-use nom_locate::LocatedSpan;
 
 mod calibration;
 mod circuit;
@@ -763,6 +763,29 @@ impl Instruction {
     }
 }
 
+#[derive(Debug, thiserror::Error)]
+pub enum ParseInstructionError {
+    #[error("Failed to parse instruction: {0}")]
+    Parse(String),
+    #[error("Expected to parse exactly one instruction but got {0}")]
+    ZeroOrMany(usize),
+}
+
+impl std::str::FromStr for Instruction {
+    type Err = ParseInstructionError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let input = LocatedSpan::new(s);
+        let lexed = lex(input).map_err(|e| ParseInstructionError::Parse(e.to_string()))?;
+        let instructions =
+            parse_instructions(&lexed).map_err(|e| ParseInstructionError::Parse(e.to_string()))?;
+        if instructions.1.len() != 1 {
+            return Err(ParseInstructionError::ZeroOrMany(instructions.1.len()));
+        }
+        Ok(instructions.1[0].to_owned())
+    }
+}
+
 /// Trait signature for a function or closure that returns an optional override for whether
 /// an instruction should be scheduled.
 pub trait GetIsScheduledFnMut: FnMut(&Instruction) -> Option<bool> {}
@@ -901,6 +924,11 @@ impl InstructionHandler {
             .and_then(|f| f(instruction))
             .unwrap_or_else(|| instruction.get_memory_accesses())
     }
+
+    /// Like [`Program::into_simplified`], but using custom instruction handling.
+    pub fn simplify_program(&mut self, program: &Program) -> Result<Program, ProgramError> {
+        program.simplify_with_handler(self)
+    }
 }
 
 #[cfg(test)]
@@ -1037,6 +1065,39 @@ RX(%a) 0",
             let mut qubit_2 = Qubit::Placeholder(placeholder_2.clone());
             qubit_2.resolve_placeholder(|k| resolver.get(k).copied());
             assert_eq!(qubit_2, Qubit::Placeholder(placeholder_2));
+        }
+    }
+
+    mod instruction_handler {
+        use super::super::*;
+
+        #[test]
+        fn it_considers_custom_instruction_frames() {
+            let program = r#"DEFFRAME 0 "rf":
+    CENTER-FREQUENCY: 3e9
+
+PRAGMA USES-ALL-FRAMES
+"#
+            .parse::<Program>()
+            .unwrap();
+
+            // This test assumes that the default simplification behavior will not assign frames to
+            // `PRAGMA` instructions. This is verified below.
+            assert!(program.into_simplified().unwrap().frames.is_empty());
+
+            let mut handler =
+                InstructionHandler::default().set_matching_frames(|instruction, program| {
+                    if let Instruction::Pragma(_) = instruction {
+                        Some(Some(MatchedFrames {
+                            used: program.frames.get_keys().into_iter().collect(),
+                            blocked: HashSet::new(),
+                        }))
+                    } else {
+                        None
+                    }
+                });
+
+            assert_eq!(handler.simplify_program(&program).unwrap().frames.len(), 1);
         }
     }
 }
