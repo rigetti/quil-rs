@@ -5,6 +5,8 @@ name: Release dry-run
 
 jobs:
   dry-run:
+    name: Dry-run cargo publish
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
         with:
