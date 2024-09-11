@@ -29,6 +29,7 @@ numpy = "0.20.0"
 pyo3 = { version = "0.20.3", features = ["indexmap"] }
 rigetti-pyo3 = {version = "0.3.4", features = ["indexmap"]}
 indexmap.workspace = true
+num-complex = "0.4.6"
 
 [build-dependencies]
 pyo3-build-config = "0.20.0"

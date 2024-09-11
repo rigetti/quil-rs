@@ -6,7 +6,7 @@ pub mod instruction;
 pub mod program;
 pub mod units;
 pub mod validation;
-pub mod waveform;
+pub mod waveforms;
 
 create_init_submodule! {
     submodules: [
@@ -14,7 +14,7 @@ create_init_submodule! {
         "instructions": instruction::init_submodule,
         "program": program::init_submodule,
         "validation": validation::init_submodule,
-        "waveform": waveform::init_submodule
+        "waveforms": waveforms::init_submodule
     ],
 }
 
