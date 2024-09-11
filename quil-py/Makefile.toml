@@ -39,6 +39,7 @@ command = "maturin"
 args = ["develop"]
 
 [tasks.test]
+dependencies = ["install-python-package"]
 command = "pytest"
 args = ["tests_py"]
 
