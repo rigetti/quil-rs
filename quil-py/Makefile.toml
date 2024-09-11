@@ -38,20 +38,6 @@ description = "Build the python package and install to the active virtual enviro
 command = "maturin"
 args = ["develop"]
 
-[tasks.pre-test-docker-up]
-script = [
-    '''
-    docker compose up -d || { echo 'Warning: `docker compose up` failed. Assuming QVM and quilc are running already.'; true; }
-    '''
-]
-
-[tasks.post-test]
-script = [
-    '''
-    docker compose down || true
-    '''
-]
-
 [tasks.test]
 command = "pytest"
 args = ["tests_py"]
