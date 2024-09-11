@@ -1,8 +1,7 @@
 ---
 source: quil-rs/src/instruction/circuit.rs
-expression: circuit_def.to_string()
+expression: circuit_def.to_quil_or_debug()
 ---
 DEFCIRCUIT BELL a b:
-	H a
-	CNOT a b
-
+    H a
+    CNOT a b

@@ -716,7 +716,7 @@ mod tests {
             Gate, Instruction, Jump, JumpUnless, JumpWhen, Label, Matrix, MemoryReference, Qubit,
             QubitPlaceholder, Target, TargetPlaceholder,
         },
-        quil::Quil,
+        quil::{Quil, INDENT},
         real,
     };
     use approx::assert_abs_diff_eq;
@@ -814,11 +814,11 @@ I 0
             program.to_quil().unwrap(),
             "DECLARE ro BIT[5]
 DEFFRAME 0 \"rx\":
-\tHARDWARE-OBJECT: \"hardware\"
+    HARDWARE-OBJECT: \"hardware\"
 DEFWAVEFORM custom:
-\t1, 2
+    1, 2
 DEFCAL I 0:
-\tDELAY 0 1
+    DELAY 0 1
 I 0
 "
         );
@@ -1167,21 +1167,23 @@ I 0
     /// consistent results.
     #[test]
     fn test_to_instructions() {
-        let input = "DECLARE foo REAL[1]
+        let input = format!(
+            "DECLARE foo REAL[1]
 DEFFRAME 1 \"rx\":
-\tHARDWARE-OBJECT: \"hardware\"
+{INDENT}HARDWARE-OBJECT: \"hardware\"
 DEFWAVEFORM custom2:
-\t1, 2
+{INDENT}1, 2
 DEFCAL I 1:
-\tDELAY 0 1
+{INDENT}DELAY 0 1
 DEFGATE BAR AS MATRIX:
-\t0, 1
-\t1, 0
+{INDENT}0, 1
+{INDENT}1, 0
 
 H 1
 CNOT 2 3
-";
-        let program = Program::from_str(input).unwrap();
+"
+        );
+        let program = Program::from_str(&input).unwrap();
         assert_debug_snapshot!(program.to_instructions());
         assert_eq!(program.to_quil().unwrap(), input);
         assert_eq!(program.to_instructions(), program.into_instructions());
