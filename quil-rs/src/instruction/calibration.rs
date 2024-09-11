@@ -3,7 +3,7 @@ use crate::{
         write_expression_parameter_string, write_instruction_block, Expression, GateModifier,
         Instruction, Qubit,
     },
-    quil::Quil,
+    quil::{Quil, INDENT},
     validation::identifier::{validate_identifier, IdentifierValidationError},
 };
 
@@ -62,7 +62,7 @@ impl Quil for Calibration {
         write_qubit_parameters(f, fall_back_to_debug, &self.qubits)?;
         write!(f, ":")?;
         for instruction in &self.instructions {
-            write!(f, "\n\t")?;
+            write!(f, "\n{INDENT}")?;
             instruction.write(f, fall_back_to_debug)?;
         }
         Ok(())

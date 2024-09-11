@@ -139,12 +139,21 @@ fn _lex(input: LexInput) -> InternalLexResult<Vec<TokenWithLocation>> {
     terminated(
         many0(alt(
             "indentation or a token preceded by whitespace",
-            (
-                token_with_location(value(Token::Indentation, tag("    "))),
-                preceded(many0(tag(" ")), lex_token),
-            ),
+            (lex_indent, preceded(many0(tag(" ")), lex_token)),
         )),
         many0(one_of("\n\t ")),
+    )(input)
+}
+
+/// The Quil spec defines an indent as exactly 4 spaces. However, the lexer recognizes tabs as well
+/// to allow for more flexible formatting.
+fn lex_indent(input: LexInput) -> InternalLexResult<TokenWithLocation> {
+    alt(
+        "indentation",
+        (
+            token_with_location(value(Token::Indentation, tag("    "))),
+            token_with_location(value(Token::Indentation, tag("\t"))),
+        ),
     )(input)
 }
 
