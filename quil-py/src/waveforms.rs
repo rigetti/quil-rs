@@ -24,18 +24,20 @@ pub fn apply_phase_and_detuning(
     detuning: f64,
     sample_rate: f64,
 ) -> PyResult<()> {
+    // There isn't a way to provide a mutable Vec<Complex64> as an argument to a pyfunction so we
+    // create a new Vec<Complex64> from the PyList, and use the updated Vec to update the PyList.
     let mut rust_iq_values: Vec<Complex64> = iq_values
         .iter()
         .map(|item| {
-            let tuple: (f64, f64) = item.extract().unwrap();
-            Complex64::new(tuple.0, tuple.1)
+            let num: Complex64 = item.extract().unwrap();
+            num
         })
         .collect();
 
     rs_apply_phase_and_detuning(&mut rust_iq_values, phase, detuning, sample_rate);
 
-    for (i, complex_num) in rust_iq_values.iter().enumerate() {
-        iq_values.set_item(i, (complex_num.re, complex_num.im))?;
+    for (i, num) in rust_iq_values.iter().enumerate() {
+        iq_values.set_item(i, num)?;
     }
 
     Ok(())
