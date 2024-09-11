@@ -1549,7 +1549,7 @@ class Gate:
         equal the number of existing parameters.
         """
         ...
-    def to_unitary_mut(self, n_qubits: int) -> NDArray[np.complex_]:
+    def to_unitary_mut(self, n_qubits: int) -> NDArray[np.complex128]:
         """Lift a Gate to the full `n_qubits`-qubit Hilbert space.
 
         Returns a ``GateError` if any of the parameters of this gate are

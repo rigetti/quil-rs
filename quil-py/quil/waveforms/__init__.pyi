@@ -1,4 +1,8 @@
-from typing import List
+from typing import Iterable
+
+def apply_phase_and_detuning(iq_values: Iterable[complex], phase: float, detuning: float, sample_rate: float):
+    """Modulate and phase shift waveform IQ data in place."""
+    ...
 
 class BoxcarKernel:
     def __new__(self, phase_cycles: float, scale: float, sample_count: int) -> BoxcarKernel:
