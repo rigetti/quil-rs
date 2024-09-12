@@ -1,3 +1,9 @@
+## 0.28.0
+
+### Breaking Changes
+
+- Use 4 spaces for indentation. (#390)
+
 ## 0.28.0-rc.0
 
 ### Breaking Changes
