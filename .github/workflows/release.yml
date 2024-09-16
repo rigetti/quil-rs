@@ -27,13 +27,13 @@ jobs:
     - name: Install Knope
       uses: knope-dev/action@v1
       with:
-        version: 0.7.1 # Test before updating, breaking changes likely: https://github.com/knope-dev/action#install-latest-version
+        version: 0.16.0 # Test before updating, breaking changes likely: https://github.com/knope-dev/action#install-latest-version
     - run: |
         git config --global user.name "${{ github.triggering_actor }}"
         git config --global user.email "${{ github.triggering_actor}}@users.noreply.github.com"
     - name: Prepare Prerelease
-      run: knope release --prerelease-label=rc
+      run: knope release --verbose --prerelease-label=rc
       if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.type == 'prerelease')
     - name: Prepare Release
-      run: knope release
+      run: knope release --verbose
       if: github.event_name == 'workflow_dispatch' && inputs.type == 'release'
