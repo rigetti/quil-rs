@@ -1,3 +1,13 @@
+## 0.5.1-rc.1 (2024-09-16)
+
+### Fixes
+
+#### update lexical
+
+#### Update lexical-core
+
+#### update Knope, get it to release an update
+
 ## 0.5.1-rc.0
 
 ### Fixes
