@@ -1,3 +1,9 @@
+## 0.28.1-rc.0
+
+### Fixes
+
+- Update lexical-core
+
 ## 0.28.0
 
 ### Breaking Changes

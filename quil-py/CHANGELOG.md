@@ -1,3 +1,9 @@
+## 0.12.1-rc.0
+
+### Fixes
+
+- Update lexical-core
+
 ## 0.12.0
 
 ### Breaking Changes
