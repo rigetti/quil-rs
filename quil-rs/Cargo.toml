@@ -13,7 +13,7 @@ categories = ["parser-implementations", "science", "compilers", "emulators"]
 approx = { version = "0.5.1", features = ["num-complex"] }
 dot-writer = { version = "0.1.2", optional = true }
 itertools = "0.12.1"
-lexical = "6.1.1"
+lexical = "7.0.1"
 ndarray.workspace = true
 nom = "7.1.1"
 nom_locate = "4.0.0"
