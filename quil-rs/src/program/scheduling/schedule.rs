@@ -249,14 +249,18 @@ impl<'p> ScheduledBasicBlock<'p> {
             common_sample_rate
                 .map(|sample_rate| sample_count as f64 / sample_rate)
                 .map(Seconds)
-        } else if name == "erfsquare" {
+        } else if name == "erfsquare" || name == "erf_square" {
             // It's not clear how demanding to be of the waveforms here.  This is the simplest thing
             // that could posibly work – compute the duration differently for "erfsquare", don't
             // require constant values for any of the other fields, don't check which fields are
             // present.  However, we could do more stringent parsing and work with an `impl
             // WaveformTemplate` instead.  This would provide stronger guarantees, but less
             // flexibility.
-            Some(parameter("duration")? + parameter("padleft")? + parameter("padright")?)
+            Some(
+                parameter("duration")?
+                    + parameter("padleft").or_else(|| parameter("pad_left"))?
+                    + parameter("padright").or_else(|| parameter("pad_right"))?,
+            )
         } else {
             parameter("duration")
         }
