@@ -62,7 +62,7 @@ pub use self::gate::{
     PauliSum, PauliTerm,
 };
 pub use self::measurement::Measurement;
-pub use self::pragma::{Include, Pragma, PragmaArgument, ReservedPragma, RESERVED_PRAGMA_EXTERN};
+pub use self::pragma::{Include, Pragma, PragmaArgument, RESERVED_PRAGMA_EXTERN};
 pub use self::qubit::{Qubit, QubitPlaceholder};
 pub use self::reset::Reset;
 pub use self::timing::{Delay, Fence};
@@ -105,7 +105,6 @@ pub enum Instruction {
     Pragma(Pragma),
     Pulse(Pulse),
     RawCapture(RawCapture),
-    ReservedPragma(ReservedPragma),
     Reset(Reset),
     SetFrequency(SetFrequency),
     SetPhase(SetPhase),
@@ -164,7 +163,6 @@ impl From<&Instruction> for InstructionRole {
             | Instruction::Load(_)
             | Instruction::Nop
             | Instruction::Pragma(_)
-            | Instruction::ReservedPragma(ReservedPragma::Extern(_))
             | Instruction::Store(_) => InstructionRole::ClassicalCompute,
             Instruction::Halt
             | Instruction::Jump(_)
@@ -300,9 +298,6 @@ impl Quil for Instruction {
             Instruction::Pulse(pulse) => pulse.write(f, fall_back_to_debug),
             Instruction::Pragma(pragma) => pragma.write(f, fall_back_to_debug),
             Instruction::RawCapture(raw_capture) => raw_capture.write(f, fall_back_to_debug),
-            Instruction::ReservedPragma(reserved_pragma) => {
-                reserved_pragma.write(f, fall_back_to_debug)
-            }
             Instruction::Reset(reset) => reset.write(f, fall_back_to_debug),
             Instruction::SetFrequency(set_frequency) => set_frequency.write(f, fall_back_to_debug),
             Instruction::SetPhase(set_phase) => set_phase.write(f, fall_back_to_debug),
@@ -566,7 +561,6 @@ impl Instruction {
             | Instruction::Move(_)
             | Instruction::Nop
             | Instruction::Pragma(_)
-            | Instruction::ReservedPragma(ReservedPragma::Extern(_))
             | Instruction::Store(_)
             | Instruction::UnaryLogic(_)
             | Instruction::WaveformDefinition(_)
@@ -695,7 +689,6 @@ impl Instruction {
             | Instruction::Move(_)
             | Instruction::Nop
             | Instruction::Pragma(_)
-            | Instruction::ReservedPragma(ReservedPragma::Extern(_))
             | Instruction::Reset(_)
             | Instruction::Store(_)
             | Instruction::Wait
@@ -744,7 +737,6 @@ impl Instruction {
             | Instruction::Move(_)
             | Instruction::Nop
             | Instruction::Pragma(_)
-            | Instruction::ReservedPragma(ReservedPragma::Extern(_))
             | Instruction::Reset(_)
             | Instruction::Store(_)
             | Instruction::UnaryLogic(_)
@@ -937,12 +929,13 @@ impl InstructionHandler {
     pub fn memory_accesses(
         &mut self,
         instruction: &Instruction,
+        extern_signature_map: &ExternSignatureMap,
     ) -> crate::program::MemoryAccessesResult {
         self.get_memory_accesses
             .as_mut()
             .and_then(|f| f(instruction))
             .map(Ok)
-            .unwrap_or_else(|| instruction.get_memory_accesses())
+            .unwrap_or_else(|| instruction.get_memory_accesses(extern_signature_map))
     }
 
     /// Like [`Program::into_simplified`], but using custom instruction handling.

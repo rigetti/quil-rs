@@ -26,7 +26,7 @@ mod error;
 mod expression;
 pub(crate) mod instruction;
 mod lexer;
-pub(crate) mod reserved_pragma_extern;
+pub(crate) mod pragma_extern;
 mod token;
 
 pub(crate) use error::{ErrorInput, InternalParseError};

@@ -24,8 +24,8 @@ pub use self::{
         PyScalarType, PySharing, PyStore, PyVector,
     },
     extern_call::{
-        CallValidationError, ExternValidationError, PyCall, PyCallArgument, PyCallArguments,
-        PyExternDefinition, PyExternParameter, PyExternParameterType, PyExternSignature,
+        CallError, ExternError, PyCall, PyCallArgument, PyExternParameter, PyExternParameterType,
+        PyExternSignature,
     },
     frame::{
         PyAttributeValue, PyCapture, PyFrameAttributes, PyFrameDefinition, PyFrameIdentifier,
@@ -37,7 +37,7 @@ pub use self::{
         PyPauliSum, PyPauliTerm,
     },
     measurement::PyMeasurement,
-    pragma::{PyInclude, PyPragma, PyPragmaArgument, PyReservedPragma},
+    pragma::{PyInclude, PyPragma, PyPragmaArgument},
     qubit::{PyQubit, PyQubitPlaceholder},
     reset::PyReset,
     timing::{PyDelay, PyFence},
@@ -91,7 +91,6 @@ py_wrap_union_enum! {
         pragma: Pragma => PyPragma,
         pulse: Pulse => PyPulse,
         raw_capture: RawCapture => PyRawCapture,
-        reserved_pragma: ReservedPragma => PyReservedPragma,
         reset: Reset => PyReset,
         set_frequency: SetFrequency => PySetFrequency,
         set_phase: SetPhase => PySetPhase,
@@ -158,13 +157,11 @@ create_init_submodule! {
         PyBinaryOperator,
         PyCall,
         PyCallArgument,
-        PyCallArguments,
         PyComparison,
         PyComparisonOperand,
         PyComparisonOperator,
         PyConvert,
         PyExchange,
-        PyExternDefinition,
         PyExternParameter,
         PyExternParameterType,
         PyExternSignature,
@@ -190,7 +187,6 @@ create_init_submodule! {
         PyFrameDefinition,
         PyFrameIdentifier,
         PyPulse,
-        PyReservedPragma,
         PyRawCapture,
         PySetFrequency,
         PySetPhase,
@@ -222,7 +218,7 @@ create_init_submodule! {
         PyWaveformDefinition,
         PyWaveformInvocation
     ],
-    errors: [ CallValidationError, ExternValidationError, GateError, ParseMemoryReferenceError ],
+    errors: [ CallError, ExternError, GateError, ParseMemoryReferenceError ],
 }
 
 /// Implements __copy__ and __deepcopy__ on any variant of the [`PyInstruction`] class, making

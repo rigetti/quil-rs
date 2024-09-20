@@ -6,14 +6,13 @@ use num_complex::Complex64;
 
 use crate::expression::Expression;
 use crate::instruction::{
-    Arithmetic, ArithmeticOperator, BinaryLogic, BinaryOperator, Calibration, Call, CallArguments,
-    Capture, CircuitDefinition, Comparison, ComparisonOperator, Convert, Declaration, Delay,
-    Exchange, Fence, FrameDefinition, GateDefinition, GateSpecification, GateType, Include,
-    Instruction, Jump, JumpUnless, JumpWhen, Label, Load, MeasureCalibrationDefinition,
-    Measurement, Move, PauliSum, Pragma, PragmaArgument, Pulse, Qubit, RawCapture, Reset,
-    SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, Store, SwapPhases, Target,
-    UnaryLogic, UnaryOperator, UnresolvedCallArgument, ValidationError, Waveform,
-    WaveformDefinition, RESERVED_PRAGMA_EXTERN,
+    Arithmetic, ArithmeticOperator, BinaryLogic, BinaryOperator, Calibration, Call, Capture,
+    CircuitDefinition, Comparison, ComparisonOperator, Convert, Declaration, Delay, Exchange,
+    Fence, FrameDefinition, GateDefinition, GateSpecification, GateType, Include, Instruction,
+    Jump, JumpUnless, JumpWhen, Label, Load, MeasureCalibrationDefinition, Measurement, Move,
+    PauliSum, Pragma, PragmaArgument, Pulse, Qubit, RawCapture, Reset, SetFrequency, SetPhase,
+    SetScale, ShiftFrequency, ShiftPhase, Store, SwapPhases, Target, UnaryLogic, UnaryOperator,
+    UnresolvedCallArgument, ValidationError, Waveform, WaveformDefinition,
 };
 
 use crate::parser::instruction::parse_block;
@@ -125,21 +124,18 @@ pub(crate) fn parse_declare<'a>(input: ParserInput<'a>) -> InternalParserResult<
 
 /// Parse the contents of a `CALL` instruction.
 ///
-/// Note, the `CALL` instruction here is unresolved; it may only be resolved within the
-/// full context of a program. See [`crate::Program::resolve_call_instructions`].
+/// Note, the `CALL` instruction here is unresolved; it can only be resolved within the
+/// full context of a program from an [`crate::instruction::extern_call::ExternSignatureMap`].
 ///
 /// Call instructions are of the form:
 ///     `CALL @ms{Identifier} @rep[:min 1]{@group{@ms{Identifier} @alt @ms{Memory Reference} @alt @ms{Complex}}}`
 ///
-/// For additional detail, see the [Quil specification "Call"](https://github.com/quil-lang/quil/blob/7f532c7cdde9f51eae6abe7408cc868fba9f91f6/specgen/spec/sec-other.s).
+/// For additional detail, see the ["Call" in the Quil specification](https://github.com/quil-lang/quil/blob/7f532c7cdde9f51eae6abe7408cc868fba9f91f6/specgen/spec/sec-other.s).
 pub(crate) fn parse_call<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Instruction> {
     let (input, name) = token!(Identifier(v))(input)?;
 
     let (input, arguments) = many0(parse_call_argument)(input)?;
-    let call = Call {
-        name,
-        arguments: CallArguments::Unresolved(arguments),
-    };
+    let call = Call { name, arguments };
 
     Ok((input, Instruction::Call(call)))
 }
@@ -521,9 +517,6 @@ pub(crate) fn parse_store<'a>(input: ParserInput<'a>) -> InternalParserResult<'a
 /// Parse the contents of a `PRAGMA` instruction.
 pub(crate) fn parse_pragma<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Instruction> {
     let (input, pragma_type) = token!(Identifier(v))(input)?;
-    if pragma_type == RESERVED_PRAGMA_EXTERN {
-        return super::reserved_pragma_extern::parse_reserved_pragma_extern(input);
-    }
     let (input, arguments) = many0(alt((
         map(token!(Identifier(v)), PragmaArgument::Identifier),
         map(token!(Integer(i)), PragmaArgument::Integer),
@@ -665,8 +658,8 @@ mod tests {
         PrefixExpression, PrefixOperator,
     };
     use crate::instruction::{
-        Call, CallArguments, GateDefinition, GateSpecification, Offset, PauliGate, PauliSum,
-        PauliTerm, PragmaArgument, Sharing, UnresolvedCallArgument,
+        Call, GateDefinition, GateSpecification, Offset, PauliGate, PauliSum, PauliTerm,
+        PragmaArgument, Sharing, UnresolvedCallArgument,
     };
     use crate::parser::lexer::lex;
     use crate::parser::Token;
@@ -1103,14 +1096,14 @@ mod tests {
                 remainder: vec![],
                 expected: Ok(Call {
                     name: "foo".to_string(),
-                    arguments: CallArguments::Unresolved(vec![
+                    arguments: vec![
                         UnresolvedCallArgument::MemoryReference(MemoryReference {
                             name: "integer".to_string(),
                             index: 0,
                         }),
                         UnresolvedCallArgument::Immediate(real!(1.0)),
                         UnresolvedCallArgument::Identifier("bar".to_string()),
-                    ]),
+                    ],
                 }),
             }
         }
@@ -1122,7 +1115,7 @@ mod tests {
                 remainder: vec![],
                 expected: Ok(Call {
                     name: "foo".to_string(),
-                    arguments: CallArguments::Unresolved(vec![]),
+                    arguments: vec![],
                 }),
             }
         }
@@ -1146,14 +1139,14 @@ mod tests {
                 remainder: vec![Token::Semicolon, Token::Identifier("baz".to_string())],
                 expected: Ok(Call {
                     name: "foo".to_string(),
-                    arguments: CallArguments::Unresolved(vec![
+                    arguments: vec![
                         UnresolvedCallArgument::MemoryReference(MemoryReference {
                             name: "integer".to_string(),
                             index: 0,
                         }),
                         UnresolvedCallArgument::Immediate(real!(1.0)),
                         UnresolvedCallArgument::Identifier("bar".to_string()),
-                    ]),
+                    ],
                 }),
             }
         }
