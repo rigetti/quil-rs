@@ -210,9 +210,16 @@ impl<'p> ScheduledBasicBlock<'p> {
     fn get_waveform_duration_seconds(
         program: &Program,
         instruction: &Instruction,
-        waveform_invocation: &WaveformInvocation,
+        WaveformInvocation { name, parameters }: &WaveformInvocation,
     ) -> Option<Seconds> {
-        if let Some(definition) = program.waveforms.get(&waveform_invocation.name) {
+        let parameter = |parameter_name| {
+            parameters
+                .get(parameter_name)
+                .and_then(|v| v.to_real().ok())
+                .map(Seconds)
+        };
+
+        if let Some(definition) = program.waveforms.get(name) {
             let sample_count = definition.matrix.len();
             let common_sample_rate =
                 program
@@ -242,12 +249,16 @@ impl<'p> ScheduledBasicBlock<'p> {
             common_sample_rate
                 .map(|sample_rate| sample_count as f64 / sample_rate)
                 .map(Seconds)
+        } else if name == "erfsquare" {
+            // It's not clear how demanding to be of the waveforms here.  This is the simplest thing
+            // that could posibly work – compute the duration differently for "erfsquare", don't
+            // require constant values for any of the other fields, don't check which fields are
+            // present.  However, we could do more stringent parsing and work with an `impl
+            // WaveformTemplate` instead.  This would provide stronger guarantees, but less
+            // flexibility.
+            Some(parameter("duration")? + parameter("padleft")? + parameter("padright")?)
         } else {
-            waveform_invocation
-                .parameters
-                .get("duration")
-                .and_then(|v| v.to_real().ok())
-                .map(Seconds)
+            parameter("duration")
         }
     }
 
