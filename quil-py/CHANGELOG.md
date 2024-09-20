@@ -1,3 +1,9 @@
+## 0.12.2-rc.0 (2024-09-20)
+
+### Features
+
+#### Add waveforms module for generating discrete IQ value sequences representing Quil's defined set of waveforms. (#399)
+
 ## 0.12.1 (2024-09-16)
 
 ### Fixes
