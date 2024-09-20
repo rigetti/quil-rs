@@ -1,3 +1,35 @@
+## 0.28.1 (2024-09-16)
+
+### Fixes
+
+#### update lexical
+
+#### Update lexical-core
+
+#### update Knope, get it to release an update
+
+## 0.28.1-rc.1 (2024-09-16)
+
+### Fixes
+
+#### update lexical
+
+#### Update lexical-core
+
+#### update Knope, get it to release an update
+
+## 0.28.1-rc.0
+
+### Fixes
+
+- Update lexical-core
+
+## 0.28.0
+
+### Breaking Changes
+
+- Use 4 spaces for indentation. (#390)
+
 ## 0.28.0-rc.0
 
 ### Breaking Changes
