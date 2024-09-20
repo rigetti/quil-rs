@@ -404,6 +404,16 @@ PULSE 0 "a" flat(duration: 1.0)
     #[case(
         r#"DEFFRAME 0 "a":
     SAMPLE-RATE: 1e9
+PULSE 0 "a" erfsquare(duration: 1.0, padleft: 0.2, padright: 0.3)
+PULSE 0 "a" erfsquare(duration: 0.1, padleft: 0.7, padright: 0.7)
+PULSE 0 "a" erfsquare(duration: 0.5, padleft: 0.6, padright: 0.4)
+FENCE
+"#,
+        Ok(vec![0.0, 1.5, 3.0, 4.5])
+    )]
+    #[case(
+        r#"DEFFRAME 0 "a":
+    SAMPLE-RATE: 1e9
 DEFFRAME 0 "b":
     SAMPLE-RATE: 1e9
 NONBLOCKING PULSE 0 "a" flat(duration: 1.0)
