@@ -102,7 +102,6 @@ class Instruction:
             Pragma,
             Pulse,
             RawCapture,
-            ReservedPragma,
             Reset,
             SetFrequency,
             SetPhase,
@@ -155,7 +154,6 @@ class Instruction:
         Pragma,
         Pulse,
         RawCapture,
-        ReservedPragma,
         Reset,
         SetFrequency,
         SetPhase,
@@ -198,7 +196,6 @@ class Instruction:
     def is_pragma(self) -> bool: ...
     def is_pulse(self) -> bool: ...
     def is_raw_capture(self) -> bool: ...
-    def is_reserved_pragma(self) -> bool: ...
     def is_reset(self) -> bool: ...
     def is_set_frequency(self) -> bool: ...
     def is_set_phase(self) -> bool: ...
@@ -276,8 +273,6 @@ class Instruction:
     def from_pulse(inner: Pulse) -> Instruction: ...
     @staticmethod
     def from_raw_capture(inner: RawCapture) -> Instruction: ...
-    @staticmethod
-    def from_reserved_pragma(inner: ReservedPragma) -> Instruction: ...
     @staticmethod
     def from_set_frequency(inner: SetFrequency) -> Instruction: ...
     @staticmethod
@@ -358,8 +353,6 @@ class Instruction:
     def to_pulse(self) -> Pulse: ...
     def as_raw_capture(self) -> Optional[RawCapture]: ...
     def to_raw_capture(self) -> RawCapture: ...
-    def as_reserved_pragma(self) -> Optional[ReservedPragma]: ...
-    def to_reserved_pragma(self) -> ReservedPragma: ...
     def as_reset(self) -> Optional[Reset]: ...
     def to_reset(self) -> Reset: ...
     def as_set_frequency(self) -> Optional[SetFrequency]: ...
@@ -1229,40 +1222,13 @@ class CallArgument:
         If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
-@final
-class CallArguments:
-    """A list of `CallArgument`s for a single `CALL`.
-
-    This abstract is necessary for the inner workings of the `CallArgument` type resolution.
-    """
-
-    def inner(self) -> Union[List[List[Expression]], List[int], PauliSum]:
-        """Returns the inner value of the variant. Raises a ``RuntimeError`` if inner data doesn't exist."""
-        ...
-    def is_arguments(self) -> bool: ...
-    def as_arguments(self) -> Optional[List["CallArgument"]]: ...
-    def to_arguments(self) -> List["CallArgument"]: ...
-    @staticmethod
-    def from_arguments(inner: List["CallArgument"]) -> "CallArguments": ...
-    def to_quil(self) -> str:
-        """Attempt to convert the instruction to a valid Quil string.
-
-        Raises an exception if the instruction can't be converted to valid Quil.
-        """
-        ...
-    def to_quil_or_debug(self) -> str:
-        """Convert the instruction to a Quil string.
-
-        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
-        """
-
-class CallValidationError(ValueError):
+class CallError(ValueError):
     """An error that may occur when performing operations on a ``Call``."""
 
     ...
 
 class Call:
-    """An instruction to an external function declared within an `ExternDefinition`.
+    """An instruction to an external function declared within a `PRAGMA EXTERN` instruction.
 
     These calls are generally specific to a particular hardware or virtual machine
     backend. For further detail, see:
@@ -1273,7 +1239,7 @@ class Call:
     * `quil#87 <https://github.com/quil-lang/quil/issues/87>`_
 
 
-    Also see `ExternDefinition`.
+    Also see `ExternSignature`.
     """
     def __new__(
         cls,
@@ -1285,9 +1251,9 @@ class Call:
     @name.setter
     def name(self, name: str) -> None: ...
     @property
-    def arguments(self) -> "CallArguments": ...
+    def arguments(self) -> List[CallArgument]: ...
     @arguments.setter
-    def arguments(self, arguments: "CallArguments") -> None: ...
+    def arguments(self, arguments: List[CallArgument]) -> None: ...
     def to_quil(self) -> str:
         """Attempt to convert the instruction to a valid Quil string.
 
@@ -1392,7 +1358,7 @@ class ExternParameter:
         """Returns a shallow copy of the class."""
 
 class ExternSignature:
-    """The signature of an `ExternDefinition`.
+    """The signature of a ``PRAGMA EXTERN`` instruction.
 
     This signature is defined by a list of `ExternParameter`s and an
     optional return type. See the `Quil Specification <https://github.com/quil-lang/quil/blob/7f532c7cdde9f51eae6abe7408cc868fba9f91f6/specgen/spec/sec-other.s>`_
@@ -1432,59 +1398,10 @@ class ExternSignature:
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
-class ExternValidationError(ValueError):
-    """An error that may occur when initializing or validating an ``ExternDefinition``."""
+class ExternError(ValueError):
+    """An error that may occur when initializing or validating a ``PRAGMA EXTERN`` instruction."""
 
     ...
-
-class ExternDefinition:
-    """An external function declaration.
-
-    These are generally specific to a particular hardware or virtual machine backend. Note,
-    these are not standard Quil instructions, but rather a type of `ReservedPragma`.
-
-    For further detail, see:
-
-    * `Other instructions and Directives <https://github.com/quil-lang/quil/blob/master/rfcs/extern-call.md>`_
-        in the Quil specification.
-    * `EXTERN / CALL RFC <https://github.com/quil-lang/quil/blob/master/rfcs/extern-call.md>`_
-    * `quil#87 <https://github.com/quil-lang/quil/issues/87>`_
-
-    Also see `Call`.
-    """
-    def __new__(
-        cls,
-        name: str,
-        signature: Optional[ExternSignature],
-    ) -> Self: ...
-    @property
-    def name(self) -> str: ...
-    @name.setter
-    def name(self, name: str) -> None: ...
-    @property
-    def signature(self) -> Optional[ExternSignature]: ...
-    @signature.setter
-    def signature(self, signature: ExternSignature) -> None: ...
-    def to_quil(self) -> str:
-        """Attempt to convert the instruction to a valid Quil string.
-
-        Raises an exception if the instruction can't be converted to valid Quil.
-        """
-        ...
-    def to_quil_or_debug(self) -> str:
-        """Convert the instruction to a Quil string.
-
-        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
-        """
-    def __deepcopy__(self, _: Dict) -> Self:
-        """Creates and returns a deep copy of the class.
-
-        If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with
-        new placeholders so resolving them in the copy will not resolve them in the original.
-        Should be used by passing an instance of the class to ``copy.deepcopy``
-        """
-    def __copy__(self) -> Self:
-        """Returns a shallow copy of the class."""
 
 class Capture:
     def __new__(
@@ -2182,33 +2099,6 @@ class PragmaArgument:
     def from_identifier(inner: str) -> PragmaArgument: ...
     @staticmethod
     def from_integer(inner: int) -> PragmaArgument: ...
-    def to_quil(self) -> str:
-        """Attempt to convert the instruction to a valid Quil string.
-
-        Raises an exception if the instruction can't be converted to valid Quil.
-        """
-        ...
-    def to_quil_or_debug(self) -> str:
-        """Convert the instruction to a Quil string.
-
-        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
-        """
-
-@final
-class ReservedPragma:
-    """An instruction represented by as a specially structured `Pragma`.
-
-    Currently, this may only be an `ExternDefinition`.
-    """
-
-    def inner(self) -> Union["ExternDefinition"]:  # type: ignore
-        """Returns the inner value of the variant. Raises a ``RuntimeError`` if inner data doesn't exist."""
-        ...
-    def is_extern_definition(self) -> bool: ...
-    def as_extern_definition(self) -> Optional[ExternDefinition]: ...
-    def to_extern_definition(self) -> ExternDefinition: ...
-    @staticmethod
-    def from_extern_definition(inner: ExternDefinition) -> "ReservedPragma": ...
     def to_quil(self) -> str:
         """Attempt to convert the instruction to a valid Quil string.
 

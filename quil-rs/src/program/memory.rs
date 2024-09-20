@@ -16,14 +16,13 @@ use std::collections::HashSet;
 
 use crate::expression::{Expression, FunctionCallExpression, InfixExpression, PrefixExpression};
 use crate::instruction::{
-    Arithmetic, ArithmeticOperand, BinaryLogic, BinaryOperand, Call, CallArguments, Capture,
-    CircuitDefinition, Comparison, ComparisonOperand, Convert, Delay, Exchange, Gate,
+    Arithmetic, ArithmeticOperand, BinaryLogic, BinaryOperand, CallResolutionError, Capture,
+    CircuitDefinition, Comparison, ComparisonOperand, Convert, Delay, Exchange, ExternMap, Gate,
     GateDefinition, GateSpecification, Instruction, JumpUnless, JumpWhen, Load,
     MeasureCalibrationDefinition, Measurement, MemoryReference, Move, Pulse, RawCapture,
-    ReservedPragma, SetFrequency, SetPhase, SetScale, Sharing, ShiftFrequency, ShiftPhase, Store,
-    UnaryLogic, Vector, WaveformInvocation,
+    SetFrequency, SetPhase, SetScale, Sharing, ShiftFrequency, ShiftPhase, Store, UnaryLogic,
+    Vector, WaveformInvocation,
 };
-use crate::quil::Quil;
 
 #[derive(Clone, Debug, Hash, PartialEq)]
 pub struct MemoryRegion {
@@ -94,17 +93,17 @@ macro_rules! set_from_memory_references {
     };
 }
 
-#[derive(Clone, thiserror::Error, Debug, PartialEq)]
+#[derive(thiserror::Error, Debug, PartialEq)]
 pub enum MemoryAccessesError {
-    #[error("cannot get instruction memory accesses before resolving call instructions: {}", .0.to_quil_or_debug())]
-    UnresolvedCallInstruction(Call),
+    #[error("must be able to resolve call to an extern signature: {0}")]
+    CallResolution(#[from] CallResolutionError),
 }
 
 pub type MemoryAccessesResult = Result<MemoryAccesses, MemoryAccessesError>;
 
 impl Instruction {
     /// Return all memory accesses by the instruction - in expressions, captures, and memory manipulation
-    pub fn get_memory_accesses(&self) -> MemoryAccessesResult {
+    pub fn get_memory_accesses(&self, extern_map: &ExternMap) -> MemoryAccessesResult {
         Ok(match self {
             Instruction::Convert(Convert {
                 source,
@@ -114,28 +113,7 @@ impl Instruction {
                 writes: set_from_memory_references![[destination]],
                 ..Default::default()
             },
-            Instruction::Call(call) => match call.arguments {
-                CallArguments::Resolved(ref arguments) => {
-                    let mut reads = HashSet::new();
-                    let mut writes = HashSet::new();
-                    for argument in arguments {
-                        if let Some(name) = argument.name() {
-                            if argument.is_mutable() {
-                                writes.insert(name.clone());
-                            }
-                            reads.insert(name);
-                        }
-                    }
-                    MemoryAccesses {
-                        reads,
-                        writes,
-                        ..Default::default()
-                    }
-                }
-                CallArguments::Unresolved(_) => {
-                    return Err(MemoryAccessesError::UnresolvedCallInstruction(call.clone()));
-                }
-            },
+            Instruction::Call(call) => call.get_memory_accesses(extern_map)?,
             Instruction::Comparison(Comparison {
                 destination,
                 lhs,
@@ -219,16 +197,17 @@ impl Instruction {
             | Instruction::MeasureCalibrationDefinition(MeasureCalibrationDefinition {
                 instructions,
                 ..
-            }) => instructions
-                .iter()
-                .try_fold(Default::default(), |acc: MemoryAccesses, el| {
-                    let el_accesses = el.get_memory_accesses()?;
+            }) => instructions.iter().try_fold(
+                Default::default(),
+                |acc: MemoryAccesses, el| -> MemoryAccessesResult {
+                    let el_accesses = el.get_memory_accesses(extern_map)?;
                     Ok(MemoryAccesses {
                         reads: merge_sets!(acc.reads, el_accesses.reads),
                         writes: merge_sets!(acc.writes, el_accesses.writes),
                         captures: merge_sets!(acc.captures, el_accesses.captures),
                     })
-                })?,
+                },
+            )?,
             Instruction::Delay(Delay { duration, .. }) => MemoryAccesses {
                 reads: set_from_memory_references!(duration.get_memory_references()),
                 ..Default::default()
@@ -332,7 +311,6 @@ impl Instruction {
             | Instruction::Label(_)
             | Instruction::Nop
             | Instruction::Pragma(_)
-            | Instruction::ReservedPragma(ReservedPragma::Extern(_))
             | Instruction::Reset(_)
             | Instruction::SwapPhases(_)
             | Instruction::WaveformDefinition(_) => Default::default(),
@@ -389,8 +367,8 @@ mod tests {
 
     use crate::expression::Expression;
     use crate::instruction::{
-        ArithmeticOperand, Convert, Exchange, FrameIdentifier, Instruction, MemoryReference, Qubit,
-        SetFrequency, ShiftFrequency, Store,
+        ArithmeticOperand, Convert, Exchange, ExternMap, FrameIdentifier, Instruction,
+        MemoryReference, Qubit, SetFrequency, ShiftFrequency, Store,
     };
     use crate::program::MemoryAccesses;
     use std::collections::HashSet;
@@ -487,7 +465,7 @@ mod tests {
         #[case] expected: MemoryAccesses,
     ) {
         let memory_accesses = instruction
-            .get_memory_accesses()
+            .get_memory_accesses(&ExternMap::default())
             .expect("must be able to get memory accesses");
         assert_eq!(memory_accesses.captures, expected.captures);
         assert_eq!(memory_accesses.reads, expected.reads);

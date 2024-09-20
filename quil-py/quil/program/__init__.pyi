@@ -141,21 +141,6 @@ class Program:
         while ensuring that unique value is not already in use within the program.
         """
         ...
-    def resolve_call_instructions(self) -> None:
-        """Resolve ``CALL`` instructions within the program.
-
-        This does two things:
-
-        1. It validates all ``EXTERN`` instructions in the program.
-        2. It resolves the ``CALL`` instruction data types based on the declared memory types
-            and ensures those match one and only one ``EXTERN`` instruction.
-
-        This method is only useful for validating program structure before it is compiled. Note,
-        this mutates the inner representation of the program.
-
-        :raises ProgramError: If any of the above conditions are not met.
-        """
-        ...
     def resolve_placeholders_with_custom_resolvers(
         self,
         *,

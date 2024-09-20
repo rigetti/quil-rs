@@ -14,13 +14,13 @@ use num_complex::Complex64;
 use crate::{
     expression::format_complex,
     hash::hash_f64,
-    parser::{lex, InternalParseError, ParserErrorKind, ParserInput},
-    program::{disallow_leftover, MemoryRegion, SyntaxError},
+    parser::lex,
+    program::{disallow_leftover, MemoryAccesses, MemoryRegion, SyntaxError},
     quil::Quil,
     validation::identifier::{validate_user_identifier, IdentifierValidationError},
 };
 
-use super::{MemoryReference, ScalarType, Vector};
+use super::{Instruction, MemoryReference, Pragma, ScalarType, Vector, RESERVED_PRAGMA_EXTERN};
 
 /// A parameter type within an extern signature.
 #[derive(Clone, Debug, PartialEq, Hash, Eq)]
@@ -94,10 +94,18 @@ pub struct ExternSignature {
 
 impl ExternSignature {
     /// Create a new extern signature.
-    pub fn new(return_type: Option<ScalarType>, parameters: Vec<ExternParameter>) -> Self {
-        Self {
+    pub fn try_new(
+        return_type: Option<ScalarType>,
+        parameters: Vec<ExternParameter>,
+    ) -> Result<Self, ExternError> {
+        let signature = Self {
             return_type,
             parameters,
+        };
+        if signature.has_return_or_parameters() {
+            Ok(signature)
+        } else {
+            Err(ExternError::NoReturnOrParameters)
         }
     }
 
@@ -106,39 +114,46 @@ impl ExternSignature {
     }
 }
 
+const EXPECTED_PRAGMA_EXTERN_STRUCTURE: &str = "PRAGMA EXTERN {{name}} \"{{signature}}\"";
+
 /// An error that can occur when parsing an extern signature.
 #[derive(Debug, thiserror::Error, PartialEq)]
-pub enum ExternSignatureError {
+pub enum ExternError {
     /// An error occurred while parsing the contents of the extern signature.
-    #[error("invalid extern signature syntax: {0}")]
+    #[error("invalid extern signature syntax: {0:?}")]
     Syntax(SyntaxError<ExternSignature>),
     /// An error occurred while lexing the extern signature.
-    #[error("failed to lex extern signature: {0}")]
+    #[error("failed to lex extern signature: {0:?}")]
     Lex(crate::parser::LexError),
-}
-
-impl ExternSignatureError {
-    pub(crate) fn into_internal_parse_error(
-        self,
-        input: ParserInput<'_>,
-    ) -> InternalParseError<'_> {
-        InternalParseError::from_kind(input, ParserErrorKind::from(Box::new(self)))
-    }
+    #[error("invalid pragma arguments")]
+    InvalidPragmaArguments,
+    #[error("no signature found: expected `{EXPECTED_PRAGMA_EXTERN_STRUCTURE}`")]
+    NoSignature,
+    #[error("no name: expected `{EXPECTED_PRAGMA_EXTERN_STRUCTURE}`")]
+    NoName,
+    #[error("pragma is not EXTERN")]
+    PragmaIsNotExtern,
+    /// The extern definition has a signature but it lacks a return or parameters.
+    #[error("extern definition has a signature but it lacks a return or parameters")]
+    NoReturnOrParameters,
+    #[error("invalid identifier: {0:?}")]
+    Name(#[from] IdentifierValidationError),
 }
 
 impl FromStr for ExternSignature {
-    type Err = ExternSignatureError;
+    type Err = ExternError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let signature_input = LocatedSpan::new(s);
-        let signature_tokens = lex(signature_input).map_err(ExternSignatureError::Lex)?;
+        let signature_tokens = lex(signature_input).map_err(ExternError::Lex)?;
         let signature = disallow_leftover(
-            crate::parser::reserved_pragma_extern::parse_extern_signature(
-                signature_tokens.as_slice(),
-            )
-            .map_err(crate::parser::ParseError::from_nom_internal_err),
+            crate::parser::pragma_extern::parse_extern_signature(signature_tokens.as_slice())
+                .map_err(crate::parser::ParseError::from_nom_internal_err),
         )
-        .map_err(ExternSignatureError::Syntax)?;
+        .map_err(ExternError::Syntax)?;
+        if signature.return_type.is_none() && signature.parameters.is_empty() {
+            return Err(ExternError::NoReturnOrParameters);
+        }
         Ok(signature)
     }
 }
@@ -169,85 +184,66 @@ impl Quil for ExternSignature {
     }
 }
 
-/// An extern definition with a name and optional signature. Note, this is not a
-/// Quil instruction or command, though it may become so in the future. Currently,
-/// it is defined as a reserved pragma.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ExternDefinition {
-    /// The name of the extern definition. This must be a valid user identifier.
-    pub name: String,
-    /// The signature of the extern definition, if any.
-    pub signature: Option<ExternSignature>,
-}
+impl TryFrom<Pragma> for ExternSignature {
+    type Error = ExternError;
 
-impl ExternDefinition {
-    pub fn try_new(
-        name: String,
-        signature: Option<ExternSignature>,
-    ) -> Result<Self, ExternValidationError> {
-        validate_user_identifier(name.as_str()).map_err(ExternValidationError::Name)?;
-
-        Ok(Self { name, signature })
-    }
-}
-
-impl Quil for ExternDefinition {
-    fn write(
-        &self,
-        writer: &mut impl std::fmt::Write,
-        fall_back_to_debug: bool,
-    ) -> Result<(), crate::quil::ToQuilError> {
-        write!(writer, "{}", self.name)?;
-        if let Some(signature) = &self.signature {
-            write!(writer, " \"")?;
-            signature.write(writer, fall_back_to_debug)?;
-            write!(writer, "\"")?;
+    fn try_from(value: Pragma) -> Result<Self, ExternError> {
+        if value.name != RESERVED_PRAGMA_EXTERN {
+            return Err(ExternError::PragmaIsNotExtern);
         }
-        Ok(())
+        if value.arguments.is_empty() {
+            return Err(ExternError::NoName);
+        }
+        if value.arguments.len() > 1 {
+            return Err(ExternError::InvalidPragmaArguments);
+        }
+
+        match value.data {
+            Some(data) => ExternSignature::from_str(data.as_str()),
+            None => Err(ExternError::NoSignature),
+        }
     }
 }
 
-/// An error that can occur when validating an extern definition.
-#[derive(Debug, thiserror::Error, PartialEq)]
-pub enum ExternValidationError {
-    /// The specified name is not a valid user identifier.
-    #[error(transparent)]
-    Name(#[from] IdentifierValidationError),
-    /// There are more than one extern definitions with the same name.
-    #[error("duplicate extern definition {0}")]
-    Duplicate(String),
-    /// The extern definition has a signature but it lacks a return or parameters.
-    #[error("extern definition {0} has a signature but it lacks a return or parameters")]
-    NoReturnOrParameters(String),
+#[derive(Clone, Debug, PartialEq, Default)]
+pub struct ExternPragmaMap(pub(crate) IndexMap<Option<String>, Pragma>);
+
+impl ExternPragmaMap {
+    pub(crate) fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    pub(crate) fn to_instructions(&self) -> Vec<Instruction> {
+        self.0.values().cloned().map(Instruction::Pragma).collect()
+    }
 }
 
-impl ExternDefinition {
-    /// Validate a list of extern definitions from the same program. It validates the
-    /// names, uniqueness, and the presence of return or parameters in the signature.
-    pub(crate) fn validate_all(
-        extern_definitions: &[ExternDefinition],
-    ) -> Result<(), ExternValidationError> {
-        extern_definitions
-            .iter()
-            .try_fold(HashSet::new(), |mut acc, extern_definition| {
-                validate_user_identifier(extern_definition.name.as_str())
-                    .map_err(ExternValidationError::Name)?;
-                if acc.contains(&extern_definition.name) {
-                    return Err(ExternValidationError::Duplicate(
-                        extern_definition.name.clone(),
-                    ));
-                }
-                if let Some(signature) = extern_definition.signature.as_ref() {
-                    if !signature.has_return_or_parameters() {
-                        return Err(ExternValidationError::NoReturnOrParameters(
-                            extern_definition.name.clone(),
-                        ));
+#[derive(Clone, Debug, PartialEq, Default)]
+pub struct ExternMap(pub(crate) IndexMap<String, ExternSignature>);
+
+impl TryFrom<ExternPragmaMap> for ExternMap {
+    type Error = (Pragma, ExternError);
+
+    fn try_from(value: ExternPragmaMap) -> Result<Self, Self::Error> {
+        Ok(ExternMap(
+            value
+                .0
+                .into_iter()
+                .map(|(key, value)| -> Result<_, Self::Error> {
+                    match key {
+                        Some(name) => {
+                            validate_user_identifier(name.as_str())
+                                .map_err(ExternError::from)
+                                .map_err(|error| (value.clone(), error))?;
+                            let signature = ExternSignature::try_from(value.clone())
+                                .map_err(|error| (value, error))?;
+                            Ok((name, signature))
+                        }
+                        _ => Err((value, ExternError::NoName)),
                     }
-                }
-                acc.insert(extern_definition.name.clone());
-                Ok(acc)
-            })?;
-        Ok(())
+                })
+                .collect::<Result<_, Self::Error>>()?,
+        ))
     }
 }
 
@@ -541,100 +537,9 @@ fn hash_complex_64<H: std::hash::Hasher>(value: &Complex64, state: &mut H) {
     }
 }
 
-impl Quil for ResolvedCallArgument {
-    fn write(
-        &self,
-        f: &mut impl std::fmt::Write,
-        fall_back_to_debug: bool,
-    ) -> crate::quil::ToQuilResult<()> {
-        match self {
-            ResolvedCallArgument::Vector {
-                memory_region_name: value,
-                ..
-            } => write!(f, "{value}").map_err(Into::into),
-            ResolvedCallArgument::MemoryReference {
-                memory_reference: value,
-                ..
-            } => value.write(f, fall_back_to_debug),
-            ResolvedCallArgument::Immediate { value, .. } => {
-                write!(f, "{value}").map_err(Into::into)
-            }
-        }
-    }
-}
-
-impl ResolvedCallArgument {
-    /// Indicates whether the argument is mutable.
-    pub(crate) fn is_mutable(&self) -> bool {
-        match self {
-            ResolvedCallArgument::Vector { mutable, .. } => *mutable,
-            ResolvedCallArgument::MemoryReference { mutable, .. } => *mutable,
-            ResolvedCallArgument::Immediate { .. } => false,
-        }
-    }
-
-    /// Returns the name of the memory region. In the case of an immediate value,
-    /// this will be `None`.
-    pub(crate) fn name(&self) -> Option<String> {
-        match self {
-            ResolvedCallArgument::Vector {
-                memory_region_name, ..
-            } => Some(memory_region_name.clone()),
-            ResolvedCallArgument::MemoryReference {
-                memory_reference, ..
-            } => Some(memory_reference.name.clone()),
-            ResolvedCallArgument::Immediate { .. } => None,
-        }
-    }
-}
-
-/// A list of arguments for a call instruction. These may be resolved or unresolved.
-/// To resolve a [`Call`] instruction, use [`crate::Program::resolve_call_instructions`].
-#[derive(Clone, Debug, PartialEq, Hash, Eq)]
-pub enum CallArguments {
-    /// The resolved call arguments.
-    Resolved(Vec<ResolvedCallArgument>),
-    /// The unresolved call arguments.
-    Unresolved(Vec<UnresolvedCallArgument>),
-}
-
-impl Quil for CallArguments {
-    fn write(
-        &self,
-        writer: &mut impl std::fmt::Write,
-        fall_back_to_debug: bool,
-    ) -> Result<(), crate::quil::ToQuilError> {
-        match self {
-            CallArguments::Resolved(arguments) => {
-                if !arguments.is_empty() {
-                    write!(writer, " ")?;
-                }
-                for (i, argument) in arguments.iter().enumerate() {
-                    argument.write(writer, fall_back_to_debug)?;
-                    if i < arguments.len() - 1 {
-                        write!(writer, " ")?;
-                    }
-                }
-            }
-            CallArguments::Unresolved(arguments) => {
-                if !arguments.is_empty() {
-                    write!(writer, " ")?;
-                }
-                for (i, argument) in arguments.iter().enumerate() {
-                    argument.write(writer, fall_back_to_debug)?;
-                    if i < arguments.len() - 1 {
-                        write!(writer, " ")?;
-                    }
-                }
-            }
-        }
-        Ok(())
-    }
-}
-
 /// An error that can occur when validating a call instruction.
 #[derive(Clone, Debug, PartialEq, thiserror::Error, Eq)]
-pub enum CallValidationError {
+pub enum CallError {
     /// The specified name is not a valid user identifier.
     #[error(transparent)]
     Name(#[from] IdentifierValidationError),
@@ -646,7 +551,7 @@ pub struct Call {
     /// The name of the call instruction. This must be a valid user identifier.
     pub name: String,
     /// The arguments of the call instruction.
-    pub arguments: CallArguments,
+    pub arguments: Vec<UnresolvedCallArgument>,
 }
 
 impl Call {
@@ -655,13 +560,10 @@ impl Call {
     pub fn try_new(
         name: String,
         arguments: Vec<UnresolvedCallArgument>,
-    ) -> Result<Self, CallValidationError> {
-        validate_user_identifier(name.as_str()).map_err(CallValidationError::Name)?;
+    ) -> Result<Self, CallError> {
+        validate_user_identifier(name.as_str()).map_err(CallError::Name)?;
 
-        Ok(Self {
-            name,
-            arguments: CallArguments::Unresolved(arguments),
-        })
+        Ok(Self { name, arguments })
     }
 }
 
@@ -681,7 +583,7 @@ pub enum CallArgumentError {
 
 /// An error that can occur when resolving a call instruction to a specific
 /// [`ExternSignature`].
-#[derive(Debug, thiserror::Error, PartialEq)]
+#[derive(Debug, thiserror::Error, PartialEq, Clone)]
 pub enum CallSignatureError {
     #[error("expected {expected} arguments, found {found}")]
     ParameterCount { expected: usize, found: usize },
@@ -705,6 +607,8 @@ pub enum CallResolutionError {
     /// No matching extern instruction was found.
     #[error("no extern instruction found with name {0}")]
     NoMatchingExternInstruction(String),
+    #[error(transparent)]
+    ExternSignature(#[from] ExternError),
 }
 
 #[allow(clippy::manual_try_fold)]
@@ -761,72 +665,100 @@ fn convert_unresolved_to_resolved_call_arguments(
 impl Call {
     /// Resolve the [`Call`] instruction to the given [`ExternSignature`].
     fn resolve_to_signature(
-        &mut self,
+        &self,
         signature: &ExternSignature,
         memory_regions: &IndexMap<String, MemoryRegion>,
-    ) -> Result<(), CallSignatureError> {
+    ) -> Result<Vec<ResolvedCallArgument>, CallSignatureError> {
         let mut expected_parameter_count = signature.parameters.len();
         if signature.return_type.is_some() {
             expected_parameter_count += 1;
         }
-        let actual_parameter_count = match &self.arguments {
-            CallArguments::Resolved(arguments) => arguments.len(),
-            CallArguments::Unresolved(arguments) => arguments.len(),
-        };
-        if actual_parameter_count != expected_parameter_count {
+
+        if self.arguments.len() != expected_parameter_count {
             return Err(CallSignatureError::ParameterCount {
                 expected: expected_parameter_count,
-                found: actual_parameter_count,
+                found: self.arguments.len(),
             });
         }
 
-        let resolved_call_arguments = match &self.arguments {
-            CallArguments::Resolved(arguments) => {
-                let unresolved_call_arguments = arguments
-                    .iter()
-                    .cloned()
-                    .map(UnresolvedCallArgument::from)
-                    .collect::<Vec<_>>();
+        let resolved_call_arguments = convert_unresolved_to_resolved_call_arguments(
+            &self.arguments,
+            signature,
+            memory_regions,
+        )?;
 
-                convert_unresolved_to_resolved_call_arguments(
-                    unresolved_call_arguments.as_slice(),
-                    signature,
-                    memory_regions,
-                )?
-            }
-            CallArguments::Unresolved(arguments) => {
-                convert_unresolved_to_resolved_call_arguments(arguments, signature, memory_regions)?
-            }
-        };
-
-        self.arguments = CallArguments::Resolved(resolved_call_arguments);
-        Ok(())
+        Ok(resolved_call_arguments)
     }
 
     /// Resolve the [`Call`] instruction to any of the given [`ExternSignature`] and memory regions.
     /// If no matching extern instruction is found, return an error.
-    pub fn resolve(
-        &mut self,
+    pub fn resolve_arguments(
+        &self,
         memory_regions: &IndexMap<String, MemoryRegion>,
-        extern_definitions: &[ExternDefinition],
-    ) -> Result<(), CallResolutionError> {
-        for definition in extern_definitions {
-            if definition.name == self.name {
-                let signature = definition
-                    .signature
-                    .as_ref()
-                    .ok_or_else(|| CallResolutionError::NoSignature(self.name.clone()))?;
-                return self
-                    .resolve_to_signature(signature, memory_regions)
-                    .map_err(|error| CallResolutionError::Signature {
-                        name: self.name.clone(),
-                        error,
-                    });
+        extern_map: &ExternMap,
+    ) -> Result<Vec<ResolvedCallArgument>, CallResolutionError> {
+        let extern_signature = extern_map
+            .0
+            .get(self.name.as_str())
+            .ok_or_else(|| CallResolutionError::NoMatchingExternInstruction(self.name.clone()))?;
+
+        self.resolve_to_signature(extern_signature, memory_regions)
+            .map_err(|error| CallResolutionError::Signature {
+                name: self.name.clone(),
+                error,
+            })
+    }
+
+    pub(crate) fn get_memory_accesses(
+        &self,
+        extern_signatures: &ExternMap,
+    ) -> Result<MemoryAccesses, CallResolutionError> {
+        let extern_signature = extern_signatures
+            .0
+            .get(self.name.as_str())
+            .ok_or_else(|| CallResolutionError::NoMatchingExternInstruction(self.name.clone()))?;
+
+        let mut reads = HashSet::new();
+        let mut writes = HashSet::new();
+        let mut arguments = self.arguments.iter();
+        if extern_signature.return_type.is_some() {
+            if let Some(argument) = self.arguments.first() {
+                arguments.next();
+                match argument {
+                    UnresolvedCallArgument::MemoryReference(memory_reference) => {
+                        reads.insert(memory_reference.name.clone());
+                        writes.insert(memory_reference.name.clone());
+                    }
+                    UnresolvedCallArgument::Identifier(identifier) => {
+                        reads.insert(identifier.clone());
+                        writes.insert(identifier.clone());
+                    }
+                    _ => {}
+                }
             }
         }
-        Err(CallResolutionError::NoMatchingExternInstruction(
-            self.name.clone(),
-        ))
+        for (argument, parameter) in std::iter::zip(arguments, extern_signature.parameters.iter()) {
+            match argument {
+                UnresolvedCallArgument::MemoryReference(memory_reference) => {
+                    reads.insert(memory_reference.name.clone());
+                    if parameter.mutable {
+                        writes.insert(memory_reference.name.clone());
+                    }
+                }
+                UnresolvedCallArgument::Identifier(identifier) => {
+                    reads.insert(identifier.clone());
+                    if parameter.mutable {
+                        writes.insert(identifier.clone());
+                    }
+                }
+                _ => {}
+            }
+        }
+        Ok(MemoryAccesses {
+            reads,
+            writes,
+            captures: HashSet::new(),
+        })
     }
 }
 
@@ -837,58 +769,34 @@ impl Quil for Call {
         fall_back_to_debug: bool,
     ) -> crate::quil::ToQuilResult<()> {
         write!(f, "CALL {}", self.name)?;
-        self.arguments.write(f, fall_back_to_debug)
+        for argument in self.arguments.as_slice() {
+            write!(f, " ")?;
+            argument.write(f, fall_back_to_debug)?;
+        }
+        Ok(())
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::instruction::PragmaArgument;
     use rstest::*;
 
-    /// Test cases for the `ExternDefinition` Quil representation.
-    struct ExternDefinitionQuilTestCase {
+    /// Test cases for the `ExternSignature` Quil representation.
+    struct ExternSignatureQuilTestCase {
         /// The extern definition to test.
-        definition: ExternDefinition,
+        signature: ExternSignature,
         /// The expected Quil representation.
         expected: &'static str,
     }
 
-    impl ExternDefinitionQuilTestCase {
+    impl ExternSignatureQuilTestCase {
         /// Signature with return and parameters
         fn case_01() -> Self {
             Self {
-                definition: ExternDefinition {
-                    name: "foo".to_string(),
-                    signature: Some(ExternSignature {
-                        return_type: Some(ScalarType::Integer),
-                        parameters: vec![
-                            ExternParameter {
-                                name: "bar".to_string(),
-                                mutable: false,
-                                data_type: ExternParameterType::Scalar(ScalarType::Integer),
-                            },
-                            ExternParameter {
-                                name: "baz".to_string(),
-                                mutable: true,
-                                data_type: ExternParameterType::FixedLengthVector(Vector {
-                                    data_type: ScalarType::Bit,
-                                    length: 2,
-                                }),
-                            },
-                        ],
-                    }),
-                },
-                expected: "foo \"INTEGER (bar : INTEGER, baz : mut BIT[2])\"",
-            }
-        }
-
-        /// Signature with only parameters
-        fn case_02() -> Self {
-            let definition = ExternDefinition {
-                name: "foo".to_string(),
-                signature: Some(ExternSignature {
-                    return_type: None,
+                signature: ExternSignature {
+                    return_type: Some(ScalarType::Integer),
                     parameters: vec![
                         ExternParameter {
                             name: "bar".to_string(),
@@ -904,88 +812,90 @@ mod tests {
                             }),
                         },
                     ],
-                }),
+                },
+                expected: "INTEGER (bar : INTEGER, baz : mut BIT[2])",
+            }
+        }
+
+        /// Signature with only parameters
+        fn case_02() -> Self {
+            let signature = ExternSignature {
+                return_type: None,
+                parameters: vec![
+                    ExternParameter {
+                        name: "bar".to_string(),
+                        mutable: false,
+                        data_type: ExternParameterType::Scalar(ScalarType::Integer),
+                    },
+                    ExternParameter {
+                        name: "baz".to_string(),
+                        mutable: true,
+                        data_type: ExternParameterType::FixedLengthVector(Vector {
+                            data_type: ScalarType::Bit,
+                            length: 2,
+                        }),
+                    },
+                ],
             };
             Self {
-                definition,
-                expected: "foo \"(bar : INTEGER, baz : mut BIT[2])\"",
+                signature,
+                expected: "(bar : INTEGER, baz : mut BIT[2])",
             }
         }
 
         /// Signature with return only
         fn case_03() -> Self {
-            let definition = ExternDefinition {
-                name: "foo".to_string(),
-                signature: Some(ExternSignature {
-                    return_type: Some(ScalarType::Integer),
-                    parameters: vec![],
-                }),
+            let signature = ExternSignature {
+                return_type: Some(ScalarType::Integer),
+                parameters: vec![],
             };
             Self {
-                definition,
-                expected: "foo \"INTEGER\"",
+                signature,
+                expected: "INTEGER",
             }
         }
 
         /// Signature with no return nor parameters
         fn case_04() -> Self {
-            let definition = ExternDefinition {
-                name: "foo".to_string(),
-                signature: Some(ExternSignature {
-                    return_type: None,
-                    parameters: vec![],
-                }),
+            let signature = ExternSignature {
+                return_type: None,
+                parameters: vec![],
             };
             Self {
-                definition,
-                expected: "foo \"\"",
-            }
-        }
-
-        /// No signature
-        fn case_05() -> Self {
-            let definition = ExternDefinition {
-                name: "foo".to_string(),
-                signature: None,
-            };
-            Self {
-                definition,
-                expected: "foo",
+                signature,
+                expected: "",
             }
         }
 
         /// Variable length vector
-        fn case_06() -> Self {
-            let definition = ExternDefinition {
-                name: "foo".to_string(),
-                signature: Some(ExternSignature {
-                    return_type: None,
-                    parameters: vec![ExternParameter {
-                        name: "bar".to_string(),
-                        mutable: false,
-                        data_type: ExternParameterType::VariableLengthVector(ScalarType::Integer),
-                    }],
-                }),
+        fn case_05() -> Self {
+            let signature = ExternSignature {
+                return_type: None,
+                parameters: vec![ExternParameter {
+                    name: "bar".to_string(),
+                    mutable: false,
+                    data_type: ExternParameterType::VariableLengthVector(ScalarType::Integer),
+                }],
             };
             Self {
-                definition,
-                expected: "foo \"(bar : INTEGER[])\"",
+                signature,
+                expected: "(bar : INTEGER[])",
             }
         }
     }
 
-    /// Test that the Quil representation of an `ExternDefinition` is as expected.
+    /// Test that the Quil representation of an `ExternSignature` is as expected.
     #[rstest]
-    #[case(ExternDefinitionQuilTestCase::case_01())]
-    #[case(ExternDefinitionQuilTestCase::case_02())]
-    #[case(ExternDefinitionQuilTestCase::case_03())]
-    #[case(ExternDefinitionQuilTestCase::case_04())]
-    #[case(ExternDefinitionQuilTestCase::case_05())]
-    #[case(ExternDefinitionQuilTestCase::case_06())]
-    fn test_extern_definition_quil(#[case] test_case: ExternDefinitionQuilTestCase) {
+    #[case(ExternSignatureQuilTestCase::case_01())]
+    #[case(ExternSignatureQuilTestCase::case_02())]
+    #[case(ExternSignatureQuilTestCase::case_03())]
+    #[case(ExternSignatureQuilTestCase::case_04())]
+    #[case(ExternSignatureQuilTestCase::case_05())]
+    #[case(ExternSignatureQuilTestCase::case_05())]
+    fn test_extern_signature_quil(#[case] test_case: ExternSignatureQuilTestCase) {
         assert_eq!(
             test_case
-                .definition
+                .signature
                 .to_quil()
                 .expect("must be able to call to quil"),
             test_case.expected.to_string()
@@ -1004,14 +914,14 @@ mod tests {
         fn case_01() -> Self {
             let call = Call {
                 name: "foo".to_string(),
-                arguments: CallArguments::Unresolved(vec![
+                arguments: vec![
                     UnresolvedCallArgument::MemoryReference(MemoryReference {
                         name: "bar".to_string(),
                         index: 0,
                     }),
                     UnresolvedCallArgument::Immediate(Complex64::new(2.0, 0.0)),
                     UnresolvedCallArgument::Identifier("baz".to_string()),
-                ]),
+                ],
             };
             Self {
                 call,
@@ -1022,13 +932,13 @@ mod tests {
         fn case_02() -> Self {
             let call = Call {
                 name: "foo".to_string(),
-                arguments: CallArguments::Unresolved(vec![
+                arguments: vec![
                     UnresolvedCallArgument::MemoryReference(MemoryReference {
                         name: "bar".to_string(),
                         index: 0,
                     }),
                     UnresolvedCallArgument::Identifier("baz".to_string()),
-                ]),
+                ],
             };
             Self {
                 call,
@@ -1039,12 +949,10 @@ mod tests {
         fn case_03() -> Self {
             let call = Call {
                 name: "foo".to_string(),
-                arguments: CallArguments::Unresolved(vec![
-                    UnresolvedCallArgument::MemoryReference(MemoryReference {
-                        name: "bar".to_string(),
-                        index: 0,
-                    }),
-                ]),
+                arguments: vec![UnresolvedCallArgument::MemoryReference(MemoryReference {
+                    name: "bar".to_string(),
+                    index: 0,
+                })],
             };
             Self {
                 call,
@@ -1055,7 +963,7 @@ mod tests {
         fn case_04() -> Self {
             let call = Call {
                 name: "foo".to_string(),
-                arguments: CallArguments::Unresolved(vec![]),
+                arguments: vec![],
             };
 
             Self {
@@ -1071,7 +979,7 @@ mod tests {
     #[case(CallQuilTestCase::case_02())]
     #[case(CallQuilTestCase::case_03())]
     #[case(CallQuilTestCase::case_04())]
-    fn test_call_definition_quil(#[case] test_case: CallQuilTestCase) {
+    fn test_call_quil(#[case] test_case: CallQuilTestCase) {
         assert_eq!(
             test_case
                 .call
@@ -1482,14 +1390,14 @@ mod tests {
         fn case_01() -> Self {
             let call = Call {
                 name: "foo".to_string(),
-                arguments: CallArguments::Unresolved(vec![
+                arguments: vec![
                     UnresolvedCallArgument::MemoryReference(MemoryReference {
                         name: "integer".to_string(),
                         index: 0,
                     }),
                     UnresolvedCallArgument::Immediate(Complex64::new(2.0, 0.0)),
                     UnresolvedCallArgument::Identifier("bit".to_string()),
-                ]),
+                ],
             };
             let signature = ExternSignature {
                 return_type: Some(ScalarType::Integer),
@@ -1542,10 +1450,10 @@ mod tests {
         fn case_02() -> Self {
             let call = Call {
                 name: "foo".to_string(),
-                arguments: CallArguments::Unresolved(vec![
+                arguments: vec![
                     UnresolvedCallArgument::Immediate(Complex64::new(2.0, 0.0)),
                     UnresolvedCallArgument::Identifier("bit".to_string()),
-                ]),
+                ],
             };
             let signature = ExternSignature {
                 return_type: None,
@@ -1590,12 +1498,10 @@ mod tests {
         fn case_03() -> Self {
             let call = Call {
                 name: "foo".to_string(),
-                arguments: CallArguments::Unresolved(vec![
-                    UnresolvedCallArgument::MemoryReference(MemoryReference {
-                        name: "integer".to_string(),
-                        index: 0,
-                    }),
-                ]),
+                arguments: vec![UnresolvedCallArgument::MemoryReference(MemoryReference {
+                    name: "integer".to_string(),
+                    index: 0,
+                })],
             };
             let signature = ExternSignature {
                 return_type: Some(ScalarType::Integer),
@@ -1616,49 +1522,18 @@ mod tests {
             }
         }
 
-        /// Already resolved is converted back to unresolved and re-resolved.
+        /// Parameter count mismatch with return and parameters
         fn case_04() -> Self {
             let call = Call {
                 name: "foo".to_string(),
-                arguments: CallArguments::Resolved(vec![ResolvedCallArgument::MemoryReference {
-                    memory_reference: MemoryReference {
-                        name: "integer".to_string(),
-                        index: 0,
-                    },
-                    scalar_type: ScalarType::Integer,
-                    mutable: true,
-                }]),
-            };
-            let signature = ExternSignature {
-                return_type: Some(ScalarType::Integer),
-                parameters: vec![],
-            };
-            Self {
-                call: call.clone(),
-                signature,
-                expected: Ok(vec![ResolvedCallArgument::MemoryReference {
-                    memory_reference: MemoryReference {
-                        name: "integer".to_string(),
-                        index: 0,
-                    },
-                    scalar_type: ScalarType::Integer,
-                    mutable: true,
-                }]),
-            }
-        }
-
-        /// Parameter count mismatch with return and parameters
-        fn case_05() -> Self {
-            let call = Call {
-                name: "foo".to_string(),
-                arguments: CallArguments::Unresolved(vec![
+                arguments: vec![
                     UnresolvedCallArgument::MemoryReference(MemoryReference {
                         name: "integer".to_string(),
                         index: 0,
                     }),
                     UnresolvedCallArgument::Immediate(Complex64::new(2.0, 0.0)),
                     UnresolvedCallArgument::Identifier("bit".to_string()),
-                ]),
+                ],
             };
             let signature = ExternSignature {
                 return_type: Some(ScalarType::Integer),
@@ -1680,16 +1555,16 @@ mod tests {
         }
 
         /// Parameter count mismatch return only
-        fn case_06() -> Self {
+        fn case_05() -> Self {
             let call = Call {
                 name: "foo".to_string(),
-                arguments: CallArguments::Unresolved(vec![
+                arguments: vec![
                     UnresolvedCallArgument::MemoryReference(MemoryReference {
                         name: "integer".to_string(),
                         index: 0,
                     }),
                     UnresolvedCallArgument::Immediate(Complex64::new(2.0, 0.0)),
-                ]),
+                ],
             };
             let signature = ExternSignature {
                 return_type: Some(ScalarType::Integer),
@@ -1707,17 +1582,17 @@ mod tests {
         }
 
         /// Parameter count mismatch parameters only
-        fn case_07() -> Self {
+        fn case_06() -> Self {
             let call = Call {
                 name: "foo".to_string(),
-                arguments: CallArguments::Unresolved(vec![
+                arguments: vec![
                     UnresolvedCallArgument::MemoryReference(MemoryReference {
                         name: "integer".to_string(),
                         index: 0,
                     }),
                     UnresolvedCallArgument::Immediate(Complex64::new(2.0, 0.0)),
                     UnresolvedCallArgument::Identifier("bit".to_string()),
-                ]),
+                ],
             };
             let signature = ExternSignature {
                 return_type: None,
@@ -1739,13 +1614,13 @@ mod tests {
         }
 
         /// Argument mismatch
-        fn case_08() -> Self {
+        fn case_07() -> Self {
             let call = Call {
                 name: "foo".to_string(),
-                arguments: CallArguments::Unresolved(vec![
+                arguments: vec![
                     UnresolvedCallArgument::Immediate(Complex64::new(2.0, 0.0)),
                     UnresolvedCallArgument::Identifier("bit".to_string()),
-                ]),
+                ],
             };
             let signature = ExternSignature {
                 return_type: Some(ScalarType::Integer),
@@ -1784,8 +1659,7 @@ mod tests {
     #[case(ResolveToSignatureTestCase::case_05())]
     #[case(ResolveToSignatureTestCase::case_06())]
     #[case(ResolveToSignatureTestCase::case_07())]
-    #[case(ResolveToSignatureTestCase::case_08())]
-    fn test_assert_matching_signature(#[case] mut test_case: ResolveToSignatureTestCase) {
+    fn test_assert_matching_signature(#[case] test_case: ResolveToSignatureTestCase) {
         let memory_regions = build_declarations();
         let found = test_case
             .call
@@ -1807,7 +1681,7 @@ mod tests {
         /// The call instruction to resolve.
         call: Call,
         /// The set of extern definitions to resolve against.
-        extern_definitions: Vec<ExternDefinition>,
+        extern_map: ExternMap,
         /// The expected result of the resolution.
         expected: Result<Vec<ResolvedCallArgument>, CallResolutionError>,
     }
@@ -1817,12 +1691,10 @@ mod tests {
         fn case_01() -> Self {
             let call = Call {
                 name: "foo".to_string(),
-                arguments: CallArguments::Unresolved(vec![
-                    UnresolvedCallArgument::MemoryReference(MemoryReference {
-                        name: "integer".to_string(),
-                        index: 0,
-                    }),
-                ]),
+                arguments: vec![UnresolvedCallArgument::MemoryReference(MemoryReference {
+                    name: "integer".to_string(),
+                    index: 0,
+                })],
             };
             let signature = ExternSignature {
                 return_type: Some(ScalarType::Integer),
@@ -1838,10 +1710,7 @@ mod tests {
             }];
             Self {
                 call,
-                extern_definitions: vec![ExternDefinition {
-                    name: "foo".to_string(),
-                    signature: Some(signature),
-                }],
+                extern_map: ExternMap([("foo".to_string(), signature)].iter().cloned().collect()),
                 expected: Ok(resolved),
             }
         }
@@ -1850,12 +1719,10 @@ mod tests {
         fn case_02() -> Self {
             let call = Call {
                 name: "foo".to_string(),
-                arguments: CallArguments::Unresolved(vec![
-                    UnresolvedCallArgument::MemoryReference(MemoryReference {
-                        name: "integer".to_string(),
-                        index: 0,
-                    }),
-                ]),
+                arguments: vec![UnresolvedCallArgument::MemoryReference(MemoryReference {
+                    name: "integer".to_string(),
+                    index: 0,
+                })],
             };
             let signature = ExternSignature {
                 return_type: Some(ScalarType::Real),
@@ -1863,10 +1730,7 @@ mod tests {
             };
             Self {
                 call,
-                extern_definitions: vec![ExternDefinition {
-                    name: "foo".to_string(),
-                    signature: Some(signature),
-                }],
+                extern_map: ExternMap([("foo".to_string(), signature)].iter().cloned().collect()),
                 expected: Err(CallResolutionError::Signature {
                     name: "foo".to_string(),
                     error: CallSignatureError::Arguments(vec![CallArgumentError::Return(
@@ -1879,37 +1743,14 @@ mod tests {
             }
         }
 
-        /// No signature on extern definition
+        /// No corresponding extern definition
         fn case_03() -> Self {
             let call = Call {
-                name: "foo".to_string(),
-                arguments: CallArguments::Unresolved(vec![
-                    UnresolvedCallArgument::MemoryReference(MemoryReference {
-                        name: "integer".to_string(),
-                        index: 0,
-                    }),
-                ]),
-            };
-            Self {
-                call,
-                extern_definitions: vec![ExternDefinition {
-                    name: "foo".to_string(),
-                    signature: None,
-                }],
-                expected: Err(CallResolutionError::NoSignature("foo".to_string())),
-            }
-        }
-
-        /// No corresponding extern definition
-        fn case_04() -> Self {
-            let call = Call {
                 name: "undeclared".to_string(),
-                arguments: CallArguments::Unresolved(vec![
-                    UnresolvedCallArgument::MemoryReference(MemoryReference {
-                        name: "integer".to_string(),
-                        index: 0,
-                    }),
-                ]),
+                arguments: vec![UnresolvedCallArgument::MemoryReference(MemoryReference {
+                    name: "integer".to_string(),
+                    index: 0,
+                })],
             };
             let signature = ExternSignature {
                 return_type: Some(ScalarType::Real),
@@ -1917,10 +1758,7 @@ mod tests {
             };
             Self {
                 call,
-                extern_definitions: vec![ExternDefinition {
-                    name: "foo".to_string(),
-                    signature: Some(signature),
-                }],
+                extern_map: ExternMap([("foo".to_string(), signature)].iter().cloned().collect()),
                 expected: Err(CallResolutionError::NoMatchingExternInstruction(
                     "undeclared".to_string(),
                 )),
@@ -1933,15 +1771,14 @@ mod tests {
     #[case(CallResolutionTestCase::case_01())]
     #[case(CallResolutionTestCase::case_02())]
     #[case(CallResolutionTestCase::case_03())]
-    #[case(CallResolutionTestCase::case_04())]
-    fn test_call_resolution(#[case] mut test_case: CallResolutionTestCase) {
+    fn test_call_resolution(#[case] test_case: CallResolutionTestCase) {
         let memory_regions = build_declarations();
         let found = test_case
             .call
-            .resolve(&memory_regions, &test_case.extern_definitions);
+            .resolve_arguments(&memory_regions, &test_case.extern_map);
         match (test_case.expected, found) {
-            (Ok(expected), Ok(_)) => {
-                assert_eq!(CallArguments::Resolved(expected), test_case.call.arguments)
+            (Ok(expected), Ok(found)) => {
+                assert_eq!(expected, found);
             }
             (Ok(expected), Err(found)) => {
                 panic!("expected resolution {:?}, found err {:?}", expected, found)
@@ -1957,83 +1794,190 @@ mod tests {
     }
 
     /// Test cases for validating extern definitions.
-    struct ExternDefinitionTestCase {
+    struct ExternPragmaMapConverstionTestCase {
         /// The set of extern definitions to validate.
-        definitions: Vec<ExternDefinition>,
+        extern_pragma_map: ExternPragmaMap,
         /// The expected result of the validation.
-        expected: Result<(), ExternValidationError>,
+        expected: Result<ExternMap, ExternError>,
     }
 
-    impl ExternDefinitionTestCase {
+    impl ExternPragmaMapConverstionTestCase {
         /// Valid definitions
         fn case_01() -> Self {
-            let definition1 = ExternDefinition {
-                name: "foo".to_string(),
-                signature: Some(ExternSignature {
-                    return_type: Some(ScalarType::Integer),
-                    parameters: vec![ExternParameter {
-                        name: "bar".to_string(),
-                        mutable: false,
-                        data_type: ExternParameterType::Scalar(ScalarType::Integer),
-                    }],
-                }),
+            let pragma1 = Pragma {
+                name: RESERVED_PRAGMA_EXTERN.to_string(),
+                arguments: vec![PragmaArgument::Identifier("foo".to_string())],
+                data: Some("(bar : INTEGER)".to_string()),
             };
-            let definition2 = ExternDefinition {
-                name: "baz".to_string(),
-                signature: Some(ExternSignature {
-                    return_type: Some(ScalarType::Real),
-                    parameters: vec![ExternParameter {
-                        name: "biz".to_string(),
-                        mutable: false,
-                        data_type: ExternParameterType::Scalar(ScalarType::Real),
-                    }],
-                }),
+            let signature1 = ExternSignature {
+                return_type: None,
+                parameters: vec![ExternParameter {
+                    name: "bar".to_string(),
+                    mutable: false,
+                    data_type: ExternParameterType::Scalar(ScalarType::Integer),
+                }],
             };
-            let definitions = vec![definition1, definition2];
-            let expected = Ok(());
+            let pragma2 = Pragma {
+                name: RESERVED_PRAGMA_EXTERN.to_string(),
+                arguments: vec![PragmaArgument::Identifier("baz".to_string())],
+                data: Some("REAL (biz : REAL)".to_string()),
+            };
+            let signature2 = ExternSignature {
+                return_type: Some(ScalarType::Real),
+                parameters: vec![ExternParameter {
+                    name: "biz".to_string(),
+                    mutable: false,
+                    data_type: ExternParameterType::Scalar(ScalarType::Real),
+                }],
+            };
+            let pragma3 = Pragma {
+                name: RESERVED_PRAGMA_EXTERN.to_string(),
+                arguments: vec![PragmaArgument::Identifier("buzz".to_string())],
+                data: Some("OCTET".to_string()),
+            };
+            let signature3 = ExternSignature {
+                return_type: Some(ScalarType::Octet),
+                parameters: vec![],
+            };
             Self {
-                definitions,
-                expected,
+                extern_pragma_map: ExternPragmaMap(
+                    [("foo", pragma1), ("baz", pragma2), ("buzz", pragma3)]
+                        .into_iter()
+                        .map(|(name, pragma)| (Some(name.to_string()), pragma))
+                        .collect(),
+                ),
+                expected: Ok(ExternMap(
+                    [
+                        ("foo", signature1),
+                        ("baz", signature2),
+                        ("buzz", signature3),
+                    ]
+                    .into_iter()
+                    .map(|(name, signature)| (name.to_string(), signature))
+                    .collect(),
+                )),
             }
         }
 
-        /// Duplicate
+        /// No Signature
         fn case_02() -> Self {
-            let definition1 = ExternDefinition {
-                name: "foo".to_string(),
-                signature: Some(ExternSignature {
-                    return_type: Some(ScalarType::Integer),
-                    parameters: vec![ExternParameter {
-                        name: "bar".to_string(),
-                        mutable: false,
-                        data_type: ExternParameterType::Scalar(ScalarType::Integer),
-                    }],
-                }),
+            let pragma = Pragma {
+                name: RESERVED_PRAGMA_EXTERN.to_string(),
+                arguments: vec![PragmaArgument::Identifier("foo".to_string())],
+                data: None,
             };
-            let definition2 = definition1.clone();
-            let definitions = vec![definition1, definition2];
-            let expected = Err(ExternValidationError::Duplicate("foo".to_string()));
+            let expected = Err(ExternError::NoSignature);
             Self {
-                definitions,
+                extern_pragma_map: ExternPragmaMap(
+                    [(Some("foo".to_string()), pragma)].into_iter().collect(),
+                ),
                 expected,
             }
         }
 
         /// No return nor parameters
         fn case_03() -> Self {
-            let definition1 = ExternDefinition {
-                name: "foo".to_string(),
-                signature: Some(ExternSignature {
-                    return_type: None,
-                    parameters: vec![],
-                }),
+            let pragma = Pragma {
+                name: RESERVED_PRAGMA_EXTERN.to_string(),
+                arguments: vec![PragmaArgument::Identifier("foo".to_string())],
+                data: Some("()".to_string()),
             };
-            let definitions = vec![definition1];
-            let expected = Err(ExternValidationError::NoReturnOrParameters(
-                "foo".to_string(),
-            ));
+            let expected = Err(ExternError::NoReturnOrParameters);
             Self {
-                definitions,
+                extern_pragma_map: ExternPragmaMap(
+                    [(Some("foo".to_string()), pragma)].into_iter().collect(),
+                ),
+                expected,
+            }
+        }
+
+        /// No name
+        fn case_04() -> Self {
+            let pragma = Pragma {
+                name: RESERVED_PRAGMA_EXTERN.to_string(),
+                arguments: vec![],
+                data: Some("(bar : REAL)".to_string()),
+            };
+            let expected = Err(ExternError::NoName);
+            Self {
+                extern_pragma_map: ExternPragmaMap([(None, pragma)].into_iter().collect()),
+                expected,
+            }
+        }
+
+        /// Not extern
+        fn case_05() -> Self {
+            let pragma = Pragma {
+                name: "NOTEXTERN".to_string(),
+                arguments: vec![PragmaArgument::Identifier("foo".to_string())],
+                data: Some("(bar : REAL)".to_string()),
+            };
+            let expected = Err(ExternError::NoName);
+            Self {
+                extern_pragma_map: ExternPragmaMap([(None, pragma)].into_iter().collect()),
+                expected,
+            }
+        }
+
+        /// Extraneous arguments
+        fn case_06() -> Self {
+            let pragma = Pragma {
+                name: RESERVED_PRAGMA_EXTERN.to_string(),
+                arguments: vec![
+                    PragmaArgument::Identifier("foo".to_string()),
+                    PragmaArgument::Identifier("bar".to_string()),
+                ],
+                data: Some("OCTET".to_string()),
+            };
+            let expected = Err(ExternError::NoName);
+            Self {
+                extern_pragma_map: ExternPragmaMap([(None, pragma)].into_iter().collect()),
+                expected,
+            }
+        }
+
+        /// Integer is not a name
+        fn case_07() -> Self {
+            let pragma = Pragma {
+                name: RESERVED_PRAGMA_EXTERN.to_string(),
+                arguments: vec![PragmaArgument::Integer(0)],
+                data: Some("OCTET".to_string()),
+            };
+            let expected = Err(ExternError::NoName);
+            Self {
+                extern_pragma_map: ExternPragmaMap([(None, pragma)].into_iter().collect()),
+                expected,
+            }
+        }
+
+        /// Lex error
+        fn case_08() -> Self {
+            let pragma = Pragma {
+                name: RESERVED_PRAGMA_EXTERN.to_string(),
+                arguments: vec![PragmaArgument::Identifier("foo".to_string())],
+                data: Some("OCTET (ㆆ _ ㆆ)".to_string()),
+            };
+            let expected = Err(ExternSignature::from_str("OCTET (ㆆ _ ㆆ)").unwrap_err());
+            Self {
+                extern_pragma_map: ExternPragmaMap(
+                    [(Some("foo".to_string()), pragma)].into_iter().collect(),
+                ),
+                expected,
+            }
+        }
+
+        /// Syntax error - missing parenthesis
+        fn case_09() -> Self {
+            let pragma = Pragma {
+                name: RESERVED_PRAGMA_EXTERN.to_string(),
+                arguments: vec![PragmaArgument::Identifier("foo".to_string())],
+                data: Some("OCTET (bar : INTEGER".to_string()),
+            };
+            let expected = Err(ExternSignature::from_str("OCTET (bar : INTEGER").unwrap_err());
+            Self {
+                extern_pragma_map: ExternPragmaMap(
+                    [(Some("foo".to_string()), pragma)].into_iter().collect(),
+                ),
                 expected,
             }
         }
@@ -2041,20 +1985,184 @@ mod tests {
 
     /// Test validation of extern definitions.
     #[rstest]
-    #[case(ExternDefinitionTestCase::case_01())]
-    #[case(ExternDefinitionTestCase::case_02())]
-    #[case(ExternDefinitionTestCase::case_03())]
-    fn test_extern_definition_validation(#[case] test_case: ExternDefinitionTestCase) {
-        let found = ExternDefinition::validate_all(test_case.definitions.as_slice());
+    #[case(ExternPragmaMapConverstionTestCase::case_01())]
+    #[case(ExternPragmaMapConverstionTestCase::case_02())]
+    #[case(ExternPragmaMapConverstionTestCase::case_03())]
+    #[case(ExternPragmaMapConverstionTestCase::case_04())]
+    #[case(ExternPragmaMapConverstionTestCase::case_05())]
+    #[case(ExternPragmaMapConverstionTestCase::case_06())]
+    #[case(ExternPragmaMapConverstionTestCase::case_07())]
+    #[case(ExternPragmaMapConverstionTestCase::case_08())]
+    #[case(ExternPragmaMapConverstionTestCase::case_09())]
+    fn test_extern_map_validation(#[case] test_case: ExternPragmaMapConverstionTestCase) {
+        let found = ExternMap::try_from(test_case.extern_pragma_map);
         match (test_case.expected, found) {
-            (Ok(_), Ok(_)) => {}
+            (Ok(expected), Ok(found)) => {
+                assert_eq!(expected, found);
+            }
             (Ok(_), Err(found)) => {
                 panic!("expected valid, found err {:?}", found)
             }
             (Err(expected), Ok(_)) => {
                 panic!("expected err {:?}, found valid", expected)
             }
-            (Err(expected), Err(found)) => assert_eq!(expected, found),
+            (Err(expected), Err((_, found))) => assert_eq!(expected, found),
+        }
+    }
+
+    struct ExternSignatureFromStrTestCase {
+        input: &'static str,
+        expected: Result<ExternSignature, ExternError>,
+    }
+
+    impl ExternSignatureFromStrTestCase {
+        /// Empty signature
+        fn case_02() -> Self {
+            Self {
+                input: "",
+                expected: Err(ExternError::NoReturnOrParameters),
+            }
+        }
+
+        /// Empty signature with parentheses
+        fn case_03() -> Self {
+            Self {
+                input: "()",
+                expected: Err(ExternError::NoReturnOrParameters),
+            }
+        }
+
+        /// Return without parameters
+        fn case_04() -> Self {
+            Self {
+                input: "INTEGER",
+                expected: Ok(crate::instruction::ExternSignature {
+                    return_type: Some(ScalarType::Integer),
+                    parameters: vec![],
+                }),
+            }
+        }
+
+        /// Return with empty parentheses
+        fn case_05() -> Self {
+            Self {
+                input: "INTEGER ()",
+                expected: Ok(crate::instruction::ExternSignature {
+                    return_type: Some(ScalarType::Integer),
+                    parameters: vec![],
+                }),
+            }
+        }
+
+        /// Return with parameters
+        fn case_06() -> Self {
+            Self {
+                input: "INTEGER (bar: REAL, baz: BIT[10], biz: mut OCTET)",
+                expected: Ok(crate::instruction::ExternSignature {
+                    return_type: Some(ScalarType::Integer),
+                    parameters: vec![
+                        ExternParameter {
+                            name: "bar".to_string(),
+                            mutable: false,
+                            data_type: ExternParameterType::Scalar(ScalarType::Real),
+                        },
+                        ExternParameter {
+                            name: "baz".to_string(),
+                            mutable: false,
+                            data_type: ExternParameterType::FixedLengthVector(Vector {
+                                data_type: ScalarType::Bit,
+                                length: 10,
+                            }),
+                        },
+                        ExternParameter {
+                            name: "biz".to_string(),
+                            mutable: true,
+                            data_type: ExternParameterType::Scalar(ScalarType::Octet),
+                        },
+                    ],
+                }),
+            }
+        }
+
+        /// Parameters without return
+        fn case_07() -> Self {
+            Self {
+                input: "(bar: REAL, baz: BIT[10], biz : mut OCTET)",
+                expected: Ok(crate::instruction::ExternSignature {
+                    return_type: None,
+                    parameters: vec![
+                        ExternParameter {
+                            name: "bar".to_string(),
+                            mutable: false,
+                            data_type: ExternParameterType::Scalar(ScalarType::Real),
+                        },
+                        ExternParameter {
+                            name: "baz".to_string(),
+                            mutable: false,
+                            data_type: ExternParameterType::FixedLengthVector(Vector {
+                                data_type: ScalarType::Bit,
+                                length: 10,
+                            }),
+                        },
+                        ExternParameter {
+                            name: "biz".to_string(),
+                            mutable: true,
+                            data_type: ExternParameterType::Scalar(ScalarType::Octet),
+                        },
+                    ],
+                }),
+            }
+        }
+
+        /// Variable length vector.
+        fn case_08() -> Self {
+            Self {
+                input: "(bar : mut REAL[])",
+                expected: Ok(crate::instruction::ExternSignature {
+                    return_type: None,
+                    parameters: vec![ExternParameter {
+                        name: "bar".to_string(),
+                        mutable: true,
+                        data_type: ExternParameterType::VariableLengthVector(ScalarType::Real),
+                    }],
+                }),
+            }
+        }
+    }
+
+    /// Test parsing of `PRAGMA EXTERN` instructions.
+    #[rstest]
+    #[case(ExternSignatureFromStrTestCase::case_02())]
+    #[case(ExternSignatureFromStrTestCase::case_03())]
+    #[case(ExternSignatureFromStrTestCase::case_04())]
+    #[case(ExternSignatureFromStrTestCase::case_05())]
+    #[case(ExternSignatureFromStrTestCase::case_06())]
+    #[case(ExternSignatureFromStrTestCase::case_07())]
+    #[case(ExternSignatureFromStrTestCase::case_08())]
+    fn test_parse_reserved_pragma_extern(#[case] test_case: ExternSignatureFromStrTestCase) {
+        match (
+            test_case.expected,
+            ExternSignature::from_str(test_case.input),
+        ) {
+            (Ok(expected), Ok(parsed)) => {
+                assert_eq!(expected, parsed);
+            }
+            (Ok(expected), Err(e)) => {
+                panic!("Expected {:?}, got error: {:?}", expected, e);
+            }
+            (Err(expected), Ok(parsed)) => {
+                panic!("Expected error: {:?}, got {:?}", expected, parsed);
+            }
+            (Err(expected), Err(found)) => {
+                let expected = format!("{expected:?}");
+                let found = format!("{found:?}");
+                assert!(
+                    found.contains(&expected),
+                    "`{}` not in `{}`",
+                    expected,
+                    found
+                );
+            }
         }
     }
 }

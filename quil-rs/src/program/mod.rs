@@ -9,7 +9,7 @@
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
+//See the License for the specific language governing permissions and
 // limitations under the License.
 
 use std::collections::{HashMap, HashSet};
@@ -21,11 +21,11 @@ use ndarray::Array2;
 use nom_locate::LocatedSpan;
 
 use crate::instruction::{
-    Arithmetic, ArithmeticOperand, ArithmeticOperator, CallResolutionError, Declaration,
-    ExternDefinition, ExternValidationError, FrameDefinition, FrameIdentifier, GateDefinition,
-    GateError, Instruction, InstructionHandler, Jump, JumpUnless, Label, Matrix, MemoryReference,
-    Move, Qubit, QubitPlaceholder, ScalarType, Target, TargetPlaceholder, Vector, Waveform,
-    WaveformDefinition,
+    Arithmetic, ArithmeticOperand, ArithmeticOperator, Declaration, ExternPragmaMap,
+    FrameDefinition, FrameIdentifier, GateDefinition, GateError, Instruction, InstructionHandler,
+    Jump, JumpUnless, Label, Matrix, MemoryReference, Move, PragmaArgument, Qubit,
+    QubitPlaceholder, ScalarType, Target, TargetPlaceholder, Vector, Waveform, WaveformDefinition,
+    RESERVED_PRAGMA_EXTERN,
 };
 use crate::parser::{lex, parse_instructions, ParseError};
 use crate::quil::Quil;
@@ -66,12 +66,6 @@ pub enum ProgramError {
 
     #[error("can only compute program unitary for programs composed of `Gate`s; found unsupported instruction: {}", .0.to_quil_or_debug())]
     UnsupportedForUnitary(Instruction),
-
-    #[error("failed to resolve call instructions: {0}")]
-    CallResolution(#[from] CallResolutionError),
-
-    #[error(transparent)]
-    ExternValidation(#[from] ExternValidationError),
 }
 
 type Result<T> = std::result::Result<T, ProgramError>;
@@ -84,6 +78,7 @@ type Result<T> = std::result::Result<T, ProgramError>;
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Program {
     pub calibrations: Calibrations,
+    extern_pragma_map: ExternPragmaMap,
     pub frames: FrameSet,
     pub memory_regions: IndexMap<String, MemoryRegion>,
     pub waveforms: IndexMap<String, Waveform>,
@@ -97,6 +92,7 @@ impl Program {
     pub fn new() -> Self {
         Program {
             calibrations: Calibrations::default(),
+            extern_pragma_map: ExternPragmaMap(IndexMap::new()),
             frames: FrameSet::new(),
             memory_regions: IndexMap::new(),
             waveforms: IndexMap::new(),
@@ -134,6 +130,7 @@ impl Program {
         Self {
             instructions: Vec::new(),
             calibrations: self.calibrations.clone(),
+            extern_pragma_map: self.extern_pragma_map.clone(),
             frames: self.frames.clone(),
             memory_regions: self.memory_regions.clone(),
             gate_definitions: self.gate_definitions.clone(),
@@ -197,6 +194,15 @@ impl Program {
             }
             Instruction::Pulse(pulse) => {
                 self.instructions.push(Instruction::Pulse(pulse));
+            }
+            Instruction::Pragma(pragma) if pragma.name == RESERVED_PRAGMA_EXTERN => {
+                self.extern_pragma_map.0.insert(
+                    match pragma.arguments.first() {
+                        Some(PragmaArgument::Identifier(name)) => Some(name.clone()),
+                        _ => None,
+                    },
+                    pragma,
+                );
             }
             Instruction::RawCapture(raw_capture) => {
                 self.instructions.push(Instruction::RawCapture(raw_capture));
@@ -264,6 +270,7 @@ impl Program {
 
         let mut new_program = Self {
             calibrations: self.calibrations.clone(),
+            extern_pragma_map: self.extern_pragma_map.clone(),
             frames: self.frames.clone(),
             memory_regions: self.memory_regions.clone(),
             waveforms: self.waveforms.clone(),
@@ -593,12 +600,14 @@ impl Program {
             + self.waveforms.len()
             + self.gate_definitions.len()
             + self.instructions.len()
+            + self.extern_pragma_map.len()
     }
 
     /// Return a copy of all of the instructions which constitute this [`Program`].
     pub fn to_instructions(&self) -> Vec<Instruction> {
         let mut instructions: Vec<Instruction> = Vec::with_capacity(self.len());
 
+        instructions.extend(self.extern_pragma_map.to_instructions());
         instructions.extend(self.memory_regions.iter().map(|(name, descriptor)| {
             Instruction::Declaration(Declaration {
                 name: name.clone(),
@@ -646,47 +655,6 @@ impl Program {
     /// Get a reference to the [`Instruction`] at the given index, if present.
     pub fn get_instruction(&self, index: usize) -> Option<&Instruction> {
         self.instructions.get(index)
-    }
-
-    pub fn resolve_call_instructions(&mut self) -> Result<()> {
-        if !self
-            .instructions
-            .iter()
-            .any(|instruction| matches!(instruction, Instruction::Call(_)))
-        {
-            return Ok(());
-        }
-
-        let extern_definitions = self
-            .instructions
-            .iter()
-            .filter_map(|instruction| {
-                if let Instruction::ReservedPragma(ReservedPragma::Extern(extern_definition)) =
-                    instruction
-                {
-                    Some(extern_definition.clone())
-                } else {
-                    None
-                }
-            })
-            .collect::<Vec<_>>();
-        ExternDefinition::validate_all(extern_definitions.as_slice())?;
-
-        let calls = self
-            .instructions
-            .iter_mut()
-            .filter_map(|instruction| {
-                if let Instruction::Call(call) = instruction {
-                    Some(call)
-                } else {
-                    None
-                }
-            })
-            .collect::<Vec<_>>();
-        for call in calls {
-            call.resolve(&self.memory_regions, extern_definitions.as_slice())?;
-        }
-        Ok(())
     }
 }
 
@@ -765,10 +733,9 @@ mod tests {
     use crate::{
         imag,
         instruction::{
-            Call, CallArguments, Declaration, ExternDefinition, ExternParameter,
-            ExternParameterType, ExternSignature, Gate, Instruction, Jump, JumpUnless, JumpWhen,
-            Label, Matrix, MemoryReference, Qubit, QubitPlaceholder, ReservedPragma, ScalarType,
-            Target, TargetPlaceholder, UnresolvedCallArgument, Vector,
+            Call, Declaration, ExternMap, Gate, Instruction, Jump, JumpUnless, JumpWhen, Label,
+            Matrix, MemoryReference, Qubit, QubitPlaceholder, ScalarType, Target,
+            TargetPlaceholder, UnresolvedCallArgument, Vector, RESERVED_PRAGMA_EXTERN,
         },
         program::MemoryAccesses,
         quil::{Quil, INDENT},
@@ -1584,17 +1551,34 @@ DEFFRAME 0 \"xy\":
     /// correctly calculated with the resolved `CALL` instruction.
     #[test]
     fn test_extern_call() {
-        let input = r#"DECLARE reals REAL[3]
+        let input = r#"PRAGMA EXTERN foo "OCTET (params : mut REAL[3])"
+DECLARE reals REAL[3]
 DECLARE octets OCTET[3]
-PRAGMA EXTERN foo "OCTET (params : mut REAL[3])"
 CALL foo octets[1] reals
 "#;
-        let mut program = Program::from_str(input).expect("should be able to parse program");
+        let program = Program::from_str(input).expect("should be able to parse program");
         let reserialized = program
             .to_quil()
             .expect("should be able to serialize program");
         assert_eq!(input, reserialized);
 
+        let pragma = crate::instruction::Pragma {
+            name: RESERVED_PRAGMA_EXTERN.to_string(),
+            arguments: vec![crate::instruction::PragmaArgument::Identifier(
+                "foo".to_string(),
+            )],
+            data: Some("OCTET (params : mut REAL[3])".to_string()),
+        };
+        let call = Call {
+            name: "foo".to_string(),
+            arguments: vec![
+                UnresolvedCallArgument::MemoryReference(MemoryReference {
+                    name: "octets".to_string(),
+                    index: 1,
+                }),
+                UnresolvedCallArgument::Identifier("reals".to_string()),
+            ],
+        };
         let expected_program = Program::from_instructions(vec![
             Instruction::Declaration(Declaration::new(
                 "reals".to_string(),
@@ -1606,47 +1590,24 @@ CALL foo octets[1] reals
                 Vector::new(ScalarType::Octet, 3),
                 None,
             )),
-            Instruction::ReservedPragma(ReservedPragma::Extern(ExternDefinition {
-                name: "foo".to_string(),
-                signature: Some(ExternSignature {
-                    return_type: Some(ScalarType::Octet),
-                    parameters: vec![ExternParameter {
-                        name: "params".to_string(),
-                        mutable: true,
-                        data_type: ExternParameterType::FixedLengthVector(Vector::new(
-                            ScalarType::Real,
-                            3,
-                        )),
-                    }],
-                }),
-            })),
-            Instruction::Call(Call {
-                name: "foo".to_string(),
-                arguments: CallArguments::Unresolved(vec![
-                    UnresolvedCallArgument::MemoryReference(MemoryReference {
-                        name: "octets".to_string(),
-                        index: 1,
-                    }),
-                    UnresolvedCallArgument::Identifier("reals".to_string()),
-                ]),
-            }),
+            Instruction::Pragma(pragma.clone()),
+            Instruction::Call(call.clone()),
         ]);
         assert_eq!(expected_program, program);
 
-        program
-            .resolve_call_instructions()
-            .expect("should be able to resolve calls");
+        let extern_map = ExternMap::try_from(program.extern_pragma_map)
+            .expect("should be able parse extern pragmas");
+        assert_eq!(extern_map.0.len(), 1);
 
         assert_eq!(
-            program.instructions[0]
-                .get_memory_accesses()
+            Instruction::Pragma(pragma)
+                .get_memory_accesses(&extern_map)
                 .expect("should be able to get memory accesses"),
             MemoryAccesses::default()
         );
 
         assert_eq!(
-            program.instructions[1]
-                .get_memory_accesses()
+            call.get_memory_accesses(&extern_map)
                 .expect("should be able to get memory accesses"),
             MemoryAccesses {
                 reads: ["octets", "reals"].into_iter().map(String::from).collect(),
