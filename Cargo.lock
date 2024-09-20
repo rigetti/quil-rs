@@ -831,9 +831,9 @@ dependencies = [
 
 [[package]]
 name = "num-complex"
-version = "0.4.3"
+version = "0.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "02e0d21255c828d6f128a1e41534206671e8c3ea0c62f32291e808dc82cff17d"
+checksum = "73f88a1307638156682bada9d7604135552957b7818057dcef22705b4d509495"
 dependencies = [
  "num-traits",
 ]
@@ -867,9 +867,9 @@ dependencies = [
 
 [[package]]
 name = "num-traits"
-version = "0.2.16"
+version = "0.2.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f30b0abd723be7e2ffca1272140fac1a2f084c77ec3e123c192b66af1ee9e6c2"
+checksum = "071dfc062690e90b734c0b2273ce72ad0ffa95f0c74596bc250dcfd960262841"
 dependencies = [
  "autocfg",
  "libm",
@@ -1132,7 +1132,7 @@ checksum = "a1d01941d82fa2ab50be1e79e6714289dd7cde78eba4c074bc5a4374f650dfe0"
 
 [[package]]
 name = "quil-cli"
-version = "0.5.1-rc.0"
+version = "0.5.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -1141,10 +1141,11 @@ dependencies = [
 
 [[package]]
 name = "quil-py"
-version = "0.12.1-rc.0"
+version = "0.12.1"
 dependencies = [
  "indexmap",
  "ndarray",
+ "num-complex",
  "numpy",
  "pyo3",
  "pyo3-build-config",
@@ -1155,7 +1156,7 @@ dependencies = [
 
 [[package]]
 name = "quil-rs"
-version = "0.28.1-rc.0"
+version = "0.28.1"
 dependencies = [
  "approx",
  "clap",
