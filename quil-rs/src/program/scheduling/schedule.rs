@@ -212,13 +212,6 @@ impl<'p> ScheduledBasicBlock<'p> {
         instruction: &Instruction,
         WaveformInvocation { name, parameters }: &WaveformInvocation,
     ) -> Option<Seconds> {
-        let parameter = |parameter_name| {
-            parameters
-                .get(parameter_name)
-                .and_then(|v| v.to_real().ok())
-                .map(Seconds)
-        };
-
         if let Some(definition) = program.waveforms.get(name) {
             let sample_count = definition.matrix.len();
             let common_sample_rate =
@@ -249,20 +242,23 @@ impl<'p> ScheduledBasicBlock<'p> {
             common_sample_rate
                 .map(|sample_rate| sample_count as f64 / sample_rate)
                 .map(Seconds)
-        } else if name == "erfsquare" || name == "erf_square" {
-            // It's not clear how demanding to be of the waveforms here.  This is the simplest thing
-            // that could posibly work – compute the duration differently for "erfsquare", don't
-            // require constant values for any of the other fields, don't check which fields are
-            // present.  However, we could do more stringent parsing and work with an `impl
-            // WaveformTemplate` instead.  This would provide stronger guarantees, but less
-            // flexibility.
+        } else {
+            // Per the Quil spec, all waveform templates have a "duration"
+            // parameter, and "erf_square" also has "pad_left" and "pad_right".
+            // We explicitly choose to be more flexible here, and allow any
+            // built-in waveform templates to have "pad_*" parameters, as well
+            // as allow "erf_square" to omit them.
+            let parameter = |parameter_name| {
+                parameters
+                    .get(parameter_name)
+                    .and_then(|v| v.to_real().ok())
+                    .map(Seconds)
+            };
             Some(
                 parameter("duration")?
-                    + parameter("padleft").or_else(|| parameter("pad_left"))?
-                    + parameter("padright").or_else(|| parameter("pad_right"))?,
+                    + parameter("pad_left").unwrap_or(Seconds::zero())
+                    + parameter("pad_right").unwrap_or(Seconds::zero()),
             )
-        } else {
-            parameter("duration")
         }
     }
 
@@ -419,9 +415,9 @@ PULSE 0 "a" flat(duration: 1.0)
     #[case(
         r#"DEFFRAME 0 "a":
     SAMPLE-RATE: 1e9
-PULSE 0 "a" erfsquare(duration: 1.0, padleft: 0.2, padright: 0.3)
-PULSE 0 "a" erfsquare(duration: 0.1, padleft: 0.7, padright: 0.7)
-PULSE 0 "a" erfsquare(duration: 0.5, padleft: 0.6, padright: 0.4)
+PULSE 0 "a" erf_square(duration: 1.0, pad_left: 0.2, pad_right: 0.3)
+PULSE 0 "a" erf_square(duration: 0.1, pad_left: 0.7, pad_right: 0.7)
+PULSE 0 "a" erf_square(duration: 0.5, pad_left: 0.6, pad_right: 0.4)
 FENCE
 "#,
         Ok(vec![0.0, 1.5, 3.0, 4.5])
