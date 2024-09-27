@@ -3,7 +3,7 @@ use quil_rs::instruction::{
 };
 
 use rigetti_pyo3::{
-    impl_hash, impl_repr, py_wrap_data_struct, py_wrap_error, py_wrap_union_enum,
+    impl_hash, impl_repr, py_wrap_error, py_wrap_union_enum,
     pyo3::{pymethods, types::PyString, Py, PyResult, Python},
     wrap_error, PyTryFrom, ToPythonError,
 };
@@ -28,35 +28,47 @@ py_wrap_error!(
     rigetti_pyo3::pyo3::exceptions::PyValueError
 );
 
-py_wrap_data_struct! {
+rigetti_pyo3::py_wrap_type! {
     #[derive(Debug, PartialEq, Eq)]
     #[pyo3(subclass, module = "quil.instructions")]
-    PyCall(Call) as "Call" {
-        name: String => Py<PyString>,
-        arguments: Vec<UnresolvedCallArgument> => Vec<PyCallArgument>
+    PyCall(Call) as "Call"
+}
+
+#[pymethods]
+impl PyCall {
+    #[new]
+    fn new(name: String, arguments: Vec<PyCallArgument>) -> PyResult<Self> {
+        Call::try_new(
+            name,
+            arguments.into_iter().map(PyCallArgument::into).collect(),
+        )
+        .map(Self)
+        .map_err(RustCallError::from)
+        .map_err(RustCallError::to_py_err)
+    }
+
+    #[getter]
+    fn name(&self) -> &str {
+        self.0.name()
+    }
+
+    #[getter]
+    fn arguments(&self) -> Vec<PyCallArgument> {
+        self.0
+            .arguments()
+            .iter()
+            .map(PyCallArgument::from)
+            .collect()
     }
 }
+
+rigetti_pyo3::impl_as_mut_for_wrapper!(PyCall);
 impl_repr!(PyCall);
 impl_to_quil!(PyCall);
 impl_copy_for_instruction!(PyCall);
 impl_hash!(PyCall);
 impl_eq!(PyCall);
 impl_pickle_for_instruction!(PyCall);
-
-#[pymethods]
-impl PyCall {
-    #[new]
-    fn new(py: Python<'_>, name: String, arguments: Vec<PyCallArgument>) -> PyResult<Self> {
-        Ok(Self(
-            Call::try_new(
-                name,
-                Vec::<UnresolvedCallArgument>::py_try_from(py, &arguments)?,
-            )
-            .map_err(RustCallError::from)
-            .map_err(RustCallError::to_py_err)?,
-        ))
-    }
-}
 
 py_wrap_union_enum! {
     #[derive(Debug, PartialEq, Eq)]
@@ -84,15 +96,12 @@ impl_to_quil!(PyExternParameterType);
 impl_hash!(PyExternParameterType);
 impl_eq!(PyExternParameterType);
 
-py_wrap_data_struct! {
+rigetti_pyo3::py_wrap_type! {
     #[derive(Debug, PartialEq, Eq)]
     #[pyo3(subclass, module = "quil.instructions")]
-    PyExternParameter(ExternParameter) as "ExternParameter" {
-        name: String => Py<PyString>,
-        mutable: bool => bool,
-        data_type: ExternParameterType => PyExternParameterType
-    }
+    PyExternParameter(ExternParameter) as "ExternParameter"
 }
+rigetti_pyo3::impl_as_mut_for_wrapper!(PyExternParameter);
 impl_repr!(PyExternParameter);
 impl_to_quil!(PyExternParameter);
 impl_copy_for_instruction!(PyExternParameter);
@@ -118,16 +127,29 @@ impl PyExternParameter {
         .map_err(RustExternError::from)
         .map_err(RustExternError::to_py_err)
     }
-}
 
-py_wrap_data_struct! {
-    #[derive(Debug, PartialEq, Eq)]
-    #[pyo3(subclass, module = "quil.instructions")]
-    PyExternSignature(ExternSignature) as "ExternSignature" {
-        return_type: Option<ScalarType> => Option<PyScalarType>,
-        parameters: Vec<ExternParameter> => Vec<PyExternParameter>
+    #[getter]
+    fn name(&self) -> &str {
+        self.0.name()
+    }
+
+    #[getter]
+    fn mutable(&self) -> bool {
+        self.0.mutable()
+    }
+
+    #[getter]
+    fn data_type(&self) -> PyExternParameterType {
+        self.0.data_type().into()
     }
 }
+
+rigetti_pyo3::py_wrap_type! {
+    #[derive(Debug, PartialEq, Eq)]
+    #[pyo3(subclass, module = "quil.instructions")]
+    PyExternSignature(ExternSignature) as "ExternSignature"
+}
+rigetti_pyo3::impl_as_mut_for_wrapper!(PyExternSignature);
 impl_repr!(PyExternSignature);
 impl_to_quil!(PyExternSignature);
 impl_copy_for_instruction!(PyExternSignature);
@@ -143,14 +165,25 @@ impl PyExternSignature {
         parameters: Vec<PyExternParameter>,
         return_type: Option<PyScalarType>,
     ) -> PyResult<Self> {
-        ExternSignature::try_new(
+        Ok(Self(ExternSignature::new(
             return_type
                 .map(|scalar_type| ScalarType::py_try_from(py, &scalar_type))
                 .transpose()?,
             Vec::<ExternParameter>::py_try_from(py, &parameters)?,
-        )
-        .map(Self)
-        .map_err(RustExternError::from)
-        .map_err(RustExternError::to_py_err)
+        )))
+    }
+
+    #[getter]
+    fn parameters(&self) -> Vec<PyExternParameter> {
+        self.0
+            .parameters()
+            .iter()
+            .map(PyExternParameter::from)
+            .collect()
+    }
+
+    #[getter]
+    fn return_type(&self) -> Option<PyScalarType> {
+        self.0.return_type().map(Into::into)
     }
 }

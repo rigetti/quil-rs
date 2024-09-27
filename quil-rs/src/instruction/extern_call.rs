@@ -65,11 +65,11 @@ impl Quil for ExternParameterType {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ExternParameter {
     /// The name of the parameter. This must be a valid user identifier.
-    pub name: String,
+    pub(crate) name: String,
     /// Whether the parameter is mutable.
-    pub mutable: bool,
+    pub(crate) mutable: bool,
     /// The data type of the parameter.
-    pub data_type: ExternParameterType,
+    pub(crate) data_type: ExternParameterType,
 }
 
 impl ExternParameter {
@@ -86,6 +86,18 @@ impl ExternParameter {
             mutable,
             data_type,
         })
+    }
+
+    pub fn name(&self) -> &str {
+        self.name.as_str()
+    }
+
+    pub fn mutable(&self) -> bool {
+        self.mutable
+    }
+
+    pub fn data_type(&self) -> &ExternParameterType {
+        &self.data_type
     }
 }
 
@@ -107,30 +119,26 @@ impl Quil for ExternParameter {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ExternSignature {
     /// The return type of the extern signature, if any.
-    pub return_type: Option<ScalarType>,
+    pub(crate) return_type: Option<ScalarType>,
     /// The parameters of the extern signature.
-    pub parameters: Vec<ExternParameter>,
+    pub(crate) parameters: Vec<ExternParameter>,
 }
 
 impl ExternSignature {
     /// Create a new extern signature.
-    pub fn try_new(
-        return_type: Option<ScalarType>,
-        parameters: Vec<ExternParameter>,
-    ) -> Result<Self, ExternError> {
-        let signature = Self {
+    pub fn new(return_type: Option<ScalarType>, parameters: Vec<ExternParameter>) -> Self {
+        Self {
             return_type,
             parameters,
-        };
-        if signature.has_return_or_parameters() {
-            Ok(signature)
-        } else {
-            Err(ExternError::NoReturnOrParameters)
         }
     }
 
-    fn has_return_or_parameters(&self) -> bool {
-        self.return_type.is_some() || !self.parameters.is_empty()
+    pub fn return_type(&self) -> Option<&ScalarType> {
+        self.return_type.as_ref()
+    }
+
+    pub fn parameters(&self) -> &[ExternParameter] {
+        self.parameters.as_slice()
     }
 }
 
@@ -182,6 +190,9 @@ impl FromStr for ExternSignature {
         .map_err(ExternError::Syntax)?;
         if signature.return_type.is_none() && signature.parameters.is_empty() {
             return Err(ExternError::NoReturnOrParameters);
+        }
+        for parameter in &signature.parameters {
+            validate_user_identifier(parameter.name.as_str()).map_err(ExternError::from)?;
         }
         Ok(signature)
     }
@@ -637,6 +648,14 @@ impl Call {
         validate_user_identifier(name.as_str()).map_err(CallError::Name)?;
 
         Ok(Self { name, arguments })
+    }
+
+    pub fn name(&self) -> &str {
+        self.name.as_str()
+    }
+
+    pub fn arguments(&self) -> &[UnresolvedCallArgument] {
+        self.arguments.as_slice()
     }
 }
 
