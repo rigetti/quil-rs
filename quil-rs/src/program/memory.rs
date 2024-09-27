@@ -95,7 +95,7 @@ macro_rules! set_from_memory_references {
 
 #[derive(thiserror::Error, Debug, PartialEq)]
 pub enum MemoryAccessesError {
-    #[error("must be able to resolve call to an extern signature: {0}")]
+    #[error(transparent)]
     CallResolution(#[from] CallResolutionError),
 }
 

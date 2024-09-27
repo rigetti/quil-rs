@@ -153,13 +153,13 @@ pub enum ExternError {
     #[error("`PRAGMA EXTERN` must have a single argument representing the extern name")]
     InvalidPragmaArguments,
     /// No signature found.
-    #[error("no signature found")]
+    #[error("`EXTERN PRAGMA` instruction has no signature")]
     NoSignature,
     /// No extern name found.
-    #[error("no name")]
+    #[error("`EXTERN PRAGMA` instruction has no name")]
     NoName,
     /// Pragma is not EXTERN.
-    #[error("pragma is not EXTERN")]
+    #[error("ExternPragmaMap contained a pragma that was not EXTERN")]
     PragmaIsNotExtern,
     /// The extern definition has a signature but it has neither a return nor parameters.
     #[error("extern definition has a signature but it has neither a return nor parameters")]
