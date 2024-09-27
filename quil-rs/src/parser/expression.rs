@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use nom::combinator::opt;
+use num_complex::Complex64;
 
 use crate::expression::{FunctionCallExpression, InfixExpression, PrefixExpression};
 use crate::parser::InternalParserResult;
@@ -75,31 +76,19 @@ pub(crate) fn parse_expression(input: ParserInput) -> InternalParserResult<Expre
 /// Recursively parse an expression as long as operator precedence is satisfied.
 fn parse(input: ParserInput, precedence: Precedence) -> InternalParserResult<Expression> {
     let (input, prefix) = opt(parse_prefix)(input)?;
-    let (mut input, mut left) = match super::split_first_token(input) {
-        None => unexpected_eof!(input),
-        Some((Token::Integer(value), remainder)) => {
-            let (remainder, imaginary) = opt(parse_i)(remainder)?;
-            match imaginary {
-                None => Ok((remainder, Expression::Number(crate::real!(*value as f64)))),
-                Some(_) => Ok((remainder, Expression::Number(crate::imag!(*value as f64)))),
+    let (input, maybe_immediate_value) = opt(parse_immediate_value)(input)?;
+
+    let (mut input, mut left) = maybe_immediate_value
+        .map(|number| Ok((input, Expression::Number(number))))
+        .unwrap_or_else(|| match super::split_first_token(input) {
+            None => unexpected_eof!(input),
+            Some((Token::Variable(name), remainder)) => {
+                Ok((remainder, Expression::Variable(name.clone())))
             }
-        }
-        Some((Token::Float(value), remainder)) => {
-            let (remainder, imaginary) = opt(parse_i)(remainder)?;
-            match imaginary {
-                None => Ok((remainder, Expression::Number(crate::real!(*value)))),
-                Some(_) => Ok((remainder, Expression::Number(crate::imag!(*value)))),
-            }
-        }
-        Some((Token::Variable(name), remainder)) => {
-            Ok((remainder, Expression::Variable(name.clone())))
-        }
-        Some((Token::Identifier(_), _)) => parse_expression_identifier(input),
-        Some((Token::LParenthesis, remainder)) => parse_grouped_expression(remainder),
-        Some((token, _)) => {
-            expected_token!(input, token, "expression".to_owned())
-        }
-    }?;
+            Some((Token::Identifier(_), _)) => parse_expression_identifier(input),
+            Some((Token::LParenthesis, remainder)) => parse_grouped_expression(remainder),
+            Some((token, _)) => expected_token!(input, token, "expression".to_owned()),
+        })?;
 
     if let Some(prefix) = prefix {
         left = Expression::Prefix(PrefixExpression {
@@ -121,6 +110,27 @@ fn parse(input: ParserInput, precedence: Precedence) -> InternalParserResult<Exp
     }
 
     Ok((input, left))
+}
+
+pub(super) fn parse_immediate_value(input: ParserInput) -> InternalParserResult<Complex64> {
+    match super::split_first_token(input) {
+        Some((Token::Integer(value), remainder)) => {
+            let (remainder, imaginary) = opt(parse_i)(remainder)?;
+            match imaginary {
+                None => Ok((remainder, crate::real!(*value as f64))),
+                Some(_) => Ok((remainder, crate::imag!(*value as f64))),
+            }
+        }
+        Some((Token::Float(value), remainder)) => {
+            let (remainder, imaginary) = opt(parse_i)(remainder)?;
+            match imaginary {
+                None => Ok((remainder, crate::real!(*value))),
+                Some(_) => Ok((remainder, crate::imag!(*value))),
+            }
+        }
+        Some((token, _)) => expected_token!(input, token, "integer or float".to_owned()),
+        None => unexpected_eof!(input),
+    }
 }
 
 /// Given an expression function, parse the expression within its parentheses.

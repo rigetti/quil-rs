@@ -73,7 +73,7 @@ pub struct ExternParameter {
 }
 
 impl ExternParameter {
-    /// Create a new extern parameter. This will faile if the parameter name
+    /// Create a new extern parameter. This will fail if the parameter name
     /// is not a valid user identifier.
     pub fn try_new(
         name: String,

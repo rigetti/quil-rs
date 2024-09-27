@@ -2,7 +2,6 @@ use nom::branch::alt;
 use nom::combinator::{map, map_res, opt};
 use nom::multi::{many0, many1, separated_list0, separated_list1};
 use nom::sequence::{delimited, pair, preceded, tuple};
-use num_complex::Complex64;
 
 use crate::expression::Expression;
 use crate::instruction::{
@@ -18,10 +17,9 @@ use crate::instruction::{
 use crate::parser::instruction::parse_block;
 use crate::parser::InternalParserResult;
 use crate::quil::Quil;
-use crate::{expected_token, real, token, unexpected_eof};
+use crate::{real, token};
 
-use super::common::{parse_i, parse_memory_reference_with_brackets, parse_variable_qubit};
-use super::Token;
+use super::common::{parse_memory_reference_with_brackets, parse_variable_qubit};
 use super::{
     common::{
         parse_arithmetic_operand, parse_binary_logic_operand, parse_comparison_operand,
@@ -149,29 +147,11 @@ fn parse_call_argument<'a>(
             UnresolvedCallArgument::MemoryReference,
         ),
         map(token!(Identifier(v)), UnresolvedCallArgument::Identifier),
-        map(parse_immediate_value, UnresolvedCallArgument::Immediate),
+        map(
+            super::expression::parse_immediate_value,
+            UnresolvedCallArgument::Immediate,
+        ),
     ))(input)
-}
-
-fn parse_immediate_value(input: ParserInput) -> InternalParserResult<Complex64> {
-    match super::split_first_token(input) {
-        Some((Token::Integer(value), remainder)) => {
-            let (remainder, imaginary) = opt(parse_i)(remainder)?;
-            match imaginary {
-                None => Ok((remainder, crate::real!(*value as f64))),
-                Some(_) => Ok((remainder, crate::imag!(*value as f64))),
-            }
-        }
-        Some((Token::Float(value), remainder)) => {
-            let (remainder, imaginary) = opt(parse_i)(remainder)?;
-            match imaginary {
-                None => Ok((remainder, crate::real!(*value))),
-                Some(_) => Ok((remainder, crate::imag!(*value))),
-            }
-        }
-        Some((token, _)) => expected_token!(input, token, "integer or float".to_owned()),
-        None => unexpected_eof!(input),
-    }
 }
 
 /// Parse the contents of a `CAPTURE` instruction.

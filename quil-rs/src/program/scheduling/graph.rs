@@ -19,7 +19,9 @@ use std::collections::{HashMap, HashSet};
 use petgraph::graphmap::GraphMap;
 use petgraph::Directed;
 
-use crate::instruction::{ExternSignatureMap, FrameIdentifier, Instruction, InstructionHandler, Target};
+use crate::instruction::{
+    ExternSignatureMap, FrameIdentifier, Instruction, InstructionHandler, Target,
+};
 use crate::program::analysis::{
     BasicBlock, BasicBlockOwned, BasicBlockTerminator, ControlFlowGraph,
 };
@@ -302,13 +304,11 @@ impl<'a> ScheduledBasicBlock<'a> {
         // NOTE: this may be refined to serialize by memory region offset rather than by entire region.
         let mut pending_memory_access: HashMap<String, MemoryAccessQueue> = HashMap::new();
 
-        let extern_signature_map =
-            ExternSignatureMap::try_from(program.extern_pragma_map.clone()).map_err(|(pragma, _)| {
-                ScheduleError {
-                    instruction_index: None,
-                    instruction: Instruction::Pragma(pragma),
-                    variant: ScheduleErrorVariant::Extern,
-                }
+        let extern_signature_map = ExternSignatureMap::try_from(program.extern_pragma_map.clone())
+            .map_err(|(pragma, _)| ScheduleError {
+                instruction_index: None,
+                instruction: Instruction::Pragma(pragma),
+                variant: ScheduleErrorVariant::Extern,
             })?;
         for (index, &instruction) in basic_block.instructions().iter().enumerate() {
             let node = graph.add_node(ScheduledGraphNode::InstructionIndex(index));
