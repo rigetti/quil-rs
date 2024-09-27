@@ -21,7 +21,7 @@ use ndarray::Array2;
 use nom_locate::LocatedSpan;
 
 use crate::instruction::{
-    Arithmetic, ArithmeticOperand, ArithmeticOperator, Declaration, ExternPragmaMap,
+    Arithmetic, ArithmeticOperand, ArithmeticOperator, Call, Declaration, ExternPragmaMap,
     FrameDefinition, FrameIdentifier, GateDefinition, GateError, Instruction, InstructionHandler,
     Jump, JumpUnless, Label, Matrix, MemoryReference, Move, Qubit, QubitPlaceholder, ScalarType,
     Target, TargetPlaceholder, Vector, Waveform, WaveformDefinition, RESERVED_PRAGMA_EXTERN,
@@ -143,7 +143,7 @@ impl Program {
     /// Note, parsing extern signatures is deferred here to maintain infallibility
     /// of [`Program::add_instruction`]. This means that invalid `PRAGMA EXTERN`
     /// instructions are still added to the [`Program::extern_pragma_map`];
-    /// duplicate `EXTERN PRAGMA` names are overwritten.
+    /// duplicate `PRAGMA EXTERN` names are overwritten.
     pub fn add_instruction(&mut self, instruction: Instruction) {
         self.used_qubits
             .extend(instruction.get_qubits().into_iter().cloned());
@@ -377,6 +377,7 @@ impl Program {
 
         let mut frames_used: HashSet<&FrameIdentifier> = HashSet::new();
         let mut waveforms_used: HashSet<&String> = HashSet::new();
+        let mut extern_signatures_used: HashSet<&String> = HashSet::new();
 
         for instruction in &expanded_program.instructions {
             if let Some(matched_frames) =
@@ -388,12 +389,23 @@ impl Program {
             if let Some(waveform) = instruction.get_waveform_invocation() {
                 waveforms_used.insert(&waveform.name);
             }
+
+            if let Instruction::Call(Call { name, .. }) = instruction {
+                extern_signatures_used.insert(name);
+            }
         }
 
         expanded_program.frames = self.frames.intersection(&frames_used);
         expanded_program
             .waveforms
             .retain(|name, _definition| waveforms_used.contains(name));
+        expanded_program
+            .extern_pragma_map
+            .retain(|name, _signature| {
+                name.as_ref()
+                    .map(|name| extern_signatures_used.contains(name))
+                    .unwrap_or(false)
+            });
 
         Ok(expanded_program)
     }
@@ -405,6 +417,8 @@ impl Program {
     /// - All calibrations, following calibration expansion
     /// - Frame definitions which are not used by any instruction such as `PULSE` or `CAPTURE`
     /// - Waveform definitions which are not used by any instruction
+    /// - `PRAGMA EXTERN` instructions which are not used by any `CALL` instruction (see
+    /// [`Program::extern_pragma_map`]).
     ///
     /// When a valid program is simplified, it remains valid.
     ///
@@ -1613,5 +1627,30 @@ CALL foo octets[1] reals
                 ..MemoryAccesses::default()
             }
         );
+    }
+
+    /// Test that unused `PRAGMA EXTERN` instructions are removed when simplifying a program.
+    #[test]
+    fn test_extern_call_simplification() {
+        let input = r#"PRAGMA EXTERN foo "OCTET (params : mut REAL[3])"
+PRAGMA EXTERN bar "OCTET (params : mut REAL[3])"
+DECLARE reals REAL[3]
+DECLARE octets OCTET[3]
+CALL foo octets[1] reals
+"#;
+        let program = Program::from_str(input).expect("should be able to parse program");
+
+        let expected = r#"PRAGMA EXTERN foo "OCTET (params : mut REAL[3])"
+DECLARE reals REAL[3]
+DECLARE octets OCTET[3]
+CALL foo octets[1] reals
+"#;
+
+        let reserialized = program
+            .into_simplified()
+            .expect("should be able to simplify program")
+            .to_quil()
+            .expect("should be able to serialize program");
+        assert_eq!(expected, reserialized);
     }
 }

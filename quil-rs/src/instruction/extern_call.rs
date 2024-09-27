@@ -161,10 +161,10 @@ pub enum ExternError {
     #[error("`PRAGMA EXTERN` must have a single argument representing the extern name")]
     InvalidPragmaArguments,
     /// No signature found.
-    #[error("`EXTERN PRAGMA` instruction has no signature")]
+    #[error("`PRAGMA EXTERN` instruction has no signature")]
     NoSignature,
     /// No extern name found.
-    #[error("`EXTERN PRAGMA` instruction has no name")]
+    #[error("`PRAGMA EXTERN` instruction has no name")]
     NoName,
     /// Pragma is not EXTERN.
     #[error("ExternPragmaMap contained a pragma that was not EXTERN")]
@@ -277,6 +277,13 @@ impl ExternPragmaMap {
             },
             pragma,
         )
+    }
+
+    pub(crate) fn retain<F>(&mut self, f: F)
+    where
+        F: FnMut(&Option<String>, &mut Pragma) -> bool,
+    {
+        self.0.retain(f)
     }
 }
 
