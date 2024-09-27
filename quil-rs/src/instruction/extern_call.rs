@@ -29,12 +29,18 @@ use super::{
 #[derive(Clone, Debug, PartialEq, Hash, Eq)]
 pub enum ExternParameterType {
     /// A scalar parameter, which may accept a memory reference or immediate value.
+    ///
+    /// For instance `PRAGMA EXTERN foo "(bar : INTEGER)"`.
     Scalar(ScalarType),
     /// A fixed-length vector, which must accept a memory region name of the appropriate
     /// length and data type.
+    ///
+    /// For instance `PRAGMA EXTERN foo "(bar : INTEGER[2])"`.
     FixedLengthVector(Vector),
     /// A variable-length vector, which must accept a memory region name of the appropriate
     /// data type.
+    ///
+    /// For instance `PRAGMA EXTERN foo "(bar : INTEGER[])"`.
     VariableLengthVector(ScalarType),
 }
 
@@ -49,7 +55,7 @@ impl Quil for ExternParameterType {
             ExternParameterType::FixedLengthVector(value) => value.write(f, fall_back_to_debug),
             ExternParameterType::VariableLengthVector(value) => {
                 value.write(f, fall_back_to_debug)?;
-                write!(f, "[]").map_err(Into::into)
+                Ok(write!(f, "[]")?)
             }
         }
     }
@@ -67,8 +73,8 @@ pub struct ExternParameter {
 }
 
 impl ExternParameter {
-    /// Create a new extern parameter. This validates the parameter name as a user
-    /// identifier.
+    /// Create a new extern parameter. This will faile if the parameter name
+    /// is not a valid user identifier.
     pub fn try_new(
         name: String,
         mutable: bool,
@@ -234,7 +240,7 @@ impl TryFrom<Pragma> for ExternSignature {
 /// the corresponding [`Pragma`] instruction. Note, keys are [`Option`]s, but a
 /// `None` key will be considered invalid when converting to an [`ExternSignatureMap`].
 #[derive(Clone, Debug, PartialEq, Default)]
-pub struct ExternPragmaMap(pub(crate) IndexMap<Option<String>, Pragma>);
+pub struct ExternPragmaMap(IndexMap<Option<String>, Pragma>);
 
 impl ExternPragmaMap {
     pub(crate) fn len(&self) -> usize {
@@ -244,12 +250,29 @@ impl ExternPragmaMap {
     pub(crate) fn to_instructions(&self) -> Vec<Instruction> {
         self.0.values().cloned().map(Instruction::Pragma).collect()
     }
+
+    /// Insert a `PRAGMA EXTERN` instruction into the underlying [`IndexMap`].
+    ///
+    /// If the first argument to the [`Pragma`] is not a [`PragmaArgument::Identifier`], or
+    /// does not exist, then the [`Pragma`] will be inserted with a `None` key.
+    ///
+    /// If the key already exists, the previous [`Pragma`] will be returned, similar to
+    /// the behavior of [`IndexMap::insert`].
+    pub(crate) fn insert(&mut self, pragma: Pragma) -> Option<Pragma> {
+        self.0.insert(
+            match pragma.arguments.first() {
+                Some(PragmaArgument::Identifier(name)) => Some(name.clone()),
+                _ => None,
+            },
+            pragma,
+        )
+    }
 }
 
 /// A map of all program `PRAGMA EXTERN` instructions from their name to the corresponding
 /// parsed and validated [`ExternSignature`].
 #[derive(Clone, Debug, PartialEq, Default)]
-pub struct ExternSignatureMap(pub(crate) IndexMap<String, ExternSignature>);
+pub struct ExternSignatureMap(IndexMap<String, ExternSignature>);
 
 impl TryFrom<ExternPragmaMap> for ExternSignatureMap {
     /// The error type for converting an [`ExternPragmaMap`] to an [`ExternSignatureMap`] includes
@@ -276,6 +299,13 @@ impl TryFrom<ExternPragmaMap> for ExternSignatureMap {
                 })
                 .collect::<Result<_, Self::Error>>()?,
         ))
+    }
+}
+
+impl ExternSignatureMap {
+    #[cfg(test)]
+    pub(crate) fn len(&self) -> usize {
+        self.0.len()
     }
 }
 

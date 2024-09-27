@@ -23,9 +23,8 @@ use nom_locate::LocatedSpan;
 use crate::instruction::{
     Arithmetic, ArithmeticOperand, ArithmeticOperator, Declaration, ExternPragmaMap,
     FrameDefinition, FrameIdentifier, GateDefinition, GateError, Instruction, InstructionHandler,
-    Jump, JumpUnless, Label, Matrix, MemoryReference, Move, PragmaArgument, Qubit,
-    QubitPlaceholder, ScalarType, Target, TargetPlaceholder, Vector, Waveform, WaveformDefinition,
-    RESERVED_PRAGMA_EXTERN,
+    Jump, JumpUnless, Label, Matrix, MemoryReference, Move, Qubit, QubitPlaceholder, ScalarType,
+    Target, TargetPlaceholder, Vector, Waveform, WaveformDefinition, RESERVED_PRAGMA_EXTERN,
 };
 use crate::parser::{lex, parse_instructions, ParseError};
 use crate::quil::Quil;
@@ -92,7 +91,7 @@ impl Program {
     pub fn new() -> Self {
         Program {
             calibrations: Calibrations::default(),
-            extern_pragma_map: ExternPragmaMap(IndexMap::new()),
+            extern_pragma_map: ExternPragmaMap::default(),
             frames: FrameSet::new(),
             memory_regions: IndexMap::new(),
             waveforms: IndexMap::new(),
@@ -140,6 +139,11 @@ impl Program {
     }
 
     /// Add an instruction to the end of the program.
+    ///
+    /// Note, parsing extern signatures is deferred here to maintain infallibility
+    /// of [`Program::add_instruction`]. This means that invalid `PRAGMA EXTERN`
+    /// instructions are still added to the [`Program::extern_pragma_map`];
+    /// duplicate `EXTERN PRAGMA` names are overwritten.
     pub fn add_instruction(&mut self, instruction: Instruction) {
         self.used_qubits
             .extend(instruction.get_qubits().into_iter().cloned());
@@ -196,13 +200,7 @@ impl Program {
                 self.instructions.push(Instruction::Pulse(pulse));
             }
             Instruction::Pragma(pragma) if pragma.name == RESERVED_PRAGMA_EXTERN => {
-                self.extern_pragma_map.0.insert(
-                    match pragma.arguments.first() {
-                        Some(PragmaArgument::Identifier(name)) => Some(name.clone()),
-                        _ => None,
-                    },
-                    pragma,
-                );
+                self.extern_pragma_map.insert(pragma);
             }
             Instruction::RawCapture(raw_capture) => {
                 self.instructions.push(Instruction::RawCapture(raw_capture));
@@ -1597,7 +1595,7 @@ CALL foo octets[1] reals
 
         let extern_signature_map = ExternSignatureMap::try_from(program.extern_pragma_map)
             .expect("should be able parse extern pragmas");
-        assert_eq!(extern_signature_map.0.len(), 1);
+        assert_eq!(extern_signature_map.len(), 1);
 
         assert_eq!(
             Instruction::Pragma(pragma)

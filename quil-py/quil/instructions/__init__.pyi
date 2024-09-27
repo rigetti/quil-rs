@@ -1187,7 +1187,7 @@ class CallArgument:
     """An argument to a ``Call`` instruction.
 
     This may be expressed as an identifier, a memory reference, or an immediate value. Memory references and identifiers require a corresponding memory region declaration by the time of
-    compilation (at the time of call argument resolution and memory graph construction to be more precise).
+    compilation (at the time of call argument resolution and memory graph construction, to be more precise).
 
     Additionally, an argument's resolved type must match the expected type of the corresponding ``ExternParameter``
     in the ``ExternSignature``.
@@ -1228,7 +1228,7 @@ class CallError(ValueError):
     ...
 
 class Call:
-    """An instruction to an external function declared within a `PRAGMA EXTERN` instruction.
+    """An instruction that calls an external function declared with a `PRAGMA EXTERN` instruction.
 
     These calls are generally specific to a particular hardware or virtual machine
     backend. For further detail, see:

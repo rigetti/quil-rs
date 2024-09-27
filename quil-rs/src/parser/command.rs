@@ -130,7 +130,7 @@ pub(crate) fn parse_declare<'a>(input: ParserInput<'a>) -> InternalParserResult<
 /// Call instructions are of the form:
 ///     `CALL @ms{Identifier} @rep[:min 1]{@group{@ms{Identifier} @alt @ms{Memory Reference} @alt @ms{Complex}}}`
 ///
-/// For additional detail, see the ["Call" in the Quil specification](https://github.com/quil-lang/quil/blob/7f532c7cdde9f51eae6abe7408cc868fba9f91f6/specgen/spec/sec-other.s).
+/// For additional detail, see ["Call" in the Quil specification](https://github.com/quil-lang/quil/blob/7f532c7cdde9f51eae6abe7408cc868fba9f91f6/specgen/spec/sec-other.s).
 pub(crate) fn parse_call<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Instruction> {
     let (input, name) = token!(Identifier(v))(input)?;
 

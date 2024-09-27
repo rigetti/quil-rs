@@ -103,8 +103,11 @@ pub type MemoryAccessesResult = Result<MemoryAccesses, MemoryAccessesError>;
 
 impl Instruction {
     /// Return all memory accesses by the instruction - in expressions, captures, and memory manipulation.
-    /// Note, this may fail if the program contains [`Instruction::Call`] instructions that cannot
-    /// be resolved to the appropriate [`crate::instruction::ExternSignature`].
+    ///
+    /// This will fail if the program contains [`Instruction::Call`] instructions that cannot
+    /// be resolved against a signature in the provided [`ExternSignatureMap`] (either because
+    /// they call functions that don't appear in the map or because the types of the parameters
+    /// are wrong).
     pub fn get_memory_accesses(
         &self,
         extern_signature_map: &ExternSignatureMap,
