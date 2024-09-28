@@ -418,7 +418,7 @@ impl Program {
     /// - Frame definitions which are not used by any instruction such as `PULSE` or `CAPTURE`
     /// - Waveform definitions which are not used by any instruction
     /// - `PRAGMA EXTERN` instructions which are not used by any `CALL` instruction (see
-    /// [`Program::extern_pragma_map`]).
+    ///   [`Program::extern_pragma_map`]).
     ///
     /// When a valid program is simplified, it remains valid.
     ///
