@@ -45,6 +45,7 @@ pub(crate) fn parse_instruction(input: ParserInput) -> InternalParserResult<Inst
         Some((Token::Command(command), remainder)) => match command {
             Command::Add => command::parse_arithmetic(ArithmeticOperator::Add, remainder),
             Command::And => command::parse_logical_binary(BinaryOperator::And, remainder),
+            Command::Call => command::parse_call(remainder),
             Command::Capture => command::parse_capture(remainder, true),
             Command::Convert => command::parse_convert(remainder),
             Command::Declare => command::parse_declare(remainder),

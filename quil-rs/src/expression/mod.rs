@@ -462,7 +462,7 @@ static FORMAT_IMAGINARY_OPTIONS: Lazy<WriteFloatOptions> = Lazy::new(|| {
 /// - When imaginary is 0, show real only
 /// - When both are non-zero, show with the correct operator in between
 #[inline(always)]
-fn format_complex(value: &Complex64) -> String {
+pub(crate) fn format_complex(value: &Complex64) -> String {
     const FORMAT: u128 = format::STANDARD;
     if value.re == 0f64 && value.im == 0f64 {
         "0".to_owned()

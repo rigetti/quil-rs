@@ -9,7 +9,7 @@
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
+//See the License for the specific language governing permissions and
 // limitations under the License.
 
 use std::collections::{HashMap, HashSet};
@@ -21,20 +21,24 @@ use ndarray::Array2;
 use nom_locate::LocatedSpan;
 
 use crate::instruction::{
-    Arithmetic, ArithmeticOperand, ArithmeticOperator, Declaration, FrameDefinition,
-    FrameIdentifier, GateDefinition, GateError, Instruction, InstructionHandler, Jump, JumpUnless,
-    Label, Matrix, MemoryReference, Move, Qubit, QubitPlaceholder, ScalarType, Target,
-    TargetPlaceholder, Vector, Waveform, WaveformDefinition,
+    Arithmetic, ArithmeticOperand, ArithmeticOperator, Call, Declaration, ExternPragmaMap,
+    FrameDefinition, FrameIdentifier, GateDefinition, GateError, Instruction, InstructionHandler,
+    Jump, JumpUnless, Label, Matrix, MemoryReference, Move, Qubit, QubitPlaceholder, ScalarType,
+    Target, TargetPlaceholder, Vector, Waveform, WaveformDefinition, RESERVED_PRAGMA_EXTERN,
 };
 use crate::parser::{lex, parse_instructions, ParseError};
 use crate::quil::Quil;
 
 pub use self::calibration::Calibrations;
 pub use self::calibration_set::CalibrationSet;
-pub use self::error::{disallow_leftover, map_parsed, recover, ParseProgramError, SyntaxError};
+pub use self::error::{
+    disallow_leftover, map_parsed, recover, LeftoverError, ParseProgramError, SyntaxError,
+};
 pub use self::frame::FrameSet;
 pub use self::frame::MatchedFrames;
-pub use self::memory::{MemoryAccess, MemoryAccesses, MemoryRegion};
+pub use self::memory::{
+    MemoryAccess, MemoryAccesses, MemoryAccessesError, MemoryAccessesResult, MemoryRegion,
+};
 
 pub mod analysis;
 mod calibration;
@@ -73,6 +77,7 @@ type Result<T> = std::result::Result<T, ProgramError>;
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Program {
     pub calibrations: Calibrations,
+    extern_pragma_map: ExternPragmaMap,
     pub frames: FrameSet,
     pub memory_regions: IndexMap<String, MemoryRegion>,
     pub waveforms: IndexMap<String, Waveform>,
@@ -86,6 +91,7 @@ impl Program {
     pub fn new() -> Self {
         Program {
             calibrations: Calibrations::default(),
+            extern_pragma_map: ExternPragmaMap::default(),
             frames: FrameSet::new(),
             memory_regions: IndexMap::new(),
             waveforms: IndexMap::new(),
@@ -123,6 +129,7 @@ impl Program {
         Self {
             instructions: Vec::new(),
             calibrations: self.calibrations.clone(),
+            extern_pragma_map: self.extern_pragma_map.clone(),
             frames: self.frames.clone(),
             memory_regions: self.memory_regions.clone(),
             gate_definitions: self.gate_definitions.clone(),
@@ -132,6 +139,11 @@ impl Program {
     }
 
     /// Add an instruction to the end of the program.
+    ///
+    /// Note, parsing extern signatures is deferred here to maintain infallibility
+    /// of [`Program::add_instruction`]. This means that invalid `PRAGMA EXTERN`
+    /// instructions are still added to the [`Program::extern_pragma_map`];
+    /// duplicate `PRAGMA EXTERN` names are overwritten.
     pub fn add_instruction(&mut self, instruction: Instruction) {
         self.used_qubits
             .extend(instruction.get_qubits().into_iter().cloned());
@@ -186,6 +198,9 @@ impl Program {
             }
             Instruction::Pulse(pulse) => {
                 self.instructions.push(Instruction::Pulse(pulse));
+            }
+            Instruction::Pragma(pragma) if pragma.name == RESERVED_PRAGMA_EXTERN => {
+                self.extern_pragma_map.insert(pragma);
             }
             Instruction::RawCapture(raw_capture) => {
                 self.instructions.push(Instruction::RawCapture(raw_capture));
@@ -253,6 +268,7 @@ impl Program {
 
         let mut new_program = Self {
             calibrations: self.calibrations.clone(),
+            extern_pragma_map: self.extern_pragma_map.clone(),
             frames: self.frames.clone(),
             memory_regions: self.memory_regions.clone(),
             waveforms: self.waveforms.clone(),
@@ -361,6 +377,7 @@ impl Program {
 
         let mut frames_used: HashSet<&FrameIdentifier> = HashSet::new();
         let mut waveforms_used: HashSet<&String> = HashSet::new();
+        let mut extern_signatures_used: HashSet<&String> = HashSet::new();
 
         for instruction in &expanded_program.instructions {
             if let Some(matched_frames) =
@@ -372,12 +389,23 @@ impl Program {
             if let Some(waveform) = instruction.get_waveform_invocation() {
                 waveforms_used.insert(&waveform.name);
             }
+
+            if let Instruction::Call(Call { name, .. }) = instruction {
+                extern_signatures_used.insert(name);
+            }
         }
 
         expanded_program.frames = self.frames.intersection(&frames_used);
         expanded_program
             .waveforms
             .retain(|name, _definition| waveforms_used.contains(name));
+        expanded_program
+            .extern_pragma_map
+            .retain(|name, _signature| {
+                name.as_ref()
+                    .map(|name| extern_signatures_used.contains(name))
+                    .unwrap_or(false)
+            });
 
         Ok(expanded_program)
     }
@@ -389,6 +417,8 @@ impl Program {
     /// - All calibrations, following calibration expansion
     /// - Frame definitions which are not used by any instruction such as `PULSE` or `CAPTURE`
     /// - Waveform definitions which are not used by any instruction
+    /// - `PRAGMA EXTERN` instructions which are not used by any `CALL` instruction (see
+    ///   [`Program::extern_pragma_map`]).
     ///
     /// When a valid program is simplified, it remains valid.
     ///
@@ -582,12 +612,14 @@ impl Program {
             + self.waveforms.len()
             + self.gate_definitions.len()
             + self.instructions.len()
+            + self.extern_pragma_map.len()
     }
 
     /// Return a copy of all of the instructions which constitute this [`Program`].
     pub fn to_instructions(&self) -> Vec<Instruction> {
         let mut instructions: Vec<Instruction> = Vec::with_capacity(self.len());
 
+        instructions.extend(self.extern_pragma_map.to_instructions());
         instructions.extend(self.memory_regions.iter().map(|(name, descriptor)| {
             Instruction::Declaration(Declaration {
                 name: name.clone(),
@@ -713,9 +745,11 @@ mod tests {
     use crate::{
         imag,
         instruction::{
-            Gate, Instruction, Jump, JumpUnless, JumpWhen, Label, Matrix, MemoryReference, Qubit,
-            QubitPlaceholder, Target, TargetPlaceholder,
+            Call, Declaration, ExternSignatureMap, Gate, Instruction, Jump, JumpUnless, JumpWhen,
+            Label, Matrix, MemoryReference, Qubit, QubitPlaceholder, ScalarType, Target,
+            TargetPlaceholder, UnresolvedCallArgument, Vector, RESERVED_PRAGMA_EXTERN,
         },
+        program::MemoryAccesses,
         quil::{Quil, INDENT},
         real,
     };
@@ -1522,5 +1556,101 @@ DEFFRAME 0 \"xy\":
             let new_program = Program::from_str(input).unwrap();
             assert_eq!(new_program.to_quil().unwrap(), quil);
         }
+    }
+
+    /// Test that a program with a `CALL` instruction can be parsed and properly resolved to
+    /// the corresponding `EXTERN` instruction. Additionally, test that the memory accesses are
+    /// correctly calculated with the resolved `CALL` instruction.
+    #[test]
+    fn test_extern_call() {
+        let input = r#"PRAGMA EXTERN foo "OCTET (params : mut REAL[3])"
+DECLARE reals REAL[3]
+DECLARE octets OCTET[3]
+CALL foo octets[1] reals
+"#;
+        let program = Program::from_str(input).expect("should be able to parse program");
+        let reserialized = program
+            .to_quil()
+            .expect("should be able to serialize program");
+        assert_eq!(input, reserialized);
+
+        let pragma = crate::instruction::Pragma {
+            name: RESERVED_PRAGMA_EXTERN.to_string(),
+            arguments: vec![crate::instruction::PragmaArgument::Identifier(
+                "foo".to_string(),
+            )],
+            data: Some("OCTET (params : mut REAL[3])".to_string()),
+        };
+        let call = Call {
+            name: "foo".to_string(),
+            arguments: vec![
+                UnresolvedCallArgument::MemoryReference(MemoryReference {
+                    name: "octets".to_string(),
+                    index: 1,
+                }),
+                UnresolvedCallArgument::Identifier("reals".to_string()),
+            ],
+        };
+        let expected_program = Program::from_instructions(vec![
+            Instruction::Declaration(Declaration::new(
+                "reals".to_string(),
+                Vector::new(ScalarType::Real, 3),
+                None,
+            )),
+            Instruction::Declaration(Declaration::new(
+                "octets".to_string(),
+                Vector::new(ScalarType::Octet, 3),
+                None,
+            )),
+            Instruction::Pragma(pragma.clone()),
+            Instruction::Call(call.clone()),
+        ]);
+        assert_eq!(expected_program, program);
+
+        let extern_signature_map = ExternSignatureMap::try_from(program.extern_pragma_map)
+            .expect("should be able parse extern pragmas");
+        assert_eq!(extern_signature_map.len(), 1);
+
+        assert_eq!(
+            Instruction::Pragma(pragma)
+                .get_memory_accesses(&extern_signature_map)
+                .expect("should be able to get memory accesses"),
+            MemoryAccesses::default()
+        );
+
+        assert_eq!(
+            call.get_memory_accesses(&extern_signature_map)
+                .expect("should be able to get memory accesses"),
+            MemoryAccesses {
+                reads: ["octets", "reals"].into_iter().map(String::from).collect(),
+                writes: ["octets", "reals"].into_iter().map(String::from).collect(),
+                ..MemoryAccesses::default()
+            }
+        );
+    }
+
+    /// Test that unused `PRAGMA EXTERN` instructions are removed when simplifying a program.
+    #[test]
+    fn test_extern_call_simplification() {
+        let input = r#"PRAGMA EXTERN foo "OCTET (params : mut REAL[3])"
+PRAGMA EXTERN bar "OCTET (params : mut REAL[3])"
+DECLARE reals REAL[3]
+DECLARE octets OCTET[3]
+CALL foo octets[1] reals
+"#;
+        let program = Program::from_str(input).expect("should be able to parse program");
+
+        let expected = r#"PRAGMA EXTERN foo "OCTET (params : mut REAL[3])"
+DECLARE reals REAL[3]
+DECLARE octets OCTET[3]
+CALL foo octets[1] reals
+"#;
+
+        let reserialized = program
+            .into_simplified()
+            .expect("should be able to simplify program")
+            .to_quil()
+            .expect("should be able to serialize program");
+        assert_eq!(expected, reserialized);
     }
 }

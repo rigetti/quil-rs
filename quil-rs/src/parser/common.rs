@@ -30,7 +30,7 @@ use crate::{
         Vector, WaveformInvocation, WaveformParameters,
     },
     parser::lexer::Operator,
-    token,
+    token, unexpected_eof,
 };
 
 use crate::parser::{InternalParseError, InternalParserResult};
@@ -348,7 +348,7 @@ pub(crate) fn parse_variable_qubit(input: ParserInput) -> InternalParserResult<S
     }
 }
 
-fn match_data_type_token(token: DataType) -> ScalarType {
+pub(super) fn match_data_type_token(token: DataType) -> ScalarType {
     match token {
         DataType::Bit => ScalarType::Bit,
         DataType::Integer => ScalarType::Integer,
@@ -399,6 +399,18 @@ pub(crate) fn parse_vector<'a>(input: ParserInput<'a>) -> InternalParserResult<'
     Ok((input, Vector { data_type, length }))
 }
 
+/// Parse a "vector" which is an integer index, such as `[0]`. The brackets are requried here.
+pub(crate) fn parse_vector_with_brackets<'a>(
+    input: ParserInput<'a>,
+) -> InternalParserResult<'a, Vector> {
+    let (input, data_type_token) = token!(DataType(v))(input)?;
+    let data_type = match_data_type_token(data_type_token);
+
+    let (input, length) = delimited(token!(LBracket), token!(Integer(v)), token!(RBracket))(input)?;
+
+    Ok((input, Vector { data_type, length }))
+}
+
 /// Parse a waveform name which may look like `custom` or `q20_q27_xy/sqrtiSWAP`
 pub(crate) fn parse_waveform_name<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, String> {
     use crate::parser::lexer::Operator::Slash;
@@ -423,6 +435,15 @@ pub(crate) fn skip_newlines_and_comments<'a>(
         token!(Semicolon),
     )))(input)?;
     Ok((input, ()))
+}
+
+/// Returns successfully if the head of input is the identifier `i`, returns error otherwise.
+pub(super) fn parse_i(input: ParserInput) -> InternalParserResult<()> {
+    match super::split_first_token(input) {
+        None => unexpected_eof!(input),
+        Some((Token::Identifier(v), remainder)) if v == "i" => Ok((remainder, ())),
+        Some((other_token, _)) => expected_token!(input, other_token, "i".to_owned()),
+    }
 }
 
 #[cfg(test)]

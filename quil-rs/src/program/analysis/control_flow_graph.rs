@@ -418,6 +418,7 @@ impl<'p> From<&'p Program> for ControlFlowGraph<'p> {
             match instruction {
                 Instruction::Arithmetic(_)
                 | Instruction::BinaryLogic(_)
+                | Instruction::Call(_)
                 | Instruction::Capture(_)
                 | Instruction::Convert(_)
                 | Instruction::Comparison(_)

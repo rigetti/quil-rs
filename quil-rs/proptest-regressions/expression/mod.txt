@@ -1,0 +1,8 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 4c32128d724ed0f840715fae4e194c99262dc153c64be39d2acf45b8903b20f7 # shrinks to value = Complex { re: 0.0, im: -0.13530277317700273 }
+cc 5cc95f2159ad7120bbaf296d3a9fb26fef30f57b61e76b3e0dc99f4759009fdb # shrinks to e = Number(Complex { re: 0.0, im: -2.772221265116396 })

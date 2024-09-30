@@ -19,7 +19,9 @@ use std::collections::{HashMap, HashSet};
 use petgraph::graphmap::GraphMap;
 use petgraph::Directed;
 
-use crate::instruction::{FrameIdentifier, Instruction, InstructionHandler, Target};
+use crate::instruction::{
+    ExternSignatureMap, FrameIdentifier, Instruction, InstructionHandler, Target,
+};
 use crate::program::analysis::{
     BasicBlock, BasicBlockOwned, BasicBlockTerminator, ControlFlowGraph,
 };
@@ -30,7 +32,9 @@ pub use crate::program::memory::MemoryAccessType;
 #[derive(Debug, Clone, Copy)]
 pub enum ScheduleErrorVariant {
     DuplicateLabel,
+    Extern,
     UncalibratedInstruction,
+    UnresolvedCallInstruction,
     UnschedulableInstruction,
 }
 
@@ -300,10 +304,22 @@ impl<'a> ScheduledBasicBlock<'a> {
         // NOTE: this may be refined to serialize by memory region offset rather than by entire region.
         let mut pending_memory_access: HashMap<String, MemoryAccessQueue> = HashMap::new();
 
+        let extern_signature_map = ExternSignatureMap::try_from(program.extern_pragma_map.clone())
+            .map_err(|(pragma, _)| ScheduleError {
+                instruction_index: None,
+                instruction: Instruction::Pragma(pragma),
+                variant: ScheduleErrorVariant::Extern,
+            })?;
         for (index, &instruction) in basic_block.instructions().iter().enumerate() {
             let node = graph.add_node(ScheduledGraphNode::InstructionIndex(index));
 
-            let accesses = custom_handler.memory_accesses(instruction);
+            let accesses = custom_handler
+                .memory_accesses(instruction, &extern_signature_map)
+                .map_err(|_| ScheduleError {
+                    instruction_index: Some(index),
+                    instruction: instruction.clone(),
+                    variant: ScheduleErrorVariant::UnresolvedCallInstruction,
+                })?;
 
             let memory_dependencies = [
                 (accesses.reads, MemoryAccessType::Read),
