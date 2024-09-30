@@ -1,3 +1,19 @@
+## 0.29.0-rc.0 (2024-09-30)
+
+### Breaking Changes
+
+#### correctly compute duration for `erfsquare` waveform templates
+
+### Features
+
+#### support underscores in `erfsquare`, `padleft`, and `padright`
+
+#### check for `pad_left` and `pad_right` on all waveforms, include `_` in `erf_square`
+
+### Fixes
+
+#### fix computation of duration for `erfsquare` waveform templates
+
 ## 0.28.1 (2024-09-16)
 
 ### Fixes
