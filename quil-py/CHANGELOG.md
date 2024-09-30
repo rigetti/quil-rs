@@ -1,3 +1,23 @@
+## 0.13.0-rc.1 (2024-09-30)
+
+### Breaking Changes
+
+#### correctly compute duration for `erfsquare` waveform templates
+
+### Features
+
+#### support underscores in `erfsquare`, `padleft`, and `padright`
+
+#### Add waveforms module for generating discrete IQ value sequences representing Quil's defined set of waveforms. (#399)
+
+#### check for `pad_left` and `pad_right` on all waveforms, include `_` in `erf_square`
+
+#### support extern call instructions (#394)
+
+### Fixes
+
+#### fix computation of duration for `erfsquare` waveform templates
+
 ## 0.13.0-rc.0 (2024-09-30)
 
 ### Breaking Changes
