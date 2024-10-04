@@ -21,10 +21,11 @@ use ndarray::Array2;
 use nom_locate::LocatedSpan;
 
 use crate::instruction::{
-    Arithmetic, ArithmeticOperand, ArithmeticOperator, Call, Declaration, ExternPragmaMap,
-    FrameDefinition, FrameIdentifier, GateDefinition, GateError, Instruction, InstructionHandler,
-    Jump, JumpUnless, Label, Matrix, MemoryReference, Move, Qubit, QubitPlaceholder, ScalarType,
-    Target, TargetPlaceholder, Vector, Waveform, WaveformDefinition, RESERVED_PRAGMA_EXTERN,
+    Arithmetic, ArithmeticOperand, ArithmeticOperator, Call, Declaration, ExternError,
+    ExternPragmaMap, ExternSignatureMap, FrameDefinition, FrameIdentifier, GateDefinition,
+    GateError, Instruction, InstructionHandler, Jump, JumpUnless, Label, Matrix, MemoryReference,
+    Move, Pragma, Qubit, QubitPlaceholder, ScalarType, Target, TargetPlaceholder, Vector, Waveform,
+    WaveformDefinition, RESERVED_PRAGMA_EXTERN,
 };
 use crate::parser::{lex, parse_instructions, ParseError};
 use crate::quil::Quil;
@@ -667,6 +668,17 @@ impl Program {
     /// Get a reference to the [`Instruction`] at the given index, if present.
     pub fn get_instruction(&self, index: usize) -> Option<&Instruction> {
         self.instructions.get(index)
+    }
+
+    /// Convert the [`Program::extern_pragma_map`] into an [`ExternSignatureMap`].
+    ///
+    /// This will parse all `PRAGMA EXTERN` instructions in the program. If the
+    /// conversion of any [`Pragma`] fails, the [`ExternError`] is returned along
+    /// with the offending [`Pragma`].
+    pub fn try_extern_signature_map_from_pragma_map(
+        &self,
+    ) -> std::result::Result<ExternSignatureMap, (Pragma, ExternError)> {
+        ExternSignatureMap::try_from(self.extern_pragma_map.clone())
     }
 }
 

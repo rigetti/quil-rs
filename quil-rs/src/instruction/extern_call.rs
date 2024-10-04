@@ -145,7 +145,7 @@ impl ExternSignature {
 const EXPECTED_PRAGMA_EXTERN_STRUCTURE: &str = "PRAGMA EXTERN {name} \"{scalar type}? (\\(({parameter name} : mut? {parameter type}) (, {parameter name} : mut? {parameter type})*\\))?\"";
 
 /// An error that can occur when parsing an extern signature.
-#[derive(Debug, thiserror::Error, PartialEq)]
+#[derive(Debug, thiserror::Error, PartialEq, Clone)]
 pub enum ExternError {
     /// An error occurred while parsing the contents of the extern signature.
     #[error(
@@ -692,7 +692,7 @@ pub enum CallSignatureError {
 
 /// An error that can occur when resolving a call instruction, given a complete
 /// [`ExternPragmaMap`] for the [`crate::program::Program`].
-#[derive(Debug, thiserror::Error, PartialEq)]
+#[derive(Debug, thiserror::Error, PartialEq, Clone)]
 pub enum CallResolutionError {
     /// A matching extern instruction was found, but signature validation failed.
     #[error("call found matching extern instruction for {name}, but signature validation failed: {error:?}")]
