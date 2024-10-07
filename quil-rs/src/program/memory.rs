@@ -93,7 +93,7 @@ macro_rules! set_from_memory_references {
     };
 }
 
-#[derive(thiserror::Error, Debug, PartialEq)]
+#[derive(thiserror::Error, Debug, PartialEq, Clone)]
 pub enum MemoryAccessesError {
     #[error(transparent)]
     CallResolution(#[from] CallResolutionError),
