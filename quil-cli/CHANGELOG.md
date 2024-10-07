@@ -1,3 +1,23 @@
+## 0.6.0-rc.2 (2024-10-07)
+
+### Breaking Changes
+
+#### correctly compute duration for `erfsquare` waveform templates
+
+### Features
+
+#### support underscores in `erfsquare`, `padleft`, and `padright`
+
+#### check for `pad_left` and `pad_right` on all waveforms, include `_` in `erf_square`
+
+### Fixes
+
+#### fix computation of duration for `erfsquare` waveform templates
+
+#### ensure extern signature map is publicly accessible
+
+#### ensure extern signature map is publicly accessible (#410)
+
 ## 0.6.0-rc.1 (2024-09-30)
 
 ### Breaking Changes
