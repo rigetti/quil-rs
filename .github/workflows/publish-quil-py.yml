@@ -48,7 +48,7 @@ jobs:
           args: -i python --release --target universal2-apple-darwin --manifest-path quil-py/Cargo.toml --out dist
       - name: Install wheel
         run: |
-          pip install quil --no-index --find-links dist --force-reinstall
+          pip install quil --find-links dist --force-reinstall
       - name: Upload wheels
         uses: actions/upload-artifact@v3
         with:
@@ -84,20 +84,20 @@ jobs:
     - name: Install wheel
       if: ${{ matrix.target == 'x86_64' }} # pip can only install wheels for it's own architecture
       run: |
-        pip install quil --no-index --find-links dist --force-reinstall
+        pip install quil --find-links dist --force-reinstall
     - name: Upload wheels
       uses: actions/upload-artifact@v3
       with:
         name: wheels
         path: dist
 
-  windows: 
-    runs-on: windows-latest 
+  windows:
+    runs-on: windows-latest
     needs: [ is-python-release, should-publish-wheels ]
-    strategy: 
-      matrix: 
-        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12'] 
-        target: [x64] 
+    strategy:
+      matrix:
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+        target: [x64]
     steps:
       # Some of the snapshots have long file paths, so we need to enable long file paths on Windows where the limit is 260 by default
       - name: Allow Long File Paths
@@ -105,29 +105,29 @@ jobs:
           reg add HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\FileSystem /v LongPathsEnabled /t REG_DWORD /d 1 /f
           # https://github.com/actions/checkout/issues/1285#issuecomment-2042579471
           git config --system core.longpaths true
-      - uses: actions/checkout@v2 
+      - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           profile: minimal
           default: true
-      - uses: actions/setup-python@v4 
-        with: 
-          python-version: ${{ matrix.python-version }} 
-          architecture: ${{ matrix.target }} 
-      - name: Build wheels 
-        uses: messense/maturin-action@v1 
-        with: 
-          target: ${{ matrix.target }} 
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: ${{ matrix.target }}
+      - name: Build wheels
+        uses: messense/maturin-action@v1
+        with:
+          target: ${{ matrix.target }}
           args: -i python --release --manifest-path quil-py/Cargo.toml --out dist
-      - name: Install built wheel 
-        run: | 
-          pip install quil --find-links dist --force-reinstall --no-deps --no-index
-      - name: Upload wheels 
-        uses: actions/upload-artifact@v2 
-        with: 
-          name: wheels 
-          path: dist 
+      - name: Install built wheel
+        run: |
+          pip install quil --find-links dist --force-reinstall --no-deps
+      - name: Upload wheels
+        uses: actions/upload-artifact@v2
+        with:
+          name: wheels
+          path: dist
 
   sdist:
     runs-on: ubuntu-latest
@@ -175,7 +175,7 @@ jobs:
       - name: Publish to PyPi
         uses: messense/maturin-action@v1
         with:
-          command: upload 
+          command: upload
           args: --skip-existing wheels/*
 
   publish-rust-crate:
