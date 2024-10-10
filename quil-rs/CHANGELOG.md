@@ -1,3 +1,9 @@
+## 0.29.1-rc.0 (2024-10-10)
+
+### Fixes
+
+#### use correct Numpy version (and bump version number) (#416)
+
 ## 0.29.0 (2024-10-07)
 
 ### Breaking Changes
