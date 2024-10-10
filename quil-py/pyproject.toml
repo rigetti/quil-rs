@@ -15,7 +15,7 @@ classifiers = [
   "Programming Language :: Python :: 3.10",
   "Operating System :: OS Independent",
 ]
-dependencies = ["numpy>=1.2.1"]
+dependencies = ["numpy>=1.21"]
 
 [tool.maturin]
 features = ["pyo3/extension-module"]
