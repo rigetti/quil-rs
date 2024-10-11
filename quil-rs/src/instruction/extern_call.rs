@@ -321,9 +321,19 @@ impl TryFrom<ExternPragmaMap> for ExternSignatureMap {
 }
 
 impl ExternSignatureMap {
-    #[cfg(test)]
-    pub(crate) fn len(&self) -> usize {
+    #[inline]
+    pub fn len(&self) -> usize {
         self.0.len()
+    }
+
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    #[inline]
+    pub fn iter(&self) -> impl Iterator<Item = (&String, &ExternSignature)> {
+        self.0.iter()
     }
 }
 
