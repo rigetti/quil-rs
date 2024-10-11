@@ -17,6 +17,7 @@ use crate::parser::error::{ErrorInput, GenericParseError, InternalError};
 use nom::error::{Error as NomError, ParseError};
 use std::convert::Infallible;
 use std::fmt;
+use std::sync::Arc;
 use thiserror::__private::AsDynError;
 
 /// An error that may occur while parsing.
@@ -34,7 +35,7 @@ use thiserror::__private::AsDynError;
 /// user-readable backtrace of the errors that caused this one.
 ///
 /// When displaying errors to end-users, prefer the alternate format for easier debugging.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Error<E = Infallible>
 where
     E: std::error::Error + Send,
@@ -43,7 +44,7 @@ where
     column: usize,
     snippet: String,
     kind: ErrorKind<E>,
-    previous: Option<Box<dyn std::error::Error + 'static + Send + Sync>>,
+    previous: Option<Arc<dyn std::error::Error + 'static + Send + Sync>>,
 }
 
 impl<I, E> From<InternalError<I, E>> for Error<E>
@@ -95,7 +96,7 @@ where
     where
         E2: std::error::Error + 'static + Send + Sync,
     {
-        self.previous = Some(Box::new(previous));
+        self.previous = Some(Arc::new(previous));
         self
     }
 

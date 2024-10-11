@@ -210,9 +210,9 @@ impl<'p> ScheduledBasicBlock<'p> {
     fn get_waveform_duration_seconds(
         program: &Program,
         instruction: &Instruction,
-        waveform_invocation: &WaveformInvocation,
+        WaveformInvocation { name, parameters }: &WaveformInvocation,
     ) -> Option<Seconds> {
-        if let Some(definition) = program.waveforms.get(&waveform_invocation.name) {
+        if let Some(definition) = program.waveforms.get(name) {
             let sample_count = definition.matrix.len();
             let common_sample_rate =
                 program
@@ -243,11 +243,22 @@ impl<'p> ScheduledBasicBlock<'p> {
                 .map(|sample_rate| sample_count as f64 / sample_rate)
                 .map(Seconds)
         } else {
-            waveform_invocation
-                .parameters
-                .get("duration")
-                .and_then(|v| v.to_real().ok())
-                .map(Seconds)
+            // Per the Quil spec, all waveform templates have a "duration"
+            // parameter, and "erf_square" also has "pad_left" and "pad_right".
+            // We explicitly choose to be more flexible here, and allow any
+            // built-in waveform templates to have "pad_*" parameters, as well
+            // as allow "erf_square" to omit them.
+            let parameter = |parameter_name| {
+                parameters
+                    .get(parameter_name)
+                    .and_then(|v| v.to_real().ok())
+                    .map(Seconds)
+            };
+            Some(
+                parameter("duration")?
+                    + parameter("pad_left").unwrap_or(Seconds::zero())
+                    + parameter("pad_right").unwrap_or(Seconds::zero()),
+            )
         }
     }
 
@@ -400,6 +411,16 @@ PULSE 0 "a" flat(duration: 1.0)
 PULSE 0 "a" flat(duration: 1.0)
 "#,
         Ok(vec![0.0, 1.0, 2.0])
+    )]
+    #[case(
+        r#"DEFFRAME 0 "a":
+    SAMPLE-RATE: 1e9
+PULSE 0 "a" erf_square(duration: 1.0, pad_left: 0.2, pad_right: 0.3)
+PULSE 0 "a" erf_square(duration: 0.1, pad_left: 0.7, pad_right: 0.7)
+PULSE 0 "a" erf_square(duration: 0.5, pad_left: 0.6, pad_right: 0.4)
+FENCE
+"#,
+        Ok(vec![0.0, 1.5, 3.0, 4.5])
     )]
     #[case(
         r#"DEFFRAME 0 "a":

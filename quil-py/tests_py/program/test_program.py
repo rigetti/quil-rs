@@ -134,8 +134,8 @@ DEFCAL CZ q0 q1:
     FENCE q0 q1
     SET-PHASE q0 "flux_tx_cz" 0.0
     SET-PHASE q1 "flux_tx_iswap" 0.0
-    NONBLOCKING PULSE q0 "flux_tx_cz" erf_square(duration: 6.000000000000001e-08)
-    NONBLOCKING PULSE q1 "flux_tx_iswap" erf_square(duration: 6.000000000000001e-08)
+    NONBLOCKING PULSE q0 "flux_tx_cz" erf_square(duration: 6.000000000000001e-08, pad_left: 0.1e-08, pad_right: 0.1e-08)
+    NONBLOCKING PULSE q1 "flux_tx_iswap" erf_square(duration: 6.000000000000001e-08, pad_left: 0.1e-08, pad_right: 0.1e-08)
     SHIFT-PHASE q0 "flux_tx_cz" 1.0
     SHIFT-PHASE q1 "flux_tx_iswap" 1.0
     FENCE q0 q1

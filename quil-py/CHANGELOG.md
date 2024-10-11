@@ -1,3 +1,169 @@
+## 0.13.1 (2024-10-10)
+
+### Fixes
+
+#### use correct Numpy version (and bump version number) (#416)
+
+## 0.13.1-rc.0 (2024-10-10)
+
+### Fixes
+
+#### use correct Numpy version (and bump version number) (#416)
+
+## 0.13.0 (2024-10-07)
+
+### Breaking Changes
+
+#### correctly compute duration for `erfsquare` waveform templates
+
+### Features
+
+#### support underscores in `erfsquare`, `padleft`, and `padright`
+
+#### Add waveforms module for generating discrete IQ value sequences representing Quil's defined set of waveforms. (#399)
+
+#### check for `pad_left` and `pad_right` on all waveforms, include `_` in `erf_square`
+
+#### support extern call instructions (#394)
+
+### Fixes
+
+#### fix computation of duration for `erfsquare` waveform templates
+
+#### ensure extern signature map is publicly accessible
+
+#### ensure extern signature map is publicly accessible (#410)
+
+## 0.13.0-rc.2 (2024-10-07)
+
+### Breaking Changes
+
+#### correctly compute duration for `erfsquare` waveform templates
+
+### Features
+
+#### support underscores in `erfsquare`, `padleft`, and `padright`
+
+#### Add waveforms module for generating discrete IQ value sequences representing Quil's defined set of waveforms. (#399)
+
+#### check for `pad_left` and `pad_right` on all waveforms, include `_` in `erf_square`
+
+#### support extern call instructions (#394)
+
+### Fixes
+
+#### fix computation of duration for `erfsquare` waveform templates
+
+#### ensure extern signature map is publicly accessible
+
+#### ensure extern signature map is publicly accessible (#410)
+
+## 0.13.0-rc.1 (2024-09-30)
+
+### Breaking Changes
+
+#### correctly compute duration for `erfsquare` waveform templates
+
+### Features
+
+#### support underscores in `erfsquare`, `padleft`, and `padright`
+
+#### Add waveforms module for generating discrete IQ value sequences representing Quil's defined set of waveforms. (#399)
+
+#### check for `pad_left` and `pad_right` on all waveforms, include `_` in `erf_square`
+
+#### support extern call instructions (#394)
+
+### Fixes
+
+#### fix computation of duration for `erfsquare` waveform templates
+
+## 0.13.0-rc.0 (2024-09-30)
+
+### Breaking Changes
+
+#### correctly compute duration for `erfsquare` waveform templates
+
+### Features
+
+#### support underscores in `erfsquare`, `padleft`, and `padright`
+
+#### Add waveforms module for generating discrete IQ value sequences representing Quil's defined set of waveforms. (#399)
+
+#### check for `pad_left` and `pad_right` on all waveforms, include `_` in `erf_square`
+
+### Fixes
+
+#### fix computation of duration for `erfsquare` waveform templates
+
+## 0.12.2-rc.0 (2024-09-20)
+
+### Features
+
+#### Add waveforms module for generating discrete IQ value sequences representing Quil's defined set of waveforms. (#399)
+
+## 0.12.1 (2024-09-16)
+
+### Fixes
+
+#### update lexical
+
+#### Update lexical-core
+
+#### update Knope, get it to release an update
+
+## 0.12.1-rc.1 (2024-09-16)
+
+### Fixes
+
+#### update lexical
+
+#### Update lexical-core
+
+#### update Knope, get it to release an update
+
+## 0.12.1-rc.0
+
+### Fixes
+
+- Update lexical-core
+
+## 0.12.0
+
+### Breaking Changes
+
+- Use 4 spaces for indentation. (#390)
+
+## 0.12.0-rc.0
+
+### Breaking Changes
+
+- Use 4 spaces for indentation. (#390)
+
+## 0.11.4
+
+### Fixes
+
+- derive Clone for ParseProgramError and lower-level errors (#383)
+
+## 0.11.4-rc.0
+
+### Fixes
+
+- derive Clone for ParseProgramError and lower-level errors (#383)
+
+## 0.11.3
+
+### Features
+
+- allow using instruction handler when simplifying program (#395)
+
+## 0.11.3-rc.0
+
+### Features
+
+- allow using instruction handler when simplifying program (#395)
+
 ## 0.11.2
 
 ### Fixes

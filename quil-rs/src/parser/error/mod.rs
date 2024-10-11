@@ -33,7 +33,7 @@ pub type ParseError = Error<ParserErrorKind>;
 
 /// Parsing errors specific to Quil parsing.
 #[allow(dead_code)]
-#[derive(Debug, thiserror::Error, PartialEq)]
+#[derive(Clone, Debug, thiserror::Error, PartialEq)]
 pub enum ParserErrorKind {
     /// Reached end of input, but expected something else.
     #[error("expected {0}, found EOF")]

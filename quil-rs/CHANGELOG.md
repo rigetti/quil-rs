@@ -1,3 +1,149 @@
+## 0.29.1 (2024-10-10)
+
+### Fixes
+
+#### use correct Numpy version (and bump version number) (#416)
+
+## 0.29.1-rc.0 (2024-10-10)
+
+### Fixes
+
+#### use correct Numpy version (and bump version number) (#416)
+
+## 0.29.0 (2024-10-07)
+
+### Breaking Changes
+
+#### correctly compute duration for `erfsquare` waveform templates
+
+### Features
+
+#### support underscores in `erfsquare`, `padleft`, and `padright`
+
+#### check for `pad_left` and `pad_right` on all waveforms, include `_` in `erf_square`
+
+### Fixes
+
+#### fix computation of duration for `erfsquare` waveform templates
+
+#### ensure extern signature map is publicly accessible
+
+#### ensure extern signature map is publicly accessible (#410)
+
+## 0.29.0-rc.2 (2024-10-07)
+
+### Breaking Changes
+
+#### correctly compute duration for `erfsquare` waveform templates
+
+### Features
+
+#### support underscores in `erfsquare`, `padleft`, and `padright`
+
+#### check for `pad_left` and `pad_right` on all waveforms, include `_` in `erf_square`
+
+### Fixes
+
+#### fix computation of duration for `erfsquare` waveform templates
+
+#### ensure extern signature map is publicly accessible
+
+#### ensure extern signature map is publicly accessible (#410)
+
+## 0.29.0-rc.1 (2024-09-30)
+
+### Breaking Changes
+
+#### correctly compute duration for `erfsquare` waveform templates
+
+### Features
+
+#### support underscores in `erfsquare`, `padleft`, and `padright`
+
+#### check for `pad_left` and `pad_right` on all waveforms, include `_` in `erf_square`
+
+### Fixes
+
+#### fix computation of duration for `erfsquare` waveform templates
+
+## 0.29.0-rc.0 (2024-09-30)
+
+### Breaking Changes
+
+#### correctly compute duration for `erfsquare` waveform templates
+
+### Features
+
+#### support underscores in `erfsquare`, `padleft`, and `padright`
+
+#### check for `pad_left` and `pad_right` on all waveforms, include `_` in `erf_square`
+
+### Fixes
+
+#### fix computation of duration for `erfsquare` waveform templates
+
+## 0.28.1 (2024-09-16)
+
+### Fixes
+
+#### update lexical
+
+#### Update lexical-core
+
+#### update Knope, get it to release an update
+
+## 0.28.1-rc.1 (2024-09-16)
+
+### Fixes
+
+#### update lexical
+
+#### Update lexical-core
+
+#### update Knope, get it to release an update
+
+## 0.28.1-rc.0
+
+### Fixes
+
+- Update lexical-core
+
+## 0.28.0
+
+### Breaking Changes
+
+- Use 4 spaces for indentation. (#390)
+
+## 0.28.0-rc.0
+
+### Breaking Changes
+
+- Use 4 spaces for indentation. (#390)
+
+## 0.27.3
+
+### Fixes
+
+- derive Clone for ParseProgramError and lower-level errors (#383)
+
+## 0.27.3-rc.0
+
+### Fixes
+
+- derive Clone for ParseProgramError and lower-level errors (#383)
+
+## 0.27.2
+
+### Features
+
+- allow using instruction handler when simplifying program (#395)
+
+## 0.27.2-rc.0
+
+### Features
+
+- allow using instruction handler when simplifying program (#395)
+
 ## 0.27.1
 
 ### Features

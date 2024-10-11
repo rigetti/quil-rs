@@ -21,6 +21,7 @@ use crate::expression::Expression;
 use crate::parser::lex;
 use crate::parser::parse_instructions;
 use crate::program::frame::{FrameMatchCondition, FrameMatchConditions};
+use crate::program::ProgramError;
 use crate::program::{MatchedFrames, MemoryAccesses};
 use crate::quil::{write_join_quil, Quil, ToQuilResult};
 use crate::Program;
@@ -30,6 +31,7 @@ mod circuit;
 mod classical;
 mod control_flow;
 mod declaration;
+mod extern_call;
 mod frame;
 mod gate;
 mod measurement;
@@ -53,6 +55,7 @@ pub use self::control_flow::{Jump, JumpUnless, JumpWhen, Label, Target, TargetPl
 pub use self::declaration::{
     Declaration, Load, MemoryReference, Offset, ScalarType, Sharing, Store, Vector,
 };
+pub use self::extern_call::*;
 pub use self::frame::{
     AttributeValue, Capture, FrameAttributes, FrameDefinition, FrameIdentifier, Pulse, RawCapture,
     SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, SwapPhases,
@@ -62,7 +65,7 @@ pub use self::gate::{
     PauliSum, PauliTerm,
 };
 pub use self::measurement::Measurement;
-pub use self::pragma::{Include, Pragma, PragmaArgument};
+pub use self::pragma::{Include, Pragma, PragmaArgument, RESERVED_PRAGMA_EXTERN};
 pub use self::qubit::{Qubit, QubitPlaceholder};
 pub use self::reset::Reset;
 pub use self::timing::{Delay, Fence};
@@ -79,6 +82,7 @@ pub enum Instruction {
     Arithmetic(Arithmetic),
     BinaryLogic(BinaryLogic),
     CalibrationDefinition(Calibration),
+    Call(Call),
     Capture(Capture),
     CircuitDefinition(CircuitDefinition),
     Convert(Convert),
@@ -152,6 +156,7 @@ impl From<&Instruction> for InstructionRole {
             | Instruction::ShiftPhase(_)
             | Instruction::SwapPhases(_) => InstructionRole::RFControl,
             Instruction::Arithmetic(_)
+            | Instruction::Call(_)
             | Instruction::Comparison(_)
             | Instruction::Convert(_)
             | Instruction::BinaryLogic(_)
@@ -270,6 +275,7 @@ impl Quil for Instruction {
             Instruction::CalibrationDefinition(calibration) => {
                 calibration.write(f, fall_back_to_debug)
             }
+            Instruction::Call(call) => call.write(f, fall_back_to_debug),
             Instruction::Capture(capture) => capture.write(f, fall_back_to_debug),
             Instruction::CircuitDefinition(circuit) => circuit.write(f, fall_back_to_debug),
             Instruction::Convert(convert) => convert.write(f, fall_back_to_debug),
@@ -540,6 +546,7 @@ impl Instruction {
             Instruction::Arithmetic(_)
             | Instruction::BinaryLogic(_)
             | Instruction::CalibrationDefinition(_)
+            | Instruction::Call(_)
             | Instruction::CircuitDefinition(_)
             | Instruction::Comparison(_)
             | Instruction::Convert(_)
@@ -671,6 +678,7 @@ impl Instruction {
             | Instruction::WaveformDefinition(_) => true,
             Instruction::Arithmetic(_)
             | Instruction::BinaryLogic(_)
+            | Instruction::Call(_)
             | Instruction::CircuitDefinition(_)
             | Instruction::Convert(_)
             | Instruction::Comparison(_)
@@ -716,6 +724,7 @@ impl Instruction {
             Instruction::Arithmetic(_)
             | Instruction::BinaryLogic(_)
             | Instruction::CalibrationDefinition(_)
+            | Instruction::Call(_)
             | Instruction::CircuitDefinition(_)
             | Instruction::Convert(_)
             | Instruction::Comparison(_)
@@ -925,11 +934,21 @@ impl InstructionHandler {
     /// This uses the return value of the override function, if set and returns `Some`. If not set
     /// or the function returns `None`, defaults to the return value of
     /// [`Instruction::get_memory_accesses`].
-    pub fn memory_accesses(&mut self, instruction: &Instruction) -> MemoryAccesses {
+    pub fn memory_accesses(
+        &mut self,
+        instruction: &Instruction,
+        extern_signature_map: &ExternSignatureMap,
+    ) -> crate::program::MemoryAccessesResult {
         self.get_memory_accesses
             .as_mut()
             .and_then(|f| f(instruction))
-            .unwrap_or_else(|| instruction.get_memory_accesses())
+            .map(Ok)
+            .unwrap_or_else(|| instruction.get_memory_accesses(extern_signature_map))
+    }
+
+    /// Like [`Program::into_simplified`], but using custom instruction handling.
+    pub fn simplify_program(&mut self, program: &Program) -> Result<Program, ProgramError> {
+        program.simplify_with_handler(self)
     }
 }
 
@@ -1067,6 +1086,39 @@ RX(%a) 0",
             let mut qubit_2 = Qubit::Placeholder(placeholder_2.clone());
             qubit_2.resolve_placeholder(|k| resolver.get(k).copied());
             assert_eq!(qubit_2, Qubit::Placeholder(placeholder_2));
+        }
+    }
+
+    mod instruction_handler {
+        use super::super::*;
+
+        #[test]
+        fn it_considers_custom_instruction_frames() {
+            let program = r#"DEFFRAME 0 "rf":
+    CENTER-FREQUENCY: 3e9
+
+PRAGMA USES-ALL-FRAMES
+"#
+            .parse::<Program>()
+            .unwrap();
+
+            // This test assumes that the default simplification behavior will not assign frames to
+            // `PRAGMA` instructions. This is verified below.
+            assert!(program.into_simplified().unwrap().frames.is_empty());
+
+            let mut handler =
+                InstructionHandler::default().set_matching_frames(|instruction, program| {
+                    if let Instruction::Pragma(_) = instruction {
+                        Some(Some(MatchedFrames {
+                            used: program.frames.get_keys().into_iter().collect(),
+                            blocked: HashSet::new(),
+                        }))
+                    } else {
+                        None
+                    }
+                });
+
+            assert_eq!(handler.simplify_program(&program).unwrap().frames.len(), 1);
         }
     }
 }

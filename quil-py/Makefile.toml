@@ -1,65 +1,79 @@
 [env]
+PYTHONPATH = { script = [ "python -c 'from distutils.sysconfig import get_python_lib; print(get_python_lib())'" ] }
 RUST_BACKTRACE = 0
 
-[tasks.poetry-install]
-command = "poetry"
-args = ["install"]
-
-[tasks.install-quil]
-command = "poetry"
-args = ["run", "maturin", "develop"]
-
-[tasks.stubtest]
-dependencies = ["poetry-install"]
-command = "poetry"
-args = ["run", "stubtest", "--allowlist", ".stubtest-allowlist", "quil"]
-
-[tasks.stubtest-flow]
-dependencies = [
-    "poetry-install",
-    "install-quil",
-    "stubtest",
+[tasks.check-venv]
+description = "Check if a virtual environment is activated"
+script = [
+    '''
+    if [ -z "$VIRTUAL_ENV" ]; then
+        echo "No virtual environment activated. Please activate one."
+        exit 1
+    else
+        echo "Virtual environment is active."
+    fi
+    '''
 ]
 
-[tasks.format]
-dependencies = ["poetry-install"]
-command = "poetry"
-args = ["run", "ruff", "format"]
+[tasks.install-uv]
+dependencies = ["check-venv"]
+description = "Install dependencies using uv"
+command = "pip"
+args = ["install", "uv"]
 
-[tasks.check-format]
-dependencies = ["poetry-install"]
-command = "poetry"
-args = ["run", "ruff", "format", "--check"]
+[tasks.install-deps]
+dependencies = ["install-uv"]
+description = "Install project dependencies using uv."
+script = [
+    '''
+    uv pip compile pyproject.toml --all-extras > requirements-dev.txt
+    uv pip install -r requirements-dev.txt
+    rm requirements-dev.txt
+    '''
+]
 
-[tasks.lint]
-dependencies = ["poetry-install"]
-command = "poetry"
-args = ["run", "ruff", "check"]
+[tasks.install-python-package]
+dependencies = ["check-venv", "install-deps"]
+description = "Build the python package and install to the active virtual environment."
+command = "maturin"
+args = ["develop"]
 
-[tasks.pytest]
-command = "poetry"
-args = ["run", "pytest"]
+[tasks.test]
+dependencies = ["install-python-package"]
+command = "pytest"
+args = ["tests_py"]
 
 [tasks.pytest-flow]
 dependencies = [
-    "poetry-install",
-    "install-quil",
-    "pytest",
+    "install-python-package",
+    "test",
+    "post-test",
 ]
 
-[tasks.docs]
-dependencies = ["poetry-install", "install-quil"]
-command = "poetry"
-args = ["run", "pdoc", "-o", "build/docs", "quil", "!quil.quil", "--logo", "https://qcs.rigetti.com/static/img/rigetti-logo.svg"]
+[tasks.stubtest]
+command = "stubtest"
+args = [
+    "--allowlist",
+    ".stubtest-allowlist",
+    "quil"
+]
+
+[tasks.stubtest-flow]
+dependencies = [
+    "install-python-package",
+    "stubtest",
+]
 
 [tasks.dev-flow]
-dependencies = [
-    "dev-test-flow",
-    "pytest-flow",
-    "stubtest",
-    "lint",
-    "check-format"
-]
+dependencies = ["dev-test-flow", "pytest-flow", "stubtest"]
 
 [tasks.default]
 alias = "dev-flow"
+
+[tasks.ci-flow]
+dependencies = ["pytest-flow", "stubtest"]
+
+[tasks.docs]
+dependencies = ["install-python-package"]
+command = "pdoc"
+args = ["-o", "build/docs", "quil", "!quil.quil", "--logo", "https://qcs.rigetti.com/static/img/rigetti-logo.svg"]

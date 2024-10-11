@@ -26,6 +26,10 @@ pub use self::{
         ParseMemoryReferenceError, PyDeclaration, PyLoad, PyMemoryReference, PyOffset,
         PyScalarType, PySharing, PyStore, PyVector,
     },
+    extern_call::{
+        CallError, ExternError, PyCall, PyCallArgument, PyExternParameter, PyExternParameterType,
+        PyExternSignature,
+    },
     frame::{
         PyAttributeValue, PyCapture, PyFrameAttributes, PyFrameDefinition, PyFrameIdentifier,
         PyPulse, PyRawCapture, PySetFrequency, PySetPhase, PySetScale, PyShiftFrequency,
@@ -48,6 +52,7 @@ mod circuit;
 mod classical;
 mod control_flow;
 mod declaration;
+mod extern_call;
 mod frame;
 mod gate;
 mod measurement;
@@ -63,6 +68,7 @@ py_wrap_union_enum! {
         arithmetic: Arithmetic => PyArithmetic,
         binary_logic: BinaryLogic => PyBinaryLogic,
         calibration_definition: CalibrationDefinition => PyCalibration,
+        call: Call => PyCall,
         capture: Capture => PyCapture,
         circuit_definition: CircuitDefinition => PyCircuitDefinition,
         convert: Convert => PyConvert,
@@ -152,11 +158,16 @@ create_init_submodule! {
         PyBinaryLogic,
         PyBinaryOperand,
         PyBinaryOperator,
+        PyCall,
+        PyCallArgument,
         PyComparison,
         PyComparisonOperand,
         PyComparisonOperator,
         PyConvert,
         PyExchange,
+        PyExternParameter,
+        PyExternParameterType,
+        PyExternSignature,
         PyMove,
         PyUnaryLogic,
         PyUnaryOperator,
@@ -212,7 +223,7 @@ create_init_submodule! {
         PyWaveformDefinition,
         PyWaveformInvocation
     ],
-    errors: [ GateError, ParseMemoryReferenceError ],
+    errors: [ CallError, ExternError, GateError, ParseMemoryReferenceError ],
 }
 
 /// Implements __copy__ and __deepcopy__ on any variant of the [`PyInstruction`] class, making

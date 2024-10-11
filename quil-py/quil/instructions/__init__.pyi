@@ -79,6 +79,7 @@ class Instruction:
             Calibration,
             Capture,
             BinaryLogic,
+            Call,
             CircuitDefinition,
             Convert,
             Comparison,
@@ -131,6 +132,7 @@ class Instruction:
         Capture,
         BinaryLogic,
         CircuitDefinition,
+        Call,
         Convert,
         Comparison,
         Declaration,
@@ -168,6 +170,7 @@ class Instruction:
     def is_arithmetic(self) -> bool: ...
     def is_binary_logic(self) -> bool: ...
     def is_calibration_definition(self) -> bool: ...
+    def is_call(self) -> bool: ...
     def is_capture(self) -> bool: ...
     def is_circuit_definition(self) -> bool: ...
     def is_convert(self) -> bool: ...
@@ -216,6 +219,8 @@ class Instruction:
     def from_binary_logic(inner: BinaryLogic) -> Instruction: ...
     @staticmethod
     def from_calibration_definition(inner: Calibration) -> Instruction: ...
+    @staticmethod
+    def from_call(inner: Call) -> Instruction: ...
     @staticmethod
     def from_capture(inner: Capture) -> Instruction: ...
     @staticmethod
@@ -294,6 +299,8 @@ class Instruction:
     def to_arithmetic(self) -> Arithmetic: ...
     def as_binary_logic(self) -> Optional[BinaryLogic]: ...
     def to_binary_logic(self) -> BinaryLogic: ...
+    def as_call(self) -> Optional[Call]: ...
+    def to_call(self) -> Call: ...
     def as_convert(self) -> Optional[Convert]: ...
     def to_convert(self) -> Convert: ...
     def as_comparison(self) -> Optional[Comparison]: ...
@@ -1259,6 +1266,213 @@ class FrameIdentifier:
         If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
+@final
+class CallArgument:
+    """An argument to a ``Call`` instruction.
+
+    This may be expressed as an identifier, a memory reference, or an immediate value. Memory references and identifiers require a corresponding memory region declaration by the time of
+    compilation (at the time of call argument resolution and memory graph construction, to be more precise).
+
+    Additionally, an argument's resolved type must match the expected type of the corresponding ``ExternParameter``
+    in the ``ExternSignature``.
+    """
+    def inner(self) -> Union[List[List[Expression]], List[int], PauliSum]:
+        """Returns the inner value of the variant. Raises a ``RuntimeError`` if inner data doesn't exist."""
+        ...
+    def is_identifier(self) -> bool: ...
+    def is_memory_reference(self) -> bool: ...
+    def is_immediate(self) -> bool: ...
+    def as_identifier(self) -> Optional[str]: ...
+    def to_identifier(self) -> str: ...
+    def as_memory_reference(self) -> Optional["MemoryReference"]: ...
+    def to_memory_reference(self) -> "MemoryReference": ...
+    def as_immediate(self) -> Optional[complex]: ...
+    def to_immediate(self) -> complex: ...
+    @staticmethod
+    def from_identifier(inner: str) -> "CallArgument": ...
+    @staticmethod
+    def from_memory_reference(inner: "MemoryReference") -> "CallArgument": ...
+    @staticmethod
+    def from_immediate(inner: complex) -> "CallArgument": ...
+    def to_quil(self) -> str:
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
+        """
+
+class CallError(ValueError):
+    """An error that may occur when initializing a ``Call``."""
+
+    ...
+
+class Call:
+    """An instruction that calls an external function declared with a `PRAGMA EXTERN` instruction.
+
+    These calls are generally specific to a particular hardware or virtual machine
+    backend. For further detail, see:
+
+    * `Other instructions and Directives <https://github.com/quil-lang/quil/blob/master/rfcs/extern-call.md>`_
+        in the Quil specification.
+    * `EXTERN / CALL RFC <https://github.com/quil-lang/quil/blob/master/rfcs/extern-call.md>`_
+    * `quil#87 <https://github.com/quil-lang/quil/issues/87>`_
+
+
+    Also see ``ExternSignature``.
+    """
+    def __new__(
+        cls,
+        name: str,
+        arguments: List["CallArgument"],
+    ) -> Self: ...
+    @property
+    def name(self) -> str: ...
+    @property
+    def arguments(self) -> List[CallArgument]: ...
+    def to_quil(self) -> str:
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
+        """
+    def __deepcopy__(self, _: Dict) -> Self:
+        """Creates and returns a deep copy of the class.
+
+        If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with
+        new placeholders so resolving them in the copy will not resolve them in the original.
+        Should be used by passing an instance of the class to ``copy.deepcopy``
+        """
+    def __copy__(self) -> Self:
+        """Returns a shallow copy of the class."""
+
+@final
+class ExternParameterType:
+    """The type of an ``ExternParameter``.
+
+    This type is used to define the expected type of a parameter within an ``ExternSignature``. May be
+    either a scalar, fixed-length vector, or variable-length vector.
+
+    Note, both scalars and fixed-length vectors are fully specified by a ``ScalarType``, but are indeed
+    distinct ``ExternParameterType``s.
+    """
+
+    def inner(self) -> Union["ScalarType", "Vector"]:
+        """Returns the inner value of the variant. Raises a ``RuntimeError`` if inner data doesn't exist."""
+        ...
+    def is_scalar(self) -> bool: ...
+    def is_fixed_length_vector(self) -> bool: ...
+    def is_variable_length_vector(self) -> bool: ...
+    def as_scalar(self) -> Optional["ScalarType"]: ...
+    def to_scalar(self) -> "ScalarType": ...
+    def as_fixed_length_vector(self) -> Optional["Vector"]: ...
+    def to_fixed_length_vector(self) -> "MemoryReference": ...
+    def as_variable_length_vector(self) -> Optional["ScalarType"]: ...
+    def to_variable_length_vector(self) -> complex: ...
+    @staticmethod
+    def from_scalar(inner: "ScalarType") -> "ExternParameterType": ...
+    @staticmethod
+    def from_fixed_length_vector(inner: "Vector") -> "ExternParameterType": ...
+    @staticmethod
+    def from_variable_length_vector(inner: "ScalarType") -> "ExternParameterType": ...
+    def to_quil(self) -> str:
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
+        """
+
+class ExternParameter:
+    """A parameter within an ``ExternSignature``. These are defined by a name, mutability, and type."""
+    def __new__(
+        cls,
+        name: str,
+        mutable: bool,
+        data_type: ExternParameterType,
+    ) -> Self: ...
+    @property
+    def name(self) -> str: ...
+    @property
+    def mutable(self) -> bool: ...
+    @property
+    def data_type(self) -> ExternParameterType: ...
+    def to_quil(self) -> str:
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
+        """
+    def __deepcopy__(self, _: Dict) -> Self:
+        """Creates and returns a deep copy of the class.
+
+        If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with
+        new placeholders so resolving them in the copy will not resolve them in the original.
+        Should be used by passing an instance of the class to ``copy.deepcopy``
+        """
+    def __copy__(self) -> Self:
+        """Returns a shallow copy of the class."""
+
+class ExternSignature:
+    """The signature of a ``PRAGMA EXTERN`` instruction.
+
+    This signature is defined by a list of ``ExternParameter``s and an
+    optional return type. See the `Quil Specification <https://github.com/quil-lang/quil/blob/7f532c7cdde9f51eae6abe7408cc868fba9f91f6/specgen/spec/sec-other.s>`_
+    for details on how these signatures are formed.
+    """
+    def __new__(
+        cls,
+        parameters: List[ExternParameter],
+        return_type: Optional[ScalarType],
+    ) -> Self: ...
+    @property
+    def parameters(self) -> List[ExternParameter]: ...
+    @property
+    def return_type(self) -> Optional[ScalarType]: ...
+    def to_quil(self) -> str:
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
+        """
+    def __deepcopy__(self, _: Dict) -> Self:
+        """Creates and returns a deep copy of the class.
+
+        If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with
+        new placeholders so resolving them in the copy will not resolve them in the original.
+        Should be used by passing an instance of the class to ``copy.deepcopy``
+        """
+    def __copy__(self) -> Self:
+        """Returns a shallow copy of the class."""
+
+class ExternError(ValueError):
+    """An error that may occur when initializing or validating a ``PRAGMA EXTERN`` instruction."""
+
+    ...
+
 class Capture:
     def __new__(
         cls,
@@ -1633,7 +1847,7 @@ class Gate:
         equal the number of existing parameters.
         """
         ...
-    def to_unitary_mut(self, n_qubits: int) -> NDArray[np.complex_]:
+    def to_unitary_mut(self, n_qubits: int) -> NDArray[np.complex128]:
         """Lift a Gate to the full `n_qubits`-qubit Hilbert space.
 
         Returns a ``GateError` if any of the parameters of this gate are

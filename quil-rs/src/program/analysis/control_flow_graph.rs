@@ -418,6 +418,7 @@ impl<'p> From<&'p Program> for ControlFlowGraph<'p> {
             match instruction {
                 Instruction::Arithmetic(_)
                 | Instruction::BinaryLogic(_)
+                | Instruction::Call(_)
                 | Instruction::Capture(_)
                 | Instruction::Convert(_)
                 | Instruction::Comparison(_)
@@ -745,8 +746,8 @@ DEFCAL CZ q0 q1:
     FENCE q0 q1
     SET-PHASE q0 "flux_tx_cz" 0.0
     SET-PHASE q1 "flux_tx_iswap" 0.0
-    NONBLOCKING PULSE q0 "flux_tx_cz" erf_square(duration: 6.000000000000001e-08)
-    NONBLOCKING PULSE q1 "flux_tx_iswap" erf_square(duration: 6.000000000000001e-08)
+    NONBLOCKING PULSE q0 "flux_tx_cz" erf_square(duration: 6.000000000000001e-08, pad_left: 0, pad_right: 0)
+    NONBLOCKING PULSE q1 "flux_tx_iswap" erf_square(duration: 6.000000000000001e-08, pad_left: 0, pad_right: 0)
     SHIFT-PHASE q0 "flux_tx_cz" 1.0
     SHIFT-PHASE q1 "flux_tx_iswap" 1.0
     FENCE q0 q1

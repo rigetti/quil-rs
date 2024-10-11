@@ -77,3 +77,5 @@ impl Include {
         Self { filename }
     }
 }
+
+pub const RESERVED_PRAGMA_EXTERN: &str = "EXTERN";
