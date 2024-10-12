@@ -1,3 +1,9 @@
+## 0.6.2-rc.0 (2024-10-12)
+
+### Features
+
+#### add source mapping for calibration expansion (#370)
+
 ## 0.6.1 (2024-10-10)
 
 ### Fixes
