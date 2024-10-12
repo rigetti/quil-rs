@@ -218,6 +218,18 @@ impl PyMaybeCalibrationExpansion {
         }
     }
 
+    #[staticmethod]
+    pub fn from_expanded(inner: PyCalibrationExpansion) -> Self {
+        Self(MaybeCalibrationExpansion::Expanded(inner.into_inner()))
+    }
+
+    #[staticmethod]
+    pub fn from_unexpanded(inner: usize) -> Self {
+        Self(MaybeCalibrationExpansion::Unexpanded(InstructionIndex(
+            inner,
+        )))
+    }
+
     pub fn is_expanded(&self) -> bool {
         matches!(self.0, MaybeCalibrationExpansion::Expanded(_))
     }
