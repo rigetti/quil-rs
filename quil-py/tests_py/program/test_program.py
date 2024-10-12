@@ -186,3 +186,58 @@ CNOT 2 3
     program = Program.parse(input)
     program_without_quil_t = program.filter_instructions(lambda instruction: not instruction.is_quil_t())
     assert program_without_quil_t.to_quil() == snapshot
+
+
+def test_calibration_expansion():
+    """
+    Assert that program calibration expansion happens as expected and that the source map is correct.
+    """
+    import inspect
+
+    program_text = inspect.cleandoc(
+        """
+        DEFCAL X 0:
+            Y 0
+
+        DEFCAL Y 0:
+            Z 0
+
+        X 0
+        Y 0
+        """
+    )
+    program = Program.parse(program_text)
+    expansion = program.expand_calibrations_with_source_map()
+    source_map = expansion.source_map()
+
+    expected_program_text = inspect.cleandoc(
+        """
+        DEFCAL X 0:
+            Y 0
+
+        DEFCAL Y 0:
+            Z 0
+
+        Z 0
+        Z 0
+        """
+    )
+
+    assert expansion.program().to_quil() == Program.parse(expected_program_text).to_quil()
+
+    # The X at index 0 should have been replaced with a Z at index 0
+    targets = source_map.list_targets_for_source_index(0)
+    assert len(targets) == 1
+    expanded = targets[0].as_expanded()
+    assert expanded.range() == range(0, 1)
+    assert source_map.list_sources_for_target_index(0) == [0]
+
+    # The Y at index 1 should have been replaced with a Z at index 1
+    targets = source_map.list_targets_for_source_index(1)
+    assert len(targets) == 1
+    expanded = targets[0].as_expanded()
+    assert expanded.range() == range(1, 2)
+    assert source_map.list_sources_for_target_index(1) == [1]
+
+    # There is no source index 2 and so there should be no mapping
+    assert source_map.list_targets_for_source_index(2) == []
