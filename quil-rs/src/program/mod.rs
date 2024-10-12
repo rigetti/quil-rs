@@ -298,6 +298,8 @@ impl Program {
         };
 
         for (index, instruction) in self.instructions.iter().enumerate() {
+            let index = InstructionIndex(index);
+
             match self.calibrations.expand_with_detail(instruction, &[])? {
                 Some(expanded) => {
                     new_program.append_calibration_expansion_output_inner(
@@ -312,7 +314,7 @@ impl Program {
                         source_mapping.entries.push(SourceMapEntry {
                             source_location: index,
                             target_location: MaybeCalibrationExpansion::Unexpanded(
-                                new_program.instructions.len() - 1,
+                                InstructionIndex(new_program.instructions.len() - 1),
                             ),
                         });
                     }
@@ -331,7 +333,7 @@ impl Program {
     fn append_calibration_expansion_output_inner(
         &mut self,
         mut expansion_output: CalibrationExpansionOutput,
-        source_index: usize,
+        source_index: InstructionIndex,
         source_mapping: &mut Option<&mut ProgramCalibrationExpansionSourceMap>,
     ) {
         if let Some(source_mapping) = source_mapping.as_mut() {
@@ -346,7 +348,7 @@ impl Program {
                 // so that the map stays correct.
                 if start_length == end_length {
                     let relative_target_index =
-                        start_length - previous_program_instruction_body_length;
+                        InstructionIndex(start_length - previous_program_instruction_body_length);
                     expansion_output
                         .detail
                         .remove_target_index(relative_target_index);
@@ -354,7 +356,8 @@ impl Program {
             }
 
             expansion_output.detail.range =
-                previous_program_instruction_body_length..self.instructions.len();
+                InstructionIndex(previous_program_instruction_body_length)
+                    ..InstructionIndex(self.instructions.len());
 
             if !expansion_output.detail.range.is_empty() {
                 source_mapping.entries.push(SourceMapEntry {
@@ -835,7 +838,15 @@ impl ops::AddAssign<Program> for Program {
     }
 }
 
-type InstructionIndex = usize;
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct InstructionIndex(pub usize);
+
+impl InstructionIndex {
+    fn map(self, f: impl FnOnce(usize) -> usize) -> Self {
+        Self(f(self.0))
+    }
+}
+
 pub type ProgramCalibrationExpansionSourceMap =
     SourceMap<InstructionIndex, MaybeCalibrationExpansion>;
 
@@ -869,7 +880,7 @@ mod tests {
         program::{
             calibration::{CalibrationExpansion, CalibrationSource, MaybeCalibrationExpansion},
             source_map::{SourceMap, SourceMapEntry},
-            MemoryAccesses,
+            InstructionIndex, MemoryAccesses,
         },
         quil::{Quil, INDENT},
         real,
@@ -1039,7 +1050,7 @@ NOP
         let expected_source_map = SourceMap {
             entries: vec![
                 SourceMapEntry {
-                    source_location: 0,
+                    source_location: InstructionIndex(0),
                     target_location: MaybeCalibrationExpansion::Expanded(CalibrationExpansion {
                         calibration_used: CalibrationIdentifier {
                             name: "I".to_string(),
@@ -1047,10 +1058,10 @@ NOP
                             ..CalibrationIdentifier::default()
                         }
                         .into(),
-                        range: 0..3,
+                        range: InstructionIndex(0)..InstructionIndex(3),
                         expansions: SourceMap {
                             entries: vec![SourceMapEntry {
-                                source_location: 0,
+                                source_location: InstructionIndex(0),
                                 target_location: CalibrationExpansion {
                                     calibration_used: CalibrationSource::Calibration(
                                         CalibrationIdentifier {
@@ -1060,7 +1071,7 @@ NOP
                                             qubits: vec![],
                                         },
                                     ),
-                                    range: 0..1,
+                                    range: InstructionIndex(0)..InstructionIndex(1),
                                     expansions: SourceMap { entries: vec![] },
                                 },
                             }],
@@ -1068,11 +1079,11 @@ NOP
                     }),
                 },
                 SourceMapEntry {
-                    source_location: 1,
-                    target_location: MaybeCalibrationExpansion::Unexpanded(3),
+                    source_location: InstructionIndex(1),
+                    target_location: MaybeCalibrationExpansion::Unexpanded(InstructionIndex(3)),
                 },
                 SourceMapEntry {
-                    source_location: 2,
+                    source_location: InstructionIndex(2),
                     target_location: MaybeCalibrationExpansion::Expanded(CalibrationExpansion {
                         calibration_used: CalibrationIdentifier {
                             name: "I".to_string(),
@@ -1080,10 +1091,10 @@ NOP
                             ..CalibrationIdentifier::default()
                         }
                         .into(),
-                        range: 4..7,
+                        range: InstructionIndex(4)..InstructionIndex(7),
                         expansions: SourceMap {
                             entries: vec![SourceMapEntry {
-                                source_location: 0,
+                                source_location: InstructionIndex(0),
                                 target_location: CalibrationExpansion {
                                     calibration_used: CalibrationSource::Calibration(
                                         CalibrationIdentifier {
@@ -1093,7 +1104,7 @@ NOP
                                             qubits: vec![],
                                         },
                                     ),
-                                    range: 0..1,
+                                    range: InstructionIndex(0)..InstructionIndex(1),
                                     expansions: SourceMap { entries: vec![] },
                                 },
                             }],

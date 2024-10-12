@@ -30,7 +30,7 @@ use crate::{
 };
 
 use super::source_map::{SourceMap, SourceMapEntry, SourceMapIndexable};
-use super::{CalibrationSet, ProgramError};
+use super::{CalibrationSet, InstructionIndex, ProgramError};
 
 /// A collection of Quil calibrations (`DEFCAL` instructions) with utility methods.
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -78,10 +78,10 @@ pub struct CalibrationExpansion {
     pub(crate) calibration_used: CalibrationSource,
 
     /// The target instruction indices produced by the expansion
-    pub(crate) range: Range<usize>,
+    pub(crate) range: Range<InstructionIndex>,
 
     /// A map of source locations to the expansions they produced
-    pub(crate) expansions: SourceMap<usize, CalibrationExpansion>,
+    pub(crate) expansions: SourceMap<InstructionIndex, CalibrationExpansion>,
 }
 
 impl CalibrationExpansion {
@@ -89,26 +89,26 @@ impl CalibrationExpansion {
     ///
     /// This is to be used when the given index is removed from the target program
     /// in the process of calibration expansion (for example, a `DECLARE`).
-    pub(crate) fn remove_target_index(&mut self, target_index: usize) {
+    pub(crate) fn remove_target_index(&mut self, target_index: InstructionIndex) {
         // Adjust the start of the range if the target index is before the range
         if self.range.start >= target_index {
-            self.range.start = self.range.start.saturating_sub(1);
+            self.range.start = self.range.start.map(|v| v.saturating_sub(1));
         }
 
         // Adjust the end of the range if the target index is before the end of the range
         if self.range.end > target_index {
-            self.range.end = self.range.end.saturating_sub(1);
+            self.range.end = self.range.end.map(|v| v.saturating_sub(1));
         }
 
         // Then walk through all entries expanded for this calibration and remove the
         // index as well. This is needed when a recursively-expanded instruction contains
         // an instruction which is excised from the overall calibration.
-        if let Some(target_within_expansion) = target_index.checked_sub(self.range.start) {
+        if let Some(target_within_expansion) = target_index.0.checked_sub(self.range.start.0) {
             self.expansions.entries.retain_mut(
-                |entry: &mut SourceMapEntry<usize, CalibrationExpansion>| {
+                |entry: &mut SourceMapEntry<InstructionIndex, CalibrationExpansion>| {
                     entry
                         .target_location
-                        .remove_target_index(target_within_expansion);
+                        .remove_target_index(InstructionIndex(target_within_expansion));
 
                     !entry.target_location.range.is_empty()
                 },
@@ -120,17 +120,17 @@ impl CalibrationExpansion {
         &self.calibration_used
     }
 
-    pub fn range(&self) -> &Range<usize> {
+    pub fn range(&self) -> &Range<InstructionIndex> {
         &self.range
     }
 
-    pub fn expansions(&self) -> &SourceMap<usize, CalibrationExpansion> {
+    pub fn expansions(&self) -> &SourceMap<InstructionIndex, CalibrationExpansion> {
         &self.expansions
     }
 }
 
-impl SourceMapIndexable<usize> for CalibrationExpansion {
-    fn intersects(&self, other: &usize) -> bool {
+impl SourceMapIndexable<InstructionIndex> for CalibrationExpansion {
+    fn intersects(&self, other: &InstructionIndex) -> bool {
         self.range.contains(other)
     }
 }
@@ -148,11 +148,11 @@ pub enum MaybeCalibrationExpansion {
     Expanded(CalibrationExpansion),
 
     /// The instruction was not expanded, but was simply copied over into the target program at the given instruction index
-    Unexpanded(usize),
+    Unexpanded(InstructionIndex),
 }
 
-impl SourceMapIndexable<usize> for MaybeCalibrationExpansion {
-    fn intersects(&self, other: &usize) -> bool {
+impl SourceMapIndexable<InstructionIndex> for MaybeCalibrationExpansion {
+    fn intersects(&self, other: &InstructionIndex) -> bool {
         match self {
             MaybeCalibrationExpansion::Expanded(expansion) => expansion.intersects(other),
             MaybeCalibrationExpansion::Unexpanded(index) => index == other,
@@ -416,7 +416,7 @@ impl Calibrations {
                     new_instructions: Vec::new(),
                     detail: CalibrationExpansion {
                         calibration_used: matched_calibration,
-                        range: 0..0,
+                        range: InstructionIndex(0)..InstructionIndex(0),
                         expansions: SourceMap::default(),
                     },
                 };
@@ -427,15 +427,17 @@ impl Calibrations {
                     match expanded_instructions {
                         Some(mut output) => {
                             if build_source_map {
-                                let range_start =
-                                    recursively_expanded_instructions.new_instructions.len();
+                                let range_start = InstructionIndex(
+                                    recursively_expanded_instructions.new_instructions.len(),
+                                );
 
                                 recursively_expanded_instructions
                                     .new_instructions
                                     .extend(output.new_instructions);
 
-                                let range_end =
-                                    recursively_expanded_instructions.new_instructions.len();
+                                let range_end = InstructionIndex(
+                                    recursively_expanded_instructions.new_instructions.len(),
+                                );
                                 output.detail.range = range_start..range_end;
 
                                 recursively_expanded_instructions
@@ -443,7 +445,7 @@ impl Calibrations {
                                     .expansions
                                     .entries
                                     .push(SourceMapEntry {
-                                        source_location: expanded_index,
+                                        source_location: InstructionIndex(expanded_index),
                                         target_location: output.detail,
                                     });
                             } else {
@@ -463,8 +465,10 @@ impl Calibrations {
                 if build_source_map {
                     // While this appears to be duplicated information at this point, it's useful when multiple
                     // source mappings are merged together.
-                    recursively_expanded_instructions.detail.range =
-                        0..recursively_expanded_instructions.new_instructions.len();
+                    recursively_expanded_instructions.detail.range = InstructionIndex(0)
+                        ..InstructionIndex(
+                            recursively_expanded_instructions.new_instructions.len(),
+                        );
                 }
 
                 Some(recursively_expanded_instructions)
@@ -617,7 +621,7 @@ mod tests {
 
     use crate::program::calibration::{CalibrationSource, MeasureCalibrationIdentifier};
     use crate::program::source_map::{SourceMap, SourceMapEntry};
-    use crate::program::Program;
+    use crate::program::{InstructionIndex, Program};
     use crate::quil::Quil;
 
     use insta::assert_snapshot;
@@ -792,11 +796,11 @@ X 0
                     parameters: vec![],
                     qubits: vec![crate::instruction::Qubit::Fixed(0)],
                 }),
-                range: 0..5,
+                range: InstructionIndex(0)..InstructionIndex(5),
                 expansions: SourceMap {
                     entries: vec![
                         SourceMapEntry {
-                            source_location: 0,
+                            source_location: InstructionIndex(0),
                             target_location: CalibrationExpansion {
                                 calibration_used: CalibrationSource::Calibration(
                                     CalibrationIdentifier {
@@ -806,10 +810,10 @@ X 0
                                         qubits: vec![crate::instruction::Qubit::Fixed(0)],
                                     },
                                 ),
-                                range: 0..2,
+                                range: InstructionIndex(0)..InstructionIndex(2),
                                 expansions: SourceMap {
                                     entries: vec![SourceMapEntry {
-                                        source_location: 1,
+                                        source_location: InstructionIndex(1),
                                         target_location: CalibrationExpansion {
                                             calibration_used: CalibrationSource::Calibration(
                                                 CalibrationIdentifier {
@@ -821,7 +825,7 @@ X 0
                                                     )],
                                                 },
                                             ),
-                                            range: 1..2,
+                                            range: InstructionIndex(1)..InstructionIndex(2),
                                             expansions: SourceMap::default(),
                                         },
                                     }],
@@ -829,7 +833,7 @@ X 0
                             },
                         },
                         SourceMapEntry {
-                            source_location: 1,
+                            source_location: InstructionIndex(1),
                             target_location: CalibrationExpansion {
                                 calibration_used: CalibrationSource::MeasureCalibration(
                                     MeasureCalibrationIdentifier {
@@ -837,12 +841,12 @@ X 0
                                         parameter: "addr".to_string(),
                                     },
                                 ),
-                                range: 2..3,
+                                range: InstructionIndex(2)..InstructionIndex(3),
                                 expansions: SourceMap::default(),
                             },
                         },
                         SourceMapEntry {
-                            source_location: 2,
+                            source_location: InstructionIndex(2),
                             target_location: CalibrationExpansion {
                                 calibration_used: CalibrationSource::Calibration(
                                     CalibrationIdentifier {
@@ -852,10 +856,10 @@ X 0
                                         qubits: vec![crate::instruction::Qubit::Fixed(0)],
                                     },
                                 ),
-                                range: 3..5,
+                                range: InstructionIndex(3)..InstructionIndex(5),
                                 expansions: SourceMap {
                                     entries: vec![SourceMapEntry {
-                                        source_location: 1,
+                                        source_location: InstructionIndex(1),
                                         target_location: CalibrationExpansion {
                                             calibration_used: CalibrationSource::Calibration(
                                                 CalibrationIdentifier {
@@ -867,7 +871,7 @@ X 0
                                                     )],
                                                 },
                                             ),
-                                            range: 1..2,
+                                            range: InstructionIndex(1)..InstructionIndex(2),
                                             expansions: SourceMap::default(),
                                         },
                                     }],

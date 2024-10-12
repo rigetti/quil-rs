@@ -1,3 +1,5 @@
+use super::InstructionIndex;
+
 /// A SourceMap provides information necessary to understand which parts of a target
 /// were derived from which parts of a source artifact, in such a way that they can be
 /// mapped in either direction.
@@ -92,8 +94,8 @@ pub trait SourceMapIndexable<Index> {
     fn intersects(&self, other: &Index) -> bool;
 }
 
-impl SourceMapIndexable<usize> for usize {
-    fn intersects(&self, other: &usize) -> bool {
+impl SourceMapIndexable<InstructionIndex> for InstructionIndex {
+    fn intersects(&self, other: &InstructionIndex) -> bool {
         self == other
     }
 }
