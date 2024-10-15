@@ -258,6 +258,10 @@ impl ExternPragmaMap {
         self.0.len()
     }
 
+    pub(crate) fn into_instructions(self) -> Vec<Instruction> {
+        self.0.into_values().map(Instruction::Pragma).collect()
+    }
+
     pub(crate) fn to_instructions(&self) -> Vec<Instruction> {
         self.0.values().cloned().map(Instruction::Pragma).collect()
     }
