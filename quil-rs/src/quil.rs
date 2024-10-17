@@ -29,6 +29,21 @@ pub trait Quil: std::fmt::Debug {
     ) -> Result<(), ToQuilError>;
 }
 
+// A simple wrapper type to represent Quil programs that are assumed to be valid
+// without parsing them.
+#[derive(Debug)]
+pub struct RawQuil<S: AsRef<str>+std::fmt::Debug>(pub S);
+
+impl<S: AsRef<str>+std::fmt::Debug> Quil for RawQuil<S> {
+    fn write(
+        &self,
+        writer: &mut impl std::fmt::Write,
+        _fall_back_to_debug: bool,
+    ) -> Result<(), ToQuilError> {
+        Ok(write!(writer, "{}", self.0.as_ref())?)
+    }
+}
+
 /// Per the Quil specification, an indentation is exactly 4 spaces.
 /// See [Quil 3-2](https://quil-lang.github.io/#3-2Syntactic-Rudiments)
 pub(crate) const INDENT: &str = "    ";
