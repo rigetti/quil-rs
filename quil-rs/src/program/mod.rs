@@ -449,6 +449,7 @@ impl Program {
                 .into_values()
                 .map(Instruction::GateDefinition),
         );
+        instructions.extend(self.extern_pragma_map.into_instructions());
         instructions.extend(self.instructions);
         instructions
     }
@@ -1894,6 +1895,8 @@ CALL foo octets[1] reals
 "#;
 
         let reserialized = program
+            .expand_calibrations()
+            .expect("should be able to expand calibrations")
             .into_simplified()
             .expect("should be able to simplify program")
             .to_quil()

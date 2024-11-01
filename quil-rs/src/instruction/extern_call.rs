@@ -258,6 +258,10 @@ impl ExternPragmaMap {
         self.0.len()
     }
 
+    pub(crate) fn into_instructions(self) -> Vec<Instruction> {
+        self.0.into_values().map(Instruction::Pragma).collect()
+    }
+
     pub(crate) fn to_instructions(&self) -> Vec<Instruction> {
         self.0.values().cloned().map(Instruction::Pragma).collect()
     }
@@ -321,9 +325,19 @@ impl TryFrom<ExternPragmaMap> for ExternSignatureMap {
 }
 
 impl ExternSignatureMap {
-    #[cfg(test)]
-    pub(crate) fn len(&self) -> usize {
+    #[inline]
+    pub fn len(&self) -> usize {
         self.0.len()
+    }
+
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    #[inline]
+    pub fn iter(&self) -> impl Iterator<Item = (&String, &ExternSignature)> {
+        self.0.iter()
     }
 }
 
