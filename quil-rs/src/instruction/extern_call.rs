@@ -301,6 +301,7 @@ impl TryFrom<ExternPragmaMap> for ExternSignatureMap {
     /// the offending [`Pragma`] instruction and the error that occurred.
     type Error = (Pragma, ExternError);
 
+    #[allow(clippy::result_large_err)]
     fn try_from(value: ExternPragmaMap) -> Result<Self, Self::Error> {
         Ok(ExternSignatureMap(
             value

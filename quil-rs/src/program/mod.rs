@@ -763,6 +763,7 @@ impl Program {
     /// This will parse all `PRAGMA EXTERN` instructions in the program. If the
     /// conversion of any [`Pragma`] fails, the [`ExternError`] is returned along
     /// with the offending [`Pragma`].
+    #[allow(clippy::result_large_err)]
     pub fn try_extern_signature_map_from_pragma_map(
         &self,
     ) -> std::result::Result<ExternSignatureMap, (Pragma, ExternError)> {
