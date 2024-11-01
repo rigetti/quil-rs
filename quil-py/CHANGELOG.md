@@ -1,3 +1,11 @@
+## 0.13.2-rc.1 (2024-11-01)
+
+### Features
+
+#### add source mapping for calibration expansion (#370)
+
+#### support inspection of ExternSignatureMap (#417)
+
 ## 0.13.2-rc.0 (2024-10-12)
 
 ### Features
