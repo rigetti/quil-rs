@@ -80,7 +80,7 @@ impl ExternParameter {
         mutable: bool,
         data_type: ExternParameterType,
     ) -> Result<Self, ExternError> {
-        validate_user_identifier(name.as_str()).map_err(ExternError::from)?;
+        validate_user_identifier(name.as_str()).map_err(ExternError::from_boxed)?;
         Ok(Self {
             name,
             mutable,
@@ -151,12 +151,12 @@ pub enum ExternError {
     #[error(
         "invalid extern signature syntax: {0:?} (expected `{EXPECTED_PRAGMA_EXTERN_STRUCTURE}`)"
     )]
-    Syntax(SyntaxError<ExternSignature>),
+    Syntax(Box<SyntaxError<ExternSignature>>),
     /// An error occurred while lexing the extern signature.
     #[error(
         "failed to lex extern signature: {0:?} (expected `{EXPECTED_PRAGMA_EXTERN_STRUCTURE}`)"
     )]
-    Lex(crate::parser::LexError),
+    Lex(Box<crate::parser::LexError>),
     /// Pragma arguments are invalid.
     #[error("`PRAGMA EXTERN` must have a single argument representing the extern name")]
     InvalidPragmaArguments,
@@ -174,7 +174,16 @@ pub enum ExternError {
     NoReturnOrParameters,
     /// Either the name of the extern or one of its parameters is invalid.
     #[error("invalid identifier: {0:?}")]
-    Name(#[from] IdentifierValidationError),
+    Name(#[from] Box<IdentifierValidationError>),
+}
+
+impl ExternError {
+    fn from_boxed<T>(value: T) -> Self
+    where
+        ExternError: From<Box<T>>,
+    {
+        ExternError::from(Box::new(value))
+    }
 }
 
 impl FromStr for ExternSignature {
@@ -182,17 +191,20 @@ impl FromStr for ExternSignature {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let signature_input = LocatedSpan::new(s);
-        let signature_tokens = lex(signature_input).map_err(ExternError::Lex)?;
+        let signature_tokens = lex(signature_input)
+            .map_err(Box::new)
+            .map_err(ExternError::Lex)?;
         let signature = disallow_leftover(
             crate::parser::pragma_extern::parse_extern_signature(signature_tokens.as_slice())
                 .map_err(crate::parser::ParseError::from_nom_internal_err),
         )
+        .map_err(Box::new)
         .map_err(ExternError::Syntax)?;
         if signature.return_type.is_none() && signature.parameters.is_empty() {
             return Err(ExternError::NoReturnOrParameters);
         }
         for parameter in &signature.parameters {
-            validate_user_identifier(parameter.name.as_str()).map_err(ExternError::from)?;
+            validate_user_identifier(parameter.name.as_str()).map_err(ExternError::from_boxed)?;
         }
         Ok(signature)
     }
@@ -310,7 +322,7 @@ impl TryFrom<ExternPragmaMap> for ExternSignatureMap {
                     match key {
                         Some(name) => {
                             validate_user_identifier(name.as_str())
-                                .map_err(ExternError::from)
+                                .map_err(ExternError::from_boxed)
                                 .map_err(|error| (value.clone(), error))?;
                             let signature = ExternSignature::try_from(value.clone())
                                 .map_err(|error| (value, error))?;
