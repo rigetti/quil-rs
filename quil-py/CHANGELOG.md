@@ -1,3 +1,15 @@
+## 0.13.2-rc.2 (2024-11-06)
+
+### Features
+
+#### add source mapping for calibration expansion (#370)
+
+#### support inspection of ExternSignatureMap (#417)
+
+### Fixes
+
+#### box nested ExternError variants (#419)
+
 ## 0.13.2-rc.1 (2024-11-01)
 
 ### Features
