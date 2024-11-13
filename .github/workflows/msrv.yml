@@ -58,28 +58,17 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.9', '3.10', '3.11', '3.12']
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
     steps:
-    - uses: actions/checkout@v4
-      with:
-        path: quil-rs
     - uses: actions-rs/toolchain@v1
       with:
         toolchain: stable
         override: true
     - uses: davidB/rust-cargo-make@v1
+    - uses: actions/checkout@v1
     - uses: syphar/restore-virtualenv@v1
     - name: Run quil-py tests, lints, and formatting checks.
-      run:
-        - cargo make --cwd quil-rs/quil-py
-    - uses: actions/checkout@v4
-      with:
-        repository: "rigetti/pyquil"
-        path: pyquil
-      run:
-        - mypy pyquil/pyquil
-        - ruff check pyquil/pyquil
-        - (cd pyquil && pytest pyquil -x)
+      run: cargo make --cwd quil-py
 
   fmt:
     name: Rustfmt
