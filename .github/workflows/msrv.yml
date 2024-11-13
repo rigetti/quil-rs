@@ -75,12 +75,12 @@ jobs:
     - uses: syphar/restore-virtualenv@v1
     - name: Run quil-py tests, lints, and formatting checks.
       run: |
-        - cargo make --cwd quil-rs/quil-py
+        cargo make --cwd quil-rs/quil-py
     - name: Check changes against pyQuil
       run: |
-        - mypy pyquil/pyquil
-        - ruff check pyquil/pyquil
-        - (cd pyquil && pytest test/unit -x)
+        mypy pyquil/pyquil
+        ruff check pyquil/pyquil
+        (cd pyquil && pytest test/unit -x)
 
   fmt:
     name: Rustfmt
