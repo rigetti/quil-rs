@@ -834,57 +834,6 @@ class UnaryLogic:
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
-class Calibration:
-    def __new__(
-        cls,
-        identifier: CalibrationIdentifier,
-        instructions: Sequence[Instruction],
-    ) -> Self: ...
-    @property
-    def name(self) -> str: ...
-    @name.setter
-    def name(self, name: str) -> None: ...
-    @property
-    def parameters(self) -> List[Expression]: ...
-    @parameters.setter
-    def parameters(self, parameters: Sequence[Expression]) -> None: ...
-    @property
-    def qubits(self) -> List[Qubit]: ...
-    @qubits.setter
-    def qubits(self, qubits: Sequence[Qubit]) -> None: ...
-    @property
-    def identifier(self) -> CalibrationIdentifier: ...
-    @identifier.setter
-    def identifier(self, identifier: CalibrationIdentifier) -> None: ...
-    @property
-    def instructions(self) -> List[Instruction]: ...
-    @instructions.setter
-    def instructions(self, instructions: Sequence[Instruction]) -> None: ...
-    @property
-    def modifiers(self) -> List[GateModifier]: ...
-    @modifiers.setter
-    def modifiers(self, modifiers: Sequence[GateModifier]) -> None: ...
-    def to_quil(self) -> str:
-        """Attempt to convert the instruction to a valid Quil string.
-
-        Raises an exception if the instruction can't be converted to valid Quil.
-        """
-        ...
-    def to_quil_or_debug(self) -> str:
-        """Convert the instruction to a Quil string.
-
-        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
-        """
-    def __deepcopy__(self, _: Dict) -> Self:
-        """Creates and returns a deep copy of the class.
-
-        If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with
-        new placeholders so resolving them in the copy will not resolve them in the original.
-        Should be used by passing an instance of the class to ``copy.deepcopy``
-        """
-    def __copy__(self) -> Self:
-        """Returns a shallow copy of the class."""
-
 class CalibrationIdentifier:
     def __new__(
         cls,
@@ -930,24 +879,27 @@ class CalibrationIdentifier:
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
-class MeasureCalibrationDefinition:
+class Calibration:
     def __new__(
         cls,
-        identifier: MeasureCalibrationIdentifier,
+        identifier: CalibrationIdentifier,
         instructions: Sequence[Instruction],
     ) -> Self: ...
+    def name(self) -> str:
+        """Get the name that identifies this calibration."""
+        ...
+    def parameters(self) -> List[Expression]:
+        """Get the list of parameters that this calibration will expand into."""
+        ...
+    def qubits(self) -> List[Qubit]:
+        """Get the list of qubits that this calibration will expand into."""
+        ...
+    def modifiers(self) -> List[GateModifier]:
+        """Get the list of parameters that this calibration will expand into."""
     @property
-    def qubit(self) -> Optional[Qubit]: ...
-    @qubit.setter
-    def qubit(self, qubit: Optional[Qubit]) -> None: ...
-    @property
-    def parameter(self) -> str: ...
-    @parameter.setter
-    def parameter(self, parameter: str) -> None: ...
-    @property
-    def identifier(self) -> MeasureCalibrationIdentifier: ...
+    def identifier(self) -> CalibrationIdentifier: ...
     @identifier.setter
-    def identifier(self, identifier: MeasureCalibrationIdentifier) -> None: ...
+    def identifier(self, identifier: CalibrationIdentifier) -> None: ...
     @property
     def instructions(self) -> List[Instruction]: ...
     @instructions.setter
@@ -987,6 +939,43 @@ class MeasureCalibrationIdentifier:
     def parameter(self) -> str: ...
     @parameter.setter
     def parameter(self, parameter: str) -> None: ...
+    def to_quil(self) -> str:
+        """Attempt to convert the instruction to a valid Quil string.
+
+        Raises an exception if the instruction can't be converted to valid Quil.
+        """
+        ...
+    def to_quil_or_debug(self) -> str:
+        """Convert the instruction to a Quil string.
+
+        If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
+        """
+    def __deepcopy__(self, _: Dict) -> Self:
+        """Creates and returns a deep copy of the class.
+
+        If the instruction contains any ``QubitPlaceholder`` or ``TargetPlaceholder``, then they will be replaced with
+        new placeholders so resolving them in the copy will not resolve them in the original.
+        Should be used by passing an instance of the class to ``copy.deepcopy``
+        """
+    def __copy__(self) -> Self:
+        """Returns a shallow copy of the class."""
+
+class MeasureCalibrationDefinition:
+    def __new__(
+        cls,
+        identifier: MeasureCalibrationIdentifier,
+        instructions: Sequence[Instruction],
+    ) -> Self: ...
+    def qubit(self) -> Optional[Qubit]: ...
+    def parameter(self) -> str: ...
+    @property
+    def identifier(self) -> MeasureCalibrationIdentifier: ...
+    @identifier.setter
+    def identifier(self, identifier: MeasureCalibrationIdentifier) -> None: ...
+    @property
+    def instructions(self) -> List[Instruction]: ...
+    @instructions.setter
+    def instructions(self, instructions: Sequence[Instruction]) -> None: ...
     def to_quil(self) -> str:
         """Attempt to convert the instruction to a valid Quil string.
 
