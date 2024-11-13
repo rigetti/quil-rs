@@ -63,6 +63,10 @@ jobs:
     - uses: actions/checkout@v4
       with:
         path: quil-rs
+    - uses: actions/checkout@v4
+      with:
+        repository: "rigetti/pyquil"
+        path: pyquil
     - uses: actions-rs/toolchain@v1
       with:
         toolchain: stable
@@ -72,14 +76,11 @@ jobs:
     - name: Run quil-py tests, lints, and formatting checks.
       run:
         - cargo make --cwd quil-rs/quil-py
-    - uses: actions/checkout@v4
-      with:
-        repository: "rigetti/pyquil"
-        path: pyquil
+    - name: Check changes against pyQuil
       run:
         - mypy pyquil/pyquil
         - ruff check pyquil/pyquil
-        - (cd pyquil && pytest pyquil -x)
+        - (cd pyquil && pytest test/unit -x)
 
   fmt:
     name: Rustfmt
