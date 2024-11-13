@@ -74,10 +74,10 @@ jobs:
     - uses: davidB/rust-cargo-make@v1
     - uses: syphar/restore-virtualenv@v1
     - name: Run quil-py tests, lints, and formatting checks.
-      run:
+      run: |
         - cargo make --cwd quil-rs/quil-py
     - name: Check changes against pyQuil
-      run:
+      run: |
         - mypy pyquil/pyquil
         - ruff check pyquil/pyquil
         - (cd pyquil && pytest test/unit -x)
