@@ -78,7 +78,7 @@ jobs:
         cargo make --cwd quil-rs/quil-py
     - name: Check changes against pyQuil
       run: |
-        pip uninstall -y -r <(pip freeze --user)
+        pip uninstall -y -r <(pip freeze)
         pip install "./pyquil[latex]"
         maturin develop -m quil-rs/quil-py
         mypy pyquil/pyquil
