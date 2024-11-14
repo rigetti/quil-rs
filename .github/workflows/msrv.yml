@@ -61,6 +61,21 @@ jobs:
         python-version: ['3.9', '3.10', '3.11', '3.12']
     steps:
     - uses: actions/checkout@v4
+    - uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+    - uses: davidB/rust-cargo-make@v1
+    - uses: syphar/restore-virtualenv@v1
+    - name: Run quil-py tests, lints, and formatting checks.
+      run: |
+        cargo make --cwd quil-rs/quil-py
+
+  check-pyquil:
+    name: Check compatibility with pyQuil
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
       with:
         path: quil-rs
     - uses: actions/checkout@v4
@@ -71,41 +86,90 @@ jobs:
       with:
         toolchain: stable
         override: true
-    - uses: davidB/rust-cargo-make@v1
     - uses: syphar/restore-virtualenv@v1
-    - name: Run quil-py tests, lints, and formatting checks.
-      run: |
-        cargo make --cwd quil-rs/quil-py
     - name: Check changes against pyQuil
       id: check_pyquil
       continue-on-error: true
       run: |
         set -o pipefail
-        rm -f warnings.log  # Clear previous warnings log if exists
+        rm -f warnings.log summary.log  # Clear previous logs if they exist
         pip uninstall -y -r <(pip freeze) || true
         pip install "./pyquil[latex]" maturin mypy ruff pytest
         maturin develop -m quil-rs/quil-py/Cargo.toml
-        mypy_output=$(mypy pyquil/pyquil 2>&1) || echo "### mypy found issues ###\n$mypy_output" >> warnings.log
-        ruff_output=$(ruff check pyquil/pyquil 2>&1) || echo "### ruff found issues ###\n$ruff_output" >> warnings.log
-        pytest_output=$(pytest pyquil/test/unit -x 2>&1) || echo "### Some pyQuil tests have failed ###\n$pytest_output" >> warnings.log
+
+        # Run mypy and capture issues count
+        mypy_output=$(mypy pyquil/pyquil 2>&1)
+        if [ $? -ne 0 ]; then
+          echo "### mypy found issues ###\n$mypy_output" >> warnings.log
+          echo "mypy: $(echo "$mypy_output" | grep -c '^')" >> summary.log
+        else
+          echo "mypy: 0" >> summary.log
+        fi
+
+        # Run ruff and capture issues count
+        ruff_output=$(ruff check pyquil/pyquil 2>&1)
+        if [ $? -ne 0 ]; then
+          echo "### ruff found issues ###\n$ruff_output" >> warnings.log
+          echo "ruff: $(echo "$ruff_output" | grep -c '^')" >> summary.log
+        else
+          echo "ruff: 0" >> summary.log
+        fi
+
+        # Run pytest and capture issues count
+        pytest_output=$(pytest pyquil/test/unit -x 2>&1)
+        if [ $? -ne 0 ]; then
+          echo "### Some pyQuil tests have failed ###\n$pytest_output" >> warnings.log
+          echo "pytest: $(echo "$pytest_output" | grep -c 'FAILED')" >> summary.log
+        else
+          echo "pytest: 0" >> summary.log
+        fi
+
     - name: Summarize warnings from pyQuil checks
       if: always()
       uses: actions/github-script@v6
       with:
         script: |
           const fs = require('fs');
-          const warningsFilePath = 'warnings.log';
-          if (fs.existsSync(warningsFilePath)) {
-            const warnings = fs.readFileSync(warningsFilePath, 'utf8').trim();
-            if (warnings.length > 0) {
-              const prNumber = context.issue.number;
-              github.rest.issues.createComment({
-                ...context.repo,
-                issue_number: prNumber,
-                body: `⚠️ **Warnings Detected** from pyQuil checks on Python ${process.env.PYTHON_VERSION}:\n\n\`\`\`\n${warnings}\n\`\`\`\n**Note**: These warnings don't block the PR but need review for potential issues.`
-              });
-            }
+          const summaryFilePath = 'summary.log';
+          // Only proceed if summary log exists and has content
+          if (fs.existsSync(summaryFilePath) && fs.readFileSync(summaryFilePath, 'utf8').trim().length > 0) {
+            const summaryData = fs.readFileSync(summaryFilePath, 'utf8')
+              .trim()
+              .split('\n')
+              .reduce((acc, line) => {
+                const [tool, count] = line.split(': ');
+                acc[tool] = count;
+                return acc;
+              }, {});
+
+            const table = `
+| Tool   | Issues Detected |
+|--------|-----------------|
+| mypy   | ${summaryData['mypy']}           |
+| ruff   | ${summaryData['ruff']}           |
+| pytest | ${summaryData['pytest']}         |
+`;
+
+            const prNumber = context.issue.number;
+            const commentBody = `⚠️ **pyQuil incompatibilities detected**:
+
+${table}
+
+**Note**: These warnings don't block the PR but need review for potential issues.
+
+To view detailed warnings, download the 'pyQuil-warnings' artifact from this workflow run.`;
+            github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: prNumber,
+              body: commentBody
+            });
           }
+    - name: Upload pyQuil warnings artifact
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: pyQuil-warnings
+        path: warnings.log
 
   fmt:
     name: Rustfmt
