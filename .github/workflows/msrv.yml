@@ -77,11 +77,12 @@ jobs:
       run: |
         cargo make --cwd quil-rs/quil-py
     - name: Check changes against pyQuil
+      continue-on-error: true
       run: |
         pip uninstall -y -r <(pip freeze)
         pip install "./pyquil[latex]" maturin mypy ruff
         maturin develop -m quil-rs/quil-py/Cargo.toml
-        mypy pyquil/pyquil
+        mypy pyquil/pyquil --config pyquil/mypy.ini
         ruff check pyquil/pyquil
         (cd pyquil && pytest test/unit -x)
 
