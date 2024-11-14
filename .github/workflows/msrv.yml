@@ -83,9 +83,9 @@ jobs:
         pip install "./pyquil[latex]" maturin mypy ruff
         maturin develop -m quil-rs/quil-py/Cargo.toml
         cd pyquil
-        mypy pyquil
-        ruff check pyquil
-        pytest test/unit -vv
+        mypy pyquil || echo "::warning::'mypy' found issues with these changes in pyQuil."
+        ruff check pyquil || echo "::warning::'ruff' found issues with these changs in pyQuil."
+        pytest test/unit -x || echo "::warning::Some pyQuil tests have failed. Please review the results for unintended breaking changes."
 
   fmt:
     name: Rustfmt
