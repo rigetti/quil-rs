@@ -80,7 +80,7 @@ jobs:
       run: |
         pip uninstall -y -r <(pip freeze)
         pip install "./pyquil[latex]" maturin
-        maturin develop -m quil-rs/quil-py
+        maturin develop -m quil-rs/quil-py/Cargo.toml
         mypy pyquil/pyquil
         ruff check pyquil/pyquil
         (cd pyquil && pytest test/unit -x)
