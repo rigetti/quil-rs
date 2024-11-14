@@ -79,7 +79,7 @@ jobs:
     - name: Check changes against pyQuil
       run: |
         pip uninstall -y -r <(pip freeze)
-        pip install "./pyquil[latex]" maturin
+        pip install "./pyquil[latex]" maturin mypy ruff
         maturin develop -m quil-rs/quil-py/Cargo.toml
         mypy pyquil/pyquil
         ruff check pyquil/pyquil
