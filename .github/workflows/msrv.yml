@@ -71,41 +71,37 @@ jobs:
       run: |
         cargo make --cwd quil-rs/quil-py
 
-check-pyquil:
-  name: Check compatibility with pyQuil
-  runs-on: ubuntu-latest
-  strategy:
-    matrix:
-      python-version: ['3.9', '3.10', '3.11', '3.12']
-  steps:
-    - uses: actions/checkout@v4
-      with:
-        path: quil-rs
+  check-pyquil:
+    name: Check compatibility with pyQuil
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.10', '3.11', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: quil-rs
 
-    - uses: actions/checkout@v4
-      with:
-        repository: "rigetti/pyquil"
-        path: pyquil
-
-    - uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        override: true
-
-    - uses: syphar/restore-virtualenv@v1
-
-    # Step 1: Install dependencies and run checks
-    - name: Check changes against pyQuil
-      id: check_pyquil
-      continue-on-error: true
-      run: |
-        set -o pipefail
-        pip uninstall -y -r <(pip freeze) || true
-        pip install "./pyquil[latex]" maturin mypy ruff pytest
-        maturin develop -m quil-rs/quil-py/Cargo.toml
-        mypy pyquil/pyquil
-        ruff check pyquil/pyquil
-        pytest pyquil/test/unit -x
+      - uses: actions/checkout@v4
+        with:
+          repository: "rigetti/pyquil"
+          path: pyquil
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - uses: syphar/restore-virtualenv@v1
+      - name: Check changes against pyQuil
+        id: check_pyquil
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          pip uninstall -y -r <(pip freeze) || true
+          pip install "./pyquil[latex]" maturin mypy ruff pytest
+          maturin develop -m quil-rs/quil-py/Cargo.toml
+          mypy pyquil/pyquil
+          ruff check pyquil/pyquil
+          pytest pyquil/test/unit -x
 
   fmt:
     name: Rustfmt
