@@ -77,15 +77,35 @@ jobs:
       run: |
         cargo make --cwd quil-rs/quil-py
     - name: Check changes against pyQuil
+      id: check_pyquil
       continue-on-error: true
       run: |
-        pip uninstall -y -r <(pip freeze)
-        pip install "./pyquil[latex]" maturin mypy ruff
+        set -o pipefail
+        rm -f warnings.log  # Clear previous warnings log if exists
+        pip uninstall -y -r <(pip freeze) || true
+        pip install "./pyquil[latex]" maturin mypy ruff pytest
         maturin develop -m quil-rs/quil-py/Cargo.toml
-        cd pyquil
-        mypy pyquil || echo "::warning::'mypy' found issues with these changes in pyQuil."
-        ruff check pyquil || echo "::warning::'ruff' found issues with these changs in pyQuil."
-        pytest test/unit -x || echo "::warning::Some pyQuil tests have failed. Please review the results for unintended breaking changes."
+        mypy_output=$(mypy pyquil/pyquil 2>&1) || echo "### mypy found issues ###\n$mypy_output" >> warnings.log
+        ruff_output=$(ruff check pyquil/pyquil 2>&1) || echo "### ruff found issues ###\n$ruff_output" >> warnings.log
+        pytest_output=$(pytest pyquil/test/unit -x 2>&1) || echo "### Some pyQuil tests have failed ###\n$pytest_output" >> warnings.log
+    - name: Summarize warnings from pyQuil checks
+      if: always()
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const warningsFilePath = 'warnings.log';
+          if (fs.existsSync(warningsFilePath)) {
+            const warnings = fs.readFileSync(warningsFilePath, 'utf8').trim();
+            if (warnings.length > 0) {
+              const prNumber = context.issue.number;
+              github.rest.issues.createComment({
+                ...context.repo,
+                issue_number: prNumber,
+                body: `⚠️ **Warnings Detected** from pyQuil checks on Python ${process.env.PYTHON_VERSION}:\n\n\`\`\`\n${warnings}\n\`\`\`\n**Note**: These warnings don't block the PR but need review for potential issues.`
+              });
+            }
+          }
 
   fmt:
     name: Rustfmt
