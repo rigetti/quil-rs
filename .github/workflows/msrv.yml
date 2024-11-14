@@ -82,9 +82,10 @@ jobs:
         pip uninstall -y -r <(pip freeze)
         pip install "./pyquil[latex]" maturin mypy ruff
         maturin develop -m quil-rs/quil-py/Cargo.toml
-        mypy pyquil/pyquil --config pyquil/mypy.ini
-        ruff check pyquil/pyquil
-        (cd pyquil && pytest test/unit -x)
+        cd pyquil
+        mypy pyquil
+        ruff check pyquil
+        pytest test/unit -vv
 
   fmt:
     name: Rustfmt
