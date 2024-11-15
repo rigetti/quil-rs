@@ -82,7 +82,7 @@ jobs:
                 body += `| pytest | ❌ Failed | [View Logs](${constructLogURL('pytest')}) |\n`;
               }
 
-              body += `\n**Note**: These warnings don't block the PR but may require your attention.\n[View Logs]()\n`;
+              body += `\n**Note**: These failures don't necessarily block the PR but both authors and reviewers should check the results for unintentional breaking changes.\n[View Logs]()\n`;
 
               // Post the failure comment
               await github.rest.issues.createComment({
@@ -94,7 +94,7 @@ jobs:
 
               // Fail the job to show a red X
               core.setFailed("One or more pyQuil checks failed.");
-            } else {
+            } else { // or post success
               let body = `✅ **pyQuil Compatibility Checks Passed** on Python \`${{ matrix.python-version }}\`. Great job!`;
 
               // Post the success comment
