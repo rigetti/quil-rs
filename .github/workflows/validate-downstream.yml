@@ -57,20 +57,16 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
-            const core = require('@actions/core');
-
-            // Determine if any checks failed
             const mypyFailed = '${{ steps.mypy.outcome }}' === 'failure';
             const ruffFailed = '${{ steps.ruff.outcome }}' === 'failure';
             const pytestFailed = '${{ steps.pytest.outcome }}' === 'failure';
 
-            // Function to construct log URLs
             const constructLogURL = (stepId) => {
               return `https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs/${{ job.id }}/steps/${stepId}/logs`;
             };
 
             if (mypyFailed || ruffFailed || pytestFailed) {
-              let body = `⚠️ **pyQuil Compatibility Checks Failed** on Python \`${{ matrix.python-version }}\`:\n\n| Tool   | Status  | Logs |\n|--------|---------|------|\n`;
+              let body = `⚠️ **pyQuil Compatibility Checks Failed**:\n\n| Tool   | Status  | Logs |\n|--------|---------|------|\n`;
 
               if (mypyFailed) {
                 body += `| mypy   | ❌ Failed | [View Logs](${constructLogURL('mypy')}) |\n`;
