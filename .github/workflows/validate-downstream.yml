@@ -1,3 +1,8 @@
+on:
+  pull_request:
+
+name: Check compatibility with downstream packages
+
 check-pyquil:
   name: Check compatibility with pyQuil
   runs-on: ubuntu-latest
