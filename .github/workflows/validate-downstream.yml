@@ -63,6 +63,10 @@ jobs:
             const ruffFailed = '${{ steps.ruff.outcome }}' === 'failure';
             const pytestFailed = '${{ steps.pytest.outcome }}' === 'failure';
 
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const issue_number = context.issue.number;
+
             const constructLogURL = (stepId) => {
               return `https://github.com/${owner}/${repo}/actions/runs/${{ github.run_id }}/jobs/${{ job.id }}/steps/${stepId}/logs`;
             };
