@@ -1,12 +1,11 @@
 on:
   pull_request:
 
-name: Check compatibility with downstream packages
+name: Check pyQuil Compatibility
 
 jobs:
   check-pyquil:
     name: Check compatibility with pyQuil
-    continue-on-error: true
     runs-on: ubuntu-latest
     steps:
       - name: Checkout quil-rs Repository
@@ -38,51 +37,71 @@ jobs:
 
       - name: Run mypy
         id: mypy
+        continue-on-error: true
         run: |
           mypy pyquil
 
       - name: Run ruff
         id: ruff
+        continue-on-error: true
         run: |
           ruff check pyquil
 
       - name: Run pytest
         id: pytest
+        continue-on-error: true
         run: |
           pytest test/unit -x
 
-      - name: Collect Failed Steps
-        id: collect_failures
-        if: failure()
-        run: |
-          echo "mypy_failed=$( [ ${{ steps.mypy.conclusion }} == 'failure' ] && echo 'true' || echo 'false' )" >> $GITHUB_OUTPUT
-          echo "ruff_failed=$( [ ${{ steps.ruff.conclusion }} == 'failure' ] && echo 'true' || echo 'false' )" >> $GITHUB_OUTPUT
-          echo "pytest_failed=$( [ ${{ steps.pytest.conclusion }} == 'failure' ] && echo 'true' || echo 'false' )" >> $GITHUB_OUTPUT
-
-      - name: Post PR Comment for Failures
-        if: failure() && steps.collect_failures.outputs.mypy_failed == 'true' || steps.collect_failures.outputs.ruff_failed == 'true' || steps.collect_failures.outputs.pytest_failed == 'true'
-        uses: peter-evans/create-or-update-comment@v3
+      - name: Post PR Comment and Fail if Necessary
+        uses: actions/github-script@v6
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          issue-number: ${{ github.event.pull_request.number }}
-          body: |
-            <!-- pyQuil-checks-comment -->
-            ⚠️ **pyQuil Compatibility Checks Failed**
+          script: |
+            const core = require('@actions/core');
 
-            | Tool   | Status  | Logs |
-            |--------|---------|------|
-            ${{ steps.collect_failures.outputs.mypy_failed == 'true' && '- mypy   | Failed | [View Logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs/${{ job.id }}/steps/mypy/logs)' || '' }}
-            ${{ steps.collect_failures.outputs.ruff_failed == 'true' && '- ruff   | Failed | [View Logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs/${{ job.id }}/steps/ruff/logs)' || '' }}
-            ${{ steps.collect_failures.outputs.pytest_failed == 'true' && '- pytest | Failed | [View Logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs/${{ job.id }}/steps/pytest/logs)' || '' }}
+            // Determine if any checks failed
+            const mypyFailed = '${{ steps.mypy.outcome }}' === 'failure';
+            const ruffFailed = '${{ steps.ruff.outcome }}' === 'failure';
+            const pytestFailed = '${{ steps.pytest.outcome }}' === 'failure';
 
-            **Note**: These warnings don't block the PR but these results should be verified by both authors and reviewers.
+            // Function to construct log URLs
+            const constructLogURL = (stepId) => {
+              return `https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs/${{ job.id }}/steps/${stepId}/logs`;
+            };
 
-      - name: Post PR Comment for Success
-        if: steps.collect_failures.outputs.mypy_failed == 'false' && steps.collect_failures.outputs.ruff_failed == 'false' && steps.collect_failures.outputs.pytest_failed == 'false'
-        uses: peter-evans/create-or-update-comment@v3
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          issue-number: ${{ github.event.pull_request.number }}
-          body: |
-            <!-- pyQuil-checks-comment -->
-            ✅ **pyQuil Compatibility Checks Passed**. Great job!
+            if (mypyFailed || ruffFailed || pytestFailed) {
+              let body = `⚠️ **pyQuil Compatibility Checks Failed** on Python \`${{ matrix.python-version }}\`:\n\n| Tool   | Status  | Logs |\n|--------|---------|------|\n`;
+
+              if (mypyFailed) {
+                body += `| mypy   | ❌ Failed | [View Logs](${constructLogURL('mypy')}) |\n`;
+              }
+              if (ruffFailed) {
+                body += `| ruff   | ❌ Failed | [View Logs](${constructLogURL('ruff')}) |\n`;
+              }
+              if (pytestFailed) {
+                body += `| pytest | ❌ Failed | [View Logs](${constructLogURL('pytest')}) |\n`;
+              }
+
+              body += `\n**Note**: These warnings don't block the PR but may require your attention.\n\n`;
+
+              // Post the failure comment
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: body
+              });
+
+              // Fail the job to show a red X
+              core.setFailed("One or more pyQuil checks failed.");
+            } else {
+              let body = `✅ **pyQuil Compatibility Checks Passed** on Python \`${{ matrix.python-version }}\`. Great job!`;
+
+              // Post the success comment
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: body
+              });
+            }
