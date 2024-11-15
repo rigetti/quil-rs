@@ -125,22 +125,22 @@
                                 <a class="variable" href="#Program.frames">frames</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.memory_regions">memory_regions</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Program.calibrations">calibrations</a>
+                                <a class="variable" href="#Program.declarations">declarations</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Program.gate_definitions">gate_definitions</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.body_instructions">body_instructions</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Program.declarations">declarations</a>
+                                <a class="variable" href="#Program.calibrations">calibrations</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Program.waveforms">waveforms</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Program.memory_regions">memory_regions</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Program.body_instructions">body_instructions</a>
                         </li>
                 </ul>
 
@@ -326,10 +326,10 @@
                                 <a class="function" href="#CalibrationSet.to_instructions">to_instructions</a>
                         </li>
                         <li>
-                                <a class="variable" href="#CalibrationSet.measure_calibrations">measure_calibrations</a>
+                                <a class="variable" href="#CalibrationSet.calibrations">calibrations</a>
                         </li>
                         <li>
-                                <a class="variable" href="#CalibrationSet.calibrations">calibrations</a>
+                                <a class="variable" href="#CalibrationSet.measure_calibrations">measure_calibrations</a>
                         </li>
                 </ul>
 
@@ -407,13 +407,13 @@
                     <a class="class" href="#TimeSpanSeconds">TimeSpanSeconds</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#TimeSpanSeconds.start">start</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#TimeSpanSeconds.duration">duration</a>
                         </li>
                         <li>
                                 <a class="variable" href="#TimeSpanSeconds.end">end</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#TimeSpanSeconds.start">start</a>
                         </li>
                 </ul>
 
@@ -826,24 +826,13 @@
     
 
                             </div>
-                            <div id="Program.memory_regions" class="classattr">
+                            <div id="Program.declarations" class="classattr">
                                 <div class="attr variable">
-            <span class="name">memory_regions</span>
+            <span class="name">declarations</span>
 
         
     </div>
-    <a class="headerlink" href="#Program.memory_regions"></a>
-    
-    
-
-                            </div>
-                            <div id="Program.calibrations" class="classattr">
-                                <div class="attr variable">
-            <span class="name">calibrations</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.calibrations"></a>
+    <a class="headerlink" href="#Program.declarations"></a>
     
     
 
@@ -859,24 +848,13 @@
     
 
                             </div>
-                            <div id="Program.body_instructions" class="classattr">
+                            <div id="Program.calibrations" class="classattr">
                                 <div class="attr variable">
-            <span class="name">body_instructions</span>
+            <span class="name">calibrations</span>
 
         
     </div>
-    <a class="headerlink" href="#Program.body_instructions"></a>
-    
-    
-
-                            </div>
-                            <div id="Program.declarations" class="classattr">
-                                <div class="attr variable">
-            <span class="name">declarations</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.declarations"></a>
+    <a class="headerlink" href="#Program.calibrations"></a>
     
     
 
@@ -888,6 +866,28 @@
         
     </div>
     <a class="headerlink" href="#Program.waveforms"></a>
+    
+    
+
+                            </div>
+                            <div id="Program.memory_regions" class="classattr">
+                                <div class="attr variable">
+            <span class="name">memory_regions</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.memory_regions"></a>
+    
+    
+
+                            </div>
+                            <div id="Program.body_instructions" class="classattr">
+                                <div class="attr variable">
+            <span class="name">body_instructions</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.body_instructions"></a>
     
     
 
@@ -1596,17 +1596,6 @@ program which were expanded using that calibration.</p>
     
 
                             </div>
-                            <div id="CalibrationSet.measure_calibrations" class="classattr">
-                                <div class="attr variable">
-            <span class="name">measure_calibrations</span>
-
-        
-    </div>
-    <a class="headerlink" href="#CalibrationSet.measure_calibrations"></a>
-    
-    
-
-                            </div>
                             <div id="CalibrationSet.calibrations" class="classattr">
                                 <div class="attr variable">
             <span class="name">calibrations</span>
@@ -1614,6 +1603,17 @@ program which were expanded using that calibration.</p>
         
     </div>
     <a class="headerlink" href="#CalibrationSet.calibrations"></a>
+    
+    
+
+                            </div>
+                            <div id="CalibrationSet.measure_calibrations" class="classattr">
+                                <div class="attr variable">
+            <span class="name">measure_calibrations</span>
+
+        
+    </div>
+    <a class="headerlink" href="#CalibrationSet.measure_calibrations"></a>
     
     
 
@@ -1857,17 +1857,6 @@ program which were expanded using that calibration.</p>
     
     
 
-                            <div id="TimeSpanSeconds.start" class="classattr">
-                                <div class="attr variable">
-            <span class="name">start</span>
-
-        
-    </div>
-    <a class="headerlink" href="#TimeSpanSeconds.start"></a>
-    
-    
-
-                            </div>
                             <div id="TimeSpanSeconds.duration" class="classattr">
                                 <div class="attr variable">
             <span class="name">duration</span>
@@ -1886,6 +1875,17 @@ program which were expanded using that calibration.</p>
         
     </div>
     <a class="headerlink" href="#TimeSpanSeconds.end"></a>
+    
+    
+
+                            </div>
+                            <div id="TimeSpanSeconds.start" class="classattr">
+                                <div class="attr variable">
+            <span class="name">start</span>
+
+        
+    </div>
+    <a class="headerlink" href="#TimeSpanSeconds.start"></a>
     
     
 
