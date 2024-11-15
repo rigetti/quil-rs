@@ -1,0 +1,63 @@
+on:
+  pull_request:
+
+name: Check pyQuil Compatibility
+
+jobs:
+  check-pyquil:
+    name: Check compatibility with pyQuil
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.10', '3.11', '3.12']
+    steps:
+      - name: Checkout quil-rs Repository
+        uses: actions/checkout@v4
+        with:
+          path: quil-rs
+
+      - name: Checkout pyQuil Repository
+        uses: actions/checkout@v4
+        with:
+          repository: "rigetti/pyquil"
+          path: pyquil
+
+      - name: Install Rust Toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Restore Python Virtual Environment
+        uses: syphar/restore-virtualenv@v1
+
+      - name: Setup pyQuil Repository
+        run: |
+          pip uninstall -y -r <(pip freeze) || true
+          pip install "./pyquil[latex]" maturin mypy ruff pytest pytest-mock
+          maturin develop -m quil-rs/quil-py/Cargo.toml
+          cd pyquil
+
+      - name: Run mypy
+        id: mypy
+        continue-on-error: true
+        run: |
+          mypy pyquil
+
+      - name: Run ruff
+        id: ruff
+        continue-on-error: true
+        run: |
+          ruff check pyquil
+
+      - name: Run pytest
+        id: pytest
+        continue-on-error: true
+        run: |
+          pytest test/unit -x
+
+      - name: Fail Job if Any Checks Failed
+        if: steps.mypy.outcome == 'failure' || steps.ruff.outcome == 'failure' || steps.pytest.outcome == 'failure'
+        run: |
+          echo "One or more checks failed. Marking the job as failed."
+          exit 1
