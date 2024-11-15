@@ -33,23 +33,25 @@ jobs:
           pip uninstall -y -r <(pip freeze) || true
           pip install "./pyquil[latex]" maturin mypy ruff pytest pytest-mock
           maturin develop -m quil-rs/quil-py/Cargo.toml
-          cd pyquil
 
       - name: Run mypy
         id: mypy
         continue-on-error: true
+        working-directory: ./pyquil
         run: |
           mypy pyquil
 
       - name: Run ruff
         id: ruff
         continue-on-error: true
+        working-directory: ./pyquil
         run: |
           ruff check pyquil
 
       - name: Run pytest
         id: pytest
         continue-on-error: true
+        working-directory: ./pyquil
         run: |
           pytest test/unit -x
 
