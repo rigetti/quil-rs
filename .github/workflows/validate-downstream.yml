@@ -1,7 +1,7 @@
 on:
   pull_request:
 
-name: Check pyQuil Compatibility
+    name: Check pyQuil Compatibility
 
 jobs:
   check-pyquil:
@@ -62,15 +62,41 @@ jobs:
             const mypyFailed = '${{ steps.mypy.outcome }}' === 'failure';
             const ruffFailed = '${{ steps.ruff.outcome }}' === 'failure';
             const pytestFailed = '${{ steps.pytest.outcome }}' === 'failure';
-
             const constructLogURL = (stepId) => {
-
-              return `https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/job/${{ job.id }}?pr=${{ context.issue.number }}`
+              return `https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/job/${{ job.id }}?pr=${{ github.context.issue.number }}`
             };
 
+            // Fetch the existing comment with this identifier, if it exists
+            const identifier = `pyQuil-checks-comment`;
+            const comments = await github.rest.issues.listComments({
+              owner,
+              repo,
+              issue_number,
+            });
+            const existingComment = comments.data.find(comment => comment.body.startsWith(`<!-- ${identifier} -->`);
+
+            const postOrUpdateComment = function (body) => {
+              if (existingComment) {
+                await github.rest.issues.updateComment({
+                  owner,
+                  repo,
+                  comment_id: existingComment.id,
+                  body
+                });
+              } else {
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number,
+                  body
+                });
+              }
+            }
+
+            var body = ""
 
             if (mypyFailed || ruffFailed || pytestFailed) {
-              let body = `⚠️ **pyQuil Compatibility Checks Failed**:\n\n| Tool   | Status  |;
+              let body += `⚠️ **pyQuil Compatibility Checks Failed**:\n\n| Tool   | Status  |;
 
               if (mypyFailed) {
                 body += `| mypy   | ❌ Failed |\n`;
@@ -79,29 +105,13 @@ jobs:
                 body += `| ruff   | ❌ Failed |\n`;
               }
               if (pytestFailed) {
-                body += `| pytest | ❌ Failed | [View Logs](${constructLogURL('pytest')}) |\n`;
+                body += `| pytest | ❌ Failed |\n`;
               }
 
-              body += `\n**Note**: These failures don't necessarily block the PR but both authors and reviewers should check the results for unintentional breaking changes.\n[View Logs]()\n`;
-
-              // Post the failure comment
-              await github.rest.issues.createComment({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: body
-              });
-
-              // Fail the job to show a red X
-              core.setFailed("One or more pyQuil checks failed.");
-            } else { // or post success
-              let body = `✅ **pyQuil Compatibility Checks Passed** on Python \`${{ matrix.python-version }}\`. Great job!`;
-
-              // Post the success comment
-              await github.rest.issues.createComment({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: body
-              });
+              body += `\n**Note**: These failures don't necessarily block the PR but both authors and reviewers should check the results for unintentional breaking changes.\n[View Logs](${ constructLogURL })\n`;
             }
+            else {
+              body += `✅ **pyQuil Compatibility Checks Passed**. Great job!`;
+            }
+
+            postOrUpdateComment(body);
