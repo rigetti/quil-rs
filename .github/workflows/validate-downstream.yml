@@ -53,13 +53,14 @@ jobs:
 
       - name: Collect Failed Steps
         id: collect_failures
+        if: failure()
         run: |
           echo "mypy_failed=$( [ ${{ steps.mypy.conclusion }} == 'failure' ] && echo 'true' || echo 'false' )" >> $GITHUB_OUTPUT
           echo "ruff_failed=$( [ ${{ steps.ruff.conclusion }} == 'failure' ] && echo 'true' || echo 'false' )" >> $GITHUB_OUTPUT
           echo "pytest_failed=$( [ ${{ steps.pytest.conclusion }} == 'failure' ] && echo 'true' || echo 'false' )" >> $GITHUB_OUTPUT
 
       - name: Post PR Comment for Failures
-        if: steps.collect_failures.outputs.mypy_failed == 'true' || steps.collect_failures.outputs.ruff_failed == 'true' || steps.collect_failures.outputs.pytest_failed == 'true'
+        if: failure() && steps.collect_failures.outputs.mypy_failed == 'true' || steps.collect_failures.outputs.ruff_failed == 'true' || steps.collect_failures.outputs.pytest_failed == 'true'
         uses: peter-evans/create-or-update-comment@v3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -85,9 +86,3 @@ jobs:
           body: |
             <!-- pyQuil-checks-comment -->
             ✅ **pyQuil Compatibility Checks Passed**. Great job!
-
-      - name: Fail Job if Any Checks Failed
-        if: steps.collect_failures.outputs.mypy_failed == 'true' || steps.collect_failures.outputs.ruff_failed == 'true' || steps.collect_failures.outputs.pytest_failed == 'true'
-        run: |
-          echo "One or more checks failed. Marking the job as failed."
-          exit 1
