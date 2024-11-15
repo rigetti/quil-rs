@@ -4,6 +4,7 @@ on:
 name: Check compatibility with downstream packages
 
 jobs:
+  continue-on-error: true
   check-pyquil:
     name: Check compatibility with pyQuil
     runs-on: ubuntu-latest
@@ -35,21 +36,18 @@ jobs:
           maturin develop -m quil-rs/quil-py/Cargo.toml
           cd pyquil
 
-      - name: Run mypy
-        id: mypy
-        continue-on-error: true
+      - name: Run ruff
+        id: ruff
         run: |
           mypy pyquil
 
       - name: Run ruff
         id: ruff
-        continue-on-error: true
         run: |
           ruff check pyquil
 
       - name: Run pytest
         id: pytest
-        continue-on-error: true
         run: |
           pytest test/unit -x
 
