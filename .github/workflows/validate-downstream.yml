@@ -4,9 +4,9 @@ on:
 name: Check compatibility with downstream packages
 
 jobs:
-  continue-on-error: true
   check-pyquil:
     name: Check compatibility with pyQuil
+    continue-on-error: true
     runs-on: ubuntu-latest
     steps:
       - name: Checkout quil-rs Repository
