@@ -1,98 +1,92 @@
-on:
-  pull_request:
+check-pyquil:
+  name: Check compatibility with pyQuil
+  runs-on: ubuntu-latest
+  strategy:
+    matrix:
+      python-version: ['3.9', '3.10', '3.11', '3.12']
+  steps:
+    - name: Checkout quil-rs Repository
+      uses: actions/checkout@v4
+      with:
+        path: quil-rs
 
-name: Check pyQuil Compatibility
+    - name: Checkout pyQuil Repository
+      uses: actions/checkout@v4
+      with:
+        repository: "rigetti/pyquil"
+        path: pyquil
 
-jobs:
-  check-pyquil:
-    name: Check compatibility with pyQuil
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ['3.9', '3.10', '3.11', '3.12']
-    steps:
-      - name: Checkout quil-rs Repository
-        uses: actions/checkout@v4
-        with:
-          path: quil-rs
+    - name: Install Rust Toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
 
-      - name: Checkout pyQuil Repository
-        uses: actions/checkout@v4
-        with:
-          repository: "rigetti/pyquil"
-          path: pyquil
+    - name: Restore Python Virtual Environment
+      uses: syphar/restore-virtualenv@v1
 
-      - name: Install Rust Toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
+    - name: Setup pyQuil Repository
+      run: |
+        pip uninstall -y -r <(pip freeze) || true
+        pip install "./pyquil[latex]" maturin mypy ruff pytest pytest-mock
+        maturin develop -m quil-rs/quil-py/Cargo.toml
+        cd pyquil
 
-      - name: Restore Python Virtual Environment
-        uses: syphar/restore-virtualenv@v1
+    - name: Run mypy
+      id: mypy
+      continue-on-error: true
+      run: |
+        mypy pyquil
 
-      - name: Setup pyQuil Repository
-        run: |
-          pip uninstall -y -r <(pip freeze) || true
-          pip install "./pyquil[latex]" maturin mypy ruff pytest pytest-mock
-          maturin develop -m quil-rs/quil-py/Cargo.toml
-          cd pyquil
+    - name: Run ruff
+      id: ruff
+      continue-on-error: true
+      run: |
+        ruff check pyquil
 
-      - name: Run mypy
-        id: mypy
-        continue-on-error: true
-        run: |
-          mypy pyquil
+    - name: Run pytest
+      id: pytest
+      continue-on-error: true
+      run: |
+        pytest test/unit -x
 
-      - name: Run ruff
-        id: ruff
-        continue-on-error: true
-        run: |
-          ruff check pyquil
+    - name: Collect Failed Steps
+      id: collect_failures
+      run: |
+        echo "mypy_failed=$( [ ${{ steps.mypy.conclusion }} == 'failure' ] && echo 'true' || echo 'false' )" >> $GITHUB_OUTPUT
+        echo "ruff_failed=$( [ ${{ steps.ruff.conclusion }} == 'failure' ] && echo 'true' || echo 'false' )" >> $GITHUB_OUTPUT
+        echo "pytest_failed=$( [ ${{ steps.pytest.conclusion }} == 'failure' ] && echo 'true' || echo 'false' )" >> $GITHUB_OUTPUT
 
-      - name: Run pytest
-        id: pytest
-        continue-on-error: true
-        run: |
-          pytest test/unit -x
+    - name: Post PR Comment for Failures
+      if: steps.collect_failures.outputs.mypy_failed == 'true' || steps.collect_failures.outputs.ruff_failed == 'true' || steps.collect_failures.outputs.pytest_failed == 'true'
+      uses: peter-evans/create-or-update-comment@v3
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        issue-number: ${{ github.event.pull_request.number }}
+        body: |
+          <!-- pyQuil-checks-comment -->
+          ⚠️ **pyQuil Compatibility Checks Failed** on Python ${{ matrix.python-version }}:
 
-      - name: Collect Failed Steps
-        id: collect_failures
-        run: |
-          echo "mypy_failed=$( [ ${{ steps.mypy.conclusion }} == 'failure' ] && echo 'true' || echo 'false' )" >> $GITHUB_OUTPUT
-          echo "ruff_failed=$( [ ${{ steps.ruff.conclusion }} == 'failure' ] && echo 'true' || echo 'false' )" >> $GITHUB_OUTPUT
-          echo "pytest_failed=$( [ ${{ steps.pytest.conclusion }} == 'failure' ] && echo 'true' || echo 'false' )" >> $GITHUB_OUTPUT
+          | Tool   | Status  | Logs |
+          |--------|---------|------|
+          ${{ steps.collect_failures.outputs.mypy_failed == 'true' && '- mypy   | Failed | [View Logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs/${{ job.id }}/steps/mypy/logs)' || '' }}
+          ${{ steps.collect_failures.outputs.ruff_failed == 'true' && '- ruff   | Failed | [View Logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs/${{ job.id }}/steps/ruff/logs)' || '' }}
+          ${{ steps.collect_failures.outputs.pytest_failed == 'true' && '- pytest | Failed | [View Logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs/${{ job.id }}/steps/pytest/logs)' || '' }}
 
-      - name: Post PR Comment for Failures
-        if: steps.collect_failures.outputs.mypy_failed == 'true' || steps.collect_failures.outputs.ruff_failed == 'true' || steps.collect_failures.outputs.pytest_failed == 'true'
-        uses: peter-evans/create-or-update-comment@v3
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          issue-number: ${{ github.event.pull_request.number }}
-          body: |
-            <!-- pyQuil-checks-comment -->
-            ⚠️ **pyQuil Compatibility Checks Failed** on Python ${{ matrix.python-version }}:
+          **Note**: These warnings don't block the PR but may require your attention.
 
-            | Tool   | Status  | Logs |
-            |--------|---------|------|
-            ${{ steps.collect_failures.outputs.mypy_failed == 'true' && '- mypy   | Failed | [View Logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs/${{ job.id }}/steps/mypy/logs)' || '' }}
-            ${{ steps.collect_failures.outputs.ruff_failed == 'true' && '- ruff   | Failed | [View Logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs/${{ job.id }}/steps/ruff/logs)' || '' }}
-            ${{ steps.collect_failures.outputs.pytest_failed == 'true' && '- pytest | Failed | [View Logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs/${{ job.id }}/steps/pytest/logs)' || '' }}
+    - name: Post PR Comment for Success
+      if: steps.collect_failures.outputs.mypy_failed == 'false' && steps.collect_failures.outputs.ruff_failed == 'false' && steps.collect_failures.outputs.pytest_failed == 'false'
+      uses: peter-evans/create-or-update-comment@v3
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        issue-number: ${{ github.event.pull_request.number }}
+        body: |
+          <!-- pyQuil-checks-comment -->
+          ✅ **pyQuil Compatibility Checks Passed** on Python ${{ matrix.python-version }}. Great job!
 
-            **Note**: These warnings don't block the PR but may require your attention.
-
-      - name: Post PR Comment for Success
-        if: steps.collect_failures.outputs.mypy_failed == 'false' && steps.collect_failures.outputs.ruff_failed == 'false' && steps.collect_failures.outputs.pytest_failed == 'false'
-        uses: peter-evans/create-or-update-comment@v3
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          issue-number: ${{ github.event.pull_request.number }}
-          body: |
-            <!-- pyQuil-checks-comment -->
-            ✅ **pyQuil Compatibility Checks Passed** on Python ${{ matrix.python-version }}. Great job!
-
-      - name: Fail Job if Any Checks Failed
-        if: steps.collect_failures.outputs.mypy_failed == 'true' || steps.collect_failures.outputs.ruff_failed == 'true' || steps.collect_failures.outputs.pytest_failed == 'true'
-        run: |
-          echo "One or more checks failed. Marking the job as failed."
-          exit 1
+    - name: Fail Job if Any Checks Failed
+      if: steps.collect_failures.outputs.mypy_failed == 'true' || steps.collect_failures.outputs.ruff_failed == 'true' || steps.collect_failures.outputs.pytest_failed == 'true'
+      run: |
+        echo "One or more checks failed. Marking the job as failed."
+        exit 1
