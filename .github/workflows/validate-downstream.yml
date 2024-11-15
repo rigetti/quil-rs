@@ -36,8 +36,8 @@ jobs:
           maturin develop -m quil-rs/quil-py/Cargo.toml
           cd pyquil
 
-      - name: Run ruff
-        id: ruff
+      - name: Run mypy
+        id: mypy
         run: |
           mypy pyquil
 
