@@ -73,9 +73,9 @@ jobs:
               repo,
               issue_number,
             });
-            const existingComment = comments.data.find(comment => comment.body.startsWith(`<!-- ${identifier} -->`);
+            const existingComment = comments.data.find(comment => comment.body.startsWith(`<!-- ${identifier} -->`));
 
-            const postOrUpdateComment = function (body) => {
+            const postOrUpdateComment = (body) => {
               if (existingComment) {
                 await github.rest.issues.updateComment({
                   owner,
