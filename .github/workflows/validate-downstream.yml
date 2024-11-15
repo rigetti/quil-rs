@@ -98,7 +98,7 @@ jobs:
             var body = ""
 
             if (mypyFailed || ruffFailed || pytestFailed) {
-              body += `⚠️ **pyQuil Compatibility Checks Failed**:\n\n| Tool   | Status  |;
+              body += `⚠️ **pyQuil Compatibility Checks Failed**:\n\n| Tool | Status |\n`;
 
               if (mypyFailed) {
                 body += `| mypy   | ❌ Failed |\n`;
