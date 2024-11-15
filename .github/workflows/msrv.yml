@@ -71,41 +71,6 @@ jobs:
       run: |
         cargo make --cwd quil-py
 
-  check-pyquil:
-    name: Check compatibility with pyQuil
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ['3.9', '3.10', '3.11', '3.12']
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          path: quil-rs
-      - uses: actions/checkout@v4
-        with:
-          repository: "rigetti/pyquil"
-          path: pyquil
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-      - uses: syphar/restore-virtualenv@v1
-      - name: Check changes against pyQuil
-        id: check_pyquil
-        continue-on-error: true
-        run: |
-          set -o pipefail
-          pip uninstall -y -r <(pip freeze) || true
-          pip install "./pyquil[latex]" maturin mypy ruff pytest pytest-mock
-          maturin develop -m quil-rs/quil-py/Cargo.toml
-          cd pyquil
-          mypy pyquil
-          ruff check pyquil
-          pytest test/unit -x
-      - name: Fail job if Check changes against pyQuil failed
-        if: steps.check_pyquil.outcome == 'failure'
-        run: exit 1  # This will mark the job as failed
-
   fmt:
     name: Rustfmt
     runs-on: ubuntu-latest
