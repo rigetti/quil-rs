@@ -64,23 +64,25 @@ jobs:
             const pytestFailed = '${{ steps.pytest.outcome }}' === 'failure';
 
             const constructLogURL = (stepId) => {
-              return `https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs/${{ job.id }}/steps/${stepId}/logs`;
+
+              return `https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/job/${{ job.id }}?pr=${{ context.issue.number }}`
             };
 
+
             if (mypyFailed || ruffFailed || pytestFailed) {
-              let body = `⚠️ **pyQuil Compatibility Checks Failed**:\n\n| Tool   | Status  | Logs |\n|--------|---------|------|\n`;
+              let body = `⚠️ **pyQuil Compatibility Checks Failed**:\n\n| Tool   | Status  |;
 
               if (mypyFailed) {
-                body += `| mypy   | ❌ Failed | [View Logs](${constructLogURL('mypy')}) |\n`;
+                body += `| mypy   | ❌ Failed |\n`;
               }
               if (ruffFailed) {
-                body += `| ruff   | ❌ Failed | [View Logs](${constructLogURL('ruff')}) |\n`;
+                body += `| ruff   | ❌ Failed |\n`;
               }
               if (pytestFailed) {
                 body += `| pytest | ❌ Failed | [View Logs](${constructLogURL('pytest')}) |\n`;
               }
 
-              body += `\n**Note**: These warnings don't block the PR but may require your attention.\n\n`;
+              body += `\n**Note**: These warnings don't block the PR but may require your attention.\n[View Logs]()\n`;
 
               // Post the failure comment
               await github.rest.issues.createComment({
