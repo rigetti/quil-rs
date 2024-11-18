@@ -68,7 +68,7 @@ jobs:
             const issue_number = context.issue.number;
 
 
-            const logUrl = 'https://github.com/${owner}/${repo}/actions/runs/${{ github.run_id }}/jobs/${{ job.id }}'
+            const logUrl = 'https://github.com/${{owner}}/${{repo}}/actions/runs/${{ github.run_id }}/jobs/${{ job.id }}'
 
             // Fetch existing comment, if it exists
             const identifier = `pyQuil-checks-comment`;
