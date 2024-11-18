@@ -67,9 +67,8 @@ jobs:
             const repo = context.repo.repo;
             const issue_number = context.issue.number;
 
-            const constructLogURL = (stepId) => {
-              return `https://github.com/${owner}/${repo}/actions/runs/${{ github.run_id }}/jobs/${{ job.id }}/steps/${stepId}/logs`;
-            };
+
+            const logUrl = 'https://github.com/${owner}/${repo}/actions/runs/${{ github.run_id }}/jobs/${{ job.id }}'
 
             // Fetch existing comment, if it exists
             const identifier = `pyQuil-checks-comment`;
@@ -102,7 +101,7 @@ jobs:
             var body = ""
 
             if (mypyFailed || ruffFailed || pytestFailed) {
-              body += `⚠️ **pyQuil Compatibility Checks Failed**:\n\n| Tool | Status |\n`;
+              body += `⚠️ **pyQuil Compatibility Checks Failed**:\n\n| Tool | Status |\n-----|-----|\n`;
 
               if (mypyFailed) {
                 body += `| mypy   | ❌ Failed |\n`;
@@ -114,7 +113,7 @@ jobs:
                 body += `| pytest | ❌ Failed |\n`;
               }
 
-              body += `\n**Note**: These failures don't necessarily block the PR but both authors and reviewers should check the results for unintentional breaking changes.\n[View Logs](${ constructLogURL })\n`;
+              body += `\n**Note**: These failures don't necessarily block the PR but both authors and reviewers should check the results for unintentional breaking changes.\n[View Logs](${ logUrl })\n`;
             }
             else {
               body += `✅ **pyQuil Compatibility Checks Passed**. Great job!`;
