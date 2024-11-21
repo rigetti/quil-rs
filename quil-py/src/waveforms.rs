@@ -109,6 +109,35 @@ impl_into_iq_values!(PyErfSquare);
 impl_repr!(PyErfSquare);
 impl_eq!(PyErfSquare);
 
+#[pymethods]
+impl PyErfSquare {
+    #[new]
+    #[allow(clippy::too_many_arguments)]
+    fn __new__(
+        duration: f64,
+        risetime: f64,
+        sample_rate: f64,
+        pad_left: f64,
+        pad_right: f64,
+        positive_polarity: bool,
+        scale: f64,
+        phase: f64,
+        detuning: f64,
+    ) -> Self {
+        PyErfSquare(ErfSquare {
+            duration,
+            risetime,
+            sample_rate,
+            pad_left,
+            pad_right,
+            positive_polarity,
+            scale,
+            phase,
+            detuning,
+        })
+    }
+}
+
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq)]
     #[pyo3(subclass)]
@@ -125,6 +154,30 @@ py_wrap_data_struct! {
 impl_into_iq_values!(PyGaussian);
 impl_repr!(PyGaussian);
 impl_eq!(PyGaussian);
+
+#[pymethods]
+impl PyGaussian {
+    #[new]
+    fn __new__(
+        duration: f64,
+        fwhm: f64,
+        t0: f64,
+        sample_rate: f64,
+        scale: f64,
+        phase: f64,
+        detuning: f64,
+    ) -> Self {
+        PyGaussian(Gaussian {
+            duration,
+            fwhm,
+            t0,
+            sample_rate,
+            scale,
+            phase,
+            detuning,
+        })
+    }
+}
 
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq)]
@@ -145,6 +198,35 @@ impl_into_iq_values!(PyDragGaussian);
 impl_repr!(PyDragGaussian);
 impl_eq!(PyDragGaussian);
 
+#[pymethods]
+impl PyDragGaussian {
+    #[new]
+    #[allow(clippy::too_many_arguments)]
+    fn __new__(
+        duration: f64,
+        fwhm: f64,
+        t0: f64,
+        anh: f64,
+        alpha: f64,
+        sample_rate: f64,
+        scale: f64,
+        phase: f64,
+        detuning: f64,
+    ) -> Self {
+        PyDragGaussian(DragGaussian {
+            duration,
+            fwhm,
+            t0,
+            anh,
+            alpha,
+            sample_rate,
+            scale,
+            phase,
+            detuning,
+        })
+    }
+}
+
 py_wrap_data_struct! {
     #[derive(Debug, PartialEq)]
     #[pyo3(subclass)]
@@ -164,3 +246,34 @@ py_wrap_data_struct! {
 impl_into_iq_values!(PyHermiteGaussian);
 impl_repr!(PyHermiteGaussian);
 impl_eq!(PyHermiteGaussian);
+
+#[pymethods]
+impl PyHermiteGaussian {
+    #[allow(clippy::too_many_arguments)]
+    #[new]
+    fn __new__(
+        duration: f64,
+        fwhm: f64,
+        t0: f64,
+        anh: f64,
+        alpha: f64,
+        sample_rate: f64,
+        second_order_hrm_coeff: f64,
+        scale: f64,
+        phase: f64,
+        detuning: f64,
+    ) -> Self {
+        PyHermiteGaussian(HermiteGaussian {
+            duration,
+            fwhm,
+            t0,
+            anh,
+            alpha,
+            sample_rate,
+            second_order_hrm_coeff,
+            scale,
+            phase,
+            detuning,
+        })
+    }
+}
