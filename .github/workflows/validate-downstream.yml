@@ -1,7 +1,6 @@
+name: Check pyQuil Compatibility
 on:
   pull_request:
-
-    name: Check pyQuil Compatibility
 
 jobs:
   check-pyquil:
@@ -67,9 +66,6 @@ jobs:
             const repo = context.repo.repo;
             const issue_number = context.issue.number;
 
-
-            const logUrl = `https://github.com/${owner}/${repo}/actions/runs/${{ github.run_id }}/jobs/${{ job.id }}`
-
             // Fetch existing comment, if it exists
             const identifier = `pyQuil-checks-comment`;
             const comments = await github.rest.issues.listComments({
@@ -112,7 +108,7 @@ jobs:
               if (pytestFailed) {
                 body += `| pytest | ❌ Failed |\n`;
               }
-              body += `\n**Note**: These failures don't necessarily block the PR but both authors and reviewers should check the results for unintentional breaking changes.\n[View Logs](${ logUrl })\n`;
+              body += `\n**Note**: These failures don't necessarily block the PR but both authors and reviewers should check the results for unintentional breaking changes.`;
             } else {
               body += `✅ **pyQuil Compatibility Checks Passed**. Great job!`;
             }
