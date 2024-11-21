@@ -1,0 +1,116 @@
+name: Check pyQuil Compatibility
+on:
+  pull_request:
+
+jobs:
+  check-pyquil:
+    name: Check compatibility with pyQuil
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout quil-rs Repository
+        uses: actions/checkout@v4
+        with:
+          path: quil-rs
+
+      - name: Checkout pyQuil Repository
+        uses: actions/checkout@v4
+        with:
+          repository: "rigetti/pyquil"
+          path: pyquil
+
+      - name: Install Rust Toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Restore Python Virtual Environment
+        uses: syphar/restore-virtualenv@v1
+
+      - name: Setup pyQuil Repository
+        run: |
+          pip uninstall -y -r <(pip freeze) || true
+          pip install "./pyquil[latex]" maturin mypy ruff pytest pytest-mock
+          maturin develop -m quil-rs/quil-py/Cargo.toml
+
+      - name: Run mypy
+        id: mypy
+        continue-on-error: true
+        working-directory: ./pyquil
+        run: |
+          mypy pyquil
+
+      - name: Run ruff
+        id: ruff
+        continue-on-error: true
+        working-directory: ./pyquil
+        run: |
+          ruff check pyquil
+
+      - name: Run pytest
+        id: pytest
+        continue-on-error: true
+        working-directory: ./pyquil
+        run: |
+          pytest test/unit -x
+
+      - name: Post PR Comment and Fail if Necessary
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const mypyFailed = '${{ steps.mypy.outcome }}' === 'failure';
+            const ruffFailed = '${{ steps.ruff.outcome }}' === 'failure';
+            const pytestFailed = '${{ steps.pytest.outcome }}' === 'failure';
+
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const issue_number = context.issue.number;
+
+            // Fetch existing comment, if it exists
+            const identifier = `pyQuil-checks-comment`;
+            const comments = await github.rest.issues.listComments({
+              owner,
+              repo,
+              issue_number,
+            });
+            const existingComment = comments.data.find(comment => comment.body.startsWith(`<!-- ${identifier} -->`));
+
+
+            async function postOrUpdateComment(body) {
+              if (existingComment) {
+                await github.rest.issues.updateComment({
+                  owner,
+                  repo,
+                  comment_id: existingComment.id,
+                  body
+                });
+              } else {
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number,
+                  body
+                });
+              }
+            }
+
+            var body = ""
+
+            if (mypyFailed || ruffFailed || pytestFailed) {
+              body += `⚠️ **pyQuil Compatibility Checks Failed**:\n\n| Tool | Status |\n-----|-----|\n`;
+
+              if (mypyFailed) {
+                body += `| mypy   | ❌ Failed |\n`;
+              }
+              if (ruffFailed) {
+                body += `| ruff   | ❌ Failed |\n`;
+              }
+              if (pytestFailed) {
+                body += `| pytest | ❌ Failed |\n`;
+              }
+              body += `\n**Note**: These failures don't necessarily block the PR but both authors and reviewers should check the results for unintentional breaking changes.`;
+            } else {
+              body += `✅ **pyQuil Compatibility Checks Passed**. Great job!`;
+            }
+
+            await postOrUpdateComment(body);
