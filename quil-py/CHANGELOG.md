@@ -1,3 +1,9 @@
+## 0.13.3-rc.0 (2024-11-21)
+
+### Fixes
+
+#### Type stubs for calibration types reflect breaking changes in 0.13.0 (#421)
+
 ## 0.13.2 (2024-11-06)
 
 ### Features
