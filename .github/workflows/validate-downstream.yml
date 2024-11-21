@@ -112,10 +112,8 @@ jobs:
               if (pytestFailed) {
                 body += `| pytest | ❌ Failed |\n`;
               }
-
               body += `\n**Note**: These failures don't necessarily block the PR but both authors and reviewers should check the results for unintentional breaking changes.\n[View Logs](${ logUrl })\n`;
-
-            else {
+            } else {
               body += `✅ **pyQuil Compatibility Checks Passed**. Great job!`;
             }
 
