@@ -486,9 +486,9 @@ mod tests {
         case("a", vec![Token::Identifier("a".to_string())]),
         case("_a-2_b-2_", vec![Token::Identifier("_a-2_b-2_".to_string())]),
         case("a-2-%var", vec![
-                Token::Identifier("a-2".to_string()),
-                Token::Operator(Operator::Minus),
-                Token::Variable("var".to_string())
+            Token::Identifier("a-2".to_string()),
+            Token::Operator(Operator::Minus),
+            Token::Variable("var".to_string())
         ]),
         case("BIT", vec![Token::DataType(DataType::Bit)]),
         case("BITS", vec![Token::Identifier("BITS".to_string())]),
@@ -496,6 +496,19 @@ mod tests {
         case("nan", vec![Token::Identifier("nan".to_string())]),
         case("NaNa", vec![Token::Identifier("NaNa".to_string())]),
         case("nana", vec![Token::Identifier("nana".to_string())]),
+        case("INF", vec![Token::Identifier("INF".to_string())]),
+        case("Infinity", vec![Token::Identifier("Infinity".to_string())]),
+        case("Inferior", vec![Token::Identifier("Inferior".to_string())]),
+        case("-NaN", vec![Token::Operator(Operator::Minus), Token::Identifier("NaN".to_string())]),
+        case("-inf", vec![Token::Operator(Operator::Minus), Token::Identifier("inf".to_string())]),
+        case("-Infinity", vec![
+            Token::Operator(Operator::Minus),
+            Token::Identifier("Infinity".to_string())
+        ]),
+        case("-inferior", vec![
+            Token::Operator(Operator::Minus),
+            Token::Identifier("inferior".to_string())
+        ]),
     )]
     fn it_lexes_identifier(input: &str, expected: Vec<Token>) {
         let input = LocatedSpan::new(input);

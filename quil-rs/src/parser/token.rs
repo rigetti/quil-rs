@@ -67,8 +67,8 @@ where
     }
 }
 
-/// The subset of [`Token`]s which (a) do not contain more specific data and (b) are keywords.  Used
-/// to ensure that keyword-checking remains in sync with the definition of [`Token`].
+/// The subset of [`Token`]s which (a) do not have arguments and (b) are keywords.  Used to ensure
+/// that keyword-checking remains in sync with the definition of [`Token`].
 #[derive(Debug, Copy, Clone, PartialEq, Eq, strum::Display, strum::EnumString)]
 #[strum(serialize_all = "SCREAMING-KEBAB-CASE")]
 pub enum KeywordToken {
@@ -104,7 +104,8 @@ impl TryFrom<Token> for KeywordToken {
 
     fn try_from(token: Token) -> Result<Self, Self::Error> {
         // This match is explicit so that if you add a new [`Token`] constructor you have to decide
-        // if it's a keyword.  Please do not add a top-level wildcard match here.
+        // if it's a keyword.
+        #[deny(clippy::wildcard_enum_match_arm, clippy::wildcard_in_or_patterns)]
         match token {
             Token::As => Ok(KeywordToken::As),
             Token::Matrix => Ok(KeywordToken::Matrix),
