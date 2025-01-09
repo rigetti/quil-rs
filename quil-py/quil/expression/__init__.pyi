@@ -5,6 +5,18 @@ from typing import Dict, Optional, Sequence, Union, final
 
 from quil.instructions import MemoryReference
 
+__all__ = [
+    'Expression',
+    'FunctionCallExpression',
+    'InfixExpression',
+    'PrefixExpression',
+    'ExpressionFunction',
+    'PrefixOperator',
+    'InfixOperator',
+    'EvaluationError',
+    'ParseExpressionError',
+]
+
 class EvaluationError(ValueError):
     """Error that may occur while evaluation an ``Expression``."""
 

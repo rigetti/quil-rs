@@ -96,6 +96,26 @@ from quil.instructions import (
     Waveform,
 )
 
+__all__ = [
+    'FrameSet',
+    'Program',
+    'CalibrationExpansion',
+    'CalibrationExpansionSourceMap',
+    'CalibrationExpansionSourceMapEntry',
+    'CalibrationSource',
+    'MaybeCalibrationExpansion',
+    'ProgramCalibrationExpansion',
+    'ProgramCalibrationExpansionSourceMap',
+    'ProgramCalibrationExpansionSourceMapEntry',
+    'CalibrationSet',
+    'MemoryRegion',
+    'BasicBlock',
+    'ControlFlowGraph',
+    'ScheduleSeconds',
+    'ScheduleSecondsItem',
+    'TimeSpanSeconds',
+]
+
 @final
 class Program:
     @staticmethod
