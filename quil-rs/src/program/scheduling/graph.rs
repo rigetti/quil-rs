@@ -818,4 +818,16 @@ LOAD bits[0] bits3 integers[0] # write
 LOAD bits4[0] bits integers[0] # read
 "#
     }
+
+    build_dot_format_snapshot_test_case! {
+        memory_dependency_in_block_terminator,
+        r#"
+DECLARE ro BIT
+
+NONBLOCKING CAPTURE 0 "readout_rx" flat(duration: 2.0000000000000003e-06, iq: 1.0, scale: 1.0, phase: 0.8745492960861506, detuning: 0.0) ro
+JUMP-WHEN @eq ro
+LABEL @eq
+PULSE 0 "tx" gaussian(duration: 1, fwhm: 2, t0: 3)
+"#
+    }
 }
