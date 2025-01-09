@@ -17,7 +17,7 @@ mod quoted_strings;
 mod wrapped_parsers;
 
 use nom::{
-    bytes::complete::{is_a, tag_no_case, take_till, take_while, take_while1},
+    bytes::complete::{is_a, take_till, take_while, take_while1},
     character::complete::{digit1, one_of},
     combinator::{all_consuming, map, recognize, value},
     multi::many0,
@@ -327,7 +327,7 @@ fn lex_modifier(input: LexInput) -> InternalLexResult {
             value(Token::Modifier(Modifier::Controlled), tag("CONTROLLED")),
             value(Token::Modifier(Modifier::Dagger), tag("DAGGER")),
             value(Token::Modifier(Modifier::Forked), tag("FORKED")),
-            value(Token::Mutable, tag_no_case("MUT")),
+            value(Token::Mutable, tag("mut")),
             value(Token::Offset, tag("OFFSET")),
             value(Token::PauliSum, tag("PAULI-SUM")),
             value(Token::Permutation, tag("PERMUTATION")),

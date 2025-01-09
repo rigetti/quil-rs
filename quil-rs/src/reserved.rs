@@ -77,6 +77,8 @@ pub enum ReservedKeyword {
     Measure,
     Move,
     Mul,
+    #[strum(serialize = "mut")]
+    Mutable,
     Neg,
     Nop,
     Not,

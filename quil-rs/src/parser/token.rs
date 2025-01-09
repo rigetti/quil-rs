@@ -67,6 +67,9 @@ where
     }
 }
 
+// When adding tokens that are keywords, you also need to update
+// [`crate::reserved::ReservedKeyword`], and similarly for gates ([`crate::reserved::ReservedGate`])
+// and constants ([`crate::reserved::ReservedConstant`]).
 #[derive(Clone, PartialEq)]
 pub enum Token {
     As,
@@ -118,7 +121,7 @@ impl fmt::Display for Token {
             Token::NonBlocking => write!(f, "NONBLOCKING"),
             Token::Matrix => write!(f, "MATRIX"),
             Token::Modifier(m) => write!(f, "{m}"),
-            Token::Mutable => write!(f, "MUT"),
+            Token::Mutable => write!(f, "mut"),
             Token::NewLine => write!(f, "NEWLINE"),
             Token::Operator(op) => write!(f, "{op}"),
             Token::Offset => write!(f, "OFFSET"),
