@@ -170,9 +170,12 @@ fn lex_token(input: LexInput) -> InternalLexResult<TokenWithLocation> {
             token_with_location(lex_string),
             // Operator must come before number (or it may be parsed as a prefix)
             token_with_location(lex_operator),
-            token_with_location(lex_number),
             token_with_location(lex_variable),
+            // Identifiers must come before numbers so that `NaN`, `Inf`, and `Infinity` aren't
+            // parsed as floats; Nom, as of version 7.1.1, will parse those strings,
+            // case-insensitively, as floats
             token_with_location(lex_keyword_or_identifier),
+            token_with_location(lex_number),
         ),
     )(input)
 }
