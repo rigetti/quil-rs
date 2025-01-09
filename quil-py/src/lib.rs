@@ -1,3 +1,7 @@
+// This error is triggered by PyO3 v0.20.3; it's fixed in 0.21, so this attribute can be removed
+// when we update PyO3.
+#![allow(non_local_definitions)]
+
 use pyo3::prelude::*;
 use rigetti_pyo3::create_init_submodule;
 

@@ -84,7 +84,7 @@ where
 /// what tag string was expected.
 pub(crate) fn tag<'a>(
     lit: &'static str,
-) -> impl FnMut(LexInput<'a>) -> InternalLexResult<LexInput<'a>> {
+) -> impl FnMut(LexInput<'a>) -> InternalLexResult<'a, LexInput<'a>> {
     move |input| {
         map_err(nom_tag(lit), |err: nom::error::Error<LexInput<'a>>| {
             InternalLexError::from_kind(err.input, LexErrorKind::ExpectedString(lit))
