@@ -1,3 +1,13 @@
+## 0.13.3-rc.1 (2025-01-09)
+
+### Features
+
+#### add missing `__all__` definitions to `.pyi` files
+
+### Fixes
+
+#### Type stubs for calibration types reflect breaking changes in 0.13.0 (#421)
+
 ## 0.13.3-rc.0 (2024-11-21)
 
 ### Fixes

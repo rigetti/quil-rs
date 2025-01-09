@@ -1,3 +1,9 @@
+## 0.29.3-rc.0 (2025-01-09)
+
+### Features
+
+#### add missing `__all__` definitions to `.pyi` files
+
 ## 0.29.2 (2024-11-06)
 
 ### Features
