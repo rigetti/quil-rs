@@ -31,8 +31,8 @@ mod token;
 
 pub(crate) use error::{ErrorInput, InternalParseError};
 pub use error::{ParseError, ParserErrorKind};
-pub use lexer::{DataType, LexError};
-pub use token::{Token, TokenWithLocation};
+pub use lexer::{Command, DataType, LexError, Modifier};
+pub use token::{KeywordToken, Token, TokenWithLocation};
 
 pub(crate) type ParserInput<'a> = &'a [TokenWithLocation<'a>];
 type InternalParserResult<'a, R, E = InternalParseError<'a>> = IResult<ParserInput<'a>, R, E>;

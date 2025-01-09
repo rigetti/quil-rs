@@ -67,9 +67,78 @@ where
     }
 }
 
-// When adding tokens that are keywords, you also need to update
-// [`crate::reserved::ReservedKeyword`], and similarly for gates ([`crate::reserved::ReservedGate`])
-// and constants ([`crate::reserved::ReservedConstant`]).
+/// The subset of [`Token`]s which (a) do not contain more specific data and (b) are keywords.  Used
+/// to ensure that keyword-checking remains in sync with the definition of [`Token`].
+#[derive(Debug, Copy, Clone, PartialEq, Eq, strum::Display, strum::EnumString)]
+#[strum(serialize_all = "SCREAMING-KEBAB-CASE")]
+pub enum KeywordToken {
+    As,
+    Matrix,
+    #[strum(serialize = "mut")]
+    Mutable,
+    #[strum(serialize = "NONBLOCKING")]
+    NonBlocking,
+    Offset,
+    PauliSum,
+    Permutation,
+    Sharing,
+}
+
+impl From<KeywordToken> for Token {
+    fn from(token: KeywordToken) -> Self {
+        match token {
+            KeywordToken::As => Token::As,
+            KeywordToken::Matrix => Token::Matrix,
+            KeywordToken::Mutable => Token::Mutable,
+            KeywordToken::NonBlocking => Token::NonBlocking,
+            KeywordToken::Offset => Token::Offset,
+            KeywordToken::PauliSum => Token::PauliSum,
+            KeywordToken::Permutation => Token::Permutation,
+            KeywordToken::Sharing => Token::Sharing,
+        }
+    }
+}
+
+impl TryFrom<Token> for KeywordToken {
+    type Error = ();
+
+    fn try_from(token: Token) -> Result<Self, Self::Error> {
+        // This match is explicit so that if you add a new [`Token`] constructor you have to decide
+        // if it's a keyword.  Please do not add a top-level wildcard match here.
+        match token {
+            Token::As => Ok(KeywordToken::As),
+            Token::Matrix => Ok(KeywordToken::Matrix),
+            Token::Mutable => Ok(KeywordToken::Mutable),
+            Token::Offset => Ok(KeywordToken::Offset),
+            Token::PauliSum => Ok(KeywordToken::PauliSum),
+            Token::Permutation => Ok(KeywordToken::Permutation),
+            Token::Sharing => Ok(KeywordToken::Sharing),
+
+            Token::Colon
+            | Token::Comma
+            | Token::Command(_)
+            | Token::Comment(_)
+            | Token::DataType(_)
+            | Token::Float(_)
+            | Token::Identifier(_)
+            | Token::Indentation
+            | Token::Integer(_)
+            | Token::Target(_)
+            | Token::LBracket
+            | Token::LParenthesis
+            | Token::NonBlocking
+            | Token::Modifier(_)
+            | Token::NewLine
+            | Token::Operator(_)
+            | Token::RBracket
+            | Token::RParenthesis
+            | Token::Semicolon
+            | Token::String(_)
+            | Token::Variable(_) => Err(()),
+        }
+    }
+}
+
 #[derive(Clone, PartialEq)]
 pub enum Token {
     As,
@@ -105,7 +174,7 @@ pub enum Token {
 impl fmt::Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Token::As => write!(f, "AS"),
+            Token::As => write!(f, "{}", KeywordToken::As),
             Token::Colon => write!(f, ":"),
             Token::Comma => write!(f, ","),
             Token::Command(cmd) => write!(f, "{cmd}"),
@@ -118,19 +187,19 @@ impl fmt::Display for Token {
             Token::Target(label) => write!(f, "{label}"),
             Token::LBracket => write!(f, "["),
             Token::LParenthesis => write!(f, "("),
-            Token::NonBlocking => write!(f, "NONBLOCKING"),
-            Token::Matrix => write!(f, "MATRIX"),
+            Token::NonBlocking => write!(f, "{}", KeywordToken::NonBlocking),
+            Token::Matrix => write!(f, "{}", KeywordToken::Matrix),
             Token::Modifier(m) => write!(f, "{m}"),
-            Token::Mutable => write!(f, "mut"),
+            Token::Mutable => write!(f, "{}", KeywordToken::Mutable),
             Token::NewLine => write!(f, "NEWLINE"),
             Token::Operator(op) => write!(f, "{op}"),
-            Token::Offset => write!(f, "OFFSET"),
-            Token::PauliSum => write!(f, "PAULI-SUM"),
-            Token::Permutation => write!(f, "PERMUTATION"),
+            Token::Offset => write!(f, "{}", KeywordToken::Offset),
+            Token::PauliSum => write!(f, "{}", KeywordToken::PauliSum),
+            Token::Permutation => write!(f, "{}", KeywordToken::Permutation),
             Token::RBracket => write!(f, "]"),
             Token::RParenthesis => write!(f, ")"),
             Token::Semicolon => write!(f, ";"),
-            Token::Sharing => write!(f, "SHARING"),
+            Token::Sharing => write!(f, "{}", KeywordToken::Sharing),
             Token::String(s) => write!(f, "{}", QuotedString(s)),
             Token::Variable(v) => write!(f, "{v}"),
         }
