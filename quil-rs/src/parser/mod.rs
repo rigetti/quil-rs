@@ -31,7 +31,7 @@ mod token;
 
 pub(crate) use error::{ErrorInput, InternalParseError};
 pub use error::{ParseError, ParserErrorKind};
-pub use lexer::LexError;
+pub use lexer::{DataType, LexError};
 pub use token::{Token, TokenWithLocation};
 
 pub(crate) type ParserInput<'a> = &'a [TokenWithLocation<'a>];

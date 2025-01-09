@@ -399,7 +399,7 @@ mod tests {
     use nom_locate::LocatedSpan;
     use rstest::*;
 
-    use crate::parser::common::tests::KITCHEN_SINK_QUIL;
+    use crate::parser::{common::tests::KITCHEN_SINK_QUIL, DataType};
 
     use super::{lex, Command, Operator, Token};
 
@@ -568,7 +568,13 @@ mod tests {
                 Token::Identifier("a-2".to_string()),
                 Token::Operator(Operator::Minus),
                 Token::Variable("var".to_string())
-        ])
+        ]),
+        case("BIT", vec![Token::DataType(DataType::Bit)]),
+        case("BITS", vec![Token::Identifier("BITS".to_string())]),
+        case("NaN", vec![Token::Identifier("NaN".to_string())]),
+        case("nan", vec![Token::Identifier("nan".to_string())]),
+        case("NaNa", vec![Token::Identifier("NaNa".to_string())]),
+        case("nana", vec![Token::Identifier("nana".to_string())]),
     )]
     fn it_lexes_identifier(input: &str, expected: Vec<Token>) {
         let input = LocatedSpan::new(input);
