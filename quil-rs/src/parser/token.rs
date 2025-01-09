@@ -48,7 +48,7 @@ impl nom::InputLength for TokenWithLocation<'_> {
 /// Wraps a parser that returns a [`Token`] and combines it with file location information.
 pub(crate) fn token_with_location<'i, E, P>(
     mut parser: P,
-) -> impl FnMut(LexInput<'i>) -> LexResult<'i, TokenWithLocation, E>
+) -> impl FnMut(LexInput<'i>) -> LexResult<'i, TokenWithLocation<'i>, E>
 where
     P: nom::Parser<LexInput<'i>, Token, E>,
     E: nom::error::ParseError<LexInput<'i>>,

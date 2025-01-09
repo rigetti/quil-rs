@@ -1,5 +1,5 @@
 [env]
-PYTHONPATH = { script = [ "python -c 'from distutils.sysconfig import get_python_lib; print(get_python_lib())'" ] }
+PYTHONPATH = { script = [ "python -c 'import sysconfig; print(sysconfig.get_path(\"platlib\"))'" ] }
 RUST_BACKTRACE = 0
 
 [tasks.check-venv]

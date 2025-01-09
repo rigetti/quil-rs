@@ -460,7 +460,7 @@ impl<'a> ScheduledBasicBlock<'a> {
         &self.graph
     }
 
-    pub fn instructions(&'a self) -> &[&'a Instruction] {
+    pub fn instructions(&'a self) -> &'a [&'a Instruction] {
         self.basic_block.instructions()
     }
 
@@ -538,7 +538,7 @@ impl<'a> From<&'a ScheduledBasicBlockOwned> for ScheduledBasicBlock<'a> {
     }
 }
 
-impl<'a> From<ScheduledBasicBlock<'a>> for ScheduledBasicBlockOwned {
+impl From<ScheduledBasicBlock<'_>> for ScheduledBasicBlockOwned {
     fn from(block: ScheduledBasicBlock) -> Self {
         Self {
             basic_block: block.basic_block.into(),

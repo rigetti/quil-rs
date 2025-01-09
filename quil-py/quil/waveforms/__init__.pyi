@@ -1,5 +1,14 @@
 from typing import Iterable
 
+__all__ = [
+    'BoxcarKernel',
+    'ErfSquare',
+    'Gaussian',
+    'DragGaussian',
+    'HermiteGaussian',
+    'apply_phase_and_detuning',
+]
+
 def apply_phase_and_detuning(iq_values: Iterable[complex], phase: float, detuning: float, sample_rate: float):
     """Modulate and phase shift waveform IQ data in place."""
     ...

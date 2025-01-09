@@ -367,7 +367,7 @@ pub enum BasicBlockTerminatorOwned {
     Halt,
 }
 
-impl<'p> From<BasicBlockTerminator<'p>> for BasicBlockTerminatorOwned {
+impl From<BasicBlockTerminator<'_>> for BasicBlockTerminatorOwned {
     fn from(value: BasicBlockTerminator) -> Self {
         match value {
             BasicBlockTerminator::ConditionalJump {
