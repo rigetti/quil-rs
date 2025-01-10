@@ -35,13 +35,23 @@ pub enum ScheduleErrorVariant {
     Extern,
     UncalibratedInstruction,
     UnresolvedCallInstruction,
+    ControlFlowNotBlockTerminator,
     UnschedulableInstruction,
 }
 
 #[derive(Debug, Clone, thiserror::Error)]
-#[error("Error scheduling instruction {}: {}: {variant:?}", .instruction_index.map(|i| i.to_string()).unwrap_or(String::from("")), .instruction.to_quil_or_debug())]
+#[error(
+    "Error scheduling {}: {}: {variant:?}",
+    match .instruction_node {
+        None => "an instruction".to_string(),
+        Some(ScheduledGraphNode::BlockStart) => "the start of the block".to_string(),
+        Some(ScheduledGraphNode::InstructionIndex(index)) => format!("instruction {index}"),
+        Some(ScheduledGraphNode::BlockEnd) => "the block terminator instruction".to_string(),
+    },
+    .instruction.to_quil_or_debug()
+)]
 pub struct ScheduleError {
-    pub instruction_index: Option<usize>,
+    pub instruction_node: Option<ScheduledGraphNode>,
     pub instruction: Instruction,
     pub variant: ScheduleErrorVariant,
 }
@@ -306,17 +316,28 @@ impl<'a> ScheduledBasicBlock<'a> {
 
         let extern_signature_map = ExternSignatureMap::try_from(program.extern_pragma_map.clone())
             .map_err(|(pragma, _)| ScheduleError {
-                instruction_index: None,
+                instruction_node: None,
                 instruction: Instruction::Pragma(pragma),
                 variant: ScheduleErrorVariant::Extern,
             })?;
-        for (index, &instruction) in basic_block.instructions().iter().enumerate() {
-            let node = graph.add_node(ScheduledGraphNode::InstructionIndex(index));
+
+        let terminator = basic_block.terminator().clone().into_instruction();
+        let terminator_ref = terminator.as_ref();
+
+        let instructions_iter = basic_block
+            .instructions()
+            .iter()
+            .enumerate()
+            .map(|(index, instr)| (ScheduledGraphNode::InstructionIndex(index), *instr))
+            .chain(terminator_ref.map(|instr| (ScheduledGraphNode::BlockEnd, instr)));
+
+        for (node, instruction) in instructions_iter {
+            graph.add_node(node);
 
             let accesses = custom_handler
                 .memory_accesses(instruction, &extern_signature_map)
                 .map_err(|_| ScheduleError {
-                    instruction_index: Some(index),
+                    instruction_node: Some(node),
                     instruction: instruction.clone(),
                     variant: ScheduleErrorVariant::UnresolvedCallInstruction,
                 })?;
@@ -417,13 +438,19 @@ impl<'a> ScheduledBasicBlock<'a> {
 
                     Ok(())
                 }
-                InstructionRole::ControlFlow => Err(ScheduleError {
-                    instruction_index: Some(index),
-                    instruction: instruction.clone(),
-                    variant: ScheduleErrorVariant::UnschedulableInstruction,
-                }),
+                InstructionRole::ControlFlow => {
+                    if let ScheduledGraphNode::BlockEnd = node {
+                        Ok(())
+                    } else {
+                        Err(ScheduleError {
+                            instruction_node: Some(node),
+                            instruction: instruction.clone(),
+                            variant: ScheduleErrorVariant::ControlFlowNotBlockTerminator,
+                        })
+                    }
+                }
                 InstructionRole::ProgramComposition => Err(ScheduleError {
-                    instruction_index: Some(index),
+                    instruction_node: Some(node),
                     instruction: instruction.clone(),
                     variant: ScheduleErrorVariant::UnschedulableInstruction,
                 }),
