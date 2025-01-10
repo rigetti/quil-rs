@@ -16,8 +16,10 @@ mod error;
 mod quoted_strings;
 mod wrapped_parsers;
 
+use std::str::FromStr;
+
 use nom::{
-    bytes::complete::{is_a, tag_no_case, take_till, take_while, take_while1},
+    bytes::complete::{is_a, take_till, take_while, take_while1},
     character::complete::{digit1, one_of},
     combinator::{all_consuming, map, recognize, value},
     multi::many0,
@@ -28,7 +30,7 @@ use nom::{
 use nom_locate::LocatedSpan;
 use wrapped_parsers::{alt, tag};
 
-pub use super::token::{Token, TokenWithLocation};
+pub use super::token::{KeywordToken, Token, TokenWithLocation};
 use crate::parser::lexer::wrapped_parsers::expecting;
 use crate::parser::token::token_with_location;
 pub(crate) use error::InternalLexError;
@@ -92,7 +94,7 @@ pub enum Command {
     Xor,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, strum::Display)]
+#[derive(Debug, Clone, PartialEq, Eq, strum::Display, strum::EnumString)]
 #[strum(serialize_all = "UPPERCASE")]
 pub enum DataType {
     Bit,
@@ -101,7 +103,7 @@ pub enum DataType {
     Integer,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, strum::Display)]
+#[derive(Debug, Clone, PartialEq, Eq, strum::Display, strum::EnumString)]
 #[strum(serialize_all = "UPPERCASE")]
 pub enum Modifier {
     Controlled,
@@ -163,30 +165,17 @@ fn lex_token(input: LexInput) -> InternalLexResult<TokenWithLocation> {
         "a token",
         (
             token_with_location(lex_comment),
-            token_with_location(lex_data_type),
-            token_with_location(lex_modifier),
             token_with_location(lex_punctuation),
             token_with_location(lex_target),
             token_with_location(lex_string),
             // Operator must come before number (or it may be parsed as a prefix)
             token_with_location(lex_operator),
-            token_with_location(lex_number),
             token_with_location(lex_variable),
-            token_with_location(lex_non_blocking),
-            // This should come last because it's sort of a catch all
-            token_with_location(lex_command_or_identifier),
-        ),
-    )(input)
-}
-
-fn lex_data_type(input: LexInput) -> InternalLexResult {
-    alt(
-        "a data type",
-        (
-            value(Token::DataType(DataType::Bit), tag("BIT")),
-            value(Token::DataType(DataType::Integer), tag("INTEGER")),
-            value(Token::DataType(DataType::Octet), tag("OCTET")),
-            value(Token::DataType(DataType::Real), tag("REAL")),
+            // Identifiers must come before numbers so that `NaN`, `Inf`, and `Infinity` aren't
+            // parsed as floats; Nom, as of version 7.1.1, will parse those strings,
+            // case-insensitively, as floats
+            token_with_location(lex_keyword_or_identifier),
+            token_with_location(lex_number),
         ),
     )(input)
 }
@@ -197,62 +186,16 @@ fn lex_comment(input: LexInput) -> InternalLexResult {
     Ok((input, Token::Comment(content.to_string())))
 }
 
-/// If the given identifier string matches a command keyword, return the keyword;
-/// otherwise, return the original identifier as a token.
-fn recognize_command_or_identifier(identifier: String) -> Token {
-    use Command::*;
-
-    match identifier.as_str() {
-        "DEFGATE" => Token::Command(DefGate),
-        "ADD" => Token::Command(Add),
-        "AND" => Token::Command(And),
-        "CALL" => Token::Command(Call),
-        "CONVERT" => Token::Command(Convert),
-        "DIV" => Token::Command(Div),
-        "EQ" => Token::Command(Eq),
-        "EXCHANGE" => Token::Command(Exchange),
-        "GE" => Token::Command(GE),
-        "GT" => Token::Command(GT),
-        "IOR" => Token::Command(Ior),
-        "LE" => Token::Command(LE),
-        "LOAD" => Token::Command(Load),
-        "LT" => Token::Command(LT),
-        "MOVE" => Token::Command(Move),
-        "MUL" => Token::Command(Mul),
-        "NEG" => Token::Command(Neg),
-        "NOT" => Token::Command(Not),
-        "STORE" => Token::Command(Store),
-        "SUB" => Token::Command(Sub),
-        "XOR" => Token::Command(Xor),
-        "DEFCIRCUIT" => Token::Command(DefCircuit),
-        "MEASURE" => Token::Command(Measure),
-        "HALT" => Token::Command(Halt),
-        "WAIT" => Token::Command(Wait),
-        "JUMP-WHEN" => Token::Command(JumpWhen),
-        "JUMP-UNLESS" => Token::Command(JumpUnless),
-        "JUMP" => Token::Command(Jump),
-        "RESET" => Token::Command(Reset),
-        "NOP" => Token::Command(Nop),
-        "INCLUDE" => Token::Command(Include),
-        "PRAGMA" => Token::Command(Pragma),
-        "DECLARE" => Token::Command(Declare),
-        "CAPTURE" => Token::Command(Capture),
-        "DEFCAL" => Token::Command(DefCal),
-        "DEFFRAME" => Token::Command(DefFrame),
-        "DEFWAVEFORM" => Token::Command(DefWaveform),
-        "DELAY" => Token::Command(Delay),
-        "FENCE" => Token::Command(Fence),
-        "PULSE" => Token::Command(Pulse),
-        "RAW-CAPTURE" => Token::Command(RawCapture),
-        "SET-FREQUENCY" => Token::Command(SetFrequency),
-        "SET-PHASE" => Token::Command(SetPhase),
-        "SET-SCALE" => Token::Command(SetScale),
-        "SWAP-PHASES" => Token::Command(SwapPhases),
-        "SHIFT-FREQUENCY" => Token::Command(ShiftFrequency),
-        "SHIFT-PHASE" => Token::Command(ShiftPhase),
-        "LABEL" => Token::Command(Label),
-        _ => Token::Identifier(identifier),
+fn keyword_or_identifier(identifier: String) -> Token {
+    fn parse<T: FromStr>(token: impl Fn(T) -> Token, identifier: &str) -> Result<Token, T::Err> {
+        T::from_str(identifier).map(token)
     }
+
+    parse(KeywordToken::into, &identifier)
+        .or_else(|_| parse(Token::Command, &identifier))
+        .or_else(|_| parse(Token::DataType, &identifier))
+        .or_else(|_| parse(Token::Modifier, &identifier))
+        .unwrap_or(Token::Identifier(identifier))
 }
 
 fn is_valid_identifier_leading_character(chr: char) -> bool {
@@ -286,9 +229,9 @@ fn lex_identifier_raw(input: LexInput) -> InternalLexResult<String> {
     )(input)
 }
 
-fn lex_command_or_identifier(input: LexInput) -> InternalLexResult {
+fn lex_keyword_or_identifier(input: LexInput) -> InternalLexResult {
     let (input, identifier) = lex_identifier_raw(input)?;
-    let token = recognize_command_or_identifier(identifier);
+    let token = keyword_or_identifier(identifier);
     Ok((input, token))
 }
 
@@ -296,10 +239,6 @@ fn lex_target(input: LexInput) -> InternalLexResult {
     let (input, _) = tag("@")(input)?;
     let (input, label) = lex_identifier_raw(input)?;
     Ok((input, Token::Target(label)))
-}
-
-fn lex_non_blocking(input: LexInput) -> InternalLexResult {
-    value(Token::NonBlocking, tag("NONBLOCKING"))(input)
 }
 
 fn lex_number(input: LexInput) -> InternalLexResult {
@@ -316,24 +255,6 @@ fn lex_number(input: LexInput) -> InternalLexResult {
             Err(_) => Token::Float(double(float_string)?.1),
         },
     ))
-}
-
-fn lex_modifier(input: LexInput) -> InternalLexResult {
-    alt(
-        "a modifier token",
-        (
-            value(Token::As, tag("AS")),
-            value(Token::Matrix, tag("MATRIX")),
-            value(Token::Modifier(Modifier::Controlled), tag("CONTROLLED")),
-            value(Token::Modifier(Modifier::Dagger), tag("DAGGER")),
-            value(Token::Modifier(Modifier::Forked), tag("FORKED")),
-            value(Token::Mutable, tag_no_case("MUT")),
-            value(Token::Offset, tag("OFFSET")),
-            value(Token::PauliSum, tag("PAULI-SUM")),
-            value(Token::Permutation, tag("PERMUTATION")),
-            value(Token::Sharing, tag("SHARING")),
-        ),
-    )(input)
 }
 
 fn lex_operator(input: LexInput) -> InternalLexResult {
@@ -399,7 +320,7 @@ mod tests {
     use nom_locate::LocatedSpan;
     use rstest::*;
 
-    use crate::parser::common::tests::KITCHEN_SINK_QUIL;
+    use crate::parser::{common::tests::KITCHEN_SINK_QUIL, DataType};
 
     use super::{lex, Command, Operator, Token};
 
@@ -565,10 +486,29 @@ mod tests {
         case("a", vec![Token::Identifier("a".to_string())]),
         case("_a-2_b-2_", vec![Token::Identifier("_a-2_b-2_".to_string())]),
         case("a-2-%var", vec![
-                Token::Identifier("a-2".to_string()),
-                Token::Operator(Operator::Minus),
-                Token::Variable("var".to_string())
-        ])
+            Token::Identifier("a-2".to_string()),
+            Token::Operator(Operator::Minus),
+            Token::Variable("var".to_string())
+        ]),
+        case("BIT", vec![Token::DataType(DataType::Bit)]),
+        case("BITS", vec![Token::Identifier("BITS".to_string())]),
+        case("NaN", vec![Token::Identifier("NaN".to_string())]),
+        case("nan", vec![Token::Identifier("nan".to_string())]),
+        case("NaNa", vec![Token::Identifier("NaNa".to_string())]),
+        case("nana", vec![Token::Identifier("nana".to_string())]),
+        case("INF", vec![Token::Identifier("INF".to_string())]),
+        case("Infinity", vec![Token::Identifier("Infinity".to_string())]),
+        case("Inferior", vec![Token::Identifier("Inferior".to_string())]),
+        case("-NaN", vec![Token::Operator(Operator::Minus), Token::Identifier("NaN".to_string())]),
+        case("-inf", vec![Token::Operator(Operator::Minus), Token::Identifier("inf".to_string())]),
+        case("-Infinity", vec![
+            Token::Operator(Operator::Minus),
+            Token::Identifier("Infinity".to_string())
+        ]),
+        case("-inferior", vec![
+            Token::Operator(Operator::Minus),
+            Token::Identifier("inferior".to_string())
+        ]),
     )]
     fn it_lexes_identifier(input: &str, expected: Vec<Token>) {
         let input = LocatedSpan::new(input);

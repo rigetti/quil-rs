@@ -4,10 +4,15 @@ use std::{fmt::Display, str::FromStr};
 
 use strum;
 
+pub use crate::parser::{Command, DataType, KeywordToken, Modifier};
+
 /// An enum that can represent any reserved token in quil.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ReservedToken {
-    Keyword(ReservedKeyword),
+    Command(Command),
+    DataType(DataType),
+    Modifier(Modifier),
+    OtherKeyword(KeywordToken),
     Gate(ReservedGate),
     Constant(ReservedConstant),
 }
@@ -20,77 +25,34 @@ impl FromStr for ReservedToken {
     type Err = NotReservedToken;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if let Ok(keyword) = ReservedKeyword::from_str(s) {
-            Ok(Self::Keyword(keyword))
-        } else if let Ok(gate) = ReservedGate::from_str(s) {
-            Ok(Self::Gate(gate))
-        } else if let Ok(constant) = ReservedConstant::from_str(s) {
-            Ok(Self::Constant(constant))
-        } else {
-            Err(NotReservedToken(s.to_string()))
+        fn parse<T: FromStr>(
+            reserved: impl Fn(T) -> ReservedToken,
+            s: &str,
+        ) -> Result<ReservedToken, T::Err> {
+            T::from_str(s).map(reserved)
         }
+
+        parse(Self::Command, s)
+            .or_else(|_| parse(Self::DataType, s))
+            .or_else(|_| parse(Self::Modifier, s))
+            .or_else(|_| parse(Self::OtherKeyword, s))
+            .or_else(|_| parse(Self::Gate, s))
+            .or_else(|_| parse(Self::Constant, s))
+            .map_err(|_| NotReservedToken(s.to_string()))
     }
 }
 
 impl Display for ReservedToken {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Keyword(keyword) => write!(f, "{keyword}"),
+            Self::Command(command) => write!(f, "{command}"),
+            Self::DataType(data_type) => write!(f, "{data_type}"),
+            Self::Modifier(modifier) => write!(f, "{modifier}"),
+            Self::OtherKeyword(keyword_token) => write!(f, "{keyword_token}"),
             Self::Gate(gate) => write!(f, "{gate}"),
             Self::Constant(constant) => write!(f, "{constant}"),
         }
     }
-}
-
-/// Any reserved keyword that isn't specifically a gate identifier or constant
-#[derive(Clone, Copy, Debug, PartialEq, Eq, strum::Display, strum::EnumString)]
-#[strum(serialize_all = "UPPERCASE")]
-pub enum ReservedKeyword {
-    Add,
-    And,
-    As,
-    Controlled,
-    Convert,
-    Dagger,
-    Declare,
-    DefCircuit,
-    DefGate,
-    Div,
-    Eq,
-    Exchange,
-    Forked,
-    Ge,
-    Gt,
-    Halt,
-    Include,
-    Ior,
-    Jump,
-    #[strum(serialize = "JUMP-UNLESS")]
-    JumpUnless,
-    #[strum(serialize = "JUMP-WHEN")]
-    JumpWhen,
-    Label,
-    Le,
-    Load,
-    Lt,
-    Matrix,
-    Measure,
-    Move,
-    Mul,
-    Neg,
-    Nop,
-    Not,
-    Offset,
-    #[strum(serialize = "PAULI-SUM")]
-    PauliSum,
-    Permutation,
-    Pragma,
-    Reset,
-    Sharing,
-    Store,
-    Sub,
-    Wait,
-    Xor,
 }
 
 /// Every reserved Gate identifier
