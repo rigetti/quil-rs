@@ -1,3 +1,19 @@
+## 0.7.0-rc.0 (2025-01-10)
+
+### Breaking Changes
+
+#### make `mut` lowercase-only and add it to `ReservedKeyword`
+
+#### only parse keywords if they form the whole identifier
+
+#### don't parse `NaN`, `inf`, and `infinity` as floats
+
+#### tokenize keywords and identifiers correctly (#428)
+
+### Features
+
+#### add missing `__all__` definitions to `.pyi` files
+
 ## 0.6.3-rc.0 (2025-01-09)
 
 ### Features
