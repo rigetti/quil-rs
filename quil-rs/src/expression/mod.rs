@@ -51,6 +51,10 @@ pub enum EvaluationError {
     NotANumber,
 }
 
+/// The type of Quil expressions.
+///
+/// Note that when comparing Quil expressions, any embedded NaNs are treated as *equal* to other
+/// NaNs, not unequal, in contravention of the IEEE 754 spec.
 #[derive(Clone, Debug)]
 pub enum Expression {
     Address(MemoryReference),
@@ -62,6 +66,10 @@ pub enum Expression {
     Variable(String),
 }
 
+/// The type of function call Quil expressions, e.g. `sin(e)`.
+///
+/// Note that when comparing Quil expressions, any embedded NaNs are treated as *equal* to other
+/// NaNs, not unequal, in contravention of the IEEE 754 spec.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct FunctionCallExpression {
     pub function: ExpressionFunction,
@@ -77,6 +85,10 @@ impl FunctionCallExpression {
     }
 }
 
+/// The type of infix Quil expressions, e.g. `e1 + e2`.
+///
+/// Note that when comparing Quil expressions, any embedded NaNs are treated as *equal* to other
+/// NaNs, not unequal, in contravention of the IEEE 754 spec.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct InfixExpression {
     pub left: Box<Expression>,
@@ -94,6 +106,10 @@ impl InfixExpression {
     }
 }
 
+/// The type of prefix Quil expressions, e.g. `-e`.
+///
+/// Note that when comparing Quil expressions, any embedded NaNs are treated as *equal* to other
+/// NaNs, not unequal, in contravention of the IEEE 754 spec.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct PrefixExpression {
     pub operator: PrefixOperator,
