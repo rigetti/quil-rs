@@ -1,3 +1,23 @@
+## 0.30.0-rc.1 (2025-01-14)
+
+### Breaking Changes
+
+#### make `mut` lowercase-only and add it to `ReservedKeyword`
+
+#### only parse keywords if they form the whole identifier
+
+#### don't parse `NaN`, `inf`, and `infinity` as floats
+
+#### make NaN == NaN inside Expression
+
+#### tokenize keywords and identifiers correctly (#428)
+
+#### make NaN == NaN inside Expression (#318)
+
+### Features
+
+#### add missing `__all__` definitions to `.pyi` files
+
 ## 0.30.0-rc.0 (2025-01-10)
 
 ### Breaking Changes
