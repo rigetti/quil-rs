@@ -17,7 +17,8 @@ timing"];
     "@measure_0" -> "@measure_end" [label="ordering
 timing"];
     "@measure_1" [shape=rectangle, label="[1] NONBLOCKING CAPTURE 0 \"ro_rx\" test(duration: 1000000) ro[0]"];
-    "@measure_1" -> "@measure_end" [label="ordering
+    "@measure_1" -> "@measure_end" [label="await capture
+ordering
 timing"];
     "@measure_end" [shape=circle, label="end"];
   }

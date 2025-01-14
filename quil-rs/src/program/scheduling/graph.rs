@@ -35,13 +35,23 @@ pub enum ScheduleErrorVariant {
     Extern,
     UncalibratedInstruction,
     UnresolvedCallInstruction,
+    ControlFlowNotBlockTerminator,
     UnschedulableInstruction,
 }
 
 #[derive(Debug, Clone, thiserror::Error)]
-#[error("Error scheduling instruction {}: {}: {variant:?}", .instruction_index.map(|i| i.to_string()).unwrap_or(String::from("")), .instruction.to_quil_or_debug())]
+#[error(
+    "Error scheduling {}: {}: {variant:?}",
+    match .instruction_node {
+        None => "an instruction".to_string(),
+        Some(ScheduledGraphNode::BlockStart) => "the start of the block".to_string(),
+        Some(ScheduledGraphNode::InstructionIndex(index)) => format!("instruction {index}"),
+        Some(ScheduledGraphNode::BlockEnd) => "the block terminator instruction".to_string(),
+    },
+    .instruction.to_quil_or_debug()
+)]
 pub struct ScheduleError {
-    pub instruction_index: Option<usize>,
+    pub instruction_node: Option<ScheduledGraphNode>,
     pub instruction: Instruction,
     pub variant: ScheduleErrorVariant,
 }
@@ -306,17 +316,28 @@ impl<'a> ScheduledBasicBlock<'a> {
 
         let extern_signature_map = ExternSignatureMap::try_from(program.extern_pragma_map.clone())
             .map_err(|(pragma, _)| ScheduleError {
-                instruction_index: None,
+                instruction_node: None,
                 instruction: Instruction::Pragma(pragma),
                 variant: ScheduleErrorVariant::Extern,
             })?;
-        for (index, &instruction) in basic_block.instructions().iter().enumerate() {
-            let node = graph.add_node(ScheduledGraphNode::InstructionIndex(index));
+
+        let terminator = basic_block.terminator().clone().into_instruction();
+        let terminator_ref = terminator.as_ref();
+
+        let instructions_iter = basic_block
+            .instructions()
+            .iter()
+            .enumerate()
+            .map(|(index, instr)| (ScheduledGraphNode::InstructionIndex(index), *instr))
+            .chain(terminator_ref.map(|instr| (ScheduledGraphNode::BlockEnd, instr)));
+
+        for (node, instruction) in instructions_iter {
+            graph.add_node(node);
 
             let accesses = custom_handler
                 .memory_accesses(instruction, &extern_signature_map)
                 .map_err(|_| ScheduleError {
-                    instruction_index: Some(index),
+                    instruction_node: Some(node),
                     instruction: instruction.clone(),
                     variant: ScheduleErrorVariant::UnresolvedCallInstruction,
                 })?;
@@ -417,13 +438,19 @@ impl<'a> ScheduledBasicBlock<'a> {
 
                     Ok(())
                 }
-                InstructionRole::ControlFlow => Err(ScheduleError {
-                    instruction_index: Some(index),
-                    instruction: instruction.clone(),
-                    variant: ScheduleErrorVariant::UnschedulableInstruction,
-                }),
+                InstructionRole::ControlFlow => {
+                    if let ScheduledGraphNode::BlockEnd = node {
+                        Ok(())
+                    } else {
+                        Err(ScheduleError {
+                            instruction_node: Some(node),
+                            instruction: instruction.clone(),
+                            variant: ScheduleErrorVariant::ControlFlowNotBlockTerminator,
+                        })
+                    }
+                }
                 InstructionRole::ProgramComposition => Err(ScheduleError {
-                    instruction_index: Some(index),
+                    instruction_node: Some(node),
                     instruction: instruction.clone(),
                     variant: ScheduleErrorVariant::UnschedulableInstruction,
                 }),
@@ -547,13 +574,12 @@ impl From<ScheduledBasicBlock<'_>> for ScheduledBasicBlockOwned {
     }
 }
 
-#[cfg(test)]
-mod tests {
+#[cfg(all(test, feature = "graphviz-dot"))]
+mod graphviz_dot_tests {
     use super::*;
-    #[cfg(feature = "graphviz-dot")]
+
     use crate::program::scheduling::graphviz_dot::tests::build_dot_format_snapshot_test_case;
 
-    #[cfg(feature = "graphviz-dot")]
     mod custom_handler {
         use super::*;
 
@@ -700,7 +726,6 @@ PRAGMA RAW-INSTRUCTION foo
 
     // Because any instruction that reads a particular region must be preceded by any earlier instructions that write to/ capture that memory region,
     // we expect an edge from the first load to the second (0 -> 1).
-    #[cfg(feature = "graphviz-dot")]
     build_dot_format_snapshot_test_case! {
         classical_write_read_load_load,
         r#"
@@ -715,7 +740,6 @@ LOAD params1[0] params2 integers[0] # reads params2
 
     // Because any instruction that reads a particular region must be preceded by any earlier instructions that write to/ capture that memory region,
     // we expect an edge from the mul to the load (0 -> 1).
-    #[cfg(feature = "graphviz-dot")]
     build_dot_format_snapshot_test_case! {
         classical_write_read_mul_load,
         r#"
@@ -730,7 +754,6 @@ LOAD params1[0] params2 integers[0] # just reads params2
 
     // Because any instruction that reads a particular region must be preceded by any earlier instructions that write to/ capture that memory region,
     // we expect an edge from the mul to the add (0 -> 1).
-    #[cfg(feature = "graphviz-dot")]
     build_dot_format_snapshot_test_case! {
         classical_write_read_add_mul,
         r#"
@@ -745,7 +768,6 @@ MUL params1[0] 2 # this reads and writes params1
 
     // Because any instruction that reads a particular region must precede any later instructions that write to/ capture that memory region,
     // we expect an edge from the first load to the second (0, 1).
-    #[cfg(feature = "graphviz-dot")]
     build_dot_format_snapshot_test_case! {
         classical_read_write_load_load,
         r#"
@@ -760,7 +782,6 @@ LOAD params2[0] params3 integers[0] # writes params2
 
     // Because any instruction that reads a particular region must precede any later instructions that write to/ capture that memory region,
     // we expect an edge from the load to the mul (0, 1).
-    #[cfg(feature = "graphviz-dot")]
     build_dot_format_snapshot_test_case! {
         classical_read_write_load_mul,
         r#"
@@ -776,7 +797,6 @@ MUL params2[0] 2                    # reads and writes params2
     // Because memory reading and writing dependencies also apply to RfControl instructions, we
     // expect edges from the first load to the first shift-phase (0 -> 1), the first shift-phase
     // to the second load (1 -> 2), and the second load to the second shift-phase (2 -> 3).
-    #[cfg(feature = "graphviz-dot")]
     build_dot_format_snapshot_test_case! {
         quantum_write_parameterized_operations,
         r#"
@@ -797,13 +817,11 @@ SHIFT-PHASE 1 "rf" params2[0]       # reads params2
     }
 
     // Because a pragma by default will have no memory accesses, it should only have edges from the block start and to the block end.
-    #[cfg(feature = "graphviz-dot")]
     build_dot_format_snapshot_test_case! {
         classical_no_memory_pragma,
         r#"PRAGMA example"#
     }
 
-    #[cfg(feature = "graphviz-dot")]
     build_dot_format_snapshot_test_case! {
         write_capture_read,
         r#"
@@ -815,7 +833,6 @@ LOAD bits3[0] bits integers[0] # read
 "#
     }
 
-    #[cfg(feature = "graphviz-dot")]
     build_dot_format_snapshot_test_case! {
         write_write_read,
         r#"
@@ -826,6 +843,32 @@ DECLARE integers INTEGER[1]
 LOAD bits[0] bits2 integers[0] # write
 LOAD bits[0] bits3 integers[0] # write
 LOAD bits4[0] bits integers[0] # read
+"#
+    }
+
+    build_dot_format_snapshot_test_case! {
+        memory_dependency_not_in_block_terminator,
+        r#"
+DECLARE ro BIT
+DECLARE depends_on_ro BIT
+
+NONBLOCKING CAPTURE 0 "ro_rx" flat(duration: 2.0000000000000003e-06, iq: 1.0, scale: 1.0, phase: 0.8745492960861506, detuning: 0.0) ro
+MOVE depends_on_ro ro
+JUMP @eq
+LABEL @eq
+PULSE 0 "ro_tx" gaussian(duration: 1, fwhm: 2, t0: 3)
+"#
+    }
+
+    build_dot_format_snapshot_test_case! {
+        memory_dependency_in_block_terminator,
+        r#"
+DECLARE ro BIT
+
+NONBLOCKING CAPTURE 0 "ro_rx" flat(duration: 2.0000000000000003e-06, iq: 1.0, scale: 1.0, phase: 0.8745492960861506, detuning: 0.0) ro
+JUMP-WHEN @eq ro
+LABEL @eq
+PULSE 0 "ro_tx" gaussian(duration: 1, fwhm: 2, t0: 3)
 "#
     }
 }
