@@ -1,0 +1,35 @@
+---
+source: quil-rs/src/program/scheduling/graph.rs
+expression: dot_format
+---
+digraph {
+  entry -> "block_0_start";
+  entry [label="Entry Point"];
+  subgraph cluster_0 {
+    label="block_0";
+    node [style="filled"];
+    "block_0_start" [shape=circle, label="start"];
+    "block_0_start" -> "block_0_0" [label="ordering
+timing"];
+    "block_0_0" [shape=rectangle, label="[0] NONBLOCKING CAPTURE 0 \"ro_rx\" flat(detuning: 0, duration: 2.0000000000000003e-6, iq: 1, phase: 0.8745492960861506, scale: 1) ro[0]"];
+    "block_0_0" -> "block_0_end" [label="await capture
+ordering
+timing"];
+    "block_0_end" [shape=circle, label="end"];
+  }
+  "block_0_end" -> "@eq_start" [label="if ro[0] != 0"];
+  "block_0_end" -> "@eq_start" [label="if ro[0] == 0"];
+  subgraph cluster_1 {
+    label="@eq";
+    node [style="filled"];
+    "@eq_start" [shape=circle, label="start"];
+    "@eq_start" -> "@eq_0" [label="ordering
+timing"];
+    "@eq_start" -> "@eq_end" [label="ordering
+timing"];
+    "@eq_0" [shape=rectangle, label="[0] PULSE 0 \"ro_tx\" gaussian(duration: 1, fwhm: 2, t0: 3)"];
+    "@eq_0" -> "@eq_end" [label="ordering
+timing"];
+    "@eq_end" [shape=circle, label="end"];
+  }
+}
