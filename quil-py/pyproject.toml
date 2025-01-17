@@ -1,6 +1,6 @@
 [project]
 name = "quil"
-version = "0.14.0-rc.2"
+version = "0.14.0"
 requires-python = ">=3.8"
 description = "A Python package for building and parsing Quil programs."
 documentation = "https://rigetti.github.io/quil-rs/quil.html"
