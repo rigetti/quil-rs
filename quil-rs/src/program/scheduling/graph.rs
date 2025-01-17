@@ -42,13 +42,8 @@ pub enum ScheduleErrorVariant {
 #[derive(Debug, Clone, thiserror::Error)]
 #[error(
     "Error scheduling {}: {}: {variant:?}",
-    match .instruction_node {
-        None => "an instruction".to_string(),
-        Some(ScheduledGraphNode::BlockStart) => "the start of the block".to_string(),
-        Some(ScheduledGraphNode::InstructionIndex(index)) => format!("instruction {index}"),
-        Some(ScheduledGraphNode::BlockEnd) => "the block terminator instruction".to_string(),
-    },
-    .instruction.to_quil_or_debug()
+    .instruction_node.map_or_else(||  "an instruction".to_string(), |node| node.to_string()),
+    .instruction.to_quil_or_debug(),
 )]
 pub struct ScheduleError {
     pub instruction_node: Option<ScheduledGraphNode>,
@@ -58,14 +53,22 @@ pub struct ScheduleError {
 
 pub type ScheduleResult<T> = Result<T, ScheduleError>;
 
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Hash, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Hash, Ord)]
 pub enum ScheduledGraphNode {
     BlockStart,
     InstructionIndex(usize),
     BlockEnd,
 }
 
-impl Eq for ScheduledGraphNode {}
+impl std::fmt::Display for ScheduledGraphNode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::BlockStart => write!(f, "the start of the block"),
+            Self::InstructionIndex(ix) => write!(f, "instruction {ix}"),
+            Self::BlockEnd => write!(f, "the end-of-block terminator"),
+        }
+    }
+}
 
 /// A MemoryAccessQueue expresses the current state of memory accessors at the time of
 /// an instruction's execution.
@@ -519,6 +522,10 @@ impl<'a> ScheduledBasicBlock<'a> {
     }
 }
 
+/// A program broken down into its [`ScheduledBasicBlock`]s.  All instruction-level scheduling in a
+/// program is intra-block; the only dependencies between basic blocks are those resulting from
+/// execution flow.  For instance, we do *not* track memory dependencies from a write in one block to
+/// a read in a subsequent block.
 #[derive(Clone, Debug)]
 pub struct ScheduledProgram<'a> {
     basic_blocks: Vec<ScheduledBasicBlock<'a>>,
@@ -526,7 +533,6 @@ pub struct ScheduledProgram<'a> {
 
 impl<'a> ScheduledProgram<'a> {
     /// Structure a sequential program
-    #[allow(unused_assignments)]
     pub fn from_program(
         program: &'a Program,
         custom_handler: &mut InstructionHandler,
@@ -868,6 +874,20 @@ DECLARE ro BIT
 NONBLOCKING CAPTURE 0 "ro_rx" flat(duration: 2.0000000000000003e-06, iq: 1.0, scale: 1.0, phase: 0.8745492960861506, detuning: 0.0) ro
 JUMP-WHEN @eq ro
 LABEL @eq
+PULSE 0 "ro_tx" gaussian(duration: 1, fwhm: 2, t0: 3)
+"#
+    }
+
+    build_dot_format_snapshot_test_case! {
+        no_memory_dependency_across_blocks,
+        r#"
+DECLARE ro BIT
+DECLARE depends_on_ro BIT
+
+NONBLOCKING CAPTURE 0 "ro_rx" flat(duration: 2.0000000000000003e-06, iq: 1.0, scale: 1.0, phase: 0.8745492960861506, detuning: 0.0) ro
+JUMP @eq
+LABEL @eq
+MOVE depends_on_ro ro
 PULSE 0 "ro_tx" gaussian(duration: 1, fwhm: 2, t0: 3)
 "#
     }
