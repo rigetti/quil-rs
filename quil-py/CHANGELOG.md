@@ -1,3 +1,31 @@
+## 0.14.0-rc.2 (2025-01-17)
+
+### Breaking Changes
+
+#### make `mut` lowercase-only and add it to `ReservedKeyword`
+
+#### only parse keywords if they form the whole identifier
+
+#### don't parse `NaN`, `inf`, and `infinity` as floats
+
+#### make NaN == NaN inside Expression
+
+#### tokenize keywords and identifiers correctly (#428)
+
+#### track memory depedencies involving the block terminator
+
+#### make NaN == NaN inside Expression (#318)
+
+#### track memory dependencies involving the block terminator (#433)
+
+### Features
+
+#### add missing `__all__` definitions to `.pyi` files
+
+### Fixes
+
+#### Type stubs for calibration types reflect breaking changes in 0.13.0 (#421)
+
 ## 0.14.0-rc.1 (2025-01-14)
 
 ### Breaking Changes
