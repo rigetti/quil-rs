@@ -963,17 +963,21 @@ class Calibration:
         identifier: CalibrationIdentifier,
         instructions: Sequence[Instruction],
     ) -> Self: ...
+    @property
     def name(self) -> str:
-        """Get the name that identifies this calibration."""
+        """The name that identifies this calibration."""
         ...
+    @property
     def parameters(self) -> List[Expression]:
-        """Get the list of parameters that this calibration will expand into."""
+        """The list of parameters that this calibration will expand into."""
         ...
+    @property
     def qubits(self) -> List[Qubit]:
-        """Get the list of qubits that this calibration will expand into."""
+        """The list of qubits that this calibration will expand into."""
         ...
+    @property
     def modifiers(self) -> List[GateModifier]:
-        """Get the list of parameters that this calibration will expand into."""
+        """The list of parameters that this calibration will expand into."""
     @property
     def identifier(self) -> CalibrationIdentifier: ...
     @identifier.setter
@@ -1044,7 +1048,9 @@ class MeasureCalibrationDefinition:
         identifier: MeasureCalibrationIdentifier,
         instructions: Sequence[Instruction],
     ) -> Self: ...
+    @property
     def qubit(self) -> Optional[Qubit]: ...
+    @property
     def parameter(self) -> str: ...
     @property
     def identifier(self) -> MeasureCalibrationIdentifier: ...
