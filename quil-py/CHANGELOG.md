@@ -1,3 +1,9 @@
+## 0.15.1-rc.0 (2025-01-23)
+
+### Fixes
+
+#### github release action configuration for upload and download artifact v4 (#437)
+
 ## 0.15.0 (2025-01-23)
 
 ### Breaking Changes
