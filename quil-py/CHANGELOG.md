@@ -1,3 +1,9 @@
+## 0.15.0-rc.0 (2025-01-23)
+
+### Breaking Changes
+
+#### make Calibration and MeasureCalibrationDefinition getter methods into properties (#435)
+
 ## 0.14.0 (2025-01-17)
 
 ### Breaking Changes
