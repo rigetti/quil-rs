@@ -1,3 +1,9 @@
+## 0.15.2-rc.0 (2025-01-23)
+
+### Fixes
+
+#### github actions should use macos-latest build runner (#438)
+
 ## 0.15.1 (2025-01-23)
 
 ### Fixes
