@@ -24,7 +24,7 @@ jobs:
       - run: echo "Publishing wheels"
 
   macos:
-    runs-on: macos-12
+    runs-on: macos-latest
     needs: [ is-python-release, should-publish-wheels ]
     strategy:
       matrix:
@@ -173,8 +173,10 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
+          path: wheels
           pattern: wheels-*
           merge-multiple: true
+      - run: ls -R wheels
       - name: Publish to PyPi
         uses: messense/maturin-action@v1
         with:
