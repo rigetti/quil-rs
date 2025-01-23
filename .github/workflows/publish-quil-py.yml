@@ -24,7 +24,7 @@ jobs:
       - run: echo "Publishing wheels"
 
   macos:
-    runs-on: macos-12
+    runs-on: macos-latest
     needs: [ is-python-release, should-publish-wheels ]
     strategy:
       matrix:
