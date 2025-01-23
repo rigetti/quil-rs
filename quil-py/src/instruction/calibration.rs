@@ -51,10 +51,12 @@ impl PyCalibration {
         ))
     }
 
+    #[getter]
     pub fn name(&self) -> &str {
         &self.as_inner().identifier.name
     }
 
+    #[getter]
     pub fn parameters(&self) -> Vec<PyExpression> {
         self.as_inner()
             .identifier
@@ -65,6 +67,7 @@ impl PyCalibration {
             .collect()
     }
 
+    #[getter]
     pub fn qubits(&self) -> Vec<PyQubit> {
         self.as_inner()
             .identifier
@@ -75,6 +78,7 @@ impl PyCalibration {
             .collect()
     }
 
+    #[getter]
     pub fn modifiers(&self) -> Vec<PyGateModifier> {
         self.as_inner()
             .identifier
@@ -153,10 +157,12 @@ impl PyMeasureCalibrationDefinition {
         )))
     }
 
+    #[getter]
     pub fn qubit(&self) -> Option<PyQubit> {
         self.as_inner().identifier.qubit.clone().map(Into::into)
     }
 
+    #[getter]
     pub fn parameter(&self) -> String {
         self.as_inner().identifier.parameter.clone()
     }
