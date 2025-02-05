@@ -208,6 +208,16 @@ impl PyProgram {
             .collect();
     }
 
+    #[getter]
+    pub fn pragma_extern_instructions(&self) -> Vec<PyInstruction> {
+        self.as_inner()
+            .extern_pragma_map
+            .to_instructions()
+            .into_iter()
+            .map(PyInstruction::from)
+            .collect()
+    }
+
     pub fn dagger(&self) -> PyResult<Self> {
         self.as_inner()
             .dagger()

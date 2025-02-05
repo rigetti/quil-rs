@@ -274,7 +274,8 @@ impl ExternPragmaMap {
         self.0.into_values().map(Instruction::Pragma).collect()
     }
 
-    pub(crate) fn to_instructions(&self) -> Vec<Instruction> {
+    /// Expose the [`ExternPragmaMap`] as a list of [`Instruction`]s.
+    pub fn to_instructions(&self) -> Vec<Instruction> {
         self.0.values().cloned().map(Instruction::Pragma).collect()
     }
 
@@ -293,6 +294,11 @@ impl ExternPragmaMap {
             },
             pragma,
         )
+    }
+
+    /// Extend the [`ExternPragmaMap`] with another.
+    pub fn extend(&mut self, other: Self) {
+        self.0.extend(other.0);
     }
 
     pub(crate) fn retain<F>(&mut self, f: F)
