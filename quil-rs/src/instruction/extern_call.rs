@@ -274,7 +274,8 @@ impl ExternPragmaMap {
         self.0.into_values().map(Instruction::Pragma).collect()
     }
 
-    pub(crate) fn to_instructions(&self) -> Vec<Instruction> {
+    /// Expose the [`ExternPragmaMap`] as a list of [`Instruction`]s.
+    pub fn to_instructions(&self) -> Vec<Instruction> {
         self.0.values().cloned().map(Instruction::Pragma).collect()
     }
 
@@ -295,11 +296,29 @@ impl ExternPragmaMap {
         )
     }
 
+    /// Extend this [`ExternPragmaMap`] with another.
+    ///
+    /// The behavior is similar to [`IndexMap::extend`] here. Of note,
+    /// for keys that already existed in [`self`], their value is updated
+    /// but it keeps the existing order.
+    pub fn extend(&mut self, other: Self) {
+        self.0.extend(other.0);
+    }
+
     pub(crate) fn retain<F>(&mut self, f: F)
     where
         F: FnMut(&Option<String>, &mut Pragma) -> bool,
     {
         self.0.retain(f)
+    }
+}
+
+impl std::iter::IntoIterator for ExternPragmaMap {
+    type Item = (Option<String>, Pragma);
+    type IntoIter = indexmap::map::IntoIter<Option<String>, Pragma>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
     }
 }
 

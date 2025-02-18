@@ -29,8 +29,8 @@ use rigetti_pyo3::{
 use crate::{
     impl_eq, impl_to_quil,
     instruction::{
-        PyDeclaration, PyGateDefinition, PyInstruction, PyMemoryReference, PyQubit, PyTarget,
-        PyWaveform,
+        PyDeclaration, PyGateDefinition, PyInstruction, PyMemoryReference, PyPragma, PyQubit,
+        PyTarget, PyWaveform,
     },
 };
 
@@ -206,6 +206,16 @@ impl PyProgram {
             .into_iter()
             .map(|(name, gate_def)| (name, gate_def.into_inner()))
             .collect();
+    }
+
+    #[getter]
+    pub fn pragma_extern_map(&self) -> IndexMap<Option<String>, PyPragma> {
+        self.as_inner()
+            .extern_pragma_map
+            .clone()
+            .into_iter()
+            .map(|(k, v)| (k, v.into()))
+            .collect()
     }
 
     pub fn dagger(&self) -> PyResult<Self> {

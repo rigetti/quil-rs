@@ -83,7 +83,7 @@ type Result<T> = std::result::Result<T, ProgramError>;
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Program {
     pub calibrations: Calibrations,
-    extern_pragma_map: ExternPragmaMap,
+    pub extern_pragma_map: ExternPragmaMap,
     pub frames: FrameSet,
     pub memory_regions: IndexMap<String, MemoryRegion>,
     pub waveforms: IndexMap<String, Waveform>,
@@ -814,16 +814,9 @@ impl From<Vec<Instruction>> for Program {
 impl ops::Add<Program> for Program {
     type Output = Program;
 
-    fn add(self, rhs: Program) -> Program {
-        let mut new_program = self;
-        new_program.calibrations.extend(rhs.calibrations);
-        new_program.memory_regions.extend(rhs.memory_regions);
-        new_program.frames.merge(rhs.frames);
-        new_program.waveforms.extend(rhs.waveforms);
-        new_program.gate_definitions.extend(rhs.gate_definitions);
-        new_program.instructions.extend(rhs.instructions);
-        new_program.used_qubits.extend(rhs.used_qubits);
-        new_program
+    fn add(mut self, rhs: Program) -> Program {
+        self += rhs;
+        self
     }
 }
 
@@ -834,6 +827,7 @@ impl ops::AddAssign<Program> for Program {
         self.frames.merge(rhs.frames);
         self.waveforms.extend(rhs.waveforms);
         self.gate_definitions.extend(rhs.gate_definitions);
+        self.extern_pragma_map.extend(rhs.extern_pragma_map);
         self.instructions.extend(rhs.instructions);
         self.used_qubits.extend(rhs.used_qubits);
     }
