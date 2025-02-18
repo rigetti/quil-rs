@@ -1,3 +1,9 @@
+## 0.7.1 (2025-02-18)
+
+### Fixes
+
+#### prefer data transparency across ffi
+
 ## 0.7.1-rc.0 (2025-02-18)
 
 ### Fixes

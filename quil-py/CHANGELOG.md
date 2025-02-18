@@ -1,3 +1,15 @@
+## 0.15.3 (2025-02-18)
+
+### Features
+
+#### expose pragma extern map iter
+
+#### expose pragma extern map iter (closes #440)
+
+### Fixes
+
+#### prefer data transparency across ffi
+
 ## 0.15.3-rc.0 (2025-02-18)
 
 ### Features
