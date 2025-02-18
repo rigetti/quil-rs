@@ -527,10 +527,10 @@
                                 <a class="variable" href="#Arithmetic.operator">operator</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Arithmetic.source">source</a>
+                                <a class="variable" href="#Arithmetic.destination">destination</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Arithmetic.destination">destination</a>
+                                <a class="variable" href="#Arithmetic.source">source</a>
                         </li>
                 </ul>
 
@@ -620,10 +620,10 @@
                                 <a class="function" href="#BinaryLogic.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#BinaryLogic.destination">destination</a>
+                                <a class="variable" href="#BinaryLogic.operator">operator</a>
                         </li>
                         <li>
-                                <a class="variable" href="#BinaryLogic.operator">operator</a>
+                                <a class="variable" href="#BinaryLogic.destination">destination</a>
                         </li>
                         <li>
                                 <a class="variable" href="#BinaryLogic.source">source</a>
@@ -770,16 +770,16 @@
                                 <a class="function" href="#Comparison.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Comparison.destination">destination</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#Comparison.lhs">lhs</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Comparison.operator">operator</a>
+                                <a class="variable" href="#Comparison.rhs">rhs</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Comparison.rhs">rhs</a>
+                                <a class="variable" href="#Comparison.destination">destination</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Comparison.operator">operator</a>
                         </li>
                 </ul>
 
@@ -884,10 +884,10 @@
                                 <a class="function" href="#Exchange.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Exchange.left">left</a>
+                                <a class="variable" href="#Exchange.right">right</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Exchange.right">right</a>
+                                <a class="variable" href="#Exchange.left">left</a>
                         </li>
                 </ul>
 
@@ -902,10 +902,10 @@
                                 <a class="function" href="#ExternParameter.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#ExternParameter.data_type">data_type</a>
+                                <a class="variable" href="#ExternParameter.name">name</a>
                         </li>
                         <li>
-                                <a class="variable" href="#ExternParameter.name">name</a>
+                                <a class="variable" href="#ExternParameter.data_type">data_type</a>
                         </li>
                         <li>
                                 <a class="variable" href="#ExternParameter.mutable">mutable</a>
@@ -992,10 +992,10 @@
                                 <a class="function" href="#Move.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Move.destination">destination</a>
+                                <a class="variable" href="#Move.source">source</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Move.source">source</a>
+                                <a class="variable" href="#Move.destination">destination</a>
                         </li>
                 </ul>
 
@@ -1049,16 +1049,16 @@
                                 <a class="variable" href="#Calibration.identifier">identifier</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Calibration.instructions">instructions</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Calibration.name">name</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#Calibration.parameters">parameters</a>
                         </li>
                         <li>
+                                <a class="variable" href="#Calibration.instructions">instructions</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#Calibration.qubits">qubits</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Calibration.name">name</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Calibration.modifiers">modifiers</a>
@@ -1079,13 +1079,13 @@
                                 <a class="variable" href="#CalibrationIdentifier.name">name</a>
                         </li>
                         <li>
+                                <a class="variable" href="#CalibrationIdentifier.modifiers">modifiers</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#CalibrationIdentifier.qubits">qubits</a>
                         </li>
                         <li>
                                 <a class="variable" href="#CalibrationIdentifier.parameters">parameters</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#CalibrationIdentifier.modifiers">modifiers</a>
                         </li>
                 </ul>
 
@@ -1100,16 +1100,16 @@
                                 <a class="function" href="#CircuitDefinition.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#CircuitDefinition.instructions">instructions</a>
+                                <a class="variable" href="#CircuitDefinition.parameters">parameters</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#CircuitDefinition.name">name</a>
                         </li>
                         <li>
                                 <a class="variable" href="#CircuitDefinition.qubit_variables">qubit_variables</a>
                         </li>
                         <li>
-                                <a class="variable" href="#CircuitDefinition.parameters">parameters</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#CircuitDefinition.name">name</a>
+                                <a class="variable" href="#CircuitDefinition.instructions">instructions</a>
                         </li>
                 </ul>
 
@@ -1124,16 +1124,16 @@
                                 <a class="function" href="#MeasureCalibrationDefinition.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#MeasureCalibrationDefinition.parameter">parameter</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#MeasureCalibrationDefinition.instructions">instructions</a>
                         </li>
                         <li>
-                                <a class="variable" href="#MeasureCalibrationDefinition.qubit">qubit</a>
+                                <a class="variable" href="#MeasureCalibrationDefinition.parameter">parameter</a>
                         </li>
                         <li>
                                 <a class="variable" href="#MeasureCalibrationDefinition.identifier">identifier</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#MeasureCalibrationDefinition.qubit">qubit</a>
                         </li>
                 </ul>
 
@@ -1187,13 +1187,13 @@
                                 <a class="function" href="#Load.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
+                                <a class="variable" href="#Load.offset">offset</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#Load.destination">destination</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Load.source">source</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Load.offset">offset</a>
                         </li>
                 </ul>
 
@@ -1220,10 +1220,10 @@
                     <a class="class" href="#Sharing">Sharing</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#Sharing.name">name</a>
+                                <a class="variable" href="#Sharing.offsets">offsets</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Sharing.offsets">offsets</a>
+                                <a class="variable" href="#Sharing.name">name</a>
                         </li>
                 </ul>
 
@@ -1238,13 +1238,13 @@
                                 <a class="function" href="#Store.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
+                                <a class="variable" href="#Store.offset">offset</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#Store.destination">destination</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Store.source">source</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Store.offset">offset</a>
                         </li>
                 </ul>
 
@@ -1283,10 +1283,10 @@
                                 <a class="function" href="#Vector.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Vector.length">length</a>
+                                <a class="variable" href="#Vector.data_type">data_type</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Vector.data_type">data_type</a>
+                                <a class="variable" href="#Vector.length">length</a>
                         </li>
                 </ul>
 
@@ -1301,10 +1301,10 @@
                                 <a class="function" href="#Measurement.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Measurement.qubit">qubit</a>
+                                <a class="variable" href="#Measurement.target">target</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Measurement.target">target</a>
+                                <a class="variable" href="#Measurement.qubit">qubit</a>
                         </li>
                 </ul>
 
@@ -1334,13 +1334,13 @@
                                 <a class="function" href="#Pragma.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
+                                <a class="variable" href="#Pragma.name">name</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#Pragma.arguments">arguments</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Pragma.data">data</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Pragma.name">name</a>
                         </li>
                 </ul>
 
@@ -1433,16 +1433,16 @@
                                 <a class="function" href="#Capture.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Capture.memory_reference">memory_reference</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#Capture.waveform">waveform</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Capture.blocking">blocking</a>
+                                <a class="variable" href="#Capture.memory_reference">memory_reference</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Capture.frame">frame</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Capture.blocking">blocking</a>
                         </li>
                 </ul>
 
@@ -1457,10 +1457,10 @@
                                 <a class="function" href="#FrameDefinition.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#FrameDefinition.identifier">identifier</a>
+                                <a class="variable" href="#FrameDefinition.attributes">attributes</a>
                         </li>
                         <li>
-                                <a class="variable" href="#FrameDefinition.attributes">attributes</a>
+                                <a class="variable" href="#FrameDefinition.identifier">identifier</a>
                         </li>
                 </ul>
 
@@ -1475,10 +1475,10 @@
                                 <a class="function" href="#FrameIdentifier.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#FrameIdentifier.qubits">qubits</a>
+                                <a class="variable" href="#FrameIdentifier.name">name</a>
                         </li>
                         <li>
-                                <a class="variable" href="#FrameIdentifier.name">name</a>
+                                <a class="variable" href="#FrameIdentifier.qubits">qubits</a>
                         </li>
                 </ul>
 
@@ -1493,13 +1493,13 @@
                                 <a class="function" href="#Pulse.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
+                                <a class="variable" href="#Pulse.blocking">blocking</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#Pulse.frame">frame</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Pulse.waveform">waveform</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Pulse.blocking">blocking</a>
                         </li>
                 </ul>
 
@@ -1514,9 +1514,6 @@
                                 <a class="function" href="#RawCapture.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#RawCapture.memory_reference">memory_reference</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#RawCapture.duration">duration</a>
                         </li>
                         <li>
@@ -1524,6 +1521,9 @@
                         </li>
                         <li>
                                 <a class="variable" href="#RawCapture.blocking">blocking</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#RawCapture.memory_reference">memory_reference</a>
                         </li>
                 </ul>
 
@@ -1538,10 +1538,10 @@
                                 <a class="function" href="#SetFrequency.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#SetFrequency.frequency">frequency</a>
+                                <a class="variable" href="#SetFrequency.frame">frame</a>
                         </li>
                         <li>
-                                <a class="variable" href="#SetFrequency.frame">frame</a>
+                                <a class="variable" href="#SetFrequency.frequency">frequency</a>
                         </li>
                 </ul>
 
@@ -1556,10 +1556,10 @@
                                 <a class="function" href="#SetPhase.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#SetPhase.frame">frame</a>
+                                <a class="variable" href="#SetPhase.phase">phase</a>
                         </li>
                         <li>
-                                <a class="variable" href="#SetPhase.phase">phase</a>
+                                <a class="variable" href="#SetPhase.frame">frame</a>
                         </li>
                 </ul>
 
@@ -1592,10 +1592,10 @@
                                 <a class="function" href="#ShiftFrequency.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#ShiftFrequency.frame">frame</a>
+                                <a class="variable" href="#ShiftFrequency.frequency">frequency</a>
                         </li>
                         <li>
-                                <a class="variable" href="#ShiftFrequency.frequency">frequency</a>
+                                <a class="variable" href="#ShiftFrequency.frame">frame</a>
                         </li>
                 </ul>
 
@@ -1658,16 +1658,16 @@
                                 <a class="function" href="#Gate.to_unitary_mut">to_unitary_mut</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Gate.qubits">qubits</a>
+                                <a class="variable" href="#Gate.parameters">parameters</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Gate.modifiers">modifiers</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Gate.name">name</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Gate.parameters">parameters</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Gate.modifiers">modifiers</a>
+                                <a class="variable" href="#Gate.qubits">qubits</a>
                         </li>
                 </ul>
 
@@ -1682,13 +1682,13 @@
                                 <a class="function" href="#GateDefinition.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#GateDefinition.specification">specification</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#GateDefinition.name">name</a>
                         </li>
                         <li>
                                 <a class="variable" href="#GateDefinition.parameters">parameters</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#GateDefinition.specification">specification</a>
                         </li>
                 </ul>
 
@@ -1790,10 +1790,10 @@
                     <a class="class" href="#PauliTerm">PauliTerm</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#PauliTerm.arguments">arguments</a>
+                                <a class="variable" href="#PauliTerm.expression">expression</a>
                         </li>
                         <li>
-                                <a class="variable" href="#PauliTerm.expression">expression</a>
+                                <a class="variable" href="#PauliTerm.arguments">arguments</a>
                         </li>
                 </ul>
 
@@ -1802,10 +1802,10 @@
                     <a class="class" href="#PauliSum">PauliSum</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#PauliSum.arguments">arguments</a>
+                                <a class="variable" href="#PauliSum.terms">terms</a>
                         </li>
                         <li>
-                                <a class="variable" href="#PauliSum.terms">terms</a>
+                                <a class="variable" href="#PauliSum.arguments">arguments</a>
                         </li>
                 </ul>
 
@@ -2027,13 +2027,13 @@
                                 <a class="function" href="#Delay.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Delay.qubits">qubits</a>
+                                <a class="variable" href="#Delay.frame_names">frame_names</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Delay.duration">duration</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Delay.frame_names">frame_names</a>
+                                <a class="variable" href="#Delay.qubits">qubits</a>
                         </li>
                 </ul>
 
@@ -2093,10 +2093,10 @@
                                 <a class="function" href="#WaveformInvocation.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#WaveformInvocation.name">name</a>
+                                <a class="variable" href="#WaveformInvocation.parameters">parameters</a>
                         </li>
                         <li>
-                                <a class="variable" href="#WaveformInvocation.parameters">parameters</a>
+                                <a class="variable" href="#WaveformInvocation.name">name</a>
                         </li>
                 </ul>
 
@@ -4275,17 +4275,6 @@
     
 
                             </div>
-                            <div id="Arithmetic.source" class="classattr">
-                                <div class="attr variable">
-            <span class="name">source</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Arithmetic.source"></a>
-    
-    
-
-                            </div>
                             <div id="Arithmetic.destination" class="classattr">
                                 <div class="attr variable">
             <span class="name">destination</span>
@@ -4293,6 +4282,17 @@
         
     </div>
     <a class="headerlink" href="#Arithmetic.destination"></a>
+    
+    
+
+                            </div>
+                            <div id="Arithmetic.source" class="classattr">
+                                <div class="attr variable">
+            <span class="name">source</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Arithmetic.source"></a>
     
     
 
@@ -4631,17 +4631,6 @@
     
 
                             </div>
-                            <div id="BinaryLogic.destination" class="classattr">
-                                <div class="attr variable">
-            <span class="name">destination</span>
-
-        
-    </div>
-    <a class="headerlink" href="#BinaryLogic.destination"></a>
-    
-    
-
-                            </div>
                             <div id="BinaryLogic.operator" class="classattr">
                                 <div class="attr variable">
             <span class="name">operator</span>
@@ -4649,6 +4638,17 @@
         
     </div>
     <a class="headerlink" href="#BinaryLogic.operator"></a>
+    
+    
+
+                            </div>
+                            <div id="BinaryLogic.destination" class="classattr">
+                                <div class="attr variable">
+            <span class="name">destination</span>
+
+        
+    </div>
+    <a class="headerlink" href="#BinaryLogic.destination"></a>
     
     
 
@@ -5203,17 +5203,6 @@
     
 
                             </div>
-                            <div id="Comparison.destination" class="classattr">
-                                <div class="attr variable">
-            <span class="name">destination</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Comparison.destination"></a>
-    
-    
-
-                            </div>
                             <div id="Comparison.lhs" class="classattr">
                                 <div class="attr variable">
             <span class="name">lhs</span>
@@ -5225,17 +5214,6 @@
     
 
                             </div>
-                            <div id="Comparison.operator" class="classattr">
-                                <div class="attr variable">
-            <span class="name">operator</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Comparison.operator"></a>
-    
-    
-
-                            </div>
                             <div id="Comparison.rhs" class="classattr">
                                 <div class="attr variable">
             <span class="name">rhs</span>
@@ -5243,6 +5221,28 @@
         
     </div>
     <a class="headerlink" href="#Comparison.rhs"></a>
+    
+    
+
+                            </div>
+                            <div id="Comparison.destination" class="classattr">
+                                <div class="attr variable">
+            <span class="name">destination</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Comparison.destination"></a>
+    
+    
+
+                            </div>
+                            <div id="Comparison.operator" class="classattr">
+                                <div class="attr variable">
+            <span class="name">operator</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Comparison.operator"></a>
     
     
 
@@ -5628,17 +5628,6 @@
     
 
                             </div>
-                            <div id="Exchange.left" class="classattr">
-                                <div class="attr variable">
-            <span class="name">left</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Exchange.left"></a>
-    
-    
-
-                            </div>
                             <div id="Exchange.right" class="classattr">
                                 <div class="attr variable">
             <span class="name">right</span>
@@ -5646,6 +5635,17 @@
         
     </div>
     <a class="headerlink" href="#Exchange.right"></a>
+    
+    
+
+                            </div>
+                            <div id="Exchange.left" class="classattr">
+                                <div class="attr variable">
+            <span class="name">left</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Exchange.left"></a>
     
     
 
@@ -5689,17 +5689,6 @@
     
 
                             </div>
-                            <div id="ExternParameter.data_type" class="classattr">
-                                <div class="attr variable">
-            <span class="name">data_type</span>
-
-        
-    </div>
-    <a class="headerlink" href="#ExternParameter.data_type"></a>
-    
-    
-
-                            </div>
                             <div id="ExternParameter.name" class="classattr">
                                 <div class="attr variable">
             <span class="name">name</span>
@@ -5707,6 +5696,17 @@
         
     </div>
     <a class="headerlink" href="#ExternParameter.name"></a>
+    
+    
+
+                            </div>
+                            <div id="ExternParameter.data_type" class="classattr">
+                                <div class="attr variable">
+            <span class="name">data_type</span>
+
+        
+    </div>
+    <a class="headerlink" href="#ExternParameter.data_type"></a>
     
     
 
@@ -6030,17 +6030,6 @@
     
 
                             </div>
-                            <div id="Move.destination" class="classattr">
-                                <div class="attr variable">
-            <span class="name">destination</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Move.destination"></a>
-    
-    
-
-                            </div>
                             <div id="Move.source" class="classattr">
                                 <div class="attr variable">
             <span class="name">source</span>
@@ -6048,6 +6037,17 @@
         
     </div>
     <a class="headerlink" href="#Move.source"></a>
+    
+    
+
+                            </div>
+                            <div id="Move.destination" class="classattr">
+                                <div class="attr variable">
+            <span class="name">destination</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Move.destination"></a>
     
     
 
@@ -6226,28 +6226,6 @@
     
 
                             </div>
-                            <div id="Calibration.instructions" class="classattr">
-                                <div class="attr variable">
-            <span class="name">instructions</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Calibration.instructions"></a>
-    
-    
-
-                            </div>
-                            <div id="Calibration.name" class="classattr">
-                                <div class="attr variable">
-            <span class="name">name</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Calibration.name"></a>
-    
-    
-
-                            </div>
                             <div id="Calibration.parameters" class="classattr">
                                 <div class="attr variable">
             <span class="name">parameters</span>
@@ -6259,6 +6237,17 @@
     
 
                             </div>
+                            <div id="Calibration.instructions" class="classattr">
+                                <div class="attr variable">
+            <span class="name">instructions</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Calibration.instructions"></a>
+    
+    
+
+                            </div>
                             <div id="Calibration.qubits" class="classattr">
                                 <div class="attr variable">
             <span class="name">qubits</span>
@@ -6266,6 +6255,17 @@
         
     </div>
     <a class="headerlink" href="#Calibration.qubits"></a>
+    
+    
+
+                            </div>
+                            <div id="Calibration.name" class="classattr">
+                                <div class="attr variable">
+            <span class="name">name</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Calibration.name"></a>
     
     
 
@@ -6331,6 +6331,17 @@
     
 
                             </div>
+                            <div id="CalibrationIdentifier.modifiers" class="classattr">
+                                <div class="attr variable">
+            <span class="name">modifiers</span>
+
+        
+    </div>
+    <a class="headerlink" href="#CalibrationIdentifier.modifiers"></a>
+    
+    
+
+                            </div>
                             <div id="CalibrationIdentifier.qubits" class="classattr">
                                 <div class="attr variable">
             <span class="name">qubits</span>
@@ -6349,17 +6360,6 @@
         
     </div>
     <a class="headerlink" href="#CalibrationIdentifier.parameters"></a>
-    
-    
-
-                            </div>
-                            <div id="CalibrationIdentifier.modifiers" class="classattr">
-                                <div class="attr variable">
-            <span class="name">modifiers</span>
-
-        
-    </div>
-    <a class="headerlink" href="#CalibrationIdentifier.modifiers"></a>
     
     
 
@@ -6403,28 +6403,6 @@
     
 
                             </div>
-                            <div id="CircuitDefinition.instructions" class="classattr">
-                                <div class="attr variable">
-            <span class="name">instructions</span>
-
-        
-    </div>
-    <a class="headerlink" href="#CircuitDefinition.instructions"></a>
-    
-    
-
-                            </div>
-                            <div id="CircuitDefinition.qubit_variables" class="classattr">
-                                <div class="attr variable">
-            <span class="name">qubit_variables</span>
-
-        
-    </div>
-    <a class="headerlink" href="#CircuitDefinition.qubit_variables"></a>
-    
-    
-
-                            </div>
                             <div id="CircuitDefinition.parameters" class="classattr">
                                 <div class="attr variable">
             <span class="name">parameters</span>
@@ -6443,6 +6421,28 @@
         
     </div>
     <a class="headerlink" href="#CircuitDefinition.name"></a>
+    
+    
+
+                            </div>
+                            <div id="CircuitDefinition.qubit_variables" class="classattr">
+                                <div class="attr variable">
+            <span class="name">qubit_variables</span>
+
+        
+    </div>
+    <a class="headerlink" href="#CircuitDefinition.qubit_variables"></a>
+    
+    
+
+                            </div>
+                            <div id="CircuitDefinition.instructions" class="classattr">
+                                <div class="attr variable">
+            <span class="name">instructions</span>
+
+        
+    </div>
+    <a class="headerlink" href="#CircuitDefinition.instructions"></a>
     
     
 
@@ -6486,17 +6486,6 @@
     
 
                             </div>
-                            <div id="MeasureCalibrationDefinition.parameter" class="classattr">
-                                <div class="attr variable">
-            <span class="name">parameter</span>
-
-        
-    </div>
-    <a class="headerlink" href="#MeasureCalibrationDefinition.parameter"></a>
-    
-    
-
-                            </div>
                             <div id="MeasureCalibrationDefinition.instructions" class="classattr">
                                 <div class="attr variable">
             <span class="name">instructions</span>
@@ -6508,13 +6497,13 @@
     
 
                             </div>
-                            <div id="MeasureCalibrationDefinition.qubit" class="classattr">
+                            <div id="MeasureCalibrationDefinition.parameter" class="classattr">
                                 <div class="attr variable">
-            <span class="name">qubit</span>
+            <span class="name">parameter</span>
 
         
     </div>
-    <a class="headerlink" href="#MeasureCalibrationDefinition.qubit"></a>
+    <a class="headerlink" href="#MeasureCalibrationDefinition.parameter"></a>
     
     
 
@@ -6526,6 +6515,17 @@
         
     </div>
     <a class="headerlink" href="#MeasureCalibrationDefinition.identifier"></a>
+    
+    
+
+                            </div>
+                            <div id="MeasureCalibrationDefinition.qubit" class="classattr">
+                                <div class="attr variable">
+            <span class="name">qubit</span>
+
+        
+    </div>
+    <a class="headerlink" href="#MeasureCalibrationDefinition.qubit"></a>
     
     
 
@@ -6702,6 +6702,17 @@
     
 
                             </div>
+                            <div id="Load.offset" class="classattr">
+                                <div class="attr variable">
+            <span class="name">offset</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Load.offset"></a>
+    
+    
+
+                            </div>
                             <div id="Load.destination" class="classattr">
                                 <div class="attr variable">
             <span class="name">destination</span>
@@ -6720,17 +6731,6 @@
         
     </div>
     <a class="headerlink" href="#Load.source"></a>
-    
-    
-
-                            </div>
-                            <div id="Load.offset" class="classattr">
-                                <div class="attr variable">
-            <span class="name">offset</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Load.offset"></a>
     
     
 
@@ -6809,17 +6809,6 @@
     
     
 
-                            <div id="Sharing.name" class="classattr">
-                                <div class="attr variable">
-            <span class="name">name</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Sharing.name"></a>
-    
-    
-
-                            </div>
                             <div id="Sharing.offsets" class="classattr">
                                 <div class="attr variable">
             <span class="name">offsets</span>
@@ -6827,6 +6816,17 @@
         
     </div>
     <a class="headerlink" href="#Sharing.offsets"></a>
+    
+    
+
+                            </div>
+                            <div id="Sharing.name" class="classattr">
+                                <div class="attr variable">
+            <span class="name">name</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Sharing.name"></a>
     
     
 
@@ -6870,6 +6870,17 @@
     
 
                             </div>
+                            <div id="Store.offset" class="classattr">
+                                <div class="attr variable">
+            <span class="name">offset</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Store.offset"></a>
+    
+    
+
+                            </div>
                             <div id="Store.destination" class="classattr">
                                 <div class="attr variable">
             <span class="name">destination</span>
@@ -6888,17 +6899,6 @@
         
     </div>
     <a class="headerlink" href="#Store.source"></a>
-    
-    
-
-                            </div>
-                            <div id="Store.offset" class="classattr">
-                                <div class="attr variable">
-            <span class="name">offset</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Store.offset"></a>
     
     
 
@@ -7029,17 +7029,6 @@
     
 
                             </div>
-                            <div id="Vector.length" class="classattr">
-                                <div class="attr variable">
-            <span class="name">length</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Vector.length"></a>
-    
-    
-
-                            </div>
                             <div id="Vector.data_type" class="classattr">
                                 <div class="attr variable">
             <span class="name">data_type</span>
@@ -7047,6 +7036,17 @@
         
     </div>
     <a class="headerlink" href="#Vector.data_type"></a>
+    
+    
+
+                            </div>
+                            <div id="Vector.length" class="classattr">
+                                <div class="attr variable">
+            <span class="name">length</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Vector.length"></a>
     
     
 
@@ -7090,17 +7090,6 @@
     
 
                             </div>
-                            <div id="Measurement.qubit" class="classattr">
-                                <div class="attr variable">
-            <span class="name">qubit</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Measurement.qubit"></a>
-    
-    
-
-                            </div>
                             <div id="Measurement.target" class="classattr">
                                 <div class="attr variable">
             <span class="name">target</span>
@@ -7108,6 +7097,17 @@
         
     </div>
     <a class="headerlink" href="#Measurement.target"></a>
+    
+    
+
+                            </div>
+                            <div id="Measurement.qubit" class="classattr">
+                                <div class="attr variable">
+            <span class="name">qubit</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Measurement.qubit"></a>
     
     
 
@@ -7201,6 +7201,17 @@
     
 
                             </div>
+                            <div id="Pragma.name" class="classattr">
+                                <div class="attr variable">
+            <span class="name">name</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Pragma.name"></a>
+    
+    
+
+                            </div>
                             <div id="Pragma.arguments" class="classattr">
                                 <div class="attr variable">
             <span class="name">arguments</span>
@@ -7219,17 +7230,6 @@
         
     </div>
     <a class="headerlink" href="#Pragma.data"></a>
-    
-    
-
-                            </div>
-                            <div id="Pragma.name" class="classattr">
-                                <div class="attr variable">
-            <span class="name">name</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Pragma.name"></a>
     
     
 
@@ -7585,17 +7585,6 @@
     
 
                             </div>
-                            <div id="Capture.memory_reference" class="classattr">
-                                <div class="attr variable">
-            <span class="name">memory_reference</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Capture.memory_reference"></a>
-    
-    
-
-                            </div>
                             <div id="Capture.waveform" class="classattr">
                                 <div class="attr variable">
             <span class="name">waveform</span>
@@ -7607,13 +7596,13 @@
     
 
                             </div>
-                            <div id="Capture.blocking" class="classattr">
+                            <div id="Capture.memory_reference" class="classattr">
                                 <div class="attr variable">
-            <span class="name">blocking</span>
+            <span class="name">memory_reference</span>
 
         
     </div>
-    <a class="headerlink" href="#Capture.blocking"></a>
+    <a class="headerlink" href="#Capture.memory_reference"></a>
     
     
 
@@ -7625,6 +7614,17 @@
         
     </div>
     <a class="headerlink" href="#Capture.frame"></a>
+    
+    
+
+                            </div>
+                            <div id="Capture.blocking" class="classattr">
+                                <div class="attr variable">
+            <span class="name">blocking</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Capture.blocking"></a>
     
     
 
@@ -7668,17 +7668,6 @@
     
 
                             </div>
-                            <div id="FrameDefinition.identifier" class="classattr">
-                                <div class="attr variable">
-            <span class="name">identifier</span>
-
-        
-    </div>
-    <a class="headerlink" href="#FrameDefinition.identifier"></a>
-    
-    
-
-                            </div>
                             <div id="FrameDefinition.attributes" class="classattr">
                                 <div class="attr variable">
             <span class="name">attributes</span>
@@ -7686,6 +7675,17 @@
         
     </div>
     <a class="headerlink" href="#FrameDefinition.attributes"></a>
+    
+    
+
+                            </div>
+                            <div id="FrameDefinition.identifier" class="classattr">
+                                <div class="attr variable">
+            <span class="name">identifier</span>
+
+        
+    </div>
+    <a class="headerlink" href="#FrameDefinition.identifier"></a>
     
     
 
@@ -7729,17 +7729,6 @@
     
 
                             </div>
-                            <div id="FrameIdentifier.qubits" class="classattr">
-                                <div class="attr variable">
-            <span class="name">qubits</span>
-
-        
-    </div>
-    <a class="headerlink" href="#FrameIdentifier.qubits"></a>
-    
-    
-
-                            </div>
                             <div id="FrameIdentifier.name" class="classattr">
                                 <div class="attr variable">
             <span class="name">name</span>
@@ -7747,6 +7736,17 @@
         
     </div>
     <a class="headerlink" href="#FrameIdentifier.name"></a>
+    
+    
+
+                            </div>
+                            <div id="FrameIdentifier.qubits" class="classattr">
+                                <div class="attr variable">
+            <span class="name">qubits</span>
+
+        
+    </div>
+    <a class="headerlink" href="#FrameIdentifier.qubits"></a>
     
     
 
@@ -7790,6 +7790,17 @@
     
 
                             </div>
+                            <div id="Pulse.blocking" class="classattr">
+                                <div class="attr variable">
+            <span class="name">blocking</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Pulse.blocking"></a>
+    
+    
+
+                            </div>
                             <div id="Pulse.frame" class="classattr">
                                 <div class="attr variable">
             <span class="name">frame</span>
@@ -7808,17 +7819,6 @@
         
     </div>
     <a class="headerlink" href="#Pulse.waveform"></a>
-    
-    
-
-                            </div>
-                            <div id="Pulse.blocking" class="classattr">
-                                <div class="attr variable">
-            <span class="name">blocking</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Pulse.blocking"></a>
     
     
 
@@ -7862,17 +7862,6 @@
     
 
                             </div>
-                            <div id="RawCapture.memory_reference" class="classattr">
-                                <div class="attr variable">
-            <span class="name">memory_reference</span>
-
-        
-    </div>
-    <a class="headerlink" href="#RawCapture.memory_reference"></a>
-    
-    
-
-                            </div>
                             <div id="RawCapture.duration" class="classattr">
                                 <div class="attr variable">
             <span class="name">duration</span>
@@ -7902,6 +7891,17 @@
         
     </div>
     <a class="headerlink" href="#RawCapture.blocking"></a>
+    
+    
+
+                            </div>
+                            <div id="RawCapture.memory_reference" class="classattr">
+                                <div class="attr variable">
+            <span class="name">memory_reference</span>
+
+        
+    </div>
+    <a class="headerlink" href="#RawCapture.memory_reference"></a>
     
     
 
@@ -7945,17 +7945,6 @@
     
 
                             </div>
-                            <div id="SetFrequency.frequency" class="classattr">
-                                <div class="attr variable">
-            <span class="name">frequency</span>
-
-        
-    </div>
-    <a class="headerlink" href="#SetFrequency.frequency"></a>
-    
-    
-
-                            </div>
                             <div id="SetFrequency.frame" class="classattr">
                                 <div class="attr variable">
             <span class="name">frame</span>
@@ -7963,6 +7952,17 @@
         
     </div>
     <a class="headerlink" href="#SetFrequency.frame"></a>
+    
+    
+
+                            </div>
+                            <div id="SetFrequency.frequency" class="classattr">
+                                <div class="attr variable">
+            <span class="name">frequency</span>
+
+        
+    </div>
+    <a class="headerlink" href="#SetFrequency.frequency"></a>
     
     
 
@@ -8006,17 +8006,6 @@
     
 
                             </div>
-                            <div id="SetPhase.frame" class="classattr">
-                                <div class="attr variable">
-            <span class="name">frame</span>
-
-        
-    </div>
-    <a class="headerlink" href="#SetPhase.frame"></a>
-    
-    
-
-                            </div>
                             <div id="SetPhase.phase" class="classattr">
                                 <div class="attr variable">
             <span class="name">phase</span>
@@ -8024,6 +8013,17 @@
         
     </div>
     <a class="headerlink" href="#SetPhase.phase"></a>
+    
+    
+
+                            </div>
+                            <div id="SetPhase.frame" class="classattr">
+                                <div class="attr variable">
+            <span class="name">frame</span>
+
+        
+    </div>
+    <a class="headerlink" href="#SetPhase.frame"></a>
     
     
 
@@ -8128,17 +8128,6 @@
     
 
                             </div>
-                            <div id="ShiftFrequency.frame" class="classattr">
-                                <div class="attr variable">
-            <span class="name">frame</span>
-
-        
-    </div>
-    <a class="headerlink" href="#ShiftFrequency.frame"></a>
-    
-    
-
-                            </div>
                             <div id="ShiftFrequency.frequency" class="classattr">
                                 <div class="attr variable">
             <span class="name">frequency</span>
@@ -8146,6 +8135,17 @@
         
     </div>
     <a class="headerlink" href="#ShiftFrequency.frequency"></a>
+    
+    
+
+                            </div>
+                            <div id="ShiftFrequency.frame" class="classattr">
+                                <div class="attr variable">
+            <span class="name">frame</span>
+
+        
+    </div>
+    <a class="headerlink" href="#ShiftFrequency.frame"></a>
     
     
 
@@ -8363,28 +8363,6 @@
     
 
                             </div>
-                            <div id="Gate.qubits" class="classattr">
-                                <div class="attr variable">
-            <span class="name">qubits</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Gate.qubits"></a>
-    
-    
-
-                            </div>
-                            <div id="Gate.name" class="classattr">
-                                <div class="attr variable">
-            <span class="name">name</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Gate.name"></a>
-    
-    
-
-                            </div>
                             <div id="Gate.parameters" class="classattr">
                                 <div class="attr variable">
             <span class="name">parameters</span>
@@ -8403,6 +8381,28 @@
         
     </div>
     <a class="headerlink" href="#Gate.modifiers"></a>
+    
+    
+
+                            </div>
+                            <div id="Gate.name" class="classattr">
+                                <div class="attr variable">
+            <span class="name">name</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Gate.name"></a>
+    
+    
+
+                            </div>
+                            <div id="Gate.qubits" class="classattr">
+                                <div class="attr variable">
+            <span class="name">qubits</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Gate.qubits"></a>
     
     
 
@@ -8446,17 +8446,6 @@
     
 
                             </div>
-                            <div id="GateDefinition.specification" class="classattr">
-                                <div class="attr variable">
-            <span class="name">specification</span>
-
-        
-    </div>
-    <a class="headerlink" href="#GateDefinition.specification"></a>
-    
-    
-
-                            </div>
                             <div id="GateDefinition.name" class="classattr">
                                 <div class="attr variable">
             <span class="name">name</span>
@@ -8475,6 +8464,17 @@
         
     </div>
     <a class="headerlink" href="#GateDefinition.parameters"></a>
+    
+    
+
+                            </div>
+                            <div id="GateDefinition.specification" class="classattr">
+                                <div class="attr variable">
+            <span class="name">specification</span>
+
+        
+    </div>
+    <a class="headerlink" href="#GateDefinition.specification"></a>
     
     
 
@@ -8849,17 +8849,6 @@
     
     
 
-                            <div id="PauliTerm.arguments" class="classattr">
-                                <div class="attr variable">
-            <span class="name">arguments</span>
-
-        
-    </div>
-    <a class="headerlink" href="#PauliTerm.arguments"></a>
-    
-    
-
-                            </div>
                             <div id="PauliTerm.expression" class="classattr">
                                 <div class="attr variable">
             <span class="name">expression</span>
@@ -8867,6 +8856,17 @@
         
     </div>
     <a class="headerlink" href="#PauliTerm.expression"></a>
+    
+    
+
+                            </div>
+                            <div id="PauliTerm.arguments" class="classattr">
+                                <div class="attr variable">
+            <span class="name">arguments</span>
+
+        
+    </div>
+    <a class="headerlink" href="#PauliTerm.arguments"></a>
     
     
 
@@ -8884,17 +8884,6 @@
     
     
 
-                            <div id="PauliSum.arguments" class="classattr">
-                                <div class="attr variable">
-            <span class="name">arguments</span>
-
-        
-    </div>
-    <a class="headerlink" href="#PauliSum.arguments"></a>
-    
-    
-
-                            </div>
                             <div id="PauliSum.terms" class="classattr">
                                 <div class="attr variable">
             <span class="name">terms</span>
@@ -8902,6 +8891,17 @@
         
     </div>
     <a class="headerlink" href="#PauliSum.terms"></a>
+    
+    
+
+                            </div>
+                            <div id="PauliSum.arguments" class="classattr">
+                                <div class="attr variable">
+            <span class="name">arguments</span>
+
+        
+    </div>
+    <a class="headerlink" href="#PauliSum.arguments"></a>
     
     
 
@@ -9692,13 +9692,13 @@
     
 
                             </div>
-                            <div id="Delay.qubits" class="classattr">
+                            <div id="Delay.frame_names" class="classattr">
                                 <div class="attr variable">
-            <span class="name">qubits</span>
+            <span class="name">frame_names</span>
 
         
     </div>
-    <a class="headerlink" href="#Delay.qubits"></a>
+    <a class="headerlink" href="#Delay.frame_names"></a>
     
     
 
@@ -9714,13 +9714,13 @@
     
 
                             </div>
-                            <div id="Delay.frame_names" class="classattr">
+                            <div id="Delay.qubits" class="classattr">
                                 <div class="attr variable">
-            <span class="name">frame_names</span>
+            <span class="name">qubits</span>
 
         
     </div>
-    <a class="headerlink" href="#Delay.frame_names"></a>
+    <a class="headerlink" href="#Delay.qubits"></a>
     
     
 
@@ -9910,17 +9910,6 @@
     
 
                             </div>
-                            <div id="WaveformInvocation.name" class="classattr">
-                                <div class="attr variable">
-            <span class="name">name</span>
-
-        
-    </div>
-    <a class="headerlink" href="#WaveformInvocation.name"></a>
-    
-    
-
-                            </div>
                             <div id="WaveformInvocation.parameters" class="classattr">
                                 <div class="attr variable">
             <span class="name">parameters</span>
@@ -9928,6 +9917,17 @@
         
     </div>
     <a class="headerlink" href="#WaveformInvocation.parameters"></a>
+    
+    
+
+                            </div>
+                            <div id="WaveformInvocation.name" class="classattr">
+                                <div class="attr variable">
+            <span class="name">name</span>
+
+        
+    </div>
+    <a class="headerlink" href="#WaveformInvocation.name"></a>
     
     
 
