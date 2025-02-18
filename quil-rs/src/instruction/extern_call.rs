@@ -296,7 +296,11 @@ impl ExternPragmaMap {
         )
     }
 
-    /// Extend the [`ExternPragmaMap`] with another.
+    /// Extend this [`ExternPragmaMap`] with another.
+    ///
+    /// The behavior is similar to [`IndexMap::extend`] here. Of note,
+    /// for keys that already existed in [`self`], their value is updated
+    /// but it keeps the existing order.
     pub fn extend(&mut self, other: Self) {
         self.0.extend(other.0);
     }
@@ -306,6 +310,15 @@ impl ExternPragmaMap {
         F: FnMut(&Option<String>, &mut Pragma) -> bool,
     {
         self.0.retain(f)
+    }
+}
+
+impl std::iter::IntoIterator for ExternPragmaMap {
+    type Item = (Option<String>, Pragma);
+    type IntoIter = indexmap::map::IntoIter<Option<String>, Pragma>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
     }
 }
 

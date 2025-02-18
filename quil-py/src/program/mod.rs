@@ -29,8 +29,8 @@ use rigetti_pyo3::{
 use crate::{
     impl_eq, impl_to_quil,
     instruction::{
-        PyDeclaration, PyGateDefinition, PyInstruction, PyMemoryReference, PyQubit, PyTarget,
-        PyWaveform,
+        PyDeclaration, PyGateDefinition, PyInstruction, PyMemoryReference, PyPragma, PyQubit,
+        PyTarget, PyWaveform,
     },
 };
 
@@ -209,12 +209,12 @@ impl PyProgram {
     }
 
     #[getter]
-    pub fn pragma_extern_instructions(&self) -> Vec<PyInstruction> {
+    pub fn pragma_extern_map(&self) -> IndexMap<Option<String>, PyPragma> {
         self.as_inner()
             .extern_pragma_map
-            .to_instructions()
+            .clone()
             .into_iter()
-            .map(PyInstruction::from)
+            .map(|(k, v)| (k, v.into()))
             .collect()
     }
 

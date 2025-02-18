@@ -87,6 +87,7 @@ from quil.instructions import (
     MeasureCalibrationIdentifier,
     Measurement,
     MemoryReference,
+    Pragma,
     Qubit,
     QubitPlaceholder,
     Sharing,
@@ -135,7 +136,7 @@ class Program:
     @gate_definitions.setter
     def gate_definitions(self, gate_definitions: Dict[str, GateDefinition]): ...
     @property
-    def pragma_extern_instructions(self) -> List[Instruction]: ...
+    def pragma_extern_map(self) -> Dict[Optional[str], Pragma]: ...
     @property
     def frames(self) -> FrameSet: ...
     @frames.setter
