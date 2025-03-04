@@ -216,8 +216,39 @@ macro_rules! impl_expr_op {
                 })
             }
         }
+
+        impl $name<ArcIntern<Expression>> for Expression {
+            type Output = Self;
+            fn $function(self, other: ArcIntern<Expression>) -> Self {
+                Expression::Infix(InfixExpression {
+                    left: ArcIntern::new(self),
+                    operator: InfixOperator::$operator,
+                    right: other,
+                })
+            }
+        }
+
+        impl $name<Expression> for ArcIntern<Expression> {
+            type Output = Expression;
+            fn $function(self, other: Expression) -> Expression {
+                Expression::Infix(InfixExpression {
+                    left: self,
+                    operator: InfixOperator::$operator,
+                    right: ArcIntern::new(other),
+                })
+            }
+        }
+
         impl $name_assign for Expression {
             fn $function_assign(&mut self, other: Self) {
+                // Move out of self to avoid potentially cloning a large value
+                let temp = ::std::mem::replace(self, Self::PiConstant);
+                *self = temp.$function(other);
+            }
+        }
+
+        impl $name_assign<ArcIntern<Expression>> for Expression {
+            fn $function_assign(&mut self, other: ArcIntern<Expression>) {
                 // Move out of self to avoid potentially cloning a large value
                 let temp = ::std::mem::replace(self, Self::PiConstant);
                 *self = temp.$function(other);
