@@ -502,6 +502,7 @@ pub mod tests {
         real,
     };
 
+    use internment::ArcIntern;
     use nom_locate::LocatedSpan;
 
     use super::{parse_matrix, parse_pauli_terms, parse_permutation, parse_waveform_invocation};
@@ -653,28 +654,28 @@ SWAP-PHASES 2 3 \"xy\" 3 4 \"xy\"";
                     (PauliGate::Z, "q".to_string()),
                 ],
                 expression: Expression::Infix(InfixExpression {
-                    left: Box::new(Expression::Prefix(PrefixExpression {
+                    left: ArcIntern::new(Expression::Prefix(PrefixExpression {
                         operator: PrefixOperator::Minus,
-                        expression: Box::new(Expression::Variable("theta".to_string())),
+                        expression: ArcIntern::new(Expression::Variable("theta".to_string())),
                     })),
                     operator: InfixOperator::Slash,
-                    right: Box::new(Expression::Number(real!(4.0))),
+                    right: ArcIntern::new(Expression::Number(real!(4.0))),
                 }),
             },
             PauliTerm {
                 arguments: vec![(PauliGate::Y, "p".to_string())],
                 expression: Expression::Infix(InfixExpression {
-                    left: Box::new(Expression::Variable("theta".to_string())),
+                    left: ArcIntern::new(Expression::Variable("theta".to_string())),
                     operator: InfixOperator::Slash,
-                    right: Box::new(Expression::Number(real!(4.0))),
+                    right: ArcIntern::new(Expression::Number(real!(4.0))),
                 }),
             },
             PauliTerm {
                 arguments: vec![(PauliGate::X, "q".to_string())],
                 expression: Expression::Infix(InfixExpression {
-                    left: Box::new(Expression::Variable("theta".to_string())),
+                    left: ArcIntern::new(Expression::Variable("theta".to_string())),
                     operator: InfixOperator::Slash,
-                    right: Box::new(Expression::Number(real!(4.0))),
+                    right: ArcIntern::new(Expression::Number(real!(4.0))),
                 }),
             },
         ];
