@@ -1,16 +1,14 @@
-use crate::expression::Expression;
-
 mod by_hand;
 
-/// Simplify an [`Expression`].
-pub(super) fn run(expression: &Expression) -> Expression {
-    by_hand::run(expression)
-}
+pub(super) use by_hand::run;
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use std::str::FromStr;
+
+    use crate::expression::Expression;
 
     macro_rules! test_simplify {
         ($name:ident, $input:expr, $expected:expr) => {

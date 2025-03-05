@@ -264,10 +264,15 @@ impl_expr_op!(Mul, MulAssign, mul, mul_assign, Star);
 impl_expr_op!(Div, DivAssign, div, div_assign, Slash);
 
 /// Compute the result of an infix expression where both operands are complex.
-fn calculate_infix(left: &Complex64, operator: &InfixOperator, right: &Complex64) -> Complex64 {
+#[inline]
+pub(crate) fn calculate_infix(
+    left: Complex64,
+    operator: InfixOperator,
+    right: Complex64,
+) -> Complex64 {
     use InfixOperator::*;
     match operator {
-        Caret => left.powc(*right),
+        Caret => left.powc(right),
         Plus => left + right,
         Minus => left - right,
         Slash => left / right,
@@ -276,7 +281,8 @@ fn calculate_infix(left: &Complex64, operator: &InfixOperator, right: &Complex64
 }
 
 /// Compute the result of a Quil-defined expression function where the operand is complex.
-fn calculate_function(function: &ExpressionFunction, argument: &Complex64) -> Complex64 {
+#[inline]
+pub(crate) fn calculate_function(function: ExpressionFunction, argument: Complex64) -> Complex64 {
     use ExpressionFunction::*;
     match function {
         Sine => argument.sin(),
@@ -372,7 +378,7 @@ impl Expression {
                 expression,
             }) => {
                 let evaluated = expression.evaluate(variables, memory_references)?;
-                Ok(calculate_function(function, &evaluated))
+                Ok(calculate_function(*function, evaluated))
             }
             Infix(InfixExpression {
                 left,
@@ -381,7 +387,7 @@ impl Expression {
             }) => {
                 let left_evaluated = left.evaluate(variables, memory_references)?;
                 let right_evaluated = right.evaluate(variables, memory_references)?;
-                Ok(calculate_infix(&left_evaluated, operator, &right_evaluated))
+                Ok(calculate_infix(left_evaluated, *operator, right_evaluated))
             }
             Prefix(PrefixExpression {
                 operator,
@@ -709,6 +715,119 @@ impl fmt::Display for InfixOperator {
                 Star => "*",
             }
         )
+    }
+}
+
+/// Convenience constructors for creating [`ArcIntern<Expression>`]s for recursive use
+pub mod interned {
+    use super::*;
+
+    macro_rules! atoms {
+        ($($func:ident: $ctor:ident$(($typ:ty))?),+ $(,)?) => {
+            $(
+                #[inline(always)]
+                pub fn $func($(value: $typ)?) -> ArcIntern<Expression> {
+                    // Using `std::convert::identity` lets us refer to `$typ` and thus make the
+                    // constructor argument optional
+                    ArcIntern::new(Expression::$ctor$((std::convert::identity::<$typ>(value)))?)
+                }
+            )+
+        };
+    }
+
+    macro_rules! expression_wrappers {
+        ($($func:ident: $atom:ident($ctor:ident { $($field:ident: $field_ty:ty),*$(,)? })),+ $(,)?) => {
+            $(
+                #[inline(always)]
+                pub fn $func($($field: $field_ty),*) -> ArcIntern<Expression> {
+                    $atom($ctor { $($field),* })
+                }
+            )+
+        };
+    }
+
+    macro_rules! function_wrappers {
+        ($($func:ident: $ctor:ident),+ $(,)?) => {
+            $(
+                #[inline(always)]
+                pub fn $func(expression: ArcIntern<Expression>) -> ArcIntern<Expression> {
+                    function_call(ExpressionFunction::$ctor, expression)
+                }
+            )+
+        };
+    }
+
+    macro_rules! infix_wrappers {
+        ($($func:ident: $ctor:ident),+ $(,)?) => {
+            $(
+                #[inline(always)]
+                pub fn $func(
+                    left: ArcIntern<Expression>,
+                    right: ArcIntern<Expression>,
+                ) -> ArcIntern<Expression> {
+                    infix(left, InfixOperator::$ctor, right)
+                }
+            )+
+        };
+    }
+
+    macro_rules! prefix_wrappers {
+        ($($func:ident: $ctor:ident),+ $(,)?) => {
+            $(
+                #[inline(always)]
+                pub fn $func(expression: ArcIntern<Expression>) -> ArcIntern<Expression> {
+                    prefix(PrefixOperator::$ctor, expression)
+                }
+            )+
+        };
+    }
+
+    atoms! {
+        function_call_expr: FunctionCall(FunctionCallExpression),
+        infix_expr: Infix(InfixExpression),
+        pi: PiConstant,
+        number: Number(Complex64),
+        prefix_expr: Prefix(PrefixExpression),
+        variable: Variable(String),
+    }
+
+    expression_wrappers! {
+        function_call: function_call_expr(FunctionCallExpression {
+            function: ExpressionFunction,
+            expression: ArcIntern<Expression>,
+        }),
+
+        infix: infix_expr(InfixExpression {
+            left: ArcIntern<Expression>,
+            operator: InfixOperator,
+            right: ArcIntern<Expression>,
+        }),
+
+        prefix: prefix_expr(PrefixExpression {
+            operator: PrefixOperator,
+            expression: ArcIntern<Expression>,
+        }),
+    }
+
+    function_wrappers! {
+        cis: Cis,
+        cos: Cosine,
+        exp: Exponent,
+        sin: Sine,
+        sqrt: SquareRoot,
+    }
+
+    infix_wrappers! {
+        add: Plus,
+        sub: Minus,
+        mul: Star,
+        div: Slash,
+        pow: Caret,
+    }
+
+    prefix_wrappers! {
+        unary_plus: Plus,
+        neg: Minus,
     }
 }
 
