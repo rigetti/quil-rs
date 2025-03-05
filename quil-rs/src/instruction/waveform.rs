@@ -40,7 +40,9 @@ impl Quil for WaveformDefinition {
         write!(f, "DEFWAVEFORM {}", self.name)?;
         write_parameter_string(f, &self.definition.parameters)?;
         write!(f, ":\n{INDENT}")?;
-        write_join_quil(f, fall_back_to_debug, &self.definition.matrix, ", ", "")}
+        write_join_quil(f, fall_back_to_debug, &self.definition.matrix, ", ", "")
+            .map_err(Into::into)
+    }
 }
 
 #[cfg(test)]
