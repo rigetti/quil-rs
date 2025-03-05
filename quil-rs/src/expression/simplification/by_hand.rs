@@ -48,6 +48,7 @@ impl std::ops::Sub<u64> for Limit {
     }
 }
 
+#[derive(Debug, Clone)]
 struct Simplifier {
     memo_table: HashMap<ArcIntern<Expression>, ArcIntern<Expression>>,
 }
@@ -57,6 +58,23 @@ impl Simplifier {
         Self {
             memo_table: HashMap::new(),
         }
+    }
+
+    #[allow(dead_code)]
+    fn debug_memo_table(&self, w: &mut impl std::io::Write) -> std::io::Result<()> {
+        use crate::quil::Quil as _;
+
+        writeln!(w, "Simplifier memo table:")?;
+        for (k, v) in &self.memo_table {
+            writeln!(
+                w,
+                "    {} => {}",
+                k.to_quil_or_debug(),
+                v.to_quil_or_debug(),
+            )?
+        }
+
+        Ok(())
     }
 
     /// Recursively simplify an [`Expression`] by hand, breaking into cases to make things more
