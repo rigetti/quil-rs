@@ -804,7 +804,7 @@ fn simplify_infix(l: &Expression, op: InfixOperator, r: &Expression, limit: u64)
                     simplify_infix(numerator, InfixOperator::Slash, multiplier, limit - 1);
                 let new = simplify_infix(
                     &new_multiplier,
-                    InfixOperator::Star,
+                    InfixOperator::Slash,
                     multiplicand,
                     limit - 1,
                 );
