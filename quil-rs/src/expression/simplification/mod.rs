@@ -336,6 +336,12 @@ mod tests {
         "0"
     }
 
+    test_simplify! {
+        mul_inside_div_on_right,
+        "4 / (2 * x)",
+        "2 / x"
+    }
+
     // TODO doesn't fully simplify in a reasonable amount of recursion
     //     test_simplify! {
     //         the_big_one,
