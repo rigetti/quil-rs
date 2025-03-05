@@ -1,3 +1,11 @@
+## 0.7.2-rc.0 (2025-03-05)
+
+### Fixes
+
+#### fix simplification so that a/(bc) = (a/b)/c
+
+#### fix simplification so that a/(bc) = (a/b)/c (#442)
+
 ## 0.7.1 (2025-02-18)
 
 ### Fixes
