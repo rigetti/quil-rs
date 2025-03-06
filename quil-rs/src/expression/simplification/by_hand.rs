@@ -50,31 +50,94 @@ impl std::ops::Sub<u64> for Limit {
 
 #[derive(Debug, Clone)]
 struct Simplifier {
-    memo_table: HashMap<ArcIntern<Expression>, ArcIntern<Expression>>,
+    simplify_cache: HashMap<ArcIntern<Expression>, ArcIntern<Expression>>,
+    size_cache: HashMap<ArcIntern<Expression>, usize>,
+}
+
+fn debug_cache<V, D: std::fmt::Display, W: std::io::Write>(
+    cache_name: &str,
+    cache: &HashMap<ArcIntern<Expression>, V>,
+    display: impl Fn(&V) -> D,
+    w: &mut W,
+) -> std::io::Result<()> {
+    use crate::quil::Quil as _;
+
+    writeln!(w, "{cache_name} cache:")?;
+    for (k, v) in cache {
+        writeln!(w, "    {} => {}", k.to_quil_or_debug(), display(v))?;
+    }
+
+    Ok(())
 }
 
 impl Simplifier {
     fn new() -> Self {
         Self {
-            memo_table: HashMap::new(),
+            simplify_cache: HashMap::new(),
+            size_cache: HashMap::new(),
         }
     }
 
     #[allow(dead_code)]
-    fn debug_memo_table(&self, w: &mut impl std::io::Write) -> std::io::Result<()> {
-        use crate::quil::Quil as _;
+    fn debug_caches(&self, w: &mut impl std::io::Write) -> std::io::Result<()> {
+        self.debug_simplify_cache(w)?;
+        writeln!(w)?;
+        self.debug_size_cache(w)?;
+        Ok(())
+    }
 
-        writeln!(w, "Simplifier memo table:")?;
-        for (k, v) in &self.memo_table {
-            writeln!(
-                w,
-                "    {} => {}",
-                k.to_quil_or_debug(),
-                v.to_quil_or_debug(),
-            )?
+    fn debug_simplify_cache(&self, w: &mut impl std::io::Write) -> std::io::Result<()> {
+        use crate::quil::Quil as _;
+        debug_cache(
+            "Simplification",
+            &self.simplify_cache,
+            |v| v.to_quil_or_debug(),
+            w,
+        )
+    }
+
+    fn debug_size_cache(&self, w: &mut impl std::io::Write) -> std::io::Result<()> {
+        debug_cache("Size", &self.size_cache, |v| *v, w)
+    }
+
+    /// Helper: in simplification, we'll bias towards smaller expressions
+    fn size(&mut self, expr: ArcIntern<Expression>) -> usize {
+        if let Some(size) = self.size_cache.get(&expr) {
+            return *size;
         }
 
-        Ok(())
+        let result = match expr.as_ref() {
+            Expression::Address(_)
+            | Expression::Number(_)
+            | Expression::PiConstant
+            | Expression::Variable(_) => 1,
+            Expression::FunctionCall(FunctionCallExpression {
+                function: _,
+                expression,
+            }) => 1 + self.size(expression.clone()),
+            Expression::Infix(InfixExpression {
+                left,
+                operator: _,
+                right,
+            }) => 1 + self.size(left.clone()) + self.size(right.clone()),
+            Expression::Prefix(PrefixExpression {
+                operator: _,
+                expression,
+            }) => 1 + self.size(expression.clone()),
+        };
+
+        self.size_cache.insert(expr, result);
+
+        result
+    }
+
+    /// Helper: using `size`, pick the smaller of two expressions
+    fn smaller(
+        &mut self,
+        expr1: ArcIntern<Expression>,
+        expr2: ArcIntern<Expression>,
+    ) -> ArcIntern<Expression> {
+        min_by_key(expr1, expr2, |e| self.size(e.clone()))
     }
 
     /// Recursively simplify an [`Expression`] by hand, breaking into cases to make things more
@@ -86,7 +149,7 @@ impl Simplifier {
     ///
     /// Invariant: Never returns [`Expression::PiConstant`].
     fn simplify(&mut self, e: ArcIntern<Expression>, limit: Limit) -> ArcIntern<Expression> {
-        if let Some(simplified) = self.memo_table.get(&e) {
+        if let Some(simplified) = self.simplify_cache.get(&e) {
             return simplified.clone();
         }
 
@@ -117,7 +180,7 @@ impl Simplifier {
             }) => self.simplify_prefix(*operator, expression.clone(), limit - 1),
         };
 
-        self.memo_table.insert(e, result.clone());
+        self.simplify_cache.insert(e, result.clone());
 
         result
     }
@@ -136,29 +199,6 @@ fn is_zero(x: num_complex::Complex64) -> bool {
 #[inline]
 fn is_one(x: num_complex::Complex64) -> bool {
     is_zero(x - 1.0)
-}
-
-/// Helper: in simplification, we'll bias towards smaller expressions
-fn size(expr: &ArcIntern<Expression>) -> usize {
-    match expr.as_ref() {
-        Expression::Address(_)
-        | Expression::Number(_)
-        | Expression::PiConstant
-        | Expression::Variable(_) => 1,
-        Expression::FunctionCall(FunctionCallExpression {
-            function: _,
-            expression,
-        }) => 1 + size(expression),
-        Expression::Infix(InfixExpression {
-            left,
-            operator: _,
-            right,
-        }) => 1 + size(left) + size(right),
-        Expression::Prefix(PrefixExpression {
-            operator: _,
-            expression,
-        }) => 1 + size(expression),
-    }
 }
 
 /// Check if both arguments are of the form "something * x" for the _same_ x.
@@ -334,7 +374,7 @@ impl Simplifier {
                 let inner_sum = self.simplify(interned::add(expression.clone(), right), limit - 1);
                 let outer_neg = self.simplify(interned::neg(inner_sum), limit - 1);
 
-                min_by_key(original_structure, outer_neg, size)
+                self.smaller(original_structure, outer_neg)
             }
 
             // Multiplication and division with negation
@@ -385,7 +425,7 @@ impl Simplifier {
                     interned::infix(neg_left, operator, expression.clone()),
                     limit - 1,
                 );
-                min_by_key(original, new, size)
+                self.smaller(original, new)
             }
 
             // (-a) ⋇ b = a ⋇ (-b), pick the shorter
@@ -403,7 +443,7 @@ impl Simplifier {
                     interned::infix(expression.clone(), operator, neg_right),
                     limit - 1,
                 );
-                min_by_key(original, new, size)
+                self.smaller(original, new)
             }
 
             //----------------------------------------------------------------
@@ -523,7 +563,7 @@ impl Simplifier {
                 let original = interned::infix(left.clone(), operator, right.clone());
                 let ab = self.simplify(interned::infix(left, operator, b.clone()), limit - 1);
                 let new = self.simplify(interned::infix(ab, operator, c.clone()), limit - 1);
-                min_by_key(original, new, size)
+                self.smaller(original, new)
             }
 
             // Right "associativity" (not really):
@@ -548,7 +588,7 @@ impl Simplifier {
                 let original = interned::infix(left.clone(), operator, right.clone());
                 let ac = self.simplify(interned::infix(left, inverse, c.clone()), limit - 1);
                 let new = self.simplify(interned::infix(ac, operator, b.clone()), limit - 1);
-                min_by_key(original, new, size)
+                self.smaller(original, new)
             }
 
             // Left associativity and "associativity":
@@ -578,7 +618,7 @@ impl Simplifier {
                 let original = interned::infix(left.clone(), operator, right.clone());
                 let bc = self.simplify(interned::infix(b.clone(), operator, right), limit - 1);
                 let new = self.simplify(interned::infix(a.clone(), rhs_operator, bc), limit - 1);
-                min_by_key(original, new, size)
+                self.smaller(original, new)
             }
 
             // Right distribution: a * (b + c) = (a * b) + (a * c)
@@ -595,7 +635,7 @@ impl Simplifier {
                 let ab = self.simplify(interned::mul(left.clone(), b.clone()), limit - 1);
                 let ac = self.simplify(interned::mul(left, c.clone()), limit - 1);
                 let new = self.simplify(interned::add(ab, ac), limit - 1);
-                min_by_key(original, new, size)
+                self.smaller(original, new)
             }
 
             // Left distribution: (a + b) * c = (a * c) + (a * b)
@@ -612,7 +652,7 @@ impl Simplifier {
                 let ac = self.simplify(interned::mul(a.clone(), right.clone()), limit - 1);
                 let bc = self.simplify(interned::mul(b.clone(), right), limit - 1);
                 let new = self.simplify(interned::add(ac, bc), limit - 1);
-                min_by_key(original, new, size)
+                self.smaller(original, new)
             }
 
             //----------------------------------------------------------------
@@ -679,7 +719,7 @@ impl Simplifier {
                     interned::mul(multiplier.clone(), new_multiplicand),
                     limit - 1,
                 );
-                min_by_key(original, new, size)
+                self.smaller(original, new)
             }
 
             // Mul inside Div on right: a / (b * c) = (a / b) / c, pick the shorter
@@ -699,7 +739,7 @@ impl Simplifier {
                     interned::div(new_multiplier, multiplicand.clone()),
                     limit - 1,
                 );
-                min_by_key(original, new, size)
+                self.smaller(original, new)
             }
 
             // Div inside Mul on left with cancellation: (b / a) * a = b
