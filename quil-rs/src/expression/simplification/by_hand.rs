@@ -54,6 +54,7 @@ struct Simplifier {
     size_cache: HashMap<ArcIntern<Expression>, usize>,
 }
 
+/// Useful for debugging
 fn debug_cache<V, D: std::fmt::Display, W: std::io::Write>(
     cache_name: &str,
     cache: &HashMap<ArcIntern<Expression>, V>,
@@ -78,6 +79,7 @@ impl Simplifier {
         }
     }
 
+    /// Useful for debugging
     #[allow(dead_code)]
     fn debug_caches(&self, w: &mut impl std::io::Write) -> std::io::Result<()> {
         self.debug_simplify_cache(w)?;
@@ -86,6 +88,7 @@ impl Simplifier {
         Ok(())
     }
 
+    /// Useful for debugging
     fn debug_simplify_cache(&self, w: &mut impl std::io::Write) -> std::io::Result<()> {
         use crate::quil::Quil as _;
         debug_cache(
@@ -96,6 +99,7 @@ impl Simplifier {
         )
     }
 
+    /// Useful for debugging
     fn debug_size_cache(&self, w: &mut impl std::io::Write) -> std::io::Result<()> {
         debug_cache("Size", &self.size_cache, |v| *v, w)
     }
@@ -661,20 +665,18 @@ impl Simplifier {
 
             // Mul inside Div on left with cancellation: (a * b) / a = (b * a) / a = b
             (
-                Expression::Infix(InfixExpression {
-                    left: same,
-                    operator: InfixOperator::Star,
-                    right: other,
-                }),
-                InfixOperator::Slash,
-                _,
-            )
-            | (
-                Expression::Infix(InfixExpression {
-                    left: other,
-                    operator: InfixOperator::Star,
-                    right: same,
-                }),
+                Expression::Infix(
+                    InfixExpression {
+                        left: same,
+                        operator: InfixOperator::Star,
+                        right: other,
+                    }
+                    | InfixExpression {
+                        left: other,
+                        operator: InfixOperator::Star,
+                        right: same,
+                    },
+                ),
                 InfixOperator::Slash,
                 _,
             ) if &right == same => other.clone(),

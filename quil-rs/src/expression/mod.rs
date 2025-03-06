@@ -238,7 +238,7 @@ macro_rules! impl_expr_op {
         impl $name for Expression {
             type Output = Self;
             fn $function(self, other: Self) -> Self {
-                Expression::Infix(InfixExpression {
+                Self::Infix(InfixExpression {
                     left: ArcIntern::new(self),
                     operator: InfixOperator::$operator,
                     right: ArcIntern::new(other),
@@ -249,7 +249,7 @@ macro_rules! impl_expr_op {
         impl $name<ArcIntern<Expression>> for Expression {
             type Output = Self;
             fn $function(self, other: ArcIntern<Expression>) -> Self {
-                Expression::Infix(InfixExpression {
+                Self::Infix(InfixExpression {
                     left: ArcIntern::new(self),
                     operator: InfixOperator::$operator,
                     right: other,
