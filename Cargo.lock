@@ -1243,6 +1243,7 @@ dependencies = [
  "nom_locate",
  "num-complex",
  "once_cell",
+ "paste",
  "petgraph",
  "pretty_assertions",
  "proptest",

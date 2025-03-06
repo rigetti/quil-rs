@@ -758,13 +758,19 @@ impl fmt::Display for InfixOperator {
     }
 }
 
-/// Convenience constructors for creating [`ArcIntern<Expression>`]s for recursive use
+/// Convenience constructors for creating [`ArcIntern<Expression>`]s out of other
+/// [`ArcIntern<Expression>`]s.
 pub mod interned {
     use super::*;
 
     macro_rules! atoms {
         ($($func:ident: $ctor:ident$(($typ:ty))?),+ $(,)?) => {
             $(
+                #[doc = concat!(
+                    "A wrapper around [`Expression::",
+                    stringify!($ctor),
+                    "`] that returns an [`ArcIntern<Expression>`]."
+                )]
                 #[inline(always)]
                 pub fn $func($(value: $typ)?) -> ArcIntern<Expression> {
                     // Using `std::convert::identity` lets us refer to `$typ` and thus make the
@@ -777,18 +783,32 @@ pub mod interned {
 
     macro_rules! expression_wrappers {
         ($($func:ident: $atom:ident($ctor:ident { $($field:ident: $field_ty:ty),*$(,)? })),+ $(,)?) => {
-            $(
+            paste::paste! { $(
+                #[doc = concat!(
+                    "A wrapper around [`Expression::", stringify!([<$func:camel>]), "`] ",
+                    "that takes the contents of the inner expression type as arguments directly ",
+                    "and returns an [`ArcIntern<Expression>`].",
+                    "\n\n",
+                    "See also [`", stringify!($atom), "`].",
+                )]
                 #[inline(always)]
                 pub fn $func($($field: $field_ty),*) -> ArcIntern<Expression> {
                     $atom($ctor { $($field),* })
                 }
-            )+
+            )+ }
         };
     }
 
     macro_rules! function_wrappers {
         ($($func:ident: $ctor:ident),+ $(,)?) => {
             $(
+                #[doc = concat!(
+                    "Create an <code>[ArcIntern]&lt;[Expression]&gt;</code> representing ",
+                    "`", stringify!($func), "(expression)`.",
+                    "\n\n",
+                    "A wrapper around [`Expression::FunctionCall`] with ",
+                    "[`ExpressionFunction::", stringify!($ctor), "`].",
+                )]
                 #[inline(always)]
                 pub fn $func(expression: ArcIntern<Expression>) -> ArcIntern<Expression> {
                     function_call(ExpressionFunction::$ctor, expression)
@@ -798,8 +818,15 @@ pub mod interned {
     }
 
     macro_rules! infix_wrappers {
-        ($($func:ident: $ctor:ident),+ $(,)?) => {
+        ($($func:ident: $ctor:ident ($op:tt)),+ $(,)?) => {
             $(
+                #[doc = concat!(
+                    "Create an <code>[ArcIntern]&lt;[Expression]&gt;</code> representing ",
+                    "`left ", stringify!($op), " right`.",
+                    "\n\n",
+                    "A wrapper around [`Expression::Infix`] with ",
+                    "[`InfixOperator::", stringify!($ctor), "`].",
+                )]
                 #[inline(always)]
                 pub fn $func(
                     left: ArcIntern<Expression>,
@@ -812,8 +839,15 @@ pub mod interned {
     }
 
     macro_rules! prefix_wrappers {
-        ($($func:ident: $ctor:ident),+ $(,)?) => {
+        ($($func:ident: $ctor:ident ($op:tt)),+ $(,)?) => {
             $(
+                #[doc = concat!(
+                    "Create an <code>[ArcIntern]&lt;[Expression]&gt;</code> representing ",
+                    "`", stringify!($op), "expression`.",
+                    "\n\n",
+                    "A wrapper around [`Expression::Prefix`] with ",
+                    "[`PrefixOperator::", stringify!($ctor), "`].",
+                )]
                 #[inline(always)]
                 pub fn $func(expression: ArcIntern<Expression>) -> ArcIntern<Expression> {
                     prefix(PrefixOperator::$ctor, expression)
@@ -858,16 +892,16 @@ pub mod interned {
     }
 
     infix_wrappers! {
-        add: Plus,
-        sub: Minus,
-        mul: Star,
-        div: Slash,
-        pow: Caret,
+        add: Plus (+),
+        sub: Minus (-),
+        mul: Star (*),
+        div: Slash (/),
+        pow: Caret (^),
     }
 
     prefix_wrappers! {
-        unary_plus: Plus,
-        neg: Minus,
+        unary_plus: Plus (+),
+        neg: Minus (-),
     }
 }
 
