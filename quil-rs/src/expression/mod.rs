@@ -56,6 +56,23 @@ pub enum EvaluationError {
 
 /// The type of Quil expressions.
 ///
+/// Quil expressions take advantage of *structural sharing*; if a Quil expression contains the same
+/// subexpression twice, such as `x + y` in `(x + y) * (x + y)`, the two children of the `*` node
+/// will be the *same pointer*.  This is implemented through *interning*, also known as
+/// *hash-consing*; the recursive references to child nodes are done via [`ArcIntern<Expression>`]s.
+/// Creating an [`ArcIntern`] from an `Expression` will always return the same pointer for the same
+/// expression.
+///
+/// The structural sharing means that equality, cloning, and hashing on Quil expressions are all
+/// very cheap, as they do not need to be recursive: equality of [`ArcIntern`]s is a single-pointer
+/// comparison, cloning of [`ArcIntern`]s is a pointer copy and an atomic increment, and hashing of
+/// [`ArcIntern`]s hashes a single pointer.  It is also very cheap to key [`HashMap`]s by an
+/// [`ArcIntern<Expression>`], which can allow for cheap memoization of operations on `Expression`s.
+///
+/// The structural sharing also means that Quil expressions are fundamentally *immutable*; it is
+/// *impossible* to get an owned or `&mut` reference to the child `Expression`s of any `Expression`,
+/// as the use of interning means there may be multiple references to that `Expression` at any time.
+///
 /// Note that when comparing Quil expressions, any embedded NaNs are treated as *equal* to other
 /// NaNs, not unequal, in contravention of the IEEE 754 spec.
 #[derive(Clone, Debug)]
@@ -70,6 +87,9 @@ pub enum Expression {
 }
 
 /// The type of function call Quil expressions, e.g. `sin(e)`.
+///
+/// Quil expressions take advantage of *structural sharing*, which is why the `expression` here is
+/// wrapped in an [`ArcIntern`]; for more details, see the documentation for [`Expression`].
 ///
 /// Note that when comparing Quil expressions, any embedded NaNs are treated as *equal* to other
 /// NaNs, not unequal, in contravention of the IEEE 754 spec.
@@ -89,6 +109,10 @@ impl FunctionCallExpression {
 }
 
 /// The type of infix Quil expressions, e.g. `e1 + e2`.
+///
+/// Quil expressions take advantage of *structural sharing*, which is why the `left` and `right`
+/// expressions here are wrapped in [`ArcIntern`]s; for more details, see the documentation for
+/// [`Expression`].
 ///
 /// Note that when comparing Quil expressions, any embedded NaNs are treated as *equal* to other
 /// NaNs, not unequal, in contravention of the IEEE 754 spec.
@@ -114,6 +138,9 @@ impl InfixExpression {
 }
 
 /// The type of prefix Quil expressions, e.g. `-e`.
+///
+/// Quil expressions take advantage of *structural sharing*, which is why the `expression` here is
+/// wrapped in an [`ArcIntern`]; for more details, see the documentation for [`Expression`].
 ///
 /// Note that when comparing Quil expressions, any embedded NaNs are treated as *equal* to other
 /// NaNs, not unequal, in contravention of the IEEE 754 spec.
