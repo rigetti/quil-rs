@@ -32,7 +32,9 @@ use std::{
     fmt,
     hash::{Hash, Hasher},
     num::NonZeroI32,
-    ops::{Add, AddAssign, BitXor, BitXorAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign},
+    ops::{
+        Add, AddAssign, BitXor, BitXorAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign,
+    },
     str::FromStr,
 };
 
@@ -262,6 +264,17 @@ impl_expr_op!(Add, AddAssign, add, add_assign, Plus);
 impl_expr_op!(Sub, SubAssign, sub, sub_assign, Minus);
 impl_expr_op!(Mul, MulAssign, mul, mul_assign, Star);
 impl_expr_op!(Div, DivAssign, div, div_assign, Slash);
+
+impl Neg for Expression {
+    type Output = Self;
+
+    fn neg(self) -> Self {
+        Expression::Prefix(PrefixExpression {
+            operator: PrefixOperator::Minus,
+            expression: ArcIntern::new(self),
+        })
+    }
+}
 
 /// Compute the result of an infix expression where both operands are complex.
 #[inline]
