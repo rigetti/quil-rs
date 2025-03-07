@@ -346,8 +346,7 @@ impl Calibrations {
                             }
 
                             instruction.apply_to_expressions(|expr| {
-                                let previous = std::mem::replace(expr, Expression::PiConstant);
-                                *expr = previous.substitute_variables(&variable_expansions);
+                                *expr = expr.substitute_variables(&variable_expansions);
                             })
                         }
 

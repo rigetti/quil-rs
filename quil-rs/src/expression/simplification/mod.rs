@@ -1,16 +1,14 @@
-use crate::expression::Expression;
-
 mod by_hand;
 
-/// Simplify an [`Expression`].
-pub(super) fn run(expression: &Expression) -> Expression {
-    by_hand::run(expression)
-}
+pub(super) use by_hand::run;
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use std::str::FromStr;
+
+    use crate::{expression::Expression, quil::Quil};
 
     macro_rules! test_simplify {
         ($name:ident, $input:expr, $expected:expr) => {
@@ -25,7 +23,26 @@ mod tests {
                     )
                 });
                 let computed = run(&parsed_input);
-                assert_eq!(parsed_expected, computed);
+                assert!(
+                    parsed_expected == computed,
+                    concat!(
+                        "Expression simplification produced the wrong result\n",
+                        "\n",
+                        "Input (Rust syntax):    {:#?}\n",
+                        "Expected (Rust syntax): {:#?}\n",
+                        "Actual (Rust syntax):   {:#?}\n",
+                        "\n",
+                        "   Input (Quil syntax): {}\n",
+                        "Expected (Quil syntax): {}\n",
+                        "  Actual (Quil syntax): {}",
+                    ),
+                    parsed_input,
+                    parsed_expected,
+                    computed,
+                    parsed_input.to_quil_or_debug(),
+                    parsed_expected.to_quil_or_debug(),
+                    computed.to_quil_or_debug(),
+                );
             }
         };
     }

@@ -18,6 +18,8 @@ use rigetti_pyo3::{
     wrap_error, PyTryFrom, PyWrapper, PyWrapperMut, ToPython, ToPythonError,
 };
 
+use internment::ArcIntern;
+
 use crate::{impl_eq, impl_to_quil, instruction::PyMemoryReference};
 
 wrap_error!(RustEvaluationError(quil_rs::expression::EvaluationError));
@@ -110,7 +112,7 @@ py_wrap_data_struct! {
     #[derive(Debug)]
     PyFunctionCallExpression(FunctionCallExpression) as "FunctionCallExpression" {
         function: ExpressionFunction => PyExpressionFunction,
-        expression: Box<Expression> => PyExpression
+        expression: ArcIntern<Expression> => PyExpression
     }
 }
 impl_repr!(PyFunctionCallExpression);
@@ -125,7 +127,7 @@ impl PyFunctionCallExpression {
     ) -> PyResult<Self> {
         Ok(PyFunctionCallExpression(FunctionCallExpression::new(
             ExpressionFunction::py_try_from(py, &function)?,
-            Box::<Expression>::py_try_from(py, &expression)?,
+            ArcIntern::<Expression>::py_try_from(py, &expression)?,
         )))
     }
 }
@@ -134,9 +136,9 @@ py_wrap_data_struct! {
     #[derive(Debug)]
     #[pyo3(subclass)]
     PyInfixExpression(InfixExpression) as "InfixExpression" {
-        left: Box<Expression> => PyExpression,
+        left: ArcIntern<Expression> => PyExpression,
         operator: InfixOperator => PyInfixOperator,
-        right: Box<Expression> => PyExpression
+        right: ArcIntern<Expression> => PyExpression
     }
 }
 impl_repr!(PyInfixExpression);
@@ -151,9 +153,9 @@ impl PyInfixExpression {
         right: PyExpression,
     ) -> PyResult<Self> {
         Ok(PyInfixExpression(InfixExpression::new(
-            Box::<Expression>::py_try_from(py, &left)?,
+            ArcIntern::<Expression>::py_try_from(py, &left)?,
             InfixOperator::py_try_from(py, &operator)?,
-            Box::<Expression>::py_try_from(py, &right)?,
+            ArcIntern::<Expression>::py_try_from(py, &right)?,
         )))
     }
 }
@@ -163,7 +165,7 @@ py_wrap_data_struct! {
     #[pyo3(subclass)]
     PyPrefixExpression(PrefixExpression) as "PrefixExpression" {
         operator: PrefixOperator => PyPrefixOperator,
-        expression: Box<Expression> => PyExpression
+        expression: ArcIntern<Expression> => PyExpression
     }
 }
 
@@ -177,7 +179,7 @@ impl PyPrefixExpression {
     ) -> PyResult<Self> {
         Ok(PyPrefixExpression(PrefixExpression::new(
             PrefixOperator::py_try_from(py, &operator)?,
-            Box::<Expression>::py_try_from(py, &expression)?,
+            ArcIntern::<Expression>::py_try_from(py, &expression)?,
         )))
     }
 }

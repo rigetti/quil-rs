@@ -21,6 +21,7 @@ use crate::{
     quil::Quil,
     real,
 };
+use internment::ArcIntern;
 use lexical::{format, to_string_with_options, WriteFloatOptions};
 use nom_locate::LocatedSpan;
 use num_complex::Complex64;
@@ -31,7 +32,9 @@ use std::{
     fmt,
     hash::{Hash, Hasher},
     num::NonZeroI32,
-    ops::{Add, AddAssign, BitXor, BitXorAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign},
+    ops::{
+        Add, AddAssign, BitXor, BitXorAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign,
+    },
     str::FromStr,
 };
 
@@ -53,6 +56,23 @@ pub enum EvaluationError {
 
 /// The type of Quil expressions.
 ///
+/// Quil expressions take advantage of *structural sharing*; if a Quil expression contains the same
+/// subexpression twice, such as `x + y` in `(x + y) * (x + y)`, the two children of the `*` node
+/// will be the *same pointer*.  This is implemented through *interning*, also known as
+/// *hash-consing*; the recursive references to child nodes are done via [`ArcIntern<Expression>`]s.
+/// Creating an [`ArcIntern`] from an `Expression` will always return the same pointer for the same
+/// expression.
+///
+/// The structural sharing means that equality, cloning, and hashing on Quil expressions are all
+/// very cheap, as they do not need to be recursive: equality of [`ArcIntern`]s is a single-pointer
+/// comparison, cloning of [`ArcIntern`]s is a pointer copy and an atomic increment, and hashing of
+/// [`ArcIntern`]s hashes a single pointer.  It is also very cheap to key [`HashMap`]s by an
+/// [`ArcIntern<Expression>`], which can allow for cheap memoization of operations on `Expression`s.
+///
+/// The structural sharing also means that Quil expressions are fundamentally *immutable*; it is
+/// *impossible* to get an owned or `&mut` reference to the child `Expression`s of any `Expression`,
+/// as the use of interning means there may be multiple references to that `Expression` at any time.
+///
 /// Note that when comparing Quil expressions, any embedded NaNs are treated as *equal* to other
 /// NaNs, not unequal, in contravention of the IEEE 754 spec.
 #[derive(Clone, Debug)]
@@ -68,16 +88,19 @@ pub enum Expression {
 
 /// The type of function call Quil expressions, e.g. `sin(e)`.
 ///
+/// Quil expressions take advantage of *structural sharing*, which is why the `expression` here is
+/// wrapped in an [`ArcIntern`]; for more details, see the documentation for [`Expression`].
+///
 /// Note that when comparing Quil expressions, any embedded NaNs are treated as *equal* to other
 /// NaNs, not unequal, in contravention of the IEEE 754 spec.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct FunctionCallExpression {
     pub function: ExpressionFunction,
-    pub expression: Box<Expression>,
+    pub expression: ArcIntern<Expression>,
 }
 
 impl FunctionCallExpression {
-    pub fn new(function: ExpressionFunction, expression: Box<Expression>) -> Self {
+    pub fn new(function: ExpressionFunction, expression: ArcIntern<Expression>) -> Self {
         Self {
             function,
             expression,
@@ -87,17 +110,25 @@ impl FunctionCallExpression {
 
 /// The type of infix Quil expressions, e.g. `e1 + e2`.
 ///
+/// Quil expressions take advantage of *structural sharing*, which is why the `left` and `right`
+/// expressions here are wrapped in [`ArcIntern`]s; for more details, see the documentation for
+/// [`Expression`].
+///
 /// Note that when comparing Quil expressions, any embedded NaNs are treated as *equal* to other
 /// NaNs, not unequal, in contravention of the IEEE 754 spec.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct InfixExpression {
-    pub left: Box<Expression>,
+    pub left: ArcIntern<Expression>,
     pub operator: InfixOperator,
-    pub right: Box<Expression>,
+    pub right: ArcIntern<Expression>,
 }
 
 impl InfixExpression {
-    pub fn new(left: Box<Expression>, operator: InfixOperator, right: Box<Expression>) -> Self {
+    pub fn new(
+        left: ArcIntern<Expression>,
+        operator: InfixOperator,
+        right: ArcIntern<Expression>,
+    ) -> Self {
         Self {
             left,
             operator,
@@ -108,16 +139,19 @@ impl InfixExpression {
 
 /// The type of prefix Quil expressions, e.g. `-e`.
 ///
+/// Quil expressions take advantage of *structural sharing*, which is why the `expression` here is
+/// wrapped in an [`ArcIntern`]; for more details, see the documentation for [`Expression`].
+///
 /// Note that when comparing Quil expressions, any embedded NaNs are treated as *equal* to other
 /// NaNs, not unequal, in contravention of the IEEE 754 spec.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct PrefixExpression {
     pub operator: PrefixOperator,
-    pub expression: Box<Expression>,
+    pub expression: ArcIntern<Expression>,
 }
 
 impl PrefixExpression {
-    pub fn new(operator: PrefixOperator, expression: Box<Expression>) -> Self {
+    pub fn new(operator: PrefixOperator, expression: ArcIntern<Expression>) -> Self {
         Self {
             operator,
             expression,
@@ -204,15 +238,46 @@ macro_rules! impl_expr_op {
         impl $name for Expression {
             type Output = Self;
             fn $function(self, other: Self) -> Self {
-                Expression::Infix(InfixExpression {
-                    left: Box::new(self),
+                Self::Infix(InfixExpression {
+                    left: ArcIntern::new(self),
                     operator: InfixOperator::$operator,
-                    right: Box::new(other),
+                    right: ArcIntern::new(other),
                 })
             }
         }
+
+        impl $name<ArcIntern<Expression>> for Expression {
+            type Output = Self;
+            fn $function(self, other: ArcIntern<Expression>) -> Self {
+                Self::Infix(InfixExpression {
+                    left: ArcIntern::new(self),
+                    operator: InfixOperator::$operator,
+                    right: other,
+                })
+            }
+        }
+
+        impl $name<Expression> for ArcIntern<Expression> {
+            type Output = Expression;
+            fn $function(self, other: Expression) -> Expression {
+                Expression::Infix(InfixExpression {
+                    left: self,
+                    operator: InfixOperator::$operator,
+                    right: ArcIntern::new(other),
+                })
+            }
+        }
+
         impl $name_assign for Expression {
             fn $function_assign(&mut self, other: Self) {
+                // Move out of self to avoid potentially cloning a large value
+                let temp = ::std::mem::replace(self, Self::PiConstant);
+                *self = temp.$function(other);
+            }
+        }
+
+        impl $name_assign<ArcIntern<Expression>> for Expression {
+            fn $function_assign(&mut self, other: ArcIntern<Expression>) {
                 // Move out of self to avoid potentially cloning a large value
                 let temp = ::std::mem::replace(self, Self::PiConstant);
                 *self = temp.$function(other);
@@ -227,11 +292,27 @@ impl_expr_op!(Sub, SubAssign, sub, sub_assign, Minus);
 impl_expr_op!(Mul, MulAssign, mul, mul_assign, Star);
 impl_expr_op!(Div, DivAssign, div, div_assign, Slash);
 
+impl Neg for Expression {
+    type Output = Self;
+
+    fn neg(self) -> Self {
+        Expression::Prefix(PrefixExpression {
+            operator: PrefixOperator::Minus,
+            expression: ArcIntern::new(self),
+        })
+    }
+}
+
 /// Compute the result of an infix expression where both operands are complex.
-fn calculate_infix(left: &Complex64, operator: &InfixOperator, right: &Complex64) -> Complex64 {
+#[inline]
+pub(crate) fn calculate_infix(
+    left: Complex64,
+    operator: InfixOperator,
+    right: Complex64,
+) -> Complex64 {
     use InfixOperator::*;
     match operator {
-        Caret => left.powc(*right),
+        Caret => left.powc(right),
         Plus => left + right,
         Minus => left - right,
         Slash => left / right,
@@ -240,7 +321,8 @@ fn calculate_infix(left: &Complex64, operator: &InfixOperator, right: &Complex64
 }
 
 /// Compute the result of a Quil-defined expression function where the operand is complex.
-fn calculate_function(function: &ExpressionFunction, argument: &Complex64) -> Complex64 {
+#[inline]
+pub(crate) fn calculate_function(function: ExpressionFunction, argument: Complex64) -> Complex64 {
     use ExpressionFunction::*;
     match function {
         Sine => argument.sin(),
@@ -336,7 +418,7 @@ impl Expression {
                 expression,
             }) => {
                 let evaluated = expression.evaluate(variables, memory_references)?;
-                Ok(calculate_function(function, &evaluated))
+                Ok(calculate_function(*function, evaluated))
             }
             Infix(InfixExpression {
                 left,
@@ -345,7 +427,7 @@ impl Expression {
             }) => {
                 let left_evaluated = left.evaluate(variables, memory_references)?;
                 let right_evaluated = right.evaluate(variables, memory_references)?;
-                Ok(calculate_infix(&left_evaluated, operator, &right_evaluated))
+                Ok(calculate_infix(left_evaluated, *operator, right_evaluated))
             }
             Prefix(PrefixExpression {
                 operator,
@@ -376,7 +458,6 @@ impl Expression {
     }
 
     /// Substitute an expression in the place of each matching variable.
-    /// Consumes the expression and returns a new one.
     ///
     /// # Example
     ///
@@ -395,7 +476,7 @@ impl Expression {
     ///
     /// assert_eq!(evaluated, Expression::from_str("1.0 + %y").unwrap())
     /// ```
-    pub fn substitute_variables(self, variable_values: &HashMap<String, Expression>) -> Self {
+    pub fn substitute_variables(&self, variable_values: &HashMap<String, Expression>) -> Self {
         use Expression::*;
 
         match self {
@@ -403,7 +484,7 @@ impl Expression {
                 function,
                 expression,
             }) => Expression::FunctionCall(FunctionCallExpression {
-                function,
+                function: *function,
                 expression: expression.substitute_variables(variable_values).into(),
             }),
             Infix(InfixExpression {
@@ -415,7 +496,7 @@ impl Expression {
                 let right = right.substitute_variables(variable_values).into();
                 Infix(InfixExpression {
                     left,
-                    operator,
+                    operator: *operator,
                     right,
                 })
             }
@@ -423,14 +504,14 @@ impl Expression {
                 operator,
                 expression,
             }) => Prefix(PrefixExpression {
-                operator,
+                operator: *operator,
                 expression: expression.substitute_variables(variable_values).into(),
             }),
             Variable(identifier) => match variable_values.get(identifier.as_str()) {
                 Some(value) => value.clone(),
-                None => Variable(identifier),
+                None => Variable(identifier.clone()),
             },
-            other => other,
+            other => other.clone(),
         }
     }
 
@@ -578,18 +659,20 @@ mod test {
         real,
     };
 
+    use internment::ArcIntern;
+
     #[test]
     fn formats_nested_expression() {
         let expression = Expression::Infix(InfixExpression {
-            left: Box::new(Expression::Prefix(PrefixExpression {
+            left: ArcIntern::new(Expression::Prefix(PrefixExpression {
                 operator: PrefixOperator::Minus,
-                expression: Box::new(Expression::Number(real!(3f64))),
+                expression: ArcIntern::new(Expression::Number(real!(3f64))),
             })),
             operator: InfixOperator::Star,
-            right: Box::new(Expression::Infix(InfixExpression {
-                left: Box::new(Expression::PiConstant),
+            right: ArcIntern::new(Expression::Infix(InfixExpression {
+                left: ArcIntern::new(Expression::PiConstant),
                 operator: InfixOperator::Slash,
-                right: Box::new(Expression::Number(real!(2f64))),
+                right: ArcIntern::new(Expression::Number(real!(2f64))),
             })),
         });
 
@@ -675,6 +758,153 @@ impl fmt::Display for InfixOperator {
     }
 }
 
+/// Convenience constructors for creating [`ArcIntern<Expression>`]s out of other
+/// [`ArcIntern<Expression>`]s.
+pub mod interned {
+    use super::*;
+
+    macro_rules! atoms {
+        ($($func:ident: $ctor:ident$(($typ:ty))?),+ $(,)?) => {
+            $(
+                #[doc = concat!(
+                    "A wrapper around [`Expression::",
+                    stringify!($ctor),
+                    "`] that returns an [`ArcIntern<Expression>`]."
+                )]
+                #[inline(always)]
+                pub fn $func($(value: $typ)?) -> ArcIntern<Expression> {
+                    // Using `std::convert::identity` lets us refer to `$typ` and thus make the
+                    // constructor argument optional
+                    ArcIntern::new(Expression::$ctor$((std::convert::identity::<$typ>(value)))?)
+                }
+            )+
+        };
+    }
+
+    macro_rules! expression_wrappers {
+        ($($func:ident: $atom:ident($ctor:ident { $($field:ident: $field_ty:ty),*$(,)? })),+ $(,)?) => {
+            paste::paste! { $(
+                #[doc = concat!(
+                    "A wrapper around [`Expression::", stringify!([<$func:camel>]), "`] ",
+                    "that takes the contents of the inner expression type as arguments directly ",
+                    "and returns an [`ArcIntern<Expression>`].",
+                    "\n\n",
+                    "See also [`", stringify!($atom), "`].",
+                )]
+                #[inline(always)]
+                pub fn $func($($field: $field_ty),*) -> ArcIntern<Expression> {
+                    $atom($ctor { $($field),* })
+                }
+            )+ }
+        };
+    }
+
+    macro_rules! function_wrappers {
+        ($($func:ident: $ctor:ident),+ $(,)?) => {
+            $(
+                #[doc = concat!(
+                    "Create an <code>[ArcIntern]&lt;[Expression]&gt;</code> representing ",
+                    "`", stringify!($func), "(expression)`.",
+                    "\n\n",
+                    "A wrapper around [`Expression::FunctionCall`] with ",
+                    "[`ExpressionFunction::", stringify!($ctor), "`].",
+                )]
+                #[inline(always)]
+                pub fn $func(expression: ArcIntern<Expression>) -> ArcIntern<Expression> {
+                    function_call(ExpressionFunction::$ctor, expression)
+                }
+            )+
+        };
+    }
+
+    macro_rules! infix_wrappers {
+        ($($func:ident: $ctor:ident ($op:tt)),+ $(,)?) => {
+            $(
+                #[doc = concat!(
+                    "Create an <code>[ArcIntern]&lt;[Expression]&gt;</code> representing ",
+                    "`left ", stringify!($op), " right`.",
+                    "\n\n",
+                    "A wrapper around [`Expression::Infix`] with ",
+                    "[`InfixOperator::", stringify!($ctor), "`].",
+                )]
+                #[inline(always)]
+                pub fn $func(
+                    left: ArcIntern<Expression>,
+                    right: ArcIntern<Expression>,
+                ) -> ArcIntern<Expression> {
+                    infix(left, InfixOperator::$ctor, right)
+                }
+            )+
+        };
+    }
+
+    macro_rules! prefix_wrappers {
+        ($($func:ident: $ctor:ident ($op:tt)),+ $(,)?) => {
+            $(
+                #[doc = concat!(
+                    "Create an <code>[ArcIntern]&lt;[Expression]&gt;</code> representing ",
+                    "`", stringify!($op), "expression`.",
+                    "\n\n",
+                    "A wrapper around [`Expression::Prefix`] with ",
+                    "[`PrefixOperator::", stringify!($ctor), "`].",
+                )]
+                #[inline(always)]
+                pub fn $func(expression: ArcIntern<Expression>) -> ArcIntern<Expression> {
+                    prefix(PrefixOperator::$ctor, expression)
+                }
+            )+
+        };
+    }
+
+    atoms! {
+        function_call_expr: FunctionCall(FunctionCallExpression),
+        infix_expr: Infix(InfixExpression),
+        pi: PiConstant,
+        number: Number(Complex64),
+        prefix_expr: Prefix(PrefixExpression),
+        variable: Variable(String),
+    }
+
+    expression_wrappers! {
+        function_call: function_call_expr(FunctionCallExpression {
+            function: ExpressionFunction,
+            expression: ArcIntern<Expression>,
+        }),
+
+        infix: infix_expr(InfixExpression {
+            left: ArcIntern<Expression>,
+            operator: InfixOperator,
+            right: ArcIntern<Expression>,
+        }),
+
+        prefix: prefix_expr(PrefixExpression {
+            operator: PrefixOperator,
+            expression: ArcIntern<Expression>,
+        }),
+    }
+
+    function_wrappers! {
+        cis: Cis,
+        cos: Cosine,
+        exp: Exponent,
+        sin: Sine,
+        sqrt: SquareRoot,
+    }
+
+    infix_wrappers! {
+        add: Plus (+),
+        sub: Minus (-),
+        mul: Star (*),
+        div: Slash (/),
+        pow: Caret (^),
+    }
+
+    prefix_wrappers! {
+        unary_plus: Plus (+),
+        neg: Minus (-),
+    }
+}
+
 #[cfg(test)]
 // This lint should be re-enabled once this proptest issue is resolved
 // https://github.com/proptest-rs/proptest/issues/364
@@ -730,7 +960,7 @@ mod tests {
             TestCase {
                 expression: Expression::Prefix(PrefixExpression {
                     operator: PrefixOperator::Minus,
-                    expression: Box::new(Number(real!(1f64))),
+                    expression: ArcIntern::new(Number(real!(1f64))),
                 }),
                 variables: &empty_variables,
                 memory_references: &empty_memory,
@@ -754,7 +984,7 @@ mod tests {
             TestCase {
                 expression: Expression::FunctionCall(FunctionCallExpression {
                     function: ExpressionFunction::Sine,
-                    expression: Box::new(Expression::Number(real!(PI / 2f64))),
+                    expression: ArcIntern::new(Expression::Number(real!(PI / 2f64))),
                 }),
                 variables: &variables,
                 memory_references: &empty_memory,
@@ -856,7 +1086,7 @@ mod tests {
                     (any::<ExpressionFunction>(), expr.clone()).prop_map(|(function, e)| {
                         Expression::FunctionCall(FunctionCallExpression {
                             function,
-                            expression: Box::new(e),
+                            expression: ArcIntern::new(e),
                         })
                     }),
                     (expr.clone(), any::<InfixOperator>())
@@ -871,13 +1101,13 @@ mod tests {
                             }
                         ))
                         .prop_map(|(l, operator, r)| Infix(InfixExpression {
-                            left: Box::new(l),
+                            left: ArcIntern::new(l),
                             operator,
-                            right: Box::new(r)
+                            right: ArcIntern::new(r)
                         })),
                     expr.prop_map(|e| Prefix(PrefixExpression {
                         operator: PrefixOperator::Minus,
-                        expression: Box::new(e)
+                        expression: ArcIntern::new(e)
                     }))
                 ]
             },
@@ -889,9 +1119,9 @@ mod tests {
         #[test]
         fn eq(a in any::<f64>(), b in any::<f64>()) {
             let first = Expression::Infix (InfixExpression {
-                left: Box::new(Expression::Number(real!(a))),
+                left: ArcIntern::new(Expression::Number(real!(a))),
                 operator: InfixOperator::Plus,
-                right: Box::new(Expression::Number(real!(b))),
+                right: ArcIntern::new(Expression::Number(real!(b))),
             } );
             let differing = Expression::Number(real!(a + b));
             prop_assert_eq!(&first, &first);
@@ -901,9 +1131,9 @@ mod tests {
         #[test]
         fn hash(a in any::<f64>(), b in any::<f64>()) {
             let first = Expression::Infix (InfixExpression {
-                left: Box::new(Expression::Number(real!(a))),
+                left: ArcIntern::new(Expression::Number(real!(a))),
                 operator: InfixOperator::Plus,
-                right: Box::new(Expression::Number(real!(b))),
+                right: ArcIntern::new(Expression::Number(real!(b))),
             });
             let matching = first.clone();
             let differing = Expression::Number(real!(a + b));
@@ -948,13 +1178,13 @@ mod tests {
 
         #[test]
         fn exponentiation_works_as_expected(left in arb_expr(), right in arb_expr()) {
-            let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Caret, right: Box::new(right.clone()) } );
+            let expected = Expression::Infix (InfixExpression { left: ArcIntern::new(left.clone()), operator: InfixOperator::Caret, right: ArcIntern::new(right.clone()) } );
             prop_assert_eq!(left ^ right, expected);
         }
 
         #[test]
         fn in_place_exponentiation_works_as_expected(left in arb_expr(), right in arb_expr()) {
-            let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Caret, right: Box::new(right.clone()) } );
+            let expected = Expression::Infix (InfixExpression { left: ArcIntern::new(left.clone()), operator: InfixOperator::Caret, right: ArcIntern::new(right.clone()) } );
             let mut x = left;
             x ^= right;
             prop_assert_eq!(x, expected);
@@ -962,13 +1192,13 @@ mod tests {
 
         #[test]
         fn addition_works_as_expected(left in arb_expr(), right in arb_expr()) {
-            let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Plus, right: Box::new(right.clone()) } );
+            let expected = Expression::Infix (InfixExpression { left: ArcIntern::new(left.clone()), operator: InfixOperator::Plus, right: ArcIntern::new(right.clone()) } );
             prop_assert_eq!(left + right, expected);
         }
 
         #[test]
         fn in_place_addition_works_as_expected(left in arb_expr(), right in arb_expr()) {
-            let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Plus, right: Box::new(right.clone()) } );
+            let expected = Expression::Infix (InfixExpression { left: ArcIntern::new(left.clone()), operator: InfixOperator::Plus, right: ArcIntern::new(right.clone()) } );
             let mut x = left;
             x += right;
             prop_assert_eq!(x, expected);
@@ -976,13 +1206,13 @@ mod tests {
 
         #[test]
         fn subtraction_works_as_expected(left in arb_expr(), right in arb_expr()) {
-            let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Minus, right: Box::new(right.clone()) } );
+            let expected = Expression::Infix (InfixExpression { left: ArcIntern::new(left.clone()), operator: InfixOperator::Minus, right: ArcIntern::new(right.clone()) } );
             prop_assert_eq!(left - right, expected);
         }
 
         #[test]
         fn in_place_subtraction_works_as_expected(left in arb_expr(), right in arb_expr()) {
-            let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Minus, right: Box::new(right.clone()) } );
+            let expected = Expression::Infix (InfixExpression { left: ArcIntern::new(left.clone()), operator: InfixOperator::Minus, right: ArcIntern::new(right.clone()) } );
             let mut x = left;
             x -= right;
             prop_assert_eq!(x, expected);
@@ -990,13 +1220,13 @@ mod tests {
 
         #[test]
         fn multiplication_works_as_expected(left in arb_expr(), right in arb_expr()) {
-            let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Star, right: Box::new(right.clone()) } );
+            let expected = Expression::Infix (InfixExpression { left: ArcIntern::new(left.clone()), operator: InfixOperator::Star, right: ArcIntern::new(right.clone()) } );
             prop_assert_eq!(left * right, expected);
         }
 
         #[test]
         fn in_place_multiplication_works_as_expected(left in arb_expr(), right in arb_expr()) {
-            let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Star, right: Box::new(right.clone()) } );
+            let expected = Expression::Infix (InfixExpression { left: ArcIntern::new(left.clone()), operator: InfixOperator::Star, right: ArcIntern::new(right.clone()) } );
             let mut x = left;
             x *= right;
             prop_assert_eq!(x, expected);
@@ -1006,14 +1236,14 @@ mod tests {
         // Avoid division by 0 so that we can reliably assert equality
         #[test]
         fn division_works_as_expected(left in arb_expr(), right in nonzero(arb_expr())) {
-            let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Slash, right: Box::new(right.clone()) } );
+            let expected = Expression::Infix (InfixExpression { left: ArcIntern::new(left.clone()), operator: InfixOperator::Slash, right: ArcIntern::new(right.clone()) } );
             prop_assert_eq!(left / right, expected);
         }
 
         // Avoid division by 0 so that we can reliably assert equality
         #[test]
         fn in_place_division_works_as_expected(left in arb_expr(), right in nonzero(arb_expr())) {
-            let expected = Expression::Infix (InfixExpression { left: Box::new(left.clone()), operator: InfixOperator::Slash, right: Box::new(right.clone()) } );
+            let expected = Expression::Infix (InfixExpression { left: ArcIntern::new(left.clone()), operator: InfixOperator::Slash, right: ArcIntern::new(right.clone()) } );
             let mut x = left;
             x /= right;
             prop_assert_eq!(x, expected);
@@ -1031,8 +1261,8 @@ mod tests {
             let simple_p = p.clone().into_simplified();
 
             prop_assert_eq!(
-                simple_p.clone(),
-                simple_e.clone(),
+                &simple_p,
+                &simple_e,
                 "Simplified expressions should be equal:\nparenthesized {p} ({p:?}) extracted from {s} simplified to {simple_p}\nvs original {e} ({e:?}) simplified to {simple_e}",
                 p=p.to_quil_or_debug(),
                 s=s,

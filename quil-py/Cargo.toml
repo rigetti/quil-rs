@@ -27,9 +27,10 @@ strum.workspace = true
 # pyo3 dependencies should be updated together
 numpy = "0.20.0"
 pyo3 = { version = "0.20.3", features = ["indexmap"] }
-rigetti-pyo3 = {version = "0.3.4", features = ["indexmap"]}
+rigetti-pyo3 = { version = "0.4.3", features = ["indexmap"] }
 indexmap.workspace = true
 num-complex = "0.4.6"
+internment = { version = "0.8.6", features = ["arc"] }
 
 [build-dependencies]
 pyo3-build-config = "0.20.0"
