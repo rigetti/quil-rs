@@ -1,3 +1,27 @@
+## 0.31.0-rc.0 (2025-03-07)
+
+### Breaking Changes
+
+#### intern `Expression`s
+
+#### expression interning, including caching during simplification
+
+### Features
+
+#### implement arithmetic traits for `ArcIntern<Expression>`
+
+#### expression simplification takes advantage of sharing
+
+#### add missing `Neg` impl for `Expression`
+
+#### cache expression sizes during simplification
+
+### Fixes
+
+#### fix simplification so that a/(bc) = (a/b)/c
+
+#### fix simplification so that a/(bc) = (a/b)/c (#442)
+
 ## 0.30.2-rc.0 (2025-03-05)
 
 ### Fixes
