@@ -19,6 +19,7 @@ db-urls = ["https://github.com/rustsec/advisory-db"]
 # More documentation for the licenses section can be found here:
 # https://embarkstudios.github.io/cargo-deny/checks/licenses/cfg.html
 [licenses]
+unused-allowed-license = "allow"
 allow = [
   "Apache-2.0",
   "Apache-2.0 WITH LLVM-exception",
