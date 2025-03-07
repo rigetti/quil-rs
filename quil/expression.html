@@ -158,13 +158,13 @@
                     <a class="class" href="#InfixExpression">InfixExpression</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#InfixExpression.operator">operator</a>
+                                <a class="variable" href="#InfixExpression.left">left</a>
                         </li>
                         <li>
                                 <a class="variable" href="#InfixExpression.right">right</a>
                         </li>
                         <li>
-                                <a class="variable" href="#InfixExpression.left">left</a>
+                                <a class="variable" href="#InfixExpression.operator">operator</a>
                         </li>
                 </ul>
 
@@ -290,7 +290,9 @@
     </div>
     <a class="headerlink" href="#Expression.from_address"></a>
     
-    
+            <div class="docstring"><p>The Python wrapper for [<code>Expression::Address</code>], creating a [<code>PyExpression</code>] and taking a Python argument.</p>
+</div>
+
 
                             </div>
                             <div id="Expression.from_function_call" class="classattr">
@@ -303,7 +305,9 @@
     </div>
     <a class="headerlink" href="#Expression.from_function_call"></a>
     
-    
+            <div class="docstring"><p>The Python wrapper for [<code>Expression::FunctionCall</code>], creating a [<code>PyExpression</code>] and taking a Python argument.</p>
+</div>
+
 
                             </div>
                             <div id="Expression.from_infix" class="classattr">
@@ -316,7 +320,9 @@
     </div>
     <a class="headerlink" href="#Expression.from_infix"></a>
     
-    
+            <div class="docstring"><p>The Python wrapper for [<code>Expression::Infix</code>], creating a [<code>PyExpression</code>] and taking a Python argument.</p>
+</div>
+
 
                             </div>
                             <div id="Expression.from_number" class="classattr">
@@ -329,7 +335,9 @@
     </div>
     <a class="headerlink" href="#Expression.from_number"></a>
     
-    
+            <div class="docstring"><p>The Python wrapper for [<code>Expression::Number</code>], creating a [<code>PyExpression</code>] and taking a Python argument.</p>
+</div>
+
 
                             </div>
                             <div id="Expression.new_pi" class="classattr">
@@ -342,7 +350,9 @@
     </div>
     <a class="headerlink" href="#Expression.new_pi"></a>
     
-    
+            <div class="docstring"><p>Create a new [<code>PyExpression</code>] wrapping a [<code>Expression::PiConstant</code>].</p>
+</div>
+
 
                             </div>
                             <div id="Expression.from_prefix" class="classattr">
@@ -355,7 +365,9 @@
     </div>
     <a class="headerlink" href="#Expression.from_prefix"></a>
     
-    
+            <div class="docstring"><p>The Python wrapper for [<code>Expression::Prefix</code>], creating a [<code>PyExpression</code>] and taking a Python argument.</p>
+</div>
+
 
                             </div>
                             <div id="Expression.from_variable" class="classattr">
@@ -368,7 +380,9 @@
     </div>
     <a class="headerlink" href="#Expression.from_variable"></a>
     
-    
+            <div class="docstring"><p>The Python wrapper for [<code>Expression::Variable</code>], creating a [<code>PyExpression</code>] and taking a Python argument.</p>
+</div>
+
 
                             </div>
                             <div id="Expression.inner" class="classattr">
@@ -381,7 +395,9 @@
     </div>
     <a class="headerlink" href="#Expression.inner"></a>
     
-    
+            <div class="docstring"><p>Directly return the Python version of the variant discriminant wrapped by this value; i.e., performs the match <code>Expression::Variant(x) =&gt; x</code> for every variant constructor in [<code><a href="#Expression">Expression</a></code>]</p>
+</div>
+
 
                             </div>
                             <div id="Expression.is_address" class="classattr">
@@ -394,7 +410,9 @@
     </div>
     <a class="headerlink" href="#Expression.is_address"></a>
     
-    
+            <div class="docstring"><p>Tests if this [<code>PyExpression</code>] wraps a [<code>Expression::address</code>] value</p>
+</div>
+
 
                             </div>
                             <div id="Expression.as_address" class="classattr">
@@ -407,7 +425,9 @@
     </div>
     <a class="headerlink" href="#Expression.as_address"></a>
     
-    
+            <div class="docstring"><p>Returns <code>x</code> if this [<code>PyExpression</code>] wraps a <code>Expression::address</code>(x); otherwise returns (Python) <code>None</code>.  On the Rust side, this corresponds to either <code>Some(x)</code> or [<code>None</code>].</p>
+</div>
+
 
                             </div>
                             <div id="Expression.to_address" class="classattr">
@@ -420,7 +440,9 @@
     </div>
     <a class="headerlink" href="#Expression.to_address"></a>
     
-    
+            <div class="docstring"><p>Returns <code>x</code> if this [<code>PyExpression</code>] wraps a <code>Expression::address</code>(x); otherwise raises a <code>ValueError</code>.  On the Rust side, this corresponds to either <code>Ok(x)</code> or <code>Err(...)</code>.</p>
+</div>
+
 
                             </div>
                             <div id="Expression.is_function_call" class="classattr">
@@ -433,7 +455,9 @@
     </div>
     <a class="headerlink" href="#Expression.is_function_call"></a>
     
-    
+            <div class="docstring"><p>Tests if this [<code>PyExpression</code>] wraps a [<code>Expression::function_call</code>] value</p>
+</div>
+
 
                             </div>
                             <div id="Expression.as_function_call" class="classattr">
@@ -446,7 +470,9 @@
     </div>
     <a class="headerlink" href="#Expression.as_function_call"></a>
     
-    
+            <div class="docstring"><p>Returns <code>x</code> if this [<code>PyExpression</code>] wraps a <code>Expression::function_call</code>(x); otherwise returns (Python) <code>None</code>.  On the Rust side, this corresponds to either <code>Some(x)</code> or [<code>None</code>].</p>
+</div>
+
 
                             </div>
                             <div id="Expression.to_function_call" class="classattr">
@@ -459,7 +485,9 @@
     </div>
     <a class="headerlink" href="#Expression.to_function_call"></a>
     
-    
+            <div class="docstring"><p>Returns <code>x</code> if this [<code>PyExpression</code>] wraps a <code>Expression::function_call</code>(x); otherwise raises a <code>ValueError</code>.  On the Rust side, this corresponds to either <code>Ok(x)</code> or <code>Err(...)</code>.</p>
+</div>
+
 
                             </div>
                             <div id="Expression.is_infix" class="classattr">
@@ -472,7 +500,9 @@
     </div>
     <a class="headerlink" href="#Expression.is_infix"></a>
     
-    
+            <div class="docstring"><p>Tests if this [<code>PyExpression</code>] wraps a [<code>Expression::infix</code>] value</p>
+</div>
+
 
                             </div>
                             <div id="Expression.as_infix" class="classattr">
@@ -485,7 +515,9 @@
     </div>
     <a class="headerlink" href="#Expression.as_infix"></a>
     
-    
+            <div class="docstring"><p>Returns <code>x</code> if this [<code>PyExpression</code>] wraps a <code>Expression::infix</code>(x); otherwise returns (Python) <code>None</code>.  On the Rust side, this corresponds to either <code>Some(x)</code> or [<code>None</code>].</p>
+</div>
+
 
                             </div>
                             <div id="Expression.to_infix" class="classattr">
@@ -498,7 +530,9 @@
     </div>
     <a class="headerlink" href="#Expression.to_infix"></a>
     
-    
+            <div class="docstring"><p>Returns <code>x</code> if this [<code>PyExpression</code>] wraps a <code>Expression::infix</code>(x); otherwise raises a <code>ValueError</code>.  On the Rust side, this corresponds to either <code>Ok(x)</code> or <code>Err(...)</code>.</p>
+</div>
+
 
                             </div>
                             <div id="Expression.is_number" class="classattr">
@@ -511,7 +545,9 @@
     </div>
     <a class="headerlink" href="#Expression.is_number"></a>
     
-    
+            <div class="docstring"><p>Tests if this [<code>PyExpression</code>] wraps a [<code>Expression::number</code>] value</p>
+</div>
+
 
                             </div>
                             <div id="Expression.as_number" class="classattr">
@@ -524,7 +560,9 @@
     </div>
     <a class="headerlink" href="#Expression.as_number"></a>
     
-    
+            <div class="docstring"><p>Returns <code>x</code> if this [<code>PyExpression</code>] wraps a <code>Expression::number</code>(x); otherwise returns (Python) <code>None</code>.  On the Rust side, this corresponds to either <code>Some(x)</code> or [<code>None</code>].</p>
+</div>
+
 
                             </div>
                             <div id="Expression.to_number" class="classattr">
@@ -537,7 +575,9 @@
     </div>
     <a class="headerlink" href="#Expression.to_number"></a>
     
-    
+            <div class="docstring"><p>Returns <code>x</code> if this [<code>PyExpression</code>] wraps a <code>Expression::number</code>(x); otherwise raises a <code>ValueError</code>.  On the Rust side, this corresponds to either <code>Ok(x)</code> or <code>Err(...)</code>.</p>
+</div>
+
 
                             </div>
                             <div id="Expression.is_pi" class="classattr">
@@ -550,7 +590,9 @@
     </div>
     <a class="headerlink" href="#Expression.is_pi"></a>
     
-    
+            <div class="docstring"><p>Tests if this [<code>PyExpression</code>] wraps a [<code>Expression::pi</code>] value</p>
+</div>
+
 
                             </div>
                             <div id="Expression.is_prefix" class="classattr">
@@ -563,7 +605,9 @@
     </div>
     <a class="headerlink" href="#Expression.is_prefix"></a>
     
-    
+            <div class="docstring"><p>Tests if this [<code>PyExpression</code>] wraps a [<code>Expression::prefix</code>] value</p>
+</div>
+
 
                             </div>
                             <div id="Expression.as_prefix" class="classattr">
@@ -576,7 +620,9 @@
     </div>
     <a class="headerlink" href="#Expression.as_prefix"></a>
     
-    
+            <div class="docstring"><p>Returns <code>x</code> if this [<code>PyExpression</code>] wraps a <code>Expression::prefix</code>(x); otherwise returns (Python) <code>None</code>.  On the Rust side, this corresponds to either <code>Some(x)</code> or [<code>None</code>].</p>
+</div>
+
 
                             </div>
                             <div id="Expression.to_prefix" class="classattr">
@@ -589,7 +635,9 @@
     </div>
     <a class="headerlink" href="#Expression.to_prefix"></a>
     
-    
+            <div class="docstring"><p>Returns <code>x</code> if this [<code>PyExpression</code>] wraps a <code>Expression::prefix</code>(x); otherwise raises a <code>ValueError</code>.  On the Rust side, this corresponds to either <code>Ok(x)</code> or <code>Err(...)</code>.</p>
+</div>
+
 
                             </div>
                             <div id="Expression.is_variable" class="classattr">
@@ -602,7 +650,9 @@
     </div>
     <a class="headerlink" href="#Expression.is_variable"></a>
     
-    
+            <div class="docstring"><p>Tests if this [<code>PyExpression</code>] wraps a [<code>Expression::variable</code>] value</p>
+</div>
+
 
                             </div>
                             <div id="Expression.as_variable" class="classattr">
@@ -615,7 +665,9 @@
     </div>
     <a class="headerlink" href="#Expression.as_variable"></a>
     
-    
+            <div class="docstring"><p>Returns <code>x</code> if this [<code>PyExpression</code>] wraps a <code>Expression::variable</code>(x); otherwise returns (Python) <code>None</code>.  On the Rust side, this corresponds to either <code>Some(x)</code> or [<code>None</code>].</p>
+</div>
+
 
                             </div>
                             <div id="Expression.to_variable" class="classattr">
@@ -628,7 +680,9 @@
     </div>
     <a class="headerlink" href="#Expression.to_variable"></a>
     
-    
+            <div class="docstring"><p>Returns <code>x</code> if this [<code>PyExpression</code>] wraps a <code>Expression::variable</code>(x); otherwise raises a <code>ValueError</code>.  On the Rust side, this corresponds to either <code>Ok(x)</code> or <code>Err(...)</code>.</p>
+</div>
+
 
                             </div>
                             <div id="Expression.to_quil" class="classattr">
@@ -667,7 +721,10 @@
     </div>
     <a class="headerlink" href="#Expression.parse"></a>
     
-    
+            <div class="docstring"><p>Implements a static <code><a href="#Expression.parse">parse</a></code> method for Python in terms of the
+Rust <a href="std::str::FromStr"><code>FromStr</code></a> instance.</p>
+</div>
+
 
                             </div>
                             <div id="Expression.simplify" class="classattr">
@@ -756,7 +813,9 @@
     </div>
     <a class="headerlink" href="#FunctionCallExpression.expression"></a>
     
-    
+            <div class="docstring"><p>Get the expression field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
 
                             </div>
                             <div id="FunctionCallExpression.function" class="classattr">
@@ -767,7 +826,9 @@
     </div>
     <a class="headerlink" href="#FunctionCallExpression.function"></a>
     
-    
+            <div class="docstring"><p>Get the function field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
 
                             </div>
                 </section>
@@ -783,15 +844,17 @@
     
     
 
-                            <div id="InfixExpression.operator" class="classattr">
+                            <div id="InfixExpression.left" class="classattr">
                                 <div class="attr variable">
-            <span class="name">operator</span>
+            <span class="name">left</span>
 
         
     </div>
-    <a class="headerlink" href="#InfixExpression.operator"></a>
+    <a class="headerlink" href="#InfixExpression.left"></a>
     
-    
+            <div class="docstring"><p>Get the left field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
 
                             </div>
                             <div id="InfixExpression.right" class="classattr">
@@ -802,18 +865,22 @@
     </div>
     <a class="headerlink" href="#InfixExpression.right"></a>
     
-    
+            <div class="docstring"><p>Get the right field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
 
                             </div>
-                            <div id="InfixExpression.left" class="classattr">
+                            <div id="InfixExpression.operator" class="classattr">
                                 <div class="attr variable">
-            <span class="name">left</span>
+            <span class="name">operator</span>
 
         
     </div>
-    <a class="headerlink" href="#InfixExpression.left"></a>
+    <a class="headerlink" href="#InfixExpression.operator"></a>
     
-    
+            <div class="docstring"><p>Get the operator field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
 
                             </div>
                 </section>
@@ -837,7 +904,9 @@
     </div>
     <a class="headerlink" href="#PrefixExpression.operator"></a>
     
-    
+            <div class="docstring"><p>Get the operator field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
 
                             </div>
                             <div id="PrefixExpression.expression" class="classattr">
@@ -848,7 +917,9 @@
     </div>
     <a class="headerlink" href="#PrefixExpression.expression"></a>
     
-    
+            <div class="docstring"><p>Get the expression field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
 
                             </div>
                 </section>
