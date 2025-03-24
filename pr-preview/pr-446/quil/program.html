@@ -122,13 +122,7 @@
                                 <a class="function" href="#Program.resolve_placeholders_with_custom_resolvers">resolve_placeholders_with_custom_resolvers</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.memory_regions">memory_regions</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Program.body_instructions">body_instructions</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Program.gate_definitions">gate_definitions</a>
+                                <a class="variable" href="#Program.waveforms">waveforms</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Program.frames">frames</a>
@@ -137,13 +131,19 @@
                                 <a class="variable" href="#Program.declarations">declarations</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.pragma_extern_map">pragma_extern_map</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#Program.calibrations">calibrations</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.waveforms">waveforms</a>
+                                <a class="variable" href="#Program.memory_regions">memory_regions</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Program.pragma_extern_map">pragma_extern_map</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Program.gate_definitions">gate_definitions</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Program.body_instructions">body_instructions</a>
                         </li>
                 </ul>
 
@@ -341,10 +341,10 @@
                     <a class="class" href="#MemoryRegion">MemoryRegion</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#MemoryRegion.size">size</a>
+                                <a class="variable" href="#MemoryRegion.sharing">sharing</a>
                         </li>
                         <li>
-                                <a class="variable" href="#MemoryRegion.sharing">sharing</a>
+                                <a class="variable" href="#MemoryRegion.size">size</a>
                         </li>
                 </ul>
 
@@ -410,13 +410,13 @@
                     <a class="class" href="#TimeSpanSeconds">TimeSpanSeconds</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#TimeSpanSeconds.end">end</a>
+                                <a class="variable" href="#TimeSpanSeconds.duration">duration</a>
                         </li>
                         <li>
                                 <a class="variable" href="#TimeSpanSeconds.start">start</a>
                         </li>
                         <li>
-                                <a class="variable" href="#TimeSpanSeconds.duration">duration</a>
+                                <a class="variable" href="#TimeSpanSeconds.end">end</a>
                         </li>
                 </ul>
 
@@ -821,35 +821,13 @@ Rust <a href="std::str::FromStr"><code>FromStr</code></a> instance.</p>
     
 
                             </div>
-                            <div id="Program.memory_regions" class="classattr">
+                            <div id="Program.waveforms" class="classattr">
                                 <div class="attr variable">
-            <span class="name">memory_regions</span>
+            <span class="name">waveforms</span>
 
         
     </div>
-    <a class="headerlink" href="#Program.memory_regions"></a>
-    
-    
-
-                            </div>
-                            <div id="Program.body_instructions" class="classattr">
-                                <div class="attr variable">
-            <span class="name">body_instructions</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.body_instructions"></a>
-    
-    
-
-                            </div>
-                            <div id="Program.gate_definitions" class="classattr">
-                                <div class="attr variable">
-            <span class="name">gate_definitions</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.gate_definitions"></a>
+    <a class="headerlink" href="#Program.waveforms"></a>
     
     
 
@@ -876,17 +854,6 @@ Rust <a href="std::str::FromStr"><code>FromStr</code></a> instance.</p>
     
 
                             </div>
-                            <div id="Program.pragma_extern_map" class="classattr">
-                                <div class="attr variable">
-            <span class="name">pragma_extern_map</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.pragma_extern_map"></a>
-    
-    
-
-                            </div>
                             <div id="Program.calibrations" class="classattr">
                                 <div class="attr variable">
             <span class="name">calibrations</span>
@@ -898,13 +865,46 @@ Rust <a href="std::str::FromStr"><code>FromStr</code></a> instance.</p>
     
 
                             </div>
-                            <div id="Program.waveforms" class="classattr">
+                            <div id="Program.memory_regions" class="classattr">
                                 <div class="attr variable">
-            <span class="name">waveforms</span>
+            <span class="name">memory_regions</span>
 
         
     </div>
-    <a class="headerlink" href="#Program.waveforms"></a>
+    <a class="headerlink" href="#Program.memory_regions"></a>
+    
+    
+
+                            </div>
+                            <div id="Program.pragma_extern_map" class="classattr">
+                                <div class="attr variable">
+            <span class="name">pragma_extern_map</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.pragma_extern_map"></a>
+    
+    
+
+                            </div>
+                            <div id="Program.gate_definitions" class="classattr">
+                                <div class="attr variable">
+            <span class="name">gate_definitions</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.gate_definitions"></a>
+    
+    
+
+                            </div>
+                            <div id="Program.body_instructions" class="classattr">
+                                <div class="attr variable">
+            <span class="name">body_instructions</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.body_instructions"></a>
     
     
 
@@ -1666,19 +1666,6 @@ program which were expanded using that calibration.</p>
     
     
 
-                            <div id="MemoryRegion.size" class="classattr">
-                                <div class="attr variable">
-            <span class="name">size</span>
-
-        
-    </div>
-    <a class="headerlink" href="#MemoryRegion.size"></a>
-    
-            <div class="docstring"><p>Get the size field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
                             <div id="MemoryRegion.sharing" class="classattr">
                                 <div class="attr variable">
             <span class="name">sharing</span>
@@ -1688,6 +1675,19 @@ program which were expanded using that calibration.</p>
     <a class="headerlink" href="#MemoryRegion.sharing"></a>
     
             <div class="docstring"><p>Get the sharing field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
+                            <div id="MemoryRegion.size" class="classattr">
+                                <div class="attr variable">
+            <span class="name">size</span>
+
+        
+    </div>
+    <a class="headerlink" href="#MemoryRegion.size"></a>
+    
+            <div class="docstring"><p>Get the size field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -1896,13 +1896,13 @@ program which were expanded using that calibration.</p>
     
     
 
-                            <div id="TimeSpanSeconds.end" class="classattr">
+                            <div id="TimeSpanSeconds.duration" class="classattr">
                                 <div class="attr variable">
-            <span class="name">end</span>
+            <span class="name">duration</span>
 
         
     </div>
-    <a class="headerlink" href="#TimeSpanSeconds.end"></a>
+    <a class="headerlink" href="#TimeSpanSeconds.duration"></a>
     
     
 
@@ -1918,13 +1918,13 @@ program which were expanded using that calibration.</p>
     
 
                             </div>
-                            <div id="TimeSpanSeconds.duration" class="classattr">
+                            <div id="TimeSpanSeconds.end" class="classattr">
                                 <div class="attr variable">
-            <span class="name">duration</span>
+            <span class="name">end</span>
 
         
     </div>
-    <a class="headerlink" href="#TimeSpanSeconds.duration"></a>
+    <a class="headerlink" href="#TimeSpanSeconds.end"></a>
     
     
 
