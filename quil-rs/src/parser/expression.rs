@@ -304,6 +304,7 @@ mod tests {
             "%a+%b",
             "(pi/2)+(1*theta[0])",
             "3 - -2",
+            "extern_fn(1, 2, 5)",
         ];
 
         for case in cases {
@@ -312,6 +313,25 @@ mod tests {
             let (remainder, parsed) = parse_expression(&tokens).unwrap();
             assert_eq!(remainder.len(), 0);
             assert_eq!(parsed.to_quil_or_debug(), case);
+        }
+    }
+
+    #[test]
+    fn nullary_functions_disallowed() {
+        let case = "nullary_fn()";
+        let input = LocatedSpan::new(case);
+        let tokens = lex(input).unwrap();
+        if let Ok((remainder, result)) = parse_expression(&tokens) {
+            panic!(
+                concat!(
+                    "expected parsing a nullary function application, \"{case}\", to fail;\n",
+                    "instead it parsed as \"{result}\",\n",
+                    "with remaining tokens {remainder:?}",
+                ),
+                case = case,
+                result = result.to_quil_or_debug(),
+                remainder = remainder,
+            );
         }
     }
 
@@ -337,6 +357,107 @@ mod tests {
                     arguments: vec![ArcIntern::new(Expression::Number(real!(1f64)))],
                 }
             ))],
+        })
+    );
+
+    test!(
+        extern_call_unary,
+        parse_expression,
+        "extern_fn(1)",
+        Expression::FunctionCall(FunctionCallExpression {
+            function: ExpressionFunction::Extern("extern_fn".into()),
+            arguments: vec![Expression::Number(real!(1f64)).into()],
+        })
+    );
+
+    test!(
+        extern_call_binary,
+        parse_expression,
+        "extern_fn(1, 2)",
+        Expression::FunctionCall(FunctionCallExpression {
+            function: ExpressionFunction::Extern("extern_fn".into()),
+            arguments: vec![
+                Expression::Number(real!(1f64)).into(),
+                Expression::Number(real!(2f64)).into()
+            ],
+        })
+    );
+
+    test!(
+        extern_call_ternary,
+        parse_expression,
+        "extern_fn(1, 2, 3)",
+        Expression::FunctionCall(FunctionCallExpression {
+            function: ExpressionFunction::Extern("extern_fn".into()),
+            arguments: vec![
+                Expression::Number(real!(1f64)).into(),
+                Expression::Number(real!(2f64)).into(),
+                Expression::Number(real!(3f64)).into(),
+            ],
+        })
+    );
+
+    test!(
+        extern_call_quaternary,
+        parse_expression,
+        "extern_fn(1, 2, 3, 4)",
+        Expression::FunctionCall(FunctionCallExpression {
+            function: ExpressionFunction::Extern("extern_fn".into()),
+            arguments: vec![
+                Expression::Number(real!(1f64)).into(),
+                Expression::Number(real!(2f64)).into(),
+                Expression::Number(real!(3f64)).into(),
+                Expression::Number(real!(4f64)).into(),
+            ],
+        })
+    );
+
+    test!(
+        extern_call_nested,
+        parse_expression,
+        "outer(inner(x+y[1]), sin(%z), pi*(theta + 0.5))",
+        Expression::FunctionCall(FunctionCallExpression {
+            function: ExpressionFunction::Extern("outer".into()),
+            arguments: vec![
+                Expression::FunctionCall(FunctionCallExpression {
+                    function: ExpressionFunction::Extern("inner".into()),
+                    arguments: vec![Expression::Infix(InfixExpression {
+                        left: Expression::Address(MemoryReference {
+                            name: "x".to_string(),
+                            index: 0,
+                        })
+                        .into(),
+                        operator: InfixOperator::Plus,
+                        right: Expression::Address(MemoryReference {
+                            name: "y".to_string(),
+                            index: 1,
+                        })
+                        .into(),
+                    })
+                    .into()],
+                })
+                .into(),
+                Expression::FunctionCall(FunctionCallExpression {
+                    function: ExpressionFunction::Builtin(QuilFunction::Sine),
+                    arguments: vec![Expression::Variable("z".to_owned()).into()],
+                })
+                .into(),
+                Expression::Infix(InfixExpression {
+                    left: ArcIntern::new(Expression::PiConstant),
+                    operator: InfixOperator::Star,
+                    right: Expression::Infix(InfixExpression {
+                        left: Expression::Address(MemoryReference {
+                            name: "theta".to_string(),
+                            index: 0,
+                        })
+                        .into(),
+                        operator: InfixOperator::Plus,
+                        right: Expression::Number(real!(0.5f64)).into(),
+                    })
+                    .into(),
+                })
+                .into()
+            ],
         })
     );
 
