@@ -177,7 +177,7 @@ impl Simplifier {
             Expression::FunctionCall(FunctionCallExpression {
                 function,
                 arguments,
-            }) => self.simplify_function_call(function, arguments.into_iter().cloned(), limit - 1),
+            }) => self.simplify_function_call(function, arguments.iter().cloned(), limit - 1),
             Expression::Infix(InfixExpression {
                 left,
                 operator,

@@ -9,3 +9,4 @@ cc 5cc95f2159ad7120bbaf296d3a9fb26fef30f57b61e76b3e0dc99f4759009fdb # shrinks to
 cc de70a1853ccef983fac85a87761ba08bfb2d54b2d4e880d5d90e7b4a75ecafb5 # shrinks to e = Address(MemoryReference { name: "mut", index: 0 })
 cc 9ad50859b68cb403ce1a67af0feef1f55d25587466878e364ba2810be5910b14 # shrinks to e = Address(MemoryReference { name: "iNf", index: 0 })
 cc 2b6281fa61604062f364d8e92d4b4e2753352d5ae1e76b7753bcb1201e8912b4 # shrinks to e = Infix(InfixExpression { left: Variable("ra"), operator: Slash, right: FunctionCall(FunctionCallExpression { function: Sine, expression: PiConstant }) })
+cc d8c5ce47ec025b51796fbada354cd4c66c54bf2abdd42cd07b4ef9df8577620a # shrinks to e = FunctionCall(FunctionCallExpression { function: Extern("a0"), arguments: [] })
