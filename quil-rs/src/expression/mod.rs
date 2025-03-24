@@ -629,8 +629,8 @@ impl Quil for Expression {
                 write!(f, "{function}(")?;
                 let mut sep = "";
                 for argument in arguments {
-                    argument.write(f, fall_back_to_debug)?;
                     write!(f, "{sep}")?;
+                    argument.write(f, fall_back_to_debug)?;
                     sep = ", ";
                 }
                 write!(f, ")")?;
