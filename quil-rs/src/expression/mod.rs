@@ -95,6 +95,10 @@ pub enum Expression {
 
 /// The type of function call Quil expressions, e.g. `sin(e)`.
 ///
+/// These function calls can be to built-in Quil functions or user-declared `EXTERN` functions.
+/// Even for `EXTERN` functions, the Quil spec only permits calling functions with at least one
+/// argument.
+///
 /// Quil expressions take advantage of *structural sharing*, which is why the `arguments` here are
 /// wrapped in [`ArcIntern`]; for more details, see the documentation for [`Expression`].
 ///
@@ -1140,9 +1144,11 @@ mod tests {
         arb_function().prop_flat_map(move |function| {
             let arguments = prop::collection::vec(
                 expr.clone().prop_map(ArcIntern::new),
+                // Per the Quil spec, functions cannot be nullary.  All built-in functions are
+                // unary.
                 match &function {
                     ExpressionFunction::Builtin(_) => 1..=1,
-                    ExpressionFunction::Extern(_) => 0..=4,
+                    ExpressionFunction::Extern(_) => 1..=4,
                 },
             );
             arguments.prop_map(move |arguments| FunctionCallExpression {

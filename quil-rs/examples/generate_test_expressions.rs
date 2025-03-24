@@ -170,7 +170,8 @@ fn builtin_func(rng: &mut impl Rng, depth: u64) -> Expression {
 /// Random extern function call.
 fn extern_func(rng: &mut impl Rng, depth: u64) -> Expression {
     let function = ExpressionFunction::Extern(name(rng));
-    let num_arguments = rng.gen_range(0..=5);
+    // Per the Quil spec, functions cannot be nullary
+    let num_arguments = rng.gen_range(1..=5);
     let arguments = (0..num_arguments)
         .map(|_| build(rng, depth).into())
         .collect();
