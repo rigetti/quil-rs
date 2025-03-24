@@ -1337,18 +1337,25 @@ mod tests {
             let simple_e = e.clone().into_simplified();
             let s = parenthesized(&e);
             let p = Expression::from_str(&s);
-            prop_assert!(p.is_ok());
-            let p = p.unwrap();
-            let simple_p = p.clone().into_simplified();
+            let simple_p = p.clone().map(|p| p.into_simplified());
+
+            fn quil_or_error<T: Quil, E: std::error::Error>(maybe_quil: &Result<T,E>) -> String {
+                match maybe_quil {
+                    Ok(quil) => quil.to_quil_or_debug(),
+                    Err(err) => format!("failed to parse ({err})")
+                }
+            }
 
             prop_assert_eq!(
                 &simple_p,
-                &simple_e,
-                "Simplified expressions should be equal:\nparenthesized {p} ({p:?}) extracted from {s} simplified to {simple_p}\nvs original {e} ({e:?}) simplified to {simple_e}",
-                p=p.to_quil_or_debug(),
+                &Ok(simple_e.clone()),
+                "Simplified expressions should be equal:\nparenthesized {p} ({p_raw:?}) extracted from {s} simplified to {simple_p}\nvs original {e} ({e_raw:?}) simplified to {simple_e}",
+                p=quil_or_error(&p),
+                p_raw=p,
                 s=s,
                 e=e.to_quil_or_debug(),
-                simple_p=simple_p.to_quil_or_debug(),
+                e_raw=e,
+                simple_p=quil_or_error(&simple_p),
                 simple_e=simple_e.to_quil_or_debug()
             );
         }
