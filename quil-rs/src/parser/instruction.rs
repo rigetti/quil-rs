@@ -157,7 +157,7 @@ mod tests {
 
     use crate::expression::{
         Expression, ExpressionFunction, FunctionCallExpression, InfixExpression, InfixOperator,
-        PrefixExpression, PrefixOperator,
+        PrefixExpression, PrefixOperator, QuilFunction,
     };
     use crate::instruction::{
         Arithmetic, ArithmeticOperand, ArithmeticOperator, AttributeValue, BinaryLogic,
@@ -715,16 +715,20 @@ mod tests {
                         left: ArcIntern::new(Expression::Number(real!(1.0))),
                         operator: InfixOperator::Slash,
                         right: ArcIntern::new(Expression::FunctionCall(FunctionCallExpression {
-                            function: crate::expression::ExpressionFunction::SquareRoot,
-                            expression: ArcIntern::new(Expression::Number(real!(2.0))),
+                            function: crate::expression::ExpressionFunction::Builtin(
+                                crate::expression::QuilFunction::SquareRoot
+                            ),
+                            arguments: vec![ArcIntern::new(Expression::Number(real!(2.0)))],
                         })),
                     }),
                     Expression::Infix(InfixExpression {
                         left: ArcIntern::new(Expression::Number(real!(1.0))),
                         operator: InfixOperator::Slash,
                         right: ArcIntern::new(Expression::FunctionCall(FunctionCallExpression {
-                            function: crate::expression::ExpressionFunction::SquareRoot,
-                            expression: ArcIntern::new(Expression::Number(real!(2.0))),
+                            function: crate::expression::ExpressionFunction::Builtin(
+                                crate::expression::QuilFunction::SquareRoot
+                            ),
+                            arguments: vec![ArcIntern::new(Expression::Number(real!(2.0)))],
                         })),
                     }),
                 ],
@@ -733,8 +737,10 @@ mod tests {
                         left: ArcIntern::new(Expression::Number(real!(1.0))),
                         operator: InfixOperator::Slash,
                         right: ArcIntern::new(Expression::FunctionCall(FunctionCallExpression {
-                            function: crate::expression::ExpressionFunction::SquareRoot,
-                            expression: ArcIntern::new(Expression::Number(real!(2.0))),
+                            function: crate::expression::ExpressionFunction::Builtin(
+                                crate::expression::QuilFunction::SquareRoot
+                            ),
+                            arguments: vec![ArcIntern::new(Expression::Number(real!(2.0)))],
                         })),
                     }),
                     Expression::Infix(InfixExpression {
@@ -744,8 +750,10 @@ mod tests {
                         })),
                         operator: InfixOperator::Slash,
                         right: ArcIntern::new(Expression::FunctionCall(FunctionCallExpression {
-                            function: crate::expression::ExpressionFunction::SquareRoot,
-                            expression: ArcIntern::new(Expression::Number(real!(2.0))),
+                            function: crate::expression::ExpressionFunction::Builtin(
+                                crate::expression::QuilFunction::SquareRoot
+                            ),
+                            arguments: vec![ArcIntern::new(Expression::Number(real!(2.0)))],
                         })),
                     }),
                 ],
@@ -763,12 +771,12 @@ mod tests {
             specification: GateSpecification::Matrix(vec![
                 vec![
                     Expression::FunctionCall(FunctionCallExpression {
-                        function: ExpressionFunction::Cosine,
-                        expression: ArcIntern::new(Expression::Infix(InfixExpression {
+                        function: ExpressionFunction::Builtin(QuilFunction::Cosine),
+                        arguments: vec![ArcIntern::new(Expression::Infix(InfixExpression {
                             left: ArcIntern::new(Expression::Variable("theta".to_string())),
                             operator: InfixOperator::Slash,
                             right: ArcIntern::new(Expression::Number(Complex { re: 2.0, im: 0.0 })),
-                        }))
+                        }))]
                     }),
                     Expression::Infix(InfixExpression {
                         left: ArcIntern::new(Expression::Prefix(PrefixExpression {
@@ -777,12 +785,12 @@ mod tests {
                         })),
                         operator: InfixOperator::Star,
                         right: ArcIntern::new(Expression::FunctionCall(FunctionCallExpression {
-                            function: ExpressionFunction::Sine,
-                            expression: ArcIntern::new(Expression::Infix(InfixExpression {
+                            function: ExpressionFunction::Builtin(QuilFunction::Sine),
+                            arguments: vec![ArcIntern::new(Expression::Infix(InfixExpression {
                                 left: ArcIntern::new(Expression::Variable("theta".to_string())),
                                 operator: InfixOperator::Slash,
                                 right: ArcIntern::new(Expression::Number(Complex { re: 2.0, im: 0.0 })),
-                            }))
+                            }))]
                         }))
                     }),
                 ],
@@ -794,21 +802,21 @@ mod tests {
                         })),
                         operator: InfixOperator::Star,
                         right: ArcIntern::new(Expression::FunctionCall(FunctionCallExpression {
-                            function: ExpressionFunction::Sine,
-                            expression: ArcIntern::new(Expression::Infix(InfixExpression {
+                            function: ExpressionFunction::Builtin(QuilFunction::Sine),
+                            arguments: vec![ArcIntern::new(Expression::Infix(InfixExpression {
                                 left: ArcIntern::new(Expression::Variable("theta".to_string())),
                                 operator: InfixOperator::Slash,
                                 right: ArcIntern::new(Expression::Number(Complex { re: 2.0, im: 0.0 }))
-                            }))
+                            }))]
                         }))
                     }),
                     Expression::FunctionCall(FunctionCallExpression {
-                        function: ExpressionFunction::Cosine,
-                        expression: ArcIntern::new(Expression::Infix(InfixExpression {
+                        function: ExpressionFunction::Builtin(QuilFunction::Cosine),
+                        arguments: vec![ArcIntern::new(Expression::Infix(InfixExpression {
                             left: ArcIntern::new(Expression::Variable("theta".to_string())),
                             operator: InfixOperator::Slash,
                             right: ArcIntern::new(Expression::Number(Complex { re: 2.0, im: 0.0 })),
-                        }))
+                        }))]
                     }),
                 ],
             ]),

@@ -46,6 +46,13 @@ mod simplification;
 /// The different possible types of errors that could occur during expression evaluation.
 #[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
 pub enum EvaluationError {
+    #[error(r#"Unknown extern function "{0}"."#)]
+    UnknownExtern(String),
+    #[error(r#"The built-in function "{function}" expects 1 argument, but got {actual}."#)]
+    WrongNumberOfArguments {
+        function: QuilFunction,
+        actual: usize,
+    },
     #[error("There wasn't enough information to completely evaluate the expression.")]
     Incomplete,
     #[error("The operation expected a real number but received a complex one.")]
@@ -88,23 +95,27 @@ pub enum Expression {
 
 /// The type of function call Quil expressions, e.g. `sin(e)`.
 ///
-/// Quil expressions take advantage of *structural sharing*, which is why the `expression` here is
-/// wrapped in an [`ArcIntern`]; for more details, see the documentation for [`Expression`].
+/// Quil expressions take advantage of *structural sharing*, which is why the `arguments` here are
+/// wrapped in [`ArcIntern`]; for more details, see the documentation for [`Expression`].
 ///
 /// Note that when comparing Quil expressions, any embedded NaNs are treated as *equal* to other
 /// NaNs, not unequal, in contravention of the IEEE 754 spec.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct FunctionCallExpression {
     pub function: ExpressionFunction,
-    pub expression: ArcIntern<Expression>,
+    pub arguments: Vec<ArcIntern<Expression>>,
 }
 
 impl FunctionCallExpression {
-    pub fn new(function: ExpressionFunction, expression: ArcIntern<Expression>) -> Self {
+    pub fn new(function: ExpressionFunction, arguments: Vec<ArcIntern<Expression>>) -> Self {
         Self {
             function,
-            expression,
+            arguments,
         }
+    }
+
+    pub fn unary(function: ExpressionFunction, argument: ArcIntern<Expression>) -> Self {
+        Self::new(function, vec![argument])
     }
 }
 
@@ -191,11 +202,11 @@ impl Hash for Expression {
             }
             Self::FunctionCall(FunctionCallExpression {
                 function,
-                expression,
+                arguments,
             }) => {
                 "FunctionCall".hash(state);
                 function.hash(state);
-                expression.hash(state);
+                arguments.hash(state);
             }
             Self::Infix(InfixExpression {
                 left,
@@ -322,8 +333,8 @@ pub(crate) fn calculate_infix(
 
 /// Compute the result of a Quil-defined expression function where the operand is complex.
 #[inline]
-pub(crate) fn calculate_function(function: ExpressionFunction, argument: Complex64) -> Complex64 {
-    use ExpressionFunction::*;
+pub(crate) fn calculate_function(function: QuilFunction, argument: Complex64) -> Complex64 {
+    use QuilFunction::*;
     match function {
         Sine => argument.sin(),
         Cis => argument.cos() + imag!(1f64) * argument.sin(),
@@ -415,11 +426,22 @@ impl Expression {
         match self {
             FunctionCall(FunctionCallExpression {
                 function,
-                expression,
-            }) => {
-                let evaluated = expression.evaluate(variables, memory_references)?;
-                Ok(calculate_function(*function, evaluated))
-            }
+                arguments,
+            }) => match (function, arguments.as_slice()) {
+                (ExpressionFunction::Builtin(function), [argument]) => {
+                    let evaluated = argument.evaluate(variables, memory_references)?;
+                    Ok(calculate_function(*function, evaluated))
+                }
+                (ExpressionFunction::Builtin(function), _) => {
+                    Err(EvaluationError::WrongNumberOfArguments {
+                        function: *function,
+                        actual: arguments.len(),
+                    })
+                }
+                (ExpressionFunction::Extern(function), _) => {
+                    Err(EvaluationError::UnknownExtern(function.to_owned()))
+                }
+            },
             Infix(InfixExpression {
                 left,
                 operator,
@@ -482,10 +504,13 @@ impl Expression {
         match self {
             FunctionCall(FunctionCallExpression {
                 function,
-                expression,
+                arguments,
             }) => Expression::FunctionCall(FunctionCallExpression {
-                function: *function,
-                expression: expression.substitute_variables(variable_values).into(),
+                function: function.clone(),
+                arguments: arguments
+                    .iter()
+                    .map(|argument| argument.substitute_variables(variable_values).into())
+                    .collect(),
             }),
             Infix(InfixExpression {
                 left,
@@ -595,10 +620,15 @@ impl Quil for Expression {
             Address(memory_reference) => memory_reference.write(f, fall_back_to_debug),
             FunctionCall(FunctionCallExpression {
                 function,
-                expression,
+                arguments,
             }) => {
                 write!(f, "{function}(")?;
-                expression.write(f, fall_back_to_debug)?;
+                let mut sep = "";
+                for argument in arguments {
+                    argument.write(f, fall_back_to_debug)?;
+                    write!(f, "{sep}")?;
+                    sep = ", ";
+                }
                 write!(f, ")")?;
                 Ok(())
             }
@@ -680,10 +710,10 @@ mod test {
     }
 }
 
-/// A function defined within Quil syntax.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+/// A builtin Quil function.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(test, derive(Arbitrary))]
-pub enum ExpressionFunction {
+pub enum QuilFunction {
     Cis,
     Cosine,
     Exponent,
@@ -691,9 +721,9 @@ pub enum ExpressionFunction {
     SquareRoot,
 }
 
-impl fmt::Display for ExpressionFunction {
+impl fmt::Display for QuilFunction {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use ExpressionFunction::*;
+        use QuilFunction::*;
         write!(
             f,
             "{}",
@@ -705,6 +735,22 @@ impl fmt::Display for ExpressionFunction {
                 SquareRoot => "sqrt",
             }
         )
+    }
+}
+
+/// A function for use in Quil expressions.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum ExpressionFunction {
+    Builtin(QuilFunction),
+    Extern(String),
+}
+
+impl fmt::Display for ExpressionFunction {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            ExpressionFunction::Builtin(fun) => fun.fmt(f),
+            ExpressionFunction::Extern(fun) => fun.fmt(f),
+        }
     }
 }
 
@@ -799,7 +845,7 @@ pub mod interned {
         };
     }
 
-    macro_rules! function_wrappers {
+    macro_rules! builtin_wrappers {
         ($($func:ident: $ctor:ident),+ $(,)?) => {
             $(
                 #[doc = concat!(
@@ -807,11 +853,14 @@ pub mod interned {
                     "`", stringify!($func), "(expression)`.",
                     "\n\n",
                     "A wrapper around [`Expression::FunctionCall`] with ",
-                    "[`ExpressionFunction::", stringify!($ctor), "`].",
+                    "[`QuilFunction::", stringify!($ctor), "`].",
                 )]
                 #[inline(always)]
                 pub fn $func(expression: ArcIntern<Expression>) -> ArcIntern<Expression> {
-                    function_call(ExpressionFunction::$ctor, expression)
+                    function_call(
+                        ExpressionFunction::Builtin(QuilFunction::$ctor),
+                        vec![expression],
+                    )
                 }
             )+
         };
@@ -868,7 +917,7 @@ pub mod interned {
     expression_wrappers! {
         function_call: function_call_expr(FunctionCallExpression {
             function: ExpressionFunction,
-            expression: ArcIntern<Expression>,
+            arguments: Vec<ArcIntern<Expression>>,
         }),
 
         infix: infix_expr(InfixExpression {
@@ -883,7 +932,7 @@ pub mod interned {
         }),
     }
 
-    function_wrappers! {
+    builtin_wrappers! {
         cis: Cis,
         cos: Cosine,
         exp: Exponent,
@@ -912,6 +961,7 @@ pub mod interned {
 mod tests {
     use super::*;
     use crate::reserved::ReservedToken;
+    use itertools::Itertools as _;
     use proptest::prelude::*;
     use std::collections::hash_map::DefaultHasher;
     use std::collections::HashSet;
@@ -983,8 +1033,8 @@ mod tests {
             },
             TestCase {
                 expression: Expression::FunctionCall(FunctionCallExpression {
-                    function: ExpressionFunction::Sine,
-                    expression: ArcIntern::new(Expression::Number(real!(PI / 2f64))),
+                    function: ExpressionFunction::Builtin(QuilFunction::Sine),
+                    arguments: vec![ArcIntern::new(Expression::Number(real!(PI / 2f64)))],
                 }),
                 variables: &variables,
                 memory_references: &empty_memory,
@@ -1018,8 +1068,14 @@ mod tests {
             Address(memory_reference) => memory_reference.to_quil_or_debug(),
             FunctionCall(FunctionCallExpression {
                 function,
-                expression,
-            }) => format!("({function}({}))", parenthesized(expression)),
+                arguments,
+            }) => format!(
+                "({function}({}))",
+                arguments
+                    .iter()
+                    .map(|argument| parenthesized(argument))
+                    .join(", ")
+            ),
             Infix(InfixExpression {
                 left,
                 operator,
@@ -1066,6 +1122,36 @@ mod tests {
         })
     }
 
+    /// Generate an arbitrary [`ExpressionFunction`] for a property test, biasing towards builtins.
+    fn arb_function() -> impl Strategy<Value = ExpressionFunction> {
+        prop_oneof![
+            6 => any::<QuilFunction>().prop_map(ExpressionFunction::Builtin),
+            1 => arb_name().prop_map(ExpressionFunction::Extern),
+        ]
+    }
+
+    /// Generate an arbitrary [`FunctionCallExpression`] for a property test, biasing towards
+    /// builtins.
+    ///
+    /// If generating a call to a built-in function, will only generate one argument for it.
+    fn arb_function_call(
+        expr: impl Strategy<Value = Expression> + Clone,
+    ) -> impl Strategy<Value = FunctionCallExpression> {
+        arb_function().prop_flat_map(move |function| {
+            let arguments = prop::collection::vec(
+                expr.clone().prop_map(ArcIntern::new),
+                match &function {
+                    ExpressionFunction::Builtin(_) => 1..=1,
+                    ExpressionFunction::Extern(_) => 0..=4,
+                },
+            );
+            arguments.prop_map(move |arguments| FunctionCallExpression {
+                function: function.clone(),
+                arguments,
+            })
+        })
+    }
+
     /// Generate an arbitrary Expression for a property test.
     /// See https://docs.rs/proptest/1.0.0/proptest/prelude/trait.Strategy.html#method.prop_recursive
     fn arb_expr() -> impl Strategy<Value = Expression> {
@@ -1083,12 +1169,7 @@ mod tests {
             |expr| {
                 let inner = expr.clone();
                 prop_oneof![
-                    (any::<ExpressionFunction>(), expr.clone()).prop_map(|(function, e)| {
-                        Expression::FunctionCall(FunctionCallExpression {
-                            function,
-                            expression: ArcIntern::new(e),
-                        })
-                    }),
+                    arb_function_call(expr.clone()).prop_map(Expression::FunctionCall),
                     (expr.clone(), any::<InfixOperator>())
                         .prop_flat_map(move |(left, operator)| (
                             Just(left),

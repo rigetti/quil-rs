@@ -94,7 +94,7 @@ pub enum Command {
     Xor,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, strum::Display, strum::EnumString)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, strum::Display, strum::EnumString)]
 #[strum(serialize_all = "UPPERCASE")]
 pub enum DataType {
     Bit,
@@ -103,7 +103,7 @@ pub enum DataType {
     Integer,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, strum::Display, strum::EnumString)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, strum::Display, strum::EnumString)]
 #[strum(serialize_all = "UPPERCASE")]
 pub enum Modifier {
     Controlled,
@@ -111,7 +111,7 @@ pub enum Modifier {
     Forked, // Not in the Quil grammar
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, strum::Display)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, strum::Display)]
 pub enum Operator {
     #[strum(serialize = "^")]
     Caret,

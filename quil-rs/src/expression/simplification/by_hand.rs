@@ -117,8 +117,13 @@ impl Simplifier {
             | Expression::Variable(_) => 1,
             Expression::FunctionCall(FunctionCallExpression {
                 function: _,
-                expression,
-            }) => 1 + self.size(expression.clone()),
+                arguments,
+            }) => {
+                1 + arguments
+                    .iter()
+                    .map(|argument| self.size(argument.clone()))
+                    .sum::<usize>()
+            }
             Expression::Infix(InfixExpression {
                 left,
                 operator: _,
@@ -171,8 +176,8 @@ impl Simplifier {
             // Simplify recursively
             Expression::FunctionCall(FunctionCallExpression {
                 function,
-                expression,
-            }) => self.simplify_function_call(*function, expression.clone(), limit - 1),
+                arguments,
+            }) => self.simplify_function_call(function, arguments.into_iter().cloned(), limit - 1),
             Expression::Infix(InfixExpression {
                 left,
                 operator,
@@ -228,18 +233,29 @@ impl Simplifier {
     /// Simplify a function call inside an `Expression`.
     fn simplify_function_call(
         &mut self,
-        function: ExpressionFunction,
-        expression: ArcIntern<Expression>,
+        function: &ExpressionFunction,
+        arguments: impl ExactSizeIterator<Item = ArcIntern<Expression>>,
         limit: Limit,
     ) -> ArcIntern<Expression> {
+        let num_arguments = arguments.len();
+
         // Evaluate numbers and π, pass through otherwise.  Since [`Self::simplify`] cannot return a
         // literal π, we only need to worry about the number case
-        let expression = self.simplify(expression, limit);
+        let mut arguments = arguments.map(|argument| self.simplify(argument, limit));
 
-        if let Expression::Number(x) = expression.as_ref() {
-            interned::number(calculate_function(function, *x))
-        } else {
-            interned::function_call(function, expression)
+        match function {
+            ExpressionFunction::Builtin(builtin) if num_arguments == 1 => {
+                // Guaranteed to succeed, since we checked `num_arguments`
+                let argument = arguments.next().unwrap();
+
+                if let Expression::Number(x) = argument.as_ref() {
+                    interned::number(calculate_function(*builtin, *x))
+                } else {
+                    interned::function_call(ExpressionFunction::Builtin(*builtin), vec![argument])
+                }
+            }
+
+            _ => interned::function_call(function.clone(), arguments.collect()),
         }
     }
 

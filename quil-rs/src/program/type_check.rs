@@ -7,7 +7,9 @@ use indexmap::IndexMap;
 use thiserror::Error;
 
 use crate::{
-    expression::{Expression, FunctionCallExpression, InfixExpression, PrefixExpression},
+    expression::{
+        Expression, ExpressionFunction, FunctionCallExpression, InfixExpression, PrefixExpression,
+    },
     instruction::{
         Arithmetic, ArithmeticOperand, ArithmeticOperator, BinaryLogic, BinaryOperand,
         BinaryOperator, Comparison, ComparisonOperand, ComparisonOperator, Exchange, Instruction,
@@ -57,6 +59,19 @@ pub enum TypeError {
         correct_type: String,
         operand: String,
         data_type: String,
+    },
+
+    #[error(
+        "In instruction {instruction}: \
+         function {function} received {actual} argument{plural}, but expected {expected}.",
+        instruction = instruction.to_quil_or_debug(),
+        plural = if *actual == 1 { "" } else { "s" },
+    )]
+    WrongNumberOfArguments {
+        instruction: Instruction,
+        function: ExpressionFunction,
+        actual: usize,
+        expected: usize,
     },
 }
 
@@ -230,9 +245,26 @@ fn should_be_real(
                 undefined_memory_reference(instruction, reference)
             }
         }
-        Expression::FunctionCall(FunctionCallExpression { expression, .. }) => {
-            should_be_real(instruction, expression, memory_regions)
-        }
+        Expression::FunctionCall(FunctionCallExpression {
+            function,
+            arguments,
+        }) => match function {
+            ExpressionFunction::Builtin(_) => match arguments.as_slice() {
+                [argument] => should_be_real(instruction, argument, memory_regions),
+                _ => Err(TypeError::WrongNumberOfArguments {
+                    instruction: instruction.clone(),
+                    function: function.clone(),
+                    actual: arguments.len(),
+                    expected: 1,
+                }),
+            },
+            // TODO: Make this precise
+            ExpressionFunction::Extern(_) => real_value_required(
+                instruction,
+                this_expression,
+                "extern function call (unchecked)",
+            ),
+        },
         Expression::Infix(InfixExpression { left, right, .. }) => should_be_real(
             instruction,
             left,
