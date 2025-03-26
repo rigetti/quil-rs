@@ -956,7 +956,7 @@ mod test_gate_definition {
     use super::{GateDefinition, GateSpecification, PauliGate, PauliSum, PauliTerm};
     use crate::expression::{
         Expression, ExpressionFunction, FunctionCallExpression, InfixExpression, InfixOperator,
-        PrefixExpression, PrefixOperator,
+        PrefixExpression, PrefixOperator, QuilFunction,
     };
     use crate::quil::Quil;
     use crate::{imag, real};
@@ -982,12 +982,14 @@ mod test_gate_definition {
             specification: GateSpecification::Matrix(vec![
                 vec![
                     Expression::FunctionCall(FunctionCallExpression {
-                        function: crate::expression::ExpressionFunction::Cosine,
-                        expression: ArcIntern::new(Expression::Infix(InfixExpression {
+                        function: crate::expression::ExpressionFunction::Builtin(
+                            crate::expression::QuilFunction::Cosine
+                        ),
+                        arguments: vec![ArcIntern::new(Expression::Infix(InfixExpression {
                             left: ArcIntern::new(Expression::Variable("theta".to_string())),
                             operator: InfixOperator::Slash,
                             right: ArcIntern::new(Expression::Number(real!(2.0))),
-                        })),
+                        }))],
                     }),
                     Expression::Infix(InfixExpression {
                         left: ArcIntern::new(Expression::Prefix(PrefixExpression {
@@ -996,12 +998,12 @@ mod test_gate_definition {
                         })),
                         operator: InfixOperator::Star,
                         right: ArcIntern::new(Expression::FunctionCall(FunctionCallExpression {
-                            function: ExpressionFunction::Sine,
-                            expression: ArcIntern::new(Expression::Infix(InfixExpression {
+                            function: ExpressionFunction::Builtin(QuilFunction::Sine),
+                            arguments: vec![ArcIntern::new(Expression::Infix(InfixExpression {
                                 left: ArcIntern::new(Expression::Variable("theta".to_string())),
                                 operator: InfixOperator::Slash,
                                 right: ArcIntern::new(Expression::Number(real!(2.0))),
-                            })),
+                            }))],
                         })),
                     })
                 ],
@@ -1013,21 +1015,23 @@ mod test_gate_definition {
                         })),
                         operator: InfixOperator::Star,
                         right: ArcIntern::new(Expression::FunctionCall(FunctionCallExpression {
-                            function: ExpressionFunction::Sine,
-                            expression: ArcIntern::new(Expression::Infix(InfixExpression {
+                            function: ExpressionFunction::Builtin(QuilFunction::Sine),
+                            arguments: vec![ArcIntern::new(Expression::Infix(InfixExpression {
                                 left: ArcIntern::new(Expression::Variable("theta".to_string())),
                                 operator: InfixOperator::Slash,
                                 right: ArcIntern::new(Expression::Number(real!(2.0))),
-                            })),
+                            }))],
                         })),
                     }),
                     Expression::FunctionCall(FunctionCallExpression {
-                        function: crate::expression::ExpressionFunction::Cosine,
-                        expression: ArcIntern::new(Expression::Infix(InfixExpression {
+                        function: crate::expression::ExpressionFunction::Builtin(
+                            crate::expression::QuilFunction::Cosine
+                        ),
+                        arguments: vec![ArcIntern::new(Expression::Infix(InfixExpression {
                             left: ArcIntern::new(Expression::Variable("theta".to_string())),
                             operator: InfixOperator::Slash,
                             right: ArcIntern::new(Expression::Number(real!(2.0))),
-                        })),
+                        }))],
                     }),
                 ],
             ]),

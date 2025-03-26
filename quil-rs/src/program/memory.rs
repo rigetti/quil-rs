@@ -342,9 +342,10 @@ impl Expression {
     pub fn get_memory_references(&self) -> Vec<&MemoryReference> {
         match self {
             Expression::Address(reference) => vec![reference],
-            Expression::FunctionCall(FunctionCallExpression { expression, .. }) => {
-                expression.get_memory_references()
-            }
+            Expression::FunctionCall(FunctionCallExpression { arguments, .. }) => arguments
+                .iter()
+                .flat_map(|arg| arg.get_memory_references())
+                .collect(),
             Expression::Infix(InfixExpression { left, right, .. }) => {
                 let mut result = left.get_memory_references();
                 result.extend(right.get_memory_references());

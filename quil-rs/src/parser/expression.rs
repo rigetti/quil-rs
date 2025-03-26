@@ -14,16 +14,17 @@
 
 use internment::ArcIntern;
 use nom::combinator::opt;
+use nom::multi::separated_list1;
+use nom::sequence::terminated;
 use num_complex::Complex64;
 
 use crate::expression::{FunctionCallExpression, InfixExpression, PrefixExpression};
 use crate::parser::InternalParserResult;
 use crate::{
     expected_token,
-    expression::{Expression, ExpressionFunction, InfixOperator, PrefixOperator},
+    expression::{Expression, ExpressionFunction, InfixOperator, PrefixOperator, QuilFunction},
     imag,
     instruction::MemoryReference,
-    parser::common::parse_memory_reference_with_brackets,
     token, unexpected_eof,
 };
 
@@ -134,53 +135,66 @@ pub(super) fn parse_immediate_value(input: ParserInput) -> InternalParserResult<
     }
 }
 
-/// Given an expression function, parse the expression within its parentheses.
-fn parse_function_call<'a>(
-    input: ParserInput<'a>,
-    function: ExpressionFunction,
-) -> InternalParserResult<'a, Expression> {
-    let (input, _) = token!(LParenthesis)(input)?;
-    let (input, expression) = parse(input, Precedence::Lowest)?; // TODO: different precedence?
-    let (input, _) = token!(RParenthesis)(input)?;
-    Ok((
-        input,
-        Expression::FunctionCall(FunctionCallExpression {
-            function,
-            expression: ArcIntern::new(expression),
-        }),
-    ))
-}
-
 /// Identifiers have to be handled specially because some have special meaning.
 ///
-/// By order of precedence:
+/// In order of precedence:
 ///
-/// 1. Memory references with brackets
-/// 2. Special function and constant identifiers
-/// 3. Anything else is considered to be a memory reference without index brackets
-fn parse_expression_identifier(input: ParserInput) -> InternalParserResult<Expression> {
-    let (input, memory_reference) = opt(parse_memory_reference_with_brackets)(input)?;
-    if let Some(memory_reference) = memory_reference {
-        return Ok((input, Expression::Address(memory_reference)));
-    }
-
+/// 1. An identifier followed by parentheses is a function call (some names are known to Quil but
+///    this doesn't affect parsing);
+/// 2. An identifier followed by brackets is a memory reference;
+/// 3. The constants `pi` and `i` are recognized specially;
+/// 4. Any other identifier is considered to be a memory reference without index brackets.
+fn parse_expression_identifier<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Expression> {
     match super::split_first_token(input) {
         None => unexpected_eof!(input),
-        Some((Token::Identifier(ident), remainder)) => match ident.to_lowercase().as_str() {
-            "cis" => parse_function_call(remainder, ExpressionFunction::Cis),
-            "cos" => parse_function_call(remainder, ExpressionFunction::Cosine),
-            "exp" => parse_function_call(remainder, ExpressionFunction::Exponent),
-            "i" => Ok((remainder, Expression::Number(imag!(1f64)))),
-            "pi" => Ok((remainder, Expression::PiConstant)),
-            "sin" => parse_function_call(remainder, ExpressionFunction::Sine),
-            "sqrt" => parse_function_call(remainder, ExpressionFunction::SquareRoot),
-            name => Ok((
-                remainder,
-                Expression::Address(MemoryReference {
-                    name: name.to_owned(),
-                    index: 0,
-                }),
-            )),
+        Some((Token::Identifier(ident), input)) => match super::split_first_token(input) {
+            Some((Token::LParenthesis, input)) => {
+                let (input, arguments) = separated_list1(token!(Comma), |input| {
+                    let (input, expression) = parse(input, Precedence::Lowest)?;
+                    Ok((input, ArcIntern::new(expression)))
+                })(input)?;
+                let (input, ()) = token!(RParenthesis)(input)?;
+
+                let function = match ident.to_lowercase().as_str() {
+                    "cis" => ExpressionFunction::Builtin(QuilFunction::Cis),
+                    "cos" => ExpressionFunction::Builtin(QuilFunction::Cosine),
+                    "exp" => ExpressionFunction::Builtin(QuilFunction::Exponent),
+                    "sin" => ExpressionFunction::Builtin(QuilFunction::Sine),
+                    "sqrt" => ExpressionFunction::Builtin(QuilFunction::SquareRoot),
+                    _ => ExpressionFunction::Extern(ident.to_owned()),
+                };
+
+                Ok((
+                    input,
+                    Expression::FunctionCall(FunctionCallExpression {
+                        function,
+                        arguments,
+                    }),
+                ))
+            }
+
+            Some((Token::LBracket, input)) => {
+                let (input, index) = terminated(token!(Integer(v)), token!(RBracket))(input)?;
+                Ok((
+                    input,
+                    Expression::Address(MemoryReference {
+                        name: ident.to_owned(),
+                        index,
+                    }),
+                ))
+            }
+
+            _ => match ident.to_lowercase().as_str() {
+                "i" => Ok((input, Expression::Number(imag!(1f64)))),
+                "pi" => Ok((input, Expression::PiConstant)),
+                name => Ok((
+                    input,
+                    Expression::Address(MemoryReference {
+                        name: name.to_owned(),
+                        index: 0,
+                    }),
+                )),
+            },
         },
         Some((other_token, _)) => expected_token!(input, other_token, "identifier".to_owned()),
     }
@@ -240,7 +254,7 @@ fn parse_prefix(input: ParserInput) -> InternalParserResult<PrefixOperator> {
 mod tests {
     use crate::expression::{
         Expression, ExpressionFunction, FunctionCallExpression, InfixExpression, InfixOperator,
-        PrefixExpression, PrefixOperator,
+        PrefixExpression, PrefixOperator, QuilFunction,
     };
     use crate::instruction::MemoryReference;
     use crate::parser::lexer::lex;
@@ -290,6 +304,7 @@ mod tests {
             "%a+%b",
             "(pi/2)+(1*theta[0])",
             "3 - -2",
+            "extern_fn(1, 2, 5)",
         ];
 
         for case in cases {
@@ -301,13 +316,32 @@ mod tests {
         }
     }
 
+    #[test]
+    fn nullary_functions_disallowed() {
+        let case = "nullary_fn()";
+        let input = LocatedSpan::new(case);
+        let tokens = lex(input).unwrap();
+        if let Ok((remainder, result)) = parse_expression(&tokens) {
+            panic!(
+                concat!(
+                    "expected parsing a nullary function application, \"{case}\", to fail;\n",
+                    "instead it parsed as \"{result}\",\n",
+                    "with remaining tokens {remainder:?}",
+                ),
+                case = case,
+                result = result.to_quil_or_debug(),
+                remainder = remainder,
+            );
+        }
+    }
+
     test!(
         function_call,
         parse_expression,
         "sin(1)",
         Expression::FunctionCall(FunctionCallExpression {
-            function: ExpressionFunction::Sine,
-            expression: ArcIntern::new(Expression::Number(real!(1f64))),
+            function: ExpressionFunction::Builtin(QuilFunction::Sine),
+            arguments: vec![ArcIntern::new(Expression::Number(real!(1f64)))],
         })
     );
 
@@ -316,11 +350,114 @@ mod tests {
         parse_expression,
         "sin(sin(1))",
         Expression::FunctionCall(FunctionCallExpression {
-            function: ExpressionFunction::Sine,
-            expression: ArcIntern::new(Expression::FunctionCall(FunctionCallExpression {
-                function: ExpressionFunction::Sine,
-                expression: ArcIntern::new(Expression::Number(real!(1f64))),
-            })),
+            function: ExpressionFunction::Builtin(QuilFunction::Sine),
+            arguments: vec![ArcIntern::new(Expression::FunctionCall(
+                FunctionCallExpression {
+                    function: ExpressionFunction::Builtin(QuilFunction::Sine),
+                    arguments: vec![ArcIntern::new(Expression::Number(real!(1f64)))],
+                }
+            ))],
+        })
+    );
+
+    test!(
+        extern_call_unary,
+        parse_expression,
+        "extern_fn(1)",
+        Expression::FunctionCall(FunctionCallExpression {
+            function: ExpressionFunction::Extern("extern_fn".into()),
+            arguments: vec![Expression::Number(real!(1f64)).into()],
+        })
+    );
+
+    test!(
+        extern_call_binary,
+        parse_expression,
+        "extern_fn(1, 2)",
+        Expression::FunctionCall(FunctionCallExpression {
+            function: ExpressionFunction::Extern("extern_fn".into()),
+            arguments: vec![
+                Expression::Number(real!(1f64)).into(),
+                Expression::Number(real!(2f64)).into()
+            ],
+        })
+    );
+
+    test!(
+        extern_call_ternary,
+        parse_expression,
+        "extern_fn(1, 2, 3)",
+        Expression::FunctionCall(FunctionCallExpression {
+            function: ExpressionFunction::Extern("extern_fn".into()),
+            arguments: vec![
+                Expression::Number(real!(1f64)).into(),
+                Expression::Number(real!(2f64)).into(),
+                Expression::Number(real!(3f64)).into(),
+            ],
+        })
+    );
+
+    test!(
+        extern_call_quaternary,
+        parse_expression,
+        "extern_fn(1, 2, 3, 4)",
+        Expression::FunctionCall(FunctionCallExpression {
+            function: ExpressionFunction::Extern("extern_fn".into()),
+            arguments: vec![
+                Expression::Number(real!(1f64)).into(),
+                Expression::Number(real!(2f64)).into(),
+                Expression::Number(real!(3f64)).into(),
+                Expression::Number(real!(4f64)).into(),
+            ],
+        })
+    );
+
+    test!(
+        extern_call_nested,
+        parse_expression,
+        "outer(inner(x+y[1]), sin(%z), pi*(theta + 0.5))",
+        Expression::FunctionCall(FunctionCallExpression {
+            function: ExpressionFunction::Extern("outer".into()),
+            arguments: vec![
+                Expression::FunctionCall(FunctionCallExpression {
+                    function: ExpressionFunction::Extern("inner".into()),
+                    arguments: vec![Expression::Infix(InfixExpression {
+                        left: Expression::Address(MemoryReference {
+                            name: "x".to_string(),
+                            index: 0,
+                        })
+                        .into(),
+                        operator: InfixOperator::Plus,
+                        right: Expression::Address(MemoryReference {
+                            name: "y".to_string(),
+                            index: 1,
+                        })
+                        .into(),
+                    })
+                    .into()],
+                })
+                .into(),
+                Expression::FunctionCall(FunctionCallExpression {
+                    function: ExpressionFunction::Builtin(QuilFunction::Sine),
+                    arguments: vec![Expression::Variable("z".to_owned()).into()],
+                })
+                .into(),
+                Expression::Infix(InfixExpression {
+                    left: ArcIntern::new(Expression::PiConstant),
+                    operator: InfixOperator::Star,
+                    right: Expression::Infix(InfixExpression {
+                        left: Expression::Address(MemoryReference {
+                            name: "theta".to_string(),
+                            index: 0,
+                        })
+                        .into(),
+                        operator: InfixOperator::Plus,
+                        right: Expression::Number(real!(0.5f64)).into(),
+                    })
+                    .into(),
+                })
+                .into()
+            ],
         })
     );
 
@@ -346,12 +483,12 @@ mod tests {
             })),
             operator: InfixOperator::Star,
             right: ArcIntern::new(Expression::FunctionCall(FunctionCallExpression {
-                function: ExpressionFunction::Sine,
-                expression: ArcIntern::new(Expression::Infix(InfixExpression {
+                function: ExpressionFunction::Builtin(QuilFunction::Sine),
+                arguments: vec![ArcIntern::new(Expression::Infix(InfixExpression {
                     left: ArcIntern::new(Expression::Variable("theta".to_owned())),
                     operator: InfixOperator::Slash,
                     right: ArcIntern::new(Expression::Number(real!(2f64))),
-                })),
+                }))],
             })),
         })
     );
@@ -452,8 +589,8 @@ mod tests {
             (
                 "(((cos(((pi))))))",
                 Expression::FunctionCall(FunctionCallExpression {
-                    function: ExpressionFunction::Cosine,
-                    expression: ArcIntern::new(Expression::PiConstant),
+                    function: ExpressionFunction::Builtin(QuilFunction::Cosine),
+                    arguments: vec![ArcIntern::new(Expression::PiConstant)],
                 }),
             ),
         ];

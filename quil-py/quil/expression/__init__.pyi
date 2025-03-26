@@ -1,7 +1,7 @@
 """The ``expression`` module contains classes for representing Quil expressions."""
 
 from enum import Enum
-from typing import Dict, Optional, Sequence, Union, final
+from typing import Dict, List, Optional, Sequence, Union, final
 
 from quil.instructions import MemoryReference
 
@@ -11,6 +11,7 @@ __all__ = [
     'InfixExpression',
     'PrefixExpression',
     'ExpressionFunction',
+    'QuilFunction',
     'PrefixOperator',
     'InfixOperator',
     'EvaluationError',
@@ -141,15 +142,15 @@ class Expression:
 class FunctionCallExpression:
     """A Quil function call."""
     @staticmethod
-    def __new__(cls, function: ExpressionFunction, expression: Expression) -> "FunctionCallExpression": ...
+    def __new__(cls, function: ExpressionFunction, *arguments: Expression) -> "FunctionCallExpression": ...
     @property
     def function(self) -> ExpressionFunction: ...
     @function.setter
     def function(self, function: ExpressionFunction): ...
     @property
-    def expression(self) -> Expression: ...
-    @expression.setter
-    def expression(self, expression: Expression): ...
+    def arguments(self) -> Expression: ...
+    @arguments.setter
+    def arguments(self, arguments: List[Expression]): ...
 
 class InfixExpression:
     """A Quil infix expression."""
@@ -182,14 +183,34 @@ class PrefixExpression:
     def expression(self, expression: Expression): ...
 
 @final
-class ExpressionFunction(Enum):
-    """An enum representing a Quil function that can be applied to an expression."""
+class QuilFunction(Enum):
+    """An enum representing a built-in Quil function that can be applied to an expression."""
 
     Cis = "CIS"
     Cosine = "COSINE"
     Exponent = "EXPONENT"
     Sine = "SINE"
     SquareRoot = "SQUAREROOT"
+
+@final
+class ExpressionFunction:
+    """A function that can be applied to an expression
+
+    This is either a built-in ``QuilFunction`` or a named extern function."""
+
+    def inner(self) -> Union[ExpressionFunction, str]:
+        """Returns the inner value of the variant. Raises a ``RuntimeError`` if inner data doesn't exist."""
+        ...
+    def is_builtin(self) -> bool: ...
+    def is_extern(self) -> bool: ...
+    @staticmethod
+    def from_builtin(inner: QuilFunction) -> "ExpressionFunction": ...
+    @staticmethod
+    def from_extern(inner: str) -> "ExpressionFunction": ...
+    def as_builtin(self) -> Optional[QuilFunction]: ...
+    def to_builtin(self) -> QuilFunction: ...
+    def as_extern(self) -> Optional[str]: ...
+    def to_extern(self) -> str: ...
 
 @final
 class PrefixOperator(Enum):

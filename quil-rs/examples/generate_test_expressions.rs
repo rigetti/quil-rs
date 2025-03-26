@@ -5,10 +5,11 @@
 //! parenthesized string version of the expression to ensure consistent parsing.
 
 use clap::Parser;
+use itertools::Itertools as _;
 use quil_rs::{
     expression::{
         Expression, ExpressionFunction, FunctionCallExpression, InfixExpression, InfixOperator,
-        PrefixExpression, PrefixOperator,
+        PrefixExpression, PrefixOperator, QuilFunction,
     },
     instruction::MemoryReference,
     quil::Quil,
@@ -55,8 +56,14 @@ fn parenthesized(expression: &Expression) -> String {
         Address(memory_reference) => format!("({memory_reference})"),
         FunctionCall(FunctionCallExpression {
             function,
-            expression,
-        }) => format!("({function}({}))", parenthesized(expression)),
+            arguments,
+        }) => format!(
+            "({function}({}))",
+            arguments
+                .iter()
+                .map(|expr| parenthesized(expr.as_ref()))
+                .join(", ")
+        ),
         Infix(InfixExpression {
             left,
             operator,
@@ -144,20 +151,46 @@ fn var(rng: &mut impl Rng) -> Expression {
     Expression::Variable(name(rng))
 }
 
-/// Random function.
-fn func(rng: &mut impl Rng, depth: u64) -> Expression {
-    let function = match rng.gen_range(0..5) {
-        0 => ExpressionFunction::Cis,
-        1 => ExpressionFunction::Cosine,
-        2 => ExpressionFunction::Exponent,
-        3 => ExpressionFunction::Sine,
-        4 => ExpressionFunction::SquareRoot,
+/// Random builtin function call.
+fn builtin_func(rng: &mut impl Rng, depth: u64) -> Expression {
+    let function = ExpressionFunction::Builtin(match rng.gen_range(0..5) {
+        0 => QuilFunction::Cis,
+        1 => QuilFunction::Cosine,
+        2 => QuilFunction::Exponent,
+        3 => QuilFunction::Sine,
+        4 => QuilFunction::SquareRoot,
         _ => unreachable!(),
-    };
+    });
     Expression::FunctionCall(FunctionCallExpression {
         function,
-        expression: build(rng, depth).into(),
+        arguments: vec![build(rng, depth).into()],
     })
+}
+
+/// Random extern function call.
+fn extern_func(rng: &mut impl Rng, depth: u64) -> Expression {
+    let function = ExpressionFunction::Extern(name(rng));
+    // Per the Quil spec, functions cannot be nullary
+    let num_arguments = rng.gen_range(1..=5);
+    let arguments = (0..num_arguments)
+        .map(|_| build(rng, depth).into())
+        .collect();
+    Expression::FunctionCall(FunctionCallExpression {
+        function,
+        arguments,
+    })
+}
+
+/// Random extern function call.
+fn func(rng: &mut impl Rng, depth: u64) -> Expression {
+    // 2/3 chance we generate a builtin, 1/3 we generate an extern.  Doesn't change the depth;
+    // `builtin_func` and `extern_func` are the ones responsible for that.
+
+    if rng.gen_range(0..3) < 2 {
+        builtin_func(rng, depth)
+    } else {
+        extern_func(rng, depth)
+    }
 }
 
 /// Random infix expression.
