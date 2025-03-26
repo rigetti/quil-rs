@@ -258,7 +258,9 @@ fn should_be_real(
                     expected: 1,
                 }),
             },
-            // TODO: Make this precise
+            // FUTURE WORK: We currently skip all `CALL` functions when type checking the program,
+            // and we likewise (but oppositely) assume that all extern functions are potential type
+            // errors when found in expressions.  This could be made more precise in the future.
             ExpressionFunction::Extern(_) => real_value_required(
                 instruction,
                 this_expression,
