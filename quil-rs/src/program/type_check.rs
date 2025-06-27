@@ -1,6 +1,10 @@
 //! Type check Quil programs.
 //!
 //! See the [Quil spec](https://quil-lang.github.io/).
+
+// TODO: Address https://github.com/rigetti/quil-rs/issues/452
+#![allow(clippy::result_large_err)]
+
 use std::fmt::Debug;
 
 use indexmap::IndexMap;
