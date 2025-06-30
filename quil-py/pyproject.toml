@@ -1,7 +1,7 @@
 [project]
 name = "quil"
 version = "0.16.0"
-requires-python = ">=3.8"
+requires-python = ">=3.9,<3.13"
 description = "A Python package for building and parsing Quil programs."
 documentation = "https://rigetti.github.io/quil-rs/quil.html"
 readme = "README-py.md"
@@ -10,12 +10,13 @@ authors = [{ name = "Rigetti Computing", email = "softapps@rigetti.com" }]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "License :: OSI Approved :: Apache Software License",
-  "Programming Language :: Python :: 3.8",
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
   "Operating System :: OS Independent",
 ]
-dependencies = ["numpy>=1.21"]
+dependencies = ["numpy>=1.26"]
 
 [tool.maturin]
 features = ["pyo3/extension-module"]

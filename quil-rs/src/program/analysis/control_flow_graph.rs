@@ -248,6 +248,8 @@ impl<'p> BasicBlock<'p> {
     }
 }
 
+// TODO: Address https://github.com/rigetti/quil-rs/issues/453
+#[allow(clippy::large_enum_variant)]
 #[allow(clippy::enum_variant_names)]
 #[derive(Debug, thiserror::Error)]
 pub enum BasicBlockScheduleError {

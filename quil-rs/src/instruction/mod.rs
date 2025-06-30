@@ -947,6 +947,8 @@ impl InstructionHandler {
     }
 
     /// Like [`Program::into_simplified`], but using custom instruction handling.
+    // TODO: Address https://github.com/rigetti/quil-rs/issues/453
+    #[allow(clippy::result_large_err)]
     pub fn simplify_program(&mut self, program: &Program) -> Result<Program, ProgramError> {
         program.simplify_with_handler(self)
     }

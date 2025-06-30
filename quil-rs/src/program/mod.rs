@@ -12,6 +12,9 @@
 //See the License for the specific language governing permissions and
 // limitations under the License.
 
+// TODO: Address https://github.com/rigetti/quil-rs/issues/453
+#![allow(clippy::result_large_err)]
+
 use std::collections::{HashMap, HashSet};
 use std::ops::{self};
 use std::str::FromStr;
@@ -55,6 +58,8 @@ pub mod scheduling;
 mod source_map;
 pub mod type_check;
 
+// TODO: Address https://github.com/rigetti/quil-rs/issues/453
+#[allow(clippy::large_enum_variant)]
 #[derive(Clone, Debug, PartialEq, thiserror::Error)]
 pub enum ProgramError {
     #[error("{0}")]
