@@ -1,3 +1,11 @@
+## 0.32.0-rc.0 (2025-06-30)
+
+### Breaking Changes
+
+#### set Python and dependency versions to match
+
+#### set Python and dependency versions to match
+
 ## 0.31.0 (2025-03-07)
 
 ### Breaking Changes
