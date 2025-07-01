@@ -262,10 +262,7 @@ mod tests {
     fn assert_almost_eq(left: Complex64, right: Complex64, epsilon: f64) {
         assert!(
             (left - right).norm() < epsilon,
-            "Expected {} to be almost equal to {} with epsilon {}",
-            left,
-            right,
-            epsilon
+            "Expected {left} to be almost equal to {right} with epsilon {epsilon}"
         );
     }
 

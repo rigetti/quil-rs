@@ -39,8 +39,6 @@ impl_to_quil!(PyScalarType);
 impl_hash!(PyScalarType);
 
 impl rigetti_pyo3::PyTryFrom<pyo3::PyAny> for PyScalarType {
-    // TODO: Address https://github.com/rigetti/quil-rs/issues/451
-    #[allow(clippy::uninlined_format_args)]
     fn py_try_from(_py: Python, item: &pyo3::PyAny) -> PyResult<Self> {
         let item = item.extract::<String>()?;
         match item.as_str() {
@@ -49,8 +47,7 @@ impl rigetti_pyo3::PyTryFrom<pyo3::PyAny> for PyScalarType {
             "OCTET" => Ok(Self::Octet),
             "REAL" => Ok(Self::Real),
             _ => Err(PyValueError::new_err(format!(
-                "Invalid value for ScalarType: {}",
-                item
+                "Invalid value for ScalarType: {item}"
             ))),
         }
     }

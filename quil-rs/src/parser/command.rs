@@ -1156,19 +1156,14 @@ mod tests {
                 assert_eq!(remainder, test_case.remainder);
             }
             (Ok(expected), Err(e)) => {
-                panic!("Expected {:?}, got error: {:?}", expected, e);
+                panic!("Expected {expected:?}, got error: {e:?}");
             }
             (Err(expected), Ok((_, parsed))) => {
-                panic!("Expected error: {:?}, got {:?}", expected, parsed);
+                panic!("Expected error: {expected:?}, got {parsed:?}");
             }
             (Err(expected), Err(found)) => {
                 let found = format!("{found:?}");
-                assert!(
-                    found.contains(&expected),
-                    "`{}` not in `{}`",
-                    expected,
-                    found
-                );
+                assert!(found.contains(&expected), "`{expected}` not in `{found}`");
             }
         }
     }

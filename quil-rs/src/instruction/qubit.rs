@@ -33,7 +33,7 @@ impl Quil for Qubit {
             Fixed(value) => write!(writer, "{value}").map_err(Into::into),
             Placeholder(_) => {
                 if fall_back_to_debug {
-                    write!(writer, "{:?}", self).map_err(Into::into)
+                    write!(writer, "{self:?}").map_err(Into::into)
                 } else {
                     Err(ToQuilError::UnresolvedQubitPlaceholder)
                 }

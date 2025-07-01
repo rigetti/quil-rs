@@ -339,7 +339,7 @@ where
             match c {
                 '"' => write!(f, "\\\"")?,
                 '\\' => write!(f, "\\\\")?,
-                c => write!(f, "{}", c)?,
+                c => write!(f, "{c}")?,
             }
         }
         write!(f, "\"")
