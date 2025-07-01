@@ -1,22 +1,20 @@
 from typing import Iterable
 
 __all__ = [
-    'BoxcarKernel',
-    'ErfSquare',
-    'Gaussian',
-    'DragGaussian',
-    'HermiteGaussian',
-    'apply_phase_and_detuning',
+    "BoxcarKernel",
+    "ErfSquare",
+    "Gaussian",
+    "DragGaussian",
+    "HermiteGaussian",
+    "apply_phase_and_detuning",
 ]
 
 def apply_phase_and_detuning(iq_values: Iterable[complex], phase: float, detuning: float, sample_rate: float):
     """Modulate and phase shift waveform IQ data in place."""
-    ...
 
 class BoxcarKernel:
-    def __new__(self, phase_cycles: float, scale: float, sample_count: int) -> BoxcarKernel:
+    def __new__(cls, phase: float, scale: float, sample_count: int) -> BoxcarKernel:
         """Create a new BoxcarKernel."""
-        ...
 
     @property
     def phase(self) -> float:
@@ -33,13 +31,22 @@ class BoxcarKernel:
     def into_iq_value(self) -> complex:
         """Convert BoxcarKernel into a Complex64 value."""
 
-
 class ErfSquare:
     """A waveform with a flat top and edges that are error functions (erfs)."""
-    def __new__(self, duration: float, risetime: float, sample_rate: float,
-                 pad_left: float, pad_right: float, positive_polarity: bool,
-                 scale: float, phase: float, detuning: float) -> ErfSquare:
-        ...
+
+    def __new__(
+        cls,
+        duration: float,
+        risetime: float,
+        sample_rate: float,
+        pad_left: float,
+        pad_right: float,
+        positive_polarity: bool,
+        scale: float,
+        phase: float,
+        detuning: float,
+    ) -> ErfSquare:
+        """Create a new ErfSquare."""
 
     @property
     def duration(self) -> float:
@@ -51,7 +58,7 @@ class ErfSquare:
 
     @property
     def sample_rate(self) -> float:
-        """Generate wavform samples at this rate (Hz)"""
+        """Generate waveform samples at this rate (Hz)"""
 
     @property
     def pad_left(self) -> float:
@@ -80,13 +87,20 @@ class ErfSquare:
     def into_iq_values(self) -> list[complex]:
         """Convert ErfSquare into a list of Complex64 values."""
 
-
 class Gaussian:
     """A waveform with a Gaussian shape."""
-    def __new__(self, duration: float, fwhm: float, t0: float,
-                 sample_rate: float, scale: float, phase: float,
-                 detuning: float) -> Gaussian:
-        ...
+
+    def __new__(
+        cls,
+        duration: float,
+        fwhm: float,
+        t0: float,
+        sample_rate: float,
+        scale: float,
+        phase: float,
+        detuning: float,
+    ) -> Gaussian:
+        """Create a new Gaussian."""
 
     @property
     def duration(self) -> float:
@@ -119,18 +133,28 @@ class Gaussian:
     def into_iq_values(self) -> list[complex]:
         """Convert Gaussian into a list of Complex64 values."""
 
-
 class DragGaussian:
-    """A waveform with a DRAG-corrected Gaussian shape.                                                             
-                                                                                                                     
-    This is a Gaussian shape with an additional component proportional to the time derivative of the main Gaussian pulse.
-                                                                                                                         
-    See Motzoi F. et al., Phys. Rev. Lett., 103 (2009) 110501. for details.                                              
+    """A waveform with a DRAG-corrected Gaussian shape.
+
+    This is a Gaussian shape with an additional component
+    proportional to the time derivative of the main Gaussian pulse.
+
+    See Motzoi F. et al., Phys. Rev. Lett., 103 (2009) 110501. for details.
     """
-    def __new__(self, duration: float, fwhm: float, t0: float, anh: float,
-                 alpha: float, sample_rate: float, scale: float, phase: float,
-                 detuning: float) -> DragGaussian:
-        ...
+
+    def __new__(
+        cls,
+        duration: float,
+        fwhm: float,
+        t0: float,
+        anh: float,
+        alpha: float,
+        sample_rate: float,
+        scale: float,
+        phase: float,
+        detuning: float,
+    ) -> DragGaussian:
+        """Create a new DragGaussian."""
 
     @property
     def duration(self) -> float:
@@ -170,8 +194,6 @@ class DragGaussian:
 
     def into_iq_values(self) -> list[complex]:
         """Convert DragGaussian into a list of Complex64 values."""
-        ...
-
 
 class HermiteGaussian:
     """A Hermite Gaussian waveform.
@@ -184,10 +206,21 @@ class HermiteGaussian:
     Warren S. Warren. 81, (1984); doi: 10.1063/1.447644
     for details.
     """
-    def __new__(self, duration: float, fwhm: float, t0: float, anh: float,
-                 alpha: float, sample_rate: float, second_order_hrm_coeff: float,
-                 scale: float, phase: float, detuning: float) -> HermiteGaussian:
-        ...
+
+    def __new__(
+        cls,
+        duration: float,
+        fwhm: float,
+        t0: float,
+        anh: float,
+        alpha: float,
+        sample_rate: float,
+        second_order_hrm_coeff: float,
+        scale: float,
+        phase: float,
+        detuning: float,
+    ) -> HermiteGaussian:
+        """Create a new HermiteGaussian."""
 
     @property
     def duration(self) -> float:
@@ -231,4 +264,3 @@ class HermiteGaussian:
 
     def into_iq_values(self) -> list[complex]:
         """Convert HermiteGaussian into a list of Complex64 values."""
-        ...
