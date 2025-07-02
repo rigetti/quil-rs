@@ -51,10 +51,10 @@ impl Quil for Target {
         fall_back_to_debug: bool,
     ) -> crate::quil::ToQuilResult<()> {
         match self {
-            Target::Fixed(label) => write!(writer, "@{}", label).map_err(Into::into),
+            Target::Fixed(label) => write!(writer, "@{label}").map_err(Into::into),
             Target::Placeholder(_) => {
                 if fall_back_to_debug {
-                    write!(writer, "@{:?}", self).map_err(Into::into)
+                    write!(writer, "@{self:?}").map_err(Into::into)
                 } else {
                     Err(ToQuilError::UnresolvedLabelPlaceholder)
                 }

@@ -65,7 +65,3 @@ harness = false
 [[example]]
 name = "generate_test_expressions"
 
-[lints.clippy]
-# TODO: Address github.com/rigetti/quil-rs/issues/451
-uninlined_format_args = "allow"
-

@@ -1444,10 +1444,10 @@ mod tests {
         match (test_case.expected, found) {
             (Ok(expected), Ok(found)) => assert_eq!(expected, found),
             (Ok(expected), Err(found)) => {
-                panic!("expected resolution {:?}, found err {:?}", expected, found)
+                panic!("expected resolution {expected:?}, found err {found:?}")
             }
             (Err(expected), Ok(found)) => {
-                panic!("expected err {:?}, found resolution {:?}", expected, found)
+                panic!("expected err {expected:?}, found resolution {found:?}")
             }
             (Err(expected), Err(found)) => assert_eq!(expected, found),
         }
@@ -1528,10 +1528,10 @@ mod tests {
         match (test_case.expected, found) {
             (Ok(expected), Ok(found)) => assert_eq!(expected, found),
             (Ok(expected), Err(found)) => {
-                panic!("expected resolution {:?}, found err {:?}", expected, found)
+                panic!("expected resolution {expected:?}, found err {found:?}")
             }
             (Err(expected), Ok(found)) => {
-                panic!("expected err {:?}, found resolution {:?}", expected, found)
+                panic!("expected err {expected:?}, found resolution {found:?}")
             }
             (Err(expected), Err(found)) => assert_eq!(expected, found),
         }
@@ -1829,10 +1829,10 @@ mod tests {
         match (test_case.expected, found) {
             (Ok(_), Ok(_)) => {}
             (Ok(expected), Err(found)) => {
-                panic!("expected resolution {:?}, found err {:?}", expected, found)
+                panic!("expected resolution {expected:?}, found err {found:?}")
             }
             (Err(expected), Ok(found)) => {
-                panic!("expected err {:?}, found resolution {:?}", expected, found)
+                panic!("expected err {expected:?}, found resolution {found:?}")
             }
             (Err(expected), Err(found)) => assert_eq!(expected, found),
         }
@@ -1949,7 +1949,7 @@ mod tests {
                 assert_eq!(expected, found);
             }
             (Ok(expected), Err(found)) => {
-                panic!("expected resolution {:?}, found err {:?}", expected, found)
+                panic!("expected resolution {expected:?}, found err {found:?}")
             }
             (Err(expected), Ok(_)) => {
                 panic!(
@@ -2169,10 +2169,10 @@ mod tests {
                 assert_eq!(expected, found);
             }
             (Ok(_), Err(found)) => {
-                panic!("expected valid, found err {:?}", found)
+                panic!("expected valid, found err {found:?}")
             }
             (Err(expected), Ok(_)) => {
-                panic!("expected err {:?}, found valid", expected)
+                panic!("expected err {expected:?}, found valid")
             }
             (Err(expected), Err((_, found))) => assert_eq!(expected, found),
         }
@@ -2319,20 +2319,15 @@ mod tests {
                 assert_eq!(expected, parsed);
             }
             (Ok(expected), Err(e)) => {
-                panic!("Expected {:?}, got error: {:?}", expected, e);
+                panic!("Expected {expected:?}, got error: {e:?}");
             }
             (Err(expected), Ok(parsed)) => {
-                panic!("Expected error: {:?}, got {:?}", expected, parsed);
+                panic!("Expected error: {expected:?}, got {parsed:?}");
             }
             (Err(expected), Err(found)) => {
                 let expected = format!("{expected:?}");
                 let found = format!("{found:?}");
-                assert!(
-                    found.contains(&expected),
-                    "`{}` not in `{}`",
-                    expected,
-                    found
-                );
+                assert!(found.contains(&expected), "`{expected}` not in `{found}`");
             }
         }
     }

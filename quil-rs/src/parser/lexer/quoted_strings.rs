@@ -121,9 +121,7 @@ mod tests {
         let round_tripped = QuotedString(&parsed).to_string();
         assert!(
             input.starts_with(&round_tripped),
-            "expected `{}` to start with `{}`",
-            input,
-            round_tripped
+            "expected `{input}` to start with `{round_tripped}`"
         );
     }
 }

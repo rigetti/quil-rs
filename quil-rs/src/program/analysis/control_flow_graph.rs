@@ -602,7 +602,7 @@ X 0
         let program: Program = input.parse().unwrap();
         let graph = ControlFlowGraph::from(&program);
         let blocks = graph.into_blocks();
-        println!("blocks: {:#?}", blocks);
+        println!("blocks: {blocks:#?}");
         let actual = blocks
             .iter()
             .map(|block| block.instruction_index_offset())
@@ -637,10 +637,10 @@ PULSE 0 "a" flat(duration: 1.0)
         let program: Program = input.parse().unwrap();
         let graph = ControlFlowGraph::from(&program);
         let blocks = graph.into_blocks();
-        println!("blocks: {:#?}", blocks);
+        println!("blocks: {blocks:#?}");
 
         let schedule = blocks[0].as_schedule_seconds(&program).unwrap();
-        println!("schedule: {:#?}", schedule);
+        println!("schedule: {schedule:#?}");
         assert_eq!(schedule.duration().0, 21.0);
         let schedule_items = schedule.into_items();
 
@@ -762,7 +762,7 @@ CZ 0 2
         let program: Program = input.parse().unwrap();
         let graph = ControlFlowGraph::from(&program);
         let blocks = graph.into_blocks();
-        println!("blocks: {:#?}", blocks);
+        println!("blocks: {blocks:#?}");
 
         let schedule = blocks[0].as_schedule_seconds(&program).unwrap();
         let mut schedule_items = schedule.into_items();

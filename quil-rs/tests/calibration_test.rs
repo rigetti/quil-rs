@@ -13,7 +13,7 @@ use quil_rs::quil::Quil;
 #[rstest]
 fn test_calibration_filtering(#[files("tests/programs/calibration_*.quil")] path: PathBuf) {
     let program_text =
-        read_to_string(&path).unwrap_or_else(|_| panic!("Should be able to load file: {:?}", path));
+        read_to_string(&path).unwrap_or_else(|_| panic!("Should be able to load file: {path:?}"));
     let program = Program::from_str(&program_text).expect("Should be able to parse test program.");
 
     assert_snapshot!(

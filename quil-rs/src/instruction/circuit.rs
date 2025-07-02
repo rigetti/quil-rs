@@ -38,15 +38,15 @@ impl Quil for CircuitDefinition {
             write!(writer, "(")?;
             let mut iter = self.parameters.iter();
             if let Some(p) = iter.next() {
-                write!(writer, "%{}", p)?;
+                write!(writer, "%{p}")?;
             }
             for p in iter {
-                write!(writer, ", %{}", p)?;
+                write!(writer, ", %{p}")?;
             }
             write!(writer, ")")?;
         }
         for qubit_variable in &self.qubit_variables {
-            write!(writer, " {}", qubit_variable)?;
+            write!(writer, " {qubit_variable}")?;
         }
         writeln!(writer, ":")?;
         for instruction in &self.instructions {

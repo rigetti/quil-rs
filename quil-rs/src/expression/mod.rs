@@ -608,7 +608,7 @@ impl Quil for Expression {
                 right,
             }) => {
                 format_inner_expression(f, fall_back_to_debug, left)?;
-                write!(f, "{}", operator)?;
+                write!(f, "{operator}")?;
                 format_inner_expression(f, fall_back_to_debug, right)
             }
             Number(value) => write!(f, "{}", format_complex(value)).map_err(Into::into),
@@ -617,10 +617,10 @@ impl Quil for Expression {
                 operator,
                 expression,
             }) => {
-                write!(f, "{}", operator)?;
+                write!(f, "{operator}")?;
                 format_inner_expression(f, fall_back_to_debug, expression)
             }
-            Variable(identifier) => write!(f, "%{}", identifier).map_err(Into::into),
+            Variable(identifier) => write!(f, "%{identifier}").map_err(Into::into),
         }
     }
 }

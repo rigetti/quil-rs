@@ -117,7 +117,7 @@ impl From<usize> for DotFormatBlockLabel<'_> {
 impl std::fmt::Display for DotFormatBlockLabel<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            DotFormatBlockLabel::Unlabeled { index } => write!(f, "block_{}", index),
+            DotFormatBlockLabel::Unlabeled { index } => write!(f, "block_{index}"),
             DotFormatBlockLabel::Labeled(label) => write!(f, "{}", label.to_quil_or_debug()),
         }
     }
@@ -141,7 +141,7 @@ impl ScheduledProgram<'_> {
             let mut digraph = writer.digraph();
 
             let blocks = self.basic_blocks();
-            println!("blocks: {:?}", blocks);
+            println!("blocks: {blocks:?}");
             let mut iter = blocks.iter().enumerate().peekable();
             if let Some((index, first_block)) = iter.peek() {
                 let block_node_label = first_block
