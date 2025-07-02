@@ -1,3 +1,19 @@
+## 0.32.0-rc.2 (2025-07-02)
+
+### Breaking Changes
+
+#### set Python and dependency versions to match
+
+#### set Python and dependency versions to match
+
+### Features
+
+#### add waveform constructors
+
+### Fixes
+
+#### waveform constructor parameter names
+
 ## 0.32.0-rc.1 (2025-07-01)
 
 ### Breaking Changes
