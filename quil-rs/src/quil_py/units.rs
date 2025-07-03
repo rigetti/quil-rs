@@ -1,11 +1,7 @@
-use pyo3::{FromPyObject, IntoPy, PyObject};
-
 #[derive(Clone, Copy, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
-#[derive(FromPyObject)]
 pub struct Cycles<T>(pub T);
 
 #[derive(Clone, Copy, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
-#[derive(FromPyObject)]
 pub struct Radians<T>(pub T);
 
 impl From<Cycles<f64>> for Radians<f64> {
@@ -17,14 +13,5 @@ impl From<Cycles<f64>> for Radians<f64> {
 impl From<Radians<f64>> for Cycles<f64> {
     fn from(radians: Radians<f64>) -> Self {
         Cycles(radians.0 / (2.0 * std::f64::consts::PI))
-    }
-}
-
-impl<T> IntoPy<PyObject> for Cycles<T>
-where
-    T: IntoPy<PyObject>
-{
-    fn into_py(self, py: pyo3::Python<'_>) -> PyObject {
-        self.0.into_py(py)
     }
 }

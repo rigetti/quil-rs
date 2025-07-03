@@ -9,6 +9,10 @@ repository = "https://github.com/rigetti/quil-rs"
 keywords = ["Quil", "Quantum", "Rigetti"]
 categories = ["parser-implementations", "science", "compilers", "emulators"]
 
+[lib]
+name = "quil_rs"
+crate-type = ["cdylib", "rlib"]
+
 [dependencies]
 approx = { version = "0.5.1", features = ["num-complex"] }
 dot-writer = { version = "0.1.2", optional = true }
@@ -17,7 +21,6 @@ lexical = "7.0.1"
 ndarray.workspace = true
 nom = "7.1.1"
 nom_locate = "4.0.0"
-num-complex = "0.4.0"
 once_cell = "1.17.1"
 petgraph = "0.6.4"
 regex = "1.7.1"
@@ -26,8 +29,14 @@ strum.workspace = true
 thiserror = "1.0.56"
 indexmap.workspace = true
 statrs = "0.16.0"
-internment = { version = "0.8.6", features = ["arc"] }
 paste = "1.0.15"
+
+# pyo3 dependencies should be updated together
+numpy = "0.20.0"
+pyo3 = { version = "0.20.3", features = ["indexmap"] }
+rigetti-pyo3 = { version = "0.4.3", features = ["indexmap"] }
+num-complex = "0.4.6"
+internment = { version = "0.8.6", features = ["arc"] }
 
 [dev-dependencies]
 clap = { version = "4.3.19", features = ["derive", "string"] }
@@ -40,6 +49,9 @@ proptest-derive = "0.5.1"
 rand = "0.8.5"
 rasciigraph = "0.2.0"
 rstest = "0.18.2"
+
+[build-dependencies]
+pyo3-build-config = "0.20.0"
 
 # These are described in the crate README.md
 [features]

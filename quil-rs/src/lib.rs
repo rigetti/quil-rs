@@ -46,5 +46,6 @@ pub mod reserved;
 pub mod units;
 pub mod validation;
 pub mod waveform;
+mod quil_py;
 
 pub use program::Program;
