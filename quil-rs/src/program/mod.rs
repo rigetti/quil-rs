@@ -24,13 +24,10 @@ use ndarray::Array2;
 use nom_locate::LocatedSpan;
 
 use crate::instruction::{
-    Arithmetic, ArithmeticOperand, ArithmeticOperator, Call, Declaration, ExternError,
-    ExternPragmaMap, ExternSignatureMap, FrameDefinition, FrameIdentifier, GateDefinition,
-    GateError, Instruction, InstructionHandler, Jump, JumpUnless, Label, Matrix, MemoryReference,
-    Move, Pragma, Qubit, QubitPlaceholder, ScalarType, Target, TargetPlaceholder, Vector, Waveform,
-    WaveformDefinition, RESERVED_PRAGMA_EXTERN,
+    Arithmetic, ArithmeticOperand, ArithmeticOperator, Call, Declaration, DefGateSequence, DefGateSequenceExpansionError, ExternError, ExternPragmaMap, ExternSignatureMap, FrameDefinition, FrameIdentifier, Gate, GateDefinition, GateError, GateSpecification, Instruction, InstructionHandler, Jump, JumpUnless, Label, Matrix, MemoryReference, Move, Pragma, Qubit, QubitPlaceholder, ScalarType, Target, TargetPlaceholder, Vector, Waveform, WaveformDefinition, RESERVED_PRAGMA_EXTERN
 };
 use crate::parser::{lex, parse_instructions, ParseError};
+use crate::program::defgate_sequence_expansion::{ProgramDefGateSequenceExpansion, ProgramDefGateSequenceExpansionSourceMap};
 use crate::quil::Quil;
 
 pub use self::calibration::Calibrations;
@@ -53,6 +50,7 @@ mod calibration;
 mod calibration_set;
 mod error;
 pub(crate) mod frame;
+mod defgate_sequence_expansion;
 mod memory;
 pub mod scheduling;
 mod source_map;
@@ -73,6 +71,9 @@ pub enum ProgramError {
 
     #[error("{0}")]
     GateError(#[from] GateError),
+
+    #[error(transparent)]
+    DefGateSequenceExpansionError(#[from] DefGateSequenceExpansionError),
 
     #[error("can only compute program unitary for programs composed of `Gate`s; found unsupported instruction: {}", .0.to_quil_or_debug())]
     UnsupportedForUnitary(Instruction),
@@ -327,6 +328,24 @@ impl Program {
             }
         }
 
+        Ok(new_program)
+    }
+
+    pub fn expand_defgate_sequences(&self, filter: crate::filter_set::Filter<String>) -> Result<Self> {
+        let expansion = ProgramDefGateSequenceExpansion::new(&self.gate_definitions, filter);
+        let new_instructions = expansion.expand_defgate_sequences(&self.instructions, None).unwrap();
+        let mut new_program = Self {
+            calibrations: self.calibrations.clone(),
+            extern_pragma_map: self.extern_pragma_map.clone(),
+            frames: self.frames.clone(),
+            memory_regions: self.memory_regions.clone(),
+            waveforms: self.waveforms.clone(),
+            // FIXME: drop expanded gate definitions.
+            gate_definitions: self.gate_definitions.clone(),
+            instructions: Vec::new(),
+            used_qubits: HashSet::new(),
+        };
+        new_program.add_instructions(new_instructions);
         Ok(new_program)
     }
 
@@ -844,6 +863,20 @@ pub struct InstructionIndex(pub usize);
 impl InstructionIndex {
     fn map(self, f: impl FnOnce(usize) -> usize) -> Self {
         Self(f(self.0))
+    }
+}
+
+enum Filter<T: std::hash::Hash + Eq> {
+    Include(HashSet<T>),
+    Exclude(HashSet<T>),
+}
+
+impl<T: std::hash::Hash + Eq> Filter<T> {
+    fn include(&self, item: &T) -> bool {
+        match self {
+            Self::Include(set) => set.contains(item),
+            Self::Exclude(set) => !set.contains(item)
+        }
     }
 }
 

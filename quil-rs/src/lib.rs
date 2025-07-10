@@ -36,6 +36,7 @@
 //! [serializer]: crate::program::Program#method.to_string
 
 pub mod expression;
+pub(crate) mod filter_set;
 mod hash;
 pub mod instruction;
 mod macros;

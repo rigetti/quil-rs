@@ -34,6 +34,7 @@ mod declaration;
 mod extern_call;
 mod frame;
 mod gate;
+mod gate_sequence;
 mod measurement;
 mod pragma;
 mod qubit;
@@ -64,6 +65,9 @@ pub use self::gate::{
     Gate, GateDefinition, GateError, GateModifier, GateSpecification, GateType, Matrix, PauliGate,
     PauliSum, PauliTerm,
 };
+pub use self::gate_sequence::{
+    DefGateSequence, DefGateSequenceError, DefGateSequenceExpansionError
+};
 pub use self::measurement::Measurement;
 pub use self::pragma::{Include, Pragma, PragmaArgument, RESERVED_PRAGMA_EXTERN};
 pub use self::qubit::{Qubit, QubitPlaceholder};
@@ -75,6 +79,8 @@ pub use self::waveform::{Waveform, WaveformDefinition, WaveformInvocation, Wavef
 pub enum ValidationError {
     #[error(transparent)]
     GateError(#[from] GateError),
+    #[error(transparent)]
+    DefGateSequenceError(#[from] DefGateSequenceError)
 }
 
 #[derive(Clone, Debug, PartialEq)]
