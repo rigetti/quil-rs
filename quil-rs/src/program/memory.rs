@@ -351,7 +351,7 @@ impl Expression {
                 result
             }
             Expression::Number(_) => vec![],
-            Expression::PiConstant => vec![],
+            Expression::PiConstant() => vec![],
             Expression::Prefix(PrefixExpression { expression, .. }) => {
                 expression.get_memory_references()
             }

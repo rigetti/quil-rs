@@ -1,39 +1,16 @@
 //! Templates for generating discrete IQ value sequences representing Quil's defined set of waveforms.
-
-// This error is triggered by PyO3 v0.20.3; it's fixed in 0.21, so this attribute can be removed
-// when we update PyO3.
-#![allow(non_local_definitions)]
-
 use std::f64::consts::PI;
 
-use crate::impl_eq;
-use crate::{imag, real};
 use ndarray::Array;
 use num_complex::Complex64;
-use pyo3::types::PyList;
+use pyo3::exceptions::PyValueError;
+use pyo3::{prelude::*, types::{PyList, PyString}};
+use serde::{Deserialize, Serialize};
 use statrs::function::erf::erf;
 
-use pyo3::prelude::*;
-use rigetti_pyo3::create_init_submodule;
-use serde::{Deserialize, Serialize};
-
-create_init_submodule! {
-    classes: [BoxcarKernel, ErfSquare, Gaussian, DragGaussian, HermiteGaussian],
-    funcs: [py_apply_phase_and_detuning],
-}
+use crate::{imag, real, repr};
 
 const J: Complex64 = Complex64::new(0f64, 1f64);
-
-#[inline]
-fn apply_phase_and_detuning_impl(
-    iq_value: Complex64,
-    phase: f64,
-    detuning: f64,
-    sample_rate: f64,
-    index: usize,
-) -> Complex64 {
-    iq_value * (2.0 * PI * J * (detuning * (index as f64) / sample_rate + phase)).exp()
-}
 
 /// Modulate and phase shift waveform IQ data in place.
 pub fn apply_phase_and_detuning(
@@ -47,23 +24,16 @@ pub fn apply_phase_and_detuning(
     }
 }
 
-/// Modulate and phase shift waveform IQ data in place.
-#[pyfunction(name = "apply_phase_and_detuning")]
-fn py_apply_phase_and_detuning(
-    iq_values: &PyList,
+/// Internal Rust implementation of phase offset and detuning.
+#[inline]
+fn apply_phase_and_detuning_impl(
+    iq_value: Complex64,
     phase: f64,
     detuning: f64,
     sample_rate: f64,
-) -> PyResult<()> {
-    // Though we could call the Rust version of this function and then modify the Python list,
-    // this version allows us to iterate only once and avoid allocating a new `Vec<Complex64>`.
-    for (index, value) in iq_values.iter().enumerate() {
-        let value = value.extract::<Complex64>()?;
-        let value = apply_phase_and_detuning_impl(value, phase, detuning, sample_rate, index);
-        iq_values.set_item(index, value)?;
-    }
-
-    Ok(())
+    index: usize,
+) -> Complex64 {
+    iq_value * (2.0 * PI * J * (detuning * (index as f64) / sample_rate + phase)).exp()
 }
 
 /// A custom `ceil()` method that includes a machine-epsilon sized region above each integer in the
@@ -86,20 +56,36 @@ pub trait WaveformTemplate {
     fn into_iq_values(self) -> Vec<Complex64>;
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
-#[pyclass(subclass, get_all, set_all)]
-pub struct BoxcarKernel {
-    pub phase: crate::units::Cycles<f64>,
-    pub scale: f64,
-    pub sample_count: u64,
+/// Modulate and phase shift waveform IQ data in place.
+#[pyfunction(name = "apply_phase_and_detuning")]
+pub(crate) fn py_apply_phase_and_detuning(
+    iq_values: &Bound<'_, PyList>,
+    phase: f64,
+    detuning: f64,
+    sample_rate: f64,
+) -> PyResult<()> {
+    // Though we could call the Rust version of this function and then modify the Python list,
+    // this version allows us to iterate only once and avoid allocating a new `Vec<Complex64>`.
+    for (index, value) in iq_values.iter().enumerate() {
+        let value = value.extract::<Complex64>()?;
+        let value = apply_phase_and_detuning_impl(value, phase, detuning, sample_rate, index);
+        iq_values.set_item(index, value)?;
+    }
+
+    Ok(())
 }
 
-// TODO: Use the #[pyclass(eq)] attribute when we upgrade PyO3.
-impl_eq!(BoxcarKernel);
-impl_eq!(ErfSquare);
-impl_eq!(Gaussian);
-impl_eq!(DragGaussian);
-impl_eq!(HermiteGaussian);
+/// A Boxcar waveform.
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[pyclass(module="quil.waveforms", subclass, get_all, set_all, eq)]
+pub struct BoxcarKernel {
+    /// The phase, in cycles.
+    pub phase: crate::units::Cycles<f64>,
+    /// Scale applied to the waveform envelope.
+    pub scale: f64,
+    /// Sample count, which must be positive. 
+    pub sample_count: u64,
+}
 
 impl BoxcarKernel {
     pub fn into_iq_value(self) -> Complex64 {
@@ -109,28 +95,45 @@ impl BoxcarKernel {
 
 #[pymethods]
 impl BoxcarKernel {
+    /// Create a new `BoxcarKernel`.
+    ///
+    /// This raises a `ValueError` if `sample_count` is zero.
     #[new]
-    pub fn __new__(phase: f64, scale: f64, sample_count: u64) -> Self {
-        Self {
-            phase: crate::units::Cycles(phase),
-            scale,
-            sample_count,
+    pub fn __new__(phase: f64, scale: f64, sample_count: u64) -> PyResult<Self> {
+        if sample_count == 0 {
+            return Err(PyValueError::new_err("sample_count must be positive"));
         }
-    }
 
-    fn __repr__(&self) -> String {
-        format!("{self:?}")
+        Ok(
+            Self {
+                phase: crate::units::Cycles(phase),
+                scale,
+                sample_count,
+            }
+        )
     }
-
+    
+    /// Get the `complex` value this `BoxcarKernel` represents.
     #[pyo3(name = "into_iq_value")]
     pub fn py_into_iq_value(&self) -> Complex64 {
-        self.clone().into_iq_value()
+        self.into_iq_value()
+    }
+    
+    fn __repr__(slf: &Bound<'_, Self>) -> PyResult<String> {
+        let class_name: Bound<'_, PyString> = slf.get_type().qualname()?;
+        let slf = slf.borrow();
+        Ok(format!("{}(phase={}, scale={}, sample_count={})", class_name, slf.phase.0, slf.scale, slf.sample_count))
+    }
+
+    fn __str__(&self) -> String {
+        format!("{self:?}")
     }
 }
 
-/// Creates a waveform with a flat top and edges that are error functions (erfs).
+
+/// A waveform with a flat top and edges that are error functions (erfs).
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
-#[pyclass(subclass, get_all, set_all)]
+#[pyclass(module="quil.waveforms", subclass, get_all, set_all, eq)]
 pub struct ErfSquare {
     /// Full duration of the pulse (s)
     pub duration: f64,
@@ -150,6 +153,31 @@ pub struct ErfSquare {
     pub phase: f64,
     /// Explicit detuning to bake into iq values
     pub detuning: f64,
+}
+
+impl WaveformTemplate for ErfSquare {
+    fn into_iq_values(self) -> Vec<Complex64> {
+        let length = ceiling_with_epsilon(self.duration * self.sample_rate);
+        let mut time_steps = Array::<f64, _>::range(0f64, length, 1f64) / self.sample_rate;
+
+        let fwhm = 0.5 * self.risetime;
+        let t1 = fwhm;
+        let t2 = self.duration - fwhm;
+        let sigma = 0.5 * fwhm / (2f64 * 2f64.ln()).sqrt();
+        time_steps.mapv_inplace(|el| 0.5 * (erf((el - t1) / sigma) - erf((el - t2) / sigma)));
+        if !self.positive_polarity {
+            time_steps *= -1f64;
+        }
+
+        let left_pad_length = (self.pad_left * self.sample_rate).ceil() as usize;
+        let mut waveform = vec![real!(0f64); left_pad_length];
+        waveform.extend(time_steps.into_iter().map(|el| self.scale * real!(el)));
+
+        let right_pad_length = (self.pad_right * self.sample_rate).ceil() as usize;
+        waveform.extend_from_slice(&vec![real!(0f64); right_pad_length]);
+        apply_phase_and_detuning(&mut waveform, self.phase, self.detuning, self.sample_rate);
+        waveform
+    }
 }
 
 #[pymethods]
@@ -180,44 +208,24 @@ impl ErfSquare {
         }
     }
 
-    fn __repr__(&self) -> String {
-        format!("{self:?}")
-    }
-
+    /// Convert `ErfSquare` into a list of `complex` values.
     #[pyo3(name = "into_iq_value")]
-    pub fn py_into_iq_values(&self) -> Vec<Complex64> {
-        self.clone().into_iq_values()
+    fn py_into_iq_values(&self) -> Vec<Complex64> {
+        self.into_iq_values()
     }
-}
+    
+    fn __repr__(slf: &Bound<'_, Self>) -> PyResult<String> {
+        repr!(slf(duration, risetime, sample_rate, pad_left, pad_right, positive_polarity, scale, phase, detuning))
+    }
 
-impl WaveformTemplate for ErfSquare {
-    fn into_iq_values(self) -> Vec<Complex64> {
-        let length = ceiling_with_epsilon(self.duration * self.sample_rate);
-        let mut time_steps = Array::<f64, _>::range(0f64, length, 1f64) / self.sample_rate;
-
-        let fwhm = 0.5 * self.risetime;
-        let t1 = fwhm;
-        let t2 = self.duration - fwhm;
-        let sigma = 0.5 * fwhm / (2f64 * 2f64.ln()).sqrt();
-        time_steps.mapv_inplace(|el| 0.5 * (erf((el - t1) / sigma) - erf((el - t2) / sigma)));
-        if !self.positive_polarity {
-            time_steps *= -1f64;
-        }
-
-        let left_pad_length = (self.pad_left * self.sample_rate).ceil() as usize;
-        let mut waveform = vec![real!(0f64); left_pad_length];
-        waveform.extend(time_steps.into_iter().map(|el| self.scale * real!(el)));
-
-        let right_pad_length = (self.pad_right * self.sample_rate).ceil() as usize;
-        waveform.extend_from_slice(&vec![real!(0f64); right_pad_length]);
-        apply_phase_and_detuning(&mut waveform, self.phase, self.detuning, self.sample_rate);
-        waveform
+    fn __str__(&self) -> String {
+        format!("{self:?}")
     }
 }
 
 /// Creates a waveform with a Gaussian shape.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
-#[pyclass(subclass, get_all, set_all)]
+#[pyclass(module="quil.waveforms", subclass, get_all, set_all, eq)]
 pub struct Gaussian {
     /// Full duration of the pulse (s)
     pub duration: f64,
@@ -275,13 +283,17 @@ impl Gaussian {
         }
     }
 
-    fn __repr__(&self) -> String {
-        format!("{self:?}")
-    }
-
     #[pyo3(name = "into_iq_value")]
     pub fn py_into_iq_values(&self) -> Vec<Complex64> {
-        self.clone().into_iq_values()
+        self.into_iq_values()
+    }
+    
+    fn __repr__(slf: &Bound<'_, Self>) -> PyResult<String> {
+        repr!(slf(duration, fwhm, t0, sample_rate, scale, phase, detuning))
+    }
+    
+    fn __str__(&self) -> String {
+        format!("{self:?}")
     }
 }
 
@@ -291,7 +303,7 @@ impl Gaussian {
 ///
 /// See Motzoi F. et al., Phys. Rev. Lett., 103 (2009) 110501. for details.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
-#[pyclass(subclass, get_all, set_all)]
+#[pyclass(module="quil.waveforms", subclass, get_all, set_all, eq)]
 pub struct DragGaussian {
     /// Full duration of the pulse (s)
     pub duration: f64,
@@ -364,13 +376,17 @@ impl DragGaussian {
         }
     }
 
-    fn __repr__(&self) -> String {
-        format!("{self:?}")
-    }
-
     #[pyo3(name = "into_iq_value")]
     pub fn py_into_iq_values(&self) -> Vec<Complex64> {
-        self.clone().into_iq_values()
+        self.into_iq_values()
+    }
+    
+    fn __repr__(slf: &Bound<'_, Self>) -> PyResult<String> {
+        repr!(slf(duration, fwhm, t0, anh, alpha, sample_rate, scale, phase, detuning))
+    }
+
+    fn __str__(&self) -> String {
+        format!("{self:?}")
     }
 }
 
@@ -384,7 +400,7 @@ impl DragGaussian {
 /// Warren S. Warren. 81, (1984); doi: 10.1063/1.447644
 /// for details.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
-#[pyclass(subclass, get_all, set_all)]
+#[pyclass(module="quil.waveforms", subclass, get_all, set_all, eq)]
 pub struct HermiteGaussian {
     /// Full duration of the pulse
     pub duration: f64,
@@ -462,13 +478,17 @@ impl HermiteGaussian {
         }
     }
 
-    fn __repr__(&self) -> String {
-        format!("{self:?}")
-    }
-
     #[pyo3(name = "into_iq_value")]
     pub fn py_into_iq_values(&self) -> Vec<Complex64> {
-        self.clone().into_iq_values()
+        self.into_iq_values()
+    }
+
+    fn __repr__(slf: &Bound<'_, Self>) -> PyResult<String> {
+        repr!(slf(duration, fwhm, t0, anh, alpha, sample_rate, second_order_hrm_coeff, scale, phase, detuning))
+    }
+
+    fn __str__(&self) -> String {
+        format!("{self:?}")
     }
 }
 

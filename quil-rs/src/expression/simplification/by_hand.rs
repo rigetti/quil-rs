@@ -113,7 +113,7 @@ impl Simplifier {
         let result = match expr.as_ref() {
             Expression::Address(_)
             | Expression::Number(_)
-            | Expression::PiConstant
+            | Expression::PiConstant()
             | Expression::Variable(_) => 1,
             Expression::FunctionCall(FunctionCallExpression {
                 function: _,
@@ -151,7 +151,7 @@ impl Simplifier {
     /// case simplification functions, the ones that do all the work, don't need to decrement the
     /// limit at the top of the function.
     ///
-    /// Invariant: Never returns [`Expression::PiConstant`].
+    /// Invariant: Never returns [`Expression::PiConstant()`].
     fn simplify(&mut self, e: ArcIntern<Expression>, limit: Limit) -> ArcIntern<Expression> {
         if let Some(simplified) = self.simplify_cache.get(&e) {
             return simplified.clone();
@@ -159,8 +159,8 @@ impl Simplifier {
 
         let result = match e.as_ref() {
             // Even at a limit of 0, replace `pi` with 3.14….  This gets us the extremely useful
-            // invariant that `Expression::PiConstant` can never be returned from `simplify`.
-            Expression::PiConstant => ArcIntern::new(Expression::Number(PI)),
+            // invariant that `Expression::PiConstant()` can never be returned from `simplify`.
+            Expression::PiConstant() => ArcIntern::new(Expression::Number(PI)),
 
             // We're out of gas; this is as simplified as things get
             _ if limit == 0 => e.clone(),
@@ -320,7 +320,7 @@ impl Simplifier {
 
             // ## Two numbers ##
 
-            // Since [`Self::simplify`] cannot return [`Expression::PiConstant`], we only need to
+            // Since [`Self::simplify`] cannot return [`Expression::PiConstant()`], we only need to
             // handle true numbers here.
             (Expression::Number(x), _, Expression::Number(y)) => {
                 interned::number(calculate_infix(*x, operator, *y))

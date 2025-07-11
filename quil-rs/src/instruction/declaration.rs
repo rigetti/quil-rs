@@ -1,6 +1,7 @@
 use std::str::FromStr;
 
 use nom_locate::LocatedSpan;
+use pyo3::prelude::*;
 
 use crate::{
     parser::{common::parse_memory_reference, lex, ParseError},
@@ -183,7 +184,9 @@ mod test_declaration {
     }
 }
 
+// TODO: impl_parse, to_quil, repr
 #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[pyclass(module="quil.instructions", get_all, eq, frozen, hash)]
 pub struct MemoryReference {
     pub name: String,
     pub index: u64,
@@ -192,6 +195,17 @@ pub struct MemoryReference {
 impl MemoryReference {
     pub fn new(name: String, index: u64) -> Self {
         Self { name, index }
+    }
+}
+
+#[pymethods]
+impl MemoryReference {
+    /// Parse a ``MemoryReference`` from a string.
+    ///
+    /// Raises a ``ParseMemoryReference`` error if the string isn't a valid Quil memory reference.
+    #[staticmethod]
+    fn parse(input: &str) -> PyResult<Self> {
+        Ok(<Self as std::str::FromStr>::from_str(input)?)
     }
 }
 

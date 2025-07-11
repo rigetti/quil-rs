@@ -60,7 +60,7 @@ mod test {
         "DAGGER CONTROLLED RX(pi) 0 1",
         Instruction::Gate(Gate {
             name: "RX".to_string(),
-            parameters: vec![Expression::PiConstant],
+            parameters: vec![Expression::PiConstant()],
             qubits: vec![Qubit::Fixed(0), Qubit::Fixed(1)],
             modifiers: vec![GateModifier::Dagger, GateModifier::Controlled],
         })

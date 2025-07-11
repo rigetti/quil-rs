@@ -4,7 +4,7 @@ version = "0.17.0"
 requires-python = ">=3.9,<3.13"
 description = "A Python package for building and parsing Quil programs."
 documentation = "https://rigetti.github.io/quil-rs/quil.html"
-# TODO readme = "README-py.md"
+readme = "README-py.md"
 license = { text = "Apache-2.0" }
 authors = [{ name = "Rigetti Computing", email = "softapps@rigetti.com" }]
 classifiers = [
@@ -22,7 +22,7 @@ dependencies = ["numpy>=1.26"]
 features = ["pyo3/extension-module"]
 bindings = "pyo3"
 compatibility = "linux"
-# TODO sdist-include = ["README.md"]
+include = [ "README-py.md" ]
 python-source = "python"
 module-name = "quil._quil"
 
