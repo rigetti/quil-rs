@@ -24,10 +24,17 @@ use ndarray::Array2;
 use nom_locate::LocatedSpan;
 
 use crate::instruction::{
-    Arithmetic, ArithmeticOperand, ArithmeticOperator, Call, Declaration, DefGateSequence, DefGateSequenceExpansionError, ExternError, ExternPragmaMap, ExternSignatureMap, FrameDefinition, FrameIdentifier, Gate, GateDefinition, GateError, GateSpecification, Instruction, InstructionHandler, Jump, JumpUnless, Label, Matrix, MemoryReference, Move, Pragma, Qubit, QubitPlaceholder, ScalarType, Target, TargetPlaceholder, Vector, Waveform, WaveformDefinition, RESERVED_PRAGMA_EXTERN
+    Arithmetic, ArithmeticOperand, ArithmeticOperator, Call, Declaration, DefGateSequence,
+    DefGateSequenceExpansionError, ExternError, ExternPragmaMap, ExternSignatureMap,
+    FrameDefinition, FrameIdentifier, Gate, GateDefinition, GateError, GateSpecification,
+    Instruction, InstructionHandler, Jump, JumpUnless, Label, Matrix, MemoryReference, Move,
+    Pragma, Qubit, QubitPlaceholder, ScalarType, Target, TargetPlaceholder, Vector, Waveform,
+    WaveformDefinition, RESERVED_PRAGMA_EXTERN,
 };
 use crate::parser::{lex, parse_instructions, ParseError};
-use crate::program::defgate_sequence_expansion::{ProgramDefGateSequenceExpansion, ProgramDefGateSequenceExpansionSourceMap};
+use crate::program::defgate_sequence_expansion::{
+    ProgramDefGateSequenceExpansion, ProgramDefGateSequenceExpansionSourceMap,
+};
 use crate::quil::Quil;
 
 pub use self::calibration::Calibrations;
@@ -48,9 +55,9 @@ pub use self::source_map::{SourceMap, SourceMapEntry};
 pub mod analysis;
 mod calibration;
 mod calibration_set;
+mod defgate_sequence_expansion;
 mod error;
 pub(crate) mod frame;
-mod defgate_sequence_expansion;
 mod memory;
 pub mod scheduling;
 mod source_map;
@@ -331,17 +338,35 @@ impl Program {
         Ok(new_program)
     }
 
-    pub fn expand_defgate_sequences(&self, filter: crate::filter_set::Filter<String>) -> Result<Self> {
+    pub fn expand_defgate_sequences(
+        &self,
+        filter: crate::filter_set::Filter<String>,
+    ) -> Result<Self> {
+        let gate_definitions = self
+            .gate_definitions
+            .iter()
+            .filter(|(gate_name, gate_definition)| {
+                if let GateSpecification::Sequence(_) = gate_definition.specification {
+                    filter.include(gate_name)
+                } else {
+                    false
+                }
+            })
+            .map(|(gate_name, definition)| (gate_name.clone(), definition.clone()))
+            .collect();
         let expansion = ProgramDefGateSequenceExpansion::new(&self.gate_definitions, filter);
-        let new_instructions = expansion.expand_defgate_sequences(&self.instructions, None).unwrap();
+        // FIXME: unwrap
+        let new_instructions = expansion
+            .expand_defgate_sequences(&self.instructions, None)
+            .unwrap();
+
         let mut new_program = Self {
             calibrations: self.calibrations.clone(),
             extern_pragma_map: self.extern_pragma_map.clone(),
             frames: self.frames.clone(),
             memory_regions: self.memory_regions.clone(),
             waveforms: self.waveforms.clone(),
-            // FIXME: drop expanded gate definitions.
-            gate_definitions: self.gate_definitions.clone(),
+            gate_definitions,
             instructions: Vec::new(),
             used_qubits: HashSet::new(),
         };
@@ -875,7 +900,7 @@ impl<T: std::hash::Hash + Eq> Filter<T> {
     fn include(&self, item: &T) -> bool {
         match self {
             Self::Include(set) => set.contains(item),
-            Self::Exclude(set) => !set.contains(item)
+            Self::Exclude(set) => !set.contains(item),
         }
     }
 }
