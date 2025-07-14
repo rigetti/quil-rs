@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use nom::branch::alt;
 use nom::combinator::{map, map_res, opt};
 use nom::multi::{many0, many1, separated_list0, separated_list1};
@@ -7,7 +5,14 @@ use nom::sequence::{delimited, pair, preceded, tuple};
 
 use crate::expression::Expression;
 use crate::instruction::{
-    Arithmetic, ArithmeticOperator, BinaryLogic, BinaryOperator, Calibration, CalibrationIdentifier, Call, Capture, CircuitDefinition, Comparison, ComparisonOperator, Convert, Declaration, Delay, Exchange, Fence, FrameDefinition, DefGateSequence, GateDefinition, GateSpecification, GateType, Include, Instruction, Jump, JumpUnless, JumpWhen, Label, Load, MeasureCalibrationDefinition, MeasureCalibrationIdentifier, Measurement, Move, PauliSum, Pragma, PragmaArgument, Pulse, Qubit, RawCapture, Reset, SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, Store, SwapPhases, Target, UnaryLogic, UnaryOperator, UnresolvedCallArgument, ValidationError, Waveform, WaveformDefinition
+    Arithmetic, ArithmeticOperator, BinaryLogic, BinaryOperator, Calibration,
+    CalibrationIdentifier, Call, Capture, CircuitDefinition, Comparison, ComparisonOperator,
+    Convert, Declaration, DefGateSequence, Delay, Exchange, Fence, FrameDefinition, GateDefinition,
+    GateSpecification, GateType, Include, Instruction, Jump, JumpUnless, JumpWhen, Label, Load,
+    MeasureCalibrationDefinition, MeasureCalibrationIdentifier, Measurement, Move, PauliSum,
+    Pragma, PragmaArgument, Pulse, Qubit, RawCapture, Reset, SetFrequency, SetPhase, SetScale,
+    ShiftFrequency, ShiftPhase, Store, SwapPhases, Target, UnaryLogic, UnaryOperator,
+    UnresolvedCallArgument, ValidationError, Waveform, WaveformDefinition,
 };
 
 use crate::parser::common::parse_sequence_elements;
@@ -300,10 +305,11 @@ pub(crate) fn parse_defgate<'a>(input: ParserInput<'a>) -> InternalParserResult<
             ))
         })(input)?,
         GateType::Sequence => map_res(parse_sequence_elements, |gates| {
-            let gate_sequence = DefGateSequence::try_new(arguments.take().unwrap_or_default(), gates)
-                .map_err(ValidationError::from)
-                .map_err(ParserErrorKind::from)
-                .map_err(|e| InternalParseError::from_kind(input, e))?;
+            let gate_sequence =
+                DefGateSequence::try_new(arguments.take().unwrap_or_default(), gates)
+                    .map_err(ValidationError::from)
+                    .map_err(ParserErrorKind::from)
+                    .map_err(|e| InternalParseError::from_kind(input, e))?;
             Ok(GateSpecification::Sequence(gate_sequence))
         })(input)?,
     };
@@ -647,7 +653,8 @@ mod tests {
         PrefixExpression, PrefixOperator,
     };
     use crate::instruction::{
-        Call, DefGateSequence, GateDefinition, GateSpecification, Offset, PauliGate, PauliSum, PauliTerm, PragmaArgument, Sharing, UnresolvedCallArgument
+        Call, DefGateSequence, GateDefinition, GateSpecification, Offset, PauliGate, PauliSum,
+        PauliTerm, PragmaArgument, Sharing, UnresolvedCallArgument,
     };
     use crate::parser::lexer::lex;
     use crate::parser::Token;
@@ -1184,8 +1191,15 @@ mod tests {
         fn case_01() -> Self {
             const CASE_01: &'static str = r"seq1(%param01) q1 AS SEQUENCE:
     RX(%param01) q1";
-            let gate1 = Gate::new("RX", vec![Expression::Variable("param01".to_string())], vec![Qubit::Variable("q1".to_string())], vec![]).expect("must be valid gate");
-            let gate_sequence = DefGateSequence::try_new(vec!["q1".to_string()], vec![gate1]).expect("must be valid sequence");
+            let gate1 = Gate::new(
+                "RX",
+                vec![Expression::Variable("param01".to_string())],
+                vec![Qubit::Variable("q1".to_string())],
+                vec![],
+            )
+            .expect("must be valid gate");
+            let gate_sequence = DefGateSequence::try_new(vec!["q1".to_string()], vec![gate1])
+                .expect("must be valid sequence");
             Self {
                 input: CASE_01,
                 remainder: vec![],
@@ -1201,9 +1215,25 @@ mod tests {
             const CASE_02: &'static str = r"seq1(%param01, %param02) q1 q2 AS SEQUENCE:
     RX(%param01) q1
     RX(%param02) q2";
-            let gate1 = Gate::new("RX", vec![Expression::Variable("param01".to_string())], vec![Qubit::Variable("q1".to_string())], vec![]).expect("must be valid gate");
-            let gate2 = Gate::new("RX", vec![Expression::Variable("param02".to_string())], vec![Qubit::Variable("q2".to_string())], vec![]).expect("must be valid gate");
-            let gate_sequence = DefGateSequence::try_new(vec!["q1".to_string(), "q2".to_string()], vec![gate1, gate2]).expect("must be valid sequence");
+            let gate1 = Gate::new(
+                "RX",
+                vec![Expression::Variable("param01".to_string())],
+                vec![Qubit::Variable("q1".to_string())],
+                vec![],
+            )
+            .expect("must be valid gate");
+            let gate2 = Gate::new(
+                "RX",
+                vec![Expression::Variable("param02".to_string())],
+                vec![Qubit::Variable("q2".to_string())],
+                vec![],
+            )
+            .expect("must be valid gate");
+            let gate_sequence = DefGateSequence::try_new(
+                vec!["q1".to_string(), "q2".to_string()],
+                vec![gate1, gate2],
+            )
+            .expect("must be valid sequence");
             Self {
                 input: CASE_02,
                 remainder: vec![],
@@ -1214,7 +1244,6 @@ mod tests {
                 }),
             }
         }
-
     }
 
     #[rstest]
@@ -1241,5 +1270,4 @@ mod tests {
             }
         }
     }
-
 }
