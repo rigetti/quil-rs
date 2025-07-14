@@ -277,7 +277,7 @@ pub(crate) fn parse_defgate<'a>(input: ParserInput<'a>) -> InternalParserResult<
     let (input, name) = token!(Identifier(v))(input)?;
     let (input, parameters) = opt(delimited(
         token!(LParenthesis),
-        separated_list1(token!(Comma), token!(Variable(v))),
+        separated_list0(token!(Comma), token!(Variable(v))),
         token!(RParenthesis),
     ))(input)?;
     let (input, mut arguments) = opt(many0(token!(Identifier(v))))(input)?;
@@ -653,8 +653,8 @@ mod tests {
         PrefixExpression, PrefixOperator,
     };
     use crate::instruction::{
-        Call, DefGateSequence, GateDefinition, GateSpecification, Offset, PauliGate, PauliSum,
-        PauliTerm, PragmaArgument, Sharing, UnresolvedCallArgument,
+        Call, DefGateSequence, DefGateSequenceError, GateDefinition, GateSpecification, Offset,
+        PauliGate, PauliSum, PauliTerm, PragmaArgument, Sharing, UnresolvedCallArgument,
     };
     use crate::parser::lexer::lex;
     use crate::parser::Token;
@@ -667,6 +667,7 @@ mod tests {
         make_test,
     };
     use internment::ArcIntern;
+    use num_complex::Complex64;
     use rstest::*;
 
     use super::{parse_declare, parse_defcircuit, parse_defgate, parse_measurement, parse_pragma};
@@ -1188,8 +1189,8 @@ mod tests {
     }
 
     impl ParseGateDefinitionTestCase {
-        fn case_01() -> Self {
-            const CASE_01: &'static str = r"seq1(%param01) q1 AS SEQUENCE:
+        fn simple_sequence() -> Self {
+            const SIMPLE_SEQUENCE: &'static str = r"seq1(%param01) q1 AS SEQUENCE:
     RX(%param01) q1";
             let gate1 = Gate::new(
                 "RX",
@@ -1201,7 +1202,7 @@ mod tests {
             let gate_sequence = DefGateSequence::try_new(vec!["q1".to_string()], vec![gate1])
                 .expect("must be valid sequence");
             Self {
-                input: CASE_01,
+                input: SIMPLE_SEQUENCE,
                 remainder: vec![],
                 expected: Ok(GateDefinition {
                     name: "seq1".to_string(),
@@ -1211,8 +1212,8 @@ mod tests {
             }
         }
 
-        fn case_02() -> Self {
-            const CASE_02: &'static str = r"seq1(%param01, %param02) q1 q2 AS SEQUENCE:
+        fn simple_2q() -> Self {
+            const SIMPLE_2Q: &'static str = r"seq1(%param01, %param02) q1 q2 AS SEQUENCE:
     RX(%param01) q1
     RX(%param02) q2";
             let gate1 = Gate::new(
@@ -1235,7 +1236,7 @@ mod tests {
             )
             .expect("must be valid sequence");
             Self {
-                input: CASE_02,
+                input: SIMPLE_2Q,
                 remainder: vec![],
                 expected: Ok(GateDefinition {
                     name: "seq1".to_string(),
@@ -1244,11 +1245,159 @@ mod tests {
                 }),
             }
         }
+
+        fn recursive() -> Self {
+            const RECURSIVE: &'static str = r"seq1(%param01, %param02) q1 q2 AS SEQUENCE:
+    seq2(%param01) q1
+    seq2(%param02) q2";
+            let gate1 = Gate::new(
+                "seq2",
+                vec![Expression::Variable("param01".to_string())],
+                vec![Qubit::Variable("q1".to_string())],
+                vec![],
+            )
+            .expect("must be valid gate");
+            let gate2 = Gate::new(
+                "seq2",
+                vec![Expression::Variable("param02".to_string())],
+                vec![Qubit::Variable("q2".to_string())],
+                vec![],
+            )
+            .expect("must be valid gate");
+            let gate_sequence = DefGateSequence::try_new(
+                vec!["q1".to_string(), "q2".to_string()],
+                vec![gate1, gate2],
+            )
+            .expect("must be valid sequence");
+            Self {
+                input: RECURSIVE,
+                remainder: vec![],
+                expected: Ok(GateDefinition {
+                    name: "seq1".to_string(),
+                    parameters: vec!["param01".to_string(), "param02".to_string()],
+                    specification: GateSpecification::Sequence(gate_sequence),
+                }),
+            }
+        }
+
+        fn no_parameters() -> Self {
+            const NO_PARAMETERS: &'static str = r"seq1() q1 AS SEQUENCE:
+    RX(pi/2) q1";
+            let gate1 = Gate::new(
+                "RX",
+                vec![Expression::Infix(InfixExpression {
+                    left: ArcIntern::new(Expression::PiConstant),
+                    operator: InfixOperator::Slash,
+                    right: ArcIntern::new(Expression::Number(Complex64 { re: 2.0, im: 0.0 })),
+                })],
+                vec![Qubit::Variable("q1".to_string())],
+                vec![],
+            )
+            .expect("must be valid gate");
+            let gate_sequence = DefGateSequence::try_new(vec!["q1".to_string()], vec![gate1])
+                .expect("must be valid sequence");
+            Self {
+                input: NO_PARAMETERS,
+                remainder: vec![],
+                expected: Ok(GateDefinition {
+                    name: "seq1".to_string(),
+                    parameters: vec![],
+                    specification: GateSpecification::Sequence(gate_sequence),
+                }),
+            }
+        }
+
+        fn unused_argument() -> Self {
+            const NO_PARAMETERS: &'static str = r"seq1(%param01) q1 q2 AS SEQUENCE:
+    RX(pi/2) q1";
+            let gate1 = Gate::new(
+                "RX",
+                vec![Expression::Infix(InfixExpression {
+                    left: ArcIntern::new(Expression::PiConstant),
+                    operator: InfixOperator::Slash,
+                    right: ArcIntern::new(Expression::Number(Complex64 { re: 2.0, im: 0.0 })),
+                })],
+                vec![Qubit::Variable("q1".to_string())],
+                vec![],
+            )
+            .expect("must be valid gate");
+            let gate_sequence =
+                DefGateSequence::try_new(vec!["q1".to_string(), "q2".to_string()], vec![gate1])
+                    .expect("must be valid sequence");
+            Self {
+                input: NO_PARAMETERS,
+                remainder: vec![],
+                expected: Ok(GateDefinition {
+                    name: "seq1".to_string(),
+                    parameters: vec!["param01".to_string()],
+                    specification: GateSpecification::Sequence(gate_sequence),
+                }),
+            }
+        }
+
+        fn error_undefined_gate_sequence_element_qubit() -> Self {
+            const UNDEFINED_QUBIT: &'static str = r"seq1(%param01) q1 AS SEQUENCE:
+    RZ(%param01) q1
+    ISWAP q1 doesnt_exist_qubit";
+            Self {
+                input: UNDEFINED_QUBIT,
+                remainder: vec![],
+                expected: Err(format!(
+                    "{:?}",
+                    DefGateSequenceError::UndefinedGateSequenceElementQubit {
+                        gate_index: 1,
+                        qubit_argument_index: 1,
+                        argument_name: "doesnt_exist_qubit".to_string(),
+                    }
+                )),
+            }
+        }
+
+        fn error_invalid_gate_sequence_element_qubit() -> Self {
+            const INVALID_QUBIT: &'static str = r"seq1(%param01) q1 AS SEQUENCE:
+    RZ(%param01) q1
+    ISWAP q1 3";
+            Self {
+                input: INVALID_QUBIT,
+                remainder: vec![],
+                expected: Err(format!(
+                    "{:?}",
+                    DefGateSequenceError::InvalidGateSequenceElementQubit {
+                        gate_index: 1,
+                        qubit_argument_index: 1,
+                        qubit: Qubit::Fixed(3)
+                    }
+                )),
+            }
+        }
+
+        fn error_at_least_one_qubit() -> Self {
+            const AT_LEAST_ONE_QUBIT: &'static str = r"seq1() AS SEQUENCE:
+    RX(pi/2) q1";
+            Self {
+                input: AT_LEAST_ONE_QUBIT,
+                remainder: vec![],
+                expected: Err(format!(
+                    "{:?}",
+                    DefGateSequenceError::AtLeastOneQubitParameterRequired
+                )),
+            }
+        }
     }
 
     #[rstest]
-    #[case(ParseGateDefinitionTestCase::case_01())]
-    #[case(ParseGateDefinitionTestCase::case_02())]
+    #[case::simple_sequence(ParseGateDefinitionTestCase::simple_sequence())]
+    #[case::simple_2q(ParseGateDefinitionTestCase::simple_2q())]
+    #[case::triple_recursive(ParseGateDefinitionTestCase::recursive())]
+    #[case::no_parameters(ParseGateDefinitionTestCase::no_parameters())]
+    #[case::unused_argument(ParseGateDefinitionTestCase::unused_argument())]
+    #[case::error_undefined_gate_sequence_element_qubit(
+        ParseGateDefinitionTestCase::error_undefined_gate_sequence_element_qubit()
+    )]
+    #[case::error_invalid_gate_sequence_element_qubit(
+        ParseGateDefinitionTestCase::error_invalid_gate_sequence_element_qubit()
+    )]
+    #[case::error_at_least_one_qubit(ParseGateDefinitionTestCase::error_at_least_one_qubit())]
     fn test_parse_gate_definition(#[case] test_case: ParseGateDefinitionTestCase) {
         let input = ::nom_locate::LocatedSpan::new(test_case.input);
         let tokens = lex(input).unwrap();

@@ -25,7 +25,9 @@ use crate::{
     expected_token,
     expression::Expression,
     instruction::{
-        ArithmeticOperand, AttributeValue, BinaryOperand, ComparisonOperand, FrameIdentifier, Gate, GateModifier, MemoryReference, Offset, PauliGate, PauliTerm, Qubit, ScalarType, Sharing, Vector, WaveformInvocation, WaveformParameters
+        ArithmeticOperand, AttributeValue, BinaryOperand, ComparisonOperand, FrameIdentifier, Gate,
+        GateModifier, MemoryReference, Offset, PauliGate, PauliTerm, Qubit, ScalarType, Sharing,
+        Vector, WaveformInvocation, WaveformParameters,
     },
     parser::lexer::Operator,
     token, unexpected_eof,
@@ -261,21 +263,6 @@ pub(crate) fn parse_pauli_terms<'a>(
     )(input)
 }
 
-fn parse_argument_qubit(input: ParserInput) -> InternalParserResult<Qubit> {
-    match super::split_first_token(input) {
-        None => Err(nom::Err::Error(InternalParseError::from_kind(
-            input,
-            ParserErrorKind::UnexpectedEOF("a qubit argument"),
-        ))),
-        Some((Token::Identifier(name), remainder)) => {
-            Ok((remainder, Qubit::Variable(name.clone())))
-        }
-        Some((other_token, _)) => {
-            expected_token!(input, other_token, stringify!($expected_variant).to_owned())
-        }
-    }
-}
-
 /// A sequence element is effectively a gate application where the formal qubit must be an argument.
 fn parse_sequence_element<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Gate> {
     let (input, modifiers) = many0(parse_gate_modifier)(input)?;
@@ -286,7 +273,7 @@ fn parse_sequence_element<'a>(input: ParserInput<'a>) -> InternalParserResult<'a
         token!(RParenthesis),
     ))(input)?;
     let parameters = parameters.unwrap_or_default();
-    let (input, qubits) = many0(parse_argument_qubit)(input)?;
+    let (input, qubits) = many0(parse_qubit)(input)?;
     Ok((
         input,
         Gate {
