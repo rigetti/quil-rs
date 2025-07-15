@@ -30,7 +30,7 @@ impl From<&Gate> for DefGateSequenceSource {
 
 /// Details about the expansion of a calibration
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct DefGateSequenceExpansion {
+pub struct DefGateSequenceExpansion {
     /// The calibration used to expand the instruction
     pub(crate) defgate_sequence_source: DefGateSequenceSource,
 

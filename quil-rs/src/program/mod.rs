@@ -19,9 +19,11 @@ use std::collections::{HashMap, HashSet};
 use std::ops::{self};
 use std::str::FromStr;
 
+use defgate_sequence_expansion::DefGateSequenceExpansion;
 use indexmap::{IndexMap, IndexSet};
 use ndarray::Array2;
 use nom_locate::LocatedSpan;
+use source_map::InstructionSourceMap;
 
 use crate::instruction::{
     Arithmetic, ArithmeticOperand, ArithmeticOperator, Call, Declaration, DefGateSequence,
@@ -340,23 +342,8 @@ impl Program {
         &self,
         filter: crate::filter_set::Filter<String>,
     ) -> Result<Self> {
-        let gate_definitions = self
-            .gate_definitions
-            .iter()
-            .filter(|(gate_name, gate_definition)| {
-                if let GateSpecification::Sequence(_) = gate_definition.specification {
-                    filter.include(gate_name)
-                } else {
-                    false
-                }
-            })
-            .map(|(gate_name, definition)| (gate_name.clone(), definition.clone()))
-            .collect();
-        let expansion = ProgramDefGateSequenceExpander::new(&self.gate_definitions, filter);
-        // FIXME: unwrap
-        let new_instructions = expansion
-            .expand_defgate_sequences(&self.instructions)
-            .unwrap();
+        let (expansion, gate_definitions) = self.initialize_defgate_sequence_expander(filter);
+        let new_instructions = expansion.expand_defgate_sequences(&self.instructions)?;
 
         let mut new_program = Self {
             calibrations: self.calibrations.clone(),
@@ -370,6 +357,51 @@ impl Program {
         };
         new_program.add_instructions(new_instructions);
         Ok(new_program)
+    }
+
+    pub fn expand_defgate_sequences_with_source_map(
+        &self,
+        filter: crate::filter_set::Filter<String>,
+    ) -> Result<(Self, InstructionSourceMap<DefGateSequenceExpansion>)> {
+        let (expander, gate_definitions) = self.initialize_defgate_sequence_expander(filter);
+        let (new_instructions, source_map) =
+            expander.expand_defgate_sequences_with_source_map(&self.instructions)?;
+
+        let mut new_program = Self {
+            calibrations: self.calibrations.clone(),
+            extern_pragma_map: self.extern_pragma_map.clone(),
+            frames: self.frames.clone(),
+            memory_regions: self.memory_regions.clone(),
+            waveforms: self.waveforms.clone(),
+            gate_definitions,
+            instructions: Vec::new(),
+            used_qubits: HashSet::new(),
+        };
+        new_program.add_instructions(new_instructions);
+        Ok((new_program, source_map))
+    }
+
+    fn initialize_defgate_sequence_expander(
+        &self,
+        filter: crate::filter_set::Filter<String>,
+    ) -> (
+        ProgramDefGateSequenceExpander,
+        IndexMap<String, GateDefinition>,
+    ) {
+        let gate_definitions = self
+            .gate_definitions
+            .iter()
+            .filter(|(gate_name, gate_definition)| {
+                if let GateSpecification::Sequence(_) = gate_definition.specification {
+                    !filter.include(gate_name)
+                } else {
+                    false
+                }
+            })
+            .map(|(gate_name, definition)| (gate_name.clone(), definition.clone()))
+            .collect();
+        let expansion = ProgramDefGateSequenceExpander::new(&self.gate_definitions, filter);
+        (expansion, gate_definitions)
     }
 
     /// Append the result of a calibration expansion to this program, being aware of which expanded instructions
@@ -2072,5 +2104,46 @@ CALL foo octets[1] reals
             &gate_definition
         );
         assert_eq!(program_copy.body_instructions().count(), 0);
+    }
+
+    /// Test that we can expand a gate sequence definition in a program. Note, for more
+    /// comprehensive tests on gate sequence expansion and corresponding source maps,
+    /// see [`super::defgate_sequence_expansion::ProgramDefGateSequenceExpander`]
+    /// tests.
+    #[test]
+    fn test_gate_sequence_expansion() {
+        const QUIL: &str = r"
+DECLARE ro BIT[2]
+
+DEFGATE seq1(%param1) a AS SEQUENCE:
+    RZ(%param1) a
+
+DEFGATE seq2() a AS SEQUENCE:
+    X a
+
+seq1(pi/2) 0
+seq2 1
+
+MEASURE 0 ro[0]
+MEASURE 1 ro[1]
+";
+        let program = Program::from_str(QUIL).expect("should parse program");
+        let filter =
+            crate::filter_set::Filter::Exclude(["seq1"].into_iter().map(String::from).collect());
+        let expanded_program = program
+            .expand_defgate_sequences(filter)
+            .expect("should expand gate sequences");
+        const EXPECTED: &str = r"
+DECLARE ro BIT[2]
+DEFGATE seq1(%param1) a AS SEQUENCE:
+    RZ(%param1) a
+
+seq1(pi/2) 0
+X 1
+MEASURE 0 ro[0]
+MEASURE 1 ro[1]
+";
+        let expected_program = Program::from_str(EXPECTED).expect("should parse expected program");
+        pretty_assertions::assert_eq!(expanded_program, expected_program);
     }
 }
