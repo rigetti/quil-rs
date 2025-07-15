@@ -1,7 +1,10 @@
 use crate::{
     expression::Expression,
     imag,
-    instruction::{write_expression_parameter_string, write_parameter_string, write_qubits, DefGateSequence, Qubit},
+    instruction::{
+        write_expression_parameter_string, write_parameter_string, write_qubits, DefGateSequence,
+        Qubit,
+    },
     quil::{write_join_quil, Quil, INDENT},
     real,
     validation::identifier::{
@@ -860,7 +863,7 @@ pub enum GateSpecification {
     /// used for a [`GateType::PauliSum`]
     PauliSum(PauliSum),
     /// A sequence of gates.
-    Sequence(DefGateSequence)
+    Sequence(DefGateSequence),
 }
 
 impl Quil for GateSpecification {
@@ -954,7 +957,7 @@ impl Quil for GateDefinition {
                 }
                 writeln!(f, " AS PAULI-SUM:")?
             }
-            GateSpecification::Sequence(_) => writeln!(f, " AS SEQUENCE:")?
+            GateSpecification::Sequence(_) => writeln!(f, " AS SEQUENCE:")?,
         }
         self.specification.write(f, fall_back_to_debug)?;
         Ok(())
@@ -1095,7 +1098,7 @@ pub enum GateType {
     Matrix,
     Permutation,
     PauliSum,
-    Sequence
+    Sequence,
 }
 
 impl Quil for GateType {
@@ -1108,7 +1111,7 @@ impl Quil for GateType {
             Self::Matrix => write!(f, "MATRIX"),
             Self::Permutation => write!(f, "PERMUTATION"),
             Self::PauliSum => write!(f, "PAULI-SUM"),
-            Self::Sequence => write!(f, "SEQUENCE")
+            Self::Sequence => write!(f, "SEQUENCE"),
         }
         .map_err(Into::into)
     }

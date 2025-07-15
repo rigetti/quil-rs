@@ -66,7 +66,7 @@ pub use self::gate::{
     PauliSum, PauliTerm,
 };
 pub use self::gate_sequence::{
-    DefGateSequence, DefGateSequenceError, DefGateSequenceExpansionError
+    DefGateSequence, DefGateSequenceError, DefGateSequenceExpansionError,
 };
 pub use self::measurement::Measurement;
 pub use self::pragma::{Include, Pragma, PragmaArgument, RESERVED_PRAGMA_EXTERN};
@@ -80,7 +80,7 @@ pub enum ValidationError {
     #[error(transparent)]
     GateError(#[from] GateError),
     #[error(transparent)]
-    DefGateSequenceError(#[from] DefGateSequenceError)
+    DefGateSequenceError(#[from] DefGateSequenceError),
 }
 
 #[derive(Clone, Debug, PartialEq)]

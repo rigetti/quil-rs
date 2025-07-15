@@ -20,4 +20,3 @@ impl<T: std::hash::Hash + Eq> Filter<T> {
         }
     }
 }
-
