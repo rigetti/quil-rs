@@ -32,9 +32,7 @@ use crate::instruction::{
     WaveformDefinition, RESERVED_PRAGMA_EXTERN,
 };
 use crate::parser::{lex, parse_instructions, ParseError};
-use crate::program::defgate_sequence_expansion::{
-    ProgramDefGateSequenceExpander, ProgramSourceMap,
-};
+use crate::program::defgate_sequence_expansion::ProgramDefGateSequenceExpander;
 use crate::quil::Quil;
 
 pub use self::calibration::Calibrations;
@@ -357,7 +355,7 @@ impl Program {
         let expansion = ProgramDefGateSequenceExpander::new(&self.gate_definitions, filter);
         // FIXME: unwrap
         let new_instructions = expansion
-            .expand_defgate_sequences(&self.instructions, None)
+            .expand_defgate_sequences(&self.instructions)
             .unwrap();
 
         let mut new_program = Self {

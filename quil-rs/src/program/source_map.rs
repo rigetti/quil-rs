@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use super::InstructionIndex;
 
 /// A SourceMap provides information necessary to understand which parts of a target
@@ -97,5 +99,49 @@ pub trait SourceMapIndexable<Index> {
 impl SourceMapIndexable<InstructionIndex> for InstructionIndex {
     fn intersects(&self, other: &InstructionIndex) -> bool {
         self == other
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct InstructionSource(std::ops::Range<InstructionIndex>);
+
+impl From<InstructionIndex> for InstructionSource {
+    fn from(value: InstructionIndex) -> Self {
+        Self(value..InstructionIndex(value.0 + 1))
+    }
+}
+
+pub trait InstructionTargetRewrite: Debug + Clone + PartialEq {
+    // label: String,
+    // target_range: std::ops::Range<InstructionIndex>,
+    // nested_instruction_source_map: Option<InstructionSourceMap>,
+    fn label(&self) -> String;
+    fn target_range(&self) -> std::ops::Range<InstructionIndex>;
+    fn nested_source_map(&self) -> Option<InstructionSourceMap<Self>>
+    where
+        Self: Sized;
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum InstructionTarget<R> {
+    Copied(InstructionIndex),
+    Rewrite(R),
+}
+
+pub type InstructionSourceMap<R> = SourceMap<InstructionSource, InstructionTarget<R>>;
+
+impl<R: InstructionTargetRewrite> From<SourceMap<InstructionIndex, InstructionTarget<R>>>
+    for InstructionSourceMap<R>
+{
+    fn from(value: SourceMap<InstructionIndex, InstructionTarget<R>>) -> Self {
+        let entries = value
+            .entries
+            .into_iter()
+            .map(|entry| SourceMapEntry {
+                source_location: InstructionSource::from(entry.source_location),
+                target_location: entry.target_location,
+            })
+            .collect();
+        Self { entries }
     }
 }
