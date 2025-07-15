@@ -1,18 +1,21 @@
-use std::{collections::{HashMap, HashSet}, hash::Hash, ops::Range};
+use std::{
+    collections::{HashMap, HashSet},
+    hash::Hash,
+    ops::Range,
+};
 
 use indexmap::{IndexMap, IndexSet};
 
-use crate::{expression::Expression, filter_set::Filter, instruction::{DefGateSequence, DefGateSequenceExpansionError, Gate, GateDefinition, GateSpecification, Instruction}, program::{InstructionIndex, SourceMap, SourceMapEntry}, quil::Quil};
-
-/// The product of expanding an instruction using a calibration
-#[derive(Clone, Debug, PartialEq)]
-pub(crate) struct DefGateSequenceExpansionOutput {
-    /// The new instructions resulting from the expansion
-    pub(crate) new_instructions: Vec<Instruction>,
-
-    /// Details about the expansion process
-    pub(crate) detail: DefGateSequenceExpansion,
-}
+use crate::{
+    expression::Expression,
+    filter_set::Filter,
+    instruction::{
+        DefGateSequence, DefGateSequenceExpansionError, Gate, GateDefinition, GateSpecification,
+        Instruction,
+    },
+    program::{InstructionIndex, SourceMap, SourceMapEntry},
+    quil::Quil,
+};
 
 #[derive(Clone, Debug, PartialEq, Hash, Eq)]
 struct DefGateSequenceSource(String);
@@ -32,63 +35,95 @@ pub(crate) struct DefGateSequenceExpansion {
     /// The target instruction indices produced by the expansion
     pub(crate) range: Range<InstructionIndex>,
 
-    /// A map of source locations to the expansions they produced
-    pub(crate) expansions: ProgramDefGateSequenceExpansionSourceMap
+    /// Sequence gate definitions may refer to other sequence gate definitions
+    /// per the Quil specification. As such, we need to track how the first-level
+    /// sequence instructions map to nested sequence gate definition expansion.
+    pub(crate) expansions: ProgramSourceMap,
 }
 
 /// The result of an attempt to expand an instruction within a [`Program`]
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) enum MaybeDefGateSequenceExpansion {
+pub(crate) enum SourceMapEntryTarget {
     /// The instruction was expanded into others
-    Expanded(DefGateSequenceExpansion),
+    DefGateSequenceExpansion(DefGateSequenceExpansion),
 
     /// The instruction was not expanded, but was simply copied over into the target program at the given instruction index
-    Unexpanded(InstructionIndex),
+    Copied(InstructionIndex),
 }
 
-pub(crate) type ProgramDefGateSequenceExpansionSourceMap =
-    SourceMap<InstructionIndex, MaybeDefGateSequenceExpansion>;
+pub(crate) type ProgramSourceMap = SourceMap<InstructionIndex, SourceMapEntryTarget>;
 
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct ProgramDefGateSequenceExpansion<'program> {
+pub(crate) struct ProgramDefGateSequenceExpander<'program> {
     gate_definitions: &'program IndexMap<String, GateDefinition>,
     filter: Filter<String>,
 }
 
-impl<'program> ProgramDefGateSequenceExpansion<'program> {
-    pub(crate) fn new(gate_definitions: &'program IndexMap<String, GateDefinition>, filter: Filter<String>) -> Self {
+impl<'program> ProgramDefGateSequenceExpander<'program> {
+    pub(crate) fn new(
+        gate_definitions: &'program IndexMap<String, GateDefinition>,
+        filter: Filter<String>,
+    ) -> Self {
         Self {
             gate_definitions,
             filter,
         }
     }
 
-    pub(crate) fn expand_defgate_sequences(&self, source_instructions: &[Instruction], source_map: Option<&mut ProgramDefGateSequenceExpansionSourceMap>) -> Result<Vec<Instruction>, DefGateSequenceExpansionError> {
+    pub(crate) fn expand_defgate_sequences(
+        &self,
+        source_instructions: &[Instruction],
+        source_map: Option<&mut ProgramSourceMap>,
+    ) -> Result<Vec<Instruction>, DefGateSequenceExpansionError> {
         if let Some(source_map) = source_map {
-            self.expand_defgate_sequences_inner_with_source_map(source_instructions, source_map, &mut IndexSet::new())
+            self.expand_defgate_sequences_inner_with_source_map(
+                source_instructions,
+                source_map,
+                &mut IndexSet::new(),
+            )
         } else {
-            self.expand_defgate_sequences_inner_without_source_map(source_instructions, &mut IndexSet::new())
+            self.expand_defgate_sequences_inner_without_source_map(
+                source_instructions,
+                &mut IndexSet::new(),
+            )
         }
     }
 
-    fn expand_defgate_sequences_inner_with_source_map(&self, source_instructions: &[Instruction], source_map: &mut ProgramDefGateSequenceExpansionSourceMap, seen: &mut IndexSet<DefGateSequenceSource>) -> Result<Vec<Instruction>, DefGateSequenceExpansionError> {
+    fn expand_defgate_sequences_inner_with_source_map(
+        &self,
+        source_instructions: &[Instruction],
+        source_map: &mut ProgramSourceMap,
+        seen: &mut IndexSet<DefGateSequenceSource>,
+    ) -> Result<Vec<Instruction>, DefGateSequenceExpansionError> {
         let mut target_instructions = vec![];
-        for (source_instruction_index, source_instruction) in source_instructions.iter().enumerate() { 
-            if let Some((target_gate_instructions, source)) = self.gate_sequence_from_instruction(seen, source_instruction)? {
+        for (source_instruction_index, source_instruction) in source_instructions.iter().enumerate()
+        {
+            if let Some((target_gate_instructions, source)) =
+                self.gate_sequence_from_instruction(seen, source_instruction)?
+            {
                 let mut seen = seen.clone();
                 seen.insert(source.clone());
 
                 let mut recursive_source_map = SourceMap::default();
-                let recursive_target_gate_instructions = self.expand_defgate_sequences_inner_with_source_map(&target_gate_instructions, &mut recursive_source_map, &mut seen)?;
+                let recursive_target_gate_instructions = self
+                    .expand_defgate_sequences_inner_with_source_map(
+                        &target_gate_instructions,
+                        &mut recursive_source_map,
+                        &mut seen,
+                    )?;
                 let target_instruction_start_index = InstructionIndex(target_instructions.len());
-                let target_instruction_end_index = InstructionIndex(target_instruction_start_index.0 + recursive_target_gate_instructions.len());
+                let target_instruction_end_index = InstructionIndex(
+                    target_instruction_start_index.0 + recursive_target_gate_instructions.len(),
+                );
                 source_map.entries.push(SourceMapEntry {
                     source_location: InstructionIndex(source_instruction_index),
-                    target_location: MaybeDefGateSequenceExpansion::Expanded(DefGateSequenceExpansion {
-                        defgate_sequence_source: source,
-                        range: target_instruction_start_index..target_instruction_end_index,
-                        expansions: recursive_source_map
-                    })
+                    target_location: SourceMapEntryTarget::DefGateSequenceExpansion(
+                        DefGateSequenceExpansion {
+                            defgate_sequence_source: source,
+                            range: target_instruction_start_index..target_instruction_end_index,
+                            expansions: recursive_source_map,
+                        },
+                    ),
                 });
                 target_instructions.extend(recursive_target_gate_instructions);
             } else {
@@ -98,14 +133,24 @@ impl<'program> ProgramDefGateSequenceExpansion<'program> {
         Ok(target_instructions)
     }
 
-    fn expand_defgate_sequences_inner_without_source_map(&self, source_instructions: &[Instruction], seen: &mut IndexSet<DefGateSequenceSource>) -> Result<Vec<Instruction>, DefGateSequenceExpansionError> {
+    fn expand_defgate_sequences_inner_without_source_map(
+        &self,
+        source_instructions: &[Instruction],
+        seen: &mut IndexSet<DefGateSequenceSource>,
+    ) -> Result<Vec<Instruction>, DefGateSequenceExpansionError> {
         let mut target_instructions = vec![];
-        for source_instruction in source_instructions.iter() { 
-            if let Some((target_gate_instructions, source)) = self.gate_sequence_from_instruction(seen, source_instruction)? {
+        for source_instruction in source_instructions.iter() {
+            if let Some((target_gate_instructions, source)) =
+                self.gate_sequence_from_instruction(seen, source_instruction)?
+            {
                 let mut seen = seen.clone();
                 seen.insert(source.clone());
 
-                let recursive_target_gate_instructions = self.expand_defgate_sequences_inner_without_source_map(&target_gate_instructions, &mut seen)?;
+                let recursive_target_gate_instructions = self
+                    .expand_defgate_sequences_inner_without_source_map(
+                        &target_gate_instructions,
+                        &mut seen,
+                    )?;
                 target_instructions.extend(recursive_target_gate_instructions);
             } else {
                 target_instructions.push(source_instruction.clone());
@@ -114,26 +159,47 @@ impl<'program> ProgramDefGateSequenceExpansion<'program> {
         Ok(target_instructions)
     }
 
-    fn gate_sequence_from_instruction<'s, 'inst>(&'s self, seen: &mut IndexSet<DefGateSequenceSource>, instruction: &'inst Instruction) -> Result<Option<(Vec<Instruction>, DefGateSequenceSource)>, DefGateSequenceExpansionError> {
+    fn gate_sequence_from_instruction<'s, 'inst>(
+        &'s self,
+        seen: &mut IndexSet<DefGateSequenceSource>,
+        instruction: &'inst Instruction,
+    ) -> Result<Option<(Vec<Instruction>, DefGateSequenceSource)>, DefGateSequenceExpansionError>
+    {
         if let Instruction::Gate(gate) = instruction {
             if let Some(gate_definition) = self.gate_definitions.get(&gate.name) {
                 if let GateSpecification::Sequence(gate_sequence) = &gate_definition.specification {
                     if self.filter.include(&gate.name) {
                         if gate_definition.parameters.len() != gate.parameters.len() {
-                            return Err(DefGateSequenceExpansionError::ParameterCount { expected: gate_definition.parameters.len(), found: gate.parameters.len() });
+                            return Err(DefGateSequenceExpansionError::ParameterCount {
+                                expected: gate_definition.parameters.len(),
+                                found: gate.parameters.len(),
+                            });
                         }
-                        let gate_parameter_arguments = gate_definition.parameters.iter().cloned().zip(gate.parameters.iter().cloned()).collect::<HashMap<String, Expression>>();
+                        let gate_parameter_arguments = gate_definition
+                            .parameters
+                            .iter()
+                            .cloned()
+                            .zip(gate.parameters.iter().cloned())
+                            .collect::<HashMap<String, Expression>>();
 
                         if !gate.modifiers.is_empty() {
-                            return Err(DefGateSequenceExpansionError::GateModifiersUnsupported(gate.modifiers.clone()));
+                            return Err(DefGateSequenceExpansionError::GateModifiersUnsupported(
+                                gate.modifiers.clone(),
+                            ));
                         }
-                        let source= DefGateSequenceSource::from(gate);
+                        let source = DefGateSequenceSource::from(gate);
                         if seen.contains(&source) {
                             let cycle = seen.clone().into_iter().map(|source| source.0).collect();
-                            return Err(DefGateSequenceExpansionError::CyclicSequenceGateDefinition(cycle));
+                            return Err(
+                                DefGateSequenceExpansionError::CyclicSequenceGateDefinition(cycle),
+                            );
                         }
-        
-                        let target_gate_instructions = gate_sequence.expand(gate_parameter_arguments, gate.qubits.clone())?.into_iter().map(Instruction::Gate).collect::<Vec<_>>();
+
+                        let target_gate_instructions = gate_sequence
+                            .expand(gate_parameter_arguments, gate.qubits.clone())?
+                            .into_iter()
+                            .map(Instruction::Gate)
+                            .collect::<Vec<_>>();
 
                         return Ok(Some((target_gate_instructions, source)));
                     }
@@ -148,10 +214,74 @@ impl<'program> ProgramDefGateSequenceExpansion<'program> {
 mod tests {
     use std::str::FromStr;
 
+    use crate::Program;
+
     use super::*;
     use rstest::*;
 
-    const TEST1: &'static str = r"
+    struct DefGateSequenceExpansionTestCase {
+        program: &'static str,
+        filter: Filter<String>,
+        expected: Result<&'static str, DefGateSequenceExpansionError>,
+        expected_source_map: SourceMap<InstructionIndex, SourceMapEntryTarget>,
+    }
+
+    struct CompactDefGateSequenceExpansion {
+        defgate_sequence_source: &'static str,
+        range: Range<usize>,
+        expansions: Vec<CompactSourceMapEntry>,
+    }
+
+    impl From<CompactDefGateSequenceExpansion> for DefGateSequenceExpansion {
+        fn from(value: CompactDefGateSequenceExpansion) -> Self {
+            DefGateSequenceExpansion {
+                defgate_sequence_source: DefGateSequenceSource(
+                    value.defgate_sequence_source.to_string(),
+                ),
+                range: InstructionIndex(value.range.start)..InstructionIndex(value.range.end),
+                expansions: SourceMap {
+                    entries: value
+                        .expansions
+                        .into_iter()
+                        .map(|entry| SourceMapEntry {
+                            source_location: InstructionIndex(entry.source_location),
+                            target_location: entry.target_location.map_or_else(
+                                || {
+                                    SourceMapEntryTarget::Copied(InstructionIndex(
+                                        entry.source_location,
+                                    ))
+                                },
+                                |expansion| {
+                                    SourceMapEntryTarget::DefGateSequenceExpansion(expansion.into())
+                                },
+                            ),
+                        })
+                        .collect(),
+                },
+            }
+        }
+    }
+
+    struct CompactSourceMapEntry {
+        source_location: usize,
+        target_location: Option<CompactDefGateSequenceExpansion>,
+    }
+
+    impl From<CompactSourceMapEntry> for SourceMapEntry<InstructionIndex, SourceMapEntryTarget> {
+        fn from(value: CompactSourceMapEntry) -> Self {
+            SourceMapEntry {
+                source_location: InstructionIndex(value.source_location),
+                target_location: value.target_location.map_or_else(
+                    || SourceMapEntryTarget::Copied(InstructionIndex(value.source_location)),
+                    |expansion| SourceMapEntryTarget::DefGateSequenceExpansion(expansion.into()),
+                ),
+            }
+        }
+    }
+
+    impl DefGateSequenceExpansionTestCase {
+        fn simple_1q_expansions() -> Self {
+            const QUIL: &str = r"
 DEFGATE seq2(%param1, %param2) a b AS SEQUENCE:
     seq1(%param1) a
     seq1(%param2) b
@@ -163,8 +293,7 @@ DEFGATE seq1(%param1) a AS SEQUENCE:
 
 seq2(pi, pi/2) 0 1
 ";
-
-    const TEST1_RESULT: &'static str = r"
+            const EXPECTED_QUIL: &str = r"
 RZ(pi) 0 # (0, 0, 0)
 RX(pi/2) 0 # (0, 0, 1)
 RZ(pi) 0 # (0, 0, 2)
@@ -172,53 +301,214 @@ RZ(pi/2) 1 # (0, 1, 0)
 RX(pi/2) 1 # (0, 1, 1)
 RZ(pi/2) 1 # (0, 1, 2)
 ";
+            let expected_source_map = SourceMap {
+                entries: vec![CompactSourceMapEntry {
+                    source_location: 0,
+                    target_location: Some(CompactDefGateSequenceExpansion {
+                        defgate_sequence_source: "seq2",
+                        range: 0..6,
+                        expansions: vec![
+                            CompactSourceMapEntry {
+                                source_location: 0,
+                                target_location: Some(CompactDefGateSequenceExpansion {
+                                    defgate_sequence_source: "seq1",
+                                    range: 0..3,
+                                    expansions: vec![],
+                                }),
+                            },
+                            CompactSourceMapEntry {
+                                source_location: 1,
+                                target_location: Some(CompactDefGateSequenceExpansion {
+                                    defgate_sequence_source: "seq1",
+                                    range: 3..6,
+                                    expansions: vec![],
+                                }),
+                            },
+                        ],
+                    }),
+                }
+                .into()],
+            };
+            Self {
+                program: QUIL,
+                filter: Filter::default(),
+                expected: Ok(EXPECTED_QUIL),
+                expected_source_map,
+            }
+        }
+
+        fn triple_recursize() -> Self {
+            const QUIL: &str = r"
+DEFGATE some_u2_cycle(%param1, %param2, %param3, %param4, %param5, %param6) a b AS SEQUENCE:
+    pmw3(%param1, %param2, %param3) a
+    pmw3(%param4, %param5, %param6) b
+
+DEFGATE pmw3(%param1, %param2, %param3) a AS SEQUENCE:
+    pmw(%param1) a
+    pmw(%param2) a
+    pmw(%param3) a
+
+DEFGATE pmw(%param1) a AS SEQUENCE:
+    RZ(%param1) a
+    RX(pi/2) a
+    RZ(-%param1) a
+
+some_u2_cycle(-pi, -pi/2, -pi/4, pi/4, pi/2, pi) 0 1
+";
+            const EXPECTED_QUIL: &str = r"
+RZ(-pi) 0
+RX(pi/2) 0
+RZ(-(-pi)) 0
+RZ(-pi/2) 0
+RX(pi/2) 0
+RZ(-(-pi/2)) 0
+RZ(-pi/4) 0
+RX(pi/2) 0
+RZ(-(-pi/4)) 0
+
+RZ(pi/4) 1
+RX(pi/2) 1
+RZ(-(pi/4)) 1
+RZ(pi/2) 1
+RX(pi/2) 1
+RZ(-(pi/2)) 1
+RZ(pi) 1
+RX(pi/2) 1
+RZ(-(pi)) 1
+";
+            let expected_source_map = SourceMap {
+                entries: vec![CompactSourceMapEntry {
+                    source_location: 0,
+                    target_location: Some(CompactDefGateSequenceExpansion {
+                        defgate_sequence_source: "some_u2_cycle",
+                        range: 0..18,
+                        expansions: vec![
+                            CompactSourceMapEntry {
+                                source_location: 0,
+                                target_location: Some(CompactDefGateSequenceExpansion {
+                                    defgate_sequence_source: "pmw3",
+                                    range: 0..9,
+                                    expansions: vec![
+                                        CompactSourceMapEntry {
+                                            source_location: 0,
+                                            target_location: Some(
+                                                CompactDefGateSequenceExpansion {
+                                                    defgate_sequence_source: "pmw",
+                                                    range: 0..3,
+                                                    expansions: vec![],
+                                                },
+                                            ),
+                                        },
+                                        CompactSourceMapEntry {
+                                            source_location: 1,
+                                            target_location: Some(
+                                                CompactDefGateSequenceExpansion {
+                                                    defgate_sequence_source: "pmw",
+                                                    range: 3..6,
+                                                    expansions: vec![],
+                                                },
+                                            ),
+                                        },
+                                        CompactSourceMapEntry {
+                                            source_location: 2,
+                                            target_location: Some(
+                                                CompactDefGateSequenceExpansion {
+                                                    defgate_sequence_source: "pmw",
+                                                    range: 6..9,
+                                                    expansions: vec![],
+                                                },
+                                            ),
+                                        },
+                                    ],
+                                }),
+                            },
+                            CompactSourceMapEntry {
+                                source_location: 1,
+                                target_location: Some(CompactDefGateSequenceExpansion {
+                                    defgate_sequence_source: "pmw3",
+                                    range: 9..18,
+                                    expansions: vec![
+                                        CompactSourceMapEntry {
+                                            source_location: 0,
+                                            target_location: Some(
+                                                CompactDefGateSequenceExpansion {
+                                                    defgate_sequence_source: "pmw",
+                                                    range: 0..3,
+                                                    expansions: vec![],
+                                                },
+                                            ),
+                                        },
+                                        CompactSourceMapEntry {
+                                            source_location: 1,
+                                            target_location: Some(
+                                                CompactDefGateSequenceExpansion {
+                                                    defgate_sequence_source: "pmw",
+                                                    range: 3..6,
+                                                    expansions: vec![],
+                                                },
+                                            ),
+                                        },
+                                        CompactSourceMapEntry {
+                                            source_location: 2,
+                                            target_location: Some(
+                                                CompactDefGateSequenceExpansion {
+                                                    defgate_sequence_source: "pmw",
+                                                    range: 6..9,
+                                                    expansions: vec![],
+                                                },
+                                            ),
+                                        },
+                                    ],
+                                }),
+                            },
+                        ],
+                    }),
+                }
+                .into()],
+            };
+            Self {
+                program: QUIL,
+                filter: Filter::default(),
+                expected: Ok(EXPECTED_QUIL),
+                expected_source_map,
+            }
+        }
+    }
 
     #[rstest]
-    fn test_defgate_sequence_expansion() {
-        let program = crate::Program::from_str(TEST1).expect("must be a valid Quil program");
-        let program_expansion = ProgramDefGateSequenceExpansion {
+    #[case::simple_1q_expansions(DefGateSequenceExpansionTestCase::simple_1q_expansions())]
+    #[case::triple_recursize(DefGateSequenceExpansionTestCase::triple_recursize())]
+    fn test_defgate_sequence_expansion(#[case] test_case: DefGateSequenceExpansionTestCase) {
+        let program =
+            crate::Program::from_str(test_case.program).expect("must be a valid Quil program");
+        let program_expansion = ProgramDefGateSequenceExpander {
             gate_definitions: &program.gate_definitions,
-            filter: Filter::default(),
+            filter: test_case.filter.clone(),
         };
-        let mut source_map = ProgramDefGateSequenceExpansionSourceMap::default();
-        let expanded = program_expansion.expand_defgate_sequences(&program.instructions, Some(&mut source_map)).expect("must expand defgate sequences");
+        let mut source_map = ProgramSourceMap::default();
+        let result = program_expansion
+            .expand_defgate_sequences(&program.instructions, Some(&mut source_map));
 
-        let expected_program = crate::Program::from_str(TEST1_RESULT).expect("must be valid Quil program");
-        assert_eq!(expanded, expected_program.into_body_instructions().collect::<Vec<_>>());
+        match (test_case.expected, result) {
+            (Ok(expected), Ok(actual)) => {
+                let expected_program =
+                    Program::from_str(expected).expect("expected program must be valid Quil");
+                let mut actual_program = Program::new();
+                actual_program.add_instructions(actual);
 
-        let expected_source_map = SourceMap {
-            entries: vec![
-                SourceMapEntry {
-                    source_location: InstructionIndex(0),
-                    target_location: MaybeDefGateSequenceExpansion::Expanded(DefGateSequenceExpansion {
-                        defgate_sequence_source: DefGateSequenceSource("seq2".to_string()),
-                        range: InstructionIndex(0)..InstructionIndex(6),
-                        expansions: SourceMap {
-                            entries: vec![
-                                SourceMapEntry {
-                                    source_location: InstructionIndex(0),
-                                    target_location: MaybeDefGateSequenceExpansion::Expanded(DefGateSequenceExpansion {
-                                        defgate_sequence_source: DefGateSequenceSource("seq1".to_string()),
-                                        range: InstructionIndex(0)..InstructionIndex(3),
-                                        expansions: SourceMap::default()
-                                    })
-                                },
-                                SourceMapEntry {
-                                    source_location: InstructionIndex(1),
-                                    target_location: MaybeDefGateSequenceExpansion::Expanded(DefGateSequenceExpansion {
-                                        defgate_sequence_source: DefGateSequenceSource("seq1".to_string()),
-                                        range: InstructionIndex(3)..InstructionIndex(6),
-                                        expansions: SourceMap::default()
-                                    })
-                                },
-                            ]
-                        }
-                    })
-                },
-            ]
-        };
-
-        println!("{source_map:#?}");
-        assert_eq!(expected_source_map, source_map);
+                pretty_assertions::assert_eq!(expected_program, actual_program);
+                pretty_assertions::assert_eq!(test_case.expected_source_map, source_map);
+            }
+            (Ok(expected), Err(e)) => {
+                panic!("Expected instructions:\n\n{expected:?}\n\ngot error:\n\n{e:?}");
+            }
+            (Err(expected), Ok(actual)) => {
+                panic!("Expected error:\n\n{expected:?}\n\ngot:\n\n{actual:?}");
+            }
+            (Err(expected), Err(found)) => {
+                pretty_assertions::assert_eq!(expected, found);
+            }
+        }
     }
 }
+

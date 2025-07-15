@@ -33,7 +33,7 @@ use crate::instruction::{
 };
 use crate::parser::{lex, parse_instructions, ParseError};
 use crate::program::defgate_sequence_expansion::{
-    ProgramDefGateSequenceExpansion, ProgramDefGateSequenceExpansionSourceMap,
+    ProgramDefGateSequenceExpander, ProgramSourceMap,
 };
 use crate::quil::Quil;
 
@@ -354,7 +354,7 @@ impl Program {
             })
             .map(|(gate_name, definition)| (gate_name.clone(), definition.clone()))
             .collect();
-        let expansion = ProgramDefGateSequenceExpansion::new(&self.gate_definitions, filter);
+        let expansion = ProgramDefGateSequenceExpander::new(&self.gate_definitions, filter);
         // FIXME: unwrap
         let new_instructions = expansion
             .expand_defgate_sequences(&self.instructions, None)
@@ -928,12 +928,15 @@ impl ProgramCalibrationExpansion {
 mod tests {
     use super::Program;
     use crate::{
+        expression::{
+            Expression, InfixExpression, InfixOperator, PrefixExpression, PrefixOperator,
+        },
         imag,
         instruction::{
-            CalibrationIdentifier, Call, Declaration, ExternSignatureMap, Gate, Instruction, Jump,
-            JumpUnless, JumpWhen, Label, Matrix, MemoryReference, Qubit, QubitPlaceholder,
-            ScalarType, Target, TargetPlaceholder, UnresolvedCallArgument, Vector,
-            RESERVED_PRAGMA_EXTERN,
+            CalibrationIdentifier, Call, Declaration, DefGateSequence, ExternSignatureMap, Gate,
+            GateDefinition, GateSpecification, Instruction, Jump, JumpUnless, JumpWhen, Label,
+            Matrix, MemoryReference, Qubit, QubitPlaceholder, ScalarType, Target,
+            TargetPlaceholder, UnresolvedCallArgument, Vector, RESERVED_PRAGMA_EXTERN,
         },
         program::{
             calibration::{CalibrationExpansion, CalibrationSource, MaybeCalibrationExpansion},
@@ -945,9 +948,11 @@ mod tests {
     };
     use approx::assert_abs_diff_eq;
     use insta::{assert_debug_snapshot, assert_snapshot};
+    use internment::ArcIntern;
     use ndarray::{array, linalg::kron, Array2};
     use num_complex::Complex64;
     use once_cell::sync::Lazy;
+    use proptest::char::range;
     use rstest::rstest;
     use std::{
         collections::{HashMap, HashSet},
@@ -1959,5 +1964,115 @@ CALL foo octets[1] reals
             .to_quil()
             .expect("should be able to serialize program");
         assert_eq!(expected, reserialized);
+    }
+
+    /// Test that we can construct a sequence gate definition, add it to a program, and ensure
+    /// that the definition is included during [`Program::clone_without_body_instructions`].
+    #[test]
+    fn test_defgate_as_sequence_mechanics() {
+        let pi_divided_by_2 = Expression::Infix(InfixExpression {
+            operator: InfixOperator::Slash,
+            left: ArcIntern::new(Expression::PiConstant),
+            right: ArcIntern::new(Expression::Number(Complex64 { re: 2.0, im: 0.0 })),
+        });
+        let negate_variable = |variable: String| {
+            Expression::Prefix(PrefixExpression {
+                operator: PrefixOperator::Minus,
+                expression: ArcIntern::new(Expression::Variable(variable)),
+            })
+        };
+        let new_gate = |gate_name: &str, param: Expression, qubit: String| {
+            Gate::new(gate_name, vec![param], vec![Qubit::Variable(qubit)], vec![])
+                .expect("must be a valid gate")
+        };
+        let pmw3 = |param_prefix: String, qubit: String| {
+            (0..3)
+                .flat_map(|i| {
+                    vec![
+                        new_gate(
+                            "RZ",
+                            Expression::Variable(format!("{}{}", param_prefix, i)),
+                            qubit.clone(),
+                        ),
+                        new_gate("RX", pi_divided_by_2.clone(), qubit.clone()),
+                        new_gate(
+                            "RZ",
+                            negate_variable(format!("{}{}", param_prefix, i)),
+                            qubit.clone(),
+                        ),
+                    ]
+                })
+                .collect::<Vec<_>>()
+        };
+        let gate_sequence = DefGateSequence::try_new(
+            ["q0", "q1"].map(String::from).to_vec(),
+            pmw3("theta".to_string(), "q0".to_string())
+                .into_iter()
+                .chain(pmw3("phi".to_string(), "q1".to_string()))
+                .collect(),
+        )
+        .expect("must be valid gate sequence");
+        let gate_definition = GateDefinition {
+            name: "PMW3".to_string(),
+            parameters: vec![
+                "theta0".to_string(),
+                "theta1".to_string(),
+                "theta2".to_string(),
+                "phi0".to_string(),
+                "phi1".to_string(),
+                "phi2".to_string(),
+            ],
+            specification: GateSpecification::Sequence(gate_sequence),
+        };
+        let mut program = Program::new();
+        program.add_instruction(Instruction::GateDefinition(gate_definition.clone()));
+        assert_eq!(program.gate_definitions.len(), 1);
+        assert_eq!(program.body_instructions().count(), 0);
+
+        let invocation = Gate::new(
+            "PMW3",
+            vec![
+                Expression::Address(MemoryReference {
+                    name: "theta".to_string(),
+                    index: 0,
+                }),
+                Expression::Address(MemoryReference {
+                    name: "theta".to_string(),
+                    index: 1,
+                }),
+                Expression::Address(MemoryReference {
+                    name: "theta".to_string(),
+                    index: 2,
+                }),
+                Expression::Address(MemoryReference {
+                    name: "phi".to_string(),
+                    index: 0,
+                }),
+                Expression::Address(MemoryReference {
+                    name: "phi".to_string(),
+                    index: 1,
+                }),
+                Expression::Address(MemoryReference {
+                    name: "phi".to_string(),
+                    index: 2,
+                }),
+            ],
+            vec![Qubit::Fixed(0), Qubit::Fixed(1)],
+            vec![],
+        )
+        .expect("must be a valid gate");
+        program.add_instruction(Instruction::Gate(invocation));
+        assert_eq!(program.body_instructions().count(), 1);
+
+        let program_copy = program.clone_without_body_instructions();
+        assert_eq!(program_copy.gate_definitions.len(), 1);
+        assert_eq!(
+            program_copy
+                .gate_definitions
+                .get("PMW3")
+                .expect("must exist"),
+            &gate_definition
+        );
+        assert_eq!(program_copy.body_instructions().count(), 0);
     }
 }

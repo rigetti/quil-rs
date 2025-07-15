@@ -1190,7 +1190,7 @@ mod tests {
 
     impl ParseGateDefinitionTestCase {
         fn simple_sequence() -> Self {
-            const SIMPLE_SEQUENCE: &'static str = r"seq1(%param01) q1 AS SEQUENCE:
+            const SIMPLE_SEQUENCE: &str = r"seq1(%param01) q1 AS SEQUENCE:
     RX(%param01) q1";
             let gate1 = Gate::new(
                 "RX",
@@ -1213,7 +1213,7 @@ mod tests {
         }
 
         fn simple_2q() -> Self {
-            const SIMPLE_2Q: &'static str = r"seq1(%param01, %param02) q1 q2 AS SEQUENCE:
+            const SIMPLE_2Q: &str = r"seq1(%param01, %param02) q1 q2 AS SEQUENCE:
     RX(%param01) q1
     RX(%param02) q2";
             let gate1 = Gate::new(
@@ -1247,7 +1247,7 @@ mod tests {
         }
 
         fn recursive() -> Self {
-            const RECURSIVE: &'static str = r"seq1(%param01, %param02) q1 q2 AS SEQUENCE:
+            const RECURSIVE: &str = r"seq1(%param01, %param02) q1 q2 AS SEQUENCE:
     seq2(%param01) q1
     seq2(%param02) q2";
             let gate1 = Gate::new(
@@ -1281,7 +1281,7 @@ mod tests {
         }
 
         fn no_parameters() -> Self {
-            const NO_PARAMETERS: &'static str = r"seq1() q1 AS SEQUENCE:
+            const NO_PARAMETERS: &str = r"seq1() q1 AS SEQUENCE:
     RX(pi/2) q1";
             let gate1 = Gate::new(
                 "RX",
@@ -1308,7 +1308,7 @@ mod tests {
         }
 
         fn unused_argument() -> Self {
-            const NO_PARAMETERS: &'static str = r"seq1(%param01) q1 q2 AS SEQUENCE:
+            const NO_PARAMETERS: &str = r"seq1(%param01) q1 q2 AS SEQUENCE:
     RX(pi/2) q1";
             let gate1 = Gate::new(
                 "RX",
@@ -1336,7 +1336,7 @@ mod tests {
         }
 
         fn error_undefined_gate_sequence_element_qubit() -> Self {
-            const UNDEFINED_QUBIT: &'static str = r"seq1(%param01) q1 AS SEQUENCE:
+            const UNDEFINED_QUBIT: &str = r"seq1(%param01) q1 AS SEQUENCE:
     RZ(%param01) q1
     ISWAP q1 doesnt_exist_qubit";
             Self {
@@ -1354,7 +1354,7 @@ mod tests {
         }
 
         fn error_invalid_gate_sequence_element_qubit() -> Self {
-            const INVALID_QUBIT: &'static str = r"seq1(%param01) q1 AS SEQUENCE:
+            const INVALID_QUBIT: &str = r"seq1(%param01) q1 AS SEQUENCE:
     RZ(%param01) q1
     ISWAP q1 3";
             Self {
@@ -1372,7 +1372,7 @@ mod tests {
         }
 
         fn error_at_least_one_qubit() -> Self {
-            const AT_LEAST_ONE_QUBIT: &'static str = r"seq1() AS SEQUENCE:
+            const AT_LEAST_ONE_QUBIT: &str = r"seq1() AS SEQUENCE:
     RX(pi/2) q1";
             Self {
                 input: AT_LEAST_ONE_QUBIT,
