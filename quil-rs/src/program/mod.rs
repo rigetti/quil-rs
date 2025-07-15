@@ -26,12 +26,12 @@ use nom_locate::LocatedSpan;
 use source_map::InstructionSourceMap;
 
 use crate::instruction::{
-    Arithmetic, ArithmeticOperand, ArithmeticOperator, Call, Declaration, DefGateSequence,
+    Arithmetic, ArithmeticOperand, ArithmeticOperator, Call, Declaration,
     DefGateSequenceExpansionError, ExternError, ExternPragmaMap, ExternSignatureMap,
-    FrameDefinition, FrameIdentifier, Gate, GateDefinition, GateError, GateSpecification,
-    Instruction, InstructionHandler, Jump, JumpUnless, Label, Matrix, MemoryReference, Move,
-    Pragma, Qubit, QubitPlaceholder, ScalarType, Target, TargetPlaceholder, Vector, Waveform,
-    WaveformDefinition, RESERVED_PRAGMA_EXTERN,
+    FrameDefinition, FrameIdentifier, GateDefinition, GateError, GateSpecification, Instruction,
+    InstructionHandler, Jump, JumpUnless, Label, Matrix, MemoryReference, Move, Pragma, Qubit,
+    QubitPlaceholder, ScalarType, Target, TargetPlaceholder, Vector, Waveform, WaveformDefinition,
+    RESERVED_PRAGMA_EXTERN,
 };
 use crate::parser::{lex, parse_instructions, ParseError};
 use crate::program::defgate_sequence_expansion::ProgramDefGateSequenceExpander;
@@ -921,20 +921,6 @@ impl InstructionIndex {
     }
 }
 
-enum Filter<T: std::hash::Hash + Eq> {
-    Include(HashSet<T>),
-    Exclude(HashSet<T>),
-}
-
-impl<T: std::hash::Hash + Eq> Filter<T> {
-    fn include(&self, item: &T) -> bool {
-        match self {
-            Self::Include(set) => set.contains(item),
-            Self::Exclude(set) => !set.contains(item),
-        }
-    }
-}
-
 pub type ProgramCalibrationExpansionSourceMap =
     SourceMap<InstructionIndex, MaybeCalibrationExpansion>;
 
@@ -982,7 +968,7 @@ mod tests {
     use ndarray::{array, linalg::kron, Array2};
     use num_complex::Complex64;
     use once_cell::sync::Lazy;
-    use proptest::char::range;
+
     use rstest::rstest;
     use std::{
         collections::{HashMap, HashSet},

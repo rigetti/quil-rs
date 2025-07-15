@@ -907,7 +907,7 @@ impl Quil for GateSpecification {
             }
             GateSpecification::Sequence(sequence) => {
                 for gate in sequence.gates.iter() {
-                    write!(f, "{INDENT}");
+                    write!(f, "{INDENT}")?;
                     gate.write(f, fall_back_to_debug)?;
                     writeln!(f)?;
                 }

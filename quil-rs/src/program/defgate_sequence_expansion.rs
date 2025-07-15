@@ -1,5 +1,5 @@
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashMap,
     hash::Hash,
     ops::Range,
 };
@@ -10,11 +10,10 @@ use crate::{
     expression::Expression,
     filter_set::Filter,
     instruction::{
-        DefGateSequence, DefGateSequenceExpansionError, Gate, GateDefinition, GateSpecification,
+        DefGateSequenceExpansionError, Gate, GateDefinition, GateSpecification,
         Instruction,
     },
     program::{InstructionIndex, SourceMap, SourceMapEntry},
-    quil::Quil,
 };
 
 use super::source_map::{InstructionSourceMap, InstructionTarget, InstructionTargetRewrite};
@@ -32,15 +31,15 @@ impl From<&Gate> for DefGateSequenceSource {
 #[derive(Clone, Debug, PartialEq)]
 pub struct DefGateSequenceExpansion {
     /// The calibration used to expand the instruction
-    pub(crate) defgate_sequence_source: DefGateSequenceSource,
+    defgate_sequence_source: DefGateSequenceSource,
 
     /// The target instruction indices produced by the expansion
-    pub(crate) range: Range<InstructionIndex>,
+    range: Range<InstructionIndex>,
 
     /// Sequence gate definitions may refer to other sequence gate definitions
     /// per the Quil specification. As such, we need to track how the first-level
     /// sequence instructions map to nested sequence gate definition expansion.
-    pub(crate) nested_expansions:
+    nested_expansions:
         SourceMap<InstructionIndex, InstructionTarget<DefGateSequenceExpansion>>,
 }
 
@@ -206,10 +205,10 @@ impl<'program> ProgramDefGateSequenceExpander<'program> {
         Ok(target_instructions)
     }
 
-    fn gate_sequence_from_instruction<'s, 'inst>(
-        &'s self,
+    fn gate_sequence_from_instruction(
+        &self,
         seen: &mut IndexSet<DefGateSequenceSource>,
-        instruction: &'inst Instruction,
+        instruction: &Instruction,
     ) -> Result<Option<(Vec<Instruction>, DefGateSequenceSource)>, DefGateSequenceExpansionError>
     {
         if let Instruction::Gate(gate) = instruction {
