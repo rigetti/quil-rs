@@ -38,7 +38,7 @@ pub enum DefGateSequenceExpansionError {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct DefGateSequence {
-    qubits: Vec<String>,
+    pub(crate) qubits: Vec<String>,
     pub(crate) gates: Vec<Gate>,
 }
 

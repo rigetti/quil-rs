@@ -1,8 +1,4 @@
-use std::{
-    collections::HashMap,
-    hash::Hash,
-    ops::Range,
-};
+use std::{collections::HashMap, ops::Range};
 
 use indexmap::{IndexMap, IndexSet};
 
@@ -10,28 +6,20 @@ use crate::{
     expression::Expression,
     filter_set::Filter,
     instruction::{
-        DefGateSequenceExpansionError, Gate, GateDefinition, GateSpecification,
+        DefGateSequenceExpansionError, GateDefinition, GateSignature, GateSpecification,
         Instruction,
     },
     program::{InstructionIndex, SourceMap, SourceMapEntry},
+    quil::Quil,
 };
 
 use super::source_map::{InstructionSourceMap, InstructionTarget, InstructionTargetRewrite};
-
-#[derive(Clone, Debug, PartialEq, Hash, Eq)]
-struct DefGateSequenceSource(String);
-
-impl From<&Gate> for DefGateSequenceSource {
-    fn from(value: &Gate) -> Self {
-        DefGateSequenceSource(value.name.clone())
-    }
-}
 
 /// Details about the expansion of a calibration
 #[derive(Clone, Debug, PartialEq)]
 pub struct DefGateSequenceExpansion {
     /// The calibration used to expand the instruction
-    defgate_sequence_source: DefGateSequenceSource,
+    defgate_sequence_source: crate::instruction::GateSignature,
 
     /// The target instruction indices produced by the expansion
     range: Range<InstructionIndex>,
@@ -39,14 +27,12 @@ pub struct DefGateSequenceExpansion {
     /// Sequence gate definitions may refer to other sequence gate definitions
     /// per the Quil specification. As such, we need to track how the first-level
     /// sequence instructions map to nested sequence gate definition expansion.
-    nested_expansions:
-        SourceMap<InstructionIndex, InstructionTarget<DefGateSequenceExpansion>>,
+    nested_expansions: SourceMap<InstructionIndex, InstructionTarget<DefGateSequenceExpansion>>,
 }
 
 impl InstructionTargetRewrite for DefGateSequenceExpansion {
     fn label(&self) -> String {
-        // FIXME: may want to include entire Quil signature.
-        self.defgate_sequence_source.0.clone()
+        self.defgate_sequence_source.to_quil_or_debug()
     }
 
     fn target_range(&self) -> std::ops::Range<InstructionIndex> {
@@ -135,7 +121,7 @@ impl<'program> ProgramDefGateSequenceExpander<'program> {
         &self,
         source_instructions: &[Instruction],
         source_map: &mut SequenceGateDefinitionSourceMap,
-        seen: &mut IndexSet<DefGateSequenceSource>,
+        seen: &mut IndexSet<String>,
     ) -> Result<Vec<Instruction>, DefGateSequenceExpansionError> {
         let mut target_instructions = vec![];
         for (source_instruction_index, source_instruction) in source_instructions.iter().enumerate()
@@ -144,7 +130,7 @@ impl<'program> ProgramDefGateSequenceExpander<'program> {
                 self.gate_sequence_from_instruction(seen, source_instruction)?
             {
                 let mut seen = seen.clone();
-                seen.insert(source.clone());
+                seen.insert(source.name.clone());
 
                 let mut recursive_source_map = SourceMap::default();
                 let recursive_target_gate_instructions = self
@@ -182,7 +168,7 @@ impl<'program> ProgramDefGateSequenceExpander<'program> {
     fn expand_defgate_sequences_without_source_map_inner(
         &self,
         source_instructions: &[Instruction],
-        seen: &mut IndexSet<DefGateSequenceSource>,
+        seen: &mut IndexSet<String>,
     ) -> Result<Vec<Instruction>, DefGateSequenceExpansionError> {
         let mut target_instructions = vec![];
         for source_instruction in source_instructions.iter() {
@@ -190,7 +176,7 @@ impl<'program> ProgramDefGateSequenceExpander<'program> {
                 self.gate_sequence_from_instruction(seen, source_instruction)?
             {
                 let mut seen = seen.clone();
-                seen.insert(source.clone());
+                seen.insert(source.name.clone());
 
                 let recursive_target_gate_instructions = self
                     .expand_defgate_sequences_without_source_map_inner(
@@ -207,10 +193,9 @@ impl<'program> ProgramDefGateSequenceExpander<'program> {
 
     fn gate_sequence_from_instruction(
         &self,
-        seen: &mut IndexSet<DefGateSequenceSource>,
+        seen: &mut IndexSet<String>,
         instruction: &Instruction,
-    ) -> Result<Option<(Vec<Instruction>, DefGateSequenceSource)>, DefGateSequenceExpansionError>
-    {
+    ) -> Result<Option<(Vec<Instruction>, GateSignature)>, DefGateSequenceExpansionError> {
         if let Instruction::Gate(gate) = instruction {
             if let Some(gate_definition) = self.gate_definitions.get(&gate.name) {
                 if let GateSpecification::Sequence(gate_sequence) = &gate_definition.specification {
@@ -233,9 +218,9 @@ impl<'program> ProgramDefGateSequenceExpander<'program> {
                                 gate.modifiers.clone(),
                             ));
                         }
-                        let source = DefGateSequenceSource::from(gate);
-                        if seen.contains(&source) {
-                            let cycle = seen.clone().into_iter().map(|source| source.0).collect();
+                        let source = GateSignature::from(gate_definition);
+                        if seen.contains(&source.name) {
+                            let cycle = seen.iter().cloned().collect();
                             return Err(
                                 DefGateSequenceExpansionError::CyclicSequenceGateDefinition(cycle),
                             );
@@ -260,13 +245,34 @@ impl<'program> ProgramDefGateSequenceExpander<'program> {
 mod tests {
     use std::str::FromStr;
 
-    use crate::Program;
+    use crate::{instruction::GateSignature, Program};
 
     use super::*;
     use rstest::*;
 
+    struct CompactGateSignature(
+        &'static str,
+        &'static [&'static str],
+        &'static [&'static str],
+    );
+
+    impl From<CompactGateSignature> for GateSignature {
+        fn from(value: CompactGateSignature) -> Self {
+            GateSignature {
+                name: value.0.to_string(),
+                gate_parameters: value.1.iter().map(|s| s.to_string()).collect(),
+                qubit_parameters: value.2.iter().map(|s| s.to_string()).collect(),
+                gate_type: crate::instruction::GateType::Sequence,
+            }
+        }
+    }
+
     struct CompactDefGateSequenceExpansion {
-        defgate_sequence_source: &'static str,
+        defgate_sequence_source: (
+            &'static str,
+            &'static [&'static str],
+            &'static [&'static str],
+        ),
         range: Range<usize>,
         expansions: Vec<CompactSourceMapEntry>,
     }
@@ -274,9 +280,11 @@ mod tests {
     impl From<CompactDefGateSequenceExpansion> for DefGateSequenceExpansion {
         fn from(value: CompactDefGateSequenceExpansion) -> Self {
             DefGateSequenceExpansion {
-                defgate_sequence_source: DefGateSequenceSource(
-                    value.defgate_sequence_source.to_string(),
-                ),
+                defgate_sequence_source: GateSignature::from(CompactGateSignature(
+                    value.defgate_sequence_source.0,
+                    value.defgate_sequence_source.1,
+                    value.defgate_sequence_source.2,
+                )),
                 range: InstructionIndex(value.range.start)..InstructionIndex(value.range.end),
                 nested_expansions: SourceMap {
                     entries: value
@@ -363,14 +371,14 @@ RZ(pi/2) 1 # (0, 1, 2)
                 entries: vec![CompactSourceMapEntry {
                     source_location: 0,
                     target_location: InstructionTarget::Rewrite(CompactDefGateSequenceExpansion {
-                        defgate_sequence_source: "seq2",
+                        defgate_sequence_source: ("seq2", &["param1", "param2"], &["a", "b"]),
                         range: 0..6,
                         expansions: vec![
                             CompactSourceMapEntry {
                                 source_location: 0,
                                 target_location: InstructionTarget::Rewrite(
                                     CompactDefGateSequenceExpansion {
-                                        defgate_sequence_source: "seq1",
+                                        defgate_sequence_source: ("seq1", &["param1"], &["a"]),
                                         range: 0..3,
                                         expansions: vec![
                                             CompactSourceMapEntry {
@@ -399,7 +407,7 @@ RZ(pi/2) 1 # (0, 1, 2)
                                 source_location: 1,
                                 target_location: InstructionTarget::Rewrite(
                                     CompactDefGateSequenceExpansion {
-                                        defgate_sequence_source: "seq1",
+                                        defgate_sequence_source: ("seq1", &["param1"], &["a"]),
                                         range: 3..6,
                                         expansions: vec![
                                             CompactSourceMapEntry {
@@ -480,21 +488,33 @@ RZ(-(pi)) 1
                 entries: vec![CompactSourceMapEntry {
                     source_location: 0,
                     target_location: InstructionTarget::Rewrite(CompactDefGateSequenceExpansion {
-                        defgate_sequence_source: "some_u2_cycle",
+                        defgate_sequence_source: (
+                            "some_u2_cycle",
+                            &["param1", "param2", "param3", "param4", "param5", "param6"],
+                            &["a", "b"],
+                        ),
                         range: 0..18,
                         expansions: vec![
                             CompactSourceMapEntry {
                                 source_location: 0,
                                 target_location: InstructionTarget::Rewrite(
                                     CompactDefGateSequenceExpansion {
-                                        defgate_sequence_source: "pmw3",
+                                        defgate_sequence_source: (
+                                            "pmw3",
+                                            &["param1", "param2", "param3"],
+                                            &["a"],
+                                        ),
                                         range: 0..9,
                                         expansions: vec![
                                             CompactSourceMapEntry {
                                                 source_location: 0,
                                                 target_location: InstructionTarget::Rewrite(
                                                     CompactDefGateSequenceExpansion {
-                                                        defgate_sequence_source: "pmw",
+                                                        defgate_sequence_source: (
+                                                            "pmw",
+                                                            &["param1"],
+                                                            &["a"],
+                                                        ),
                                                         range: 0..3,
                                                         expansions: vec![
                                                             CompactSourceMapEntry {
@@ -526,7 +546,11 @@ RZ(-(pi)) 1
                                                 source_location: 1,
                                                 target_location: InstructionTarget::Rewrite(
                                                     CompactDefGateSequenceExpansion {
-                                                        defgate_sequence_source: "pmw",
+                                                        defgate_sequence_source: (
+                                                            "pmw",
+                                                            &["param1"],
+                                                            &["a"],
+                                                        ),
                                                         range: 3..6,
                                                         expansions: vec![
                                                             CompactSourceMapEntry {
@@ -558,7 +582,11 @@ RZ(-(pi)) 1
                                                 source_location: 2,
                                                 target_location: InstructionTarget::Rewrite(
                                                     CompactDefGateSequenceExpansion {
-                                                        defgate_sequence_source: "pmw",
+                                                        defgate_sequence_source: (
+                                                            "pmw",
+                                                            &["param1"],
+                                                            &["a"],
+                                                        ),
                                                         range: 6..9,
                                                         expansions: vec![
                                                             CompactSourceMapEntry {
@@ -594,14 +622,22 @@ RZ(-(pi)) 1
                                 source_location: 1,
                                 target_location: InstructionTarget::Rewrite(
                                     CompactDefGateSequenceExpansion {
-                                        defgate_sequence_source: "pmw3",
+                                        defgate_sequence_source: (
+                                            "pmw3",
+                                            &["param1", "param2", "param3"],
+                                            &["a"],
+                                        ),
                                         range: 9..18,
                                         expansions: vec![
                                             CompactSourceMapEntry {
                                                 source_location: 0,
                                                 target_location: InstructionTarget::Rewrite(
                                                     CompactDefGateSequenceExpansion {
-                                                        defgate_sequence_source: "pmw",
+                                                        defgate_sequence_source: (
+                                                            "pmw",
+                                                            &["param1"],
+                                                            &["a"],
+                                                        ),
                                                         range: 0..3,
                                                         expansions: vec![
                                                             CompactSourceMapEntry {
@@ -633,7 +669,11 @@ RZ(-(pi)) 1
                                                 source_location: 1,
                                                 target_location: InstructionTarget::Rewrite(
                                                     CompactDefGateSequenceExpansion {
-                                                        defgate_sequence_source: "pmw",
+                                                        defgate_sequence_source: (
+                                                            "pmw",
+                                                            &["param1"],
+                                                            &["a"],
+                                                        ),
                                                         range: 3..6,
                                                         expansions: vec![
                                                             CompactSourceMapEntry {
@@ -665,7 +705,11 @@ RZ(-(pi)) 1
                                                 source_location: 2,
                                                 target_location: InstructionTarget::Rewrite(
                                                     CompactDefGateSequenceExpansion {
-                                                        defgate_sequence_source: "pmw",
+                                                        defgate_sequence_source: (
+                                                            "pmw",
+                                                            &["param1"],
+                                                            &["a"],
+                                                        ),
                                                         range: 6..9,
                                                         expansions: vec![
                                                             CompactSourceMapEntry {
@@ -750,7 +794,11 @@ MEASURE 1 ro[1]
                         source_location: 1,
                         target_location: InstructionTarget::Rewrite(
                             CompactDefGateSequenceExpansion {
-                                defgate_sequence_source: "seq2",
+                                defgate_sequence_source: (
+                                    "seq2",
+                                    &["param1", "param2"],
+                                    &["a", "b"],
+                                ),
                                 range: 1..7,
                                 expansions: vec![
                                     CompactSourceMapEntry {
@@ -763,7 +811,11 @@ MEASURE 1 ro[1]
                                         source_location: 1,
                                         target_location: InstructionTarget::Rewrite(
                                             CompactDefGateSequenceExpansion {
-                                                defgate_sequence_source: "seq1",
+                                                defgate_sequence_source: (
+                                                    "seq1",
+                                                    &["param1"],
+                                                    &["a"],
+                                                ),
                                                 range: 1..4,
                                                 expansions: vec![
                                                     CompactSourceMapEntry {
@@ -843,7 +895,7 @@ RZ(pi) 0
                 entries: vec![CompactSourceMapEntry {
                     source_location: 0,
                     target_location: InstructionTarget::Rewrite(CompactDefGateSequenceExpansion {
-                        defgate_sequence_source: "seq1",
+                        defgate_sequence_source: ("seq1", &["param1"], &["a", "b"]),
                         range: 0..3,
                         expansions: vec![
                             CompactSourceMapEntry {
@@ -896,7 +948,7 @@ seq2(pi/2) 0
                         source_location: 0,
                         target_location: InstructionTarget::Rewrite(
                             CompactDefGateSequenceExpansion {
-                                defgate_sequence_source: "seq1",
+                                defgate_sequence_source: ("seq1", &["param1"], &["a"]),
                                 range: 0..3,
                                 expansions: vec![
                                     CompactSourceMapEntry {
