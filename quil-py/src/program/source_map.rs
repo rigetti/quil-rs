@@ -167,13 +167,13 @@ impl PyMaybeCalibrationExpansion {
         if let Ok(inner) = <_ as PyTryFrom<PyAny>>::py_try_from(py, input) {
             let inner = &inner;
             if let Ok(item) = PyTryFrom::py_try_from(py, inner) {
-                return Ok(Self::from(MaybeCalibrationExpansion::Expanded(item)));
+                return Ok(Self::from(MaybeCalibrationExpansion::Rewrite(item)));
             }
         }
 
         if let Ok(inner) = <_ as PyTryFrom<PyAny>>::py_try_from(py, input) {
             if let Ok(item) = PyTryFrom::<usize>::py_try_from(py, &inner) {
-                return Ok(Self::from(MaybeCalibrationExpansion::Unexpanded(
+                return Ok(Self::from(MaybeCalibrationExpansion::Copied(
                     InstructionIndex(item),
                 )));
             }
@@ -189,10 +189,10 @@ impl PyMaybeCalibrationExpansion {
     #[allow(unreachable_code, unreachable_patterns)]
     pub fn inner(&self, py: Python) -> PyResult<Py<PyAny>> {
         match &self.0 {
-            MaybeCalibrationExpansion::Expanded(inner) => Ok(
+            MaybeCalibrationExpansion::Rewrite(inner) => Ok(
                 conversion::IntoPy::<Py<PyAny>>::into_py(ToPython::to_python(&inner, py)?, py),
             ),
-            MaybeCalibrationExpansion::Unexpanded(inner) => Ok(inner.0.into_py(py)),
+            MaybeCalibrationExpansion::Copied(inner) => Ok(inner.0.into_py(py)),
             _ => {
                 use exceptions::PyRuntimeError;
                 Err(PyRuntimeError::new_err(
@@ -204,7 +204,7 @@ impl PyMaybeCalibrationExpansion {
 
     pub fn as_expanded(&self) -> Option<PyCalibrationExpansion> {
         match &self.0 {
-            MaybeCalibrationExpansion::Expanded(inner) => {
+            MaybeCalibrationExpansion::Rewrite(inner) => {
                 Some(PyCalibrationExpansion(inner.clone()))
             }
             _ => None,
@@ -213,34 +213,32 @@ impl PyMaybeCalibrationExpansion {
 
     pub fn as_unexpanded(&self) -> Option<usize> {
         match &self.0 {
-            MaybeCalibrationExpansion::Unexpanded(inner) => Some(inner.0),
+            MaybeCalibrationExpansion::Copied(inner) => Some(inner.0),
             _ => None,
         }
     }
 
     #[staticmethod]
     pub fn from_expanded(inner: PyCalibrationExpansion) -> Self {
-        Self(MaybeCalibrationExpansion::Expanded(inner.into_inner()))
+        Self(MaybeCalibrationExpansion::Rewrite(inner.into_inner()))
     }
 
     #[staticmethod]
     pub fn from_unexpanded(inner: usize) -> Self {
-        Self(MaybeCalibrationExpansion::Unexpanded(InstructionIndex(
-            inner,
-        )))
+        Self(MaybeCalibrationExpansion::Copied(InstructionIndex(inner)))
     }
 
     pub fn is_expanded(&self) -> bool {
-        matches!(self.0, MaybeCalibrationExpansion::Expanded(_))
+        matches!(self.0, MaybeCalibrationExpansion::Rewrite(_))
     }
 
     pub fn is_unexpanded(&self) -> bool {
-        matches!(self.0, MaybeCalibrationExpansion::Unexpanded(_))
+        matches!(self.0, MaybeCalibrationExpansion::Copied(_))
     }
 
     pub fn to_expanded(&self) -> PyResult<PyCalibrationExpansion> {
         match &self.0 {
-            MaybeCalibrationExpansion::Expanded(inner) => Ok(PyCalibrationExpansion(inner.clone())),
+            MaybeCalibrationExpansion::Rewrite(inner) => Ok(PyCalibrationExpansion(inner.clone())),
             _ => Err(pyo3::exceptions::PyValueError::new_err(
                 "expected self to be an Expanded variant",
             )),
@@ -249,7 +247,7 @@ impl PyMaybeCalibrationExpansion {
 
     pub fn to_unexpanded(&self) -> PyResult<usize> {
         match &self.0 {
-            MaybeCalibrationExpansion::Unexpanded(inner) => Ok(inner.0),
+            MaybeCalibrationExpansion::Copied(inner) => Ok(inner.0),
             _ => Err(pyo3::exceptions::PyValueError::new_err(
                 "expected self to be an Unexpanded variant",
             )),
