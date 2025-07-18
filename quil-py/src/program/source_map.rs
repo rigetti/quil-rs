@@ -174,7 +174,7 @@ impl_repr!(PyCalibrationSource);
 impl_eq!(PyCalibrationSource);
 
 #[derive(Debug, PartialEq, Clone)]
-enum InstructionTargetShim {
+pub enum InstructionTargetShim {
     Copied(usize),
     Rewrite(InstructionTargetRewrite),
 }

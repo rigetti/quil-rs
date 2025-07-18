@@ -38,8 +38,9 @@ use self::{
     analysis::{PyBasicBlock, PyControlFlowGraph},
     scheduling::{PyScheduleSeconds, PyScheduleSecondsItem, PyTimeSpanSeconds},
     source_map::{
-        PyCalibrationExpansion, PyCalibrationSource, PyCalibrationSource, PyInstructionSourceMap,
-        PyInstructionSourceMapEntry, PyInstructionTarget, PyInstructionTargetRewrite,
+        PyCalibrationExpansion, PyCalibrationSource, PyDefGateSequenceExpansion,
+        PyInstructionSourceMap, PyInstructionSourceMapEntry, PyInstructionTarget,
+        PyInstructionTargetRewrite,
     },
 };
 pub use self::{calibration::PyCalibrationSet, frame::PyFrameSet, memory::PyMemoryRegion};
@@ -92,13 +93,15 @@ impl PyProgram {
         ControlFlowGraphOwned::from(ControlFlowGraph::from(self.as_inner())).into()
     }
 
-    pub fn expand_calibrations_with_source_map(&self) -> PyResult<PyProgramCalibrationExpansion> {
+    pub fn expand_calibrations_with_source_map(
+        &self,
+    ) -> PyResult<(PyProgram, PyInstructionSourceMap)> {
         let expansion = self
             .as_inner()
             .expand_calibrations_with_source_map()
             .map_err(ProgramError::from)
             .map_err(ProgramError::to_py_err)?;
-        Ok(expansion.into())
+        Ok((expansion.0.into(), expansion.1.into()))
     }
 
     #[getter]
@@ -402,13 +405,12 @@ create_init_submodule! {
         PyFrameSet,
         PyProgram,
         PyCalibrationExpansion,
-        PyCalibrationExpansionSourceMap,
-        PyCalibrationExpansionSourceMapEntry,
         PyCalibrationSource,
-        PyMaybeCalibrationExpansion,
-        PyProgramCalibrationExpansion,
-        PyProgramCalibrationExpansionSourceMap,
-        PyProgramCalibrationExpansionSourceMapEntry,
+        PyInstructionSourceMap,
+        PyInstructionTarget,
+        PyInstructionTargetRewrite,
+        PyDefGateSequenceExpansion,
+        PyInstructionSourceMapEntry,
         PyCalibrationSet,
         PyMemoryRegion,
         PyBasicBlock,
