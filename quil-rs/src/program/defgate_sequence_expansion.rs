@@ -10,12 +10,9 @@ use crate::{
         Instruction,
     },
     program::{InstructionIndex, SourceMap, SourceMapEntry},
-    quil::Quil,
 };
 
-use super::source_map::{
-    InstructionSourceMap, InstructionTarget, InstructionTargetRewrite, SourceMapIndexable,
-};
+use super::source_map::{InstructionSourceMap, InstructionTarget, SourceMapIndexable};
 
 /// Details about the expansion of a calibration
 #[derive(Clone, Debug, PartialEq)]

@@ -29,9 +29,7 @@ use crate::{
     },
 };
 
-use super::source_map::{
-    InstructionSourceMap, InstructionTarget, SourceMap, SourceMapEntry, SourceMapIndexable,
-};
+use super::source_map::{InstructionTarget, SourceMap, SourceMapEntry, SourceMapIndexable};
 use super::{CalibrationSet, InstructionIndex, ProgramError};
 
 /// A collection of Quil calibrations (`DEFCAL` instructions) with utility methods.

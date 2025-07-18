@@ -197,22 +197,20 @@ impl SourceMapIndexable<InstructionIndex> for InstructionSource {
 
 impl SourceMapIndexable<CalibrationSource> for InstructionTarget<InstructionTargetRewrite> {
     fn intersects(&self, other: &CalibrationSource) -> bool {
-        match self {
-            Self::Rewrite(InstructionTargetRewrite::Calibration(expansion)) => {
-                expansion.intersects(other)
-            }
-            _ => false,
+        if let Self::Rewrite(InstructionTargetRewrite::Calibration(expansion)) = self {
+            expansion.intersects(other)
+        } else {
+            false
         }
     }
 }
 
 impl SourceMapIndexable<GateSignature> for InstructionTarget<InstructionTargetRewrite> {
     fn intersects(&self, other: &GateSignature) -> bool {
-        match self {
-            Self::Rewrite(InstructionTargetRewrite::DefGateSequence(expansion)) => {
-                expansion.intersects(other)
-            }
-            _ => false,
+        if let Self::Rewrite(InstructionTargetRewrite::DefGateSequence(expansion)) = self {
+            expansion.intersects(other)
+        } else {
+            false
         }
     }
 }
