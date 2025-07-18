@@ -252,7 +252,8 @@ mod tests {
                 value.1.iter().map(|s| s.to_string()).collect(),
                 value.2.iter().map(|s| s.to_string()).collect(),
                 crate::instruction::GateType::Sequence,
-            ).expect("must be a valid gate")
+            )
+            .expect("must be a valid gate")
         }
     }
 

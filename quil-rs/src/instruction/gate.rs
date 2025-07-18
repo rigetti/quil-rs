@@ -963,7 +963,12 @@ pub struct GateSignature {
 }
 
 impl GateSignature {
-    pub fn try_new(name: String, gate_parameters: Vec<String>, qubit_parameters: Vec<String>, gate_type: GateType) -> Result<Self, GateError> {
+    pub fn try_new(
+        name: String,
+        gate_parameters: Vec<String>,
+        qubit_parameters: Vec<String>,
+        gate_type: GateType,
+    ) -> Result<Self, GateError> {
         validate_user_identifier(&name)?;
         if qubit_parameters.is_empty() {
             return Err(GateError::EmptyQubits);

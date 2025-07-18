@@ -179,8 +179,12 @@ impl SourceMapIndexable<InstructionIndex> for InstructionTarget<InstructionTarge
     fn intersects(&self, other: &InstructionIndex) -> bool {
         match self {
             Self::Copied(index) => index == other,
-            Self::Rewrite(InstructionTargetRewrite::Calibration(expansion)) => expansion.intersects(other),
-            Self::Rewrite(InstructionTargetRewrite::DefGateSequence(expansion)) => expansion.intersects(other),
+            Self::Rewrite(InstructionTargetRewrite::Calibration(expansion)) => {
+                expansion.intersects(other)
+            }
+            Self::Rewrite(InstructionTargetRewrite::DefGateSequence(expansion)) => {
+                expansion.intersects(other)
+            }
         }
     }
 }
@@ -194,7 +198,9 @@ impl SourceMapIndexable<InstructionIndex> for InstructionSource {
 impl SourceMapIndexable<CalibrationSource> for InstructionTarget<InstructionTargetRewrite> {
     fn intersects(&self, other: &CalibrationSource) -> bool {
         match self {
-            Self::Rewrite(InstructionTargetRewrite::Calibration(expansion)) => expansion.intersects(other),
+            Self::Rewrite(InstructionTargetRewrite::Calibration(expansion)) => {
+                expansion.intersects(other)
+            }
             _ => false,
         }
     }
@@ -203,7 +209,9 @@ impl SourceMapIndexable<CalibrationSource> for InstructionTarget<InstructionTarg
 impl SourceMapIndexable<GateSignature> for InstructionTarget<InstructionTargetRewrite> {
     fn intersects(&self, other: &GateSignature) -> bool {
         match self {
-            Self::Rewrite(InstructionTargetRewrite::DefGateSequence(expansion)) => expansion.intersects(other),
+            Self::Rewrite(InstructionTargetRewrite::DefGateSequence(expansion)) => {
+                expansion.intersects(other)
+            }
             _ => false,
         }
     }

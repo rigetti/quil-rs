@@ -62,8 +62,8 @@ pub use self::frame::{
     SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, SwapPhases,
 };
 pub use self::gate::{
-    Gate, GateDefinition, GateError, GateModifier, GateSpecification, GateType, Matrix, PauliGate,
-    PauliSum, PauliTerm, GateSignature,
+    Gate, GateDefinition, GateError, GateModifier, GateSignature, GateSpecification, GateType,
+    Matrix, PauliGate, PauliSum, PauliTerm,
 };
 pub use self::gate_sequence::{
     DefGateSequence, DefGateSequenceError, DefGateSequenceExpansionError,
