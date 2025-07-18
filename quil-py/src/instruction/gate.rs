@@ -2,8 +2,8 @@ use numpy::{PyArray2, ToPyArray};
 use quil_rs::{
     expression::Expression,
     instruction::{
-        Gate, GateDefinition, GateModifier, GateSpecification, PauliGate, PauliSum, PauliTerm,
-        Qubit,
+        Gate, GateDefinition, GateModifier, GateSignature, GateSpecification, GateType, PauliGate,
+        PauliSum, PauliTerm, Qubit,
     },
 };
 use rigetti_pyo3::{
@@ -124,6 +124,42 @@ impl_repr!(PyGateModifier);
 impl_to_quil!(PyGateModifier);
 impl_hash!(PyGateModifier);
 impl_eq!(PyGateModifier);
+
+py_wrap_simple_enum! {
+    #[derive(Debug, PartialEq, Eq)]
+    PyGateType(GateType) as "GateType" {
+        Matrix,
+        Permutation,
+        PauliSum,
+        Sequence
+    }
+}
+
+py_wrap_type! {
+    #[derive(Debug, PartialEq, Eq)]
+    PyGateSignature(GateSignature) as "GateSignature"
+}
+
+#[pymethods]
+impl PyGateSignature {
+    #[new]
+    fn new(
+        name: String,
+        gate_parameters: Vec<String>,
+        qubit_parameters: Vec<String>,
+        gate_type: PyGateType,
+    ) -> PyResult<Self> {
+        Ok(Self(
+            GateSignature::try_new(name, gate_parameters, qubit_parameters, gate_type.into())
+                .map_err(RustGateError::from)
+                .map_err(RustGateError::to_py_err)?,
+        ))
+    }
+}
+
+rigetti_pyo3::impl_as_mut_for_wrapper!(PyGateSignature);
+impl_repr!(PyGateSignature);
+impl_eq!(PyGateSignature);
 
 py_wrap_simple_enum! {
     #[derive(Debug, PartialEq, Eq)]
@@ -292,5 +328,11 @@ impl PyGateDefinition {
             .map_err(RustGateError::from)
             .map_err(RustGateError::to_py_err)?,
         ))
+    }
+
+    #[getter]
+    pub fn signature(&self) -> PyGateSignature {
+        let signature = GateSignature::from(self.as_inner());
+        PyGateSignature::from(signature)
     }
 }

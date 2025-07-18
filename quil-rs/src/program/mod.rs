@@ -19,11 +19,9 @@ use std::collections::{HashMap, HashSet};
 use std::ops::{self};
 use std::str::FromStr;
 
-use defgate_sequence_expansion::DefGateSequenceExpansion;
 use indexmap::{IndexMap, IndexSet};
 use ndarray::Array2;
 use nom_locate::LocatedSpan;
-use source_map::{InstructionSourceMap, InstructionTarget};
 
 use crate::instruction::{
     Arithmetic, ArithmeticOperand, ArithmeticOperator, Call, Declaration,
@@ -40,6 +38,7 @@ use crate::quil::Quil;
 pub use self::calibration::Calibrations;
 pub use self::calibration::{CalibrationExpansion, CalibrationExpansionOutput, CalibrationSource};
 pub use self::calibration_set::CalibrationSet;
+pub use self::defgate_sequence_expansion::DefGateSequenceExpansion;
 pub use self::error::{
     disallow_leftover, map_parsed, recover, LeftoverError, ParseProgramError, SyntaxError,
 };
@@ -48,7 +47,10 @@ pub use self::frame::MatchedFrames;
 pub use self::memory::{
     MemoryAccess, MemoryAccesses, MemoryAccessesError, MemoryAccessesResult, MemoryRegion,
 };
-pub use self::source_map::{SourceMap, SourceMapEntry};
+pub use self::source_map::{
+    InstructionSource, InstructionSourceMap, InstructionTarget, InstructionTargetRewrite,
+    SourceMap, SourceMapEntry,
+};
 
 pub mod analysis;
 mod calibration;
@@ -278,9 +280,7 @@ impl Program {
 
     /// Expand any instructions in the program which have a matching calibration, leaving the others
     /// unchanged. Return the expanded copy of the program and a source mapping of the expansions made.
-    pub fn expand_calibrations_with_source_map(
-        &self,
-    ) -> Result<(Program, InstructionSourceMap<CalibrationExpansion>)> {
+    pub fn expand_calibrations_with_source_map(&self) -> Result<(Program, InstructionSourceMap)> {
         let mut source_mapping = ProgramCalibrationExpansionSourceMap::default();
         let new_program = self.expand_calibrations_inner(Some(&mut source_mapping))?;
 
@@ -359,7 +359,7 @@ impl Program {
     pub fn expand_defgate_sequences_with_source_map(
         &self,
         filter: crate::filter_set::Filter<String>,
-    ) -> Result<(Self, InstructionSourceMap<DefGateSequenceExpansion>)> {
+    ) -> Result<(Self, InstructionSourceMap)> {
         let (expander, gate_definitions) = self.initialize_defgate_sequence_expander(filter);
         let (new_instructions, source_map) =
             expander.expand_defgate_sequences_with_source_map(&self.instructions)?;

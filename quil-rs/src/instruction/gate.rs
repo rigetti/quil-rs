@@ -955,11 +955,42 @@ impl Quil for GateDefinition {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub(crate) struct GateSignature {
-    pub(crate) name: String,
-    pub(crate) gate_parameters: Vec<String>,
-    pub(crate) qubit_parameters: Vec<String>,
-    pub(crate) gate_type: GateType,
+pub struct GateSignature {
+    name: String,
+    gate_parameters: Vec<String>,
+    qubit_parameters: Vec<String>,
+    gate_type: GateType,
+}
+
+impl GateSignature {
+    pub fn try_new(name: String, gate_parameters: Vec<String>, qubit_parameters: Vec<String>, gate_type: GateType) -> Result<Self, GateError> {
+        validate_user_identifier(&name)?;
+        if qubit_parameters.is_empty() {
+            return Err(GateError::EmptyQubits);
+        }
+        Ok(Self {
+            name,
+            gate_parameters,
+            qubit_parameters,
+            gate_type,
+        })
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn gate_parameters(&self) -> &[String] {
+        &self.gate_parameters
+    }
+
+    pub fn qubit_parameters(&self) -> &[String] {
+        &self.qubit_parameters
+    }
+
+    pub fn gate_type(&self) -> GateType {
+        self.gate_type
+    }
 }
 
 impl From<&GateDefinition> for GateSignature {

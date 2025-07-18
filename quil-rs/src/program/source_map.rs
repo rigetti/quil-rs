@@ -1,6 +1,8 @@
 use std::fmt::Debug;
 
-use super::InstructionIndex;
+use crate::instruction::GateSignature;
+
+use super::{CalibrationExpansion, CalibrationSource, DefGateSequenceExpansion, InstructionIndex};
 
 /// A SourceMap provides information necessary to understand which parts of a target
 /// were derived from which parts of a source artifact, in such a way that they can be
@@ -105,21 +107,24 @@ impl SourceMapIndexable<InstructionIndex> for InstructionIndex {
 #[derive(Clone, Debug, PartialEq)]
 pub struct InstructionSource(std::ops::Range<InstructionIndex>);
 
+impl InstructionSource {
+    pub fn start(&self) -> InstructionIndex {
+        self.0.start
+    }
+
+    pub fn end(&self) -> InstructionIndex {
+        self.0.end
+    }
+
+    pub fn contains(&self, index: &InstructionIndex) -> bool {
+        self.0.contains(index)
+    }
+}
+
 impl From<InstructionIndex> for InstructionSource {
     fn from(value: InstructionIndex) -> Self {
         Self(value..InstructionIndex(value.0 + 1))
     }
-}
-
-pub trait InstructionTargetRewrite: Debug + Clone + PartialEq {
-    // label: String,
-    // target_range: std::ops::Range<InstructionIndex>,
-    // nested_instruction_source_map: Option<InstructionSourceMap>,
-    fn label(&self) -> String;
-    fn target_range(&self) -> std::ops::Range<InstructionIndex>;
-    fn nested_source_map(&self) -> Option<InstructionSourceMap<Self>>
-    where
-        Self: Sized;
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -128,10 +133,29 @@ pub enum InstructionTarget<R> {
     Rewrite(R),
 }
 
-pub type InstructionSourceMap<R> = SourceMap<InstructionSource, InstructionTarget<R>>;
+#[derive(Clone, Debug, PartialEq)]
+pub enum InstructionTargetRewrite {
+    Calibration(CalibrationExpansion),
+    DefGateSequence(DefGateSequenceExpansion),
+}
 
-impl<R: InstructionTargetRewrite> From<SourceMap<InstructionIndex, InstructionTarget<R>>>
-    for InstructionSourceMap<R>
+impl From<CalibrationExpansion> for InstructionTargetRewrite {
+    fn from(value: CalibrationExpansion) -> Self {
+        Self::Calibration(value)
+    }
+}
+
+impl From<DefGateSequenceExpansion> for InstructionTargetRewrite {
+    fn from(value: DefGateSequenceExpansion) -> Self {
+        Self::DefGateSequence(value)
+    }
+}
+
+pub type InstructionSourceMap =
+    SourceMap<InstructionSource, InstructionTarget<InstructionTargetRewrite>>;
+
+impl<R: Into<InstructionTargetRewrite>> From<SourceMap<InstructionIndex, InstructionTarget<R>>>
+    for InstructionSourceMap
 {
     fn from(value: SourceMap<InstructionIndex, InstructionTarget<R>>) -> Self {
         let entries = value
@@ -139,9 +163,48 @@ impl<R: InstructionTargetRewrite> From<SourceMap<InstructionIndex, InstructionTa
             .into_iter()
             .map(|entry| SourceMapEntry {
                 source_location: InstructionSource::from(entry.source_location),
-                target_location: entry.target_location,
+                target_location: match entry.target_location {
+                    InstructionTarget::Copied(index) => InstructionTarget::Copied(index),
+                    InstructionTarget::Rewrite(rewrite) => {
+                        InstructionTarget::Rewrite(rewrite.into())
+                    }
+                },
             })
             .collect();
         Self { entries }
+    }
+}
+
+impl SourceMapIndexable<InstructionIndex> for InstructionTarget<InstructionTargetRewrite> {
+    fn intersects(&self, other: &InstructionIndex) -> bool {
+        match self {
+            Self::Copied(index) => index == other,
+            Self::Rewrite(InstructionTargetRewrite::Calibration(expansion)) => expansion.intersects(other),
+            Self::Rewrite(InstructionTargetRewrite::DefGateSequence(expansion)) => expansion.intersects(other),
+        }
+    }
+}
+
+impl SourceMapIndexable<InstructionIndex> for InstructionSource {
+    fn intersects(&self, other: &InstructionIndex) -> bool {
+        self.contains(other)
+    }
+}
+
+impl SourceMapIndexable<CalibrationSource> for InstructionTarget<InstructionTargetRewrite> {
+    fn intersects(&self, other: &CalibrationSource) -> bool {
+        match self {
+            Self::Rewrite(InstructionTargetRewrite::Calibration(expansion)) => expansion.intersects(other),
+            _ => false,
+        }
+    }
+}
+
+impl SourceMapIndexable<GateSignature> for InstructionTarget<InstructionTargetRewrite> {
+    fn intersects(&self, other: &GateSignature) -> bool {
+        match self {
+            Self::Rewrite(InstructionTargetRewrite::DefGateSequence(expansion)) => expansion.intersects(other),
+            _ => false,
+        }
     }
 }

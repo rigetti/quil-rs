@@ -6,8 +6,9 @@ use pyo3::{
     IntoPy, Py, PyAny, PyResult, Python,
 };
 use quil_rs::program::{
-    CalibrationExpansion, CalibrationSource, InstructionIndex, MaybeCalibrationExpansion,
-    ProgramCalibrationExpansion, ProgramCalibrationExpansionSourceMap, SourceMap, SourceMapEntry,
+    CalibrationExpansion, CalibrationSource, DefGateSequenceExpansion, InstructionIndex,
+    InstructionSource, InstructionSourceMap, InstructionTarget, InstructionTargetRewrite,
+    SourceMap, SourceMapEntry,
 };
 use rigetti_pyo3::{
     impl_as_mut_for_wrapper, impl_repr, py_wrap_type, py_wrap_union_enum, pyo3::pymethods,
@@ -16,15 +17,10 @@ use rigetti_pyo3::{
 
 use crate::{
     impl_eq,
-    instruction::{PyCalibrationIdentifier, PyMeasureCalibrationIdentifier},
+    instruction::{PyCalibrationIdentifier, PyGateSignature, PyMeasureCalibrationIdentifier},
 };
 
 use super::PyProgram;
-
-type CalibrationExpansionSourceMap = SourceMap<InstructionIndex, CalibrationExpansion>;
-type CalibrationExpansionSourceMapEntry = SourceMapEntry<InstructionIndex, CalibrationExpansion>;
-type ProgramCalibrationExpansionSourceMapEntry =
-    SourceMapEntry<InstructionIndex, MaybeCalibrationExpansion>;
 
 py_wrap_type! {
     #[derive(Debug, PartialEq)]
@@ -47,22 +43,56 @@ impl PyCalibrationExpansion {
         range.call1(tuple)?.extract()
     }
 
-    pub fn expansions(&self) -> PyCalibrationExpansionSourceMap {
-        self.as_inner().expansions().into()
+    pub fn expansions(&self) -> PyInstructionSourceMap {
+        InstructionSourceMap::from(self.as_inner().expansions().clone()).into()
     }
 }
 
 py_wrap_type! {
     #[derive(Debug, PartialEq)]
-    PyCalibrationExpansionSourceMap(CalibrationExpansionSourceMap) as "CalibrationExpansionSourceMap"
+    PyDefGateSequenceExpansion(DefGateSequenceExpansion) as "DefGateSequenceExpansion"
 }
 
-impl_repr!(PyCalibrationExpansionSourceMap);
-impl_eq!(PyCalibrationExpansionSourceMap);
+impl_repr!(PyDefGateSequenceExpansion);
+impl_eq!(PyDefGateSequenceExpansion);
 
 #[pymethods]
-impl PyCalibrationExpansionSourceMap {
-    pub fn entries(&self) -> Vec<PyCalibrationExpansionSourceMapEntry> {
+impl PyDefGateSequenceExpansion {
+    pub fn calibration_used(&self) -> PyGateSignature {
+        self.as_inner().defgate_sequence_source().into()
+    }
+
+    pub fn range<'py>(&self, py: Python<'py>) -> PyResult<&'py PyAny> {
+        let range = PyModule::import(py, "builtins")?.getattr("range")?;
+        let Range { start, end } = self.as_inner().range();
+        let tuple = PyTuple::new(py, [start.0, end.0]);
+        range.call1(tuple)?.extract()
+    }
+
+    pub fn expansions(&self) -> PyInstructionSourceMap {
+        InstructionSourceMap::from(self.as_inner().nested_expansions().clone()).into()
+    }
+}
+
+py_wrap_union_enum! {
+    #[derive(Debug, PartialEq)]
+    PyInstructionTargetRewrite(InstructionTargetRewrite) as "InstructionTargetRewrite" {
+        calibration: Calibration => PyCalibrationExpansion,
+        defgate_sequence: DefGateSequence => PyDefGateSequenceExpansion
+    }
+}
+
+py_wrap_type! {
+    #[derive(Debug, PartialEq)]
+    PyInstructionSourceMap(InstructionSourceMap) as "InstructionSourceMap"
+}
+
+impl_repr!(PyInstructionSourceMap);
+impl_eq!(PyInstructionSourceMap);
+
+#[pymethods]
+impl PyInstructionSourceMap {
+    pub fn entries(&self) -> Vec<PyInstructionSourceMapEntry> {
         self.as_inner()
             .entries()
             .iter()
@@ -74,11 +104,11 @@ impl PyCalibrationExpansionSourceMap {
     /// which were expanded to generate that instruction.
     ///
     /// This is `O(n)` where `n` is the number of first-level calibration expansions performed.
-    pub fn list_sources_for_target_index(&self, target_index: usize) -> Vec<usize> {
+    pub fn list_sources_for_target_index(&self, target_index: usize) -> Vec<(usize, usize)> {
         self.as_inner()
             .list_sources(&InstructionIndex(target_index))
             .into_iter()
-            .map(|index| index.0)
+            .map(|index| (index.start().0, index.end().0))
             .collect()
     }
 
@@ -93,7 +123,7 @@ impl PyCalibrationExpansionSourceMap {
         self.as_inner()
             .list_sources(calibration_used.as_inner())
             .into_iter()
-            .map(|index| index.0)
+            .map(|index| index.start().0)
             .collect()
     }
 
@@ -103,31 +133,35 @@ impl PyCalibrationExpansionSourceMap {
     pub fn list_targets_for_source_index(
         &self,
         source_index: usize,
-    ) -> Vec<PyCalibrationExpansion> {
+    ) -> Vec<PyInstructionTarget> {
         self.as_inner()
             .list_targets(&InstructionIndex(source_index))
             .into_iter()
-            .map(|expansion| expansion.into())
+            .map(|expansion| InstructionTargetShim::from(expansion.clone()).into())
             .collect()
     }
 }
 
+type InstructionSourceMapEntry =
+    SourceMapEntry<InstructionSource, InstructionTarget<InstructionTargetRewrite>>;
+
 py_wrap_type! {
     #[derive(Debug, PartialEq)]
-    PyCalibrationExpansionSourceMapEntry(CalibrationExpansionSourceMapEntry) as "CalibrationExpansionSourceMapEntry"
+    PyInstructionSourceMapEntry(InstructionSourceMapEntry) as "InstructionSourceMapEntry"
 }
 
-impl_repr!(PyCalibrationExpansionSourceMapEntry);
-impl_eq!(PyCalibrationExpansionSourceMapEntry);
+impl_repr!(PyInstructionSourceMapEntry);
+impl_eq!(PyInstructionSourceMapEntry);
 
 #[pymethods]
-impl PyCalibrationExpansionSourceMapEntry {
-    pub fn source_location(&self) -> usize {
-        self.as_inner().source_location().0
+impl PyInstructionSourceMapEntry {
+    pub fn source_location(&self) -> (usize, usize) {
+        let source_location = self.as_inner().source_location();
+        (source_location.start().0, source_location.end().0)
     }
 
-    pub fn target_location(&self) -> PyCalibrationExpansion {
-        self.as_inner().target_location().into()
+    pub fn target_location(&self) -> PyInstructionTarget {
+        InstructionTargetShim::from(self.as_inner().target_location().clone()).into()
     }
 }
 
@@ -142,216 +176,37 @@ py_wrap_union_enum! {
 impl_repr!(PyCalibrationSource);
 impl_eq!(PyCalibrationSource);
 
-// Note: this type is manually implemented below because there is no `Into` conversion from `InstructionIndex` to `usize`
-// This manual implementation follows the same API as this invocation otherwise would:
-// ```
-// py_wrap_union_enum! {
-//     #[derive(Debug, PartialEq)]
-//     PyMaybeCalibrationExpansion(MaybeCalibrationExpansion) as "MaybeCalibrationExpansion" {
-//         expanded: Expanded => PyCalibrationExpansion,
-//         unexpanded: Unexpanded => InstructionIndex => usize
-//     }
-// }
-// ```
-py_wrap_type! {
+#[derive(Debug, PartialEq, Clone)]
+enum InstructionTargetShim {
+    Copied(usize),
+    Rewrite(InstructionTargetRewrite)
+}
+
+impl From<InstructionTargetShim> for InstructionTarget<InstructionTargetRewrite> {
+   fn from(value: InstructionTargetShim) -> Self {
+        match value {
+            InstructionTargetShim::Copied(index) => InstructionTarget::Copied(InstructionIndex(index)),
+            InstructionTargetShim::Rewrite(rewrite) => InstructionTarget::Rewrite(rewrite)
+        }
+   } 
+}
+
+impl From<InstructionTarget<InstructionTargetRewrite>> for InstructionTargetShim {
+    fn from(value: InstructionTarget<InstructionTargetRewrite>) -> Self {
+        match value {
+            InstructionTarget::Copied(index) => InstructionTargetShim::Copied(index.0),
+            InstructionTarget::Rewrite(rewrite) => InstructionTargetShim::Rewrite(rewrite)
+        }
+    }
+}
+
+py_wrap_union_enum! {
     #[derive(Debug, PartialEq)]
-    PyMaybeCalibrationExpansion(MaybeCalibrationExpansion) as "MaybeCalibrationExpansion"
-}
-
-impl_as_mut_for_wrapper!(PyMaybeCalibrationExpansion);
-
-#[pymethods]
-impl PyMaybeCalibrationExpansion {
-    #[new]
-    pub fn new(py: Python, input: &PyAny) -> PyResult<Self> {
-        if let Ok(inner) = <_ as PyTryFrom<PyAny>>::py_try_from(py, input) {
-            let inner = &inner;
-            if let Ok(item) = PyTryFrom::py_try_from(py, inner) {
-                return Ok(Self::from(MaybeCalibrationExpansion::Rewrite(item)));
-            }
-        }
-
-        if let Ok(inner) = <_ as PyTryFrom<PyAny>>::py_try_from(py, input) {
-            if let Ok(item) = PyTryFrom::<usize>::py_try_from(py, &inner) {
-                return Ok(Self::from(MaybeCalibrationExpansion::Copied(
-                    InstructionIndex(item),
-                )));
-            }
-        }
-
-        Err(exceptions::PyValueError::new_err(format!(
-            "could not create {} from {}",
-            stringify!($name),
-            input.repr()?
-        )))
-    }
-
-    #[allow(unreachable_code, unreachable_patterns)]
-    pub fn inner(&self, py: Python) -> PyResult<Py<PyAny>> {
-        match &self.0 {
-            MaybeCalibrationExpansion::Rewrite(inner) => Ok(
-                conversion::IntoPy::<Py<PyAny>>::into_py(ToPython::to_python(&inner, py)?, py),
-            ),
-            MaybeCalibrationExpansion::Copied(inner) => Ok(inner.0.into_py(py)),
-            _ => {
-                use exceptions::PyRuntimeError;
-                Err(PyRuntimeError::new_err(
-                    "Enum variant has no inner data or is unimplemented",
-                ))
-            }
-        }
-    }
-
-    pub fn as_expanded(&self) -> Option<PyCalibrationExpansion> {
-        match &self.0 {
-            MaybeCalibrationExpansion::Rewrite(inner) => {
-                Some(PyCalibrationExpansion(inner.clone()))
-            }
-            _ => None,
-        }
-    }
-
-    pub fn as_unexpanded(&self) -> Option<usize> {
-        match &self.0 {
-            MaybeCalibrationExpansion::Copied(inner) => Some(inner.0),
-            _ => None,
-        }
-    }
-
-    #[staticmethod]
-    pub fn from_expanded(inner: PyCalibrationExpansion) -> Self {
-        Self(MaybeCalibrationExpansion::Rewrite(inner.into_inner()))
-    }
-
-    #[staticmethod]
-    pub fn from_unexpanded(inner: usize) -> Self {
-        Self(MaybeCalibrationExpansion::Copied(InstructionIndex(inner)))
-    }
-
-    pub fn is_expanded(&self) -> bool {
-        matches!(self.0, MaybeCalibrationExpansion::Rewrite(_))
-    }
-
-    pub fn is_unexpanded(&self) -> bool {
-        matches!(self.0, MaybeCalibrationExpansion::Copied(_))
-    }
-
-    pub fn to_expanded(&self) -> PyResult<PyCalibrationExpansion> {
-        match &self.0 {
-            MaybeCalibrationExpansion::Rewrite(inner) => Ok(PyCalibrationExpansion(inner.clone())),
-            _ => Err(pyo3::exceptions::PyValueError::new_err(
-                "expected self to be an Expanded variant",
-            )),
-        }
-    }
-
-    pub fn to_unexpanded(&self) -> PyResult<usize> {
-        match &self.0 {
-            MaybeCalibrationExpansion::Copied(inner) => Ok(inner.0),
-            _ => Err(pyo3::exceptions::PyValueError::new_err(
-                "expected self to be an Unexpanded variant",
-            )),
-        }
+    PyInstructionTarget(InstructionTargetShim) as "InstructionTarget" {
+        copied: Copied => usize,
+        rewrite: Rewrite => PyInstructionTargetRewrite
     }
 }
 
-impl_repr!(PyMaybeCalibrationExpansion);
-impl_eq!(PyMaybeCalibrationExpansion);
-
-py_wrap_type! {
-    #[derive(Debug, PartialEq)]
-    PyProgramCalibrationExpansion(ProgramCalibrationExpansion) as "ProgramCalibrationExpansion"
-}
-
-impl_repr!(PyProgramCalibrationExpansion);
-impl_eq!(PyProgramCalibrationExpansion);
-
-#[pymethods]
-impl PyProgramCalibrationExpansion {
-    pub fn program(&self) -> PyProgram {
-        self.as_inner().program().into()
-    }
-
-    pub fn source_map(&self) -> PyProgramCalibrationExpansionSourceMap {
-        self.as_inner().source_map().clone().into()
-    }
-}
-
-py_wrap_type! {
-    #[derive(Debug, PartialEq)]
-    PyProgramCalibrationExpansionSourceMap(ProgramCalibrationExpansionSourceMap) as "ProgramCalibrationExpansionSourceMap"
-}
-
-impl_repr!(PyProgramCalibrationExpansionSourceMap);
-impl_eq!(PyProgramCalibrationExpansionSourceMap);
-
-#[pymethods]
-impl PyProgramCalibrationExpansionSourceMap {
-    pub fn entries(&self) -> Vec<PyProgramCalibrationExpansionSourceMapEntry> {
-        self.as_inner()
-            .entries()
-            .iter()
-            .map(|entry| entry.into())
-            .collect()
-    }
-
-    /// Given an instruction index within the resulting expansion, return the locations in the source
-    /// which were expanded to generate that instruction.
-    ///
-    /// This is `O(n)` where `n` is the number of source instructions.
-    pub fn list_sources_for_target_index(&self, target_index: usize) -> Vec<usize> {
-        self.as_inner()
-            .list_sources(&InstructionIndex(target_index))
-            .into_iter()
-            .map(|index| index.0)
-            .collect()
-    }
-
-    /// Given a particular calibration (`DEFCAL` or `DEFCAL MEASURE`), return the locations in the source
-    /// program which were expanded using that calibration.
-    ///
-    /// This is `O(n)` where `n` is the number of source instructions.
-    pub fn list_sources_for_calibration_used(
-        &self,
-        calibration_used: PyCalibrationSource,
-    ) -> Vec<usize> {
-        self.as_inner()
-            .list_sources(calibration_used.as_inner())
-            .into_iter()
-            .map(|index| index.0)
-            .collect()
-    }
-
-    /// Given a source index, return information about its expansion.
-    ///
-    /// This is `O(n)` where `n` is the number of source instructions.
-    pub fn list_targets_for_source_index(
-        &self,
-        source_index: usize,
-    ) -> Vec<PyMaybeCalibrationExpansion> {
-        self.as_inner()
-            .list_targets(&InstructionIndex(source_index))
-            .into_iter()
-            .map(|expansion| expansion.into())
-            .collect()
-    }
-}
-
-py_wrap_type! {
-    #[derive(Debug, PartialEq)]
-    PyProgramCalibrationExpansionSourceMapEntry(ProgramCalibrationExpansionSourceMapEntry) as "ProgramCalibrationExpansionSourceMapEntry"
-}
-
-impl_repr!(PyProgramCalibrationExpansionSourceMapEntry);
-impl_eq!(PyProgramCalibrationExpansionSourceMapEntry);
-
-#[pymethods]
-impl PyProgramCalibrationExpansionSourceMapEntry {
-    pub fn source_location(&self) -> usize {
-        self.as_inner().source_location().0
-    }
-
-    pub fn target_location(&self) -> PyMaybeCalibrationExpansion {
-        self.as_inner().target_location().clone().into()
-    }
-}
+impl_repr!(PyInstructionTarget);
+impl_eq!(PyInstructionTarget);

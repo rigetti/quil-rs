@@ -30,8 +30,7 @@ use crate::{
 };
 
 use super::source_map::{
-    InstructionSourceMap, InstructionTarget, InstructionTargetRewrite, SourceMap, SourceMapEntry,
-    SourceMapIndexable,
+    InstructionSourceMap, InstructionTarget, SourceMap, SourceMapEntry, SourceMapIndexable,
 };
 use super::{CalibrationSet, InstructionIndex, ProgramError};
 
@@ -138,23 +137,6 @@ impl CalibrationExpansion {
     }
 }
 
-impl InstructionTargetRewrite for CalibrationExpansion {
-    fn label(&self) -> String {
-        match &self.calibration_used {
-            CalibrationSource::Calibration(cal) => cal.to_quil_or_debug(),
-            CalibrationSource::MeasureCalibration(cal) => cal.to_quil_or_debug(),
-        }
-    }
-
-    fn target_range(&self) -> Range<InstructionIndex> {
-        self.range.clone()
-    }
-
-    fn nested_source_map(&self) -> Option<InstructionSourceMap<CalibrationExpansion>> {
-        Some(InstructionSourceMap::from(self.expansions.clone()))
-    }
-}
-
 impl SourceMapIndexable<InstructionIndex> for CalibrationExpansion {
     fn intersects(&self, other: &InstructionIndex) -> bool {
         self.range.contains(other)
@@ -164,24 +146,6 @@ impl SourceMapIndexable<InstructionIndex> for CalibrationExpansion {
 impl SourceMapIndexable<CalibrationSource> for CalibrationExpansion {
     fn intersects(&self, other: &CalibrationSource) -> bool {
         self.calibration_used() == other
-    }
-}
-
-impl SourceMapIndexable<InstructionIndex> for InstructionTarget<CalibrationExpansion> {
-    fn intersects(&self, other: &InstructionIndex) -> bool {
-        match self {
-            InstructionTarget::Rewrite(expansion) => expansion.intersects(other),
-            InstructionTarget::Copied(index) => index == other,
-        }
-    }
-}
-
-impl SourceMapIndexable<CalibrationSource> for InstructionTarget<CalibrationExpansion> {
-    fn intersects(&self, other: &CalibrationSource) -> bool {
-        match self {
-            InstructionTarget::Rewrite(expansion) => expansion.intersects(other),
-            InstructionTarget::Copied(_) => false,
-        }
     }
 }
 

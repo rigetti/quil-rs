@@ -37,7 +37,7 @@ pub use self::{
     },
     gate::{
         GateError, PyGate, PyGateDefinition, PyGateModifier, PyGateSpecification, PyPauliGate,
-        PyPauliSum, PyPauliTerm,
+        PyPauliSum, PyPauliTerm, PyGateSignature, PyGateType,
     },
     measurement::PyMeasurement,
     pragma::{PyInclude, PyPragma, PyPragmaArgument},

@@ -13,7 +13,9 @@ use crate::{
     quil::Quil,
 };
 
-use super::source_map::{InstructionSourceMap, InstructionTarget, InstructionTargetRewrite};
+use super::source_map::{
+    InstructionSourceMap, InstructionTarget, InstructionTargetRewrite, SourceMapIndexable,
+};
 
 /// Details about the expansion of a calibration
 #[derive(Clone, Debug, PartialEq)]
@@ -30,41 +32,34 @@ pub struct DefGateSequenceExpansion {
     nested_expansions: SourceMap<InstructionIndex, InstructionTarget<DefGateSequenceExpansion>>,
 }
 
-impl InstructionTargetRewrite for DefGateSequenceExpansion {
-    fn label(&self) -> String {
-        self.defgate_sequence_source.to_quil_or_debug()
+impl DefGateSequenceExpansion {
+    /// Returns the source gate signature of the sequence gate definition
+    pub fn defgate_sequence_source(&self) -> &GateSignature {
+        &self.defgate_sequence_source
     }
 
-    fn target_range(&self) -> std::ops::Range<InstructionIndex> {
-        self.range.clone()
+    /// Returns the range of target instruction indices produced by the expansion
+    pub fn range(&self) -> &Range<InstructionIndex> {
+        &self.range
     }
 
-    fn nested_source_map(
+    /// Returns the nested expansions of this sequence gate definition
+    pub fn nested_expansions(
         &self,
-    ) -> Option<
-        SourceMap<
-            super::source_map::InstructionSource,
-            InstructionTarget<DefGateSequenceExpansion>,
-        >,
-    > {
-        if self.nested_expansions.entries.is_empty() {
-            None
-        } else {
-            Some(SourceMap {
-                entries: self
-                    .nested_expansions
-                    .entries
-                    .iter()
-                    .cloned()
-                    .map(|entry| SourceMapEntry {
-                        source_location: super::source_map::InstructionSource::from(
-                            entry.source_location,
-                        ),
-                        target_location: entry.target_location,
-                    })
-                    .collect(),
-            })
-        }
+    ) -> &SourceMap<InstructionIndex, InstructionTarget<DefGateSequenceExpansion>> {
+        &self.nested_expansions
+    }
+}
+
+impl SourceMapIndexable<InstructionIndex> for DefGateSequenceExpansion {
+    fn intersects(&self, other: &InstructionIndex) -> bool {
+        self.range.contains(other)
+    }
+}
+
+impl SourceMapIndexable<GateSignature> for DefGateSequenceExpansion {
+    fn intersects(&self, other: &GateSignature) -> bool {
+        &self.defgate_sequence_source == other
     }
 }
 
@@ -101,13 +96,7 @@ impl<'program> ProgramDefGateSequenceExpander<'program> {
     pub(crate) fn expand_defgate_sequences_with_source_map(
         &self,
         source_instructions: &[Instruction],
-    ) -> Result<
-        (
-            Vec<Instruction>,
-            InstructionSourceMap<DefGateSequenceExpansion>,
-        ),
-        DefGateSequenceExpansionError,
-    > {
+    ) -> Result<(Vec<Instruction>, InstructionSourceMap), DefGateSequenceExpansionError> {
         let mut source_map = SourceMap::default();
         self.expand_defgate_sequences_with_source_map_inner(
             source_instructions,
@@ -130,7 +119,7 @@ impl<'program> ProgramDefGateSequenceExpander<'program> {
                 self.gate_sequence_from_instruction(seen, source_instruction)?
             {
                 let mut seen = seen.clone();
-                seen.insert(source.name.clone());
+                seen.insert(source.name().to_string());
 
                 let mut recursive_source_map = SourceMap::default();
                 let recursive_target_gate_instructions = self
@@ -176,7 +165,7 @@ impl<'program> ProgramDefGateSequenceExpander<'program> {
                 self.gate_sequence_from_instruction(seen, source_instruction)?
             {
                 let mut seen = seen.clone();
-                seen.insert(source.name.clone());
+                seen.insert(source.name().to_string());
 
                 let recursive_target_gate_instructions = self
                     .expand_defgate_sequences_without_source_map_inner(
@@ -219,7 +208,7 @@ impl<'program> ProgramDefGateSequenceExpander<'program> {
                             ));
                         }
                         let source = GateSignature::from(gate_definition);
-                        if seen.contains(&source.name) {
+                        if seen.contains(source.name()) {
                             let cycle = seen.iter().cloned().collect();
                             return Err(
                                 DefGateSequenceExpansionError::CyclicSequenceGateDefinition(cycle),
@@ -258,12 +247,12 @@ mod tests {
 
     impl From<CompactGateSignature> for GateSignature {
         fn from(value: CompactGateSignature) -> Self {
-            GateSignature {
-                name: value.0.to_string(),
-                gate_parameters: value.1.iter().map(|s| s.to_string()).collect(),
-                qubit_parameters: value.2.iter().map(|s| s.to_string()).collect(),
-                gate_type: crate::instruction::GateType::Sequence,
-            }
+            GateSignature::try_new(
+                value.0.to_string(),
+                value.1.iter().map(|s| s.to_string()).collect(),
+                value.2.iter().map(|s| s.to_string()).collect(),
+                crate::instruction::GateType::Sequence,
+            ).expect("must be a valid gate")
         }
     }
 
