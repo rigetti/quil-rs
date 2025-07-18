@@ -1,18 +1,15 @@
 use std::ops::Range;
 
 use pyo3::{
-    conversion, exceptions,
     types::{PyModule, PyTuple},
-    IntoPy, Py, PyAny, PyResult, Python,
+    PyAny, PyResult, Python,
 };
 use quil_rs::program::{
     CalibrationExpansion, CalibrationSource, DefGateSequenceExpansion, InstructionIndex,
-    InstructionSource, InstructionSourceMap, InstructionTarget, InstructionTargetRewrite,
-    SourceMap, SourceMapEntry,
+    InstructionSource, InstructionSourceMap, InstructionTarget, InstructionTargetRewrite, SourceMapEntry,
 };
 use rigetti_pyo3::{
-    impl_as_mut_for_wrapper, impl_repr, py_wrap_type, py_wrap_union_enum, pyo3::pymethods,
-    PyTryFrom, PyWrapper, ToPython,
+    impl_repr, py_wrap_type, py_wrap_union_enum, pyo3::pymethods, PyWrapper,
 };
 
 use crate::{
@@ -20,7 +17,6 @@ use crate::{
     instruction::{PyCalibrationIdentifier, PyGateSignature, PyMeasureCalibrationIdentifier},
 };
 
-use super::PyProgram;
 
 py_wrap_type! {
     #[derive(Debug, PartialEq)]
