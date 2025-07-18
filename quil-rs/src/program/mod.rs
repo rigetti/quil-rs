@@ -22,6 +22,8 @@ use std::str::FromStr;
 use indexmap::{IndexMap, IndexSet};
 use ndarray::Array2;
 use nom_locate::LocatedSpan;
+use petgraph::algo::DfsSpace;
+use petgraph::Graph;
 
 use crate::instruction::{
     Arithmetic, ArithmeticOperand, ArithmeticOperator, Call, Declaration,
@@ -385,20 +387,10 @@ impl Program {
         ProgramDefGateSequenceExpander,
         IndexMap<String, GateDefinition>,
     ) {
-        let gate_definitions = self
-            .gate_definitions
-            .iter()
-            .filter(|(gate_name, gate_definition)| {
-                if let GateSpecification::Sequence(_) = gate_definition.specification {
-                    !filter.include(gate_name)
-                } else {
-                    false
-                }
-            })
-            .map(|(gate_name, definition)| (gate_name.clone(), definition.clone()))
-            .collect();
+        let gate_definitions_to_keep =
+            filter_sequence_gate_definitions_to_keep(&self.gate_definitions, &filter);
         let expansion = ProgramDefGateSequenceExpander::new(&self.gate_definitions, filter);
-        (expansion, gate_definitions)
+        (expansion, gate_definitions_to_keep)
     }
 
     /// Append the result of a calibration expansion to this program, being aware of which expanded instructions
@@ -844,6 +836,67 @@ impl Program {
     ) -> std::result::Result<ExternSignatureMap, (Pragma, ExternError)> {
         ExternSignatureMap::try_from(self.extern_pragma_map.clone())
     }
+}
+
+fn filter_sequence_gate_definitions_to_keep(
+    gate_definitions: &IndexMap<String, GateDefinition>,
+    filter: &crate::filter_set::Filter<String>,
+) -> IndexMap<String, GateDefinition> {
+    let mut graph: Graph<usize, u8> = Graph::new();
+    let gate_sequence_definitions = gate_definitions
+        .iter()
+        .filter_map(|(gate_name, definition)| {
+            if let GateSpecification::Sequence(sequence) = &definition.specification {
+                Some((gate_name.clone(), sequence.clone()))
+            } else {
+                None
+            }
+        })
+        .map(| (gate_name, sequence)| (gate_name, (graph.add_node(1), sequence)))
+        .collect::<HashMap<_, _>>();
+
+    gate_sequence_definitions
+        .values()
+        .flat_map(|(i, sequence)| {
+            sequence.gates.iter().filter_map(|gate| {
+                if let Some((j, _)) = gate_sequence_definitions.get(&gate.name) {
+                    Some((*i, *j))
+                } else {
+                    None
+                }
+            })
+        })
+        .for_each(|edge| {
+            graph.add_edge(edge.0, edge.1, 1);
+        });
+
+    let mut space = DfsSpace::new(&graph);
+    let mut seq_defgates_referenced_by_unfiltered_seq_defgates = HashSet::new();
+
+    for (_, (i, _)) in gate_sequence_definitions
+        .iter()
+        .filter(|(name, _)| !filter.include(name))
+    {
+        for (gate_name, (j, _)) in gate_sequence_definitions.iter() {
+            if petgraph::algo::has_path_connecting(&graph, *i, *j, Some(&mut space)) {
+                seq_defgates_referenced_by_unfiltered_seq_defgates.insert(gate_name.clone());
+                break;
+            }
+        }
+    }
+
+    gate_definitions
+        .iter()
+        .filter(|(gate_name, definition)| {
+            if let GateSpecification::Sequence(_) = definition.specification {
+                !filter.include(gate_name)
+                    || seq_defgates_referenced_by_unfiltered_seq_defgates.contains(*gate_name)
+            } else {
+                true
+            }
+        })
+        .map(|(gate_name, definition)| (gate_name.clone(), definition.clone()))
+        .collect()
 }
 
 impl Quil for Program {
@@ -2161,6 +2214,55 @@ DEFGATE seq1(%param1) a AS SEQUENCE:
 
 seq1(pi/2) 0
 X 1
+MEASURE 0 ro[0]
+MEASURE 1 ro[1]
+";
+        let expected_program = Program::from_str(EXPECTED).expect("should parse expected program");
+        pretty_assertions::assert_eq!(expanded_program, expected_program);
+    }
+
+    /// Test that gate definitions that are referenced by unexpanded sequence gate definitions
+    /// are preserved.
+    #[test]
+    fn test_gate_sequence_expansion_preserves_referred_gates() {
+        const QUIL: &str = r"
+DECLARE ro BIT[2]
+
+DEFGATE seq1(%param1) a AS SEQUENCE:
+    RZ(%param1) a
+    seq2() a
+
+DEFGATE seq2() a AS SEQUENCE:
+    H a
+
+DEFGATE seq3() a AS SEQUENCE:
+    X a
+
+seq1(pi/2) 0
+seq2() 1
+seq3 2
+
+MEASURE 0 ro[0]
+MEASURE 1 ro[1]
+";
+        let program = Program::from_str(QUIL).expect("should parse program");
+        let filter =
+            crate::filter_set::Filter::Exclude(["seq1"].into_iter().map(String::from).collect());
+        let expanded_program = program
+            .expand_defgate_sequences(filter)
+            .expect("should expand gate sequences");
+        const EXPECTED: &str = r"
+DECLARE ro BIT[2]
+DEFGATE seq1(%param1) a AS SEQUENCE:
+    RZ(%param1) a
+    seq2() a
+
+DEFGATE seq2() a AS SEQUENCE:
+    H a
+
+seq1(pi/2) 0
+H 1
+X 2
 MEASURE 0 ro[0]
 MEASURE 1 ro[1]
 ";
