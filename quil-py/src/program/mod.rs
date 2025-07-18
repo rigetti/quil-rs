@@ -38,8 +38,8 @@ use self::{
     analysis::{PyBasicBlock, PyControlFlowGraph},
     scheduling::{PyScheduleSeconds, PyScheduleSecondsItem, PyTimeSpanSeconds},
     source_map::{
-        PyCalibrationExpansion, PyCalibrationSource, PyInstructionSourceMap, PyInstructionSourceMapEntry, PyCalibrationSource,
-        PyInstructionTarget, PyInstructionTargetRewrite
+        PyCalibrationExpansion, PyCalibrationSource, PyCalibrationSource, PyInstructionSourceMap,
+        PyInstructionSourceMapEntry, PyInstructionTarget, PyInstructionTargetRewrite,
     },
 };
 pub use self::{calibration::PyCalibrationSet, frame::PyFrameSet, memory::PyMemoryRegion};

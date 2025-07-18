@@ -130,10 +130,7 @@ impl PyInstructionSourceMap {
     /// Given a source index, return information about its expansion.
     ///
     /// This is `O(n)` where `n` is the number of first-level calibration expansions performed.
-    pub fn list_targets_for_source_index(
-        &self,
-        source_index: usize,
-    ) -> Vec<PyInstructionTarget> {
+    pub fn list_targets_for_source_index(&self, source_index: usize) -> Vec<PyInstructionTarget> {
         self.as_inner()
             .list_targets(&InstructionIndex(source_index))
             .into_iter()
@@ -179,23 +176,25 @@ impl_eq!(PyCalibrationSource);
 #[derive(Debug, PartialEq, Clone)]
 enum InstructionTargetShim {
     Copied(usize),
-    Rewrite(InstructionTargetRewrite)
+    Rewrite(InstructionTargetRewrite),
 }
 
 impl From<InstructionTargetShim> for InstructionTarget<InstructionTargetRewrite> {
-   fn from(value: InstructionTargetShim) -> Self {
+    fn from(value: InstructionTargetShim) -> Self {
         match value {
-            InstructionTargetShim::Copied(index) => InstructionTarget::Copied(InstructionIndex(index)),
-            InstructionTargetShim::Rewrite(rewrite) => InstructionTarget::Rewrite(rewrite)
+            InstructionTargetShim::Copied(index) => {
+                InstructionTarget::Copied(InstructionIndex(index))
+            }
+            InstructionTargetShim::Rewrite(rewrite) => InstructionTarget::Rewrite(rewrite),
         }
-   } 
+    }
 }
 
 impl From<InstructionTarget<InstructionTargetRewrite>> for InstructionTargetShim {
     fn from(value: InstructionTarget<InstructionTargetRewrite>) -> Self {
         match value {
             InstructionTarget::Copied(index) => InstructionTargetShim::Copied(index.0),
-            InstructionTarget::Rewrite(rewrite) => InstructionTargetShim::Rewrite(rewrite)
+            InstructionTarget::Rewrite(rewrite) => InstructionTargetShim::Rewrite(rewrite),
         }
     }
 }
