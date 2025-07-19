@@ -1,7 +1,7 @@
 use crate::{
     expression::Expression,
     imag,
-    instruction::{write_expression_parameter_string, write_parameter_string, write_qubits, Qubit},
+    instruction::{write_expression_parameter_string, write_parameter_string, write_qubits, ParseInstructionError, Qubit},
     quil::{write_join_quil, Quil, INDENT},
     real,
     validation::identifier::{
@@ -834,6 +834,18 @@ pub enum PauliGate {
     X,
     Y,
     Z,
+}
+
+#[pymethods]
+impl PauliGate {
+    /// Parse a ``PauliGate`` from a string.
+    ///
+    /// Raises a ``ParseExpressionError`` error if the string isn't a valid Quil expression.
+    #[staticmethod]
+    fn parse(input: &str) -> Result<Self, ParseInstructionError> {
+        <Self as std::str::FromStr>::from_str(input)
+            .map_err(|err| ParseInstructionError::Parse(err.to_string()))
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

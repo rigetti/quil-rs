@@ -177,6 +177,14 @@ impl Program {
         Program::default()
     }
 
+    /// Parse a ``Program`` from a string.
+    ///
+    /// Raises a `ProgramError`` if the string isn't a valid Quil expression.
+    #[staticmethod]
+    fn parse(input: &str) -> Result<Self> {
+        <Self as std::str::FromStr>::from_str(input)
+    }
+
     /// Return a deep copy of the `Program`, but without the body instructions.
     pub fn clone_without_body_instructions(&self) -> Self {
         Self {
