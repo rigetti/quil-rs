@@ -33,7 +33,7 @@ paste = "1.0.15"
 
 # pyo3 dependencies should be updated together
 numpy = "0.25.0"
-pyo3 = { version = "0.25.1", features = ["indexmap", "num-complex"] }
+pyo3 = { version = "0.25.1", features = ["indexmap", "num-complex", "multiple-pymethods"] }
 num-complex = "0.4.6"
 internment = { version = "0.8.6", features = ["arc"] }
 

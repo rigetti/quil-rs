@@ -3,4 +3,18 @@
 ⚠️ This package is still in early development and breaking changes should be expected between minor versions.
 """
 
-from .quil_rs import *
+from ._quil import (
+    expression,
+    instructions,
+    program,
+    validation,
+    waveforms
+)
+
+__all__ = [
+    "expression",
+    "instructions",
+    "program",
+    "validation",
+    "waveforms",
+]

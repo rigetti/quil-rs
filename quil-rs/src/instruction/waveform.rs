@@ -1,4 +1,5 @@
 use indexmap::IndexMap;
+use pyo3::prelude::*;
 
 use crate::{
     expression::Expression,
@@ -8,24 +9,30 @@ use crate::{
 use super::write_parameter_string;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
 pub struct Waveform {
     pub matrix: Vec<Expression>,
     pub parameters: Vec<String>,
 }
 
+#[pymethods]
 impl Waveform {
+    #[new]
     pub fn new(matrix: Vec<Expression>, parameters: Vec<String>) -> Self {
         Self { matrix, parameters }
     }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
 pub struct WaveformDefinition {
     pub name: String,
     pub definition: Waveform,
 }
 
+#[pymethods]
 impl WaveformDefinition {
+    #[new]
     pub fn new(name: String, definition: Waveform) -> Self {
         Self { name, definition }
     }
@@ -81,6 +88,7 @@ mod test_waveform_definition {
 pub type WaveformParameters = IndexMap<String, Expression>;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[pyclass(module = "quil.instructions", eq, frozen, get_all)]
 pub struct WaveformInvocation {
     pub name: String,
     pub parameters: WaveformParameters,

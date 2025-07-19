@@ -12,23 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::{HashMap, HashSet};
+use std::{
+    borrow::Borrow,
+    collections::{HashMap, HashSet},
+};
+
+use pyo3::prelude::*;
 
 use crate::instruction::{FrameAttributes, FrameDefinition, FrameIdentifier, Instruction, Qubit};
 
 /// A collection of Quil frames (`DEFFRAME` instructions) with utility methods.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[pyclass(module = "quil.program", eq)]
 pub struct FrameSet {
     frames: HashMap<FrameIdentifier, FrameAttributes>,
 }
 
 impl FrameSet {
-    pub fn new() -> Self {
-        FrameSet {
-            frames: HashMap::new(),
-        }
-    }
-
     /// Retrieve the attributes of a frame by its identifier.
     pub fn get(&self, identifier: &FrameIdentifier) -> Option<&FrameAttributes> {
         self.frames.get(identifier)
@@ -101,22 +101,15 @@ impl FrameSet {
         }
     }
 
-    /// Insert a new frame by ID, overwriting any existing one.
-    pub fn insert(&mut self, identifier: FrameIdentifier, attributes: FrameAttributes) {
-        self.frames.insert(identifier, attributes);
-    }
-
-    /// Merge another [FrameSet] with this one, overwriting any existing keys
-    pub fn merge(&mut self, other: FrameSet) {
-        self.frames.extend(other.frames);
-    }
-
-    /// Return a new [FrameSet] which describes only the given [FrameIdentifier]s.
-    pub fn intersection(&self, identifiers: &HashSet<&FrameIdentifier>) -> Self {
+    /// Return a new [`FrameSet`] which describes only the given [`FrameIdentifier`]s.
+    pub fn intersection<T>(&self, identifiers: &HashSet<T>) -> Self
+    where
+        T: Borrow<FrameIdentifier> + Eq + std::hash::Hash,
+    {
         let mut new_frameset = Self::new();
 
         for (identifier, definition) in &self.frames {
-            if identifiers.contains(&identifier) {
+            if identifiers.contains(identifier) {
                 new_frameset.insert(identifier.clone(), definition.clone())
             }
         }
@@ -127,16 +120,6 @@ impl FrameSet {
     /// Iterate through the contained frames.
     pub fn iter(&self) -> std::collections::hash_map::Iter<'_, FrameIdentifier, FrameAttributes> {
         self.frames.iter()
-    }
-
-    /// Return the number of frames described within.
-    pub fn len(&self) -> usize {
-        self.frames.len()
-    }
-
-    /// Return true if this describes no frames.
-    pub fn is_empty(&self) -> bool {
-        self.frames.is_empty()
     }
 
     /// Return the Quil instructions which describe the contained frames, consuming the [`FrameSet`].
@@ -150,6 +133,55 @@ impl FrameSet {
                 })
             })
             .collect()
+    }
+}
+
+#[pymethods]
+impl FrameSet {
+    #[new]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    #[pyo3(name = "get")]
+    fn py_get(&self, identifier: &FrameIdentifier) -> Option<FrameAttributes> {
+        self.get(identifier).cloned()
+    }
+
+    #[pyo3(name = "get_keys")]
+    fn py_get_keys(&self) -> Vec<FrameIdentifier> {
+        self.get_keys().into_iter().cloned().collect()
+    }
+
+    fn get_all_frames(&self) -> HashMap<FrameIdentifier, FrameAttributes> {
+        self.frames.clone()
+    }
+
+    /// Insert a new frame by ID, overwriting any existing one.
+    pub fn insert(&mut self, identifier: FrameIdentifier, attributes: FrameAttributes) {
+        self.frames.insert(identifier, attributes);
+    }
+
+    /// Merge another [FrameSet] with this one, overwriting any existing keys
+    pub fn merge(&mut self, other: FrameSet) {
+        self.frames.extend(other.frames);
+    }
+
+    /// Return a new [`FrameSet`] which describes only the given [`FrameIdentifier`]s.
+    #[pyo3(name = "intersection")]
+    pub fn py_intersection(&self, identifiers: HashSet<FrameIdentifier>) -> Self {
+        self.intersection(&identifiers)
+    }
+
+    /// Return the number of frames described within.
+    #[pyo3(name = "__len__")]
+    pub fn len(&self) -> usize {
+        self.frames.len()
+    }
+
+    /// Return true if this describes no frames.
+    pub fn is_empty(&self) -> bool {
+        self.frames.is_empty()
     }
 
     /// Return the Quil instructions which describe the contained frames.

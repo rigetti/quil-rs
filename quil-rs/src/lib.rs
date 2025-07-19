@@ -42,10 +42,10 @@ mod macros;
 pub(crate) mod parser;
 pub mod program;
 pub mod quil;
+mod quil_py;
 pub mod reserved;
 pub mod units;
 pub mod validation;
 pub mod waveform;
-mod quil_py;
 
 pub use program::Program;

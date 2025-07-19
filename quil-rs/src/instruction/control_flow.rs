@@ -1,14 +1,19 @@
 use std::sync::Arc;
 
+use pyo3::prelude::*;
+
 use super::MemoryReference;
 use crate::quil::{Quil, ToQuilError};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
 pub struct Label {
     pub target: Target,
 }
 
+#[pymethods]
 impl Label {
+    #[new]
     pub fn new(target: Target) -> Self {
         Label { target }
     }
@@ -26,6 +31,8 @@ impl Quil for Label {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, strum::EnumTryAs)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash)]
+#[pyo3(rename_all = "snake_case")]
 pub enum Target {
     Fixed(String),
     Placeholder(TargetPlaceholder),
@@ -68,17 +75,23 @@ type TargetPlaceholderInner = Arc<String>;
 /// An opaque placeholder for a label whose index may be assigned
 /// at a later time.
 #[derive(Clone, Debug, Eq)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, ord)]
 pub struct TargetPlaceholder(TargetPlaceholderInner);
 
+#[pymethods]
 impl TargetPlaceholder {
+    #[new]
     pub fn new(base_label: String) -> Self {
         Self(Arc::new(base_label))
     }
 
+    #[getter(base_label)]
     pub fn as_inner(&self) -> &str {
         &self.0
     }
+}
 
+impl TargetPlaceholder {
     fn address(&self) -> usize {
         &*self.0 as *const _ as usize
     }
@@ -109,6 +122,7 @@ impl PartialEq for TargetPlaceholder {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[pyclass(module = "quil.instructions", eq, frozen, get_all)]
 pub struct Jump {
     pub target: Target,
 }
@@ -125,19 +139,24 @@ impl Quil for Jump {
     }
 }
 
+#[pymethods]
 impl Jump {
+    #[new]
     pub fn new(target: Target) -> Self {
         Self { target }
     }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[pyclass(module = "quil.instructions", eq, frozen, get_all)]
 pub struct JumpWhen {
     pub target: Target,
     pub condition: MemoryReference,
 }
 
+#[pymethods]
 impl JumpWhen {
+    #[new]
     pub fn new(target: Target, condition: MemoryReference) -> Self {
         Self { target, condition }
     }
@@ -157,12 +176,15 @@ impl Quil for JumpWhen {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[pyclass(module = "quil.instructions", eq, frozen, get_all)]
 pub struct JumpUnless {
     pub target: Target,
     pub condition: MemoryReference,
 }
 
+#[pymethods]
 impl JumpUnless {
+    #[new]
     pub fn new(target: Target, condition: MemoryReference) -> Self {
         Self { target, condition }
     }

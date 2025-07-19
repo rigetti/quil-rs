@@ -1,14 +1,19 @@
+use pyo3::prelude::*;
+
 use crate::quil::Quil;
 
 use super::{MemoryReference, Qubit};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
 pub struct Measurement {
     pub qubit: Qubit,
     pub target: Option<MemoryReference>,
 }
 
+#[pymethods]
 impl Measurement {
+    #[new]
     pub fn new(qubit: Qubit, target: Option<MemoryReference>) -> Self {
         Self { qubit, target }
     }

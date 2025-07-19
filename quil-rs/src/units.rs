@@ -1,12 +1,14 @@
 use pyo3::{FromPyObject, IntoPyObject};
 
-#[derive(Clone, Copy, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
-#[derive(FromPyObject, IntoPyObject)]
+#[derive(
+    Clone, Copy, Debug, PartialEq, serde::Serialize, serde::Deserialize, FromPyObject, IntoPyObject,
+)]
 #[pyo3(transparent)]
 pub struct Cycles<T>(pub T);
 
-#[derive(Clone, Copy, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
-#[derive(FromPyObject, IntoPyObject)]
+#[derive(
+    Clone, Copy, Debug, PartialEq, serde::Serialize, serde::Deserialize, FromPyObject, IntoPyObject,
+)]
 #[pyo3(transparent)]
 pub struct Radians<T>(pub T);
 

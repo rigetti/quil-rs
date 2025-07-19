@@ -12,6 +12,7 @@ use crate::{
 use super::ArithmeticOperand;
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
 pub enum ScalarType {
     Bit,
     Integer,
@@ -41,12 +42,15 @@ impl Quil for ScalarType {
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
 pub struct Vector {
     pub data_type: ScalarType,
     pub length: u64,
 }
 
+#[pymethods]
 impl Vector {
+    #[new]
     pub fn new(data_type: ScalarType, length: u64) -> Self {
         Self { data_type, length }
     }
@@ -64,26 +68,48 @@ impl Quil for Vector {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash)]
 pub struct Sharing {
+    #[pyo3(get)]
     pub name: String,
     pub offsets: Vec<Offset>,
 }
 
+#[pymethods]
 impl Sharing {
+    #[new]
     pub fn new(name: String, offsets: Vec<Offset>) -> Self {
         Self { name, offsets }
+    }
+
+    #[getter]
+    fn offsets(&self) -> Vec<Offset> {
+        self.offsets.clone()
     }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash)]
 pub struct Offset {
     pub offset: u64,
     pub data_type: ScalarType,
 }
 
+#[pymethods]
 impl Offset {
+    #[new]
     pub fn new(offset: u64, data_type: ScalarType) -> Self {
         Self { offset, data_type }
+    }
+
+    #[getter]
+    fn offset(&self) -> u64 {
+        self.offset
+    }
+
+    #[getter]
+    fn data_type(&self) -> ScalarType {
+        self.data_type
     }
 }
 
@@ -99,13 +125,16 @@ impl Quil for Offset {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
 pub struct Declaration {
     pub name: String,
     pub size: Vector,
     pub sharing: Option<Sharing>,
 }
 
+#[pymethods]
 impl Declaration {
+    #[new]
     pub fn new(name: String, size: Vector, sharing: Option<Sharing>) -> Self {
         Self {
             name,
@@ -186,7 +215,7 @@ mod test_declaration {
 
 // TODO: impl_parse, to_quil, repr
 #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
-#[pyclass(module="quil.instructions", get_all, eq, frozen, hash)]
+#[pyclass(module = "quil.instructions", get_all, eq, frozen, hash)]
 pub struct MemoryReference {
     pub name: String,
     pub index: u64,
@@ -238,13 +267,16 @@ impl FromStr for MemoryReference {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
 pub struct Load {
     pub destination: MemoryReference,
     pub source: String,
     pub offset: MemoryReference,
 }
 
+#[pymethods]
 impl Load {
+    #[new]
     pub fn new(destination: MemoryReference, source: String, offset: MemoryReference) -> Self {
         Self {
             destination,
@@ -269,13 +301,16 @@ impl Quil for Load {
 }
 
 #[derive(Clone, Debug, PartialEq, Hash)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
 pub struct Store {
     pub destination: String,
     pub offset: MemoryReference,
     pub source: ArithmeticOperand,
 }
 
+#[pymethods]
 impl Store {
+    #[new]
     pub fn new(destination: String, offset: MemoryReference, source: ArithmeticOperand) -> Self {
         Self {
             destination,

@@ -10,7 +10,9 @@ use crate::{
 };
 use ndarray::{array, linalg::kron, Array2};
 use num_complex::Complex64;
+use numpy::{PyArray2, ToPyArray};
 use once_cell::sync::Lazy;
+use pyo3::prelude::*;
 use std::{
     cmp::Ordering,
     collections::{HashMap, HashSet},
@@ -18,6 +20,7 @@ use std::{
 
 /// A struct encapsulating all the properties of a Quil Quantum Gate.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash)]
 pub struct Gate {
     pub name: String,
     pub parameters: Vec<Expression>,
@@ -27,6 +30,8 @@ pub struct Gate {
 
 /// An enum of all the possible modifiers on a quil [`Gate`]
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash)] // TODO: to_quil
+#[pyo3(rename_all = "snake_case")]
 pub enum GateModifier {
     /// The `CONTROLLED` modifier makes the gate take an extra [`Qubit`] parameter as a control
     /// qubit.
@@ -88,12 +93,14 @@ pub enum GateError {
 /// Matrix version of a gate.
 pub type Matrix = Array2<Complex64>;
 
+#[pymethods]
 impl Gate {
     /// Build a new gate
     ///
     /// # Errors
     ///
     /// Returns an error if the given name isn't a valid Quil identifier or if no qubits are given.
+    #[new]
     pub fn new(
         name: &str,
         parameters: Vec<Expression>,
@@ -114,13 +121,41 @@ impl Gate {
         })
     }
 
+    #[pyo3(name = "controlled")]
+    #[must_use]
+    fn py_controlled(&self, control_qubit: Qubit) -> Self {
+        self.clone().controlled(control_qubit)
+    }
+
+    #[pyo3(name = "forked")]
+    fn py_forked(&self, fork_qubit: Qubit, alt_params: Vec<Expression>) -> Result<Self, GateError> {
+        self.clone().forked(fork_qubit, alt_params)
+    }
+
+    // TODO: `Gate` is now immutable for Python users because it uses the Rust hash impl.
+    // Consequently, this method now makes a clone of the `Gate` before calculating the unitary.
+    // It probably makes sense to change the method name to reflect this.
+    #[pyo3(name = "to_unitary_mut")]
+    fn py_to_unitary_mut<'py>(
+        slf: &Bound<'py, Self>,
+        n_qubits: u64,
+    ) -> PyResult<Bound<'py, PyArray2<Complex64>>> {
+        let py = slf.py();
+        let mut slf = { slf.get().clone() };
+        Ok(slf.to_unitary(n_qubits)?.to_pyarray(py))
+    }
+}
+
+impl Gate {
     /// Apply a DAGGER modifier to the gate
+    #[must_use]
     pub fn dagger(mut self) -> Self {
         self.modifiers.insert(0, GateModifier::Dagger);
         self
     }
 
     /// Apply a CONTROLLED modifier to the gate
+    #[must_use]
     pub fn controlled(mut self, control_qubit: Qubit) -> Self {
         self.qubits.insert(0, control_qubit);
         self.modifiers.insert(0, GateModifier::Controlled);
@@ -791,7 +826,9 @@ mod test_gate_into_matrix {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, strum::Display, strum::EnumString)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash)]
 #[strum(serialize_all = "UPPERCASE")]
+#[pyo3(rename_all = "UPPERCASE")]
 pub enum PauliGate {
     I,
     X,
@@ -800,19 +837,24 @@ pub enum PauliGate {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
 pub struct PauliTerm {
     pub arguments: Vec<(PauliGate, String)>,
     pub expression: Expression,
 }
 
+#[pymethods]
 impl PauliTerm {
+    #[new]
     pub fn new(arguments: Vec<(PauliGate, String)>, expression: Expression) -> Self {
         Self {
             arguments,
             expression,
         }
     }
+}
 
+impl PauliTerm {
     pub(crate) fn word(&self) -> impl Iterator<Item = &PauliGate> {
         self.arguments.iter().map(|(gate, _)| gate)
     }
@@ -823,12 +865,15 @@ impl PauliTerm {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
 pub struct PauliSum {
     pub arguments: Vec<String>,
     pub terms: Vec<PauliTerm>,
 }
 
+#[pymethods]
 impl PauliSum {
+    #[new]
     pub fn new(arguments: Vec<String>, terms: Vec<PauliTerm>) -> Result<Self, GateError> {
         let diff = terms
             .iter()
@@ -851,6 +896,8 @@ impl PauliSum {
 
 /// An enum representing a the specification of a [`GateDefinition`] for a given [`GateType`]
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash)]
+#[pyo3(rename_all = "snake_case")]
 pub enum GateSpecification {
     /// A matrix of [`Expression`]s representing a unitary operation for a [`GateType::Matrix`].
     Matrix(Vec<Vec<Expression>>),
@@ -907,13 +954,16 @@ impl Quil for GateSpecification {
 
 /// A struct encapsulating a quil Gate Definition
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
 pub struct GateDefinition {
     pub name: String,
     pub parameters: Vec<String>,
     pub specification: GateSpecification,
 }
 
+#[pymethods]
 impl GateDefinition {
+    #[new]
     pub fn new(
         name: String,
         parameters: Vec<String>,

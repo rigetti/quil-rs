@@ -1,13 +1,18 @@
+use pyo3::prelude::*;
+
 use crate::quil::Quil;
 
 use super::Qubit;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
 pub struct Reset {
     pub qubit: Option<Qubit>,
 }
 
+#[pymethods]
 impl Reset {
+    #[new]
     pub fn new(qubit: Option<Qubit>) -> Self {
         Self { qubit }
     }

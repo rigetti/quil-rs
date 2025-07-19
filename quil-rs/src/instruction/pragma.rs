@@ -1,15 +1,20 @@
+use pyo3::prelude::*;
+
 use crate::quil::Quil;
 
 use super::QuotedString;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
 pub struct Pragma {
     pub name: String,
     pub arguments: Vec<PragmaArgument>,
     pub data: Option<String>,
 }
 
+#[pymethods]
 impl Pragma {
+    #[new]
     pub fn new(name: String, arguments: Vec<PragmaArgument>, data: Option<String>) -> Self {
         Self {
             name,
@@ -38,6 +43,8 @@ impl Quil for Pragma {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash)]
+#[pyo3(rename_all = "snake_case")]
 pub enum PragmaArgument {
     Identifier(String),
     Integer(u64),
@@ -58,6 +65,7 @@ impl Quil for PragmaArgument {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
 pub struct Include {
     pub filename: String,
 }

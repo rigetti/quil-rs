@@ -2,6 +2,7 @@ use std::str::FromStr;
 
 use indexmap::IndexMap;
 use nom_locate::LocatedSpan;
+use pyo3::prelude::*;
 
 use super::{MemoryReference, Qubit, QuotedString, WaveformInvocation};
 use crate::{
@@ -12,6 +13,8 @@ use crate::{
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, strum::EnumTryAs)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
+#[pyo3(rename_all = "snake_case")]
 pub enum AttributeValue {
     String(String),
     Expression(Expression),
@@ -34,12 +37,15 @@ impl Quil for AttributeValue {
 pub type FrameAttributes = IndexMap<String, AttributeValue>;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[pyclass(module = "quil.instructions", eq, frozen, get_all)]
 pub struct FrameDefinition {
     pub identifier: FrameIdentifier,
     pub attributes: FrameAttributes,
 }
 
+#[pymethods]
 impl FrameDefinition {
+    #[new]
     pub fn new(identifier: FrameIdentifier, attributes: FrameAttributes) -> Self {
         Self {
             identifier,
@@ -67,12 +73,15 @@ impl Quil for FrameDefinition {
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
 pub struct FrameIdentifier {
     pub name: String,
     pub qubits: Vec<Qubit>,
 }
 
+#[pymethods]
 impl FrameIdentifier {
+    #[new]
     pub fn new(name: String, qubits: Vec<Qubit>) -> Self {
         Self { name, qubits }
     }
@@ -105,6 +114,7 @@ impl FromStr for FrameIdentifier {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[pyclass(module = "quil.instructions", eq, frozen, get_all)]
 pub struct Capture {
     pub blocking: bool,
     pub frame: FrameIdentifier,
@@ -112,7 +122,9 @@ pub struct Capture {
     pub waveform: WaveformInvocation,
 }
 
+#[pymethods]
 impl Capture {
+    #[new]
     pub fn new(
         blocking: bool,
         frame: FrameIdentifier,
@@ -152,13 +164,16 @@ impl Quil for Capture {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[pyclass(module = "quil.instructions", eq, frozen, get_all)]
 pub struct Pulse {
     pub blocking: bool,
     pub frame: FrameIdentifier,
     pub waveform: WaveformInvocation,
 }
 
+#[pymethods]
 impl Pulse {
+    #[new]
     pub fn new(blocking: bool, frame: FrameIdentifier, waveform: WaveformInvocation) -> Self {
         Self {
             blocking,
@@ -189,6 +204,7 @@ impl Quil for Pulse {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
 pub struct RawCapture {
     pub blocking: bool,
     pub frame: FrameIdentifier,
@@ -196,7 +212,9 @@ pub struct RawCapture {
     pub memory_reference: MemoryReference,
 }
 
+#[pymethods]
 impl RawCapture {
+    #[new]
     pub fn new(
         blocking: bool,
         frame: FrameIdentifier,
@@ -235,12 +253,15 @@ impl Quil for RawCapture {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
 pub struct SetFrequency {
     pub frame: FrameIdentifier,
     pub frequency: Expression,
 }
 
+#[pymethods]
 impl SetFrequency {
+    #[new]
     pub fn new(frame: FrameIdentifier, frequency: Expression) -> Self {
         Self { frame, frequency }
     }
@@ -261,12 +282,15 @@ impl Quil for SetFrequency {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
 pub struct SetPhase {
     pub frame: FrameIdentifier,
     pub phase: Expression,
 }
 
+#[pymethods]
 impl SetPhase {
+    #[new]
     pub fn new(frame: FrameIdentifier, phase: Expression) -> Self {
         Self { frame, phase }
     }
@@ -287,12 +311,15 @@ impl Quil for SetPhase {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
 pub struct SetScale {
     pub frame: FrameIdentifier,
     pub scale: Expression,
 }
 
+#[pymethods]
 impl SetScale {
+    #[new]
     pub fn new(frame: FrameIdentifier, scale: Expression) -> Self {
         Self { frame, scale }
     }
@@ -313,12 +340,15 @@ impl Quil for SetScale {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
 pub struct ShiftFrequency {
     pub frame: FrameIdentifier,
     pub frequency: Expression,
 }
 
+#[pymethods]
 impl ShiftFrequency {
+    #[new]
     pub fn new(frame: FrameIdentifier, frequency: Expression) -> Self {
         Self { frame, frequency }
     }
@@ -339,12 +369,15 @@ impl Quil for ShiftFrequency {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
 pub struct ShiftPhase {
     pub frame: FrameIdentifier,
     pub phase: Expression,
 }
 
+#[pymethods]
 impl ShiftPhase {
+    #[new]
     pub fn new(frame: FrameIdentifier, phase: Expression) -> Self {
         Self { frame, phase }
     }
@@ -365,12 +398,15 @@ impl Quil for ShiftPhase {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
 pub struct SwapPhases {
     pub frame_1: FrameIdentifier,
     pub frame_2: FrameIdentifier,
 }
 
+#[pymethods]
 impl SwapPhases {
+    #[new]
     pub fn new(frame_1: FrameIdentifier, frame_2: FrameIdentifier) -> Self {
         Self { frame_1, frame_2 }
     }

@@ -1,8 +1,11 @@
+use pyo3::prelude::*;
+
 use crate::quil::{Quil, INDENT};
 
 use super::Instruction;
 
 #[derive(Clone, Debug, PartialEq)]
+#[pyclass(module = "quil.instructions", eq, frozen, get_all)]
 pub struct CircuitDefinition {
     pub name: String,
     pub parameters: Vec<String>,
@@ -11,7 +14,9 @@ pub struct CircuitDefinition {
     pub instructions: Vec<Instruction>,
 }
 
+#[pymethods]
 impl CircuitDefinition {
+    #[new]
     pub fn new(
         name: String,
         parameters: Vec<String>,

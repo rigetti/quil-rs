@@ -9,6 +9,8 @@ use petgraph::{
     Direction,
 };
 
+use pyo3::prelude::*;
+
 use crate::{
     instruction::{
         AttributeValue, Capture, Delay, Instruction, Pulse, RawCapture, WaveformInvocation,
@@ -19,7 +21,7 @@ use crate::{
 
 use super::{ExecutionDependency, ScheduledBasicBlock, ScheduledGraphNode};
 
-#[derive(Clone, Debug, Default, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Default, PartialEq, PartialOrd, FromPyObject, IntoPyObject)]
 pub struct Seconds(pub f64);
 
 impl std::ops::Add<Seconds> for Seconds {
@@ -352,6 +354,100 @@ impl<'p> ScheduledBasicBlock<'p> {
         }
 
         Ok(schedule)
+    }
+}
+
+/// A Schedule is a ``DependencyGraph`` flattened into a linear sequence of instructions,
+/// each of which is assigned a start time and duration.
+#[derive(Clone, Debug, PartialEq)]
+#[pyclass(
+    name = "ScheduleSeconds",
+    module = "quil.program",
+    subclass,
+    eq,
+    frozen
+)]
+pub(crate) struct PyScheduleSeconds(pub Schedule<Seconds>);
+
+/// A single item within a schedule, representing a single instruction within a basic block.
+#[derive(Clone, Debug, PartialEq)]
+#[pyclass(
+    name = "ScheduleSecondsItem",
+    module = "quil.program",
+    subclass,
+    eq,
+    frozen
+)]
+pub(crate) struct ScheduleSecondsItem(pub ComputedScheduleItem<Seconds>);
+
+/// A time span, in seconds.
+#[derive(Clone, Debug, PartialEq)]
+#[pyclass(
+    name = "TimeSpanSeconds",
+    module = "quil.program",
+    subclass,
+    eq,
+    frozen
+)]
+pub(crate) struct TimeSpanSeconds(pub TimeSpan<Seconds>);
+
+#[pymethods]
+impl PyScheduleSeconds {
+    /// Scheduled items, in an unspecified order.
+    #[getter]
+    fn items(&self) -> Vec<ScheduleSecondsItem> {
+        self.0
+            .items
+            .iter()
+            .map(|item| ScheduleSecondsItem(item.clone()))
+            .collect()
+    }
+
+    /// The schedule duration, in seconds.
+    ///
+    /// This is the maximum end time among all scheduled items.
+    #[getter]
+    fn duration(&self) -> Seconds {
+        self.0.duration().clone()
+    }
+}
+
+#[pymethods]
+impl ScheduleSecondsItem {
+    /// The index of the instruction within the basic block.
+    #[getter]
+    fn time_span(&self) -> TimeSpanSeconds {
+        TimeSpanSeconds(self.0.time_span.clone())
+    }
+
+    /// The time span during which the instruction is scheduled.
+    #[getter]
+    fn instruction_index(&self) -> usize {
+        self.0.instruction_index
+    }
+}
+
+#[pymethods]
+impl TimeSpanSeconds {
+    /// The inclusive start time of the time span,
+    /// in seconds relative to the start of the scheduling context (such as the basic block).
+    #[getter]
+    fn start_time(&self) -> Seconds {
+        self.0.start_time().clone()
+    }
+
+    /// The duration of the time span, in seconds.
+    #[getter]
+    fn duration(&self) -> Seconds {
+        self.0.duration().clone()
+    }
+
+    /// The end time of the time span, in seconds.
+    ///
+    /// This is the sum of the start time and duration.
+    #[getter]
+    fn end(&self) -> Seconds {
+        self.0.end()
     }
 }
 

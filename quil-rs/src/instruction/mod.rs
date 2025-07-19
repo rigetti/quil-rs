@@ -14,8 +14,11 @@
 
 use std::collections::HashSet;
 use std::fmt;
+use std::str::FromStr;
 
 use nom_locate::LocatedSpan;
+use pyo3::prelude::*;
+use pyo3::types::PyDict;
 
 use crate::expression::Expression;
 use crate::parser::lex;
@@ -24,7 +27,9 @@ use crate::program::frame::{FrameMatchCondition, FrameMatchConditions};
 use crate::program::ProgramError;
 use crate::program::{MatchedFrames, MemoryAccesses};
 use crate::quil::{write_join_quil, Quil, ToQuilResult};
+use crate::quil_py;
 use crate::Program;
+use crate::{impl_repr, impl_to_quil};
 
 mod calibration;
 mod circuit;
@@ -71,6 +76,225 @@ pub use self::reset::Reset;
 pub use self::timing::{Delay, Fence};
 pub use self::waveform::{Waveform, WaveformDefinition, WaveformInvocation, WaveformParameters};
 
+#[pymodule]
+#[pyo3(name = "instructions", module = "quil", submodule)]
+pub(crate) fn init_submodule(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    let py = m.py();
+
+    m.add("CallError", py.get_type::<quil_py::errors::CallError>())?;
+    m.add("ExternError", py.get_type::<quil_py::errors::ExternError>())?;
+    m.add("GateError", py.get_type::<quil_py::errors::GateError>())?;
+    m.add(
+        "ParseMemoryReferenceError",
+        py.get_type::<quil_py::errors::ParseMemoryReferenceError>(),
+    )?;
+
+    m.add_class::<Arithmetic>()?;
+    m.add_class::<ArithmeticOperand>()?;
+    m.add_class::<ArithmeticOperator>()?;
+    m.add_class::<AttributeValue>()?;
+    m.add_class::<BinaryLogic>()?;
+    m.add_class::<BinaryOperand>()?;
+    m.add_class::<BinaryOperator>()?;
+    m.add_class::<Calibration>()?;
+    m.add_class::<CalibrationIdentifier>()?;
+    m.add_class::<Call>()?;
+    m.add_class::<UnresolvedCallArgument>()?; // Python name: CallArgument
+    m.add_class::<Capture>()?;
+    m.add_class::<CircuitDefinition>()?;
+    m.add_class::<Comparison>()?;
+    m.add_class::<ComparisonOperand>()?;
+    m.add_class::<ComparisonOperator>()?;
+    m.add_class::<Convert>()?;
+    m.add_class::<Declaration>()?;
+    m.add_class::<Delay>()?;
+    m.add_class::<Exchange>()?;
+    m.add_class::<ExternParameter>()?;
+    m.add_class::<ExternParameterType>()?;
+    m.add_class::<ExternSignature>()?;
+    m.add_class::<Fence>()?;
+    m.add_class::<FrameDefinition>()?;
+    m.add_class::<FrameIdentifier>()?;
+    m.add_class::<Gate>()?;
+    m.add_class::<GateDefinition>()?;
+    m.add_class::<GateModifier>()?;
+    m.add_class::<GateSpecification>()?;
+    m.add_class::<Include>()?;
+    m.add_class::<Instruction>()?;
+    m.add_class::<Jump>()?;
+    m.add_class::<JumpUnless>()?;
+    m.add_class::<JumpWhen>()?;
+    m.add_class::<Label>()?;
+    m.add_class::<Load>()?;
+    m.add_class::<MeasureCalibrationDefinition>()?;
+    m.add_class::<MeasureCalibrationIdentifier>()?;
+    m.add_class::<Measurement>()?;
+    m.add_class::<Move>()?;
+    m.add_class::<Offset>()?;
+    m.add_class::<PauliGate>()?;
+    m.add_class::<PauliSum>()?;
+    m.add_class::<PauliTerm>()?;
+    m.add_class::<Pragma>()?;
+    m.add_class::<PragmaArgument>()?;
+    m.add_class::<Pulse>()?;
+    m.add_class::<Qubit>()?;
+    m.add_class::<QubitPlaceholder>()?;
+    m.add_class::<RawCapture>()?;
+    m.add_class::<Reset>()?;
+    m.add_class::<ScalarType>()?;
+    m.add_class::<SetFrequency>()?;
+    m.add_class::<SetPhase>()?;
+    m.add_class::<SetScale>()?;
+    m.add_class::<Sharing>()?;
+    m.add_class::<ShiftFrequency>()?;
+    m.add_class::<ShiftPhase>()?;
+    m.add_class::<Store>()?;
+    m.add_class::<SwapPhases>()?;
+    m.add_class::<Target>()?;
+    m.add_class::<TargetPlaceholder>()?;
+    m.add_class::<UnaryLogic>()?;
+    m.add_class::<UnaryOperator>()?;
+    m.add_class::<Vector>()?;
+    m.add_class::<Waveform>()?;
+    m.add_class::<WaveformDefinition>()?;
+    m.add_class::<WaveformInvocation>()?;
+
+    Ok(())
+}
+
+impl_repr!(Arithmetic);
+impl_repr!(ArithmeticOperand);
+impl_repr!(ArithmeticOperator);
+impl_repr!(AttributeValue);
+impl_repr!(BinaryLogic);
+impl_repr!(BinaryOperand);
+impl_repr!(BinaryOperator);
+impl_repr!(Calibration);
+impl_repr!(CalibrationIdentifier);
+impl_repr!(Call);
+impl_repr!(UnresolvedCallArgument);
+impl_repr!(Capture);
+impl_repr!(CircuitDefinition);
+impl_repr!(Comparison);
+impl_repr!(ComparisonOperand);
+impl_repr!(Convert);
+impl_repr!(Declaration);
+impl_repr!(Delay);
+impl_repr!(Exchange);
+impl_repr!(ExternParameter);
+impl_repr!(ExternParameterType);
+impl_repr!(ExternSignature);
+impl_repr!(Fence);
+impl_repr!(FrameDefinition);
+impl_repr!(FrameIdentifier);
+impl_repr!(Gate);
+impl_repr!(GateDefinition);
+impl_repr!(GateModifier);
+impl_repr!(GateSpecification);
+impl_repr!(Include);
+impl_repr!(Instruction);
+impl_repr!(Jump);
+impl_repr!(JumpUnless);
+impl_repr!(JumpWhen);
+impl_repr!(Label);
+impl_repr!(Load);
+impl_repr!(MeasureCalibrationDefinition);
+impl_repr!(MeasureCalibrationIdentifier);
+impl_repr!(Measurement);
+impl_repr!(MemoryReference);
+impl_repr!(Move);
+impl_repr!(Offset);
+impl_repr!(PauliGate);
+impl_repr!(PauliSum);
+impl_repr!(Pragma);
+impl_repr!(PragmaArgument);
+impl_repr!(Pulse);
+impl_repr!(Qubit);
+impl_repr!(QubitPlaceholder);
+impl_repr!(RawCapture);
+impl_repr!(Reset);
+impl_repr!(ScalarType);
+impl_repr!(SetFrequency);
+impl_repr!(SetPhase);
+impl_repr!(SetScale);
+impl_repr!(Sharing);
+impl_repr!(ShiftFrequency);
+impl_repr!(ShiftPhase);
+impl_repr!(Store);
+impl_repr!(SwapPhases);
+impl_repr!(Target);
+impl_repr!(TargetPlaceholder);
+impl_repr!(UnaryLogic);
+impl_repr!(UnaryOperator);
+impl_repr!(Vector);
+impl_repr!(Waveform);
+impl_repr!(WaveformDefinition);
+impl_repr!(WaveformInvocation);
+
+impl_to_quil!(Arithmetic);
+impl_to_quil!(ArithmeticOperand);
+impl_to_quil!(ArithmeticOperator);
+impl_to_quil!(AttributeValue);
+impl_to_quil!(BinaryLogic);
+impl_to_quil!(BinaryOperand);
+impl_to_quil!(BinaryOperator);
+impl_to_quil!(Calibration);
+impl_to_quil!(CalibrationIdentifier);
+impl_to_quil!(Call);
+impl_to_quil!(UnresolvedCallArgument);
+impl_to_quil!(Capture);
+impl_to_quil!(CircuitDefinition);
+impl_to_quil!(Comparison);
+impl_to_quil!(ComparisonOperand);
+impl_to_quil!(Convert);
+impl_to_quil!(Declaration);
+impl_to_quil!(Delay);
+impl_to_quil!(Exchange);
+impl_to_quil!(Expression);
+impl_to_quil!(ExternParameter);
+impl_to_quil!(ExternParameterType);
+impl_to_quil!(ExternSignature);
+impl_to_quil!(Fence);
+impl_to_quil!(FrameDefinition);
+impl_to_quil!(FrameIdentifier);
+impl_to_quil!(Gate);
+impl_to_quil!(GateDefinition);
+impl_to_quil!(GateModifier);
+impl_to_quil!(GateSpecification);
+impl_to_quil!(Include);
+impl_to_quil!(Instruction);
+impl_to_quil!(Jump);
+impl_to_quil!(JumpUnless);
+impl_to_quil!(JumpWhen);
+impl_to_quil!(Label);
+impl_to_quil!(Load);
+impl_to_quil!(MeasureCalibrationDefinition);
+impl_to_quil!(MeasureCalibrationIdentifier);
+impl_to_quil!(Measurement);
+impl_to_quil!(MemoryReference);
+impl_to_quil!(Move);
+impl_to_quil!(Offset);
+impl_to_quil!(Pragma);
+impl_to_quil!(PragmaArgument);
+impl_to_quil!(Pulse);
+impl_to_quil!(Qubit);
+impl_to_quil!(RawCapture);
+impl_to_quil!(Reset);
+impl_to_quil!(ScalarType);
+impl_to_quil!(SetFrequency);
+impl_to_quil!(SetPhase);
+impl_to_quil!(SetScale);
+impl_to_quil!(ShiftFrequency);
+impl_to_quil!(ShiftPhase);
+impl_to_quil!(Store);
+impl_to_quil!(SwapPhases);
+impl_to_quil!(Target);
+impl_to_quil!(UnaryLogic);
+impl_to_quil!(UnaryOperator);
+impl_to_quil!(Vector);
+impl_to_quil!(WaveformDefinition);
+impl_to_quil!(WaveformInvocation);
+
 #[derive(Clone, Debug, thiserror::Error, PartialEq, Eq)]
 pub enum ValidationError {
     #[error(transparent)]
@@ -78,6 +302,8 @@ pub enum ValidationError {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+#[pyclass(module = "quil.instruction", eq, frozen)]
+#[pyo3(rename_all = "snake_case")]
 pub enum Instruction {
     Arithmetic(Arithmetic),
     BinaryLogic(BinaryLogic),
@@ -94,7 +320,7 @@ pub enum Instruction {
     FrameDefinition(FrameDefinition),
     Gate(Gate),
     GateDefinition(GateDefinition),
-    Halt,
+    Halt(),
     Include(Include),
     Jump(Jump),
     JumpUnless(JumpUnless),
@@ -104,7 +330,7 @@ pub enum Instruction {
     MeasureCalibrationDefinition(MeasureCalibrationDefinition),
     Measurement(Measurement),
     Move(Move),
-    Nop,
+    Nop(),
     Pragma(Pragma),
     Pulse(Pulse),
     RawCapture(RawCapture),
@@ -118,7 +344,76 @@ pub enum Instruction {
     SwapPhases(SwapPhases),
     UnaryLogic(UnaryLogic),
     WaveformDefinition(WaveformDefinition),
-    Wait,
+    Wait(),
+}
+
+#[pymethods]
+impl Instruction {
+    /// Returns true if the instruction is a Quil-T instruction.
+    pub fn is_quil_t(&self) -> bool {
+        match self {
+            Instruction::Capture(_)
+            | Instruction::CalibrationDefinition(_)
+            | Instruction::Delay(_)
+            | Instruction::Fence(_)
+            | Instruction::FrameDefinition(_)
+            | Instruction::MeasureCalibrationDefinition(_)
+            | Instruction::Pulse(_)
+            | Instruction::RawCapture(_)
+            | Instruction::SetFrequency(_)
+            | Instruction::SetPhase(_)
+            | Instruction::SetScale(_)
+            | Instruction::ShiftFrequency(_)
+            | Instruction::ShiftPhase(_)
+            | Instruction::SwapPhases(_)
+            | Instruction::WaveformDefinition(_) => true,
+
+            Instruction::Arithmetic(_)
+            | Instruction::BinaryLogic(_)
+            | Instruction::Call(_)
+            | Instruction::CircuitDefinition(_)
+            | Instruction::Convert(_)
+            | Instruction::Comparison(_)
+            | Instruction::Declaration(_)
+            | Instruction::Exchange(_)
+            | Instruction::Gate(_)
+            | Instruction::GateDefinition(_)
+            | Instruction::Halt()
+            | Instruction::Include(_)
+            | Instruction::Jump(_)
+            | Instruction::JumpUnless(_)
+            | Instruction::JumpWhen(_)
+            | Instruction::Label(_)
+            | Instruction::Load(_)
+            | Instruction::Measurement(_)
+            | Instruction::Move(_)
+            | Instruction::Nop()
+            | Instruction::Pragma(_)
+            | Instruction::Reset(_)
+            | Instruction::Store(_)
+            | Instruction::Wait()
+            | Instruction::UnaryLogic(_) => false,
+        }
+    }
+
+    #[staticmethod]
+    fn parse(string: &str) -> Result<Self, <Instruction as FromStr>::Err> {
+        Instruction::from_str(string)
+    }
+
+    fn __copy__(&self) -> Self {
+        // TODO: This is probably not the actual goal of the original implementation;
+        // moreover, likely it's not needed -- Python assignments are essentially shallow copies;
+        // The distinction really only matters for container types,
+        // for when you want a new instance of the container class,
+        // but want it populated with the same references as some other class.
+        self.clone()
+    }
+
+    fn __deepcopy__<'py>(&self, _memo: &Bound<'py, PyDict>) -> Self {
+        // TODO: there's some inner state here that is meant to be reset on deepcopy.
+        self.clone()
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -164,14 +459,14 @@ impl From<&Instruction> for InstructionRole {
             | Instruction::Move(_)
             | Instruction::Exchange(_)
             | Instruction::Load(_)
-            | Instruction::Nop
+            | Instruction::Nop()
             | Instruction::Pragma(_)
             | Instruction::Store(_) => InstructionRole::ClassicalCompute,
-            Instruction::Halt
+            Instruction::Halt()
             | Instruction::Jump(_)
             | Instruction::JumpWhen(_)
             | Instruction::JumpUnless(_)
-            | Instruction::Wait => InstructionRole::ControlFlow,
+            | Instruction::Wait() => InstructionRole::ControlFlow,
         }
     }
 }
@@ -313,9 +608,9 @@ impl Quil for Instruction {
             Instruction::WaveformDefinition(waveform_definition) => {
                 waveform_definition.write(f, fall_back_to_debug)
             }
-            Instruction::Halt => write!(f, "HALT").map_err(Into::into),
-            Instruction::Nop => write!(f, "NOP").map_err(Into::into),
-            Instruction::Wait => write!(f, "WAIT").map_err(Into::into),
+            Instruction::Halt() => write!(f, "HALT").map_err(Into::into),
+            Instruction::Nop() => write!(f, "NOP").map_err(Into::into),
+            Instruction::Wait() => write!(f, "WAIT").map_err(Into::into),
             Instruction::Jump(jump) => jump.write(f, fall_back_to_debug),
             Instruction::JumpUnless(jump) => jump.write(f, fall_back_to_debug),
             Instruction::JumpWhen(jump) => jump.write(f, fall_back_to_debug),
@@ -555,7 +850,7 @@ impl Instruction {
             | Instruction::FrameDefinition(_)
             | Instruction::Gate(_)
             | Instruction::GateDefinition(_)
-            | Instruction::Halt
+            | Instruction::Halt()
             | Instruction::Include(_)
             | Instruction::Jump(_)
             | Instruction::JumpUnless(_)
@@ -565,12 +860,12 @@ impl Instruction {
             | Instruction::MeasureCalibrationDefinition(_)
             | Instruction::Measurement(_)
             | Instruction::Move(_)
-            | Instruction::Nop
+            | Instruction::Nop()
             | Instruction::Pragma(_)
             | Instruction::Store(_)
             | Instruction::UnaryLogic(_)
             | Instruction::WaveformDefinition(_)
-            | Instruction::Wait => None,
+            | Instruction::Wait() => None,
         }
     }
 
@@ -645,10 +940,10 @@ impl Instruction {
         }
     }
 
-    #[cfg(test)]
     /// Parse a single instruction from an input string. Returns an error if the input fails to parse,
     /// or if there is input left over after parsing.
-    pub(crate) fn parse(input: &str) -> Result<Self, String> {
+    #[cfg(test)]
+    pub(crate) fn parse_in_test(input: &str) -> Result<Self, String> {
         use crate::parser::instruction::parse_instruction;
 
         let input = LocatedSpan::new(input);
@@ -656,52 +951,6 @@ impl Instruction {
         let (_, instruction) =
             nom::combinator::all_consuming(parse_instruction)(&lexed).map_err(|e| e.to_string())?;
         Ok(instruction)
-    }
-
-    /// Returns true if the instruction is a Quil-T instruction.
-    pub fn is_quil_t(&self) -> bool {
-        match self {
-            Instruction::Capture(_)
-            | Instruction::CalibrationDefinition(_)
-            | Instruction::Delay(_)
-            | Instruction::Fence(_)
-            | Instruction::FrameDefinition(_)
-            | Instruction::MeasureCalibrationDefinition(_)
-            | Instruction::Pulse(_)
-            | Instruction::RawCapture(_)
-            | Instruction::SetFrequency(_)
-            | Instruction::SetPhase(_)
-            | Instruction::SetScale(_)
-            | Instruction::ShiftFrequency(_)
-            | Instruction::ShiftPhase(_)
-            | Instruction::SwapPhases(_)
-            | Instruction::WaveformDefinition(_) => true,
-            Instruction::Arithmetic(_)
-            | Instruction::BinaryLogic(_)
-            | Instruction::Call(_)
-            | Instruction::CircuitDefinition(_)
-            | Instruction::Convert(_)
-            | Instruction::Comparison(_)
-            | Instruction::Declaration(_)
-            | Instruction::Exchange(_)
-            | Instruction::Gate(_)
-            | Instruction::GateDefinition(_)
-            | Instruction::Halt
-            | Instruction::Include(_)
-            | Instruction::Jump(_)
-            | Instruction::JumpUnless(_)
-            | Instruction::JumpWhen(_)
-            | Instruction::Label(_)
-            | Instruction::Load(_)
-            | Instruction::Measurement(_)
-            | Instruction::Move(_)
-            | Instruction::Nop
-            | Instruction::Pragma(_)
-            | Instruction::Reset(_)
-            | Instruction::Store(_)
-            | Instruction::Wait
-            | Instruction::UnaryLogic(_) => false,
-        }
     }
 
     /// Per the Quil-T spec, whether this instruction's timing within the pulse
@@ -720,7 +969,7 @@ impl Instruction {
             | Instruction::ShiftFrequency(_)
             | Instruction::ShiftPhase(_)
             | Instruction::SwapPhases(_)
-            | Instruction::Wait => true,
+            | Instruction::Wait() => true,
             Instruction::Arithmetic(_)
             | Instruction::BinaryLogic(_)
             | Instruction::CalibrationDefinition(_)
@@ -733,7 +982,7 @@ impl Instruction {
             | Instruction::FrameDefinition(_)
             | Instruction::Gate(_)
             | Instruction::GateDefinition(_)
-            | Instruction::Halt
+            | Instruction::Halt()
             | Instruction::Include(_)
             | Instruction::Jump(_)
             | Instruction::JumpUnless(_)
@@ -743,7 +992,7 @@ impl Instruction {
             | Instruction::MeasureCalibrationDefinition(_)
             | Instruction::Measurement(_)
             | Instruction::Move(_)
-            | Instruction::Nop
+            | Instruction::Nop()
             | Instruction::Pragma(_)
             | Instruction::Reset(_)
             | Instruction::Store(_)

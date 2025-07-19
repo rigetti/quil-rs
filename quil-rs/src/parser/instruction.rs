@@ -66,7 +66,7 @@ pub(crate) fn parse_instruction(input: ParserInput) -> InternalParserResult<Inst
             }
             Command::LT => command::parse_comparison(ComparisonOperator::LessThan, remainder),
             Command::Fence => command::parse_fence(remainder),
-            Command::Halt => Ok((remainder, Instruction::Halt)),
+            Command::Halt => Ok((remainder, Instruction::Halt())),
             Command::Include => command::parse_include(remainder),
             Command::Ior => command::parse_logical_binary(BinaryOperator::Ior, remainder),
             Command::Jump => command::parse_jump(remainder),
@@ -79,7 +79,7 @@ pub(crate) fn parse_instruction(input: ParserInput) -> InternalParserResult<Inst
             Command::Exchange => command::parse_exchange(remainder),
             Command::Mul => command::parse_arithmetic(ArithmeticOperator::Multiply, remainder),
             Command::Neg => command::parse_logical_unary(UnaryOperator::Neg, remainder),
-            Command::Nop => Ok((remainder, Instruction::Nop)),
+            Command::Nop => Ok((remainder, Instruction::Nop())),
             Command::Not => command::parse_logical_unary(UnaryOperator::Not, remainder),
             Command::Pragma => command::parse_pragma(remainder),
             Command::Pulse => command::parse_pulse(remainder, true),
@@ -93,7 +93,7 @@ pub(crate) fn parse_instruction(input: ParserInput) -> InternalParserResult<Inst
             Command::SwapPhases => command::parse_swap_phases(remainder),
             Command::Store => command::parse_store(remainder),
             Command::Sub => command::parse_arithmetic(ArithmeticOperator::Subtract, remainder),
-            Command::Wait => Ok((remainder, Instruction::Wait)),
+            Command::Wait => Ok((remainder, Instruction::Wait())),
             Command::Xor => command::parse_logical_binary(BinaryOperator::Xor, remainder),
         }
         .map_err(|err| {
@@ -840,7 +840,7 @@ mod tests {
         })]
     );
 
-    make_test!(nop, parse_instructions, r#"NOP"#, vec![Instruction::Nop]);
+    make_test!(nop, parse_instructions, r#"NOP"#, vec![Instruction::Nop()]);
 
     #[test]
     fn parse_set_phase() {

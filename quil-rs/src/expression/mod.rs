@@ -14,7 +14,7 @@
 
 use crate::{
     hash::hash_f64,
-    imag,
+    imag, impl_repr,
     instruction::MemoryReference,
     parser::{lex, parse_expression, ParseError},
     program::{disallow_leftover, ParseProgramError},
@@ -49,24 +49,31 @@ mod simplification;
 #[pymodule]
 #[pyo3(name = "expression", module = "quil", submodule)]
 pub(crate) fn init_submodule(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    use quil_py::errors;
+
     let py = m.py();
-    m.add(
-        "EvaluationError",
-        py.get_type::<quil_py::errors::EvaluationError>(),
-    )?;
+    m.add("EvaluationError", py.get_type::<errors::EvaluationError>())?;
     m.add(
         "ParseExpressionError",
-        py.get_type::<quil_py::errors::ParseExpressionError>(),
+        py.get_type::<errors::ParseExpressionError>(),
     )?;
     m.add_class::<Expression>()?;
+    m.add_class::<ExpressionFunction>()?;
     m.add_class::<FunctionCallExpression>()?;
     m.add_class::<InfixExpression>()?;
-    m.add_class::<PrefixExpression>()?;
-    m.add_class::<ExpressionFunction>()?;
-    m.add_class::<PrefixOperator>()?;
     m.add_class::<InfixOperator>()?;
+    m.add_class::<PrefixExpression>()?;
+    m.add_class::<PrefixOperator>()?;
     Ok(())
 }
+
+impl_repr!(Expression);
+impl_repr!(ExpressionFunction);
+impl_repr!(FunctionCallExpression);
+impl_repr!(InfixExpression);
+impl_repr!(InfixOperator);
+impl_repr!(PrefixExpression);
+impl_repr!(PrefixOperator);
 
 /// The different possible types of errors that could occur during expression evaluation.
 #[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
@@ -113,7 +120,6 @@ where
 /// Note that when comparing Quil expressions, any embedded NaNs are treated as *equal* to other
 /// NaNs, not unequal, in contravention of the IEEE 754 spec.
 #[derive(Clone, Debug)]
-// TODO: repr, to_quil, from_str, parse
 #[pyclass(module = "quil.expression", eq, frozen, hash)]
 pub enum Expression {
     Address(MemoryReference),
@@ -157,23 +163,6 @@ impl FunctionCallExpression {
             expression: ArcIntern::new(expression),
         }
     }
-
-    // TODO: consider whether we should change this to __str__ and return something else for __repr__.
-    // 
-    // Returning the Debug output here is a bit strange for Python users:
-    // Ideally, __repr__ returns a valid Python expression for constructing an equivalent instance,
-    // but when that's not possible, returns an opaque `<SomeClass at address>` string.
-    // Giving the Rust Debug output is likely more appropriate for __str__,
-    // at least when the type does not implement Display.
-    // Note that in the later case, PyO3 supports deriving __str__ from the Display impl,
-    // but perhaps we should have our own derive macro for __repr__
-    // to produce the Python expression relevant for the class.
-    //
-    // The main reason to put this behind __str__ instead of __repr__
-    // is so Python users can effortlessly embed this in format strings.
-    fn __repr__(&self) -> String {
-        format!("{self:?}")
-    }
 }
 
 /// The type of infix Quil expressions, e.g. `e1 + e2`.
@@ -206,10 +195,6 @@ impl InfixExpression {
             right,
         }
     }
-
-    fn __repr__(&self) -> String {
-        format!("{self:?}")
-    }
 }
 
 /// The type of prefix Quil expressions, e.g. `-e`.
@@ -237,10 +222,6 @@ impl PrefixExpression {
             operator,
             expression,
         }
-    }
-
-    fn __repr__(&self) -> String {
-        format!("{self:?}")
     }
 }
 
@@ -675,10 +656,6 @@ impl Expression {
     #[staticmethod]
     fn parse(input: &str) -> PyResult<Self> {
         Ok(<Self as std::str::FromStr>::from_str(input)?)
-    }
-
-    fn __repr__(&self) -> String {
-        format!("{self:?}")
     }
 }
 

@@ -1,8 +1,12 @@
 use std::sync::Arc;
 
+use pyo3::prelude::*;
+
 use crate::quil::{Quil, ToQuilError};
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord, strum::EnumTryAs)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, ord)]
+#[pyo3(rename_all = "snake_case")]
 pub enum Qubit {
     Fixed(u64),
     Placeholder(QubitPlaceholder),
@@ -48,7 +52,17 @@ type QubitPlaceholderInner = Arc<()>;
 /// An opaque placeholder for a qubit whose index may be assigned
 /// at a later time.
 #[derive(Clone, Eq)]
+#[pyclass(module = "quil.instruction", eq, frozen, hash, ord)]
+#[pyo3(rename_all = "snake_case")]
 pub struct QubitPlaceholder(QubitPlaceholderInner);
+
+#[pymethods]
+impl QubitPlaceholder {
+    #[new]
+    fn new() -> Self {
+        Self::default()
+    }
+}
 
 impl QubitPlaceholder {
     fn address(&self) -> usize {

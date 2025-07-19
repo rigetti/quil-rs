@@ -10,6 +10,7 @@ use std::{collections::HashSet, str::FromStr};
 use indexmap::IndexMap;
 use nom_locate::LocatedSpan;
 use num_complex::Complex64;
+use pyo3::prelude::*;
 
 use crate::{
     expression::format_complex,
@@ -27,6 +28,8 @@ use super::{
 
 /// A parameter type within an extern signature.
 #[derive(Clone, Debug, PartialEq, Hash, Eq)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash)]
+#[pyo3(rename_all = "snake_case")]
 pub enum ExternParameterType {
     /// A scalar parameter, which may accept a memory reference or immediate value.
     ///
@@ -63,6 +66,7 @@ impl Quil for ExternParameterType {
 
 /// An extern parameter with a name, mutability, and data type.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
 pub struct ExternParameter {
     /// The name of the parameter. This must be a valid user identifier.
     pub(crate) name: String,
@@ -72,9 +76,11 @@ pub struct ExternParameter {
     pub(crate) data_type: ExternParameterType,
 }
 
+#[pymethods]
 impl ExternParameter {
     /// Create a new extern parameter. This will fail if the parameter name
     /// is not a valid user identifier.
+    #[new]
     pub fn try_new(
         name: String,
         mutable: bool,
@@ -87,7 +93,9 @@ impl ExternParameter {
             data_type,
         })
     }
+}
 
+impl ExternParameter {
     pub fn name(&self) -> &str {
         self.name.as_str()
     }
@@ -117,6 +125,7 @@ impl Quil for ExternParameter {
 
 /// An extern signature with a return type and parameters.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
 pub struct ExternSignature {
     /// The return type of the extern signature, if any.
     pub(crate) return_type: Option<ScalarType>,
@@ -124,15 +133,19 @@ pub struct ExternSignature {
     pub(crate) parameters: Vec<ExternParameter>,
 }
 
+#[pymethods]
 impl ExternSignature {
     /// Create a new extern signature.
+    #[new]
     pub fn new(return_type: Option<ScalarType>, parameters: Vec<ExternParameter>) -> Self {
         Self {
             return_type,
             parameters,
         }
     }
+}
 
+impl ExternSignature {
     pub fn return_type(&self) -> Option<&ScalarType> {
         self.return_type.as_ref()
     }
@@ -262,7 +275,7 @@ impl TryFrom<Pragma> for ExternSignature {
 /// A map of all program `PRAGMA EXTERN` instructions from their name (if any) to
 /// the corresponding [`Pragma`] instruction. Note, keys are [`Option`]s, but a
 /// `None` key will be considered invalid when converting to an [`ExternSignatureMap`].
-#[derive(Clone, Debug, PartialEq, Default)]
+#[derive(Clone, Debug, PartialEq, Default, IntoPyObject)]
 pub struct ExternPragmaMap(IndexMap<Option<String>, Pragma>);
 
 impl ExternPragmaMap {
@@ -402,6 +415,15 @@ pub enum CallArgumentResolutionError {
 /// with the appropriate [`ExternSignature`]. Resolution is required for building the
 /// [`crate::Program`] memory graph.
 #[derive(Clone, Debug, PartialEq)]
+#[pyclass(
+    name = "CallArgument",
+    module = "quil.instructions",
+    eq,
+    frozen,
+    hash,
+    get_all
+)]
+#[pyo3(rename_all = "snake_case")]
 pub enum UnresolvedCallArgument {
     /// A reference to a declared memory location. Note, this may be resolved to either
     /// a scalar or vector. In the former case, the assumed index is 0.
@@ -683,6 +705,8 @@ pub enum CallError {
 
 /// A call instruction with a name and arguments.
 #[derive(Clone, Debug, PartialEq, Hash, Eq)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash)]
+#[pyo3(rename_all = "snake_case")]
 pub struct Call {
     /// The name of the call instruction. This must be a valid user identifier.
     pub name: String,
@@ -690,9 +714,11 @@ pub struct Call {
     pub arguments: Vec<UnresolvedCallArgument>,
 }
 
+#[pymethods]
 impl Call {
     /// Create a new call instruction with resolved arguments. This will validate the
     /// name as a user identifier.
+    #[new]
     pub fn try_new(
         name: String,
         arguments: Vec<UnresolvedCallArgument>,
@@ -702,10 +728,18 @@ impl Call {
         Ok(Self { name, arguments })
     }
 
+    #[getter]
     pub fn name(&self) -> &str {
         self.name.as_str()
     }
 
+    #[getter("arguments")]
+    fn py_arguments(&self) -> Vec<UnresolvedCallArgument> {
+        self.arguments.clone()
+    }
+}
+
+impl Call {
     pub fn arguments(&self) -> &[UnresolvedCallArgument] {
         self.arguments.as_slice()
     }

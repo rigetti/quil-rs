@@ -99,3 +99,71 @@ impl SourceMapIndexable<InstructionIndex> for InstructionIndex {
         self == other
     }
 }
+
+/// Creates Python wrappers for `SourceMap<$srcT, $tgtT>` and `SourceMapEntry<$T, $U>`,
+/// then implements the methods for them that forward to the inner type.
+/// This is necessary because a `#[pyclass]` can't have generic parameters,
+/// and concrete implementations must be generated explicitly.
+#[macro_export]
+macro_rules! py_source_map {
+    ($mapT: ident, $entryT: ident, $srcT: ty, $tgtT: ty) => {
+        #[derive(Clone, Debug, PartialEq)]
+        #[pyclass(module = "quil.program", frozen)]
+        pub struct $mapT(pub SourceMap<$srcT, $tgtT>);
+        #[derive(Clone, Debug, PartialEq)]
+        #[pyclass(module = "quil.program", frozen)]
+        pub struct $entryT(pub SourceMapEntry<$srcT, $tgtT>);
+
+        #[pymethods]
+        impl $entryT {
+            pub fn source_location(&self) -> $srcT {
+                *self.0.source_location()
+            }
+
+            pub fn target_location(&self) -> $tgtT {
+                self.0.target_location().clone()
+            }
+        }
+
+        #[pymethods]
+        impl $mapT {
+            fn entries(&self) -> Vec<$entryT> {
+                self.0
+                    .entries()
+                    .iter()
+                    .map(|entry| $entryT(entry.clone()))
+                    .collect()
+            }
+
+            /// Given an instruction index within the resulting expansion, return the locations in the source
+            /// which were expanded to generate that instruction.
+            ///
+            /// This is `O(n)` where `n` is the number of first-level calibration expansions performed.
+            fn list_sources_for_target_index(&self, target_index: $srcT) -> Vec<&$srcT> {
+                self.0.list_sources(&target_index)
+            }
+
+            /// Given a particular calibration (`DEFCAL` or `DEFCAL MEASURE`), return the locations in the source
+            /// program which were expanded using that calibration.
+            ///
+            /// This is `O(n)` where `n` is the number of first-level calibration expansions performed.
+            fn list_sources_for_calibration_used(
+                &self,
+                calibration_used: CalibrationSource,
+            ) -> Vec<&$srcT> {
+                self.0.list_sources(&calibration_used)
+            }
+
+            /// Given a source index, return information about its expansion.
+            ///
+            /// This is `O(n)` where `n` is the number of first-level calibration expansions performed.
+            fn list_targets_for_source_index(&self, source_index: $srcT) -> Vec<$tgtT> {
+                self.0
+                    .list_targets(&source_index)
+                    .into_iter()
+                    .map(|ext| ext.clone())
+                    .collect()
+            }
+        }
+    };
+}

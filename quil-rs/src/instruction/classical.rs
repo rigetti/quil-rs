@@ -1,15 +1,20 @@
 use crate::{hash::hash_f64, quil::Quil};
 
+use pyo3::prelude::*;
+
 use super::MemoryReference;
 
 #[derive(Clone, Debug, Hash, PartialEq)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
 pub struct Arithmetic {
     pub operator: ArithmeticOperator,
     pub destination: MemoryReference,
     pub source: ArithmeticOperand,
 }
 
+#[pymethods]
 impl Arithmetic {
+    #[new]
     pub fn new(
         operator: ArithmeticOperator,
         destination: MemoryReference,
@@ -38,6 +43,8 @@ impl Quil for Arithmetic {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
+#[pyo3(rename_all = "snake_case")]
 pub enum ArithmeticOperand {
     LiteralInteger(i64),
     LiteralReal(f64),
@@ -75,6 +82,7 @@ impl From<MemoryReference> for ArithmeticOperand {
 }
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
 pub enum ArithmeticOperator {
     Add,
     Subtract,
@@ -99,6 +107,8 @@ impl Quil for ArithmeticOperator {
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
+#[pyo3(rename_all = "snake_case")]
 pub enum BinaryOperand {
     LiteralInteger(i64),
     MemoryReference(MemoryReference),
@@ -118,6 +128,8 @@ impl Quil for BinaryOperand {
 }
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
+#[pyo3(rename_all = "snake_case")]
 pub enum BinaryOperator {
     And,
     Ior,
@@ -140,6 +152,8 @@ impl Quil for BinaryOperator {
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
+#[pyo3(rename_all = "snake_case")]
 pub struct BinaryLogic {
     pub operator: BinaryOperator,
     pub destination: MemoryReference,
@@ -161,7 +175,9 @@ impl Quil for BinaryLogic {
     }
 }
 
+#[pymethods]
 impl BinaryLogic {
+    #[new]
     pub fn new(
         operator: BinaryOperator,
         destination: MemoryReference,
@@ -176,12 +192,16 @@ impl BinaryLogic {
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
+#[pyo3(rename_all = "snake_case")]
 pub struct Convert {
     pub destination: MemoryReference,
     pub source: MemoryReference,
 }
 
+#[pymethods]
 impl Convert {
+    #[new]
     pub fn new(destination: MemoryReference, source: MemoryReference) -> Self {
         Self {
             destination,
@@ -205,12 +225,16 @@ impl Quil for Convert {
 }
 
 #[derive(Clone, Debug, Hash, PartialEq)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
+#[pyo3(rename_all = "snake_case")]
 pub struct Move {
     pub destination: MemoryReference,
     pub source: ArithmeticOperand,
 }
 
+#[pymethods]
 impl Move {
+    #[new]
     pub fn new(destination: MemoryReference, source: ArithmeticOperand) -> Self {
         Self {
             destination,
@@ -234,6 +258,8 @@ impl Quil for Move {
 }
 
 #[derive(Clone, Debug, Hash, PartialEq)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
+#[pyo3(rename_all = "snake_case")]
 pub struct Exchange {
     pub left: MemoryReference,
     pub right: MemoryReference,
@@ -253,13 +279,17 @@ impl Quil for Exchange {
     }
 }
 
+#[pymethods]
 impl Exchange {
+    #[new]
     pub fn new(left: MemoryReference, right: MemoryReference) -> Self {
         Self { left, right }
     }
 }
 
 #[derive(Clone, Debug, Hash, PartialEq)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
+#[pyo3(rename_all = "snake_case")]
 pub struct Comparison {
     pub operator: ComparisonOperator,
     pub destination: MemoryReference,
@@ -267,7 +297,9 @@ pub struct Comparison {
     pub rhs: ComparisonOperand,
 }
 
+#[pymethods]
 impl Comparison {
+    #[new]
     pub fn new(
         operator: ComparisonOperator,
         destination: MemoryReference,
@@ -301,6 +333,8 @@ impl Quil for Comparison {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
+#[pyo3(rename_all = "snake_case")]
 pub enum ComparisonOperand {
     LiteralInteger(i64),
     LiteralReal(f64),
@@ -332,6 +366,8 @@ impl std::hash::Hash for ComparisonOperand {
 }
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
+#[pyo3(rename_all = "snake_case")]
 pub enum ComparisonOperator {
     Equal,
     GreaterThanOrEqual,
@@ -358,12 +394,16 @@ impl Quil for ComparisonOperator {
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
+#[pyo3(rename_all = "snake_case")]
 pub struct UnaryLogic {
     pub operator: UnaryOperator,
     pub operand: MemoryReference,
 }
 
+#[pymethods]
 impl UnaryLogic {
+    #[new]
     pub fn new(operator: UnaryOperator, operand: MemoryReference) -> Self {
         Self { operator, operand }
     }
@@ -383,6 +423,8 @@ impl Quil for UnaryLogic {
 }
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
+#[pyo3(rename_all = "snake_case")]
 pub enum UnaryOperator {
     Neg,
     Not,

@@ -1,3 +1,5 @@
+use pyo3::prelude::*;
+
 use crate::{
     instruction::{
         write_expression_parameter_string, write_instruction_block, Expression, GateModifier,
@@ -19,13 +21,16 @@ pub trait CalibrationSignature {
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
+#[pyclass(module = "quil.instructions", eq, get_all)]
 pub struct Calibration {
     pub identifier: CalibrationIdentifier,
     pub instructions: Vec<Instruction>,
 }
 
+#[pymethods]
 impl Calibration {
     /// Builds a new calibration definition.
+    #[new]
     pub fn new(
         identifier: CalibrationIdentifier,
         instructions: Vec<Instruction>,
@@ -34,6 +39,26 @@ impl Calibration {
             identifier,
             instructions,
         })
+    }
+
+    #[getter]
+    fn name(&self) -> &str {
+        &self.identifier.name
+    }
+
+    #[getter]
+    fn parameters(&self) -> Vec<Expression> {
+        self.identifier.parameters.clone()
+    }
+
+    #[getter]
+    fn qubits(&self) -> Vec<Qubit> {
+        self.identifier.qubits.clone()
+    }
+
+    #[getter]
+    fn modifiers(&self) -> Vec<GateModifier> {
+        self.identifier.modifiers.clone()
     }
 }
 
@@ -67,6 +92,7 @@ impl Quil for Calibration {
 
 /// Unique identifier for a calibration definition within a program
 #[derive(Clone, Debug, Default, PartialEq)]
+#[pyclass(module = "quil.instructions", eq, frozen, get_all)]
 pub struct CalibrationIdentifier {
     /// The modifiers applied to the gate
     pub modifiers: Vec<GateModifier>,
@@ -81,12 +107,14 @@ pub struct CalibrationIdentifier {
     pub qubits: Vec<Qubit>,
 }
 
+#[pymethods]
 impl CalibrationIdentifier {
     /// Builds a new calibration identifier.
     ///
     /// # Errors
     ///
     /// Returns an error if the given name isn't a valid Quil identifier.
+    #[new]
     pub fn new(
         name: String,
         modifiers: Vec<GateModifier>,
@@ -101,7 +129,9 @@ impl CalibrationIdentifier {
             qubits,
         })
     }
+}
 
+impl CalibrationIdentifier {
     pub fn matches(&self, gate: &Gate) -> bool {
         // Filter out non-matching calibrations: check rules 1-4
         if self.name != gate.name
@@ -188,17 +218,31 @@ impl Quil for CalibrationIdentifier {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+#[pyclass(module = "quil.instructions", eq, frozen, get_all)]
+#[pyo3(rename_all = "snake_case")]
 pub struct MeasureCalibrationDefinition {
     pub identifier: MeasureCalibrationIdentifier,
     pub instructions: Vec<Instruction>,
 }
 
+#[pymethods]
 impl MeasureCalibrationDefinition {
+    #[new]
     pub fn new(identifier: MeasureCalibrationIdentifier, instructions: Vec<Instruction>) -> Self {
         Self {
             identifier,
             instructions,
         }
+    }
+
+    #[getter]
+    fn qubit(&self) -> Option<Qubit> {
+        self.identifier.qubit.clone()
+    }
+
+    #[getter]
+    fn parameter(&self) -> &str {
+        &self.identifier.parameter
     }
 }
 
@@ -231,6 +275,8 @@ impl Quil for MeasureCalibrationDefinition {
 
 /// A unique identifier for a measurement calibration definition within a program
 #[derive(Clone, Debug, Default, PartialEq)]
+#[pyclass(module = "quil.instructions", eq, frozen, get_all)]
+#[pyo3(rename_all = "snake_case")]
 pub struct MeasureCalibrationIdentifier {
     /// The qubit which is the target of measurement, if any
     pub qubit: Option<Qubit>,
@@ -239,7 +285,9 @@ pub struct MeasureCalibrationIdentifier {
     pub parameter: String,
 }
 
+#[pymethods]
 impl MeasureCalibrationIdentifier {
+    #[new]
     pub fn new(qubit: Option<Qubit>, parameter: String) -> Self {
         Self { qubit, parameter }
     }

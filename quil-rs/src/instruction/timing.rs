@@ -1,14 +1,18 @@
 use super::Qubit;
 use crate::{expression::Expression, quil::Quil};
+use pyo3::prelude::*;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
 pub struct Delay {
     pub duration: Expression,
     pub frame_names: Vec<String>,
     pub qubits: Vec<Qubit>,
 }
 
+#[pymethods]
 impl Delay {
+    #[new]
     pub fn new(duration: Expression, frame_names: Vec<String>, qubits: Vec<Qubit>) -> Self {
         Self {
             duration,
@@ -38,6 +42,7 @@ impl Quil for Delay {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
 pub struct Fence {
     pub qubits: Vec<Qubit>,
 }
@@ -57,7 +62,9 @@ impl Quil for Fence {
     }
 }
 
+#[pymethods]
 impl Fence {
+    #[new]
     pub fn new(qubits: Vec<Qubit>) -> Self {
         Self { qubits }
     }

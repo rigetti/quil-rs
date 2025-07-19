@@ -1,5 +1,6 @@
 use pyo3::prelude::*;
 
+use crate::impl_repr;
 pub(crate) mod templates;
 
 pub use templates::*;
@@ -16,3 +17,8 @@ pub(crate) fn init_submodule(m: &Bound<'_, PyModule>) -> PyResult<()> {
     Ok(())
 }
 
+impl_repr!(BoxcarKernel);
+impl_repr!(DragGaussian);
+impl_repr!(ErfSquare);
+impl_repr!(Gaussian);
+impl_repr!(HermiteGaussian);

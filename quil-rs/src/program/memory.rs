@@ -14,6 +14,8 @@
 
 use std::collections::HashSet;
 
+use pyo3::prelude::*;
+
 use crate::expression::{Expression, FunctionCallExpression, InfixExpression, PrefixExpression};
 use crate::instruction::{
     Arithmetic, ArithmeticOperand, BinaryLogic, BinaryOperand, CallResolutionError, Capture,
@@ -25,12 +27,15 @@ use crate::instruction::{
 };
 
 #[derive(Clone, Debug, Hash, PartialEq)]
+#[pyclass(module = "quil.program", eq, frozen, hash, get_all)]
 pub struct MemoryRegion {
     pub size: Vector,
     pub sharing: Option<Sharing>,
 }
 
+#[pymethods]
 impl MemoryRegion {
+    #[new]
     pub fn new(size: Vector, sharing: Option<Sharing>) -> Self {
         Self { size, sharing }
     }
@@ -313,12 +318,12 @@ impl Instruction {
             Instruction::Declaration(_)
             | Instruction::Fence(_)
             | Instruction::FrameDefinition(_)
-            | Instruction::Halt
-            | Instruction::Wait
+            | Instruction::Halt()
+            | Instruction::Wait()
             | Instruction::Include(_)
             | Instruction::Jump(_)
             | Instruction::Label(_)
-            | Instruction::Nop
+            | Instruction::Nop()
             | Instruction::Pragma(_)
             | Instruction::Reset(_)
             | Instruction::SwapPhases(_)

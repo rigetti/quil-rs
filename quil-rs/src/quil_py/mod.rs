@@ -1,10 +1,9 @@
 use pyo3::{prelude::*, types::PyDict, wrap_pymodule};
 
 use crate::expression;
-// use crate::instruction;
-// use crate::program;
-// use crate::validation;
-// use crate::units;
+use crate::instruction;
+use crate::program;
+use crate::validation;
 use crate::waveform;
 
 pub(crate) mod errors;
@@ -13,6 +12,9 @@ pub(crate) mod errors;
 #[pyo3(name = "_quil")]
 fn init_module(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_wrapped(wrap_pymodule!(expression::init_submodule))?;
+    m.add_wrapped(wrap_pymodule!(instruction::init_submodule))?;
+    m.add_wrapped(wrap_pymodule!(program::init_submodule))?;
+    m.add_wrapped(wrap_pymodule!(validation::init_submodule))?;
     m.add_wrapped(wrap_pymodule!(waveform::init_submodule))?;
 
     let py = m.py();
@@ -20,40 +22,51 @@ fn init_module(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let sys_modules: Bound<'_, PyDict> = sys.getattr("modules")?.downcast_into()?;
     sys_modules.set_item("quil.waveforms", m.getattr("waveforms")?)?;
     sys_modules.set_item("quil.expression", m.getattr("expression")?)?;
+    sys_modules.set_item("quil.instructions", m.getattr("instructions")?)?;
+    sys_modules.set_item("quil.program", m.getattr("program")?)?;
+
+    let validation_module = m.getattr("validation")?;
+    sys_modules.set_item(
+        "quil.validation.identifier",
+        validation_module.getattr("identifier")?,
+    )?;
+    sys_modules.set_item("quil.validation", validation_module)?;
     Ok(())
 }
 
-/*
-create_init_submodule! {
-    submodules: [
-        "expression": expression::init_submodule,
-        "instructions": instruction::init_submodule,
-        "program": program::init_submodule,
-        "validation": validation::init_submodule,
-        "waveforms": waveforms::init_submodule
-    ],
-}
-
-/// Implement `to_quil` and `to_quil_or_debug` methods for wrapper types whose inner type
-/// implements [`Quil`](quil_rs::quil::Quil).
+/// Add Python `to_quil` and `to_quil_or_debug` methods
+/// for types that implements [`Quil`](quil_rs::quil::Quil).
 #[macro_export]
 macro_rules! impl_to_quil {
     ($name: ident) => {
         #[pyo3::pymethods]
         impl $name {
-            pub fn to_quil(&self) -> pyo3::PyResult<String> {
-                quil_rs::quil::Quil::to_quil(rigetti_pyo3::PyWrapper::as_inner(self))
-                    .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
+            #[pyo3(name = "to_quil")]
+            fn py_to_quil(&self) -> pyo3::PyResult<String> {
+                Ok(self.to_quil()?)
             }
 
-            pub fn to_quil_or_debug(&self) -> String {
-                quil_rs::quil::Quil::to_quil_or_debug(rigetti_pyo3::PyWrapper::as_inner(self))
+            #[pyo3(name = "to_quil_or_debug")]
+            fn py_to_quil_or_debug(&self) -> String {
+                self.to_quil_or_debug()
             }
         }
     };
 }
-*/
 
+#[macro_export]
+macro_rules! impl_repr {
+    ($name: ident) => {
+        #[pyo3::pymethods]
+        impl $name {
+            fn __repr__(&self) -> String {
+                format!("{self:?}")
+            }
+        }
+    };
+}
+
+/* TODO
 /// Implements pickling for an instruction by implementing __getstate__ and __reduce__.
 ///
 /// The program is serialized using [`Quil`](quil_rs::quil::Quil), which means pickling can fail if
@@ -114,53 +127,4 @@ macro_rules! impl_pickle_for_instruction {
         }
     };
 }
-
-#[macro_export]
-macro_rules! repr {
-    () => {};
-    
-    // Terminal rule to turn processed fields into a format expression.
-    (@f ($cls:ident, $slf:ident, $fmt:expr, [$($fields:tt)*]); ()) => {
-        format!(concat!( "{}(", $fmt, ")" ), $cls, $($fields)*)
-    };
-    
-    // matches repr!( @f (cls, slf, 'name1={}', [name1]); (name2, name3, name4) )
-    // outputs repr!( @f (cls, slf, 'name1={}, name2={}', [name1, name2]); (name3, name4) )
-    (@f ($cls:ident, $slf:ident, $fmt:expr, [$($fields:tt)*]); ($field:ident, $($tail:tt)*)) => {
-        repr!(@f 
-            ( $cls, $slf, concat!($fmt, ", ", stringify!($field), "={}"), [$($fields)* $slf.$field,] );
-            ($($tail)*)
-        )
-    };
-
-    (@x $slf:ident, $exp:expr) => { $slf.$exp };
-    (@as_expr $e:expr) => { $e };
-
-    ($slf:ident()) => {
-        {
-            let class_name: Bound<'_, PyString> = $slf.get_type().qualname()?;
-            Ok( format!("{class_name}()") ) 
-        }
-    };
-    
-    ($slf:ident( $($fields:tt)* )) => {
-        {
-            let class_name: Bound<'_, PyString> = $slf.get_type().qualname()?;
-            let _slf = $slf.borrow();
-            Ok( repr!(@f (class_name, _slf, "", []); ($($fields)*,)) )
-        }
-    };
-}
-
-#[macro_export]
-macro_rules! py_wrap_error {
-    ($module: expr, $rust: ty, $python: ident, $base: ty) => {
-        pyo3::create_exception!($module, $python, $base);
-
-        impl std::convert::From<$rust> for pyo3::PyErr {
-            fn from(err: $rust) -> pyo3::PyErr {
-                <$python>::new_err(err.to_string())
-            }
-        }
-    };
-}
+*/
