@@ -24,7 +24,7 @@ use ndarray::Array2;
 use nom_locate::LocatedSpan;
 use numpy::{Complex64, PyArray2, ToPyArray};
 use pyo3::prelude::*;
-use pyo3::types::{PyBytes, PyFunction, PyList};
+use pyo3::types::{PyBytes, PyFunction};
 
 use crate::instruction::{
     Arithmetic, ArithmeticOperand, ArithmeticOperator, Call, Declaration, ExternError,
@@ -79,6 +79,11 @@ pub(crate) fn init_submodule(m: &Bound<'_, PyModule>) -> PyResult<()> {
         "ComputedScheduleError",
         py.get_type::<errors::ComputedScheduleError>(),
     )?;
+    m.add(
+        "BasicBlockScheduleError",
+        py.get_type::<errors::BasicBlockScheduleError>(),
+    )?;
+    m.add("QubitGraphError", py.get_type::<errors::QubitGraphError>())?;
 
     m.add_class::<BasicBlockOwned>()?; // Python name: BasicBlock
     m.add_class::<CalibrationExpansion>()?;
@@ -384,19 +389,16 @@ impl Program {
     #[pyo3(name = "filter_instructions")]
     fn py_filter_instructions<'py>(
         &self,
+        py: Python<'py>,
         predicate: &Bound<'py, PyFunction>,
-    ) -> PyResult<Bound<'py, PyList>> {
-        let py = predicate.py();
-        let filtered = PyList::empty(py);
-
-        for inst in self.to_instructions() {
-            let inst = inst.into_pyobject(py)?;
-            if predicate.call1((&inst,))?.extract::<bool>()? {
-                filtered.append(inst)?;
-            }
-        }
-
-        Ok(filtered)
+    ) -> Self {
+        self.filter_instructions(|inst| {
+            predicate
+                .call1((inst.clone().into_pyobject(py).unwrap(),))
+                .unwrap_or_else(|err| panic!("predicate function returned an error: {err}"))
+                .extract()
+                .unwrap_or_else(|err| panic!("predicate function must return a bool: {err}"))
+        })
     }
 
     /// Creates a new conjugate transpose of the [`Program`] by reversing the order of gate
