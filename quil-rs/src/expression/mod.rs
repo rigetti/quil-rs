@@ -127,6 +127,7 @@ pub enum Expression {
     FunctionCall(FunctionCallExpression),
     Infix(InfixExpression),
     Number(Complex64),
+    #[pyo3(name = "pi")]
     PiConstant(),
     Prefix(PrefixExpression),
     Variable(String),
