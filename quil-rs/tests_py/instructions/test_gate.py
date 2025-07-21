@@ -15,18 +15,18 @@ from quil.instructions import (
 
 class TestPauliTerm:
     def test_new(self):
-        pt = PauliTerm([(PauliGate.X, "a")], Expression.new_pi())
+        pt = PauliTerm([(PauliGate.X, "a")], Expression.pi())
         assert pt.arguments == [(PauliGate.X, "a")]
-        pt.arguments = [(PauliGate.Y, "b")]
+        pt = PauliTerm([(PauliGate.Y, "b")], Expression.pi())
         assert pt.arguments == [(PauliGate.Y, "b")]
 
 
 def test_calibration_getters():
-    placeholder = Qubit.from_placeholder(QubitPlaceholder())
+    placeholder = Qubit.placeholder(QubitPlaceholder())
 
     calibration = Calibration(
         CalibrationIdentifier("MYCAL", [], [placeholder], []),
-        [Instruction.from_delay(Delay(Expression.from_number(complex(0.5)), [], [placeholder]))],
+        [Instruction.delay(Delay(Expression.number(complex(0.5)), [], [placeholder]))],
     )
 
     assert calibration.name == "MYCAL"
@@ -36,7 +36,7 @@ def test_calibration_getters():
 
 
 def test_measure_calibration_getters():
-    placeholder = Qubit.from_placeholder(QubitPlaceholder())
+    placeholder = Qubit.placeholder(QubitPlaceholder())
 
     calibration = MeasureCalibrationDefinition(
         MeasureCalibrationIdentifier(placeholder, "param"),

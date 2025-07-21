@@ -5,7 +5,8 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 
 from quil.instructions import Gate, Instruction, Jump, Qubit, QubitPlaceholder, Target, TargetPlaceholder
-from quil.program import Program
+from quil.program import MaybeCalibrationExpansion, Program
+from quil import QuilError
 
 
 def test_pickle():
@@ -38,12 +39,12 @@ def test_custom_resolver():
     program = Program()
     program.add_instructions(
         [
-            Instruction.from_gate(Gate("H", [], [Qubit.from_placeholder(qubit_placeholder)], [])),
-            Instruction.from_jump(Jump(Target.from_placeholder(target_placeholder))),
+            Instruction.gate(Gate("H", [], [Qubit.placeholder(qubit_placeholder)], [])),
+            Instruction.jump(Jump(Target.placeholder(target_placeholder))),
         ]
     )
 
-    with pytest.raises(ValueError):
+    with pytest.raises(QuilError):
         program.to_quil()
 
     program.resolve_placeholders_with_custom_resolvers(target_resolver=target_resolver, qubit_resolver=qubit_resolver)
@@ -63,13 +64,13 @@ MEASURE 0 ro[0]
 MEASURE 1 ro[1]
 """
     )
-    assert program.get_used_qubits() == {Qubit.from_fixed(0), Qubit.from_fixed(1)}
+    assert program.used_qubits == {Qubit.fixed(0), Qubit.fixed(1)}
     cfg = program.control_flow_graph()
     blocks = cfg.basic_blocks()
     assert len(blocks) == 1
     assert blocks[0].terminator() is None
     block_program = Program()
-    block_program.add_instructions(blocks[0].instructions())
+    block_program.add_instructions(blocks[0].instructions)
     assert (
         block_program.to_quil()
         == """H 0
@@ -93,7 +94,7 @@ LABEL @end
 HALT
 """
     )
-    assert program.get_used_qubits() == {Qubit.from_fixed(0)}
+    assert program.used_qubits == {Qubit.fixed(0)}
     cfg = program.control_flow_graph()
 
     assert cfg.has_dynamic_control_flow()
@@ -151,7 +152,7 @@ CZ 0 2
     block = blocks[0]
 
     schedule = block.as_schedule_seconds(program)
-    items = schedule.items()
+    items = schedule.items
 
     # One for each CZ
     assert len(items) == 3
@@ -208,7 +209,7 @@ def test_calibration_expansion():
     )
     program = Program.parse(program_text)
     expansion = program.expand_calibrations_with_source_map()
-    source_map = expansion.source_map()
+    source_map = expansion.source_map
 
     expected_program_text = inspect.cleandoc(
         """
@@ -223,20 +224,22 @@ def test_calibration_expansion():
         """
     )
 
-    assert expansion.program().to_quil() == Program.parse(expected_program_text).to_quil()
+    assert expansion.program.to_quil() == Program.parse(expected_program_text).to_quil()
 
     # The X at index 0 should have been replaced with a Z at index 0
     targets = source_map.list_targets_for_source_index(0)
     assert len(targets) == 1
-    expanded = targets[0].as_expanded()
-    assert expanded.range() == range(0, 1)
+    assert isinstance(targets[0], MaybeCalibrationExpansion.expanded)
+    expanded = targets[0][0]
+    assert expanded.range == range(0, 1)
     assert source_map.list_sources_for_target_index(0) == [0]
 
     # The Y at index 1 should have been replaced with a Z at index 1
     targets = source_map.list_targets_for_source_index(1)
     assert len(targets) == 1
-    expanded = targets[0].as_expanded()
-    assert expanded.range() == range(1, 2)
+    assert isinstance(targets[0], MaybeCalibrationExpansion.expanded)
+    expanded = targets[0][0]
+    assert expanded.range == range(1, 2)
     assert source_map.list_sources_for_target_index(1) == [1]
 
     # There is no source index 2 and so there should be no mapping
