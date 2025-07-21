@@ -107,14 +107,12 @@ pub struct CalibrationIdentifier {
     pub qubits: Vec<Qubit>,
 }
 
-#[pymethods]
 impl CalibrationIdentifier {
     /// Builds a new calibration identifier.
     ///
     /// # Errors
     ///
     /// Returns an error if the given name isn't a valid Quil identifier.
-    #[new]
     pub fn new(
         name: String,
         modifiers: Vec<GateModifier>,
@@ -128,6 +126,22 @@ impl CalibrationIdentifier {
             parameters,
             qubits,
         })
+    }
+}
+
+#[pymethods]
+impl CalibrationIdentifier {
+    /// Builds a new calibration identifier.
+    ///
+    /// Raises an error if the given name isn't a valid Quil identifier.
+    #[new]
+    fn __new__(
+        name: String,
+        parameters: Vec<Expression>,
+        qubits: Vec<Qubit>,
+        modifiers: Vec<GateModifier>,
+    ) -> Result<Self, IdentifierValidationError> {
+        Self::new(name, modifiers, parameters, qubits)
     }
 }
 
