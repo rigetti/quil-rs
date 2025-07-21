@@ -25,10 +25,18 @@ macro_rules! exception {
 // TODO: Create a unified error hierarchy: https://github.com/rigetti/quil-rs/issues/461
 // Base exception type for this package.
 pyo3::create_exception!(
-    quil.program,
+    quil,
     QuilError,
     PyException,
     "Base exception type for errors raised by this package."
+);
+
+exception!(
+    crate::quil::ToQuilError,
+    quil,
+    ToQuilError,
+    QuilError,
+    "Errors which can occur when converting a Quil item to a string."
 );
 
 // expression errors
@@ -134,13 +142,4 @@ exception!(
     quil.program,
     QubitGraphError,
     ProgramError
-);
-
-// quil errors
-exception!(
-    crate::quil::ToQuilError,
-    quil.program,
-    ToQuilError,
-    QuilError,
-    "Errors which can occur when converting a Quil item to a string."
 );

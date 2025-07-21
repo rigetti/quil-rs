@@ -11,13 +11,19 @@ pub(crate) mod errors;
 #[pymodule]
 #[pyo3(name = "_quil")]
 fn init_module(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    use crate::quil_py::errors;
+
+    let py = m.py();
+
     m.add_wrapped(wrap_pymodule!(expression::init_submodule))?;
     m.add_wrapped(wrap_pymodule!(instruction::init_submodule))?;
     m.add_wrapped(wrap_pymodule!(program::init_submodule))?;
     m.add_wrapped(wrap_pymodule!(validation::init_submodule))?;
     m.add_wrapped(wrap_pymodule!(waveform::init_submodule))?;
 
-    let py = m.py();
+    m.add("QuilError", py.get_type::<errors::QuilError>())?;
+    m.add("ToQuilError", py.get_type::<errors::ToQuilError>())?;
+
     let sys = PyModule::import(py, "sys")?;
     let sys_modules: Bound<'_, PyDict> = sys.getattr("modules")?.downcast_into()?;
     sys_modules.set_item("quil.waveforms", m.getattr("waveforms")?)?;

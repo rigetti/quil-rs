@@ -8,7 +8,9 @@ from ._quil import (
     instructions,
     program,
     validation,
-    waveforms
+    waveforms,
+    QuilError,
+    ToQuilError,
 )
 
 __all__ = [
@@ -17,4 +19,6 @@ __all__ = [
     "program",
     "validation",
     "waveforms",
+    "QuilError",
+    "ToQuilError",
 ]
