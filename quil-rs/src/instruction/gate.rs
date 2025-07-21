@@ -1,7 +1,10 @@
 use crate::{
     expression::Expression,
     imag,
-    instruction::{write_expression_parameter_string, write_parameter_string, write_qubits, ParseInstructionError, Qubit},
+    instruction::{
+        write_expression_parameter_string, write_parameter_string, write_qubits,
+        ParseInstructionError, Qubit,
+    },
     quil::{write_join_quil, Quil, INDENT},
     real,
     validation::identifier::{
