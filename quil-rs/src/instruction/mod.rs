@@ -401,18 +401,32 @@ impl Instruction {
         Instruction::from_str(string)
     }
 
+    /// Create a new, equivalent `Instruction` instance, including its `QubitPlaceholder`s.
     fn __copy__(&self) -> Self {
-        // TODO: This is probably not the actual goal of the original implementation;
-        // moreover, likely it's not needed -- Python assignments are essentially shallow copies;
-        // The distinction really only matters for container types,
-        // for when you want a new instance of the container class,
-        // but want it populated with the same references as some other class.
         self.clone()
     }
 
+    /// Create a new `Instruction` instance, with new `QubitPlaceholder`s.
+    ///
+    /// Note that the resulting `Instruction` may not compare equal to the original
+    /// (that is, `instruction != deepcopy(instruction)`),
+    /// since unique placeholders are never considered equal.
     fn __deepcopy__<'py>(&self, _memo: &Bound<'py, PyDict>) -> Self {
-        // TODO: there's some inner state here that is meant to be reset on deepcopy.
-        self.clone()
+        // Generate new `QubitPlaceholder`s and replace them wherever present,
+        // but make sure that if two instructions referenced the same placeholder,
+        // the new instructions reference the same replacement.
+        use std::collections::HashMap;
+        let mut placeholders: HashMap<QubitPlaceholder, QubitPlaceholder> = HashMap::new();
+
+        let mut inst = self.clone();
+        for qubit in inst.get_qubits_mut() {
+            if let Qubit::Placeholder(placeholder) = qubit {
+                *qubit =
+                    Qubit::Placeholder(placeholders.entry(placeholder.clone()).or_default().clone())
+            }
+        }
+
+        inst
     }
 }
 
