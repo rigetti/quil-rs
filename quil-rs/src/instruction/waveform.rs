@@ -94,7 +94,9 @@ pub struct WaveformInvocation {
     pub parameters: WaveformParameters,
 }
 
+#[pymethods]
 impl WaveformInvocation {
+    #[new]
     pub fn new(name: String, parameters: WaveformParameters) -> Self {
         Self { name, parameters }
     }
