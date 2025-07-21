@@ -432,7 +432,7 @@ impl TimeSpanSeconds {
     /// The inclusive start time of the time span,
     /// in seconds relative to the start of the scheduling context (such as the basic block).
     #[getter]
-    fn start_time(&self) -> Seconds {
+    fn start(&self) -> Seconds {
         self.0.start_time().clone()
     }
 
