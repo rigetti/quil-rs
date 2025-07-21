@@ -49,10 +49,7 @@ pub use self::frame::MatchedFrames;
 pub use self::memory::{
     MemoryAccess, MemoryAccesses, MemoryAccessesError, MemoryAccessesResult, MemoryRegion,
 };
-pub use self::source_map::{
-    InstructionSource, InstructionSourceMap, InstructionTarget, InstructionTargetRewrite,
-    SourceMap, SourceMapEntry,
-};
+pub use self::source_map::{InstructionTarget, SourceMap, SourceMapEntry, SourceMapIndexable};
 
 pub mod analysis;
 mod calibration;
@@ -282,11 +279,16 @@ impl Program {
 
     /// Expand any instructions in the program which have a matching calibration, leaving the others
     /// unchanged. Return the expanded copy of the program and a source mapping of the expansions made.
-    pub fn expand_calibrations_with_source_map(&self) -> Result<(Program, InstructionSourceMap)> {
+    pub fn expand_calibrations_with_source_map(
+        &self,
+    ) -> Result<(
+        Program,
+        SourceMap<InstructionIndex, InstructionTarget<CalibrationExpansion>>,
+    )> {
         let mut source_mapping = ProgramCalibrationExpansionSourceMap::default();
         let new_program = self.expand_calibrations_inner(Some(&mut source_mapping))?;
 
-        Ok((new_program, InstructionSourceMap::from(source_mapping)))
+        Ok((new_program, source_mapping))
     }
 
     /// Expand calibrations, writing expansions to a [`SourceMap`] if provided.
@@ -361,7 +363,10 @@ impl Program {
     pub fn expand_defgate_sequences_with_source_map(
         &self,
         filter: crate::filter_set::Filter<String>,
-    ) -> Result<(Self, InstructionSourceMap)> {
+    ) -> Result<(
+        Self,
+        SourceMap<InstructionIndex, InstructionTarget<DefGateSequenceExpansion>>,
+    )> {
         let (expander, gate_definitions) = self.initialize_defgate_sequence_expander(filter);
         let (new_instructions, source_map) =
             expander.expand_defgate_sequences_with_source_map(&self.instructions)?;
@@ -852,7 +857,7 @@ fn filter_sequence_gate_definitions_to_keep(
                 None
             }
         })
-        .map(| (gate_name, sequence)| (gate_name, (graph.add_node(1), sequence)))
+        .map(|(gate_name, sequence)| (gate_name, (graph.add_node(1), sequence)))
         .collect::<HashMap<_, _>>();
 
     gate_sequence_definitions
@@ -990,7 +995,7 @@ mod tests {
         },
         program::{
             calibration::{CalibrationExpansion, CalibrationSource},
-            source_map::{InstructionSourceMap, InstructionTarget, SourceMap, SourceMapEntry},
+            source_map::{InstructionTarget, SourceMap, SourceMapEntry},
             InstructionIndex, MemoryAccesses,
         },
         quil::{Quil, INDENT},
@@ -1284,7 +1289,7 @@ NOP
         let program = Program::from_str(input).unwrap();
         let (expanded_program, source_map) = program.expand_calibrations_with_source_map().unwrap();
         pretty_assertions::assert_eq!(expanded_program.to_quil().unwrap(), expected);
-        pretty_assertions::assert_eq!(source_map, InstructionSourceMap::from(expected_source_map));
+        pretty_assertions::assert_eq!(source_map, expected_source_map);
     }
 
     #[test]

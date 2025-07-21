@@ -4,19 +4,98 @@ use pyo3::{
     types::{PyModule, PyTuple},
     PyAny, PyResult, Python,
 };
-use quil_rs::program::{
-    CalibrationExpansion, CalibrationSource, DefGateSequenceExpansion, InstructionIndex,
-    InstructionSource, InstructionSourceMap, InstructionTarget, InstructionTargetRewrite, SourceMapEntry,
+use quil_rs::{
+    instruction::GateSignature,
+    program::{
+        CalibrationExpansion, CalibrationSource, DefGateSequenceExpansion, InstructionIndex,
+        InstructionTarget, SourceMap, SourceMapEntry, SourceMapIndexable,
+    },
 };
-use rigetti_pyo3::{
-    impl_repr, py_wrap_type, py_wrap_union_enum, pyo3::pymethods, PyWrapper,
-};
+use rigetti_pyo3::{impl_repr, py_wrap_type, py_wrap_union_enum, pyo3::pymethods, PyWrapper};
 
 use crate::{
     impl_eq,
     instruction::{PyCalibrationIdentifier, PyGateSignature, PyMeasureCalibrationIdentifier},
 };
 
+#[derive(Clone, Debug, PartialEq)]
+pub enum InstructionTargetRewrite {
+    Calibration(CalibrationExpansion),
+    DefGateSequence(DefGateSequenceExpansion),
+}
+
+impl From<CalibrationExpansion> for InstructionTargetRewrite {
+    fn from(value: CalibrationExpansion) -> Self {
+        Self::Calibration(value)
+    }
+}
+
+impl From<DefGateSequenceExpansion> for InstructionTargetRewrite {
+    fn from(value: DefGateSequenceExpansion) -> Self {
+        Self::DefGateSequence(value)
+    }
+}
+
+impl SourceMapIndexable<InstructionIndex> for InstructionTargetRewrite {
+    fn intersects(&self, other: &InstructionIndex) -> bool {
+        match self {
+            Self::Calibration(expansion) => expansion.intersects(other),
+            Self::DefGateSequence(expansion) => expansion.intersects(other),
+        }
+    }
+}
+
+impl SourceMapIndexable<CalibrationSource> for InstructionTargetRewrite {
+    fn intersects(&self, other: &CalibrationSource) -> bool {
+        if let Self::Calibration(expansion) = self {
+            expansion.intersects(other)
+        } else {
+            false
+        }
+    }
+}
+
+impl SourceMapIndexable<GateSignature> for InstructionTargetRewrite {
+    fn intersects(&self, other: &GateSignature) -> bool {
+        if let Self::DefGateSequence(expansion) = self {
+            expansion.intersects(other)
+        } else {
+            false
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct InstructionSource(std::ops::Range<InstructionIndex>);
+
+impl InstructionSource {
+    pub fn start(&self) -> InstructionIndex {
+        self.0.start
+    }
+
+    pub fn end(&self) -> InstructionIndex {
+        self.0.end
+    }
+
+    pub fn contains(&self, index: &InstructionIndex) -> bool {
+        self.0.contains(index)
+    }
+}
+
+impl From<&InstructionIndex> for InstructionSource {
+    fn from(value: &InstructionIndex) -> Self {
+        Self(*value..InstructionIndex(value.0 + 1))
+    }
+}
+
+impl SourceMapIndexable<InstructionIndex> for InstructionSource {
+    fn intersects(&self, other: &InstructionIndex) -> bool {
+        self.contains(other)
+    }
+}
+
+type InstructionSourceMap =
+    SourceMap<InstructionSource, InstructionTarget<InstructionTargetRewrite>>;
 
 py_wrap_type! {
     #[derive(Debug, PartialEq)]
@@ -40,7 +119,8 @@ impl PyCalibrationExpansion {
     }
 
     pub fn expansions(&self) -> PyInstructionSourceMap {
-        InstructionSourceMap::from(self.as_inner().expansions().clone()).into()
+        let source_map = self.as_inner().expansions().clone();
+        to_instruction_source_map(source_map).into()
     }
 }
 
@@ -66,7 +146,7 @@ impl PyDefGateSequenceExpansion {
     }
 
     pub fn expansions(&self) -> PyInstructionSourceMap {
-        InstructionSourceMap::from(self.as_inner().nested_expansions().clone()).into()
+        to_instruction_source_map(self.as_inner().nested_expansions().clone()).into()
     }
 }
 
@@ -123,6 +203,14 @@ impl PyInstructionSourceMap {
             .collect()
     }
 
+    pub fn list_sources_for_gate_expansion(&self, gate_signature: PyGateSignature) -> Vec<usize> {
+        self.as_inner()
+            .list_sources(gate_signature.as_inner())
+            .into_iter()
+            .map(|index| index.start().0)
+            .collect()
+    }
+
     /// Given a source index, return information about its expansion.
     ///
     /// This is `O(n)` where `n` is the number of first-level calibration expansions performed.
@@ -133,6 +221,36 @@ impl PyInstructionSourceMap {
             .map(|expansion| InstructionTargetShim::from(expansion.clone()).into())
             .collect()
     }
+}
+
+impl<R: Into<InstructionTargetRewrite> + Clone>
+    From<SourceMap<InstructionIndex, InstructionTarget<R>>> for PyInstructionSourceMap
+{
+    fn from(value: SourceMap<InstructionIndex, InstructionTarget<R>>) -> Self {
+        to_instruction_source_map(value).into()
+    }
+}
+
+fn to_instruction_source_map<R: Into<InstructionTargetRewrite> + Clone>(
+    value: SourceMap<InstructionIndex, InstructionTarget<R>>,
+) -> InstructionSourceMap {
+    let entries = value
+        .entries()
+        .iter()
+        .cloned()
+        .map(|entry| {
+            SourceMapEntry::new(
+                InstructionSource::from(entry.source_location()),
+                match entry.target_location().clone() {
+                    InstructionTarget::Copied(index) => InstructionTarget::Copied(index),
+                    InstructionTarget::Rewrite(rewrite) => {
+                        InstructionTarget::Rewrite(rewrite.into())
+                    }
+                },
+            )
+        })
+        .collect();
+    InstructionSourceMap::new(entries)
 }
 
 type InstructionSourceMapEntry =

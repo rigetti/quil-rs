@@ -12,7 +12,7 @@ use crate::{
     program::{InstructionIndex, SourceMap, SourceMapEntry},
 };
 
-use super::source_map::{InstructionSourceMap, InstructionTarget, SourceMapIndexable};
+use super::source_map::{InstructionTarget, SourceMapIndexable};
 
 /// Details about the expansion of a calibration
 #[derive(Clone, Debug, PartialEq)]
@@ -93,14 +93,15 @@ impl<'program> ProgramDefGateSequenceExpander<'program> {
     pub(crate) fn expand_defgate_sequences_with_source_map(
         &self,
         source_instructions: &[Instruction],
-    ) -> Result<(Vec<Instruction>, InstructionSourceMap), DefGateSequenceExpansionError> {
+    ) -> Result<(Vec<Instruction>, SequenceGateDefinitionSourceMap), DefGateSequenceExpansionError>
+    {
         let mut source_map = SourceMap::default();
         self.expand_defgate_sequences_with_source_map_inner(
             source_instructions,
             &mut source_map,
             &mut IndexSet::new(),
         )
-        .map(|instructions| (instructions, InstructionSourceMap::from(source_map)))
+        .map(|instructions| (instructions, source_map))
     }
 
     fn expand_defgate_sequences_with_source_map_inner(
@@ -1108,10 +1109,7 @@ DAGGER seq1(pi/2) 0
                 actual_program.add_instructions(actual);
 
                 pretty_assertions::assert_eq!(expected_program, actual_program);
-                pretty_assertions::assert_eq!(
-                    InstructionSourceMap::from(test_case.expected_source_map),
-                    source_map
-                );
+                pretty_assertions::assert_eq!(test_case.expected_source_map, source_map);
 
                 let actual_program_without_source_map = Program::from_instructions(
                     program_expansion
