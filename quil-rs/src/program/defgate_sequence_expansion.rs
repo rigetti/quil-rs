@@ -1,3 +1,6 @@
+/// This module implements the expansion of sequence gate definitions in a Quil program,
+/// as well as the associated source map that tracks how the original
+/// instructions map to the expanded instructions.
 use std::{collections::HashMap, ops::Range};
 
 use indexmap::{IndexMap, IndexSet};
@@ -14,10 +17,16 @@ use crate::{
 
 use super::source_map::{InstructionTarget, SourceMapIndexable};
 
-/// Details about the expansion of a calibration
+/// Details about the expansion of a sequence gate definition
 #[derive(Clone, Debug, PartialEq)]
 pub struct DefGateSequenceExpansion {
-    /// The calibration used to expand the instruction
+    /// The signature of the sequence gate definition that was
+    /// used to expand the instruction.
+    ///
+    /// Note, technically, the gate name itself is sufficient to identify
+    /// the sequence gate definition, since gate names are unique within
+    /// a program. Nevertheless, we include the full signature here
+    /// for later reference within error messages.
     defgate_sequence_source: crate::instruction::GateSignature,
 
     /// The target instruction indices produced by the expansion
@@ -63,6 +72,7 @@ impl SourceMapIndexable<GateSignature> for DefGateSequenceExpansion {
 type SequenceGateDefinitionSourceMap =
     SourceMap<InstructionIndex, InstructionTarget<DefGateSequenceExpansion>>;
 
+/// A utility to expand sequence gate definitions in a Quil program.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct ProgramDefGateSequenceExpander<'program> {
     gate_definitions: &'program IndexMap<String, GateDefinition>,
@@ -70,6 +80,13 @@ pub(crate) struct ProgramDefGateSequenceExpander<'program> {
 }
 
 impl<'program> ProgramDefGateSequenceExpander<'program> {
+    /// Creates a new `ProgramDefGateSequenceExpander`.
+    ///
+    /// # Arguments
+    ///
+    /// * `gate_definitions` - A reference to the gate definitions of the program.
+    /// * `filter` - A filter to apply to the gate definitions, allowing for selective
+    ///   expansion.
     pub(crate) fn new(
         gate_definitions: &'program IndexMap<String, GateDefinition>,
         filter: Filter<String>,
@@ -80,6 +97,7 @@ impl<'program> ProgramDefGateSequenceExpander<'program> {
         }
     }
 
+    /// Expands sequence gate definitions in the provided instructions.
     pub(crate) fn expand_defgate_sequences(
         &self,
         source_instructions: &[Instruction],
@@ -90,6 +108,8 @@ impl<'program> ProgramDefGateSequenceExpander<'program> {
         )
     }
 
+    /// Expands sequence gate definitions in the provided instructions and returns a source map
+    /// detailing the expansion.
     pub(crate) fn expand_defgate_sequences_with_source_map(
         &self,
         source_instructions: &[Instruction],
@@ -114,7 +134,7 @@ impl<'program> ProgramDefGateSequenceExpander<'program> {
         for (source_instruction_index, source_instruction) in source_instructions.iter().enumerate()
         {
             if let Some((target_gate_instructions, source)) =
-                self.gate_sequence_from_instruction(seen, source_instruction)?
+                self.gate_sequence_from_instruction(source_instruction, seen)?
             {
                 let mut seen = seen.clone();
                 seen.insert(source.name().to_string());
@@ -160,7 +180,7 @@ impl<'program> ProgramDefGateSequenceExpander<'program> {
         let mut target_instructions = vec![];
         for source_instruction in source_instructions.iter() {
             if let Some((target_gate_instructions, source)) =
-                self.gate_sequence_from_instruction(seen, source_instruction)?
+                self.gate_sequence_from_instruction(source_instruction, seen)?
             {
                 let mut seen = seen.clone();
                 seen.insert(source.name().to_string());
@@ -178,10 +198,17 @@ impl<'program> ProgramDefGateSequenceExpander<'program> {
         Ok(target_instructions)
     }
 
+    /// Given an instruction, this function checks if it is a gate instruction that
+    /// matches a sequence gate definition. If it does and the gate name is included
+    /// by the [`ProgramDefGateSequenceExpander::filter`], it expands the gate
+    /// definition into a sequence of instructions and returns them along with the
+    /// signature of the gate definition.
+    ///
+    /// This also checks the `seen` set to prevent cyclic expansions.
     fn gate_sequence_from_instruction(
         &self,
-        seen: &mut IndexSet<String>,
         instruction: &Instruction,
+        seen: &mut IndexSet<String>,
     ) -> Result<Option<(Vec<Instruction>, GateSignature)>, DefGateSequenceExpansionError> {
         if let Instruction::Gate(gate) = instruction {
             if let Some(gate_definition) = self.gate_definitions.get(&gate.name) {
@@ -237,54 +264,7 @@ mod tests {
     use super::*;
     use rstest::*;
 
-    fn build_gate_signature(
-        gate_name: &'static str,
-        gate_parameters: &'static [&'static str],
-        gate_qubits: &'static [&'static str],
-    ) -> GateSignature {
-        GateSignature::try_new(
-            gate_name.to_string(),
-            gate_parameters.iter().map(|s| s.to_string()).collect(),
-            gate_qubits.iter().map(|s| s.to_string()).collect(),
-            crate::instruction::GateType::Sequence,
-        )
-        .expect("must be a valid gate")
-    }
-
-    fn build_defgate_sequence_expansion(
-        gate_name: &'static str,
-        gate_parameters: &'static [&'static str],
-        gate_qubits: &'static [&'static str],
-        range: Range<usize>,
-        entries: Vec<SourceMapEntry<InstructionIndex, InstructionTarget<DefGateSequenceExpansion>>>,
-    ) -> InstructionTarget<DefGateSequenceExpansion> {
-        InstructionTarget::Rewrite(DefGateSequenceExpansion {
-            defgate_sequence_source: build_gate_signature(gate_name, gate_parameters, gate_qubits),
-            range: InstructionIndex(range.start)..InstructionIndex(range.end),
-            nested_expansions: SourceMap { entries },
-        })
-    }
-
-    fn build_source_map_entry(
-        source_location: usize,
-        target_location: InstructionTarget<DefGateSequenceExpansion>,
-    ) -> SourceMapEntry<InstructionIndex, InstructionTarget<DefGateSequenceExpansion>> {
-        SourceMapEntry {
-            source_location: InstructionIndex(source_location),
-            target_location,
-        }
-    }
-
-    fn build_source_map_entry_copy(
-        source_location: usize,
-        target_location: usize,
-    ) -> SourceMapEntry<InstructionIndex, InstructionTarget<DefGateSequenceExpansion>> {
-        build_source_map_entry(
-            source_location,
-            InstructionTarget::Copied(InstructionIndex(target_location)),
-        )
-    }
-
+    /// A test case for the [`ProgramDefGateSequenceExpander`] functionality.
     struct DefGateSequenceExpansionTestCase {
         program: &'static str,
         filter: Filter<String>,
@@ -298,8 +278,8 @@ mod tests {
     ///
     /// Note, the error coverage is comprehensive with the exception of
     /// [`DefGateSequenceExpansionError::UndefinedGateSequenceElementQubit`] and
-    /// [`DefGateSequenceExpansionError::InvalidGateSequenceElementQubit`], which should be
-    /// impossible to parse or construct.
+    /// [`DefGateSequenceExpansionError::InvalidGateSequenceElementQubit`], which
+    /// cover Quil errors that are impossible to parse or construct.
     impl DefGateSequenceExpansionTestCase {
         fn simple_1q_expansions() -> Self {
             const QUIL: &str = r"
@@ -537,6 +517,7 @@ RZ(-(pi)) 1
             }
         }
 
+        /// Test a program expansion where some instructions are not expanded
         fn unexpanded_instructions() -> Self {
             const QUIL: &str = r"
 DEFGATE seq2(%param1, %param2) a b AS SEQUENCE:
@@ -609,6 +590,11 @@ MEASURE 1 ro[1]
             }
         }
 
+        /// Test that a sequence gate definition works even if one of the qubit parameters
+        /// is not used in the expansion.
+        ///
+        /// This is not expressly forbidden by the Quil specification, so we include
+        /// this test to document the behavior.
         fn unused_instruction() -> Self {
             const QUIL: &str = r"
 DEFGATE seq1(%param1) a b AS SEQUENCE:
@@ -647,6 +633,8 @@ RZ(pi) 0
             }
         }
 
+        /// Test sequence gate definition expansion within a program, where one or more
+        /// sequence gate definitions are not included by the filter.
         fn filtered_sequence() -> Self {
             const QUIL: &str = r"
 DEFGATE seq1(%param1) a AS SEQUENCE:
@@ -844,5 +832,53 @@ DAGGER seq1(pi/2) 0
                 pretty_assertions::assert_eq!(expected, found);
             }
         }
+    }
+
+    fn build_gate_signature(
+        gate_name: &'static str,
+        gate_parameters: &'static [&'static str],
+        gate_qubits: &'static [&'static str],
+    ) -> GateSignature {
+        GateSignature::try_new(
+            gate_name.to_string(),
+            gate_parameters.iter().map(|s| s.to_string()).collect(),
+            gate_qubits.iter().map(|s| s.to_string()).collect(),
+            crate::instruction::GateType::Sequence,
+        )
+        .expect("must be a valid gate")
+    }
+
+    fn build_defgate_sequence_expansion(
+        gate_name: &'static str,
+        gate_parameters: &'static [&'static str],
+        gate_qubits: &'static [&'static str],
+        range: Range<usize>,
+        entries: Vec<SourceMapEntry<InstructionIndex, InstructionTarget<DefGateSequenceExpansion>>>,
+    ) -> InstructionTarget<DefGateSequenceExpansion> {
+        InstructionTarget::Rewrite(DefGateSequenceExpansion {
+            defgate_sequence_source: build_gate_signature(gate_name, gate_parameters, gate_qubits),
+            range: InstructionIndex(range.start)..InstructionIndex(range.end),
+            nested_expansions: SourceMap { entries },
+        })
+    }
+
+    fn build_source_map_entry(
+        source_location: usize,
+        target_location: InstructionTarget<DefGateSequenceExpansion>,
+    ) -> SourceMapEntry<InstructionIndex, InstructionTarget<DefGateSequenceExpansion>> {
+        SourceMapEntry {
+            source_location: InstructionIndex(source_location),
+            target_location,
+        }
+    }
+
+    fn build_source_map_entry_copy(
+        source_location: usize,
+        target_location: usize,
+    ) -> SourceMapEntry<InstructionIndex, InstructionTarget<DefGateSequenceExpansion>> {
+        build_source_map_entry(
+            source_location,
+            InstructionTarget::Copied(InstructionIndex(target_location)),
+        )
     }
 }

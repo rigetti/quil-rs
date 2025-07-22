@@ -18,6 +18,13 @@ use crate::{
     instruction::{PyCalibrationIdentifier, PyGateSignature, PyMeasureCalibrationIdentifier},
 };
 
+/// A concrete type for [`InstructionTarget::Rewrite`] variant. This is used to present
+/// a single type to Python that can represent calibration expansions, gate sequence expansions,
+/// and other rewrites we may want to perform in the future.
+///
+/// Note, should we want to support rewrites from Python, we can expose an additional
+/// pyo3 type that wraps classes implementing the required Python interface. See the pyo3
+/// [trait bound](https://pyo3.rs/main/trait-bounds.html) documentation.
 #[derive(Clone, Debug, PartialEq)]
 pub enum InstructionTargetRewrite {
     Calibration(CalibrationExpansion),
@@ -65,19 +72,22 @@ impl SourceMapIndexable<GateSignature> for InstructionTargetRewrite {
     }
 }
 
+/// In its most general form, a source within a source map can correspond to
+/// a range of instructions, rather than just a single instruction. We use
+/// this type as the [`SourceMap`] `SourceIndex` for forward compatibility.
 #[derive(Clone, Debug, PartialEq)]
 pub struct InstructionSource(std::ops::Range<InstructionIndex>);
 
 impl InstructionSource {
-    pub fn start(&self) -> InstructionIndex {
+    fn start(&self) -> InstructionIndex {
         self.0.start
     }
 
-    pub fn end(&self) -> InstructionIndex {
+    fn end(&self) -> InstructionIndex {
         self.0.end
     }
 
-    pub fn contains(&self, index: &InstructionIndex) -> bool {
+    fn contains(&self, index: &InstructionIndex) -> bool {
         self.0.contains(index)
     }
 }
@@ -94,6 +104,8 @@ impl SourceMapIndexable<InstructionIndex> for InstructionSource {
     }
 }
 
+/// A single concrete type for [`SourceMap`] using instruction indices
+/// that we will expose to Python.
 type InstructionSourceMap =
     SourceMap<InstructionSource, InstructionTarget<InstructionTargetRewrite>>;
 
@@ -203,6 +215,11 @@ impl PyInstructionSourceMap {
             .collect()
     }
 
+    /// Given a gate signature, return the locations in the source program which were
+    /// expanded using that gate signature.
+    ///
+    /// This is `O(n)` where `n` is the number of first-level sequence gate definition
+    /// expansions performed.
     pub fn list_sources_for_gate_expansion(&self, gate_signature: PyGateSignature) -> Vec<usize> {
         self.as_inner()
             .list_sources(gate_signature.as_inner())
@@ -287,6 +304,8 @@ py_wrap_union_enum! {
 impl_repr!(PyCalibrationSource);
 impl_eq!(PyCalibrationSource);
 
+/// Because we expose [`usize`] to Python, rather than [`InstructionIndex`], to Python,
+/// we need a shim to use the [`rigetti_pyo3::py_wrap_union_enum!`] macro.
 #[derive(Debug, PartialEq, Clone)]
 pub enum InstructionTargetShim {
     Copied(usize),

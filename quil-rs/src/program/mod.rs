@@ -339,6 +339,15 @@ impl Program {
         Ok(new_program)
     }
 
+    /// Expand any `DefGateSequence` instructions in the program, leaving the others unchanged.
+    /// Return the expanded copy of the program. Any sequence gate definitions that are included
+    /// by the filter are removed from the program's gate definitions, unless they are referenced
+    /// by unexpanded sequence gate definitions.
+    ///
+    /// # Arguments
+    ///
+    /// * `filter` - A filter that determines which sequence gate definitions to keep in the
+    ///   program.
     pub fn expand_defgate_sequences(
         &self,
         filter: crate::filter_set::Filter<String>,
@@ -360,6 +369,16 @@ impl Program {
         Ok(new_program)
     }
 
+    /// Expand any sequence gate definitions in the program, leaving the others unchanged.
+    /// Return the expanded copy of the program and a source mapping of the expansions made.
+    /// Any sequence gate definitions that are included by the filter are removed from
+    /// the program's gate definitions, unless they are referenced by unexpanded
+    /// sequence gate definitions.
+    ///
+    /// # Arguments
+    ///
+    /// * `filter` - A filter that determines which sequence gate definitions to keep in the
+    ///   program.
     pub fn expand_defgate_sequences_with_source_map(
         &self,
         filter: crate::filter_set::Filter<String>,
@@ -843,6 +862,8 @@ impl Program {
     }
 }
 
+/// Filter the sequence gate definitions in the program to keep only those that are
+/// excluded by the filter or are referenced by those that are excluded by the filter.
 fn filter_sequence_gate_definitions_to_keep(
     gate_definitions: &IndexMap<String, GateDefinition>,
     filter: &crate::filter_set::Filter<String>,
@@ -885,7 +906,6 @@ fn filter_sequence_gate_definitions_to_keep(
         for (gate_name, (j, _)) in gate_sequence_definitions.iter() {
             if petgraph::algo::has_path_connecting(&graph, *i, *j, Some(&mut space)) {
                 seq_defgates_referenced_by_unfiltered_seq_defgates.insert(gate_name.clone());
-                break;
             }
         }
     }
@@ -1518,7 +1538,7 @@ DEFWAVEFORM custom2:
     1,2
 DEFGATE BAR:
     0, 1
-    1, 0
+    // 1, 0
 ";
         let lhs = Program::from_str(lhs_input).unwrap();
         let rhs = Program::from_str(rhs_input).unwrap();
