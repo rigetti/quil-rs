@@ -1,7 +1,7 @@
 [project]
 name = "quil"
 version = "0.17.0"
-requires-python = ">=3.9,<3.13"
+requires-python = ">=3.9,<4"
 description = "A Python package for building and parsing Quil programs."
 documentation = "https://rigetti.github.io/quil-rs/quil.html"
 readme = "README-py.md"
@@ -71,7 +71,7 @@ exclude = [
 ]
 line-length = 120
 indent-width = 4
-target-version = "py38"
+target-version = "py39"
 
 [tool.ruff.lint]
 select = ["D", "E4", "E7", "E9", "F", "I", "B", "S", "W"]
