@@ -1538,7 +1538,7 @@ DEFWAVEFORM custom2:
     1,2
 DEFGATE BAR:
     0, 1
-    // 1, 0
+    1, 0
 ";
         let lhs = Program::from_str(lhs_input).unwrap();
         let rhs = Program::from_str(rhs_input).unwrap();
@@ -2120,13 +2120,13 @@ CALL foo octets[1] reals
                     vec![
                         new_gate(
                             "RZ",
-                            Expression::Variable(format!("{}{}", param_prefix, i)),
+                            Expression::Variable(format!("{param_prefix}{i}")),
                             qubit.clone(),
                         ),
                         new_gate("RX", pi_divided_by_2.clone(), qubit.clone()),
                         new_gate(
                             "RZ",
-                            negate_variable(format!("{}{}", param_prefix, i)),
+                            negate_variable(format!("{param_prefix}{i}")),
                             qubit.clone(),
                         ),
                     ]
