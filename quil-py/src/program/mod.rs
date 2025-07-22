@@ -6,6 +6,7 @@ use std::{
 use indexmap::IndexMap;
 use numpy::{PyArray2, ToPyArray};
 use quil_rs::{
+    filter_set::Filter,
     instruction::{Instruction, QubitPlaceholder, TargetPlaceholder, Waveform},
     program::{
         analysis::{ControlFlowGraph, ControlFlowGraphOwned},
@@ -16,7 +17,7 @@ use quil_rs::{
 use rigetti_pyo3::{
     create_init_submodule, impl_as_mut_for_wrapper, impl_from_str, impl_parse, impl_repr,
     num_complex::Complex64,
-    py_wrap_error, py_wrap_type,
+    py_wrap_error, py_wrap_type, py_wrap_union_enum,
     pyo3::{
         exceptions::PyValueError,
         prelude::*,
@@ -40,7 +41,6 @@ use self::{
     source_map::{
         PyCalibrationExpansion, PyCalibrationSource, PyDefGateSequenceExpansion,
         PyInstructionSourceMap, PyInstructionSourceMapEntry, PyInstructionTarget,
-        PyInstructionTargetRewrite,
     },
 };
 pub use self::{calibration::PyCalibrationSet, frame::PyFrameSet, memory::PyMemoryRegion};
@@ -99,6 +99,21 @@ impl PyProgram {
         let expansion = self
             .as_inner()
             .expand_calibrations_with_source_map()
+            .map_err(ProgramError::from)
+            .map_err(ProgramError::to_py_err)?;
+        Ok((expansion.0.into(), expansion.1.into()))
+    }
+
+    #[pyo3(signature = (/, filter = None))]
+    pub fn expand_defgate_sequences_with_source_map(
+        &self,
+        filter: Option<PyFilterStr>,
+    ) -> PyResult<(PyProgram, PyInstructionSourceMap)> {
+        let expansion = self
+            .as_inner()
+            .expand_defgate_sequences_with_source_map(
+                filter.map(|f| f.into_inner()).unwrap_or_default(),
+            )
             .map_err(ProgramError::from)
             .map_err(ProgramError::to_py_err)?;
         Ok((expansion.0.into(), expansion.1.into()))
@@ -230,6 +245,15 @@ impl PyProgram {
     pub fn expand_calibrations(&self) -> PyResult<Self> {
         self.as_inner()
             .expand_calibrations()
+            .map(PyProgram::from)
+            .map_err(ProgramError::from)
+            .map_err(ProgramError::to_py_err)
+    }
+
+    #[pyo3(signature = (/, filter = None))]
+    pub fn expand_defgate_sequences(&self, filter: Option<PyFilterStr>) -> PyResult<Self> {
+        self.as_inner()
+            .expand_defgate_sequences(filter.map(|f| f.into_inner()).unwrap_or_default())
             .map(PyProgram::from)
             .map_err(ProgramError::from)
             .map_err(ProgramError::to_py_err)
@@ -400,15 +424,28 @@ impl PyProgram {
     }
 }
 
+type FilterString = Filter<String>;
+
+py_wrap_union_enum! {
+    #[derive(Debug, PartialEq)]
+    PyFilterStr(FilterString) as "FilterStr" {
+        exclude: Exclude => HashSet<String>,
+        include: Include => HashSet<String>
+    }
+}
+impl_repr!(PyFilterStr);
+impl_eq!(PyFilterStr);
+
 create_init_submodule! {
     classes: [
+        PyFilterStr,
         PyFrameSet,
         PyProgram,
         PyCalibrationExpansion,
         PyCalibrationSource,
         PyInstructionSourceMap,
         PyInstructionTarget,
-        PyInstructionTargetRewrite,
+        PyInstructionTarget,
         PyDefGateSequenceExpansion,
         PyInstructionSourceMapEntry,
         PyCalibrationSet,

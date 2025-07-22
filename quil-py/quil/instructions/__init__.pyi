@@ -25,6 +25,8 @@ __all__ = [
     'ExternParameter',
     'ExternParameterType',
     'ExternSignature',
+    'GateSignature',
+    'GateType',
     'Move',
     'UnaryLogic',
     'UnaryOperator',
@@ -1987,6 +1989,14 @@ class PauliSum:
     def terms(self, terms: Sequence[PauliTerm]) -> None: ...
 
 @final
+class GateSignature:
+    """A signature for a gate definition; this does not include the gate definition content.
+
+    Note, this is accessible from `GateDefinition.signature`.
+    """
+    def __new__(cls, name: str, gate_parameters: List[str], qubit_parameters: List[str], gate_type: GateType) -> Self: ...
+
+@final
 class GateSpecification:
     """A specification for a gate definition.
 
@@ -2047,6 +2057,8 @@ class GateDefinition:
     @parameters.setter
     def parameters(self, parameters: Sequence[str]) -> None: ...
     @property
+    def signature(self) -> GateSignature: ...
+    @property
     def specification(self) -> GateSpecification: ...
     @specification.setter
     def specification(self, specification: GateSpecification) -> None: ...
@@ -2070,6 +2082,15 @@ class GateDefinition:
         """
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
+
+@final
+class GateType(Enum):
+    """The type of a gate definition; used within the `GateSignature`."""
+    Matrix = "Matrix"
+    Permutation = "Permutation"
+    PauliSum = "PauliSum"
+    Sequence = "Sequence"
+
 
 @final
 class Qubit:

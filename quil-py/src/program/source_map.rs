@@ -18,41 +18,67 @@ use crate::{
     instruction::{PyCalibrationIdentifier, PyGateSignature, PyMeasureCalibrationIdentifier},
 };
 
-/// A concrete type for [`InstructionTarget::Rewrite`] variant. This is used to present
-/// a single type to Python that can represent calibration expansions, gate sequence expansions,
-/// and other rewrites we may want to perform in the future.
+/// A single type for [`SourceMap`] `TargetIndex` that we will expose to Python. This
+/// can represent calibration expansions, gate sequence expansions, and other rewrites
+/// we may want to perform in the future.
 ///
 /// Note, should we want to support rewrites from Python, we can expose an additional
 /// pyo3 type that wraps classes implementing the required Python interface. See the pyo3
 /// [trait bound](https://pyo3.rs/main/trait-bounds.html) documentation.
+///
+/// Additionally note, we expose [`usize`] to Python, rather than [`InstructionIndex`],
+/// to Python, facilitating usage of the [`rigetti_pyo3::py_wrap_union_enum!`] macro.
 #[derive(Clone, Debug, PartialEq)]
-pub enum InstructionTargetRewrite {
+pub enum InstructionTargetShim {
+    Copied(usize),
     Calibration(CalibrationExpansion),
     DefGateSequence(DefGateSequenceExpansion),
 }
 
-impl From<CalibrationExpansion> for InstructionTargetRewrite {
+impl From<CalibrationExpansion> for InstructionTargetShim {
     fn from(value: CalibrationExpansion) -> Self {
         Self::Calibration(value)
     }
 }
 
-impl From<DefGateSequenceExpansion> for InstructionTargetRewrite {
+impl From<DefGateSequenceExpansion> for InstructionTargetShim {
     fn from(value: DefGateSequenceExpansion) -> Self {
         Self::DefGateSequence(value)
     }
 }
 
-impl SourceMapIndexable<InstructionIndex> for InstructionTargetRewrite {
+impl<R: Into<InstructionTargetShim> + Clone> From<InstructionTarget<R>> for InstructionTargetShim {
+    fn from(value: InstructionTarget<R>) -> Self {
+        match value {
+            InstructionTarget::Copied(index) => Self::Copied(index.0),
+            InstructionTarget::Rewrite(rewrite) => rewrite.into(),
+        }
+    }
+}
+
+py_wrap_union_enum! {
+    #[derive(Debug, PartialEq)]
+    PyInstructionTarget(InstructionTargetShim) as "InstructionTarget" {
+        copied: Copied => usize,
+        calibration: Calibration => PyCalibrationExpansion,
+        defgate_sequence: DefGateSequence => PyDefGateSequenceExpansion
+    }
+}
+
+impl_repr!(PyInstructionTarget);
+impl_eq!(PyInstructionTarget);
+
+impl SourceMapIndexable<InstructionIndex> for InstructionTargetShim {
     fn intersects(&self, other: &InstructionIndex) -> bool {
         match self {
+            Self::Copied(index) => *index == other.0,
             Self::Calibration(expansion) => expansion.intersects(other),
             Self::DefGateSequence(expansion) => expansion.intersects(other),
         }
     }
 }
 
-impl SourceMapIndexable<CalibrationSource> for InstructionTargetRewrite {
+impl SourceMapIndexable<CalibrationSource> for InstructionTargetShim {
     fn intersects(&self, other: &CalibrationSource) -> bool {
         if let Self::Calibration(expansion) = self {
             expansion.intersects(other)
@@ -62,7 +88,7 @@ impl SourceMapIndexable<CalibrationSource> for InstructionTargetRewrite {
     }
 }
 
-impl SourceMapIndexable<GateSignature> for InstructionTargetRewrite {
+impl SourceMapIndexable<GateSignature> for InstructionTargetShim {
     fn intersects(&self, other: &GateSignature) -> bool {
         if let Self::DefGateSequence(expansion) = self {
             expansion.intersects(other)
@@ -106,8 +132,7 @@ impl SourceMapIndexable<InstructionIndex> for InstructionSource {
 
 /// A single concrete type for [`SourceMap`] using instruction indices
 /// that we will expose to Python.
-type InstructionSourceMap =
-    SourceMap<InstructionSource, InstructionTarget<InstructionTargetRewrite>>;
+type InstructionSourceMap = SourceMap<InstructionSource, InstructionTarget<InstructionTargetShim>>;
 
 py_wrap_type! {
     #[derive(Debug, PartialEq)]
@@ -136,6 +161,30 @@ impl PyCalibrationExpansion {
     }
 }
 
+/// Because [`SourceMap`] is defined outside of this crate, we define this
+/// utility function rather than implementing `From<SourceMap<...>>`.
+fn to_instruction_source_map<R: Into<InstructionTargetShim> + Clone>(
+    value: SourceMap<InstructionIndex, InstructionTarget<R>>,
+) -> InstructionSourceMap {
+    let entries = value
+        .entries()
+        .iter()
+        .cloned()
+        .map(|entry| {
+            SourceMapEntry::new(
+                InstructionSource::from(entry.source_location()),
+                match entry.target_location().clone() {
+                    InstructionTarget::Copied(index) => InstructionTarget::Copied(index),
+                    InstructionTarget::Rewrite(rewrite) => {
+                        InstructionTarget::Rewrite(rewrite.into())
+                    }
+                },
+            )
+        })
+        .collect();
+    InstructionSourceMap::new(entries)
+}
+
 py_wrap_type! {
     #[derive(Debug, PartialEq)]
     PyDefGateSequenceExpansion(DefGateSequenceExpansion) as "DefGateSequenceExpansion"
@@ -146,7 +195,7 @@ impl_eq!(PyDefGateSequenceExpansion);
 
 #[pymethods]
 impl PyDefGateSequenceExpansion {
-    pub fn calibration_used(&self) -> PyGateSignature {
+    pub fn defgate_sequence_source(&self) -> PyGateSignature {
         self.as_inner().defgate_sequence_source().into()
     }
 
@@ -159,14 +208,6 @@ impl PyDefGateSequenceExpansion {
 
     pub fn expansions(&self) -> PyInstructionSourceMap {
         to_instruction_source_map(self.as_inner().nested_expansions().clone()).into()
-    }
-}
-
-py_wrap_union_enum! {
-    #[derive(Debug, PartialEq)]
-    PyInstructionTargetRewrite(InstructionTargetRewrite) as "InstructionTargetRewrite" {
-        calibration: Calibration => PyCalibrationExpansion,
-        defgate_sequence: DefGateSequence => PyDefGateSequenceExpansion
     }
 }
 
@@ -240,38 +281,16 @@ impl PyInstructionSourceMap {
     }
 }
 
-impl<R: Into<InstructionTargetRewrite> + Clone>
-    From<SourceMap<InstructionIndex, InstructionTarget<R>>> for PyInstructionSourceMap
+impl<R: Into<InstructionTargetShim> + Clone> From<SourceMap<InstructionIndex, InstructionTarget<R>>>
+    for PyInstructionSourceMap
 {
     fn from(value: SourceMap<InstructionIndex, InstructionTarget<R>>) -> Self {
         to_instruction_source_map(value).into()
     }
 }
 
-fn to_instruction_source_map<R: Into<InstructionTargetRewrite> + Clone>(
-    value: SourceMap<InstructionIndex, InstructionTarget<R>>,
-) -> InstructionSourceMap {
-    let entries = value
-        .entries()
-        .iter()
-        .cloned()
-        .map(|entry| {
-            SourceMapEntry::new(
-                InstructionSource::from(entry.source_location()),
-                match entry.target_location().clone() {
-                    InstructionTarget::Copied(index) => InstructionTarget::Copied(index),
-                    InstructionTarget::Rewrite(rewrite) => {
-                        InstructionTarget::Rewrite(rewrite.into())
-                    }
-                },
-            )
-        })
-        .collect();
-    InstructionSourceMap::new(entries)
-}
-
 type InstructionSourceMapEntry =
-    SourceMapEntry<InstructionSource, InstructionTarget<InstructionTargetRewrite>>;
+    SourceMapEntry<InstructionSource, InstructionTarget<InstructionTargetShim>>;
 
 py_wrap_type! {
     #[derive(Debug, PartialEq)]
@@ -303,42 +322,3 @@ py_wrap_union_enum! {
 
 impl_repr!(PyCalibrationSource);
 impl_eq!(PyCalibrationSource);
-
-/// Because we expose [`usize`] to Python, rather than [`InstructionIndex`], to Python,
-/// we need a shim to use the [`rigetti_pyo3::py_wrap_union_enum!`] macro.
-#[derive(Debug, PartialEq, Clone)]
-pub enum InstructionTargetShim {
-    Copied(usize),
-    Rewrite(InstructionTargetRewrite),
-}
-
-impl From<InstructionTargetShim> for InstructionTarget<InstructionTargetRewrite> {
-    fn from(value: InstructionTargetShim) -> Self {
-        match value {
-            InstructionTargetShim::Copied(index) => {
-                InstructionTarget::Copied(InstructionIndex(index))
-            }
-            InstructionTargetShim::Rewrite(rewrite) => InstructionTarget::Rewrite(rewrite),
-        }
-    }
-}
-
-impl From<InstructionTarget<InstructionTargetRewrite>> for InstructionTargetShim {
-    fn from(value: InstructionTarget<InstructionTargetRewrite>) -> Self {
-        match value {
-            InstructionTarget::Copied(index) => InstructionTargetShim::Copied(index.0),
-            InstructionTarget::Rewrite(rewrite) => InstructionTargetShim::Rewrite(rewrite),
-        }
-    }
-}
-
-py_wrap_union_enum! {
-    #[derive(Debug, PartialEq)]
-    PyInstructionTarget(InstructionTargetShim) as "InstructionTarget" {
-        copied: Copied => usize,
-        rewrite: Rewrite => PyInstructionTargetRewrite
-    }
-}
-
-impl_repr!(PyInstructionTarget);
-impl_eq!(PyInstructionTarget);
