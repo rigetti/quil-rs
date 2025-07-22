@@ -422,7 +422,7 @@ class FilterStr:
 @final
 class InstructionSourceMap:
     def entries(self) -> List[InstructionSourceMapEntry]: ...
-    def list_sources_for_target_index(self, target_index: int) -> List[int]:
+    def list_sources_for_target_index(self, target_index: int) -> List[Tuple[int, int]]:
         """Return the locations in the source which were expanded to generate that instruction.
 
         This is `O(n)` where `n` is the number of first-level calibration expansions performed.
@@ -446,7 +446,7 @@ class InstructionSourceMap:
         ...
 
 
-    def list_targets_for_source_index(self, source_index: int) -> List[CalibrationExpansion]:
+    def list_targets_for_source_index(self, source_index: int) -> List[InstructionTarget]:
         """Given a source index, return information about its expansion.
 
         This is `O(n)` where `n` is the number of first-level calibration expansions performed.
