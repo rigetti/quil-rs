@@ -237,85 +237,52 @@ mod tests {
     use super::*;
     use rstest::*;
 
-    struct CompactGateSignature(
-        &'static str,
-        &'static [&'static str],
-        &'static [&'static str],
-    );
-
-    impl From<CompactGateSignature> for GateSignature {
-        fn from(value: CompactGateSignature) -> Self {
-            GateSignature::try_new(
-                value.0.to_string(),
-                value.1.iter().map(|s| s.to_string()).collect(),
-                value.2.iter().map(|s| s.to_string()).collect(),
-                crate::instruction::GateType::Sequence,
-            )
-            .expect("must be a valid gate")
-        }
+    fn build_gate_signature(
+        gate_name: &'static str,
+        gate_parameters: &'static [&'static str],
+        gate_qubits: &'static [&'static str],
+    ) -> GateSignature {
+        GateSignature::try_new(
+            gate_name.to_string(),
+            gate_parameters.iter().map(|s| s.to_string()).collect(),
+            gate_qubits.iter().map(|s| s.to_string()).collect(),
+            crate::instruction::GateType::Sequence,
+        )
+        .expect("must be a valid gate")
     }
 
-    struct CompactDefGateSequenceExpansion {
-        defgate_sequence_source: (
-            &'static str,
-            &'static [&'static str],
-            &'static [&'static str],
-        ),
+    fn build_defgate_sequence_expansion(
+        gate_name: &'static str,
+        gate_parameters: &'static [&'static str],
+        gate_qubits: &'static [&'static str],
         range: Range<usize>,
-        expansions: Vec<CompactSourceMapEntry>,
+        entries: Vec<SourceMapEntry<InstructionIndex, InstructionTarget<DefGateSequenceExpansion>>>,
+    ) -> InstructionTarget<DefGateSequenceExpansion> {
+        InstructionTarget::Rewrite(DefGateSequenceExpansion {
+            defgate_sequence_source: build_gate_signature(gate_name, gate_parameters, gate_qubits),
+            range: InstructionIndex(range.start)..InstructionIndex(range.end),
+            nested_expansions: SourceMap { entries },
+        })
     }
 
-    impl From<CompactDefGateSequenceExpansion> for DefGateSequenceExpansion {
-        fn from(value: CompactDefGateSequenceExpansion) -> Self {
-            DefGateSequenceExpansion {
-                defgate_sequence_source: GateSignature::from(CompactGateSignature(
-                    value.defgate_sequence_source.0,
-                    value.defgate_sequence_source.1,
-                    value.defgate_sequence_source.2,
-                )),
-                range: InstructionIndex(value.range.start)..InstructionIndex(value.range.end),
-                nested_expansions: SourceMap {
-                    entries: value
-                        .expansions
-                        .into_iter()
-                        .map(|entry| SourceMapEntry {
-                            source_location: InstructionIndex(entry.source_location),
-                            target_location: match entry.target_location {
-                                InstructionTarget::Copied(index) => {
-                                    InstructionTarget::Copied(InstructionIndex(index.0))
-                                }
-                                InstructionTarget::Rewrite(expansion) => {
-                                    InstructionTarget::Rewrite(expansion.into())
-                                }
-                            },
-                        })
-                        .collect(),
-                },
-            }
-        }
-    }
-
-    struct CompactSourceMapEntry {
+    fn build_source_map_entry(
         source_location: usize,
-        target_location: InstructionTarget<CompactDefGateSequenceExpansion>,
+        target_location: InstructionTarget<DefGateSequenceExpansion>,
+    ) -> SourceMapEntry<InstructionIndex, InstructionTarget<DefGateSequenceExpansion>> {
+        SourceMapEntry {
+            source_location: InstructionIndex(source_location),
+            target_location,
+        }
     }
 
-    impl From<CompactSourceMapEntry>
-        for SourceMapEntry<InstructionIndex, InstructionTarget<DefGateSequenceExpansion>>
-    {
-        fn from(value: CompactSourceMapEntry) -> Self {
-            SourceMapEntry {
-                source_location: InstructionIndex(value.source_location),
-                target_location: match value.target_location {
-                    InstructionTarget::Copied(index) => {
-                        InstructionTarget::Copied(InstructionIndex(index.0))
-                    }
-                    InstructionTarget::Rewrite(expansion) => {
-                        InstructionTarget::Rewrite(expansion.into())
-                    }
-                },
-            }
-        }
+    fn build_source_map_entry_copy(
+        source_location: usize,
+        target_location: usize,
+    ) -> SourceMapEntry<InstructionIndex, InstructionTarget<DefGateSequenceExpansion>> {
+        build_source_map_entry(
+            source_location,
+            InstructionTarget::Copied(InstructionIndex(target_location)),
+        )
     }
 
     struct DefGateSequenceExpansionTestCase {
@@ -356,74 +323,45 @@ RX(pi/2) 1 # (0, 1, 1)
 RZ(pi/2) 1 # (0, 1, 2)
 ";
             let expected_source_map = SourceMap {
-                entries: vec![CompactSourceMapEntry {
-                    source_location: 0,
-                    target_location: InstructionTarget::Rewrite(CompactDefGateSequenceExpansion {
-                        defgate_sequence_source: ("seq2", &["param1", "param2"], &["a", "b"]),
-                        range: 0..6,
-                        expansions: vec![
-                            CompactSourceMapEntry {
-                                source_location: 0,
-                                target_location: InstructionTarget::Rewrite(
-                                    CompactDefGateSequenceExpansion {
-                                        defgate_sequence_source: ("seq1", &["param1"], &["a"]),
-                                        range: 0..3,
-                                        expansions: vec![
-                                            CompactSourceMapEntry {
-                                                source_location: 0,
-                                                target_location: InstructionTarget::Copied(
-                                                    InstructionIndex(0),
-                                                ),
-                                            },
-                                            CompactSourceMapEntry {
-                                                source_location: 1,
-                                                target_location: InstructionTarget::Copied(
-                                                    InstructionIndex(1),
-                                                ),
-                                            },
-                                            CompactSourceMapEntry {
-                                                source_location: 2,
-                                                target_location: InstructionTarget::Copied(
-                                                    InstructionIndex(2),
-                                                ),
-                                            },
-                                        ],
-                                    },
+                entries: vec![build_source_map_entry(
+                    0,
+                    build_defgate_sequence_expansion(
+                        "seq2",
+                        &["param1", "param2"],
+                        &["a", "b"],
+                        0..6,
+                        vec![
+                            build_source_map_entry(
+                                0,
+                                build_defgate_sequence_expansion(
+                                    "seq1",
+                                    &["param1"],
+                                    &["a"],
+                                    0..3,
+                                    vec![
+                                        build_source_map_entry_copy(0, 0),
+                                        build_source_map_entry_copy(1, 1),
+                                        build_source_map_entry_copy(2, 2),
+                                    ],
                                 ),
-                            },
-                            CompactSourceMapEntry {
-                                source_location: 1,
-                                target_location: InstructionTarget::Rewrite(
-                                    CompactDefGateSequenceExpansion {
-                                        defgate_sequence_source: ("seq1", &["param1"], &["a"]),
-                                        range: 3..6,
-                                        expansions: vec![
-                                            CompactSourceMapEntry {
-                                                source_location: 0,
-                                                target_location: InstructionTarget::Copied(
-                                                    InstructionIndex(0),
-                                                ),
-                                            },
-                                            CompactSourceMapEntry {
-                                                source_location: 1,
-                                                target_location: InstructionTarget::Copied(
-                                                    InstructionIndex(1),
-                                                ),
-                                            },
-                                            CompactSourceMapEntry {
-                                                source_location: 2,
-                                                target_location: InstructionTarget::Copied(
-                                                    InstructionIndex(2),
-                                                ),
-                                            },
-                                        ],
-                                    },
+                            ),
+                            build_source_map_entry(
+                                1,
+                                build_defgate_sequence_expansion(
+                                    "seq1",
+                                    &["param1"],
+                                    &["a"],
+                                    3..6,
+                                    vec![
+                                        build_source_map_entry_copy(0, 0),
+                                        build_source_map_entry_copy(1, 1),
+                                        build_source_map_entry_copy(2, 2),
+                                    ],
                                 ),
-                            },
+                            ),
                         ],
-                    }),
-                }
-                .into()],
+                    ),
+                )],
             };
             Self {
                 program: QUIL,
@@ -473,266 +411,123 @@ RX(pi/2) 1
 RZ(-(pi)) 1
 ";
             let expected_source_map = SourceMap {
-                entries: vec![CompactSourceMapEntry {
-                    source_location: 0,
-                    target_location: InstructionTarget::Rewrite(CompactDefGateSequenceExpansion {
-                        defgate_sequence_source: (
-                            "some_u2_cycle",
-                            &["param1", "param2", "param3", "param4", "param5", "param6"],
-                            &["a", "b"],
-                        ),
-                        range: 0..18,
-                        expansions: vec![
-                            CompactSourceMapEntry {
-                                source_location: 0,
-                                target_location: InstructionTarget::Rewrite(
-                                    CompactDefGateSequenceExpansion {
-                                        defgate_sequence_source: (
-                                            "pmw3",
-                                            &["param1", "param2", "param3"],
-                                            &["a"],
+                entries: vec![build_source_map_entry(
+                    0,
+                    build_defgate_sequence_expansion(
+                        "some_u2_cycle",
+                        &["param1", "param2", "param3", "param4", "param5", "param6"],
+                        &["a", "b"],
+                        0..18,
+                        vec![
+                            build_source_map_entry(
+                                0,
+                                build_defgate_sequence_expansion(
+                                    "pmw3",
+                                    &["param1", "param2", "param3"],
+                                    &["a"],
+                                    0..9,
+                                    vec![
+                                        build_source_map_entry(
+                                            0,
+                                            build_defgate_sequence_expansion(
+                                                "pmw",
+                                                &["param1"],
+                                                &["a"],
+                                                0..3,
+                                                vec![
+                                                    build_source_map_entry_copy(0, 0),
+                                                    build_source_map_entry_copy(1, 1),
+                                                    build_source_map_entry_copy(2, 2),
+                                                ],
+                                            ),
                                         ),
-                                        range: 0..9,
-                                        expansions: vec![
-                                            CompactSourceMapEntry {
-                                                source_location: 0,
-                                                target_location: InstructionTarget::Rewrite(
-                                                    CompactDefGateSequenceExpansion {
-                                                        defgate_sequence_source: (
-                                                            "pmw",
-                                                            &["param1"],
-                                                            &["a"],
-                                                        ),
-                                                        range: 0..3,
-                                                        expansions: vec![
-                                                            CompactSourceMapEntry {
-                                                                source_location: 0,
-                                                                target_location:
-                                                                    InstructionTarget::Copied(
-                                                                        InstructionIndex(0),
-                                                                    ),
-                                                            },
-                                                            CompactSourceMapEntry {
-                                                                source_location: 1,
-                                                                target_location:
-                                                                    InstructionTarget::Copied(
-                                                                        InstructionIndex(1),
-                                                                    ),
-                                                            },
-                                                            CompactSourceMapEntry {
-                                                                source_location: 2,
-                                                                target_location:
-                                                                    InstructionTarget::Copied(
-                                                                        InstructionIndex(2),
-                                                                    ),
-                                                            },
-                                                        ],
-                                                    },
-                                                ),
-                                            },
-                                            CompactSourceMapEntry {
-                                                source_location: 1,
-                                                target_location: InstructionTarget::Rewrite(
-                                                    CompactDefGateSequenceExpansion {
-                                                        defgate_sequence_source: (
-                                                            "pmw",
-                                                            &["param1"],
-                                                            &["a"],
-                                                        ),
-                                                        range: 3..6,
-                                                        expansions: vec![
-                                                            CompactSourceMapEntry {
-                                                                source_location: 0,
-                                                                target_location:
-                                                                    InstructionTarget::Copied(
-                                                                        InstructionIndex(0),
-                                                                    ),
-                                                            },
-                                                            CompactSourceMapEntry {
-                                                                source_location: 1,
-                                                                target_location:
-                                                                    InstructionTarget::Copied(
-                                                                        InstructionIndex(1),
-                                                                    ),
-                                                            },
-                                                            CompactSourceMapEntry {
-                                                                source_location: 2,
-                                                                target_location:
-                                                                    InstructionTarget::Copied(
-                                                                        InstructionIndex(2),
-                                                                    ),
-                                                            },
-                                                        ],
-                                                    },
-                                                ),
-                                            },
-                                            CompactSourceMapEntry {
-                                                source_location: 2,
-                                                target_location: InstructionTarget::Rewrite(
-                                                    CompactDefGateSequenceExpansion {
-                                                        defgate_sequence_source: (
-                                                            "pmw",
-                                                            &["param1"],
-                                                            &["a"],
-                                                        ),
-                                                        range: 6..9,
-                                                        expansions: vec![
-                                                            CompactSourceMapEntry {
-                                                                source_location: 0,
-                                                                target_location:
-                                                                    InstructionTarget::Copied(
-                                                                        InstructionIndex(0),
-                                                                    ),
-                                                            },
-                                                            CompactSourceMapEntry {
-                                                                source_location: 1,
-                                                                target_location:
-                                                                    InstructionTarget::Copied(
-                                                                        InstructionIndex(1),
-                                                                    ),
-                                                            },
-                                                            CompactSourceMapEntry {
-                                                                source_location: 2,
-                                                                target_location:
-                                                                    InstructionTarget::Copied(
-                                                                        InstructionIndex(2),
-                                                                    ),
-                                                            },
-                                                        ],
-                                                    },
-                                                ),
-                                            },
-                                        ],
-                                    },
-                                ),
-                            },
-                            CompactSourceMapEntry {
-                                source_location: 1,
-                                target_location: InstructionTarget::Rewrite(
-                                    CompactDefGateSequenceExpansion {
-                                        defgate_sequence_source: (
-                                            "pmw3",
-                                            &["param1", "param2", "param3"],
-                                            &["a"],
+                                        build_source_map_entry(
+                                            1,
+                                            build_defgate_sequence_expansion(
+                                                "pmw",
+                                                &["param1"],
+                                                &["a"],
+                                                3..6,
+                                                vec![
+                                                    build_source_map_entry_copy(0, 0),
+                                                    build_source_map_entry_copy(1, 1),
+                                                    build_source_map_entry_copy(2, 2),
+                                                ],
+                                            ),
                                         ),
-                                        range: 9..18,
-                                        expansions: vec![
-                                            CompactSourceMapEntry {
-                                                source_location: 0,
-                                                target_location: InstructionTarget::Rewrite(
-                                                    CompactDefGateSequenceExpansion {
-                                                        defgate_sequence_source: (
-                                                            "pmw",
-                                                            &["param1"],
-                                                            &["a"],
-                                                        ),
-                                                        range: 0..3,
-                                                        expansions: vec![
-                                                            CompactSourceMapEntry {
-                                                                source_location: 0,
-                                                                target_location:
-                                                                    InstructionTarget::Copied(
-                                                                        InstructionIndex(0),
-                                                                    ),
-                                                            },
-                                                            CompactSourceMapEntry {
-                                                                source_location: 1,
-                                                                target_location:
-                                                                    InstructionTarget::Copied(
-                                                                        InstructionIndex(1),
-                                                                    ),
-                                                            },
-                                                            CompactSourceMapEntry {
-                                                                source_location: 2,
-                                                                target_location:
-                                                                    InstructionTarget::Copied(
-                                                                        InstructionIndex(2),
-                                                                    ),
-                                                            },
-                                                        ],
-                                                    },
-                                                ),
-                                            },
-                                            CompactSourceMapEntry {
-                                                source_location: 1,
-                                                target_location: InstructionTarget::Rewrite(
-                                                    CompactDefGateSequenceExpansion {
-                                                        defgate_sequence_source: (
-                                                            "pmw",
-                                                            &["param1"],
-                                                            &["a"],
-                                                        ),
-                                                        range: 3..6,
-                                                        expansions: vec![
-                                                            CompactSourceMapEntry {
-                                                                source_location: 0,
-                                                                target_location:
-                                                                    InstructionTarget::Copied(
-                                                                        InstructionIndex(0),
-                                                                    ),
-                                                            },
-                                                            CompactSourceMapEntry {
-                                                                source_location: 1,
-                                                                target_location:
-                                                                    InstructionTarget::Copied(
-                                                                        InstructionIndex(1),
-                                                                    ),
-                                                            },
-                                                            CompactSourceMapEntry {
-                                                                source_location: 2,
-                                                                target_location:
-                                                                    InstructionTarget::Copied(
-                                                                        InstructionIndex(2),
-                                                                    ),
-                                                            },
-                                                        ],
-                                                    },
-                                                ),
-                                            },
-                                            CompactSourceMapEntry {
-                                                source_location: 2,
-                                                target_location: InstructionTarget::Rewrite(
-                                                    CompactDefGateSequenceExpansion {
-                                                        defgate_sequence_source: (
-                                                            "pmw",
-                                                            &["param1"],
-                                                            &["a"],
-                                                        ),
-                                                        range: 6..9,
-                                                        expansions: vec![
-                                                            CompactSourceMapEntry {
-                                                                source_location: 0,
-                                                                target_location:
-                                                                    InstructionTarget::Copied(
-                                                                        InstructionIndex(0),
-                                                                    ),
-                                                            },
-                                                            CompactSourceMapEntry {
-                                                                source_location: 1,
-                                                                target_location:
-                                                                    InstructionTarget::Copied(
-                                                                        InstructionIndex(1),
-                                                                    ),
-                                                            },
-                                                            CompactSourceMapEntry {
-                                                                source_location: 2,
-                                                                target_location:
-                                                                    InstructionTarget::Copied(
-                                                                        InstructionIndex(2),
-                                                                    ),
-                                                            },
-                                                        ],
-                                                    },
-                                                ),
-                                            },
-                                        ],
-                                    },
+                                        build_source_map_entry(
+                                            2,
+                                            build_defgate_sequence_expansion(
+                                                "pmw",
+                                                &["param1"],
+                                                &["a"],
+                                                6..9,
+                                                vec![
+                                                    build_source_map_entry_copy(0, 0),
+                                                    build_source_map_entry_copy(1, 1),
+                                                    build_source_map_entry_copy(2, 2),
+                                                ],
+                                            ),
+                                        ),
+                                    ],
                                 ),
-                            },
+                            ),
+                            build_source_map_entry(
+                                1,
+                                build_defgate_sequence_expansion(
+                                    "pmw3",
+                                    &["param1", "param2", "param3"],
+                                    &["a"],
+                                    9..18,
+                                    vec![
+                                        build_source_map_entry(
+                                            0,
+                                            build_defgate_sequence_expansion(
+                                                "pmw",
+                                                &["param1"],
+                                                &["a"],
+                                                0..3,
+                                                vec![
+                                                    build_source_map_entry_copy(0, 0),
+                                                    build_source_map_entry_copy(1, 1),
+                                                    build_source_map_entry_copy(2, 2),
+                                                ],
+                                            ),
+                                        ),
+                                        build_source_map_entry(
+                                            1,
+                                            build_defgate_sequence_expansion(
+                                                "pmw",
+                                                &["param1"],
+                                                &["a"],
+                                                3..6,
+                                                vec![
+                                                    build_source_map_entry_copy(0, 0),
+                                                    build_source_map_entry_copy(1, 1),
+                                                    build_source_map_entry_copy(2, 2),
+                                                ],
+                                            ),
+                                        ),
+                                        build_source_map_entry(
+                                            2,
+                                            build_defgate_sequence_expansion(
+                                                "pmw",
+                                                &["param1"],
+                                                &["a"],
+                                                6..9,
+                                                vec![
+                                                    build_source_map_entry_copy(0, 0),
+                                                    build_source_map_entry_copy(1, 1),
+                                                    build_source_map_entry_copy(2, 2),
+                                                ],
+                                            ),
+                                        ),
+                                    ],
+                                ),
+                            ),
                         ],
-                    }),
-                }
-                .into()],
+                    ),
+                )],
             };
             Self {
                 program: QUIL,
@@ -773,88 +568,37 @@ MEASURE 1 ro[1]
 ";
             let expected_source_map = SourceMap {
                 entries: vec![
-                    CompactSourceMapEntry {
-                        source_location: 0,
-                        target_location: InstructionTarget::Copied(InstructionIndex(0)),
-                    }
-                    .into(),
-                    CompactSourceMapEntry {
-                        source_location: 1,
-                        target_location: InstructionTarget::Rewrite(
-                            CompactDefGateSequenceExpansion {
-                                defgate_sequence_source: (
-                                    "seq2",
-                                    &["param1", "param2"],
-                                    &["a", "b"],
+                    build_source_map_entry(0, InstructionTarget::Copied(InstructionIndex(0))),
+                    build_source_map_entry(
+                        1,
+                        build_defgate_sequence_expansion(
+                            "seq2",
+                            &["param1", "param2"],
+                            &["a", "b"],
+                            1..7,
+                            vec![
+                                build_source_map_entry_copy(0, 0),
+                                build_source_map_entry(
+                                    1,
+                                    build_defgate_sequence_expansion(
+                                        "seq1",
+                                        &["param1"],
+                                        &["a"],
+                                        1..4,
+                                        vec![
+                                            build_source_map_entry_copy(0, 0),
+                                            build_source_map_entry_copy(1, 1),
+                                            build_source_map_entry_copy(2, 2),
+                                        ],
+                                    ),
                                 ),
-                                range: 1..7,
-                                expansions: vec![
-                                    CompactSourceMapEntry {
-                                        source_location: 0,
-                                        target_location: InstructionTarget::Copied(
-                                            InstructionIndex(0),
-                                        ),
-                                    },
-                                    CompactSourceMapEntry {
-                                        source_location: 1,
-                                        target_location: InstructionTarget::Rewrite(
-                                            CompactDefGateSequenceExpansion {
-                                                defgate_sequence_source: (
-                                                    "seq1",
-                                                    &["param1"],
-                                                    &["a"],
-                                                ),
-                                                range: 1..4,
-                                                expansions: vec![
-                                                    CompactSourceMapEntry {
-                                                        source_location: 0,
-                                                        target_location: InstructionTarget::Copied(
-                                                            InstructionIndex(0),
-                                                        ),
-                                                    },
-                                                    CompactSourceMapEntry {
-                                                        source_location: 1,
-                                                        target_location: InstructionTarget::Copied(
-                                                            InstructionIndex(1),
-                                                        ),
-                                                    },
-                                                    CompactSourceMapEntry {
-                                                        source_location: 2,
-                                                        target_location: InstructionTarget::Copied(
-                                                            InstructionIndex(2),
-                                                        ),
-                                                    },
-                                                ],
-                                            },
-                                        ),
-                                    },
-                                    CompactSourceMapEntry {
-                                        source_location: 2,
-                                        target_location: InstructionTarget::Copied(
-                                            InstructionIndex(4),
-                                        ),
-                                    },
-                                    CompactSourceMapEntry {
-                                        source_location: 3,
-                                        target_location: InstructionTarget::Copied(
-                                            InstructionIndex(5),
-                                        ),
-                                    },
-                                ],
-                            },
+                                build_source_map_entry_copy(2, 4),
+                                build_source_map_entry_copy(3, 5),
+                            ],
                         ),
-                    }
-                    .into(),
-                    CompactSourceMapEntry {
-                        source_location: 2,
-                        target_location: InstructionTarget::Copied(InstructionIndex(7)),
-                    }
-                    .into(),
-                    CompactSourceMapEntry {
-                        source_location: 3,
-                        target_location: InstructionTarget::Copied(InstructionIndex(8)),
-                    }
-                    .into(),
+                    ),
+                    build_source_map_entry_copy(2, 7),
+                    build_source_map_entry_copy(3, 8),
                 ],
             };
             Self {
@@ -880,28 +624,20 @@ RX(pi/2) 0
 RZ(pi) 0
 ";
             let expected_source_map = SourceMap {
-                entries: vec![CompactSourceMapEntry {
-                    source_location: 0,
-                    target_location: InstructionTarget::Rewrite(CompactDefGateSequenceExpansion {
-                        defgate_sequence_source: ("seq1", &["param1"], &["a", "b"]),
-                        range: 0..3,
-                        expansions: vec![
-                            CompactSourceMapEntry {
-                                source_location: 0,
-                                target_location: InstructionTarget::Copied(InstructionIndex(0)),
-                            },
-                            CompactSourceMapEntry {
-                                source_location: 1,
-                                target_location: InstructionTarget::Copied(InstructionIndex(1)),
-                            },
-                            CompactSourceMapEntry {
-                                source_location: 2,
-                                target_location: InstructionTarget::Copied(InstructionIndex(2)),
-                            },
+                entries: vec![build_source_map_entry(
+                    0,
+                    build_defgate_sequence_expansion(
+                        "seq1",
+                        &["param1"],
+                        &["a", "b"],
+                        0..3,
+                        vec![
+                            build_source_map_entry_copy(0, 0),
+                            build_source_map_entry_copy(1, 1),
+                            build_source_map_entry_copy(2, 2),
                         ],
-                    }),
-                }
-                .into()],
+                    ),
+                )],
             };
             Self {
                 program: QUIL,
@@ -932,41 +668,21 @@ seq2(pi/2) 0
 ";
             let expected_source_map = SourceMap {
                 entries: vec![
-                    CompactSourceMapEntry {
-                        source_location: 0,
-                        target_location: InstructionTarget::Rewrite(
-                            CompactDefGateSequenceExpansion {
-                                defgate_sequence_source: ("seq1", &["param1"], &["a"]),
-                                range: 0..3,
-                                expansions: vec![
-                                    CompactSourceMapEntry {
-                                        source_location: 0,
-                                        target_location: InstructionTarget::Copied(
-                                            InstructionIndex(0),
-                                        ),
-                                    },
-                                    CompactSourceMapEntry {
-                                        source_location: 1,
-                                        target_location: InstructionTarget::Copied(
-                                            InstructionIndex(1),
-                                        ),
-                                    },
-                                    CompactSourceMapEntry {
-                                        source_location: 2,
-                                        target_location: InstructionTarget::Copied(
-                                            InstructionIndex(2),
-                                        ),
-                                    },
-                                ],
-                            },
+                    build_source_map_entry(
+                        0,
+                        build_defgate_sequence_expansion(
+                            "seq1",
+                            &["param1"],
+                            &["a"],
+                            0..3,
+                            vec![
+                                build_source_map_entry_copy(0, 0),
+                                build_source_map_entry_copy(1, 1),
+                                build_source_map_entry_copy(2, 2),
+                            ],
                         ),
-                    }
-                    .into(),
-                    CompactSourceMapEntry {
-                        source_location: 1,
-                        target_location: InstructionTarget::Copied(InstructionIndex(3)),
-                    }
-                    .into(),
+                    ),
+                    build_source_map_entry_copy(1, 3),
                 ],
             };
             Self {
