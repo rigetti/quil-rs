@@ -1388,7 +1388,7 @@ mod tests {
     #[rstest]
     #[case::simple_sequence(ParseGateDefinitionTestCase::simple_sequence())]
     #[case::simple_2q(ParseGateDefinitionTestCase::simple_2q())]
-    #[case::triple_recursive(ParseGateDefinitionTestCase::recursive())]
+    #[case::recursive(ParseGateDefinitionTestCase::recursive())]
     #[case::no_parameters(ParseGateDefinitionTestCase::no_parameters())]
     #[case::unused_argument(ParseGateDefinitionTestCase::unused_argument())]
     #[case::error_undefined_gate_sequence_element_qubit(

@@ -127,7 +127,6 @@ impl DefGateSequence {
     }
 }
 
-/// DEFGATE AS SEQUENCE gate elements
 fn validate_defgate_as_sequence_elements(
     gates: &[Gate],
     qubit_parameters: &[String],
