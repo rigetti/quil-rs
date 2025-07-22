@@ -85,6 +85,10 @@ pub(crate) fn init_submodule(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("ExternError", py.get_type::<quil_py::errors::ExternError>())?;
     m.add("GateError", py.get_type::<quil_py::errors::GateError>())?;
     m.add(
+        "ParseInstructionError",
+        py.get_type::<quil_py::errors::ParseInstructionError>(),
+    )?;
+    m.add(
         "ParseMemoryReferenceError",
         py.get_type::<quil_py::errors::ParseMemoryReferenceError>(),
     )?;
@@ -129,6 +133,7 @@ pub(crate) fn init_submodule(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<MeasureCalibrationDefinition>()?;
     m.add_class::<MeasureCalibrationIdentifier>()?;
     m.add_class::<Measurement>()?;
+    m.add_class::<MemoryReference>()?;
     m.add_class::<Move>()?;
     m.add_class::<Offset>()?;
     m.add_class::<PauliGate>()?;
@@ -302,7 +307,7 @@ pub enum ValidationError {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-#[pyclass(module = "quil.instruction", eq, frozen)]
+#[pyclass(module = "quil.instructions", eq, frozen)]
 #[pyo3(rename_all = "snake_case")]
 pub enum Instruction {
     Arithmetic(Arithmetic),

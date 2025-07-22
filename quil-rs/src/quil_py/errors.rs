@@ -74,7 +74,7 @@ exception!(
 
 exception!(
     crate::instruction::CallError,
-    quil.instruction,
+    quil.instructions,
     CallError,
     QuilError,
     "Errors that may occur when initializing a ``Call``."
@@ -82,7 +82,7 @@ exception!(
 
 exception!(
     crate::instruction::ExternError,
-    quil.instruction,
+    quil.instructions,
     ExternError,
     QuilError,
     "Errors that may occur when initializing or validating a ``PRAGMA EXTERN`` instruction."
@@ -90,7 +90,7 @@ exception!(
 
 exception!(
     crate::instruction::GateError,
-    quil.instruction,
+    quil.instructions,
     GateError,
     QuilError,
     "Errors that may occur when performing operations on a ``Gate``."

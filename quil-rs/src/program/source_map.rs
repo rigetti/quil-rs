@@ -101,18 +101,43 @@ impl SourceMapIndexable<InstructionIndex> for InstructionIndex {
 }
 
 /// Creates Python wrappers for `SourceMap<$srcT, $tgtT>` and `SourceMapEntry<$T, $U>`,
-/// then implements the methods for them that forward to the inner type.
+/// then implements `pymethods` for them to forward to the inner type.
 /// This is necessary because a `#[pyclass]` can't have generic parameters,
 /// and concrete implementations must be generated explicitly.
+///
+/// The syntax of the macro is meant to look like a regular newtype declaration
+/// for a wrappers around the above types, except you can't specify the `SourceMapEntry` types
+/// (they're forced to match the types for the `SourceMap` itself).
+/// The structs automatically get `#[pyclass]` and `#[derive(Clone, Debug, PartialEq)]`,
+/// but you can add additional annotations as desired, e.g. to change the Python name and module:
+///
+/// ```
+/// py_source_map! {
+///     #[pyo3(name = "CalibrationExpansionSourceMap", module = "quil.program", frozen)]
+///     PyCalibrationExpansionSourceMap(SourceMap<InstructionIndex, MaybeCalibrationExpansion>);
+///
+///     #[pyo3(name = "CalibrationExpansionSourceMapEntry", module = "quil.program", frozen)]
+///     PyCalibrationExpansionSourceMapEntry(SourceMapEntry<...>);
+/// }
+/// ```
 #[macro_export]
 macro_rules! py_source_map {
-    ($mapT: ident, $entryT: ident, $srcT: ty, $tgtT: ty) => {
+    (
+        $(#[$meta_map: meta])*
+        $mapvis:vis struct $mapT: ident(SourceMap<$srcT: ty, $tgtT: ty>);
+
+        $(#[$meta_entry: meta])*
+        $entryvis:vis struct $entryT: ident(SourceMapEntry<...>);
+    ) => {
         #[derive(Clone, Debug, PartialEq)]
-        #[pyclass(module = "quil.program", frozen)]
-        pub struct $mapT(pub SourceMap<$srcT, $tgtT>);
+        #[pyclass]
+        $(#[$meta_map])*
+        $mapvis struct $mapT(pub SourceMap<$srcT, $tgtT>);
+
         #[derive(Clone, Debug, PartialEq)]
-        #[pyclass(module = "quil.program", frozen)]
-        pub struct $entryT(pub SourceMapEntry<$srcT, $tgtT>);
+        #[pyclass]
+        $(#[$meta_entry])*
+        $entryvis struct $entryT(pub SourceMapEntry<$srcT, $tgtT>);
 
         #[pymethods]
         impl $entryT {

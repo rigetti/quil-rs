@@ -254,6 +254,10 @@ impl CalibrationExpansion {
     pub fn range(&self) -> &Range<InstructionIndex> {
         &self.range
     }
+
+    pub fn expansions(&self) -> &SourceMap<InstructionIndex, CalibrationExpansion> {
+        &self.expansions
+    }
 }
 
 #[pymethods]
@@ -267,8 +271,8 @@ impl CalibrationExpansion {
         )
     }
 
-    #[getter]
-    pub fn expansions(&self) -> PyCalibrationExpansionSourceMap {
+    #[getter(expansions)]
+    fn py_expansions(&self) -> PyCalibrationExpansionSourceMap {
         PyCalibrationExpansionSourceMap(self.expansions.clone())
     }
 }
@@ -696,8 +700,7 @@ impl Calibrations {
         matched_calibration.map(|m| m.calibration)
     }
 
-    /// Return the Quil instructions which describe the contained calibrations, consuming the
-    /// [`CalibrationSet`]
+    /// Return the Quil instructions which describe the contained calibrations, consuming the [`CalibrationSet`]
     pub fn into_instructions(self) -> Vec<Instruction> {
         self.calibrations
             .into_iter()
@@ -712,17 +715,19 @@ impl Calibrations {
 }
 
 py_source_map! {
-    PyCalibrationExpansionSourceMap,
-    PyCalibrationExpansionSourceMapEntry,
-    InstructionIndex,
-    CalibrationExpansion
+    #[pyo3(name = "CalibrationExpansionSourceMap", module = "quil.program", frozen)]
+    pub(crate) struct PyCalibrationExpansionSourceMap(SourceMap<InstructionIndex, CalibrationExpansion>);
+
+    #[pyo3(name = "CalibrationExpansionSourceMapEntry", module = "quil.program", frozen)]
+    pub(crate) struct PyCalibrationExpansionSourceMapEntry(SourceMapEntry<...>);
 }
 
 py_source_map! {
-    PyProgramCalibrationExpansionSourceMap,
-    PyProgramCalibrationExpansionSourceMapEntry,
-    InstructionIndex,
-    MaybeCalibrationExpansion
+    #[pyo3(name = "ProgramCalibrationExpansionSourceMap", module = "quil.program", frozen)]
+    pub(crate) struct PyProgramCalibrationExpansionSourceMap(SourceMap<InstructionIndex, MaybeCalibrationExpansion>);
+
+    #[pyo3(name = "ProgramCalibrationExpansionSourceMapEntry", module = "quil.program", frozen)]
+    pub(crate) struct PyProgramCalibrationExpansionSourceMapEntry(SourceMapEntry<...>);
 }
 
 #[cfg(test)]

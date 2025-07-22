@@ -34,15 +34,12 @@ use crate::instruction::{
     WaveformDefinition, RESERVED_PRAGMA_EXTERN,
 };
 use crate::parser::{lex, parse_instructions, ParseError};
-use crate::program::analysis::{BasicBlockOwned, ControlFlowGraph, ControlFlowGraphOwned};
-use crate::program::calibration::PyProgramCalibrationExpansionSourceMap;
 use crate::quil::Quil;
 use crate::{impl_repr, impl_to_quil};
 
 pub use self::calibration::{
     CalibrationExpansion, CalibrationExpansionOutput, CalibrationSource, Calibrations,
-    MaybeCalibrationExpansion, PyCalibrationExpansionSourceMap,
-    PyCalibrationExpansionSourceMapEntry, PyProgramCalibrationExpansionSourceMapEntry,
+    MaybeCalibrationExpansion,
 };
 pub use self::calibration_set::CalibrationSet;
 pub use self::error::{
@@ -54,9 +51,13 @@ pub use self::memory::{
     MemoryAccess, MemoryAccesses, MemoryAccessesError, MemoryAccessesResult, MemoryRegion,
 };
 pub use self::source_map::{SourceMap, SourceMapEntry};
-use crate::program::scheduling::schedule::{
-    PyScheduleSeconds, ScheduleSecondsItem, TimeSpanSeconds,
+
+use self::analysis::{BasicBlockOwned, ControlFlowGraph, ControlFlowGraphOwned};
+use self::calibration::{
+    PyCalibrationExpansionSourceMap, PyCalibrationExpansionSourceMapEntry,
+    PyProgramCalibrationExpansionSourceMap, PyProgramCalibrationExpansionSourceMapEntry,
 };
+use self::scheduling::schedule::{PyScheduleSeconds, ScheduleSecondsItem, TimeSpanSeconds};
 
 pub mod analysis;
 mod calibration;

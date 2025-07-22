@@ -52,8 +52,7 @@ type QubitPlaceholderInner = Arc<()>;
 /// An opaque placeholder for a qubit whose index may be assigned
 /// at a later time.
 #[derive(Clone, Eq)]
-#[pyclass(module = "quil.instruction", eq, frozen, hash, ord)]
-#[pyo3(rename_all = "snake_case")]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, ord)]
 pub struct QubitPlaceholder(QubitPlaceholderInner);
 
 #[pymethods]
