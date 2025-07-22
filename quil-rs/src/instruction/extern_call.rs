@@ -415,14 +415,7 @@ pub enum CallArgumentResolutionError {
 /// with the appropriate [`ExternSignature`]. Resolution is required for building the
 /// [`crate::Program`] memory graph.
 #[derive(Clone, Debug, PartialEq)]
-#[pyclass(
-    name = "CallArgument",
-    module = "quil.instructions",
-    eq,
-    frozen,
-    hash,
-    get_all
-)]
+#[pyclass(name = "CallArgument", module = "quil.instructions", eq, frozen, hash)]
 #[pyo3(rename_all = "snake_case")]
 pub enum UnresolvedCallArgument {
     /// A reference to a declared memory location. Note, this may be resolved to either
