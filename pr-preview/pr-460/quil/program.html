@@ -161,13 +161,19 @@
                                 <a class="function" href="#Program.resolve_placeholders_with_custom_resolvers">resolve_placeholders_with_custom_resolvers</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.pragma_extern_map">pragma_extern_map</a>
+                                <a class="variable" href="#Program.memory_regions">memory_regions</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Program.calibrations">calibrations</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Program.frames">frames</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Program.declarations">declarations</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.memory_regions">memory_regions</a>
+                                <a class="variable" href="#Program.gate_definitions">gate_definitions</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Program.waveforms">waveforms</a>
@@ -176,13 +182,7 @@
                                 <a class="variable" href="#Program.body_instructions">body_instructions</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.calibrations">calibrations</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Program.gate_definitions">gate_definitions</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Program.frames">frames</a>
+                                <a class="variable" href="#Program.pragma_extern_map">pragma_extern_map</a>
                         </li>
                 </ul>
 
@@ -356,10 +356,10 @@
                                 <a class="function" href="#CalibrationSet.to_instructions">to_instructions</a>
                         </li>
                         <li>
-                                <a class="variable" href="#CalibrationSet.measure_calibrations">measure_calibrations</a>
+                                <a class="variable" href="#CalibrationSet.calibrations">calibrations</a>
                         </li>
                         <li>
-                                <a class="variable" href="#CalibrationSet.calibrations">calibrations</a>
+                                <a class="variable" href="#CalibrationSet.measure_calibrations">measure_calibrations</a>
                         </li>
                 </ul>
 
@@ -368,10 +368,10 @@
                     <a class="class" href="#MemoryRegion">MemoryRegion</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#MemoryRegion.sharing">sharing</a>
+                                <a class="variable" href="#MemoryRegion.size">size</a>
                         </li>
                         <li>
-                                <a class="variable" href="#MemoryRegion.size">size</a>
+                                <a class="variable" href="#MemoryRegion.sharing">sharing</a>
                         </li>
                 </ul>
 
@@ -437,10 +437,10 @@
                     <a class="class" href="#TimeSpanSeconds">TimeSpanSeconds</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#TimeSpanSeconds.start">start</a>
+                                <a class="variable" href="#TimeSpanSeconds.end">end</a>
                         </li>
                         <li>
-                                <a class="variable" href="#TimeSpanSeconds.end">end</a>
+                                <a class="variable" href="#TimeSpanSeconds.start">start</a>
                         </li>
                         <li>
                                 <a class="variable" href="#TimeSpanSeconds.duration">duration</a>
@@ -1022,13 +1022,35 @@ Rust <a href="std::str::FromStr"><code>FromStr</code></a> instance.</p>
     
 
                             </div>
-                            <div id="Program.pragma_extern_map" class="classattr">
+                            <div id="Program.memory_regions" class="classattr">
                                 <div class="attr variable">
-            <span class="name">pragma_extern_map</span>
+            <span class="name">memory_regions</span>
 
         
     </div>
-    <a class="headerlink" href="#Program.pragma_extern_map"></a>
+    <a class="headerlink" href="#Program.memory_regions"></a>
+    
+    
+
+                            </div>
+                            <div id="Program.calibrations" class="classattr">
+                                <div class="attr variable">
+            <span class="name">calibrations</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.calibrations"></a>
+    
+    
+
+                            </div>
+                            <div id="Program.frames" class="classattr">
+                                <div class="attr variable">
+            <span class="name">frames</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.frames"></a>
     
     
 
@@ -1044,13 +1066,13 @@ Rust <a href="std::str::FromStr"><code>FromStr</code></a> instance.</p>
     
 
                             </div>
-                            <div id="Program.memory_regions" class="classattr">
+                            <div id="Program.gate_definitions" class="classattr">
                                 <div class="attr variable">
-            <span class="name">memory_regions</span>
+            <span class="name">gate_definitions</span>
 
         
     </div>
-    <a class="headerlink" href="#Program.memory_regions"></a>
+    <a class="headerlink" href="#Program.gate_definitions"></a>
     
     
 
@@ -1077,35 +1099,13 @@ Rust <a href="std::str::FromStr"><code>FromStr</code></a> instance.</p>
     
 
                             </div>
-                            <div id="Program.calibrations" class="classattr">
+                            <div id="Program.pragma_extern_map" class="classattr">
                                 <div class="attr variable">
-            <span class="name">calibrations</span>
+            <span class="name">pragma_extern_map</span>
 
         
     </div>
-    <a class="headerlink" href="#Program.calibrations"></a>
-    
-    
-
-                            </div>
-                            <div id="Program.gate_definitions" class="classattr">
-                                <div class="attr variable">
-            <span class="name">gate_definitions</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.gate_definitions"></a>
-    
-    
-
-                            </div>
-                            <div id="Program.frames" class="classattr">
-                                <div class="attr variable">
-            <span class="name">frames</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.frames"></a>
+    <a class="headerlink" href="#Program.pragma_extern_map"></a>
     
     
 
@@ -1824,17 +1824,6 @@ expansions performed.</p>
     
 
                             </div>
-                            <div id="CalibrationSet.measure_calibrations" class="classattr">
-                                <div class="attr variable">
-            <span class="name">measure_calibrations</span>
-
-        
-    </div>
-    <a class="headerlink" href="#CalibrationSet.measure_calibrations"></a>
-    
-    
-
-                            </div>
                             <div id="CalibrationSet.calibrations" class="classattr">
                                 <div class="attr variable">
             <span class="name">calibrations</span>
@@ -1842,6 +1831,17 @@ expansions performed.</p>
         
     </div>
     <a class="headerlink" href="#CalibrationSet.calibrations"></a>
+    
+    
+
+                            </div>
+                            <div id="CalibrationSet.measure_calibrations" class="classattr">
+                                <div class="attr variable">
+            <span class="name">measure_calibrations</span>
+
+        
+    </div>
+    <a class="headerlink" href="#CalibrationSet.measure_calibrations"></a>
     
     
 
@@ -1859,19 +1859,6 @@ expansions performed.</p>
     
     
 
-                            <div id="MemoryRegion.sharing" class="classattr">
-                                <div class="attr variable">
-            <span class="name">sharing</span>
-
-        
-    </div>
-    <a class="headerlink" href="#MemoryRegion.sharing"></a>
-    
-            <div class="docstring"><p>Get the sharing field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
                             <div id="MemoryRegion.size" class="classattr">
                                 <div class="attr variable">
             <span class="name">size</span>
@@ -1881,6 +1868,19 @@ expansions performed.</p>
     <a class="headerlink" href="#MemoryRegion.size"></a>
     
             <div class="docstring"><p>Get the size field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
+                            <div id="MemoryRegion.sharing" class="classattr">
+                                <div class="attr variable">
+            <span class="name">sharing</span>
+
+        
+    </div>
+    <a class="headerlink" href="#MemoryRegion.sharing"></a>
+    
+            <div class="docstring"><p>Get the sharing field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -2089,17 +2089,6 @@ expansions performed.</p>
     
     
 
-                            <div id="TimeSpanSeconds.start" class="classattr">
-                                <div class="attr variable">
-            <span class="name">start</span>
-
-        
-    </div>
-    <a class="headerlink" href="#TimeSpanSeconds.start"></a>
-    
-    
-
-                            </div>
                             <div id="TimeSpanSeconds.end" class="classattr">
                                 <div class="attr variable">
             <span class="name">end</span>
@@ -2107,6 +2096,17 @@ expansions performed.</p>
         
     </div>
     <a class="headerlink" href="#TimeSpanSeconds.end"></a>
+    
+    
+
+                            </div>
+                            <div id="TimeSpanSeconds.start" class="classattr">
+                                <div class="attr variable">
+            <span class="name">start</span>
+
+        
+    </div>
+    <a class="headerlink" href="#TimeSpanSeconds.start"></a>
     
     
 
