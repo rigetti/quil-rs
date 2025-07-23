@@ -66,7 +66,7 @@ impl Quil for ExternParameterType {
 
 /// An extern parameter with a name, mutability, and data type.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)]
 pub struct ExternParameter {
     /// The name of the parameter. This must be a valid user identifier.
     pub(crate) name: String,
@@ -125,7 +125,7 @@ impl Quil for ExternParameter {
 
 /// An extern signature with a return type and parameters.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)]
 pub struct ExternSignature {
     /// The return type of the extern signature, if any.
     pub(crate) return_type: Option<ScalarType>,
@@ -698,7 +698,7 @@ pub enum CallError {
 
 /// A call instruction with a name and arguments.
 #[derive(Clone, Debug, PartialEq, Hash, Eq)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, subclass)]
 #[pyo3(rename_all = "snake_case")]
 pub struct Call {
     /// The name of the call instruction. This must be a valid user identifier.

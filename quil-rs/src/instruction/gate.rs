@@ -23,7 +23,7 @@ use std::{
 
 /// A struct encapsulating all the properties of a Quil Quantum Gate.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, subclass)]
 pub struct Gate {
     pub name: String,
     pub parameters: Vec<Expression>,
@@ -852,7 +852,7 @@ impl PauliGate {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)]
 pub struct PauliTerm {
     pub arguments: Vec<(PauliGate, String)>,
     pub expression: Expression,
@@ -880,7 +880,7 @@ impl PauliTerm {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)]
 pub struct PauliSum {
     pub arguments: Vec<String>,
     pub terms: Vec<PauliTerm>,
@@ -969,7 +969,7 @@ impl Quil for GateSpecification {
 
 /// A struct encapsulating a quil Gate Definition
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)]
 pub struct GateDefinition {
     pub name: String,
     pub parameters: Vec<String>,

@@ -42,7 +42,7 @@ impl Quil for ScalarType {
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)]
 pub struct Vector {
     pub data_type: ScalarType,
     pub length: u64,
@@ -68,7 +68,7 @@ impl Quil for Vector {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, subclass)]
 pub struct Sharing {
     #[pyo3(get)]
     pub name: String,
@@ -89,7 +89,7 @@ impl Sharing {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, subclass)]
 pub struct Offset {
     pub offset: u64,
     pub data_type: ScalarType,
@@ -125,7 +125,7 @@ impl Quil for Offset {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)]
 pub struct Declaration {
     pub name: String,
     pub size: Vector,
@@ -215,7 +215,7 @@ mod test_declaration {
 
 // TODO: impl_parse, to_quil, repr
 #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
-#[pyclass(module = "quil.instructions", get_all, eq, frozen, hash)]
+#[pyclass(module = "quil.instructions", get_all, eq, frozen, hash, subclass)]
 pub struct MemoryReference {
     pub name: String,
     pub index: u64,
@@ -267,7 +267,7 @@ impl FromStr for MemoryReference {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)]
 pub struct Load {
     pub destination: MemoryReference,
     pub source: String,
@@ -301,7 +301,7 @@ impl Quil for Load {
 }
 
 #[derive(Clone, Debug, PartialEq, Hash)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)]
 pub struct Store {
     pub destination: String,
     pub offset: MemoryReference,

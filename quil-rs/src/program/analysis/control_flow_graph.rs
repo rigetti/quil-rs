@@ -292,7 +292,7 @@ pub enum BasicBlockScheduleError {
 // involves a lot of Cloning, and they're the types exposed by the Python bindings.
 // Can we combine their relevant methods or otherwise avoid the costly conversions?
 #[derive(Clone, Debug)]
-#[pyclass(name = "BasicBlock", module = "quil.program")]
+#[pyclass(name = "BasicBlock", module = "quil.program", subclass)]
 pub struct BasicBlockOwned {
     #[pyo3(get)]
     label: Option<Target>,

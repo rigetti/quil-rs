@@ -141,7 +141,7 @@ pub enum Expression {
 /// Note that when comparing Quil expressions, any embedded NaNs are treated as *equal* to other
 /// NaNs, not unequal, in contravention of the IEEE 754 spec.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[pyclass(module = "quil.expression", eq, frozen, hash)]
+#[pyclass(module = "quil.expression", eq, frozen, hash, subclass)]
 pub struct FunctionCallExpression {
     pub function: ExpressionFunction,
     pub expression: ArcIntern<Expression>,
@@ -176,7 +176,7 @@ impl FunctionCallExpression {
 /// Note that when comparing Quil expressions, any embedded NaNs are treated as *equal* to other
 /// NaNs, not unequal, in contravention of the IEEE 754 spec.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[pyclass(module = "quil.expression", eq, frozen, hash)]
+#[pyclass(module = "quil.expression", eq, frozen, hash, subclass)]
 pub struct InfixExpression {
     pub left: ArcIntern<Expression>,
     pub operator: InfixOperator,
@@ -207,7 +207,7 @@ impl InfixExpression {
 /// Note that when comparing Quil expressions, any embedded NaNs are treated as *equal* to other
 /// NaNs, not unequal, in contravention of the IEEE 754 spec.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[pyclass(module = "quil.expression", eq, frozen, hash)]
+#[pyclass(module = "quil.expression", eq, frozen, hash, subclass)]
 pub struct PrefixExpression {
     pub operator: PrefixOperator,
     pub expression: ArcIntern<Expression>,

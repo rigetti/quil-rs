@@ -6,7 +6,7 @@ use super::MemoryReference;
 use crate::quil::{Quil, ToQuilError};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)]
 pub struct Label {
     pub target: Target,
 }
@@ -75,7 +75,7 @@ type TargetPlaceholderInner = Arc<String>;
 /// An opaque placeholder for a label whose index may be assigned
 /// at a later time.
 #[derive(Clone, Debug, Eq)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash, ord)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, ord, subclass)]
 pub struct TargetPlaceholder(TargetPlaceholderInner);
 
 #[pymethods]
@@ -122,7 +122,7 @@ impl PartialEq for TargetPlaceholder {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[pyclass(module = "quil.instructions", eq, frozen, get_all)]
+#[pyclass(module = "quil.instructions", eq, frozen, get_all, subclass)]
 pub struct Jump {
     pub target: Target,
 }
@@ -148,7 +148,7 @@ impl Jump {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[pyclass(module = "quil.instructions", eq, frozen, get_all)]
+#[pyclass(module = "quil.instructions", eq, frozen, get_all, subclass)]
 pub struct JumpWhen {
     pub target: Target,
     pub condition: MemoryReference,
@@ -176,7 +176,7 @@ impl Quil for JumpWhen {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[pyclass(module = "quil.instructions", eq, frozen, get_all)]
+#[pyclass(module = "quil.instructions", eq, frozen, get_all, subclass)]
 pub struct JumpUnless {
     pub target: Target,
     pub condition: MemoryReference,

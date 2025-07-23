@@ -5,7 +5,7 @@ use crate::quil::Quil;
 use super::{MemoryReference, Qubit};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)]
 pub struct Measurement {
     pub qubit: Qubit,
     pub target: Option<MemoryReference>,

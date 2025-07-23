@@ -27,7 +27,7 @@ use crate::instruction::{
 };
 
 #[derive(Clone, Debug, Hash, PartialEq)]
-#[pyclass(module = "quil.program", eq, frozen, hash, get_all)]
+#[pyclass(module = "quil.program", eq, frozen, hash, get_all, subclass)]
 pub struct MemoryRegion {
     pub size: Vector,
     pub sharing: Option<Sharing>,

@@ -37,7 +37,7 @@ impl Quil for AttributeValue {
 pub type FrameAttributes = IndexMap<String, AttributeValue>;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[pyclass(module = "quil.instructions", eq, frozen, get_all)]
+#[pyclass(module = "quil.instructions", eq, frozen, get_all, subclass)]
 pub struct FrameDefinition {
     pub identifier: FrameIdentifier,
     pub attributes: FrameAttributes,
@@ -73,7 +73,7 @@ impl Quil for FrameDefinition {
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)]
 pub struct FrameIdentifier {
     pub name: String,
     pub qubits: Vec<Qubit>,
@@ -114,7 +114,7 @@ impl FromStr for FrameIdentifier {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[pyclass(module = "quil.instructions", eq, frozen, get_all)]
+#[pyclass(module = "quil.instructions", eq, frozen, get_all, subclass)]
 pub struct Capture {
     pub blocking: bool,
     pub frame: FrameIdentifier,
@@ -164,7 +164,7 @@ impl Quil for Capture {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[pyclass(module = "quil.instructions", eq, frozen, get_all)]
+#[pyclass(module = "quil.instructions", eq, frozen, get_all, subclass)]
 pub struct Pulse {
     pub blocking: bool,
     pub frame: FrameIdentifier,
@@ -204,7 +204,7 @@ impl Quil for Pulse {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)]
 pub struct RawCapture {
     pub blocking: bool,
     pub frame: FrameIdentifier,
@@ -253,7 +253,7 @@ impl Quil for RawCapture {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)]
 pub struct SetFrequency {
     pub frame: FrameIdentifier,
     pub frequency: Expression,
@@ -282,7 +282,7 @@ impl Quil for SetFrequency {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)]
 pub struct SetPhase {
     pub frame: FrameIdentifier,
     pub phase: Expression,
@@ -311,7 +311,7 @@ impl Quil for SetPhase {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)]
 pub struct SetScale {
     pub frame: FrameIdentifier,
     pub scale: Expression,
@@ -340,7 +340,7 @@ impl Quil for SetScale {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)]
 pub struct ShiftFrequency {
     pub frame: FrameIdentifier,
     pub frequency: Expression,
@@ -369,7 +369,7 @@ impl Quil for ShiftFrequency {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)]
 pub struct ShiftPhase {
     pub frame: FrameIdentifier,
     pub phase: Expression,
@@ -398,7 +398,7 @@ impl Quil for ShiftPhase {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)]
 pub struct SwapPhases {
     pub frame_1: FrameIdentifier,
     pub frame_2: FrameIdentifier,

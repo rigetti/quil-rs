@@ -5,7 +5,7 @@ use pyo3::prelude::*;
 use super::MemoryReference;
 
 #[derive(Clone, Debug, Hash, PartialEq)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)]
 pub struct Arithmetic {
     pub operator: ArithmeticOperator,
     pub destination: MemoryReference,
@@ -152,7 +152,7 @@ impl Quil for BinaryOperator {
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)]
 #[pyo3(rename_all = "snake_case")]
 pub struct BinaryLogic {
     pub operator: BinaryOperator,
@@ -192,7 +192,7 @@ impl BinaryLogic {
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)]
 #[pyo3(rename_all = "snake_case")]
 pub struct Convert {
     pub destination: MemoryReference,
@@ -225,7 +225,7 @@ impl Quil for Convert {
 }
 
 #[derive(Clone, Debug, Hash, PartialEq)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)]
 #[pyo3(rename_all = "snake_case")]
 pub struct Move {
     pub destination: MemoryReference,
@@ -258,7 +258,7 @@ impl Quil for Move {
 }
 
 #[derive(Clone, Debug, Hash, PartialEq)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)]
 #[pyo3(rename_all = "snake_case")]
 pub struct Exchange {
     pub left: MemoryReference,
@@ -288,7 +288,7 @@ impl Exchange {
 }
 
 #[derive(Clone, Debug, Hash, PartialEq)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)]
 #[pyo3(rename_all = "snake_case")]
 pub struct Comparison {
     pub operator: ComparisonOperator,
@@ -394,7 +394,7 @@ impl Quil for ComparisonOperator {
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)]
 #[pyo3(rename_all = "snake_case")]
 pub struct UnaryLogic {
     pub operator: UnaryOperator,

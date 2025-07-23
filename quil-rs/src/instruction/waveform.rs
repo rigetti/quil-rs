@@ -9,7 +9,7 @@ use crate::{
 use super::write_parameter_string;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)]
 pub struct Waveform {
     pub matrix: Vec<Expression>,
     pub parameters: Vec<String>,
@@ -24,7 +24,7 @@ impl Waveform {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
+#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)]
 pub struct WaveformDefinition {
     pub name: String,
     pub definition: Waveform,
@@ -88,7 +88,7 @@ mod test_waveform_definition {
 pub type WaveformParameters = IndexMap<String, Expression>;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[pyclass(module = "quil.instructions", eq, frozen, get_all)]
+#[pyclass(module = "quil.instructions", eq, frozen, get_all, subclass)]
 pub struct WaveformInvocation {
     pub name: String,
     pub parameters: WaveformParameters,

@@ -37,7 +37,7 @@ use super::{CalibrationSet, InstructionIndex, ProgramError};
 
 /// A collection of Quil calibrations (`DEFCAL` instructions) with utility methods.
 #[derive(Clone, Debug, Default, PartialEq)]
-#[pyclass(module = "quil.program", eq)]
+#[pyclass(name = "CalibrationSet", module = "quil.program", eq, subclass)]
 pub struct Calibrations {
     pub calibrations: CalibrationSet<Calibration>,
     pub measure_calibrations: CalibrationSet<MeasureCalibrationDefinition>,

@@ -21,7 +21,7 @@ pub trait CalibrationSignature {
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
-#[pyclass(module = "quil.instructions", eq, get_all)]
+#[pyclass(module = "quil.instructions", eq, get_all, subclass)]
 pub struct Calibration {
     pub identifier: CalibrationIdentifier,
     pub instructions: Vec<Instruction>,
@@ -92,7 +92,7 @@ impl Quil for Calibration {
 
 /// Unique identifier for a calibration definition within a program
 #[derive(Clone, Debug, Default, PartialEq)]
-#[pyclass(module = "quil.instructions", eq, frozen, get_all)]
+#[pyclass(module = "quil.instructions", eq, frozen, get_all, subclass)]
 pub struct CalibrationIdentifier {
     /// The modifiers applied to the gate
     pub modifiers: Vec<GateModifier>,
@@ -232,7 +232,7 @@ impl Quil for CalibrationIdentifier {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-#[pyclass(module = "quil.instructions", eq, frozen, get_all)]
+#[pyclass(module = "quil.instructions", eq, frozen, get_all, subclass)]
 #[pyo3(rename_all = "snake_case")]
 pub struct MeasureCalibrationDefinition {
     pub identifier: MeasureCalibrationIdentifier,
@@ -289,7 +289,7 @@ impl Quil for MeasureCalibrationDefinition {
 
 /// A unique identifier for a measurement calibration definition within a program
 #[derive(Clone, Debug, Default, PartialEq)]
-#[pyclass(module = "quil.instructions", eq, frozen, get_all)]
+#[pyclass(module = "quil.instructions", eq, frozen, get_all, subclass)]
 #[pyo3(rename_all = "snake_case")]
 pub struct MeasureCalibrationIdentifier {
     /// The qubit which is the target of measurement, if any
