@@ -129,7 +129,6 @@ impl Quil for BinaryOperand {
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 #[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
-#[pyo3(rename_all = "snake_case")]
 pub enum BinaryOperator {
     And,
     Ior,
@@ -367,7 +366,6 @@ impl std::hash::Hash for ComparisonOperand {
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 #[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
-#[pyo3(rename_all = "snake_case")]
 pub enum ComparisonOperator {
     Equal,
     GreaterThanOrEqual,
@@ -424,7 +422,6 @@ impl Quil for UnaryLogic {
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 #[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
-#[pyo3(rename_all = "snake_case")]
 pub enum UnaryOperator {
     Neg,
     Not,
