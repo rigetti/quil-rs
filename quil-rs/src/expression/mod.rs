@@ -90,7 +90,7 @@ pub enum EvaluationError {
 ///
 /// This is used in constructors when the Rust constructor expects an interned instance,
 /// since when called from Python, the heap-allocated object needs to be extracted first.
-fn intern_py<'py, T>(obj: &Bound<'py, PyAny>) -> PyResult<ArcIntern<T>>
+fn intern_from_py<'py, T>(obj: &Bound<'py, PyAny>) -> PyResult<ArcIntern<T>>
 where
     T: FromPyObject<'py> + Sync + Send + Hash + Eq,
 {
@@ -143,6 +143,7 @@ pub enum Expression {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[pyclass(module = "quil.expression", eq, frozen, hash, subclass)]
 pub struct FunctionCallExpression {
+    #[pyo3(get)]
     pub function: ExpressionFunction,
     pub expression: ArcIntern<Expression>,
 }
@@ -165,6 +166,10 @@ impl FunctionCallExpression {
             expression: ArcIntern::new(expression),
         }
     }
+
+    fn expression(&self) -> Expression {
+        (*self.expression).clone()
+    }
 }
 
 /// The type of infix Quil expressions, e.g. `e1 + e2`.
@@ -179,6 +184,7 @@ impl FunctionCallExpression {
 #[pyclass(module = "quil.expression", eq, frozen, hash, subclass)]
 pub struct InfixExpression {
     pub left: ArcIntern<Expression>,
+    #[pyo3(get)]
     pub operator: InfixOperator,
     pub right: ArcIntern<Expression>,
 }
@@ -187,15 +193,25 @@ pub struct InfixExpression {
 impl InfixExpression {
     #[new]
     pub fn new(
-        #[pyo3(from_py_with = intern_py)] left: ArcIntern<Expression>,
+        #[pyo3(from_py_with = intern_from_py)] left: ArcIntern<Expression>,
         operator: InfixOperator,
-        #[pyo3(from_py_with = intern_py)] right: ArcIntern<Expression>,
+        #[pyo3(from_py_with = intern_from_py)] right: ArcIntern<Expression>,
     ) -> Self {
         Self {
             left,
             operator,
             right,
         }
+    }
+
+    #[getter]
+    fn left(&self) -> Expression {
+        (*self.left).clone()
+    }
+
+    #[getter]
+    fn right(&self) -> Expression {
+        (*self.right).clone()
     }
 }
 
@@ -209,6 +225,7 @@ impl InfixExpression {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[pyclass(module = "quil.expression", eq, frozen, hash, subclass)]
 pub struct PrefixExpression {
+    #[pyo3(get)]
     pub operator: PrefixOperator,
     pub expression: ArcIntern<Expression>,
 }
@@ -218,12 +235,17 @@ impl PrefixExpression {
     #[new]
     pub fn new(
         operator: PrefixOperator,
-        #[pyo3(from_py_with = intern_py)] expression: ArcIntern<Expression>,
+        #[pyo3(from_py_with = intern_from_py)] expression: ArcIntern<Expression>,
     ) -> Self {
         Self {
             operator,
             expression,
         }
+    }
+
+    #[getter]
+    fn expression(&self) -> Expression {
+        (*self.expression).clone()
     }
 }
 
