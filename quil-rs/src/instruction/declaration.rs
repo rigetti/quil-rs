@@ -221,14 +221,13 @@ pub struct MemoryReference {
     pub index: u64,
 }
 
+#[pymethods]
 impl MemoryReference {
+    #[new]
     pub fn new(name: String, index: u64) -> Self {
         Self { name, index }
     }
-}
 
-#[pymethods]
-impl MemoryReference {
     /// Parse a ``MemoryReference`` from a string.
     ///
     /// Raises a ``ParseMemoryReference`` error if the string isn't a valid Quil memory reference.

@@ -69,6 +69,11 @@ pub struct ControlFlowGraphOwned {
 
 #[pymethods]
 impl ControlFlowGraphOwned {
+    #[new]
+    fn new(instance: Self) -> Self {
+        instance
+    }
+
     /// Return ``True`` if the program has dynamic control flow, i.e. contains a conditional branch instruction.
     ///
     /// ``False`` does not imply that there is only one basic block in the program.
@@ -304,6 +309,11 @@ pub struct BasicBlockOwned {
 
 #[pymethods]
 impl BasicBlockOwned {
+    #[new]
+    fn new(instance: Self) -> Self {
+        instance
+    }
+
     fn as_schedule_seconds(
         &self,
         program: &Program,
@@ -320,6 +330,7 @@ impl BasicBlockOwned {
         QubitGraph::try_from(&block).map(|graph| graph.gate_depth(gate_minimum_qubit_count))
     }
 
+    #[getter]
     fn terminator(&self) -> Option<Instruction> {
         BasicBlockTerminator::from(&self.terminator).into_instruction()
     }

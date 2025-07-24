@@ -191,6 +191,11 @@ impl Program {
         <Self as std::str::FromStr>::from_str(input)
     }
 
+    #[getter(body_instructions)]
+    fn py_body_instructions(&self) -> Vec<Instruction> {
+        self.instructions.to_vec()
+    }
+
     /// Return a deep copy of the `Program`, but without the body instructions.
     pub fn clone_without_body_instructions(&self) -> Self {
         Self {
