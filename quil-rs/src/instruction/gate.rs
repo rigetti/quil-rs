@@ -33,8 +33,7 @@ pub struct Gate {
 
 /// An enum of all the possible modifiers on a quil [`Gate`]
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash)] // TODO: to_quil
-#[pyo3(rename_all = "snake_case")]
+#[pyclass(module = "quil.instructions", eq, frozen, hash)]
 pub enum GateModifier {
     /// The `CONTROLLED` modifier makes the gate take an extra [`Qubit`] parameter as a control
     /// qubit.
@@ -831,7 +830,6 @@ mod test_gate_into_matrix {
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, strum::Display, strum::EnumString)]
 #[pyclass(module = "quil.instructions", eq, frozen, hash)]
 #[strum(serialize_all = "UPPERCASE")]
-#[pyo3(rename_all = "UPPERCASE")]
 pub enum PauliGate {
     I,
     X,
