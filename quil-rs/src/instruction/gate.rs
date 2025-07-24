@@ -123,6 +123,12 @@ impl Gate {
         })
     }
 
+    #[pyo3(name = "dagger")]
+    #[must_use]
+    fn py_dagger(&self) -> Self {
+        self.clone().dagger()
+    }
+
     #[pyo3(name = "controlled")]
     #[must_use]
     fn py_controlled(&self, control_qubit: Qubit) -> Self {
