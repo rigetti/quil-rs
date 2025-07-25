@@ -613,17 +613,6 @@ impl Expression {
             other => other.clone(),
         }
     }
-
-    /// If this is a number with imaginary part "equal to" zero (of _small_ absolute value), return
-    /// that number. Otherwise, error with an evaluation error of a descriptive type.
-    pub fn to_real(&self) -> Result<f64, EvaluationError> {
-        match self {
-            Expression::PiConstant() => Ok(PI),
-            Expression::Number(x) if is_small(x.im) => Ok(x.re),
-            Expression::Number(_) => Err(EvaluationError::NumberNotReal),
-            _ => Err(EvaluationError::NotANumber),
-        }
-    }
 }
 
 #[pymethods]
@@ -647,15 +636,19 @@ impl Expression {
 
     /// Substitute an expression in the place of each matching variable.
     #[pyo3(name = "substitute_variables")]
-    pub fn py_substitute_variables(&self, variable_values: HashMap<String, Expression>) -> Self {
+    fn py_substitute_variables(&self, variable_values: HashMap<String, Expression>) -> Self {
         self.substitute_variables(&variable_values)
     }
 
-    /// If this is a number with imaginary part "equal to" zero (of _small_ absolute value),
-    /// return that number. Otherwise, raise an evaluation error.
-    #[pyo3(name = "to_real")]
-    fn py_to_real(&self) -> PyResult<f64> {
-        Ok(self.to_real()?)
+    /// If this is a number with imaginary part "equal to" zero (of _small_ absolute value), return
+    /// that number. Otherwise, error with an evaluation error of a descriptive type.
+    pub fn to_real(&self) -> Result<f64, EvaluationError> {
+        match self {
+            Expression::PiConstant() => Ok(PI),
+            Expression::Number(x) if is_small(x.im) => Ok(x.re),
+            Expression::Number(_) => Err(EvaluationError::NumberNotReal),
+            _ => Err(EvaluationError::NotANumber),
+        }
     }
 
     fn __add__(&self, other: Expression) -> Self {
