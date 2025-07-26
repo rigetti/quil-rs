@@ -227,14 +227,6 @@ impl MemoryReference {
     pub fn new(name: String, index: u64) -> Self {
         Self { name, index }
     }
-
-    /// Parse a ``MemoryReference`` from a string.
-    ///
-    /// Raises a ``ParseMemoryReference`` error if the string isn't a valid Quil memory reference.
-    #[staticmethod]
-    fn parse(input: &str) -> PyResult<Self> {
-        Ok(<Self as std::str::FromStr>::from_str(input)?)
-    }
 }
 
 impl Quil for MemoryReference {
