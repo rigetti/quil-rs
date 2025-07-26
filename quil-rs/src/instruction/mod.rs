@@ -215,34 +215,6 @@ macro_rules! impl_pickle_for_instruction {
     };
 }
 
-macro_rules! impl_copy_for_instruction {
-    ($name: ident) => {
-        #[pyo3::pymethods]
-        impl $name {
-            #[staticmethod]
-            #[pyo3(name = "parse")]
-            fn __copy__<'py>(string: &str, py: Python<'py>) -> PyResult<Bound<'py, Self>> {
-                // Instead of attempting to extract Self from the Instruction enum,
-                // this makes use PyO3's downcasting methods.
-                Ok(Instruction::from_str(string)?
-                    .into_pyobject(py)?
-                    .into_any()
-                    .downcast_into()?)
-            }
-
-            fn __reduce__<'py>(
-                slf: &Bound<'py, Self>,
-                py: Python<'py>,
-            ) -> PyResult<Bound<'py, pyo3::types::PyTuple>> {
-                let parse = slf.as_any().getattr(pyo3::intern!(py, "parse"))?;
-                let state = { pyo3::types::PyString::new(py, &slf.borrow().to_quil()?) };
-                let args = pyo3::types::PyTuple::new(py, &[state])?.into_any();
-                pyo3::types::PyTuple::new(py, &[parse, args])
-            }
-        }
-    };
-}
-
 /// Implement expected methods on each of the types in a given list.
 ///
 /// Given the following:
