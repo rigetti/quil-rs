@@ -171,7 +171,7 @@ macro_rules! impl_parse {
     ($name: ident) => {
         #[pyo3::pymethods]
         impl $name {
-            #[classmethod]
+            #[staticmethod]
             #[pyo3(name = "parse")]
             fn py_parse(string: &str) -> PyResult<Self> {
                 Ok(Self::from_str(string)?)
