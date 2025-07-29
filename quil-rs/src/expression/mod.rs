@@ -167,6 +167,7 @@ impl FunctionCallExpression {
         }
     }
 
+    #[getter]
     fn expression(&self) -> Expression {
         (*self.expression).clone()
     }
