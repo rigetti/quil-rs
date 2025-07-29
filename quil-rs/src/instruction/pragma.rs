@@ -44,7 +44,6 @@ impl Quil for Pragma {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[pyclass(module = "quil.instructions", eq, frozen, hash)]
-#[pyo3(rename_all = "snake_case")]
 pub enum PragmaArgument {
     Identifier(String),
     Integer(u64),

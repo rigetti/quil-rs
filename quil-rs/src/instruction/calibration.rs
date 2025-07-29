@@ -233,7 +233,6 @@ impl Quil for CalibrationIdentifier {
 
 #[derive(Clone, Debug, PartialEq)]
 #[pyclass(module = "quil.instructions", eq, frozen, get_all, subclass)]
-#[pyo3(rename_all = "snake_case")]
 pub struct MeasureCalibrationDefinition {
     pub identifier: MeasureCalibrationIdentifier,
     pub instructions: Vec<Instruction>,
@@ -290,7 +289,6 @@ impl Quil for MeasureCalibrationDefinition {
 /// A unique identifier for a measurement calibration definition within a program
 #[derive(Clone, Debug, Default, PartialEq)]
 #[pyclass(module = "quil.instructions", eq, frozen, get_all, subclass)]
-#[pyo3(rename_all = "snake_case")]
 pub struct MeasureCalibrationIdentifier {
     /// The qubit which is the target of measurement, if any
     pub qubit: Option<Qubit>,

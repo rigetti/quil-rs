@@ -171,7 +171,7 @@ macro_rules! impl_parse {
     ($name: ident) => {
         #[pyo3::pymethods]
         impl $name {
-            #[staticmethod]
+            #[classmethod]
             #[pyo3(name = "parse")]
             fn py_parse(string: &str) -> PyResult<Self> {
                 Ok(Self::from_str(string)?)
@@ -402,7 +402,6 @@ pub enum ValidationError {
 
 #[derive(Clone, Debug, PartialEq)]
 #[pyclass(module = "quil.instructions", eq, frozen)]
-#[pyo3(rename_all = "snake_case")]
 pub enum Instruction {
     Arithmetic(Arithmetic),
     BinaryLogic(BinaryLogic),

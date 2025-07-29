@@ -6,7 +6,6 @@ use crate::quil::{Quil, ToQuilError};
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord, strum::EnumTryAs)]
 #[pyclass(module = "quil.instructions", eq, frozen, hash, ord)]
-#[pyo3(rename_all = "snake_case")]
 pub enum Qubit {
     Fixed(u64),
     Placeholder(QubitPlaceholder),

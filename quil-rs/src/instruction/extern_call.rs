@@ -29,7 +29,6 @@ use super::{
 /// A parameter type within an extern signature.
 #[derive(Clone, Debug, PartialEq, Hash, Eq)]
 #[pyclass(module = "quil.instructions", eq, frozen, hash)]
-#[pyo3(rename_all = "snake_case")]
 pub enum ExternParameterType {
     /// A scalar parameter, which may accept a memory reference or immediate value.
     ///
@@ -416,7 +415,6 @@ pub enum CallArgumentResolutionError {
 /// [`crate::Program`] memory graph.
 #[derive(Clone, Debug, PartialEq)]
 #[pyclass(name = "CallArgument", module = "quil.instructions", eq, frozen, hash)]
-#[pyo3(rename_all = "snake_case")]
 pub enum UnresolvedCallArgument {
     /// A reference to a declared memory location. Note, this may be resolved to either
     /// a scalar or vector. In the former case, the assumed index is 0.
@@ -699,7 +697,6 @@ pub enum CallError {
 /// A call instruction with a name and arguments.
 #[derive(Clone, Debug, PartialEq, Hash, Eq)]
 #[pyclass(module = "quil.instructions", eq, frozen, hash, subclass)]
-#[pyo3(rename_all = "snake_case")]
 pub struct Call {
     /// The name of the call instruction. This must be a valid user identifier.
     pub name: String,

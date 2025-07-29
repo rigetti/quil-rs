@@ -121,13 +121,12 @@ where
 /// NaNs, not unequal, in contravention of the IEEE 754 spec.
 #[derive(Clone, Debug)]
 #[pyclass(module = "quil.expression", eq, frozen, hash)]
-#[pyo3(rename_all = "snake_case")]
 pub enum Expression {
     Address(MemoryReference),
     FunctionCall(FunctionCallExpression),
     Infix(InfixExpression),
     Number(Complex64),
-    #[pyo3(name = "pi")]
+    #[pyo3(name = "Pi")]
     PiConstant(),
     Prefix(PrefixExpression),
     Variable(String),

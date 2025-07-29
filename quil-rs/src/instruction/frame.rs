@@ -14,7 +14,6 @@ use crate::{
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, strum::EnumTryAs)]
 #[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
-#[pyo3(rename_all = "snake_case")]
 pub enum AttributeValue {
     String(String),
     Expression(Expression),

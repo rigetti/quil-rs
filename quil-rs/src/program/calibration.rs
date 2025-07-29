@@ -292,7 +292,6 @@ impl SourceMapIndexable<CalibrationSource> for CalibrationExpansion {
 /// The result of an attempt to expand an instruction within a [`Program`]
 #[derive(Clone, Debug, PartialEq)]
 #[pyclass(module = "quil.program", eq, frozen)]
-#[pyo3(rename_all = "snake_case")]
 pub enum MaybeCalibrationExpansion {
     /// The instruction was expanded into others
     Expanded(CalibrationExpansion),
@@ -322,7 +321,6 @@ impl SourceMapIndexable<CalibrationSource> for MaybeCalibrationExpansion {
 /// A source of a calibration, either a [`Calibration`] or a [`MeasureCalibrationDefinition`]
 #[derive(Clone, Debug, PartialEq)]
 #[pyclass(module = "quil.program", eq, frozen)]
-#[pyo3(rename_all = "snake_case")]
 pub enum CalibrationSource {
     /// Describes a `DEFCAL` instruction
     Calibration(CalibrationIdentifier),

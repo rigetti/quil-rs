@@ -916,7 +916,6 @@ impl PauliSum {
 /// An enum representing a the specification of a [`GateDefinition`] for a given [`GateType`]
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[pyclass(module = "quil.instructions", eq, frozen, hash)]
-#[pyo3(rename_all = "snake_case")]
 pub enum GateSpecification {
     /// A matrix of [`Expression`]s representing a unitary operation for a [`GateType::Matrix`].
     Matrix(Vec<Vec<Expression>>),

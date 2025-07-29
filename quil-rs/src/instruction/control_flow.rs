@@ -32,7 +32,6 @@ impl Quil for Label {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, strum::EnumTryAs)]
 #[pyclass(module = "quil.instructions", eq, frozen, hash)]
-#[pyo3(rename_all = "snake_case")]
 pub enum Target {
     Fixed(String),
     Placeholder(TargetPlaceholder),
