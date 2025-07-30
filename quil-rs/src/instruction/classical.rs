@@ -3,6 +3,7 @@ use crate::{hash::hash_f64, quil::Quil};
 use pyo3::prelude::*;
 
 use super::MemoryReference;
+use crate::pickleable_new;
 
 #[derive(Clone, Debug, Hash, PartialEq)]
 #[pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)]
@@ -12,19 +13,13 @@ pub struct Arithmetic {
     pub source: ArithmeticOperand,
 }
 
-#[pymethods]
-impl Arithmetic {
-    #[new]
-    pub fn new(
-        operator: ArithmeticOperator,
-        destination: MemoryReference,
-        source: ArithmeticOperand,
-    ) -> Self {
-        Self {
-            operator,
-            destination,
-            source,
-        }
+pickleable_new! {
+    impl Arithmetic {
+        pub fn new(
+            operator: ArithmeticOperator,
+            destination: MemoryReference,
+            source: ArithmeticOperand,
+        );
     }
 }
 
@@ -171,19 +166,13 @@ impl Quil for BinaryLogic {
     }
 }
 
-#[pymethods]
-impl BinaryLogic {
-    #[new]
-    pub fn new(
-        operator: BinaryOperator,
-        destination: MemoryReference,
-        source: BinaryOperand,
-    ) -> Self {
-        Self {
-            operator,
-            destination,
-            source,
-        }
+pickleable_new! {
+    impl BinaryLogic {
+        pub fn new(
+            operator: BinaryOperator,
+            destination: MemoryReference,
+            source: BinaryOperand,
+        );
     }
 }
 
@@ -194,14 +183,9 @@ pub struct Convert {
     pub source: MemoryReference,
 }
 
-#[pymethods]
-impl Convert {
-    #[new]
-    pub fn new(destination: MemoryReference, source: MemoryReference) -> Self {
-        Self {
-            destination,
-            source,
-        }
+pickleable_new! {
+    impl Convert {
+        pub fn new(destination: MemoryReference, source: MemoryReference);
     }
 }
 
@@ -226,14 +210,9 @@ pub struct Move {
     pub source: ArithmeticOperand,
 }
 
-#[pymethods]
-impl Move {
-    #[new]
-    pub fn new(destination: MemoryReference, source: ArithmeticOperand) -> Self {
-        Self {
-            destination,
-            source,
-        }
+pickleable_new! {
+    impl Move {
+        pub fn new(destination: MemoryReference, source: ArithmeticOperand);
     }
 }
 
@@ -272,11 +251,9 @@ impl Quil for Exchange {
     }
 }
 
-#[pymethods]
-impl Exchange {
-    #[new]
-    pub fn new(left: MemoryReference, right: MemoryReference) -> Self {
-        Self { left, right }
+pickleable_new! {
+    impl Exchange {
+        pub fn new(left: MemoryReference, right: MemoryReference);
     }
 }
 
@@ -289,21 +266,14 @@ pub struct Comparison {
     pub rhs: ComparisonOperand,
 }
 
-#[pymethods]
-impl Comparison {
-    #[new]
-    pub fn new(
-        operator: ComparisonOperator,
-        destination: MemoryReference,
-        lhs: MemoryReference,
-        rhs: ComparisonOperand,
-    ) -> Self {
-        Self {
-            operator,
-            destination,
-            lhs,
-            rhs,
-        }
+pickleable_new! {
+    impl Comparison {
+        pub fn new(
+            operator: ComparisonOperator,
+            destination: MemoryReference,
+            lhs: MemoryReference,
+            rhs: ComparisonOperand,
+        );
     }
 }
 
@@ -390,11 +360,9 @@ pub struct UnaryLogic {
     pub operand: MemoryReference,
 }
 
-#[pymethods]
-impl UnaryLogic {
-    #[new]
-    pub fn new(operator: UnaryOperator, operand: MemoryReference) -> Self {
-        Self { operator, operand }
+pickleable_new! {
+    impl UnaryLogic {
+        pub fn new(operator: UnaryOperator, operand: MemoryReference);
     }
 }
 

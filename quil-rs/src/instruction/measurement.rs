@@ -1,6 +1,6 @@
 use pyo3::prelude::*;
 
-use crate::quil::Quil;
+use crate::{pickleable_new, quil::Quil};
 
 use super::{MemoryReference, Qubit};
 
@@ -11,11 +11,9 @@ pub struct Measurement {
     pub target: Option<MemoryReference>,
 }
 
-#[pymethods]
-impl Measurement {
-    #[new]
-    pub fn new(qubit: Qubit, target: Option<MemoryReference>) -> Self {
-        Self { qubit, target }
+pickleable_new! {
+    impl Measurement {
+        pub fn new(qubit: Qubit, target: Option<MemoryReference>);
     }
 }
 

@@ -6,10 +6,7 @@ use pyo3::prelude::*;
 
 use super::{MemoryReference, Qubit, QuotedString, WaveformInvocation};
 use crate::{
-    expression::Expression,
-    parser::{common::parse_frame_identifier, lex, ParseError},
-    program::{disallow_leftover, SyntaxError},
-    quil::{Quil, INDENT},
+    expression::Expression, parser::{common::parse_frame_identifier, lex, ParseError}, pickleable_new, program::{disallow_leftover, SyntaxError}, quil::{Quil, INDENT}
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, strum::EnumTryAs)]
@@ -42,14 +39,9 @@ pub struct FrameDefinition {
     pub attributes: FrameAttributes,
 }
 
-#[pymethods]
-impl FrameDefinition {
-    #[new]
-    pub fn new(identifier: FrameIdentifier, attributes: FrameAttributes) -> Self {
-        Self {
-            identifier,
-            attributes,
-        }
+pickleable_new! {
+    impl FrameDefinition {
+        pub fn new(identifier: FrameIdentifier, attributes: FrameAttributes); 
     }
 }
 
@@ -121,21 +113,14 @@ pub struct Capture {
     pub waveform: WaveformInvocation,
 }
 
-#[pymethods]
-impl Capture {
-    #[new]
-    pub fn new(
-        blocking: bool,
-        frame: FrameIdentifier,
-        memory_reference: MemoryReference,
-        waveform: WaveformInvocation,
-    ) -> Self {
-        Self {
-            blocking,
-            frame,
-            memory_reference,
-            waveform,
-        }
+pickleable_new! {
+    impl Capture {
+        pub fn new(
+            blocking: bool,
+            frame: FrameIdentifier,
+            memory_reference: MemoryReference,
+            waveform: WaveformInvocation,
+        );
     }
 }
 
@@ -170,15 +155,9 @@ pub struct Pulse {
     pub waveform: WaveformInvocation,
 }
 
-#[pymethods]
-impl Pulse {
-    #[new]
-    pub fn new(blocking: bool, frame: FrameIdentifier, waveform: WaveformInvocation) -> Self {
-        Self {
-            blocking,
-            frame,
-            waveform,
-        }
+pickleable_new! {
+    impl Pulse {
+        pub fn new(blocking: bool, frame: FrameIdentifier, waveform: WaveformInvocation);
     }
 }
 
@@ -211,21 +190,14 @@ pub struct RawCapture {
     pub memory_reference: MemoryReference,
 }
 
-#[pymethods]
-impl RawCapture {
-    #[new]
-    pub fn new(
-        blocking: bool,
-        frame: FrameIdentifier,
-        duration: Expression,
-        memory_reference: MemoryReference,
-    ) -> Self {
-        Self {
-            blocking,
-            frame,
-            duration,
-            memory_reference,
-        }
+pickleable_new! {
+    impl RawCapture {
+        pub fn new(
+            blocking: bool,
+            frame: FrameIdentifier,
+            duration: Expression,
+            memory_reference: MemoryReference,
+        );
     }
 }
 
@@ -258,11 +230,9 @@ pub struct SetFrequency {
     pub frequency: Expression,
 }
 
-#[pymethods]
-impl SetFrequency {
-    #[new]
-    pub fn new(frame: FrameIdentifier, frequency: Expression) -> Self {
-        Self { frame, frequency }
+pickleable_new! {
+    impl SetFrequency {
+        pub fn new(frame: FrameIdentifier, frequency: Expression);
     }
 }
 
@@ -287,11 +257,9 @@ pub struct SetPhase {
     pub phase: Expression,
 }
 
-#[pymethods]
-impl SetPhase {
-    #[new]
-    pub fn new(frame: FrameIdentifier, phase: Expression) -> Self {
-        Self { frame, phase }
+pickleable_new! {
+    impl SetPhase {
+        pub fn new(frame: FrameIdentifier, phase: Expression);
     }
 }
 
@@ -316,11 +284,9 @@ pub struct SetScale {
     pub scale: Expression,
 }
 
-#[pymethods]
-impl SetScale {
-    #[new]
-    pub fn new(frame: FrameIdentifier, scale: Expression) -> Self {
-        Self { frame, scale }
+pickleable_new! {
+    impl SetScale {
+        pub fn new(frame: FrameIdentifier, scale: Expression);
     }
 }
 
@@ -345,11 +311,9 @@ pub struct ShiftFrequency {
     pub frequency: Expression,
 }
 
-#[pymethods]
-impl ShiftFrequency {
-    #[new]
-    pub fn new(frame: FrameIdentifier, frequency: Expression) -> Self {
-        Self { frame, frequency }
+pickleable_new! {
+    impl ShiftFrequency {
+        pub fn new(frame: FrameIdentifier, frequency: Expression);
     }
 }
 
@@ -374,11 +338,9 @@ pub struct ShiftPhase {
     pub phase: Expression,
 }
 
-#[pymethods]
-impl ShiftPhase {
-    #[new]
-    pub fn new(frame: FrameIdentifier, phase: Expression) -> Self {
-        Self { frame, phase }
+pickleable_new! {
+    impl ShiftPhase {
+        pub fn new(frame: FrameIdentifier, phase: Expression);
     }
 }
 
@@ -403,11 +365,9 @@ pub struct SwapPhases {
     pub frame_2: FrameIdentifier,
 }
 
-#[pymethods]
-impl SwapPhases {
-    #[new]
-    pub fn new(frame_1: FrameIdentifier, frame_2: FrameIdentifier) -> Self {
-        Self { frame_1, frame_2 }
+pickleable_new! {
+    impl SwapPhases {
+        pub fn new(frame_1: FrameIdentifier, frame_2: FrameIdentifier);
     }
 }
 

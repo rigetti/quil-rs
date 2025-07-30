@@ -4,9 +4,7 @@ use nom_locate::LocatedSpan;
 use pyo3::prelude::*;
 
 use crate::{
-    parser::{common::parse_memory_reference, lex, ParseError},
-    program::{disallow_leftover, SyntaxError},
-    quil::Quil,
+    parser::{common::parse_memory_reference, lex, ParseError}, pickleable_new, program::{disallow_leftover, SyntaxError}, quil::Quil
 };
 
 use super::ArithmeticOperand;
@@ -132,15 +130,9 @@ pub struct Declaration {
     pub sharing: Option<Sharing>,
 }
 
-#[pymethods]
-impl Declaration {
-    #[new]
-    pub fn new(name: String, size: Vector, sharing: Option<Sharing>) -> Self {
-        Self {
-            name,
-            size,
-            sharing,
-        }
+pickleable_new! {
+    impl Declaration {
+        pub fn new(name: String, size: Vector, sharing: Option<Sharing>); 
     }
 }
 
@@ -265,15 +257,9 @@ pub struct Load {
     pub offset: MemoryReference,
 }
 
-#[pymethods]
-impl Load {
-    #[new]
-    pub fn new(destination: MemoryReference, source: String, offset: MemoryReference) -> Self {
-        Self {
-            destination,
-            source,
-            offset,
-        }
+pickleable_new! {
+    impl Load {
+        pub fn new(destination: MemoryReference, source: String, offset: MemoryReference);
     }
 }
 
@@ -299,15 +285,9 @@ pub struct Store {
     pub source: ArithmeticOperand,
 }
 
-#[pymethods]
-impl Store {
-    #[new]
-    pub fn new(destination: String, offset: MemoryReference, source: ArithmeticOperand) -> Self {
-        Self {
-            destination,
-            offset,
-            source,
-        }
+pickleable_new! {
+    impl Store {
+        pub fn new(destination: String, offset: MemoryReference, source: ArithmeticOperand);
     }
 }
 

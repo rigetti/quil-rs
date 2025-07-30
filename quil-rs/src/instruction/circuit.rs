@@ -1,6 +1,6 @@
 use pyo3::prelude::*;
 
-use crate::quil::{Quil, INDENT};
+use crate::{pickleable_new, quil::{Quil, INDENT}};
 
 use super::Instruction;
 
@@ -14,21 +14,14 @@ pub struct CircuitDefinition {
     pub instructions: Vec<Instruction>,
 }
 
-#[pymethods]
-impl CircuitDefinition {
-    #[new]
-    pub fn new(
-        name: String,
-        parameters: Vec<String>,
-        qubit_variables: Vec<String>,
-        instructions: Vec<Instruction>,
-    ) -> Self {
-        Self {
-            name,
-            parameters,
-            qubit_variables,
-            instructions,
-        }
+pickleable_new! {
+    impl CircuitDefinition {
+        pub fn new(
+            name: String,
+            parameters: Vec<String>,
+            qubit_variables: Vec<String>,
+            instructions: Vec<Instruction>,
+        );
     }
 }
 

@@ -4,9 +4,7 @@ use crate::{
     instruction::{
         write_expression_parameter_string, write_instruction_block, Expression, GateModifier,
         Instruction, Qubit,
-    },
-    quil::{Quil, INDENT},
-    validation::identifier::{validate_identifier, IdentifierValidationError},
+    }, pickleable_new, quil::{Quil, INDENT}, validation::identifier::{validate_identifier, IdentifierValidationError}
 };
 
 use super::{write_qubit_parameters, Gate};
@@ -27,20 +25,18 @@ pub struct Calibration {
     pub instructions: Vec<Instruction>,
 }
 
+pickleable_new! {
+    impl Calibration {
+        /// Builds a new calibration definition.
+        pub fn new(
+            identifier: CalibrationIdentifier,
+            instructions: Vec<Instruction>,
+        ); 
+    }
+}
+
 #[pymethods]
 impl Calibration {
-    /// Builds a new calibration definition.
-    #[new]
-    pub fn new(
-        identifier: CalibrationIdentifier,
-        instructions: Vec<Instruction>,
-    ) -> Result<Self, IdentifierValidationError> {
-        Ok(Self {
-            identifier,
-            instructions,
-        })
-    }
-
     #[getter]
     fn name(&self) -> &str {
         &self.identifier.name
@@ -238,16 +234,14 @@ pub struct MeasureCalibrationDefinition {
     pub instructions: Vec<Instruction>,
 }
 
+pickleable_new! {
+    impl MeasureCalibrationDefinition {
+        pub fn new(identifier: MeasureCalibrationIdentifier, instructions: Vec<Instruction>); 
+    }
+}
+
 #[pymethods]
 impl MeasureCalibrationDefinition {
-    #[new]
-    pub fn new(identifier: MeasureCalibrationIdentifier, instructions: Vec<Instruction>) -> Self {
-        Self {
-            identifier,
-            instructions,
-        }
-    }
-
     #[getter]
     fn qubit(&self) -> Option<Qubit> {
         self.identifier.qubit.clone()

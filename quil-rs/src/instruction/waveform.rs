@@ -2,8 +2,7 @@ use indexmap::IndexMap;
 use pyo3::prelude::*;
 
 use crate::{
-    expression::Expression,
-    quil::{write_join_quil, Quil, INDENT},
+    expression::Expression, pickleable_new, quil::{write_join_quil, Quil, INDENT}
 };
 
 use super::write_parameter_string;
@@ -30,11 +29,9 @@ pub struct WaveformDefinition {
     pub definition: Waveform,
 }
 
-#[pymethods]
-impl WaveformDefinition {
-    #[new]
-    pub fn new(name: String, definition: Waveform) -> Self {
-        Self { name, definition }
+pickleable_new! {
+    impl WaveformDefinition {
+        pub fn new(name: String, definition: Waveform);
     }
 }
 

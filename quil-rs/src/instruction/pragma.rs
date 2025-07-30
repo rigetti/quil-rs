@@ -1,6 +1,6 @@
 use pyo3::prelude::*;
 
-use crate::quil::Quil;
+use crate::{pickleable_new, quil::Quil};
 
 use super::QuotedString;
 
@@ -12,15 +12,9 @@ pub struct Pragma {
     pub data: Option<String>,
 }
 
-#[pymethods]
-impl Pragma {
-    #[new]
-    pub fn new(name: String, arguments: Vec<PragmaArgument>, data: Option<String>) -> Self {
-        Self {
-            name,
-            arguments,
-            data,
-        }
+pickleable_new! {
+    impl Pragma {
+        pub fn new(name: String, arguments: Vec<PragmaArgument>, data: Option<String>); 
     }
 }
 
@@ -79,11 +73,9 @@ impl Quil for Include {
     }
 }
 
-#[pymethods]
-impl Include {
-    #[new]
-    pub fn new(filename: String) -> Self {
-        Self { filename }
+pickleable_new! {
+    impl Include {
+        pub fn new(filename: String); 
     }
 }
 

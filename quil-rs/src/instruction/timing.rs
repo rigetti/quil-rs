@@ -1,5 +1,5 @@
 use super::Qubit;
-use crate::{expression::Expression, quil::Quil};
+use crate::{expression::Expression, pickleable_new, quil::Quil};
 use pyo3::prelude::*;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -10,15 +10,9 @@ pub struct Delay {
     pub qubits: Vec<Qubit>,
 }
 
-#[pymethods]
-impl Delay {
-    #[new]
-    pub fn new(duration: Expression, frame_names: Vec<String>, qubits: Vec<Qubit>) -> Self {
-        Self {
-            duration,
-            frame_names,
-            qubits,
-        }
+pickleable_new! {
+    impl Delay {
+        pub fn new(duration: Expression, frame_names: Vec<String>, qubits: Vec<Qubit>); 
     }
 }
 
@@ -62,10 +56,8 @@ impl Quil for Fence {
     }
 }
 
-#[pymethods]
-impl Fence {
-    #[new]
-    pub fn new(qubits: Vec<Qubit>) -> Self {
-        Self { qubits }
+pickleable_new! {
+    impl Fence {
+        pub fn new(qubits: Vec<Qubit>);
     }
 }

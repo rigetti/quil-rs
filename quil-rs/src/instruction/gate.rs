@@ -1,15 +1,10 @@
 use crate::{
-    expression::Expression,
-    imag,
-    instruction::{
+    expression::Expression, imag, instruction::{
         write_expression_parameter_string, write_parameter_string, write_qubits,
         ParseInstructionError, Qubit,
-    },
-    quil::{write_join_quil, Quil, INDENT},
-    real,
-    validation::identifier::{
+    }, pickleable_new, quil::{write_join_quil, Quil, INDENT}, real, validation::identifier::{
         validate_identifier, validate_user_identifier, IdentifierValidationError,
-    },
+    }
 };
 use ndarray::{array, linalg::kron, Array2};
 use num_complex::Complex64;
@@ -94,15 +89,13 @@ pub enum GateError {
 
 /// Matrix version of a gate.
 pub type Matrix = Array2<Complex64>;
-
-#[pymethods]
+    
 impl Gate {
     /// Build a new gate
     ///
     /// # Errors
     ///
     /// Returns an error if the given name isn't a valid Quil identifier or if no qubits are given.
-    #[new]
     pub fn new(
         name: &str,
         parameters: Vec<Expression>,
@@ -122,7 +115,23 @@ impl Gate {
             modifiers,
         })
     }
+}
 
+pickleable_new! {
+    impl Gate {
+        fn py_new(
+            name: String,
+            parameters: Vec<Expression>,
+            qubits: Vec<Qubit>,
+            modifiers: Vec<GateModifier>,
+        ) -> Result<Self, GateError> {
+            Self::new(&name, parameters, qubits, modifiers)
+        }
+    }
+}
+
+#[pymethods]
+impl Gate {
     #[pyo3(name = "dagger")]
     #[must_use]
     fn py_dagger(&self) -> Self {

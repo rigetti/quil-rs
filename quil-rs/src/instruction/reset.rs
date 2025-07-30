@@ -1,6 +1,6 @@
 use pyo3::prelude::*;
 
-use crate::quil::Quil;
+use crate::{pickleable_new, quil::Quil};
 
 use super::Qubit;
 
@@ -10,11 +10,9 @@ pub struct Reset {
     pub qubit: Option<Qubit>,
 }
 
-#[pymethods]
-impl Reset {
-    #[new]
-    pub fn new(qubit: Option<Qubit>) -> Self {
-        Self { qubit }
+pickleable_new! {
+    impl Reset {
+        pub fn new(qubit: Option<Qubit>);
     }
 }
 

@@ -3,7 +3,7 @@ use std::sync::Arc;
 use pyo3::prelude::*;
 
 use super::MemoryReference;
-use crate::quil::{Quil, ToQuilError};
+use crate::{pickleable_new, quil::{Quil, ToQuilError}};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)]
@@ -11,11 +11,9 @@ pub struct Label {
     pub target: Target,
 }
 
-#[pymethods]
-impl Label {
-    #[new]
-    pub fn new(target: Target) -> Self {
-        Label { target }
+pickleable_new! {
+    impl Label {
+        pub fn new(target: Target);
     }
 }
 
@@ -138,11 +136,9 @@ impl Quil for Jump {
     }
 }
 
-#[pymethods]
-impl Jump {
-    #[new]
-    pub fn new(target: Target) -> Self {
-        Self { target }
+pickleable_new! {
+    impl Jump {
+        pub fn new(target: Target);
     }
 }
 
@@ -153,11 +149,9 @@ pub struct JumpWhen {
     pub condition: MemoryReference,
 }
 
-#[pymethods]
-impl JumpWhen {
-    #[new]
-    pub fn new(target: Target, condition: MemoryReference) -> Self {
-        Self { target, condition }
+pickleable_new! {
+    impl JumpWhen {
+        pub fn new(target: Target, condition: MemoryReference);
     }
 }
 
@@ -181,11 +175,9 @@ pub struct JumpUnless {
     pub condition: MemoryReference,
 }
 
-#[pymethods]
-impl JumpUnless {
-    #[new]
-    pub fn new(target: Target, condition: MemoryReference) -> Self {
-        Self { target, condition }
+pickleable_new! {
+    impl JumpUnless {
+        pub fn new(target: Target, condition: MemoryReference);
     }
 }
 

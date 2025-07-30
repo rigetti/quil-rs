@@ -13,12 +13,7 @@ use num_complex::Complex64;
 use pyo3::prelude::*;
 
 use crate::{
-    expression::format_complex,
-    hash::hash_f64,
-    parser::lex,
-    program::{disallow_leftover, MemoryAccesses, MemoryRegion, SyntaxError},
-    quil::Quil,
-    validation::identifier::{validate_user_identifier, IdentifierValidationError},
+    expression::format_complex, hash::hash_f64, parser::lex, pickleable_new, program::{disallow_leftover, MemoryAccesses, MemoryRegion, SyntaxError}, quil::Quil, validation::identifier::{validate_user_identifier, IdentifierValidationError}
 };
 
 use super::{
@@ -704,20 +699,23 @@ pub struct Call {
     pub arguments: Vec<UnresolvedCallArgument>,
 }
 
+pickleable_new! {
+    impl Call {
+        /// Create a new call instruction with resolved arguments.
+        /// This will validate the name as a user identifier.
+        pub fn try_new(
+            name: String,
+            arguments: Vec<UnresolvedCallArgument>,
+        ) -> Result<Self, CallError> {
+            validate_user_identifier(name.as_str()).map_err(CallError::Name)?;
+
+            Ok(Self { name, arguments })
+        }
+    }
+}
+
 #[pymethods]
 impl Call {
-    /// Create a new call instruction with resolved arguments. This will validate the
-    /// name as a user identifier.
-    #[new]
-    pub fn try_new(
-        name: String,
-        arguments: Vec<UnresolvedCallArgument>,
-    ) -> Result<Self, CallError> {
-        validate_user_identifier(name.as_str()).map_err(CallError::Name)?;
-
-        Ok(Self { name, arguments })
-    }
-
     #[getter]
     pub fn name(&self) -> &str {
         self.name.as_str()
