@@ -121,7 +121,7 @@ impl PartialEq for TargetPlaceholder {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[pyclass(module = "quil.instructions", eq, frozen, get_all, subclass)]
+#[pyclass(module = "quil.instructions", eq, get_all, set_all, subclass)]
 pub struct Jump {
     pub target: Target,
 }
@@ -147,7 +147,7 @@ impl Jump {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[pyclass(module = "quil.instructions", eq, frozen, get_all, subclass)]
+#[pyclass(module = "quil.instructions", eq, get_all, set_all, subclass)]
 pub struct JumpWhen {
     pub target: Target,
     pub condition: MemoryReference,
@@ -175,7 +175,7 @@ impl Quil for JumpWhen {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[pyclass(module = "quil.instructions", eq, frozen, get_all, subclass)]
+#[pyclass(module = "quil.instructions", eq, get_all, set_all, subclass)]
 pub struct JumpUnless {
     pub target: Target,
     pub condition: MemoryReference,

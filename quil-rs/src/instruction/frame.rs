@@ -36,7 +36,7 @@ impl Quil for AttributeValue {
 pub type FrameAttributes = IndexMap<String, AttributeValue>;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[pyclass(module = "quil.instructions", eq, get_all, subclass)]
+#[pyclass(module = "quil.instructions", eq, get_all, set_all, subclass)]
 pub struct FrameDefinition {
     pub identifier: FrameIdentifier,
     pub attributes: FrameAttributes,
@@ -113,7 +113,7 @@ impl FromStr for FrameIdentifier {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[pyclass(module = "quil.instructions", eq, frozen, get_all, subclass)]
+#[pyclass(module = "quil.instructions", eq, get_all, set_all, subclass)]
 pub struct Capture {
     pub blocking: bool,
     pub frame: FrameIdentifier,
@@ -163,7 +163,7 @@ impl Quil for Capture {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[pyclass(module = "quil.instructions", eq, frozen, get_all, subclass)]
+#[pyclass(module = "quil.instructions", eq, get_all, set_all, subclass)]
 pub struct Pulse {
     pub blocking: bool,
     pub frame: FrameIdentifier,

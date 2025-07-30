@@ -79,7 +79,9 @@ impl Quil for Include {
     }
 }
 
+#[pymethods]
 impl Include {
+    #[new]
     pub fn new(filename: String) -> Self {
         Self { filename }
     }
