@@ -1,9 +1,10 @@
 use super::Qubit;
 use crate::{expression::Expression, pickleable_new, quil::Quil};
+#[cfg(feature = "python")]
 use pyo3::prelude::*;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)]
+#[cfg_attr(feature = "python", pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
 pub struct Delay {
     pub duration: Expression,
     pub frame_names: Vec<String>,
@@ -36,7 +37,7 @@ impl Quil for Delay {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)]
+#[cfg_attr(feature = "python", pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
 pub struct Fence {
     pub qubits: Vec<Qubit>,
 }

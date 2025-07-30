@@ -2,7 +2,6 @@
 use std::str::FromStr;
 
 use once_cell::sync::Lazy;
-use pyo3::pyfunction;
 use regex::Regex;
 use thiserror;
 
@@ -24,7 +23,7 @@ static IDENTIFIER_REGEX: Lazy<Regex> =
     Lazy::new(|| Regex::new(IDENTIFIER_REGEX_STRING).expect("regex should be valid"));
 
 /// Returns an error if the given identifier is not a valid Quil Identifier.
-#[pyfunction]
+#[cfg_attr(feature = "python", pyo3::pyfunction)]
 pub fn validate_identifier(ident: &str) -> Result<(), IdentifierValidationError> {
     match IDENTIFIER_REGEX.is_match(ident) {
         true => Ok(()),
@@ -33,7 +32,7 @@ pub fn validate_identifier(ident: &str) -> Result<(), IdentifierValidationError>
 }
 
 /// Returns an error if the given identifier is reserved, or if it is not a valid Quil identifier
-#[pyfunction]
+#[cfg_attr(feature = "python", pyo3::pyfunction)]
 pub fn validate_user_identifier(ident: &str) -> Result<(), IdentifierValidationError> {
     ReservedToken::from_str(ident).map_or(validate_identifier(ident), |t| {
         Err(IdentifierValidationError::Reserved(t))

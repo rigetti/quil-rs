@@ -1,5 +1,9 @@
 use indexmap::IndexMap;
+
+#[cfg(feature = "python")]
 use pyo3::prelude::*;
+#[cfg(not(feature = "python"))]
+use optipy::strip_pyo3;
 
 use crate::{
     expression::Expression, pickleable_new, quil::{write_join_quil, Quil, INDENT}
@@ -8,13 +12,14 @@ use crate::{
 use super::write_parameter_string;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)]
+#[cfg_attr(feature = "python", pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
 pub struct Waveform {
     pub matrix: Vec<Expression>,
     pub parameters: Vec<String>,
 }
 
-#[pymethods]
+#[cfg_attr(feature = "python", pymethods)]
+#[cfg_attr(not(feature = "python"), strip_pyo3)]
 impl Waveform {
     #[new]
     pub fn new(matrix: Vec<Expression>, parameters: Vec<String>) -> Self {
@@ -23,7 +28,7 @@ impl Waveform {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)]
+#[cfg_attr(feature = "python", pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
 pub struct WaveformDefinition {
     pub name: String,
     pub definition: Waveform,
@@ -85,13 +90,14 @@ mod test_waveform_definition {
 pub type WaveformParameters = IndexMap<String, Expression>;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[pyclass(module = "quil.instructions", eq, frozen, get_all, subclass)]
+#[cfg_attr(feature = "python", pyclass(module = "quil.instructions", eq, frozen, get_all, subclass))]
 pub struct WaveformInvocation {
     pub name: String,
     pub parameters: WaveformParameters,
 }
 
-#[pymethods]
+#[cfg_attr(feature = "python", pymethods)]
+#[cfg_attr(not(feature = "python"), strip_pyo3)]
 impl WaveformInvocation {
     #[new]
     pub fn new(name: String, parameters: WaveformParameters) -> Self {

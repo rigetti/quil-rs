@@ -17,15 +17,16 @@ use std::{
     collections::{HashMap, HashSet},
 };
 
-use pyo3::prelude::*;
-
 use crate::instruction::{FrameAttributes, FrameDefinition, FrameIdentifier, Instruction, Qubit};
+
+#[cfg(not(feature = "python"))]
+use optipy::strip_pyo3;
 
 /// A collection of Quil frames (`DEFFRAME` instructions) with utility methods.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
-#[pyclass(module = "quil.program", eq)]
+#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.program", eq))]
 pub struct FrameSet {
-    frames: HashMap<FrameIdentifier, FrameAttributes>,
+    pub(crate) frames: HashMap<FrameIdentifier, FrameAttributes>,
 }
 
 impl FrameSet {
@@ -136,25 +137,12 @@ impl FrameSet {
     }
 }
 
-#[pymethods]
+#[cfg_attr(feature = "python", pyo3::pymethods)]
+#[cfg_attr(not(feature = "python"), strip_pyo3)]
 impl FrameSet {
     #[new]
     pub fn new() -> Self {
         Self::default()
-    }
-
-    #[pyo3(name = "get")]
-    fn py_get(&self, identifier: &FrameIdentifier) -> Option<FrameAttributes> {
-        self.get(identifier).cloned()
-    }
-
-    #[pyo3(name = "get_keys")]
-    fn py_get_keys(&self) -> Vec<FrameIdentifier> {
-        self.get_keys().into_iter().cloned().collect()
-    }
-
-    fn get_all_frames(&self) -> HashMap<FrameIdentifier, FrameAttributes> {
-        self.frames.clone()
     }
 
     /// Insert a new frame by ID, overwriting any existing one.
@@ -165,12 +153,6 @@ impl FrameSet {
     /// Merge another [FrameSet] with this one, overwriting any existing keys
     pub fn merge(&mut self, other: FrameSet) {
         self.frames.extend(other.frames);
-    }
-
-    /// Return a new [`FrameSet`] which describes only the given [`FrameIdentifier`]s.
-    #[pyo3(name = "intersection")]
-    pub fn py_intersection(&self, identifiers: HashSet<FrameIdentifier>) -> Self {
-        self.intersection(&identifiers)
     }
 
     /// Return the number of frames described within.

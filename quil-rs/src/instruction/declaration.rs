@@ -1,7 +1,6 @@
 use std::str::FromStr;
 
 use nom_locate::LocatedSpan;
-use pyo3::prelude::*;
 
 use crate::{
     parser::{common::parse_memory_reference, lex, ParseError}, pickleable_new, program::{disallow_leftover, SyntaxError}, quil::Quil
@@ -10,7 +9,7 @@ use crate::{
 use super::ArithmeticOperand;
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all)]
+#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all))]
 pub enum ScalarType {
     Bit,
     Integer,
@@ -40,17 +39,17 @@ impl Quil for ScalarType {
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)]
+#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
 pub struct Vector {
     pub data_type: ScalarType,
     pub length: u64,
 }
 
-#[pymethods]
-impl Vector {
-    #[new]
-    pub fn new(data_type: ScalarType, length: u64) -> Self {
-        Self { data_type, length }
+pickleable_new! {
+    impl Vector {
+        pub fn new(data_type: ScalarType, length: u64) -> Self {
+            Self { data_type, length }
+        }
     }
 }
 
@@ -66,48 +65,33 @@ impl Quil for Vector {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash, subclass)]
+#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, subclass))]
 pub struct Sharing {
-    #[pyo3(get)]
     pub name: String,
     pub offsets: Vec<Offset>,
 }
 
-#[pymethods]
-impl Sharing {
-    #[new]
-    pub fn new(name: String, offsets: Vec<Offset>) -> Self {
-        Self { name, offsets }
-    }
-
-    #[getter]
-    fn offsets(&self) -> Vec<Offset> {
-        self.offsets.clone()
+pickleable_new! {
+    impl Sharing {
+        pub fn new(name: String, offsets: Vec<Offset>) -> Self {
+            Self { name, offsets }
+        }
     }
 }
 
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash, subclass)]
+#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, subclass))]
 pub struct Offset {
     pub offset: u64,
     pub data_type: ScalarType,
 }
 
-#[pymethods]
-impl Offset {
-    #[new]
-    pub fn new(offset: u64, data_type: ScalarType) -> Self {
-        Self { offset, data_type }
-    }
-
-    #[getter]
-    fn offset(&self) -> u64 {
-        self.offset
-    }
-
-    #[getter]
-    fn data_type(&self) -> ScalarType {
-        self.data_type
+pickleable_new! {
+    impl Offset {
+        pub fn new(offset: u64, data_type: ScalarType) -> Self {
+            Self { offset, data_type }
+        }
     }
 }
 
@@ -123,7 +107,7 @@ impl Quil for Offset {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)]
+#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
 pub struct Declaration {
     pub name: String,
     pub size: Vector,
@@ -207,17 +191,17 @@ mod test_declaration {
 
 // TODO: impl_parse, to_quil, repr
 #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
-#[pyclass(module = "quil.instructions", get_all, eq, frozen, hash, subclass)]
+#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", get_all, eq, frozen, hash, subclass))]
 pub struct MemoryReference {
     pub name: String,
     pub index: u64,
 }
 
-#[pymethods]
-impl MemoryReference {
-    #[new]
-    pub fn new(name: String, index: u64) -> Self {
-        Self { name, index }
+pickleable_new! {
+    impl MemoryReference {
+        pub fn new(name: String, index: u64) -> Self {
+            Self { name, index }
+        }
     }
 }
 
@@ -250,7 +234,7 @@ impl FromStr for MemoryReference {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)]
+#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
 pub struct Load {
     pub destination: MemoryReference,
     pub source: String,
@@ -278,7 +262,7 @@ impl Quil for Load {
 }
 
 #[derive(Clone, Debug, PartialEq, Hash)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)]
+#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
 pub struct Store {
     pub destination: String,
     pub offset: MemoryReference,

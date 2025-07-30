@@ -1,15 +1,11 @@
-use pyo3::{FromPyObject, IntoPyObject};
-
-#[derive(
-    Clone, Copy, Debug, PartialEq, serde::Serialize, serde::Deserialize, FromPyObject, IntoPyObject,
-)]
-#[pyo3(transparent)]
+#[derive(Clone, Copy, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "python", derive(pyo3::FromPyObject, pyo3::IntoPyObject))]
+#[cfg_attr(feature = "python", pyo3(transparent))]
 pub struct Cycles<T>(pub T);
 
-#[derive(
-    Clone, Copy, Debug, PartialEq, serde::Serialize, serde::Deserialize, FromPyObject, IntoPyObject,
-)]
-#[pyo3(transparent)]
+#[derive(Clone, Copy, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "python", derive(pyo3::FromPyObject, pyo3::IntoPyObject))]
+#[cfg_attr(feature = "python", pyo3(transparent))]
 pub struct Radians<T>(pub T);
 
 impl From<Cycles<f64>> for Radians<f64> {

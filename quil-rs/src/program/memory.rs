@@ -14,8 +14,6 @@
 
 use std::collections::HashSet;
 
-use pyo3::prelude::*;
-
 use crate::expression::{Expression, FunctionCallExpression, InfixExpression, PrefixExpression};
 use crate::instruction::{
     Arithmetic, ArithmeticOperand, BinaryLogic, BinaryOperand, CallResolutionError, Capture,
@@ -26,14 +24,18 @@ use crate::instruction::{
     Vector, WaveformInvocation,
 };
 
+#[cfg(not(feature = "python"))]
+use optipy::strip_pyo3;
+
 #[derive(Clone, Debug, Hash, PartialEq)]
-#[pyclass(module = "quil.program", eq, frozen, hash, get_all, subclass)]
+#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.program", eq, frozen, hash, get_all, subclass))]
 pub struct MemoryRegion {
     pub size: Vector,
     pub sharing: Option<Sharing>,
 }
 
-#[pymethods]
+#[cfg_attr(feature = "python", pyo3::pymethods)]
+#[cfg_attr(not(feature = "python"), strip_pyo3)]
 impl MemoryRegion {
     #[new]
     pub fn new(size: Vector, sharing: Option<Sharing>) -> Self {

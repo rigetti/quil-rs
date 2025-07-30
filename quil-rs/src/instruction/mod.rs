@@ -17,7 +17,6 @@ use std::fmt;
 use std::str::FromStr;
 
 use nom_locate::LocatedSpan;
-use pyo3::prelude::*;
 
 use crate::expression::Expression;
 use crate::parser::lex;
@@ -25,10 +24,13 @@ use crate::parser::parse_instructions;
 use crate::program::frame::{FrameMatchCondition, FrameMatchConditions};
 use crate::program::ProgramError;
 use crate::program::{MatchedFrames, MemoryAccesses};
-use crate::quil::{write_join_quil, Quil, ToQuilResult};
-use crate::quil_py;
 use crate::Program;
-use crate::{impl_repr, impl_to_quil};
+use crate::quil::{write_join_quil, Quil, ToQuilResult};
+
+#[cfg(feature = "python")]
+use pyo3::prelude::*;
+#[cfg(feature = "python")]
+pub(crate) mod quilpy;
 
 mod calibration;
 mod circuit;
@@ -44,7 +46,6 @@ mod qubit;
 mod reset;
 mod timing;
 mod waveform;
-mod quilpy;
 
 pub use self::calibration::{
     Calibration, CalibrationIdentifier, CalibrationSignature, MeasureCalibrationDefinition,
@@ -76,234 +77,6 @@ pub use self::reset::Reset;
 pub use self::timing::{Delay, Fence};
 pub use self::waveform::{Waveform, WaveformDefinition, WaveformInvocation, WaveformParameters};
 
-#[pymodule]
-#[pyo3(name = "instructions", module = "quil", submodule)]
-pub(crate) fn init_submodule(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    let py = m.py();
-
-    m.add("CallError", py.get_type::<quil_py::errors::CallError>())?;
-    m.add("ExternError", py.get_type::<quil_py::errors::ExternError>())?;
-    m.add("GateError", py.get_type::<quil_py::errors::GateError>())?;
-    m.add(
-        "ParseInstructionError",
-        py.get_type::<quil_py::errors::ParseInstructionError>(),
-    )?;
-    m.add(
-        "ParseMemoryReferenceError",
-        py.get_type::<quil_py::errors::ParseMemoryReferenceError>(),
-    )?;
-
-    m.add_class::<Arithmetic>()?;
-    m.add_class::<ArithmeticOperand>()?;
-    m.add_class::<ArithmeticOperator>()?;
-    m.add_class::<AttributeValue>()?;
-    m.add_class::<BinaryLogic>()?;
-    m.add_class::<BinaryOperand>()?;
-    m.add_class::<BinaryOperator>()?;
-    m.add_class::<Calibration>()?;
-    m.add_class::<CalibrationIdentifier>()?;
-    m.add_class::<Call>()?;
-    m.add_class::<UnresolvedCallArgument>()?; // Python name: CallArgument
-    m.add_class::<Capture>()?;
-    m.add_class::<CircuitDefinition>()?;
-    m.add_class::<Comparison>()?;
-    m.add_class::<ComparisonOperand>()?;
-    m.add_class::<ComparisonOperator>()?;
-    m.add_class::<Convert>()?;
-    m.add_class::<Declaration>()?;
-    m.add_class::<Delay>()?;
-    m.add_class::<Exchange>()?;
-    m.add_class::<ExternParameter>()?;
-    m.add_class::<ExternParameterType>()?;
-    m.add_class::<ExternSignature>()?;
-    m.add_class::<Fence>()?;
-    m.add_class::<FrameDefinition>()?;
-    m.add_class::<FrameIdentifier>()?;
-    m.add_class::<Gate>()?;
-    m.add_class::<GateDefinition>()?;
-    m.add_class::<GateModifier>()?;
-    m.add_class::<GateSpecification>()?;
-    m.add_class::<Include>()?;
-    m.add_class::<Instruction>()?;
-    m.add_class::<Jump>()?;
-    m.add_class::<JumpUnless>()?;
-    m.add_class::<JumpWhen>()?;
-    m.add_class::<Label>()?;
-    m.add_class::<Load>()?;
-    m.add_class::<MeasureCalibrationDefinition>()?;
-    m.add_class::<MeasureCalibrationIdentifier>()?;
-    m.add_class::<Measurement>()?;
-    m.add_class::<MemoryReference>()?;
-    m.add_class::<Move>()?;
-    m.add_class::<Offset>()?;
-    m.add_class::<PauliGate>()?;
-    m.add_class::<PauliSum>()?;
-    m.add_class::<PauliTerm>()?;
-    m.add_class::<Pragma>()?;
-    m.add_class::<PragmaArgument>()?;
-    m.add_class::<Pulse>()?;
-    m.add_class::<Qubit>()?;
-    m.add_class::<QubitPlaceholder>()?;
-    m.add_class::<RawCapture>()?;
-    m.add_class::<Reset>()?;
-    m.add_class::<ScalarType>()?;
-    m.add_class::<SetFrequency>()?;
-    m.add_class::<SetPhase>()?;
-    m.add_class::<SetScale>()?;
-    m.add_class::<Sharing>()?;
-    m.add_class::<ShiftFrequency>()?;
-    m.add_class::<ShiftPhase>()?;
-    m.add_class::<Store>()?;
-    m.add_class::<SwapPhases>()?;
-    m.add_class::<Target>()?;
-    m.add_class::<TargetPlaceholder>()?;
-    m.add_class::<UnaryLogic>()?;
-    m.add_class::<UnaryOperator>()?;
-    m.add_class::<Vector>()?;
-    m.add_class::<Waveform>()?;
-    m.add_class::<WaveformDefinition>()?;
-    m.add_class::<WaveformInvocation>()?;
-
-    Ok(())
-}
-
-/// Add a `parse` implementation to a `#[pyclass]` to uses the type's `from_str` implementation.
-macro_rules! impl_parse {
-    ($name: ident) => {
-        #[pyo3::pymethods]
-        impl $name {
-            #[staticmethod]
-            #[pyo3(name = "parse")]
-            fn py_parse(string: &str) -> PyResult<Self> {
-                Ok(Self::from_str(string)?)
-            }
-        }
-    };
-}
-
-/// Implement expected methods on each of the instruction-related types, given as a list.
-/// This makes it easy to see which classes make up the `instructions` module,
-/// to verify that those classes have necessary `#[pymethods]` implemented,
-/// and to see at a glance what differences they do have in their implementations.
-///
-/// Types are supplied in a list. Those which deviate from the default implementations
-/// can give the items they should implement as a sublist, as in this example:
-///
-/// ```
-/// impl_instruction!([
-///     A, // By default, [repr + quil]
-///     B [repr + quil],
-///     C [quil + parse],
-/// ]);
-/// ```
-macro_rules! impl_instruction {
-    // Terminal rule -- an empty list expands to nothing.
-    ([]) => {};
-
-    // Implements default methods for an instruction, then recursively expands the rest of the list.
-    ([$name: ident, $($tail: tt)*]) => {
-        impl_instruction!(@one $name [+ repr + quil]);
-        impl_instruction!([$($tail)*]);
-    };
-
-    // Implements specific methods for an instruction, then recursively expands the rest of the list.
-    ([$name: ident [$($args: tt)+], $($tail: tt)*]) => {
-        impl_instruction!(@one $name [+ $($args)*]);
-        impl_instruction!([$($tail)*]);
-    };
-
-    // All the `@one` rules expand a single `$name` and its list of required methods.
-
-    // Terminal rule -- an empty list expands to nothing.
-    (@one $name: ident []) => {};
-
-    (@one $name: ident [+ repr $($tail: tt)*]) => {
-        impl_repr!($name);
-        impl_instruction!(@one $name [$($tail)*]);
-    };
-
-    (@one $name: ident [+ quil $($tail: tt)*]) => {
-        impl_to_quil!($name);
-        impl_instruction!(@one $name [$($tail)*]);
-    };
-
-    (@one $name: ident [+ parse $($tail: tt)*]) => {
-        impl_parse!($name);
-        impl_instruction!(@one $name [$($tail)*]);
-    };
-}
-
-impl_instruction!([
-    Arithmetic,
-    ArithmeticOperand,
-    ArithmeticOperator,
-    AttributeValue,
-    BinaryLogic,
-    BinaryOperand,
-    BinaryOperator,
-    Calibration,
-    CalibrationIdentifier,
-    Call,
-    Capture,
-    CircuitDefinition,
-    Comparison,
-    ComparisonOperand,
-    Convert,
-    Declaration,
-    Delay,
-    Exchange,
-    ExternParameter,
-    ExternParameterType,
-    ExternSignature,
-    Fence,
-    FrameDefinition,
-    FrameIdentifier,
-    Gate,
-    GateDefinition,
-    GateModifier,
-    GateSpecification,
-    Include,
-    Instruction [repr + quil + parse],
-    Jump,
-    JumpUnless,
-    JumpWhen,
-    Label,
-    Load,
-    MeasureCalibrationDefinition,
-    MeasureCalibrationIdentifier,
-    Measurement,
-    MemoryReference [repr + quil + parse],
-    Move,
-    Offset,
-    PauliGate [repr],
-    PauliSum [repr],
-    Pragma,
-    PragmaArgument,
-    Pulse,
-    Qubit,
-    QubitPlaceholder [repr],
-    RawCapture,
-    Reset,
-    ScalarType,
-    SetFrequency,
-    SetPhase,
-    SetScale,
-    Sharing [repr],
-    ShiftFrequency,
-    ShiftPhase,
-    Store,
-    SwapPhases,
-    Target,
-    TargetPlaceholder [repr],
-    UnaryLogic,
-    UnaryOperator,
-    UnresolvedCallArgument,
-    Vector,
-    Waveform [repr],
-    WaveformDefinition,
-    WaveformInvocation,
-]);
-
 #[derive(Clone, Debug, thiserror::Error, PartialEq, Eq)]
 pub enum ValidationError {
     #[error(transparent)]
@@ -311,7 +84,7 @@ pub enum ValidationError {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-#[pyclass(module = "quil.instructions", eq, frozen)]
+#[cfg_attr(feature = "python", pyclass(module = "quil.instructions", eq, frozen))]
 pub enum Instruction {
     Arithmetic(Arithmetic),
     BinaryLogic(BinaryLogic),
@@ -355,7 +128,7 @@ pub enum Instruction {
     Wait(),
 }
 
-#[pymethods]
+#[cfg_attr(feature = "python", pymethods)]
 impl Instruction {
     /// Returns true if the instruction is a Quil-T instruction.
     pub fn is_quil_t(&self) -> bool {
@@ -1025,7 +798,7 @@ pub enum ParseInstructionError {
     ZeroOrMany(usize),
 }
 
-impl std::str::FromStr for Instruction {
+impl FromStr for Instruction {
     type Err = ParseInstructionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {

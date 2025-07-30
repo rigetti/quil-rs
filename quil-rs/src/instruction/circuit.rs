@@ -1,11 +1,9 @@
-use pyo3::prelude::*;
-
 use crate::{pickleable_new, quil::{Quil, INDENT}};
 
 use super::Instruction;
 
 #[derive(Clone, Debug, PartialEq)]
-#[pyclass(module = "quil.instructions", eq, get_all, set_all, subclass)]
+#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, get_all, set_all, subclass))]
 pub struct CircuitDefinition {
     pub name: String,
     pub parameters: Vec<String>,

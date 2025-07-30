@@ -1,5 +1,5 @@
 [workspace]
-members = ["quil-rs", "quil-cli"]
+members = ["quil-rs", "quil-cli", "optipy"]
 resolver = "2"
 
 [profile.release]

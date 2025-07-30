@@ -17,11 +17,8 @@ use std::ops::Range;
 
 use itertools::FoldWhile::{Continue, Done};
 use itertools::Itertools;
-use pyo3::prelude::*;
-use pyo3::types::PyRange;
 
 use crate::instruction::{CalibrationIdentifier, MeasureCalibrationIdentifier};
-use crate::py_source_map;
 use crate::quil::Quil;
 use crate::{
     expression::Expression,
@@ -35,86 +32,20 @@ use crate::{
 use super::source_map::{SourceMap, SourceMapEntry, SourceMapIndexable};
 use super::{CalibrationSet, InstructionIndex, ProgramError};
 
+#[cfg(not(feature = "python"))]
+use optipy::strip_pyo3;
+
 /// A collection of Quil calibrations (`DEFCAL` instructions) with utility methods.
 #[derive(Clone, Debug, Default, PartialEq)]
-#[pyclass(name = "CalibrationSet", module = "quil.program", eq, subclass)]
+#[cfg_attr(feature = "python", pyo3::pyclass(name = "CalibrationSet", module = "quil.program", eq, subclass))]
 pub struct Calibrations {
     pub calibrations: CalibrationSet<Calibration>,
     pub measure_calibrations: CalibrationSet<MeasureCalibrationDefinition>,
 }
 
-#[pymethods]
+#[cfg_attr(feature = "python", pyo3::pymethods)]
+#[cfg_attr(not(feature = "python"), strip_pyo3)]
 impl Calibrations {
-    #[new]
-    fn new(
-        calibrations: Vec<Calibration>,
-        measure_calibrations: Vec<MeasureCalibrationDefinition>,
-    ) -> Self {
-        Self {
-            calibrations: calibrations.into(),
-            measure_calibrations: measure_calibrations.into(),
-        }
-    }
-
-    /// Return a list of all [`Calibration`]s in the set.
-    #[getter(calibrations)]
-    fn py_calibrations(&self) -> Vec<Calibration> {
-        self.iter_calibrations().cloned().collect()
-    }
-
-    /// Return a list of all [`MeasureCalibrationDefinition`]s in the set.
-    #[getter(measure_calibrations)]
-    fn py_measure_calibrations(&self) -> Vec<MeasureCalibrationDefinition> {
-        self.iter_measure_calibrations().cloned().collect()
-    }
-
-    /// Given an instruction, return the instructions to which it is expanded if there is a match.
-    /// Recursively calibrate instructions, returning an error if a calibration directly or indirectly
-    /// expands into itself.
-    ///
-    /// Return only the expanded instructions; for more information about the expansion process,
-    /// see [`Self::expand_with_detail`].
-    #[pyo3(name = "expand")]
-    fn py_expand(
-        &self,
-        instruction: &Instruction,
-        previous_calibrations: Vec<Instruction>,
-    ) -> Result<Option<Vec<Instruction>>, ProgramError> {
-        self.expand(instruction, &previous_calibrations)
-    }
-
-    /// Returns the last-specified ``MeasureCalibrationDefinition`` that matches the target
-    /// qubit (if any), or otherwise the last-specified one that specified no qubit.
-    ///
-    /// If multiple calibrations match the measurement, the precedence is as follows:
-    ///
-    ///   1. Match fixed qubit.
-    ///   2. Match variable qubit.
-    ///   3. Match no qubit.
-    ///
-    /// In the case of multiple calibrations with equal precedence, the last one wins.
-    #[pyo3(name = "get_match_for_measurement")]
-    fn py_get_match_for_measurement(
-        &self,
-        measurement: &Measurement,
-    ) -> Option<MeasureCalibrationDefinition> {
-        self.get_match_for_measurement(measurement).cloned()
-    }
-
-    /// Return the final calibration which matches the gate per the QuilT specification:
-    ///
-    /// A calibration matches a gate if:
-    /// 1. It has the same name
-    /// 2. It has the same modifiers
-    /// 3. It has the same qubit count (any mix of fixed & variable)
-    /// 4. It has the same parameter count (both specified and unspecified)
-    /// 5. All fixed qubits in the calibration definition match those in the gate
-    /// 6. All specified parameters in the calibration definition match those in the gate
-    #[pyo3(name = "get_match_for_gate")]
-    fn py_get_match_for_gate(&self, gate: &Gate) -> Option<Calibration> {
-        self.get_match_for_gate(gate).cloned()
-    }
-
     /// Return the count of contained calibrations.
     #[pyo3(name = "__len__")]
     pub fn len(&self) -> usize {
@@ -202,7 +133,8 @@ pub struct CalibrationExpansionOutput {
 
 /// Details about the expansion of a calibration
 #[derive(Clone, Debug, PartialEq)]
-#[pyclass(module = "quil.program", eq, frozen)]
+#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.program", eq, frozen))]
+#[cfg_attr(not(feature = "python"), strip_pyo3)]
 pub struct CalibrationExpansion {
     /// The calibration used to expand the instruction
     #[pyo3(get)]
@@ -260,23 +192,6 @@ impl CalibrationExpansion {
     }
 }
 
-#[pymethods]
-impl CalibrationExpansion {
-    #[getter(range)]
-    pub fn py_range<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyRange>> {
-        PyRange::new(
-            py,
-            self.range.start.0.try_into()?,
-            self.range.end.0.try_into()?,
-        )
-    }
-
-    #[getter(expansions)]
-    fn py_expansions(&self) -> PyCalibrationExpansionSourceMap {
-        PyCalibrationExpansionSourceMap(self.expansions.clone())
-    }
-}
-
 impl SourceMapIndexable<InstructionIndex> for CalibrationExpansion {
     fn intersects(&self, other: &InstructionIndex) -> bool {
         self.range.contains(other)
@@ -291,7 +206,7 @@ impl SourceMapIndexable<CalibrationSource> for CalibrationExpansion {
 
 /// The result of an attempt to expand an instruction within a [`Program`]
 #[derive(Clone, Debug, PartialEq)]
-#[pyclass(module = "quil.program", eq, frozen)]
+#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.program", eq, frozen))]
 pub enum MaybeCalibrationExpansion {
     /// The instruction was expanded into others
     Expanded(CalibrationExpansion),
@@ -320,7 +235,7 @@ impl SourceMapIndexable<CalibrationSource> for MaybeCalibrationExpansion {
 
 /// A source of a calibration, either a [`Calibration`] or a [`MeasureCalibrationDefinition`]
 #[derive(Clone, Debug, PartialEq)]
-#[pyclass(module = "quil.program", eq, frozen)]
+#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.program", eq, frozen))]
 pub enum CalibrationSource {
     /// Describes a `DEFCAL` instruction
     Calibration(CalibrationIdentifier),
@@ -710,22 +625,6 @@ impl Calibrations {
             )
             .collect()
     }
-}
-
-py_source_map! {
-    #[pyo3(name = "CalibrationExpansionSourceMap", module = "quil.program", frozen)]
-    pub(crate) struct PyCalibrationExpansionSourceMap(SourceMap<InstructionIndex, CalibrationExpansion>);
-
-    #[pyo3(name = "CalibrationExpansionSourceMapEntry", module = "quil.program", frozen)]
-    pub(crate) struct PyCalibrationExpansionSourceMapEntry(SourceMapEntry<...>);
-}
-
-py_source_map! {
-    #[pyo3(name = "ProgramCalibrationExpansionSourceMap", module = "quil.program", frozen)]
-    pub(crate) struct PyProgramCalibrationExpansionSourceMap(SourceMap<InstructionIndex, MaybeCalibrationExpansion>);
-
-    #[pyo3(name = "ProgramCalibrationExpansionSourceMapEntry", module = "quil.program", frozen)]
-    pub(crate) struct PyProgramCalibrationExpansionSourceMapEntry(SourceMapEntry<...>);
 }
 
 #[cfg(test)]

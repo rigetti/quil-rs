@@ -1,3 +1,4 @@
+#[cfg(feature = "python")]
 use pyo3::prelude::*;
 
 use crate::{pickleable_new, quil::Quil};
@@ -5,7 +6,7 @@ use crate::{pickleable_new, quil::Quil};
 use super::QuotedString;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)]
+#[cfg_attr(feature = "python", pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
 pub struct Pragma {
     pub name: String,
     pub arguments: Vec<PragmaArgument>,
@@ -37,7 +38,7 @@ impl Quil for Pragma {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash)]
+#[cfg_attr(feature = "python", pyclass(module = "quil.instructions", eq, frozen, hash))]
 pub enum PragmaArgument {
     Identifier(String),
     Integer(u64),
@@ -58,7 +59,7 @@ impl Quil for PragmaArgument {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)]
+#[cfg_attr(feature = "python", pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
 pub struct Include {
     pub filename: String,
 }

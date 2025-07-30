@@ -1,12 +1,13 @@
 use std::sync::Arc;
 
-use pyo3::prelude::*;
-
 use super::MemoryReference;
 use crate::{pickleable_new, quil::{Quil, ToQuilError}};
 
+#[cfg(not(feature = "python"))]
+use optipy::strip_pyo3;
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)]
+#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
 pub struct Label {
     pub target: Target,
 }
@@ -29,7 +30,7 @@ impl Quil for Label {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, strum::EnumTryAs)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash)]
+#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash))]
 pub enum Target {
     Fixed(String),
     Placeholder(TargetPlaceholder),
@@ -72,10 +73,11 @@ type TargetPlaceholderInner = Arc<String>;
 /// An opaque placeholder for a label whose index may be assigned
 /// at a later time.
 #[derive(Clone, Debug, Eq)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash, ord, subclass)]
+#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, ord, subclass))]
 pub struct TargetPlaceholder(TargetPlaceholderInner);
 
-#[pymethods]
+#[cfg_attr(feature = "python", pyo3::pymethods)]
+#[cfg_attr(not(feature = "python"), strip_pyo3)]
 impl TargetPlaceholder {
     #[new]
     pub fn new(base_label: String) -> Self {
@@ -119,7 +121,7 @@ impl PartialEq for TargetPlaceholder {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[pyclass(module = "quil.instructions", eq, get_all, set_all, subclass)]
+#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, get_all, set_all, subclass))]
 pub struct Jump {
     pub target: Target,
 }
@@ -143,7 +145,7 @@ pickleable_new! {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[pyclass(module = "quil.instructions", eq, get_all, set_all, subclass)]
+#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, get_all, set_all, subclass))]
 pub struct JumpWhen {
     pub target: Target,
     pub condition: MemoryReference,
@@ -169,7 +171,7 @@ impl Quil for JumpWhen {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[pyclass(module = "quil.instructions", eq, get_all, set_all, subclass)]
+#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, get_all, set_all, subclass))]
 pub struct JumpUnless {
     pub target: Target,
     pub condition: MemoryReference,

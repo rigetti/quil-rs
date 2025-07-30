@@ -14,12 +14,12 @@
 
 use crate::{
     hash::hash_f64,
-    imag, impl_repr,
+    imag,
     instruction::MemoryReference,
     parser::{lex, parse_expression, ParseError},
     program::{disallow_leftover, ParseProgramError},
     quil::Quil,
-    quil_py, real,
+    real,
 };
 use internment::ArcIntern;
 use lexical::{format, to_string_with_options, WriteFloatOptions};
@@ -42,38 +42,17 @@ use std::{
 #[cfg(test)]
 use proptest_derive::Arbitrary;
 
+#[cfg(not(feature = "python"))]
+use optipy::strip_pyo3;
+#[cfg(feature = "python")]
 use pyo3::prelude::*;
+#[cfg(feature = "python")]
+use quilpy::intern_from_py;
+#[cfg(feature = "python")]
+pub(crate) mod quilpy;
+
 
 mod simplification;
-
-#[pymodule]
-#[pyo3(name = "expression", module = "quil", submodule)]
-pub(crate) fn init_submodule(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    use quil_py::errors;
-
-    let py = m.py();
-    m.add("EvaluationError", py.get_type::<errors::EvaluationError>())?;
-    m.add(
-        "ParseExpressionError",
-        py.get_type::<errors::ParseExpressionError>(),
-    )?;
-    m.add_class::<Expression>()?;
-    m.add_class::<ExpressionFunction>()?;
-    m.add_class::<FunctionCallExpression>()?;
-    m.add_class::<InfixExpression>()?;
-    m.add_class::<InfixOperator>()?;
-    m.add_class::<PrefixExpression>()?;
-    m.add_class::<PrefixOperator>()?;
-    Ok(())
-}
-
-impl_repr!(Expression);
-impl_repr!(ExpressionFunction);
-impl_repr!(FunctionCallExpression);
-impl_repr!(InfixExpression);
-impl_repr!(InfixOperator);
-impl_repr!(PrefixExpression);
-impl_repr!(PrefixOperator);
 
 /// The different possible types of errors that could occur during expression evaluation.
 #[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
@@ -86,17 +65,29 @@ pub enum EvaluationError {
     NotANumber,
 }
 
-/// Extract a Python-bound `T` and intern it.
-///
-/// This is used in constructors when the Rust constructor expects an interned instance,
-/// since when called from Python, the heap-allocated object needs to be extracted first.
-fn intern_from_py<'py, T>(obj: &Bound<'py, PyAny>) -> PyResult<ArcIntern<T>>
-where
-    T: FromPyObject<'py> + Sync + Send + Hash + Eq,
-{
-    let val = obj.extract::<T>()?;
-    Ok(ArcIntern::new(val))
+/*
+#[cfg(feature = "python")]
+macro_rules! if_python {
+    ( [ $($done:tt)* ] [] ) => { $($done)* };
+    ( [ $($done:tt)* ] [ #[pyo3($($attrs:tt)*)] $( $rest:tt )* ] ) => {
+        if_python!{ [ $($done)* ] [ $($rest)* ] }
+    };
+    ( [ $($done:tt)* ] [ $other:tt $( $rest:tt )* ] ) => {
+        if_python!{ [$($done)* $other] [ $($rest)* ] }
+    };
+    ( $( $rest:tt )* ) => { if_python!{ [] [ $($rest)* ] } };
 }
+
+#[cfg(not(feature = "python"))]
+macro_rules! if_python {
+    ( #[cfg_attr(feature = "python", $($attrs:tt)*)] $( $rest:tt )* ) => {
+        if_python! { $($rest)* }
+    };
+    ( $other:tt $( $rest:tt )* ) => {
+        $other if_python! { $($rest)* }
+    };
+}
+*/
 
 /// The type of Quil expressions.
 ///
@@ -120,7 +111,8 @@ where
 /// Note that when comparing Quil expressions, any embedded NaNs are treated as *equal* to other
 /// NaNs, not unequal, in contravention of the IEEE 754 spec.
 #[derive(Clone, Debug)]
-#[pyclass(module = "quil.expression", eq, frozen, hash)]
+#[cfg_attr(feature = "python", pyclass)]
+#[cfg_attr(not(feature = "python"), strip_pyo3)]
 pub enum Expression {
     Address(MemoryReference),
     FunctionCall(FunctionCallExpression),
@@ -140,7 +132,8 @@ pub enum Expression {
 /// Note that when comparing Quil expressions, any embedded NaNs are treated as *equal* to other
 /// NaNs, not unequal, in contravention of the IEEE 754 spec.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[pyclass(module = "quil.expression", eq, frozen, hash, subclass)]
+#[cfg_attr(feature = "python", pyclass(module = "quil.expression", eq, frozen, hash, subclass))]
+#[cfg_attr(not(feature = "python"), strip_pyo3)]
 pub struct FunctionCallExpression {
     #[pyo3(get)]
     pub function: ExpressionFunction,
@@ -156,22 +149,6 @@ impl FunctionCallExpression {
     }
 }
 
-#[pymethods]
-impl FunctionCallExpression {
-    #[new]
-    pub fn __new__(function: ExpressionFunction, expression: Expression) -> Self {
-        Self {
-            function,
-            expression: ArcIntern::new(expression),
-        }
-    }
-
-    #[getter]
-    fn expression(&self) -> Expression {
-        (*self.expression).clone()
-    }
-}
-
 /// The type of infix Quil expressions, e.g. `e1 + e2`.
 ///
 /// Quil expressions take advantage of *structural sharing*, which is why the `left` and `right`
@@ -181,7 +158,8 @@ impl FunctionCallExpression {
 /// Note that when comparing Quil expressions, any embedded NaNs are treated as *equal* to other
 /// NaNs, not unequal, in contravention of the IEEE 754 spec.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[pyclass(module = "quil.expression", eq, frozen, hash, subclass)]
+#[cfg_attr(feature = "python", pyclass(module = "quil.expression", eq, frozen, hash, subclass))]
+#[cfg_attr(not(feature = "python"), strip_pyo3)]
 pub struct InfixExpression {
     pub left: ArcIntern<Expression>,
     #[pyo3(get)]
@@ -189,7 +167,8 @@ pub struct InfixExpression {
     pub right: ArcIntern<Expression>,
 }
 
-#[pymethods]
+#[cfg_attr(feature = "python", pymethods)]
+#[cfg_attr(not(feature = "python"), strip_pyo3)]
 impl InfixExpression {
     #[new]
     pub fn new(
@@ -203,16 +182,6 @@ impl InfixExpression {
             right,
         }
     }
-
-    #[getter]
-    fn left(&self) -> Expression {
-        (*self.left).clone()
-    }
-
-    #[getter]
-    fn right(&self) -> Expression {
-        (*self.right).clone()
-    }
 }
 
 /// The type of prefix Quil expressions, e.g. `-e`.
@@ -223,14 +192,16 @@ impl InfixExpression {
 /// Note that when comparing Quil expressions, any embedded NaNs are treated as *equal* to other
 /// NaNs, not unequal, in contravention of the IEEE 754 spec.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[pyclass(module = "quil.expression", eq, frozen, hash, subclass)]
+#[cfg_attr(feature = "python", pyclass(module = "quil.expression", eq, frozen, hash, subclass))]
+#[cfg_attr(not(feature = "python"), strip_pyo3)]
 pub struct PrefixExpression {
     #[pyo3(get)]
     pub operator: PrefixOperator,
     pub expression: ArcIntern<Expression>,
 }
 
-#[pymethods]
+#[cfg_attr(feature = "python", pymethods)]
+#[cfg_attr(not(feature = "python"), strip_pyo3)]
 impl PrefixExpression {
     #[new]
     pub fn new(
@@ -241,11 +212,6 @@ impl PrefixExpression {
             operator,
             expression,
         }
-    }
-
-    #[getter]
-    fn expression(&self) -> Expression {
-        (*self.expression).clone()
     }
 }
 
@@ -615,31 +581,8 @@ impl Expression {
     }
 }
 
-#[pymethods]
+#[cfg_attr(feature = "python", pymethods)]
 impl Expression {
-    #[pyo3(name = "into_simplified")]
-    fn py_into_simplified(&self) -> Self {
-        self.clone().into_simplified()
-    }
-
-    /// Evaluate an expression, expecting that it may be fully reduced to a single complex number.
-    ///
-    /// If it cannot be reduced to a complex number, this raises an error.
-    #[pyo3(name = "evaluate")]
-    fn py_evaluate(
-        &self,
-        variables: HashMap<String, Complex64>,
-        memory_references: HashMap<String, Vec<f64>>,
-    ) -> PyResult<Complex64> {
-        Ok(self.evaluate(&variables, &memory_references)?)
-    }
-
-    /// Substitute an expression in the place of each matching variable.
-    #[pyo3(name = "substitute_variables")]
-    fn py_substitute_variables(&self, variable_values: HashMap<String, Expression>) -> Self {
-        self.substitute_variables(&variable_values)
-    }
-
     /// If this is a number with imaginary part "equal to" zero (of _small_ absolute value), return
     /// that number. Otherwise, error with an evaluation error of a descriptive type.
     pub fn to_real(&self) -> Result<f64, EvaluationError> {
@@ -649,30 +592,6 @@ impl Expression {
             Expression::Number(_) => Err(EvaluationError::NumberNotReal),
             _ => Err(EvaluationError::NotANumber),
         }
-    }
-
-    fn __add__(&self, other: Expression) -> Self {
-        self.clone() + other
-    }
-
-    fn __sub__(&self, other: Expression) -> Self {
-        self.clone() - other
-    }
-
-    fn __mul__(&self, other: Expression) -> Self {
-        self.clone() * other
-    }
-
-    fn __truediv__(&self, other: Expression) -> Self {
-        self.clone() / other
-    }
-
-    /// Parse an ``Expression`` from a string.
-    ///
-    /// Raises a ``ParseExpressionError`` error if the string isn't a valid Quil expression.
-    #[staticmethod]
-    fn parse(input: &str) -> PyResult<Self> {
-        Ok(<Self as std::str::FromStr>::from_str(input)?)
     }
 }
 
@@ -831,7 +750,7 @@ mod test {
 
 /// A function defined within Quil syntax.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-#[pyclass(module = "quil.expression", eq, frozen, hash, str)]
+#[cfg_attr(feature = "python", pyclass(module = "quil.expression", eq, frozen, hash, str))]
 #[cfg_attr(test, derive(Arbitrary))]
 pub enum ExpressionFunction {
     Cis,
@@ -859,7 +778,7 @@ impl fmt::Display for ExpressionFunction {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-#[pyclass(module = "quil.expression", eq, frozen, hash, str)]
+#[cfg_attr(feature = "python", pyclass(module = "quil.expression", eq, frozen, hash, str))]
 #[cfg_attr(test, derive(Arbitrary))]
 pub enum PrefixOperator {
     Plus,
@@ -882,7 +801,7 @@ impl fmt::Display for PrefixOperator {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-#[pyclass(module = "quil.expression", eq, frozen, hash, str)]
+#[cfg_attr(feature = "python", pyclass(module = "quil.expression", eq, frozen, hash, str))]
 #[cfg_attr(test, derive(Arbitrary))]
 pub enum InfixOperator {
     Caret,

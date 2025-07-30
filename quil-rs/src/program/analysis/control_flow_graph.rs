@@ -19,25 +19,22 @@ use std::{
     fmt::Debug,
 };
 
-use pyo3::prelude::*;
-
 use crate::{
     instruction::{
         Instruction, InstructionHandler, Jump, JumpUnless, JumpWhen, Label, MemoryReference, Target,
     },
     program::{
-        analysis::{QubitGraph, QubitGraphError},
         scheduling::{
-            schedule::{
-                ComputedScheduleError, ComputedScheduleItem, PyScheduleSeconds, Schedule, TimeSpan,
-                Zero,
-            },
+            schedule::{ComputedScheduleError, ComputedScheduleItem, Schedule, TimeSpan, Zero},
             ScheduleError, ScheduledBasicBlock, Seconds,
         },
         ProgramError,
     },
     Program,
 };
+
+#[cfg(not(feature = "python"))]
+use optipy::strip_pyo3;
 
 /// A control flow graph (CFG) is a representation of a program's control flow as a directed graph.
 /// Each node in the graph is a basic block, a sequence of instructions with a single entry point
@@ -62,32 +59,12 @@ impl<'p> ControlFlowGraph<'p> {
 }
 
 #[derive(Clone, Debug)]
-#[pyclass(name = "ControlFlowGraph", module = "quil.program", subclass, frozen)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(name = "ControlFlowGraph", module = "quil.program", subclass, frozen)
+)]
 pub struct ControlFlowGraphOwned {
-    blocks: Vec<BasicBlockOwned>,
-}
-
-#[pymethods]
-impl ControlFlowGraphOwned {
-    #[new]
-    fn new(instance: Self) -> Self {
-        instance
-    }
-
-    /// Return ``True`` if the program has dynamic control flow, i.e. contains a conditional branch instruction.
-    ///
-    /// ``False`` does not imply that there is only one basic block in the program.
-    /// Multiple basic blocks may have non-conditional control flow among them,
-    /// in which the execution order is deterministic and does not depend on program state.
-    /// This may be a sequence of basic blocks with fixed `JUMP`s or without explicit terminators.
-    fn has_dynamic_control_flow(&self) -> bool {
-        ControlFlowGraph::from(self).has_dynamic_control_flow()
-    }
-
-    /// Return a list of all the basic blocks in the control flow graph, in order of definition.
-    fn basic_blocks(&self) -> Vec<BasicBlockOwned> {
-        self.blocks.clone()
-    }
+    pub(crate) blocks: Vec<BasicBlockOwned>,
 }
 
 impl From<ControlFlowGraph<'_>> for ControlFlowGraphOwned {
@@ -297,43 +274,18 @@ pub enum BasicBlockScheduleError {
 // involves a lot of Cloning, and they're the types exposed by the Python bindings.
 // Can we combine their relevant methods or otherwise avoid the costly conversions?
 #[derive(Clone, Debug)]
-#[pyclass(name = "BasicBlock", module = "quil.program", subclass)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(name = "BasicBlock", module = "quil.program", subclass)
+)]
+#[cfg_attr(not(feature = "python"), strip_pyo3)]
 pub struct BasicBlockOwned {
     #[pyo3(get)]
     label: Option<Target>,
     #[pyo3(get)]
     instructions: Vec<Instruction>,
     instruction_index_offset: usize,
-    terminator: BasicBlockTerminatorOwned,
-}
-
-#[pymethods]
-impl BasicBlockOwned {
-    #[new]
-    fn new(instance: Self) -> Self {
-        instance
-    }
-
-    fn as_schedule_seconds(
-        &self,
-        program: &Program,
-    ) -> Result<PyScheduleSeconds, BasicBlockScheduleError> {
-        BasicBlock::from(self)
-            .as_schedule_seconds(program)
-            .map(PyScheduleSeconds)
-    }
-
-    fn gate_depth(&self, gate_minimum_qubit_count: usize) -> Result<usize, QubitGraphError> {
-        // TODO: this copies everything twice: once to make the block, and again for the graph.
-        // Then it throws them both away. There's got to be a better way.
-        let block = BasicBlock::from(self);
-        QubitGraph::try_from(&block).map(|graph| graph.gate_depth(gate_minimum_qubit_count))
-    }
-
-    #[getter]
-    fn terminator(&self) -> Option<Instruction> {
-        BasicBlockTerminator::from(&self.terminator).into_instruction()
-    }
+    pub(crate) terminator: BasicBlockTerminatorOwned,
 }
 
 impl From<BasicBlock<'_>> for BasicBlockOwned {

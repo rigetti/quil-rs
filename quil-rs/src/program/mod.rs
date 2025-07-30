@@ -22,9 +22,6 @@ use std::str::FromStr;
 use indexmap::{IndexMap, IndexSet};
 use ndarray::Array2;
 use nom_locate::LocatedSpan;
-use numpy::{Complex64, PyArray2, ToPyArray};
-use pyo3::prelude::*;
-use pyo3::types::{PyBytes, PyFunction};
 
 use crate::instruction::{
     Arithmetic, ArithmeticOperand, ArithmeticOperator, Call, Declaration, ExternError,
@@ -35,7 +32,6 @@ use crate::instruction::{
 };
 use crate::parser::{lex, parse_instructions, ParseError};
 use crate::quil::Quil;
-use crate::{impl_repr, impl_to_quil};
 
 pub use self::calibration::{
     CalibrationExpansion, CalibrationExpansionOutput, CalibrationSource, Calibrations,
@@ -52,13 +48,6 @@ pub use self::memory::{
 };
 pub use self::source_map::{SourceMap, SourceMapEntry};
 
-use self::analysis::{BasicBlockOwned, ControlFlowGraph, ControlFlowGraphOwned};
-use self::calibration::{
-    PyCalibrationExpansionSourceMap, PyCalibrationExpansionSourceMapEntry,
-    PyProgramCalibrationExpansionSourceMap, PyProgramCalibrationExpansionSourceMapEntry,
-};
-use self::scheduling::schedule::{PyScheduleSeconds, ScheduleSecondsItem, TimeSpanSeconds};
-
 pub mod analysis;
 mod calibration;
 mod calibration_set;
@@ -69,63 +58,12 @@ pub mod scheduling;
 mod source_map;
 pub mod type_check;
 
-#[pymodule]
-#[pyo3(name = "program", module = "quil", submodule)]
-pub(crate) fn init_submodule(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    use crate::quil_py::errors;
-
-    let py = m.py();
-    m.add("ProgramError", py.get_type::<errors::ProgramError>())?;
-    m.add(
-        "ComputedScheduleError",
-        py.get_type::<errors::ComputedScheduleError>(),
-    )?;
-    m.add(
-        "BasicBlockScheduleError",
-        py.get_type::<errors::BasicBlockScheduleError>(),
-    )?;
-    m.add("QubitGraphError", py.get_type::<errors::QubitGraphError>())?;
-
-    m.add_class::<BasicBlockOwned>()?; // Python name: BasicBlock
-    m.add_class::<CalibrationExpansion>()?;
-    m.add_class::<PyCalibrationExpansionSourceMap>()?; // Python: CalibrationExpansionSourceMap
-    m.add_class::<PyCalibrationExpansionSourceMapEntry>()?; // Python: CalibrationExpansionSourceMapEntry
-    m.add_class::<Calibrations>()?; // Python: CalibrationSet
-    m.add_class::<CalibrationSource>()?;
-    m.add_class::<ControlFlowGraphOwned>()?; // Python: ControlFlowGraph
-    m.add_class::<FrameSet>()?;
-    m.add_class::<MaybeCalibrationExpansion>()?;
-    m.add_class::<MemoryRegion>()?;
-    m.add_class::<Program>()?;
-    m.add_class::<ProgramCalibrationExpansion>()?;
-    m.add_class::<PyProgramCalibrationExpansionSourceMap>()?;
-    m.add_class::<PyProgramCalibrationExpansionSourceMapEntry>()?;
-    m.add_class::<PyScheduleSeconds>()?;
-    m.add_class::<ScheduleSecondsItem>()?;
-    m.add_class::<TimeSpanSeconds>()?;
-
-    Ok(())
-}
-
-impl_repr!(BasicBlockOwned);
-impl_repr!(CalibrationExpansion);
-impl_repr!(PyCalibrationExpansionSourceMap);
-impl_repr!(PyCalibrationExpansionSourceMapEntry);
-impl_repr!(Calibrations);
-impl_repr!(CalibrationSource);
-impl_repr!(ControlFlowGraphOwned);
-impl_repr!(FrameSet);
-impl_repr!(MaybeCalibrationExpansion);
-impl_repr!(MemoryRegion);
-impl_repr!(Program);
-impl_repr!(ProgramCalibrationExpansion);
-impl_repr!(PyProgramCalibrationExpansionSourceMap);
-impl_repr!(PyProgramCalibrationExpansionSourceMapEntry);
-impl_repr!(PyScheduleSeconds);
-impl_repr!(ScheduleSecondsItem);
-impl_repr!(TimeSpanSeconds);
-
-impl_to_quil!(Program);
+#[cfg(not(feature = "python"))]
+use optipy::strip_pyo3;
+#[cfg(feature = "python")]
+use pyo3::prelude::*;
+#[cfg(feature = "python")]
+pub mod quilpy;
 
 // TODO: Address https://github.com/rigetti/quil-rs/issues/453
 #[allow(clippy::large_enum_variant)]
@@ -155,7 +93,8 @@ type Result<T> = std::result::Result<T, ProgramError>;
 /// also the "headers" used to describe and manipulate those instructions, such as calibrations
 /// and frame definitions.
 #[derive(Clone, Debug, Default, PartialEq)]
-#[pyclass(module = "quil.program", eq)]
+#[cfg_attr(feature = "python", pyclass(module = "quil.program", eq))]
+#[cfg_attr(not(feature = "python"), strip_pyo3)]
 pub struct Program {
     #[pyo3(get, set)]
     pub calibrations: Calibrations,
@@ -176,24 +115,12 @@ pub struct Program {
     used_qubits: HashSet<Qubit>,
 }
 
-#[pymethods]
+#[cfg_attr(feature = "python", pymethods)]
+#[cfg_attr(not(feature = "python"), strip_pyo3)]
 impl Program {
     #[new]
     pub fn new() -> Self {
         Program::default()
-    }
-
-    /// Parse a ``Program`` from a string.
-    ///
-    /// Raises a `ProgramError`` if the string isn't a valid Quil expression.
-    #[staticmethod]
-    fn parse(input: &str) -> Result<Self> {
-        <Self as std::str::FromStr>::from_str(input)
-    }
-
-    #[getter(body_instructions)]
-    fn py_body_instructions(&self) -> Vec<Instruction> {
-        self.instructions.to_vec()
     }
 
     /// Return a deep copy of the `Program`, but without the body instructions.
@@ -208,66 +135,6 @@ impl Program {
             instructions: Vec::new(),
             used_qubits: HashSet::new(),
         }
-    }
-
-    /// Return a deep copy of the `Program`.
-    fn copy(&self) -> Self {
-        self.clone()
-    }
-
-    fn control_flow_graph(&self) -> ControlFlowGraphOwned {
-        ControlFlowGraphOwned::from(ControlFlowGraph::from(self))
-    }
-
-    #[getter]
-    // TODO: (9b9690d4 Marquess Valdez 2023-06-01 14:10:25 -0700) Should this filtering move to Program? Should we assume memory_regions will always make up all
-    // declarations and simplify this?
-    fn declarations(&self) -> HashMap<String, Declaration> {
-        self.to_instructions()
-            .into_iter()
-            .filter_map(|inst| match inst {
-                Instruction::Declaration(declaration) => {
-                    Some((declaration.name.clone(), declaration))
-                }
-                _ => None,
-            })
-            .collect()
-    }
-
-    /// Expand any instructions in the program which have a matching calibration,
-    /// leaving the others unchanged.
-    /// Return the expanded copy of the program.
-    ///
-    /// Returns an error if any instruction expands into itself.
-    ///
-    /// See [`Program::expand_calibrations_with_source_map`] for a version that returns a source mapping.
-    pub fn expand_calibrations(&self) -> Result<Self> {
-        self.expand_calibrations_inner(None)
-    }
-
-    #[pyo3(name = "expand_calibrations_with_source_map")]
-    fn py_expand_calibrations_with_source_map(&self) -> Result<ProgramCalibrationExpansion> {
-        self.expand_calibrations_with_source_map()
-    }
-
-    /// Simplify this program into a new [`Program`] which contains only instructions
-    /// and definitions which are executed; effectively, perform dead code removal.
-    ///
-    /// Removes:
-    /// - All calibrations, following calibration expansion
-    /// - Frame definitions which are not used by any instruction such as `PULSE` or `CAPTURE`
-    /// - Waveform definitions which are not used by any instruction
-    /// - `PRAGMA EXTERN` instructions which are not used by any `CALL` instruction (see
-    ///   [`Program::extern_pragma_map`]).
-    ///
-    /// When a valid program is simplified, it remains valid.
-    ///
-    /// # Note
-    ///
-    /// If you need custom instruction handling during simplification,
-    /// use [`InstructionHandler::simplify_program`] instead.
-    pub fn into_simplified(&self) -> Result<Self> {
-        self.simplify_with_handler(&mut InstructionHandler::default())
     }
 
     /// Add an instruction to the end of the program.
@@ -341,72 +208,6 @@ impl Program {
         }
     }
 
-    #[pyo3(name = "add_instructions")]
-    fn py_add_instructions(&mut self, instructions: Vec<Instruction>) {
-        self.add_instructions(instructions)
-    }
-
-    /// Return a copy of all of the instructions which constitute this [`Program`].
-    pub fn to_instructions(&self) -> Vec<Instruction> {
-        let mut instructions: Vec<Instruction> = Vec::with_capacity(self.len());
-
-        instructions.extend(self.extern_pragma_map.to_instructions());
-        instructions.extend(self.memory_regions.iter().map(|(name, descriptor)| {
-            Instruction::Declaration(Declaration {
-                name: name.clone(),
-                size: descriptor.size.clone(),
-                sharing: descriptor.sharing.clone(),
-            })
-        }));
-        instructions.extend(self.frames.to_instructions());
-        instructions.extend(self.waveforms.iter().map(|(name, definition)| {
-            Instruction::WaveformDefinition(WaveformDefinition {
-                name: name.clone(),
-                definition: definition.clone(),
-            })
-        }));
-        instructions.extend(self.calibrations.to_instructions());
-        instructions.extend(
-            self.gate_definitions
-                .values()
-                .cloned()
-                .map(Instruction::GateDefinition),
-        );
-        instructions.extend(self.instructions.clone());
-        instructions
-    }
-
-    /// Return the unitary of a program.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the program contains instructions other than `Gate`s.
-    #[pyo3(name = "to_unitary")]
-    fn py_to_unitary<'py>(
-        &self,
-        py: Python<'py>,
-        n_qubits: u64,
-    ) -> PyResult<Bound<'py, PyArray2<Complex64>>> {
-        Ok(self.to_unitary(n_qubits)?.to_pyarray(py))
-    }
-
-    /// Return a new ``Program`` containing only the instructions
-    /// for which `predicate` returns true.
-    #[pyo3(name = "filter_instructions")]
-    fn py_filter_instructions<'py>(
-        &self,
-        py: Python<'py>,
-        predicate: &Bound<'py, PyFunction>,
-    ) -> Self {
-        self.filter_instructions(|inst| {
-            predicate
-                .call1((inst.clone().into_pyobject(py).unwrap(),))
-                .unwrap_or_else(|err| panic!("predicate function returned an error: {err}"))
-                .extract()
-                .unwrap_or_else(|err| panic!("predicate function must return a bool: {err}"))
-        })
-    }
-
     /// Creates a new conjugate transpose of the [`Program`] by reversing the order of gate
     /// instructions and applying the DAGGER modifier to each.
     ///
@@ -426,76 +227,35 @@ impl Program {
         )
     }
 
-    /// Resolve [`LabelPlaceholder`]s and [`QubitPlaceholder`]s within the program using default resolvers.
+    /// Expand any instructions in the program which have a matching calibration,
+    /// leaving the others unchanged.
+    /// Return the expanded copy of the program.
     ///
-    /// See [`resolve_placeholders_with_custom_resolvers`](Self::resolve_placeholders_with_custom_resolvers),
-    /// [`default_target_resolver`](Self::default_target_resolver),
-    /// and [`default_qubit_resolver`](Self::default_qubit_resolver) for more information.
-    pub fn resolve_placeholders(&mut self) {
-        self.resolve_placeholders_with_custom_resolvers(
-            self.default_target_resolver(),
-            self.default_qubit_resolver(),
-        )
+    /// Returns an error if any instruction expands into itself.
+    ///
+    /// See [`Program::expand_calibrations_with_source_map`] for a version that returns a source mapping.
+    pub fn expand_calibrations(&self) -> Result<Self> {
+        self.expand_calibrations_inner(None)
     }
 
-    // Because we can't bubble up an error from inside the closures, they panic when the given
-    // Python functions return an error or an unexpected type. This is unusual, but in a Python
-    // program, this function will only raise because [`pyo3`] wraps Rust panics in a
-    // `PanicException`.
-    #[pyo3(
-        name = "resolve_placeholders_with_custom_resolvers",
-        signature = (*, target_resolver = None, qubit_resolver = None)
-    )]
-    fn py_resolve_placeholders_with_custom_resolvers(
-        &mut self,
-        target_resolver: Option<Py<PyFunction>>,
-        qubit_resolver: Option<Py<PyFunction>>,
-    ) {
-        #[allow(clippy::type_complexity)]
-        let rs_qubit_resolver: Box<dyn Fn(&QubitPlaceholder) -> Option<u64>> =
-            if let Some(resolver) = qubit_resolver {
-                Box::new(move |placeholder: &QubitPlaceholder| -> Option<u64> {
-                    Python::with_gil(|py| {
-                        let placeholder = placeholder
-                            .clone()
-                            .into_pyobject(py)
-                            .expect("QubitPlaceholder.into_python() should be infallible");
-                        let resolved_qubit =
-                            resolver.call1(py, (placeholder,)).unwrap_or_else(|err| {
-                                panic!("qubit_resolver returned an error: {err}")
-                            });
-                        resolved_qubit.extract(py).unwrap_or_else(|err| {
-                            panic!("qubit_resolver must return None or int: {err}")
-                        })
-                    })
-                })
-            } else {
-                self.default_qubit_resolver()
-            };
-
-        #[allow(clippy::type_complexity)]
-        let rs_target_resolver: Box<dyn Fn(&TargetPlaceholder) -> Option<String>> =
-            if let Some(resolver) = target_resolver {
-                Box::new(move |placeholder: &TargetPlaceholder| -> Option<String> {
-                    Python::with_gil(|py| {
-                        let placeholder = placeholder
-                            .clone()
-                            .into_pyobject(py)
-                            .expect("TargetPlaceholder.into_python() should be infallible");
-                        let resolved_target =
-                            resolver.call1(py, (placeholder,)).unwrap_or_else(|err| {
-                                panic!("target_resolver returned an error: {err}")
-                            });
-                        resolved_target.extract(py).unwrap_or_else(|err| {
-                            panic!("target_resolver must return None or str: {err}")
-                        })
-                    })
-                })
-            } else {
-                self.default_target_resolver()
-            };
-
-        self.resolve_placeholders_with_custom_resolvers(rs_target_resolver, rs_qubit_resolver);
+    /// Simplify this program into a new [`Program`] which contains only instructions
+    /// and definitions which are executed; effectively, perform dead code removal.
+    ///
+    /// Removes:
+    /// - All calibrations, following calibration expansion
+    /// - Frame definitions which are not used by any instruction such as `PULSE` or `CAPTURE`
+    /// - Waveform definitions which are not used by any instruction
+    /// - `PRAGMA EXTERN` instructions which are not used by any `CALL` instruction (see
+    ///   [`Program::extern_pragma_map`]).
+    ///
+    /// When a valid program is simplified, it remains valid.
+    ///
+    /// # Note
+    ///
+    /// If you need custom instruction handling during simplification,
+    /// use [`InstructionHandler::simplify_program`] instead.
+    pub fn into_simplified(&self) -> Result<Self> {
+        self.simplify_with_handler(&mut InstructionHandler::default())
     }
 
     /// Return a copy of the [`Program`] wrapped in a loop that repeats `iterations` times.
@@ -569,24 +329,46 @@ impl Program {
         looped_program
     }
 
-    fn __add__(&self, rhs: Self) -> Self {
-        self.clone() + rhs
+    /// Resolve [`LabelPlaceholder`]s and [`QubitPlaceholder`]s within the program using default resolvers.
+    ///
+    /// See [`resolve_placeholders_with_custom_resolvers`](Self::resolve_placeholders_with_custom_resolvers),
+    /// [`default_target_resolver`](Self::default_target_resolver),
+    /// and [`default_qubit_resolver`](Self::default_qubit_resolver) for more information.
+    pub fn resolve_placeholders(&mut self) {
+        self.resolve_placeholders_with_custom_resolvers(
+            self.default_target_resolver(),
+            self.default_qubit_resolver(),
+        )
     }
 
-    fn __iadd__(&mut self, rhs: Self) {
-        *self += rhs
-    }
+    /// Return a copy of all of the instructions which constitute this [`Program`].
+    pub fn to_instructions(&self) -> Vec<Instruction> {
+        let mut instructions: Vec<Instruction> = Vec::with_capacity(self.len());
 
-    /// This will raise an error if the program contains any unresolved
-    /// placeholders. This is because they can't be converted to valid quil,
-    /// nor can they be serialized and deserialized in a consistent way.
-    fn __getstate__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyBytes>> {
-        Ok(PyBytes::new(py, self.to_quil()?.as_bytes()))
-    }
-
-    pub fn __setstate__(&mut self, state: &Bound<'_, PyBytes>) -> PyResult<()> {
-        *self = Program::from_str(std::str::from_utf8(state.as_bytes())?)?;
-        Ok(())
+        instructions.extend(self.extern_pragma_map.to_instructions());
+        instructions.extend(self.memory_regions.iter().map(|(name, descriptor)| {
+            Instruction::Declaration(Declaration {
+                name: name.clone(),
+                size: descriptor.size.clone(),
+                sharing: descriptor.sharing.clone(),
+            })
+        }));
+        instructions.extend(self.frames.to_instructions());
+        instructions.extend(self.waveforms.iter().map(|(name, definition)| {
+            Instruction::WaveformDefinition(WaveformDefinition {
+                name: name.clone(),
+                definition: definition.clone(),
+            })
+        }));
+        instructions.extend(self.calibrations.to_instructions());
+        instructions.extend(
+            self.gate_definitions
+                .values()
+                .cloned()
+                .map(Instruction::GateDefinition),
+        );
+        instructions.extend(self.instructions.clone());
+        instructions
     }
 }
 
@@ -1069,9 +851,8 @@ impl ops::AddAssign<Program> for Program {
     }
 }
 
-#[derive(
-    Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, FromPyObject, IntoPyObject, IntoPyObjectRef,
-)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature = "python", derive(FromPyObject, IntoPyObject, IntoPyObjectRef))]
 pub struct InstructionIndex(pub usize);
 
 impl InstructionIndex {
@@ -1084,7 +865,8 @@ pub type ProgramCalibrationExpansionSourceMap =
     SourceMap<InstructionIndex, MaybeCalibrationExpansion>;
 
 #[derive(Clone, Debug, PartialEq)]
-#[pyclass(module = "quil.program", eq, frozen)]
+#[cfg_attr(feature = "python", pyclass(module = "quil.program", eq, frozen))]
+#[cfg_attr(not(feature = "python"), strip_pyo3)]
 pub struct ProgramCalibrationExpansion {
     #[pyo3(get)]
     program: Program,
@@ -1094,14 +876,6 @@ pub struct ProgramCalibrationExpansion {
 impl ProgramCalibrationExpansion {
     pub fn source_map(&self) -> &ProgramCalibrationExpansionSourceMap {
         &self.source_map
-    }
-}
-
-#[pymethods]
-impl ProgramCalibrationExpansion {
-    #[getter(source_map)]
-    fn py_source_map(&self) -> PyProgramCalibrationExpansionSourceMap {
-        PyProgramCalibrationExpansionSourceMap(self.source_map.clone())
     }
 }
 

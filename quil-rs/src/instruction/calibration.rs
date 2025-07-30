@@ -1,4 +1,5 @@
-use pyo3::prelude::*;
+#[cfg(not(feature = "python"))]
+use optipy::strip_pyo3;
 
 use crate::{
     instruction::{
@@ -18,9 +19,11 @@ pub trait CalibrationSignature {
     fn has_signature(&self, signature: &Self::Signature<'_>) -> bool;
 }
 
+#[cfg_attr(not(feature = "python"), strip_pyo3)]
 #[derive(Clone, Debug, Default, PartialEq)]
-#[pyclass(module = "quil.instructions", eq, get_all, set_all, subclass)]
+#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, get_all, set_all, subclass))]
 pub struct Calibration {
+    #[pyo3(name = "identifier")]
     pub identifier: CalibrationIdentifier,
     pub instructions: Vec<Instruction>,
 }
@@ -32,29 +35,6 @@ pickleable_new! {
             identifier: CalibrationIdentifier,
             instructions: Vec<Instruction>,
         ); 
-    }
-}
-
-#[pymethods]
-impl Calibration {
-    #[getter]
-    fn name(&self) -> &str {
-        &self.identifier.name
-    }
-
-    #[getter]
-    fn parameters(&self) -> Vec<Expression> {
-        self.identifier.parameters.clone()
-    }
-
-    #[getter]
-    fn qubits(&self) -> Vec<Qubit> {
-        self.identifier.qubits.clone()
-    }
-
-    #[getter]
-    fn modifiers(&self) -> Vec<GateModifier> {
-        self.identifier.modifiers.clone()
     }
 }
 
@@ -88,7 +68,7 @@ impl Quil for Calibration {
 
 /// Unique identifier for a calibration definition within a program
 #[derive(Clone, Debug, Default, PartialEq)]
-#[pyclass(module = "quil.instructions", eq, get_all, set_all, subclass)]
+#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, get_all, set_all, subclass))]
 pub struct CalibrationIdentifier {
     /// The modifiers applied to the gate
     pub modifiers: Vec<GateModifier>,
@@ -122,22 +102,6 @@ impl CalibrationIdentifier {
             parameters,
             qubits,
         })
-    }
-}
-
-#[pymethods]
-impl CalibrationIdentifier {
-    /// Builds a new calibration identifier.
-    ///
-    /// Raises an error if the given name isn't a valid Quil identifier.
-    #[new]
-    fn __new__(
-        name: String,
-        parameters: Vec<Expression>,
-        qubits: Vec<Qubit>,
-        modifiers: Vec<GateModifier>,
-    ) -> Result<Self, IdentifierValidationError> {
-        Self::new(name, modifiers, parameters, qubits)
     }
 }
 
@@ -228,7 +192,7 @@ impl Quil for CalibrationIdentifier {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-#[pyclass(module = "quil.instructions", eq, get_all, set_all, subclass)]
+#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, get_all, set_all, subclass))]
 pub struct MeasureCalibrationDefinition {
     pub identifier: MeasureCalibrationIdentifier,
     pub instructions: Vec<Instruction>,
@@ -237,19 +201,6 @@ pub struct MeasureCalibrationDefinition {
 pickleable_new! {
     impl MeasureCalibrationDefinition {
         pub fn new(identifier: MeasureCalibrationIdentifier, instructions: Vec<Instruction>); 
-    }
-}
-
-#[pymethods]
-impl MeasureCalibrationDefinition {
-    #[getter]
-    fn qubit(&self) -> Option<Qubit> {
-        self.identifier.qubit.clone()
-    }
-
-    #[getter]
-    fn parameter(&self) -> &str {
-        &self.identifier.parameter
     }
 }
 
@@ -282,7 +233,7 @@ impl Quil for MeasureCalibrationDefinition {
 
 /// A unique identifier for a measurement calibration definition within a program
 #[derive(Clone, Debug, Default, PartialEq)]
-#[pyclass(module = "quil.instructions", eq, get_all, set_all, subclass)]
+#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, get_all, set_all, subclass))]
 pub struct MeasureCalibrationIdentifier {
     /// The qubit which is the target of measurement, if any
     pub qubit: Option<Qubit>,
@@ -291,7 +242,8 @@ pub struct MeasureCalibrationIdentifier {
     pub parameter: String,
 }
 
-#[pymethods]
+#[cfg_attr(feature = "python", pyo3::pymethods)]
+#[cfg_attr(not(feature = "python"), strip_pyo3)]
 impl MeasureCalibrationIdentifier {
     #[new]
     pub fn new(qubit: Option<Qubit>, parameter: String) -> Self {

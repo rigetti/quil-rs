@@ -1,24 +1,25 @@
 use crate::{
     expression::Expression, imag, instruction::{
-        write_expression_parameter_string, write_parameter_string, write_qubits,
-        ParseInstructionError, Qubit,
-    }, pickleable_new, quil::{write_join_quil, Quil, INDENT}, real, validation::identifier::{
+        write_expression_parameter_string, write_parameter_string, write_qubits, Qubit,
+    },
+    quil::{write_join_quil, Quil, INDENT}, real, validation::identifier::{
         validate_identifier, validate_user_identifier, IdentifierValidationError,
     }
 };
 use ndarray::{array, linalg::kron, Array2};
 use num_complex::Complex64;
-use numpy::{PyArray2, ToPyArray};
 use once_cell::sync::Lazy;
-use pyo3::prelude::*;
 use std::{
     cmp::Ordering,
     collections::{HashMap, HashSet},
 };
 
+#[cfg(not(feature = "python"))]
+use optipy::strip_pyo3;
+
 /// A struct encapsulating all the properties of a Quil Quantum Gate.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)]
+#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
 pub struct Gate {
     pub name: String,
     pub parameters: Vec<Expression>,
@@ -28,7 +29,7 @@ pub struct Gate {
 
 /// An enum of all the possible modifiers on a quil [`Gate`]
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash)]
+#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash))]
 pub enum GateModifier {
     /// The `CONTROLLED` modifier makes the gate take an extra [`Qubit`] parameter as a control
     /// qubit.
@@ -114,52 +115,6 @@ impl Gate {
             qubits,
             modifiers,
         })
-    }
-}
-
-pickleable_new! {
-    impl Gate {
-        fn py_new(
-            name: String,
-            parameters: Vec<Expression>,
-            qubits: Vec<Qubit>,
-            modifiers: Vec<GateModifier>,
-        ) -> Result<Self, GateError> {
-            Self::new(&name, parameters, qubits, modifiers)
-        }
-    }
-}
-
-#[pymethods]
-impl Gate {
-    #[pyo3(name = "dagger")]
-    #[must_use]
-    fn py_dagger(&self) -> Self {
-        self.clone().dagger()
-    }
-
-    #[pyo3(name = "controlled")]
-    #[must_use]
-    fn py_controlled(&self, control_qubit: Qubit) -> Self {
-        self.clone().controlled(control_qubit)
-    }
-
-    #[pyo3(name = "forked")]
-    fn py_forked(&self, fork_qubit: Qubit, alt_params: Vec<Expression>) -> Result<Self, GateError> {
-        self.clone().forked(fork_qubit, alt_params)
-    }
-
-    // TODO: `Gate` is now immutable for Python users because it uses the Rust hash impl.
-    // Consequently, this method now makes a clone of the `Gate` before calculating the unitary.
-    // It probably makes sense to change the method name to reflect this.
-    #[pyo3(name = "to_unitary_mut")]
-    fn py_to_unitary_mut<'py>(
-        slf: &Bound<'py, Self>,
-        n_qubits: u64,
-    ) -> PyResult<Bound<'py, PyArray2<Complex64>>> {
-        let py = slf.py();
-        let mut slf = { slf.get().clone() };
-        Ok(slf.to_unitary(n_qubits)?.to_pyarray(py))
     }
 }
 
@@ -843,7 +798,7 @@ mod test_gate_into_matrix {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, strum::Display, strum::EnumString)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash)]
+#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash))]
 #[strum(serialize_all = "UPPERCASE")]
 pub enum PauliGate {
     I,
@@ -852,26 +807,15 @@ pub enum PauliGate {
     Z,
 }
 
-#[pymethods]
-impl PauliGate {
-    /// Parse a ``PauliGate`` from a string.
-    ///
-    /// Raises a ``ParseExpressionError`` error if the string isn't a valid Quil expression.
-    #[staticmethod]
-    fn parse(input: &str) -> Result<Self, ParseInstructionError> {
-        <Self as std::str::FromStr>::from_str(input)
-            .map_err(|err| ParseInstructionError::Parse(err.to_string()))
-    }
-}
-
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)]
+#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
 pub struct PauliTerm {
     pub arguments: Vec<(PauliGate, String)>,
     pub expression: Expression,
 }
 
-#[pymethods]
+#[cfg_attr(feature = "python", pyo3::pymethods)]
+#[cfg_attr(not(feature = "python"), strip_pyo3)]
 impl PauliTerm {
     #[new]
     pub fn new(arguments: Vec<(PauliGate, String)>, expression: Expression) -> Self {
@@ -893,13 +837,14 @@ impl PauliTerm {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)]
+#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
 pub struct PauliSum {
     pub arguments: Vec<String>,
     pub terms: Vec<PauliTerm>,
 }
 
-#[pymethods]
+#[cfg_attr(feature = "python", pyo3::pymethods)]
+#[cfg_attr(not(feature = "python"), strip_pyo3)]
 impl PauliSum {
     #[new]
     pub fn new(arguments: Vec<String>, terms: Vec<PauliTerm>) -> Result<Self, GateError> {
@@ -924,7 +869,7 @@ impl PauliSum {
 
 /// An enum representing a the specification of a [`GateDefinition`] for a given [`GateType`]
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash)]
+#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash))]
 pub enum GateSpecification {
     /// A matrix of [`Expression`]s representing a unitary operation for a [`GateType::Matrix`].
     Matrix(Vec<Vec<Expression>>),
@@ -981,14 +926,15 @@ impl Quil for GateSpecification {
 
 /// A struct encapsulating a quil Gate Definition
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)]
+#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
 pub struct GateDefinition {
     pub name: String,
     pub parameters: Vec<String>,
     pub specification: GateSpecification,
 }
 
-#[pymethods]
+#[cfg_attr(feature = "python", pyo3::pymethods)]
+#[cfg_attr(not(feature = "python"), strip_pyo3)]
 impl GateDefinition {
     #[new]
     pub fn new(
