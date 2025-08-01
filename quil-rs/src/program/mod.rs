@@ -61,9 +61,7 @@ pub mod type_check;
 #[cfg(not(feature = "python"))]
 use optipy::strip_pyo3;
 #[cfg(feature = "python")]
-use pyo3::prelude::*;
-#[cfg(feature = "python")]
-pub mod quilpy;
+pub(crate) mod quilpy;
 
 // TODO: Address https://github.com/rigetti/quil-rs/issues/453
 #[allow(clippy::large_enum_variant)]
@@ -93,7 +91,7 @@ type Result<T> = std::result::Result<T, ProgramError>;
 /// also the "headers" used to describe and manipulate those instructions, such as calibrations
 /// and frame definitions.
 #[derive(Clone, Debug, Default, PartialEq)]
-#[cfg_attr(feature = "python", pyclass(module = "quil.program", eq))]
+#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.program", eq))]
 #[cfg_attr(not(feature = "python"), strip_pyo3)]
 pub struct Program {
     #[pyo3(get, set)]
@@ -115,7 +113,7 @@ pub struct Program {
     used_qubits: HashSet<Qubit>,
 }
 
-#[cfg_attr(feature = "python", pymethods)]
+#[cfg_attr(feature = "python", pyo3::pymethods)]
 #[cfg_attr(not(feature = "python"), strip_pyo3)]
 impl Program {
     #[new]
@@ -852,7 +850,7 @@ impl ops::AddAssign<Program> for Program {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-#[cfg_attr(feature = "python", derive(FromPyObject, IntoPyObject, IntoPyObjectRef))]
+#[cfg_attr(feature = "python", derive(pyo3::FromPyObject, pyo3::IntoPyObject, pyo3::IntoPyObjectRef))]
 pub struct InstructionIndex(pub usize);
 
 impl InstructionIndex {
@@ -865,7 +863,7 @@ pub type ProgramCalibrationExpansionSourceMap =
     SourceMap<InstructionIndex, MaybeCalibrationExpansion>;
 
 #[derive(Clone, Debug, PartialEq)]
-#[cfg_attr(feature = "python", pyclass(module = "quil.program", eq, frozen))]
+#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.program", eq, frozen))]
 #[cfg_attr(not(feature = "python"), strip_pyo3)]
 pub struct ProgramCalibrationExpansion {
     #[pyo3(get)]

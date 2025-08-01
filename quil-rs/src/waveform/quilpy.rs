@@ -25,7 +25,6 @@ pub(crate) fn py_apply_phase_and_detuning(
 }
 
 #[pymodule]
-#[cfg_attr(feature = "python", pyo3(name = "waveforms", module = "quil", submodule))]
 pub(crate) fn init_submodule(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<BoxcarKernel>()?;
     m.add_class::<ErfSquare>()?;

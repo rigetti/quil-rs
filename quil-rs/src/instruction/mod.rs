@@ -28,8 +28,6 @@ use crate::Program;
 use crate::quil::{write_join_quil, Quil, ToQuilResult};
 
 #[cfg(feature = "python")]
-use pyo3::prelude::*;
-#[cfg(feature = "python")]
 pub(crate) mod quilpy;
 
 mod calibration;
@@ -84,7 +82,7 @@ pub enum ValidationError {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-#[cfg_attr(feature = "python", pyclass(module = "quil.instructions", eq, frozen))]
+#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen))]
 pub enum Instruction {
     Arithmetic(Arithmetic),
     BinaryLogic(BinaryLogic),
@@ -128,7 +126,7 @@ pub enum Instruction {
     Wait(),
 }
 
-#[cfg_attr(feature = "python", pymethods)]
+#[cfg_attr(feature = "python", pyo3::pymethods)]
 impl Instruction {
     /// Returns true if the instruction is a Quil-T instruction.
     pub fn is_quil_t(&self) -> bool {

@@ -1,12 +1,9 @@
-#[cfg(feature = "python")]
-use pyo3::prelude::*;
-
 use crate::{pickleable_new, quil::Quil};
 
 use super::{MemoryReference, Qubit};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "python", pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
+#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
 pub struct Measurement {
     pub qubit: Qubit,
     pub target: Option<MemoryReference>,

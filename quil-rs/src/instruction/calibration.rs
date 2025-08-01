@@ -19,9 +19,9 @@ pub trait CalibrationSignature {
     fn has_signature(&self, signature: &Self::Signature<'_>) -> bool;
 }
 
-#[cfg_attr(not(feature = "python"), strip_pyo3)]
 #[derive(Clone, Debug, Default, PartialEq)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, get_all, set_all, subclass))]
+#[cfg_attr(not(feature = "python"), strip_pyo3)]
 pub struct Calibration {
     #[pyo3(name = "identifier")]
     pub identifier: CalibrationIdentifier,
