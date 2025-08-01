@@ -87,7 +87,7 @@ pub enum EvaluationError {
 /// Note that when comparing Quil expressions, any embedded NaNs are treated as *equal* to other
 /// NaNs, not unequal, in contravention of the IEEE 754 spec.
 #[derive(Clone, Debug)]
-#[cfg_attr(feature = "python", pyclass)]
+#[cfg_attr(feature = "python", pyclass(module = "quil.expression", eq, frozen, hash))]
 #[cfg_attr(not(feature = "python"), strip_pyo3)]
 pub enum Expression {
     Address(MemoryReference),
