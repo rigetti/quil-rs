@@ -65,30 +65,6 @@ pub enum EvaluationError {
     NotANumber,
 }
 
-/*
-#[cfg(feature = "python")]
-macro_rules! if_python {
-    ( [ $($done:tt)* ] [] ) => { $($done)* };
-    ( [ $($done:tt)* ] [ #[pyo3($($attrs:tt)*)] $( $rest:tt )* ] ) => {
-        if_python!{ [ $($done)* ] [ $($rest)* ] }
-    };
-    ( [ $($done:tt)* ] [ $other:tt $( $rest:tt )* ] ) => {
-        if_python!{ [$($done)* $other] [ $($rest)* ] }
-    };
-    ( $( $rest:tt )* ) => { if_python!{ [] [ $($rest)* ] } };
-}
-
-#[cfg(not(feature = "python"))]
-macro_rules! if_python {
-    ( #[cfg_attr(feature = "python", $($attrs:tt)*)] $( $rest:tt )* ) => {
-        if_python! { $($rest)* }
-    };
-    ( $other:tt $( $rest:tt )* ) => {
-        $other if_python! { $($rest)* }
-    };
-}
-*/
-
 /// The type of Quil expressions.
 ///
 /// Quil expressions take advantage of *structural sharing*; if a Quil expression contains the same
