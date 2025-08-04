@@ -6,7 +6,7 @@ use super::*;
 use crate::{impl_repr, impl_to_quil, pickleable_new, validation::identifier::IdentifierValidationError};
 
 #[pymodule]
-#[cfg_attr(feature = "python", pyo3(name = "instructions", module = "quil", submodule))]
+#[pyo3(name = "instructions", module = "quil", submodule)]
 pub(crate) fn init_submodule(m: &Bound<'_, PyModule>) -> PyResult<()> {
     use crate::quilpy::errors;
 
