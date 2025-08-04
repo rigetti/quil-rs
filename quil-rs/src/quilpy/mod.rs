@@ -29,6 +29,7 @@ fn init_module(m: &Bound<'_, PyModule>) -> PyResult<()> {
     sys_modules.set_item("quil.expression", m.getattr("expression")?)?;
     sys_modules.set_item("quil.instructions", m.getattr("instructions")?)?;
     sys_modules.set_item("quil.program", m.getattr("program")?)?;
+    // validation is added below
     sys_modules.set_item("quil.waveforms", m.getattr("waveforms")?)?;
 
     let validation_module = m.getattr("validation")?;
