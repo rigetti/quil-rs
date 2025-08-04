@@ -96,12 +96,9 @@ pub struct WaveformInvocation {
     pub parameters: WaveformParameters,
 }
 
-#[cfg_attr(feature = "python", pymethods)]
-#[cfg_attr(not(feature = "python"), strip_pyo3)]
-impl WaveformInvocation {
-    #[new]
-    pub fn new(name: String, parameters: WaveformParameters) -> Self {
-        Self { name, parameters }
+pickleable_new! {
+    impl WaveformInvocation {
+        pub fn new(name: String, parameters: WaveformParameters);
     }
 }
 
