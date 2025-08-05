@@ -1,5 +1,8 @@
 use pyo3::{prelude::*, types::PyDict, wrap_pymodule};
 
+#[cfg(feature = "stubs")]
+use pyo3_stub_gen::define_stub_info_gatherer;
+
 use crate::expression;
 use crate::instruction;
 use crate::program;
@@ -74,3 +77,7 @@ macro_rules! impl_repr {
 
 pub(crate) use impl_to_quil; 
 pub(crate) use impl_repr;
+
+#[cfg(feature = "stubs")]
+define_stub_info_gatherer!(stub_info);
+

@@ -23,6 +23,9 @@ use indexmap::{IndexMap, IndexSet};
 use ndarray::Array2;
 use nom_locate::LocatedSpan;
 
+#[cfg(feature = "stubs")]
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
+
 use crate::instruction::{
     Arithmetic, ArithmeticOperand, ArithmeticOperator, Call, Declaration, ExternError,
     ExternPragmaMap, ExternSignatureMap, FrameDefinition, FrameIdentifier, GateDefinition,
@@ -91,6 +94,7 @@ type Result<T> = std::result::Result<T, ProgramError>;
 /// also the "headers" used to describe and manipulate those instructions, such as calibrations
 /// and frame definitions.
 #[derive(Clone, Debug, Default, PartialEq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.program", eq))]
 #[cfg_attr(not(feature = "python"), strip_pyo3)]
 pub struct Program {
@@ -113,6 +117,7 @@ pub struct Program {
     used_qubits: HashSet<Qubit>,
 }
 
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[cfg_attr(feature = "python", pyo3::pymethods)]
 #[cfg_attr(not(feature = "python"), strip_pyo3)]
 impl Program {
@@ -863,6 +868,7 @@ pub type ProgramCalibrationExpansionSourceMap =
     SourceMap<InstructionIndex, MaybeCalibrationExpansion>;
 
 #[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.program", eq, frozen))]
 #[cfg_attr(not(feature = "python"), strip_pyo3)]
 pub struct ProgramCalibrationExpansion {

@@ -19,6 +19,11 @@ use std::{
     fmt::Debug,
 };
 
+#[cfg(feature = "stubs")]
+use pyo3_stub_gen::derive::gen_stub_pyclass;
+#[cfg(not(feature = "python"))]
+use optipy::strip_pyo3;
+
 use crate::{
     instruction::{
         Instruction, InstructionHandler, Jump, JumpUnless, JumpWhen, Label, MemoryReference, Target,
@@ -32,9 +37,6 @@ use crate::{
     },
     Program,
 };
-
-#[cfg(not(feature = "python"))]
-use optipy::strip_pyo3;
 
 /// A control flow graph (CFG) is a representation of a program's control flow as a directed graph.
 /// Each node in the graph is a basic block, a sequence of instructions with a single entry point
@@ -59,6 +61,7 @@ impl<'p> ControlFlowGraph<'p> {
 }
 
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
     pyo3::pyclass(name = "ControlFlowGraph", module = "quil.program", subclass, frozen)
@@ -274,6 +277,7 @@ pub enum BasicBlockScheduleError {
 // involves a lot of Cloning, and they're the types exposed by the Python bindings.
 // Can we combine their relevant methods or otherwise avoid the costly conversions?
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
     pyo3::pyclass(name = "BasicBlock", module = "quil.program", subclass)

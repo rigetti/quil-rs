@@ -14,11 +14,16 @@ use std::{
     collections::{HashMap, HashSet},
 };
 
+#[cfg(feature = "stubs")]
+use pyo3_stub_gen::derive::{
+    gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pyclass_enum, gen_stub_pymethods
+};
 #[cfg(not(feature = "python"))]
 use optipy::strip_pyo3;
 
 /// A struct encapsulating all the properties of a Quil Quantum Gate.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
 pub struct Gate {
     pub name: String,
@@ -29,6 +34,7 @@ pub struct Gate {
 
 /// An enum of all the possible modifiers on a quil [`Gate`]
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass_enum)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash))]
 pub enum GateModifier {
     /// The `CONTROLLED` modifier makes the gate take an extra [`Qubit`] parameter as a control
@@ -90,7 +96,7 @@ pub enum GateError {
 
 /// Matrix version of a gate.
 pub type Matrix = Array2<Complex64>;
-    
+
 impl Gate {
     /// Build a new gate
     ///
@@ -798,6 +804,7 @@ mod test_gate_into_matrix {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, strum::Display, strum::EnumString)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass_enum)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash))]
 #[strum(serialize_all = "UPPERCASE")]
 pub enum PauliGate {
@@ -808,12 +815,14 @@ pub enum PauliGate {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
 pub struct PauliTerm {
     pub arguments: Vec<(PauliGate, String)>,
     pub expression: Expression,
 }
 
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[cfg_attr(feature = "python", pyo3::pymethods)]
 #[cfg_attr(not(feature = "python"), strip_pyo3)]
 impl PauliTerm {
@@ -837,12 +846,14 @@ impl PauliTerm {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
 pub struct PauliSum {
     pub arguments: Vec<String>,
     pub terms: Vec<PauliTerm>,
 }
 
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[cfg_attr(feature = "python", pyo3::pymethods)]
 #[cfg_attr(not(feature = "python"), strip_pyo3)]
 impl PauliSum {
@@ -869,6 +880,7 @@ impl PauliSum {
 
 /// An enum representing a the specification of a [`GateDefinition`] for a given [`GateType`]
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash))]
 pub enum GateSpecification {
     /// A matrix of [`Expression`]s representing a unitary operation for a [`GateType::Matrix`].
@@ -926,6 +938,7 @@ impl Quil for GateSpecification {
 
 /// A struct encapsulating a quil Gate Definition
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
 pub struct GateDefinition {
     pub name: String,
@@ -933,6 +946,7 @@ pub struct GateDefinition {
     pub specification: GateSpecification,
 }
 
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[cfg_attr(feature = "python", pyo3::pymethods)]
 #[cfg_attr(not(feature = "python"), strip_pyo3)]
 impl GateDefinition {

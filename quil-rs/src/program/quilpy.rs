@@ -7,6 +7,12 @@ use pyo3::{
     types::{PyBytes, PyFunction, PyRange},
 };
 
+#[cfg(feature = "stubs")]
+use pyo3_stub_gen::{
+    PyStubType,
+    derive::{gen_stub_pyclass, gen_stub_pymethods}
+};
+
 use crate::{impl_repr, impl_to_quil};
 use crate::{
     instruction::{
@@ -87,6 +93,8 @@ impl_repr!(TimeSpanSeconds);
 
 impl_to_quil!(Program);
 
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl Program {
     /// Parse a ``Program`` from a string.
@@ -142,6 +150,12 @@ impl Program {
     fn py_filter_instructions<'py>(
         &self,
         py: Python<'py>,
+        #[gen_stub(
+            override_type(
+                type_repr="collections.abc.Callable[[Instruction], bool]",
+                imports=("collections.abc")
+            )
+        )]
         predicate: &Bound<'py, PyFunction>,
     ) -> Self {
         self.filter_instructions(|inst| {
@@ -163,8 +177,8 @@ impl Program {
     )]
     fn py_resolve_placeholders_with_custom_resolvers(
         &mut self,
-        target_resolver: Option<Py<PyFunction>>,
-        qubit_resolver: Option<Py<PyFunction>>,
+        target_resolver: Option<PyTargetResolver>,
+        qubit_resolver: Option<PyQubitResolver>,
     ) {
         #[allow(clippy::type_complexity)]
         let rs_qubit_resolver: Box<dyn Fn(&QubitPlaceholder) -> Option<u64>> =
@@ -176,7 +190,7 @@ impl Program {
                             .into_pyobject(py)
                             .expect("QubitPlaceholder.into_python() should be infallible");
                         let resolved_qubit =
-                            resolver.call1(py, (placeholder,)).unwrap_or_else(|err| {
+                            resolver.0.call1(py, (placeholder,)).unwrap_or_else(|err| {
                                 panic!("qubit_resolver returned an error: {err}")
                             });
                         resolved_qubit.extract(py).unwrap_or_else(|err| {
@@ -198,7 +212,7 @@ impl Program {
                             .into_pyobject(py)
                             .expect("TargetPlaceholder.into_python() should be infallible");
                         let resolved_target =
-                            resolver.call1(py, (placeholder,)).unwrap_or_else(|err| {
+                            resolver.0.call1(py, (placeholder,)).unwrap_or_else(|err| {
                                 panic!("target_resolver returned an error: {err}")
                             });
                         resolved_target.extract(py).unwrap_or_else(|err| {
@@ -230,9 +244,9 @@ impl Program {
     fn __add__(&self, rhs: Self) -> Self {
         // TODO: Since we already own `rhs` (and thus must have cloned it),
         // it might be cheaper if we can implement this prepending `self`'s content instead.
-        // If users are regularly adding a small program to a larger one, 
+        // If users are regularly adding a small program to a larger one,
         // (say, if they're appending a common program to an initial set of calibrations),
-        // the performance impact might be non-trivial. 
+        // the performance impact might be non-trivial.
         self.clone() + rhs
     }
 
@@ -253,6 +267,7 @@ impl Program {
     }
 }
 
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl Calibrations {
     #[new]
@@ -326,8 +341,11 @@ impl Calibrations {
     }
 }
 
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[pymethods]
 impl CalibrationExpansion {
+    #[gen_stub(override_return_type(type_repr="range", imports=()))]
     #[getter(range)]
     pub fn py_range<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyRange>> {
         PyRange::new(
@@ -343,6 +361,7 @@ impl CalibrationExpansion {
     }
 }
 
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl ProgramCalibrationExpansion {
     #[getter(source_map)]
@@ -351,6 +370,7 @@ impl ProgramCalibrationExpansion {
     }
 }
 
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl FrameSet {
     #[pyo3(name = "get")]
@@ -404,15 +424,18 @@ macro_rules! py_source_map {
         $entryvis:vis struct $entryT: ident(SourceMapEntry<...>);
     ) => {
         #[derive(Clone, Debug, PartialEq)]
+        #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
         #[pyclass]
         $(#[$meta_map])*
         $mapvis struct $mapT(pub SourceMap<$srcT, $tgtT>);
 
         #[derive(Clone, Debug, PartialEq)]
+        #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
         #[pyclass]
         $(#[$meta_entry])*
         $entryvis struct $entryT(pub SourceMapEntry<$srcT, $tgtT>);
 
+        #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
         #[pymethods]
         impl $entryT {
             pub fn source_location(&self) -> $srcT {
@@ -424,6 +447,7 @@ macro_rules! py_source_map {
             }
         }
 
+        #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
         #[pymethods]
         impl $mapT {
             fn entries(&self) -> Vec<$entryT> {
@@ -483,9 +507,50 @@ py_source_map! {
     pub(crate) struct PyProgramCalibrationExpansionSourceMapEntry(SourceMapEntry<...>);
 }
 
+#[derive(FromPyObject, IntoPyObject, IntoPyObjectRef)]
+struct PyQubitResolver(Py<PyFunction>);
+#[derive(FromPyObject, IntoPyObject, IntoPyObjectRef)]
+struct PyTargetResolver(Py<PyFunction>);
+
+#[cfg(feature = "stubs")]
+mod stubs {
+    use super::*;
+
+    impl PyStubType for PyQubitResolver {
+        fn type_output() -> pyo3_stub_gen::TypeInfo {
+            pyo3_stub_gen::TypeInfo::with_module(
+                "collections.abc.Callable[[QubitPlaceholder], int | None]",
+                "collections.abc".into(),
+            )
+        }
+    }
+
+    impl PyStubType for PyTargetResolver {
+        fn type_output() -> pyo3_stub_gen::TypeInfo {
+            pyo3_stub_gen::TypeInfo::with_module(
+                "collections.abc.Callable[[TargetPlaceholder], str | None]",
+                "collections.abc".into(),
+            )
+        }
+    }
+
+    impl PyStubType for InstructionIndex {
+        fn type_output() -> pyo3_stub_gen::TypeInfo {
+            pyo3_stub_gen::TypeInfo::builtin("int")
+        }
+    }
+
+    impl PyStubType for Seconds {
+        fn type_output() -> pyo3_stub_gen::TypeInfo {
+            pyo3_stub_gen::TypeInfo::builtin("float")
+        }
+    }
+}
+
 /// A Schedule is a ``DependencyGraph`` flattened into a linear sequence of instructions,
 /// each of which is assigned a start time and duration.
 #[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[pyclass(
     name = "ScheduleSeconds",
     module = "quil.program",
@@ -497,6 +562,7 @@ pub(crate) struct PyScheduleSeconds(pub Schedule<Seconds>);
 
 /// A single item within a schedule, representing a single instruction within a basic block.
 #[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[pyclass(
     name = "ScheduleSecondsItem",
     module = "quil.program",
@@ -508,6 +574,7 @@ pub(crate) struct ScheduleSecondsItem(pub ComputedScheduleItem<Seconds>);
 
 /// A time span, in seconds.
 #[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[pyclass(
     name = "TimeSpanSeconds",
     module = "quil.program",
@@ -517,6 +584,7 @@ pub(crate) struct ScheduleSecondsItem(pub ComputedScheduleItem<Seconds>);
 )]
 pub(crate) struct TimeSpanSeconds(pub TimeSpan<Seconds>);
 
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl PyScheduleSeconds {
     /// Scheduled items, in an unspecified order.
@@ -538,6 +606,7 @@ impl PyScheduleSeconds {
     }
 }
 
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl ScheduleSecondsItem {
     /// The index of the instruction within the basic block.
@@ -553,6 +622,7 @@ impl ScheduleSecondsItem {
     }
 }
 
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl TimeSpanSeconds {
     /// The inclusive start time of the time span,
@@ -577,6 +647,7 @@ impl TimeSpanSeconds {
     }
 }
 
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl ControlFlowGraphOwned {
     #[new]
@@ -601,6 +672,7 @@ impl ControlFlowGraphOwned {
 }
 
 
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl BasicBlockOwned {
     #[new]

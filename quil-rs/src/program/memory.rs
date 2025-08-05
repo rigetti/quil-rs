@@ -14,6 +14,12 @@
 
 use std::collections::HashSet;
 
+#[cfg(feature = "stubs")]
+use pyo3_stub_gen::derive::{ gen_stub_pyclass, gen_stub_pymethods };
+#[cfg(not(feature = "python"))]
+use optipy::strip_pyo3;
+
+
 use crate::expression::{Expression, FunctionCallExpression, InfixExpression, PrefixExpression};
 use crate::instruction::{
     Arithmetic, ArithmeticOperand, BinaryLogic, BinaryOperand, CallResolutionError, Capture,
@@ -24,16 +30,15 @@ use crate::instruction::{
     Vector, WaveformInvocation,
 };
 
-#[cfg(not(feature = "python"))]
-use optipy::strip_pyo3;
-
 #[derive(Clone, Debug, Hash, PartialEq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.program", eq, frozen, hash, get_all, subclass))]
 pub struct MemoryRegion {
     pub size: Vector,
     pub sharing: Option<Sharing>,
 }
 
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[cfg_attr(feature = "python", pyo3::pymethods)]
 #[cfg_attr(not(feature = "python"), strip_pyo3)]
 impl MemoryRegion {

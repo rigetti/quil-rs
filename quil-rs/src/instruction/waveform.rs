@@ -1,7 +1,7 @@
 use indexmap::IndexMap;
 
-#[cfg(feature = "python")]
-use pyo3::prelude::*;
+#[cfg(feature = "stubs")]
+use pyo3_stub_gen::derive::{ gen_stub_pyclass, gen_stub_pymethods };
 #[cfg(not(feature = "python"))]
 use optipy::strip_pyo3;
 
@@ -12,13 +12,15 @@ use crate::{
 use super::write_parameter_string;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "python", pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
 pub struct Waveform {
     pub matrix: Vec<Expression>,
     pub parameters: Vec<String>,
 }
 
-#[cfg_attr(feature = "python", pymethods)]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[cfg_attr(feature = "python", pyo3::pymethods)]
 #[cfg_attr(not(feature = "python"), strip_pyo3)]
 impl Waveform {
     #[new]
@@ -28,7 +30,8 @@ impl Waveform {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "python", pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
 pub struct WaveformDefinition {
     pub name: String,
     pub definition: Waveform,
@@ -90,7 +93,8 @@ mod test_waveform_definition {
 pub type WaveformParameters = IndexMap<String, Expression>;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "python", pyclass(module = "quil.instructions", eq, frozen, get_all, subclass))]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, get_all, subclass))]
 pub struct WaveformInvocation {
     pub name: String,
     pub parameters: WaveformParameters,

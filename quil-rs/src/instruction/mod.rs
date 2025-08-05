@@ -18,6 +18,11 @@ use std::str::FromStr;
 
 use nom_locate::LocatedSpan;
 
+#[cfg(feature = "stubs")]
+use pyo3_stub_gen::derive::{
+    gen_stub_pyclass_complex_enum, gen_stub_pymethods
+};
+
 use crate::expression::Expression;
 use crate::parser::lex;
 use crate::parser::parse_instructions;
@@ -82,6 +87,7 @@ pub enum ValidationError {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen))]
 pub enum Instruction {
     Arithmetic(Arithmetic),
@@ -126,6 +132,7 @@ pub enum Instruction {
     Wait(),
 }
 
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[cfg_attr(feature = "python", pyo3::pymethods)]
 impl Instruction {
     /// Returns true if the instruction is a Quil-T instruction.

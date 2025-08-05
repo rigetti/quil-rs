@@ -18,6 +18,11 @@ use std::ops::Range;
 use itertools::FoldWhile::{Continue, Done};
 use itertools::Itertools;
 
+#[cfg(feature = "stubs")]
+use pyo3_stub_gen::derive::{
+    gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pymethods
+};
+
 use crate::instruction::{CalibrationIdentifier, MeasureCalibrationIdentifier};
 use crate::quil::Quil;
 use crate::{
@@ -37,12 +42,14 @@ use optipy::strip_pyo3;
 
 /// A collection of Quil calibrations (`DEFCAL` instructions) with utility methods.
 #[derive(Clone, Debug, Default, PartialEq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(feature = "python", pyo3::pyclass(name = "CalibrationSet", module = "quil.program", eq, subclass))]
 pub struct Calibrations {
     pub calibrations: CalibrationSet<Calibration>,
     pub measure_calibrations: CalibrationSet<MeasureCalibrationDefinition>,
 }
 
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[cfg_attr(feature = "python", pyo3::pymethods)]
 #[cfg_attr(not(feature = "python"), strip_pyo3)]
 impl Calibrations {
@@ -133,6 +140,7 @@ pub struct CalibrationExpansionOutput {
 
 /// Details about the expansion of a calibration
 #[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.program", eq, frozen))]
 #[cfg_attr(not(feature = "python"), strip_pyo3)]
 pub struct CalibrationExpansion {
@@ -206,6 +214,7 @@ impl SourceMapIndexable<CalibrationSource> for CalibrationExpansion {
 
 /// The result of an attempt to expand an instruction within a [`Program`]
 #[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.program", eq, frozen))]
 pub enum MaybeCalibrationExpansion {
     /// The instruction was expanded into others
@@ -235,6 +244,7 @@ impl SourceMapIndexable<CalibrationSource> for MaybeCalibrationExpansion {
 
 /// A source of a calibration, either a [`Calibration`] or a [`MeasureCalibrationDefinition`]
 #[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.program", eq, frozen))]
 pub enum CalibrationSource {
     /// Describes a `DEFCAL` instruction

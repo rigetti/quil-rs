@@ -6,6 +6,9 @@ use num_complex::Complex64;
 use serde::{Deserialize, Serialize};
 use statrs::function::erf::erf;
 
+#[cfg(feature = "stubs")]
+use pyo3_stub_gen::derive::gen_stub_pyclass;
+
 use crate::{imag, real};
 
 const J: Complex64 = Complex64::new(0f64, 1f64);
@@ -46,16 +49,19 @@ fn ceiling_with_epsilon(value: f64) -> f64 {
 }
 
 /// Convert polar coordinates to rectangular coordinates.
+#[allow(dead_code)]
 fn polar_to_rectangular(magnitude: f64, angle: crate::units::Radians<f64>) -> Complex64 {
     magnitude * imag!(angle.0).exp()
 }
 
 pub trait WaveformTemplate {
+    #[allow(dead_code)]
     fn into_iq_values(self) -> Vec<Complex64>;
 }
 
 /// A Boxcar waveform.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.waveforms", subclass, get_all, set_all, eq))]
 pub struct BoxcarKernel {
     /// The phase, in cycles.
@@ -67,6 +73,7 @@ pub struct BoxcarKernel {
 }
 
 impl BoxcarKernel {
+    #[allow(dead_code)]
     pub fn into_iq_value(self) -> Complex64 {
         polar_to_rectangular(self.scale / self.sample_count as f64, self.phase.into())
     }
@@ -74,6 +81,7 @@ impl BoxcarKernel {
 
 /// A waveform with a flat top and edges that are error functions (erfs).
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.waveforms", subclass, get_all, set_all, eq))]
 pub struct ErfSquare {
     /// Full duration of the pulse (s)
@@ -123,6 +131,7 @@ impl WaveformTemplate for ErfSquare {
 
 /// Creates a waveform with a Gaussian shape.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.waveforms", subclass, get_all, set_all, eq))]
 pub struct Gaussian {
     /// Full duration of the pulse (s)
@@ -164,6 +173,7 @@ impl WaveformTemplate for Gaussian {
 ///
 /// See Motzoi F. et al., Phys. Rev. Lett., 103 (2009) 110501. for details.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.waveforms", subclass, get_all, set_all, eq))]
 pub struct DragGaussian {
     /// Full duration of the pulse (s)
@@ -219,6 +229,7 @@ impl WaveformTemplate for DragGaussian {
 /// Warren S. Warren. 81, (1984); doi: 10.1063/1.447644
 /// for details.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.waveforms", subclass, get_all, set_all, eq))]
 pub struct HermiteGaussian {
     /// Full duration of the pulse

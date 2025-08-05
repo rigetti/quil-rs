@@ -229,6 +229,12 @@ impl_instruction!([
     WaveformInvocation,
 ]);
 
+#[cfg(feature = "stubs")]
+impl pyo3_stub_gen::PyStubType for ExternPragmaMap {
+    fn type_output() -> pyo3_stub_gen::TypeInfo {
+        pyo3_stub_gen::TypeInfo::dict_of::<Option<String>, Pragma>()
+    }
+}
 
 #[pymethods]
 impl Calibration {

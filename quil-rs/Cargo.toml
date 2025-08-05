@@ -3,7 +3,7 @@ name = "quil-rs"
 description = "Rust tooling for Quil (Quantum Instruction Language)"
 version = "0.31.0"
 edition = "2021"
-rust-version = "1.70"
+rust-version = "1.80"
 license = "Apache-2.0"
 repository = "https://github.com/rigetti/quil-rs"
 keywords = ["Quil", "Quantum", "Rigetti"]
@@ -32,12 +32,12 @@ thiserror = "1.0.56"
 indexmap.workspace = true
 statrs = "0.16.0"
 paste = "1.0.15"
-
 optipy = { path = "../optipy" }
 
 # Enabled with the "python" feature.
 numpy = { version = "0.25.0", optional = true }
 pyo3 = { version = "0.25.1", features = ["indexmap", "num-complex", "multiple-pymethods"], optional = true }
+pyo3-stub-gen = { version = "0.12.1", features = ["numpy"], optional = true }
 
 [dev-dependencies]
 clap = { version = "4.3.19", features = ["derive", "string"] }
@@ -60,6 +60,7 @@ graphviz-dot = ["dot-writer"]
 wasm-bindgen = []
 # TODO: add to README
 python = [ "numpy", "pyo3", "pyo3-build-config" ]
+stubs = [ "python", "pyo3-stub-gen" ]
 
 [[bench]]
 name = "parser"

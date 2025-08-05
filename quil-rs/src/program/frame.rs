@@ -17,13 +17,16 @@ use std::{
     collections::{HashMap, HashSet},
 };
 
-use crate::instruction::{FrameAttributes, FrameDefinition, FrameIdentifier, Instruction, Qubit};
-
+#[cfg(feature = "stubs")]
+use pyo3_stub_gen::derive::{ gen_stub_pyclass, gen_stub_pymethods };
 #[cfg(not(feature = "python"))]
 use optipy::strip_pyo3;
 
+use crate::instruction::{FrameAttributes, FrameDefinition, FrameIdentifier, Instruction, Qubit};
+
 /// A collection of Quil frames (`DEFFRAME` instructions) with utility methods.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.program", eq))]
 pub struct FrameSet {
     pub(crate) frames: HashMap<FrameIdentifier, FrameAttributes>,
@@ -138,6 +141,7 @@ impl FrameSet {
 }
 
 #[cfg_attr(feature = "python", pyo3::pymethods)]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[cfg_attr(not(feature = "python"), strip_pyo3)]
 impl FrameSet {
     #[new]

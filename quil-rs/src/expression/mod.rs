@@ -42,10 +42,12 @@ use std::{
 #[cfg(test)]
 use proptest_derive::Arbitrary;
 
+#[cfg(feature = "stubs")]
+use pyo3_stub_gen::derive::{
+    gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pyclass_enum, gen_stub_pymethods
+};
 #[cfg(not(feature = "python"))]
 use optipy::strip_pyo3;
-#[cfg(feature = "python")]
-use quilpy::intern_from_py;
 #[cfg(feature = "python")]
 pub(crate) mod quilpy;
 
@@ -85,6 +87,7 @@ pub enum EvaluationError {
 /// Note that when comparing Quil expressions, any embedded NaNs are treated as *equal* to other
 /// NaNs, not unequal, in contravention of the IEEE 754 spec.
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.expression", eq, frozen, hash))]
 #[cfg_attr(not(feature = "python"), strip_pyo3)]
 pub enum Expression {
@@ -106,6 +109,7 @@ pub enum Expression {
 /// Note that when comparing Quil expressions, any embedded NaNs are treated as *equal* to other
 /// NaNs, not unequal, in contravention of the IEEE 754 spec.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.expression", eq, frozen, hash, subclass))]
 #[cfg_attr(not(feature = "python"), strip_pyo3)]
 pub struct FunctionCallExpression {
@@ -132,6 +136,7 @@ impl FunctionCallExpression {
 /// Note that when comparing Quil expressions, any embedded NaNs are treated as *equal* to other
 /// NaNs, not unequal, in contravention of the IEEE 754 spec.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.expression", eq, frozen, hash, subclass))]
 #[cfg_attr(not(feature = "python"), strip_pyo3)]
 pub struct InfixExpression {
@@ -141,14 +146,11 @@ pub struct InfixExpression {
     pub right: ArcIntern<Expression>,
 }
 
-#[cfg_attr(feature = "python", pyo3::pymethods)]
-#[cfg_attr(not(feature = "python"), strip_pyo3)]
 impl InfixExpression {
-    #[new]
     pub fn new(
-        #[pyo3(from_py_with = intern_from_py)] left: ArcIntern<Expression>,
+        left: ArcIntern<Expression>,
         operator: InfixOperator,
-        #[pyo3(from_py_with = intern_from_py)] right: ArcIntern<Expression>,
+        right: ArcIntern<Expression>,
     ) -> Self {
         Self {
             left,
@@ -166,6 +168,7 @@ impl InfixExpression {
 /// Note that when comparing Quil expressions, any embedded NaNs are treated as *equal* to other
 /// NaNs, not unequal, in contravention of the IEEE 754 spec.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.expression", eq, frozen, hash, subclass))]
 #[cfg_attr(not(feature = "python"), strip_pyo3)]
 pub struct PrefixExpression {
@@ -174,14 +177,8 @@ pub struct PrefixExpression {
     pub expression: ArcIntern<Expression>,
 }
 
-#[cfg_attr(feature = "python", pyo3::pymethods)]
-#[cfg_attr(not(feature = "python"), strip_pyo3)]
 impl PrefixExpression {
-    #[new]
-    pub fn new(
-        operator: PrefixOperator,
-        #[pyo3(from_py_with = intern_from_py)] expression: ArcIntern<Expression>,
-    ) -> Self {
+    pub fn new(operator: PrefixOperator, expression: ArcIntern<Expression>) -> Self {
         Self {
             operator,
             expression,
@@ -555,6 +552,7 @@ impl Expression {
     }
 }
 
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[cfg_attr(feature = "python", pyo3::pymethods)]
 impl Expression {
     /// If this is a number with imaginary part "equal to" zero (of _small_ absolute value), return
@@ -724,6 +722,7 @@ mod test {
 
 /// A function defined within Quil syntax.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass_enum)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.expression", eq, frozen, hash, str))]
 #[cfg_attr(test, derive(Arbitrary))]
 pub enum ExpressionFunction {
@@ -752,6 +751,7 @@ impl fmt::Display for ExpressionFunction {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass_enum)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.expression", eq, frozen, hash, str))]
 #[cfg_attr(test, derive(Arbitrary))]
 pub enum PrefixOperator {
@@ -775,6 +775,7 @@ impl fmt::Display for PrefixOperator {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass_enum)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.expression", eq, frozen, hash, str))]
 #[cfg_attr(test, derive(Arbitrary))]
 pub enum InfixOperator {

@@ -1,3 +1,5 @@
+#[cfg(feature = "stubs")]
+use pyo3_stub_gen::derive::{ gen_stub_pyclass, gen_stub_pymethods };
 #[cfg(not(feature = "python"))]
 use optipy::strip_pyo3;
 
@@ -20,6 +22,7 @@ pub trait CalibrationSignature {
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, get_all, set_all, subclass))]
 #[cfg_attr(not(feature = "python"), strip_pyo3)]
 pub struct Calibration {
@@ -34,7 +37,7 @@ pickleable_new! {
         pub fn new(
             identifier: CalibrationIdentifier,
             instructions: Vec<Instruction>,
-        ); 
+        );
     }
 }
 
@@ -68,6 +71,7 @@ impl Quil for Calibration {
 
 /// Unique identifier for a calibration definition within a program
 #[derive(Clone, Debug, Default, PartialEq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, get_all, set_all, subclass))]
 pub struct CalibrationIdentifier {
     /// The modifiers applied to the gate
@@ -192,6 +196,7 @@ impl Quil for CalibrationIdentifier {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, get_all, set_all, subclass))]
 pub struct MeasureCalibrationDefinition {
     pub identifier: MeasureCalibrationIdentifier,
@@ -200,7 +205,7 @@ pub struct MeasureCalibrationDefinition {
 
 pickleable_new! {
     impl MeasureCalibrationDefinition {
-        pub fn new(identifier: MeasureCalibrationIdentifier, instructions: Vec<Instruction>); 
+        pub fn new(identifier: MeasureCalibrationIdentifier, instructions: Vec<Instruction>);
     }
 }
 
@@ -233,6 +238,7 @@ impl Quil for MeasureCalibrationDefinition {
 
 /// A unique identifier for a measurement calibration definition within a program
 #[derive(Clone, Debug, Default, PartialEq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, get_all, set_all, subclass))]
 pub struct MeasureCalibrationIdentifier {
     /// The qubit which is the target of measurement, if any
@@ -242,6 +248,7 @@ pub struct MeasureCalibrationIdentifier {
     pub parameter: String,
 }
 
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[cfg_attr(feature = "python", pyo3::pymethods)]
 #[cfg_attr(not(feature = "python"), strip_pyo3)]
 impl MeasureCalibrationIdentifier {

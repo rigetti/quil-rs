@@ -2,10 +2,14 @@ use pyo3::{prelude::*, types::PyList};
 use pyo3::exceptions::PyValueError;
 use num_complex::Complex64;
 
+#[cfg(feature = "stubs")]
+use pyo3_stub_gen::derive::{gen_stub_pyfunction, gen_stub_pymethods};
+
 use crate::impl_repr;
 use super::templates::*;
 
 /// Modulate and phase shift waveform IQ data in place.
+#[cfg_attr(feature = "stubs", gen_stub_pyfunction(module = "quil.waveforms"))]
 #[pyfunction(name = "apply_phase_and_detuning")]
 pub(crate) fn py_apply_phase_and_detuning(
     iq_values: &Bound<'_, PyList>,
@@ -42,6 +46,7 @@ impl_repr!(ErfSquare);
 impl_repr!(Gaussian);
 impl_repr!(HermiteGaussian);
 
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl BoxcarKernel {
     /// Create a new `BoxcarKernel`.
@@ -102,6 +107,7 @@ impl ErfSquare {
     }
 }
 
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl Gaussian {
     #[new]
@@ -165,6 +171,7 @@ impl DragGaussian {
     }
 }
 
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl HermiteGaussian {
     #[allow(clippy::too_many_arguments)]

@@ -3,6 +3,8 @@ use std::str::FromStr;
 use indexmap::IndexMap;
 use nom_locate::LocatedSpan;
 
+#[cfg(feature = "stubs")]
+use pyo3_stub_gen::derive::{ gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pymethods };
 #[cfg(not(feature = "python"))]
 use optipy::strip_pyo3;
 
@@ -12,6 +14,7 @@ use crate::{
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, strum::EnumTryAs)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all))]
 pub enum AttributeValue {
     String(String),
@@ -35,6 +38,7 @@ impl Quil for AttributeValue {
 pub type FrameAttributes = IndexMap<String, AttributeValue>;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, get_all, set_all, subclass))]
 pub struct FrameDefinition {
     pub identifier: FrameIdentifier,
@@ -66,12 +70,14 @@ impl Quil for FrameDefinition {
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
 pub struct FrameIdentifier {
     pub name: String,
     pub qubits: Vec<Qubit>,
 }
 
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[cfg_attr(feature = "python", pyo3::pymethods)]
 #[cfg_attr(not(feature = "python"), strip_pyo3)]
 impl FrameIdentifier {
@@ -108,6 +114,7 @@ impl FromStr for FrameIdentifier {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, get_all, set_all, subclass))]
 pub struct Capture {
     pub blocking: bool,
@@ -151,6 +158,7 @@ impl Quil for Capture {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, get_all, set_all, subclass))]
 pub struct Pulse {
     pub blocking: bool,
@@ -185,6 +193,7 @@ impl Quil for Pulse {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
 pub struct RawCapture {
     pub blocking: bool,
@@ -227,6 +236,7 @@ impl Quil for RawCapture {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
 pub struct SetFrequency {
     pub frame: FrameIdentifier,
@@ -254,6 +264,7 @@ impl Quil for SetFrequency {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
 pub struct SetPhase {
     pub frame: FrameIdentifier,
@@ -281,6 +292,7 @@ impl Quil for SetPhase {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
 pub struct SetScale {
     pub frame: FrameIdentifier,
@@ -308,6 +320,7 @@ impl Quil for SetScale {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
 pub struct ShiftFrequency {
     pub frame: FrameIdentifier,
@@ -335,6 +348,7 @@ impl Quil for ShiftFrequency {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
 pub struct ShiftPhase {
     pub frame: FrameIdentifier,
@@ -362,6 +376,7 @@ impl Quil for ShiftPhase {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
 pub struct SwapPhases {
     pub frame_1: FrameIdentifier,

@@ -1,5 +1,8 @@
 use pyo3::prelude::*;
 
+#[cfg(feature = "stubs")]
+use pyo3_stub_gen::derive::gen_stub_pymethods;
+
 use crate::impl_repr;
 use super::*;
 
@@ -32,19 +35,7 @@ impl_repr!(InfixOperator);
 impl_repr!(PrefixExpression);
 impl_repr!(PrefixOperator);
 
-
-/// Extract a Python-bound `T` and intern it.
-///
-/// This is used in constructors when the Rust constructor expects an interned instance,
-/// since when called from Python, the heap-allocated object needs to be extracted first.
-pub(crate) fn intern_from_py<'py, T>(obj: &Bound<'py, PyAny>) -> PyResult<ArcIntern<T>>
-where
-    T: FromPyObject<'py> + Sync + Send + Hash + Eq,
-{
-    let val = obj.extract::<T>()?;
-    Ok(ArcIntern::new(val))
-}
-
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl Expression {
     #[pyo3(name = "into_simplified")]
@@ -95,8 +86,18 @@ impl Expression {
     }
 }
 
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl InfixExpression {
+    #[new]
+    fn __new__(left: Expression, operator: InfixOperator, right: Expression) -> Self {
+        Self::new(ArcIntern::new(left), operator, ArcIntern::new(right))
+    }
+
+    fn __getnewargs__(&self) -> (Expression, InfixOperator, Expression) {
+        (self.left(), self.operator, self.right())
+    }
+
     #[getter]
     fn left(&self) -> Expression {
         (*self.left).clone()
@@ -108,22 +109,34 @@ impl InfixExpression {
     }
 }
 
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl PrefixExpression {
+    #[new]
+    fn __new__(operator: PrefixOperator, expression: Expression) -> Self {
+        Self::new(operator, ArcIntern::new(expression))
+    }
+
+    fn __getnewargs__(&self) -> (PrefixOperator, Expression) {
+        (self.operator, self.expression())
+    }
+
     #[getter]
     fn expression(&self) -> Expression {
         (*self.expression).clone()
     }
 }
 
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl FunctionCallExpression {
     #[new]
     fn __new__(function: ExpressionFunction, expression: Expression) -> Self {
-        Self {
-            function,
-            expression: ArcIntern::new(expression),
-        }
+        Self::new(function, ArcIntern::new(expression))
+    }
+
+    fn __getnewargs__(&self) -> (ExpressionFunction, Expression) {
+        (self.function, self.expression())
     }
 
     #[getter]

@@ -50,7 +50,7 @@ pub mod waveform;
 pub use program::Program;
 
 #[cfg(feature = "python")]
-mod quilpy;
+pub mod quilpy;
 #[cfg(feature = "python")]
 pub(crate) use quilpy::{impl_repr, impl_to_quil};
 

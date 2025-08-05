@@ -1,8 +1,12 @@
+#[cfg(feature = "stubs")]
+use pyo3_stub_gen::derive::{ gen_stub_pyclass, gen_stub_pyclass_complex_enum };
+
 use crate::{pickleable_new, quil::Quil};
 
 use super::QuotedString;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
 pub struct Pragma {
     pub name: String,
@@ -35,6 +39,7 @@ impl Quil for Pragma {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash))]
 pub enum PragmaArgument {
     Identifier(String),
@@ -56,6 +61,7 @@ impl Quil for PragmaArgument {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
 pub struct Include {
     pub filename: String,

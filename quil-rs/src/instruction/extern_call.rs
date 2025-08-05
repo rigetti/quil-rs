@@ -11,6 +11,11 @@ use indexmap::IndexMap;
 use nom_locate::LocatedSpan;
 use num_complex::Complex64;
 
+#[cfg(feature = "stubs")]
+use pyo3_stub_gen::derive::{ gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pymethods };
+#[cfg(not(feature = "python"))]
+use optipy::strip_pyo3;
+
 use crate::{
     expression::format_complex, hash::hash_f64, parser::lex, pickleable_new, program::{disallow_leftover, MemoryAccesses, MemoryRegion, SyntaxError}, quil::Quil, validation::identifier::{validate_user_identifier, IdentifierValidationError}
 };
@@ -20,11 +25,9 @@ use super::{
     RESERVED_PRAGMA_EXTERN,
 };
 
-#[cfg(not(feature = "python"))]
-use optipy::strip_pyo3;
-
 /// A parameter type within an extern signature.
 #[derive(Clone, Debug, PartialEq, Hash, Eq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash))]
 pub enum ExternParameterType {
     /// A scalar parameter, which may accept a memory reference or immediate value.
@@ -62,6 +65,7 @@ impl Quil for ExternParameterType {
 
 /// An extern parameter with a name, mutability, and data type.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
 pub struct ExternParameter {
     /// The name of the parameter. This must be a valid user identifier.
@@ -72,6 +76,7 @@ pub struct ExternParameter {
     pub(crate) data_type: ExternParameterType,
 }
 
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[cfg_attr(feature = "python", pyo3::pymethods)]
 #[cfg_attr(not(feature = "python"), strip_pyo3)]
 impl ExternParameter {
@@ -122,6 +127,7 @@ impl Quil for ExternParameter {
 
 /// An extern signature with a return type and parameters.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
 pub struct ExternSignature {
     /// The return type of the extern signature, if any.
@@ -130,6 +136,7 @@ pub struct ExternSignature {
     pub(crate) parameters: Vec<ExternParameter>,
 }
 
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[cfg_attr(feature = "python", pyo3::pymethods)]
 #[cfg_attr(not(feature = "python"), strip_pyo3)]
 impl ExternSignature {
@@ -414,6 +421,7 @@ pub enum CallArgumentResolutionError {
 /// with the appropriate [`ExternSignature`]. Resolution is required for building the
 /// [`crate::Program`] memory graph.
 #[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
 #[cfg_attr(feature = "python", pyo3::pyclass(name = "CallArgument", module = "quil.instructions", eq, frozen, hash))]
 pub enum UnresolvedCallArgument {
     /// A reference to a declared memory location. Note, this may be resolved to either
@@ -696,6 +704,7 @@ pub enum CallError {
 
 /// A call instruction with a name and arguments.
 #[derive(Clone, Debug, PartialEq, Hash, Eq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, subclass))]
 pub struct Call {
     /// The name of the call instruction. This must be a valid user identifier.
@@ -719,6 +728,7 @@ pickleable_new! {
     }
 }
 
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[cfg_attr(feature = "python", pyo3::pymethods)]
 #[cfg_attr(not(feature = "python"), strip_pyo3)]
 impl Call {
