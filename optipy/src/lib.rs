@@ -3,25 +3,39 @@ extern crate proc_macro;
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::{
-    Attribute, Field, ImplItemFn, Item, ItemEnum, ItemFn, ItemImpl, ItemMod, ItemStruct,
-    PatType, Receiver, Variant, parse_macro_input,
+    Attribute, Field, ImplItemFn, Item, ItemEnum, ItemFn, ItemImpl, ItemMod, ItemStruct, PatType,
+    Receiver, Variant, parse_macro_input,
     visit_mut::{self, VisitMut},
 };
 
 #[proc_macro_attribute]
-pub fn strip_pyo3(_attr: TokenStream, item: TokenStream) -> TokenStream {
+pub fn strip_pyo3(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let mut stripper = StripPyO3 { only_stubs: false };
+
+    let opt_parser = syn::meta::parser(|meta| {
+        if meta.path.is_ident("only_stubs") {
+            stripper.only_stubs = true;
+            Ok(())
+        } else {
+            Err(meta.error("unsupported strip_pyo3 property"))
+        }
+    });
+    parse_macro_input!(attr with opt_parser);
+
     let mut input = parse_macro_input!(item as Item);
-    StripPyO3.visit_item_mut(&mut input);
+    stripper.visit_item_mut(&mut input);
     quote!(#input).into()
 }
 
-struct StripPyO3;
+struct StripPyO3 {
+    only_stubs: bool,
+}
 
 /// Visit a type by filtering its attributes, then delegating to its default implementation.
 macro_rules! filter_visitor {
     ($name:ident($type:ty)) => {
         fn $name(&mut self, i: &mut $type) {
-            filter_pyo3_attrs(&mut i.attrs);
+            self.filter_pyo3_attrs(&mut i.attrs);
             visit_mut::$name(self, i);
         }
     };
@@ -41,21 +55,28 @@ impl VisitMut for StripPyO3 {
     filter_visitor!(visit_variant_mut(Variant));
 }
 
-/// Filter out `PyO3` attributes.
-fn filter_pyo3_attrs(attrs: &mut Vec<Attribute>) {
-    attrs.retain(|attr| match attr.path().get_ident() {
-        None => true,
-        Some(id) => {
-            !(id == "pyo3"
-                || id == "new"
-                || id == "getter"
-                || id == "setter"
-                || id == "pyclass"
-                || id == "pymethods"
-                || id == "pyfunction"
-                || id == "pymodule")
+impl StripPyO3 {
+    /// Filter out `PyO3` attributes.
+    fn filter_pyo3_attrs(&self, attrs: &mut Vec<Attribute>) {
+        if self.only_stubs {
+            attrs.retain(|attr| !matches!(attr.path().get_ident(), Some(id) if id == "gen_stub"));
+        } else {
+            attrs.retain(|attr| match attr.path().get_ident() {
+                None => true,
+                Some(id) => {
+                    !(id == "pyo3"
+                        || id == "new"
+                        || id == "getter"
+                        || id == "setter"
+                        || id == "pyclass"
+                        || id == "pymethods"
+                        || id == "pyfunction"
+                        || id == "pymodule"
+                        || id == "gen_stub")
+                }
+            });
         }
-    });
+    }
 }
 
 #[cfg(test)]
@@ -65,7 +86,7 @@ mod tests {
     use syn::{Item, parse_quote, visit_mut::VisitMut};
 
     #[test]
-    fn test_strip_struct() {
+    fn test_strip_pyo3() {
         let mut input: Item = parse_quote! {
             mod module {
                 #[pyclass]
@@ -140,7 +161,62 @@ mod tests {
             }
         );
 
-        StripPyO3.visit_item_mut(&mut input);
+        StripPyO3 { only_stubs: false }.visit_item_mut(&mut input);
+        let result = format!("{}", quote!(#input));
+        assert_eq!(format!("{result}"), expected);
+    }
+
+    #[test]
+    fn test_strip_only_stubs() {
+        let mut input: Item = parse_quote! {
+            #[pymethods]
+            impl S {
+                fn foo(#[gen_stub(override_return_type(type_repr="int", imports=()))] field: i32) -> usize {
+                    1
+                }
+            }
+        };
+
+        let expected = format!(
+            "{}",
+            quote! {
+                #[pymethods]
+                impl S {
+                    fn foo(field: i32) -> usize {
+                        1
+                    }
+                }
+            }
+        );
+
+        StripPyO3 { only_stubs: true }.visit_item_mut(&mut input);
+        let result = format!("{}", quote!(#input));
+        assert_eq!(format!("{result}"), expected);
+    }
+
+    #[test]
+    fn test_strip_all() {
+        let mut input: Item = parse_quote! {
+            #[pymethods]
+            impl S {
+                fn foo(#[gen_stub(override_return_type(type_repr="int", imports=()))] field: i32) -> usize {
+                    1
+                }
+            }
+        };
+
+        let expected = format!(
+            "{}",
+            quote! {
+                impl S {
+                    fn foo(field: i32) -> usize {
+                        1
+                    }
+                }
+            }
+        );
+
+        StripPyO3 { only_stubs: false }.visit_item_mut(&mut input);
         let result = format!("{}", quote!(#input));
         assert_eq!(format!("{result}"), expected);
     }
