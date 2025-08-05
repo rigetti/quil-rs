@@ -3,17 +3,23 @@ use std::str::FromStr;
 use nom_locate::LocatedSpan;
 
 #[cfg(feature = "stubs")]
-use pyo3_stub_gen::derive::{ gen_stub_pyclass, gen_stub_pyclass_enum };
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyclass_enum};
 
 use crate::{
-    parser::{common::parse_memory_reference, lex, ParseError}, pickleable_new, program::{disallow_leftover, SyntaxError}, quil::Quil
+    parser::{common::parse_memory_reference, lex, ParseError},
+    pickleable_new,
+    program::{disallow_leftover, SyntaxError},
+    quil::Quil,
 };
 
 use super::ArithmeticOperand;
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_enum)]
-#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all))]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all)
+)]
 pub enum ScalarType {
     Bit,
     Integer,
@@ -44,7 +50,10 @@ impl Quil for ScalarType {
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
+)]
 pub struct Vector {
     pub data_type: ScalarType,
     pub length: u64,
@@ -71,7 +80,10 @@ impl Quil for Vector {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, subclass))]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, subclass)
+)]
 pub struct Sharing {
     pub name: String,
     pub offsets: Vec<Offset>,
@@ -85,10 +97,12 @@ pickleable_new! {
     }
 }
 
-
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, subclass))]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, subclass)
+)]
 pub struct Offset {
     pub offset: u64,
     pub data_type: ScalarType,
@@ -115,7 +129,10 @@ impl Quil for Offset {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
+)]
 pub struct Declaration {
     pub name: String,
     pub size: Vector,
@@ -199,7 +216,10 @@ mod test_declaration {
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", get_all, eq, frozen, hash, subclass))]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", get_all, eq, frozen, hash, subclass)
+)]
 pub struct MemoryReference {
     pub name: String,
     pub index: u64,
@@ -243,7 +263,10 @@ impl FromStr for MemoryReference {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
+)]
 pub struct Load {
     pub destination: MemoryReference,
     pub source: String,
@@ -272,7 +295,10 @@ impl Quil for Load {
 
 #[derive(Clone, Debug, PartialEq, Hash)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
+)]
 pub struct Store {
     pub destination: String,
     pub offset: MemoryReference,

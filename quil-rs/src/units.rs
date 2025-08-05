@@ -33,4 +33,3 @@ impl pyo3_stub_gen::PyStubType for Radians<f64> {
         pyo3_stub_gen::TypeInfo::builtin("float")
     }
 }
-

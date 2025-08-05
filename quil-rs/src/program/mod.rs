@@ -855,7 +855,10 @@ impl ops::AddAssign<Program> for Program {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-#[cfg_attr(feature = "python", derive(pyo3::FromPyObject, pyo3::IntoPyObject, pyo3::IntoPyObjectRef))]
+#[cfg_attr(
+    feature = "python",
+    derive(pyo3::FromPyObject, pyo3::IntoPyObject, pyo3::IntoPyObjectRef)
+)]
 pub struct InstructionIndex(pub usize);
 
 impl InstructionIndex {

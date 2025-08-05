@@ -19,10 +19,10 @@ use std::{
     fmt::Debug,
 };
 
-#[cfg(feature = "stubs")]
-use pyo3_stub_gen::derive::gen_stub_pyclass;
 #[cfg(not(feature = "python"))]
 use optipy::strip_pyo3;
+#[cfg(feature = "stubs")]
+use pyo3_stub_gen::derive::gen_stub_pyclass;
 
 use crate::{
     instruction::{

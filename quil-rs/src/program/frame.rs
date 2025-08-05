@@ -17,10 +17,10 @@ use std::{
     collections::{HashMap, HashSet},
 };
 
-#[cfg(feature = "stubs")]
-use pyo3_stub_gen::derive::{ gen_stub_pyclass, gen_stub_pymethods };
 #[cfg(not(feature = "python"))]
 use optipy::strip_pyo3;
+#[cfg(feature = "stubs")]
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::instruction::{FrameAttributes, FrameDefinition, FrameIdentifier, Instruction, Qubit};
 

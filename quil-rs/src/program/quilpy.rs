@@ -9,25 +9,23 @@ use pyo3::{
 
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::{
+    derive::{gen_stub_pyclass, gen_stub_pymethods},
     PyStubType,
-    derive::{gen_stub_pyclass, gen_stub_pymethods}
 };
 
 use crate::{impl_repr, impl_to_quil};
 use crate::{
     instruction::{
-        Calibration, Declaration, Gate, Instruction, MeasureCalibrationDefinition, Measurement,
-        QubitPlaceholder, TargetPlaceholder,
-        FrameIdentifier, FrameAttributes,
+        Calibration, Declaration, FrameAttributes, FrameIdentifier, Gate, Instruction,
+        MeasureCalibrationDefinition, Measurement, QubitPlaceholder, TargetPlaceholder,
     },
     quil::Quil,
 };
 
-
 use super::{
     analysis::{
-        BasicBlockOwned, ControlFlowGraph, ControlFlowGraphOwned,
-        BasicBlock, BasicBlockTerminator, BasicBlockScheduleError, QubitGraph, QubitGraphError
+        BasicBlock, BasicBlockOwned, BasicBlockScheduleError, BasicBlockTerminator,
+        ControlFlowGraph, ControlFlowGraphOwned, QubitGraph, QubitGraphError,
     },
     scheduling::{ComputedScheduleItem, Schedule, Seconds, TimeSpan},
     CalibrationExpansion, CalibrationSource, Calibrations, FrameSet, InstructionIndex,
@@ -392,7 +390,6 @@ impl FrameSet {
     pub fn py_intersection(&self, identifiers: HashSet<FrameIdentifier>) -> Self {
         self.intersection(&identifiers)
     }
-
 }
 
 /// Creates Python wrappers for `SourceMap<$srcT, $tgtT>` and `SourceMapEntry<$T, $U>`,
@@ -671,7 +668,6 @@ impl ControlFlowGraphOwned {
     }
 }
 
-
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl BasicBlockOwned {
@@ -689,7 +685,10 @@ impl BasicBlockOwned {
             .map(PyScheduleSeconds)
     }
 
-    fn gate_depth(&self, gate_minimum_qubit_count: usize) -> std::result::Result<usize, QubitGraphError> {
+    fn gate_depth(
+        &self,
+        gate_minimum_qubit_count: usize,
+    ) -> std::result::Result<usize, QubitGraphError> {
         // TODO: this copies everything twice: once to make the block, and again for the graph.
         // Then it throws them both away. There's got to be a better way.
         let block = BasicBlock::from(self);
@@ -701,4 +700,3 @@ impl BasicBlockOwned {
         BasicBlockTerminator::from(&self.terminator).into_instruction()
     }
 }
-

@@ -19,9 +19,7 @@ use std::str::FromStr;
 use nom_locate::LocatedSpan;
 
 #[cfg(feature = "stubs")]
-use pyo3_stub_gen::derive::{
-    gen_stub_pyclass_complex_enum, gen_stub_pymethods
-};
+use pyo3_stub_gen::derive::{gen_stub_pyclass_complex_enum, gen_stub_pymethods};
 
 use crate::expression::Expression;
 use crate::parser::lex;
@@ -29,8 +27,8 @@ use crate::parser::parse_instructions;
 use crate::program::frame::{FrameMatchCondition, FrameMatchConditions};
 use crate::program::ProgramError;
 use crate::program::{MatchedFrames, MemoryAccesses};
-use crate::Program;
 use crate::quil::{write_join_quil, Quil, ToQuilResult};
+use crate::Program;
 
 #[cfg(feature = "python")]
 pub(crate) mod quilpy;
@@ -88,7 +86,10 @@ pub enum ValidationError {
 
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
-#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen))]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen)
+)]
 pub enum Instruction {
     Arithmetic(Arithmetic),
     BinaryLogic(BinaryLogic),

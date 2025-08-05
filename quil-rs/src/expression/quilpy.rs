@@ -3,8 +3,8 @@ use pyo3::prelude::*;
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::gen_stub_pymethods;
 
-use crate::impl_repr;
 use super::*;
+use crate::impl_repr;
 
 #[pymodule]
 #[pyo3(name = "expression", module = "quil", submodule)]

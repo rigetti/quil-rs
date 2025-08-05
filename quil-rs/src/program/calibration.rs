@@ -19,9 +19,7 @@ use itertools::FoldWhile::{Continue, Done};
 use itertools::Itertools;
 
 #[cfg(feature = "stubs")]
-use pyo3_stub_gen::derive::{
-    gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pymethods
-};
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pymethods};
 
 use crate::instruction::{CalibrationIdentifier, MeasureCalibrationIdentifier};
 use crate::quil::Quil;
@@ -43,7 +41,10 @@ use optipy::strip_pyo3;
 /// A collection of Quil calibrations (`DEFCAL` instructions) with utility methods.
 #[derive(Clone, Debug, Default, PartialEq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[cfg_attr(feature = "python", pyo3::pyclass(name = "CalibrationSet", module = "quil.program", eq, subclass))]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(name = "CalibrationSet", module = "quil.program", eq, subclass)
+)]
 pub struct Calibrations {
     pub calibrations: CalibrationSet<Calibration>,
     pub measure_calibrations: CalibrationSet<MeasureCalibrationDefinition>,

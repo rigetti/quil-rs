@@ -1,9 +1,11 @@
-use pyo3::prelude::*;
-use numpy::{PyArray2, ToPyArray};
 use num_complex::Complex64;
+use numpy::{PyArray2, ToPyArray};
+use pyo3::prelude::*;
 
 use super::*;
-use crate::{impl_repr, impl_to_quil, pickleable_new, validation::identifier::IdentifierValidationError};
+use crate::{
+    impl_repr, impl_to_quil, pickleable_new, validation::identifier::IdentifierValidationError,
+};
 
 #[pymodule]
 #[pyo3(name = "instructions", module = "quil", submodule)]
@@ -15,8 +17,14 @@ pub(crate) fn init_submodule(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("CallError", py.get_type::<errors::CallError>())?;
     m.add("ExternError", py.get_type::<errors::ExternError>())?;
     m.add("GateError", py.get_type::<errors::GateError>())?;
-    m.add("ParseInstructquilpyr", py.get_type::<errors::ParseInstructionError>())?;
-    m.add("ParseMemoryRequilpyError", py.get_type::<errors::ParseMemoryReferenceError>())?;
+    m.add(
+        "ParseInstructquilpyr",
+        py.get_type::<errors::ParseInstructionError>(),
+    )?;
+    m.add(
+        "ParseMemoryRequilpyError",
+        py.get_type::<errors::ParseMemoryReferenceError>(),
+    )?;
 
     m.add_class::<Arithmetic>()?;
     m.add_class::<ArithmeticOperand>()?;
@@ -188,7 +196,7 @@ impl_instruction!([
     GateModifier,
     GateSpecification,
     Include,
-    Instruction [repr + quil + parse],
+    Instruction[repr + quil + parse],
     Jump,
     JumpUnless,
     JumpWhen,
@@ -197,34 +205,34 @@ impl_instruction!([
     MeasureCalibrationDefinition,
     MeasureCalibrationIdentifier,
     Measurement,
-    MemoryReference [repr + quil + parse],
+    MemoryReference[repr + quil + parse],
     Move,
     Offset,
-    PauliGate [repr],
-    PauliSum [repr],
+    PauliGate[repr],
+    PauliSum[repr],
     Pragma,
     PragmaArgument,
     Pulse,
     Qubit,
-    QubitPlaceholder [repr],
+    QubitPlaceholder[repr],
     RawCapture,
     Reset,
     ScalarType,
     SetFrequency,
     SetPhase,
     SetScale,
-    Sharing [repr],
+    Sharing[repr],
     ShiftFrequency,
     ShiftPhase,
     Store,
     SwapPhases,
     Target,
-    TargetPlaceholder [repr],
+    TargetPlaceholder[repr],
     UnaryLogic,
     UnaryOperator,
     UnresolvedCallArgument,
     Vector,
-    Waveform [repr],
+    Waveform[repr],
     WaveformDefinition,
     WaveformInvocation,
 ]);
@@ -329,7 +337,6 @@ impl Gate {
     }
 }
 
-
 #[pymethods]
 impl MeasureCalibrationDefinition {
     #[getter]
@@ -388,4 +395,3 @@ impl QubitPlaceholder {
         Self::default()
     }
 }
-

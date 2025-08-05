@@ -1,10 +1,12 @@
 use crate::{
-    expression::Expression, imag, instruction::{
-        write_expression_parameter_string, write_parameter_string, write_qubits, Qubit,
-    },
-    quil::{write_join_quil, Quil, INDENT}, real, validation::identifier::{
+    expression::Expression,
+    imag,
+    instruction::{write_expression_parameter_string, write_parameter_string, write_qubits, Qubit},
+    quil::{write_join_quil, Quil, INDENT},
+    real,
+    validation::identifier::{
         validate_identifier, validate_user_identifier, IdentifierValidationError,
-    }
+    },
 };
 use ndarray::{array, linalg::kron, Array2};
 use num_complex::Complex64;
@@ -14,17 +16,20 @@ use std::{
     collections::{HashMap, HashSet},
 };
 
-#[cfg(feature = "stubs")]
-use pyo3_stub_gen::derive::{
-    gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pyclass_enum, gen_stub_pymethods
-};
 #[cfg(not(feature = "python"))]
 use optipy::strip_pyo3;
+#[cfg(feature = "stubs")]
+use pyo3_stub_gen::derive::{
+    gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pyclass_enum, gen_stub_pymethods,
+};
 
 /// A struct encapsulating all the properties of a Quil Quantum Gate.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
+)]
 pub struct Gate {
     pub name: String,
     pub parameters: Vec<Expression>,
@@ -35,7 +40,10 @@ pub struct Gate {
 /// An enum of all the possible modifiers on a quil [`Gate`]
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_enum)]
-#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash))]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash)
+)]
 pub enum GateModifier {
     /// The `CONTROLLED` modifier makes the gate take an extra [`Qubit`] parameter as a control
     /// qubit.
@@ -805,7 +813,10 @@ mod test_gate_into_matrix {
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, strum::Display, strum::EnumString)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_enum)]
-#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash))]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash)
+)]
 #[strum(serialize_all = "UPPERCASE")]
 pub enum PauliGate {
     I,
@@ -816,7 +827,10 @@ pub enum PauliGate {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
+)]
 pub struct PauliTerm {
     pub arguments: Vec<(PauliGate, String)>,
     pub expression: Expression,
@@ -847,7 +861,10 @@ impl PauliTerm {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
+)]
 pub struct PauliSum {
     pub arguments: Vec<String>,
     pub terms: Vec<PauliTerm>,
@@ -881,7 +898,10 @@ impl PauliSum {
 /// An enum representing a the specification of a [`GateDefinition`] for a given [`GateType`]
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
-#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash))]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash)
+)]
 pub enum GateSpecification {
     /// A matrix of [`Expression`]s representing a unitary operation for a [`GateType::Matrix`].
     Matrix(Vec<Vec<Expression>>),
@@ -939,7 +959,10 @@ impl Quil for GateSpecification {
 /// A struct encapsulating a quil Gate Definition
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
+)]
 pub struct GateDefinition {
     pub name: String,
     pub parameters: Vec<String>,

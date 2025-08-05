@@ -62,7 +62,10 @@ pub trait WaveformTemplate {
 /// A Boxcar waveform.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.waveforms", subclass, get_all, set_all, eq))]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.waveforms", subclass, get_all, set_all, eq)
+)]
 pub struct BoxcarKernel {
     /// The phase, in cycles.
     pub phase: crate::units::Cycles<f64>,
@@ -82,7 +85,10 @@ impl BoxcarKernel {
 /// A waveform with a flat top and edges that are error functions (erfs).
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.waveforms", subclass, get_all, set_all, eq))]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.waveforms", subclass, get_all, set_all, eq)
+)]
 pub struct ErfSquare {
     /// Full duration of the pulse (s)
     pub duration: f64,
@@ -132,7 +138,10 @@ impl WaveformTemplate for ErfSquare {
 /// Creates a waveform with a Gaussian shape.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.waveforms", subclass, get_all, set_all, eq))]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.waveforms", subclass, get_all, set_all, eq)
+)]
 pub struct Gaussian {
     /// Full duration of the pulse (s)
     pub duration: f64,
@@ -174,7 +183,10 @@ impl WaveformTemplate for Gaussian {
 /// See Motzoi F. et al., Phys. Rev. Lett., 103 (2009) 110501. for details.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.waveforms", subclass, get_all, set_all, eq))]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.waveforms", subclass, get_all, set_all, eq)
+)]
 pub struct DragGaussian {
     /// Full duration of the pulse (s)
     pub duration: f64,
@@ -230,7 +242,10 @@ impl WaveformTemplate for DragGaussian {
 /// for details.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.waveforms", subclass, get_all, set_all, eq))]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.waveforms", subclass, get_all, set_all, eq)
+)]
 pub struct HermiteGaussian {
     /// Full duration of the pulse
     pub duration: f64,

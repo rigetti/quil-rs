@@ -63,7 +63,7 @@ macro_rules! impl_to_quil {
     };
 }
 
-/// Add a `__repr__` method that returns the Rust type's `Debug` string. 
+/// Add a `__repr__` method that returns the Rust type's `Debug` string.
 macro_rules! impl_repr {
     ($name: ident) => {
         #[pyo3::pymethods]
@@ -75,9 +75,8 @@ macro_rules! impl_repr {
     };
 }
 
-pub(crate) use impl_to_quil; 
 pub(crate) use impl_repr;
+pub(crate) use impl_to_quil;
 
 #[cfg(feature = "stubs")]
 define_stub_info_gatherer!(stub_info);
-

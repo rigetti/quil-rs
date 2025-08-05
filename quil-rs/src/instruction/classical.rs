@@ -5,12 +5,15 @@ use pyo3_stub_gen::derive::{
 
 use super::MemoryReference;
 
-use crate::{hash::hash_f64, quil::Quil};
 use crate::pickleable_new;
+use crate::{hash::hash_f64, quil::Quil};
 
 #[derive(Clone, Debug, Hash, PartialEq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
+)]
 pub struct Arithmetic {
     pub operator: ArithmeticOperator,
     pub destination: MemoryReference,
@@ -43,7 +46,10 @@ impl Quil for Arithmetic {
 
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
-#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all))]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all)
+)]
 pub enum ArithmeticOperand {
     LiteralInteger(i64),
     LiteralReal(f64),
@@ -82,7 +88,10 @@ impl From<MemoryReference> for ArithmeticOperand {
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
-#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all))]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all)
+)]
 pub enum ArithmeticOperator {
     Add,
     Subtract,
@@ -108,7 +117,10 @@ impl Quil for ArithmeticOperator {
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_enum)]
-#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all))]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all)
+)]
 pub enum BinaryOperand {
     LiteralInteger(i64),
     MemoryReference(MemoryReference),
@@ -129,7 +141,10 @@ impl Quil for BinaryOperand {
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
-#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all))]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all)
+)]
 pub enum BinaryOperator {
     And,
     Ior,
@@ -153,7 +168,10 @@ impl Quil for BinaryOperator {
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
+)]
 pub struct BinaryLogic {
     pub operator: BinaryOperator,
     pub destination: MemoryReference,
@@ -187,7 +205,10 @@ pickleable_new! {
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
+)]
 pub struct Convert {
     pub destination: MemoryReference,
     pub source: MemoryReference,
@@ -215,7 +236,10 @@ impl Quil for Convert {
 
 #[derive(Clone, Debug, Hash, PartialEq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
+)]
 pub struct Move {
     pub destination: MemoryReference,
     pub source: ArithmeticOperand,
@@ -243,7 +267,10 @@ impl Quil for Move {
 
 #[derive(Clone, Debug, Hash, PartialEq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
+)]
 pub struct Exchange {
     pub left: MemoryReference,
     pub right: MemoryReference,
@@ -271,7 +298,10 @@ pickleable_new! {
 
 #[derive(Clone, Debug, Hash, PartialEq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
+)]
 pub struct Comparison {
     pub operator: ComparisonOperator,
     pub destination: MemoryReference,
@@ -309,7 +339,10 @@ impl Quil for Comparison {
 
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
-#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all))]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all)
+)]
 pub enum ComparisonOperand {
     LiteralInteger(i64),
     LiteralReal(f64),
@@ -342,7 +375,10 @@ impl std::hash::Hash for ComparisonOperand {
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_enum)]
-#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all))]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all)
+)]
 pub enum ComparisonOperator {
     Equal,
     GreaterThanOrEqual,
@@ -370,7 +406,10 @@ impl Quil for ComparisonOperator {
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass))]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
+)]
 pub struct UnaryLogic {
     pub operator: UnaryOperator,
     pub operand: MemoryReference,
@@ -397,7 +436,10 @@ impl Quil for UnaryLogic {
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_enum)]
-#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all))]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all)
+)]
 pub enum UnaryOperator {
     Neg,
     Not,

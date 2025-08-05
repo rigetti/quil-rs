@@ -54,7 +54,7 @@ pub mod quilpy;
 #[cfg(feature = "python")]
 pub(crate) use quilpy::{impl_repr, impl_to_quil};
 
-/// Implement `__new__` and `__getnewargs__` for the common cases. 
+/// Implement `__new__` and `__getnewargs__` for the common cases.
 ///
 /// # Purpose
 ///
@@ -64,9 +64,9 @@ pub(crate) use quilpy::{impl_repr, impl_to_quil};
 /// # Usage
 ///
 /// The implementation generated simply `clone`s all the fields names given to the macro,
-/// though you can customize the body of the `__new__` implementation, if desired. 
+/// though you can customize the body of the `__new__` implementation, if desired.
 /// You can choose the name of the `__new__` method and its visibility,
-/// so the easiest way to use this macro with a `#[pyclass]` that you also use in Rust is like: 
+/// so the easiest way to use this macro with a `#[pyclass]` that you also use in Rust is like:
 ///
 /// ```
 /// pub struct Foo {
@@ -80,7 +80,7 @@ pub(crate) use quilpy::{impl_repr, impl_to_quil};
 ///     }
 /// }
 /// ```
-/// 
+///
 /// That will expand to the default body, namely:
 ///
 /// ```
@@ -128,15 +128,15 @@ pub(crate) use quilpy::{impl_repr, impl_to_quil};
 ///     }
 /// }
 /// ```
-/// 
-/// That will generate the same `__getnewargs__` implementation, but use your given `new` body. 
+///
+/// That will generate the same `__getnewargs__` implementation, but use your given `new` body.
 ///
 /// # Note
 ///
-/// This macro expands to two `impl` blocks: one for if the `python` feature is enabled, 
+/// This macro expands to two `impl` blocks: one for if the `python` feature is enabled,
 /// which includes the `#[pymethods]` block with its `#[new]` and `__getnewargs__` methods,
 /// and a second that for when the `python` feature is not enabled,
-/// which simply implements the constructor. 
+/// which simply implements the constructor.
 macro_rules! pickleable_new {
     // Default implementation: just list the fields and types, and this will do the rest.
     (
@@ -157,7 +157,7 @@ macro_rules! pickleable_new {
         }
     };
 
-    // If __new__ needs actual logic, you can supply a body. 
+    // If __new__ needs actual logic, you can supply a body.
     (
         impl $name:ident {
             $(#[$meta:meta])*
@@ -175,7 +175,7 @@ macro_rules! pickleable_new {
                 $($body)+
             }
 
-            fn __getnewargs__(&self) -> ($($field_type,)*) { 
+            fn __getnewargs__(&self) -> ($($field_type,)*) {
                 (
                     $(self.$field.clone(),)*
                 )
