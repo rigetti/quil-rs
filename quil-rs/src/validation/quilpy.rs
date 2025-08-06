@@ -5,13 +5,14 @@ use super::identifier::{validate_identifier, validate_user_identifier};
 #[pymodule]
 #[pyo3(name = "validation", module = "quil", submodule)]
 pub(crate) fn init_submodule(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_wrapped(wrap_pymodule!(init_subsubmodule))?;
+    m.add_wrapped(wrap_pymodule!(init_submodule_identifier))?;
+    init_submodule_identifier(m)?;
     Ok(())
 }
 
 #[pymodule]
 #[pyo3(name = "identifier", module = "quil.validation", submodule)]
-fn init_subsubmodule(m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn init_submodule_identifier(m: &Bound<'_, PyModule>) -> PyResult<()> {
     use crate::quilpy::errors;
 
     let py = m.py();
