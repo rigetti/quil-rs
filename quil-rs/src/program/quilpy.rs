@@ -406,10 +406,10 @@ impl FrameSet {
 /// ```
 /// py_source_map! {
 ///     #[pyo3(name = "CalibrationExpansionSourceMap", module = "quil.program", frozen)]
-///     PyCalibrationExpansionSourceMap(SourceMap<InstructionIndex, MaybeCalibrationExpansion>);
+///     pub struct PyCalibrationExpansionSourceMap(SourceMap<InstructionIndex, MaybeCalibrationExpansion>);
 ///
 ///     #[pyo3(name = "CalibrationExpansionSourceMapEntry", module = "quil.program", frozen)]
-///     PyCalibrationExpansionSourceMapEntry(SourceMapEntry<...>);
+///     pub struct PyCalibrationExpansionSourceMapEntry(SourceMapEntry<...>);
 /// }
 /// ```
 macro_rules! py_source_map {
