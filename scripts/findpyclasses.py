@@ -12,28 +12,366 @@ and at least one of them is added to a module, this script won't know which it i
 As a result, it just prints all the functions it finds and a guess about the export.
 """
 
-from collections import defaultdict
-from collections.abc import MutableSet
+from collections import defaultdict, deque
+from collections.abc import ItemsView, KeysView, MutableMapping, MutableSet, ValuesView
 from dataclasses import dataclass, field, replace
+from itertools import accumulate, chain
 from pathlib import Path
+from typing import Iterator, TypeAlias, TypeVar, TYPE_CHECKING, Self, overload
+
+import argparse
+import enum
+import logging
 import re
-import sys
-from typing import Iterable, Iterator, TypeAlias
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger()
+
+
+def main():
+    args = get_parser().parse_args()
+
+    if args.log_level is not None:
+        logger.setLevel(args.log_level)
+
+    annotated, exported = Package(), Package()
+    for path in args.base.rglob("*.rs"):
+        extract_items_from_file(path, annotated, exported)
+    guess_function_modules(annotated, exported)
+
+    if args.show_mistakes:
+        print_possible_mistakes(annotated, exported)
+    if args.show_package:
+        print_package_info(annotated)
+
+
+def get_parser() -> argparse.ArgumentParser:
+    DEFAULT_PATH = Path("./src")
+
+    parser = argparse.ArgumentParser(description="Lint quil-py source files.")
+
+    parser.add_argument(
+        "-b",
+        "--base",
+        metavar="PATH",
+        type=Path,
+        help=f"the base path to source files (default: '{DEFAULT_PATH}')",
+        default=DEFAULT_PATH,
+    )
+
+    parser.add_argument(
+        "-m",
+        "--show-mistakes",
+        action="store_true",
+        default="",
+        help="Show likely mistakes (default: enabled).",
+    )
+
+    parser.add_argument(
+        "-M",
+        "--no-show-mistakes",
+        action="store_false",
+        dest="show_mistakes",
+        help="Don't show likely mistakes.",
+    )
+
+    parser.add_argument(
+        "-p",
+        "--show-package",
+        action="store_true",
+        help="Show package details (default: disabled).",
+    )
+
+    parser.add_argument(
+        "-P",
+        "--no-show-package",
+        action="store_false",
+        dest="show_package",
+        default="",
+        help="Don't show package details.",
+    )
+
+    parser.add_argument(
+        "--log-level",
+        help="set the logger level",
+        choices=tuple(
+            logging.getLevelName(level)
+            for level in (logging.DEBUG, logging.INFO, logging.WARNING, logging.ERROR)
+        ),
+    )
+
+    return parser
+
+
+def guess_function_modules(annotated: "Package", exported: "Package"):
+    """Try to match functions to modules.
+
+    The ``pyfunction`` annotation doesn't include a ``module`` property,
+    so we can only guess the module it belongs to if we can find a matching export
+    (that is, a ``pymodule`` it appears to have been added to).
+    """
+    for func in (f for f in annotated["builtins"] if f.kind == "fn"):
+        matching = (
+            name
+            for name, mod in exported.items()
+            for item in mod
+            if (item.kind == "fn" and item.rust_name == func.rust_name)
+        )
+        if modname := next(matching, None):
+            logger.info(f"Guessing module '{modname}' for function: {func}")
+            exported[modname].add(func)
+        else:
+            logger.warning(f"No module found for function: {func}")
+
+
+def print_possible_mistakes(annotated: "Package", exported: "Package") -> bool:
+    logger.debug("Checking that annotated items are added to the correct module.")
+    found_issues = False
+
+    found_exports = {"builtins", "quil", "._quil"}
+    for module, anno in sorted(annotated.items()):
+        if module == "builtins":
+            continue
+
+        # First check if we found the module itself.
+        logger.debug(f"Looking for `#[pymodule]` matching '{module}'")
+        expm = exported.get(module)
+        if expm is None:
+            found_issues = True
+            print(
+                f"Module '{module}' does not appear to be exported",
+                f"  Module found in: {anno.path}",
+                f"  Items in module:",
+                sep="\n",
+            )
+            for item in anno:
+                print(f"    {item} (props: {item.props}, text: {item.line})")
+            print()
+            continue
+
+        parts = module.split(".")
+        found_exports.add(parts[0])
+        found_exports |= set(accumulate(parts, lambda parent, sub: f"{parent}.{sub}"))
+
+        # When parsing a ``pymodule``, we know the Rust name,
+        # but if it has a different Python name, we only know when we find the ``pyclass``,
+        # so here we map Rust names to items, and if we can't find an item in an export,
+        # we'll try to find it by Rust name in this collection,
+        # and if it has a matching `kind`, we'll assume it's the same item.
+        rust_to_py_anno = {item.rust_name: item for item in anno}
+        logger.debug(
+            f"Checking for items added to '{module}' but not annotated as such."
+        )
+        for item in sorted(expm):
+            if (
+                item not in anno
+                and (anno_item := rust_to_py_anno.get(item.rust_name))
+                and anno_item.kind.is_py_like(item.kind)
+            ):
+                replacement = replace(item, python_name=anno_item.python_name)
+                logger.debug(f"Replacing {item} with {replacement} in '{module}'.")
+                expm.discard(item)
+                expm.add(replacement)
+                item = replacement
+
+            if not (item in anno or item.kind is Kind.Function):
+                found_issues = True
+                print(
+                    f"  Wrong or missing module annotation for '{module}.{item.python_name}'",
+                    f"     ({item})",
+                    sep="\n",
+                )
+
+        logger.debug(f"Checking that items marked to belong to '{module}' are added.")
+        for item in sorted(anno):
+            if item.python_name.startswith("Py"):
+                print(
+                    f"  Suspicious name for '{module}.{item.python_name}'",
+                    f"     ({item})",
+                    (
+                        "     "
+                        "hint: did you forget a '#[pyo3(name = "
+                        f'"{item.python_name.strip("Py")}" attribute?'
+                    ),
+                    sep="\n",
+                )
+
+            if item not in expm:
+                found_issues = True
+                print(
+                    f"  Couldn't find export for '{module}.{item.python_name}'",
+                    f"     ({item})",
+                    sep="\n",
+                )
+
+    logger.debug(f"Found exports: {', '.join(found_exports)}")
+    logger.debug(f"Expected exported modules: {', '.join(exported.keys())}")
+    for module in exported.keys() - found_exports:
+        found_issues = True
+        print(f"No annotations found for module '{module}'")
+
+    return found_issues
+
+
+def print_package_info(annotated: "Package") -> None:
+    for module, anno in sorted(annotated.items()):
+        print(f"\n---- {module} Enums ----")
+        for item in sorted(anno):
+            if item.kind is Kind.Enumeration:
+                print(
+                    f"{module}.{item.python_name} | {item.rust_name} @ {item.path}:{item.line.num}"
+                )
+
+        print(f"\n---- {module} Structs ----")
+        for item in sorted(anno):
+            if item.kind is Kind.Struct:
+                print(
+                    f"{module}.{item}\n",
+                    f"  {item.props}",
+                    sep="",
+                )
+                if "frozen" in item.props and "hash" not in item.props:
+                    print("  ** item is frozen, but not hash **")
+                else:
+                    print()
+
+
+###############################################################################
+# Supporting code starts here.
+###############################################################################
+
+
+class Kind(enum.Enum):
+    Struct = "struct"
+    Enumeration = "enum"
+    Function = "fn"
+    # When discovered in a pymodule, we don't know the Rust type.
+    Class = "class"
+    Error = "error"
+
+    def is_py_like(self, py: Self) -> bool:
+        match (self, py):
+            case (Kind.Enumeration | Kind.Struct, Kind.Class | Kind.Error):
+                return True
+            case (x, y) if x is y:
+                return True
+        return False
+
+
+class PyO3Props(dict[str, str | bool]):
+    """Properties found in a PyO3 attribute, such as ``module = "name"`` or ``ord``.
+
+    Use `parse` and `__str__` to convert to/from a string.
+    You can check for the presence of a property with ordinary ``"prop" in props`` syntax,
+    but you should prefer the type-specific versions which raise `TypeError`s
+    if the property exists but doesn't match the expected type::
+
+    - `gets(key)` returns a string-valued property
+    - `is_(key)` checks for a boolean-valued property
+    """
+
+    def gets(self, key: str, default: str | None = None) -> str:
+        if not (default is None or isinstance(default, str)):
+            raise TypeError("if given, default must be str")
+        if (value := super().get(key, default)) is not None and isinstance(value, str):
+            return value
+        if key in self:
+            raise TypeError(f"expected {key} to be str, not {type(value)}")
+        raise KeyError(key)
+
+    def is_(self, key: str, default: bool = False) -> bool:
+        if not (default is None or isinstance(default, bool)):
+            raise TypeError("if given, default must be bool")
+        if (value := super().get(key, default)) is not None and isinstance(value, bool):
+            return value
+        if key in self:
+            raise TypeError(f"expected {key} to be bool, not {type(value)}")
+        raise KeyError(key)
+
+    @classmethod
+    def parse(cls, prop_str: str) -> Self:
+        """Convert props used in a ``#[whatever(arg1, arg2 = "val")]`` annotation.
+        Note that the `prop_str` should just be the part between the parentheses.
+
+        For the above example, the return value is ``{"arg1": True, "arg2": "val"}``.
+        """
+
+        result = cls()
+        parts = [p.strip() for p in prop_str.split(",")]
+        for part in parts:
+            if "=" in part:
+                key, val = map(str.strip, part.split("=", 1))
+                if val.startswith('"') and val.endswith('"'):
+                    val = val[1:-1]
+                result[key] = val
+            else:
+                result[part] = True
+        return result
+
+    def __str__(self) -> str:
+        """Convert back into a string."""
+        return ", ".join(
+            f'{k} = "{v}"' if isinstance(v, str) else f"{k}" for k, v in self.items()
+        )
+
+
+@dataclass(frozen=True, slots=True, order=True)
+class Line:
+    """A line of text with the line number of the source it came from."""
+
+    num: int
+    text: str
+
+    def __contains__(self, s: str) -> bool:
+        return s in self.text
+
+    def __iter__(self) -> Iterator:
+        yield self.num
+        yield self.text
+
+    def is_blank(self) -> bool:
+        return self.text.strip() == ""
+
+    def splitat(self, index: int) -> tuple[Self, Self]:
+        cls = self.__class__
+        return cls(self.num, self.text[:index]), cls(self.num, self.text[index:])
+
+    def partition(self, sep: str) -> tuple[Self, Self]:
+        if (index := self.text.find(sep)) >= 0:
+            return self.splitat(index)
+        return self.splitat(len(self.text))
+
+
+Lines: TypeAlias = Iterator[Line]
 
 
 @dataclass(frozen=True, order=True)
 class Item:
-    kind: str
-    python_name: str
+    """Something that can be included in a Module (e.g., a class, function, exception, etc.)."""
+
     rust_name: str
+    python_name: str
+    kind: Kind = field(compare=False, hash=False)
     path: Path = field(compare=False, hash=False)
-    line_num: int = field(compare=False, hash=False)
+    line: Line = field(compare=False, hash=False)
+    props: PyO3Props = field(compare=False, hash=False, default_factory=PyO3Props)
+
+    def __str__(self) -> str:
+        name = self.rust_name
+        if self.rust_name != self.python_name:
+            name = f"{name} (py: {self.python_name})"
+        return f"{self.kind.value} '{name}' in {self.path}@{self.line.num}"
 
 
 def test_item():
-    i1 = Item("struct", "A", "B", Path("C"), 1)
-    i2 = Item("struct", "A", "B", Path("c"), 2)
-    i3 = Item("struct", "A", "b", Path("C"), 1)
+    """Verify that hash and equality checks work as expected.
+
+    Namely, we want to compare items on their Python+Rust names,
+    but ignore the rest of their metadata.
+    """
+    i1 = Item("A", "B", "struct", Path("C"), Line(1, "struct B();"))
+    i2 = Item("A", "B", "struct", Path("c"), Line(2, "struct B();"))
+    i3 = Item("A", "b", "struct", Path("C"), Line(1, "struct b();"))
     assert hash(i1) == hash(i2)
     assert hash(i1) != hash(i3)
     assert i1 in {i2}
@@ -45,125 +383,356 @@ def test_item():
 
 @dataclass
 class Module(MutableSet[Item]):
-    items: set[Item] = field(default_factory=set)
+    """A collection of `Item`s in the same Python module."""
+
+    _items: set[Item] = field(default_factory=set)
     submodule: bool = True
     path: Path = Path(".")
     line_num: int = -1
+    props: PyO3Props = field(default_factory=PyO3Props)
 
     def __contains__(self, key: object) -> bool:
-        return key in self.items
+        return key in self._items
 
     def __iter__(self) -> Iterator[Item]:
-        return self.items.__iter__()
+        return self._items.__iter__()
 
     def __len__(self) -> int:
-        return self.items.__len__()
+        return self._items.__len__()
 
     def discard(self, value: Item) -> None:
-        return self.items.discard(value)
+        return self._items.discard(value)
 
     def add(self, item: Item) -> None:
-        self.items.add(item)
+        logger.info(f"Adding {item}")
+        self._items.add(item)
+
+
+_T = TypeVar("_T")
 
 
 @dataclass
-class Package:
-    modules: defaultdict[str, Module] = field(
+class Package(MutableMapping[str, Module]):
+    """A collection of `Module`s."""
+
+    _modules: defaultdict[str, Module] = field(
         default_factory=lambda: defaultdict(Module)
     )
 
+    def __getitem__(self, name: str, /) -> Module:
+        if name not in self._modules:
+            logger.info(f"Creating module '{name}'.")
+        return self._modules[name]
 
-PYITEM_RE = re.compile(r"#\s*\[(?:pyclass|pyfunction)\s*(?:\((.*?)\))?\]")
-PYMODULE_RE = re.compile(r"#\s*\[pymodule\]")
-PYO3_RE = re.compile(r"#\s*\[pyo3\s*\((.*?)\)\]")
-ITEM_RE = re.compile(r"(struct|enum|fn)\s+([A-Za-z_][A-Za-z0-9_]*)")
-ADD_RE = re.compile(r'\.add\(\s*"(?P<python_name>.+?)".*<(?P<rust_name>.*?)>')
+    @overload  # type: ignore
+    def get(self, key: str, default: None = None, /) -> Module | None: ...
+    @overload
+    def get(self, key: str, default: Module, /) -> Module: ...
+    @overload
+    def get(self, key: str, default: _T, /) -> Module | _T: ...
+
+    def get(self, name: str, default: _T | None = None, /) -> Module | _T | None:
+        return self._modules.get(name, default)
+
+    def __setitem__(self, name: str, module: Module, /) -> None:
+        logger.info(f"Setting module '{name}'.")
+        self._modules[name] = module
+
+    def __delitem__(self, name: str, /) -> None:
+        del self._modules[name]
+
+    def __contains__(self, name: object) -> bool:
+        if not isinstance(name, str):
+            raise TypeError(f"Package keys must be strings, not {type(name)}")
+        return name in self._modules
+
+    def __iter__(self) -> Iterator[str]:
+        return self._modules.__iter__()
+
+    def __len__(self) -> int:
+        return self._modules.__len__()
+
+    def keys(self) -> KeysView[str]:
+        return self._modules.keys()
+
+    def values(self) -> ValuesView[Module]:
+        return self._modules.values()
+
+    def items(self) -> ItemsView[str, Module]:
+        return self._modules.items()
+
+
+def _meta(regex: str) -> str:
+    r"""Create an RE to match content of an attribute; i.e., match ``#[{regex}]``."""
+    return rf"#\[\s*?{regex}\s*?\]"
+
+
+def _cfg(regex: str, cond: str = r"[^,]+") -> str:
+    r"""Create an RE to match content of a configurable attribute;
+    i.e., match either ``#[{regex}]`` or ``#[cfg_attr({cond}, {regex})]``.
+    """
+    return _meta(rf"(?:cfg_attr\s*?\({cond},\s*?{regex}\s*?\)|{regex})")
+
+
+CONFIG_ATTR = r'(?:cfg_attr\(feature\s*?=\s*?"python",\s*?)?'
+PYITEM_RE = re.compile(_cfg(rf"(?:pyo3::)?(?:pyclass|pyfunction)\s*(?:\((.*?)\))?"))
+PYMODULE_RE = re.compile(_cfg(f"(?:pyo3::)?pymodule"))
+PYO3_RE = re.compile(_cfg(r"pyo3\(([^)]+)\)"))
+ITEM_RE = re.compile(
+    r"(?P<kind>struct|enum|fn)\s+(?:\(\s*)?(?P<rust_name>[A-Za-z_][A-Za-z0-9_]*)"
+)
+ADD_ERROR_RE = re.compile(
+    r'\.add\(\s*"(?P<python_name>[^"]*?)"[^<]*<(?P<rust_name>[^>]*?)>'
+)
 ADD_CLASS_RE = re.compile(
-    r"\.add_class::<(?P<class_name>[^>]*?)>|"
+    r"\.add_class::<(?P<rust_name>[^>]*?)>|"
     r"\.add_function\(wrap_pyfunction!\((?P<func_name>[^>]*?),.*\)"
 )
 
-NumberedLine: TypeAlias = tuple[int, str]
 
-
-def read_to_close(
-    first: str,
-    lines: Iterable[NumberedLine],
-    pair="()",
+def iter_delim(
+    lines: Iterator[Line],
+    start="()",
     stop: str | None = None,
-    sep: str = " ",
-) -> str:
-    """Collect lines of text between a pair of properly-nested delimiters."""
+    /,
+    first: Line | None = None,
+) -> Iterator[Line]:
+    """Yield lines until reading the closing delimiter.
 
+    Lines will be yielded in the same manner as the input iterator supplies them,
+    with the exception of the final line, which is split in two at the closing delimiter:
+    the content before and including the closing delimiter is yielded first,
+    and then any remaining content on the line is yielded after.
+    Lines before and including the opening delimiter are yielded in whole,
+    as this presumes you've already discovered your opening delimiter
+    and are starting at that point anyway.
+
+    If given, the initial line `first` is prepended to the `rest` of the lines,
+    and generally should contain the opening delimiter.
+    """
     if stop is None:
-        start, stop = pair
-    else:
-        start = pair
+        start, stop = start
 
-    def _get_lines():
-        yield first
-        count = first.count(start) - first.count(stop)
-        while count > 0 and (numline := next(lines, None)):
-            _, line = numline
+    if first is not None:
+        lines = chain((first,), lines)
+
+    reg = re.compile(rf"(?P<add>{re.escape(start)})|(?P<sub>{re.escape(stop)})")
+    count = 0
+    while line := next(lines, None):
+        for m in reg.finditer(line.text):
+            count += 1 if m.lastgroup == "add" else -1
+            if count <= 0:
+                yield from line.splitat(m.end())
+                return
+        yield line
+
+    if count != 0 or line is not None:
+        raise ValueError(
+            f"mismatched delimiters: EOF when count('{start}') - count('{stop}') = {count}"
+        )
+
+
+def skip(
+    lines: Iterator[Line],
+    start: str = "()",
+    stop: str | None = None,
+    /,
+    first: Line | None = None,
+) -> Line:
+    """Skip delimited text, returning only the final line, following closing delimiter."""
+    return deque(iter_delim(lines, start, stop, first=first), maxlen=1).pop()
+
+
+def join_lines(lines: Lines, /, first: Line | None = None, sep: str = " ") -> Line:
+    """Collect lines into a single line, separated with a delimiter."""
+
+    first = next(lines, first)
+    if first is None:
+        raise ValueError("no lines to iterate")
+    return Line(first.num, sep.join(l.text for l in chain((first,), lines)))
+
+
+MARKERS = re.compile(r"(?P<cblock>/\*)|(?P<cline>//)|(?P<macrodef>macro_rules!)")
+
+
+def read_content(lines: Lines) -> Lines:
+    """Iterate over lines, skipping empty lines, comments, and `macro_rules!` definitions."""
+
+    while line := next(lines, None):
+        while m := MARKERS.search(line.text):
+            if m.lastgroup == "cblock":
+                logger.debug(f"Skipping block comment ({line}).")
+                line, rest = line.splitat(m.start())
+                if not line.is_blank():
+                    yield line
+                line = skip(lines, "/*", "*/", first=rest)
+
+            elif m.lastgroup == "cline":
+                logger.debug(f"Skipping line comment ({line}).")
+                line, _ = line.splitat(m.start())
+
+            elif m.lastgroup == "macrodef":
+                logger.debug(f"Skipping macro def ({line}).")
+                line, rest = line.splitat(m.start())
+                if not line.is_blank():
+                    yield line
+                line = skip(lines, "{}", first=rest)
+
+        if not line.is_blank():
             yield line
-            count += line.count(start) - line.count(stop)
-
-    return sep.join(_get_lines())
 
 
-def parse_args(arg_str: str) -> dict[str, str | bool]:
-    """Convert args used in a `#[whatever(arg1, arg2 = "val")]` annotation.
-    Note that the `arg_str` should just be the part between the parentheses.
-
-    For the above example, the return value is `{"arg1": True, "arg2": "val"}`.
-    """
-
-    result: dict[str, str | bool] = {}
-    parts = [p.strip() for p in arg_str.split(",")]
-    for part in parts:
-        if "=" in part:
-            key, val = map(str.strip, part.split("=", 1))
-            if val.startswith('"') and val.endswith('"'):
-                val = val[1:-1]
-            result[key] = val
-        else:
-            result[part] = True
-    return result
-
-
-def read_file(path: Path) -> Iterator[NumberedLine]:
-    """Iterate over `(line_number, line)` tuples of a file,
-    skipping content comments and `macro_rules!` definitions.
-    """
-
+def read_file(path: Path) -> Lines:
+    logger.info(f"Processing {path}")
     with path.open() as f:
-        lines = ((i, line.strip()) for i, line in enumerate(f, start=1))
-        while numline := next(lines, None):
-            num, line = numline
+        yield from read_content(
+            Line(i, line.strip()) for i, line in enumerate(f, start=1)
+        )
 
-            if "/*" in line:
-                num_begin, begin = num, line[: line.find("/*")]
 
-                cnt = line.count("/*") - line.count("*/")
-                while cnt > 0 and (numline := next(lines, None)):
-                    num, line = numline
-                    cnt += line.count("/*") - line.count("*/")
+def _pyitem(annotated: Package, path: Path, lines: Lines, pyclass_match: re.Match):
+    """Process #[pyclass] and #[pyfunction] annotated items,
+    adding them as annotated package details.
+    """
 
-                if not numline:
-                    num, line = num_begin, begin
-                elif num == num_begin:
-                    line = begin + " " + line[line.rfind("*/") + 1 :]
-                else:
-                    yield num_begin, begin
+    props = PyO3Props.parse(pyclass_match.group(1) or pyclass_match.group(2) or "")
 
-            elif (idx := line.find("//")) >= 0:
-                line = line[:idx]
+    # Skip over additional `#[...]` lines, looking for more props.
+    while (line := next(lines, None)) and line.text.strip().startswith("#["):
+        line = join_lines(iter_delim(lines, "[]", first=line))
+        if m := PYO3_RE.search(line.text):
+            props |= PyO3Props.parse(m.group(1) or m.group(2))
 
-            elif "macro_rules!" in line:
-                _ = read_to_close(line, lines, pair="{}")
-                continue
+    if line is None:
+        logger.error(f"Unexpected EOF processing {path}")
+        return
 
-            yield num, line
+    if not (item_match := ITEM_RE.search(line.text)):
+        logger.error(f"Failed to extract item details for {path}@{line}")
+        return
+
+    kind: Kind = Kind(item_match.group("kind"))
+    rust_name: str = item_match.group("rust_name")
+
+    if not isinstance(rust_name, str):
+        logger.error(f"Couldn't find Rust name for {path}@{line}: {kind}")
+        return
+
+    item = Item(
+        kind=kind,
+        python_name=props.gets("name", rust_name),
+        rust_name=rust_name,
+        path=path,
+        line=line,
+        props=props,
+    )
+
+    if item.python_name.startswith("Py"):
+        logger.warning(f"Suspicious name for {path}@{line}: {item}")
+
+    annotated[props.gets("module", "builtins")].add(item)
+
+
+def _py_source_map(annotated: Package, path: Path, line: Line, lines: Lines):
+    """Process the content of the ``py_source_map!`` macro."""
+
+    # Synthesize the match.
+    pyclass_match = PYITEM_RE.search("#[pyclass]")
+    assert pyclass_match is not None
+
+    # Read the macro content.
+    body = iter_delim(chain((line,), lines), "{}")
+    next(body)  # skip the first
+    _pyitem(annotated, path, body, pyclass_match)  # SourceMap
+    _pyitem(annotated, path, body, pyclass_match)  # SourceMapEntry
+
+
+def _exceptions(annotated: Package, path: Path, line: Line, lines: Lines):
+    """Process the content of the ``exception!`` and ``create_exception!`` macros."""
+    if not "create_exception!(" in line:
+        _ = next(lines)
+    _, module = next(lines)
+    err_line = next(lines)
+    err_name = err_line.text.strip(",")
+    item = Item(
+        kind=Kind.Error,
+        python_name=err_name,
+        rust_name=err_name,
+        path=path,
+        line=err_line,
+        props=PyO3Props(),
+    )
+    mod = annotated[module.strip(",")]
+    mod.add(item)
+    mod.path = path
+
+
+def _pymod(exported: Package, path: Path, lines: Lines):
+    """Process the body of a #[pymodule] annotated function."""
+
+    mod_line = -1
+    props = PyO3Props()
+    while (line := next(lines, None)) and line.text.strip().startswith("#["):
+        line = join_lines(iter_delim(lines, "[]", first=line))
+        if m := PYO3_RE.search(line.text):
+            props |= PyO3Props.parse(m.group(1) or m.group(2))
+            mod_line = line.num
+            break
+
+    if mod_line < 0:
+        logger.error(f"Could not find module properties for {path}.")
+
+    if line is None:
+        return
+
+    name = props.gets("name", "")
+    module = f"{props.gets('module', '')}.{name}"
+    if name == "_quil":
+        module = "quil"
+    exported[module].props |= props
+
+    body = iter_delim(lines, "{}", first=line)
+    while line := next(body, None):
+        if "add" in line.text:
+            line = join_lines(iter_delim(lines, "()", first=line))
+
+        if add_match := ADD_ERROR_RE.search(line.text):
+            python_name, rust_name = add_match.groups(("python_name", "rust_name"))
+            if TYPE_CHECKING:
+                assert isinstance(python_name, str)
+                assert isinstance(rust_name, str)
+
+            rust_name = rust_name[rust_name.rfind(":") + 1 :]
+            item = Item(
+                kind=Kind.Error,
+                python_name=python_name,
+                rust_name=rust_name,
+                path=path,
+                line=line,
+            )
+            exported[module].add(item)
+
+        elif add_match := ADD_CLASS_RE.search(line.text):
+            if rust_name := add_match.group("rust_name"):
+                kind = Kind.Class
+                python_name = rust_name
+            else:
+                kind = Kind.Function
+                python_name = rust_name = add_match.group("func_name")
+
+            item = Item(
+                kind=kind,
+                python_name=python_name,
+                rust_name=rust_name,
+                path=path,
+                line=line,
+            )
+            exported[module].add(item)
+
+        mod = exported[module]
+        mod.submodule = props.is_("submodule")
+        mod.path = path
+        mod.line_num = mod_line
 
 
 def extract_items_from_file(path: Path, annotated: Package, exported: Package):
@@ -172,205 +741,41 @@ def extract_items_from_file(path: Path, annotated: Package, exported: Package):
     and the items actually added to the module.
     """
 
-    def _pyitem(lines, pyclass_match):
-        """Process #[pyclass] and #[pyfunction] annotated items."""
-
-        args = parse_args(pyclass_match.group(1) or "")
-        module = args.get("module", "")
-        pyname = args.get("name", "")
-
-        # Skip over additional `#[...]` lines
-        while (num_line := next(lines, None)) and num_line[1].startswith("#"):
-            if m := PYO3_RE.search(num_line[1]):
-                pyname = parse_args(m.group(1)).get("name", pyname)
-                module = parse_args(m.group(1)).get("module", module)
-        if num_line is None:
-            return
-
-        # Look for struct or enum declaration
-        _, line = num_line
-        item_match = ITEM_RE.search(line)
-        if item_match:
-            kind, rustname = item_match.groups()
-            python_name = pyname or rustname
-            item = Item(
-                kind="func" if kind == "fn" else "class",
-                python_name=python_name,
-                rust_name=rustname,
-                path=path,
-                line_num=line_num,
-            )
-            if item.kind == "func":
-                module = "builtins"
-            annotated.modules[module].add(item)
-
-    def _pymod(lines, mod_line: int):
-        """Process the body of a #[pymodule] annotated function."""
-
-        module = ""
-        is_sub = False
-        while num_line := next(lines, None):
-            line_num, line = num_line
-            if m := PYO3_RE.search(line):
-                args = parse_args(m.group(1))
-                is_sub = "submodule" in args
-                module = args.get("module", module)
-                name = args.get("name", "")
-                if module:
-                    module += "." + name
-                else:
-                    module = name
-                mod_line = line_num
-                break
-
-        if module == "_quil":
-            module = "quil"
-
-        while (num_line := next(lines, None)) and "{" not in num_line[1]:
-            continue
-
-        line_num, line = num_line or (-1, "")
-        brace_count = line.count("{") - line.count("}")
-        while brace_count > 0 and (num_line := next(lines, None)):
-            line_num, line = num_line
-            brace_count += line.count("{") - line.count("}")
-
-            if "add" in line:
-                line = read_to_close(line, lines, "()")
-
-            if add_match := ADD_RE.search(line):
-                python_name, rust_name = add_match.groups(("python_name", "rust_name"))
-                rust_name = rust_name[rust_name.rfind(":") + 1 :]
-                item = Item(
-                    "error",
-                    python_name=python_name,
-                    rust_name=rust_name,
-                    path=path,
-                    line_num=line_num,
-                )
-                exported.modules[module].add(item)
-
-            elif add_match := ADD_CLASS_RE.search(line):
-                if rust_name := add_match.group("class_name"):
-                    kind = "class"
-                    python_name = rust_name
-                else:
-                    kind = "func"
-                    python_name = rust_name = add_match.group("func_name")
-                item = Item(
-                    kind,
-                    python_name=python_name,
-                    rust_name=rust_name,
-                    path=path,
-                    line_num=line_num,
-                )
-                exported.modules[module].add(item)
-
-            mod = exported.modules[module]
-            mod.submodule = is_sub
-            mod.path = path
-            mod.line_num = mod_line
-
     lines = read_file(path)
-    while num_line := next(lines, None):
-        line_num, line = num_line
-
+    while line := next(lines, None):
+        # Handle macros:
         if "py_source_map!" in line:
-            pyclass_match = PYITEM_RE.search("#[pyclass]")
-            txt = read_to_close(line, lines, "{}", sep="\n")
-            _lines = enumerate(txt.split("\n"), start=line_num)
-            _ = next(_lines)
-            _pyitem(_lines, pyclass_match)
-            _ = next(_lines)
-            _pyitem(_lines, pyclass_match)
+            logger.info(f"Discovered SourceMap in {path}: {line}")
+            _py_source_map(annotated, path, line, lines)
             continue
 
         elif "exception!(" in line:
-            if not "create_exception!(" in line:
-                _ = next(lines)
-            _, module = next(lines)
-            line_num, err_name = next(lines)
-            err_name = err_name.strip(",")
-            item = Item(
-                "error",
-                python_name=err_name,
-                rust_name=err_name,
-                path=path,
-                line_num=line_num,
-            )
-            mod = annotated.modules[module.strip(",")]
-            mod.add(item)
-            mod.path = path
+            logger.info(f"Discovered Error in {path}: {line}")
+            _exceptions(annotated, path, line, lines)
             continue
 
-        if line.startswith("#["):
-            line = read_to_close(line, lines, "[]")
-
-        if pyclass_match := PYITEM_RE.search(line):
-            _pyitem(lines, pyclass_match)
-        elif PYMODULE_RE.search(line):
-            _pymod(lines, line_num)
-
-
-def main():
-    annotated, exported = Package(), Package()
-    base = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(".")
-    for path in base.rglob("*.rs"):
-        extract_items_from_file(path, annotated, exported)
-
-    for func in (f for f in annotated.modules["builtins"].items if f.kind == "func"):
-        matching = (
-            name
-            for name, mod in exported.modules.items()
-            for item in mod
-            if (item.kind == "func" and item.rust_name == func.rust_name)
-        )
-        if modname := next(matching, None):
-            print(f"guess for export of {func}: {modname}")
-            exported.modules[modname].add(func)
-        else:
-            print(f"no guess for export of {func}")
-
-    for module, anno in sorted(annotated.modules.items()):
-        if module == "builtins":
+        # Skip non-attributes:
+        if not line.text.strip().startswith("#["):
             continue
 
-        rust_to_py_anno = {item.rust_name: item for item in anno}
+        line = join_lines(iter_delim(lines, "[]", first=line))
+        logger.debug(f"Found Attribute: {line}.")
 
-        expm = exported.modules.get(module)
-        if not expm:
-            print(
-                f"Module {module} is not exported;",
-                f"  Module annotation: {anno.path} @ {anno.line_num}",
-                f"  Items in module:",
-                sep="\n",
-            )
-            for item in anno:
-                print(f"  {item}")
-            continue
+        if pyclass_match := PYITEM_RE.search(line.text):
+            logger.info(f"Discovered Item in {path}: {line}")
+            _pyitem(annotated, path, lines, pyclass_match)
+        elif ("pyclass" in line.text or "pyfunction" in line.text) and not (
+            "gen_stub" in line.text or "use " in line.text
+        ):
+            logger.error(f"We're probably missing this annotation: {line}")
 
-        for item in sorted(anno):
-            if not (
-                item in expm
-                or (
-                    (anno_item := rust_to_py_anno.get(item.rust_name))
-                    and anno_item.python_name == item.python_name
-                )
-            ):
-                print(
-                    f"{item.kind} {module}.{item.python_name} is not exported"
-                    f" ({item.rust_name} @ {item.path}:{item.line_num})"
-                )
-
-        for item in sorted(expm):
-            if anno_item := rust_to_py_anno.get(item.rust_name):
-                item = replace(item, python_name=anno_item.python_name)
-
-            if item not in anno and item.kind != "func":
-                print(
-                    f"{item.kind} {module}.{item.python_name} has wrong or missing module annotation "
-                    f" ({item.rust_name} @ {item.path}:{item.line_num})"
-                )
+        if PYMODULE_RE.search(line.text):
+            logger.info(f"Discovered Module in {path}: {line}")
+            _pymod(exported, path, chain((line,), lines))
+        elif "pymodule" in line.text and not (
+            "gen_stub" in line.text or "use " in line.text
+        ):
+            logger.error(f"We're probably missing this annotation: {line}")
 
 
 if __name__ == "__main__":
