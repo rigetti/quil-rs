@@ -14,6 +14,7 @@ pub(crate) fn init_submodule(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     let py = m.py();
 
+    m.add("InstructionError", py.get_type::<errors::InstructionError>())?;
     m.add("CallError", py.get_type::<errors::CallError>())?;
     m.add("ExternError", py.get_type::<errors::ExternError>())?;
     m.add("GateError", py.get_type::<errors::GateError>())?;
