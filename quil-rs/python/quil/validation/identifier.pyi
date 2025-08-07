@@ -13,3 +13,5 @@ def validate_user_identifier(ident:builtins.str) -> None:
     Returns an error if the given identifier is reserved, or if it is not a valid Quil identifier
     """
 
+class IdentifierValidationError(QuilError): ...
+

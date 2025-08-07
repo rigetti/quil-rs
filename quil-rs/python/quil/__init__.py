@@ -3,22 +3,7 @@
 ⚠️ This package is still in early development and breaking changes should be expected between minor versions.
 """
 
-from ._quil import (
-    expression,
-    instructions,
-    program,
-    validation,
-    waveforms,
-    QuilError,
-    ToQuilError,
-)
-
-__all__ = [
-    "expression",
-    "instructions",
-    "program",
-    "validation",
-    "waveforms",
-    "QuilError",
-    "ToQuilError",
-]
+from . import _quil
+assert isinstance(_quil.__all__, list) and all(isinstance(s, str) for s in _quil.__all__)
+exec(f"from ._quil import {", ".join(_quil.__all__)}; __all__ = {_quil.__all__}")
+del _quil
