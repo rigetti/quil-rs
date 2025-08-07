@@ -16,7 +16,10 @@ fn init_submodule_identifier(m: &Bound<'_, PyModule>) -> PyResult<()> {
     use crate::quilpy::errors;
 
     let py = m.py();
-    m.add("IdentifierValidationError", py.get_type::<errors::IdentifierValidationError>())?;
+    m.add(
+        "IdentifierValidationError",
+        py.get_type::<errors::IdentifierValidationError>(),
+    )?;
     m.add_function(wrap_pyfunction!(validate_identifier, m)?)?;
     m.add_function(wrap_pyfunction!(validate_user_identifier, m)?)?;
     Ok(())

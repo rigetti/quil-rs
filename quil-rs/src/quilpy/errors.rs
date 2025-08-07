@@ -6,7 +6,10 @@ use pyo3::exceptions::PyException;
 /// Note that the exception class must still be added to the module.
 macro_rules! exception {
     ( $rust_err: ty, $module:expr, $py_err: ident, $base: ty $(, $doc: expr)? ) => {
+        #[cfg(not(feature = "stubs"))]
         pyo3::create_exception!( $module, $py_err, $base $(, $doc)? );
+        #[cfg(feature = "stubs")]
+        pyo3_stub_gen::create_exception!( $module, $py_err, $base $(, $doc)? );
 
         #[doc = concat!(
             "Convert a Rust ",
@@ -20,6 +23,30 @@ macro_rules! exception {
             }
         }
     };
+}
+
+#[cfg(feature = "stubs")]
+mod stubs {
+    use super::*;
+    use pyo3_stub_gen::exception::NativeException;
+
+    macro_rules! impl_native_exception {
+        ($base:ident) => {
+            impl NativeException for $base {
+                fn type_name() -> &'static str {
+                    stringify!($base)
+                }
+            }
+        };
+    }
+
+    // Obviously these aren't native exceptions,
+    // but pyo3_stub_gen requires it on the base class
+    // when one exception is derived from another.
+    impl_native_exception!(QuilError);
+    impl_native_exception!(InstructionError);
+    impl_native_exception!(ParseInstructionError);
+    impl_native_exception!(ProgramError);
 }
 
 // TODO: Create a unified error hierarchy: https://github.com/rigetti/quil-rs/issues/461

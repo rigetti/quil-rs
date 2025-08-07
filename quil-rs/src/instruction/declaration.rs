@@ -61,7 +61,7 @@ pub struct Vector {
 
 pickleable_new! {
     impl Vector {
-        pub fn new(data_type: ScalarType, length: u64); 
+        pub fn new(data_type: ScalarType, length: u64);
     }
 }
 
@@ -106,7 +106,7 @@ pub struct Offset {
 
 pickleable_new! {
     impl Offset {
-        pub fn new(offset: u64, data_type: ScalarType); 
+        pub fn new(offset: u64, data_type: ScalarType);
     }
 }
 
