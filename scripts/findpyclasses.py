@@ -176,9 +176,15 @@ def print_possible_mistakes(annotated: "Package", exported: "Package") -> bool:
 
             if not (item in anno or item.kind is Kind.Function):
                 found_issues = True
+                if alt := exported.find_rust(item):
+                    hint = (
+                        f"\n     (hint: item may belong to module '{alt[0]}': {alt[1]})"
+                    )
+                else:
+                    hint = ""
                 print(
                     f"  Wrong or missing module annotation for '{module}.{item.python_name}'",
-                    f"     ({item})",
+                    f"     ({item}){hint}",
                     sep="\n",
                 )
 
@@ -250,6 +256,8 @@ def print_package_info(annotated: "Package") -> None:
 
 
 class Kind(enum.Enum):
+    """The sorts of things that can be annotated."""
+
     Struct = "struct"
     Enumeration = "enum"
     Function = "fn"
@@ -257,13 +265,72 @@ class Kind(enum.Enum):
     Class = "class"
     Error = "error"
 
-    def is_py_like(self, py: Self) -> bool:
+    def is_py_like(self, py: Self, /) -> bool:
+        """Return ``True`` if the Python-argument is "like" this one; that is,::
+        - they have the same kind, or
+        - this is a struct or enum and the argument is a class or error.
+
+        This is useful for comparing annotated Rust items (where we know the Rust item kind)
+        to exported Python items (where we know the Python item kind).
+        """
         match (self, py):
             case (Kind.Enumeration | Kind.Struct, Kind.Class | Kind.Error):
                 return True
             case (x, y) if x is y:
                 return True
         return False
+
+
+class StubKind(enum.Enum):
+    """A ``gen_stub_*`` attribute."""
+
+    Function = "function"
+    Methods = "methods"
+    Class = "class"
+    Enumeration = "class_enum"
+    ComplexEnumeration = "class_complex_enum"
+
+    def is_like(self, kind: Kind) -> bool:
+        match (kind, self):
+            case (Kind.Struct, StubKind.Class):
+                return True
+            case (
+                Kind.Enumeration,
+                (StubKind.Enumeration | StubKind.ComplexEnumeration),
+            ):
+                return True
+            case (
+                Kind.Class,
+                (StubKind.Class | StubKind.Enumeration | StubKind.ComplexEnumeration),
+            ):
+                return True
+            case (Kind.Function, StubKind.Function):
+                return True
+        return False
+
+
+@dataclass
+class StubAttr:
+    kind: StubKind
+    module: str | None = None
+
+    @classmethod
+    def from_match(cls, stubgen_match: re.Match) -> Self:
+        """Process #[gen_stub_...] annotations."""
+
+        stub_kind = stubgen_match.group(1) or stubgen_match.group(3)
+        if stub_kind is None:
+            raise ValueError("Unable to determine stub kind")
+
+        kind = StubKind(stub_kind)
+        module: str | None = None
+
+        if kind is StubKind.Function:
+            props = PyO3Props.parse(stubgen_match.group(2) or stubgen_match.group(4))
+            if not (module := props.gets("module")):
+                logger.warning(f"Unknown module for stub {stubgen_match.group(0)}")
+
+        return cls(kind, module)
 
 
 class PyO3Props(dict[str, str | bool]):
@@ -416,6 +483,10 @@ class Module(MutableSet[Item]):
         logger.info(f"Adding {item}")
         self._items.add(item)
 
+    def find_rust(self, item: Item) -> Item | None:
+        """Return an `item` in this `Module` that has the same Rust name as the given `item`."""
+        return next((i for i in self if i.rust_name == item.rust_name), None)
+
 
 _T = TypeVar("_T")
 
@@ -427,6 +498,21 @@ class Package(MutableMapping[str, Module]):
     _modules: defaultdict[str, Module] = field(
         default_factory=lambda: defaultdict(Module)
     )
+
+    def find_rust(self, item: Item) -> tuple[str, Item] | None:
+        """Return the name of a `Module` and an `Item` within it
+        that has the same Rust name as the given `item`,
+        but is distinct from the given `item.`
+        """
+        return next(
+            (
+                (name, found)
+                for name, module in self._modules.items()
+                if (found := module.find_rust(item)) is not None
+                and id(found) != id(item)
+            ),
+            None,
+        )
 
     def __getitem__(self, name: str, /) -> Module:
         if name not in self._modules:
@@ -606,7 +692,11 @@ def read_file(path: Path) -> Lines:
 
 
 def _pyitem(
-    annotated: Package, path: Path, lines: Lines, pyclass_match: re.Match
+    annotated: Package,
+    path: Path,
+    lines: Lines,
+    pyclass_match: re.Match,
+    last_stub: StubAttr | None = None,
 ) -> tuple[Module, Item] | tuple[None, None]:
     """Process #[pyclass] and #[pyfunction] annotated items,
     adding them as annotated package details.
@@ -645,10 +735,21 @@ def _pyitem(
         path=path,
         line=line,
         props=props,
+        has_stub=last_stub is not None,
     )
 
     if item.python_name.startswith("Py"):
         logger.warning(f"Suspicious name for {path}@{line}: {item}")
+
+    if last_stub is None:
+        logger.warning(f"No stub annotation found for {path} {item}.")
+    elif not last_stub.kind.is_like(item.kind):
+        logger.warning(
+            f"Mismatched stub {last_stub} (vs {item.kind}) found for {path} {item}."
+        )
+    elif last_stub.kind is StubKind.Function and last_stub.module:
+        logger.info(f"Moving fn to {last_stub.module}")
+        module = last_stub.module
 
     module = props.gets("module", "builtins")
     annotated[module].add(item)
@@ -661,19 +762,20 @@ def _py_source_map(annotated: Package, path: Path, line: Line, lines: Lines):
     # Synthesize the match.
     pyclass_match = PYITEM_RE.search("#[pyclass]")
     assert pyclass_match is not None
+    last_stub = StubAttr(StubKind.Class)
 
     # Read the macro content.
     body = iter_delim(chain((line,), lines), "{}")
-    next(body)  # skip the first
-    _pyitem(annotated, path, body, pyclass_match)  # SourceMap
-    _pyitem(annotated, path, body, pyclass_match)  # SourceMapEntry
+    next(body)  # Skip the first line, which contains the opening delimiter.
+    _pyitem(annotated, path, body, pyclass_match, last_stub)  # SourceMap
+    _pyitem(annotated, path, body, pyclass_match, last_stub)  # SourceMapEntry
 
 
 def _exceptions(annotated: Package, path: Path, line: Line, lines: Lines):
     """Process the content of the ``exception!`` and ``create_exception!`` macros."""
     if not "create_exception!(" in line:
         _ = next(lines)
-    _, module = next(lines)
+    module = next(lines).text.strip(",")
     err_line = next(lines)
     err_name = err_line.text.strip(",")
     item = Item(
@@ -682,33 +784,9 @@ def _exceptions(annotated: Package, path: Path, line: Line, lines: Lines):
         rust_name=err_name,
         path=path,
         line=err_line,
-        props=PyO3Props(),
+        has_stub=True,
     )
-    mod = annotated[module.strip(",")]
-    mod.add(item)
-    mod.path = path
-
-
-IMPL_RE = re.compile("impl\s+?(?P<name>\S+)")
-
-
-def _pymethods(path: Path, lines: Lines) -> str | None:
-    """Find the impl type name."""
-
-    while (line := next(lines, None)) and line.text.strip().startswith("#["):
-        skip(lines, "[]", first=line)
-
-    if line is None or not line.text.strip().startswith("impl"):
-        logger.error(f"Could not find impl line for {path}.")
-        return None
-
-    if not (
-        impl := IMPL_RE.search(join_lines(iter_delim(lines, "{}", first=line)).text)
-    ):
-        logger.error(f"Could not find impl line for {path}.")
-        return None
-
-    return impl.group("name")
+    annotated[module].add(item)
 
 
 def _pymod(exported: Package, path: Path, lines: Lines):
@@ -779,56 +857,6 @@ def _pymod(exported: Package, path: Path, lines: Lines):
         mod.line_num = mod_line
 
 
-class StubKind(enum.Enum):
-    Function = "function"
-    Methods = "methods"
-    Class = "class"
-    Enumeration = "class_enum"
-    ComplexEnumeration = "class_complex_enum"
-
-    def is_like(self, kind: Kind) -> bool:
-        match (kind, self):
-            case (Kind.Struct, StubKind.Class):
-                return True
-            case (
-                Kind.Enumeration,
-                (StubKind.Enumeration | StubKind.ComplexEnumeration),
-            ):
-                return True
-            case (
-                Kind.Class,
-                (StubKind.Class | StubKind.Enumeration | StubKind.ComplexEnumeration),
-            ):
-                return True
-            case (Kind.Function, StubKind.Function):
-                return True
-        return False
-
-
-@dataclass
-class StubAttr:
-    kind: StubKind
-    module: str | None = None
-
-    @classmethod
-    def from_match(cls, stubgen_match: re.Match) -> Self:
-        """Process #[gen_stub_...] annotations."""
-
-        stub_kind = stubgen_match.group(1) or stubgen_match.group(3)
-        if stub_kind is None:
-            raise ValueError("Unable to determine stub kind")
-
-        kind = StubKind(stub_kind)
-        module: str | None = None
-
-        if kind is StubKind.Function:
-            props = PyO3Props.parse(stubgen_match.group(2) or stubgen_match.group(4))
-            if not (module := props.gets("module")):
-                logger.warning(f"Unknown module for stub {stubgen_match.group(0)}")
-
-        return cls(kind, module)
-
-
 def extract_items_from_file(path: Path, annotated: Package, exported: Package):
     """Update `annotated` and `exported` with, respectively,
     the items that are annotated to belong to a module
@@ -844,13 +872,14 @@ def extract_items_from_file(path: Path, annotated: Package, exported: Package):
             _py_source_map(annotated, path, line, lines)
             continue
 
-        elif "exception!(" in line:
+        elif re.search(r"\b(?:create_)?exception!", line.text):
             logger.info(f"Discovered Error in {path}: {line}")
             _exceptions(annotated, path, line, lines)
             continue
 
         # Skip non-attributes:
         if not line.text.strip().startswith("#["):
+            last_stub = None
             continue
 
         line = join_lines(iter_delim(lines, "[]", first=line))
@@ -865,21 +894,7 @@ def extract_items_from_file(path: Path, annotated: Package, exported: Package):
 
         if pyclass_match := PYITEM_RE.search(line.text):
             logger.info(f"Discovered Item in {path}: {line}")
-            module, item = _pyitem(annotated, path, lines, pyclass_match)
-            if module and item and last_stub:
-                if not last_stub.kind.is_like(item.kind):
-                    logger.warning(
-                        f"Mismatched stub {last_stub} found for {path} {item}."
-                    )
-                else:
-                    logger.info(f"Stub annotation found for {path} {item}.")
-                    module.add(replace(item, has_stub=True))
-                    if last_stub.kind is StubKind.Function and last_stub.module:
-                        logger.info(f"Moving fn to {last_stub.module}")
-            elif item:
-                logger.warning(f"No stub annotation found for {path} {item}.")
-
-            last_stub = None
+            _pyitem(annotated, path, lines, pyclass_match, last_stub)
         elif ("pyclass" in line.text or "pyfunction" in line.text) and not (
             "gen_stub" in line.text or "use " in line.text
         ):
@@ -889,7 +904,6 @@ def extract_items_from_file(path: Path, annotated: Package, exported: Package):
             logger.info(f"Discovered impl block in {path}: {line}")
             if last_stub is None:
                 logger.warning(f"No stub annotation found for {path} {line}.")
-            last_stub = None
         elif "pymethods" in line.text and not (
             "gen_stub" in line.text or "use " in line.text
         ):
@@ -898,7 +912,6 @@ def extract_items_from_file(path: Path, annotated: Package, exported: Package):
         if PYMODULE_RE.search(line.text):
             logger.info(f"Discovered Module in {path}: {line}")
             _pymod(exported, path, chain((line,), lines))
-            last_stub = None
         elif "pymodule" in line.text and not (
             "gen_stub" in line.text or "use " in line.text
         ):
