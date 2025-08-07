@@ -140,15 +140,17 @@ pub(crate) use quilpy::{impl_repr, impl_to_quil};
 macro_rules! pickleable_new {
     // Default implementation: just list the fields and types, and this will do the rest.
     (
+        $(#[$impl_meta:meta])*
         impl $name:ident {
             $(#[$meta:meta])*
             $pub:vis fn $new:ident( $($field:ident: $field_type:ty$(,)?)*);
         }
     ) => {
         pickleable_new! {
+            $(#[$impl_meta])*
             impl $name {
                 $(#[$meta])*
-                $pub fn $new($($field: $field_type,)*) -> Self {
+                $pub fn $new($($field: $field_type,)*) -> $name {
                     Self {
                         $($field,)*
                     }
@@ -159,19 +161,22 @@ macro_rules! pickleable_new {
 
     // If __new__ needs actual logic, you can supply a body.
     (
+        $(#[$impl_meta:meta])*
         impl $name:ident {
             $(#[$meta:meta])*
-            $pub:vis fn $new:ident( $($field:ident: $field_type:ty$(,)?)*) -> $Self:ty {
+            $pub:vis fn $new:ident( $($field:ident: $field_type:ty$(,)?)*) -> $ret:ty {
                 $($body:tt)+
             }
         }
     ) => {
+        $(#[$impl_meta])*
         #[cfg(feature = "python")]
+        #[cfg_attr(feature = "stubs", pyo3_stub_gen::derive::gen_stub_pymethods)]
         #[pyo3::pymethods]
         impl $name {
             $(#[$meta])*
             #[new]
-            $pub fn $new($($field: $field_type,)*) -> $Self {
+            $pub fn $new($($field: $field_type,)*) -> $ret {
                 $($body)+
             }
 
@@ -182,10 +187,11 @@ macro_rules! pickleable_new {
             }
         }
 
+        $(#[$impl_meta])*
         #[cfg(not(feature = "python"))]
         impl $name {
             $(#[$meta])*
-            $pub fn $new($($field: $field_type,)*) -> $Self {
+            $pub fn $new($($field: $field_type,)*) -> $ret {
                 $($body)+
             }
         }

@@ -98,6 +98,7 @@ pub(crate) fn init_submodule(m: &Bound<'_, PyModule>) -> PyResult<()> {
 /// Add a `parse` implementation to a `#[pyclass]` to uses the type's `from_str` implementation.
 macro_rules! impl_parse {
     ($name: ident) => {
+        #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
         #[pyo3::pymethods]
         impl $name {
             #[staticmethod]
@@ -239,6 +240,7 @@ impl pyo3_stub_gen::PyStubType for ExternPragmaMap {
     }
 }
 
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl Calibration {
     #[getter]
@@ -272,13 +274,14 @@ pickleable_new! {
             parameters: Vec<Expression>,
             qubits: Vec<Qubit>,
             modifiers: Vec<GateModifier>,
-        ) -> Result<Self, IdentifierValidationError> {
+        ) -> Result<CalibrationIdentifier, IdentifierValidationError> {
             // Note that  the parameter order is different for the Python version :(
             Self::new(name, modifiers, parameters, qubits)
         }
     }
 }
 
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl Call {
     fn py_arguments(&self) -> Vec<UnresolvedCallArgument> {
@@ -293,12 +296,13 @@ pickleable_new! {
             parameters: Vec<Expression>,
             qubits: Vec<Qubit>,
             modifiers: Vec<GateModifier>,
-        ) -> Result<Self, GateError> {
+        ) -> Result<Gate, GateError> {
             Self::new(&name, parameters, qubits, modifiers)
         }
     }
 }
 
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl Gate {
     #[pyo3(name = "dagger")]
@@ -332,6 +336,7 @@ impl Gate {
     }
 }
 
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl MeasureCalibrationDefinition {
     #[getter]
@@ -345,6 +350,7 @@ impl MeasureCalibrationDefinition {
     }
 }
 
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl Sharing {
     #[getter]
@@ -358,6 +364,7 @@ impl Sharing {
     }
 }
 
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl Offset {
     #[getter]
@@ -371,6 +378,7 @@ impl Offset {
     }
 }
 
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl PauliGate {
     /// Parse a ``PauliGate`` from a string.
@@ -383,6 +391,7 @@ impl PauliGate {
     }
 }
 
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl QubitPlaceholder {
     #[new]

@@ -18,6 +18,7 @@ class BasicBlock:
     def __new__(cls, instance:BasicBlock) -> BasicBlock: ...
     def as_schedule_seconds(self, program:Program) -> ScheduleSeconds: ...
     def gate_depth(self, gate_minimum_qubit_count:builtins.int) -> builtins.int: ...
+    def __repr__(self) -> builtins.str: ...
 
 class CalibrationExpansion:
     r"""
@@ -32,6 +33,7 @@ class CalibrationExpansion:
     def range(self) -> range: ...
     @property
     def expansions(self) -> CalibrationExpansionSourceMap: ...
+    def __repr__(self) -> builtins.str: ...
 
 class CalibrationExpansionSourceMap:
     def entries(self) -> builtins.list[CalibrationExpansionSourceMapEntry]: ...
@@ -55,10 +57,12 @@ class CalibrationExpansionSourceMap:
         
         This is `O(n)` where `n` is the number of first-level calibration expansions performed.
         """
+    def __repr__(self) -> builtins.str: ...
 
 class CalibrationExpansionSourceMapEntry:
     def source_location(self) -> builtins.int: ...
     def target_location(self) -> CalibrationExpansion: ...
+    def __repr__(self) -> builtins.str: ...
 
 class CalibrationSet:
     r"""
@@ -142,11 +146,13 @@ class CalibrationSet:
         5. All fixed qubits in the calibration definition match those in the gate
         6. All specified parameters in the calibration definition match those in the gate
         """
+    def __repr__(self) -> builtins.str: ...
 
 class CalibrationSource:
     r"""
     A source of a calibration, either a [`Calibration`] or a [`MeasureCalibrationDefinition`]
     """
+    def __repr__(self) -> builtins.str: ...
     class Calibration(CalibrationSource):
         r"""
         Describes a `DEFCAL` instruction
@@ -169,7 +175,6 @@ class CalibrationSource:
         def __len__(self) -> builtins.int: ...
         def __getitem__(self, key:builtins.int) -> typing.Any: ...
     
-    ...
 
 class ControlFlowGraph:
     def __new__(cls, instance:ControlFlowGraph) -> ControlFlowGraph: ...
@@ -186,6 +191,7 @@ class ControlFlowGraph:
         r"""
         Return a list of all the basic blocks in the control flow graph, in order of definition.
         """
+    def __repr__(self) -> builtins.str: ...
 
 class FrameSet:
     r"""
@@ -198,7 +204,8 @@ class FrameSet:
         r"""
         Return a new [`FrameSet`] which describes only the given [`FrameIdentifier`]s.
         """
-    def new(self) -> FrameSet: ...
+    def __repr__(self) -> builtins.str: ...
+    def __new__(cls) -> FrameSet: ...
     def insert(self, identifier:FrameIdentifier, attributes:typing.Mapping[builtins.str, AttributeValue]) -> None:
         r"""
         Insert a new frame by ID, overwriting any existing one.
@@ -207,7 +214,7 @@ class FrameSet:
         r"""
         Merge another [FrameSet] with this one, overwriting any existing keys
         """
-    def len(self) -> builtins.int:
+    def __len__(self) -> builtins.int:
         r"""
         Return the number of frames described within.
         """
@@ -224,6 +231,7 @@ class MaybeCalibrationExpansion:
     r"""
     The result of an attempt to expand an instruction within a [`Program`]
     """
+    def __repr__(self) -> builtins.str: ...
     class Expanded(MaybeCalibrationExpansion):
         r"""
         The instruction was expanded into others
@@ -246,13 +254,13 @@ class MaybeCalibrationExpansion:
         def __len__(self) -> builtins.int: ...
         def __getitem__(self, key:builtins.int) -> typing.Any: ...
     
-    ...
 
 class MemoryRegion:
     @property
     def size(self) -> Vector: ...
     @property
     def sharing(self) -> typing.Optional[Sharing]: ...
+    def __repr__(self) -> builtins.str: ...
     def __new__(cls, size:Vector, sharing:typing.Optional[Sharing]) -> MemoryRegion: ...
 
 class Program:
@@ -332,6 +340,9 @@ class Program:
         nor can they be serialized and deserialized in a consistent way.
         """
     def __setstate__(self, state:bytes) -> None: ...
+    def to_quil(self) -> builtins.str: ...
+    def to_quil_or_debug(self) -> builtins.str: ...
+    def __repr__(self) -> builtins.str: ...
     def __new__(cls) -> Program: ...
     def clone_without_body_instructions(self) -> Program:
         r"""
@@ -419,6 +430,7 @@ class ProgramCalibrationExpansion:
     def program(self) -> Program: ...
     @property
     def source_map(self) -> ProgramCalibrationExpansionSourceMap: ...
+    def __repr__(self) -> builtins.str: ...
 
 class ProgramCalibrationExpansionSourceMap:
     def entries(self) -> builtins.list[ProgramCalibrationExpansionSourceMapEntry]: ...
@@ -442,10 +454,12 @@ class ProgramCalibrationExpansionSourceMap:
         
         This is `O(n)` where `n` is the number of first-level calibration expansions performed.
         """
+    def __repr__(self) -> builtins.str: ...
 
 class ProgramCalibrationExpansionSourceMapEntry:
     def source_location(self) -> builtins.int: ...
     def target_location(self) -> MaybeCalibrationExpansion: ...
+    def __repr__(self) -> builtins.str: ...
 
 class ScheduleSeconds:
     r"""
@@ -464,6 +478,7 @@ class ScheduleSeconds:
         
         This is the maximum end time among all scheduled items.
         """
+    def __repr__(self) -> builtins.str: ...
 
 class ScheduleSecondsItem:
     r"""
@@ -479,6 +494,7 @@ class ScheduleSecondsItem:
         r"""
         The time span during which the instruction is scheduled.
         """
+    def __repr__(self) -> builtins.str: ...
 
 class TimeSpanSeconds:
     r"""
@@ -502,4 +518,5 @@ class TimeSpanSeconds:
         
         This is the sum of the start time and duration.
         """
+    def __repr__(self) -> builtins.str: ...
 

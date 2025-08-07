@@ -72,6 +72,7 @@ impl BoxcarKernel {
     }
 }
 
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl ErfSquare {
     #[new]
@@ -137,6 +138,7 @@ impl Gaussian {
     }
 }
 
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl DragGaussian {
     #[new]

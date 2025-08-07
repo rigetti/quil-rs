@@ -140,8 +140,8 @@ impl FrameSet {
     }
 }
 
-#[cfg_attr(feature = "python", pyo3::pymethods)]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[cfg_attr(feature = "python", pyo3::pymethods)]
 #[cfg_attr(not(feature = "python"), strip_pyo3)]
 impl FrameSet {
     #[new]

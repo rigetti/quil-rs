@@ -61,9 +61,7 @@ pub struct Vector {
 
 pickleable_new! {
     impl Vector {
-        pub fn new(data_type: ScalarType, length: u64) -> Self {
-            Self { data_type, length }
-        }
+        pub fn new(data_type: ScalarType, length: u64); 
     }
 }
 
@@ -91,9 +89,7 @@ pub struct Sharing {
 
 pickleable_new! {
     impl Sharing {
-        pub fn new(name: String, offsets: Vec<Offset>) -> Self {
-            Self { name, offsets }
-        }
+        pub fn new(name: String, offsets: Vec<Offset>);
     }
 }
 
@@ -110,9 +106,7 @@ pub struct Offset {
 
 pickleable_new! {
     impl Offset {
-        pub fn new(offset: u64, data_type: ScalarType) -> Self {
-            Self { offset, data_type }
-        }
+        pub fn new(offset: u64, data_type: ScalarType); 
     }
 }
 
@@ -227,9 +221,7 @@ pub struct MemoryReference {
 
 pickleable_new! {
     impl MemoryReference {
-        pub fn new(name: String, index: u64) -> Self {
-            Self { name, index }
-        }
+        pub fn new(name: String, index: u64);
     }
 }
 

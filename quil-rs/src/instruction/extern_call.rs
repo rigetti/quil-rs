@@ -741,7 +741,7 @@ pickleable_new! {
         pub fn try_new(
             name: String,
             arguments: Vec<UnresolvedCallArgument>,
-        ) -> Result<Self, CallError> {
+        ) -> Result<Call, CallError> {
             validate_user_identifier(name.as_str()).map_err(CallError::Name)?;
 
             Ok(Self { name, arguments })

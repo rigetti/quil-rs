@@ -47,6 +47,7 @@ class BoxcarKernel:
         r"""
         Get the `complex` value this `BoxcarKernel` represents.
         """
+    def __repr__(self) -> builtins.str: ...
 
 class DragGaussian:
     r"""
@@ -146,6 +147,9 @@ class DragGaussian:
         r"""
         Explicit detuning to bake into iq values
         """
+    def __new__(cls, duration:builtins.float, fwhm:builtins.float, t0:builtins.float, anh:builtins.float, alpha:builtins.float, sample_rate:builtins.float, scale:builtins.float, phase:builtins.float, detuning:builtins.float) -> DragGaussian: ...
+    def into_iq_value(self) -> builtins.list[builtins.complex]: ...
+    def __repr__(self) -> builtins.str: ...
 
 class ErfSquare:
     r"""
@@ -241,6 +245,12 @@ class ErfSquare:
         r"""
         Explicit detuning to bake into iq values
         """
+    def __new__(cls, duration:builtins.float, risetime:builtins.float, sample_rate:builtins.float, pad_left:builtins.float, pad_right:builtins.float, positive_polarity:builtins.bool, scale:builtins.float, phase:builtins.float, detuning:builtins.float) -> ErfSquare: ...
+    def into_iq_value(self) -> builtins.list[builtins.complex]:
+        r"""
+        Convert `ErfSquare` into a list of `complex` values.
+        """
+    def __repr__(self) -> builtins.str: ...
 
 class Gaussian:
     r"""
@@ -318,6 +328,7 @@ class Gaussian:
         """
     def __new__(cls, duration:builtins.float, fwhm:builtins.float, t0:builtins.float, sample_rate:builtins.float, scale:builtins.float, phase:builtins.float, detuning:builtins.float) -> Gaussian: ...
     def into_iq_value(self) -> builtins.list[builtins.complex]: ...
+    def __repr__(self) -> builtins.str: ...
 
 class HermiteGaussian:
     r"""
@@ -433,6 +444,7 @@ class HermiteGaussian:
         """
     def __new__(cls, duration:builtins.float, fwhm:builtins.float, t0:builtins.float, anh:builtins.float, alpha:builtins.float, sample_rate:builtins.float, second_order_hrm_coeff:builtins.float, scale:builtins.float, phase:builtins.float, detuning:builtins.float) -> HermiteGaussian: ...
     def into_iq_value(self) -> builtins.list[builtins.complex]: ...
+    def __repr__(self) -> builtins.str: ...
 
 def apply_phase_and_detuning(iq_values:list, phase:builtins.float, detuning:builtins.float, sample_rate:builtins.float) -> None:
     r"""

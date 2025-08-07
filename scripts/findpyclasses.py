@@ -204,6 +204,14 @@ def print_possible_mistakes(annotated: "Package", exported: "Package") -> bool:
                     sep="\n",
                 )
 
+            if not item.has_stub:
+                found_issues = True
+                print(
+                    f"  Didn't find a stub annotation for '{module}.{item.python_name}'",
+                    f"     ({item})",
+                    sep="\n",
+                )
+
     logger.debug(f"Found exports: {', '.join(found_exports)}")
     logger.debug(f"Expected exported modules: {', '.join(exported.keys())}")
     for module in exported.keys() - found_exports:
@@ -355,6 +363,7 @@ class Item:
     path: Path = field(compare=False, hash=False)
     line: Line = field(compare=False, hash=False)
     props: PyO3Props = field(compare=False, hash=False, default_factory=PyO3Props)
+    has_stub: bool = field(compare=False, hash=False, default=False)
 
     def __str__(self) -> str:
         name = self.rust_name
@@ -477,6 +486,7 @@ def _cfg(regex: str, cond: str = r"[^,]+") -> str:
 CONFIG_ATTR = r'(?:cfg_attr\(feature\s*?=\s*?"python",\s*?)?'
 PYITEM_RE = re.compile(_cfg(rf"(?:pyo3::)?(?:pyclass|pyfunction)\s*(?:\((.*?)\))?"))
 PYMODULE_RE = re.compile(_cfg(f"(?:pyo3::)?pymodule"))
+PYMETHODS_RE = re.compile(_cfg(r"(?:pyo3::)?pymethods"))
 PYO3_RE = re.compile(_cfg(r"pyo3\(([^)]+)\)"))
 ITEM_RE = re.compile(
     r"(?P<kind>struct|enum|fn)\s+(?:\(\s*)?(?P<rust_name>[A-Za-z_][A-Za-z0-9_]*)"
@@ -487,6 +497,11 @@ ADD_ERROR_RE = re.compile(
 ADD_CLASS_RE = re.compile(
     r"\.add_class::<(?P<rust_name>[^>]*?)>|"
     r"\.add_function\(wrap_pyfunction!\((?P<func_name>[^>]*?),.*\)"
+)
+STUB_GEN_RE = re.compile(
+    _cfg(
+        r"gen_stub_py(class(?:(?:_complex)?_enum)?|methods|function)(?:\((\s*?[^)]+)\))?"
+    )
 )
 
 
@@ -590,9 +605,14 @@ def read_file(path: Path) -> Lines:
         )
 
 
-def _pyitem(annotated: Package, path: Path, lines: Lines, pyclass_match: re.Match):
+def _pyitem(
+    annotated: Package, path: Path, lines: Lines, pyclass_match: re.Match
+) -> tuple[Module, Item] | tuple[None, None]:
     """Process #[pyclass] and #[pyfunction] annotated items,
     adding them as annotated package details.
+
+    On success, this returns ``(module, item)``,
+    where ``module`` is the `Module` where `Item` ``item`` is added.
     """
 
     props = PyO3Props.parse(pyclass_match.group(1) or pyclass_match.group(2) or "")
@@ -605,18 +625,18 @@ def _pyitem(annotated: Package, path: Path, lines: Lines, pyclass_match: re.Matc
 
     if line is None:
         logger.error(f"Unexpected EOF processing {path}")
-        return
+        return None, None
 
     if not (item_match := ITEM_RE.search(line.text)):
         logger.error(f"Failed to extract item details for {path}@{line}")
-        return
+        return None, None
 
     kind: Kind = Kind(item_match.group("kind"))
     rust_name: str = item_match.group("rust_name")
 
     if not isinstance(rust_name, str):
         logger.error(f"Couldn't find Rust name for {path}@{line}: {kind}")
-        return
+        return None, None
 
     item = Item(
         kind=kind,
@@ -630,7 +650,9 @@ def _pyitem(annotated: Package, path: Path, lines: Lines, pyclass_match: re.Matc
     if item.python_name.startswith("Py"):
         logger.warning(f"Suspicious name for {path}@{line}: {item}")
 
-    annotated[props.gets("module", "builtins")].add(item)
+    module = props.gets("module", "builtins")
+    annotated[module].add(item)
+    return annotated[module], item
 
 
 def _py_source_map(annotated: Package, path: Path, line: Line, lines: Lines):
@@ -665,6 +687,28 @@ def _exceptions(annotated: Package, path: Path, line: Line, lines: Lines):
     mod = annotated[module.strip(",")]
     mod.add(item)
     mod.path = path
+
+
+IMPL_RE = re.compile("impl\s+?(?P<name>\S+)")
+
+
+def _pymethods(path: Path, lines: Lines) -> str | None:
+    """Find the impl type name."""
+
+    while (line := next(lines, None)) and line.text.strip().startswith("#["):
+        skip(lines, "[]", first=line)
+
+    if line is None or not line.text.strip().startswith("impl"):
+        logger.error(f"Could not find impl line for {path}.")
+        return None
+
+    if not (
+        impl := IMPL_RE.search(join_lines(iter_delim(lines, "{}", first=line)).text)
+    ):
+        logger.error(f"Could not find impl line for {path}.")
+        return None
+
+    return impl.group("name")
 
 
 def _pymod(exported: Package, path: Path, lines: Lines):
@@ -735,6 +779,56 @@ def _pymod(exported: Package, path: Path, lines: Lines):
         mod.line_num = mod_line
 
 
+class StubKind(enum.Enum):
+    Function = "function"
+    Methods = "methods"
+    Class = "class"
+    Enumeration = "class_enum"
+    ComplexEnumeration = "class_complex_enum"
+
+    def is_like(self, kind: Kind) -> bool:
+        match (kind, self):
+            case (Kind.Struct, StubKind.Class):
+                return True
+            case (
+                Kind.Enumeration,
+                (StubKind.Enumeration | StubKind.ComplexEnumeration),
+            ):
+                return True
+            case (
+                Kind.Class,
+                (StubKind.Class | StubKind.Enumeration | StubKind.ComplexEnumeration),
+            ):
+                return True
+            case (Kind.Function, StubKind.Function):
+                return True
+        return False
+
+
+@dataclass
+class StubAttr:
+    kind: StubKind
+    module: str | None = None
+
+    @classmethod
+    def from_match(cls, stubgen_match: re.Match) -> Self:
+        """Process #[gen_stub_...] annotations."""
+
+        stub_kind = stubgen_match.group(1) or stubgen_match.group(3)
+        if stub_kind is None:
+            raise ValueError("Unable to determine stub kind")
+
+        kind = StubKind(stub_kind)
+        module: str | None = None
+
+        if kind is StubKind.Function:
+            props = PyO3Props.parse(stubgen_match.group(2) or stubgen_match.group(4))
+            if not (module := props.gets("module")):
+                logger.warning(f"Unknown module for stub {stubgen_match.group(0)}")
+
+        return cls(kind, module)
+
+
 def extract_items_from_file(path: Path, annotated: Package, exported: Package):
     """Update `annotated` and `exported` with, respectively,
     the items that are annotated to belong to a module
@@ -742,6 +836,7 @@ def extract_items_from_file(path: Path, annotated: Package, exported: Package):
     """
 
     lines = read_file(path)
+    last_stub: StubAttr | None = None
     while line := next(lines, None):
         # Handle macros:
         if "py_source_map!" in line:
@@ -759,23 +854,55 @@ def extract_items_from_file(path: Path, annotated: Package, exported: Package):
             continue
 
         line = join_lines(iter_delim(lines, "[]", first=line))
-        logger.debug(f"Found Attribute: {line}.")
+        logger.debug(f"Found Attribute in {path}: {line}.")
+
+        # Note that gen_stub_* attributes must come before pyo3 attributes.
+        if stubgen_match := STUB_GEN_RE.search(line.text):
+            logger.info(f"Discovered stub_gen attr in {path}: {line}")
+            last_stub = StubAttr.from_match(stubgen_match)
+        elif "gen_stub" in line and "override_" not in line:
+            logger.error(f"We're probably missing this annotation: {path} {line}")
 
         if pyclass_match := PYITEM_RE.search(line.text):
             logger.info(f"Discovered Item in {path}: {line}")
-            _pyitem(annotated, path, lines, pyclass_match)
+            module, item = _pyitem(annotated, path, lines, pyclass_match)
+            if module and item and last_stub:
+                if not last_stub.kind.is_like(item.kind):
+                    logger.warning(
+                        f"Mismatched stub {last_stub} found for {path} {item}."
+                    )
+                else:
+                    logger.info(f"Stub annotation found for {path} {item}.")
+                    module.add(replace(item, has_stub=True))
+                    if last_stub.kind is StubKind.Function and last_stub.module:
+                        logger.info(f"Moving fn to {last_stub.module}")
+            elif item:
+                logger.warning(f"No stub annotation found for {path} {item}.")
+
+            last_stub = None
         elif ("pyclass" in line.text or "pyfunction" in line.text) and not (
             "gen_stub" in line.text or "use " in line.text
         ):
-            logger.error(f"We're probably missing this annotation: {line}")
+            logger.error(f"We're probably missing this annotation: {path} {line}")
+
+        if PYMETHODS_RE.search(line.text):
+            logger.info(f"Discovered impl block in {path}: {line}")
+            if last_stub is None:
+                logger.warning(f"No stub annotation found for {path} {line}.")
+            last_stub = None
+        elif "pymethods" in line.text and not (
+            "gen_stub" in line.text or "use " in line.text
+        ):
+            logger.error(f"We're probably missing this annotation: {path} {line}")
 
         if PYMODULE_RE.search(line.text):
             logger.info(f"Discovered Module in {path}: {line}")
             _pymod(exported, path, chain((line,), lines))
+            last_stub = None
         elif "pymodule" in line.text and not (
             "gen_stub" in line.text or "use " in line.text
         ):
-            logger.error(f"We're probably missing this annotation: {line}")
+            logger.error(f"We're probably missing this annotation: {path} {line}")
 
 
 if __name__ == "__main__":
