@@ -51,7 +51,16 @@ mod stubs {
 
 // TODO: Create a unified error hierarchy: https://github.com/rigetti/quil-rs/issues/461
 // Base exception type for this package.
+#[cfg(not(feature = "stubs"))]
 pyo3::create_exception!(
+    quil,
+    QuilError,
+    PyException,
+    "Base exception type for errors raised by this package."
+);
+
+#[cfg(feature = "stubs")]
+pyo3_stub_gen::create_exception!(
     quil,
     QuilError,
     PyException,
