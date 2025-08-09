@@ -182,7 +182,7 @@ macro_rules! pickleable_new {
 
             fn __getnewargs__(&self) -> ($($field_type,)*) {
                 (
-                    $(self.$field.clone(),)*
+                    $((self.$field).clone(),)*
                 )
             }
         }

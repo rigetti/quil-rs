@@ -2,14 +2,23 @@
 //! along with conversions from their Rust error counterparts within this crate.
 use pyo3::exceptions::PyException;
 
+/// Create a new Python exception using the correct macro
+/// based on whether the "stubs" features is active.
+macro_rules! create_exception {
+    ( $module:expr, $py_err: ident, $base: ty $(, $doc: expr)? ) => {
+        #[cfg(not(feature = "stubs"))]
+        pyo3::create_exception!( $module, $py_err, $base $(, $doc)? );
+
+        #[cfg(feature = "stubs")]
+        pyo3_stub_gen::create_exception!( $module, $py_err, $base $(, $doc)? );
+    };
+}
+
 /// Create a Python exception and a conversion from its Rust type.
 /// Note that the exception class must still be added to the module.
 macro_rules! exception {
     ( $rust_err: ty, $module:expr, $py_err: ident, $base: ty $(, $doc: expr)? ) => {
-        #[cfg(not(feature = "stubs"))]
-        pyo3::create_exception!( $module, $py_err, $base $(, $doc)? );
-        #[cfg(feature = "stubs")]
-        pyo3_stub_gen::create_exception!( $module, $py_err, $base $(, $doc)? );
+        create_exception!( $module, $py_err, $base $(, $doc)? );
 
         #[doc = concat!(
             "Convert a Rust ",
@@ -50,22 +59,15 @@ mod stubs {
 }
 
 // TODO: Create a unified error hierarchy: https://github.com/rigetti/quil-rs/issues/461
-// Base exception type for this package.
-#[cfg(not(feature = "stubs"))]
-pyo3::create_exception!(
+
+create_exception!(
     quil,
     QuilError,
     PyException,
     "Base exception type for errors raised by this package."
 );
 
-#[cfg(feature = "stubs")]
-pyo3_stub_gen::create_exception!(
-    quil,
-    QuilError,
-    PyException,
-    "Base exception type for errors raised by this package."
-);
+create_exception!(quil, QuilValueError, QuilError, "Input value is invalid.");
 
 exception!(
     crate::quil::ToQuilError,

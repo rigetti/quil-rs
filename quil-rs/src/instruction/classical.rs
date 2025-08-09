@@ -87,7 +87,7 @@ impl From<MemoryReference> for ArithmeticOperand {
 }
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
-#[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass_enum)]
 #[cfg_attr(
     feature = "python",
     pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all)
@@ -140,7 +140,7 @@ impl Quil for BinaryOperand {
 }
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
-#[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass_enum)]
 #[cfg_attr(
     feature = "python",
     pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all)

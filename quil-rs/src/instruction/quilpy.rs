@@ -1,6 +1,6 @@
 use num_complex::Complex64;
 use numpy::{PyArray2, ToPyArray};
-use pyo3::prelude::*;
+use pyo3::{prelude::*, types::PyTuple};
 
 use super::*;
 use crate::{
@@ -104,7 +104,7 @@ pub(crate) fn init_submodule(m: &Bound<'_, PyModule>) -> PyResult<()> {
     Ok(())
 }
 
-/// Add a `parse` implementation to a `#[pyclass]` to uses the type's `from_str` implementation.
+/// Add a `parse` implementation to a `#[pyclass]` to use the type's `from_str` implementation.
 macro_rules! impl_parse {
     ($name: ident) => {
         #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
@@ -242,10 +242,44 @@ impl_instruction!([
     WaveformInvocation,
 ]);
 
-#[cfg(feature = "stubs")]
-impl pyo3_stub_gen::PyStubType for ExternPragmaMap {
-    fn type_output() -> pyo3_stub_gen::TypeInfo {
-        pyo3_stub_gen::TypeInfo::dict_of::<Option<String>, Pragma>()
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl ArithmeticOperand {
+    #[gen_stub(override_return_type(type_repr = "tuple[int | float | MemoryReference]"))]
+    fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+        match self {
+            Self::LiteralInteger(value) => (value,).into_pyobject(py),
+            Self::LiteralReal(value) => (value,).into_pyobject(py),
+            Self::MemoryReference(value) => (value.clone(),).into_pyobject(py),
+        }
+    }
+}
+
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl AttributeValue {
+    #[gen_stub(override_return_type(type_repr = "tuple[str | Expression]"))]
+    fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+        match self {
+            Self::String(value) => (value.clone(),).into_pyobject(py),
+            Self::Expression(value) => (value.clone(),).into_pyobject(py),
+        }
+    }
+}
+
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl ComparisonOperand {
+    #[gen_stub(override_return_type(type_repr = "tuple[int | float | MemoryReference]"))]
+    fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+        match self {
+            Self::LiteralInteger(value) => (value,).into_pyobject(py),
+            Self::LiteralReal(value) => (value,).into_pyobject(py),
+            Self::MemoryReference(value) => (value.clone(),).into_pyobject(py),
+        }
     }
 }
 
@@ -298,6 +332,26 @@ impl Call {
     }
 }
 
+#[cfg(feature = "stubs")]
+impl pyo3_stub_gen::PyStubType for ExternPragmaMap {
+    fn type_output() -> pyo3_stub_gen::TypeInfo {
+        pyo3_stub_gen::TypeInfo::dict_of::<Option<String>, Pragma>()
+    }
+}
+
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl ExternParameterType {
+    #[gen_stub(override_return_type(type_repr = "tuple[ScalarType | Vector]"))]
+    fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+        match self {
+            Self::Scalar(value) | Self::VariableLengthVector(value) => (*value,).into_pyobject(py),
+            Self::FixedLengthVector(value) => (value.clone(),).into_pyobject(py),
+        }
+    }
+}
+
 pickleable_new! {
     impl Gate {
         fn __new__(
@@ -342,6 +396,22 @@ impl Gate {
         let py = slf.py();
         let mut slf = { slf.get().clone() };
         Ok(slf.to_unitary(n_qubits)?.to_pyarray(py))
+    }
+}
+
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl GateSpecification {
+    #[gen_stub(override_return_type(
+        type_repr = "tuple[list[list[Expression]] | list[int] | GateType.PauliSum]"
+    ))]
+    fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+        match self {
+            Self::Matrix(value) => (value.clone(),).into_pyobject(py),
+            Self::Permutation(value) => (value.clone(),).into_pyobject(py),
+            Self::PauliSum(value) => (value.clone(),).into_pyobject(py),
+        }
     }
 }
 
@@ -400,11 +470,65 @@ impl PauliGate {
     }
 }
 
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl PragmaArgument {
+    #[gen_stub(override_return_type(type_repr = "tuple[int | str]"))]
+    fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+        match self {
+            Self::Identifier(value) => (value.clone(),).into_pyobject(py),
+            Self::Integer(value) => (*value,).into_pyobject(py),
+        }
+    }
+}
+
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl Qubit {
+    #[gen_stub(override_return_type(type_repr = "tuple[int | str | QubitPlaceholder]"))]
+    fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+        match self {
+            Self::Fixed(value) => (value,).into_pyobject(py),
+            Self::Variable(value) => (value,).into_pyobject(py),
+            Self::Placeholder(value) => (value.clone(),).into_pyobject(py),
+        }
+    }
+}
+
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl QubitPlaceholder {
     #[new]
     fn new() -> Self {
         Self::default()
+    }
+}
+
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl Target {
+    #[gen_stub(override_return_type(type_repr = "tuple[str | TargetPlaceholder]"))]
+    fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+        match self {
+            Self::Fixed(value) => (value,).into_pyobject(py),
+            Self::Placeholder(value) => (value.clone(),).into_pyobject(py),
+        }
+    }
+}
+
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl UnresolvedCallArgument {
+    #[gen_stub(override_return_type(type_repr = "tuple[str | MemoryReference | complex]"))]
+    fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+        match self {
+            Self::Identifier(value) => (value.clone(),).into_pyobject(py),
+            Self::MemoryReference(value) => (value.clone(),).into_pyobject(py),
+            Self::Immediate(value) => (*value,).into_pyobject(py),
+        }
     }
 }

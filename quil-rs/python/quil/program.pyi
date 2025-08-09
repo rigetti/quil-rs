@@ -152,6 +152,7 @@ class CalibrationSource:
     r"""
     A source of a calibration, either a [`Calibration`] or a [`MeasureCalibrationDefinition`]
     """
+    def __getnewargs__(self) -> tuple[CalibrationIdentifier | MeasureCalibrationIdentifier]: ...
     def __repr__(self) -> builtins.str: ...
     class Calibration(CalibrationSource):
         r"""
@@ -231,6 +232,7 @@ class MaybeCalibrationExpansion:
     r"""
     The result of an attempt to expand an instruction within a [`Program`]
     """
+    def __getnewargs__(self) -> tuple[CalibrationExpansion, InstructionIndex]: ...
     def __repr__(self) -> builtins.str: ...
     class Expanded(MaybeCalibrationExpansion):
         r"""

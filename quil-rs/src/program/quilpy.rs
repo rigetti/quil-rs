@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 
 use numpy::{Complex64, PyArray2, ToPyArray};
+use pyo3::types::PyTuple;
 use pyo3::{
     prelude::*,
     types::{PyBytes, PyFunction, PyRange},
@@ -389,6 +390,34 @@ impl FrameSet {
     #[pyo3(name = "intersection")]
     pub fn py_intersection(&self, identifiers: HashSet<FrameIdentifier>) -> Self {
         self.intersection(&identifiers)
+    }
+}
+
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl CalibrationSource {
+    #[gen_stub(override_return_type(
+        type_repr = "tuple[CalibrationIdentifier | MeasureCalibrationIdentifier]"
+    ))]
+    fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+        match self {
+            Self::Calibration(value) => (value.clone(),).into_pyobject(py),
+            Self::MeasureCalibration(value) => (value.clone(),).into_pyobject(py),
+        }
+    }
+}
+
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl MaybeCalibrationExpansion {
+    #[gen_stub(override_return_type(type_repr = "tuple[CalibrationExpansion, InstructionIndex]"))]
+    fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+        match self {
+            Self::Expanded(value) => (value.clone(),).into_pyobject(py),
+            Self::Unexpanded(value) => (value,).into_pyobject(py),
+        }
     }
 }
 

@@ -1,10 +1,10 @@
-use pyo3::prelude::*;
+use pyo3::{prelude::*, types::PyTuple};
 
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::gen_stub_pymethods;
 
 use super::*;
-use crate::impl_repr;
+use crate::{impl_repr, quilpy::errors::QuilValueError};
 
 #[pymodule]
 #[pyo3(name = "expression", module = "quil", submodule)]
@@ -35,6 +35,7 @@ impl_repr!(InfixOperator);
 impl_repr!(PrefixExpression);
 impl_repr!(PrefixOperator);
 
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl Expression {
@@ -83,6 +84,21 @@ impl Expression {
     #[staticmethod]
     fn parse(input: &str) -> PyResult<Self> {
         Ok(<Self as std::str::FromStr>::from_str(input)?)
+    }
+
+    #[gen_stub(override_return_type(
+        type_repr = "tuple[MemoryReference | FunctionCallExpression | InfixExpression | complex | PrefixExpression | str]"
+    ))]
+    fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+        match self {
+            Self::Address(value) => (value.clone(),).into_pyobject(py),
+            Self::FunctionCall(value) => (value.clone(),).into_pyobject(py),
+            Self::Infix(value) => (value.clone(),).into_pyobject(py),
+            Self::Number(value) => (value,).into_pyobject(py),
+            Self::PiConstant() => (Self::PiConstant(),).into_pyobject(py),
+            Self::Prefix(value) => (value.clone(),).into_pyobject(py),
+            Self::Variable(value) => (value.clone(),).into_pyobject(py),
+        }
     }
 }
 
@@ -142,5 +158,65 @@ impl FunctionCallExpression {
     #[getter]
     fn expression(&self) -> Expression {
         (*self.expression).clone()
+    }
+}
+
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl ExpressionFunction {
+    #[new]
+    fn __new__(value: isize) -> PyResult<Self> {
+        match value {
+            val if val == Self::Cis as isize => Ok(Self::Cis),
+            val if val == Self::Cosine as isize => Ok(Self::Cosine),
+            val if val == Self::Exponent as isize => Ok(Self::Exponent),
+            val if val == Self::Sine as isize => Ok(Self::Sine),
+            val if val == Self::SquareRoot as isize => Ok(Self::SquareRoot),
+            _ => Err(QuilValueError::new_err("unknown value")),
+        }
+    }
+
+    fn __getnewargs__(&self) -> (isize,) {
+        (*self as isize,)
+    }
+}
+
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl PrefixOperator {
+    #[new]
+    fn __new__(value: isize) -> PyResult<Self> {
+        match value {
+            val if val == Self::Plus as isize => Ok(Self::Plus),
+            val if val == Self::Minus as isize => Ok(Self::Minus),
+            _ => Err(QuilValueError::new_err("unknown value")),
+        }
+    }
+
+    fn __getnewargs__(&self) -> (isize,) {
+        (*self as isize,)
+    }
+}
+
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl InfixOperator {
+    #[new]
+    fn __new__(value: isize) -> PyResult<Self> {
+        match value {
+            val if val == Self::Caret as isize => Ok(Self::Caret),
+            val if val == Self::Plus as isize => Ok(Self::Plus),
+            val if val == Self::Minus as isize => Ok(Self::Minus),
+            val if val == Self::Slash as isize => Ok(Self::Slash),
+            val if val == Self::Star as isize => Ok(Self::Star),
+            _ => Err(QuilValueError::new_err("unknown value")),
+        }
+    }
+
+    fn __getnewargs__(&self) -> (isize,) {
+        (*self as isize,)
     }
 }
