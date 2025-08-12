@@ -146,10 +146,10 @@
                     <a class="class" href="#FunctionCallExpression">FunctionCallExpression</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#FunctionCallExpression.function">function</a>
+                                <a class="variable" href="#FunctionCallExpression.expression">expression</a>
                         </li>
                         <li>
-                                <a class="variable" href="#FunctionCallExpression.expression">expression</a>
+                                <a class="variable" href="#FunctionCallExpression.function">function</a>
                         </li>
                 </ul>
 
@@ -158,13 +158,13 @@
                     <a class="class" href="#InfixExpression">InfixExpression</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#InfixExpression.left">left</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#InfixExpression.operator">operator</a>
                         </li>
                         <li>
                                 <a class="variable" href="#InfixExpression.right">right</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#InfixExpression.left">left</a>
                         </li>
                 </ul>
 
@@ -173,10 +173,10 @@
                     <a class="class" href="#PrefixExpression">PrefixExpression</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#PrefixExpression.expression">expression</a>
+                                <a class="variable" href="#PrefixExpression.operator">operator</a>
                         </li>
                         <li>
-                                <a class="variable" href="#PrefixExpression.operator">operator</a>
+                                <a class="variable" href="#PrefixExpression.expression">expression</a>
                         </li>
                 </ul>
 
@@ -805,19 +805,6 @@ Rust <a href="std::str::FromStr"><code>FromStr</code></a> instance.</p>
     
     
 
-                            <div id="FunctionCallExpression.function" class="classattr">
-                                <div class="attr variable">
-            <span class="name">function</span>
-
-        
-    </div>
-    <a class="headerlink" href="#FunctionCallExpression.function"></a>
-    
-            <div class="docstring"><p>Get the function field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
                             <div id="FunctionCallExpression.expression" class="classattr">
                                 <div class="attr variable">
             <span class="name">expression</span>
@@ -827,6 +814,19 @@ Rust <a href="std::str::FromStr"><code>FromStr</code></a> instance.</p>
     <a class="headerlink" href="#FunctionCallExpression.expression"></a>
     
             <div class="docstring"><p>Get the expression field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
+                            <div id="FunctionCallExpression.function" class="classattr">
+                                <div class="attr variable">
+            <span class="name">function</span>
+
+        
+    </div>
+    <a class="headerlink" href="#FunctionCallExpression.function"></a>
+    
+            <div class="docstring"><p>Get the function field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -844,19 +844,6 @@ Rust <a href="std::str::FromStr"><code>FromStr</code></a> instance.</p>
     
     
 
-                            <div id="InfixExpression.left" class="classattr">
-                                <div class="attr variable">
-            <span class="name">left</span>
-
-        
-    </div>
-    <a class="headerlink" href="#InfixExpression.left"></a>
-    
-            <div class="docstring"><p>Get the left field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
                             <div id="InfixExpression.operator" class="classattr">
                                 <div class="attr variable">
             <span class="name">operator</span>
@@ -883,6 +870,19 @@ Rust <a href="std::str::FromStr"><code>FromStr</code></a> instance.</p>
 
 
                             </div>
+                            <div id="InfixExpression.left" class="classattr">
+                                <div class="attr variable">
+            <span class="name">left</span>
+
+        
+    </div>
+    <a class="headerlink" href="#InfixExpression.left"></a>
+    
+            <div class="docstring"><p>Get the left field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
                 </section>
                 <section id="PrefixExpression">
                     <div class="attr class">
@@ -896,19 +896,6 @@ Rust <a href="std::str::FromStr"><code>FromStr</code></a> instance.</p>
     
     
 
-                            <div id="PrefixExpression.expression" class="classattr">
-                                <div class="attr variable">
-            <span class="name">expression</span>
-
-        
-    </div>
-    <a class="headerlink" href="#PrefixExpression.expression"></a>
-    
-            <div class="docstring"><p>Get the expression field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
                             <div id="PrefixExpression.operator" class="classattr">
                                 <div class="attr variable">
             <span class="name">operator</span>
@@ -918,6 +905,19 @@ Rust <a href="std::str::FromStr"><code>FromStr</code></a> instance.</p>
     <a class="headerlink" href="#PrefixExpression.operator"></a>
     
             <div class="docstring"><p>Get the operator field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
+                            <div id="PrefixExpression.expression" class="classattr">
+                                <div class="attr variable">
+            <span class="name">expression</span>
+
+        
+    </div>
+    <a class="headerlink" href="#PrefixExpression.expression"></a>
+    
+            <div class="docstring"><p>Get the expression field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
