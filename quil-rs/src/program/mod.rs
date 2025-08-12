@@ -487,7 +487,7 @@ impl Program {
         &self,
         filter: F,
     ) -> (
-        ProgramDefGateSequenceExpander<F>,
+        ProgramDefGateSequenceExpander<'_, F>,
         IndexMap<String, GateDefinition>,
     )
     where
