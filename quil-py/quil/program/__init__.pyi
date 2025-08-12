@@ -406,7 +406,7 @@ class DefGateSequenceExpansion:
 @final
 class InstructionSourceMap:
     def entries(self) -> List[InstructionSourceMapEntry]: ...
-    def list_sources_for_target_index(self, target_index: int) -> List[Tuple[int, int]]:
+    def list_sources_for_target_index(self, target_index: int) -> List[int]:
         """Return the locations in the source which were expanded to generate that instruction.
 
         This is `O(n)` where `n` is the number of first-level calibration expansions performed.

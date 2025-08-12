@@ -68,12 +68,24 @@ py_wrap_union_enum! {
 impl_repr!(PyInstructionTarget);
 impl_eq!(PyInstructionTarget);
 
-impl SourceMapIndexable<InstructionIndex> for InstructionTargetShim {
-    fn intersects(&self, other: &InstructionIndex) -> bool {
+/// A shim type to allow us to use `usize` as an index in the `SourceMap` API.
+/// Note, this is necessary because we need to crate-defined type to implement
+/// [`SourceMapIndexable`]. See
+/// [`PyInstructionSourceMap::list_targets_for_source_index`] for use.
+struct InstructionIndexShim(usize);
+
+impl SourceMapIndexable<InstructionIndexShim> for usize {
+    fn intersects(&self, other: &InstructionIndexShim) -> bool {
+        *self == other.0
+    }
+}
+
+impl SourceMapIndexable<usize> for InstructionTargetShim {
+    fn intersects(&self, other: &usize) -> bool {
         match self {
-            Self::Copied(index) => *index == other.0,
-            Self::Calibration(expansion) => expansion.intersects(other),
-            Self::DefGateSequence(expansion) => expansion.intersects(other),
+            Self::Copied(index) => index == other,
+            Self::Calibration(expansion) => expansion.intersects(&InstructionIndex(*other)),
+            Self::DefGateSequence(expansion) => expansion.intersects(&InstructionIndex(*other)),
         }
     }
 }
@@ -98,41 +110,9 @@ impl SourceMapIndexable<GateSignature> for InstructionTargetShim {
     }
 }
 
-/// In its most general form, a source within a source map can correspond to
-/// a range of instructions, rather than just a single instruction. We use
-/// this type as the [`SourceMap`] `SourceIndex` for forward compatibility.
-#[derive(Clone, Debug, PartialEq)]
-pub struct InstructionSource(std::ops::Range<InstructionIndex>);
-
-impl InstructionSource {
-    fn start(&self) -> InstructionIndex {
-        self.0.start
-    }
-
-    fn end(&self) -> InstructionIndex {
-        self.0.end
-    }
-
-    fn contains(&self, index: &InstructionIndex) -> bool {
-        self.0.contains(index)
-    }
-}
-
-impl From<&InstructionIndex> for InstructionSource {
-    fn from(value: &InstructionIndex) -> Self {
-        Self(*value..InstructionIndex(value.0 + 1))
-    }
-}
-
-impl SourceMapIndexable<InstructionIndex> for InstructionSource {
-    fn intersects(&self, other: &InstructionIndex) -> bool {
-        self.contains(other)
-    }
-}
-
 /// A single concrete type for [`SourceMap`] using instruction indices
 /// that we will expose to Python.
-type InstructionSourceMap = SourceMap<InstructionSource, InstructionTarget<InstructionTargetShim>>;
+type InstructionSourceMap = SourceMap<usize, InstructionTargetShim>;
 
 py_wrap_type! {
     #[derive(Debug, PartialEq)]
@@ -172,13 +152,8 @@ fn to_instruction_source_map<R: Into<InstructionTargetShim> + Clone>(
         .cloned()
         .map(|entry| {
             SourceMapEntry::new(
-                InstructionSource::from(entry.source_location()),
-                match entry.target_location().clone() {
-                    InstructionTarget::Copied(index) => InstructionTarget::Copied(index),
-                    InstructionTarget::Rewrite(rewrite) => {
-                        InstructionTarget::Rewrite(rewrite.into())
-                    }
-                },
+                entry.source_location().0,
+                InstructionTargetShim::from(entry.target_location().clone()),
             )
         })
         .collect();
@@ -225,7 +200,7 @@ impl PyInstructionSourceMap {
         self.as_inner()
             .entries()
             .iter()
-            .map(|entry| entry.into())
+            .map(|entry| entry.clone().into())
             .collect()
     }
 
@@ -233,11 +208,11 @@ impl PyInstructionSourceMap {
     /// which were expanded to generate that instruction.
     ///
     /// This is `O(n)` where `n` is the number of first-level calibration expansions performed.
-    pub fn list_sources_for_target_index(&self, target_index: usize) -> Vec<(usize, usize)> {
+    pub fn list_sources_for_target_index(&self, target_index: usize) -> Vec<usize> {
         self.as_inner()
-            .list_sources(&InstructionIndex(target_index))
+            .list_sources(&target_index)
             .into_iter()
-            .map(|index| (index.start().0, index.end().0))
+            .cloned()
             .collect()
     }
 
@@ -252,7 +227,7 @@ impl PyInstructionSourceMap {
         self.as_inner()
             .list_sources(calibration_used.as_inner())
             .into_iter()
-            .map(|index| index.start().0)
+            .cloned()
             .collect()
     }
 
@@ -265,7 +240,7 @@ impl PyInstructionSourceMap {
         self.as_inner()
             .list_sources(gate_signature.as_inner())
             .into_iter()
-            .map(|index| index.start().0)
+            .cloned()
             .collect()
     }
 
@@ -273,10 +248,12 @@ impl PyInstructionSourceMap {
     ///
     /// This is `O(n)` where `n` is the number of first-level calibration expansions performed.
     pub fn list_targets_for_source_index(&self, source_index: usize) -> Vec<PyInstructionTarget> {
-        self.as_inner()
-            .list_targets(&InstructionIndex(source_index))
+        let inner = self.as_inner();
+
+        inner
+            .list_targets(&InstructionIndexShim(source_index))
             .into_iter()
-            .map(|expansion| InstructionTargetShim::from(expansion.clone()).into())
+            .map(PyInstructionTarget::from)
             .collect()
     }
 }
@@ -289,8 +266,7 @@ impl<R: Into<InstructionTargetShim> + Clone> From<SourceMap<InstructionIndex, In
     }
 }
 
-type InstructionSourceMapEntry =
-    SourceMapEntry<InstructionSource, InstructionTarget<InstructionTargetShim>>;
+type InstructionSourceMapEntry = SourceMapEntry<usize, InstructionTargetShim>;
 
 py_wrap_type! {
     #[derive(Debug, PartialEq)]
@@ -302,13 +278,12 @@ impl_eq!(PyInstructionSourceMapEntry);
 
 #[pymethods]
 impl PyInstructionSourceMapEntry {
-    pub fn source_location(&self) -> (usize, usize) {
-        let source_location = self.as_inner().source_location();
-        (source_location.start().0, source_location.end().0)
+    pub fn source_location(&self) -> usize {
+        *self.as_inner().source_location()
     }
 
     pub fn target_location(&self) -> PyInstructionTarget {
-        InstructionTargetShim::from(self.as_inner().target_location().clone()).into()
+        self.as_inner().target_location().clone().into()
     }
 }
 
