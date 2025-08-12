@@ -274,6 +274,7 @@ impl PyProgram {
                 .unwrap_or(true)
         };
         self.as_inner()
+            .clone()
             .expand_defgate_sequences(filter)
             .map(PyProgram::from)
             .map_err(ProgramError::from)

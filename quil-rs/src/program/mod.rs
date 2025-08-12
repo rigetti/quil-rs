@@ -422,7 +422,7 @@ impl Program {
     ///
     ///  assert_eq!(expanded_program, expected_program);
     ///  ```
-    pub fn expand_defgate_sequences<F>(&self, filter: F) -> Result<Self>
+    pub fn expand_defgate_sequences<F>(self, filter: F) -> Result<Self>
     where
         F: Fn(&String) -> bool,
     {
@@ -430,11 +430,11 @@ impl Program {
         let new_instructions = expansion.expand_defgate_sequences(&self.instructions)?;
 
         let mut new_program = Self {
-            calibrations: self.calibrations.clone(),
-            extern_pragma_map: self.extern_pragma_map.clone(),
-            frames: self.frames.clone(),
-            memory_regions: self.memory_regions.clone(),
-            waveforms: self.waveforms.clone(),
+            calibrations: self.calibrations,
+            extern_pragma_map: self.extern_pragma_map,
+            frames: self.frames,
+            memory_regions: self.memory_regions,
+            waveforms: self.waveforms,
             gate_definitions,
             instructions: Vec::new(),
             used_qubits: HashSet::new(),
