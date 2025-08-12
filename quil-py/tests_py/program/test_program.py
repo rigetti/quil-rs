@@ -5,7 +5,7 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 
 from quil.instructions import Gate, Instruction, Jump, Qubit, QubitPlaceholder, Target, TargetPlaceholder
-from quil.program import FilterStr, Program
+from quil.program import Program
 
 
 def test_pickle():
@@ -334,7 +334,7 @@ seq3 2
 MEASURE 0 ro[0]
 MEASURE 1 ro[1]""")
     program = Program.parse(program_text)
-    filter_str = FilterStr.from_exclude({"seq1"})
+    filter_str = lambda key: key != "seq1"
     expanded_program, source_map = program.expand_defgate_sequences_with_source_map(filter=filter_str)
 
     expected_program_text = inspect.cleandoc("""DECLARE ro BIT[2]

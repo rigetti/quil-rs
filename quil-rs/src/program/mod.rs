@@ -132,7 +132,7 @@ impl Program {
     #[cfg(test)]
     pub(crate) fn for_each_body_instruction<F>(&mut self, closure: F)
     where
-        F: FnMut(&mut Instruction),
+        F: Fn(&mut Instruction),
     {
         let mut instructions = std::mem::take(&mut self.instructions);
         self.used_qubits.clear();
@@ -348,10 +348,10 @@ impl Program {
     ///
     /// * `filter` - A filter that determines which sequence gate definitions to keep in the
     ///   program.
-    pub fn expand_defgate_sequences(
-        &self,
-        filter: crate::filter_set::Filter<String>,
-    ) -> Result<Self> {
+    pub fn expand_defgate_sequences<F>(&self, filter: F) -> Result<Self>
+    where
+        F: Fn(&String) -> bool,
+    {
         let (expansion, gate_definitions) = self.initialize_defgate_sequence_expander(filter);
         let new_instructions = expansion.expand_defgate_sequences(&self.instructions)?;
 
@@ -379,13 +379,16 @@ impl Program {
     ///
     /// * `filter` - A filter that determines which sequence gate definitions to keep in the
     ///   program.
-    pub fn expand_defgate_sequences_with_source_map(
+    pub fn expand_defgate_sequences_with_source_map<F>(
         &self,
-        filter: crate::filter_set::Filter<String>,
+        filter: F,
     ) -> Result<(
         Self,
         SourceMap<InstructionIndex, InstructionTarget<DefGateSequenceExpansion>>,
-    )> {
+    )>
+    where
+        F: Fn(&String) -> bool,
+    {
         let (expander, gate_definitions) = self.initialize_defgate_sequence_expander(filter);
         let (new_instructions, source_map) =
             expander.expand_defgate_sequences_with_source_map(&self.instructions)?;
@@ -404,13 +407,16 @@ impl Program {
         Ok((new_program, source_map))
     }
 
-    fn initialize_defgate_sequence_expander(
+    fn initialize_defgate_sequence_expander<F>(
         &self,
-        filter: crate::filter_set::Filter<String>,
+        filter: F,
     ) -> (
-        ProgramDefGateSequenceExpander,
+        ProgramDefGateSequenceExpander<F>,
         IndexMap<String, GateDefinition>,
-    ) {
+    )
+    where
+        F: Fn(&String) -> bool,
+    {
         let gate_definitions_to_keep =
             filter_sequence_gate_definitions_to_keep(&self.gate_definitions, &filter);
         let expansion = ProgramDefGateSequenceExpander::new(&self.gate_definitions, filter);
@@ -864,10 +870,13 @@ impl Program {
 
 /// Filter the sequence gate definitions in the program to keep only those that are
 /// excluded by the filter or are referenced by those that are excluded by the filter.
-fn filter_sequence_gate_definitions_to_keep(
+fn filter_sequence_gate_definitions_to_keep<F>(
     gate_definitions: &IndexMap<String, GateDefinition>,
-    filter: &crate::filter_set::Filter<String>,
-) -> IndexMap<String, GateDefinition> {
+    filter: &F,
+) -> IndexMap<String, GateDefinition>
+where
+    F: Fn(&String) -> bool,
+{
     let mut graph: Graph<usize, u8> = Graph::new();
     let gate_sequence_definitions = gate_definitions
         .iter()
@@ -901,7 +910,7 @@ fn filter_sequence_gate_definitions_to_keep(
 
     for (_, (i, _)) in gate_sequence_definitions
         .iter()
-        .filter(|(name, _)| !filter.include(name))
+        .filter(|(name, _)| !filter(name))
     {
         for (gate_name, (j, _)) in gate_sequence_definitions.iter() {
             if petgraph::algo::has_path_connecting(&graph, *i, *j, Some(&mut space)) {
@@ -914,7 +923,7 @@ fn filter_sequence_gate_definitions_to_keep(
         .iter()
         .filter(|(gate_name, definition)| {
             if let GateSpecification::Sequence(_) = definition.specification {
-                !filter.include(gate_name)
+                !filter(gate_name)
                     || seq_defgates_referenced_by_unfiltered_seq_defgates.contains(*gate_name)
             } else {
                 true
@@ -2227,8 +2236,11 @@ MEASURE 0 ro[0]
 MEASURE 1 ro[1]
 ";
         let program = Program::from_str(QUIL).expect("should parse program");
-        let filter =
-            crate::filter_set::Filter::Exclude(["seq1"].into_iter().map(String::from).collect());
+        let exclude = ["seq1"]
+            .into_iter()
+            .map(String::from)
+            .collect::<HashSet<_>>();
+        let filter = |key: &String| !exclude.contains(key);
         let expanded_program = program
             .expand_defgate_sequences(filter)
             .expect("should expand gate sequences");
@@ -2271,8 +2283,11 @@ MEASURE 0 ro[0]
 MEASURE 1 ro[1]
 ";
         let program = Program::from_str(QUIL).expect("should parse program");
-        let filter =
-            crate::filter_set::Filter::Exclude(["seq1"].into_iter().map(String::from).collect());
+        let exclude = ["seq1"]
+            .into_iter()
+            .map(String::from)
+            .collect::<HashSet<_>>();
+        let filter = |key: &String| !exclude.contains(key);
         let expanded_program = program
             .expand_defgate_sequences(filter)
             .expect("should expand gate sequences");

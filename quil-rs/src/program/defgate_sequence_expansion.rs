@@ -7,7 +7,6 @@ use indexmap::{IndexMap, IndexSet};
 
 use crate::{
     expression::Expression,
-    filter_set::Filter,
     instruction::{
         DefGateSequenceExpansionError, GateDefinition, GateSignature, GateSpecification,
         Instruction,
@@ -74,12 +73,15 @@ type SequenceGateDefinitionSourceMap =
 
 /// A utility to expand sequence gate definitions in a Quil program.
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct ProgramDefGateSequenceExpander<'program> {
+pub(crate) struct ProgramDefGateSequenceExpander<'program, F> {
     gate_definitions: &'program IndexMap<String, GateDefinition>,
-    filter: Filter<String>,
+    filter: F,
 }
 
-impl<'program> ProgramDefGateSequenceExpander<'program> {
+impl<'program, F> ProgramDefGateSequenceExpander<'program, F>
+where
+    F: Fn(&String) -> bool,
+{
     /// Creates a new `ProgramDefGateSequenceExpander`.
     ///
     /// # Arguments
@@ -89,7 +91,7 @@ impl<'program> ProgramDefGateSequenceExpander<'program> {
     ///   expansion.
     pub(crate) fn new(
         gate_definitions: &'program IndexMap<String, GateDefinition>,
-        filter: Filter<String>,
+        filter: F,
     ) -> Self {
         Self {
             gate_definitions,
@@ -213,7 +215,7 @@ impl<'program> ProgramDefGateSequenceExpander<'program> {
         if let Instruction::Gate(gate) = instruction {
             if let Some(gate_definition) = self.gate_definitions.get(&gate.name) {
                 if let GateSpecification::Sequence(gate_sequence) = &gate_definition.specification {
-                    if self.filter.include(&gate.name) {
+                    if (self.filter)(&gate.name) {
                         if gate_definition.parameters.len() != gate.parameters.len() {
                             return Err(DefGateSequenceExpansionError::ParameterCount {
                                 expected: gate_definition.parameters.len(),
@@ -267,7 +269,7 @@ mod tests {
     /// A test case for the [`ProgramDefGateSequenceExpander`] functionality.
     struct DefGateSequenceExpansionTestCase {
         program: &'static str,
-        filter: Filter<String>,
+        filter: Box<dyn Fn(&String) -> bool>,
         expected: Result<&'static str, DefGateSequenceExpansionError>,
         expected_source_map:
             SourceMap<InstructionIndex, InstructionTarget<DefGateSequenceExpansion>>,
@@ -345,7 +347,7 @@ RZ(pi/2) 1 # (0, 1, 2)
             };
             Self {
                 program: QUIL,
-                filter: Filter::default(),
+                filter: Box::new(|_| true),
                 expected: Ok(EXPECTED_QUIL),
                 expected_source_map,
             }
@@ -511,7 +513,7 @@ RZ(-(pi)) 1
             };
             Self {
                 program: QUIL,
-                filter: Filter::default(),
+                filter: Box::new(|_| true),
                 expected: Ok(EXPECTED_QUIL),
                 expected_source_map,
             }
@@ -584,7 +586,7 @@ MEASURE 1 ro[1]
             };
             Self {
                 program: QUIL,
-                filter: Filter::default(),
+                filter: Box::new(|_| true),
                 expected: Ok(EXPECTED_QUIL),
                 expected_source_map,
             }
@@ -627,7 +629,7 @@ RZ(pi) 0
             };
             Self {
                 program: QUIL,
-                filter: Filter::default(),
+                filter: Box::new(|_| true),
                 expected: Ok(EXPECTED_QUIL),
                 expected_source_map,
             }
@@ -675,7 +677,7 @@ seq2(pi/2) 0
             };
             Self {
                 program: QUIL,
-                filter: Filter::Include(["seq1".to_string()].into_iter().collect()), // Only include seq2
+                filter: Box::new(|k| k == "seq1"),
                 expected: Ok(EXPECTED_QUIL),
                 expected_source_map,
             }
@@ -693,7 +695,7 @@ seq1() 0
             });
             Self {
                 program: QUIL,
-                filter: Filter::default(),
+                filter: Box::new(|_| true),
                 expected,
                 expected_source_map: SourceMap::default(),
             }
@@ -717,7 +719,7 @@ seq1(pi) 0
             ));
             Self {
                 program: QUIL,
-                filter: Filter::default(),
+                filter: Box::new(|_| true),
                 expected,
                 expected_source_map: SourceMap::default(),
             }
@@ -736,7 +738,7 @@ seq1(pi/2) 0 1
             });
             Self {
                 program: QUIL,
-                filter: Filter::default(),
+                filter: Box::new(|_| true),
                 expected,
                 expected_source_map: SourceMap::default(),
             }
@@ -754,7 +756,7 @@ seq1(pi/2) %q1
             ));
             Self {
                 program: QUIL,
-                filter: Filter::default(),
+                filter: Box::new(|_| true),
                 expected,
                 expected_source_map: SourceMap::default(),
             }
@@ -773,7 +775,7 @@ DAGGER seq1(pi/2) 0
             ));
             Self {
                 program: QUIL,
-                filter: Filter::default(),
+                filter: Box::new(|_| true),
                 expected,
                 expected_source_map: SourceMap::default(),
             }
@@ -800,7 +802,7 @@ DAGGER seq1(pi/2) 0
             crate::Program::from_str(test_case.program).expect("must be a valid Quil program");
         let program_expansion = ProgramDefGateSequenceExpander {
             gate_definitions: &program.gate_definitions,
-            filter: test_case.filter.clone(),
+            filter: test_case.filter,
         };
         let result =
             program_expansion.expand_defgate_sequences_with_source_map(&program.instructions);

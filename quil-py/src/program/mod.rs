@@ -6,7 +6,6 @@ use std::{
 use indexmap::IndexMap;
 use numpy::{PyArray2, ToPyArray};
 use quil_rs::{
-    filter_set::Filter,
     instruction::{Instruction, QubitPlaceholder, TargetPlaceholder, Waveform},
     program::{
         analysis::{ControlFlowGraph, ControlFlowGraphOwned},
@@ -17,7 +16,7 @@ use quil_rs::{
 use rigetti_pyo3::{
     create_init_submodule, impl_as_mut_for_wrapper, impl_from_str, impl_parse, impl_repr,
     num_complex::Complex64,
-    py_wrap_error, py_wrap_type, py_wrap_union_enum,
+    py_wrap_error, py_wrap_type,
     pyo3::{
         exceptions::PyValueError,
         prelude::*,
@@ -107,13 +106,23 @@ impl PyProgram {
     #[pyo3(signature = (/, filter = None))]
     pub fn expand_defgate_sequences_with_source_map(
         &self,
-        filter: Option<PyFilterStr>,
+        filter: Option<&PyAny>,
     ) -> PyResult<(PyProgram, PyInstructionSourceMap)> {
+        let py_filter = filter
+            .map(|f| f.is_callable().then_some(f))
+            .unwrap_or_default();
+        let filter = |key: &String| -> bool {
+            py_filter
+                .map(|f| {
+                    f.call1((key,))
+                        .and_then(|v| v.extract::<bool>())
+                        .unwrap_or(true)
+                })
+                .unwrap_or(true)
+        };
         let expansion = self
             .as_inner()
-            .expand_defgate_sequences_with_source_map(
-                filter.map(|f| f.into_inner()).unwrap_or_default(),
-            )
+            .expand_defgate_sequences_with_source_map(filter)
             .map_err(ProgramError::from)
             .map_err(ProgramError::to_py_err)?;
         Ok((expansion.0.into(), expansion.1.into()))
@@ -251,9 +260,21 @@ impl PyProgram {
     }
 
     #[pyo3(signature = (/, filter = None))]
-    pub fn expand_defgate_sequences(&self, filter: Option<PyFilterStr>) -> PyResult<Self> {
+    pub fn expand_defgate_sequences(&self, filter: Option<&PyAny>) -> PyResult<Self> {
+        let py_filter = filter
+            .map(|f| f.is_callable().then_some(f))
+            .unwrap_or_default();
+        let filter = |key: &String| -> bool {
+            py_filter
+                .map(|f| {
+                    f.call1((key,))
+                        .and_then(|v| v.extract::<bool>())
+                        .unwrap_or(true)
+                })
+                .unwrap_or(true)
+        };
         self.as_inner()
-            .expand_defgate_sequences(filter.map(|f| f.into_inner()).unwrap_or_default())
+            .expand_defgate_sequences(filter)
             .map(PyProgram::from)
             .map_err(ProgramError::from)
             .map_err(ProgramError::to_py_err)
@@ -424,21 +445,8 @@ impl PyProgram {
     }
 }
 
-type FilterString = Filter<String>;
-
-py_wrap_union_enum! {
-    #[derive(Debug, PartialEq)]
-    PyFilterStr(FilterString) as "FilterStr" {
-        exclude: Exclude => HashSet<String>,
-        include: Include => HashSet<String>
-    }
-}
-impl_repr!(PyFilterStr);
-impl_eq!(PyFilterStr);
-
 create_init_submodule! {
     classes: [
-        PyFilterStr,
         PyFrameSet,
         PyProgram,
         PyCalibrationExpansion,
