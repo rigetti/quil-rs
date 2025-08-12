@@ -26,7 +26,7 @@ pub struct DefGateSequenceExpansion {
     /// the sequence gate definition, since gate names are unique within
     /// a program. Nevertheless, we include the full signature here
     /// for later reference within error messages.
-    defgate_sequence_source: crate::instruction::GateSignature,
+    source_signature: crate::instruction::GateSignature,
 
     /// The target instruction indices produced by the expansion
     range: Range<InstructionIndex>,
@@ -39,8 +39,8 @@ pub struct DefGateSequenceExpansion {
 
 impl DefGateSequenceExpansion {
     /// Returns the source gate signature of the sequence gate definition
-    pub fn defgate_sequence_source(&self) -> &GateSignature {
-        &self.defgate_sequence_source
+    pub fn source_signature(&self) -> &GateSignature {
+        &self.source_signature
     }
 
     /// Returns the range of target instruction indices produced by the expansion
@@ -64,7 +64,7 @@ impl SourceMapIndexable<InstructionIndex> for DefGateSequenceExpansion {
 
 impl SourceMapIndexable<GateSignature> for DefGateSequenceExpansion {
     fn intersects(&self, other: &GateSignature) -> bool {
-        &self.defgate_sequence_source == other
+        &self.source_signature == other
     }
 }
 
@@ -130,23 +130,27 @@ where
         &self,
         source_instructions: &[Instruction],
         source_map: &mut SequenceGateDefinitionSourceMap,
-        seen: &mut IndexSet<String>,
+        gate_expansion_stack: &mut IndexSet<String>,
     ) -> Result<Vec<Instruction>, DefGateSequenceExpansionError> {
         let mut target_instructions = vec![];
         for (source_instruction_index, source_instruction) in source_instructions.iter().enumerate()
         {
-            if let Some((target_gate_instructions, source)) =
-                self.gate_sequence_from_instruction(source_instruction, seen)?
+            if let Some((target_gate_instructions, gate_sequence_signature)) =
+                self.gate_sequence_from_instruction(source_instruction, gate_expansion_stack)?
             {
-                let mut seen = seen.clone();
-                seen.insert(source.name().to_string());
+                // if this instruction is a sequence gate definition, we need to expand it. Before
+                // doing so, we add the gate sequence signature to the the `gate_expansion_stack`,
+                // so all nested expansions within this sequence have access to the stack of
+                // already expanded gate definitions.
+                let mut gate_expansion_stack = gate_expansion_stack.clone();
+                gate_expansion_stack.insert(gate_sequence_signature.name().to_string());
 
                 let mut recursive_source_map = SourceMap::default();
                 let recursive_target_gate_instructions = self
                     .expand_defgate_sequences_with_source_map_inner(
                         &target_gate_instructions,
                         &mut recursive_source_map,
-                        &mut seen,
+                        &mut gate_expansion_stack,
                     )?;
                 let target_instruction_start_index = InstructionIndex(target_instructions.len());
                 let target_instruction_end_index = InstructionIndex(
@@ -155,7 +159,7 @@ where
                 source_map.entries.push(SourceMapEntry {
                     source_location: InstructionIndex(source_instruction_index),
                     target_location: InstructionTarget::Rewrite(DefGateSequenceExpansion {
-                        defgate_sequence_source: source,
+                        source_signature: gate_sequence_signature,
                         range: target_instruction_start_index..target_instruction_end_index,
                         nested_expansions: recursive_source_map,
                     }),
@@ -177,20 +181,24 @@ where
     fn expand_defgate_sequences_without_source_map_inner(
         &self,
         source_instructions: &[Instruction],
-        seen: &mut IndexSet<String>,
+        gate_expansion_stack: &mut IndexSet<String>,
     ) -> Result<Vec<Instruction>, DefGateSequenceExpansionError> {
         let mut target_instructions = vec![];
         for source_instruction in source_instructions.iter() {
             if let Some((target_gate_instructions, source)) =
-                self.gate_sequence_from_instruction(source_instruction, seen)?
+                self.gate_sequence_from_instruction(source_instruction, gate_expansion_stack)?
             {
-                let mut seen = seen.clone();
-                seen.insert(source.name().to_string());
+                // if this instruction is a sequence gate definition, we need to expand it. Before
+                // doing so, we add the gate sequence signature to the the `gate_expansion_stack`,
+                // so all nested expansions within this sequence have access to the stack of
+                // already expanded gate definitions.
+                let mut gate_expansion_stack = gate_expansion_stack.clone();
+                gate_expansion_stack.insert(source.name().to_string());
 
                 let recursive_target_gate_instructions = self
                     .expand_defgate_sequences_without_source_map_inner(
                         &target_gate_instructions,
-                        &mut seen,
+                        &mut gate_expansion_stack,
                     )?;
                 target_instructions.extend(recursive_target_gate_instructions);
             } else {
@@ -206,11 +214,11 @@ where
     /// definition into a sequence of instructions and returns them along with the
     /// signature of the gate definition.
     ///
-    /// This also checks the `seen` set to prevent cyclic expansions.
+    /// This also checks the `gate_expansion_stack` set to prevent cyclic expansions.
     fn gate_sequence_from_instruction(
         &self,
         instruction: &Instruction,
-        seen: &mut IndexSet<String>,
+        gate_expansion_stack: &mut IndexSet<String>,
     ) -> Result<Option<(Vec<Instruction>, GateSignature)>, DefGateSequenceExpansionError> {
         if let Instruction::Gate(gate) = instruction {
             if let Some(gate_definition) = self.gate_definitions.get(&gate.name) {
@@ -235,8 +243,8 @@ where
                             ));
                         }
                         let source = GateSignature::from(gate_definition);
-                        if seen.contains(source.name()) {
-                            let cycle = seen.iter().cloned().collect();
+                        if gate_expansion_stack.contains(source.name()) {
+                            let cycle = gate_expansion_stack.iter().cloned().collect();
                             return Err(
                                 DefGateSequenceExpansionError::CyclicSequenceGateDefinition(cycle),
                             );
@@ -297,12 +305,12 @@ DEFGATE seq1(%param1) a AS SEQUENCE:
 seq2(pi, pi/2) 0 1
 ";
             const EXPECTED_QUIL: &str = r"
-RZ(pi) 0 # (0, 0, 0)
-RX(pi/2) 0 # (0, 0, 1)
-RZ(pi) 0 # (0, 0, 2)
-RZ(pi/2) 1 # (0, 1, 0)
-RX(pi/2) 1 # (0, 1, 1)
-RZ(pi/2) 1 # (0, 1, 2)
+RZ(pi) 0
+RX(pi/2) 0
+RZ(pi) 0
+RZ(pi/2) 1
+RX(pi/2) 1
+RZ(pi/2) 1
 ";
             let expected_source_map = SourceMap {
                 entries: vec![build_source_map_entry(
@@ -751,7 +759,7 @@ DEFGATE seq1(%param1) a AS SEQUENCE:
 
 seq1(pi/2) %q1
 ";
-            let expected = Err(DefGateSequenceExpansionError::GateQubitArugment(
+            let expected = Err(DefGateSequenceExpansionError::NonFixedQubitArugment(
                 crate::instruction::Qubit::Variable("q1".to_string()),
             ));
             Self {
@@ -858,7 +866,7 @@ DAGGER seq1(pi/2) 0
         entries: Vec<SourceMapEntry<InstructionIndex, InstructionTarget<DefGateSequenceExpansion>>>,
     ) -> InstructionTarget<DefGateSequenceExpansion> {
         InstructionTarget::Rewrite(DefGateSequenceExpansion {
-            defgate_sequence_source: build_gate_signature(gate_name, gate_parameters, gate_qubits),
+            source_signature: build_gate_signature(gate_name, gate_parameters, gate_qubits),
             range: InstructionIndex(range.start)..InstructionIndex(range.end),
             nested_expansions: SourceMap { entries },
         })

@@ -51,7 +51,7 @@ assert expanded_program.to_quil() == Program.parse(expected_program_text).to_qui
 targets = source_map.list_targets_for_source_index(0)
 
 # ...then we extract the expanded instruction.
-# If the instruction had _not_ been expanded (i.e. there was no matching calibration), then `as_expanded()` would return `None`.
+# If the instruction had _not_ been expanded (i.e. there was no matching calibration), then `as_calibration()` would return `None`.
 calibration_expansion = targets[0].as_calibration()
 
 # This line shows how that `X 0` was expanded into instruction index 0 (only) within the expanded program.
@@ -472,6 +472,11 @@ class DefGateSequenceExpansion:
 
 @final
 class InstructionSourceMap:
+    """A source map describing how instructions in a source program were expanded into a target program.
+    Each entry describes an instruction index in the source program which were expanded according
+    to either a calibration or a sequence gate definition.
+    """
+
     def entries(self) -> List[InstructionSourceMapEntry]: ...
     def list_sources_for_target_index(self, target_index: int) -> List[int]:
         """Return the locations in the source which were expanded to generate that instruction.
@@ -533,11 +538,11 @@ class InstructionSourceMapEntry:
 
     In this program, `A` will expand into `NOP`, `B`, and `HALT`. Then, `B` will expand into `NOP` and `WAIT`.
     Each level of this expansion will have its own `InstructionSourceMap` describing the expansion.
-    In the map of `B` to `NOP` and `WAIT`, the `source_location` will be `[1, 2]` because `B` is the second instruction
+    In the map of `B` to `NOP` and `WAIT`, the `source_location` will be `1` because `B` is the second instruction
     in `DEFCAL A`, even though `A` is the 4th instruction (index = 3) in the original program.
     """
-    def source_location(self) -> Tuple[int, int]: ...
-    """The instruction index range within the source program's body instructions."""
+    def source_location(self) -> int: ...
+    """The instruction index within the source program's body instructions."""
     def target_location(self) -> InstructionTarget: ...
     """The location of the expanded instruction within the target program's body instructions."""
 
@@ -621,13 +626,14 @@ class CalibrationSet:
 
 @final
 class InstructionTarget:
-    """The target with an `InstructionSourceMap`.
+    """The result of having expanded a certain instruction within a program.
 
-    It currently has three variants:
+    It has three variants:
 
-    - `calibration`: The instruction was expanded into other instructions, described by a `CalibrationExpansion`.
-    - `defgate_sequence`: The instruction was expanded into other instructions, described by a
-        `DefGateSequenceExpansion`.
+    - `calibration`: The instruction has a matching Quil-T calibration and was expanded by it into
+      other instructions, as described by a `CalibrationExpansion`.
+    - `defgate_sequence`: The instruction has a matching `DEFGATE ... AS SEQUENCE` and was expanded
+      by it into other instructions, as described by a `DefGateSequenceExpansion`.
     - `int`: The instruction was not expanded and is described by an integer, the index of the instruction
         within the resulting program's body instructions.
     """

@@ -249,43 +249,51 @@ def test_defgate_sequence_expansion_triple_recursive():
     """
     import inspect
 
-    program_text = inspect.cleandoc("""DEFGATE some_u2_cycle(%param1, %param2, %param3, %param4, %param5, %param6) a b AS SEQUENCE:
-    pmw3(%param1, %param2, %param3) a
-    pmw3(%param4, %param5, %param6) b
+    program_text = inspect.cleandoc(
+        """
+        DEFGATE some_u2_cycle(%param1, %param2, %param3, %param4, %param5, %param6) a b AS SEQUENCE:
+            pmw3(%param1, %param2, %param3) a
+            pmw3(%param4, %param5, %param6) b
 
-DEFGATE pmw3(%param1, %param2, %param3) a AS SEQUENCE:
-    pmw(%param1) a
-    pmw(%param2) a
-    pmw(%param3) a
+        DEFGATE pmw3(%param1, %param2, %param3) a AS SEQUENCE:
+            pmw(%param1) a
+            pmw(%param2) a
+            pmw(%param3) a
 
-DEFGATE pmw(%param1) a AS SEQUENCE:
-    RZ(%param1) a
-    RX(pi/2) a
-    RZ(-%param1) a
+        DEFGATE pmw(%param1) a AS SEQUENCE:
+            RZ(%param1) a
+            RX(pi/2) a
+            RZ(-%param1) a
 
-some_u2_cycle(-pi, -pi/2, -pi/4, pi/4, pi/2, pi) 0 1""")
+        some_u2_cycle(-pi, -pi/2, -pi/4, pi/4, pi/2, pi) 0 1
+        """
+    )
     program = Program.parse(program_text)
     expanded_program, source_map = program.expand_defgate_sequences_with_source_map()
 
-    expected_program_text = inspect.cleandoc("""RZ(-pi) 0
-RX(pi/2) 0
-RZ(-(-pi)) 0
-RZ(-pi/2) 0
-RX(pi/2) 0
-RZ(-(-pi/2)) 0
-RZ(-pi/4) 0
-RX(pi/2) 0
-RZ(-(-pi/4)) 0
+    expected_program_text = inspect.cleandoc(
+        """
+        RZ(-pi) 0
+        RX(pi/2) 0
+        RZ(-(-pi)) 0
+        RZ(-pi/2) 0
+        RX(pi/2) 0
+        RZ(-(-pi/2)) 0
+        RZ(-pi/4) 0
+        RX(pi/2) 0
+        RZ(-(-pi/4)) 0
 
-RZ(pi/4) 1
-RX(pi/2) 1
-RZ(-(pi/4)) 1
-RZ(pi/2) 1
-RX(pi/2) 1
-RZ(-(pi/2)) 1
-RZ(pi) 1
-RX(pi/2) 1
-RZ(-(pi)) 1""")
+        RZ(pi/4) 1
+        RX(pi/2) 1
+        RZ(-(pi/4)) 1
+        RZ(pi/2) 1
+        RX(pi/2) 1
+        RZ(-(pi/2)) 1
+        RZ(pi) 1
+        RX(pi/2) 1
+        RZ(-(pi)) 1
+        """
+    )
 
     assert expanded_program.to_quil() == Program.parse(expected_program_text).to_quil()
 
@@ -315,41 +323,49 @@ def test_defgate_sequence_expansion_with_filtering():
     """
     import inspect
 
-    program_text = inspect.cleandoc("""DECLARE ro BIT[2]
+    program_text = inspect.cleandoc(
+        """
+        DECLARE ro BIT[2]
 
-DEFGATE seq1(%param1) a AS SEQUENCE:
-    RZ(%param1) a
-    seq2() a
+        DEFGATE seq1(%param1) a AS SEQUENCE:
+            RZ(%param1) a
+            seq2() a
 
-DEFGATE seq2() a AS SEQUENCE:
-    H a
+        DEFGATE seq2() a AS SEQUENCE:
+            H a
 
-DEFGATE seq3() a AS SEQUENCE:
-    X a
+        DEFGATE seq3() a AS SEQUENCE:
+            X a
 
-seq1(pi/2) 0
-seq2() 1
-seq3 2
+        seq1(pi/2) 0
+        seq2() 1
+        seq3 2
 
-MEASURE 0 ro[0]
-MEASURE 1 ro[1]""")
+        MEASURE 0 ro[0]
+        MEASURE 1 ro[1]
+        """
+    )
     program = Program.parse(program_text)
     filter_str = lambda key: key != "seq1"
     expanded_program, source_map = program.expand_defgate_sequences_with_source_map(filter=filter_str)
 
-    expected_program_text = inspect.cleandoc("""DECLARE ro BIT[2]
-DEFGATE seq1(%param1) a AS SEQUENCE:
-    RZ(%param1) a
-    seq2() a
+    expected_program_text = inspect.cleandoc(
+        """
+        DECLARE ro BIT[2]
+        DEFGATE seq1(%param1) a AS SEQUENCE:
+            RZ(%param1) a
+            seq2() a
 
-DEFGATE seq2() a AS SEQUENCE:
-    H a
+        DEFGATE seq2() a AS SEQUENCE:
+            H a
 
-seq1(pi/2) 0
-H 1
-X 2
-MEASURE 0 ro[0]
-MEASURE 1 ro[1]""")
+        seq1(pi/2) 0
+        H 1
+        X 2
+        MEASURE 0 ro[0]
+        MEASURE 1 ro[1]
+        """
+    )
 
     assert expanded_program.to_quil() == Program.parse(expected_program_text).to_quil()
 

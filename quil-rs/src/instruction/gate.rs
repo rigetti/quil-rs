@@ -1000,29 +1000,23 @@ impl GateSignature {
 
 impl From<&GateDefinition> for GateSignature {
     fn from(value: &GateDefinition) -> Self {
-        match &value.specification {
-            GateSpecification::Matrix(_) | GateSpecification::Permutation(_) => Self {
-                name: value.name.clone(),
-                gate_parameters: value.parameters.clone(),
-                qubit_parameters: Vec::new(),
-                gate_type: if matches!(&value.specification, GateSpecification::Matrix(_)) {
-                    GateType::Matrix
-                } else {
-                    GateType::Permutation
-                },
-            },
-            GateSpecification::PauliSum(sum) => Self {
-                name: value.name.clone(),
-                gate_parameters: value.parameters.clone(),
-                qubit_parameters: sum.arguments.clone(),
-                gate_type: GateType::PauliSum,
-            },
-            GateSpecification::Sequence(seq) => Self {
-                name: value.name.clone(),
-                gate_parameters: value.parameters.clone(),
-                qubit_parameters: seq.qubits.clone(),
-                gate_type: GateType::Sequence,
-            },
+        let GateDefinition {
+            name,
+            parameters: gate_parameters,
+            specification,
+        } = value;
+
+        let (qubit_parameters, gate_type) = match specification {
+            GateSpecification::Matrix(_) => (None, GateType::Matrix),
+            GateSpecification::Permutation(_) => (None, GateType::Permutation),
+            GateSpecification::PauliSum(sum) => (Some(&sum.arguments), GateType::PauliSum),
+            GateSpecification::Sequence(seq) => (Some(&seq.qubits), GateType::Sequence),
+        };
+        Self {
+            name: name.clone(),
+            gate_parameters: gate_parameters.clone(),
+            qubit_parameters: qubit_parameters.cloned().unwrap_or_default(),
+            gate_type,
         }
     }
 }
@@ -1031,19 +1025,15 @@ impl Quil for GateSignature {
     fn write(
         &self,
         f: &mut impl std::fmt::Write,
-        _fall_back_to_debug: bool,
+        fall_back_to_debug: bool,
     ) -> Result<(), crate::quil::ToQuilError> {
         write!(f, "DEFGATE {}", self.name,)?;
         write_parameter_string(f, &self.gate_parameters)?;
         for qubit in self.qubit_parameters.iter() {
             write!(f, " {qubit}")?;
         }
-        match self.gate_type {
-            GateType::Matrix => write!(f, " AS MATRIX")?,
-            GateType::Permutation => write!(f, " AS PERMUTATION")?,
-            GateType::PauliSum => write!(f, " AS PAULI-SUM")?,
-            GateType::Sequence => write!(f, " AS SEQUENCE")?,
-        }
+        write!(f, " AS ")?;
+        self.gate_type.write(f, fall_back_to_debug)?;
         Ok(())
     }
 }

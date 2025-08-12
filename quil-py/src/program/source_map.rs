@@ -18,16 +18,16 @@ use crate::{
     instruction::{PyCalibrationIdentifier, PyGateSignature, PyMeasureCalibrationIdentifier},
 };
 
-/// A single type for [`SourceMap`] `TargetIndex` that we will expose to Python. This
+/// A single type for the `TargetIndex` on a [`SourceMap`] that we expose to Python. This
 /// can represent calibration expansions, gate sequence expansions, and other rewrites
 /// we may want to perform in the future.
 ///
 /// Note, should we want to support rewrites from Python, we can expose an additional
 /// pyo3 type that wraps classes implementing the required Python interface. See the pyo3
 /// [trait bound](https://pyo3.rs/main/trait-bounds.html) documentation.
-///
-/// Additionally note, we expose [`usize`] to Python, rather than [`InstructionIndex`],
-/// to Python, facilitating usage of the [`rigetti_pyo3::py_wrap_union_enum!`] macro.
+//
+// Additionally note, we expose [`usize`] to Python, rather than [`InstructionIndex`],
+// to Python, facilitating usage of the [`rigetti_pyo3::py_wrap_union_enum!`] macro.
 #[derive(Clone, Debug, PartialEq)]
 pub enum InstructionTargetShim {
     Copied(usize),
@@ -171,7 +171,7 @@ impl_eq!(PyDefGateSequenceExpansion);
 #[pymethods]
 impl PyDefGateSequenceExpansion {
     pub fn defgate_sequence_source(&self) -> PyGateSignature {
-        self.as_inner().defgate_sequence_source().into()
+        self.as_inner().source_signature().into()
     }
 
     pub fn range<'py>(&self, py: Python<'py>) -> PyResult<&'py PyAny> {
@@ -207,7 +207,8 @@ impl PyInstructionSourceMap {
     /// Given an instruction index within the resulting expansion, return the locations in the source
     /// which were expanded to generate that instruction.
     ///
-    /// This is `O(n)` where `n` is the number of first-level calibration expansions performed.
+    /// This is `O(n)` where `n` is the number of first-level expansions performed,
+    /// which is at worst `O(i)` where `i` is the number of source instructions.
     pub fn list_sources_for_target_index(&self, target_index: usize) -> Vec<usize> {
         self.as_inner()
             .list_sources(&target_index)
@@ -219,7 +220,8 @@ impl PyInstructionSourceMap {
     /// Given a particular calibration (`DEFCAL` or `DEFCAL MEASURE`), return the locations in the source
     /// program which were expanded using that calibration.
     ///
-    /// This is `O(n)` where `n` is the number of first-level calibration expansions performed.
+    /// This is `O(n)` where `n` is the number of first-level calibration expansions performed,
+    /// which is at worst `O(i)` where `i` is the number of source instructions.
     pub fn list_sources_for_calibration_used(
         &self,
         calibration_used: PyCalibrationSource,
@@ -234,8 +236,8 @@ impl PyInstructionSourceMap {
     /// Given a gate signature, return the locations in the source program which were
     /// expanded using that gate signature.
     ///
-    /// This is `O(n)` where `n` is the number of first-level sequence gate definition
-    /// expansions performed.
+    /// This is `O(n)` where `n` is the number of first-level sequence gate expansions performed,
+    /// which is at worst `O(i)` where `i` is the number of source instructions.
     pub fn list_sources_for_gate_expansion(&self, gate_signature: PyGateSignature) -> Vec<usize> {
         self.as_inner()
             .list_sources(gate_signature.as_inner())
@@ -246,7 +248,8 @@ impl PyInstructionSourceMap {
 
     /// Given a source index, return information about its expansion.
     ///
-    /// This is `O(n)` where `n` is the number of first-level calibration expansions performed.
+    /// This is `O(n)` where `n` is the number of first-level expansions performed,
+    /// which is at worst `O(i)` where `i` is the number of source instructions.
     pub fn list_targets_for_source_index(&self, source_index: usize) -> Vec<PyInstructionTarget> {
         let inner = self.as_inner();
 

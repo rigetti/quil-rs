@@ -1992,7 +1992,7 @@ class PauliSum:
 class GateSignature:
     """A signature for a gate definition; this does not include the gate definition content.
 
-    Note, this is accessible from `GateDefinition.signature`.
+    To get a signature from a definition, use `GateDefinition.signature`.
     """
     def __new__(cls, name: str, gate_parameters: List[str], qubit_parameters: List[str], gate_type: GateType) -> Self: ...
 

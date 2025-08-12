@@ -1307,6 +1307,33 @@ mod tests {
             }
         }
 
+        fn no_parentheses() -> Self {
+            const NO_PARENTHESES: &str = r"seq1 q1 AS SEQUENCE:
+    RX(pi/2) q1";
+            let gate1 = Gate::new(
+                "RX",
+                vec![Expression::Infix(InfixExpression {
+                    left: ArcIntern::new(Expression::PiConstant),
+                    operator: InfixOperator::Slash,
+                    right: ArcIntern::new(Expression::Number(Complex64 { re: 2.0, im: 0.0 })),
+                })],
+                vec![Qubit::Variable("q1".to_string())],
+                vec![],
+            )
+            .expect("must be valid gate");
+            let gate_sequence = DefGateSequence::try_new(vec!["q1".to_string()], vec![gate1])
+                .expect("must be valid sequence");
+            Self {
+                input: NO_PARENTHESES,
+                remainder: vec![],
+                expected: Ok(GateDefinition {
+                    name: "seq1".to_string(),
+                    parameters: vec![],
+                    specification: GateSpecification::Sequence(gate_sequence),
+                }),
+            }
+        }
+
         fn unused_argument() -> Self {
             const NO_PARAMETERS: &str = r"seq1(%param01) q1 q2 AS SEQUENCE:
     RX(pi/2) q1";
@@ -1390,6 +1417,7 @@ mod tests {
     #[case::simple_2q(ParseGateDefinitionTestCase::simple_2q())]
     #[case::recursive(ParseGateDefinitionTestCase::recursive())]
     #[case::no_parameters(ParseGateDefinitionTestCase::no_parameters())]
+    #[case::no_parentheses(ParseGateDefinitionTestCase::no_parentheses())]
     #[case::unused_argument(ParseGateDefinitionTestCase::unused_argument())]
     #[case::error_undefined_gate_sequence_element_qubit(
         ParseGateDefinitionTestCase::error_undefined_gate_sequence_element_qubit()
