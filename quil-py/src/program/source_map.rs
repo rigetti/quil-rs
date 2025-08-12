@@ -75,25 +75,25 @@ impl_eq!(PyInstructionTarget);
 struct InstructionIndexShim(usize);
 
 impl SourceMapIndexable<InstructionIndexShim> for usize {
-    fn intersects(&self, other: &InstructionIndexShim) -> bool {
+    fn contains(&self, other: &InstructionIndexShim) -> bool {
         *self == other.0
     }
 }
 
 impl SourceMapIndexable<usize> for ExpansionResultShim {
-    fn intersects(&self, other: &usize) -> bool {
+    fn contains(&self, other: &usize) -> bool {
         match self {
             Self::Unmodified(index) => index == other,
-            Self::Calibration(expansion) => expansion.intersects(&InstructionIndex(*other)),
-            Self::DefGateSequence(expansion) => expansion.intersects(&InstructionIndex(*other)),
+            Self::Calibration(expansion) => expansion.contains(&InstructionIndex(*other)),
+            Self::DefGateSequence(expansion) => expansion.contains(&InstructionIndex(*other)),
         }
     }
 }
 
 impl SourceMapIndexable<CalibrationSource> for ExpansionResultShim {
-    fn intersects(&self, other: &CalibrationSource) -> bool {
+    fn contains(&self, other: &CalibrationSource) -> bool {
         if let Self::Calibration(expansion) = self {
-            expansion.intersects(other)
+            expansion.contains(other)
         } else {
             false
         }
@@ -101,9 +101,9 @@ impl SourceMapIndexable<CalibrationSource> for ExpansionResultShim {
 }
 
 impl SourceMapIndexable<GateSignature> for ExpansionResultShim {
-    fn intersects(&self, other: &GateSignature) -> bool {
+    fn contains(&self, other: &GateSignature) -> bool {
         if let Self::DefGateSequence(expansion) = self {
-            expansion.intersects(other)
+            expansion.contains(other)
         } else {
             false
         }

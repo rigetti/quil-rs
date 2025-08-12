@@ -136,13 +136,13 @@ impl CalibrationExpansion {
 }
 
 impl SourceMapIndexable<InstructionIndex> for CalibrationExpansion {
-    fn intersects(&self, other: &InstructionIndex) -> bool {
+    fn contains(&self, other: &InstructionIndex) -> bool {
         self.range.contains(other)
     }
 }
 
 impl SourceMapIndexable<CalibrationSource> for CalibrationExpansion {
-    fn intersects(&self, other: &CalibrationSource) -> bool {
+    fn contains(&self, other: &CalibrationSource) -> bool {
         self.calibration_used() == other
     }
 }

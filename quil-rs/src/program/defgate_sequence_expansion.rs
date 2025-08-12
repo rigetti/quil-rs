@@ -57,13 +57,13 @@ impl DefGateSequenceExpansion {
 }
 
 impl SourceMapIndexable<InstructionIndex> for DefGateSequenceExpansion {
-    fn intersects(&self, other: &InstructionIndex) -> bool {
+    fn contains(&self, other: &InstructionIndex) -> bool {
         self.range.contains(other)
     }
 }
 
 impl SourceMapIndexable<GateSignature> for DefGateSequenceExpansion {
-    fn intersects(&self, other: &GateSignature) -> bool {
+    fn contains(&self, other: &GateSignature) -> bool {
         &self.source_signature == other
     }
 }
