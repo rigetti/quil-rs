@@ -49,7 +49,7 @@ pub use self::frame::MatchedFrames;
 pub use self::memory::{
     MemoryAccess, MemoryAccesses, MemoryAccessesError, MemoryAccessesResult, MemoryRegion,
 };
-pub use self::source_map::{InstructionTarget, SourceMap, SourceMapEntry, SourceMapIndexable};
+pub use self::source_map::{ExpansionResult, SourceMap, SourceMapEntry, SourceMapIndexable};
 
 pub mod analysis;
 mod calibration;
@@ -283,7 +283,7 @@ impl Program {
         &self,
     ) -> Result<(
         Program,
-        SourceMap<InstructionIndex, InstructionTarget<CalibrationExpansion>>,
+        SourceMap<InstructionIndex, ExpansionResult<CalibrationExpansion>>,
     )> {
         let mut source_mapping = ProgramCalibrationExpansionSourceMap::default();
         let new_program = self.expand_calibrations_inner(Some(&mut source_mapping))?;
@@ -327,7 +327,7 @@ impl Program {
                     if let Some(source_mapping) = source_mapping.as_mut() {
                         source_mapping.entries.push(SourceMapEntry {
                             source_location: index,
-                            target_location: InstructionTarget::Copied(InstructionIndex(
+                            target_location: ExpansionResult::Unmodified(InstructionIndex(
                                 new_program.instructions.len() - 1,
                             )),
                         });
@@ -460,7 +460,7 @@ impl Program {
         filter: F,
     ) -> Result<(
         Self,
-        SourceMap<InstructionIndex, InstructionTarget<DefGateSequenceExpansion>>,
+        SourceMap<InstructionIndex, ExpansionResult<DefGateSequenceExpansion>>,
     )>
     where
         F: Fn(&String) -> bool,
@@ -536,7 +536,7 @@ impl Program {
             if !expansion_output.detail.range.is_empty() {
                 source_mapping.entries.push(SourceMapEntry {
                     source_location: source_index,
-                    target_location: InstructionTarget::Rewrite(expansion_output.detail),
+                    target_location: ExpansionResult::Rewritten(expansion_output.detail),
                 });
             }
         } else {
@@ -1082,7 +1082,7 @@ impl InstructionIndex {
 }
 
 type ProgramCalibrationExpansionSourceMap =
-    SourceMap<InstructionIndex, InstructionTarget<CalibrationExpansion>>;
+    SourceMap<InstructionIndex, ExpansionResult<CalibrationExpansion>>;
 
 #[cfg(test)]
 mod tests {
@@ -1100,7 +1100,7 @@ mod tests {
         },
         program::{
             calibration::{CalibrationExpansion, CalibrationSource},
-            source_map::{InstructionTarget, SourceMap, SourceMapEntry},
+            source_map::{ExpansionResult, SourceMap, SourceMapEntry},
             InstructionIndex, MemoryAccesses,
         },
         quil::{Quil, INDENT},
@@ -1274,7 +1274,7 @@ NOP
             entries: vec![
                 SourceMapEntry {
                     source_location: InstructionIndex(0),
-                    target_location: InstructionTarget::Rewrite(CalibrationExpansion {
+                    target_location: ExpansionResult::Rewritten(CalibrationExpansion {
                         calibration_used: CalibrationIdentifier {
                             name: "I".to_string(),
                             qubits: vec![Qubit::Fixed(0)],
@@ -1286,7 +1286,7 @@ NOP
                             entries: vec![
                                 SourceMapEntry {
                                     source_location: InstructionIndex(0),
-                                    target_location: InstructionTarget::Rewrite(
+                                    target_location: ExpansionResult::Rewritten(
                                         CalibrationExpansion {
                                             calibration_used: CalibrationSource::Calibration(
                                                 CalibrationIdentifier {
@@ -1301,15 +1301,17 @@ NOP
                                                 entries: vec![
                                                     SourceMapEntry {
                                                         source_location: InstructionIndex(0),
-                                                        target_location: InstructionTarget::Copied(
-                                                            InstructionIndex(0),
-                                                        ),
+                                                        target_location:
+                                                            ExpansionResult::Unmodified(
+                                                                InstructionIndex(0),
+                                                            ),
                                                     },
                                                     SourceMapEntry {
                                                         source_location: InstructionIndex(1),
-                                                        target_location: InstructionTarget::Copied(
-                                                            InstructionIndex(1),
-                                                        ),
+                                                        target_location:
+                                                            ExpansionResult::Unmodified(
+                                                                InstructionIndex(1),
+                                                            ),
                                                     },
                                                 ],
                                             },
@@ -1318,11 +1320,15 @@ NOP
                                 },
                                 SourceMapEntry {
                                     source_location: InstructionIndex(1),
-                                    target_location: InstructionTarget::Copied(InstructionIndex(2)),
+                                    target_location: ExpansionResult::Unmodified(InstructionIndex(
+                                        2,
+                                    )),
                                 },
                                 SourceMapEntry {
                                     source_location: InstructionIndex(2),
-                                    target_location: InstructionTarget::Copied(InstructionIndex(3)),
+                                    target_location: ExpansionResult::Unmodified(InstructionIndex(
+                                        3,
+                                    )),
                                 },
                             ],
                         },
@@ -1330,11 +1336,11 @@ NOP
                 },
                 SourceMapEntry {
                     source_location: InstructionIndex(1),
-                    target_location: InstructionTarget::Copied(InstructionIndex(3)),
+                    target_location: ExpansionResult::Unmodified(InstructionIndex(3)),
                 },
                 SourceMapEntry {
                     source_location: InstructionIndex(2),
-                    target_location: InstructionTarget::Rewrite(CalibrationExpansion {
+                    target_location: ExpansionResult::Rewritten(CalibrationExpansion {
                         calibration_used: CalibrationIdentifier {
                             name: "I".to_string(),
                             qubits: vec![Qubit::Fixed(0)],
@@ -1346,7 +1352,7 @@ NOP
                             entries: vec![
                                 SourceMapEntry {
                                     source_location: InstructionIndex(0),
-                                    target_location: InstructionTarget::Rewrite(
+                                    target_location: ExpansionResult::Rewritten(
                                         CalibrationExpansion {
                                             calibration_used: CalibrationSource::Calibration(
                                                 CalibrationIdentifier {
@@ -1361,15 +1367,17 @@ NOP
                                                 entries: vec![
                                                     SourceMapEntry {
                                                         source_location: InstructionIndex(0),
-                                                        target_location: InstructionTarget::Copied(
-                                                            InstructionIndex(0),
-                                                        ),
+                                                        target_location:
+                                                            ExpansionResult::Unmodified(
+                                                                InstructionIndex(0),
+                                                            ),
                                                     },
                                                     SourceMapEntry {
                                                         source_location: InstructionIndex(1),
-                                                        target_location: InstructionTarget::Copied(
-                                                            InstructionIndex(1),
-                                                        ),
+                                                        target_location:
+                                                            ExpansionResult::Unmodified(
+                                                                InstructionIndex(1),
+                                                            ),
                                                     },
                                                 ],
                                             },
@@ -1378,11 +1386,15 @@ NOP
                                 },
                                 SourceMapEntry {
                                     source_location: InstructionIndex(1),
-                                    target_location: InstructionTarget::Copied(InstructionIndex(2)),
+                                    target_location: ExpansionResult::Unmodified(InstructionIndex(
+                                        2,
+                                    )),
                                 },
                                 SourceMapEntry {
                                     source_location: InstructionIndex(2),
-                                    target_location: InstructionTarget::Copied(InstructionIndex(3)),
+                                    target_location: ExpansionResult::Unmodified(InstructionIndex(
+                                        3,
+                                    )),
                                 },
                             ],
                         },

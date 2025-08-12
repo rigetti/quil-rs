@@ -371,7 +371,7 @@ def test_defgate_sequence_expansion_with_filtering():
 
     targets = source_map.list_targets_for_source_index(0)
     assert len(targets) == 1
-    expanded = targets[0].as_copied()
+    expanded = targets[0].as_unmodified()
     assert expanded == 0
     assert source_map.list_sources_for_target_index(0) == [0]
     assert source_map.list_sources_for_target_index(1) == [1]

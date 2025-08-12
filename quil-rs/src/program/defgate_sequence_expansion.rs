@@ -14,7 +14,7 @@ use crate::{
     program::{InstructionIndex, SourceMap, SourceMapEntry},
 };
 
-use super::source_map::{InstructionTarget, SourceMapIndexable};
+use super::source_map::{ExpansionResult, SourceMapIndexable};
 
 /// Details about the expansion of a sequence gate definition
 #[derive(Clone, Debug, PartialEq)]
@@ -34,7 +34,7 @@ pub struct DefGateSequenceExpansion {
     /// Sequence gate definitions may refer to other sequence gate definitions
     /// per the Quil specification. As such, we need to track how the first-level
     /// sequence instructions map to nested sequence gate definition expansion.
-    nested_expansions: SourceMap<InstructionIndex, InstructionTarget<DefGateSequenceExpansion>>,
+    nested_expansions: SourceMap<InstructionIndex, ExpansionResult<DefGateSequenceExpansion>>,
 }
 
 impl DefGateSequenceExpansion {
@@ -51,7 +51,7 @@ impl DefGateSequenceExpansion {
     /// Returns the nested expansions of this sequence gate definition
     pub fn nested_expansions(
         &self,
-    ) -> &SourceMap<InstructionIndex, InstructionTarget<DefGateSequenceExpansion>> {
+    ) -> &SourceMap<InstructionIndex, ExpansionResult<DefGateSequenceExpansion>> {
         &self.nested_expansions
     }
 }
@@ -69,7 +69,7 @@ impl SourceMapIndexable<GateSignature> for DefGateSequenceExpansion {
 }
 
 type SequenceGateDefinitionSourceMap =
-    SourceMap<InstructionIndex, InstructionTarget<DefGateSequenceExpansion>>;
+    SourceMap<InstructionIndex, ExpansionResult<DefGateSequenceExpansion>>;
 
 /// A utility to expand sequence gate definitions in a Quil program.
 #[derive(Clone, Debug, PartialEq)]
@@ -158,7 +158,7 @@ where
                 );
                 source_map.entries.push(SourceMapEntry {
                     source_location: InstructionIndex(source_instruction_index),
-                    target_location: InstructionTarget::Rewrite(DefGateSequenceExpansion {
+                    target_location: ExpansionResult::Rewritten(DefGateSequenceExpansion {
                         source_signature: gate_sequence_signature,
                         range: target_instruction_start_index..target_instruction_end_index,
                         nested_expansions: recursive_source_map,
@@ -169,7 +169,7 @@ where
                 target_instructions.push(source_instruction.clone());
                 source_map.entries.push(SourceMapEntry {
                     source_location: InstructionIndex(source_instruction_index),
-                    target_location: InstructionTarget::Copied(InstructionIndex(
+                    target_location: ExpansionResult::Unmodified(InstructionIndex(
                         target_instructions.len() - 1,
                     )),
                 });
@@ -279,8 +279,7 @@ mod tests {
         program: &'static str,
         filter: Box<dyn Fn(&String) -> bool>,
         expected: Result<&'static str, DefGateSequenceExpansionError>,
-        expected_source_map:
-            SourceMap<InstructionIndex, InstructionTarget<DefGateSequenceExpansion>>,
+        expected_source_map: SourceMap<InstructionIndex, ExpansionResult<DefGateSequenceExpansion>>,
     }
 
     /// Below we define a set of test cases for the `DefGateSequenceExpansion` functionality. We
@@ -559,7 +558,7 @@ MEASURE 1 ro[1]
 ";
             let expected_source_map = SourceMap {
                 entries: vec![
-                    build_source_map_entry(0, InstructionTarget::Copied(InstructionIndex(0))),
+                    build_source_map_entry(0, ExpansionResult::Unmodified(InstructionIndex(0))),
                     build_source_map_entry(
                         1,
                         build_defgate_sequence_expansion(
@@ -863,9 +862,9 @@ DAGGER seq1(pi/2) 0
         gate_parameters: &'static [&'static str],
         gate_qubits: &'static [&'static str],
         range: Range<usize>,
-        entries: Vec<SourceMapEntry<InstructionIndex, InstructionTarget<DefGateSequenceExpansion>>>,
-    ) -> InstructionTarget<DefGateSequenceExpansion> {
-        InstructionTarget::Rewrite(DefGateSequenceExpansion {
+        entries: Vec<SourceMapEntry<InstructionIndex, ExpansionResult<DefGateSequenceExpansion>>>,
+    ) -> ExpansionResult<DefGateSequenceExpansion> {
+        ExpansionResult::Rewritten(DefGateSequenceExpansion {
             source_signature: build_gate_signature(gate_name, gate_parameters, gate_qubits),
             range: InstructionIndex(range.start)..InstructionIndex(range.end),
             nested_expansions: SourceMap { entries },
@@ -874,8 +873,8 @@ DAGGER seq1(pi/2) 0
 
     fn build_source_map_entry(
         source_location: usize,
-        target_location: InstructionTarget<DefGateSequenceExpansion>,
-    ) -> SourceMapEntry<InstructionIndex, InstructionTarget<DefGateSequenceExpansion>> {
+        target_location: ExpansionResult<DefGateSequenceExpansion>,
+    ) -> SourceMapEntry<InstructionIndex, ExpansionResult<DefGateSequenceExpansion>> {
         SourceMapEntry {
             source_location: InstructionIndex(source_location),
             target_location,
@@ -885,10 +884,10 @@ DAGGER seq1(pi/2) 0
     fn build_source_map_entry_copy(
         source_location: usize,
         target_location: usize,
-    ) -> SourceMapEntry<InstructionIndex, InstructionTarget<DefGateSequenceExpansion>> {
+    ) -> SourceMapEntry<InstructionIndex, ExpansionResult<DefGateSequenceExpansion>> {
         build_source_map_entry(
             source_location,
-            InstructionTarget::Copied(InstructionIndex(target_location)),
+            ExpansionResult::Unmodified(InstructionIndex(target_location)),
         )
     }
 }

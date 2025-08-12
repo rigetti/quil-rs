@@ -116,29 +116,29 @@ impl SourceMapIndexable<InstructionIndex> for InstructionIndex {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum InstructionTarget<R> {
-    Copied(InstructionIndex),
-    Rewrite(R),
+pub enum ExpansionResult<R> {
+    Unmodified(InstructionIndex),
+    Rewritten(R),
 }
 
-impl<R> SourceMapIndexable<InstructionIndex> for InstructionTarget<R>
+impl<R> SourceMapIndexable<InstructionIndex> for ExpansionResult<R>
 where
     R: SourceMapIndexable<InstructionIndex>,
 {
     fn intersects(&self, other: &InstructionIndex) -> bool {
         match self {
-            Self::Copied(index) => index == other,
-            Self::Rewrite(rewrite) => rewrite.intersects(other),
+            Self::Unmodified(index) => index == other,
+            Self::Rewritten(rewrite) => rewrite.intersects(other),
         }
     }
 }
 
-impl<R> SourceMapIndexable<CalibrationSource> for InstructionTarget<R>
+impl<R> SourceMapIndexable<CalibrationSource> for ExpansionResult<R>
 where
     R: SourceMapIndexable<CalibrationSource>,
 {
     fn intersects(&self, other: &CalibrationSource) -> bool {
-        if let Self::Rewrite(rewrite) = self {
+        if let Self::Rewritten(rewrite) = self {
             rewrite.intersects(other)
         } else {
             false
@@ -146,12 +146,12 @@ where
     }
 }
 
-impl<R> SourceMapIndexable<GateSignature> for InstructionTarget<R>
+impl<R> SourceMapIndexable<GateSignature> for ExpansionResult<R>
 where
     R: SourceMapIndexable<GateSignature>,
 {
     fn intersects(&self, other: &GateSignature) -> bool {
-        if let Self::Rewrite(rewrite) = self {
+        if let Self::Rewritten(rewrite) = self {
             rewrite.intersects(other)
         } else {
             false

@@ -7,8 +7,8 @@ use pyo3::{
 use quil_rs::{
     instruction::GateSignature,
     program::{
-        CalibrationExpansion, CalibrationSource, DefGateSequenceExpansion, InstructionIndex,
-        InstructionTarget, SourceMap, SourceMapEntry, SourceMapIndexable,
+        CalibrationExpansion, CalibrationSource, DefGateSequenceExpansion, ExpansionResult,
+        InstructionIndex, SourceMap, SourceMapEntry, SourceMapIndexable,
     },
 };
 use rigetti_pyo3::{impl_repr, py_wrap_type, py_wrap_union_enum, pyo3::pymethods, PyWrapper};
@@ -29,37 +29,37 @@ use crate::{
 // Additionally note, we expose [`usize`] to Python, rather than [`InstructionIndex`],
 // to Python, facilitating usage of the [`rigetti_pyo3::py_wrap_union_enum!`] macro.
 #[derive(Clone, Debug, PartialEq)]
-pub enum InstructionTargetShim {
-    Copied(usize),
+pub enum ExpansionResultShim {
+    Unmodified(usize),
     Calibration(CalibrationExpansion),
     DefGateSequence(DefGateSequenceExpansion),
 }
 
-impl From<CalibrationExpansion> for InstructionTargetShim {
+impl From<CalibrationExpansion> for ExpansionResultShim {
     fn from(value: CalibrationExpansion) -> Self {
         Self::Calibration(value)
     }
 }
 
-impl From<DefGateSequenceExpansion> for InstructionTargetShim {
+impl From<DefGateSequenceExpansion> for ExpansionResultShim {
     fn from(value: DefGateSequenceExpansion) -> Self {
         Self::DefGateSequence(value)
     }
 }
 
-impl<R: Into<InstructionTargetShim> + Clone> From<InstructionTarget<R>> for InstructionTargetShim {
-    fn from(value: InstructionTarget<R>) -> Self {
+impl<R: Into<ExpansionResultShim> + Clone> From<ExpansionResult<R>> for ExpansionResultShim {
+    fn from(value: ExpansionResult<R>) -> Self {
         match value {
-            InstructionTarget::Copied(index) => Self::Copied(index.0),
-            InstructionTarget::Rewrite(rewrite) => rewrite.into(),
+            ExpansionResult::Unmodified(index) => Self::Unmodified(index.0),
+            ExpansionResult::Rewritten(rewrite) => rewrite.into(),
         }
     }
 }
 
 py_wrap_union_enum! {
     #[derive(Debug, PartialEq)]
-    PyInstructionTarget(InstructionTargetShim) as "InstructionTarget" {
-        copied: Copied => usize,
+    PyInstructionTarget(ExpansionResultShim) as "InstructionTarget" {
+        unmodified: Unmodified => usize,
         calibration: Calibration => PyCalibrationExpansion,
         defgate_sequence: DefGateSequence => PyDefGateSequenceExpansion
     }
@@ -80,17 +80,17 @@ impl SourceMapIndexable<InstructionIndexShim> for usize {
     }
 }
 
-impl SourceMapIndexable<usize> for InstructionTargetShim {
+impl SourceMapIndexable<usize> for ExpansionResultShim {
     fn intersects(&self, other: &usize) -> bool {
         match self {
-            Self::Copied(index) => index == other,
+            Self::Unmodified(index) => index == other,
             Self::Calibration(expansion) => expansion.intersects(&InstructionIndex(*other)),
             Self::DefGateSequence(expansion) => expansion.intersects(&InstructionIndex(*other)),
         }
     }
 }
 
-impl SourceMapIndexable<CalibrationSource> for InstructionTargetShim {
+impl SourceMapIndexable<CalibrationSource> for ExpansionResultShim {
     fn intersects(&self, other: &CalibrationSource) -> bool {
         if let Self::Calibration(expansion) = self {
             expansion.intersects(other)
@@ -100,7 +100,7 @@ impl SourceMapIndexable<CalibrationSource> for InstructionTargetShim {
     }
 }
 
-impl SourceMapIndexable<GateSignature> for InstructionTargetShim {
+impl SourceMapIndexable<GateSignature> for ExpansionResultShim {
     fn intersects(&self, other: &GateSignature) -> bool {
         if let Self::DefGateSequence(expansion) = self {
             expansion.intersects(other)
@@ -112,7 +112,7 @@ impl SourceMapIndexable<GateSignature> for InstructionTargetShim {
 
 /// A single concrete type for [`SourceMap`] using instruction indices
 /// that we will expose to Python.
-type InstructionSourceMap = SourceMap<usize, InstructionTargetShim>;
+type InstructionSourceMap = SourceMap<usize, ExpansionResultShim>;
 
 py_wrap_type! {
     #[derive(Debug, PartialEq)]
@@ -143,8 +143,8 @@ impl PyCalibrationExpansion {
 
 /// Because [`SourceMap`] is defined outside of this crate, we define this
 /// utility function rather than implementing `From<SourceMap<...>>`.
-fn to_instruction_source_map<R: Into<InstructionTargetShim> + Clone>(
-    value: SourceMap<InstructionIndex, InstructionTarget<R>>,
+fn to_instruction_source_map<R: Into<ExpansionResultShim> + Clone>(
+    value: SourceMap<InstructionIndex, ExpansionResult<R>>,
 ) -> InstructionSourceMap {
     let entries = value
         .entries()
@@ -153,7 +153,7 @@ fn to_instruction_source_map<R: Into<InstructionTargetShim> + Clone>(
         .map(|entry| {
             SourceMapEntry::new(
                 entry.source_location().0,
-                InstructionTargetShim::from(entry.target_location().clone()),
+                ExpansionResultShim::from(entry.target_location().clone()),
             )
         })
         .collect();
@@ -261,15 +261,15 @@ impl PyInstructionSourceMap {
     }
 }
 
-impl<R: Into<InstructionTargetShim> + Clone> From<SourceMap<InstructionIndex, InstructionTarget<R>>>
+impl<R: Into<ExpansionResultShim> + Clone> From<SourceMap<InstructionIndex, ExpansionResult<R>>>
     for PyInstructionSourceMap
 {
-    fn from(value: SourceMap<InstructionIndex, InstructionTarget<R>>) -> Self {
+    fn from(value: SourceMap<InstructionIndex, ExpansionResult<R>>) -> Self {
         to_instruction_source_map(value).into()
     }
 }
 
-type InstructionSourceMapEntry = SourceMapEntry<usize, InstructionTargetShim>;
+type InstructionSourceMapEntry = SourceMapEntry<usize, ExpansionResultShim>;
 
 py_wrap_type! {
     #[derive(Debug, PartialEq)]
