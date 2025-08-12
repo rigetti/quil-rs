@@ -347,7 +347,81 @@ impl Program {
     /// # Arguments
     ///
     /// * `filter` - A filter that determines which sequence gate definitions to keep in the
-    ///   program.
+    ///   program. Gates are kept if the filter returns `true` for their name.
+    ///
+    /// # Example
+    ///
+    /// Below, we show the results of gate sequence expansion on a program that has two gate
+    /// sequence definitions. The first, `seq1`, has a matching calibration and we do not
+    /// want to expand it. The second, `seq2`, does not have a matching calibration and
+    /// we do want to expand it.
+    ///
+    /// ```rust
+    /// use quil_rs::program::Program;
+    /// use quil_rs::quil::Quil;
+    /// use std::collections::HashSet;
+    ///
+    /// let quil = r#"
+    /// DEFCAL seq1 0 1:
+    ///     FENCE 0 1
+    ///     NONBLOCKING PULSE 0 "rf" drag_gaussian(duration: 6.000000000000001e-08, fwhm: 1.5000000000000002e-08, t0: 3.0000000000000004e-08, anh: -190000000.0, alpha: -1.6453719598238201, scale: 0.168265925924524, phase: 0.0, detuning: 0)
+    ///     NONBLOCKING PULSE 1 "rf" drag_gaussian(duration: 6.000000000000001e-08, fwhm: 1.5000000000000002e-08, t0: 3.0000000000000004e-08, anh: -190000000.0, alpha: -1.6453719598238201, scale: 0.168265925924524, phase: 0.0, detuning: 0)
+    ///     FENCE 0 1
+    ///
+    /// DEFGATE seq1() a b AS SEQUENCE:
+    ///     RX(pi/2) a
+    ///     RX(pi/2) b
+    ///
+    /// DEFGATE seq2(%theta, %psi, %phi) a AS SEQUENCE:
+    ///     RZ(%theta) a
+    ///     RX(pi/2) a
+    ///     RZ(%psi) a
+    ///     RX(pi/2) a
+    ///     RZ(%phi) a
+    ///  
+    ///  seq1 0 1
+    ///  seq2(1.5707963267948966, 3.141592653589793, 0) 0
+    ///  seq2(3.141592653589793, 0, 1.5707963267948966) 1
+    ///  "#;
+    ///
+    ///  let program: Program = quil.parse().unwrap();
+    ///  let calibrated_gate_names = program.calibrations.calibrations.iter().fold(HashSet::new(), |mut acc, calibration| {
+    ///     acc.insert(calibration.identifier.name.clone());
+    ///     acc
+    ///  });
+    ///
+    ///  let expanded_program = program.expand_defgate_sequences(|name| !calibrated_gate_names.contains(name)).unwrap();
+    ///
+    ///  let expected_quil = r#"
+    /// DEFCAL seq1 0 1:
+    ///     FENCE 0 1
+    ///     NONBLOCKING PULSE 0 "rf" drag_gaussian(duration: 6.000000000000001e-08, fwhm: 1.5000000000000002e-08, t0: 3.0000000000000004e-08, anh: -190000000.0, alpha: -1.6453719598238201, scale: 0.168265925924524, phase: 0.0, detuning: 0)
+    ///     NONBLOCKING PULSE 1 "rf" drag_gaussian(duration: 6.000000000000001e-08, fwhm: 1.5000000000000002e-08, t0: 3.0000000000000004e-08, anh: -190000000.0, alpha: -1.6453719598238201, scale: 0.168265925924524, phase: 0.0, detuning: 0)
+    ///     FENCE 0 1
+    ///
+    /// DEFGATE seq1 a b AS SEQUENCE:
+    ///     RX(pi/2) a
+    ///     RX(pi/2) b
+    ///
+    /// seq1 0 1
+    ///
+    /// RZ(1.5707963267948966) 0
+    /// RX(pi/2) 0
+    /// RZ(3.141592653589793) 0
+    /// RX(pi/2) 0
+    /// RZ(0) 0
+    ///
+    /// RZ(3.141592653589793) 1
+    /// RX(pi/2) 1
+    /// RZ(0) 1
+    /// RX(pi/2) 1
+    /// RZ(1.5707963267948966) 1
+    ///  "#;
+    ///
+    ///  let expected_program: Program = expected_quil.parse().unwrap();
+    ///
+    ///  assert_eq!(expanded_program, expected_program);
+    ///  ```
     pub fn expand_defgate_sequences<F>(&self, filter: F) -> Result<Self>
     where
         F: Fn(&String) -> bool,
@@ -378,7 +452,9 @@ impl Program {
     /// # Arguments
     ///
     /// * `filter` - A filter that determines which sequence gate definitions to keep in the
-    ///   program.
+    ///   program. Gates are kept if the filter returns `true` for their name.
+    ///
+    /// See [`Program::expand_defgate_sequences`](Self::expand_defgate_sequences) for an example.
     pub fn expand_defgate_sequences_with_source_map<F>(
         &self,
         filter: F,
