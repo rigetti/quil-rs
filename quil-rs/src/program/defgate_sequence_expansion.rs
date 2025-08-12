@@ -242,7 +242,7 @@ where
                                 gate.modifiers.clone(),
                             ));
                         }
-                        let source = GateSignature::from(gate_definition);
+                        let source = gate_definition.signature();
                         if gate_expansion_stack.contains(source.name()) {
                             let cycle = gate_expansion_stack.iter().cloned().collect();
                             return Err(

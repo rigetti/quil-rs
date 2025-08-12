@@ -332,7 +332,6 @@ impl PyGateDefinition {
 
     #[getter]
     pub fn signature(&self) -> PyGateSignature {
-        let signature = GateSignature::from(self.as_inner());
-        PyGateSignature::from(signature)
+        self.as_inner().signature().into()
     }
 }

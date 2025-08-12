@@ -938,6 +938,27 @@ impl GateDefinition {
             specification,
         })
     }
+
+    pub fn signature(&self) -> GateSignature {
+        let GateDefinition {
+            name,
+            parameters: gate_parameters,
+            specification,
+        } = self;
+
+        let (qubit_parameters, gate_type) = match specification {
+            GateSpecification::Matrix(_) => (None, GateType::Matrix),
+            GateSpecification::Permutation(_) => (None, GateType::Permutation),
+            GateSpecification::PauliSum(sum) => (Some(&sum.arguments), GateType::PauliSum),
+            GateSpecification::Sequence(seq) => (Some(&seq.qubits), GateType::Sequence),
+        };
+        GateSignature {
+            name: name.clone(),
+            gate_parameters: gate_parameters.clone(),
+            qubit_parameters: qubit_parameters.cloned().unwrap_or_default(),
+            gate_type,
+        }
+    }
 }
 
 impl Quil for GateDefinition {
@@ -946,7 +967,7 @@ impl Quil for GateDefinition {
         f: &mut impl std::fmt::Write,
         fall_back_to_debug: bool,
     ) -> crate::quil::ToQuilResult<()> {
-        let signature = GateSignature::from(self);
+        let signature = self.signature();
         signature.write(f, fall_back_to_debug)?;
         writeln!(f, ":")?;
         self.specification.write(f, fall_back_to_debug)?;
@@ -995,29 +1016,6 @@ impl GateSignature {
 
     pub fn gate_type(&self) -> GateType {
         self.gate_type
-    }
-}
-
-impl From<&GateDefinition> for GateSignature {
-    fn from(value: &GateDefinition) -> Self {
-        let GateDefinition {
-            name,
-            parameters: gate_parameters,
-            specification,
-        } = value;
-
-        let (qubit_parameters, gate_type) = match specification {
-            GateSpecification::Matrix(_) => (None, GateType::Matrix),
-            GateSpecification::Permutation(_) => (None, GateType::Permutation),
-            GateSpecification::PauliSum(sum) => (Some(&sum.arguments), GateType::PauliSum),
-            GateSpecification::Sequence(seq) => (Some(&seq.qubits), GateType::Sequence),
-        };
-        Self {
-            name: name.clone(),
-            gate_parameters: gate_parameters.clone(),
-            qubit_parameters: qubit_parameters.cloned().unwrap_or_default(),
-            gate_type,
-        }
     }
 }
 
