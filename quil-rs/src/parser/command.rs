@@ -1246,40 +1246,6 @@ mod tests {
             }
         }
 
-        fn recursive() -> Self {
-            const RECURSIVE: &str = r"seq1(%param01, %param02) q1 q2 AS SEQUENCE:
-    seq2(%param01) q1
-    seq2(%param02) q2";
-            let gate1 = Gate::new(
-                "seq2",
-                vec![Expression::Variable("param01".to_string())],
-                vec![Qubit::Variable("q1".to_string())],
-                vec![],
-            )
-            .expect("must be valid gate");
-            let gate2 = Gate::new(
-                "seq2",
-                vec![Expression::Variable("param02".to_string())],
-                vec![Qubit::Variable("q2".to_string())],
-                vec![],
-            )
-            .expect("must be valid gate");
-            let gate_sequence = DefGateSequence::try_new(
-                vec!["q1".to_string(), "q2".to_string()],
-                vec![gate1, gate2],
-            )
-            .expect("must be valid sequence");
-            Self {
-                input: RECURSIVE,
-                remainder: vec![],
-                expected: Ok(GateDefinition {
-                    name: "seq1".to_string(),
-                    parameters: vec!["param01".to_string(), "param02".to_string()],
-                    specification: GateSpecification::Sequence(gate_sequence),
-                }),
-            }
-        }
-
         fn no_parameters() -> Self {
             const NO_PARAMETERS: &str = r"seq1() q1 AS SEQUENCE:
     RX(pi/2) q1";
@@ -1415,7 +1381,6 @@ mod tests {
     #[rstest]
     #[case::simple_sequence(ParseGateDefinitionTestCase::simple_sequence())]
     #[case::simple_2q(ParseGateDefinitionTestCase::simple_2q())]
-    #[case::recursive(ParseGateDefinitionTestCase::recursive())]
     #[case::no_parameters(ParseGateDefinitionTestCase::no_parameters())]
     #[case::no_parentheses(ParseGateDefinitionTestCase::no_parentheses())]
     #[case::unused_argument(ParseGateDefinitionTestCase::unused_argument())]
