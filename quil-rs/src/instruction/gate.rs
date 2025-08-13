@@ -939,7 +939,7 @@ impl GateDefinition {
         })
     }
 
-    pub fn signature(&self) -> GateSignature {
+    pub fn signature(&self) -> GateSignature<'_> {
         let GateDefinition {
             name,
             parameters: gate_parameters,
@@ -949,13 +949,15 @@ impl GateDefinition {
         let (qubit_parameters, gate_type) = match specification {
             GateSpecification::Matrix(_) => (None, GateType::Matrix),
             GateSpecification::Permutation(_) => (None, GateType::Permutation),
-            GateSpecification::PauliSum(sum) => (Some(&sum.arguments), GateType::PauliSum),
-            GateSpecification::Sequence(seq) => (Some(&seq.qubits), GateType::Sequence),
+            GateSpecification::PauliSum(sum) => {
+                (Some(sum.arguments.as_slice()), GateType::PauliSum)
+            }
+            GateSpecification::Sequence(seq) => (Some(seq.qubits.as_slice()), GateType::Sequence),
         };
         GateSignature {
-            name: name.clone(),
-            gate_parameters: gate_parameters.clone(),
-            qubit_parameters: qubit_parameters.cloned().unwrap_or_default(),
+            name,
+            gate_parameters,
+            qubit_parameters,
             gate_type,
         }
     }
@@ -976,24 +978,21 @@ impl Quil for GateDefinition {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct GateSignature {
-    name: String,
-    gate_parameters: Vec<String>,
-    qubit_parameters: Vec<String>,
+pub struct GateSignature<'a> {
+    name: &'a String,
+    gate_parameters: &'a [String],
+    qubit_parameters: Option<&'a [String]>,
     gate_type: GateType,
 }
 
-impl GateSignature {
+impl<'a> GateSignature<'a> {
     pub fn try_new(
-        name: String,
-        gate_parameters: Vec<String>,
-        qubit_parameters: Vec<String>,
+        name: &'a String,
+        gate_parameters: &'a [String],
+        qubit_parameters: Option<&'a [String]>,
         gate_type: GateType,
     ) -> Result<Self, GateError> {
-        validate_user_identifier(&name)?;
-        if qubit_parameters.is_empty() {
-            return Err(GateError::EmptyQubits);
-        }
+        validate_user_identifier(name)?;
         Ok(Self {
             name,
             gate_parameters,
@@ -1003,15 +1002,15 @@ impl GateSignature {
     }
 
     pub fn name(&self) -> &str {
-        &self.name
+        self.name
     }
 
     pub fn gate_parameters(&self) -> &[String] {
-        &self.gate_parameters
+        self.gate_parameters
     }
 
-    pub fn qubit_parameters(&self) -> &[String] {
-        &self.qubit_parameters
+    pub fn qubit_parameters(&self) -> Option<&[String]> {
+        self.qubit_parameters
     }
 
     pub fn gate_type(&self) -> GateType {
@@ -1019,16 +1018,18 @@ impl GateSignature {
     }
 }
 
-impl Quil for GateSignature {
+impl<'a> Quil for GateSignature<'a> {
     fn write(
         &self,
         f: &mut impl std::fmt::Write,
         fall_back_to_debug: bool,
     ) -> Result<(), crate::quil::ToQuilError> {
         write!(f, "DEFGATE {}", self.name,)?;
-        write_parameter_string(f, &self.gate_parameters)?;
-        for qubit in self.qubit_parameters.iter() {
-            write!(f, " {qubit}")?;
+        write_parameter_string(f, self.gate_parameters)?;
+        if let Some(qubit_parameters) = self.qubit_parameters {
+            for qubit in qubit_parameters.iter() {
+                write!(f, " {qubit}")?;
+            }
         }
         write!(f, " AS ")?;
         self.gate_type.write(f, fall_back_to_debug)?;

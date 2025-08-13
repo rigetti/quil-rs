@@ -146,11 +146,11 @@ where
     }
 }
 
-impl<R> SourceMapIndexable<GateSignature> for ExpansionResult<R>
+impl<'a, R> SourceMapIndexable<GateSignature<'a>> for ExpansionResult<R>
 where
-    R: SourceMapIndexable<GateSignature>,
+    R: SourceMapIndexable<GateSignature<'a>>,
 {
-    fn contains(&self, other: &GateSignature) -> bool {
+    fn contains(&self, other: &GateSignature<'a>) -> bool {
         if let Self::Rewritten(rewrite) = self {
             rewrite.contains(other)
         } else {

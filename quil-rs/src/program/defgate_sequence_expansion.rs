@@ -18,7 +18,7 @@ use super::source_map::{ExpansionResult, SourceMapIndexable};
 
 /// Details about the expansion of a sequence gate definition
 #[derive(Clone, Debug, PartialEq)]
-pub struct DefGateSequenceExpansion {
+pub struct DefGateSequenceExpansion<'a> {
     /// The signature of the sequence gate definition that was
     /// used to expand the instruction.
     ///
@@ -26,7 +26,7 @@ pub struct DefGateSequenceExpansion {
     /// the sequence gate definition, since gate names are unique within
     /// a program. Nevertheless, we include the full signature here
     /// for later reference within error messages.
-    source_signature: crate::instruction::GateSignature,
+    source_signature: crate::instruction::GateSignature<'a>,
 
     /// The target instruction indices produced by the expansion
     range: Range<InstructionIndex>,
@@ -34,12 +34,12 @@ pub struct DefGateSequenceExpansion {
     /// Sequence gate definitions may refer to other sequence gate definitions
     /// per the Quil specification. As such, we need to track how the first-level
     /// sequence instructions map to nested sequence gate definition expansion.
-    nested_expansions: SourceMap<InstructionIndex, ExpansionResult<DefGateSequenceExpansion>>,
+    nested_expansions: SourceMap<InstructionIndex, ExpansionResult<DefGateSequenceExpansion<'a>>>,
 }
 
-impl DefGateSequenceExpansion {
+impl<'a> DefGateSequenceExpansion<'a> {
     /// Returns the source gate signature of the sequence gate definition
-    pub fn source_signature(&self) -> &GateSignature {
+    pub fn source_signature(&self) -> &GateSignature<'a> {
         &self.source_signature
     }
 
@@ -51,25 +51,25 @@ impl DefGateSequenceExpansion {
     /// Returns the nested expansions of this sequence gate definition
     pub fn nested_expansions(
         &self,
-    ) -> &SourceMap<InstructionIndex, ExpansionResult<DefGateSequenceExpansion>> {
+    ) -> &SourceMap<InstructionIndex, ExpansionResult<DefGateSequenceExpansion<'a>>> {
         &self.nested_expansions
     }
 }
 
-impl SourceMapIndexable<InstructionIndex> for DefGateSequenceExpansion {
+impl<'a> SourceMapIndexable<InstructionIndex> for DefGateSequenceExpansion<'a> {
     fn contains(&self, other: &InstructionIndex) -> bool {
         self.range.contains(other)
     }
 }
 
-impl SourceMapIndexable<GateSignature> for DefGateSequenceExpansion {
+impl<'a> SourceMapIndexable<GateSignature<'a>> for DefGateSequenceExpansion<'a> {
     fn contains(&self, other: &GateSignature) -> bool {
         &self.source_signature == other
     }
 }
 
-type SequenceGateDefinitionSourceMap =
-    SourceMap<InstructionIndex, ExpansionResult<DefGateSequenceExpansion>>;
+type SequenceGateDefinitionSourceMap<'a> =
+    SourceMap<InstructionIndex, ExpansionResult<DefGateSequenceExpansion<'a>>>;
 
 /// A utility to expand sequence gate definitions in a Quil program.
 #[derive(Clone, Debug, PartialEq)]
@@ -114,9 +114,11 @@ where
     /// detailing the expansion.
     pub(crate) fn expand_defgate_sequences_with_source_map(
         &self,
-        source_instructions: &[Instruction],
-    ) -> Result<(Vec<Instruction>, SequenceGateDefinitionSourceMap), DefGateSequenceExpansionError>
-    {
+        source_instructions: &'program [Instruction],
+    ) -> Result<
+        (Vec<Instruction>, SequenceGateDefinitionSourceMap<'program>),
+        DefGateSequenceExpansionError,
+    > {
         let mut source_map = SourceMap::default();
         self.expand_defgate_sequences_with_source_map_inner(
             source_instructions,
@@ -129,7 +131,7 @@ where
     fn expand_defgate_sequences_with_source_map_inner(
         &self,
         source_instructions: &[Instruction],
-        source_map: &mut SequenceGateDefinitionSourceMap,
+        source_map: &mut SequenceGateDefinitionSourceMap<'program>,
         gate_expansion_stack: &mut IndexSet<String>,
     ) -> Result<Vec<Instruction>, DefGateSequenceExpansionError> {
         let mut target_instructions = vec![];
@@ -219,7 +221,8 @@ where
         &self,
         instruction: &Instruction,
         gate_expansion_stack: &mut IndexSet<String>,
-    ) -> Result<Option<(Vec<Instruction>, GateSignature)>, DefGateSequenceExpansionError> {
+    ) -> Result<Option<(Vec<Instruction>, GateSignature<'program>)>, DefGateSequenceExpansionError>
+    {
         if let Instruction::Gate(gate) = instruction {
             if let Some(gate_definition) = self.gate_definitions.get(&gate.name) {
                 if let GateSpecification::Sequence(gate_sequence) = &gate_definition.specification {
@@ -279,7 +282,8 @@ mod tests {
         program: &'static str,
         filter: Box<dyn Fn(&String) -> bool>,
         expected: Result<&'static str, DefGateSequenceExpansionError>,
-        expected_source_map: SourceMap<InstructionIndex, ExpansionResult<DefGateSequenceExpansion>>,
+        source_map_entry_builders:
+            Vec<SourceMapEntry<InstructionIndex, ExpansionResult<DefGateSequenceExpansionBuilder>>>,
     }
 
     /// Below we define a set of test cases for the `DefGateSequenceExpansion` functionality. We
@@ -290,6 +294,26 @@ mod tests {
     /// [`DefGateSequenceExpansionError::InvalidGateSequenceElementQubit`], which
     /// cover Quil errors that are impossible to parse or construct.
     impl DefGateSequenceExpansionTestCase {
+        fn to_source_map(
+            &self,
+        ) -> SourceMap<InstructionIndex, ExpansionResult<DefGateSequenceExpansion<'_>>> {
+            SourceMap {
+                entries: self
+                    .source_map_entry_builders
+                    .iter()
+                    .map(|builder| SourceMapEntry {
+                        source_location: builder.source_location,
+                        target_location: match &builder.target_location {
+                            ExpansionResult::Rewritten(expansion) => expansion.build(),
+                            ExpansionResult::Unmodified(index) => {
+                                ExpansionResult::Unmodified(*index)
+                            }
+                        },
+                    })
+                    .collect(),
+            }
+        }
+
         fn simple_1q_expansions() -> Self {
             const QUIL: &str = r"
 DEFGATE seq2(%param1, %param2) a b AS SEQUENCE:
@@ -311,52 +335,50 @@ RZ(pi/2) 1
 RX(pi/2) 1
 RZ(pi/2) 1
 ";
-            let expected_source_map = SourceMap {
-                entries: vec![build_source_map_entry(
-                    0,
-                    build_defgate_sequence_expansion(
-                        "seq2",
-                        &["param1", "param2"],
-                        &["a", "b"],
-                        0..6,
-                        vec![
-                            build_source_map_entry(
-                                0,
-                                build_defgate_sequence_expansion(
-                                    "seq1",
-                                    &["param1"],
-                                    &["a"],
-                                    0..3,
-                                    vec![
-                                        build_source_map_entry_copy(0, 0),
-                                        build_source_map_entry_copy(1, 1),
-                                        build_source_map_entry_copy(2, 2),
-                                    ],
-                                ),
+            let source_map_entry_builders = vec![build_source_map_entry(
+                0,
+                DefGateSequenceExpansionBuilder::new(
+                    "seq2",
+                    &["param1", "param2"],
+                    &["a", "b"],
+                    0..6,
+                    vec![
+                        build_source_map_entry(
+                            0,
+                            DefGateSequenceExpansionBuilder::new(
+                                "seq1",
+                                &["param1"],
+                                &["a"],
+                                0..3,
+                                vec![
+                                    build_source_map_entry_copy(0, 0),
+                                    build_source_map_entry_copy(1, 1),
+                                    build_source_map_entry_copy(2, 2),
+                                ],
                             ),
-                            build_source_map_entry(
-                                1,
-                                build_defgate_sequence_expansion(
-                                    "seq1",
-                                    &["param1"],
-                                    &["a"],
-                                    3..6,
-                                    vec![
-                                        build_source_map_entry_copy(0, 0),
-                                        build_source_map_entry_copy(1, 1),
-                                        build_source_map_entry_copy(2, 2),
-                                    ],
-                                ),
+                        ),
+                        build_source_map_entry(
+                            1,
+                            DefGateSequenceExpansionBuilder::new(
+                                "seq1",
+                                &["param1"],
+                                &["a"],
+                                3..6,
+                                vec![
+                                    build_source_map_entry_copy(0, 0),
+                                    build_source_map_entry_copy(1, 1),
+                                    build_source_map_entry_copy(2, 2),
+                                ],
                             ),
-                        ],
-                    ),
-                )],
-            };
+                        ),
+                    ],
+                ),
+            )];
             Self {
                 program: QUIL,
                 filter: Box::new(|_| true),
                 expected: Ok(EXPECTED_QUIL),
-                expected_source_map,
+                source_map_entry_builders,
             }
         }
 
@@ -399,130 +421,128 @@ RZ(pi) 1
 RX(pi/2) 1
 RZ(-(pi)) 1
 ";
-            let expected_source_map = SourceMap {
-                entries: vec![build_source_map_entry(
-                    0,
-                    build_defgate_sequence_expansion(
-                        "some_u2_cycle",
-                        &["param1", "param2", "param3", "param4", "param5", "param6"],
-                        &["a", "b"],
-                        0..18,
-                        vec![
-                            build_source_map_entry(
-                                0,
-                                build_defgate_sequence_expansion(
-                                    "pmw3",
-                                    &["param1", "param2", "param3"],
-                                    &["a"],
-                                    0..9,
-                                    vec![
-                                        build_source_map_entry(
-                                            0,
-                                            build_defgate_sequence_expansion(
-                                                "pmw",
-                                                &["param1"],
-                                                &["a"],
-                                                0..3,
-                                                vec![
-                                                    build_source_map_entry_copy(0, 0),
-                                                    build_source_map_entry_copy(1, 1),
-                                                    build_source_map_entry_copy(2, 2),
-                                                ],
-                                            ),
+            let source_map_entry_builders = vec![build_source_map_entry(
+                0,
+                DefGateSequenceExpansionBuilder::new(
+                    "some_u2_cycle",
+                    &["param1", "param2", "param3", "param4", "param5", "param6"],
+                    &["a", "b"],
+                    0..18,
+                    vec![
+                        build_source_map_entry(
+                            0,
+                            DefGateSequenceExpansionBuilder::new(
+                                "pmw3",
+                                &["param1", "param2", "param3"],
+                                &["a"],
+                                0..9,
+                                vec![
+                                    build_source_map_entry(
+                                        0,
+                                        DefGateSequenceExpansionBuilder::new(
+                                            "pmw",
+                                            &["param1"],
+                                            &["a"],
+                                            0..3,
+                                            vec![
+                                                build_source_map_entry_copy(0, 0),
+                                                build_source_map_entry_copy(1, 1),
+                                                build_source_map_entry_copy(2, 2),
+                                            ],
                                         ),
-                                        build_source_map_entry(
-                                            1,
-                                            build_defgate_sequence_expansion(
-                                                "pmw",
-                                                &["param1"],
-                                                &["a"],
-                                                3..6,
-                                                vec![
-                                                    build_source_map_entry_copy(0, 0),
-                                                    build_source_map_entry_copy(1, 1),
-                                                    build_source_map_entry_copy(2, 2),
-                                                ],
-                                            ),
+                                    ),
+                                    build_source_map_entry(
+                                        1,
+                                        DefGateSequenceExpansionBuilder::new(
+                                            "pmw",
+                                            &["param1"],
+                                            &["a"],
+                                            3..6,
+                                            vec![
+                                                build_source_map_entry_copy(0, 0),
+                                                build_source_map_entry_copy(1, 1),
+                                                build_source_map_entry_copy(2, 2),
+                                            ],
                                         ),
-                                        build_source_map_entry(
-                                            2,
-                                            build_defgate_sequence_expansion(
-                                                "pmw",
-                                                &["param1"],
-                                                &["a"],
-                                                6..9,
-                                                vec![
-                                                    build_source_map_entry_copy(0, 0),
-                                                    build_source_map_entry_copy(1, 1),
-                                                    build_source_map_entry_copy(2, 2),
-                                                ],
-                                            ),
+                                    ),
+                                    build_source_map_entry(
+                                        2,
+                                        DefGateSequenceExpansionBuilder::new(
+                                            "pmw",
+                                            &["param1"],
+                                            &["a"],
+                                            6..9,
+                                            vec![
+                                                build_source_map_entry_copy(0, 0),
+                                                build_source_map_entry_copy(1, 1),
+                                                build_source_map_entry_copy(2, 2),
+                                            ],
                                         ),
-                                    ],
-                                ),
+                                    ),
+                                ],
                             ),
-                            build_source_map_entry(
-                                1,
-                                build_defgate_sequence_expansion(
-                                    "pmw3",
-                                    &["param1", "param2", "param3"],
-                                    &["a"],
-                                    9..18,
-                                    vec![
-                                        build_source_map_entry(
-                                            0,
-                                            build_defgate_sequence_expansion(
-                                                "pmw",
-                                                &["param1"],
-                                                &["a"],
-                                                0..3,
-                                                vec![
-                                                    build_source_map_entry_copy(0, 0),
-                                                    build_source_map_entry_copy(1, 1),
-                                                    build_source_map_entry_copy(2, 2),
-                                                ],
-                                            ),
+                        ),
+                        build_source_map_entry(
+                            1,
+                            DefGateSequenceExpansionBuilder::new(
+                                "pmw3",
+                                &["param1", "param2", "param3"],
+                                &["a"],
+                                9..18,
+                                vec![
+                                    build_source_map_entry(
+                                        0,
+                                        DefGateSequenceExpansionBuilder::new(
+                                            "pmw",
+                                            &["param1"],
+                                            &["a"],
+                                            0..3,
+                                            vec![
+                                                build_source_map_entry_copy(0, 0),
+                                                build_source_map_entry_copy(1, 1),
+                                                build_source_map_entry_copy(2, 2),
+                                            ],
                                         ),
-                                        build_source_map_entry(
-                                            1,
-                                            build_defgate_sequence_expansion(
-                                                "pmw",
-                                                &["param1"],
-                                                &["a"],
-                                                3..6,
-                                                vec![
-                                                    build_source_map_entry_copy(0, 0),
-                                                    build_source_map_entry_copy(1, 1),
-                                                    build_source_map_entry_copy(2, 2),
-                                                ],
-                                            ),
+                                    ),
+                                    build_source_map_entry(
+                                        1,
+                                        DefGateSequenceExpansionBuilder::new(
+                                            "pmw",
+                                            &["param1"],
+                                            &["a"],
+                                            3..6,
+                                            vec![
+                                                build_source_map_entry_copy(0, 0),
+                                                build_source_map_entry_copy(1, 1),
+                                                build_source_map_entry_copy(2, 2),
+                                            ],
                                         ),
-                                        build_source_map_entry(
-                                            2,
-                                            build_defgate_sequence_expansion(
-                                                "pmw",
-                                                &["param1"],
-                                                &["a"],
-                                                6..9,
-                                                vec![
-                                                    build_source_map_entry_copy(0, 0),
-                                                    build_source_map_entry_copy(1, 1),
-                                                    build_source_map_entry_copy(2, 2),
-                                                ],
-                                            ),
+                                    ),
+                                    build_source_map_entry(
+                                        2,
+                                        DefGateSequenceExpansionBuilder::new(
+                                            "pmw",
+                                            &["param1"],
+                                            &["a"],
+                                            6..9,
+                                            vec![
+                                                build_source_map_entry_copy(0, 0),
+                                                build_source_map_entry_copy(1, 1),
+                                                build_source_map_entry_copy(2, 2),
+                                            ],
                                         ),
-                                    ],
-                                ),
+                                    ),
+                                ],
                             ),
-                        ],
-                    ),
-                )],
-            };
+                        ),
+                    ],
+                ),
+            )];
             Self {
                 program: QUIL,
                 filter: Box::new(|_| true),
                 expected: Ok(EXPECTED_QUIL),
-                expected_source_map,
+                source_map_entry_builders,
             }
         }
 
@@ -556,46 +576,44 @@ ISWAP 0 1
 MEASURE 0 ro[0]
 MEASURE 1 ro[1]
 ";
-            let expected_source_map = SourceMap {
-                entries: vec![
-                    build_source_map_entry(0, ExpansionResult::Unmodified(InstructionIndex(0))),
-                    build_source_map_entry(
-                        1,
-                        build_defgate_sequence_expansion(
-                            "seq2",
-                            &["param1", "param2"],
-                            &["a", "b"],
-                            1..7,
-                            vec![
-                                build_source_map_entry_copy(0, 0),
-                                build_source_map_entry(
-                                    1,
-                                    build_defgate_sequence_expansion(
-                                        "seq1",
-                                        &["param1"],
-                                        &["a"],
-                                        1..4,
-                                        vec![
-                                            build_source_map_entry_copy(0, 0),
-                                            build_source_map_entry_copy(1, 1),
-                                            build_source_map_entry_copy(2, 2),
-                                        ],
-                                    ),
+            let source_map_entry_builders = vec![
+                build_source_map_entry(0, ExpansionResult::Unmodified(InstructionIndex(0))),
+                build_source_map_entry(
+                    1,
+                    DefGateSequenceExpansionBuilder::new(
+                        "seq2",
+                        &["param1", "param2"],
+                        &["a", "b"],
+                        1..7,
+                        vec![
+                            build_source_map_entry_copy(0, 0),
+                            build_source_map_entry(
+                                1,
+                                DefGateSequenceExpansionBuilder::new(
+                                    "seq1",
+                                    &["param1"],
+                                    &["a"],
+                                    1..4,
+                                    vec![
+                                        build_source_map_entry_copy(0, 0),
+                                        build_source_map_entry_copy(1, 1),
+                                        build_source_map_entry_copy(2, 2),
+                                    ],
                                 ),
-                                build_source_map_entry_copy(2, 4),
-                                build_source_map_entry_copy(3, 5),
-                            ],
-                        ),
+                            ),
+                            build_source_map_entry_copy(2, 4),
+                            build_source_map_entry_copy(3, 5),
+                        ],
                     ),
-                    build_source_map_entry_copy(2, 7),
-                    build_source_map_entry_copy(3, 8),
-                ],
-            };
+                ),
+                build_source_map_entry_copy(2, 7),
+                build_source_map_entry_copy(3, 8),
+            ];
             Self {
                 program: QUIL,
                 filter: Box::new(|_| true),
                 expected: Ok(EXPECTED_QUIL),
-                expected_source_map,
+                source_map_entry_builders,
             }
         }
 
@@ -618,27 +636,25 @@ RZ(pi) 0
 RX(pi/2) 0
 RZ(pi) 0
 ";
-            let expected_source_map = SourceMap {
-                entries: vec![build_source_map_entry(
-                    0,
-                    build_defgate_sequence_expansion(
-                        "seq1",
-                        &["param1"],
-                        &["a", "b"],
-                        0..3,
-                        vec![
-                            build_source_map_entry_copy(0, 0),
-                            build_source_map_entry_copy(1, 1),
-                            build_source_map_entry_copy(2, 2),
-                        ],
-                    ),
-                )],
-            };
+            let source_map_entry_builders = vec![build_source_map_entry(
+                0,
+                DefGateSequenceExpansionBuilder::new(
+                    "seq1",
+                    &["param1"],
+                    &["a", "b"],
+                    0..3,
+                    vec![
+                        build_source_map_entry_copy(0, 0),
+                        build_source_map_entry_copy(1, 1),
+                        build_source_map_entry_copy(2, 2),
+                    ],
+                ),
+            )];
             Self {
                 program: QUIL,
                 filter: Box::new(|_| true),
                 expected: Ok(EXPECTED_QUIL),
-                expected_source_map,
+                source_map_entry_builders,
             }
         }
 
@@ -663,30 +679,28 @@ RX(pi/2) 0
 RZ(pi) 0
 seq2(pi/2) 0
 ";
-            let expected_source_map = SourceMap {
-                entries: vec![
-                    build_source_map_entry(
-                        0,
-                        build_defgate_sequence_expansion(
-                            "seq1",
-                            &["param1"],
-                            &["a"],
-                            0..3,
-                            vec![
-                                build_source_map_entry_copy(0, 0),
-                                build_source_map_entry_copy(1, 1),
-                                build_source_map_entry_copy(2, 2),
-                            ],
-                        ),
+            let source_map_entry_builders = vec![
+                build_source_map_entry(
+                    0,
+                    DefGateSequenceExpansionBuilder::new(
+                        "seq1",
+                        &["param1"],
+                        &["a"],
+                        0..3,
+                        vec![
+                            build_source_map_entry_copy(0, 0),
+                            build_source_map_entry_copy(1, 1),
+                            build_source_map_entry_copy(2, 2),
+                        ],
                     ),
-                    build_source_map_entry_copy(1, 3),
-                ],
-            };
+                ),
+                build_source_map_entry_copy(1, 3),
+            ];
             Self {
                 program: QUIL,
                 filter: Box::new(|k| k == "seq1"),
                 expected: Ok(EXPECTED_QUIL),
-                expected_source_map,
+                source_map_entry_builders,
             }
         }
 
@@ -704,7 +718,7 @@ seq1() 0
                 program: QUIL,
                 filter: Box::new(|_| true),
                 expected,
-                expected_source_map: SourceMap::default(),
+                source_map_entry_builders: vec![],
             }
         }
 
@@ -728,7 +742,7 @@ seq1(pi) 0
                 program: QUIL,
                 filter: Box::new(|_| true),
                 expected,
-                expected_source_map: SourceMap::default(),
+                source_map_entry_builders: vec![],
             }
         }
 
@@ -747,7 +761,7 @@ seq1(pi/2) 0 1
                 program: QUIL,
                 filter: Box::new(|_| true),
                 expected,
-                expected_source_map: SourceMap::default(),
+                source_map_entry_builders: vec![],
             }
         }
 
@@ -765,7 +779,7 @@ seq1(pi/2) %q1
                 program: QUIL,
                 filter: Box::new(|_| true),
                 expected,
-                expected_source_map: SourceMap::default(),
+                source_map_entry_builders: vec![],
             }
         }
 
@@ -784,7 +798,7 @@ DAGGER seq1(pi/2) 0
                 program: QUIL,
                 filter: Box::new(|_| true),
                 expected,
-                expected_source_map: SourceMap::default(),
+                source_map_entry_builders: vec![],
             }
         }
     }
@@ -809,12 +823,12 @@ DAGGER seq1(pi/2) 0
             crate::Program::from_str(test_case.program).expect("must be a valid Quil program");
         let program_expansion = ProgramDefGateSequenceExpander {
             gate_definitions: &program.gate_definitions,
-            filter: test_case.filter,
+            filter: &test_case.filter,
         };
         let result =
             program_expansion.expand_defgate_sequences_with_source_map(&program.instructions);
 
-        match (test_case.expected, result) {
+        match (&test_case.expected, result) {
             (Ok(expected), Ok((actual, source_map))) => {
                 let expected_program =
                     Program::from_str(expected).expect("expected program must be valid Quil");
@@ -822,7 +836,7 @@ DAGGER seq1(pi/2) 0
                 actual_program.add_instructions(actual);
 
                 pretty_assertions::assert_eq!(expected_program, actual_program);
-                pretty_assertions::assert_eq!(test_case.expected_source_map, source_map);
+                pretty_assertions::assert_eq!(test_case.to_source_map(), source_map);
 
                 let actual_program_without_source_map = Program::from_instructions(
                     program_expansion
@@ -838,43 +852,89 @@ DAGGER seq1(pi/2) 0
                 panic!("Expected error:\n\n{expected:?}\n\ngot:\n\n{actual:?}");
             }
             (Err(expected), Err(found)) => {
-                pretty_assertions::assert_eq!(expected, found);
+                pretty_assertions::assert_eq!(*expected, found);
             }
         }
     }
 
-    fn build_gate_signature(
-        gate_name: &'static str,
-        gate_parameters: &'static [&'static str],
-        gate_qubits: &'static [&'static str],
-    ) -> GateSignature {
-        GateSignature::try_new(
-            gate_name.to_string(),
-            gate_parameters.iter().map(|s| s.to_string()).collect(),
-            gate_qubits.iter().map(|s| s.to_string()).collect(),
-            crate::instruction::GateType::Sequence,
-        )
-        .expect("must be a valid gate")
+    struct GateSignatureBuilder {
+        gate_name: String,
+        gate_parameters: Vec<String>,
+        gate_qubits: Vec<String>,
     }
 
-    fn build_defgate_sequence_expansion(
-        gate_name: &'static str,
-        gate_parameters: &'static [&'static str],
-        gate_qubits: &'static [&'static str],
+    impl GateSignatureBuilder {
+        fn new(
+            gate_name: &'static str,
+            gate_parameters: &'static [&'static str],
+            gate_qubits: &'static [&'static str],
+        ) -> Self {
+            Self {
+                gate_name: gate_name.to_string(),
+                gate_parameters: gate_parameters.iter().map(|s| s.to_string()).collect(),
+                gate_qubits: gate_qubits.iter().map(|s| s.to_string()).collect(),
+            }
+        }
+
+        fn build(&self) -> GateSignature<'_> {
+            GateSignature::try_new(
+                &self.gate_name,
+                &self.gate_parameters,
+                Some(self.gate_qubits.as_slice()),
+                crate::instruction::GateType::Sequence,
+            )
+            .expect("must be a valid gate signature")
+        }
+    }
+
+    struct DefGateSequenceExpansionBuilder {
+        signature: GateSignatureBuilder,
         range: Range<usize>,
-        entries: Vec<SourceMapEntry<InstructionIndex, ExpansionResult<DefGateSequenceExpansion>>>,
-    ) -> ExpansionResult<DefGateSequenceExpansion> {
-        ExpansionResult::Rewritten(DefGateSequenceExpansion {
-            source_signature: build_gate_signature(gate_name, gate_parameters, gate_qubits),
-            range: InstructionIndex(range.start)..InstructionIndex(range.end),
-            nested_expansions: SourceMap { entries },
-        })
+        nested_expansions:
+            Vec<SourceMapEntry<InstructionIndex, ExpansionResult<DefGateSequenceExpansionBuilder>>>,
+    }
+
+    impl DefGateSequenceExpansionBuilder {
+        fn new(
+            gate_name: &'static str,
+            gate_parameters: &'static [&'static str],
+            gate_qubits: &'static [&'static str],
+            range: Range<usize>,
+            entries: Vec<
+                SourceMapEntry<InstructionIndex, ExpansionResult<DefGateSequenceExpansionBuilder>>,
+            >,
+        ) -> ExpansionResult<Self> {
+            ExpansionResult::Rewritten(Self {
+                signature: GateSignatureBuilder::new(gate_name, gate_parameters, gate_qubits),
+                range,
+                nested_expansions: entries,
+            })
+        }
+
+        fn build(&self) -> ExpansionResult<DefGateSequenceExpansion<'_>> {
+            let entries: Vec<_> = self
+                .nested_expansions
+                .iter()
+                .map(|entry| SourceMapEntry {
+                    source_location: entry.source_location,
+                    target_location: match entry.target_location() {
+                        ExpansionResult::Rewritten(expansion) => expansion.build(),
+                        ExpansionResult::Unmodified(index) => ExpansionResult::Unmodified(*index),
+                    },
+                })
+                .collect();
+            ExpansionResult::Rewritten(DefGateSequenceExpansion {
+                source_signature: self.signature.build(),
+                range: InstructionIndex(self.range.start)..InstructionIndex(self.range.end),
+                nested_expansions: SourceMap { entries },
+            })
+        }
     }
 
     fn build_source_map_entry(
         source_location: usize,
-        target_location: ExpansionResult<DefGateSequenceExpansion>,
-    ) -> SourceMapEntry<InstructionIndex, ExpansionResult<DefGateSequenceExpansion>> {
+        target_location: ExpansionResult<DefGateSequenceExpansionBuilder>,
+    ) -> SourceMapEntry<InstructionIndex, ExpansionResult<DefGateSequenceExpansionBuilder>> {
         SourceMapEntry {
             source_location: InstructionIndex(source_location),
             target_location,
@@ -884,7 +944,7 @@ DAGGER seq1(pi/2) 0
     fn build_source_map_entry_copy(
         source_location: usize,
         target_location: usize,
-    ) -> SourceMapEntry<InstructionIndex, ExpansionResult<DefGateSequenceExpansion>> {
+    ) -> SourceMapEntry<InstructionIndex, ExpansionResult<DefGateSequenceExpansionBuilder>> {
         build_source_map_entry(
             source_location,
             ExpansionResult::Unmodified(InstructionIndex(target_location)),

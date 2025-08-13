@@ -460,7 +460,7 @@ impl Program {
         filter: F,
     ) -> Result<(
         Self,
-        SourceMap<InstructionIndex, ExpansionResult<DefGateSequenceExpansion>>,
+        SourceMap<InstructionIndex, ExpansionResult<DefGateSequenceExpansion<'_>>>,
     )>
     where
         F: Fn(&String) -> bool,
