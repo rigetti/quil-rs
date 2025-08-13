@@ -9,7 +9,7 @@ use quil_rs::{
     instruction::{Instruction, QubitPlaceholder, TargetPlaceholder, Waveform},
     program::{
         analysis::{ControlFlowGraph, ControlFlowGraphOwned},
-        Calibrations, FrameSet, MemoryRegion,
+        Calibrations, FrameSet, MemoryRegion, SourceMap, SourceMapEntry,
     },
     Program,
 };
@@ -25,6 +25,7 @@ use rigetti_pyo3::{
     },
     wrap_error, PyTryFrom, PyWrapper, PyWrapperMut, ToPython, ToPythonError,
 };
+use source_map::{FlatExpansionResult, PyInstructionIndex};
 
 use crate::{
     impl_eq, impl_to_quil,
@@ -38,10 +39,8 @@ use self::{
     analysis::{PyBasicBlock, PyControlFlowGraph},
     scheduling::{PyScheduleSeconds, PyScheduleSecondsItem, PyTimeSpanSeconds},
     source_map::{
-        PyCalibrationExpansion, PyCalibrationExpansionSourceMap,
-        PyCalibrationExpansionSourceMapEntry, PyCalibrationSource, PyMaybeCalibrationExpansion,
-        PyProgramCalibrationExpansion, PyProgramCalibrationExpansionSourceMap,
-        PyProgramCalibrationExpansionSourceMapEntry,
+        PyCalibrationExpansion, PyCalibrationSource, PyDefGateSequenceExpansion,
+        PyInstructionSourceMap, PyInstructionSourceMapEntry, PyInstructionTarget,
     },
 };
 pub use self::{calibration::PyCalibrationSet, frame::PyFrameSet, memory::PyMemoryRegion};
@@ -94,13 +93,52 @@ impl PyProgram {
         ControlFlowGraphOwned::from(ControlFlowGraph::from(self.as_inner())).into()
     }
 
-    pub fn expand_calibrations_with_source_map(&self) -> PyResult<PyProgramCalibrationExpansion> {
+    pub fn expand_calibrations_with_source_map(
+        &self,
+    ) -> PyResult<(PyProgram, PyInstructionSourceMap)> {
         let expansion = self
             .as_inner()
             .expand_calibrations_with_source_map()
             .map_err(ProgramError::from)
             .map_err(ProgramError::to_py_err)?;
-        Ok(expansion.into())
+        Ok((expansion.0.into(), expansion.1.into()))
+    }
+
+    #[pyo3(signature = (/, filter = None))]
+    pub fn expand_defgate_sequences_with_source_map(
+        &self,
+        filter: Option<&PyAny>,
+    ) -> PyResult<(PyProgram, PyInstructionSourceMap)> {
+        let py_filter = filter
+            .map(|f| f.is_callable().then_some(f))
+            .unwrap_or_default();
+        let filter = |key: &String| -> bool {
+            py_filter
+                .map(|f| {
+                    f.call1((key,))
+                        .and_then(|v| v.extract::<bool>())
+                        .unwrap_or(true)
+                })
+                .unwrap_or(true)
+        };
+        let (expanded_program, source_map) = self
+            .as_inner()
+            .expand_defgate_sequences_with_source_map(filter)
+            .map_err(ProgramError::from)
+            .map_err(ProgramError::to_py_err)?;
+
+        let entries: Vec<_> = source_map
+            .entries()
+            .iter()
+            .map(|entry| {
+                SourceMapEntry::new(
+                    *entry.source_location(),
+                    FlatExpansionResult::from(entry.target_location()),
+                )
+            })
+            .collect();
+        let py_source_map = PyInstructionSourceMap::from(SourceMap::new(entries));
+        Ok((expanded_program.into(), py_source_map))
     }
 
     #[getter]
@@ -229,6 +267,28 @@ impl PyProgram {
     pub fn expand_calibrations(&self) -> PyResult<Self> {
         self.as_inner()
             .expand_calibrations()
+            .map(PyProgram::from)
+            .map_err(ProgramError::from)
+            .map_err(ProgramError::to_py_err)
+    }
+
+    #[pyo3(signature = (/, filter = None))]
+    pub fn expand_defgate_sequences(&self, filter: Option<&PyAny>) -> PyResult<Self> {
+        let py_filter = filter
+            .map(|f| f.is_callable().then_some(f))
+            .unwrap_or_default();
+        let filter = |key: &String| -> bool {
+            py_filter
+                .map(|f| {
+                    f.call1((key,))
+                        .and_then(|v| v.extract::<bool>())
+                        .unwrap_or(true)
+                })
+                .unwrap_or(true)
+        };
+        self.as_inner()
+            .clone()
+            .expand_defgate_sequences(filter)
             .map(PyProgram::from)
             .map_err(ProgramError::from)
             .map_err(ProgramError::to_py_err)
@@ -404,13 +464,12 @@ create_init_submodule! {
         PyFrameSet,
         PyProgram,
         PyCalibrationExpansion,
-        PyCalibrationExpansionSourceMap,
-        PyCalibrationExpansionSourceMapEntry,
         PyCalibrationSource,
-        PyMaybeCalibrationExpansion,
-        PyProgramCalibrationExpansion,
-        PyProgramCalibrationExpansionSourceMap,
-        PyProgramCalibrationExpansionSourceMapEntry,
+        PyInstructionSourceMap,
+        PyInstructionIndex,
+        PyInstructionTarget,
+        PyDefGateSequenceExpansion,
+        PyInstructionSourceMapEntry,
         PyCalibrationSet,
         PyMemoryRegion,
         PyBasicBlock,

@@ -25,7 +25,7 @@ use crate::{
     expected_token,
     expression::Expression,
     instruction::{
-        ArithmeticOperand, AttributeValue, BinaryOperand, ComparisonOperand, FrameIdentifier,
+        ArithmeticOperand, AttributeValue, BinaryOperand, ComparisonOperand, FrameIdentifier, Gate,
         GateModifier, MemoryReference, Offset, PauliGate, PauliTerm, Qubit, ScalarType, Sharing,
         Vector, WaveformInvocation, WaveformParameters,
     },
@@ -259,6 +259,41 @@ pub(crate) fn parse_pauli_terms<'a>(
         separated_list1(
             token!(NewLine),
             preceded(token!(Indentation), parse_pauli_term),
+        ),
+    )(input)
+}
+
+/// A sequence element is effectively a gate application where the formal qubit must be an argument.
+fn parse_sequence_element<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Gate> {
+    let (input, modifiers) = many0(parse_gate_modifier)(input)?;
+    let (input, name) = token!(Identifier(v))(input)?;
+    let (input, parameters) = opt(delimited(
+        token!(LParenthesis),
+        separated_list0(token!(Comma), parse_expression),
+        token!(RParenthesis),
+    ))(input)?;
+    let parameters = parameters.unwrap_or_default();
+    let (input, qubits) = many0(parse_qubit)(input)?;
+    Ok((
+        input,
+        Gate {
+            name,
+            parameters,
+            qubits,
+            modifiers,
+        },
+    ))
+}
+
+/// Parse gate sequence representation of a `DEFGATE` specification.
+pub(crate) fn parse_sequence_elements<'a>(
+    input: ParserInput<'a>,
+) -> InternalParserResult<'a, Vec<Gate>> {
+    preceded(
+        token!(NewLine),
+        separated_list1(
+            token!(NewLine),
+            preceded(token!(Indentation), parse_sequence_element),
         ),
     )(input)
 }

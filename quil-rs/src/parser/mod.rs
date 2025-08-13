@@ -41,14 +41,14 @@ type InternalParserResult<'a, R, E = InternalParseError<'a>> = IResult<ParserInp
 ///
 /// This also converts the first item from [`TokenWithLocation`] to [`Token`], which makes match
 /// statements more straightforward.
-pub(crate) fn split_first_token(input: ParserInput) -> Option<(&Token, ParserInput)> {
+pub(crate) fn split_first_token(input: ParserInput<'_>) -> Option<(&Token, ParserInput<'_>)> {
     input
         .split_first()
         .map(|(first, rest)| (first.as_token(), rest))
 }
 
 /// Returns the first token of the input as [`Token`] instead of [`TokenWithLocation`].
-pub(crate) fn first_token(input: ParserInput) -> Option<&Token> {
+pub(crate) fn first_token(input: ParserInput<'_>) -> Option<&Token> {
     input.first().map(TokenWithLocation::as_token)
 }
 
