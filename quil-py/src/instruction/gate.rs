@@ -135,25 +135,68 @@ py_wrap_simple_enum! {
     }
 }
 
+/// [`GateSignature`] references data from the [`GateDefinition`]; as such it is incompatible
+/// with Python's memory management, so we redefine a type with owned data.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct OwnedGateSignature {
+    name: String,
+    gate_parameters: Vec<String>,
+    qubit_parameters: Option<Vec<String>>,
+    gate_type: GateType,
+}
+
+impl<'a> From<GateSignature<'a>> for OwnedGateSignature {
+    fn from(signature: GateSignature) -> Self {
+        OwnedGateSignature {
+            name: signature.name().to_string(),
+            gate_parameters: signature.gate_parameters().to_vec(),
+            qubit_parameters: signature
+                .qubit_parameters()
+                .map(|qubit_parameters| qubit_parameters.to_vec()),
+            gate_type: signature.gate_type(),
+        }
+    }
+}
+
+impl<'a> TryFrom<&'a OwnedGateSignature> for GateSignature<'a> {
+    type Error = pyo3::PyErr;
+    fn try_from(signature: &'a OwnedGateSignature) -> Result<Self, Self::Error> {
+        GateSignature::try_new(
+            &signature.name,
+            signature.gate_parameters.as_slice(),
+            signature.qubit_parameters.as_deref(),
+            signature.gate_type,
+        )
+        .map_err(RustGateError::from)
+        .map_err(RustGateError::to_py_err)
+    }
+}
+
 py_wrap_type! {
     #[derive(Debug, PartialEq, Eq)]
-    PyGateSignature(GateSignature) as "GateSignature"
+    PyGateSignature(OwnedGateSignature) as "GateSignature"
 }
 
 #[pymethods]
 impl PyGateSignature {
     #[new]
     fn new(
+        py: Python<'_>,
         name: String,
         gate_parameters: Vec<String>,
         qubit_parameters: Vec<String>,
         gate_type: PyGateType,
     ) -> PyResult<Self> {
-        Ok(Self(
-            GateSignature::try_new(name, gate_parameters, qubit_parameters, gate_type.into())
-                .map_err(RustGateError::from)
-                .map_err(RustGateError::to_py_err)?,
-        ))
+        Ok(Self(OwnedGateSignature {
+            name,
+            gate_parameters,
+            qubit_parameters: if qubit_parameters.is_empty() {
+                None
+            } else {
+                Some(qubit_parameters)
+            },
+            gate_type: GateType::py_try_from(py, &gate_type)?,
+        }))
     }
 }
 
@@ -332,6 +375,6 @@ impl PyGateDefinition {
 
     #[getter]
     pub fn signature(&self) -> PyGateSignature {
-        self.as_inner().signature().into()
+        OwnedGateSignature::from(self.as_inner().signature()).into()
     }
 }

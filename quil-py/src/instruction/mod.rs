@@ -36,8 +36,8 @@ pub use self::{
         PyShiftPhase, PySwapPhases,
     },
     gate::{
-        GateError, PyGate, PyGateDefinition, PyGateModifier, PyGateSignature, PyGateSpecification,
-        PyGateType, PyPauliGate, PyPauliSum, PyPauliTerm,
+        GateError, OwnedGateSignature, PyGate, PyGateDefinition, PyGateModifier, PyGateSignature,
+        PyGateSpecification, PyGateType, PyPauliGate, PyPauliSum, PyPauliTerm,
     },
     measurement::PyMeasurement,
     pragma::{PyInclude, PyPragma, PyPragmaArgument},

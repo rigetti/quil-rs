@@ -9,7 +9,7 @@ use quil_rs::{
     instruction::{Instruction, QubitPlaceholder, TargetPlaceholder, Waveform},
     program::{
         analysis::{ControlFlowGraph, ControlFlowGraphOwned},
-        Calibrations, FrameSet, MemoryRegion,
+        Calibrations, FrameSet, MemoryRegion, SourceMap, SourceMapEntry,
     },
     Program,
 };
@@ -25,7 +25,7 @@ use rigetti_pyo3::{
     },
     wrap_error, PyTryFrom, PyWrapper, PyWrapperMut, ToPython, ToPythonError,
 };
-use source_map::PyInstructionIndex;
+use source_map::{FlatExpansionResult, PyInstructionIndex};
 
 use crate::{
     impl_eq, impl_to_quil,
@@ -121,12 +121,24 @@ impl PyProgram {
                 })
                 .unwrap_or(true)
         };
-        let expansion = self
+        let (expanded_program, source_map) = self
             .as_inner()
             .expand_defgate_sequences_with_source_map(filter)
             .map_err(ProgramError::from)
             .map_err(ProgramError::to_py_err)?;
-        Ok((expansion.0.into(), expansion.1.into()))
+
+        let entries: Vec<_> = source_map
+            .entries()
+            .iter()
+            .map(|entry| {
+                SourceMapEntry::new(
+                    *entry.source_location(),
+                    FlatExpansionResult::from(entry.target_location()),
+                )
+            })
+            .collect();
+        let py_source_map = PyInstructionSourceMap::from(SourceMap::new(entries));
+        Ok((expanded_program.into(), py_source_map))
     }
 
     #[getter]
