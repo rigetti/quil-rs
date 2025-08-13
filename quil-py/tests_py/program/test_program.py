@@ -5,7 +5,7 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 
 from quil.instructions import Gate, Instruction, Jump, Qubit, QubitPlaceholder, Target, TargetPlaceholder
-from quil.program import Program
+from quil.program import InstructionIndex, Program
 
 
 def test_pickle():
@@ -225,21 +225,21 @@ def test_calibration_expansion():
     assert expanded_program.to_quil() == Program.parse(expected_program_text).to_quil()
 
     # The X at index 0 should have been replaced with a Z at index 0
-    targets = source_map.list_targets_for_source_index(0)
+    targets = source_map.list_targets_for_source_index(InstructionIndex(0))
     assert len(targets) == 1
     expanded = targets[0].as_calibration()
     assert expanded.range() == range(0, 1)
-    assert source_map.list_sources_for_target_index(0) == [0]
+    assert source_map.list_sources_for_target_index(InstructionIndex(0)) == [InstructionIndex(0)]
 
     # The Y at index 1 should have been replaced with a Z at index 1
-    targets = source_map.list_targets_for_source_index(1)
+    targets = source_map.list_targets_for_source_index(InstructionIndex(1))
     assert len(targets) == 1
     expanded = targets[0].as_calibration()
     assert expanded.range() == range(1, 2)
-    assert source_map.list_sources_for_target_index(1) == [1]
+    assert source_map.list_sources_for_target_index(InstructionIndex(1)) == [InstructionIndex(1)]
 
     # There is no source index 2 and so there should be no mapping
-    assert source_map.list_targets_for_source_index(2) == []
+    assert source_map.list_targets_for_source_index(InstructionIndex(2)) == []
 
 
 def test_defgate_sequence_expansion_triple_recursive():
@@ -298,22 +298,16 @@ def test_defgate_sequence_expansion_triple_recursive():
     assert expanded_program.to_quil() == Program.parse(expected_program_text).to_quil()
 
     # The X at index 0 should have been replaced with a Z at index 0
-    targets = source_map.list_targets_for_source_index(0)
+    targets = source_map.list_targets_for_source_index(InstructionIndex(0))
     assert len(targets) == 1
     expanded = targets[0].as_defgate_sequence()
     assert expanded.range() == range(0, 18)
-    assert source_map.list_sources_for_target_index(0) == [0]
-    assert source_map.list_sources_for_target_index(17) == [0]
+    assert source_map.list_sources_for_target_index(InstructionIndex(0)) == [InstructionIndex(0)]
+    assert source_map.list_sources_for_target_index(InstructionIndex(10)) == [InstructionIndex(0)]
+    assert source_map.list_sources_for_target_index(InstructionIndex(17)) == [InstructionIndex(0)]
 
-    # The Y at index 1 should have been replaced with a Z at index 1
-    targets = source_map.list_targets_for_source_index(0)
-    assert len(targets) == 1
-    expanded = targets[0].as_defgate_sequence()
-    assert expanded.range() == range(0, 18)
-    assert source_map.list_sources_for_target_index(10) == [0]
-
-    # There is no source index 2 and so there should be no mapping
-    assert source_map.list_targets_for_source_index(2) == []
+    targets = source_map.list_targets_for_source_index(InstructionIndex(1))
+    assert len(targets) == 0
 
 
 def test_defgate_sequence_expansion_with_filtering():
@@ -369,15 +363,15 @@ def test_defgate_sequence_expansion_with_filtering():
 
     assert expanded_program.to_quil() == Program.parse(expected_program_text).to_quil()
 
-    targets = source_map.list_targets_for_source_index(0)
+    targets = source_map.list_targets_for_source_index(InstructionIndex(0))
     assert len(targets) == 1
     expanded = targets[0].as_unmodified()
-    assert expanded == 0
-    assert source_map.list_sources_for_target_index(0) == [0]
-    assert source_map.list_sources_for_target_index(1) == [1]
-    assert source_map.list_sources_for_target_index(2) == [2]
+    assert expanded == InstructionIndex(0)
+    assert source_map.list_sources_for_target_index(InstructionIndex(0)) == [InstructionIndex(0)]
+    assert source_map.list_sources_for_target_index(InstructionIndex(1)) == [InstructionIndex(1)]
+    assert source_map.list_sources_for_target_index(InstructionIndex(2)) == [InstructionIndex(2)]
 
-    targets = source_map.list_targets_for_source_index(1)
+    targets = source_map.list_targets_for_source_index(InstructionIndex(1))
     assert len(targets) == 1
     expanded = targets[0].as_defgate_sequence()
     assert expanded.range() == range(1, 2)

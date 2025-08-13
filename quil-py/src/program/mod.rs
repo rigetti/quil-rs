@@ -25,6 +25,7 @@ use rigetti_pyo3::{
     },
     wrap_error, PyTryFrom, PyWrapper, PyWrapperMut, ToPython, ToPythonError,
 };
+use source_map::PyInstructionIndex;
 
 use crate::{
     impl_eq, impl_to_quil,
@@ -453,7 +454,7 @@ create_init_submodule! {
         PyCalibrationExpansion,
         PyCalibrationSource,
         PyInstructionSourceMap,
-        PyInstructionTarget,
+        PyInstructionIndex,
         PyInstructionTarget,
         PyDefGateSequenceExpansion,
         PyInstructionSourceMapEntry,

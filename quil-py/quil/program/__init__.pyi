@@ -101,6 +101,7 @@ __all__ = [
     'FrameSet',
     'Program',
     'CalibrationExpansion',
+    'InstructionIndex',
     'InstructionSourceMap',
     'InstructionSourceMapEntry',
     'InstructionTarget',
@@ -478,21 +479,21 @@ class InstructionSourceMap:
     """
 
     def entries(self) -> List[InstructionSourceMapEntry]: ...
-    def list_sources_for_target_index(self, target_index: int) -> List[int]:
+    def list_sources_for_target_index(self, target_index: InstructionIndex) -> List[InstructionIndex]:
         """Return the locations in the source which were expanded to generate that instruction.
 
         This is `O(n)` where `n` is the number of first-level calibration expansions performed.
         """
         ...
 
-    def list_sources_for_calibration_used(self, calibration_used: CalibrationSource) -> List[int]:
+    def list_sources_for_calibration_used(self, calibration_used: CalibrationSource) -> List[InstructionIndex]:
         """Return the locations in the source program which were expanded using a calibration.
 
         This is `O(n)` where `n` is the number of first-level calibration expansions performed.
         """
         ...
 
-    def list_sources_for_gate_expansion(self, gate_signature: GateSignature) -> List[int]:
+    def list_sources_for_gate_expansion(self, gate_signature: GateSignature) -> List[InstructionIndex]:
         """Return the locations in the source program which were expanded using a particular
         sequence gate definition.
 
@@ -502,7 +503,7 @@ class InstructionSourceMap:
         ...
 
 
-    def list_targets_for_source_index(self, source_index: int) -> List[InstructionTarget]:
+    def list_targets_for_source_index(self, source_index: InstructionIndex) -> List[InstructionTarget]:
         """Given a source index, return information about its expansion.
 
         This is `O(n)` where `n` is the number of first-level calibration expansions performed.
@@ -624,6 +625,17 @@ class CalibrationSet:
         """Return the Quil instructions which describe the contained calibrations."""
         ...
 
+
+@final
+class InstructionIndex:
+    """A simple wrapper around an integer representing the index of an instruction within a program's body instructions."""
+    def __new__(cls, index: int) -> "InstructionIndex": ...
+    def __eq__(self, other: object) -> bool: ...
+    def __repr__(self) -> str: ...
+    @property
+    def index(self) -> int:
+        """The integer index of the instruction within the program's body instructions."""
+
 @final
 class InstructionTarget:
     """The result of having expanded a certain instruction within a program.
@@ -638,7 +650,7 @@ class InstructionTarget:
         within the resulting program's body instructions.
     """
     def as_calibration(self) -> CalibrationExpansion: ...
-    def as_unmodified(self) -> int: ...
+    def as_unmodified(self) -> InstructionIndex: ...
     def as_defgate_sequence(self) -> DefGateSequenceExpansion: ...
     @staticmethod
     def from_calibration(inner: CalibrationExpansion): ...
@@ -646,12 +658,12 @@ class InstructionTarget:
     def from_unmodified(inner: int): ...
     @staticmethod
     def from_defgate_sequence(inner: DefGateSequenceExpansion): ...
-    def inner(self) -> Union[CalibrationExpansion, DefGateSequenceExpansion, int]: ...
+    def inner(self) -> Union[CalibrationExpansion, DefGateSequenceExpansion, InstructionIndex]: ...
     def is_calibration(self) -> bool: ...
     def is_unmodified(self) -> bool: ...
     def is_defgate_sequence(self) -> bool: ...
     def to_calibration(self) -> CalibrationExpansion: ...
-    def to_unmodified(self) -> int: ...
+    def to_unmodified(self) -> InstructionIndex: ...
     def to_defgate_sequence(self) -> DefGateSequenceExpansion: ...
 
 class ScheduleSecondsItem:
