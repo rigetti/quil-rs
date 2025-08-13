@@ -36,8 +36,8 @@ pub use self::{
         PyShiftPhase, PySwapPhases,
     },
     gate::{
-        GateError, OwnedGateSignature, PyGate, PyGateDefinition, PyGateModifier, PyGateSignature,
-        PyGateSpecification, PyGateType, PyPauliGate, PyPauliSum, PyPauliTerm,
+        GateError, OwnedGateSignature, PyDefGateSequence, PyGate, PyGateDefinition, PyGateModifier,
+        PyGateSignature, PyGateSpecification, PyGateType, PyPauliGate, PyPauliSum, PyPauliTerm,
     },
     measurement::PyMeasurement,
     pragma::{PyInclude, PyPragma, PyPragmaArgument},
@@ -164,6 +164,7 @@ create_init_submodule! {
         PyComparisonOperand,
         PyComparisonOperator,
         PyConvert,
+        PyDefGateSequence,
         PyExchange,
         PyExternParameter,
         PyExternParameterType,

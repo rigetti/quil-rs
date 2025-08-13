@@ -50,6 +50,14 @@ impl DefGateSequence {
         Ok(Self { qubits, gates })
     }
 
+    pub fn qubits(&self) -> &[String] {
+        &self.qubits
+    }
+
+    pub fn gates(&self) -> &[Gate] {
+        &self.gates
+    }
+
     pub(crate) fn expand(
         &self,
         gate_parameter_arguments: HashMap<String, Expression>,

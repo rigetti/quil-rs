@@ -2,8 +2,8 @@ use numpy::{PyArray2, ToPyArray};
 use quil_rs::{
     expression::Expression,
     instruction::{
-        Gate, GateDefinition, GateModifier, GateSignature, GateSpecification, GateType, PauliGate,
-        PauliSum, PauliTerm, Qubit,
+        DefGateSequence, Gate, GateDefinition, GateModifier, GateSignature, GateSpecification,
+        GateType, PauliGate, PauliSum, PauliTerm, Qubit,
     },
 };
 use rigetti_pyo3::{
@@ -324,12 +324,56 @@ impl PyPauliSum {
     }
 }
 
+wrap_error!(RustDefGateSequenceError(
+    quil_rs::instruction::DefGateSequenceError
+));
+py_wrap_error!(
+    quil,
+    RustDefGateSequenceError,
+    DefGateSequenceError,
+    PyValueError
+);
+
+py_wrap_type! {
+    #[derive(Debug, PartialEq, Eq)]
+    PyDefGateSequence(DefGateSequence) as "DefGateSequence"
+}
+impl_repr!(PyDefGateSequence);
+impl_eq!(PyDefGateSequence);
+
+#[pymethods]
+impl PyDefGateSequence {
+    #[new]
+    pub fn new(qubits: Vec<String>, gates: Vec<PyGate>) -> PyResult<Self> {
+        Ok(Self(
+            DefGateSequence::try_new(qubits, gates.into_iter().map(|g| g.into_inner()).collect())
+                .map_err(RustDefGateSequenceError::from)
+                .map_err(RustDefGateSequenceError::to_py_err)?,
+        ))
+    }
+
+    #[getter]
+    pub fn qubits(&self) -> Vec<String> {
+        self.as_inner().qubits().to_vec()
+    }
+
+    #[getter]
+    pub fn gates(&self) -> Vec<PyGate> {
+        self.as_inner()
+            .gates()
+            .iter()
+            .map(PyGate::from)
+            .collect::<Vec<_>>()
+    }
+}
+
 py_wrap_union_enum! {
     #[derive(Debug, PartialEq, Eq)]
     PyGateSpecification(GateSpecification) as "GateSpecification" {
         matrix: Matrix => Vec<Vec<PyExpression>>,
         permutation: Permutation => Vec<Py<PyInt>>,
-        pauli_sum: PauliSum => PyPauliSum
+        pauli_sum: PauliSum => PyPauliSum,
+        sequence: Sequence => PyDefGateSequence
     }
 }
 impl_repr!(PyGateSpecification);
