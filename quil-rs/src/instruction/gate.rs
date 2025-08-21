@@ -2,6 +2,7 @@ use crate::{
     expression::Expression,
     imag,
     instruction::{write_expression_parameter_string, write_parameter_string, write_qubits, Qubit},
+    pickleable_new,
     quil::{write_join_quil, Quil, INDENT},
     real,
     validation::identifier::{
@@ -969,22 +970,20 @@ pub struct GateDefinition {
     pub specification: GateSpecification,
 }
 
-#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[cfg_attr(feature = "python", pyo3::pymethods)]
-#[cfg_attr(not(feature = "python"), strip_pyo3)]
-impl GateDefinition {
-    #[new]
-    pub fn new(
-        name: String,
-        parameters: Vec<String>,
-        specification: GateSpecification,
-    ) -> Result<Self, GateError> {
-        validate_user_identifier(&name)?;
-        Ok(Self {
-            name,
-            parameters,
-            specification,
-        })
+pickleable_new! {
+    impl GateDefinition {
+        pub fn new(
+            name: String,
+            parameters: Vec<String>,
+            specification: GateSpecification,
+        ) -> Result<GateDefinition, GateError> {
+            validate_user_identifier(&name)?;
+            Ok(Self {
+                name,
+                parameters,
+                specification,
+            })
+        }
     }
 }
 
