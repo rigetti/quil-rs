@@ -6,7 +6,7 @@ use nom_locate::LocatedSpan;
 #[cfg(not(feature = "python"))]
 use optipy::strip_pyo3;
 #[cfg(feature = "stubs")]
-use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pymethods};
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyclass_complex_enum};
 
 use super::{MemoryReference, Qubit, QuotedString, WaveformInvocation};
 use crate::{
@@ -90,13 +90,9 @@ pub struct FrameIdentifier {
     pub qubits: Vec<Qubit>,
 }
 
-#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[cfg_attr(feature = "python", pyo3::pymethods)]
-#[cfg_attr(not(feature = "python"), strip_pyo3)]
-impl FrameIdentifier {
-    #[new]
-    pub fn new(name: String, qubits: Vec<Qubit>) -> Self {
-        Self { name, qubits }
+pickleable_new! {
+    impl FrameIdentifier {
+        pub fn new(name: String, qubits: Vec<Qubit>);
     }
 }
 
