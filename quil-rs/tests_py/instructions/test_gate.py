@@ -1,3 +1,4 @@
+import pytest
 from quil.expression import Expression
 from quil.instructions import (
     MeasureCalibrationDefinition,
@@ -10,6 +11,7 @@ from quil.instructions import (
     QubitPlaceholder,
     Instruction,
     Delay,
+    Gate,
 )
 
 class TestPauliTerm:
@@ -44,3 +46,13 @@ def test_measure_calibration_getters():
 
     assert calibration.qubit == placeholder
     assert calibration.instructions == []
+
+
+@pytest.mark.xfail(reason="This underflows, but should raise a proper exception.")
+def test_to_unitary():
+    g = Gate("X", (), (Qubit.Fixed(0),), ())
+    g.to_unitary(0)
+
+if __name__ == "__main__":
+    test_to_unitary()
+
