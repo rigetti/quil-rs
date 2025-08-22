@@ -448,17 +448,13 @@ impl Gate {
         self.clone().forked(fork_qubit, alt_params)
     }
 
-    // TODO: `Gate` is now immutable for Python users because it uses the Rust hash impl.
-    // Consequently, this method now makes a clone of the `Gate` before calculating the unitary.
-    // It probably makes sense to change the method name to reflect this.
-    #[pyo3(name = "to_unitary_mut")]
-    fn py_to_unitary_mut<'py>(
-        slf: &Bound<'py, Self>,
+    #[pyo3(name = "to_unitary")]
+    fn py_to_unitary<'py>(
+        &self,
         n_qubits: u64,
+        py: Python<'py>,
     ) -> PyResult<Bound<'py, PyArray2<Complex64>>> {
-        let py = slf.py();
-        let mut slf = { slf.get().clone() };
-        Ok(slf.to_unitary(n_qubits)?.to_pyarray(py))
+        Ok(self.clone().to_unitary(n_qubits)?.to_pyarray(py))
     }
 }
 
