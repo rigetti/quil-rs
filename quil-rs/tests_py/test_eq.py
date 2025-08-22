@@ -8,19 +8,19 @@ from quil.program import Program
 
 
 def test_instruction_eq():
-    pi_expr = Expression.number(complex(np.pi, 0))
+    pi_expr = Expression.Number(complex(np.pi, 0))
 
-    rx = Gate("RX", [pi_expr], [Qubit.fixed(0)], [])
+    rx = Gate("RX", [pi_expr], [Qubit.Fixed(0)], [])
     rx_copy = deepcopy(rx)
-    ry = Gate("RY", [pi_expr], [Qubit.fixed(0)], [])
+    ry = Gate("RY", [pi_expr], [Qubit.Fixed(0)], [])
     assert rx == rx_copy
     assert not (rx != rx_copy)
     assert rx != ry
     assert not (rx == ry)
 
-    rx_inst = Instruction.gate(rx)
+    rx_inst = Instruction.Gate(rx)
     rx_inst_copy = deepcopy(rx_inst)
-    ry_inst = Instruction.gate(ry)
+    ry_inst = Instruction.Gate(ry)
     assert rx_inst == rx_inst_copy
     assert not (rx_inst != rx_inst_copy)
     assert rx_inst != ry_inst

@@ -12,21 +12,20 @@ from quil.instructions import (
     Delay,
 )
 
-
 class TestPauliTerm:
     def test_new(self):
-        pt = PauliTerm([(PauliGate.X, "a")], Expression.pi())
+        pt = PauliTerm([(PauliGate.X, "a")], Expression.Pi())
         assert pt.arguments == [(PauliGate.X, "a")]
-        pt = PauliTerm([(PauliGate.Y, "b")], Expression.pi())
+        pt = PauliTerm([(PauliGate.Y, "b")], Expression.Pi())
         assert pt.arguments == [(PauliGate.Y, "b")]
 
 
 def test_calibration_getters():
-    placeholder = Qubit.placeholder(QubitPlaceholder())
+    placeholder = Qubit.Placeholder(QubitPlaceholder())
 
     calibration = Calibration(
         CalibrationIdentifier("MYCAL", [], [placeholder], []),
-        [Instruction.delay(Delay(Expression.number(complex(0.5)), [], [placeholder]))],
+        [Instruction.Delay(Delay(Expression.Number(complex(0.5)), [], [placeholder]))],
     )
 
     assert calibration.name == "MYCAL"
@@ -36,7 +35,7 @@ def test_calibration_getters():
 
 
 def test_measure_calibration_getters():
-    placeholder = Qubit.placeholder(QubitPlaceholder())
+    placeholder = Qubit.Placeholder(QubitPlaceholder())
 
     calibration = MeasureCalibrationDefinition(
         MeasureCalibrationIdentifier(placeholder, "param"),

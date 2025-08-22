@@ -39,8 +39,8 @@ def test_custom_resolver():
     program = Program()
     program.add_instructions(
         [
-            Instruction.gate(Gate("H", [], [Qubit.placeholder(qubit_placeholder)], [])),
-            Instruction.jump(Jump(Target.placeholder(target_placeholder))),
+            Instruction.Gate(Gate("H", [], [Qubit.Placeholder(qubit_placeholder)], [])),
+            Instruction.Jump(Jump(Target.Placeholder(target_placeholder))),
         ]
     )
 
@@ -64,11 +64,11 @@ MEASURE 0 ro[0]
 MEASURE 1 ro[1]
 """
     )
-    assert program.used_qubits == {Qubit.fixed(0), Qubit.fixed(1)}
+    assert program.used_qubits == {Qubit.Fixed(0), Qubit.Fixed(1)}
     cfg = program.control_flow_graph()
     blocks = cfg.basic_blocks()
     assert len(blocks) == 1
-    assert blocks[0].terminator() is None
+    assert blocks[0].terminator is None
     block_program = Program()
     block_program.add_instructions(blocks[0].instructions)
     assert (
@@ -94,7 +94,7 @@ LABEL @end
 HALT
 """
     )
-    assert program.used_qubits == {Qubit.fixed(0)}
+    assert program.used_qubits == {Qubit.Fixed(0)}
     cfg = program.control_flow_graph()
 
     assert cfg.has_dynamic_control_flow()
@@ -229,7 +229,7 @@ def test_calibration_expansion():
     # The X at index 0 should have been replaced with a Z at index 0
     targets = source_map.list_targets_for_source_index(0)
     assert len(targets) == 1
-    assert isinstance(targets[0], MaybeCalibrationExpansion.expanded)
+    assert isinstance(targets[0], MaybeCalibrationExpansion.Expanded)
     expanded = targets[0][0]
     assert expanded.range == range(0, 1)
     assert source_map.list_sources_for_target_index(0) == [0]
@@ -237,7 +237,7 @@ def test_calibration_expansion():
     # The Y at index 1 should have been replaced with a Z at index 1
     targets = source_map.list_targets_for_source_index(1)
     assert len(targets) == 1
-    assert isinstance(targets[0], MaybeCalibrationExpansion.expanded)
+    assert isinstance(targets[0], MaybeCalibrationExpansion.Expanded)
     expanded = targets[0][0]
     assert expanded.range == range(1, 2)
     assert source_map.list_sources_for_target_index(1) == [1]
