@@ -17,7 +17,17 @@ from collections.abc import ItemsView, KeysView, MutableMapping, MutableSet, Val
 from dataclasses import dataclass, field, replace
 from itertools import accumulate, chain
 from pathlib import Path
-from typing import Iterator, TypeAlias, TypeVar, TYPE_CHECKING, Self, overload
+import sys
+from typing import (
+    Callable,
+    Iterable,
+    Iterator,
+    TypeAlias,
+    TypeVar,
+    TYPE_CHECKING,
+    Self,
+    overload,
+)
 
 import argparse
 import enum
@@ -39,10 +49,19 @@ def main():
         extract_items_from_file(path, annotated, exported)
     guess_function_modules(annotated, exported)
 
+    issues = find_possible_mistakes(annotated, exported)
     if args.show_mistakes:
-        print_possible_mistakes(annotated, exported)
+        for issue in issues:
+            print(issue.message)
+
     if args.show_package:
         print_package_info(annotated)
+
+    if issues:
+        print(f"\n {len(issues)} potential issue(s) discovered.", file=sys.stderr)
+        if not args.show_mistakes:
+            print("  (use --show-mistakes to see)", file=sys.stderr)
+        sys.exit(1)
 
 
 def get_parser() -> argparse.ArgumentParser:
@@ -124,9 +143,20 @@ def guess_function_modules(annotated: "Package", exported: "Package"):
             logger.warning(f"No module found for function: {func}")
 
 
-def print_possible_mistakes(annotated: "Package", exported: "Package") -> bool:
+class PackageKind(enum.Enum):
+    Annotation = "annotation"
+    Export = "export"
+
+
+@dataclass
+class Issue:
+    package_kind: PackageKind
+    message: str
+
+
+def find_possible_mistakes(annotated: "Package", exported: "Package") -> list[Issue]:
     logger.debug("Checking that annotated items are added to the correct module.")
-    found_issues = False
+    issues: list[Issue] = []
 
     found_exports = {"builtins", "quil", "._quil"}
     for module, anno in sorted(annotated.items()):
@@ -137,16 +167,18 @@ def print_possible_mistakes(annotated: "Package", exported: "Package") -> bool:
         logger.debug(f"Looking for `#[pymodule]` matching '{module}'")
         expm = exported.get(module)
         if expm is None:
-            found_issues = True
-            print(
-                f"Module '{module}' does not appear to be exported",
-                f"  Module found in: {anno.path}",
-                f"  Items in module:",
-                sep="\n",
+            items = "\n".join(
+                f"    {item} (props: {item.props}, text: {item.line})" for item in anno
             )
-            for item in anno:
-                print(f"    {item} (props: {item.props}, text: {item.line})")
-            print()
+            msg = "\n".join(
+                (
+                    f"Module '{module}' does not appear to be exported",
+                    f"  Module found in: {anno.path}",
+                    f"  Items in module:",
+                    items,
+                )
+            )
+            issues.append(Issue(PackageKind.Annotation, msg))
             continue
 
         parts = module.split(".")
@@ -175,79 +207,108 @@ def print_possible_mistakes(annotated: "Package", exported: "Package") -> bool:
                 item = replacement
 
             if not (item in anno or item.kind is Kind.Function):
-                found_issues = True
                 if alt := exported.find_rust(item):
                     hint = (
                         f"\n     (hint: item may belong to module '{alt[0]}': {alt[1]})"
                     )
                 else:
                     hint = ""
-                print(
-                    f"  Wrong or missing module annotation for '{module}.{item.python_name}'",
-                    f"     ({item}){hint}",
-                    sep="\n",
+                msg = "\n".join(
+                    (
+                        f"  Wrong or missing module annotation for '{module}.{item.python_name}'",
+                        f"     ({item}){hint}",
+                    )
                 )
+                issues.append(Issue(PackageKind.Export, msg))
 
         logger.debug(f"Checking that items marked to belong to '{module}' are added.")
         for item in sorted(anno):
             if item.python_name.startswith("Py"):
-                print(
-                    f"  Suspicious name for '{module}.{item.python_name}'",
-                    f"     ({item})",
+                msg = "\n".join(
                     (
-                        "     "
-                        "hint: did you forget a '#[pyo3(name = "
-                        f'"{item.python_name.strip("Py")}" attribute?'
-                    ),
-                    sep="\n",
+                        f"  Suspicious name for '{module}.{item.python_name}'",
+                        f"     ({item})",
+                        (
+                            "     "
+                            "hint: did you forget a '#[pyo3(name = "
+                            f'"{item.python_name.strip("Py")}" attribute?'
+                        ),
+                    )
                 )
+                issues.append(Issue(PackageKind.Export, msg))
 
             if item not in expm:
-                found_issues = True
-                print(
-                    f"  Couldn't find export for '{module}.{item.python_name}'",
-                    f"     ({item})",
-                    sep="\n",
+                msg = "\n".join(
+                    (
+                        f"  Couldn't find export for '{module}.{item.python_name}'",
+                        f"     ({item})",
+                    )
                 )
+                issues.append(Issue(PackageKind.Export, msg))
 
-            if not item.has_stub:
-                found_issues = True
-                print(
-                    f"  Didn't find a stub annotation for '{module}.{item.python_name}'",
-                    f"     ({item})",
-                    sep="\n",
+            if item.stub_attr is None:
+                msg = "\n".join(
+                    (
+                        f"  Didn't find a stub annotation for '{module}.{item.python_name}'",
+                        f"     ({item})",
+                    )
                 )
+                issues.append(Issue(PackageKind.Export, msg))
+            elif item.stub_attr.kind is StubKind.ComplexEnumeration:
+                if item.rust_name not in expm._fixed_enums:
+                    msg = "\n".join(
+                        (
+                            f"  Didn't find `fix_complex_enums!` for '{module}.{item.python_name}'",
+                            f"     ({item})",
+                        )
+                    )
+                    issues.append(Issue(PackageKind.Export, msg))
 
     logger.debug(f"Found exports: {', '.join(found_exports)}")
     logger.debug(f"Expected exported modules: {', '.join(exported.keys())}")
     for module in exported.keys() - found_exports:
-        found_issues = True
-        print(f"No annotations found for module '{module}'")
+        msg = f"No annotations found for module '{module}'"
+        issues.append(Issue(PackageKind.Export, msg))
 
-    return found_issues
+    return issues
 
 
 def print_package_info(annotated: "Package") -> None:
     for module, anno in sorted(annotated.items()):
-        print(f"\n---- {module} Enums ----")
-        for item in sorted(anno):
-            if item.kind is Kind.Enumeration:
+        items = sorted(anno)
+        enums = [item for item in items if item.kind is Kind.Enumeration]
+        complex_enums = [
+            e
+            for e in enums
+            if (stubs := e.stub_attr) and stubs.kind is StubKind.ComplexEnumeration
+        ]
+        structs = [item for item in items if item.kind is Kind.Struct]
+
+        if complex_enums:
+            enums = [e for e in enums if e not in complex_enums]
+            print(f"\n---- {module} Complex Enums ----")
+            for item in complex_enums:
+                full_qual = f"{module}.{item.python_name}"
                 print(
-                    f"{module}.{item.python_name} | {item.rust_name} @ {item.path}:{item.line.num}"
+                    f"{full_qual:50} | {item.rust_name:20} | {item.path}:{item.line.num}"
                 )
 
-        print(f"\n---- {module} Structs ----")
-        for item in sorted(anno):
-            if item.kind is Kind.Struct:
+        if enums:
+            print(f"\n---- {module} Enums ----")
+            for item in enums:
+                full_qual = f"{module}.{item.python_name}"
                 print(
-                    f"{module}.{item}\n",
-                    f"  {item.props}",
-                    sep="",
+                    f"{full_qual:50} | {item.rust_name:20} | {item.path}:{item.line.num}"
                 )
-                if "frozen" in item.props and "hash" not in item.props:
-                    print("  ** item is frozen, but not hash **")
-                else:
-                    print()
+
+        if structs:
+            print(f"\n---- {module} Structs ----")
+            for item in structs:
+                full_qual = f"{module}.{item.python_name}"
+                print(
+                    f"{full_qual:50} | {item.rust_name:20} | {item.path}:{item.line.num}"
+                )
+                print("  ", item.props - {"name", "module"})
 
 
 ###############################################################################
@@ -378,16 +439,22 @@ class PyO3Props(dict[str, str | bool]):
                 key, val = map(str.strip, part.split("=", 1))
                 if val.startswith('"') and val.endswith('"'):
                     val = val[1:-1]
-                result[key] = val
-            else:
+                if key:
+                    result[key] = val
+            elif part:
                 result[part] = True
         return result
 
     def __str__(self) -> str:
         """Convert back into a string."""
         return ", ".join(
-            f'{k} = "{v}"' if isinstance(v, str) else f"{k}" for k, v in self.items()
+            f'{k} = "{v}"' if isinstance(v, str) else str(k)
+            for k, v in sorted(self.items())
         )
+
+    def __sub__(self, keys: set[str]) -> Self:
+        cls = self.__class__
+        return cls((k, v) for k, v in self.items() if k not in keys)
 
 
 @dataclass(frozen=True, slots=True, order=True)
@@ -430,13 +497,16 @@ class Item:
     path: Path = field(compare=False, hash=False)
     line: Line = field(compare=False, hash=False)
     props: PyO3Props = field(compare=False, hash=False, default_factory=PyO3Props)
-    has_stub: bool = field(compare=False, hash=False, default=False)
+    stub_attr: StubAttr | None = field(compare=False, hash=False, default=None)
 
     def __str__(self) -> str:
         name = self.rust_name
         if self.rust_name != self.python_name:
             name = f"{name} (py: {self.python_name})"
         return f"{self.kind.value} '{name}' in {self.path}@{self.line.num}"
+
+    def has_stub(self) -> bool:
+        return self.stub_attr is not None
 
 
 def test_item():
@@ -466,6 +536,7 @@ class Module(MutableSet[Item]):
     path: Path = Path(".")
     line_num: int = -1
     props: PyO3Props = field(default_factory=PyO3Props)
+    _fixed_enums: set[str] = field(default_factory=set)
 
     def __contains__(self, key: object) -> bool:
         return key in self._items
@@ -475,6 +546,9 @@ class Module(MutableSet[Item]):
 
     def __len__(self) -> int:
         return self._items.__len__()
+
+    def update(self, items: Iterable[Item]) -> None:
+        return self._items.update(items)
 
     def discard(self, value: Item) -> None:
         return self._items.discard(value)
@@ -735,7 +809,7 @@ def _pyitem(
         path=path,
         line=line,
         props=props,
-        has_stub=last_stub is not None,
+        stub_attr=last_stub,
     )
 
     if item.python_name.startswith("Py"):
@@ -773,20 +847,61 @@ def _py_source_map(annotated: Package, path: Path, line: Line, lines: Lines):
 
 def _exceptions(annotated: Package, path: Path, line: Line, lines: Lines):
     """Process the content of the ``exception!`` and ``create_exception!`` macros."""
-    if not "create_exception!(" in line:
-        _ = next(lines)
-    module = next(lines).text.strip(",")
-    err_line = next(lines)
-    err_name = err_line.text.strip(",")
+
+    body = join_lines(iter_delim(lines, "()", first=line))
+    if "create_exception!(" in line:
+        module, err_name, _ = body.text.split(",", maxsplit=2)
+    else:
+        _, module, err_name, _ = body.text.split(",", maxsplit=3)
+
+    module = module[module.find("!") + 2 :].strip()
+
     item = Item(
         kind=Kind.Error,
-        python_name=err_name,
-        rust_name=err_name,
+        python_name=err_name.strip(),
+        rust_name=err_name.strip(),
         path=path,
-        line=err_line,
-        has_stub=True,
+        line=line,
+        stub_attr=StubAttr(kind=StubKind.Class, module=module),
     )
     annotated[module].add(item)
+
+
+def _impl_instruction(exported: Package, path: Path, line: Line, lines: Lines):
+    """Process the input to the ``impl_instruction!`` macro."""
+
+    exported["quil.instructions"].update(
+        Item(
+            kind=Kind.Class,
+            python_name=rust_name,
+            rust_name=rust_name,
+            path=path,
+            line=line,
+        )
+        for name in
+        join_lines(iter_delim(lines, "[]", first=line))
+        .text.replace(" ", "")
+        .removeprefix("impl_instruction!([")
+        .removesuffix("]);")
+        .split(",")
+        if (rust_name := name.partition("[")[0].strip()) != ""
+    )
+
+
+def _fix_complex_enums(module: Module, line: Line, lines: Lines):
+    """Process the input to the ``_impl_instruction!`` macro."""
+
+    module._fixed_enums.update(
+        name
+        for n in (
+            join_lines(iter_delim(lines, "()", first=line))
+            .text.replace(" ", "")
+            .removeprefix("fix_complex_enums!(")
+            .removesuffix(");")
+            .split(",")
+        )
+        if (name := n.strip()) != "" and name != "py"
+    )
 
 
 def _pymod(exported: Package, path: Path, lines: Lines):
@@ -815,6 +930,10 @@ def _pymod(exported: Package, path: Path, lines: Lines):
 
     body = iter_delim(lines, "{}", first=line)
     while line := next(body, None):
+        if "fix_complex_enums!(" in line.text:
+            _fix_complex_enums(exported[module], line, lines)
+            continue
+
         if "add" in line.text:
             line = join_lines(iter_delim(lines, "()", first=line))
 
@@ -870,6 +989,16 @@ def extract_items_from_file(path: Path, annotated: Package, exported: Package):
         if "py_source_map!" in line:
             logger.info(f"Discovered SourceMap in {path}: {line}")
             _py_source_map(annotated, path, line, lines)
+            continue
+
+        if "impl_instruction!" in line:
+            logger.info(f"Discovered impl_implementation! in {path}: {line}")
+            _impl_instruction(exported, path, line, lines)
+            continue
+
+        if "fix_complex_enums!" in line:
+            logger.info(f"Discovered fix_complex_enums! in {path}: {line}")
+            _fix_complex_enums(exported, path, line, lines)
             continue
 
         elif re.search(r"\b(?:create_)?exception!", line.text):
