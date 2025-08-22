@@ -51,8 +51,6 @@ pub use program::Program;
 
 #[cfg(feature = "python")]
 pub mod quilpy;
-#[cfg(feature = "python")]
-pub(crate) use quilpy::{impl_repr, impl_to_quil};
 
 /// Implement `__new__` and `__getnewargs__` for the common cases.
 ///

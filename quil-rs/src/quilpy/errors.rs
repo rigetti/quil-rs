@@ -52,6 +52,11 @@ mod stubs {
     // Obviously these aren't native exceptions,
     // but pyo3_stub_gen requires it on the base class
     // when one exception is derived from another.
+    //
+    // If you create a new exception or modify the type hierarchy
+    // and see a compiler error along the lines of
+    // `the trait bound $type: pyo3_stub_gen::exception::NativeException is not satisfied`,
+    // you probably just need to add the $type to this list.
     impl_native_exception!(QuilError);
     impl_native_exception!(InstructionError);
     impl_native_exception!(ParseInstructionError);
@@ -68,6 +73,13 @@ create_exception!(
 );
 
 create_exception!(quil, QuilValueError, QuilError, "Input value is invalid.");
+
+create_exception!(
+    quil,
+    PickleError,
+    QuilError,
+    "Errors when trying to pickle or deepcopy."
+);
 
 exception!(
     crate::quil::ToQuilError,

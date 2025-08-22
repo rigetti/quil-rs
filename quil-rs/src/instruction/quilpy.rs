@@ -1,10 +1,13 @@
 use num_complex::Complex64;
 use numpy::{PyArray2, ToPyArray};
+use paste::paste;
 use pyo3::{prelude::*, types::PyTuple};
 
 use super::*;
 use crate::{
-    impl_repr, impl_to_quil, pickleable_new, validation::identifier::IdentifierValidationError,
+    pickleable_new,
+    quilpy::{errors::PickleError, fix_complex_enums, impl_repr, impl_to_quil},
+    validation::identifier::IdentifierValidationError,
 };
 
 #[pymodule]
@@ -30,76 +33,21 @@ pub(crate) fn init_submodule(m: &Bound<'_, PyModule>) -> PyResult<()> {
         py.get_type::<errors::ParseMemoryReferenceError>(),
     )?;
 
-    m.add_class::<Arithmetic>()?;
-    m.add_class::<ArithmeticOperand>()?;
-    m.add_class::<ArithmeticOperator>()?;
-    m.add_class::<AttributeValue>()?;
-    m.add_class::<BinaryLogic>()?;
-    m.add_class::<BinaryOperand>()?;
-    m.add_class::<BinaryOperator>()?;
-    m.add_class::<Calibration>()?;
-    m.add_class::<CalibrationIdentifier>()?;
-    m.add_class::<Call>()?;
-    m.add_class::<UnresolvedCallArgument>()?; // Python name: CallArgument
-    m.add_class::<Capture>()?;
-    m.add_class::<CircuitDefinition>()?;
-    m.add_class::<Comparison>()?;
-    m.add_class::<ComparisonOperand>()?;
-    m.add_class::<ComparisonOperator>()?;
-    m.add_class::<Convert>()?;
-    m.add_class::<Declaration>()?;
-    m.add_class::<Delay>()?;
-    m.add_class::<Exchange>()?;
-    m.add_class::<ExternParameter>()?;
-    m.add_class::<ExternParameterType>()?;
-    m.add_class::<ExternSignature>()?;
-    m.add_class::<Fence>()?;
-    m.add_class::<FrameDefinition>()?;
-    m.add_class::<FrameIdentifier>()?;
-    m.add_class::<Gate>()?;
-    m.add_class::<GateDefinition>()?;
-    m.add_class::<GateModifier>()?;
-    m.add_class::<GateSpecification>()?;
-    m.add_class::<Include>()?;
-    m.add_class::<Instruction>()?;
-    m.add_class::<Jump>()?;
-    m.add_class::<JumpUnless>()?;
-    m.add_class::<JumpWhen>()?;
-    m.add_class::<Label>()?;
-    m.add_class::<Load>()?;
-    m.add_class::<MeasureCalibrationDefinition>()?;
-    m.add_class::<MeasureCalibrationIdentifier>()?;
-    m.add_class::<Measurement>()?;
-    m.add_class::<MemoryReference>()?;
-    m.add_class::<Move>()?;
-    m.add_class::<Offset>()?;
-    m.add_class::<PauliGate>()?;
-    m.add_class::<PauliSum>()?;
-    m.add_class::<PauliTerm>()?;
-    m.add_class::<Pragma>()?;
-    m.add_class::<PragmaArgument>()?;
-    m.add_class::<Pulse>()?;
-    m.add_class::<Qubit>()?;
-    m.add_class::<QubitPlaceholder>()?;
-    m.add_class::<RawCapture>()?;
-    m.add_class::<Reset>()?;
-    m.add_class::<ScalarType>()?;
-    m.add_class::<SetFrequency>()?;
-    m.add_class::<SetPhase>()?;
-    m.add_class::<SetScale>()?;
-    m.add_class::<Sharing>()?;
-    m.add_class::<ShiftFrequency>()?;
-    m.add_class::<ShiftPhase>()?;
-    m.add_class::<Store>()?;
-    m.add_class::<SwapPhases>()?;
-    m.add_class::<Target>()?;
-    m.add_class::<TargetPlaceholder>()?;
-    m.add_class::<UnaryLogic>()?;
-    m.add_class::<UnaryOperator>()?;
-    m.add_class::<Vector>()?;
-    m.add_class::<Waveform>()?;
-    m.add_class::<WaveformDefinition>()?;
-    m.add_class::<WaveformInvocation>()?;
+    add_instruction_classes(m)?;
+
+    fix_complex_enums!(
+        py,
+        ArithmeticOperand,
+        AttributeValue,
+        ComparisonOperand,
+        ExternParameterType,
+        GateSpecification,
+        Instruction,
+        PragmaArgument,
+        Qubit,
+        Target,
+        UnresolvedCallArgument,
+    );
 
     Ok(())
 }
@@ -135,19 +83,34 @@ macro_rules! impl_parse {
 /// ]);
 /// ```
 macro_rules! impl_instruction {
+    // Initial capture: this lets us grab all the names in one go,
+    // which we can then use to generate parts of the module initializer.
+    // After we generate that, the entire input is passed on to the @list rule,
+    // which will chew through the tokens recursively.
+    ([$( $name:ident $([$($args: tt)*])? ),* ,]) => {
+
+        /// Adds instruction classes to the given module, assumed to be `quil.instructions`.
+        fn add_instruction_classes(m: &Bound<'_, PyModule>) -> PyResult<()> {
+            $(m.add_class::<$name>()?;)*
+            Ok(())
+        }
+
+        impl_instruction!(@list [$($name $([$($args)*])? ,)*]);
+    };
+
     // Terminal rule -- an empty list expands to nothing.
-    ([]) => {};
+    (@list []) => {};
 
     // Implements default methods for an instruction, then recursively expands the rest of the list.
-    ([$name: ident, $($tail: tt)*]) => {
+    (@list [$name:ident, $($tail: tt)*]) => {
         impl_instruction!(@one $name [+ repr + quil]);
-        impl_instruction!([$($tail)*]);
+        impl_instruction!(@list [$($tail)*]);
     };
 
     // Implements specific methods for an instruction, then recursively expands the rest of the list.
-    ([$name: ident [$($args: tt)+], $($tail: tt)*]) => {
+    (@list [$name: ident [$($args: tt)+], $($tail: tt)*]) => {
         impl_instruction!(@one $name [+ $($args)*]);
-        impl_instruction!([$($tail)*]);
+        impl_instruction!(@list [$($tail)*]);
     };
 
     // All the `@one` rules expand a single `$name` and its list of required methods.
@@ -186,6 +149,7 @@ impl_instruction!([
     CircuitDefinition,
     Comparison,
     ComparisonOperand,
+    ComparisonOperator,
     Convert,
     Declaration,
     Delay,
@@ -214,6 +178,7 @@ impl_instruction!([
     Move,
     Offset,
     PauliGate[repr],
+    PauliTerm[repr],
     PauliSum[repr],
     Pragma,
     PragmaArgument,
@@ -235,12 +200,110 @@ impl_instruction!([
     TargetPlaceholder[repr],
     UnaryLogic,
     UnaryOperator,
-    UnresolvedCallArgument,
+    UnresolvedCallArgument, // Python name: CallArgument
     Vector,
     Waveform[repr],
     WaveformDefinition,
     WaveformInvocation,
 ]);
+
+/// This macro expands to the `__getnewargs__` definition for the `Instruction` enum,
+/// making it compatible with the `copy` and `pickle` modules,
+/// (provided the variant itself supports it).
+///
+/// Note that we have to manually handle `Halt`, `Nop`, and `Wait`,
+/// since they don't actually have an inner value.
+/// We also have to handle `CalibrationDefinition` as a special case,
+/// because the variant name differs from the inner type the tuple holds.
+///
+/// Finally, this macro makes use of `paste` to generate the `pyo3_stub_gen` return type,
+/// since it's a union of an empty tuple and a tuple of variant's inner type.
+/// The `type_repr` requires a string literal, so we can't just use `concat!(stringify!`.
+/// This is also why the macro operates on the full list of variants,
+/// rather than just generating a single match arm.
+///
+// Developer note: with a little effort, this could be made to operate on any "complex" enum,
+// but it would likely best suited as a `#[derive(...)]` macro.
+// Since we currently have only about a dozen of them, most with only a couple variants,
+// the reason to do so would mostly be potential future reuse.
+//
+// In particular, unlike struct-based `#[pyclass]`es,
+// there's little risk a handwritten `__getnewargs__` could be incompatible with `__new__`,
+// since most changes to the variants would either work fine or would cause a compiler error.
+// As an exception to that rule, though, if you change the variant's type,
+// the methods will still work as intended, but the type stub annotation will be wrong.
+//
+// It might still make sense to create a derive macro that works for all `#[pyclass]`es
+// and generates the `__new__` and/or `__getnewargs__` appropriate for the type,
+// which could then replace most uses of `pickleable_new!` as well.
+macro_rules! instruction_getnewargs {
+    ($($kind:ty),* $(,)?) => { paste! {
+        #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+        #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+        #[pymethods]
+        impl Instruction {
+            #[gen_stub(override_return_type(
+                type_repr = "tuple[()] | tuple[Calibration" $(" | " $kind)* "]"
+            ))]
+            fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+                match self {
+                    Instruction::Halt() | Instruction::Nop() | Instruction::Wait() => {
+                        Ok(PyTuple::empty(py))
+                    },
+                    Instruction::CalibrationDefinition(instr) => (instr.clone(),).into_pyobject(py),
+                    $(Instruction::$kind(instr) => (instr.clone(),).into_pyobject(py),)*
+                }
+            }
+        }
+    }};
+}
+
+// Note that these are just Instruction variants, sans the few that need special handling.
+instruction_getnewargs!(
+    Arithmetic,
+    BinaryLogic,
+    Call,
+    Capture,
+    CircuitDefinition,
+    Comparison,
+    Convert,
+    Declaration,
+    Delay,
+    Exchange,
+    Fence,
+    FrameDefinition,
+    Gate,
+    GateDefinition,
+    Include,
+    Jump,
+    JumpUnless,
+    JumpWhen,
+    Label,
+    Load,
+    MeasureCalibrationDefinition,
+    Measurement,
+    Move,
+    Pragma,
+    Pulse,
+    RawCapture,
+    Reset,
+    SetFrequency,
+    SetPhase,
+    SetScale,
+    ShiftFrequency,
+    ShiftPhase,
+    Store,
+    SwapPhases,
+    UnaryLogic,
+    WaveformDefinition,
+);
+
+// The following types implement `__getnewargs__` manually because,
+// as (complex-)enums, they get their `__new__` methods from PyO3 directly,
+// so we can't wrap them in the `pickleable_new!` macro.
+// In any case, this lets us correctly set the type stubs' return types,
+// which would otherwise require either creating our own derive macro,
+// or using `paste!` (as is done in the macro version for `Instruction`).
 
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
@@ -497,12 +560,22 @@ impl Qubit {
     }
 }
 
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl QubitPlaceholder {
     #[new]
     fn new() -> Self {
         Self::default()
+    }
+
+    /// `QubitPlaceholder`s do not support `pickle` or `deepcopy`.
+    /// Calling this method will raise an error.
+    #[gen_stub(override_return_type(type_repr = "NoReturn"))]
+    fn __getnewargs__(&self) -> PyResult<()> {
+        Err(PickleError::new_err(
+            "Unable to pickle or deepcopy a QubitPlaceholder.",
+        ))
     }
 }
 

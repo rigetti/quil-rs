@@ -6,7 +6,7 @@ use pyo3::{prelude::*, types::PyList};
 use pyo3_stub_gen::derive::{gen_stub_pyfunction, gen_stub_pymethods};
 
 use super::templates::*;
-use crate::impl_repr;
+use crate::quilpy::impl_repr;
 
 /// Modulate and phase shift waveform IQ data in place.
 #[cfg_attr(feature = "stubs", gen_stub_pyfunction(module = "quil.waveforms"))]

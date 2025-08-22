@@ -4,7 +4,7 @@ use pyo3::{prelude::*, types::PyTuple};
 use pyo3_stub_gen::derive::gen_stub_pymethods;
 
 use super::*;
-use crate::{impl_repr, quilpy::errors::QuilValueError};
+use crate::quilpy::{errors::QuilValueError, fix_complex_enums, impl_repr};
 
 #[pymodule]
 #[pyo3(name = "expression", module = "quil", submodule)]
@@ -17,6 +17,7 @@ pub(crate) fn init_submodule(m: &Bound<'_, PyModule>) -> PyResult<()> {
         "ParseExpressionError",
         py.get_type::<errors::ParseExpressionError>(),
     )?;
+
     m.add_class::<Expression>()?;
     m.add_class::<ExpressionFunction>()?;
     m.add_class::<FunctionCallExpression>()?;
@@ -24,6 +25,9 @@ pub(crate) fn init_submodule(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<InfixOperator>()?;
     m.add_class::<PrefixExpression>()?;
     m.add_class::<PrefixOperator>()?;
+
+    fix_complex_enums!(py, Expression);
+
     Ok(())
 }
 

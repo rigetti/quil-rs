@@ -14,13 +14,13 @@ use pyo3_stub_gen::{
     PyStubType,
 };
 
-use crate::{impl_repr, impl_to_quil};
 use crate::{
     instruction::{
         Calibration, Declaration, FrameAttributes, FrameIdentifier, Gate, Instruction,
         MeasureCalibrationDefinition, Measurement, QubitPlaceholder, TargetPlaceholder,
     },
     quil::Quil,
+    quilpy::{fix_complex_enums, impl_repr, impl_to_quil},
 };
 
 use super::{
@@ -68,6 +68,8 @@ pub(crate) fn init_submodule(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyScheduleSeconds>()?;
     m.add_class::<ScheduleSecondsItem>()?;
     m.add_class::<TimeSpanSeconds>()?;
+
+    fix_complex_enums!(py, CalibrationSource, MaybeCalibrationExpansion);
 
     Ok(())
 }
