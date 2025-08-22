@@ -66,7 +66,7 @@ pub mod quilpy;
 /// You can choose the name of the `__new__` method and its visibility,
 /// so the easiest way to use this macro with a `#[pyclass]` that you also use in Rust is like:
 ///
-/// ```
+/// ```ignore
 /// pub struct Foo {
 ///     bar: i32,
 ///     baz: String,
@@ -81,12 +81,7 @@ pub mod quilpy;
 ///
 /// That will expand to the default body, namely:
 ///
-/// ```
-/// # use pyo3::prelude::*;
-/// # pub struct Foo {
-/// #     bar: i32,
-/// #     baz: String,
-/// # }
+/// ```ignore
 /// #[pymethods]
 /// impl Foo {
 ///     pub fn new(bar: i32, baz: String) -> Self {
@@ -109,12 +104,7 @@ pub mod quilpy;
 /// however, if you want to accept different parameter names or type than the struct's fields,
 /// you'll have to tell the macro the struct's field names and return types.
 ///
-/// ```
-/// # pub struct Foo {
-/// #     bar: i32,
-/// #     baz: String,
-/// # }
-/// #
+/// ```ignore
 /// pickleable_new! {
 ///     impl Foo {
 ///         pub fn new(bar: i32, baz: &str) -> Self {

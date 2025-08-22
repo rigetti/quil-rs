@@ -349,21 +349,25 @@ impl ComparisonOperand {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl Calibration {
+    /// The name that identifies this `Calibration`.
     #[getter]
     fn name(&self) -> &str {
         &self.identifier.name
     }
 
+    /// The list of parameters that this `Calibration` will expand into.
     #[getter]
     fn parameters(&self) -> Vec<Expression> {
         self.identifier.parameters.clone()
     }
 
+    /// The list of `Qubit`s that this `Calibration` will expand into.
     #[getter]
     fn qubits(&self) -> Vec<Qubit> {
         self.identifier.qubits.clone()
     }
 
+    /// The list of `GateModifier`s that this `Calibration` will expand into.
     #[getter]
     fn modifiers(&self) -> Vec<GateModifier> {
         self.identifier.modifiers.clone()
@@ -431,23 +435,50 @@ pickleable_new! {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl Gate {
+    /// Return a copy of the ``Gate`` with the ``DAGGER`` modifier added to it.
     #[pyo3(name = "dagger")]
     #[must_use]
     fn py_dagger(&self) -> Self {
         self.clone().dagger()
     }
 
+    /// Return a copy of the ``Gate`` with the ``CONTROLLED`` modifier added to it.
     #[pyo3(name = "controlled")]
     #[must_use]
     fn py_controlled(&self, control_qubit: Qubit) -> Self {
         self.clone().controlled(control_qubit)
     }
 
+    /// Return a copy of the ``Gate`` with the ``FORKED`` modifier added to it.
+    ///
+    /// Raises a ``GateError`` if the number of provided alternate parameters
+    /// don't equal the number of existing parameters.
     #[pyo3(name = "forked")]
     fn py_forked(&self, fork_qubit: Qubit, alt_params: Vec<Expression>) -> Result<Self, GateError> {
         self.clone().forked(fork_qubit, alt_params)
     }
 
+    /// Get the matrix resulting from lifting this ``Gate``
+    /// to the full `n_qubits`-qubit Hilbert space.
+    ///
+    /// Raises a ``GateError`` if any of the parameters of this ``Gate`` are non-constant,
+    /// if any of the ``Qubit``s are variable,
+    /// if the name of this ``Gate`` is unknown,
+    /// or if there are an unexpected number of parameters.
+    ///
+    /// # Notes
+    ///
+    /// A previous version of this library called this `to_unitary_mut`,
+    /// and modified the ``Gate`` when called.
+    /// This is no longer possible, as it would modify the ``Gate``'s hash,
+    /// leading to confusing bugs.
+    /// ``Gate``s, as well as all other hashable classes, are immutable from Python.
+    ///
+    /// # Bugs
+    ///
+    /// Supplying `n_qubits` as `0` will raise an unspecified exception;
+    /// other invalid input parameters may silently return an invalid result.
+    ///
     #[pyo3(name = "to_unitary")]
     fn py_to_unitary<'py>(
         &self,

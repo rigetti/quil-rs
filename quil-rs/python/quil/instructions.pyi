@@ -92,13 +92,25 @@ class Calibration:
     @property
     def instructions(self) -> builtins.list[Instruction]: ...
     @property
-    def name(self) -> builtins.str: ...
+    def name(self) -> builtins.str:
+        r"""
+        The name that identifies this `Calibration`.
+        """
     @property
-    def parameters(self) -> builtins.list[Expression]: ...
+    def parameters(self) -> builtins.list[Expression]:
+        r"""
+        The list of parameters that this `Calibration` will expand into.
+        """
     @property
-    def qubits(self) -> builtins.list[Qubit]: ...
+    def qubits(self) -> builtins.list[Qubit]:
+        r"""
+        The list of `Qubit`s that this `Calibration` will expand into.
+        """
     @property
-    def modifiers(self) -> builtins.list[GateModifier]: ...
+    def modifiers(self) -> builtins.list[GateModifier]:
+        r"""
+        The list of `GateModifier`s that this `Calibration` will expand into.
+        """
     @identifier.setter
     def identifier(self, value: CalibrationIdentifier) -> None: ...
     @instructions.setter
@@ -170,6 +182,17 @@ class CalibrationIdentifier:
 class Call:
     r"""
     A call instruction with a name and arguments.
+    
+    An instruction that calls an external function declared with a `PRAGMA EXTERN` instruction.
+    These calls are generally specific to a particular hardware or virtual machine backend.
+    
+    For further detail, see:
+    
+    * [Other instructions and Directives](https://github.com/quil-lang/quil/blob/master/rfcs/extern-call.md) in the Quil specification.
+    * [EXTERN / CALL RFC](https://github.com/quil-lang/quil/blob/master/rfcs/extern-call.md)
+    * [quil#87](https://github.com/quil-lang/quil/issues/87)
+    
+    Also see [`ExternSignature`].
     """
     @property
     def name(self) -> builtins.str: ...
@@ -449,6 +472,11 @@ class ExternParameterType:
 class ExternSignature:
     r"""
     An extern signature with a return type and parameters.
+    
+    The signature of a ``PRAGMA EXTERN`` instruction.
+    This signature is defined by a list of ``ExternParameter``s and an optional return type.
+    See the [Quil Specification](https://github.com/quil-lang/quil/blob/7f532c7cdde9f51eae6abe7408cc868fba9f91f6/specgen/spec/sec-other.s)
+    for details on how these signatures are formed.
     """
     @property
     def return_type(self) -> typing.Optional[ScalarType]:
@@ -515,10 +543,44 @@ class Gate:
     def qubits(self) -> builtins.list[Qubit]: ...
     @property
     def modifiers(self) -> builtins.list[GateModifier]: ...
-    def dagger(self) -> Gate: ...
-    def controlled(self, control_qubit:Qubit) -> Gate: ...
-    def forked(self, fork_qubit:Qubit, alt_params:typing.Sequence[Expression]) -> Gate: ...
-    def to_unitary(self, n_qubits:builtins.int) -> numpy.typing.NDArray[numpy.complex128]: ...
+    def dagger(self) -> Gate:
+        r"""
+        Return a copy of the ``Gate`` with the ``DAGGER`` modifier added to it.
+        """
+    def controlled(self, control_qubit:Qubit) -> Gate:
+        r"""
+        Return a copy of the ``Gate`` with the ``CONTROLLED`` modifier added to it.
+        """
+    def forked(self, fork_qubit:Qubit, alt_params:typing.Sequence[Expression]) -> Gate:
+        r"""
+        Return a copy of the ``Gate`` with the ``FORKED`` modifier added to it.
+        
+        Raises a ``GateError`` if the number of provided alternate parameters
+        don't equal the number of existing parameters.
+        """
+    def to_unitary(self, n_qubits:builtins.int) -> numpy.typing.NDArray[numpy.complex128]:
+        r"""
+        Get the matrix resulting from lifting this ``Gate``
+        to the full `n_qubits`-qubit Hilbert space.
+        
+        Raises a ``GateError`` if any of the parameters of this ``Gate`` are non-constant,
+        if any of the ``Qubit``s are variable,
+        if the name of this ``Gate`` is unknown,
+        or if there are an unexpected number of parameters.
+        
+        # Notes
+        
+        A previous version of this library called this `to_unitary_mut`,
+        and modified the ``Gate`` when called.
+        This is no longer possible, as it would modify the ``Gate``'s hash,
+        leading to confusing bugs.
+        ``Gate``s, as well as all other hashable classes, are immutable from Python.
+        
+        # Bugs
+        
+        Supplying `n_qubits` as `0` will raise an unspecified exception;
+        other invalid input parameters may silently return an invalid result.
+        """
     def __new__(cls, name:builtins.str, parameters:typing.Sequence[Expression], qubits:typing.Sequence[Qubit], modifiers:typing.Sequence[GateModifier]) -> Gate: ...
     def __getnewargs__(self) -> tuple[builtins.str, builtins.list[Expression], builtins.list[Qubit], builtins.list[GateModifier]]: ...
     def to_quil(self) -> builtins.str: ...
@@ -594,6 +656,54 @@ class Include:
     def __repr__(self) -> builtins.str: ...
 
 class Instruction:
+    r"""
+    A Quil instruction.
+    
+    Each variant (for Python users, each nested subclass)
+    corresponds to a possible type of Quil instruction,
+    which is accessible as a member within the variant.
+    
+    # Python Users
+    
+    The subclasses of this class are class attributes defined on it,
+    and can be used to "wrap" instructions when they should be stored together.
+    In particular, they are *NOT* the instruction classes you'd typically create,
+    and instances of instruction classes are *NOT* subclasses of this class:
+    
+    ```python
+    >>> from quil.instructions import Instruction, Gate, Qubit
+    >>> issubclass(Instruction.Gate, Instruction)
+    True
+    >>> issubclass(Gate, Instruction)
+    False
+    >>> g = Gate("X", (), (Qubit.Fixed(0),), ())
+    >>> isinstance(g, Gate)
+    True
+    >>> isinstance(g, Instruction.Gate)
+    False
+    >>> g_instr = Instruction.Gate(g)
+    >>> isinstance(g_instr, Gate)
+    False
+    >>> isinstance(g_instr, Instruction.Gate)
+    True
+    >>> isinstance(g_instr._0, Gate)
+    True
+    >>> g_instr._0 == g
+    True
+    ```
+    
+    The point of this class is to wrap different kinds of instructions
+    when stored together in a collection, all of which are of type `Instruction`.
+    You can check for different instruction variants and destructure them using `match`:
+    
+    ```python
+    match g_instr:
+        case Instruction.Gate(gate):
+            assert isinstance(gate, Gate)
+        case Instruction.Wait() | Instruction.Nop():
+            # note the `()` -- these aren't like Python's enumerations!
+    ```
+    """
     def is_quil_t(self) -> builtins.bool:
         r"""
         Returns true if the instruction is a Quil-T instruction.

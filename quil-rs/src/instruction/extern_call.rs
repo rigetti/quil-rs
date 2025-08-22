@@ -138,6 +138,11 @@ impl Quil for ExternParameter {
 }
 
 /// An extern signature with a return type and parameters.
+///
+/// The signature of a ``PRAGMA EXTERN`` instruction.
+/// This signature is defined by a list of ``ExternParameter``s and an optional return type.
+/// See the [Quil Specification](https://github.com/quil-lang/quil/blob/7f532c7cdde9f51eae6abe7408cc868fba9f91f6/specgen/spec/sec-other.s)
+/// for details on how these signatures are formed.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
@@ -721,6 +726,17 @@ pub enum CallError {
 }
 
 /// A call instruction with a name and arguments.
+///
+/// An instruction that calls an external function declared with a `PRAGMA EXTERN` instruction.
+/// These calls are generally specific to a particular hardware or virtual machine backend.
+///
+/// For further detail, see:
+///
+/// * [Other instructions and Directives](https://github.com/quil-lang/quil/blob/master/rfcs/extern-call.md) in the Quil specification.
+/// * [EXTERN / CALL RFC](https://github.com/quil-lang/quil/blob/master/rfcs/extern-call.md)
+/// * [quil#87](https://github.com/quil-lang/quil/issues/87)
+///
+/// Also see [`ExternSignature`].
 #[derive(Clone, Debug, PartialEq, Hash, Eq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(

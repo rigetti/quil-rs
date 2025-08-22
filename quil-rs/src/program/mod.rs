@@ -875,6 +875,7 @@ pub type ProgramCalibrationExpansionSourceMap =
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.program", eq, frozen))]
 #[cfg_attr(not(feature = "python"), strip_pyo3)]
 pub struct ProgramCalibrationExpansion {
+    /// The program containing the instructions.
     #[pyo3(get)]
     program: Program,
     source_map: ProgramCalibrationExpansionSourceMap,

@@ -43,6 +43,7 @@ impl_repr!(PrefixOperator);
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl Expression {
+    /// Return an expression derived from this one, simplified as much as possible.
     #[pyo3(name = "into_simplified")]
     fn py_into_simplified(&self) -> Self {
         self.clone().into_simplified()

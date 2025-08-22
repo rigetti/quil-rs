@@ -84,6 +84,52 @@ pub enum ValidationError {
     GateError(#[from] GateError),
 }
 
+/// A Quil instruction.
+///
+/// Each variant (for Python users, each nested subclass)
+/// corresponds to a possible type of Quil instruction,
+/// which is accessible as a member within the variant.
+///
+/// # Python Users
+///
+/// The subclasses of this class are class attributes defined on it,
+/// and can be used to "wrap" instructions when they should be stored together.
+/// In particular, they are *NOT* the instruction classes you'd typically create,
+/// and instances of instruction classes are *NOT* subclasses of this class:
+///
+/// ```python
+/// >>> from quil.instructions import Instruction, Gate, Qubit
+/// >>> issubclass(Instruction.Gate, Instruction)
+/// True
+/// >>> issubclass(Gate, Instruction)
+/// False
+/// >>> g = Gate("X", (), (Qubit.Fixed(0),), ())
+/// >>> isinstance(g, Gate)
+/// True
+/// >>> isinstance(g, Instruction.Gate)
+/// False
+/// >>> g_instr = Instruction.Gate(g)
+/// >>> isinstance(g_instr, Gate)
+/// False
+/// >>> isinstance(g_instr, Instruction.Gate)
+/// True
+/// >>> isinstance(g_instr._0, Gate)
+/// True
+/// >>> g_instr._0 == g
+/// True
+/// ```
+///
+/// The point of this class is to wrap different kinds of instructions
+/// when stored together in a collection, all of which are of type `Instruction`.
+/// You can check for different instruction variants and destructure them using `match`:
+///
+/// ```python
+/// match g_instr:
+///     case Instruction.Gate(gate):
+///         assert isinstance(gate, Gate)
+///     case Instruction.Wait() | Instruction.Nop():
+///         # note the `()` -- these aren't like Python's enumerations!
+/// ```
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
 #[cfg_attr(

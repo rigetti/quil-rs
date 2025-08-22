@@ -101,7 +101,7 @@ impl ErfSquare {
         }
     }
 
-    /// Convert `ErfSquare` into a list of `complex` values.
+    /// Get the a list of `complex` values from this waveform.
     #[pyo3(name = "into_iq_value")]
     fn py_into_iq_values(&self) -> Vec<Complex64> {
         self.into_iq_values()
@@ -132,6 +132,7 @@ impl Gaussian {
         }
     }
 
+    /// Get the a list of `complex` values from this waveform.
     #[pyo3(name = "into_iq_value")]
     fn py_into_iq_values(&self) -> Vec<Complex64> {
         self.into_iq_values()
@@ -167,6 +168,7 @@ impl DragGaussian {
         }
     }
 
+    /// Get the a list of `complex` values from this waveform.
     #[pyo3(name = "into_iq_value")]
     fn py_into_iq_values(&self) -> Vec<Complex64> {
         self.into_iq_values()
@@ -204,6 +206,7 @@ impl HermiteGaussian {
         }
     }
 
+    /// Get the a list of `complex` values from this waveform.
     #[pyo3(name = "into_iq_value")]
     fn py_into_iq_values(&self) -> Vec<Complex64> {
         self.into_iq_values()

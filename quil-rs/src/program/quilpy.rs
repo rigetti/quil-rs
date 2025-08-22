@@ -34,6 +34,73 @@ use super::{
     SourceMap, SourceMapEntry,
 };
 
+/// The `quil.program` module contains classes for constructing and representing a Quil program.
+///
+/// # Examples
+///
+/// ## Source Mapping for Calibration Expansion
+///
+/// ```python
+/// import inspect
+/// from quil.program import Program
+///
+/// program_text = inspect.cleandoc(
+///     """
+///     DEFCAL X 0:
+///         Y 0
+///
+///     DEFCAL Y 0:
+///         Z 0
+///
+///     X 0 # This instruction is index 0
+///     Y 0 # This instruction is index 1
+///     """
+/// )
+///
+/// # First, we parse the program and expand its calibrations
+/// program = Program.parse(program_text)
+/// expansion = program.expand_calibrations_with_source_map()
+/// source_map = expansion.source_map()
+///
+/// # This is what we expect the expanded program to be. X and Y have each been replaced by Z.
+/// expected_program_text = inspect.cleandoc(
+///     """
+///     DEFCAL X 0:
+///         Y 0
+///
+///     DEFCAL Y 0:
+///         Z 0
+///
+///     Z 0 # This instruction is index 0
+///     Z 0 # This instruction is index 1
+///     """
+/// )
+/// assert expansion.program().to_quil() == Program.parse(expected_program_text).to_quil()
+///
+/// # In order to discover _which_ calibration led to the first Z in the resulting program, we
+/// # can interrogate the expansion source mapping.
+/// #
+/// # For instance, the X at index 0 should have been replaced with a Z at index 0.
+/// # Here's how we can confirm that:
+///
+/// # First, we list the calibration expansion targets for that first instruction...
+/// targets = source_map.list_targets_for_source_index(0)
+///
+/// # ...then we extract the expanded instruction.
+/// # If the instruction had _not_ been expanded (i.e. there was no matching calibration), then `as_expanded()` would return `None`.
+/// expanded = targets[0].as_expanded()
+///
+/// # This line shows how that `X 0` was expanded into instruction index 0 (only) within the expanded program.
+/// # The end of the range is exclusive.
+/// assert expanded.range() == range(0, 1)
+///
+/// # We can also map instructions in reverse: given an instruction index in the expanded program, we can find the source index.
+/// # This is useful for understanding the provenance of instructions in the expanded program.
+/// sources = source_map.list_sources_for_target_index(1)
+///
+/// # In this case, the instruction was expanded from the source program at index 1.
+/// assert sources == [1]
+/// ```
 #[pymodule]
 #[pyo3(name = "program", module = "quil", submodule)]
 pub(crate) fn init_submodule(m: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -100,7 +167,7 @@ impl_to_quil!(Program);
 impl Program {
     /// Parse a ``Program`` from a string.
     ///
-    /// Raises a `ProgramError`` if the string isn't a valid Quil expression.
+    /// Raises a ``ProgramError`` if the string isn't a valid Quil expression.
     #[staticmethod]
     fn parse(input: &str) -> Result<Self> {
         <Self as std::str::FromStr>::from_str(input)
@@ -116,6 +183,9 @@ impl Program {
         self.clone()
     }
 
+    /// Return the [control flow graph][] of the program.
+    ///
+    /// [control flow graph]: https://en.wikipedia.org/wiki/Control-flow_graph
     fn control_flow_graph(&self) -> ControlFlowGraphOwned {
         ControlFlowGraphOwned::from(ControlFlowGraph::from(self))
     }
@@ -135,11 +205,16 @@ impl Program {
             .collect()
     }
 
+    /// Expand any instructions in the program which have a matching calibration,
+    /// leaving the others unchanged.
+    /// Return the expanded copy of the program
+    /// and a source mapping describing the expansions made.
     #[pyo3(name = "expand_calibrations_with_source_map")]
     fn py_expand_calibrations_with_source_map(&self) -> Result<ProgramCalibrationExpansion> {
         self.expand_calibrations_with_source_map()
     }
 
+    /// Add a list of instructions to the end of the program.
     #[pyo3(name = "add_instructions")]
     fn py_add_instructions(&mut self, instructions: Vec<Instruction>) {
         self.add_instructions(instructions)
@@ -168,6 +243,19 @@ impl Program {
         })
     }
 
+    /// Resolve ``TargetPlaceholder``s and ``QubitPlaceholder``s within the program.
+    ///
+    /// The resolved values will remain unique to that placeholder
+    /// within the scope of the program.
+    /// If you provide ``target_resolver`` and/or ``qubit_resolver``,
+    /// those will be used to resolve those values respectively.
+    /// If your resolver returns `None` for a particular placeholder,
+    /// it will not be replaced but will be left as a placeholder.
+    /// If you do not provide a resolver for a placeholder,
+    /// a default resolver will be used which will generate
+    /// a unique value for that placeholder within the scope of the program
+    /// using an auto-incrementing value (for qubit) or suffix (for target)
+    /// while ensuring that unique value is not already in use within the program.
     // Because we can't bubble up an error from inside the closures, they panic when the given
     // Python functions return an error or an unexpected type. This is unusual, but in a Python
     // program, this function will only raise because [`pyo3`] wraps Rust panics in a
@@ -346,7 +434,9 @@ impl Calibrations {
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[pymethods]
 impl CalibrationExpansion {
-    #[gen_stub(override_return_type(type_repr="range", imports=()))]
+    /// The range of instructions in the expanded list
+    /// which were generated by this expansion.
+    #[gen_stub(override_return_type(type_repr = "range"))]
     #[getter(range)]
     pub fn py_range<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyRange>> {
         PyRange::new(
@@ -356,6 +446,7 @@ impl CalibrationExpansion {
         )
     }
 
+    /// The source map describing the nested expansions made.
     #[getter(expansions)]
     fn py_expansions(&self) -> PyCalibrationExpansionSourceMap {
         PyCalibrationExpansionSourceMap(self.expansions.clone())
@@ -365,6 +456,7 @@ impl CalibrationExpansion {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl ProgramCalibrationExpansion {
+    /// The source mapping describing the expansions made.
     #[getter(source_map)]
     fn py_source_map(&self) -> PyProgramCalibrationExpansionSourceMap {
         PyProgramCalibrationExpansionSourceMap(self.source_map.clone())
@@ -374,11 +466,13 @@ impl ProgramCalibrationExpansion {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl FrameSet {
+    /// Retrieve the attributes of a frame by its identifier.
     #[pyo3(name = "get")]
     fn py_get(&self, identifier: &FrameIdentifier) -> Option<FrameAttributes> {
         self.get(identifier).cloned()
     }
 
+    /// Return a list of all ``FrameIdentifier``s described by this ``FrameSet``.
     #[pyo3(name = "get_keys")]
     fn py_get_keys(&self) -> Vec<FrameIdentifier> {
         self.get_keys().into_iter().cloned().collect()
@@ -466,10 +560,13 @@ macro_rules! py_source_map {
         #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
         #[pymethods]
         impl $entryT {
+            /// The instruction index within the source program's body instructions.
             pub fn source_location(&self) -> $srcT {
                 *self.0.source_location()
             }
 
+            /// The location of the expanded instruction within the target
+            /// program's body instructions.
             pub fn target_location(&self) -> $tgtT {
                 self.0.target_location().clone()
             }
@@ -486,16 +583,16 @@ macro_rules! py_source_map {
                     .collect()
             }
 
-            /// Given an instruction index within the resulting expansion, return the locations in the source
-            /// which were expanded to generate that instruction.
+            /// Return all source ranges in the source map
+            /// which were used to generate the target index.
             ///
-            /// This is `O(n)` where `n` is the number of first-level calibration expansions performed.
+            /// This is `O(n)` where `n` is the number of entries in the map.
             fn list_sources_for_target_index(&self, target_index: $srcT) -> Vec<&$srcT> {
                 self.0.list_sources(&target_index)
             }
 
-            /// Given a particular calibration (`DEFCAL` or `DEFCAL MEASURE`), return the locations in the source
-            /// program which were expanded using that calibration.
+            /// Given a particular calibration (`DEFCAL` or `DEFCAL MEASURE`), =
+            /// return the locations in the source which were expanded using that calibration.
             ///
             /// This is `O(n)` where `n` is the number of first-level calibration expansions performed.
             fn list_sources_for_calibration_used(
@@ -505,9 +602,9 @@ macro_rules! py_source_map {
                 self.0.list_sources(&calibration_used)
             }
 
-            /// Given a source index, return information about its expansion.
+            /// Return all target ranges which were used to generate the source range.
             ///
-            /// This is `O(n)` where `n` is the number of first-level calibration expansions performed.
+            /// This is `O(n)` where `n` is the number of entries in the map.
             fn list_targets_for_source_index(&self, source_index: $srcT) -> Vec<$tgtT> {
                 self.0
                     .list_targets(&source_index)
@@ -523,6 +620,42 @@ py_source_map! {
     #[pyo3(name = "CalibrationExpansionSourceMap", module = "quil.program", frozen)]
     pub(crate) struct PyCalibrationExpansionSourceMap(SourceMap<InstructionIndex, CalibrationExpansion>);
 
+    /// A description of the expansion of one instruction into other instructions.
+    ///
+    /// If present, the instruction located at `source_location` was expanded using calibrations
+    /// into the instructions located at `target_location`.
+    ///
+    /// Note that both `source_location` and `target_location` are relative to the scope of expansion.
+    ///
+    /// In the case of a nested expansion, both describe the location relative only to that
+    /// level of expansion and *not* the original program.
+    ///
+    /// Consider the following example:
+    ///
+    /// ```python
+    /// DEFCAL A:
+    ///     NOP
+    ///     B
+    ///     HALT
+    ///
+    ///
+    /// DEFCAL B:
+    ///     NOP
+    ///     WAIT
+    ///
+    /// NOP
+    /// NOP
+    /// NOP
+    /// A
+    /// ```
+    ///
+    /// In this program, `A` will expand into `NOP`, `B`, and `HALT`.
+    /// Then, `B` will expand into `NOP` and `WAIT`.
+    /// Each level of this expansion
+    /// will have its own ``CalibrationExpansionSourceMap`` describing the expansion.
+    /// In the map of `B` to `NOP` and `WAIT`, the `source_location` will be `1`
+    /// because `B` is the second instruction in `DEFCAL A`,
+    /// even though `A` is the 4th instruction (index = 3) in the original program.
     #[pyo3(name = "CalibrationExpansionSourceMapEntry", module = "quil.program", frozen)]
     pub(crate) struct PyCalibrationExpansionSourceMapEntry(SourceMapEntry<...>);
 }
@@ -716,6 +849,14 @@ impl BasicBlockOwned {
             .map(PyScheduleSeconds)
     }
 
+    /// Return the length of the longest path
+    /// from an initial instruction (one with no prerequisite instructions)
+    /// to a final instruction (one with no dependent instructions),
+    /// where the length of a path is the number of gate instructions in the path.
+    ///
+    /// :param gate_minimum_qubit_count:
+    ///     The minimum number of qubits in a gate
+    ///     for it to be counted in the depth.
     fn gate_depth(
         &self,
         gate_minimum_qubit_count: usize,
@@ -726,6 +867,9 @@ impl BasicBlockOwned {
         QubitGraph::try_from(&block).map(|graph| graph.gate_depth(gate_minimum_qubit_count))
     }
 
+    /// The control flow terminator instruction of the block, if any.
+    ///
+    /// If this is ``None``, the implicit behavior is to "continue" to the subsequent block.
     #[getter]
     fn terminator(&self) -> Option<Instruction> {
         BasicBlockTerminator::from(&self.terminator).into_instruction()

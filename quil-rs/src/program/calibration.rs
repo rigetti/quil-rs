@@ -39,6 +39,9 @@ use super::{CalibrationSet, InstructionIndex, ProgramError};
 use optipy::strip_pyo3;
 
 /// A collection of Quil calibrations (`DEFCAL` instructions) with utility methods.
+///
+/// This exposes the semantics similar to [`CalibrationSet`] to Python users,
+/// so see the documentation there for more information.
 #[derive(Clone, Debug, Default, PartialEq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
@@ -129,30 +132,30 @@ impl<'a> MatchedCalibration<'a> {
     }
 }
 
-/// The product of expanding an instruction using a calibration
+/// The product of expanding an instruction using a calibration.
 #[derive(Clone, Debug, PartialEq)]
 pub struct CalibrationExpansionOutput {
     /// The new instructions resulting from the expansion
     pub new_instructions: Vec<Instruction>,
 
-    /// Details about the expansion process
+    /// Details about the expansion process.
     pub detail: CalibrationExpansion,
 }
 
-/// Details about the expansion of a calibration
+/// Details about the expansion of a calibration.
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.program", eq, frozen))]
 #[cfg_attr(not(feature = "python"), strip_pyo3)]
 pub struct CalibrationExpansion {
-    /// The calibration used to expand the instruction
+    /// The calibration used to expand the instruction.
     #[pyo3(get)]
     pub(crate) calibration_used: CalibrationSource,
 
-    /// The target instruction indices produced by the expansion
+    /// The target instruction indices produced by the expansion.
     pub(crate) range: Range<InstructionIndex>,
 
-    /// A map of source locations to the expansions they produced
+    /// A map of source locations to the expansions they produced.
     pub(crate) expansions: SourceMap<InstructionIndex, CalibrationExpansion>,
 }
 

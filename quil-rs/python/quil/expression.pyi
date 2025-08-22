@@ -35,7 +35,10 @@ class Expression:
         If this is a number with imaginary part "equal to" zero (of _small_ absolute value), return
         that number. Otherwise, error with an evaluation error of a descriptive type.
         """
-    def into_simplified(self) -> Expression: ...
+    def into_simplified(self) -> Expression:
+        r"""
+        Return an expression derived from this one, simplified as much as possible.
+        """
     def evaluate(self, variables:typing.Mapping[builtins.str, builtins.complex], memory_references:typing.Mapping[builtins.str, typing.Sequence[builtins.float]]) -> builtins.complex:
         r"""
         Evaluate an expression, expecting that it may be fully reduced to a single complex number.
