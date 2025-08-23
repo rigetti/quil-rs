@@ -527,49 +527,54 @@ impl Program {
     /// Return a copy of the [`Program`] wrapped in a loop that repeats `iterations` times.
     ///
     /// The loop is constructed by wrapping the body of the program in classical Quil instructions.
-    /// The given `loop_count_reference` must refer to an INTEGER memory region. The value at the
-    /// reference given will be set to `iterations` and decremented in the loop. The loop will
-    /// terminate when the reference reaches 0. For this reason your program should not itself
-    /// modify the value at the reference unless you intend to modify the remaining number of
-    /// iterations (i.e. to break the loop).
+    /// The given `loop_count_reference` must refer to an INTEGER memory region. If `iterations is
+    /// provided, then the value at the reference will be set to `iterations`. If not provided,
+    /// then the user must provide a value for the memory at execution time. The value at the loop
+    /// count reference will then be decremented in the loop. The loop will terminate when the
+    /// reference reaches 0. For this reason your program should not itself modify the value at the
+    /// reference unless you intend to modify the remaining number of iterations (i.e. to break the loop).
     ///
     /// The given `start_target` and `end_target` will be used as the entry and exit points for the
     /// loop, respectively. You should provide unique [`Target`]s that won't be used elsewhere in
     /// the program.
     ///
-    /// If `iterations` is 0, then a copy of the program is returned without any changes.
+    /// If `iterations` is provided and 0, then a copy of the program is returned without any changes.
     pub fn wrap_in_loop(
         &self,
         loop_count_reference: MemoryReference,
         start_target: Target,
         end_target: Target,
-        iterations: u32,
+        iterations: Option<u32>,
     ) -> Self {
-        if iterations == 0 {
+        if iterations.is_some_and(|i| i == 0) {
             return self.clone();
         }
 
         let mut looped_program = self.clone_without_body_instructions();
 
+        let move_instruction = if let Some(iterations) = iterations {
+            vec![Instruction::Move(Move {
+                destination: loop_count_reference.clone(),
+                source: ArithmeticOperand::LiteralInteger(iterations.into()),
+            })]
+        } else {
+            vec![]
+        };
+
         looped_program.add_instructions(
-            vec![
-                Instruction::Declaration(Declaration {
-                    name: loop_count_reference.name.clone(),
-                    size: Vector {
-                        data_type: ScalarType::Integer,
-                        length: 1,
-                    },
-                    sharing: None,
-                }),
-                Instruction::Move(Move {
-                    destination: loop_count_reference.clone(),
-                    source: ArithmeticOperand::LiteralInteger(iterations.into()),
-                }),
-                Instruction::Label(Label {
-                    target: start_target.clone(),
-                }),
-            ]
+            vec![Instruction::Declaration(Declaration {
+                name: loop_count_reference.name.clone(),
+                size: Vector {
+                    data_type: ScalarType::Integer,
+                    length: 1,
+                },
+                sharing: None,
+            })]
             .into_iter()
+            .chain(move_instruction)
+            .chain(std::iter::once(Instruction::Label(Label {
+                target: start_target.clone(),
+            })))
             .chain(self.body_instructions().cloned())
             .chain(vec![
                 Instruction::Arithmetic(Arithmetic {
@@ -1643,17 +1648,31 @@ DEFWAVEFORM custom:
     1,2
 I 0
 ";
-        let program = Program::from_str(input).unwrap().wrap_in_loop(
+        let program = Program::from_str(input).unwrap();
+
+        let static_loop_program = program.wrap_in_loop(
             MemoryReference {
                 name: "shot_count".to_string(),
                 index: 0,
             },
             Target::Fixed("loop-start".to_string()),
             Target::Fixed("loop-end".to_string()),
-            10,
+            Some(10),
         );
 
-        assert_snapshot!(program.to_quil().unwrap())
+        assert_snapshot!(static_loop_program.to_quil().unwrap());
+
+        let dynamic_loop_program = program.wrap_in_loop(
+            MemoryReference {
+                name: "shot_count".to_string(),
+                index: 0,
+            },
+            Target::Fixed("loop-start".to_string()),
+            Target::Fixed("loop-end".to_string()),
+            None,
+        );
+
+        assert_snapshot!(dynamic_loop_program.to_quil().unwrap())
     }
 
     #[test]

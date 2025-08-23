@@ -215,16 +215,17 @@ class Program:
         """Return a new ``Program`` containing only the instructions for which ``predicate`` returns ``True``."""
         ...
     def wrap_in_loop(
-        self, loop_count_reference: MemoryReference, start_target: Target, end_target: Target, iterations: int
+        self, loop_count_reference: MemoryReference, start_target: Target, end_target: Target, iterations: Optional[int]=None
     ) -> "Program":
         """Return a copy of the `Program` wrapped in a loop that repeats ``iterations`` times.
 
         The loop is constructed by wrapping the body of the program in classical Quil instructions.
-        The given ``loop_count_reference`` must refer to an INTEGER memory region. The value at the
-        reference given will be set to ``iterations`` and decremented in the loop. The loop will
-        terminate when the reference reaches 0. For this reason your program should not itself
-        modify the value at the reference unless you intend to modify the remaining number of
-        iterations (i.e. to break the loop).
+        The given `loop_count_reference` must refer to an INTEGER memory region. If `iterations is
+        provided, then the value at the reference will be set to `iterations`. If not provided,
+        then the user must provide a value for the memory at execution time. The value at the loop
+        count reference will then be decremented in the loop. The loop will terminate when the
+        reference reaches 0. For this reason your program should not itself modify the value at the
+        reference unless you intend to modify the remaining number of iterations (i.e. to break the loop).
 
         The given ``start_target`` and ``end_target`` will be used as the entry and exit points for
         the loop, respectively. You should provide unique `quil.instructions.Target`s that won't be
