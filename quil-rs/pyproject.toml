@@ -115,6 +115,6 @@ plugins = "numpy.typing.mypy_plugin"
 
 [[tool.mypy.overrides]]
 module = [
-    "quil.quil",
+    "quil",
 ]
 ignore_missing_imports = true

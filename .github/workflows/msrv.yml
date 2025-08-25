@@ -58,7 +58,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.9', '3.10', '3.11', '3.12']
+        python-version: ['3.10', '3.11', '3.12', '3.13']
     steps:
     - uses: actions/checkout@v4
     - uses: actions-rs/toolchain@v1
@@ -69,7 +69,7 @@ jobs:
     - uses: syphar/restore-virtualenv@v1
     - name: Run quil-py tests, lints, and formatting checks.
       run: |
-        cargo make --cwd quil-py
+        cargo make --cwd quil-rs
 
   fmt:
     name: Rustfmt
