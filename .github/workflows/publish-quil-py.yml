@@ -28,7 +28,7 @@ jobs:
     needs: [ is-python-release, should-publish-wheels ]
     strategy:
       matrix:
-        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+        python-version: ['3.10', '3.11', '3.12', '3.13']
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
@@ -45,7 +45,7 @@ jobs:
         # universal2 supports both x86_64 and aarch64
         uses: messense/maturin-action@v1
         with:
-          args: -i python --release --target universal2-apple-darwin --manifest-path quil-py/Cargo.toml --out dist
+          args: -i python --release --target universal2-apple-darwin --manifest-path quil-rs/Cargo.toml --out dist
       - name: Install wheel
         run: |
           pip install quil --find-links dist --force-reinstall
@@ -62,7 +62,7 @@ jobs:
       CXXFLAGS: "-std=c++11"
     strategy:
       matrix:
-        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+        python-version: ['3.10', '3.11', '3.12', '3.13']
         target: [x86_64, aarch64, ppc64le]
     steps:
     - uses: actions/checkout@v2
@@ -80,7 +80,7 @@ jobs:
       with:
         target: ${{ matrix.target }}
         manylinux: 2014
-        args: -i ${{ matrix.python-version }} --release --manifest-path quil-py/Cargo.toml --out dist
+        args: -i ${{ matrix.python-version }} --release --manifest-path quil-rs/Cargo.toml --out dist
     - name: Install wheel
       if: ${{ matrix.target == 'x86_64' }} # pip can only install wheels for it's own architecture
       run: |
@@ -96,7 +96,7 @@ jobs:
     needs: [ is-python-release, should-publish-wheels ]
     strategy:
       matrix:
-        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+        python-version: ['3.10', '3.11', '3.12', '3.13']
         target: [x64]
     steps:
       # Some of the snapshots have long file paths, so we need to enable long file paths on Windows where the limit is 260 by default
@@ -119,7 +119,7 @@ jobs:
         uses: messense/maturin-action@v1
         with:
           target: ${{ matrix.target }}
-          args: -i python --release --manifest-path quil-py/Cargo.toml --out dist
+          args: -i python --release --manifest-path quil-rs/Cargo.toml --out dist
       - name: Install built wheel
         run: |
           pip install quil --find-links dist --force-reinstall --no-deps
@@ -149,7 +149,7 @@ jobs:
       uses: messense/maturin-action@v1
       with:
         command: sdist
-        args: --manifest-path quil-py/Cargo.toml --out dist
+        args: --manifest-path quil-rs/Cargo.toml --out dist
     - name: Upload sdist
       uses: actions/upload-artifact@v4
       with:
@@ -196,4 +196,4 @@ jobs:
         with:
           toolchain: stable
           override: true
-      - run: cargo publish --manifest-path=quil-py/Cargo.toml --token ${{ secrets.CRATES_IO_TOKEN }}
+      - run: cargo publish --manifest-path=quil-rs/Cargo.toml --token ${{ secrets.CRATES_IO_TOKEN }}
