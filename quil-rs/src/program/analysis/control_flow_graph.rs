@@ -132,16 +132,16 @@ impl<'p> BasicBlock<'p> {
     /// # Arguments
     ///
     /// * `program` - The program containing this basic block.
-    ///     This is used to retrieve frame and calibration information.
-    ///     Generally, this should be the program
-    ///     from which the block was extracted.
+    ///   This is used to retrieve frame and calibration information.
+    ///   Generally, this should be the program
+    ///   from which the block was extracted.
     ///
     /// # How it Works
     ///
     /// * Expanding each instruction within the block using the program's calibration definitions
     /// * Resolving the `ScheduleSeconds` of the expanded instructions
     /// * Mapping calibrated instructions back to the original instructions within this block,
-    ///     such that the block's instruction is represented as a timespan encompassing all of its expanded instructions
+    ///   such that the block's instruction is represented as a timespan encompassing all of its expanded instructions
     ///
     /// # Notes
     ///
