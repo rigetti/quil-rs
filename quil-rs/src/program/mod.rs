@@ -477,7 +477,7 @@ impl Program {
             if let Some(matched_frames) =
                 instruction_handler.matching_frames(instruction, &expanded_program)
             {
-                frames_used.extend(matched_frames.used())
+                frames_used.extend(matched_frames.used)
             }
 
             if let Some(waveform) = instruction.get_waveform_invocation() {
@@ -1213,7 +1213,7 @@ DEFFRAME 0 1 \"2q\":
             let instruction = Instruction::parse(instruction_string).unwrap();
             let matched_frames = program.get_frames_for_instruction(&instruction).unwrap();
             let used_frames: HashSet<String> = matched_frames
-                .used()
+                .used
                 .iter()
                 .map(|f| f.to_quil_or_debug())
                 .collect();
@@ -1227,7 +1227,7 @@ DEFFRAME 0 1 \"2q\":
             );
 
             let blocked_frames: HashSet<String> = matched_frames
-                .blocked()
+                .blocked
                 .iter()
                 .map(|f| f.to_quil_or_debug())
                 .collect();

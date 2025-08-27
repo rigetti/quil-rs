@@ -396,7 +396,7 @@ impl<'a> ScheduledBasicBlock<'a> {
                     let is_scheduled = custom_handler.is_scheduled(instruction);
 
                     if let Some(matched_frames) = matched_frames {
-                        for frame in matched_frames.used() {
+                        for frame in matched_frames.used {
                             if is_scheduled {
                                 let previous_node_ids = last_timed_instruction_by_frame
                                     .entry((*frame).clone())
@@ -418,7 +418,7 @@ impl<'a> ScheduledBasicBlock<'a> {
                             }
                         }
 
-                        for frame in matched_frames.blocked() {
+                        for frame in matched_frames.blocked {
                             if is_scheduled {
                                 if let Some(previous_node_id) = last_timed_instruction_by_frame
                                     .entry((*frame).clone())
