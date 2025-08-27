@@ -230,9 +230,6 @@ pub struct MatchedFrames<'a> {
 
 impl MatchedFrames<'_> {
     pub fn new() -> Self {
-        Self {
-            blocked: HashSet::new(),
-            used: HashSet::new(),
-        }
+        Self::default()
     }
 }
