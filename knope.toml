@@ -1,15 +1,15 @@
 [packages.quil-rs]
-versioned_files = ["quil-rs/Cargo.toml"]
+versioned_files = ["quil-rs/Cargo.toml", "Cargo.lock"]
 changelog = "quil-rs/CHANGELOG.md"
 scopes = ["rs", "rust", "quil-rs"]
 
 [packages.quil-py]
-versioned_files = ["quil-py/Cargo.toml", "quil-py/pyproject.toml"]
+versioned_files = ["quil-py/Cargo.toml", "quil-py/pyproject.toml", "Cargo.lock"]
 changelog = "quil-py/CHANGELOG.md"
 scopes = ["py", "python", "quil-py"]
 
 [packages.quil-cli]
-versioned_files = ["quil-cli/Cargo.toml"]
+versioned_files = ["quil-cli/Cargo.toml", "Cargo.lock"]
 changelog = "quil-cli/CHANGELOG.md"
 scopes = ["cli", "quil-cli"]
 
