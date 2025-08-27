@@ -524,13 +524,13 @@
                                 <a class="function" href="#Arithmetic.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
+                                <a class="variable" href="#Arithmetic.operator">operator</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#Arithmetic.destination">destination</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Arithmetic.source">source</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Arithmetic.operator">operator</a>
                         </li>
                 </ul>
 
@@ -620,13 +620,13 @@
                                 <a class="function" href="#BinaryLogic.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#BinaryLogic.operator">operator</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#BinaryLogic.destination">destination</a>
                         </li>
                         <li>
                                 <a class="variable" href="#BinaryLogic.source">source</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#BinaryLogic.operator">operator</a>
                         </li>
                 </ul>
 
@@ -902,13 +902,13 @@
                                 <a class="function" href="#ExternParameter.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#ExternParameter.data_type">data_type</a>
+                                <a class="variable" href="#ExternParameter.name">name</a>
                         </li>
                         <li>
                                 <a class="variable" href="#ExternParameter.mutable">mutable</a>
                         </li>
                         <li>
-                                <a class="variable" href="#ExternParameter.name">name</a>
+                                <a class="variable" href="#ExternParameter.data_type">data_type</a>
                         </li>
                 </ul>
 
@@ -974,10 +974,10 @@
                                 <a class="function" href="#ExternSignature.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#ExternSignature.return_type">return_type</a>
+                                <a class="variable" href="#ExternSignature.parameters">parameters</a>
                         </li>
                         <li>
-                                <a class="variable" href="#ExternSignature.parameters">parameters</a>
+                                <a class="variable" href="#ExternSignature.return_type">return_type</a>
                         </li>
                 </ul>
 
@@ -1046,9 +1046,6 @@
                                 <a class="function" href="#Calibration.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Calibration.parameters">parameters</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#Calibration.identifier">identifier</a>
                         </li>
                         <li>
@@ -1056,6 +1053,9 @@
                         </li>
                         <li>
                                 <a class="variable" href="#Calibration.modifiers">modifiers</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Calibration.parameters">parameters</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Calibration.name">name</a>
@@ -1076,9 +1076,6 @@
                                 <a class="function" href="#CalibrationIdentifier.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#CalibrationIdentifier.modifiers">modifiers</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#CalibrationIdentifier.parameters">parameters</a>
                         </li>
                         <li>
@@ -1086,6 +1083,9 @@
                         </li>
                         <li>
                                 <a class="variable" href="#CalibrationIdentifier.qubits">qubits</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#CalibrationIdentifier.modifiers">modifiers</a>
                         </li>
                 </ul>
 
@@ -1100,13 +1100,13 @@
                                 <a class="function" href="#CircuitDefinition.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
+                                <a class="variable" href="#CircuitDefinition.qubit_variables">qubit_variables</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#CircuitDefinition.name">name</a>
                         </li>
                         <li>
                                 <a class="variable" href="#CircuitDefinition.parameters">parameters</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#CircuitDefinition.qubit_variables">qubit_variables</a>
                         </li>
                         <li>
                                 <a class="variable" href="#CircuitDefinition.instructions">instructions</a>
@@ -1124,16 +1124,16 @@
                                 <a class="function" href="#MeasureCalibrationDefinition.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#MeasureCalibrationDefinition.instructions">instructions</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#MeasureCalibrationDefinition.parameter">parameter</a>
+                                <a class="variable" href="#MeasureCalibrationDefinition.qubit">qubit</a>
                         </li>
                         <li>
                                 <a class="variable" href="#MeasureCalibrationDefinition.identifier">identifier</a>
                         </li>
                         <li>
-                                <a class="variable" href="#MeasureCalibrationDefinition.qubit">qubit</a>
+                                <a class="variable" href="#MeasureCalibrationDefinition.parameter">parameter</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#MeasureCalibrationDefinition.instructions">instructions</a>
                         </li>
                 </ul>
 
@@ -1148,10 +1148,10 @@
                                 <a class="function" href="#MeasureCalibrationIdentifier.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#MeasureCalibrationIdentifier.qubit">qubit</a>
+                                <a class="variable" href="#MeasureCalibrationIdentifier.parameter">parameter</a>
                         </li>
                         <li>
-                                <a class="variable" href="#MeasureCalibrationIdentifier.parameter">parameter</a>
+                                <a class="variable" href="#MeasureCalibrationIdentifier.qubit">qubit</a>
                         </li>
                 </ul>
 
@@ -1169,10 +1169,10 @@
                                 <a class="variable" href="#Declaration.size">size</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Declaration.sharing">sharing</a>
+                                <a class="variable" href="#Declaration.name">name</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Declaration.name">name</a>
+                                <a class="variable" href="#Declaration.sharing">sharing</a>
                         </li>
                 </ul>
 
@@ -1187,10 +1187,10 @@
                                 <a class="function" href="#Load.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Load.offset">offset</a>
+                                <a class="variable" href="#Load.source">source</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Load.source">source</a>
+                                <a class="variable" href="#Load.offset">offset</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Load.destination">destination</a>
@@ -1208,10 +1208,10 @@
                                 <a class="function" href="#Offset.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Offset.data_type">data_type</a>
+                                <a class="variable" href="#Offset.offset">offset</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Offset.offset">offset</a>
+                                <a class="variable" href="#Offset.data_type">data_type</a>
                         </li>
                 </ul>
 
@@ -1220,10 +1220,10 @@
                     <a class="class" href="#Sharing">Sharing</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#Sharing.name">name</a>
+                                <a class="variable" href="#Sharing.offsets">offsets</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Sharing.offsets">offsets</a>
+                                <a class="variable" href="#Sharing.name">name</a>
                         </li>
                 </ul>
 
@@ -1238,13 +1238,13 @@
                                 <a class="function" href="#Store.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Store.source">source</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#Store.offset">offset</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Store.destination">destination</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Store.source">source</a>
                         </li>
                 </ul>
 
@@ -1283,10 +1283,10 @@
                                 <a class="function" href="#Vector.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Vector.data_type">data_type</a>
+                                <a class="variable" href="#Vector.length">length</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Vector.length">length</a>
+                                <a class="variable" href="#Vector.data_type">data_type</a>
                         </li>
                 </ul>
 
@@ -1301,10 +1301,10 @@
                                 <a class="function" href="#Measurement.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Measurement.target">target</a>
+                                <a class="variable" href="#Measurement.qubit">qubit</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Measurement.qubit">qubit</a>
+                                <a class="variable" href="#Measurement.target">target</a>
                         </li>
                 </ul>
 
@@ -1334,10 +1334,10 @@
                                 <a class="function" href="#Pragma.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Pragma.data">data</a>
+                                <a class="variable" href="#Pragma.name">name</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Pragma.name">name</a>
+                                <a class="variable" href="#Pragma.data">data</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Pragma.arguments">arguments</a>
@@ -1433,6 +1433,9 @@
                                 <a class="function" href="#Capture.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
+                                <a class="variable" href="#Capture.memory_reference">memory_reference</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#Capture.blocking">blocking</a>
                         </li>
                         <li>
@@ -1440,9 +1443,6 @@
                         </li>
                         <li>
                                 <a class="variable" href="#Capture.waveform">waveform</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Capture.memory_reference">memory_reference</a>
                         </li>
                 </ul>
 
@@ -1457,10 +1457,10 @@
                                 <a class="function" href="#FrameDefinition.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#FrameDefinition.identifier">identifier</a>
+                                <a class="variable" href="#FrameDefinition.attributes">attributes</a>
                         </li>
                         <li>
-                                <a class="variable" href="#FrameDefinition.attributes">attributes</a>
+                                <a class="variable" href="#FrameDefinition.identifier">identifier</a>
                         </li>
                 </ul>
 
@@ -1475,10 +1475,10 @@
                                 <a class="function" href="#FrameIdentifier.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#FrameIdentifier.name">name</a>
+                                <a class="variable" href="#FrameIdentifier.qubits">qubits</a>
                         </li>
                         <li>
-                                <a class="variable" href="#FrameIdentifier.qubits">qubits</a>
+                                <a class="variable" href="#FrameIdentifier.name">name</a>
                         </li>
                 </ul>
 
@@ -1493,13 +1493,13 @@
                                 <a class="function" href="#Pulse.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Pulse.waveform">waveform</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#Pulse.frame">frame</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Pulse.blocking">blocking</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Pulse.waveform">waveform</a>
                         </li>
                 </ul>
 
@@ -1517,10 +1517,10 @@
                                 <a class="variable" href="#RawCapture.frame">frame</a>
                         </li>
                         <li>
-                                <a class="variable" href="#RawCapture.memory_reference">memory_reference</a>
+                                <a class="variable" href="#RawCapture.duration">duration</a>
                         </li>
                         <li>
-                                <a class="variable" href="#RawCapture.duration">duration</a>
+                                <a class="variable" href="#RawCapture.memory_reference">memory_reference</a>
                         </li>
                         <li>
                                 <a class="variable" href="#RawCapture.blocking">blocking</a>
@@ -1556,10 +1556,10 @@
                                 <a class="function" href="#SetPhase.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#SetPhase.phase">phase</a>
+                                <a class="variable" href="#SetPhase.frame">frame</a>
                         </li>
                         <li>
-                                <a class="variable" href="#SetPhase.frame">frame</a>
+                                <a class="variable" href="#SetPhase.phase">phase</a>
                         </li>
                 </ul>
 
@@ -1592,10 +1592,10 @@
                                 <a class="function" href="#ShiftFrequency.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#ShiftFrequency.frequency">frequency</a>
+                                <a class="variable" href="#ShiftFrequency.frame">frame</a>
                         </li>
                         <li>
-                                <a class="variable" href="#ShiftFrequency.frame">frame</a>
+                                <a class="variable" href="#ShiftFrequency.frequency">frequency</a>
                         </li>
                 </ul>
 
@@ -1658,9 +1658,6 @@
                                 <a class="function" href="#Gate.to_unitary_mut">to_unitary_mut</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Gate.name">name</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#Gate.qubits">qubits</a>
                         </li>
                         <li>
@@ -1668,6 +1665,9 @@
                         </li>
                         <li>
                                 <a class="variable" href="#Gate.modifiers">modifiers</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Gate.name">name</a>
                         </li>
                 </ul>
 
@@ -1682,13 +1682,13 @@
                                 <a class="function" href="#GateDefinition.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#GateDefinition.specification">specification</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#GateDefinition.parameters">parameters</a>
                         </li>
                         <li>
                                 <a class="variable" href="#GateDefinition.name">name</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#GateDefinition.specification">specification</a>
                         </li>
                 </ul>
 
@@ -1790,10 +1790,10 @@
                     <a class="class" href="#PauliTerm">PauliTerm</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#PauliTerm.expression">expression</a>
+                                <a class="variable" href="#PauliTerm.arguments">arguments</a>
                         </li>
                         <li>
-                                <a class="variable" href="#PauliTerm.arguments">arguments</a>
+                                <a class="variable" href="#PauliTerm.expression">expression</a>
                         </li>
                 </ul>
 
@@ -1853,10 +1853,10 @@
                                 <a class="function" href="#JumpUnless.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#JumpUnless.target">target</a>
+                                <a class="variable" href="#JumpUnless.condition">condition</a>
                         </li>
                         <li>
-                                <a class="variable" href="#JumpUnless.condition">condition</a>
+                                <a class="variable" href="#JumpUnless.target">target</a>
                         </li>
                 </ul>
 
@@ -1937,10 +1937,10 @@
                                 <a class="function" href="#MemoryReference.parse">parse</a>
                         </li>
                         <li>
-                                <a class="variable" href="#MemoryReference.index">index</a>
+                                <a class="variable" href="#MemoryReference.name">name</a>
                         </li>
                         <li>
-                                <a class="variable" href="#MemoryReference.name">name</a>
+                                <a class="variable" href="#MemoryReference.index">index</a>
                         </li>
                 </ul>
 
@@ -2027,13 +2027,13 @@
                                 <a class="function" href="#Delay.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
+                                <a class="variable" href="#Delay.qubits">qubits</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#Delay.frame_names">frame_names</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Delay.duration">duration</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Delay.qubits">qubits</a>
                         </li>
                 </ul>
 
@@ -2057,10 +2057,10 @@
                     <a class="class" href="#Waveform">Waveform</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#Waveform.matrix">matrix</a>
+                                <a class="variable" href="#Waveform.parameters">parameters</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Waveform.parameters">parameters</a>
+                                <a class="variable" href="#Waveform.matrix">matrix</a>
                         </li>
                 </ul>
 
@@ -4574,6 +4574,19 @@
     
 
                             </div>
+                            <div id="Arithmetic.operator" class="classattr">
+                                <div class="attr variable">
+            <span class="name">operator</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Arithmetic.operator"></a>
+    
+            <div class="docstring"><p>Get the operator field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
                             <div id="Arithmetic.destination" class="classattr">
                                 <div class="attr variable">
             <span class="name">destination</span>
@@ -4596,19 +4609,6 @@
     <a class="headerlink" href="#Arithmetic.source"></a>
     
             <div class="docstring"><p>Get the source field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
-                            <div id="Arithmetic.operator" class="classattr">
-                                <div class="attr variable">
-            <span class="name">operator</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Arithmetic.operator"></a>
-    
-            <div class="docstring"><p>Get the operator field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -4973,19 +4973,6 @@
     
 
                             </div>
-                            <div id="BinaryLogic.operator" class="classattr">
-                                <div class="attr variable">
-            <span class="name">operator</span>
-
-        
-    </div>
-    <a class="headerlink" href="#BinaryLogic.operator"></a>
-    
-            <div class="docstring"><p>Get the operator field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
                             <div id="BinaryLogic.destination" class="classattr">
                                 <div class="attr variable">
             <span class="name">destination</span>
@@ -5008,6 +4995,19 @@
     <a class="headerlink" href="#BinaryLogic.source"></a>
     
             <div class="docstring"><p>Get the source field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
+                            <div id="BinaryLogic.operator" class="classattr">
+                                <div class="attr variable">
+            <span class="name">operator</span>
+
+        
+    </div>
+    <a class="headerlink" href="#BinaryLogic.operator"></a>
+    
+            <div class="docstring"><p>Get the operator field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -6123,13 +6123,13 @@
     
 
                             </div>
-                            <div id="ExternParameter.data_type" class="classattr">
+                            <div id="ExternParameter.name" class="classattr">
                                 <div class="attr variable">
-            <span class="name">data_type</span>
+            <span class="name">name</span>
 
         
     </div>
-    <a class="headerlink" href="#ExternParameter.data_type"></a>
+    <a class="headerlink" href="#ExternParameter.name"></a>
     
     
 
@@ -6145,13 +6145,13 @@
     
 
                             </div>
-                            <div id="ExternParameter.name" class="classattr">
+                            <div id="ExternParameter.data_type" class="classattr">
                                 <div class="attr variable">
-            <span class="name">name</span>
+            <span class="name">data_type</span>
 
         
     </div>
-    <a class="headerlink" href="#ExternParameter.name"></a>
+    <a class="headerlink" href="#ExternParameter.data_type"></a>
     
     
 
@@ -6429,17 +6429,6 @@
     
 
                             </div>
-                            <div id="ExternSignature.return_type" class="classattr">
-                                <div class="attr variable">
-            <span class="name">return_type</span>
-
-        
-    </div>
-    <a class="headerlink" href="#ExternSignature.return_type"></a>
-    
-    
-
-                            </div>
                             <div id="ExternSignature.parameters" class="classattr">
                                 <div class="attr variable">
             <span class="name">parameters</span>
@@ -6447,6 +6436,17 @@
         
     </div>
     <a class="headerlink" href="#ExternSignature.parameters"></a>
+    
+    
+
+                            </div>
+                            <div id="ExternSignature.return_type" class="classattr">
+                                <div class="attr variable">
+            <span class="name">return_type</span>
+
+        
+    </div>
+    <a class="headerlink" href="#ExternSignature.return_type"></a>
     
     
 
@@ -6683,17 +6683,6 @@
     
 
                             </div>
-                            <div id="Calibration.parameters" class="classattr">
-                                <div class="attr variable">
-            <span class="name">parameters</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Calibration.parameters"></a>
-    
-    
-
-                            </div>
                             <div id="Calibration.identifier" class="classattr">
                                 <div class="attr variable">
             <span class="name">identifier</span>
@@ -6725,6 +6714,17 @@
         
     </div>
     <a class="headerlink" href="#Calibration.modifiers"></a>
+    
+    
+
+                            </div>
+                            <div id="Calibration.parameters" class="classattr">
+                                <div class="attr variable">
+            <span class="name">parameters</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Calibration.parameters"></a>
     
     
 
@@ -6792,19 +6792,6 @@
     
 
                             </div>
-                            <div id="CalibrationIdentifier.modifiers" class="classattr">
-                                <div class="attr variable">
-            <span class="name">modifiers</span>
-
-        
-    </div>
-    <a class="headerlink" href="#CalibrationIdentifier.modifiers"></a>
-    
-            <div class="docstring"><p>Get the modifiers field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
                             <div id="CalibrationIdentifier.parameters" class="classattr">
                                 <div class="attr variable">
             <span class="name">parameters</span>
@@ -6840,6 +6827,19 @@
     <a class="headerlink" href="#CalibrationIdentifier.qubits"></a>
     
             <div class="docstring"><p>Get the qubits field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
+                            <div id="CalibrationIdentifier.modifiers" class="classattr">
+                                <div class="attr variable">
+            <span class="name">modifiers</span>
+
+        
+    </div>
+    <a class="headerlink" href="#CalibrationIdentifier.modifiers"></a>
+    
+            <div class="docstring"><p>Get the modifiers field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -6883,6 +6883,19 @@
     
 
                             </div>
+                            <div id="CircuitDefinition.qubit_variables" class="classattr">
+                                <div class="attr variable">
+            <span class="name">qubit_variables</span>
+
+        
+    </div>
+    <a class="headerlink" href="#CircuitDefinition.qubit_variables"></a>
+    
+            <div class="docstring"><p>Get the qubit_variables field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
                             <div id="CircuitDefinition.name" class="classattr">
                                 <div class="attr variable">
             <span class="name">name</span>
@@ -6905,19 +6918,6 @@
     <a class="headerlink" href="#CircuitDefinition.parameters"></a>
     
             <div class="docstring"><p>Get the parameters field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
-                            <div id="CircuitDefinition.qubit_variables" class="classattr">
-                                <div class="attr variable">
-            <span class="name">qubit_variables</span>
-
-        
-    </div>
-    <a class="headerlink" href="#CircuitDefinition.qubit_variables"></a>
-    
-            <div class="docstring"><p>Get the qubit_variables field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -6974,26 +6974,13 @@
     
 
                             </div>
-                            <div id="MeasureCalibrationDefinition.instructions" class="classattr">
+                            <div id="MeasureCalibrationDefinition.qubit" class="classattr">
                                 <div class="attr variable">
-            <span class="name">instructions</span>
+            <span class="name">qubit</span>
 
         
     </div>
-    <a class="headerlink" href="#MeasureCalibrationDefinition.instructions"></a>
-    
-            <div class="docstring"><p>Get the instructions field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
-                            <div id="MeasureCalibrationDefinition.parameter" class="classattr">
-                                <div class="attr variable">
-            <span class="name">parameter</span>
-
-        
-    </div>
-    <a class="headerlink" href="#MeasureCalibrationDefinition.parameter"></a>
+    <a class="headerlink" href="#MeasureCalibrationDefinition.qubit"></a>
     
     
 
@@ -7011,15 +6998,28 @@
 
 
                             </div>
-                            <div id="MeasureCalibrationDefinition.qubit" class="classattr">
+                            <div id="MeasureCalibrationDefinition.parameter" class="classattr">
                                 <div class="attr variable">
-            <span class="name">qubit</span>
+            <span class="name">parameter</span>
 
         
     </div>
-    <a class="headerlink" href="#MeasureCalibrationDefinition.qubit"></a>
+    <a class="headerlink" href="#MeasureCalibrationDefinition.parameter"></a>
     
     
+
+                            </div>
+                            <div id="MeasureCalibrationDefinition.instructions" class="classattr">
+                                <div class="attr variable">
+            <span class="name">instructions</span>
+
+        
+    </div>
+    <a class="headerlink" href="#MeasureCalibrationDefinition.instructions"></a>
+    
+            <div class="docstring"><p>Get the instructions field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
 
                             </div>
                 </section>
@@ -7061,19 +7061,6 @@
     
 
                             </div>
-                            <div id="MeasureCalibrationIdentifier.qubit" class="classattr">
-                                <div class="attr variable">
-            <span class="name">qubit</span>
-
-        
-    </div>
-    <a class="headerlink" href="#MeasureCalibrationIdentifier.qubit"></a>
-    
-            <div class="docstring"><p>Get the qubit field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
                             <div id="MeasureCalibrationIdentifier.parameter" class="classattr">
                                 <div class="attr variable">
             <span class="name">parameter</span>
@@ -7083,6 +7070,19 @@
     <a class="headerlink" href="#MeasureCalibrationIdentifier.parameter"></a>
     
             <div class="docstring"><p>Get the parameter field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
+                            <div id="MeasureCalibrationIdentifier.qubit" class="classattr">
+                                <div class="attr variable">
+            <span class="name">qubit</span>
+
+        
+    </div>
+    <a class="headerlink" href="#MeasureCalibrationIdentifier.qubit"></a>
+    
+            <div class="docstring"><p>Get the qubit field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -7139,19 +7139,6 @@
 
 
                             </div>
-                            <div id="Declaration.sharing" class="classattr">
-                                <div class="attr variable">
-            <span class="name">sharing</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Declaration.sharing"></a>
-    
-            <div class="docstring"><p>Get the sharing field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
                             <div id="Declaration.name" class="classattr">
                                 <div class="attr variable">
             <span class="name">name</span>
@@ -7161,6 +7148,19 @@
     <a class="headerlink" href="#Declaration.name"></a>
     
             <div class="docstring"><p>Get the name field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
+                            <div id="Declaration.sharing" class="classattr">
+                                <div class="attr variable">
+            <span class="name">sharing</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Declaration.sharing"></a>
+    
+            <div class="docstring"><p>Get the sharing field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -7204,19 +7204,6 @@
     
 
                             </div>
-                            <div id="Load.offset" class="classattr">
-                                <div class="attr variable">
-            <span class="name">offset</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Load.offset"></a>
-    
-            <div class="docstring"><p>Get the offset field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
                             <div id="Load.source" class="classattr">
                                 <div class="attr variable">
             <span class="name">source</span>
@@ -7226,6 +7213,19 @@
     <a class="headerlink" href="#Load.source"></a>
     
             <div class="docstring"><p>Get the source field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
+                            <div id="Load.offset" class="classattr">
+                                <div class="attr variable">
+            <span class="name">offset</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Load.offset"></a>
+    
+            <div class="docstring"><p>Get the offset field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -7282,19 +7282,6 @@
     
 
                             </div>
-                            <div id="Offset.data_type" class="classattr">
-                                <div class="attr variable">
-            <span class="name">data_type</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Offset.data_type"></a>
-    
-            <div class="docstring"><p>Get the data_type field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
                             <div id="Offset.offset" class="classattr">
                                 <div class="attr variable">
             <span class="name">offset</span>
@@ -7304,6 +7291,19 @@
     <a class="headerlink" href="#Offset.offset"></a>
     
             <div class="docstring"><p>Get the offset field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
+                            <div id="Offset.data_type" class="classattr">
+                                <div class="attr variable">
+            <span class="name">data_type</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Offset.data_type"></a>
+    
+            <div class="docstring"><p>Get the data_type field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -7321,19 +7321,6 @@
     
     
 
-                            <div id="Sharing.name" class="classattr">
-                                <div class="attr variable">
-            <span class="name">name</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Sharing.name"></a>
-    
-            <div class="docstring"><p>Get the name field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
                             <div id="Sharing.offsets" class="classattr">
                                 <div class="attr variable">
             <span class="name">offsets</span>
@@ -7343,6 +7330,19 @@
     <a class="headerlink" href="#Sharing.offsets"></a>
     
             <div class="docstring"><p>Get the offsets field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
+                            <div id="Sharing.name" class="classattr">
+                                <div class="attr variable">
+            <span class="name">name</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Sharing.name"></a>
+    
+            <div class="docstring"><p>Get the name field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -7386,19 +7386,6 @@
     
 
                             </div>
-                            <div id="Store.source" class="classattr">
-                                <div class="attr variable">
-            <span class="name">source</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Store.source"></a>
-    
-            <div class="docstring"><p>Get the source field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
                             <div id="Store.offset" class="classattr">
                                 <div class="attr variable">
             <span class="name">offset</span>
@@ -7421,6 +7408,19 @@
     <a class="headerlink" href="#Store.destination"></a>
     
             <div class="docstring"><p>Get the destination field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
+                            <div id="Store.source" class="classattr">
+                                <div class="attr variable">
+            <span class="name">source</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Store.source"></a>
+    
+            <div class="docstring"><p>Get the source field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -7551,19 +7551,6 @@
     
 
                             </div>
-                            <div id="Vector.data_type" class="classattr">
-                                <div class="attr variable">
-            <span class="name">data_type</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Vector.data_type"></a>
-    
-            <div class="docstring"><p>Get the data_type field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
                             <div id="Vector.length" class="classattr">
                                 <div class="attr variable">
             <span class="name">length</span>
@@ -7573,6 +7560,19 @@
     <a class="headerlink" href="#Vector.length"></a>
     
             <div class="docstring"><p>Get the length field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
+                            <div id="Vector.data_type" class="classattr">
+                                <div class="attr variable">
+            <span class="name">data_type</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Vector.data_type"></a>
+    
+            <div class="docstring"><p>Get the data_type field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -7616,19 +7616,6 @@
     
 
                             </div>
-                            <div id="Measurement.target" class="classattr">
-                                <div class="attr variable">
-            <span class="name">target</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Measurement.target"></a>
-    
-            <div class="docstring"><p>Get the target field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
                             <div id="Measurement.qubit" class="classattr">
                                 <div class="attr variable">
             <span class="name">qubit</span>
@@ -7638,6 +7625,19 @@
     <a class="headerlink" href="#Measurement.qubit"></a>
     
             <div class="docstring"><p>Get the qubit field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
+                            <div id="Measurement.target" class="classattr">
+                                <div class="attr variable">
+            <span class="name">target</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Measurement.target"></a>
+    
+            <div class="docstring"><p>Get the target field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -7733,19 +7733,6 @@
     
 
                             </div>
-                            <div id="Pragma.data" class="classattr">
-                                <div class="attr variable">
-            <span class="name">data</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Pragma.data"></a>
-    
-            <div class="docstring"><p>Get the data field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
                             <div id="Pragma.name" class="classattr">
                                 <div class="attr variable">
             <span class="name">name</span>
@@ -7755,6 +7742,19 @@
     <a class="headerlink" href="#Pragma.name"></a>
     
             <div class="docstring"><p>Get the name field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
+                            <div id="Pragma.data" class="classattr">
+                                <div class="attr variable">
+            <span class="name">data</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Pragma.data"></a>
+    
+            <div class="docstring"><p>Get the data field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -8159,6 +8159,19 @@
     
 
                             </div>
+                            <div id="Capture.memory_reference" class="classattr">
+                                <div class="attr variable">
+            <span class="name">memory_reference</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Capture.memory_reference"></a>
+    
+            <div class="docstring"><p>Get the memory_reference field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
                             <div id="Capture.blocking" class="classattr">
                                 <div class="attr variable">
             <span class="name">blocking</span>
@@ -8194,19 +8207,6 @@
     <a class="headerlink" href="#Capture.waveform"></a>
     
             <div class="docstring"><p>Get the waveform field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
-                            <div id="Capture.memory_reference" class="classattr">
-                                <div class="attr variable">
-            <span class="name">memory_reference</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Capture.memory_reference"></a>
-    
-            <div class="docstring"><p>Get the memory_reference field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -8250,19 +8250,6 @@
     
 
                             </div>
-                            <div id="FrameDefinition.identifier" class="classattr">
-                                <div class="attr variable">
-            <span class="name">identifier</span>
-
-        
-    </div>
-    <a class="headerlink" href="#FrameDefinition.identifier"></a>
-    
-            <div class="docstring"><p>Get the identifier field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
                             <div id="FrameDefinition.attributes" class="classattr">
                                 <div class="attr variable">
             <span class="name">attributes</span>
@@ -8272,6 +8259,19 @@
     <a class="headerlink" href="#FrameDefinition.attributes"></a>
     
             <div class="docstring"><p>Get the attributes field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
+                            <div id="FrameDefinition.identifier" class="classattr">
+                                <div class="attr variable">
+            <span class="name">identifier</span>
+
+        
+    </div>
+    <a class="headerlink" href="#FrameDefinition.identifier"></a>
+    
+            <div class="docstring"><p>Get the identifier field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -8315,19 +8315,6 @@
     
 
                             </div>
-                            <div id="FrameIdentifier.name" class="classattr">
-                                <div class="attr variable">
-            <span class="name">name</span>
-
-        
-    </div>
-    <a class="headerlink" href="#FrameIdentifier.name"></a>
-    
-            <div class="docstring"><p>Get the name field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
                             <div id="FrameIdentifier.qubits" class="classattr">
                                 <div class="attr variable">
             <span class="name">qubits</span>
@@ -8337,6 +8324,19 @@
     <a class="headerlink" href="#FrameIdentifier.qubits"></a>
     
             <div class="docstring"><p>Get the qubits field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
+                            <div id="FrameIdentifier.name" class="classattr">
+                                <div class="attr variable">
+            <span class="name">name</span>
+
+        
+    </div>
+    <a class="headerlink" href="#FrameIdentifier.name"></a>
+    
+            <div class="docstring"><p>Get the name field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -8380,19 +8380,6 @@
     
 
                             </div>
-                            <div id="Pulse.waveform" class="classattr">
-                                <div class="attr variable">
-            <span class="name">waveform</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Pulse.waveform"></a>
-    
-            <div class="docstring"><p>Get the waveform field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
                             <div id="Pulse.frame" class="classattr">
                                 <div class="attr variable">
             <span class="name">frame</span>
@@ -8415,6 +8402,19 @@
     <a class="headerlink" href="#Pulse.blocking"></a>
     
             <div class="docstring"><p>Get the blocking field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
+                            <div id="Pulse.waveform" class="classattr">
+                                <div class="attr variable">
+            <span class="name">waveform</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Pulse.waveform"></a>
+    
+            <div class="docstring"><p>Get the waveform field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -8471,19 +8471,6 @@
 
 
                             </div>
-                            <div id="RawCapture.memory_reference" class="classattr">
-                                <div class="attr variable">
-            <span class="name">memory_reference</span>
-
-        
-    </div>
-    <a class="headerlink" href="#RawCapture.memory_reference"></a>
-    
-            <div class="docstring"><p>Get the memory_reference field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
                             <div id="RawCapture.duration" class="classattr">
                                 <div class="attr variable">
             <span class="name">duration</span>
@@ -8493,6 +8480,19 @@
     <a class="headerlink" href="#RawCapture.duration"></a>
     
             <div class="docstring"><p>Get the duration field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
+                            <div id="RawCapture.memory_reference" class="classattr">
+                                <div class="attr variable">
+            <span class="name">memory_reference</span>
+
+        
+    </div>
+    <a class="headerlink" href="#RawCapture.memory_reference"></a>
+    
+            <div class="docstring"><p>Get the memory_reference field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -8614,19 +8614,6 @@
     
 
                             </div>
-                            <div id="SetPhase.phase" class="classattr">
-                                <div class="attr variable">
-            <span class="name">phase</span>
-
-        
-    </div>
-    <a class="headerlink" href="#SetPhase.phase"></a>
-    
-            <div class="docstring"><p>Get the phase field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
                             <div id="SetPhase.frame" class="classattr">
                                 <div class="attr variable">
             <span class="name">frame</span>
@@ -8636,6 +8623,19 @@
     <a class="headerlink" href="#SetPhase.frame"></a>
     
             <div class="docstring"><p>Get the frame field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
+                            <div id="SetPhase.phase" class="classattr">
+                                <div class="attr variable">
+            <span class="name">phase</span>
+
+        
+    </div>
+    <a class="headerlink" href="#SetPhase.phase"></a>
+    
+            <div class="docstring"><p>Get the phase field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -8744,19 +8744,6 @@
     
 
                             </div>
-                            <div id="ShiftFrequency.frequency" class="classattr">
-                                <div class="attr variable">
-            <span class="name">frequency</span>
-
-        
-    </div>
-    <a class="headerlink" href="#ShiftFrequency.frequency"></a>
-    
-            <div class="docstring"><p>Get the frequency field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
                             <div id="ShiftFrequency.frame" class="classattr">
                                 <div class="attr variable">
             <span class="name">frame</span>
@@ -8766,6 +8753,19 @@
     <a class="headerlink" href="#ShiftFrequency.frame"></a>
     
             <div class="docstring"><p>Get the frame field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
+                            <div id="ShiftFrequency.frequency" class="classattr">
+                                <div class="attr variable">
+            <span class="name">frequency</span>
+
+        
+    </div>
+    <a class="headerlink" href="#ShiftFrequency.frequency"></a>
+    
+            <div class="docstring"><p>Get the frequency field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -8991,19 +8991,6 @@
     
 
                             </div>
-                            <div id="Gate.name" class="classattr">
-                                <div class="attr variable">
-            <span class="name">name</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Gate.name"></a>
-    
-            <div class="docstring"><p>Get the name field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
                             <div id="Gate.qubits" class="classattr">
                                 <div class="attr variable">
             <span class="name">qubits</span>
@@ -9039,6 +9026,19 @@
     <a class="headerlink" href="#Gate.modifiers"></a>
     
             <div class="docstring"><p>Get the modifiers field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
+                            <div id="Gate.name" class="classattr">
+                                <div class="attr variable">
+            <span class="name">name</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Gate.name"></a>
+    
+            <div class="docstring"><p>Get the name field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -9082,19 +9082,6 @@
     
 
                             </div>
-                            <div id="GateDefinition.specification" class="classattr">
-                                <div class="attr variable">
-            <span class="name">specification</span>
-
-        
-    </div>
-    <a class="headerlink" href="#GateDefinition.specification"></a>
-    
-            <div class="docstring"><p>Get the specification field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
                             <div id="GateDefinition.parameters" class="classattr">
                                 <div class="attr variable">
             <span class="name">parameters</span>
@@ -9117,6 +9104,19 @@
     <a class="headerlink" href="#GateDefinition.name"></a>
     
             <div class="docstring"><p>Get the name field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
+                            <div id="GateDefinition.specification" class="classattr">
+                                <div class="attr variable">
+            <span class="name">specification</span>
+
+        
+    </div>
+    <a class="headerlink" href="#GateDefinition.specification"></a>
+    
+            <div class="docstring"><p>Get the specification field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -9520,19 +9520,6 @@ Rust <a href="std::str::FromStr"><code>FromStr</code></a> instance.</p>
     
     
 
-                            <div id="PauliTerm.expression" class="classattr">
-                                <div class="attr variable">
-            <span class="name">expression</span>
-
-        
-    </div>
-    <a class="headerlink" href="#PauliTerm.expression"></a>
-    
-            <div class="docstring"><p>Get the expression field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
                             <div id="PauliTerm.arguments" class="classattr">
                                 <div class="attr variable">
             <span class="name">arguments</span>
@@ -9542,6 +9529,19 @@ Rust <a href="std::str::FromStr"><code>FromStr</code></a> instance.</p>
     <a class="headerlink" href="#PauliTerm.arguments"></a>
     
             <div class="docstring"><p>Get the arguments field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
+                            <div id="PauliTerm.expression" class="classattr">
+                                <div class="attr variable">
+            <span class="name">expression</span>
+
+        
+    </div>
+    <a class="headerlink" href="#PauliTerm.expression"></a>
+    
+            <div class="docstring"><p>Get the expression field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -9741,19 +9741,6 @@ Rust <a href="std::str::FromStr"><code>FromStr</code></a> instance.</p>
     
 
                             </div>
-                            <div id="JumpUnless.target" class="classattr">
-                                <div class="attr variable">
-            <span class="name">target</span>
-
-        
-    </div>
-    <a class="headerlink" href="#JumpUnless.target"></a>
-    
-            <div class="docstring"><p>Get the target field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
                             <div id="JumpUnless.condition" class="classattr">
                                 <div class="attr variable">
             <span class="name">condition</span>
@@ -9763,6 +9750,19 @@ Rust <a href="std::str::FromStr"><code>FromStr</code></a> instance.</p>
     <a class="headerlink" href="#JumpUnless.condition"></a>
     
             <div class="docstring"><p>Get the condition field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
+                            <div id="JumpUnless.target" class="classattr">
+                                <div class="attr variable">
+            <span class="name">target</span>
+
+        
+    </div>
+    <a class="headerlink" href="#JumpUnless.target"></a>
+    
+            <div class="docstring"><p>Get the target field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -10072,19 +10072,6 @@ Rust <a href="std::str::FromStr"><code>FromStr</code></a> instance.</p>
 
 
                             </div>
-                            <div id="MemoryReference.index" class="classattr">
-                                <div class="attr variable">
-            <span class="name">index</span>
-
-        
-    </div>
-    <a class="headerlink" href="#MemoryReference.index"></a>
-    
-            <div class="docstring"><p>Get the index field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
                             <div id="MemoryReference.name" class="classattr">
                                 <div class="attr variable">
             <span class="name">name</span>
@@ -10094,6 +10081,19 @@ Rust <a href="std::str::FromStr"><code>FromStr</code></a> instance.</p>
     <a class="headerlink" href="#MemoryReference.name"></a>
     
             <div class="docstring"><p>Get the name field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
+                            <div id="MemoryReference.index" class="classattr">
+                                <div class="attr variable">
+            <span class="name">index</span>
+
+        
+    </div>
+    <a class="headerlink" href="#MemoryReference.index"></a>
+    
+            <div class="docstring"><p>Get the index field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -10436,6 +10436,19 @@ Rust <a href="std::str::FromStr"><code>FromStr</code></a> instance.</p>
     
 
                             </div>
+                            <div id="Delay.qubits" class="classattr">
+                                <div class="attr variable">
+            <span class="name">qubits</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Delay.qubits"></a>
+    
+            <div class="docstring"><p>Get the qubits field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
                             <div id="Delay.frame_names" class="classattr">
                                 <div class="attr variable">
             <span class="name">frame_names</span>
@@ -10458,19 +10471,6 @@ Rust <a href="std::str::FromStr"><code>FromStr</code></a> instance.</p>
     <a class="headerlink" href="#Delay.duration"></a>
     
             <div class="docstring"><p>Get the duration field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
-                            <div id="Delay.qubits" class="classattr">
-                                <div class="attr variable">
-            <span class="name">qubits</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Delay.qubits"></a>
-    
-            <div class="docstring"><p>Get the qubits field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -10540,19 +10540,6 @@ Rust <a href="std::str::FromStr"><code>FromStr</code></a> instance.</p>
     
     
 
-                            <div id="Waveform.matrix" class="classattr">
-                                <div class="attr variable">
-            <span class="name">matrix</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Waveform.matrix"></a>
-    
-            <div class="docstring"><p>Get the matrix field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
                             <div id="Waveform.parameters" class="classattr">
                                 <div class="attr variable">
             <span class="name">parameters</span>
@@ -10562,6 +10549,19 @@ Rust <a href="std::str::FromStr"><code>FromStr</code></a> instance.</p>
     <a class="headerlink" href="#Waveform.parameters"></a>
     
             <div class="docstring"><p>Get the parameters field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
+                            <div id="Waveform.matrix" class="classattr">
+                                <div class="attr variable">
+            <span class="name">matrix</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Waveform.matrix"></a>
+    
+            <div class="docstring"><p>Get the matrix field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
