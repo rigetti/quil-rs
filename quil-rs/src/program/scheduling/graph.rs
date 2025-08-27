@@ -513,7 +513,7 @@ impl<'a> ScheduledBasicBlock<'a> {
         self.instructions().is_empty()
     }
 
-    pub fn terminator(&self) -> &BasicBlockTerminator {
+    pub fn terminator(&self) -> &BasicBlockTerminator<'_> {
         self.basic_block.terminator()
     }
 
