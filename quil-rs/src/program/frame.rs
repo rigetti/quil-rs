@@ -227,3 +227,12 @@ pub struct MatchedFrames<'a> {
     /// This set should be mutually exclusive with [`Self::blocked`].
     pub used: HashSet<&'a FrameIdentifier>,
 }
+
+impl MatchedFrames<'_> {
+    pub fn new() -> Self {
+        Self {
+            blocked: HashSet::new(),
+            used: HashSet::new(),
+        }
+    }
+}
