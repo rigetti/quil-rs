@@ -1,3 +1,25 @@
+## 0.32.0-rc.4 (2025-08-27)
+
+### Breaking Changes
+
+- set Python and dependency versions to match
+- set Python and dependency versions to match
+- remove unnecessary getter methods on `MatchedFrames`
+- improvements to `MatchedFrames` and related methods (#333)
+
+### Features
+
+- add waveform constructors
+- derive Default for MatchedFrames
+- add `MatchedFrames::new`
+- improve lifetimes of `InstructionHandler::matching_frames`
+
+### Fixes
+
+- waveform constructor parameter names
+- improve lifetime – thanks, Clippy!
+- lifetimes in Program#get_frames_for_instruction
+
 ## 0.32.0-rc.3 (2025-08-27)
 
 ### Breaking Changes
