@@ -107,7 +107,7 @@ exception!(
 );
 
 // instruction errors
-pyo3::create_exception!(
+create_exception!(
     quil.instructions,
     InstructionError,
     QuilError,
