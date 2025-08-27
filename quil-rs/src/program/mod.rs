@@ -394,9 +394,9 @@ impl Program {
     ///
     /// See the [Quil-T spec](https://github.com/quil-lang/quil/blob/master/rfcs/analog/proposal.md)
     /// for more information.
-    pub fn get_frames_for_instruction<'i, 'p>(
+    pub fn get_frames_for_instruction<'p>(
         &'p self,
-        instruction: &'i Instruction,
+        instruction: &Instruction,
     ) -> Option<MatchedFrames<'p>> {
         let qubits_used_by_program = self.get_used_qubits();
 
