@@ -28,9 +28,9 @@ jobs:
         fetch-depth: 0
         token: ${{ secrets.PAT }}
     - name: Install Knope
-      uses: knope-dev/action@v2.0.0
+      uses: knope-dev/action@v2.1.0
       with:
-        version: 0.16.0 # Test before updating, breaking changes likely: https://github.com/knope-dev/action#install-latest-version
+        version: 0.21.3 # Test before updating, breaking changes likely: https://github.com/knope-dev/action#install-latest-version
     - run: |
         git config --global user.name "${{ github.triggering_actor }}"
         git config --global user.email "${{ github.triggering_actor}}@users.noreply.github.com"
