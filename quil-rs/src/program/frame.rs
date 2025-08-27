@@ -210,26 +210,26 @@ pub(crate) struct FrameMatchConditions<'a> {
     pub blocked: Option<FrameMatchCondition<'a>>,
 }
 
-/// The product of evaluating  [`FrameMatchConditions`] in the scope of available frames (such as within a [`crate::Program`]).
-#[derive(Debug)]
+/// The product of evaluating [`FrameMatchConditions`] in the scope of available frames (such as
+/// within a [`crate::Program`]).
+///
+/// When performing this evaluation with functions from `quil-rs`, the fields will be appropriately
+/// disjoint as described in their documentation.
+#[derive(Clone, PartialEq, Eq, Debug, Default)]
 pub struct MatchedFrames<'a> {
-    /// Which concrete frames are blocked and not used.
-    /// This set is mutually exclusive with `used`.
+    /// Which concrete frames are blocked by the [`Instruction`] but not used by it.
+    ///
+    /// This set should be mutually exclusive with [`Self::used`].
     pub blocked: HashSet<&'a FrameIdentifier>,
 
     /// Which concrete frames are used by the [`Instruction`]
+    ///
+    /// This set should be mutually exclusive with [`Self::blocked`].
     pub used: HashSet<&'a FrameIdentifier>,
 }
 
-impl<'a> MatchedFrames<'a> {
-    /// Which concrete frames are blocked and not used.
-    /// This set is mutually exclusive with `used`.
-    pub fn blocked(&self) -> &HashSet<&'a FrameIdentifier> {
-        &self.blocked
-    }
-
-    /// Which concrete frames are used by the [`Instruction`]
-    pub fn used(&self) -> &HashSet<&'a FrameIdentifier> {
-        &self.used
+impl MatchedFrames<'_> {
+    pub fn new() -> Self {
+        Self::default()
     }
 }
