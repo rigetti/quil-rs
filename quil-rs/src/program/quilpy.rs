@@ -528,7 +528,7 @@ impl MaybeCalibrationExpansion {
 /// The structs automatically get `#[pyclass]` and `#[derive(Clone, Debug, PartialEq)]`,
 /// but you can add additional annotations as desired, e.g. to change the Python name and module:
 ///
-/// ```
+/// ```ignore
 /// py_source_map! {
 ///     #[pyo3(name = "CalibrationExpansionSourceMap", module = "quil.program", frozen)]
 ///     pub struct PyCalibrationExpansionSourceMap(SourceMap<InstructionIndex, MaybeCalibrationExpansion>);

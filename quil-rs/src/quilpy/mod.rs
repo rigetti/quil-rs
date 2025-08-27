@@ -115,7 +115,7 @@ pub(crate) fn fix_enum_qual_names<'py>(typ: &Bound<'py, PyType>) -> PyResult<()>
 ///
 /// # Example
 ///
-/// ```
+/// ```ignore
 /// use pyo3;
 /// use pyo3_stub_gen::derive::gen_stub_pyclass_complex_enum;
 ///

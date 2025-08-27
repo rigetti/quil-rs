@@ -75,7 +75,7 @@ macro_rules! impl_parse {
 /// Types are supplied in a list. Those which deviate from the default implementations
 /// can give the items they should implement as a sublist, as in this example:
 ///
-/// ```
+/// ```ignore
 /// impl_instruction!([
 ///     A, // By default, [repr + quil]
 ///     B [repr + quil],
