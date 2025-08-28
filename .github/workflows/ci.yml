@@ -61,7 +61,7 @@ jobs:
     runs-on: ${{ matrix.platform.os }}
     steps:
       - name: Set git config for long paths (Windows only)
-        if: startsWith(runner.os, "Windows")
+        if: startsWith(runner.os, 'Windows')
         run: git config --global core.longpaths true
 
       - uses: actions/checkout@v5
