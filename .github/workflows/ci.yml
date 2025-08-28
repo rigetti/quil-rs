@@ -76,10 +76,10 @@ jobs:
       - name: Install Poetry
         uses: abatilo/actions-poetry@v4
 
-      - name: Configure Python Cache for ${{ matrix.os }}
+      - name: Configure Python Cache for ${{ matrix.platform.os }}
         uses: actions/cache@v4
         with:
-          path: ${{ matrix.venv }}
+          path: ${{ matrix.platform.venv }}
           key: ${{ runner.os }}-venv-${{ hashFiles('**/poetry.lock') }}
 
       - name: Install Python dev dependencies
