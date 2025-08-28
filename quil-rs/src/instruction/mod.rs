@@ -878,11 +878,11 @@ impl<F> GetRoleForInstructionFnMut for F where F: FnMut(&Instruction) -> Option<
 /// Trait signature for a function or closure that returns an optional override for an
 /// instruction's [`MatchedFrames`].
 pub trait GetMatchingFramesFnMut:
-    for<'a> FnMut(&'a Instruction, &'a Program) -> Option<Option<MatchedFrames<'a>>>
+    for<'p> FnMut(&Instruction, &'p Program) -> Option<Option<MatchedFrames<'p>>>
 {
 }
 impl<F> GetMatchingFramesFnMut for F where
-    F: for<'a> FnMut(&'a Instruction, &'a Program) -> Option<Option<MatchedFrames<'a>>>
+    F: for<'p> FnMut(&Instruction, &'p Program) -> Option<Option<MatchedFrames<'p>>>
 {
 }
 
@@ -981,11 +981,11 @@ impl InstructionHandler {
     /// This uses the return value of the override function, if set and returns `Some`. If not set
     /// or the function returns `None`, defaults to the return value of
     /// [`Program::get_frames_for_instruction`].
-    pub fn matching_frames<'a>(
+    pub fn matching_frames<'p>(
         &mut self,
-        instruction: &'a Instruction,
-        program: &'a Program,
-    ) -> Option<MatchedFrames<'a>> {
+        instruction: &Instruction,
+        program: &'p Program,
+    ) -> Option<MatchedFrames<'p>> {
         self.get_matching_frames
             .as_mut()
             .and_then(|f| f(instruction, program))

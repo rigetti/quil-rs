@@ -543,10 +543,10 @@ impl Program {
     ///
     /// See the [Quil-T spec](https://github.com/quil-lang/quil/blob/master/rfcs/analog/proposal.md)
     /// for more information.
-    pub fn get_frames_for_instruction<'a>(
-        &'a self,
-        instruction: &'a Instruction,
-    ) -> Option<MatchedFrames<'a>> {
+    pub fn get_frames_for_instruction<'p>(
+        &'p self,
+        instruction: &Instruction,
+    ) -> Option<MatchedFrames<'p>> {
         let qubits_used_by_program = self.get_used_qubits();
 
         instruction
@@ -626,7 +626,7 @@ impl Program {
             if let Some(matched_frames) =
                 instruction_handler.matching_frames(instruction, &expanded_program)
             {
-                frames_used.extend(matched_frames.used())
+                frames_used.extend(matched_frames.used)
             }
 
             if let Some(waveform) = instruction.get_waveform_invocation() {
@@ -1234,7 +1234,7 @@ DEFFRAME 0 1 \"2q\":
             let instruction = Instruction::parse_in_test(instruction_string).unwrap();
             let matched_frames = program.get_frames_for_instruction(&instruction).unwrap();
             let used_frames: HashSet<String> = matched_frames
-                .used()
+                .used
                 .iter()
                 .map(|f| f.to_quil_or_debug())
                 .collect();
@@ -1248,7 +1248,7 @@ DEFFRAME 0 1 \"2q\":
             );
 
             let blocked_frames: HashSet<String> = matched_frames
-                .blocked()
+                .blocked
                 .iter()
                 .map(|f| f.to_quil_or_debug())
                 .collect();
