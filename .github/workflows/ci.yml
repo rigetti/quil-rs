@@ -58,6 +58,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@cargo-make
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
@@ -68,6 +69,5 @@ jobs:
         run: cargo test --all-features
 
       - name: Run quil-py tests, lints, and formatting checks.
-        uses: taiki-e/install-action@cargo-make
         run: cargo make --cwd quil-rs
 
