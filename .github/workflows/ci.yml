@@ -55,7 +55,7 @@ jobs:
               os: "windows-latest",
               python-architecture: "x64",
               rust-target: "x86_64-pc-windows-msvc",
-              venv: ".\.venv",
+              venv: '.\.venv',
             },
           ]
     runs-on: ${{ matrix.platform.os }}
