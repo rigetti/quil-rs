@@ -1,6 +1,8 @@
-# [env]
-# PYTHONPATH = { script = [ "python -c 'import sysconfig; print(sysconfig.get_path(\"platlib\"))'" ] }
-# RUST_BACKTRACE = 0
+[env]
+PYTHONPATH = { script = ["poetry env info -e"] }
+VENVPATH = { script = ["poetry env info -p"] } 
+MYPYPATH = "python" 
+PATH = { source = "${CARGO_MAKE_RUST_TARGET_OS}", mapping = { "linux" = "${PATH}:${VENVPATH}/bin", "macos" = "${PATH}:${VENVPATH}/bin", "windows" = "${PATH};${VENVPATH}\\bin" } }
 
 [tasks.install-python-deps]
 description = "Install dependencies using poetry"
@@ -16,7 +18,7 @@ args = ["generate-stubs"]
 [tasks.install-python-package]
 dependencies = ["install-python-deps"]
 description = "Build the python package and install to the active virtual environment."
-command = ".venv/bin/maturin"
+command = "maturin"
 args = ["develop", "--features", "python"]
 
 [tasks.install-package-with-stubs]
@@ -30,7 +32,6 @@ args = ["tests_py"]
 
 [tasks.stubtest]
 dependencies = ["install-package-with-stubs"]
-cwd = "./python"
 command = "stubtest"
 args = ["quil"]
 
