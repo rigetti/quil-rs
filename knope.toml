@@ -1,12 +1,7 @@
 [packages.quil-rs]
-versioned_files = ["quil-rs/Cargo.toml", "Cargo.lock"]
+versioned_files = ["quil-rs/Cargo.toml", "quil-rs/pyproject.toml", "Cargo.lock"]
 changelog = "quil-rs/CHANGELOG.md"
 scopes = ["rs", "rust", "quil-rs"]
-
-[packages.quil-py]
-versioned_files = ["quil-py/Cargo.toml", "quil-py/pyproject.toml", "Cargo.lock"]
-changelog = "quil-py/CHANGELOG.md"
-scopes = ["py", "python", "quil-py"]
 
 [packages.quil-cli]
 versioned_files = ["quil-cli/Cargo.toml", "Cargo.lock"]
@@ -25,7 +20,7 @@ command = "sh ./scripts/sync_versions.sh"
 
 [[workflows.steps]]
 type = "Command"
-command = "git add quil-py/Cargo.toml"
+command = "git add quil-rs/Cargo.toml"
 
 [[workflows.steps]]
 type = "Command"
