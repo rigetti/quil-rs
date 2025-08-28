@@ -16,7 +16,7 @@ args = ["generate-stubs"]
 [tasks.install-python-package]
 dependencies = ["install-python-deps"]
 description = "Build the python package and install to the active virtual environment."
-command = "maturin"
+command = ".venv/bin/maturin"
 args = ["develop", "--features", "python"]
 
 [tasks.install-package-with-stubs]
