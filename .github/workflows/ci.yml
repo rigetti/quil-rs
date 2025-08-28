@@ -1,0 +1,73 @@
+name: Run Checks
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@cargo-hack
+      - uses: taiki-e/install-action@cargo-deny
+      
+      - name: Check Formatting
+        run: cargo fmt --all -- --check
+
+      - name: Run Clippy
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+
+      - name: Run cargo deny
+        run: cargo deny --workspace --all-features check
+
+      - name: Run cargo check
+        run: cargo hack check --workspace --feature-powerset
+
+  test:
+    name: Run Tests
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.11', '3.12', '3.13']
+        platform:
+          [
+            {
+              os: "macos-latest",
+              python-architecture: "arm64",
+              rust-target: "aarch64-apple-darwin",
+            },
+            {
+              os: "ubuntu-latest",
+              python-architecture: "x64",
+              rust-target: "x86_64-unknown-linux-gnu",
+            },
+            {
+              os: "windows-latest",
+              python-architecture: "x64",
+              rust-target: "x86_64-pc-windows-msvc",
+            },
+          ]
+    runs-on: ${{ matrix.platform.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Run cargo test
+        run: cargo test --all-features
+
+      - name: Run quil-py tests, lints, and formatting checks.
+        uses: taiki-e/install-action@cargo-make
+        run: cargo make --cwd quil-rs
+
