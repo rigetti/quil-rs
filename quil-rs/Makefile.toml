@@ -20,7 +20,7 @@ command = "maturin"
 args = ["develop", "--features", "python"]
 
 [tasks.install-package-with-stubs]
-dependencies = ["generate-python-stubs", "install-python-pacakge"]
+dependencies = ["generate-python-stubs", "install-python-package"]
 description = "Install the python package with up-to-date stubs (not needed for testing)."
 
 [tasks.test]
