@@ -1,84 +1,46 @@
-[env]
-PYTHONPATH = { script = [ "python -c 'import sysconfig; print(sysconfig.get_path(\"platlib\"))'" ] }
-RUST_BACKTRACE = 0
+# [env]
+# PYTHONPATH = { script = [ "python -c 'import sysconfig; print(sysconfig.get_path(\"platlib\"))'" ] }
+# RUST_BACKTRACE = 0
 
-[tasks.check-venv]
-description = "Check if a virtual environment is activated"
-script = [
-    '''
-    if [ -z "$VIRTUAL_ENV" ]; then
-        echo "No virtual environment activated. Please activate one."
-        exit 1
-    else
-        echo "Virtual environment is active."
-    fi
-    '''
-]
-
-[tasks.install-uv]
-dependencies = ["check-venv"]
-description = "Install dependencies using uv"
-command = "pip"
-args = ["install", "uv"]
-
-[tasks.install-deps]
-dependencies = ["install-uv"]
-description = "Install project dependencies using uv."
-script = [
-    '''
-    uv pip compile pyproject.toml --all-extras > requirements-dev.txt
-    uv pip install -r requirements-dev.txt
-    rm requirements-dev.txt
-    '''
-]
+[tasks.install-python-deps]
+description = "Install dependencies using poetry"
+command = "poetry"
+args = ["install", "--extras", "dev", "--no-root"]
 
 [tasks.generate-python-stubs]
-dependencies = ["check-venv", "install-deps"]
+dependencies = ["install-python-deps"]
 description = "Generate Python stub files."
 command = "cargo"
 args = ["generate-stubs"]
 
 [tasks.install-python-package]
-dependencies = ["generate-python-stubs"]
+dependencies = ["install-python-deps"]
 description = "Build the python package and install to the active virtual environment."
 command = "maturin"
 args = ["develop", "--features", "python"]
+
+[tasks.install-package-with-stubs]
+dependencies = ["generate-python-stubs", "install-python-pacakge"]
+description = "Install the python package with up-to-date stubs (not needed for testing)."
 
 [tasks.test]
 dependencies = ["install-python-package"]
 command = "pytest"
 args = ["tests_py"]
 
-[tasks.pytest-flow]
-dependencies = [
-    "install-python-package",
-    "test",
-    "post-test",
-]
-
 [tasks.stubtest]
+dependencies = ["install-package-with-stubs"]
 cwd = "./python"
 command = "stubtest"
-args = [
-    "quil"
-]
+args = ["quil"]
 
-[tasks.stubtest-flow]
-dependencies = [
-    "install-python-package",
-    "stubtest",
-]
-
-[tasks.dev-flow]
-dependencies = ["dev-test-flow", "pytest-flow", "stubtest"]
+[tasks.test-all]
+dependencies = ["test", "stubtest"]
 
 [tasks.default]
-alias = "dev-flow"
-
-[tasks.ci-flow]
-dependencies = ["pytest-flow", "stubtest"]
+alias = "test-all"
 
 [tasks.docs]
-dependencies = ["install-python-package"]
+dependencies = ["install-package-with-stubs"]
 command = "pdoc"
 args = ["-o", "build/docs", "quil", "--logo", "https://qcs.rigetti.com/static/img/rigetti-logo.svg"]

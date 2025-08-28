@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   check:
-    name: Check
+    name: Run Checks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -43,20 +43,27 @@ jobs:
               os: "macos-latest",
               python-architecture: "arm64",
               rust-target: "aarch64-apple-darwin",
+              venv: "./.venv",
             },
             {
               os: "ubuntu-latest",
               python-architecture: "x64",
               rust-target: "x86_64-unknown-linux-gnu",
+              venv: "./.venv",
             },
             {
               os: "windows-latest",
               python-architecture: "x64",
               rust-target: "x86_64-pc-windows-msvc",
+              venv: ".\.venv",
             },
           ]
     runs-on: ${{ matrix.platform.os }}
     steps:
+      - name: Set git config for long paths (Windows only)
+        if: startsWith(runner.os, "Windows")
+        run: git config --global core.longpaths true
+
       - uses: actions/checkout@v5
       - uses: Swatinem/rust-cache@v2
       - uses: taiki-e/install-action@cargo-make
@@ -66,9 +73,21 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Install Poetry
+        uses: abatilo/actions-poetry@v4
+
+      - name: Configure Python Cache for ${{ matrix.os }}
+        uses: actions/cache@v4
+        with:
+          path: ${{ matrix.venv }}
+          key: ${{ runner.os }}-venv-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Install Python dev dependencies
+        run: poetry install --extras dev --no-root
+
       - name: Run cargo test
         run: cargo test --all-features
 
-      - name: Run quil-py tests, lints, and formatting checks.
-        run: cargo make --cwd quil-rs
+      - name: Run quil-py tests
+        run: cargo make --cwd quil-rs ci-flow
 

@@ -40,6 +40,9 @@ dev = [
 requires = ["maturin>=1.0.0,<2.0.0"]
 build-backend = "maturin"
 
+[tool.poetry]
+package-mode = false
+
 [tool.ruff]
 exclude = [
     ".bzr",
