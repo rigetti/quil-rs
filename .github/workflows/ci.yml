@@ -83,7 +83,7 @@ jobs:
           key: ${{ runner.os }}-venv-${{ hashFiles('**/poetry.lock') }}
 
       - name: Install Python dev dependencies
-        run: poetry install --extras dev --no-root
+        run: cargo make --cwd quil-rs install-python-deps
 
       - name: Run cargo test
         run: cargo test --all-features
