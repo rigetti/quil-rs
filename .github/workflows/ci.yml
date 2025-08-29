@@ -89,5 +89,5 @@ jobs:
         run: cargo test --all-features
 
       - name: Run quil-py tests
-        run: cargo make --cwd quil-rs ci-flow
+        run: cargo make --cwd quil-rs test-all
 
