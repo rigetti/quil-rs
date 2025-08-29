@@ -1,47 +1,52 @@
-[env]
-PYTHONPATH = { script = ["poetry env info -e"] }
-VENVPATH = { script = ["poetry env info -p"] } 
-MYPYPATH = "python" 
-PATH = { source = "${CARGO_MAKE_RUST_TARGET_OS}", mapping = { "linux" = "${PATH}:${VENVPATH}/bin", "macos" = "${PATH}:${VENVPATH}/bin", "windows" = "${PATH};${VENVPATH}\\bin" } }
-
 [tasks.install-python-deps]
 description = "Install dependencies using poetry"
 command = "poetry"
 args = ["install", "--extras", "dev", "--no-root"]
 
 [tasks.generate-python-stubs]
-dependencies = ["install-python-deps"]
 description = "Generate Python stub files."
+dependencies = ["install-python-deps"]
 command = "cargo"
 args = ["generate-stubs"]
 
 [tasks.install-python-package]
-dependencies = ["install-python-deps"]
 description = "Build the python package and install to the active virtual environment."
-command = "maturin"
-args = ["develop", "--features", "python"]
+dependencies = ["install-python-deps"]
+command = "poetry"
+args = ["run", "maturin", "develop", "--features", "python"]
 
 [tasks.install-package-with-stubs]
-dependencies = ["generate-python-stubs", "install-python-package"]
 description = "Install the python package with up-to-date stubs (not needed for testing)."
+dependencies = ["generate-python-stubs", "install-python-package"]
 
-[tasks.test]
+[tasks.pytest]
+description = "Run python tests."
 dependencies = ["install-python-package"]
-command = "pytest"
-args = ["tests_py"]
+command = "poetry"
+args = ["run", "pytest"]
 
 [tasks.stubtest]
+description = "Check python stubfiles."
 dependencies = ["install-package-with-stubs"]
-command = "stubtest"
-args = ["quil"]
+command = "poetry"
+cwd = "python"
+args = ["run", "stubtest", "quil"]
 
 [tasks.test-all]
-dependencies = ["test", "stubtest"]
+description = "Run all Python-related tests."
+dependencies = ["pytest", "stubtest"]
 
 [tasks.default]
 alias = "test-all"
 
 [tasks.docs]
+description = "Generate Python documentation."
 dependencies = ["install-package-with-stubs"]
-command = "pdoc"
-args = ["-o", "build/docs", "quil", "--logo", "https://qcs.rigetti.com/static/img/rigetti-logo.svg"]
+command = "poetry"
+args = [
+    "run", 
+    "pdoc", 
+    "-o", "build/docs",
+    "quil", 
+    "--logo", "https://qcs.rigetti.com/static/img/rigetti-logo.svg",
+]
