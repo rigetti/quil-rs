@@ -43,19 +43,19 @@ jobs:
               os: "macos-latest",
               python-architecture: "arm64",
               rust-target: "aarch64-apple-darwin",
-              venv: "./.venv",
+              venv: "./quil-rs/.venv",
             },
             {
               os: "ubuntu-latest",
               python-architecture: "x64",
               rust-target: "x86_64-unknown-linux-gnu",
-              venv: "./.venv",
+              venv: "./quil-rs/.venv",
             },
             {
               os: "windows-latest",
               python-architecture: "x64",
               rust-target: "x86_64-pc-windows-msvc",
-              venv: '.\.venv',
+              venv: '.\quil-rs\.venv',
             },
           ]
     runs-on: ${{ matrix.platform.os }}
