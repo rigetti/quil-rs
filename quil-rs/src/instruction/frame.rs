@@ -3,15 +3,24 @@ use std::str::FromStr;
 use indexmap::IndexMap;
 use nom_locate::LocatedSpan;
 
+#[cfg(feature = "stubs")]
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyclass_complex_enum};
+
 use super::{MemoryReference, Qubit, QuotedString, WaveformInvocation};
 use crate::{
     expression::Expression,
     parser::{common::parse_frame_identifier, lex, ParseError},
+    pickleable_new,
     program::{disallow_leftover, SyntaxError},
     quil::{Quil, INDENT},
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, strum::EnumTryAs)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all)
+)]
 pub enum AttributeValue {
     String(String),
     Expression(Expression),
@@ -34,17 +43,19 @@ impl Quil for AttributeValue {
 pub type FrameAttributes = IndexMap<String, AttributeValue>;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, get_all, set_all, subclass)
+)]
 pub struct FrameDefinition {
     pub identifier: FrameIdentifier,
     pub attributes: FrameAttributes,
 }
 
-impl FrameDefinition {
-    pub fn new(identifier: FrameIdentifier, attributes: FrameAttributes) -> Self {
-        Self {
-            identifier,
-            attributes,
-        }
+pickleable_new! {
+    impl FrameDefinition {
+        pub fn new(identifier: FrameIdentifier, attributes: FrameAttributes);
     }
 }
 
@@ -67,14 +78,19 @@ impl Quil for FrameDefinition {
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
+)]
 pub struct FrameIdentifier {
     pub name: String,
     pub qubits: Vec<Qubit>,
 }
 
-impl FrameIdentifier {
-    pub fn new(name: String, qubits: Vec<Qubit>) -> Self {
-        Self { name, qubits }
+pickleable_new! {
+    impl FrameIdentifier {
+        pub fn new(name: String, qubits: Vec<Qubit>);
     }
 }
 
@@ -105,6 +121,11 @@ impl FromStr for FrameIdentifier {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, get_all, set_all, subclass)
+)]
 pub struct Capture {
     pub blocking: bool,
     pub frame: FrameIdentifier,
@@ -112,19 +133,14 @@ pub struct Capture {
     pub waveform: WaveformInvocation,
 }
 
-impl Capture {
-    pub fn new(
-        blocking: bool,
-        frame: FrameIdentifier,
-        memory_reference: MemoryReference,
-        waveform: WaveformInvocation,
-    ) -> Self {
-        Self {
-            blocking,
-            frame,
-            memory_reference,
-            waveform,
-        }
+pickleable_new! {
+    impl Capture {
+        pub fn new(
+            blocking: bool,
+            frame: FrameIdentifier,
+            memory_reference: MemoryReference,
+            waveform: WaveformInvocation,
+        );
     }
 }
 
@@ -152,19 +168,20 @@ impl Quil for Capture {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, get_all, set_all, subclass)
+)]
 pub struct Pulse {
     pub blocking: bool,
     pub frame: FrameIdentifier,
     pub waveform: WaveformInvocation,
 }
 
-impl Pulse {
-    pub fn new(blocking: bool, frame: FrameIdentifier, waveform: WaveformInvocation) -> Self {
-        Self {
-            blocking,
-            frame,
-            waveform,
-        }
+pickleable_new! {
+    impl Pulse {
+        pub fn new(blocking: bool, frame: FrameIdentifier, waveform: WaveformInvocation);
     }
 }
 
@@ -189,6 +206,11 @@ impl Quil for Pulse {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
+)]
 pub struct RawCapture {
     pub blocking: bool,
     pub frame: FrameIdentifier,
@@ -196,19 +218,14 @@ pub struct RawCapture {
     pub memory_reference: MemoryReference,
 }
 
-impl RawCapture {
-    pub fn new(
-        blocking: bool,
-        frame: FrameIdentifier,
-        duration: Expression,
-        memory_reference: MemoryReference,
-    ) -> Self {
-        Self {
-            blocking,
-            frame,
-            duration,
-            memory_reference,
-        }
+pickleable_new! {
+    impl RawCapture {
+        pub fn new(
+            blocking: bool,
+            frame: FrameIdentifier,
+            duration: Expression,
+            memory_reference: MemoryReference,
+        );
     }
 }
 
@@ -235,14 +252,19 @@ impl Quil for RawCapture {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
+)]
 pub struct SetFrequency {
     pub frame: FrameIdentifier,
     pub frequency: Expression,
 }
 
-impl SetFrequency {
-    pub fn new(frame: FrameIdentifier, frequency: Expression) -> Self {
-        Self { frame, frequency }
+pickleable_new! {
+    impl SetFrequency {
+        pub fn new(frame: FrameIdentifier, frequency: Expression);
     }
 }
 
@@ -261,14 +283,19 @@ impl Quil for SetFrequency {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
+)]
 pub struct SetPhase {
     pub frame: FrameIdentifier,
     pub phase: Expression,
 }
 
-impl SetPhase {
-    pub fn new(frame: FrameIdentifier, phase: Expression) -> Self {
-        Self { frame, phase }
+pickleable_new! {
+    impl SetPhase {
+        pub fn new(frame: FrameIdentifier, phase: Expression);
     }
 }
 
@@ -287,14 +314,19 @@ impl Quil for SetPhase {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
+)]
 pub struct SetScale {
     pub frame: FrameIdentifier,
     pub scale: Expression,
 }
 
-impl SetScale {
-    pub fn new(frame: FrameIdentifier, scale: Expression) -> Self {
-        Self { frame, scale }
+pickleable_new! {
+    impl SetScale {
+        pub fn new(frame: FrameIdentifier, scale: Expression);
     }
 }
 
@@ -313,14 +345,19 @@ impl Quil for SetScale {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
+)]
 pub struct ShiftFrequency {
     pub frame: FrameIdentifier,
     pub frequency: Expression,
 }
 
-impl ShiftFrequency {
-    pub fn new(frame: FrameIdentifier, frequency: Expression) -> Self {
-        Self { frame, frequency }
+pickleable_new! {
+    impl ShiftFrequency {
+        pub fn new(frame: FrameIdentifier, frequency: Expression);
     }
 }
 
@@ -339,14 +376,19 @@ impl Quil for ShiftFrequency {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
+)]
 pub struct ShiftPhase {
     pub frame: FrameIdentifier,
     pub phase: Expression,
 }
 
-impl ShiftPhase {
-    pub fn new(frame: FrameIdentifier, phase: Expression) -> Self {
-        Self { frame, phase }
+pickleable_new! {
+    impl ShiftPhase {
+        pub fn new(frame: FrameIdentifier, phase: Expression);
     }
 }
 
@@ -365,14 +407,19 @@ impl Quil for ShiftPhase {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
+)]
 pub struct SwapPhases {
     pub frame_1: FrameIdentifier,
     pub frame_2: FrameIdentifier,
 }
 
-impl SwapPhases {
-    pub fn new(frame_1: FrameIdentifier, frame_2: FrameIdentifier) -> Self {
-        Self { frame_1, frame_2 }
+pickleable_new! {
+    impl SwapPhases {
+        pub fn new(frame_1: FrameIdentifier, frame_2: FrameIdentifier);
     }
 }
 

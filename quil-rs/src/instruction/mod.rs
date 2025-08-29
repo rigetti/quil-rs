@@ -14,8 +14,12 @@
 
 use std::collections::HashSet;
 use std::fmt;
+use std::str::FromStr;
 
 use nom_locate::LocatedSpan;
+
+#[cfg(feature = "stubs")]
+use pyo3_stub_gen::derive::{gen_stub_pyclass_complex_enum, gen_stub_pymethods};
 
 use crate::expression::Expression;
 use crate::parser::lex;
@@ -25,6 +29,9 @@ use crate::program::ProgramError;
 use crate::program::{MatchedFrames, MemoryAccesses};
 use crate::quil::{write_join_quil, Quil, ToQuilResult};
 use crate::Program;
+
+#[cfg(feature = "python")]
+pub(crate) mod quilpy;
 
 mod calibration;
 mod circuit;
@@ -77,7 +84,58 @@ pub enum ValidationError {
     GateError(#[from] GateError),
 }
 
+/// A Quil instruction.
+///
+/// Each variant (for Python users, each nested subclass)
+/// corresponds to a possible type of Quil instruction,
+/// which is accessible as a member within the variant.
+///
+/// # Python Users
+///
+/// The subclasses of this class are class attributes defined on it,
+/// and can be used to "wrap" instructions when they should be stored together.
+/// In particular, they are *NOT* the instruction classes you'd typically create,
+/// and instances of instruction classes are *NOT* subclasses of this class:
+///
+/// ```python
+/// >>> from quil.instructions import Instruction, Gate, Qubit
+/// >>> issubclass(Instruction.Gate, Instruction)
+/// True
+/// >>> issubclass(Gate, Instruction)
+/// False
+/// >>> g = Gate("X", (), (Qubit.Fixed(0),), ())
+/// >>> isinstance(g, Gate)
+/// True
+/// >>> isinstance(g, Instruction.Gate)
+/// False
+/// >>> g_instr = Instruction.Gate(g)
+/// >>> isinstance(g_instr, Gate)
+/// False
+/// >>> isinstance(g_instr, Instruction.Gate)
+/// True
+/// >>> isinstance(g_instr._0, Gate)
+/// True
+/// >>> g_instr._0 == g
+/// True
+/// ```
+///
+/// The point of this class is to wrap different kinds of instructions
+/// when stored together in a collection, all of which are of type `Instruction`.
+/// You can check for different instruction variants and destructure them using `match`:
+///
+/// ```python
+/// match g_instr:
+///     case Instruction.Gate(gate):
+///         assert isinstance(gate, Gate)
+///     case Instruction.Wait() | Instruction.Nop():
+///         # note the `()` -- these aren't like Python's enumerations!
+/// ```
 #[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen)
+)]
 pub enum Instruction {
     Arithmetic(Arithmetic),
     BinaryLogic(BinaryLogic),
@@ -94,7 +152,7 @@ pub enum Instruction {
     FrameDefinition(FrameDefinition),
     Gate(Gate),
     GateDefinition(GateDefinition),
-    Halt,
+    Halt(),
     Include(Include),
     Jump(Jump),
     JumpUnless(JumpUnless),
@@ -104,7 +162,7 @@ pub enum Instruction {
     MeasureCalibrationDefinition(MeasureCalibrationDefinition),
     Measurement(Measurement),
     Move(Move),
-    Nop,
+    Nop(),
     Pragma(Pragma),
     Pulse(Pulse),
     RawCapture(RawCapture),
@@ -118,7 +176,58 @@ pub enum Instruction {
     SwapPhases(SwapPhases),
     UnaryLogic(UnaryLogic),
     WaveformDefinition(WaveformDefinition),
-    Wait,
+    Wait(),
+}
+
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[cfg_attr(feature = "python", pyo3::pymethods)]
+impl Instruction {
+    /// Returns true if the instruction is a Quil-T instruction.
+    pub fn is_quil_t(&self) -> bool {
+        match self {
+            Instruction::Capture(_)
+            | Instruction::CalibrationDefinition(_)
+            | Instruction::Delay(_)
+            | Instruction::Fence(_)
+            | Instruction::FrameDefinition(_)
+            | Instruction::MeasureCalibrationDefinition(_)
+            | Instruction::Pulse(_)
+            | Instruction::RawCapture(_)
+            | Instruction::SetFrequency(_)
+            | Instruction::SetPhase(_)
+            | Instruction::SetScale(_)
+            | Instruction::ShiftFrequency(_)
+            | Instruction::ShiftPhase(_)
+            | Instruction::SwapPhases(_)
+            | Instruction::WaveformDefinition(_) => true,
+
+            Instruction::Arithmetic(_)
+            | Instruction::BinaryLogic(_)
+            | Instruction::Call(_)
+            | Instruction::CircuitDefinition(_)
+            | Instruction::Convert(_)
+            | Instruction::Comparison(_)
+            | Instruction::Declaration(_)
+            | Instruction::Exchange(_)
+            | Instruction::Gate(_)
+            | Instruction::GateDefinition(_)
+            | Instruction::Halt()
+            | Instruction::Include(_)
+            | Instruction::Jump(_)
+            | Instruction::JumpUnless(_)
+            | Instruction::JumpWhen(_)
+            | Instruction::Label(_)
+            | Instruction::Load(_)
+            | Instruction::Measurement(_)
+            | Instruction::Move(_)
+            | Instruction::Nop()
+            | Instruction::Pragma(_)
+            | Instruction::Reset(_)
+            | Instruction::Store(_)
+            | Instruction::Wait()
+            | Instruction::UnaryLogic(_) => false,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -164,14 +273,14 @@ impl From<&Instruction> for InstructionRole {
             | Instruction::Move(_)
             | Instruction::Exchange(_)
             | Instruction::Load(_)
-            | Instruction::Nop
+            | Instruction::Nop()
             | Instruction::Pragma(_)
             | Instruction::Store(_) => InstructionRole::ClassicalCompute,
-            Instruction::Halt
+            Instruction::Halt()
             | Instruction::Jump(_)
             | Instruction::JumpWhen(_)
             | Instruction::JumpUnless(_)
-            | Instruction::Wait => InstructionRole::ControlFlow,
+            | Instruction::Wait() => InstructionRole::ControlFlow,
         }
     }
 }
@@ -313,9 +422,9 @@ impl Quil for Instruction {
             Instruction::WaveformDefinition(waveform_definition) => {
                 waveform_definition.write(f, fall_back_to_debug)
             }
-            Instruction::Halt => write!(f, "HALT").map_err(Into::into),
-            Instruction::Nop => write!(f, "NOP").map_err(Into::into),
-            Instruction::Wait => write!(f, "WAIT").map_err(Into::into),
+            Instruction::Halt() => write!(f, "HALT").map_err(Into::into),
+            Instruction::Nop() => write!(f, "NOP").map_err(Into::into),
+            Instruction::Wait() => write!(f, "WAIT").map_err(Into::into),
             Instruction::Jump(jump) => jump.write(f, fall_back_to_debug),
             Instruction::JumpUnless(jump) => jump.write(f, fall_back_to_debug),
             Instruction::JumpWhen(jump) => jump.write(f, fall_back_to_debug),
@@ -555,7 +664,7 @@ impl Instruction {
             | Instruction::FrameDefinition(_)
             | Instruction::Gate(_)
             | Instruction::GateDefinition(_)
-            | Instruction::Halt
+            | Instruction::Halt()
             | Instruction::Include(_)
             | Instruction::Jump(_)
             | Instruction::JumpUnless(_)
@@ -565,12 +674,12 @@ impl Instruction {
             | Instruction::MeasureCalibrationDefinition(_)
             | Instruction::Measurement(_)
             | Instruction::Move(_)
-            | Instruction::Nop
+            | Instruction::Nop()
             | Instruction::Pragma(_)
             | Instruction::Store(_)
             | Instruction::UnaryLogic(_)
             | Instruction::WaveformDefinition(_)
-            | Instruction::Wait => None,
+            | Instruction::Wait() => None,
         }
     }
 
@@ -645,10 +754,10 @@ impl Instruction {
         }
     }
 
-    #[cfg(test)]
     /// Parse a single instruction from an input string. Returns an error if the input fails to parse,
     /// or if there is input left over after parsing.
-    pub(crate) fn parse(input: &str) -> Result<Self, String> {
+    #[cfg(test)]
+    pub(crate) fn parse_in_test(input: &str) -> Result<Self, String> {
         use crate::parser::instruction::parse_instruction;
 
         let input = LocatedSpan::new(input);
@@ -656,52 +765,6 @@ impl Instruction {
         let (_, instruction) =
             nom::combinator::all_consuming(parse_instruction)(&lexed).map_err(|e| e.to_string())?;
         Ok(instruction)
-    }
-
-    /// Returns true if the instruction is a Quil-T instruction.
-    pub fn is_quil_t(&self) -> bool {
-        match self {
-            Instruction::Capture(_)
-            | Instruction::CalibrationDefinition(_)
-            | Instruction::Delay(_)
-            | Instruction::Fence(_)
-            | Instruction::FrameDefinition(_)
-            | Instruction::MeasureCalibrationDefinition(_)
-            | Instruction::Pulse(_)
-            | Instruction::RawCapture(_)
-            | Instruction::SetFrequency(_)
-            | Instruction::SetPhase(_)
-            | Instruction::SetScale(_)
-            | Instruction::ShiftFrequency(_)
-            | Instruction::ShiftPhase(_)
-            | Instruction::SwapPhases(_)
-            | Instruction::WaveformDefinition(_) => true,
-            Instruction::Arithmetic(_)
-            | Instruction::BinaryLogic(_)
-            | Instruction::Call(_)
-            | Instruction::CircuitDefinition(_)
-            | Instruction::Convert(_)
-            | Instruction::Comparison(_)
-            | Instruction::Declaration(_)
-            | Instruction::Exchange(_)
-            | Instruction::Gate(_)
-            | Instruction::GateDefinition(_)
-            | Instruction::Halt
-            | Instruction::Include(_)
-            | Instruction::Jump(_)
-            | Instruction::JumpUnless(_)
-            | Instruction::JumpWhen(_)
-            | Instruction::Label(_)
-            | Instruction::Load(_)
-            | Instruction::Measurement(_)
-            | Instruction::Move(_)
-            | Instruction::Nop
-            | Instruction::Pragma(_)
-            | Instruction::Reset(_)
-            | Instruction::Store(_)
-            | Instruction::Wait
-            | Instruction::UnaryLogic(_) => false,
-        }
     }
 
     /// Per the Quil-T spec, whether this instruction's timing within the pulse
@@ -720,7 +783,7 @@ impl Instruction {
             | Instruction::ShiftFrequency(_)
             | Instruction::ShiftPhase(_)
             | Instruction::SwapPhases(_)
-            | Instruction::Wait => true,
+            | Instruction::Wait() => true,
             Instruction::Arithmetic(_)
             | Instruction::BinaryLogic(_)
             | Instruction::CalibrationDefinition(_)
@@ -733,7 +796,7 @@ impl Instruction {
             | Instruction::FrameDefinition(_)
             | Instruction::Gate(_)
             | Instruction::GateDefinition(_)
-            | Instruction::Halt
+            | Instruction::Halt()
             | Instruction::Include(_)
             | Instruction::Jump(_)
             | Instruction::JumpUnless(_)
@@ -743,7 +806,7 @@ impl Instruction {
             | Instruction::MeasureCalibrationDefinition(_)
             | Instruction::Measurement(_)
             | Instruction::Move(_)
-            | Instruction::Nop
+            | Instruction::Nop()
             | Instruction::Pragma(_)
             | Instruction::Reset(_)
             | Instruction::Store(_)
@@ -787,7 +850,7 @@ pub enum ParseInstructionError {
     ZeroOrMany(usize),
 }
 
-impl std::str::FromStr for Instruction {
+impl FromStr for Instruction {
     type Err = ParseInstructionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {

@@ -5,6 +5,9 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use thiserror;
 
+#[cfg(feature = "stubs")]
+use pyo3_stub_gen::derive::gen_stub_pyfunction;
+
 use crate::reserved::ReservedToken;
 
 #[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
@@ -22,7 +25,12 @@ const IDENTIFIER_REGEX_STRING: &str = r"^([A-Za-z_]|[A-Za-z_][A-Za-z0-9\-_]*[A-Z
 static IDENTIFIER_REGEX: Lazy<Regex> =
     Lazy::new(|| Regex::new(IDENTIFIER_REGEX_STRING).expect("regex should be valid"));
 
-/// Returns an error if the given identifier is not a valid Quil Identifier
+/// Returns an error if the given identifier is not a valid Quil Identifier.
+#[cfg_attr(
+    feature = "stubs",
+    gen_stub_pyfunction(module = "quil.validation.identifier")
+)]
+#[cfg_attr(feature = "python", pyo3::pyfunction)]
 pub fn validate_identifier(ident: &str) -> Result<(), IdentifierValidationError> {
     match IDENTIFIER_REGEX.is_match(ident) {
         true => Ok(()),
@@ -31,6 +39,11 @@ pub fn validate_identifier(ident: &str) -> Result<(), IdentifierValidationError>
 }
 
 /// Returns an error if the given identifier is reserved, or if it is not a valid Quil identifier
+#[cfg_attr(
+    feature = "stubs",
+    gen_stub_pyfunction(module = "quil.validation.identifier")
+)]
+#[cfg_attr(feature = "python", pyo3::pyfunction)]
 pub fn validate_user_identifier(ident: &str) -> Result<(), IdentifierValidationError> {
     ReservedToken::from_str(ident).map_or(validate_identifier(ident), |t| {
         Err(IdentifierValidationError::Reserved(t))

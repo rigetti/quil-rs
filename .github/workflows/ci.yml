@@ -1,0 +1,93 @@
+name: Run Checks
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Run Checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@cargo-hack
+      - uses: taiki-e/install-action@cargo-deny
+      
+      - name: Check Formatting
+        run: cargo fmt --all -- --check
+
+      - name: Run Clippy
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+
+      - name: Run cargo deny
+        run: cargo deny --workspace --all-features check
+
+      - name: Run cargo check
+        run: cargo hack check --workspace --feature-powerset
+
+  test:
+    name: Run Tests
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.11', '3.12', '3.13']
+        platform:
+          [
+            {
+              os: "macos-latest",
+              python-architecture: "arm64",
+              rust-target: "aarch64-apple-darwin",
+              venv: "./quil-rs/.venv",
+            },
+            {
+              os: "ubuntu-latest",
+              python-architecture: "x64",
+              rust-target: "x86_64-unknown-linux-gnu",
+              venv: "./quil-rs/.venv",
+            },
+            {
+              os: "windows-latest",
+              python-architecture: "x64",
+              rust-target: "x86_64-pc-windows-msvc",
+              venv: '.\quil-rs\.venv',
+            },
+          ]
+    runs-on: ${{ matrix.platform.os }}
+    steps:
+      - name: Set git config for long paths (Windows only)
+        if: startsWith(runner.os, 'Windows')
+        run: git config --global core.longpaths true
+
+      - uses: actions/checkout@v5
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@cargo-make
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Poetry
+        uses: abatilo/actions-poetry@v4
+
+      - name: Configure Python Cache for ${{ matrix.platform.os }}
+        uses: actions/cache@v4
+        with:
+          path: ${{ matrix.platform.venv }}
+          key: ${{ runner.os }}-venv-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Install Python dev dependencies
+        run: cargo make --cwd quil-rs install-python-deps
+
+      - name: Run cargo test
+        run: cargo test --all-features
+
+      - name: Run quil-py tests
+        run: cargo make --cwd quil-rs test-all
+

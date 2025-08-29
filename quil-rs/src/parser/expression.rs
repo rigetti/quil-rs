@@ -171,7 +171,7 @@ fn parse_expression_identifier(input: ParserInput) -> InternalParserResult<Expre
             "cos" => parse_function_call(remainder, ExpressionFunction::Cosine),
             "exp" => parse_function_call(remainder, ExpressionFunction::Exponent),
             "i" => Ok((remainder, Expression::Number(imag!(1f64)))),
-            "pi" => Ok((remainder, Expression::PiConstant)),
+            "pi" => Ok((remainder, Expression::PiConstant())),
             "sin" => parse_function_call(remainder, ExpressionFunction::Sine),
             "sqrt" => parse_function_call(remainder, ExpressionFunction::SquareRoot),
             name => Ok((
@@ -377,7 +377,7 @@ mod tests {
         "pi/2 + 2*theta[0]",
         Expression::Infix(InfixExpression {
             left: ArcIntern::new(Expression::Infix(InfixExpression {
-                left: ArcIntern::new(Expression::PiConstant),
+                left: ArcIntern::new(Expression::PiConstant()),
                 operator: InfixOperator::Slash,
                 right: ArcIntern::new(Expression::Number(real!(2f64))),
             })),
@@ -453,7 +453,7 @@ mod tests {
                 "(((cos(((pi))))))",
                 Expression::FunctionCall(FunctionCallExpression {
                     function: ExpressionFunction::Cosine,
-                    expression: ArcIntern::new(Expression::PiConstant),
+                    expression: ArcIntern::new(Expression::PiConstant()),
                 }),
             ),
         ];
@@ -463,7 +463,7 @@ mod tests {
 
     #[test]
     fn pi() {
-        let cases = vec![("pi", Expression::PiConstant)];
+        let cases = vec![("pi", Expression::PiConstant())];
 
         compare(cases);
     }

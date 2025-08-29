@@ -12,23 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::{HashMap, HashSet};
+use std::{
+    borrow::Borrow,
+    collections::{HashMap, HashSet},
+};
+
+#[cfg(not(feature = "python"))]
+use optipy::strip_pyo3;
+#[cfg(feature = "stubs")]
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::instruction::{FrameAttributes, FrameDefinition, FrameIdentifier, Instruction, Qubit};
 
 /// A collection of Quil frames (`DEFFRAME` instructions) with utility methods.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.program", eq))]
 pub struct FrameSet {
-    frames: HashMap<FrameIdentifier, FrameAttributes>,
+    pub(crate) frames: HashMap<FrameIdentifier, FrameAttributes>,
 }
 
 impl FrameSet {
-    pub fn new() -> Self {
-        FrameSet {
-            frames: HashMap::new(),
-        }
-    }
-
     /// Retrieve the attributes of a frame by its identifier.
     pub fn get(&self, identifier: &FrameIdentifier) -> Option<&FrameAttributes> {
         self.frames.get(identifier)
@@ -101,22 +105,15 @@ impl FrameSet {
         }
     }
 
-    /// Insert a new frame by ID, overwriting any existing one.
-    pub fn insert(&mut self, identifier: FrameIdentifier, attributes: FrameAttributes) {
-        self.frames.insert(identifier, attributes);
-    }
-
-    /// Merge another [FrameSet] with this one, overwriting any existing keys
-    pub fn merge(&mut self, other: FrameSet) {
-        self.frames.extend(other.frames);
-    }
-
-    /// Return a new [FrameSet] which describes only the given [FrameIdentifier]s.
-    pub fn intersection(&self, identifiers: &HashSet<&FrameIdentifier>) -> Self {
+    /// Return a new [`FrameSet`] which describes only the given [`FrameIdentifier`]s.
+    pub fn intersection<T>(&self, identifiers: &HashSet<T>) -> Self
+    where
+        T: Borrow<FrameIdentifier> + Eq + std::hash::Hash,
+    {
         let mut new_frameset = Self::new();
 
         for (identifier, definition) in &self.frames {
-            if identifiers.contains(&identifier) {
+            if identifiers.contains(identifier) {
                 new_frameset.insert(identifier.clone(), definition.clone())
             }
         }
@@ -127,16 +124,6 @@ impl FrameSet {
     /// Iterate through the contained frames.
     pub fn iter(&self) -> std::collections::hash_map::Iter<'_, FrameIdentifier, FrameAttributes> {
         self.frames.iter()
-    }
-
-    /// Return the number of frames described within.
-    pub fn len(&self) -> usize {
-        self.frames.len()
-    }
-
-    /// Return true if this describes no frames.
-    pub fn is_empty(&self) -> bool {
-        self.frames.is_empty()
     }
 
     /// Return the Quil instructions which describe the contained frames, consuming the [`FrameSet`].
@@ -150,6 +137,37 @@ impl FrameSet {
                 })
             })
             .collect()
+    }
+}
+
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[cfg_attr(feature = "python", pyo3::pymethods)]
+#[cfg_attr(not(feature = "python"), strip_pyo3)]
+impl FrameSet {
+    #[new]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Insert a new frame by ID, overwriting any existing one.
+    pub fn insert(&mut self, identifier: FrameIdentifier, attributes: FrameAttributes) {
+        self.frames.insert(identifier, attributes);
+    }
+
+    /// Merge another [FrameSet] with this one, overwriting any existing keys
+    pub fn merge(&mut self, other: FrameSet) {
+        self.frames.extend(other.frames);
+    }
+
+    /// Return the number of frames described within.
+    #[pyo3(name = "__len__")]
+    pub fn len(&self) -> usize {
+        self.frames.len()
+    }
+
+    /// Return true if this describes no frames.
+    pub fn is_empty(&self) -> bool {
+        self.frames.is_empty()
     }
 
     /// Return the Quil instructions which describe the contained frames.

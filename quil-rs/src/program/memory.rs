@@ -14,6 +14,11 @@
 
 use std::collections::HashSet;
 
+#[cfg(not(feature = "python"))]
+use optipy::strip_pyo3;
+#[cfg(feature = "stubs")]
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
+
 use crate::expression::{Expression, FunctionCallExpression, InfixExpression, PrefixExpression};
 use crate::instruction::{
     Arithmetic, ArithmeticOperand, BinaryLogic, BinaryOperand, CallResolutionError, Capture,
@@ -25,12 +30,21 @@ use crate::instruction::{
 };
 
 #[derive(Clone, Debug, Hash, PartialEq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.program", eq, frozen, hash, get_all, subclass)
+)]
 pub struct MemoryRegion {
     pub size: Vector,
     pub sharing: Option<Sharing>,
 }
 
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[cfg_attr(feature = "python", pyo3::pymethods)]
+#[cfg_attr(not(feature = "python"), strip_pyo3)]
 impl MemoryRegion {
+    #[new]
     pub fn new(size: Vector, sharing: Option<Sharing>) -> Self {
         Self { size, sharing }
     }
@@ -313,12 +327,12 @@ impl Instruction {
             Instruction::Declaration(_)
             | Instruction::Fence(_)
             | Instruction::FrameDefinition(_)
-            | Instruction::Halt
-            | Instruction::Wait
+            | Instruction::Halt()
+            | Instruction::Wait()
             | Instruction::Include(_)
             | Instruction::Jump(_)
             | Instruction::Label(_)
-            | Instruction::Nop
+            | Instruction::Nop()
             | Instruction::Pragma(_)
             | Instruction::Reset(_)
             | Instruction::SwapPhases(_)
@@ -351,7 +365,7 @@ impl Expression {
                 result
             }
             Expression::Number(_) => vec![],
-            Expression::PiConstant => vec![],
+            Expression::PiConstant() => vec![],
             Expression::Prefix(PrefixExpression { expression, .. }) => {
                 expression.get_memory_references()
             }

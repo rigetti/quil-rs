@@ -1,8 +1,14 @@
+#[cfg(not(feature = "python"))]
+use optipy::strip_pyo3;
+#[cfg(feature = "stubs")]
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
+
 use crate::{
     instruction::{
         write_expression_parameter_string, write_instruction_block, Expression, GateModifier,
         Instruction, Qubit,
     },
+    pickleable_new,
     quil::{Quil, INDENT},
     validation::identifier::{validate_identifier, IdentifierValidationError},
 };
@@ -19,21 +25,25 @@ pub trait CalibrationSignature {
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, get_all, set_all, subclass)
+)]
+#[cfg_attr(not(feature = "python"), strip_pyo3)]
 pub struct Calibration {
+    #[pyo3(name = "identifier")]
     pub identifier: CalibrationIdentifier,
     pub instructions: Vec<Instruction>,
 }
 
-impl Calibration {
-    /// Builds a new calibration definition.
-    pub fn new(
-        identifier: CalibrationIdentifier,
-        instructions: Vec<Instruction>,
-    ) -> Result<Self, IdentifierValidationError> {
-        Ok(Self {
-            identifier,
-            instructions,
-        })
+pickleable_new! {
+    impl Calibration {
+        /// Builds a new calibration definition.
+        pub fn new(
+            identifier: CalibrationIdentifier,
+            instructions: Vec<Instruction>,
+        );
     }
 }
 
@@ -67,6 +77,11 @@ impl Quil for Calibration {
 
 /// Unique identifier for a calibration definition within a program
 #[derive(Clone, Debug, Default, PartialEq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, get_all, set_all, subclass)
+)]
 pub struct CalibrationIdentifier {
     /// The modifiers applied to the gate
     pub modifiers: Vec<GateModifier>,
@@ -101,7 +116,9 @@ impl CalibrationIdentifier {
             qubits,
         })
     }
+}
 
+impl CalibrationIdentifier {
     pub fn matches(&self, gate: &Gate) -> bool {
         // Filter out non-matching calibrations: check rules 1-4
         if self.name != gate.name
@@ -188,17 +205,19 @@ impl Quil for CalibrationIdentifier {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, get_all, set_all, subclass)
+)]
 pub struct MeasureCalibrationDefinition {
     pub identifier: MeasureCalibrationIdentifier,
     pub instructions: Vec<Instruction>,
 }
 
-impl MeasureCalibrationDefinition {
-    pub fn new(identifier: MeasureCalibrationIdentifier, instructions: Vec<Instruction>) -> Self {
-        Self {
-            identifier,
-            instructions,
-        }
+pickleable_new! {
+    impl MeasureCalibrationDefinition {
+        pub fn new(identifier: MeasureCalibrationIdentifier, instructions: Vec<Instruction>);
     }
 }
 
@@ -231,6 +250,11 @@ impl Quil for MeasureCalibrationDefinition {
 
 /// A unique identifier for a measurement calibration definition within a program
 #[derive(Clone, Debug, Default, PartialEq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, get_all, set_all, subclass)
+)]
 pub struct MeasureCalibrationIdentifier {
     /// The qubit which is the target of measurement, if any
     pub qubit: Option<Qubit>,
@@ -239,7 +263,11 @@ pub struct MeasureCalibrationIdentifier {
     pub parameter: String,
 }
 
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[cfg_attr(feature = "python", pyo3::pymethods)]
+#[cfg_attr(not(feature = "python"), strip_pyo3)]
 impl MeasureCalibrationIdentifier {
+    #[new]
     pub fn new(qubit: Option<Qubit>, parameter: String) -> Self {
         Self { qubit, parameter }
     }

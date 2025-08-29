@@ -1,0 +1,52 @@
+[tasks.install-python-deps]
+description = "Install dependencies using poetry"
+command = "poetry"
+args = ["install", "--extras", "dev", "--no-root"]
+
+[tasks.generate-python-stubs]
+description = "Generate Python stub files."
+dependencies = ["install-python-deps"]
+command = "cargo"
+args = ["generate-stubs"]
+
+[tasks.install-python-package]
+description = "Build the python package and install to the active virtual environment."
+dependencies = ["install-python-deps"]
+command = "poetry"
+args = ["run", "maturin", "develop", "--features", "python"]
+
+[tasks.install-package-with-stubs]
+description = "Install the python package with up-to-date stubs (not needed for testing)."
+dependencies = ["generate-python-stubs", "install-python-package"]
+
+[tasks.pytest]
+description = "Run python tests."
+dependencies = ["install-python-package"]
+command = "poetry"
+args = ["run", "pytest"]
+
+[tasks.stubtest]
+description = "Check python stubfiles."
+dependencies = ["install-package-with-stubs"]
+command = "poetry"
+cwd = "python"
+args = ["run", "stubtest", "quil"]
+
+[tasks.test-all]
+description = "Run all Python-related tests."
+dependencies = ["pytest", "stubtest"]
+
+[tasks.default]
+alias = "test-all"
+
+[tasks.docs]
+description = "Generate Python documentation."
+dependencies = ["install-package-with-stubs"]
+command = "poetry"
+args = [
+    "run", 
+    "pdoc", 
+    "-o", "build/docs",
+    "quil", 
+    "--logo", "https://qcs.rigetti.com/static/img/rigetti-logo.svg",
+]

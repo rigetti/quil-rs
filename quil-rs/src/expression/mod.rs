@@ -27,6 +27,7 @@ use nom_locate::LocatedSpan;
 use num_complex::Complex64;
 use once_cell::sync::Lazy;
 use std::{
+    borrow::Borrow,
     collections::HashMap,
     f64::consts::PI,
     fmt,
@@ -40,6 +41,15 @@ use std::{
 
 #[cfg(test)]
 use proptest_derive::Arbitrary;
+
+#[cfg(not(feature = "python"))]
+use optipy::strip_pyo3;
+#[cfg(feature = "stubs")]
+use pyo3_stub_gen::derive::{
+    gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pyclass_enum, gen_stub_pymethods,
+};
+#[cfg(feature = "python")]
+pub(crate) mod quilpy;
 
 mod simplification;
 
@@ -76,12 +86,19 @@ pub enum EvaluationError {
 /// Note that when comparing Quil expressions, any embedded NaNs are treated as *equal* to other
 /// NaNs, not unequal, in contravention of the IEEE 754 spec.
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.expression", eq, frozen, hash)
+)]
+#[cfg_attr(not(feature = "python"), strip_pyo3)]
 pub enum Expression {
     Address(MemoryReference),
     FunctionCall(FunctionCallExpression),
     Infix(InfixExpression),
     Number(Complex64),
-    PiConstant,
+    #[pyo3(name = "Pi")]
+    PiConstant(),
     Prefix(PrefixExpression),
     Variable(String),
 }
@@ -94,7 +111,14 @@ pub enum Expression {
 /// Note that when comparing Quil expressions, any embedded NaNs are treated as *equal* to other
 /// NaNs, not unequal, in contravention of the IEEE 754 spec.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.expression", eq, frozen, hash, subclass)
+)]
+#[cfg_attr(not(feature = "python"), strip_pyo3)]
 pub struct FunctionCallExpression {
+    #[pyo3(get)]
     pub function: ExpressionFunction,
     pub expression: ArcIntern<Expression>,
 }
@@ -117,8 +141,15 @@ impl FunctionCallExpression {
 /// Note that when comparing Quil expressions, any embedded NaNs are treated as *equal* to other
 /// NaNs, not unequal, in contravention of the IEEE 754 spec.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.expression", eq, frozen, hash, subclass)
+)]
+#[cfg_attr(not(feature = "python"), strip_pyo3)]
 pub struct InfixExpression {
     pub left: ArcIntern<Expression>,
+    #[pyo3(get)]
     pub operator: InfixOperator,
     pub right: ArcIntern<Expression>,
 }
@@ -145,7 +176,14 @@ impl InfixExpression {
 /// Note that when comparing Quil expressions, any embedded NaNs are treated as *equal* to other
 /// NaNs, not unequal, in contravention of the IEEE 754 spec.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.expression", eq, frozen, hash, subclass)
+)]
+#[cfg_attr(not(feature = "python"), strip_pyo3)]
 pub struct PrefixExpression {
+    #[pyo3(get)]
     pub operator: PrefixOperator,
     pub expression: ArcIntern<Expression>,
 }
@@ -159,6 +197,7 @@ impl PrefixExpression {
     }
 }
 
+// TODO: PartialEq/Eq is inconsistent with Hash: https://github.com/rigetti/quil-rs/issues/458
 impl PartialEq for Expression {
     // Implemented by hand since we can't derive with f64s hidden inside.
     fn eq(&self, other: &Self) -> bool {
@@ -172,7 +211,7 @@ impl PartialEq for Expression {
             (Self::Prefix(left), Self::Prefix(right)) => left == right,
             (Self::FunctionCall(left), Self::FunctionCall(right)) => left == right,
             (Self::Variable(left), Self::Variable(right)) => left == right,
-            (Self::PiConstant, Self::PiConstant) => true,
+            (Self::PiConstant(), Self::PiConstant()) => true,
             _ => false,
         }
     }
@@ -217,8 +256,8 @@ impl Hash for Expression {
                     hash_f64(n.im, state)
                 }
             }
-            Self::PiConstant => {
-                "PiConstant".hash(state);
+            Self::PiConstant() => {
+                "PiConstant()".hash(state);
             }
             Self::Prefix(p) => {
                 "Prefix".hash(state);
@@ -271,7 +310,7 @@ macro_rules! impl_expr_op {
         impl $name_assign for Expression {
             fn $function_assign(&mut self, other: Self) {
                 // Move out of self to avoid potentially cloning a large value
-                let temp = ::std::mem::replace(self, Self::PiConstant);
+                let temp = ::std::mem::replace(self, Self::PiConstant());
                 *self = temp.$function(other);
             }
         }
@@ -279,7 +318,7 @@ macro_rules! impl_expr_op {
         impl $name_assign<ArcIntern<Expression>> for Expression {
             fn $function_assign(&mut self, other: ArcIntern<Expression>) {
                 // Move out of self to avoid potentially cloning a large value
-                let temp = ::std::mem::replace(self, Self::PiConstant);
+                let temp = ::std::mem::replace(self, Self::PiConstant());
                 *self = temp.$function(other);
             }
         }
@@ -357,7 +396,7 @@ impl Expression {
     pub fn simplify(&mut self) {
         match self {
             Expression::Address(_) | Expression::Number(_) | Expression::Variable(_) => {}
-            Expression::PiConstant => {
+            Expression::PiConstant() => {
                 *self = Expression::Number(Complex64::from(PI));
             }
             _ => *self = simplification::run(self),
@@ -405,11 +444,15 @@ impl Expression {
     ///
     /// assert_eq!(evaluated, Complex64::from(3.0))
     /// ```
-    pub fn evaluate(
+    pub fn evaluate<K1, K2>(
         &self,
-        variables: &HashMap<String, Complex64>,
-        memory_references: &HashMap<&str, Vec<f64>>,
-    ) -> Result<Complex64, EvaluationError> {
+        variables: &HashMap<K1, Complex64>,
+        memory_references: &HashMap<K2, Vec<f64>>,
+    ) -> Result<Complex64, EvaluationError>
+    where
+        K1: Borrow<str> + Hash + Eq,
+        K2: Borrow<str> + Hash + Eq,
+    {
         use Expression::*;
 
         match self {
@@ -441,8 +484,8 @@ impl Expression {
                     Ok(value)
                 }
             }
-            Variable(identifier) => match variables.get(identifier.as_str()) {
-                Some(value) => Ok(*value),
+            Variable(identifier) => match variables.get(identifier) {
+                Some(&value) => Ok(value),
                 None => Err(EvaluationError::Incomplete),
             },
             Address(memory_reference) => memory_references
@@ -452,7 +495,7 @@ impl Expression {
                     Some(real!(*value))
                 })
                 .ok_or(EvaluationError::Incomplete),
-            PiConstant => Ok(real!(PI)),
+            PiConstant() => Ok(real!(PI)),
             Number(number) => Ok(*number),
         }
     }
@@ -476,7 +519,11 @@ impl Expression {
     ///
     /// assert_eq!(evaluated, Expression::from_str("1.0 + %y").unwrap())
     /// ```
-    pub fn substitute_variables(&self, variable_values: &HashMap<String, Expression>) -> Self {
+    #[must_use]
+    pub fn substitute_variables<K>(&self, variable_values: &HashMap<K, Expression>) -> Self
+    where
+        K: Borrow<str> + Hash + Eq,
+    {
         use Expression::*;
 
         match self {
@@ -507,19 +554,23 @@ impl Expression {
                 operator: *operator,
                 expression: expression.substitute_variables(variable_values).into(),
             }),
-            Variable(identifier) => match variable_values.get(identifier.as_str()) {
+            Variable(identifier) => match variable_values.get(identifier) {
                 Some(value) => value.clone(),
                 None => Variable(identifier.clone()),
             },
             other => other.clone(),
         }
     }
+}
 
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[cfg_attr(feature = "python", pyo3::pymethods)]
+impl Expression {
     /// If this is a number with imaginary part "equal to" zero (of _small_ absolute value), return
     /// that number. Otherwise, error with an evaluation error of a descriptive type.
     pub fn to_real(&self) -> Result<f64, EvaluationError> {
         match self {
-            Expression::PiConstant => Ok(PI),
+            Expression::PiConstant() => Ok(PI),
             Expression::Number(x) if is_small(x.im) => Ok(x.re),
             Expression::Number(_) => Err(EvaluationError::NumberNotReal),
             _ => Err(EvaluationError::NotANumber),
@@ -612,7 +663,7 @@ impl Quil for Expression {
                 format_inner_expression(f, fall_back_to_debug, right)
             }
             Number(value) => write!(f, "{}", format_complex(value)).map_err(Into::into),
-            PiConstant => write!(f, "pi").map_err(Into::into),
+            PiConstant() => write!(f, "pi").map_err(Into::into),
             Prefix(PrefixExpression {
                 operator,
                 expression,
@@ -670,7 +721,7 @@ mod test {
             })),
             operator: InfixOperator::Star,
             right: ArcIntern::new(Expression::Infix(InfixExpression {
-                left: ArcIntern::new(Expression::PiConstant),
+                left: ArcIntern::new(Expression::PiConstant()),
                 operator: InfixOperator::Slash,
                 right: ArcIntern::new(Expression::Number(real!(2f64))),
             })),
@@ -682,6 +733,11 @@ mod test {
 
 /// A function defined within Quil syntax.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass_enum)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.expression", eq, frozen, hash, str)
+)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub enum ExpressionFunction {
     Cis,
@@ -709,6 +765,11 @@ impl fmt::Display for ExpressionFunction {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass_enum)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.expression", eq, frozen, hash, str)
+)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub enum PrefixOperator {
     Plus,
@@ -731,6 +792,11 @@ impl fmt::Display for PrefixOperator {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass_enum)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.expression", eq, frozen, hash, str)
+)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub enum InfixOperator {
     Caret,
@@ -764,7 +830,7 @@ pub mod interned {
     use super::*;
 
     macro_rules! atoms {
-        ($($func:ident: $ctor:ident$(($typ:ty))?),+ $(,)?) => {
+        ($($func:ident: $ctor:ident($($typ:ty)?)),+ $(,)?) => {
             $(
                 #[doc = concat!(
                     "A wrapper around [`Expression::",
@@ -775,7 +841,7 @@ pub mod interned {
                 pub fn $func($(value: $typ)?) -> ArcIntern<Expression> {
                     // Using `std::convert::identity` lets us refer to `$typ` and thus make the
                     // constructor argument optional
-                    ArcIntern::new(Expression::$ctor$((std::convert::identity::<$typ>(value)))?)
+                    ArcIntern::new(Expression::$ctor($(std::convert::identity::<$typ>(value))?))
                 }
             )+
         };
@@ -859,7 +925,7 @@ pub mod interned {
     atoms! {
         function_call_expr: FunctionCall(FunctionCallExpression),
         infix_expr: Infix(InfixExpression),
-        pi: PiConstant,
+        pi: PiConstant(),
         number: Number(Complex64),
         prefix_expr: Prefix(PrefixExpression),
         variable: Variable(String),
@@ -1031,7 +1097,7 @@ mod tests {
                 parenthesized(right)
             ),
             Number(value) => format!("({})", format_complex(value)),
-            PiConstant => "pi".to_string(),
+            PiConstant() => "pi".to_string(),
             Prefix(PrefixExpression {
                 operator,
                 expression,
@@ -1073,7 +1139,7 @@ mod tests {
         let leaf = prop_oneof![
             arb_memory_reference().prop_map(Address),
             arb_complex64().prop_map(Number),
-            Just(PiConstant),
+            Just(PiConstant()),
             arb_name().prop_map(Variable),
         ];
         leaf.prop_recursive(
@@ -1164,7 +1230,7 @@ mod tests {
         }
 
         #[test]
-        fn no_other_exps_are_real(expr in arb_expr().prop_filter("Not numbers", |e| !matches!(e, Expression::Number(_) | Expression::PiConstant))) {
+        fn no_other_exps_are_real(expr in arb_expr().prop_filter("Not numbers", |e| !matches!(e, Expression::Number(_) | Expression::PiConstant()))) {
             prop_assert_eq!(expr.to_real(), Err(EvaluationError::NotANumber))
         }
 
@@ -1321,7 +1387,7 @@ mod tests {
     #[test]
     fn specific_to_real_tests() {
         for (input, expected) in [
-            (Expression::PiConstant, Ok(PI)),
+            (Expression::PiConstant(), Ok(PI)),
             (Expression::Number(Complex64 { re: 1.0, im: 0.0 }), Ok(1.0)),
             (
                 Expression::Number(Complex64 { re: 1.0, im: 1.0 }),
