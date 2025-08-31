@@ -160,10 +160,6 @@ pub struct CalibrationExpansion {
 }
 
 impl CalibrationExpansion {
-    pub fn calibration_used(&self) -> &CalibrationSource {
-        &self.calibration_used
-    }
-
     /// Remove the given target index from all entries, recursively.
     ///
     /// This is to be used when the given index is removed from the target program
@@ -193,6 +189,10 @@ impl CalibrationExpansion {
                 },
             );
         }
+    }
+
+    pub fn calibration_used(&self) -> &CalibrationSource {
+        &self.calibration_used
     }
 
     pub fn range(&self) -> &Range<InstructionIndex> {
