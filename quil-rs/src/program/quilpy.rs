@@ -190,8 +190,12 @@ impl Program {
         ControlFlowGraphOwned::from(ControlFlowGraph::from(self))
     }
 
-    // TODO: (9b9690d4 Marquess Valdez 2023-06-01 14:10:25 -0700) Should this filtering move to Program? Should we assume memory_regions will always make up all
+    // TODO (#470): Should this filtering move to Program?
+    // Should we assume memory_regions will always make up all
     // declarations and simplify this?
+    // Note: the original comment predates the `quil-py`/`quil-rs` merge
+    // and can be found at 9db8cb4cfe75e67a4fa572e96e86ae8e59d0bdfc
+    // in the file /quil-py/src/program/mod.rs on line 180.
     #[getter]
     fn declarations(&self) -> HashMap<String, Declaration> {
         self.to_instructions()
@@ -331,11 +335,7 @@ impl Program {
     }
 
     fn __add__(&self, rhs: Self) -> Self {
-        // TODO: Since we already own `rhs` (and thus must have cloned it),
-        // it might be cheaper if we can implement this prepending `self`'s content instead.
-        // If users are regularly adding a small program to a larger one,
-        // (say, if they're appending a common program to an initial set of calibrations),
-        // the performance impact might be non-trivial.
+        // TODO (#471): Can we reuse `rhs` to avoid an extra `clone`?
         self.clone() + rhs
     }
 
@@ -861,8 +861,8 @@ impl BasicBlockOwned {
         &self,
         gate_minimum_qubit_count: usize,
     ) -> std::result::Result<usize, QubitGraphError> {
-        // TODO: this copies everything twice: once to make the block, and again for the graph.
-        // Then it throws them both away. There's got to be a better way.
+        // TODO (#472): This copies everything twice: once to make the block,
+        // and again for the graph. Then it throws them both away. There's got to be a better way.
         let block = BasicBlock::from(self);
         QubitGraph::try_from(&block).map(|graph| graph.gate_depth(gate_minimum_qubit_count))
     }

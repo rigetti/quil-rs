@@ -201,7 +201,7 @@ impl PrefixExpression {
     }
 }
 
-// TODO: PartialEq/Eq is inconsistent with Hash: https://github.com/rigetti/quil-rs/issues/458
+// TODO (#458): PartialEq/Eq is inconsistent with Hash.
 impl PartialEq for Expression {
     // Implemented by hand since we can't derive with f64s hidden inside.
     fn eq(&self, other: &Self) -> bool {

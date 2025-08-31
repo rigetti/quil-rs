@@ -179,7 +179,7 @@ impl Gate {
     /// Returns an error if any of the parameters of this gate are non-constant, if any of the
     /// qubits are variable, if the name of this gate is unknown, or if there are an unexpected
     /// number of parameters.
-    // TODO(#464): This method can lead to overflow.
+    // TODO (#464): This method can lead to overflow.
     pub fn to_unitary(&mut self, n_qubits: u64) -> Result<Matrix, GateError> {
         let qubits = self
             .qubits
@@ -429,7 +429,7 @@ fn two_swap_helper(j: u64, k: u64, n_qubits: u64, qubit_map: &mut [u64]) -> Matr
 fn qubit_adjacent_lifted_gate(i: u64, matrix: &Matrix, n_qubits: u64) -> Matrix {
     let bottom_matrix = Array2::eye(2usize.pow(i as u32));
     let gate_size = (matrix.shape()[0] as f64).log2().floor() as u64;
-    // TODO(#464): This can overflow and lead to silent errors in release builds.
+    // TODO (#464): This can overflow and lead to silent errors in release builds.
     let top_qubits = n_qubits - i - gate_size;
     let top_matrix = Array2::eye(2usize.pow(top_qubits as u32));
     kron(&top_matrix, &kron(matrix, &bottom_matrix))

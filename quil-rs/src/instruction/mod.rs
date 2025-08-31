@@ -155,7 +155,7 @@ pub enum Instruction {
     // Developer note: In Rust, this could be just `Halt`,
     // but to be compatible with PyO3's "complex enums",
     // it has to be an empty tuple variant.
-    // The same restriction applies `Nop` and `Wait`, 
+    // The same restriction applies `Nop` and `Wait`,
     // as well as those in the `Expression` enumeration.
     Halt(),
     Include(Include),
@@ -1015,7 +1015,7 @@ impl InstructionHandler {
     }
 
     /// Like [`Program::into_simplified`], but using custom instruction handling.
-    // TODO: Address https://github.com/rigetti/quil-rs/issues/453
+    // TODO (#453): Address large error types.
     #[allow(clippy::result_large_err)]
     pub fn simplify_program(&mut self, program: &Program) -> Result<Program, ProgramError> {
         program.simplify_with_handler(self)

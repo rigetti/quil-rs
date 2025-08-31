@@ -12,7 +12,7 @@
 //See the License for the specific language governing permissions and
 // limitations under the License.
 
-// TODO: Address https://github.com/rigetti/quil-rs/issues/453
+// TODO (#453): Address large error types.
 #![allow(clippy::result_large_err)]
 
 use std::collections::{HashMap, HashSet};
@@ -66,7 +66,7 @@ use optipy::strip_pyo3;
 #[cfg(feature = "python")]
 pub(crate) mod quilpy;
 
-// TODO: Address https://github.com/rigetti/quil-rs/issues/453
+// TODO (#453): Address large error types.
 #[allow(clippy::large_enum_variant)]
 #[derive(Clone, Debug, PartialEq, thiserror::Error)]
 pub enum ProgramError {

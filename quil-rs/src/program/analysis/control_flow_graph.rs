@@ -300,7 +300,7 @@ impl<'p> BasicBlock<'p> {
     }
 }
 
-// TODO: Address https://github.com/rigetti/quil-rs/issues/453
+// TODO (#453): Address large error types.
 #[allow(clippy::large_enum_variant)]
 #[allow(clippy::enum_variant_names)]
 #[derive(Debug, thiserror::Error)]
@@ -315,7 +315,7 @@ pub enum BasicBlockScheduleError {
     ProgramError(#[from] ProgramError),
 }
 
-// TODO: The conversions to/from these Owned types and their non-Owned counterparts
+// TODO (#472): The conversions to/from these Owned types and their non-Owned counterparts
 // involves a lot of Cloning, and they're the types exposed by the Python bindings.
 // Can we combine their relevant methods or otherwise avoid the costly conversions?
 #[derive(Clone, Debug)]

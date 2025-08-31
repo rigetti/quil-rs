@@ -63,8 +63,6 @@ mod stubs {
     impl_native_exception!(ProgramError);
 }
 
-// TODO: Create a unified error hierarchy: https://github.com/rigetti/quil-rs/issues/461
-
 create_exception!(
     quil,
     QuilError,
