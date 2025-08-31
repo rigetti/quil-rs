@@ -97,6 +97,10 @@ pub enum Expression {
     FunctionCall(FunctionCallExpression),
     Infix(InfixExpression),
     Number(Complex64),
+    // Developer note: In Rust, this could be just `PiConstant`,
+    // but to be compatible with PyO3's "complex enums",
+    // it has to be an empty tuple variant.
+    // The same restriction applies to empty tuples in `Instruction`.
     #[pyo3(name = "Pi")]
     PiConstant(),
     Prefix(PrefixExpression),
