@@ -72,6 +72,10 @@ impl StripPyO3 {
                         || id == "pymethods"
                         || id == "pyfunction"
                         || id == "pymodule"
+                        || id == "staticmethod"
+                        || id == "classmethod"
+                        || id == "classattr"
+                        || id == "args"
                         || id == "gen_stub")
                 }
             });
