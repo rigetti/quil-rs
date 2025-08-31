@@ -88,24 +88,22 @@ pub struct ExternParameter {
     pub(crate) data_type: ExternParameterType,
 }
 
-#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[cfg_attr(feature = "python", pyo3::pymethods)]
-#[cfg_attr(not(feature = "python"), strip_pyo3)]
-impl ExternParameter {
-    /// Create a new extern parameter. This will fail if the parameter name
-    /// is not a valid user identifier.
-    #[new]
-    pub fn try_new(
-        name: String,
-        mutable: bool,
-        data_type: ExternParameterType,
-    ) -> Result<Self, ExternError> {
-        validate_user_identifier(name.as_str()).map_err(ExternError::from_boxed)?;
-        Ok(Self {
-            name,
-            mutable,
-            data_type,
-        })
+pickleable_new! {
+    impl ExternParameter {
+        /// Create a new extern parameter. This will fail if the parameter name
+        /// is not a valid user identifier.
+        pub fn try_new(
+            name: String,
+            mutable: bool,
+            data_type: ExternParameterType,
+        ) -> Result<ExternParameter, ExternError> {
+            validate_user_identifier(name.as_str()).map_err(ExternError::from_boxed)?;
+            Ok(ExternParameter {
+                name,
+                mutable,
+                data_type,
+            })
+        }
     }
 }
 
@@ -156,17 +154,10 @@ pub struct ExternSignature {
     pub(crate) parameters: Vec<ExternParameter>,
 }
 
-#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[cfg_attr(feature = "python", pyo3::pymethods)]
-#[cfg_attr(not(feature = "python"), strip_pyo3)]
-impl ExternSignature {
-    /// Create a new extern signature.
-    #[new]
-    pub fn new(return_type: Option<ScalarType>, parameters: Vec<ExternParameter>) -> Self {
-        Self {
-            return_type,
-            parameters,
-        }
+pickleable_new! {
+    impl ExternSignature {
+        /// Create a new extern signature.
+        pub fn new(return_type: Option<ScalarType>, parameters: Vec<ExternParameter>);
     }
 }
 

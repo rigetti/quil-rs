@@ -21,7 +21,7 @@ use std::{
 use optipy::strip_pyo3;
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::{
-    gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pyclass_enum, gen_stub_pymethods,
+    gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pyclass_enum,
 };
 
 /// A struct encapsulating all the properties of a Quil Quantum Gate.
@@ -839,16 +839,9 @@ pub struct PauliTerm {
     pub expression: Expression,
 }
 
-#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[cfg_attr(feature = "python", pyo3::pymethods)]
-#[cfg_attr(not(feature = "python"), strip_pyo3)]
-impl PauliTerm {
-    #[new]
-    pub fn new(arguments: Vec<(PauliGate, String)>, expression: Expression) -> Self {
-        Self {
-            arguments,
-            expression,
-        }
+pickleable_new! {
+    impl PauliTerm {
+        pub fn new(arguments: Vec<(PauliGate, String)>, expression: Expression);
     }
 }
 
@@ -873,28 +866,26 @@ pub struct PauliSum {
     pub terms: Vec<PauliTerm>,
 }
 
-#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[cfg_attr(feature = "python", pyo3::pymethods)]
-#[cfg_attr(not(feature = "python"), strip_pyo3)]
-impl PauliSum {
-    #[new]
-    pub fn new(arguments: Vec<String>, terms: Vec<PauliTerm>) -> Result<Self, GateError> {
-        let diff = terms
-            .iter()
-            .flat_map(|t| t.arguments())
-            .collect::<HashSet<_>>()
-            .difference(&arguments.iter().collect::<HashSet<_>>())
-            .copied()
-            .collect::<Vec<_>>();
+pickleable_new! {
+    impl PauliSum {
+        pub fn new(arguments: Vec<String>, terms: Vec<PauliTerm>) -> Result<PauliSum, GateError> {
+            let diff = terms
+                .iter()
+                .flat_map(|t| t.arguments())
+                .collect::<HashSet<_>>()
+                .difference(&arguments.iter().collect::<HashSet<_>>())
+                .copied()
+                .collect::<Vec<_>>();
 
-        if !diff.is_empty() {
-            return Err(GateError::PauliSumArgumentMismatch {
-                mismatches: diff.into_iter().cloned().collect(),
-                expected_arguments: arguments,
-            });
+            if !diff.is_empty() {
+                return Err(GateError::PauliSumArgumentMismatch {
+                    mismatches: diff.into_iter().cloned().collect(),
+                    expected_arguments: arguments,
+                });
+            }
+
+            Ok(Self { arguments, terms })
         }
-
-        Ok(Self { arguments, terms })
     }
 }
 

@@ -1,7 +1,7 @@
 #[cfg(not(feature = "python"))]
 use optipy::strip_pyo3;
 #[cfg(feature = "stubs")]
-use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
+use pyo3_stub_gen::derive::gen_stub_pyclass;
 
 use crate::{
     instruction::{
@@ -263,13 +263,9 @@ pub struct MeasureCalibrationIdentifier {
     pub parameter: String,
 }
 
-#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[cfg_attr(feature = "python", pyo3::pymethods)]
-#[cfg_attr(not(feature = "python"), strip_pyo3)]
-impl MeasureCalibrationIdentifier {
-    #[new]
-    pub fn new(qubit: Option<Qubit>, parameter: String) -> Self {
-        Self { qubit, parameter }
+pickleable_new! {
+    impl MeasureCalibrationIdentifier {
+        pub fn new(qubit: Option<Qubit>, parameter: String);
     }
 }
 

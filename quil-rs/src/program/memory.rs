@@ -17,7 +17,7 @@ use std::collections::HashSet;
 #[cfg(not(feature = "python"))]
 use optipy::strip_pyo3;
 #[cfg(feature = "stubs")]
-use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
+use pyo3_stub_gen::derive::gen_stub_pyclass;
 
 use crate::expression::{Expression, FunctionCallExpression, InfixExpression, PrefixExpression};
 use crate::instruction::{
@@ -28,6 +28,7 @@ use crate::instruction::{
     SetFrequency, SetPhase, SetScale, Sharing, ShiftFrequency, ShiftPhase, Store, UnaryLogic,
     Vector, WaveformInvocation,
 };
+use crate::pickleable_new;
 
 #[derive(Clone, Debug, Hash, PartialEq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
@@ -40,13 +41,9 @@ pub struct MemoryRegion {
     pub sharing: Option<Sharing>,
 }
 
-#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[cfg_attr(feature = "python", pyo3::pymethods)]
-#[cfg_attr(not(feature = "python"), strip_pyo3)]
-impl MemoryRegion {
-    #[new]
-    pub fn new(size: Vector, sharing: Option<Sharing>) -> Self {
-        Self { size, sharing }
+pickleable_new! {
+    impl MemoryRegion {
+        pub fn new(size: Vector, sharing: Option<Sharing>);
     }
 }
 
