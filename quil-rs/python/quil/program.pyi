@@ -44,6 +44,9 @@ class BasicBlock:
         """
     def __repr__(self) -> builtins.str: ...
 
+class BasicBlockScheduleError(builtins.ProgramError):
+    ...
+
 class CalibrationExpansion:
     r"""
     Details about the expansion of a calibration.
@@ -64,6 +67,7 @@ class CalibrationExpansion:
         r"""
         The source map describing the nested expansions made.
         """
+    def __eq__(self, other:builtins.object) -> builtins.bool: ...
     def __repr__(self) -> builtins.str: ...
 
 class CalibrationExpansionSourceMap:
@@ -157,6 +161,7 @@ class CalibrationSet:
         r"""
         Return a list of all [`MeasureCalibrationDefinition`]s in the set.
         """
+    def __eq__(self, other:builtins.object) -> builtins.bool: ...
     def __len__(self) -> builtins.int:
         r"""
         Return the count of contained calibrations.
@@ -256,6 +261,12 @@ class CalibrationSource:
         def __getitem__(self, key:builtins.int) -> typing.Any: ...
     
 
+class ComputedScheduleError(builtins.ProgramError):
+    r"""
+    Error raised if the computed schedule is invalid.
+    """
+    ...
+
 class ControlFlowGraph:
     def __new__(cls, instance:ControlFlowGraph) -> ControlFlowGraph: ...
     def has_dynamic_control_flow(self) -> builtins.bool:
@@ -277,20 +288,7 @@ class FrameSet:
     r"""
     A collection of Quil frames (`DEFFRAME` instructions) with utility methods.
     """
-    def get(self, identifier:FrameIdentifier) -> typing.Optional[builtins.dict[builtins.str, AttributeValue]]:
-        r"""
-        Retrieve the attributes of a frame by its identifier.
-        """
-    def get_keys(self) -> builtins.list[FrameIdentifier]:
-        r"""
-        Return a list of all ``FrameIdentifier``s described by this ``FrameSet``.
-        """
-    def get_all_frames(self) -> builtins.dict[FrameIdentifier, builtins.dict[builtins.str, AttributeValue]]: ...
-    def intersection(self, identifiers:builtins.set[FrameIdentifier]) -> FrameSet:
-        r"""
-        Return a new [`FrameSet`] which describes only the given [`FrameIdentifier`]s.
-        """
-    def __repr__(self) -> builtins.str: ...
+    def __eq__(self, other:builtins.object) -> builtins.bool: ...
     def __new__(cls) -> FrameSet: ...
     def insert(self, identifier:FrameIdentifier, attributes:typing.Mapping[builtins.str, AttributeValue]) -> None:
         r"""
@@ -312,6 +310,20 @@ class FrameSet:
         r"""
         Return the Quil instructions which describe the contained frames.
         """
+    def get(self, identifier:FrameIdentifier) -> typing.Optional[builtins.dict[builtins.str, AttributeValue]]:
+        r"""
+        Retrieve the attributes of a frame by its identifier.
+        """
+    def get_keys(self) -> builtins.list[FrameIdentifier]:
+        r"""
+        Return a list of all ``FrameIdentifier``s described by this ``FrameSet``.
+        """
+    def get_all_frames(self) -> builtins.dict[FrameIdentifier, builtins.dict[builtins.str, AttributeValue]]: ...
+    def intersection(self, identifiers:builtins.set[FrameIdentifier]) -> FrameSet:
+        r"""
+        Return a new [`FrameSet`] which describes only the given [`FrameIdentifier`]s.
+        """
+    def __repr__(self) -> builtins.str: ...
 
 class MaybeCalibrationExpansion:
     r"""
@@ -347,8 +359,11 @@ class MemoryRegion:
     def size(self) -> Vector: ...
     @property
     def sharing(self) -> typing.Optional[Sharing]: ...
-    def __repr__(self) -> builtins.str: ...
+    def __eq__(self, other:builtins.object) -> builtins.bool: ...
+    def __hash__(self) -> builtins.int: ...
     def __new__(cls, size:Vector, sharing:typing.Optional[Sharing]) -> MemoryRegion: ...
+    def __getnewargs__(self) -> tuple[Vector, typing.Optional[Sharing]]: ...
+    def __repr__(self) -> builtins.str: ...
 
 class Program:
     r"""
@@ -390,75 +405,7 @@ class Program:
     def gate_definitions(self, value: builtins.dict[builtins.str, GateDefinition]) -> None: ...
     @instructions.setter
     def instructions(self, value: builtins.list[Instruction]) -> None: ...
-    @staticmethod
-    def parse(input:builtins.str) -> Program:
-        r"""
-        Parse a ``Program`` from a string.
-        
-        Raises a ``ProgramError`` if the string isn't a valid Quil expression.
-        """
-    def copy(self) -> Program:
-        r"""
-        Return a deep copy of the `Program`.
-        """
-    def control_flow_graph(self) -> ControlFlowGraph:
-        r"""
-        Return the [control flow graph][] of the program.
-        
-        [control flow graph]: https://en.wikipedia.org/wiki/Control-flow_graph
-        """
-    def expand_calibrations_with_source_map(self) -> ProgramCalibrationExpansion:
-        r"""
-        Expand any instructions in the program which have a matching calibration,
-        leaving the others unchanged.
-        Return the expanded copy of the program
-        and a source mapping describing the expansions made.
-        """
-    def add_instructions(self, instructions:typing.Sequence[Instruction]) -> None:
-        r"""
-        Add a list of instructions to the end of the program.
-        """
-    def filter_instructions(self, predicate:collections.abc.Callable[[Instruction], bool]) -> Program:
-        r"""
-        Return a new ``Program`` containing only the instructions
-        for which `predicate` returns true.
-        """
-    def resolve_placeholders_with_custom_resolvers(self, *, target_resolver:typing.Optional[collections.abc.Callable[[TargetPlaceholder], str | None]]=None, qubit_resolver:typing.Optional[collections.abc.Callable[[QubitPlaceholder], int | None]]=None) -> None:
-        r"""
-        Resolve ``TargetPlaceholder``s and ``QubitPlaceholder``s within the program.
-        
-        The resolved values will remain unique to that placeholder
-        within the scope of the program.
-        If you provide ``target_resolver`` and/or ``qubit_resolver``,
-        those will be used to resolve those values respectively.
-        If your resolver returns `None` for a particular placeholder,
-        it will not be replaced but will be left as a placeholder.
-        If you do not provide a resolver for a placeholder,
-        a default resolver will be used which will generate
-        a unique value for that placeholder within the scope of the program
-        using an auto-incrementing value (for qubit) or suffix (for target)
-        while ensuring that unique value is not already in use within the program.
-        """
-    def to_unitary(self, n_qubits:builtins.int) -> numpy.typing.NDArray[numpy.complex128]:
-        r"""
-        Return the unitary of a program.
-        
-        # Errors
-        
-        Returns an error if the program contains instructions other than `Gate`s.
-        """
-    def __add__(self, rhs:Program) -> Program: ...
-    def __iadd__(self, rhs:Program) -> None: ...
-    def __getstate__(self) -> bytes:
-        r"""
-        This will raise an error if the program contains any unresolved
-        placeholders. This is because they can't be converted to valid quil,
-        nor can they be serialized and deserialized in a consistent way.
-        """
-    def __setstate__(self, state:bytes) -> None: ...
-    def to_quil(self) -> builtins.str: ...
-    def to_quil_or_debug(self) -> builtins.str: ...
-    def __repr__(self) -> builtins.str: ...
+    def __eq__(self, other:builtins.object) -> builtins.bool: ...
     def __new__(cls) -> Program: ...
     def clone_without_body_instructions(self) -> Program:
         r"""
@@ -540,6 +487,75 @@ class Program:
         r"""
         Return a copy of all of the instructions which constitute this [`Program`].
         """
+    @staticmethod
+    def parse(input:builtins.str) -> Program:
+        r"""
+        Parse a ``Program`` from a string.
+        
+        Raises a ``ProgramError`` if the string isn't a valid Quil expression.
+        """
+    def copy(self) -> Program:
+        r"""
+        Return a deep copy of the `Program`.
+        """
+    def control_flow_graph(self) -> ControlFlowGraph:
+        r"""
+        Return the [control flow graph][] of the program.
+        
+        [control flow graph]: https://en.wikipedia.org/wiki/Control-flow_graph
+        """
+    def expand_calibrations_with_source_map(self) -> ProgramCalibrationExpansion:
+        r"""
+        Expand any instructions in the program which have a matching calibration,
+        leaving the others unchanged.
+        Return the expanded copy of the program
+        and a source mapping describing the expansions made.
+        """
+    def add_instructions(self, instructions:typing.Sequence[Instruction]) -> None:
+        r"""
+        Add a list of instructions to the end of the program.
+        """
+    def filter_instructions(self, predicate:collections.abc.Callable[[Instruction], bool]) -> Program:
+        r"""
+        Return a new ``Program`` containing only the instructions
+        for which `predicate` returns true.
+        """
+    def resolve_placeholders_with_custom_resolvers(self, *, target_resolver:typing.Optional[collections.abc.Callable[[TargetPlaceholder], str | None]]=None, qubit_resolver:typing.Optional[collections.abc.Callable[[QubitPlaceholder], int | None]]=None) -> None:
+        r"""
+        Resolve ``TargetPlaceholder``s and ``QubitPlaceholder``s within the program.
+        
+        The resolved values will remain unique to that placeholder
+        within the scope of the program.
+        If you provide ``target_resolver`` and/or ``qubit_resolver``,
+        those will be used to resolve those values respectively.
+        If your resolver returns `None` for a particular placeholder,
+        it will not be replaced but will be left as a placeholder.
+        If you do not provide a resolver for a placeholder,
+        a default resolver will be used which will generate
+        a unique value for that placeholder within the scope of the program
+        using an auto-incrementing value (for qubit) or suffix (for target)
+        while ensuring that unique value is not already in use within the program.
+        """
+    def to_unitary(self, n_qubits:builtins.int) -> numpy.typing.NDArray[numpy.complex128]:
+        r"""
+        Return the unitary of a program.
+        
+        # Errors
+        
+        Returns an error if the program contains instructions other than `Gate`s.
+        """
+    def __add__(self, rhs:Program) -> Program: ...
+    def __iadd__(self, rhs:Program) -> None: ...
+    def __getstate__(self) -> bytes:
+        r"""
+        This will raise an error if the program contains any unresolved
+        placeholders. This is because they can't be converted to valid quil,
+        nor can they be serialized and deserialized in a consistent way.
+        """
+    def __setstate__(self, state:bytes) -> None: ...
+    def to_quil(self) -> builtins.str: ...
+    def to_quil_or_debug(self) -> builtins.str: ...
+    def __repr__(self) -> builtins.str: ...
 
 class ProgramCalibrationExpansion:
     @property
@@ -552,6 +568,7 @@ class ProgramCalibrationExpansion:
         r"""
         The source mapping describing the expansions made.
         """
+    def __eq__(self, other:builtins.object) -> builtins.bool: ...
     def __repr__(self) -> builtins.str: ...
 
 class ProgramCalibrationExpansionSourceMap:
@@ -590,6 +607,15 @@ class ProgramCalibrationExpansionSourceMapEntry:
         """
     def __repr__(self) -> builtins.str: ...
 
+class ProgramError(builtins.QuilError):
+    r"""
+    Errors encountered related to a Program.
+    """
+    ...
+
+class QubitGraphError(builtins.ProgramError):
+    ...
+
 class ScheduleSeconds:
     r"""
     A Schedule is a ``DependencyGraph`` flattened into a linear sequence of instructions,
@@ -607,6 +633,7 @@ class ScheduleSeconds:
         
         This is the maximum end time among all scheduled items.
         """
+    def __eq__(self, other:builtins.object) -> builtins.bool: ...
     def __repr__(self) -> builtins.str: ...
 
 class ScheduleSecondsItem:
@@ -623,6 +650,7 @@ class ScheduleSecondsItem:
         r"""
         The time span during which the instruction is scheduled.
         """
+    def __eq__(self, other:builtins.object) -> builtins.bool: ...
     def __repr__(self) -> builtins.str: ...
 
 class TimeSpanSeconds:
@@ -647,13 +675,6 @@ class TimeSpanSeconds:
         
         This is the sum of the start time and duration.
         """
+    def __eq__(self, other:builtins.object) -> builtins.bool: ...
     def __repr__(self) -> builtins.str: ...
-
-class BasicBlockScheduleError(ProgramError): ...
-
-class ComputedScheduleError(ProgramError): ...
-
-class ProgramError(QuilError): ...
-
-class QubitGraphError(ProgramError): ...
 

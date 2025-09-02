@@ -34,35 +34,6 @@ macro_rules! exception {
     };
 }
 
-#[cfg(feature = "stubs")]
-mod stubs {
-    use super::*;
-    use pyo3_stub_gen::exception::NativeException;
-
-    macro_rules! impl_native_exception {
-        ($base:ident) => {
-            impl NativeException for $base {
-                fn type_name() -> &'static str {
-                    stringify!($base)
-                }
-            }
-        };
-    }
-
-    // Obviously these aren't native exceptions,
-    // but pyo3_stub_gen requires it on the base class
-    // when one exception is derived from another.
-    //
-    // If you create a new exception or modify the type hierarchy
-    // and see a compiler error along the lines of
-    // `the trait bound $type: pyo3_stub_gen::exception::NativeException is not satisfied`,
-    // you probably just need to add the $type to this list.
-    impl_native_exception!(QuilError);
-    impl_native_exception!(InstructionError);
-    impl_native_exception!(ParseInstructionError);
-    impl_native_exception!(ProgramError);
-}
-
 create_exception!(
     quil,
     QuilError,
