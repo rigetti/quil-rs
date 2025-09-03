@@ -15,20 +15,20 @@ jobs:
   publish-docs:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
+
       - uses: Swatinem/rust-cache@v2
       - uses: taiki-e/install-action@cargo-make
-      - name: Build quil-py documentation
       - name: Configure Python Cache 
         uses: actions/cache@v4
         with:
           path: './quil-rs/.venv/' 
           key: ubuntu-latest-venv-${{ hashFiles('**/poetry.lock') }}
 
-      - name: Build docs 
+      - name: Build quil-py documentation
         run: cargo make --cwd quil-rs docs 
       - name: Deploy preview
         if: ${{ github.event_name == 'pull_request' }}
