@@ -9,6 +9,12 @@ dependencies = ["install-python-deps"]
 command = "cargo"
 args = ["generate-stubs"]
 
+[tasks.python-package]
+description = "Build a release version of the python package."
+dependencies = ["generate-python-stubs"]
+command = "poetry"
+args = ["run", "maturin", "build", "--features", "python", "--release"]
+
 [tasks.install-python-package]
 description = "Build the python package and install to the active virtual environment."
 dependencies = ["install-python-deps"]
