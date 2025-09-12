@@ -8,6 +8,24 @@ use pyo3_stub_gen::derive::{gen_stub_pyfunction, gen_stub_pymethods};
 use super::templates::*;
 use crate::quilpy::impl_repr;
 
+#[pymodule]
+#[pyo3(name = "waveforms", module = "quil", submodule)]
+pub(crate) fn init_submodule(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    m.add_class::<BoxcarKernel>()?;
+    m.add_class::<ErfSquare>()?;
+    m.add_class::<Gaussian>()?;
+    m.add_class::<DragGaussian>()?;
+    m.add_class::<HermiteGaussian>()?;
+    m.add_function(wrap_pyfunction!(py_apply_phase_and_detuning, m)?)?;
+    Ok(())
+}
+
+impl_repr!(BoxcarKernel);
+impl_repr!(DragGaussian);
+impl_repr!(ErfSquare);
+impl_repr!(Gaussian);
+impl_repr!(HermiteGaussian);
+
 /// Modulate and phase shift waveform IQ data in place.
 #[cfg_attr(feature = "stubs", gen_stub_pyfunction(module = "quil.waveforms"))]
 #[pyfunction(name = "apply_phase_and_detuning")]
@@ -27,24 +45,6 @@ pub(crate) fn py_apply_phase_and_detuning(
 
     Ok(())
 }
-
-#[pymodule]
-#[pyo3(name = "waveforms", module = "quil", submodule)]
-pub(crate) fn init_submodule(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_class::<BoxcarKernel>()?;
-    m.add_class::<ErfSquare>()?;
-    m.add_class::<Gaussian>()?;
-    m.add_class::<DragGaussian>()?;
-    m.add_class::<HermiteGaussian>()?;
-    m.add_function(wrap_pyfunction!(py_apply_phase_and_detuning, m)?)?;
-    Ok(())
-}
-
-impl_repr!(BoxcarKernel);
-impl_repr!(DragGaussian);
-impl_repr!(ErfSquare);
-impl_repr!(Gaussian);
-impl_repr!(HermiteGaussian);
 
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
