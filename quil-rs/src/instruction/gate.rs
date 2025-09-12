@@ -17,8 +17,6 @@ use std::{
     collections::{HashMap, HashSet},
 };
 
-#[cfg(not(feature = "python"))]
-use optipy::strip_pyo3;
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::{
     gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pyclass_enum,
