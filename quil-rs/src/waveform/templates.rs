@@ -27,7 +27,7 @@ pub fn apply_phase_and_detuning(
 
 /// Internal Rust implementation of phase offset and detuning.
 #[inline]
-pub(crate) fn apply_phase_and_detuning_impl(
+pub(super) fn apply_phase_and_detuning_impl(
     iq_value: Complex64,
     phase: f64,
     detuning: f64,
