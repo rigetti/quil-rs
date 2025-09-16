@@ -5,8 +5,7 @@ use pyo3_stub_gen::derive::{
 
 use super::MemoryReference;
 
-use crate::pickleable_new;
-use crate::{hash::hash_f64, quil::Quil};
+use crate::{floating_point_eq, pickleable_new, quil::Quil};
 
 #[derive(Clone, Debug, Hash, PartialEq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
@@ -44,7 +43,7 @@ impl Quil for Arithmetic {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
 #[cfg_attr(
     feature = "python",
@@ -56,11 +55,28 @@ pub enum ArithmeticOperand {
     MemoryReference(MemoryReference),
 }
 
+impl PartialEq for ArithmeticOperand {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::LiteralInteger(this), Self::LiteralInteger(that)) => this == that,
+            (Self::LiteralReal(this), Self::LiteralReal(that)) => {
+                floating_point_eq::f64::eq(*this, *that)
+            }
+            (Self::MemoryReference(this), Self::MemoryReference(that)) => this == that,
+            // This explicit or-pattern ensures that we'll get a compilation error if
+            // `ArithmeticOperand` grows another constructor.
+            (Self::LiteralInteger(_) | Self::LiteralReal(_) | Self::MemoryReference(_), _) => false,
+        }
+    }
+}
+
+impl Eq for ArithmeticOperand {}
+
 impl std::hash::Hash for ArithmeticOperand {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         match self {
             Self::LiteralInteger(operand) => operand.hash(state),
-            Self::LiteralReal(operand) => hash_f64(*operand, state),
+            Self::LiteralReal(operand) => floating_point_eq::f64::hash(*operand, state),
             Self::MemoryReference(operand) => operand.hash(state),
         }
     }
@@ -349,7 +365,7 @@ impl Quil for Comparison {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
 #[cfg_attr(
     feature = "python",
@@ -375,11 +391,30 @@ impl Quil for ComparisonOperand {
     }
 }
 
+impl PartialEq for ComparisonOperand {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::LiteralInteger(this), Self::LiteralInteger(that)) => this == that,
+            (Self::LiteralReal(this), Self::LiteralReal(that)) => {
+                floating_point_eq::f64::eq(*this, *that)
+            }
+            (Self::MemoryReference(this), Self::MemoryReference(that)) => this == that,
+            // This explicit or-pattern ensures that we'll get a compilation error if
+            // `ComparisonOperand` grows another constructor.
+            (Self::LiteralInteger(_) | Self::LiteralReal(_) | Self::MemoryReference(_), _) => false,
+        }
+    }
+}
+
+impl Eq for ComparisonOperand {}
+
 impl std::hash::Hash for ComparisonOperand {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         match self {
             ComparisonOperand::LiteralInteger(operand) => operand.hash(state),
-            ComparisonOperand::LiteralReal(operand) => hash_f64(*operand, state),
+            ComparisonOperand::LiteralReal(operand) => {
+                floating_point_eq::f64::hash(*operand, state)
+            }
             ComparisonOperand::MemoryReference(operand) => operand.hash(state),
         }
     }

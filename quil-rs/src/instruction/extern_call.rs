@@ -16,7 +16,7 @@ use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyclass_complex_enum};
 
 use crate::{
     expression::format_complex,
-    hash::hash_f64,
+    floating_point_eq,
     parser::lex,
     pickleable_new,
     program::{disallow_leftover, MemoryAccesses, MemoryRegion, SyntaxError},
@@ -429,7 +429,7 @@ pub enum CallArgumentResolutionError {
 /// A parsed, but unresolved call argument. This may be resolved into a [`ResolvedCallArgument`]
 /// with the appropriate [`ExternSignature`]. Resolution is required for building the
 /// [`crate::Program`] memory graph.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
 #[cfg_attr(
     feature = "python",
@@ -443,6 +443,21 @@ pub enum UnresolvedCallArgument {
     MemoryReference(MemoryReference),
     /// An immediate value. This may be resolved to a non-mutable scalar.
     Immediate(Complex64),
+}
+
+impl PartialEq for UnresolvedCallArgument {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Identifier(this), Self::Identifier(that)) => this == that,
+            (Self::MemoryReference(this), Self::MemoryReference(that)) => this == that,
+            (Self::Immediate(this), Self::Immediate(that)) => {
+                floating_point_eq::complex64::eq(*this, *that)
+            }
+            // This explicit or-pattern ensures that we'll get a compilation error if
+            // `UnresolvedCallArgument` grows another constructor.
+            (Self::Identifier(_) | Self::MemoryReference(_) | Self::Immediate(_), _) => false,
+        }
+    }
 }
 
 impl Eq for UnresolvedCallArgument {}
@@ -460,7 +475,7 @@ impl std::hash::Hash for UnresolvedCallArgument {
             }
             UnresolvedCallArgument::Immediate(value) => {
                 "Immediate".hash(state);
-                hash_complex_64(value, state);
+                floating_point_eq::complex64::hash(*value, state);
             }
         }
     }
@@ -626,7 +641,7 @@ impl Quil for UnresolvedCallArgument {
 /// A resolved call argument. This is the result of resolving an [`UnresolvedCallArgument`] with
 /// the appropriate [`ExternParameter`]. It annotates the argument both with a type (and possibly
 /// a length in the case of a vector) and mutability.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug)]
 pub enum ResolvedCallArgument {
     /// A resolved vector argument, including its scalar type, length, and mutability.
     Vector {
@@ -645,6 +660,66 @@ pub enum ResolvedCallArgument {
         value: Complex64,
         scalar_type: ScalarType,
     },
+}
+
+impl PartialEq for ResolvedCallArgument {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (
+                Self::Vector {
+                    memory_region_name: this_memory_region_name,
+                    vector: this_vector,
+                    mutable: this_mutable,
+                },
+                Self::Vector {
+                    memory_region_name: that_memory_region_name,
+                    vector: that_vector,
+                    mutable: that_mutable,
+                },
+            ) => {
+                this_memory_region_name == that_memory_region_name
+                    && this_vector == that_vector
+                    && this_mutable == that_mutable
+            }
+
+            (
+                Self::MemoryReference {
+                    memory_reference: this_memory_reference,
+                    scalar_type: this_scalar_type,
+                    mutable: this_mutable,
+                },
+                Self::MemoryReference {
+                    memory_reference: that_memory_reference,
+                    scalar_type: that_scalar_type,
+                    mutable: that_mutable,
+                },
+            ) => {
+                this_memory_reference == that_memory_reference
+                    && this_scalar_type == that_scalar_type
+                    && this_mutable == that_mutable
+            }
+
+            (
+                Self::Immediate {
+                    value: this_value,
+                    scalar_type: this_scalar_type,
+                },
+                Self::Immediate {
+                    value: that_value,
+                    scalar_type: that_scalar_type,
+                },
+            ) => {
+                floating_point_eq::complex64::eq(*this_value, *that_value)
+                    && this_scalar_type == that_scalar_type
+            }
+
+            // This explicit or-pattern ensures that we'll get a compilation error if
+            // `ResolvedCallArgument` grows another constructor.
+            (Self::Vector { .. } | Self::MemoryReference { .. } | Self::Immediate { .. }, _) => {
+                false
+            }
+        }
+    }
 }
 
 impl From<ResolvedCallArgument> for UnresolvedCallArgument {
@@ -690,19 +765,10 @@ impl std::hash::Hash for ResolvedCallArgument {
             }
             ResolvedCallArgument::Immediate { value, scalar_type } => {
                 "Immediate".hash(state);
-                hash_complex_64(value, state);
+                floating_point_eq::complex64::hash(*value, state);
                 scalar_type.hash(state);
             }
         }
-    }
-}
-
-fn hash_complex_64<H: std::hash::Hasher>(value: &Complex64, state: &mut H) {
-    if value.re.abs() > 0f64 {
-        hash_f64(value.re, state);
-    }
-    if value.im.abs() > 0f64 {
-        hash_f64(value.im, state);
     }
 }
 
