@@ -73,10 +73,10 @@
                                 <a class="function" href="#BasicBlock.gate_depth">gate_depth</a>
                         </li>
                         <li>
-                                <a class="variable" href="#BasicBlock.label">label</a>
+                                <a class="variable" href="#BasicBlock.instructions">instructions</a>
                         </li>
                         <li>
-                                <a class="variable" href="#BasicBlock.instructions">instructions</a>
+                                <a class="variable" href="#BasicBlock.label">label</a>
                         </li>
                         <li>
                                 <a class="variable" href="#BasicBlock.terminator">terminator</a>
@@ -88,13 +88,13 @@
                     <a class="class" href="#CalibrationExpansion">CalibrationExpansion</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#CalibrationExpansion.range">range</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#CalibrationExpansion.expansions">expansions</a>
                         </li>
                         <li>
                                 <a class="variable" href="#CalibrationExpansion.calibration_used">calibration_used</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#CalibrationExpansion.range">range</a>
                         </li>
                 </ul>
 
@@ -247,10 +247,10 @@
                     <a class="class" href="#MemoryRegion">MemoryRegion</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#MemoryRegion.sharing">sharing</a>
+                                <a class="variable" href="#MemoryRegion.size">size</a>
                         </li>
                         <li>
-                                <a class="variable" href="#MemoryRegion.size">size</a>
+                                <a class="variable" href="#MemoryRegion.sharing">sharing</a>
                         </li>
                 </ul>
 
@@ -313,10 +313,13 @@
                                 <a class="function" href="#Program.to_instructions">to_instructions</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.waveforms">waveforms</a>
+                                <a class="variable" href="#Program.frames">frames</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.calibrations">calibrations</a>
+                                <a class="variable" href="#Program.used_qubits">used_qubits</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Program.body_instructions">body_instructions</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Program.memory_regions">memory_regions</a>
@@ -325,22 +328,19 @@
                                 <a class="variable" href="#Program.gate_definitions">gate_definitions</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.declarations">declarations</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Program.frames">frames</a>
+                                <a class="variable" href="#Program.calibrations">calibrations</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Program.pragma_extern_map">pragma_extern_map</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.used_qubits">used_qubits</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#Program.instructions">instructions</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.body_instructions">body_instructions</a>
+                                <a class="variable" href="#Program.declarations">declarations</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Program.waveforms">waveforms</a>
                         </li>
                 </ul>
 
@@ -349,10 +349,10 @@
                     <a class="class" href="#ProgramCalibrationExpansion">ProgramCalibrationExpansion</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#ProgramCalibrationExpansion.source_map">source_map</a>
+                                <a class="variable" href="#ProgramCalibrationExpansion.program">program</a>
                         </li>
                         <li>
-                                <a class="variable" href="#ProgramCalibrationExpansion.program">program</a>
+                                <a class="variable" href="#ProgramCalibrationExpansion.source_map">source_map</a>
                         </li>
                 </ul>
 
@@ -391,10 +391,10 @@
                     <a class="class" href="#ScheduleSeconds">ScheduleSeconds</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#ScheduleSeconds.duration">duration</a>
+                                <a class="variable" href="#ScheduleSeconds.items">items</a>
                         </li>
                         <li>
-                                <a class="variable" href="#ScheduleSeconds.items">items</a>
+                                <a class="variable" href="#ScheduleSeconds.duration">duration</a>
                         </li>
                 </ul>
 
@@ -629,20 +629,6 @@ for it to be counted in the depth.</li>
 
 
                             </div>
-                            <div id="BasicBlock.label" class="classattr">
-                                <div class="attr variable">
-            <span class="name">label</span>
-
-        
-    </div>
-    <a class="headerlink" href="#BasicBlock.label"></a>
-    
-            <div class="docstring"><p>The label of the block, if any.
-This is used to target this block in control flow.</p>
-</div>
-
-
-                            </div>
                             <div id="BasicBlock.instructions" class="classattr">
                                 <div class="attr variable">
             <span class="name">instructions</span>
@@ -654,6 +640,20 @@ This is used to target this block in control flow.</p>
             <div class="docstring"><p>A list of the instructions in the block, in order of definition.</p>
 
 <p>This does not include the label or terminator instructions.</p>
+</div>
+
+
+                            </div>
+                            <div id="BasicBlock.label" class="classattr">
+                                <div class="attr variable">
+            <span class="name">label</span>
+
+        
+    </div>
+    <a class="headerlink" href="#BasicBlock.label"></a>
+    
+            <div class="docstring"><p>The label of the block, if any.
+This is used to target this block in control flow.</p>
 </div>
 
 
@@ -688,20 +688,6 @@ This is used to target this block in control flow.</p>
 </div>
 
 
-                            <div id="CalibrationExpansion.range" class="classattr">
-                                <div class="attr variable">
-            <span class="name">range</span>
-
-        
-    </div>
-    <a class="headerlink" href="#CalibrationExpansion.range"></a>
-    
-            <div class="docstring"><p>The range of instructions in the expanded list
-which were generated by this expansion.</p>
-</div>
-
-
-                            </div>
                             <div id="CalibrationExpansion.expansions" class="classattr">
                                 <div class="attr variable">
             <span class="name">expansions</span>
@@ -724,6 +710,20 @@ which were generated by this expansion.</p>
     <a class="headerlink" href="#CalibrationExpansion.calibration_used"></a>
     
             <div class="docstring"><p>The calibration used to expand the instruction.</p>
+</div>
+
+
+                            </div>
+                            <div id="CalibrationExpansion.range" class="classattr">
+                                <div class="attr variable">
+            <span class="name">range</span>
+
+        
+    </div>
+    <a class="headerlink" href="#CalibrationExpansion.range"></a>
+    
+            <div class="docstring"><p>The range of instructions in the expanded list
+which were generated by this expansion.</p>
 </div>
 
 
@@ -1409,17 +1409,6 @@ This may be a sequence of basic blocks with fixed <code>JUMP</code>s or without 
     
     
 
-                            <div id="MemoryRegion.sharing" class="classattr">
-                                <div class="attr variable">
-            <span class="name">sharing</span>
-
-        
-    </div>
-    <a class="headerlink" href="#MemoryRegion.sharing"></a>
-    
-    
-
-                            </div>
                             <div id="MemoryRegion.size" class="classattr">
                                 <div class="attr variable">
             <span class="name">size</span>
@@ -1427,6 +1416,17 @@ This may be a sequence of basic blocks with fixed <code>JUMP</code>s or without 
         
     </div>
     <a class="headerlink" href="#MemoryRegion.size"></a>
+    
+    
+
+                            </div>
+                            <div id="MemoryRegion.sharing" class="classattr">
+                                <div class="attr variable">
+            <span class="name">sharing</span>
+
+        
+    </div>
+    <a class="headerlink" href="#MemoryRegion.sharing"></a>
     
     
 
@@ -1793,24 +1793,35 @@ and <a href="Self::default_qubit_resolver"><code>default_qubit_resolver</code></
 
 
                             </div>
-                            <div id="Program.waveforms" class="classattr">
+                            <div id="Program.frames" class="classattr">
                                 <div class="attr variable">
-            <span class="name">waveforms</span>
+            <span class="name">frames</span>
 
         
     </div>
-    <a class="headerlink" href="#Program.waveforms"></a>
+    <a class="headerlink" href="#Program.frames"></a>
     
     
 
                             </div>
-                            <div id="Program.calibrations" class="classattr">
+                            <div id="Program.used_qubits" class="classattr">
                                 <div class="attr variable">
-            <span class="name">calibrations</span>
+            <span class="name">used_qubits</span>
 
         
     </div>
-    <a class="headerlink" href="#Program.calibrations"></a>
+    <a class="headerlink" href="#Program.used_qubits"></a>
+    
+    
+
+                            </div>
+                            <div id="Program.body_instructions" class="classattr">
+                                <div class="attr variable">
+            <span class="name">body_instructions</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.body_instructions"></a>
     
     
 
@@ -1837,24 +1848,13 @@ and <a href="Self::default_qubit_resolver"><code>default_qubit_resolver</code></
     
 
                             </div>
-                            <div id="Program.declarations" class="classattr">
+                            <div id="Program.calibrations" class="classattr">
                                 <div class="attr variable">
-            <span class="name">declarations</span>
+            <span class="name">calibrations</span>
 
         
     </div>
-    <a class="headerlink" href="#Program.declarations"></a>
-    
-    
-
-                            </div>
-                            <div id="Program.frames" class="classattr">
-                                <div class="attr variable">
-            <span class="name">frames</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.frames"></a>
+    <a class="headerlink" href="#Program.calibrations"></a>
     
     
 
@@ -1870,17 +1870,6 @@ and <a href="Self::default_qubit_resolver"><code>default_qubit_resolver</code></
     
 
                             </div>
-                            <div id="Program.used_qubits" class="classattr">
-                                <div class="attr variable">
-            <span class="name">used_qubits</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.used_qubits"></a>
-    
-    
-
-                            </div>
                             <div id="Program.instructions" class="classattr">
                                 <div class="attr variable">
             <span class="name">instructions</span>
@@ -1892,13 +1881,24 @@ and <a href="Self::default_qubit_resolver"><code>default_qubit_resolver</code></
     
 
                             </div>
-                            <div id="Program.body_instructions" class="classattr">
+                            <div id="Program.declarations" class="classattr">
                                 <div class="attr variable">
-            <span class="name">body_instructions</span>
+            <span class="name">declarations</span>
 
         
     </div>
-    <a class="headerlink" href="#Program.body_instructions"></a>
+    <a class="headerlink" href="#Program.declarations"></a>
+    
+    
+
+                            </div>
+                            <div id="Program.waveforms" class="classattr">
+                                <div class="attr variable">
+            <span class="name">waveforms</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.waveforms"></a>
     
     
 
@@ -1916,19 +1916,6 @@ and <a href="Self::default_qubit_resolver"><code>default_qubit_resolver</code></
     
     
 
-                            <div id="ProgramCalibrationExpansion.source_map" class="classattr">
-                                <div class="attr variable">
-            <span class="name">source_map</span>
-
-        
-    </div>
-    <a class="headerlink" href="#ProgramCalibrationExpansion.source_map"></a>
-    
-            <div class="docstring"><p>The source mapping describing the expansions made.</p>
-</div>
-
-
-                            </div>
                             <div id="ProgramCalibrationExpansion.program" class="classattr">
                                 <div class="attr variable">
             <span class="name">program</span>
@@ -1938,6 +1925,19 @@ and <a href="Self::default_qubit_resolver"><code>default_qubit_resolver</code></
     <a class="headerlink" href="#ProgramCalibrationExpansion.program"></a>
     
             <div class="docstring"><p>The program containing the instructions.</p>
+</div>
+
+
+                            </div>
+                            <div id="ProgramCalibrationExpansion.source_map" class="classattr">
+                                <div class="attr variable">
+            <span class="name">source_map</span>
+
+        
+    </div>
+    <a class="headerlink" href="#ProgramCalibrationExpansion.source_map"></a>
+    
+            <div class="docstring"><p>The source mapping describing the expansions made.</p>
 </div>
 
 
@@ -2083,6 +2083,19 @@ each of which is assigned a start time and duration.</p>
 </div>
 
 
+                            <div id="ScheduleSeconds.items" class="classattr">
+                                <div class="attr variable">
+            <span class="name">items</span>
+
+        
+    </div>
+    <a class="headerlink" href="#ScheduleSeconds.items"></a>
+    
+            <div class="docstring"><p>Scheduled items, in an unspecified order.</p>
+</div>
+
+
+                            </div>
                             <div id="ScheduleSeconds.duration" class="classattr">
                                 <div class="attr variable">
             <span class="name">duration</span>
@@ -2094,19 +2107,6 @@ each of which is assigned a start time and duration.</p>
             <div class="docstring"><p>The schedule duration, in seconds.</p>
 
 <p>This is the maximum end time among all scheduled items.</p>
-</div>
-
-
-                            </div>
-                            <div id="ScheduleSeconds.items" class="classattr">
-                                <div class="attr variable">
-            <span class="name">items</span>
-
-        
-    </div>
-    <a class="headerlink" href="#ScheduleSeconds.items"></a>
-    
-            <div class="docstring"><p>Scheduled items, in an unspecified order.</p>
 </div>
 
 
