@@ -8,7 +8,7 @@ name: Benchmark
 jobs:
   benchmark:
     name: Run benchmarks
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.platform.os }}
     strategy:
       matrix:
         platform:
@@ -43,7 +43,7 @@ jobs:
         uses: dawidd6/action-download-artifact@v11
         with:
           workflow: bench.yml
-          name: benchmarks-${{ matrix.os }}
+          name: benchmarks-${{ matrix.platform.os }}
           path: target/criterion
         continue-on-error: true
       
@@ -62,6 +62,6 @@ jobs:
         if: ${{ github.ref == 'refs/heads/main'}}
         uses: actions/upload-artifact@v4
         with:
-          name: benchmarks-${{ matrix.os }}
+          name: benchmarks-${{ matrix.platform.os }}
           path: target/criterion
     
