@@ -11,6 +11,7 @@ on:
     inputs:
       type:
         description: Bump versions and trigger a new release.
+        type: choice
         required: true
         default: release
         options:
