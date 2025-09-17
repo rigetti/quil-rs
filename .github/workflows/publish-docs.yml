@@ -34,7 +34,7 @@ jobs:
           key: ubuntu-latest-venv-${{ hashFiles('**/poetry.lock') }}
 
       - name: Build quil-py documentation
-        run: cargo make --cwd quil-rs docs 
+        run: cargo make --cwd quil-rs document-quil
 
       - name: Deploy preview
         if: ${{ github.event_name == 'pull_request' }}

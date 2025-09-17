@@ -41,19 +41,16 @@ jobs:
           [
             {
               os: "macos-latest",
-              python-architecture: "arm64",
               rust-target: "aarch64-apple-darwin",
               venv: "./quil-rs/.venv",
             },
             {
               os: "ubuntu-latest",
-              python-architecture: "x64",
               rust-target: "x86_64-unknown-linux-gnu",
               venv: "./quil-rs/.venv",
             },
             {
               os: "windows-latest",
-              python-architecture: "x64",
               rust-target: "x86_64-pc-windows-msvc",
               venv: '.\quil-rs\.venv',
             },
@@ -83,11 +80,8 @@ jobs:
           key: ${{ runner.os }}-venv-${{ hashFiles('**/poetry.lock') }}
 
       - name: Install Python dev dependencies
-        run: cargo make --cwd quil-rs install-python-deps
+        run: cargo make --cwd quil-rs install-quil-deps
 
-      - name: Run cargo test
-        run: cargo test --all-features
-
-      - name: Run quil-py tests
+      - name: Run tests
         run: cargo make --cwd quil-rs test-all
 
