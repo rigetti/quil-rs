@@ -13,7 +13,7 @@ versioned_files = [
     "quil-rs/Cargo.toml",
     "quil-rs/pyproject.toml",
     "Cargo.lock",
-    # Update the workspace version of quil-rs for quil-cli
+    # Update the quil-rs version in quil-cli
     { path = "quil-cli/Cargo.toml", dependency = "quil-rs" },
 ]
 changelog = "quil-rs/CHANGELOG.md"
