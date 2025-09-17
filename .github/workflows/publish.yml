@@ -6,10 +6,14 @@ on:
   workflow_dispatch:
     description: "Manually publish release"
     inputs:
-        publishWheels:
-          description: "Build and publish wheels to PyPI"
-          type: boolean
-          default: false
+      publishWheels:
+        description: "Build and publish wheels to PyPI"
+        type: boolean
+        default: false
+      publishCrate:
+        description: "Publish quil-rs to crates.io"
+        type: boolean
+        default: false
 
 jobs:
   is-release:
@@ -22,8 +26,45 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: echo "Publishing wheels"
+  should-publish-crate:
+    if: (github.event_name == 'workflow_dispatch' && inputs.publishCrate) || (github.event_name == 'release' && !github.event.release.prerelease)
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Publishing wheels"
 
-  build:
+  publish-quil-rs:
+    name: Publish quil-rs 
+    needs: [ is-release, should-publish-crate ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: Swatinem/rust-cache@v2
+      - run: |
+          cargo publish -p quil-rs --locked --token ${{ secrets.CRATES_IO_TOKEN }}
+
+  sdist:
+    name: Build a source distribution
+    runs-on: ubuntu-latest
+    needs: is-release
+    steps:
+    - uses: actions/checkout@v5
+    - uses: Swatinem/rust-cache@v2
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.13'
+    - name: Build sdist
+      uses: messense/maturin-action@v1
+      with:
+        working-directory: quil-rs
+        command: sdist
+        args: --release --features=python --out dist
+    - name: Upload sdist
+      uses: actions/upload-artifact@v4
+      with:
+        name: wheels-sdist
+        path: dist
+
+  build-wheels:
     name: Build Wheel ${{ matrix.platform.name }}-${{ matrix.platform.target }}-${{ matrix.python-version }}
     runs-on: ${{ matrix.platform.os }}
     needs: [ is-release, should-publish-wheels ]
@@ -72,29 +113,8 @@ jobs:
           name: wheels-${{ matrix.platform.target }}-${{ matrix.python-version }}
           path: dist
 
-  sdist:
-    runs-on: ubuntu-latest
-    needs: is-release
-    steps:
-    - uses: actions/checkout@v5
-    - uses: Swatinem/rust-cache@v2
-    - uses: actions/setup-python@v5
-      with:
-        python-version: '3.13'
-    - name: Build sdist
-      uses: messense/maturin-action@v1
-      with:
-        working-directory: quil-rs
-        command: sdist
-        args: --release --features=python --out dist
-    - name: Upload sdist
-      uses: actions/upload-artifact@v4
-      with:
-        name: wheels-sdist
-        path: dist
-
   publish-python-package:
-    name: Release
+    name: Publish quil
     runs-on: ubuntu-latest
     # `needs` forces this job to wait until all specified jobs
     # are finished to run. Typically, those jobs would all have
@@ -119,13 +139,3 @@ jobs:
         with:
           command: upload
           args: --skip-existing wheels/*
-
-  publish-rust-crate:
-    name: Release
-    runs-on: ubuntu-latest
-    needs: publish-python-package
-    steps:
-      - uses: actions/checkout@v5
-      - uses: Swatinem/rust-cache@v2
-      - run: |
-          cargo publish -p quil-rs --locked --token ${{ secrets.CRATES_IO_TOKEN }}
