@@ -49,13 +49,11 @@ fn ceiling_with_epsilon(value: f64) -> f64 {
 }
 
 /// Convert polar coordinates to rectangular coordinates.
-#[allow(dead_code)]
 fn polar_to_rectangular(magnitude: f64, angle: crate::units::Radians<f64>) -> Complex64 {
     magnitude * imag!(angle.0).exp()
 }
 
 pub trait WaveformTemplate {
-    #[allow(dead_code)]
     fn into_iq_values(self) -> Vec<Complex64>;
 }
 
@@ -76,7 +74,6 @@ pub struct BoxcarKernel {
 }
 
 impl BoxcarKernel {
-    #[allow(dead_code)]
     pub fn into_iq_value(self) -> Complex64 {
         polar_to_rectangular(self.scale / self.sample_count as f64, self.phase.into())
     }

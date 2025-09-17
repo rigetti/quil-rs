@@ -178,6 +178,7 @@ impl Gate {
     /// qubits are variable, if the name of this gate is unknown, or if there are an unexpected
     /// number of parameters.
     // TODO (#464): This method can lead to overflow.
+    #[allow(clippy::wrong_self_convention)] // It's a Breaking Change to change it now.
     pub fn to_unitary(&mut self, n_qubits: u64) -> Result<Matrix, GateError> {
         let qubits = self
             .qubits

@@ -257,6 +257,7 @@ impl Program {
     ///
     /// If you need custom instruction handling during simplification,
     /// use [`InstructionHandler::simplify_program`] instead.
+    #[allow(clippy::wrong_self_convention)] // It's a Breaking Change to change it now.
     pub fn into_simplified(&self) -> Result<Self> {
         self.simplify_with_handler(&mut InstructionHandler::default())
     }
