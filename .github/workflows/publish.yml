@@ -123,7 +123,7 @@ jobs:
     # finish, regardless of their outcome. In this case, we
     # still make sure that at least a source distribution
     # can be published.
-    needs: [ build, sdist ]
+    needs: [ build-wheels, sdist ]
     if: always() && needs.sdist.result == 'success'
     permissions:
       id-token: write
