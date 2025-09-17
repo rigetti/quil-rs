@@ -19,7 +19,7 @@ classifiers = [
 dependencies = ["numpy>=1.26"]
 
 [tool.maturin]
-features = ["pyo3/extension-module"]
+features = ["pyo3/extension-module", "python"]
 bindings = "pyo3"
 compatibility = "linux"
 include = [ "README-py.md" ]

@@ -57,7 +57,7 @@ jobs:
       with:
         working-directory: quil-rs
         command: sdist
-        args: --release --features=python --out dist
+        args: --out dist
     - name: Upload sdist
       uses: actions/upload-artifact@v4
       with:
