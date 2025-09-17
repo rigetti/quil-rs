@@ -1,3 +1,66 @@
+## 0.9.1-rc.1 (2025-09-17)
+
+### Features
+
+- add pickle impls for instructions
+- unite Instruction macros
+- impl __getnewargs__
+- feature-gate python-related elements
+- make WaveformInvocation pickleable
+- allow stripping only stub_gen attrs
+- generate python stubs
+- improve linting script
+- add command to generate stub files
+- add more generated stubs
+- add more stub gen attributes
+- generate stubs for base Quil exception
+- improve lint script stub attr discovery
+- make enums copyable and pickleable
+- teach lint script a bunch more tricks
+- strip more pyo3 attrs
+- let knope manage quil-cli version
+
+### Fixes
+
+- add missing parse impls
+- add missing rename annotation
+- expose missing error types
+- PiConstant should be named pi in Python
+- Program.filter_instruction from Python should return a Program
+- CalibrationIdentifier uses different argument order for Python constructor
+- add missing Python constructor for WaveformInvocation
+- Python version of TimeSpanSeconds calls "start_time" just "start"
+- adjust tests to fix modified quil API
+- remove unneeded get_all annotation on enum
+- typos and mistakes in module exports
+- transfer subclass annotations
+- gate enum naming
+- add getters for Gate
+- getters for interned expressions
+- enum casing
+- add missing constructors
+- add missing dagger method
+- share to_real impl
+- allow mutating FrameDefinition
+- FunctionCallExpression.expression is a getter
+- make parse static, not classmethod
+- allow setting properties on non-hash classes
+- restore module def on Expression
+- add missing module metadata
+- badly replaced error names
+- another badly replaced error name
+- add InstructionError to module
+- update validation module properties
+- make GateDefinition pickleable
+- make FrameIdentifier pickleable
+- significant clean-up for pickling
+- correct broken tests
+- to_unitary name and bounds
+- update sync_versions script
+- use correct macro for QuilError
+- use an f-string syntax supported in older pythons
+- restore original waveform public items
+
 ## 0.9.1-rc.0 (2025-09-17)
 
 ### Features
