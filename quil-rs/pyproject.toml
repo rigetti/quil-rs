@@ -43,6 +43,9 @@ build-backend = "maturin"
 [tool.poetry]
 package-mode = false
 
+[tool.poetry.group.dev.dependencies]
+griffe = "^1.14.0"
+
 [tool.ruff]
 exclude = [
     ".bzr",

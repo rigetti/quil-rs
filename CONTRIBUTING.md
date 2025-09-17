@@ -87,6 +87,7 @@ You can use these additional `cargo-make` tasks:
 | `install-quil-with-stubs` | Like `install-quil`, but first regenerates type stubs |
 | `install-quil-deps` | Install `quil` development dependencies to the local virtual environment |
 | `document-quil` | Generate documentation for `quil` |
+| `check-api` | Check if `quil` has breaking API changes that aren't marked as such |
 | `test-quil` | Run all Python-related tests |
 | `test-all` | Run all Rust and Python tests |
 

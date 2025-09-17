@@ -42,6 +42,7 @@ dependencies = ["install-quil-with-stubs"]
 command = "poetry"
 cwd = "python"
 args = ["run", "stubtest", "quil"]
+# TODO(#475): Enable error reporting once stubtest is happy with stubgen's output.
 ignore_errors = true
 
 [tasks.test-quil]
@@ -54,6 +55,12 @@ dependencies = ["test", "test-quil"]
 
 [tasks.default]
 alias = "test-all"
+
+[tasks.check-api]
+description = "Check if quil API has breaking changes."
+dependencies = ["install-quil-with-stubs"]
+cwd = ".."
+script = { file = "./scripts/check-quil-api.sh" }
 
 [tasks.document-quil]
 description = "Generate quil documentation."
