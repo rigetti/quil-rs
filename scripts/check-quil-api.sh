@@ -16,11 +16,7 @@ poetry run -P quil-rs -- \
     --search quil-rs/python \
     --search quil-py \
     quil
-
-if [[ ! $? ]]; then
-  echo "griffe does not report any breaking changes"
-  exit 0
-fi
+api_break=$?
 
 # Now check if `knope` knows this has "Breaking Changes".
 #
@@ -36,8 +32,17 @@ knope --dry-run release | awk -f <(cat <<-'EOF'
   END { exit is_breaking; }
 EOF
 )
+marked_break=$?
 
-if [[ ! $? ]]; then
+if [[ $api_break == $marked_break ]]; then
+  echo "griffe and knope agree about breaking changes"
+  exit 0
+elif [[ $api_break == 0 ]] ; then
+  # This isn't an error, but it might be a surprise.
+  echo "knope knows about breaking changes, but griffe doesn't report breaking changes for quil"
+  exit 0
+else
   echo "griffe says this is a breaking change for the quil API, but knope does not know that!"
   exit 1
 fi
+
