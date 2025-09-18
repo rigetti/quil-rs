@@ -14,6 +14,7 @@ but `pyQuil` offers higher-level abstractions and greater stability guarantees.
 
 [quil-spec]: https://github.com/quil-lang/quil
 [`quil-rs`]: https://github.com/rigetti/quil-rs/tree/main/quil-rs
+[`quil-py`]: https://github.com/rigetti/quil-rs/tree/main/quil-rs
 [`quil-cli`]: https://github.com/rigetti/quil-rs/tree/main/quil-cli
 [`pyQuil`]: https://github.com/rigetti/pyquil
 
