@@ -62,7 +62,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: wheels-sdist
-        path: dist
+        path: quil-rs/dist
 
   build-wheels:
     name: Build Wheel ${{ matrix.platform.name }}-${{ matrix.platform.target }}-${{ matrix.python-version }}
