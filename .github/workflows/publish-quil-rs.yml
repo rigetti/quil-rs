@@ -102,7 +102,7 @@ jobs:
           args: --release --features python,extension-module -i ${{ matrix.python-version }} --out dist
 
       - name: Install Wheel
-        if: ${{ matrix.platform.name != 'linux' || matrix.platform.target == "x86_64" }}
+        if: ${{ matrix.platform.name != 'linux' || matrix.platform.target == 'x86_64' }}
         run: |
           pip install quil --pre --find-links quil-rs/dist --force-reinstall
           python -c "import quil"
