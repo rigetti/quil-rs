@@ -73,13 +73,13 @@
                                 <a class="function" href="#BasicBlock.gate_depth">gate_depth</a>
                         </li>
                         <li>
-                                <a class="variable" href="#BasicBlock.terminator">terminator</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#BasicBlock.label">label</a>
                         </li>
                         <li>
                                 <a class="variable" href="#BasicBlock.instructions">instructions</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#BasicBlock.terminator">terminator</a>
                         </li>
                 </ul>
 
@@ -313,16 +313,7 @@
                                 <a class="function" href="#Program.to_instructions">to_instructions</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.declarations">declarations</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#Program.calibrations">calibrations</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Program.frames">frames</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Program.body_instructions">body_instructions</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Program.gate_definitions">gate_definitions</a>
@@ -331,13 +322,22 @@
                                 <a class="variable" href="#Program.waveforms">waveforms</a>
                         </li>
                         <li>
+                                <a class="variable" href="#Program.instructions">instructions</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#Program.memory_regions">memory_regions</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Program.declarations">declarations</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Program.frames">frames</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Program.used_qubits">used_qubits</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.instructions">instructions</a>
+                                <a class="variable" href="#Program.body_instructions">body_instructions</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Program.pragma_extern_map">pragma_extern_map</a>
@@ -629,21 +629,6 @@ for it to be counted in the depth.</li>
 
 
                             </div>
-                            <div id="BasicBlock.terminator" class="classattr">
-                                <div class="attr variable">
-            <span class="name">terminator</span>
-
-        
-    </div>
-    <a class="headerlink" href="#BasicBlock.terminator"></a>
-    
-            <div class="docstring"><p>The control flow terminator instruction of the block, if any.</p>
-
-<p>If this is <code>None</code>, the implicit behavior is to "continue" to the subsequent block.</p>
-</div>
-
-
-                            </div>
                             <div id="BasicBlock.label" class="classattr">
                                 <div class="attr variable">
             <span class="name">label</span>
@@ -669,6 +654,21 @@ This is used to target this block in control flow.</p>
             <div class="docstring"><p>A list of the instructions in the block, in order of definition.</p>
 
 <p>This does not include the label or terminator instructions.</p>
+</div>
+
+
+                            </div>
+                            <div id="BasicBlock.terminator" class="classattr">
+                                <div class="attr variable">
+            <span class="name">terminator</span>
+
+        
+    </div>
+    <a class="headerlink" href="#BasicBlock.terminator"></a>
+    
+            <div class="docstring"><p>The control flow terminator instruction of the block, if any.</p>
+
+<p>If this is <code>None</code>, the implicit behavior is to "continue" to the subsequent block.</p>
 </div>
 
 
@@ -1793,17 +1793,6 @@ and <a href="Self::default_qubit_resolver"><code>default_qubit_resolver</code></
 
 
                             </div>
-                            <div id="Program.declarations" class="classattr">
-                                <div class="attr variable">
-            <span class="name">declarations</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.declarations"></a>
-    
-    
-
-                            </div>
                             <div id="Program.calibrations" class="classattr">
                                 <div class="attr variable">
             <span class="name">calibrations</span>
@@ -1811,28 +1800,6 @@ and <a href="Self::default_qubit_resolver"><code>default_qubit_resolver</code></
         
     </div>
     <a class="headerlink" href="#Program.calibrations"></a>
-    
-    
-
-                            </div>
-                            <div id="Program.frames" class="classattr">
-                                <div class="attr variable">
-            <span class="name">frames</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.frames"></a>
-    
-    
-
-                            </div>
-                            <div id="Program.body_instructions" class="classattr">
-                                <div class="attr variable">
-            <span class="name">body_instructions</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.body_instructions"></a>
     
     
 
@@ -1859,6 +1826,17 @@ and <a href="Self::default_qubit_resolver"><code>default_qubit_resolver</code></
     
 
                             </div>
+                            <div id="Program.instructions" class="classattr">
+                                <div class="attr variable">
+            <span class="name">instructions</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.instructions"></a>
+    
+    
+
+                            </div>
                             <div id="Program.memory_regions" class="classattr">
                                 <div class="attr variable">
             <span class="name">memory_regions</span>
@@ -1866,6 +1844,28 @@ and <a href="Self::default_qubit_resolver"><code>default_qubit_resolver</code></
         
     </div>
     <a class="headerlink" href="#Program.memory_regions"></a>
+    
+    
+
+                            </div>
+                            <div id="Program.declarations" class="classattr">
+                                <div class="attr variable">
+            <span class="name">declarations</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.declarations"></a>
+    
+    
+
+                            </div>
+                            <div id="Program.frames" class="classattr">
+                                <div class="attr variable">
+            <span class="name">frames</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.frames"></a>
     
     
 
@@ -1881,13 +1881,13 @@ and <a href="Self::default_qubit_resolver"><code>default_qubit_resolver</code></
     
 
                             </div>
-                            <div id="Program.instructions" class="classattr">
+                            <div id="Program.body_instructions" class="classattr">
                                 <div class="attr variable">
-            <span class="name">instructions</span>
+            <span class="name">body_instructions</span>
 
         
     </div>
-    <a class="headerlink" href="#Program.instructions"></a>
+    <a class="headerlink" href="#Program.body_instructions"></a>
     
     
 
