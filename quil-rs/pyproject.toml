@@ -21,7 +21,6 @@ dependencies = ["numpy>=1.26"]
 [tool.maturin]
 features = ["pyo3/extension-module", "python"]
 bindings = "pyo3"
-compatibility = "linux"
 include = [ "README-py.md" ]
 python-source = "python"
 module-name = "quil._quil"
