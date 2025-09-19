@@ -42,9 +42,6 @@ pub(crate) mod f64 {
             value
         };
 
-        // Per [`f64::from_bits`], the only portability concerns here have to do with quiet
-        // vs. signaling NaNs on MIPS.  We care neither about MIPS nor the signallingness of NaNs, so
-        // this is not a problem.
         value.to_bits().hash(state)
     }
 
