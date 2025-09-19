@@ -12,13 +12,14 @@ use super::{MemoryReference, Qubit};
     pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
 )]
 pub struct Measurement {
+    pub name: Option<String>,
     pub qubit: Qubit,
     pub target: Option<MemoryReference>,
 }
 
 pickleable_new! {
     impl Measurement {
-        pub fn new(qubit: Qubit, target: Option<MemoryReference>);
+        pub fn new(name: Option<String>, qubit: Qubit, target: Option<MemoryReference>);
     }
 }
 
@@ -28,7 +29,11 @@ impl Quil for Measurement {
         writer: &mut impl std::fmt::Write,
         fall_back_to_debug: bool,
     ) -> Result<(), crate::quil::ToQuilError> {
-        write!(writer, "MEASURE ")?;
+        write!(writer, "MEASURE")?;
+        if let Some(name) = &self.name {
+            write!(writer, "!{name}")?;
+        }
+        write!(writer, " ")?;
         self.qubit.write(writer, fall_back_to_debug)?;
         if let Some(target) = &self.target {
             write!(writer, " ")?;

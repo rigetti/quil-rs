@@ -115,7 +115,8 @@ impl TryFrom<Token> for KeywordToken {
             Token::Permutation => Ok(KeywordToken::Permutation),
             Token::Sharing => Ok(KeywordToken::Sharing),
 
-            Token::Colon
+            Token::Bang
+            | Token::Colon
             | Token::Comma
             | Token::Command(_)
             | Token::Comment(_)
@@ -143,6 +144,7 @@ impl TryFrom<Token> for KeywordToken {
 #[derive(Clone, PartialEq)]
 pub enum Token {
     As,
+    Bang,
     Colon,
     Comma,
     Command(Command),
@@ -176,6 +178,7 @@ impl fmt::Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Token::As => write!(f, "{}", KeywordToken::As),
+            Token::Bang => write!(f, "!"),
             Token::Colon => write!(f, ":"),
             Token::Comma => write!(f, ","),
             Token::Command(cmd) => write!(f, "{cmd}"),
@@ -211,6 +214,7 @@ impl fmt::Debug for Token {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Token::As => write!(f, "{self}"),
+            Token::Bang => write!(f, "BANG"),
             Token::Colon => write!(f, "COLON"),
             Token::Comma => write!(f, "COMMA"),
             Token::Command(cmd) => write!(f, "COMMAND({cmd})"),
