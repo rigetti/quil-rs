@@ -1,0 +1,1 @@
+[{"package_kind": "Export", "message": "  Suspicious name for 'quil.instructions.PyInstA'\n     (struct 'PyInstA' in tests/data/suspicious_name/somecode.rs@41)\n     hint: did you forget a '#[pyo3(name = \"InstA)]\" attribute?"}]
