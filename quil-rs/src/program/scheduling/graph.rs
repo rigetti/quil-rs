@@ -70,20 +70,9 @@ impl std::fmt::Display for ScheduledGraphNode {
     }
 }
 
-/// A MemoryAccessQueue expresses the current state of memory accessors at the time of
-/// an instruction's execution.
-///
-/// Quil uses a multiple-reader, single-writer concurrency model for memory access.
-#[derive(Debug, Default, Clone)]
-struct MemoryAccessQueue {
-    pending_capture: Option<ScheduledGraphNode>,
-    pending_reads: Vec<ScheduledGraphNode>,
-    pending_write: Option<ScheduledGraphNode>,
-}
-
 /// A MemoryAccessDependency expresses a dependency that one node has on another to complete
 /// some type of memory access prior to the dependent node's execution.
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 struct MemoryAccessDependency {
     /// What type of memory access must complete prior to the downstream instruction.
     // NOTE: This must remain the first field for ordering to work as expected.
@@ -107,76 +96,70 @@ pub enum ExecutionDependency {
     StableOrdering,
 }
 
-/// A data structure to be used in the serializing of access to a memory region.
-/// This utility helps guarantee strong consistency in a single-writer, multiple-reader model.
+/// A [`MemoryAccessQueue`] keeps track of which reads and writes are currently outstanding for a
+/// given memory region.
+///
+/// Quil memory is sequentially consistent; all writes must happen-before subsequent reads, and all
+/// reads must happen-before subsequent writes.  There is no dependency between reads.
+///
+/// For the purposes of linearizing memory accesses, there is no difference between
+/// [write][MemoryAccessType::Write] and [capture][MemoryAccessType::Capture] accesses; both are
+/// considered writes, although they are distinguished.
+///
+/// This queue keeps track of the most recent write (or capture) access, if any, as well as all
+/// reads that have been performed since that write.  Every memory access
+/// [registered][Self::access_node_and_get_dependencies] after that write access incurs a
+/// [dependency][MemoryAccessDependency] on it.  When a write (or capture) access is performed, both
+/// the prior most recent write and all outstanding reads are registered as a dependency on this new
+/// write; this new write becomes the most recent write, with no reads that have been performed
+/// since it.
+///
+/// [read]: MemoryAccessType::Read
+/// [write]: MemoryAccessType::Write
+/// [writes]: MemoryAccessType::Write
+/// [capture]: MemoryAccessType::Capture
+/// [captures]: MemoryAccessType::Capture
+#[derive(Debug, Default, Clone)]
+struct MemoryAccessQueue {
+    /// The most recent write or capture access, if any.
+    write: Option<MemoryAccessDependency>,
+
+    /// All reads that that have occurred after [`Self::write`] and before any other write or
+    /// capture access.
+    reads: Vec<ScheduledGraphNode>,
+}
+
 impl MemoryAccessQueue {
-    /// Register that a node wants access of the given type, while returning which accesses block
-    /// the requested access.
+    /// Register that an access of the provided [type][MemoryAccessType] is being performed to the
+    /// provided [graph node][ScheduledGraphNode], returning [all the memory accesses that must have
+    /// completed before this one can happen][MemoryAccessDependency].
     ///
-    /// Captures and writes may not happen concurrently with any other access; multiple reads may
-    /// occur concurrently.
-    ///
-    /// Thus, if the caller requests Read access, and there are no pending captures or writes, then
-    /// there will be no blocking nodes.
-    ///
-    /// However, if there is a pending capture or write, that dependency will be expressed in the
-    /// return value.
-    ///
-    /// If the caller requests a capture or a write, then all pending calls - reads, writes, and captures -
-    /// will be returned as "blocking" the capture or write.
-    ///
-    /// A capture or write remains blocking until the next capture or write.
-    pub fn get_blocking_nodes(
+    /// To ensure sequential consistency, neither [writes][] nor [captures][] may happen
+    /// concurrently with any other accesses; however, multiple reads may happen concurrently.
+    pub fn access_node_and_get_dependencies(
         &mut self,
         node_id: ScheduledGraphNode,
-        access: &MemoryAccessType,
+        access_type: MemoryAccessType,
     ) -> Vec<MemoryAccessDependency> {
-        use MemoryAccessType::*;
+        // Writes must happen before both subsequent reads *and* subsequent writes, so we
+        // unconditionally register a dependency on the preceding write.
+        let mut result: Vec<_> = self.write.into_iter().collect();
 
-        let mut result = vec![];
-        if let Some(node_id) = self.pending_write {
-            result.push(MemoryAccessDependency {
-                node_id,
-                access_type: Write,
-            });
-        }
-        if let Some(node_id) = self.pending_capture {
-            result.push(MemoryAccessDependency {
-                node_id,
-                access_type: Capture,
-            });
-        }
+        match access_type {
+            // If we're doing a write now, then all outstanding reads must finish first.
+            MemoryAccessType::Write | MemoryAccessType::Capture => {
+                result.extend(self.reads.drain(..).map(|read_id| MemoryAccessDependency {
+                    access_type: MemoryAccessType::Read,
+                    node_id: read_id,
+                }));
 
-        self.pending_capture = None;
-        self.pending_write = None;
-
-        match access {
-            Read => {
-                self.pending_reads.push(node_id);
+                self.write = Some(MemoryAccessDependency {
+                    access_type,
+                    node_id,
+                })
             }
-            Capture => {
-                for upstream_node_id in self.pending_reads.iter() {
-                    result.push(MemoryAccessDependency {
-                        node_id: *upstream_node_id,
-                        access_type: Read,
-                    });
-                }
-
-                self.pending_reads = vec![];
-                self.pending_capture = Some(node_id);
-            }
-
-            Write => {
-                for upstream_node_id in self.pending_reads.iter() {
-                    result.push(MemoryAccessDependency {
-                        node_id: *upstream_node_id,
-                        access_type: Read,
-                    });
-                }
-
-                self.pending_reads = vec![];
-                self.pending_write = Some(node_id);
-            }
+            // Otherwise, save this read so we can serialize it with respect to the next write.
+            MemoryAccessType::Read => self.reads.push(node_id),
         }
 
         result
@@ -313,8 +296,16 @@ impl<'a> ScheduledBasicBlock<'a> {
         let mut last_timed_instruction_by_frame: HashMap<FrameIdentifier, PreviousNodes> =
             HashMap::new();
 
-        // Store memory access reads and writes. Key is memory region name.
-        // NOTE: this may be refined to serialize by memory region offset rather than by entire region.
+        // Keep track of memory accesses (reads/writes) to each region, so that they can be
+        // serialized.  This serialization is done by memory region; that is, writes to `region[0]`
+        // are not allowed to be concurrent with writes to `region[1]`.
+        //
+        // This could be refined to serialize writes to each memory region *and offset*, so writes
+        // to `region[0]` could happen in parallel with writes to `region[1]`, although this would
+        // require further refinement of [`Instruction::get_memory_accesses`] and the
+        // [`crate::program::memory::MemoryAccesses`] type.  In particular, we would need to capture
+        // accesses that read from/write to potentially an entire region, such as `LOAD` and
+        // `STORE`, as well as accesses that only access a statically known index.
         let mut pending_memory_access: HashMap<String, MemoryAccessQueue> = HashMap::new();
 
         let extern_signature_map = ExternSignatureMap::try_from(program.extern_pragma_map.clone())
@@ -350,32 +341,33 @@ impl<'a> ScheduledBasicBlock<'a> {
                 (accesses.writes, MemoryAccessType::Write),
                 (accesses.captures, MemoryAccessType::Capture),
             ]
-            .iter()
+            .into_iter()
             .flat_map(|(regions, access_type)| {
                 regions
-                    .iter()
+                    .into_iter()
                     .flat_map(|region| {
                         pending_memory_access
-                            .entry(region.clone())
+                            .entry(region)
                             .or_default()
                             // NOTE: This mutates the underlying `MemoryAccessQueue` by registering
                             // the instruction node.
-                            .get_blocking_nodes(node, access_type)
+                            .access_node_and_get_dependencies(node, access_type)
                     })
-                    // Collecting is necessary to avoid "captured variable cannot escape FnMut closure body" errors
+                    // We have to `collect` into a `Vec` to finish our accesses to
+                    // `pending_memory_access`.
                     .collect::<Vec<_>>()
             })
             .collect::<Vec<_>>();
-            let has_memory_dependencies = !memory_dependencies.is_empty();
+            let no_memory_dependencies = memory_dependencies.is_empty();
             for memory_dependency in memory_dependencies {
                 // Test to make sure that no instructions depend directly on themselves
                 if memory_dependency.node_id != node {
                     let execution_dependency =
                         ExecutionDependency::AwaitMemoryAccess(memory_dependency.access_type);
                     add_dependency!(graph, memory_dependency.node_id => node, execution_dependency);
-                    // This memory dependency now has an outgoing edge, so it is no longer a trailing classical
-                    // instruction. If the memory dependency is not a classical instruction, this
-                    // has no effect.
+                    // This memory dependency now has an outgoing edge, so it is no longer a
+                    // trailing classical instruction. If the memory dependency is not a classical
+                    // instruction, this has no effect.
                     trailing_classical_instructions.remove(&memory_dependency.node_id);
                 }
             }
@@ -385,7 +377,7 @@ impl<'a> ScheduledBasicBlock<'a> {
                 InstructionRole::ClassicalCompute => {
                     // If this instruction has no memory dependencies, it is a leading classical
                     // instruction and needs an incoming edge from the block start.
-                    if !has_memory_dependencies {
+                    if no_memory_dependencies {
                         add_dependency!(graph, ScheduledGraphNode::BlockStart => node, ExecutionDependency::StableOrdering);
                     }
                     trailing_classical_instructions.insert(node);
@@ -801,8 +793,9 @@ MUL params2[0] 2                    # reads and writes params2
     }
 
     // Because memory reading and writing dependencies also apply to RfControl instructions, we
-    // expect edges from the first load to the first shift-phase (0 -> 1), the first shift-phase
-    // to the second load (1 -> 2), and the second load to the second shift-phase (2 -> 3).
+    // expect edges from the first load to the first shift-phase (0 -> 1) as well as to the the
+    // second load (0 -> 2), from the first shift-phase to the second load (1 -> 2), and from the
+    // second load to the second shift-phase (2 -> 3).
     build_dot_format_snapshot_test_case! {
         quantum_write_parameterized_operations,
         r#"

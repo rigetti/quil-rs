@@ -23,6 +23,7 @@ timing"];
     "block_0_0" [shape=rectangle, label="[0] DELAY 2e-8"];
     "block_0_1" [shape=rectangle, label="[1] MOVE phase[0] 0.1"];
     "block_0_1" -> "block_0_2" [label="await write"];
+    "block_0_1" -> "block_0_3" [label="await write"];
     "block_0_2" [shape=rectangle, label="[2] SET-PHASE 0 \"frame0\" (2*pi)*phase[0]"];
     "block_0_2" -> "block_0_4" [label="ordering
 timing"];
