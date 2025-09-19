@@ -28,7 +28,7 @@ use crate::instruction::{
 };
 use crate::pickleable_new;
 
-#[derive(Clone, Debug, Hash, PartialEq)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
@@ -44,8 +44,6 @@ pickleable_new! {
         pub fn new(size: Vector, sharing: Option<Sharing>);
     }
 }
-
-impl Eq for MemoryRegion {}
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct MemoryAccesses {
