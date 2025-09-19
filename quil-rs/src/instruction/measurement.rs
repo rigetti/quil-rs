@@ -29,13 +29,19 @@ impl Quil for Measurement {
         writer: &mut impl std::fmt::Write,
         fall_back_to_debug: bool,
     ) -> Result<(), crate::quil::ToQuilError> {
+        let Self {
+            name,
+            qubit,
+            target,
+        } = self;
+
         write!(writer, "MEASURE")?;
-        if let Some(name) = &self.name {
+        if let Some(name) = name {
             write!(writer, "!{name}")?;
         }
         write!(writer, " ")?;
-        self.qubit.write(writer, fall_back_to_debug)?;
-        if let Some(target) = &self.target {
+        qubit.write(writer, fall_back_to_debug)?;
+        if let Some(target) = target {
             write!(writer, " ")?;
             target.write(writer, fall_back_to_debug)?;
         }

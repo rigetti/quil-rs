@@ -512,6 +512,12 @@ impl GateSpecification {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl MeasureCalibrationDefinition {
+    /// The Quil-T name of the measurement that this measure calibration definition is for, if any.
+    #[getter]
+    fn name(&self) -> Option<&str> {
+        self.identifier.name.as_deref()
+    }
+
     /// The qubit that this measure calibration definition is for.
     #[getter]
     fn qubit(&self) -> Qubit {

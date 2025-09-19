@@ -235,6 +235,7 @@ pub(crate) fn parse_defcal_gate<'a>(
 pub(crate) fn parse_defcal_measure<'a>(
     input: ParserInput<'a>,
 ) -> InternalParserResult<'a, Instruction> {
+    let (input, name) = opt(preceded(token!(Bang), token!(Identifier(name))))(input)?;
     let (input, qubit) = parse_qubit(input)?;
     let (input, target) = opt(token!(Identifier(t)))(input)?;
     let (input, _) = token!(Colon)(input)?;
@@ -242,7 +243,11 @@ pub(crate) fn parse_defcal_measure<'a>(
     Ok((
         input,
         Instruction::MeasureCalibrationDefinition(MeasureCalibrationDefinition {
-            identifier: MeasureCalibrationIdentifier { qubit, target },
+            identifier: MeasureCalibrationIdentifier {
+                name,
+                qubit,
+                target,
+            },
             instructions,
         }),
     ))
