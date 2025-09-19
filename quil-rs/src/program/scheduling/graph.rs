@@ -891,4 +891,91 @@ MOVE depends_on_ro ro
 PULSE 0 "ro_tx" gaussian(duration: 1, fwhm: 2, t0: 3)
 "#
     }
+
+    build_dot_format_snapshot_test_case! {
+        memory_dependency_one_variable,
+        r#"DEFFRAME 0 "frame0":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 6864214214.214214
+    CENTER-FREQUENCY: 7250000000.0
+    HARDWARE-OBJECT: "{\"instrument_name\": \"tsunami00\", \"card_index\": 0, \"channel_type\": \"QGSx2Channel\", \"channel_index\": 0, \"sequencer_index\": 0, \"nco_index\": 0}"
+    SAMPLE-RATE: 1000000000.0
+DEFFRAME 1 "frame1":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 6864214214.214214
+    CENTER-FREQUENCY: 7250000000.0
+    HARDWARE-OBJECT: "{\"instrument_name\": \"tsunami00\", \"card_index\": 1, \"channel_type\": \"QGSx2Channel\", \"channel_index\": 0, \"sequencer_index\": 0, \"nco_index\": 0}"
+    SAMPLE-RATE: 1000000000.0
+
+DELAY 2e-8
+
+DECLARE phase REAL
+MOVE phase 0.1
+
+SET-PHASE 0 "frame0" 2*pi*phase
+SET-PHASE 1 "frame1" 2*pi*phase
+
+PULSE 0 "frame0" flat(iq: 1, duration: 4e-9)
+PULSE 1 "frame1" flat(iq: 1, duration: 4e-9)
+"#
+    }
+
+    build_dot_format_snapshot_test_case! {
+        memory_dependency_array,
+        r#"DEFFRAME 0 "frame0":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 6864214214.214214
+    CENTER-FREQUENCY: 7250000000.0
+    HARDWARE-OBJECT: "{\"instrument_name\": \"tsunami00\", \"card_index\": 0, \"channel_type\": \"QGSx2Channel\", \"channel_index\": 0, \"sequencer_index\": 0, \"nco_index\": 0}"
+    SAMPLE-RATE: 1000000000.0
+DEFFRAME 1 "frame1":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 6864214214.214214
+    CENTER-FREQUENCY: 7250000000.0
+    HARDWARE-OBJECT: "{\"instrument_name\": \"tsunami00\", \"card_index\": 1, \"channel_type\": \"QGSx2Channel\", \"channel_index\": 0, \"sequencer_index\": 0, \"nco_index\": 0}"
+    SAMPLE-RATE: 1000000000.0
+
+DELAY 2e-8
+
+DECLARE phase REAL[2]
+MOVE phase[0] 0.1
+MOVE phase[1] 0.1
+
+SET-PHASE 0 "frame0" 2*pi*phase[0]
+SET-PHASE 1 "frame1" 2*pi*phase[1]
+
+PULSE 0 "frame0" flat(iq: 1, duration: 4e-9)
+PULSE 1 "frame1" flat(iq: 1, duration: 4e-9)
+"#
+    }
+
+    build_dot_format_snapshot_test_case! {
+        memory_dependency_two_variables,
+        r#"DEFFRAME 0 "frame0":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 6864214214.214214
+    CENTER-FREQUENCY: 7250000000.0
+    HARDWARE-OBJECT: "{\"instrument_name\": \"tsunami00\", \"card_index\": 0, \"channel_type\": \"QGSx2Channel\", \"channel_index\": 0, \"sequencer_index\": 0, \"nco_index\": 0}"
+    SAMPLE-RATE: 1000000000.0
+DEFFRAME 1 "frame1":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 6864214214.214214
+    CENTER-FREQUENCY: 7250000000.0
+    HARDWARE-OBJECT: "{\"instrument_name\": \"tsunami00\", \"card_index\": 1, \"channel_type\": \"QGSx2Channel\", \"channel_index\": 0, \"sequencer_index\": 0, \"nco_index\": 0}"
+    SAMPLE-RATE: 1000000000.0
+
+DELAY 2e-8
+
+DECLARE phase0 REAL
+DECLARE phase1 REAL
+MOVE phase0 0.1
+MOVE phase1 0.1
+
+SET-PHASE 0 "frame0" 2*pi*phase0
+SET-PHASE 1 "frame1" 2*pi*phase1
+
+PULSE 0 "frame0" flat(iq: 1, duration: 4e-9)
+PULSE 1 "frame1" flat(iq: 1, duration: 4e-9)
+"#
+    }
 }
