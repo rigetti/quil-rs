@@ -27,12 +27,15 @@ but `pyQuil` offers higher-level abstractions and greater stability guarantees.
 | `wasm-bindgen`     | Enable compilation to `wasm32-unknown-unknown` with `wasm-bindgen`    |
 | `python`           | Enable Python bindings via `PyO3`                                     |
 | `stubs`            | Enable type stub generation via `pyo3_stub_gen` (implies `python`)    |
-| `extension-module` | Disables linking `libpython`, needed for [`manylinux`][extmod] builds |
 
 The `python` feature enables code to build the `quil` Python package,
 which allows Python programs to use the features of `quil-rs`.
 The code related to the Python package is sometimes referred to as `quil-py`,
 both for historical reasons, and to distinguish it from other parts of `quil-rs`.
+
+Note that `maturin` commands (`maturin develop`, `maturin release`, etc.)
+automatically enable the `python` feature, as well as the `pyo3/extension-module` feature,
+which disables linking `libpython`, and is needed for [`manylinux`][extmod] builds.
 
 [extmod]: https://pyo3.rs/v0.25.1/building-and-distribution.html#the-extension-module-feature
 

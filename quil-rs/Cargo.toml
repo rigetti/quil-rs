@@ -60,7 +60,6 @@ graphviz-dot = ["dot-writer"]
 wasm-bindgen = []
 python = [ "numpy", "pyo3", "pyo3-build-config" ]
 stubs = [ "python", "pyo3-stub-gen" ]
-extension-module = [ "python", "pyo3/extension-module" ]
 
 [[bench]]
 name = "parser"
