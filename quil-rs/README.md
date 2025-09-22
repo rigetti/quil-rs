@@ -61,8 +61,11 @@ For the trouble, we now support the latest versions of `PyO3` and Python.
 This comes with improvements to security, stability, and performance
 and makes our codebase much easier to support moving forward.
 
-For Rust consumers of `quil-rs`, the only breaking changes
-are that the previously Unit-variants of
+### Rust (`quil-rs`) Breaking Changes
+
+For Rust consumers of `quil-rs`, there are a couple of breaking changes.
+
+First, the previously `Unit`-variants of
 `Instruction` (`Halt`, `Nop`, and `Wait`) and `Expression` (`PiConstant`)
 are now empty tuple variants to make them compatible with `PyO3`'s "Complex enums".
 That means the following variants must have `()` appended to their usages:
@@ -78,6 +81,22 @@ match expression {
     PiConstant() => ...,
 }
 ```
+
+Second, the signature of `Expression::evaluate`
+was generalized to make it easier to share with Python,
+and this will cause an error if you were relying on type inference for these parameters, e.g.:
+
+```rust
+some_expression.evaluate(&HashMap::new(), &HashMap::new());
+```
+
+You can fix it by specifying the key type, e.g.:
+
+```rust
+some_expression.evaluate(&HashMap::<String, _>::new(), &HashMap::<&str, _>::new());
+```
+
+### Python (`quil`/`quil-py`) Breaking Changes
 
 If you're directly using the `quil` Python package that exposes bindings to `quil-rs`,
 please be aware of the following changes required to upgrade to the newest `quil`:
