@@ -53,7 +53,7 @@ pub struct MemoryAccesses {
 }
 
 /// Express a mode of memory access.
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Copy, Hash, PartialEq, Eq, Debug)]
 pub enum MemoryAccessType {
     /// Read from a memory location
     Read,

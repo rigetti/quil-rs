@@ -19,6 +19,7 @@ use std::collections::{HashMap, HashSet};
 use petgraph::graphmap::GraphMap;
 use petgraph::Directed;
 
+use self::dependency_queue::DependencyQueue;
 use crate::instruction::{
     ExternSignatureMap, FrameIdentifier, Instruction, InstructionHandler, Target,
 };
@@ -28,6 +29,8 @@ use crate::program::analysis::{
 use crate::{instruction::InstructionRole, program::Program, quil::Quil};
 
 pub use crate::program::memory::MemoryAccessType;
+
+mod dependency_queue;
 
 #[derive(Debug, Clone, Copy)]
 pub enum ScheduleErrorVariant {
@@ -72,7 +75,7 @@ impl std::fmt::Display for ScheduledGraphNode {
 
 /// A MemoryAccessDependency expresses a dependency that one node has on another to complete
 /// some type of memory access prior to the dependent node's execution.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 struct MemoryAccessDependency {
     /// What type of memory access must complete prior to the downstream instruction.
     // NOTE: This must remain the first field for ordering to work as expected.
@@ -94,76 +97,6 @@ pub enum ExecutionDependency {
 
     /// The ordering between these two instructions must remain unchanged
     StableOrdering,
-}
-
-/// A [`MemoryAccessQueue`] keeps track of which reads and writes are currently outstanding for a
-/// given memory region.
-///
-/// Quil memory is sequentially consistent; all writes must happen-before subsequent reads, and all
-/// reads must happen-before subsequent writes.  There is no dependency between reads.
-///
-/// For the purposes of linearizing memory accesses, there is no difference between
-/// [write][MemoryAccessType::Write] and [capture][MemoryAccessType::Capture] accesses; both are
-/// considered writes, although they are distinguished.
-///
-/// This queue keeps track of the most recent write (or capture) access, if any, as well as all
-/// reads that have been performed since that write.  Every memory access
-/// [registered][Self::access_node_and_get_dependencies] after that write access incurs a
-/// [dependency][MemoryAccessDependency] on it.  When a write (or capture) access is performed, both
-/// the prior most recent write and all outstanding reads are registered as a dependency on this new
-/// write; this new write becomes the most recent write, with no reads that have been performed
-/// since it.
-///
-/// [read]: MemoryAccessType::Read
-/// [write]: MemoryAccessType::Write
-/// [writes]: MemoryAccessType::Write
-/// [capture]: MemoryAccessType::Capture
-/// [captures]: MemoryAccessType::Capture
-#[derive(Debug, Default, Clone)]
-struct MemoryAccessQueue {
-    /// The most recent write or capture access, if any.
-    write: Option<MemoryAccessDependency>,
-
-    /// All reads that that have occurred after [`Self::write`] and before any other write or
-    /// capture access.
-    reads: Vec<ScheduledGraphNode>,
-}
-
-impl MemoryAccessQueue {
-    /// Register that an access of the provided [type][MemoryAccessType] is being performed to the
-    /// provided [graph node][ScheduledGraphNode], returning [all the memory accesses that must have
-    /// completed before this one can happen][MemoryAccessDependency].
-    ///
-    /// To ensure sequential consistency, neither [writes][] nor [captures][] may happen
-    /// concurrently with any other accesses; however, multiple reads may happen concurrently.
-    pub fn access_node_and_get_dependencies(
-        &mut self,
-        node_id: ScheduledGraphNode,
-        access_type: MemoryAccessType,
-    ) -> Vec<MemoryAccessDependency> {
-        // Writes must happen before both subsequent reads *and* subsequent writes, so we
-        // unconditionally register a dependency on the preceding write.
-        let mut result: Vec<_> = self.write.into_iter().collect();
-
-        match access_type {
-            // If we're doing a write now, then all outstanding reads must finish first.
-            MemoryAccessType::Write | MemoryAccessType::Capture => {
-                result.extend(self.reads.drain(..).map(|read_id| MemoryAccessDependency {
-                    access_type: MemoryAccessType::Read,
-                    node_id: read_id,
-                }));
-
-                self.write = Some(MemoryAccessDependency {
-                    access_type,
-                    node_id,
-                })
-            }
-            // Otherwise, save this read so we can serialize it with respect to the next write.
-            MemoryAccessType::Read => self.reads.push(node_id),
-        }
-
-        result
-    }
 }
 
 /// Add a dependency to an edge on the graph, whether that edge currently exists or not.
@@ -197,82 +130,27 @@ pub struct ScheduledBasicBlock<'a> {
     basic_block: BasicBlock<'a>,
     pub(super) graph: DependencyGraph,
 }
-/// PreviousNodes is a structure which helps maintain ordering among instructions which operate on a given frame.
-/// It works similarly to a multiple-reader-single-writer queue, where an instruction which "uses" a frame is like
-/// a writer and an instruction which blocks that frame is like a reader. Multiple instructions may concurrently
-/// block a frame, but an instruction may not use a frame while it is concurrently used or blocked.
-///
-/// ## Examples
-///
-/// Note that "depends on" is equivalent to "must execute at or after completion of." The interpretation of
-/// "at or after" depends on the type of dependency and the compiler.
-///
-/// ```text
-/// user --> user # a second user takes a dependency on the first
-///
-/// user --> blocker # multiple blockers take a dependency on the most recent user
-///      \-> blocker
-///      \-> blocker
-///
-/// blocker --> user --> blocker # users and blockers take dependencies on one another,
-///                              # but blockers do not depend on other blocking instructions
-/// ```
-struct PreviousNodes {
-    using: Option<ScheduledGraphNode>,
-    blocking: HashSet<ScheduledGraphNode>,
-}
 
-impl Default for PreviousNodes {
-    /// The default value for [PreviousNodes] is useful in that, if no previous nodes have been recorded
-    /// as using a frame, we should consider that the start of the instruction block "uses" of that frame
-    ///
-    /// In other words, no instruction can be scheduled prior to the start of the instruction block
-    /// and all scheduled instructions within the block depend on the block's start time, at least indirectly.
-    fn default() -> Self {
-        Self {
-            using: Some(ScheduledGraphNode::BlockStart),
-            blocking: HashSet::new(),
-        }
-    }
-}
-
-impl PreviousNodes {
-    /// Register a node as using a frame, and return the instructions on which it should depend/wait for scheduling (if any).
-    ///
-    /// A node which uses a frame will block on any previous user or blocker of the frame, much like a writer in a read-write lock.
-    fn get_dependencies_for_next_user(
-        &mut self,
-        node: ScheduledGraphNode,
-    ) -> HashSet<ScheduledGraphNode> {
-        let mut result = std::mem::take(&mut self.blocking);
-        if let Some(previous_user) = self.using.replace(node) {
-            result.insert(previous_user);
-        }
-
-        result
-    }
-
-    /// Register a node as blocking a frame, and return the instructions on which it should depend/wait for scheduling (if any).
-    ///
-    /// A node which blocks a frame will block on any previous user of the frame, but not concurrent blockers.
-    ///
-    /// If the frame is currently blocked by other nodes, it will add itself to the list of blockers,
-    /// much like a reader in a read-write lock.
-    fn get_dependency_for_next_blocker(
-        &mut self,
-        node: ScheduledGraphNode,
-    ) -> Option<ScheduledGraphNode> {
-        self.blocking.insert(node);
-        self.using
-    }
-
-    /// Consume the [PreviousNodes] and return all nodes within.
-    pub fn into_hashset(mut self) -> HashSet<ScheduledGraphNode> {
-        if let Some(using) = self.using {
-            self.blocking.insert(using);
-        }
-        self.blocking
-    }
+/// How an instruction affects a frame.
+///
+/// An instruction may do one of two things:
+///
+/// 1. It may [*block*][Self::Blocking] the frame, which indicates that while it does not play on
+///    that frame itself, it must prevent any other instructions from playing on it.
+///
+/// 2. It may [*use*][Self::Using] the frame, which indicates that the instruction play on or
+///    modifies that frame.
+///
+/// These may be thought of as reads and writes of a frame, respectively: blocking does not have an
+/// affect on the frame but must be ordered with respect to uses, while uses must happen in a
+/// specific order.  This is relevant for [`dependency_queue::Access`].
+///
+/// See also [`crate::program::MatchedFrames`] for the type that keeps track of the specific frames
+/// that are blocked or used by an instruction.
+#[derive(Clone, Copy, Hash, PartialEq, Eq, Debug)]
+pub enum InstructionFrameInteraction {
+    Blocking,
+    Using,
 }
 
 impl<'a> ScheduledBasicBlock<'a> {
@@ -292,9 +170,15 @@ impl<'a> ScheduledBasicBlock<'a> {
         let mut trailing_classical_instructions: HashSet<ScheduledGraphNode> = HashSet::new();
 
         // Store the instruction index of the last instruction to block that frame
-        let mut last_instruction_by_frame: HashMap<FrameIdentifier, PreviousNodes> = HashMap::new();
-        let mut last_timed_instruction_by_frame: HashMap<FrameIdentifier, PreviousNodes> =
-            HashMap::new();
+        let mut last_instruction_by_frame: HashMap<
+            FrameIdentifier,
+            DependencyQueue<InstructionFrameInteraction>,
+        > = HashMap::new();
+
+        let mut last_timed_instruction_by_frame: HashMap<
+            FrameIdentifier,
+            DependencyQueue<InstructionFrameInteraction>,
+        > = HashMap::new();
 
         // Keep track of memory accesses (reads/writes) to each region, so that they can be
         // serialized.  This serialization is done by memory region; that is, writes to `region[0]`
@@ -306,7 +190,8 @@ impl<'a> ScheduledBasicBlock<'a> {
         // [`crate::program::memory::MemoryAccesses`] type.  In particular, we would need to capture
         // accesses that read from/write to potentially an entire region, such as `LOAD` and
         // `STORE`, as well as accesses that only access a statically known index.
-        let mut pending_memory_access: HashMap<String, MemoryAccessQueue> = HashMap::new();
+        let mut pending_memory_access: HashMap<String, DependencyQueue<MemoryAccessType>> =
+            HashMap::new();
 
         let extern_signature_map = ExternSignatureMap::try_from(program.extern_pragma_map.clone())
             .map_err(|(pragma, _)| ScheduleError {
@@ -349,9 +234,9 @@ impl<'a> ScheduledBasicBlock<'a> {
                         pending_memory_access
                             .entry(region)
                             .or_default()
-                            // NOTE: This mutates the underlying `MemoryAccessQueue` by registering
+                            // NOTE: This mutates the underlying `DependencyQueue` by registering
                             // the instruction node.
-                            .access_node_and_get_dependencies(node, access_type)
+                            .record_access_and_get_dependencies(node, access_type)
                     })
                     // We have to `collect` into a `Vec` to finish our accesses to
                     // `pending_memory_access`.
@@ -393,7 +278,10 @@ impl<'a> ScheduledBasicBlock<'a> {
                                 let previous_node_ids = last_timed_instruction_by_frame
                                     .entry((*frame).clone())
                                     .or_default()
-                                    .get_dependencies_for_next_user(node);
+                                    .record_access_and_get_dependencies(
+                                        node,
+                                        InstructionFrameInteraction::Using,
+                                    );
 
                                 for previous_node_id in previous_node_ids {
                                     add_dependency!(graph, previous_node_id => node, ExecutionDependency::Scheduled);
@@ -403,7 +291,10 @@ impl<'a> ScheduledBasicBlock<'a> {
                             let previous_node_ids = last_instruction_by_frame
                                 .entry((*frame).clone())
                                 .or_default()
-                                .get_dependencies_for_next_user(node);
+                                .record_access_and_get_dependencies(
+                                    node,
+                                    InstructionFrameInteraction::Using,
+                                );
 
                             for previous_node_id in previous_node_ids {
                                 add_dependency!(graph, previous_node_id => node, ExecutionDependency::StableOrdering);
@@ -412,20 +303,26 @@ impl<'a> ScheduledBasicBlock<'a> {
 
                         for frame in matched_frames.blocked {
                             if is_scheduled {
-                                if let Some(previous_node_id) = last_timed_instruction_by_frame
+                                let previous_node_ids = last_timed_instruction_by_frame
                                     .entry((*frame).clone())
                                     .or_default()
-                                    .get_dependency_for_next_blocker(node)
-                                {
+                                    .record_access_and_get_dependencies(
+                                        node,
+                                        InstructionFrameInteraction::Blocking,
+                                    );
+                                for previous_node_id in previous_node_ids {
                                     add_dependency!(graph, previous_node_id => node, ExecutionDependency::Scheduled);
                                 }
                             }
 
-                            if let Some(previous_node_id) = last_instruction_by_frame
+                            let previous_node_ids = last_instruction_by_frame
                                 .entry((*frame).clone())
                                 .or_default()
-                                .get_dependency_for_next_blocker(node)
-                            {
+                                .record_access_and_get_dependencies(
+                                    node,
+                                    InstructionFrameInteraction::Blocking,
+                                );
+                            for previous_node_id in previous_node_ids {
                                 add_dependency!(graph, previous_node_id => node, ExecutionDependency::StableOrdering);
                             }
                         }
@@ -458,16 +355,18 @@ impl<'a> ScheduledBasicBlock<'a> {
             add_dependency!(graph, trailing_classical_instruction => ScheduledGraphNode::BlockEnd, ExecutionDependency::StableOrdering);
         }
 
-        for previous_nodes in last_timed_instruction_by_frame.into_values() {
-            for node in previous_nodes.into_hashset() {
-                add_dependency!(graph, node => ScheduledGraphNode::BlockEnd, ExecutionDependency::Scheduled);
-            }
+        for node in last_timed_instruction_by_frame
+            .into_values()
+            .flat_map(DependencyQueue::into_pending_dependencies)
+        {
+            add_dependency!(graph, node => ScheduledGraphNode::BlockEnd, ExecutionDependency::Scheduled);
         }
 
-        for previous_nodes in last_instruction_by_frame.into_values() {
-            for node in previous_nodes.into_hashset() {
-                add_dependency!(graph, node => ScheduledGraphNode::BlockEnd, ExecutionDependency::StableOrdering);
-            }
+        for node in last_instruction_by_frame
+            .into_values()
+            .flat_map(DependencyQueue::into_pending_dependencies)
+        {
+            add_dependency!(graph, node => ScheduledGraphNode::BlockEnd, ExecutionDependency::StableOrdering);
         }
 
         // Maintain the invariant that the block start node has a connecting path to the block end node.
