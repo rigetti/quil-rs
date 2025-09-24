@@ -15,7 +15,7 @@ With ``pyo3_stub_gen`` annotations, the script can usually make a better guess a
 but without one, it just prints all the functions it finds with a guess about the export.
 """
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from itertools import accumulate, chain
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -28,6 +28,7 @@ from .reader import (
     read_file,
     Line,
     Lines,
+    skip,
 )
 
 from .package import (
@@ -44,7 +45,7 @@ from .package import (
 logger = logging.getLogger(__name__)
 
 
-@dataclass
+@dataclass(frozen=True)
 class Issue:
     package_kind: PackageKind
     message: str
@@ -70,10 +71,7 @@ def guess_function_modules(annotated: Package, exported: Package):
     (that is, a ``pymodule`` it appears to have been added to).
     """
 
-    builtins = annotated.get("builtins")
-    if builtins is None:
-        raise ValueError("missing `builtins` from annotated modules")
-
+    builtins = annotated["builtins"]
     funcs = [f for f in builtins if f.kind is Kind.Function]
     for func in funcs:
         matching = (
@@ -88,6 +86,7 @@ def guess_function_modules(annotated: Package, exported: Package):
             builtins.discard(func)
         else:
             logger.warning(f"No module found for function: {func}")
+
 
 def find_possible_mistakes(
     annotated: Package, exported: Package, found_exports: set[str] | None = None
@@ -111,6 +110,36 @@ def find_possible_mistakes(
 
     logger.debug("Checking that annotated items are added to the correct module.")
     issues: list[Issue] = []
+
+
+    for method in annotated._methods:
+        rust_type, _ = method.rust_name.split("::", 1)
+        if (found := annotated.find_rust(rust_type)) is None:
+            msg = "\n".join(
+                (
+                    f"Method '{method.python_name}' was not matched to a Rust type.",
+                    f"   {method}",
+                )
+            )
+            issues.append(Issue(PackageKind.Annotation, msg))
+            continue
+
+        module, item = found
+        if method.python_name.startswith("Py") or method.python_name.startswith("py_"):
+            msg = "\n".join(
+                (
+                    f"Suspicious method name for '{module}.{item.python_name}.{method.python_name}'",
+                    f"     ({method})",
+                    (
+                        "     "
+                        "hint: did you forget a '#[pyo3(name = "
+                        f'"{method.python_name.lower().removeprefix("py").removeprefix("_")}"'
+                        ')] attribute?'
+                    ),
+                )
+            )
+            issues.append(Issue(PackageKind.Annotation, msg))
+
 
     if found_exports is None:
         found_exports = {"builtins", "quil", "._quil"}
@@ -187,7 +216,7 @@ def find_possible_mistakes(
 
         logger.debug(f"Checking that items marked to belong to '{module}' are added.")
         for item in sorted(anno):
-            if item.python_name.startswith("Py"):
+            if item.python_name.startswith("Py") or item.python_name.startswith("py_"):
                 msg = "\n".join(
                     (
                         f"  Suspicious name for '{module}.{item.python_name}'",
@@ -290,6 +319,7 @@ PYITEM_RE = re.compile(_cfg(rf"(?:pyo3::)?(?:pyclass|pyfunction)\s*(?:\((.*?)\))
 PYMODULE_RE = re.compile(_cfg(f"(?:pyo3::)?pymodule"))
 PYMETHODS_RE = re.compile(_cfg(r"(?:pyo3::)?pymethods"))
 PYO3_RE = re.compile(_cfg(r"pyo3\(([^)]+)\)"))
+GETTER_SETTER_RE = re.compile(_cfg(r"(getter|setter)\(([^)]+)\)"))
 ITEM_RE = re.compile(
     r"(?P<kind>struct|enum|fn)\s+(?:\(\s*)?(?P<rust_name>[A-Za-z_][A-Za-z0-9_]*)"
 )
@@ -305,6 +335,65 @@ STUB_GEN_RE = re.compile(
         r"gen_stub_py(class(?:(?:_complex)?_enum)?|methods|function)(?:\((\s*?[^)]+)\))?"
     )
 )
+
+def _pymethods(annotated: Package, path: Path, lines: Lines):
+    """Process the body of a ``#[pymethods]`` annotated ``impl`` block."""
+
+    # Skip over additional `#[...]` lines.
+    while (line := next(lines, None)) and line.text.strip().startswith("#["):
+        line = join_lines(iter_delim(lines, "[]", first=line))
+
+    if line is None:
+        logger.error(f"Unexpected EOF processing {path}")
+        return
+
+    match line.text.split():
+        case ["impl", rust_type, "{"] | ["impl", _, "for", rust_type, "{"]:
+            logger.info(f"Processing impl block for {rust_type}.")
+            pass
+        case _:
+            logger.error(f"Expected impl block, but found {line}.")
+            return
+
+    # Limit ourselves to the impl block.
+    lines = iter_delim(lines, "{}")
+
+    props = PyO3Props()
+    while (line := next(lines, None)):
+        if line.text.strip().startswith("#["):
+            line = join_lines(iter_delim(lines, "[]", first=line))
+            if m := PYO3_RE.search(line.text):
+                props |= PyO3Props.parse(m.group(1) or m.group(2))
+            elif m := GETTER_SETTER_RE.search(line.text):
+                props["name"] = m.group(2) or m.group(4)
+
+        if not (item_match := ITEM_RE.search(line.text)):
+            continue
+
+        kind: Kind = Kind(item_match.group("kind"))
+        rust_name: str = item_match.group("rust_name")
+
+        if not isinstance(rust_name, str):
+            logger.error(f"Couldn't find Rust name for {path}@{line}: {kind}")
+            return
+
+        python_name = props.get("name") or props.get("getter")
+
+        item = Item(
+            kind=kind,
+            python_name=props.gets("name", rust_name),
+            rust_name=f"{rust_type}::{rust_name}",
+            path=path,
+            line=line,
+        )
+        assert item.kind is Kind.Function, str(item)
+        if item.python_name.startswith("Py") or item.python_name.startswith("py_"):
+            logger.warning(f"Suspicious name for {path}@{line}: {item}")
+
+        annotated._methods.add(item)
+
+        # Skip the actual function body.
+        skip(lines, "{}", first=line)
 
 
 def _pyitem(
@@ -354,7 +443,7 @@ def _pyitem(
         stub_attr=last_stub,
     )
 
-    if item.python_name.startswith("Py"):
+    if item.python_name.startswith("Py") or item.python_name.startswith("py_"):
         logger.warning(f"Suspicious name for {path}@{line}: {item}")
 
     if last_stub is None:
@@ -569,6 +658,7 @@ def extract_items_from_file(path: Path, annotated: Package, exported: Package):
             logger.info(f"Discovered impl block in {path}: {line}")
             if last_stub is None:
                 logger.warning(f"No stub annotation found for {path} {line}.")
+            _pymethods(annotated, path, chain((line,), lines))
         elif "pymethods" in line.text and not (
             "gen_stub" in line.text or "use " in line.text
         ):

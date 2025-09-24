@@ -1,1 +1,6 @@
-[{"package_kind": "Export", "message": "  Didn't find `fix_complex_enums!` for 'quil.instructions.EnumA'\n     (enum 'EnumA' in tests/data/missing_fix_complex_enums/somecode.rs@20)"}]
+[
+  {
+    "package_kind": "Export",
+    "message": "  Didn't find `fix_complex_enums!` for 'quil.instructions.EnumA'\n     (enum 'EnumA' in tests/data/missing_fix_complex_enums/somecode.rs@20)"
+  }
+]

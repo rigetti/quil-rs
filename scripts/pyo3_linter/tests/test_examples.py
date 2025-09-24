@@ -1,14 +1,8 @@
 import json
-from dataclasses import asdict
 from pathlib import Path
-import pytest
+from typing import Iterable
 
-from pyo3_linter import process_dir, find_possible_mistakes, Package, Issue
-
-def pytest_generate_tests(metafunc: pytest.Metafunc):
-    if "root" in metafunc.fixturenames:
-        paths = [p for p in Path("tests/data").iterdir() if p.is_dir()]
-        metafunc.parametrize("root", paths, ids=[p.name for p in paths])
+from pyo3_linter import process_dir, find_possible_mistakes, Issue, Package, PackageKind
 
 
 def package_to_dict(package: Package) -> dict:
@@ -33,7 +27,8 @@ def package_to_dict(package: Package) -> dict:
         for name, mod in package.items()
     }
 
-def issues_to_list(issues: list[Issue]) -> list:
+
+def issues_to_list(issues: Iterable[Issue]) -> list:
     return [
         {
             "package_kind": issue.package_kind.name,
@@ -43,31 +38,46 @@ def issues_to_list(issues: list[Issue]) -> list:
     ]
 
 
-def test_find_mistakes(root: Path):
+def list_to_issues(issues: list[dict]) -> set[Issue]:
+    return {
+        Issue(package_kind = PackageKind(issue["package_kind"]), message=issue["message"])
+        for issue in issues
+    }
+
+
+def _save_generated(data, paths):
+    for d, p in zip(data, paths):
+        with open(p, "w") as f:
+            json.dump(d, f, indent=2)
+
+
+def test_find_mistakes(root: Path, generating: bool):
     """Processes files under the `root` and compares the results to expected output,
     stored in JSON files under that root directory.
     """
 
-    expected_paths = [
-        (root / "expected-annotated.json"),
-        (root / "expected-exported.json"),
-        (root / "expected-issues.json"),
-    ]
-    for p in expected_paths:
-        assert p.exists() and p.is_file(), f"missing comparison file for {root.name}"
-
-    expected_annotated = json.loads(expected_paths[0].read_text())
-    expected_exported = json.loads(expected_paths[1].read_text())
-    expected_issues = json.loads(expected_paths[2].read_text())
-
     annotated, exported = process_dir(root)
     issues = find_possible_mistakes(annotated, exported)
 
-    got_annotated = package_to_dict(annotated)
-    got_exported = package_to_dict(exported)
-    got_issues = issues_to_list(issues)
+    # These are dicts/lists so they'll be valid JSON and easier to manipulate/check.
+    got_data, expected_paths = list(zip(*(
+        ( package_to_dict(annotated), (root / "expected-annotated.json") ),
+        ( package_to_dict(exported), (root / "expected-exported.json") ),
+        ( issues_to_list(issues), (root / "expected-issues.json") ),
+    )))
 
-    assert got_annotated == expected_annotated
-    assert got_exported == expected_exported
-    assert got_issues == expected_issues
+    if generating:
+        _save_generated(got_data, expected_paths)
+        expected_data = got_data
+    else:
+        for p in expected_paths:
+            assert p.exists() and p.is_file(), f"missing comparison file for {root.name}"
+        expected_data = [ json.loads(p.read_text()) for p in expected_paths ]
+
+    for got, expected in zip(got_data, expected_data):
+        if isinstance(got, list):
+            # Compare as sets, because order isn't important.
+            got = list_to_issues(got)
+            expected = list_to_issues(expected)
+        assert got == expected
 

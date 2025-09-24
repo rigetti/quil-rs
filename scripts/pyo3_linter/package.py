@@ -22,8 +22,8 @@ from .reader import Line
 logger = logging.getLogger(__name__)
 
 class PackageKind(enum.Enum):
-    Annotation = "annotation"
-    Export = "export"
+    Annotation = "Annotation"
+    Export = "Export"
 
 
 class Kind(enum.Enum):
@@ -221,9 +221,10 @@ class Module(MutableSet[Item]):
         logger.info(f"Adding {item}")
         self._items.add(item)
 
-    def find_rust(self, item: Item) -> Item | None:
+    def find_rust(self, item: Item | str) -> Item | None:
         """Return an `item` in this `Module` that has the same Rust name as the given `item`."""
-        return next((i for i in self if i.rust_name == item.rust_name), None)
+        target = item.rust_name if isinstance(item, Item) else item
+        return next((i for i in self if i.rust_name == target), None)
 
 _T = TypeVar("_T")
 
@@ -235,17 +236,30 @@ class Package(MutableMapping[str, Module]):
         default_factory=lambda: defaultdict(Module)
     )
 
-    def find_rust(self, item: Item) -> tuple[str, Item] | None:
+    # This tracks ``rust_type_name -> methods`` for `impl` blocks as we discover them,
+    # for when we don't yet know which Python module the implemented type belongs to.
+    _methods: Module = field(default_factory=Module)
+
+    def find_rust(self, item: Item | str) -> tuple[str, Item] | None:
         """Return the name of a `Module` and an `Item` within it
         that has the same Rust name as the given `item`,
         but is distinct from the given `item.`
+
+        If the given `item` is a `str` instead of an actual `Item`,
+        the search is instead for an `Item` with that Rust name,
+        and distinctness does not apply.
+
+        The `Item`-argument form is useful for finding an `Item`
+        that has been mistakenly placed in multiple modules,
+        while `str`-argument form is useful for associating something with an `Item`
+        when its module isn't immediately available (i.e., in an `impl` block).
         """
         return next(
             (
                 (name, found)
                 for name, module in self._modules.items()
                 if (found := module.find_rust(item)) is not None
-                and id(found) != id(item)
+                and (isinstance(item, str) or id(found) != id(item))
             ),
             None,
         )

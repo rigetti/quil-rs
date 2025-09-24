@@ -80,7 +80,7 @@ pickleable_new! {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl InstC {
-    fn py_arguments(&self) -> Vec<Args> {
+    fn arguments(&self) -> Vec<Args> {
         self.arguments.clone()
     }
 }

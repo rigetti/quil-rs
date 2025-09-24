@@ -7,7 +7,7 @@ pub(crate) fn init_submodule(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     m.add("InstructionError", py.get_type::<InstructionError>())?;
     m.add("SomeKindOfError", py.get_type::<SomeKindOfError>())?;
-    m.add_function(wrap_pyfunction!(a_different_name, m)?)?;
+    m.add_function(wrap_pyfunction!(py_some_function, m)?)?;
     
     m.add_class::<EnumA>()?;
     m.add_class::<EnumB>()?;
@@ -22,8 +22,7 @@ pub(crate) fn init_submodule(m: &Bound<'_, PyModule>) -> PyResult<()> {
 }
 
 #[cfg_attr(feature = "stubs", gen_stub_pyfunction(module = "quil.instructions"))]
-#[pyfunction(name = "some_function")]
-fn a_different_name() -> PyResult<()> {
+fn py_some_function() -> PyResult<()> {
     Ok(())
 }
 
@@ -49,7 +48,7 @@ impl_instruction!([
 ]);
 
 instruction_getnewargs!(
-    InstA,
+    PyInstA,
     InstB,
 );
 
@@ -68,10 +67,15 @@ impl InstC {
 
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
-impl InstA {
+impl PyInstA {
     #[getter]
-    fn name(&self) -> &str {
+    fn py_name(&self) -> &str {
         &self.identifier.name
+    }
+    
+    #[getter(value)]
+    fn py_value(&self) -> &str {
+        &self.value
     }
 }
 
@@ -87,11 +91,16 @@ impl InstC {
     fn py_arguments(&self) -> Vec<Args> {
         self.arguments.clone()
     }
+
+    #[pyo3(name = "other")]
+    fn py_other(&self) -> Vec<Args> {
+        self.other()
+    }
 }
 
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
-impl InstA {
+impl PyInstA {
     #[staticmethod]
     fn parse(input: &str) -> Result<Self, ParseInstructionError> {
         <Self as std::str::FromStr>::from_str(input)

@@ -1,1 +1,6 @@
-[{"package_kind": "Export", "message": "  Didn't find a stub annotation for 'quil.instructions.EnumA'\n     (enum 'EnumA' in tests/data/missing_stubs/somecode.rs@19)"}]
+[
+  {
+    "package_kind": "Export",
+    "message": "  Didn't find a stub annotation for 'quil.instructions.EnumA'\n     (enum 'EnumA' in tests/data/missing_stubs/somecode.rs@19)"
+  }
+]
