@@ -391,14 +391,6 @@ pickleable_new! {
     }
 }
 
-#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[pymethods]
-impl Call {
-    fn py_arguments(&self) -> Vec<UnresolvedCallArgument> {
-        self.arguments.clone()
-    }
-}
-
 #[cfg(feature = "stubs")]
 impl pyo3_stub_gen::PyStubType for ExternPragmaMap {
     fn type_output() -> pyo3_stub_gen::TypeInfo {

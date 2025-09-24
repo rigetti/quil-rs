@@ -11,10 +11,8 @@ use indexmap::IndexMap;
 use nom_locate::LocatedSpan;
 use num_complex::Complex64;
 
-#[cfg(not(feature = "python"))]
-use optipy::strip_pyo3;
 #[cfg(feature = "stubs")]
-use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pymethods};
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyclass_complex_enum};
 
 use crate::{
     expression::format_complex,
@@ -732,7 +730,7 @@ pub enum CallError {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, subclass)
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, subclass, get_all)
 )]
 pub struct Call {
     /// The name of the call instruction. This must be a valid user identifier.
@@ -753,16 +751,6 @@ pickleable_new! {
 
             Ok(Self { name, arguments })
         }
-    }
-}
-
-#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[cfg_attr(feature = "python", pyo3::pymethods)]
-#[cfg_attr(not(feature = "python"), strip_pyo3)]
-impl Call {
-    #[getter]
-    pub fn name(&self) -> &str {
-        self.name.as_str()
     }
 }
 

@@ -36,6 +36,11 @@ class Expression:
     Note that when comparing Quil expressions, any embedded NaNs are treated as *equal* to other
     NaNs, not unequal, in contravention of the IEEE 754 spec.
     """
+    def to_real(self) -> builtins.float:
+        r"""
+        If this is a number with imaginary part "equal to" zero (of _small_ absolute value), return
+        that number. Otherwise, error with an evaluation error of a descriptive type.
+        """
     def into_simplified(self) -> Expression:
         r"""
         Return an expression derived from this one, simplified as much as possible.
@@ -63,11 +68,6 @@ class Expression:
         """
     def __getnewargs__(self) -> tuple[MemoryReference | FunctionCallExpression | InfixExpression | complex | PrefixExpression | str]: ...
     def __repr__(self) -> builtins.str: ...
-    def to_real(self) -> builtins.float:
-        r"""
-        If this is a number with imaginary part "equal to" zero (of _small_ absolute value), return
-        that number. Otherwise, error with an evaluation error of a descriptive type.
-        """
     class Address(Expression):
         __match_args__ = ("_0",)
         @property
