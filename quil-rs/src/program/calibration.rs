@@ -16,9 +16,7 @@ use std::collections::HashMap;
 use std::iter::FusedIterator;
 use std::ops::Range;
 
-use itertools::FoldWhile::{Continue, Done};
-use itertools::Itertools;
-
+use itertools::{Either, Itertools as _};
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pymethods};
 
@@ -276,12 +274,6 @@ impl From<MeasureCalibrationIdentifier> for CalibrationSource {
 }
 
 impl Calibrations {
-    /// Return a vector containing a reference to all [`MeasureCalibrationDefinition`]s
-    /// in the set.
-    pub fn measure_calibrations(&self) -> Vec<&MeasureCalibrationDefinition> {
-        self.iter_measure_calibrations().collect()
-    }
-
     /// Iterate over all [`CalibrationDefinition`]s in the set
     pub fn iter_calibrations(
         &self,
@@ -290,7 +282,9 @@ impl Calibrations {
     }
 
     /// Iterate over all [`MeasureCalibrationDefinition`]s calibrations in the set
-    pub fn iter_measure_calibrations(&self) -> impl Iterator<Item = &MeasureCalibrationDefinition> {
+    pub fn iter_measure_calibrations(
+        &self,
+    ) -> impl DoubleEndedIterator<Item = &MeasureCalibrationDefinition> + FusedIterator {
         self.measure_calibrations.iter()
     }
 
@@ -449,8 +443,7 @@ impl Calibrations {
                             match instruction {
                                 Instruction::Pragma(pragma) => {
                                     if pragma.name == "LOAD-MEMORY"
-                                        && pragma.data.as_ref()
-                                            == Some(&calibration.identifier.parameter)
+                                        && pragma.data == calibration.identifier.target
                                     {
                                         if let Some(target) = &measurement.target {
                                             pragma.data = Some(target.to_quil_or_debug())
@@ -571,30 +564,52 @@ impl Calibrations {
         &self,
         measurement: &Measurement,
     ) -> Option<&MeasureCalibrationDefinition> {
-        measurement.target.as_ref()?;
+        /// Utility type: when collecting from an iterator, return only the first value it produces.
+        struct First<T>(Option<T>);
 
-        self.measure_calibrations()
-            .into_iter()
+        impl<T> Default for First<T> {
+            fn default() -> Self {
+                Self(None)
+            }
+        }
+
+        impl<A> Extend<A> for First<A> {
+            fn extend<T: IntoIterator<Item = A>>(&mut self, iter: T) {
+                if self.0.is_none() {
+                    self.0 = iter.into_iter().next()
+                }
+            }
+        }
+
+        let Measurement { qubit, target } = measurement;
+
+        // Find the last matching measurement calibration, but prefer an exact qubit match to a
+        // wildcard qubit match.
+        let (First(exact), First(wildcard)) = self
+            .iter_measure_calibrations()
             .rev()
-            .fold_while(None, |best_match, calibration| {
-                if let Some(qubit) = &calibration.identifier.qubit {
-                    match qubit {
-                        Qubit::Fixed(_) if qubit == &measurement.qubit => Done(Some(calibration)),
-                        Qubit::Variable(_)
-                            if best_match.is_none()
-                                || best_match.is_some_and(|c| c.identifier.qubit.is_none()) =>
-                        {
-                            Continue(Some(calibration))
-                        }
-                        _ => Continue(best_match),
-                    }
-                } else if best_match.is_none() {
-                    Continue(Some(calibration))
-                } else {
-                    Continue(best_match)
+            .filter_map(|calibration| {
+                let identifier = &calibration.identifier;
+
+                if target.is_some() != identifier.target.is_some() {
+                    return None;
+                }
+
+                match &identifier.qubit {
+                    fixed @ Qubit::Fixed(_) if qubit == fixed => Some((calibration, true)),
+                    Qubit::Variable(_) => Some((calibration, false)),
+                    Qubit::Fixed(_) | Qubit::Placeholder(_) => None,
                 }
             })
-            .into_inner()
+            .partition_map(|(calibration, exact)| {
+                if exact {
+                    Either::Left(calibration)
+                } else {
+                    Either::Right(calibration)
+                }
+            });
+
+        exact.or(wildcard)
     }
 
     /// Return the final calibration which matches the gate per the QuilT specification:
@@ -709,8 +724,8 @@ mod tests {
             "    PRAGMA INCORRECT_PRECEDENCE\n",
             "DEFCAL MEASURE 1 addr:\n",
             "    PRAGMA INCORRECT_QUBIT\n",
-            "DEFCAL MEASURE addr:\n",
-            "    PRAGMA INCORRECT_PRECEDENCE\n",
+            "DEFCAL MEASURE q:\n",
+            "    PRAGMA INCORRECT_RECORD_VS_EFFECT\n",
             "MEASURE 0 ro\n",
         ),
     )]
@@ -721,37 +736,63 @@ mod tests {
     #[case(
         "Precedence-Fixed-Match",
         concat!(
-            "DEFCAL MEASURE addr:\n",
-            "    PRAGMA INCORRECT_PRECEDENCE\n",
-            "DEFCAL MEASURE q addr:\n",
+            "DEFCAL MEASURE q:\n",
+            "    PRAGMA INCORRECT_RECORD_VS_EFFECT\n",
+            "DEFCAL MEASURE b addr:\n",
             "    PRAGMA INCORRECT_PRECEDENCE\n",
             "DEFCAL MEASURE 0 addr:\n",
             "    PRAGMA INCORRECT_ORDER\n",
             "DEFCAL MEASURE 0 addr:\n",
             "    PRAGMA CORRECT\n",
+            "DEFCAL MEASURE q addr:\n",
+            "    PRAGMA INCORRECT_PRECEDENCE\n",
+            "DEFCAL MEASURE 1 addr:\n",
+            "    PRAGMA INCORRECT_QUBIT\n",
             "MEASURE 0 ro\n",
         )
     )]
     #[case(
         "Precedence-Variable-Match",
         concat!(
-            "DEFCAL MEASURE addr:\n",
-            "    PRAGMA INCORRECT_PRECEDENCE\n",
-            "DEFCAL MEASURE q addr:\n",
-            "    PRAGMA INCORRECT_PRECEDENCE\n",
+            "DEFCAL MEASURE q:\n",
+            "    PRAGMA INCORRECT_RECORD_VS_EFFECT\n",
             "DEFCAL MEASURE b addr:\n",
+            "    PRAGMA INCORRECT_ORDER\n",
+            "DEFCAL MEASURE q addr:\n",
             "    PRAGMA CORRECT\n",
             "MEASURE 0 ro\n",
         )
     )]
     #[case(
-        "Precedence-No-Qubit-Match",
+        "Precedence-No-Target-Match",
         concat!(
-            "DEFCAL MEASURE addr:\n",
-            "    PRAGMA INCORRECT_PRECEDENCE\n",
-            "DEFCAL MEASURE addr:\n",
+            "DEFCAL MEASURE b:\n",
+            "    PRAGMA INCORRECT_SAME_NAME_SHOULD_NOT_APPEAR_IN_OUTPUT\n",
+            "DEFCAL MEASURE b:\n",
+            "    PRAGMA INCORRECT_ORDER\n",
+            "DEFCAL MEASURE q:\n",
             "    PRAGMA CORRECT\n",
+            "MEASURE 0\n",
+        )
+    )]
+    #[case(
+        "Precedence-Prefer-Exact-Qubit-Match",
+        concat!(
+            "DEFCAL MEASURE 0 addr:\n",
+            "    PRAGMA CORRECT\n",
+            "DEFCAL MEASURE q addr:\n",
+            "    PRAGMA INCORRECT_PRECEDENCE\n",
             "MEASURE 0 ro\n",
+        )
+    )]
+    #[case(
+        "Precedence-Prefer-Exact-Qubit-Match-No-Target",
+        concat!(
+            "DEFCAL MEASURE 0:\n",
+            "    PRAGMA CORRECT\n",
+            "DEFCAL MEASURE q:\n",
+            "    PRAGMA INCORRECT_PRECEDENCE\n",
+            "MEASURE 0\n",
         )
     )]
     #[case(
@@ -865,8 +906,8 @@ X 0
                             target_location: CalibrationExpansion {
                                 calibration_used: CalibrationSource::MeasureCalibration(
                                     MeasureCalibrationIdentifier {
-                                        qubit: Some(crate::instruction::Qubit::Fixed(0)),
-                                        parameter: "addr".to_string(),
+                                        qubit: crate::instruction::Qubit::Fixed(0),
+                                        target: Some("addr".to_string()),
                                     },
                                 ),
                                 range: InstructionIndex(2)..InstructionIndex(3),

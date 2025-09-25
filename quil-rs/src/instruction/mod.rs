@@ -14,6 +14,7 @@
 
 use std::collections::HashSet;
 use std::fmt;
+use std::iter;
 use std::str::FromStr;
 
 use nom_locate::LocatedSpan;
@@ -704,17 +705,16 @@ impl Instruction {
                         .flat_map(|inst| inst.get_qubits()),
                 )
                 .collect(),
-            Instruction::MeasureCalibrationDefinition(measurement) => measurement
-                .identifier
-                .qubit
-                .iter()
-                .chain(
-                    measurement
-                        .instructions
-                        .iter()
-                        .flat_map(|inst| inst.get_qubits()),
-                )
-                .collect(),
+            Instruction::MeasureCalibrationDefinition(measurement) => {
+                iter::once(&measurement.identifier.qubit)
+                    .chain(
+                        measurement
+                            .instructions
+                            .iter()
+                            .flat_map(|inst| inst.get_qubits()),
+                    )
+                    .collect()
+            }
             Instruction::Measurement(measurement) => vec![&measurement.qubit],
             Instruction::Reset(reset) => match &reset.qubit {
                 Some(qubit) => vec![qubit],
@@ -744,17 +744,16 @@ impl Instruction {
                         .flat_map(|inst| inst.get_qubits_mut()),
                 )
                 .collect(),
-            Instruction::MeasureCalibrationDefinition(measurement) => measurement
-                .identifier
-                .qubit
-                .iter_mut()
-                .chain(
-                    measurement
-                        .instructions
-                        .iter_mut()
-                        .flat_map(|inst| inst.get_qubits_mut()),
-                )
-                .collect(),
+            Instruction::MeasureCalibrationDefinition(measurement) => {
+                iter::once(&mut measurement.identifier.qubit)
+                    .chain(
+                        measurement
+                            .instructions
+                            .iter_mut()
+                            .flat_map(|inst| inst.get_qubits_mut()),
+                    )
+                    .collect()
+            }
             Instruction::Measurement(measurement) => vec![&mut measurement.qubit],
             Instruction::Reset(reset) => match &mut reset.qubit {
                 Some(qubit) => vec![qubit],

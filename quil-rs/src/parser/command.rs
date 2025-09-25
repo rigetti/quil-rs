@@ -1,7 +1,7 @@
 use nom::branch::alt;
 use nom::combinator::{map, map_res, opt};
 use nom::multi::{many0, many1, separated_list0, separated_list1};
-use nom::sequence::{delimited, pair, preceded, tuple};
+use nom::sequence::{delimited, preceded, tuple};
 
 use crate::expression::Expression;
 use crate::instruction::{
@@ -17,7 +17,6 @@ use crate::instruction::{
 
 use crate::parser::instruction::parse_block;
 use crate::parser::InternalParserResult;
-use crate::quil::Quil;
 use crate::{real, token};
 
 use super::common::{parse_memory_reference_with_brackets, parse_variable_qubit};
@@ -236,20 +235,14 @@ pub(crate) fn parse_defcal_gate<'a>(
 pub(crate) fn parse_defcal_measure<'a>(
     input: ParserInput<'a>,
 ) -> InternalParserResult<'a, Instruction> {
-    let (input, params) = pair(parse_qubit, opt(token!(Identifier(v))))(input)?;
-    let (qubit, destination) = match params {
-        (qubit, Some(destination)) => (Some(qubit), destination),
-        (destination, None) => (None, destination.to_quil_or_debug()),
-    };
+    let (input, qubit) = parse_qubit(input)?;
+    let (input, target) = opt(token!(Identifier(t)))(input)?;
     let (input, _) = token!(Colon)(input)?;
     let (input, instructions) = parse_block(input)?;
     Ok((
         input,
         Instruction::MeasureCalibrationDefinition(MeasureCalibrationDefinition {
-            identifier: MeasureCalibrationIdentifier {
-                qubit,
-                parameter: destination,
-            },
+            identifier: MeasureCalibrationIdentifier { qubit, target },
             instructions,
         }),
     ))

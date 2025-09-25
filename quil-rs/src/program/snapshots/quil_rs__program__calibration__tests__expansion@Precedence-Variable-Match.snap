@@ -1,15 +1,14 @@
 ---
 source: quil-rs/src/program/calibration.rs
-expression: calibrated_program.to_string()
+expression: calibrated_program.to_quil_or_debug()
 ---
-DEFCAL MEASURE addr:
-	PRAGMA INCORRECT_PRECEDENCE
-
-DEFCAL MEASURE q addr:
-	PRAGMA INCORRECT_PRECEDENCE
+DEFCAL MEASURE q:
+	PRAGMA INCORRECT_RECORD_VS_EFFECT
 
 DEFCAL MEASURE b addr:
+	PRAGMA INCORRECT_ORDER
+
+DEFCAL MEASURE q addr:
 	PRAGMA CORRECT
 
 PRAGMA CORRECT
-

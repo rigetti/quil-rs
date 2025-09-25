@@ -498,14 +498,17 @@ impl GateSpecification {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl MeasureCalibrationDefinition {
+    /// The qubit that this measure calibration definition is for.
     #[getter]
-    fn qubit(&self) -> Option<Qubit> {
+    fn qubit(&self) -> Qubit {
         self.identifier.qubit.clone()
     }
 
+    /// The name the measurement calibration uses for the variable it will write the measurement
+    /// result to, if this is a measurement for record.
     #[getter]
-    fn parameter(&self) -> &str {
-        &self.identifier.parameter
+    fn target(&self) -> Option<&str> {
+        self.identifier.target.as_deref()
     }
 }
 

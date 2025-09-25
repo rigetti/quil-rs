@@ -40,11 +40,12 @@ def test_measure_calibration_getters():
     placeholder = Qubit.Placeholder(QubitPlaceholder())
 
     calibration = MeasureCalibrationDefinition(
-        MeasureCalibrationIdentifier(placeholder, "param"),
+        MeasureCalibrationIdentifier(placeholder, "addr"),
         [],
     )
 
     assert calibration.qubit == placeholder
+    assert calibration.target == "addr"
     assert calibration.instructions == []
 
 
