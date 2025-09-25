@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use std::collections::HashMap;
+use std::iter::FusedIterator;
 use std::ops::Range;
 
 use itertools::FoldWhile::{Continue, Done};
@@ -26,7 +27,7 @@ use crate::quil::Quil;
 use crate::{
     expression::Expression,
     instruction::{
-        Calibration, Capture, Delay, Fence, FrameIdentifier, Gate, Instruction,
+        CalibrationDefinition, Capture, Delay, Fence, FrameIdentifier, Gate, Instruction,
         MeasureCalibrationDefinition, Measurement, Pulse, Qubit, RawCapture, SetFrequency,
         SetPhase, SetScale, ShiftFrequency, ShiftPhase,
     },
@@ -49,7 +50,7 @@ use optipy::strip_pyo3;
     pyo3::pyclass(name = "CalibrationSet", module = "quil.program", eq, subclass)
 )]
 pub struct Calibrations {
-    pub calibrations: CalibrationSet<Calibration>,
+    pub calibrations: CalibrationSet<CalibrationDefinition>,
     pub measure_calibrations: CalibrationSet<MeasureCalibrationDefinition>,
 }
 
@@ -68,18 +69,21 @@ impl Calibrations {
         self.calibrations.is_empty()
     }
 
-    /// Insert a [`Calibration`] into the set.
+    /// Insert a [`CalibrationDefinition`] into the set.
     ///
-    /// If a calibration with the same [`CalibrationSignature`] already exists in the set, it will
-    /// be replaced, and the old calibration is returned.
-    pub fn insert_calibration(&mut self, calibration: Calibration) -> Option<Calibration> {
+    /// If a calibration with the same [signature][crate::instruction::CalibrationSignature] already
+    /// exists in the set, it will be replaced and the old calibration will be returned.
+    pub fn insert_calibration(
+        &mut self,
+        calibration: CalibrationDefinition,
+    ) -> Option<CalibrationDefinition> {
         self.calibrations.replace(calibration)
     }
 
-    /// Insert a [`MeasureCalibration`] into the set.
+    /// Insert a [`MeasureCalibrationDefinition`] into the set.
     ///
-    /// If a calibration with the same [`CalibrationSignature`] already exists in the set, it will
-    /// be replaced, and the old calibration is returned.
+    /// If a calibration with the same [signature][crate::instruction::CalibrationSignature] already
+    /// exists in the set, it will be replaced and the old calibration will be returned.
     pub fn insert_measurement_calibration(
         &mut self,
         calibration: MeasureCalibrationDefinition,
@@ -111,12 +115,12 @@ impl Calibrations {
 }
 
 struct MatchedCalibration<'a> {
-    pub calibration: &'a Calibration,
+    pub calibration: &'a CalibrationDefinition,
     pub fixed_qubit_count: usize,
 }
 
 impl<'a> MatchedCalibration<'a> {
-    pub fn new(calibration: &'a Calibration) -> Self {
+    pub fn new(calibration: &'a CalibrationDefinition) -> Self {
         Self {
             calibration,
             fixed_qubit_count: calibration
@@ -246,7 +250,8 @@ impl SourceMapIndexable<CalibrationSource> for MaybeCalibrationExpansion {
     }
 }
 
-/// A source of a calibration, either a [`Calibration`] or a [`MeasureCalibrationDefinition`]
+/// The source of a calibration, either a [`CalibrationIdentifier`] or a
+/// [`MeasureCalibrationIdentifier`].
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.program", eq, frozen))]
@@ -271,19 +276,16 @@ impl From<MeasureCalibrationIdentifier> for CalibrationSource {
 }
 
 impl Calibrations {
-    /// Return a vector containing a reference to all [`Calibration`]s in the set.
-    pub fn calibrations(&self) -> Vec<&Calibration> {
-        self.iter_calibrations().collect()
-    }
-
     /// Return a vector containing a reference to all [`MeasureCalibrationDefinition`]s
     /// in the set.
     pub fn measure_calibrations(&self) -> Vec<&MeasureCalibrationDefinition> {
         self.iter_measure_calibrations().collect()
     }
 
-    /// Iterate over all [`Calibration`]s in the set
-    pub fn iter_calibrations(&self) -> impl Iterator<Item = &Calibration> {
+    /// Iterate over all [`CalibrationDefinition`]s in the set
+    pub fn iter_calibrations(
+        &self,
+    ) -> impl DoubleEndedIterator<Item = &CalibrationDefinition> + FusedIterator {
         self.calibrations.iter()
     }
 
@@ -604,7 +606,7 @@ impl Calibrations {
     /// 4. It has the same parameter count (both specified and unspecified)
     /// 5. All fixed qubits in the calibration definition match those in the gate
     /// 6. All specified parameters in the calibration definition match those in the gate
-    pub fn get_match_for_gate(&self, gate: &Gate) -> Option<&Calibration> {
+    pub fn get_match_for_gate(&self, gate: &Gate) -> Option<&CalibrationDefinition> {
         let mut matched_calibration: Option<MatchedCalibration> = None;
 
         for calibration in self

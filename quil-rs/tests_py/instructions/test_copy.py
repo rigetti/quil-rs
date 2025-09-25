@@ -6,7 +6,7 @@ import pytest
 import quil
 from quil.expression import Expression
 from quil.instructions import (
-    Calibration,
+    CalibrationDefinition,
     CalibrationIdentifier,
     Delay,
     FrameIdentifier,
@@ -24,8 +24,8 @@ def qubit(request: pytest.FixtureRequest) -> Qubit:
     return request.param
 
 
-def _calibration(qubit: Qubit) -> tuple[Calibration, Instruction]:
-    calibration = Calibration(
+def _calibration(qubit: Qubit) -> tuple[CalibrationDefinition, Instruction]:
+    calibration = CalibrationDefinition(
         CalibrationIdentifier("MYCAL", [], [qubit], []),
         [Instruction.Delay(Delay(Expression.Number(complex(0.5)), [], [qubit]))],
     )

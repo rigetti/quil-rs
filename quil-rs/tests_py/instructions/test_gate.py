@@ -6,7 +6,7 @@ from quil.instructions import (
     PauliGate,
     PauliTerm,
     Qubit,
-    Calibration,
+    CalibrationDefinition,
     CalibrationIdentifier,
     QubitPlaceholder,
     Instruction,
@@ -25,7 +25,7 @@ class TestPauliTerm:
 def test_calibration_getters():
     placeholder = Qubit.Placeholder(QubitPlaceholder())
 
-    calibration = Calibration(
+    calibration = CalibrationDefinition(
         CalibrationIdentifier("MYCAL", [], [placeholder], []),
         [Instruction.Delay(Delay(Expression.Number(complex(0.5)), [], [placeholder]))],
     )

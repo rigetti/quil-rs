@@ -161,12 +161,12 @@ mod tests {
     };
     use crate::instruction::{
         Arithmetic, ArithmeticOperand, ArithmeticOperator, AttributeValue, BinaryLogic,
-        BinaryOperand, BinaryOperator, Calibration, CalibrationIdentifier, Capture, Comparison,
-        ComparisonOperand, ComparisonOperator, Convert, FrameDefinition, FrameIdentifier, Gate,
-        GateDefinition, GateSpecification, Include, Instruction, Jump, JumpWhen, Label,
-        MemoryReference, Move, Pulse, Qubit, RawCapture, Reset, SetFrequency, SetPhase, SetScale,
-        ShiftFrequency, ShiftPhase, SwapPhases, Target, UnaryLogic, UnaryOperator, Waveform,
-        WaveformDefinition, WaveformInvocation, WaveformParameters,
+        BinaryOperand, BinaryOperator, CalibrationDefinition, CalibrationIdentifier, Capture,
+        Comparison, ComparisonOperand, ComparisonOperator, Convert, FrameDefinition,
+        FrameIdentifier, Gate, GateDefinition, GateSpecification, Include, Instruction, Jump,
+        JumpWhen, Label, MemoryReference, Move, Pulse, Qubit, RawCapture, Reset, SetFrequency,
+        SetPhase, SetScale, ShiftFrequency, ShiftPhase, SwapPhases, Target, UnaryLogic,
+        UnaryOperator, Waveform, WaveformDefinition, WaveformInvocation, WaveformParameters,
     };
     use crate::parser::common::tests::KITCHEN_SINK_QUIL;
     use crate::parser::lexer::lex;
@@ -555,7 +555,7 @@ mod tests {
         parametric_calibration,
         parse_instructions,
         "DEFCAL RX(%theta) %qubit:\n\tPULSE 1 \"xy\" custom_waveform(a: 1)",
-        vec![Instruction::CalibrationDefinition(Calibration {
+        vec![Instruction::CalibrationDefinition(CalibrationDefinition {
             identifier: CalibrationIdentifier {
                 name: "RX".to_owned(),
                 parameters: vec![Expression::Variable("theta".to_owned())],

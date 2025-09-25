@@ -5,7 +5,7 @@ use nom::sequence::{delimited, pair, preceded, tuple};
 
 use crate::expression::Expression;
 use crate::instruction::{
-    Arithmetic, ArithmeticOperator, BinaryLogic, BinaryOperator, Calibration,
+    Arithmetic, ArithmeticOperator, BinaryLogic, BinaryOperator, CalibrationDefinition,
     CalibrationIdentifier, Call, Capture, CircuitDefinition, Comparison, ComparisonOperator,
     Convert, Declaration, Delay, Exchange, Fence, FrameDefinition, GateDefinition,
     GateSpecification, GateType, Include, Instruction, Jump, JumpUnless, JumpWhen, Label, Load,
@@ -220,7 +220,7 @@ pub(crate) fn parse_defcal_gate<'a>(
     let (input, instructions) = parse_block(input)?;
     Ok((
         input,
-        Instruction::CalibrationDefinition(Calibration {
+        Instruction::CalibrationDefinition(CalibrationDefinition {
             identifier: CalibrationIdentifier {
                 name,
                 parameters,

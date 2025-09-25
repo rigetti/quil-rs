@@ -90,7 +90,7 @@ class BinaryLogic:
     def __new__(cls, operator:BinaryOperator, destination:MemoryReference, source:BinaryOperand) -> BinaryLogic: ...
     def __getnewargs__(self) -> tuple[BinaryOperator, MemoryReference, BinaryOperand]: ...
 
-class Calibration:
+class CalibrationDefinition:
     @property
     def identifier(self) -> CalibrationIdentifier: ...
     @property
@@ -98,29 +98,29 @@ class Calibration:
     @property
     def name(self) -> builtins.str:
         r"""
-        The name that identifies this `Calibration`.
+        The gate name that this calibration definition is for.
         """
     @property
     def parameters(self) -> builtins.list[Expression]:
         r"""
-        The list of parameters that this `Calibration` will expand into.
+        The list of parameters that this calibration definition is for.
         """
     @property
     def qubits(self) -> builtins.list[Qubit]:
         r"""
-        The list of `Qubit`s that this `Calibration` will expand into.
+        The list of [`Qubit`]s that this calibration definition is for.
         """
     @property
     def modifiers(self) -> builtins.list[GateModifier]:
         r"""
-        The list of `GateModifier`s that this `Calibration` will expand into.
+        The list of [`GateModifier`]s that this calibration definition is for.
         """
     @identifier.setter
     def identifier(self, value: CalibrationIdentifier) -> None: ...
     @instructions.setter
     def instructions(self, value: builtins.list[Instruction]) -> None: ...
     def __eq__(self, other:builtins.object) -> builtins.bool: ...
-    def __new__(cls, identifier:CalibrationIdentifier, instructions:typing.Sequence[Instruction]) -> Calibration:
+    def __new__(cls, identifier:CalibrationIdentifier, instructions:typing.Sequence[Instruction]) -> CalibrationDefinition:
         r"""
         Builds a new calibration definition.
         """
@@ -766,7 +766,7 @@ class Instruction:
             # note the `()` -- these aren't like Python's enumerations!
     ```
     """
-    def __getnewargs__(self) -> tuple[()] | tuple[Calibration | Arithmetic | BinaryLogic | Call | Capture | CircuitDefinition | Comparison | Convert | Declaration | Delay | Exchange | Fence | FrameDefinition | Gate | GateDefinition | Include | Jump | JumpUnless | JumpWhen | Label | Load | MeasureCalibrationDefinition | Measurement | Move | Pragma | Pulse | RawCapture | Reset | SetFrequency | SetPhase | SetScale | ShiftFrequency | ShiftPhase | Store | SwapPhases | UnaryLogic | WaveformDefinition]: ...
+    def __getnewargs__(self) -> tuple[()] | tuple[Arithmetic | BinaryLogic | Call | Capture | CalibrationDefinition | CircuitDefinition | Comparison | Convert | Declaration | Delay | Exchange | Fence | FrameDefinition | Gate | GateDefinition | Include | Jump | JumpUnless | JumpWhen | Label | Load | MeasureCalibrationDefinition | Measurement | Move | Pragma | Pulse | RawCapture | Reset | SetFrequency | SetPhase | SetScale | ShiftFrequency | ShiftPhase | Store | SwapPhases | UnaryLogic | WaveformDefinition]: ...
     @staticmethod
     def parse(string:builtins.str) -> Instruction: ...
     def to_quil(self) -> builtins.str: ...
@@ -795,8 +795,8 @@ class Instruction:
     class CalibrationDefinition(Instruction):
         __match_args__ = ("_0",)
         @property
-        def _0(self) -> Calibration: ...
-        def __new__(cls, _0:Calibration) -> Instruction.CalibrationDefinition: ...
+        def _0(self) -> CalibrationDefinition: ...
+        def __new__(cls, _0:CalibrationDefinition) -> Instruction.CalibrationDefinition: ...
         def __len__(self) -> builtins.int: ...
         def __getitem__(self, key:builtins.int) -> typing.Any: ...
     

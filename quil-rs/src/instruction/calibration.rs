@@ -24,21 +24,21 @@ pub trait CalibrationSignature {
     fn has_signature(&self, signature: &Self::Signature<'_>) -> bool;
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
     pyo3::pyclass(module = "quil.instructions", eq, get_all, set_all, subclass)
 )]
 #[cfg_attr(not(feature = "python"), strip_pyo3)]
-pub struct Calibration {
+pub struct CalibrationDefinition {
     #[pyo3(name = "identifier")]
     pub identifier: CalibrationIdentifier,
     pub instructions: Vec<Instruction>,
 }
 
 pickleable_new! {
-    impl Calibration {
+    impl CalibrationDefinition {
         /// Builds a new calibration definition.
         pub fn new(
             identifier: CalibrationIdentifier,
@@ -47,8 +47,8 @@ pickleable_new! {
     }
 }
 
-impl CalibrationSignature for Calibration {
-    type Signature<'a> = (&'a str, &'a [Expression], &'a [Qubit]);
+impl CalibrationSignature for CalibrationDefinition {
+    type Signature<'a> = <CalibrationIdentifier as CalibrationSignature>::Signature<'a>;
 
     fn signature(&self) -> Self::Signature<'_> {
         self.identifier.signature()
@@ -59,7 +59,7 @@ impl CalibrationSignature for Calibration {
     }
 }
 
-impl Quil for Calibration {
+impl Quil for CalibrationDefinition {
     fn write(
         &self,
         f: &mut impl std::fmt::Write,
@@ -76,7 +76,7 @@ impl Quil for Calibration {
 }
 
 /// Unique identifier for a calibration definition within a program
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
@@ -175,19 +175,25 @@ impl CalibrationIdentifier {
 }
 
 impl CalibrationSignature for CalibrationIdentifier {
-    type Signature<'a> = (&'a str, &'a [Expression], &'a [Qubit]);
+    type Signature<'a> = (&'a [GateModifier], &'a str, &'a [Expression], &'a [Qubit]);
 
     fn signature(&self) -> Self::Signature<'_> {
+        let Self {
+            modifiers,
+            name,
+            parameters,
+            qubits,
+        } = self;
         (
-            self.name.as_str(),
-            self.parameters.as_slice(),
-            self.qubits.as_slice(),
+            modifiers.as_slice(),
+            name.as_str(),
+            parameters.as_slice(),
+            qubits.as_slice(),
         )
     }
 
     fn has_signature(&self, signature: &Self::Signature<'_>) -> bool {
-        let (name, parameters, qubits) = signature;
-        self.name == *name && self.parameters == *parameters && self.qubits == *qubits
+        &self.signature() == signature
     }
 }
 

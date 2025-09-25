@@ -49,8 +49,8 @@ mod timing;
 mod waveform;
 
 pub use self::calibration::{
-    Calibration, CalibrationIdentifier, CalibrationSignature, MeasureCalibrationDefinition,
-    MeasureCalibrationIdentifier,
+    CalibrationDefinition, CalibrationIdentifier, CalibrationSignature,
+    MeasureCalibrationDefinition, MeasureCalibrationIdentifier,
 };
 pub use self::circuit::CircuitDefinition;
 pub use self::classical::{
@@ -139,7 +139,7 @@ pub enum ValidationError {
 pub enum Instruction {
     Arithmetic(Arithmetic),
     BinaryLogic(BinaryLogic),
-    CalibrationDefinition(Calibration),
+    CalibrationDefinition(CalibrationDefinition),
     Call(Call),
     Capture(Capture),
     CircuitDefinition(CircuitDefinition),
@@ -524,7 +524,7 @@ impl Instruction {
     /// ```
     pub fn apply_to_expressions(&mut self, mut closure: impl FnMut(&mut Expression)) {
         match self {
-            Instruction::CalibrationDefinition(Calibration {
+            Instruction::CalibrationDefinition(CalibrationDefinition {
                 identifier: CalibrationIdentifier { parameters, .. },
                 ..
             })
@@ -693,6 +693,28 @@ impl Instruction {
     pub fn get_qubits(&self) -> Vec<&Qubit> {
         match self {
             Instruction::Gate(gate) => gate.qubits.iter().collect(),
+            Instruction::CalibrationDefinition(calibration) => calibration
+                .identifier
+                .qubits
+                .iter()
+                .chain(
+                    calibration
+                        .instructions
+                        .iter()
+                        .flat_map(|inst| inst.get_qubits()),
+                )
+                .collect(),
+            Instruction::MeasureCalibrationDefinition(measurement) => measurement
+                .identifier
+                .qubit
+                .iter()
+                .chain(
+                    measurement
+                        .instructions
+                        .iter()
+                        .flat_map(|inst| inst.get_qubits()),
+                )
+                .collect(),
             Instruction::Measurement(measurement) => vec![&measurement.qubit],
             Instruction::Reset(reset) => match &reset.qubit {
                 Some(qubit) => vec![qubit],

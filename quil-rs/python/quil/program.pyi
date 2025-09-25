@@ -152,9 +152,9 @@ class CalibrationSet:
     so see the documentation there for more information.
     """
     @property
-    def calibrations(self) -> builtins.list[Calibration]:
+    def calibrations(self) -> builtins.list[CalibrationDefinition]:
         r"""
-        Return a list of all [`Calibration`]s in the set.
+        Return a list of all [`CalibrationDefinition`]s in the set.
         """
     @property
     def measure_calibrations(self) -> builtins.list[MeasureCalibrationDefinition]:
@@ -170,19 +170,19 @@ class CalibrationSet:
         r"""
         Return true if this contains no data.
         """
-    def insert_calibration(self, calibration:Calibration) -> typing.Optional[Calibration]:
+    def insert_calibration(self, calibration:CalibrationDefinition) -> typing.Optional[CalibrationDefinition]:
         r"""
-        Insert a [`Calibration`] into the set.
+        Insert a [`CalibrationDefinition`] into the set.
         
-        If a calibration with the same [`CalibrationSignature`] already exists in the set, it will
-        be replaced, and the old calibration is returned.
+        If a calibration with the same [signature][crate::instruction::CalibrationSignature] already
+        exists in the set, it will be replaced and the old calibration will be returned.
         """
     def insert_measurement_calibration(self, calibration:MeasureCalibrationDefinition) -> typing.Optional[MeasureCalibrationDefinition]:
         r"""
-        Insert a [`MeasureCalibration`] into the set.
+        Insert a [`MeasureCalibrationDefinition`] into the set.
         
-        If a calibration with the same [`CalibrationSignature`] already exists in the set, it will
-        be replaced, and the old calibration is returned.
+        If a calibration with the same [signature][crate::instruction::CalibrationSignature] already
+        exists in the set, it will be replaced and the old calibration will be returned.
         """
     def extend(self, other:CalibrationSet) -> None:
         r"""
@@ -195,7 +195,7 @@ class CalibrationSet:
         r"""
         Return the Quil instructions which describe the contained calibrations.
         """
-    def __new__(cls, calibrations:typing.Sequence[Calibration], measure_calibrations:typing.Sequence[MeasureCalibrationDefinition]) -> CalibrationSet: ...
+    def __new__(cls, calibrations:typing.Sequence[CalibrationDefinition], measure_calibrations:typing.Sequence[MeasureCalibrationDefinition]) -> CalibrationSet: ...
     def expand(self, instruction:Instruction, previous_calibrations:typing.Sequence[Instruction]) -> typing.Optional[builtins.list[Instruction]]:
         r"""
         Given an instruction, return the instructions to which it is expanded if there is a match.
@@ -218,7 +218,7 @@ class CalibrationSet:
         
         In the case of multiple calibrations with equal precedence, the last one wins.
         """
-    def get_match_for_gate(self, gate:Gate) -> typing.Optional[Calibration]:
+    def get_match_for_gate(self, gate:Gate) -> typing.Optional[CalibrationDefinition]:
         r"""
         Return the final calibration which matches the gate per the QuilT specification:
         
@@ -234,7 +234,8 @@ class CalibrationSet:
 
 class CalibrationSource:
     r"""
-    A source of a calibration, either a [`Calibration`] or a [`MeasureCalibrationDefinition`]
+    The source of a calibration, either a [`CalibrationIdentifier`] or a
+    [`MeasureCalibrationIdentifier`].
     """
     def __getnewargs__(self) -> tuple[CalibrationIdentifier | MeasureCalibrationIdentifier]: ...
     def __repr__(self) -> builtins.str: ...

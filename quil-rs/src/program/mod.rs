@@ -1075,7 +1075,8 @@ NOP
                         calibration_used: CalibrationIdentifier {
                             name: "I".to_string(),
                             qubits: vec![Qubit::Fixed(0)],
-                            ..CalibrationIdentifier::default()
+                            modifiers: vec![],
+                            parameters: vec![],
                         }
                         .into(),
                         range: InstructionIndex(0)..InstructionIndex(3),
@@ -1108,7 +1109,8 @@ NOP
                         calibration_used: CalibrationIdentifier {
                             name: "I".to_string(),
                             qubits: vec![Qubit::Fixed(0)],
-                            ..CalibrationIdentifier::default()
+                            modifiers: vec![],
+                            parameters: vec![],
                         }
                         .into(),
                         range: InstructionIndex(4)..InstructionIndex(7),
