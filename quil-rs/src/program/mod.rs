@@ -46,9 +46,7 @@ pub use self::error::{
 };
 pub use self::frame::FrameSet;
 pub use self::frame::MatchedFrames;
-pub use self::memory::{
-    MemoryAccess, MemoryAccesses, MemoryAccessesError, MemoryAccessesResult, MemoryRegion,
-};
+pub use self::memory::{MemoryAccesses, MemoryAccessesError, MemoryAccessesResult, MemoryRegion};
 pub use self::source_map::{SourceMap, SourceMapEntry};
 
 pub mod analysis;
