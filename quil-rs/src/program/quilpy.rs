@@ -16,7 +16,7 @@ use pyo3_stub_gen::{
 
 use crate::{
     instruction::{
-        Calibration, Declaration, FrameAttributes, FrameIdentifier, Gate, Instruction,
+        CalibrationDefinition, Declaration, FrameAttributes, FrameIdentifier, Gate, Instruction,
         MeasureCalibrationDefinition, Measurement, QubitPlaceholder, TargetPlaceholder,
     },
     quil::Quil,
@@ -361,7 +361,7 @@ impl Program {
 impl Calibrations {
     #[new]
     fn new(
-        calibrations: Vec<Calibration>,
+        calibrations: Vec<CalibrationDefinition>,
         measure_calibrations: Vec<MeasureCalibrationDefinition>,
     ) -> Self {
         Self {
@@ -370,9 +370,9 @@ impl Calibrations {
         }
     }
 
-    /// Return a list of all [`Calibration`]s in the set.
+    /// Return a list of all [`CalibrationDefinition`]s in the set.
     #[getter(calibrations)]
-    fn py_calibrations(&self) -> Vec<Calibration> {
+    fn py_calibrations(&self) -> Vec<CalibrationDefinition> {
         self.iter_calibrations().cloned().collect()
     }
 
@@ -425,7 +425,7 @@ impl Calibrations {
     /// 5. All fixed qubits in the calibration definition match those in the gate
     /// 6. All specified parameters in the calibration definition match those in the gate
     #[pyo3(name = "get_match_for_gate")]
-    fn py_get_match_for_gate(&self, gate: &Gate) -> Option<Calibration> {
+    fn py_get_match_for_gate(&self, gate: &Gate) -> Option<CalibrationDefinition> {
         self.get_match_for_gate(gate).cloned()
     }
 }

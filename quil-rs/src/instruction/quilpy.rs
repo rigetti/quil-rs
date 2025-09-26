@@ -142,7 +142,7 @@ impl_instruction!([
     BinaryLogic,
     BinaryOperand,
     BinaryOperator,
-    Calibration,
+    CalibrationDefinition,
     CalibrationIdentifier,
     Call,
     Capture,
@@ -211,10 +211,8 @@ impl_instruction!([
 /// making it compatible with the `copy` and `pickle` modules,
 /// (provided the variant itself supports it).
 ///
-/// Note that we have to manually handle `Halt`, `Nop`, and `Wait`,
-/// since they don't actually have an inner value.
-/// We also have to handle `CalibrationDefinition` as a special case,
-/// because the variant name differs from the inner type the tuple holds.
+/// Note that we have to manually handle `Halt`, `Nop`, and `Wait`, since they don't actually have
+/// an inner value.
 ///
 /// Finally, this macro makes use of `paste` to generate the `pyo3_stub_gen` return type,
 /// since it's a union of an empty tuple and a tuple of variant's inner type.
@@ -243,14 +241,13 @@ macro_rules! instruction_getnewargs {
         #[pymethods]
         impl Instruction {
             #[gen_stub(override_return_type(
-                type_repr = "tuple[()] | tuple[Calibration" $(" | " $kind)* "]"
+                type_repr = "tuple[()] | tuple[" $($kind)" | "* "]"
             ))]
             fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
                 match self {
                     Instruction::Halt() | Instruction::Nop() | Instruction::Wait() => {
                         Ok(PyTuple::empty(py))
                     },
-                    Instruction::CalibrationDefinition(instr) => (instr.clone(),).into_pyobject(py),
                     $(Instruction::$kind(instr) => (instr.clone(),).into_pyobject(py),)*
                 }
             }
@@ -258,12 +255,13 @@ macro_rules! instruction_getnewargs {
     }};
 }
 
-// Note that these are just Instruction variants, sans the few that need special handling.
+// Note that these are just the [`Instruction`] variants that take parameters.
 instruction_getnewargs!(
     Arithmetic,
     BinaryLogic,
     Call,
     Capture,
+    CalibrationDefinition,
     CircuitDefinition,
     Comparison,
     Convert,
@@ -348,26 +346,26 @@ impl ComparisonOperand {
 
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
-impl Calibration {
-    /// The name that identifies this `Calibration`.
+impl CalibrationDefinition {
+    /// The gate name that this calibration definition is for.
     #[getter]
     fn name(&self) -> &str {
         &self.identifier.name
     }
 
-    /// The list of parameters that this `Calibration` will expand into.
+    /// The list of parameters that this calibration definition is for.
     #[getter]
     fn parameters(&self) -> Vec<Expression> {
         self.identifier.parameters.clone()
     }
 
-    /// The list of `Qubit`s that this `Calibration` will expand into.
+    /// The list of [`Qubit`]s that this calibration definition is for.
     #[getter]
     fn qubits(&self) -> Vec<Qubit> {
         self.identifier.qubits.clone()
     }
 
-    /// The list of `GateModifier`s that this `Calibration` will expand into.
+    /// The list of [`GateModifier`]s that this calibration definition is for.
     #[getter]
     fn modifiers(&self) -> Vec<GateModifier> {
         self.identifier.modifiers.clone()
@@ -500,14 +498,17 @@ impl GateSpecification {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl MeasureCalibrationDefinition {
+    /// The qubit that this measure calibration definition is for.
     #[getter]
-    fn qubit(&self) -> Option<Qubit> {
+    fn qubit(&self) -> Qubit {
         self.identifier.qubit.clone()
     }
 
+    /// The name the measurement calibration uses for the variable it will write the measurement
+    /// result to, if this is a measurement for record.
     #[getter]
-    fn parameter(&self) -> &str {
-        &self.identifier.parameter
+    fn target(&self) -> Option<&str> {
+        self.identifier.target.as_deref()
     }
 }
 

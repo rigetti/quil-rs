@@ -53,7 +53,7 @@ expression: program.to_instructions()
         },
     ),
     CalibrationDefinition(
-        Calibration {
+        CalibrationDefinition {
             identifier: CalibrationIdentifier {
                 modifiers: [],
                 name: "I",

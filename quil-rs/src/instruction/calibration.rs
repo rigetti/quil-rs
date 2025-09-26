@@ -24,21 +24,21 @@ pub trait CalibrationSignature {
     fn has_signature(&self, signature: &Self::Signature<'_>) -> bool;
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
     pyo3::pyclass(module = "quil.instructions", eq, get_all, set_all, subclass)
 )]
 #[cfg_attr(not(feature = "python"), strip_pyo3)]
-pub struct Calibration {
+pub struct CalibrationDefinition {
     #[pyo3(name = "identifier")]
     pub identifier: CalibrationIdentifier,
     pub instructions: Vec<Instruction>,
 }
 
 pickleable_new! {
-    impl Calibration {
+    impl CalibrationDefinition {
         /// Builds a new calibration definition.
         pub fn new(
             identifier: CalibrationIdentifier,
@@ -47,8 +47,8 @@ pickleable_new! {
     }
 }
 
-impl CalibrationSignature for Calibration {
-    type Signature<'a> = (&'a str, &'a [Expression], &'a [Qubit]);
+impl CalibrationSignature for CalibrationDefinition {
+    type Signature<'a> = <CalibrationIdentifier as CalibrationSignature>::Signature<'a>;
 
     fn signature(&self) -> Self::Signature<'_> {
         self.identifier.signature()
@@ -59,7 +59,7 @@ impl CalibrationSignature for Calibration {
     }
 }
 
-impl Quil for Calibration {
+impl Quil for CalibrationDefinition {
     fn write(
         &self,
         f: &mut impl std::fmt::Write,
@@ -76,7 +76,7 @@ impl Quil for Calibration {
 }
 
 /// Unique identifier for a calibration definition within a program
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
@@ -175,19 +175,25 @@ impl CalibrationIdentifier {
 }
 
 impl CalibrationSignature for CalibrationIdentifier {
-    type Signature<'a> = (&'a str, &'a [Expression], &'a [Qubit]);
+    type Signature<'a> = (&'a [GateModifier], &'a str, &'a [Expression], &'a [Qubit]);
 
     fn signature(&self) -> Self::Signature<'_> {
+        let Self {
+            modifiers,
+            name,
+            parameters,
+            qubits,
+        } = self;
         (
-            self.name.as_str(),
-            self.parameters.as_slice(),
-            self.qubits.as_slice(),
+            modifiers.as_slice(),
+            name.as_str(),
+            parameters.as_slice(),
+            qubits.as_slice(),
         )
     }
 
     fn has_signature(&self, signature: &Self::Signature<'_>) -> bool {
-        let (name, parameters, qubits) = signature;
-        self.name == *name && self.parameters == *parameters && self.qubits == *qubits
+        &self.signature() == signature
     }
 }
 
@@ -222,7 +228,7 @@ pickleable_new! {
 }
 
 impl CalibrationSignature for MeasureCalibrationDefinition {
-    type Signature<'a> = (Option<&'a Qubit>, &'a str);
+    type Signature<'a> = <MeasureCalibrationIdentifier as CalibrationSignature>::Signature<'a>;
 
     fn signature(&self) -> Self::Signature<'_> {
         self.identifier.signature()
@@ -249,36 +255,39 @@ impl Quil for MeasureCalibrationDefinition {
 }
 
 /// A unique identifier for a measurement calibration definition within a program
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
     pyo3::pyclass(module = "quil.instructions", eq, get_all, set_all, subclass)
 )]
 pub struct MeasureCalibrationIdentifier {
-    /// The qubit which is the target of measurement, if any
-    pub qubit: Option<Qubit>,
+    /// The qubit which is being measured.
+    pub qubit: Qubit,
 
-    /// The memory region name to which the measurement result is written
-    pub parameter: String,
+    /// The name the definition uses for the variable it will write the measurement result to, if
+    /// this is a measurement for record.
+    ///
+    /// If this is missing, this is a calibration for a measurement for effect.
+    pub target: Option<String>,
 }
 
 pickleable_new! {
     impl MeasureCalibrationIdentifier {
-        pub fn new(qubit: Option<Qubit>, parameter: String);
+        pub fn new(qubit: Qubit, target: Option<String>);
     }
 }
 
 impl CalibrationSignature for MeasureCalibrationIdentifier {
-    type Signature<'a> = (Option<&'a Qubit>, &'a str);
+    type Signature<'a> = (&'a Qubit, Option<&'a str>);
 
     fn signature(&self) -> Self::Signature<'_> {
-        (self.qubit.as_ref(), self.parameter.as_str())
+        let Self { qubit, target } = self;
+        (qubit, target.as_deref())
     }
 
     fn has_signature(&self, signature: &Self::Signature<'_>) -> bool {
-        let (qubit, parameter) = signature;
-        self.qubit.as_ref() == *qubit && self.parameter == *parameter
+        &self.signature() == signature
     }
 }
 
@@ -288,12 +297,14 @@ impl Quil for MeasureCalibrationIdentifier {
         f: &mut impl std::fmt::Write,
         fall_back_to_debug: bool,
     ) -> crate::quil::ToQuilResult<()> {
-        write!(f, "DEFCAL MEASURE")?;
-        if let Some(qubit) = &self.qubit {
-            write!(f, " ")?;
-            qubit.write(f, fall_back_to_debug)?;
+        let Self { qubit, target } = self;
+
+        write!(f, "DEFCAL MEASURE ")?;
+        qubit.write(f, fall_back_to_debug)?;
+        if let Some(target) = target {
+            write!(f, " {target}")?;
         }
-        write!(f, " {}", self.parameter,)?;
+
         Ok(())
     }
 }
@@ -313,8 +324,8 @@ mod test_measure_calibration_definition {
         "With Fixed Qubit",
         MeasureCalibrationDefinition {
             identifier: MeasureCalibrationIdentifier {
-                qubit: Some(Qubit::Fixed(0)),
-                parameter: "theta".to_string(),
+                qubit: Qubit::Fixed(0),
+                target: Some("theta".to_string()),
             },
             instructions: vec![Instruction::Gate(Gate {
                 name: "X".to_string(),
@@ -325,15 +336,44 @@ mod test_measure_calibration_definition {
             })]},
     )]
     #[case(
+        "Effect With Fixed Qubit",
+        MeasureCalibrationDefinition {
+            identifier: MeasureCalibrationIdentifier {
+                qubit: Qubit::Fixed(0),
+                target: None,
+            },
+            instructions: vec![Instruction::Gate(Gate {
+                name: "X".to_string(),
+                parameters: vec![Expression::PiConstant()],
+                qubits: vec![Qubit::Fixed(0)],
+                modifiers: vec![],
+
+            })]},
+    )]
+    #[case(
         "With Variable Qubit",
         MeasureCalibrationDefinition {
             identifier: MeasureCalibrationIdentifier {
-                qubit: Some(Qubit::Variable("q".to_string())),
-                parameter: "theta".to_string(),
+                qubit: Qubit::Variable("q".to_string()),
+                target: Some("theta".to_string()),
             },
             instructions: vec![Instruction::Gate(Gate {
                 name: "X".to_string(),
                 parameters: vec![Expression::Variable("theta".to_string())],
+                qubits: vec![Qubit::Variable("q".to_string())],
+                modifiers: vec![],
+            })]},
+    )]
+    #[case(
+        "Effect Variable Qubit",
+        MeasureCalibrationDefinition {
+            identifier: MeasureCalibrationIdentifier {
+                qubit: Qubit::Variable("q".to_string()),
+                target: None,
+            },
+            instructions: vec![Instruction::Gate(Gate {
+                name: "X".to_string(),
+                parameters: vec![Expression::PiConstant()],
                 qubits: vec![Qubit::Variable("q".to_string())],
                 modifiers: vec![],
             })]},
