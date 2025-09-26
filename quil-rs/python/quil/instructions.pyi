@@ -90,7 +90,7 @@ class BinaryLogic:
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
-class Calibration:
+class CalibrationDefinition:
     @property
     def identifier(self) -> CalibrationIdentifier: ...
     @property
@@ -98,22 +98,22 @@ class Calibration:
     @property
     def modifiers(self) -> builtins.list[GateModifier]:
         r"""
-        The list of `GateModifier`s that this `Calibration` will expand into.
+        The list of [`GateModifier`]s that this calibration definition is for.
         """
     @property
     def name(self) -> builtins.str:
         r"""
-        The name that identifies this `Calibration`.
+        The gate name that this calibration definition is for.
         """
     @property
     def parameters(self) -> builtins.list[Expression]:
         r"""
-        The list of parameters that this `Calibration` will expand into.
+        The list of parameters that this calibration definition is for.
         """
     @property
     def qubits(self) -> builtins.list[Qubit]:
         r"""
-        The list of `Qubit`s that this `Calibration` will expand into.
+        The list of [`Qubit`]s that this calibration definition is for.
         """
     @identifier.setter
     def identifier(self, value: CalibrationIdentifier) -> None: ...
@@ -121,7 +121,7 @@ class Calibration:
     def instructions(self, value: builtins.list[Instruction]) -> None: ...
     def __eq__(self, other:builtins.object) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[CalibrationIdentifier, builtins.list[Instruction]]: ...
-    def __new__(cls, identifier:CalibrationIdentifier, instructions:typing.Sequence[Instruction]) -> Calibration:
+    def __new__(cls, identifier:CalibrationIdentifier, instructions:typing.Sequence[Instruction]) -> CalibrationDefinition:
         r"""
         Builds a new calibration definition.
         """
@@ -766,7 +766,7 @@ class Instruction:
             # note the `()` -- these aren't like Python's enumerations!
     ```
     """
-    def __getnewargs__(self) -> tuple[()] | tuple[Calibration | Arithmetic | BinaryLogic | Call | Capture | CircuitDefinition | Comparison | Convert | Declaration | Delay | Exchange | Fence | FrameDefinition | Gate | GateDefinition | Include | Jump | JumpUnless | JumpWhen | Label | Load | MeasureCalibrationDefinition | Measurement | Move | Pragma | Pulse | RawCapture | Reset | SetFrequency | SetPhase | SetScale | ShiftFrequency | ShiftPhase | Store | SwapPhases | UnaryLogic | WaveformDefinition]: ...
+    def __getnewargs__(self) -> tuple[()] | tuple[Arithmetic | BinaryLogic | Call | Capture | CalibrationDefinition | CircuitDefinition | Comparison | Convert | Declaration | Delay | Exchange | Fence | FrameDefinition | Gate | GateDefinition | Include | Jump | JumpUnless | JumpWhen | Label | Load | MeasureCalibrationDefinition | Measurement | Move | Pragma | Pulse | RawCapture | Reset | SetFrequency | SetPhase | SetScale | ShiftFrequency | ShiftPhase | Store | SwapPhases | UnaryLogic | WaveformDefinition]: ...
     def __repr__(self) -> builtins.str: ...
     def is_quil_t(self) -> builtins.bool:
         r"""
@@ -795,10 +795,10 @@ class Instruction:
     class CalibrationDefinition(Instruction):
         __match_args__ = ("_0",)
         @property
-        def _0(self) -> Calibration: ...
+        def _0(self) -> CalibrationDefinition: ...
         def __getitem__(self, key:builtins.int) -> typing.Any: ...
         def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0:Calibration) -> Instruction.CalibrationDefinition: ...
+        def __new__(cls, _0:CalibrationDefinition) -> Instruction.CalibrationDefinition: ...
     
     class Call(Instruction):
         __match_args__ = ("_0",)
@@ -1173,9 +1173,16 @@ class MeasureCalibrationDefinition:
     @property
     def instructions(self) -> builtins.list[Instruction]: ...
     @property
-    def parameter(self) -> builtins.str: ...
+    def qubit(self) -> Qubit:
+        r"""
+        The qubit that this measure calibration definition is for.
+        """
     @property
-    def qubit(self) -> typing.Optional[Qubit]: ...
+    def target(self) -> typing.Optional[builtins.str]:
+        r"""
+        The name the measurement calibration uses for the variable it will write the measurement
+        result to, if this is a measurement for record.
+        """
     @identifier.setter
     def identifier(self, value: MeasureCalibrationIdentifier) -> None: ...
     @instructions.setter
@@ -1192,28 +1199,34 @@ class MeasureCalibrationIdentifier:
     A unique identifier for a measurement calibration definition within a program
     """
     @property
-    def parameter(self) -> builtins.str:
+    def qubit(self) -> Qubit:
         r"""
-        The memory region name to which the measurement result is written
+        The qubit which is being measured.
         """
     @property
-    def qubit(self) -> typing.Optional[Qubit]:
+    def target(self) -> typing.Optional[builtins.str]:
         r"""
-        The qubit which is the target of measurement, if any
-        """
-    @parameter.setter
-    def parameter(self, value: builtins.str) -> None:
-        r"""
-        The memory region name to which the measurement result is written
+        The name the definition uses for the variable it will write the measurement result to, if
+        this is a measurement for record.
+        
+        If this is missing, this is a calibration for a measurement for effect.
         """
     @qubit.setter
-    def qubit(self, value: typing.Optional[Qubit]) -> None:
+    def qubit(self, value: Qubit) -> None:
         r"""
-        The qubit which is the target of measurement, if any
+        The qubit which is being measured.
+        """
+    @target.setter
+    def target(self, value: typing.Optional[builtins.str]) -> None:
+        r"""
+        The name the definition uses for the variable it will write the measurement result to, if
+        this is a measurement for record.
+        
+        If this is missing, this is a calibration for a measurement for effect.
         """
     def __eq__(self, other:builtins.object) -> builtins.bool: ...
-    def __getnewargs__(self) -> tuple[typing.Optional[Qubit], builtins.str]: ...
-    def __new__(cls, qubit:typing.Optional[Qubit], parameter:builtins.str) -> MeasureCalibrationIdentifier: ...
+    def __getnewargs__(self) -> tuple[Qubit, typing.Optional[builtins.str]]: ...
+    def __new__(cls, qubit:Qubit, target:typing.Optional[builtins.str]) -> MeasureCalibrationIdentifier: ...
     def __repr__(self) -> builtins.str: ...
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
