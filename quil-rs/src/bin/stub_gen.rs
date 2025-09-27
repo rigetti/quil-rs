@@ -74,6 +74,8 @@ mod sort_stubs {
                         // This guarantees us exhaustiveness
                         let $struct { $($field),* } = self;
 
+                        // Return the first non-Equal result when comparing field pairs,
+                        // or return Equal if all field pairs compare Equal.
                         let result = Ordering::Equal;
                         $(
                             let result = $field.cmp(&other.$field);
@@ -276,7 +278,7 @@ mod sort_stubs {
         // be reordered.
         let _: &BTreeMap<&str, VariableDef> = variables;
 
-        // Names (being strings) don't any adjustment.
+        // Names (being strings) don't need any adjustment.
         let _: &String = name;
         let _: &String = default_module_name;
 
