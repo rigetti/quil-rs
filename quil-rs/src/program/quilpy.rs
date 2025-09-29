@@ -508,7 +508,7 @@ impl CalibrationSource {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl MaybeCalibrationExpansion {
-    #[gen_stub(override_return_type(type_repr = "tuple[CalibrationExpansion, InstructionIndex]"))]
+    #[gen_stub(override_return_type(type_repr = "tuple[CalibrationExpansion, builtins.int]"))]
     fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
         match self {
             Self::Expanded(value) => (value.clone(),).into_pyobject(py),
@@ -675,35 +675,49 @@ struct PyTargetResolver(Py<PyFunction>);
 
 #[cfg(feature = "stubs")]
 mod stubs {
+    use pyo3_stub_gen::{PyStubType, TypeInfo};
+
     use super::*;
 
+    /// Create a `Callable[[A], R]` stub.
+    fn callable_of<A: PyStubType, R: PyStubType>() -> TypeInfo {
+        let TypeInfo {
+            name: name_a,
+            mut import,
+        } = A::type_output();
+        let TypeInfo {
+            name: name_r,
+            import: import_r,
+        } = R::type_output();
+        import.extend(import_r);
+        import.insert("collections.abc".into());
+        TypeInfo {
+            name: format!("collections.abc.Callable[[{name_a}], {name_r}]"),
+            import,
+        }
+    }
+
     impl PyStubType for PyQubitResolver {
-        fn type_output() -> pyo3_stub_gen::TypeInfo {
-            pyo3_stub_gen::TypeInfo::with_module(
-                "collections.abc.Callable[[QubitPlaceholder], int | None]",
-                "collections.abc".into(),
-            )
+        fn type_output() -> TypeInfo {
+            callable_of::<QubitPlaceholder, Option<u64>>()
         }
     }
 
     impl PyStubType for PyTargetResolver {
-        fn type_output() -> pyo3_stub_gen::TypeInfo {
-            pyo3_stub_gen::TypeInfo::with_module(
-                "collections.abc.Callable[[TargetPlaceholder], str | None]",
-                "collections.abc".into(),
-            )
+        fn type_output() -> TypeInfo {
+            callable_of::<TargetPlaceholder, Option<String>>()
         }
     }
 
     impl PyStubType for InstructionIndex {
-        fn type_output() -> pyo3_stub_gen::TypeInfo {
-            pyo3_stub_gen::TypeInfo::builtin("int")
+        fn type_output() -> TypeInfo {
+            TypeInfo::builtin("int")
         }
     }
 
     impl PyStubType for Seconds {
-        fn type_output() -> pyo3_stub_gen::TypeInfo {
-            pyo3_stub_gen::TypeInfo::builtin("float")
+        fn type_output() -> TypeInfo {
+            TypeInfo::builtin("float")
         }
     }
 }

@@ -390,9 +390,35 @@ pickleable_new! {
 }
 
 #[cfg(feature = "stubs")]
-impl pyo3_stub_gen::PyStubType for ExternPragmaMap {
-    fn type_output() -> pyo3_stub_gen::TypeInfo {
-        pyo3_stub_gen::TypeInfo::dict_of::<Option<String>, Pragma>()
+mod stubs {
+    use pyo3_stub_gen::{PyStubType, TypeInfo};
+
+    use super::*;
+
+    /// Create a `dict[K, V]` stub.
+    ///
+    /// This is a workaround for this bug: https://github.com/Jij-Inc/pyo3-stub-gen/issues/310
+    fn dict_of<K: PyStubType, V: PyStubType>() -> TypeInfo {
+        let TypeInfo {
+            name: name_k,
+            mut import,
+        } = K::type_output();
+        let TypeInfo {
+            name: name_v,
+            import: import_v,
+        } = V::type_output();
+        import.extend(import_v);
+        import.insert("builtins".into());
+        TypeInfo {
+            name: format!("builtins.dict[{name_k}, {name_v}]"),
+            import,
+        }
+    }
+
+    impl PyStubType for ExternPragmaMap {
+        fn type_output() -> TypeInfo {
+            dict_of::<Option<String>, Pragma>()
+        }
     }
 }
 
@@ -484,7 +510,7 @@ impl Gate {
 #[pymethods]
 impl GateSpecification {
     #[gen_stub(override_return_type(
-        type_repr = "tuple[list[list[Expression]] | list[int] | GateType.PauliSum]"
+        type_repr = "tuple[list[list[Expression]] | list[int] | PauliSum]"
     ))]
     fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
         match self {
@@ -591,7 +617,7 @@ impl QubitPlaceholder {
 
     /// `QubitPlaceholder`s do not support `pickle` or `deepcopy`.
     /// Calling this method will raise an error.
-    #[gen_stub(override_return_type(type_repr = "NoReturn"))]
+    #[gen_stub(override_return_type(type_repr = "typing.NoReturn", imports = ("typing")))]
     fn __getnewargs__(&self) -> PyResult<()> {
         Err(PickleError::new_err(
             "Unable to pickle or deepcopy a QubitPlaceholder.",
