@@ -10,12 +10,12 @@ It serves three purposes:
 
 It should be considered unstable until the release of v1.0.
 
-Note: For Rigetti's Python library for quantum programming with Quil, you likely want [`pyQuil`][].
+Note: For Rigetti's Python library for quantum programming with Quil, you likely want [`PyQuil`][].
 This code serves as the foundation of that library,
-but `pyQuil` offers higher-level abstractions and greater stability guarantees.
+but `PyQuil` offers higher-level abstractions and greater stability guarantees.
 
 [quil-spec]: https://github.com/quil-lang/quil
-[`pyQuil`]: https://github.com/rigetti/pyquil
+[`PyQuil`]: https://github.com/rigetti/pyquil
 
 ## Crate Features
 
@@ -63,9 +63,17 @@ and makes our codebase much easier to support moving forward.
 
 ### Rust (`quil-rs`) Breaking Changes
 
-For Rust consumers of `quil-rs`, there are a couple of breaking changes.
+For Rust consumers of `quil-rs`, there are a few breaking changes:
 
-First, the previously `Unit`-variants of
+- [Unit enum variants are now empty tuple variants](#unit-variants)
+- [`instruction::Calibration` has been renamed `instruction::CalibrationDefinition`](#instructioncalibrationdefinition)
+- [`MeasureCalibrationDefinition` has new struct and constructor](#instructionmeasurecalibrationdefinition)
+- [`Expression::evaluate` may require explicit types](#expressionevaluate)
+- [The unused-but-public `MemoryAccess` type has been removed](#instructionmemoryaccess)
+
+#### Unit variants
+
+The previously `Unit`-variants of
 `Instruction` (`Halt`, `Nop`, and `Wait`) and `Expression` (`PiConstant`)
 are now empty tuple variants to make them compatible with `PyO3`'s "Complex enums".
 That means the following variants must have `()` appended to their usages:
@@ -82,7 +90,28 @@ match expression {
 }
 ```
 
-Second, the signature of `Expression::evaluate`
+#### `instruction::CalibrationDefinition`
+
+The `Calibration` type in in the `instruction` module has been renamed `CalibrationDefinition`
+to be consistent with other definition instructions, particularly `MeasureCalibrationDefinition`,
+and to match its variant name within the `Instruction`s enumeration,
+as is the naming convention for all other `Instruction` variants.
+
+#### `instruction::MeasureCalibrationDefinition`
+
+Contrary to the Quil specification, `MeasureCalibrationDefinition`
+made its `qubit` optional and its `parameter` name required.
+This is now fixed, making `qubit` required and the name optional;
+in addition, it renames `parameter` to `target` for clarity,
+in anticipation of [Named Measurements][named-measurments] support.
+
+Note that it was always a bug to use `None` for the `qubit` parameter.
+
+[named-measurments]: https://github.com/rigetti/quil-rs/pull/479
+
+#### `Expression::evaluate`
+
+The signature of `Expression::evaluate`
 was generalized to make it easier to share with Python,
 and this will cause an error if you were relying on type inference for these parameters, e.g.:
 
@@ -96,6 +125,11 @@ You can fix it by specifying the key type, e.g.:
 some_expression.evaluate(&HashMap::<String, _>::new(), &HashMap::<&str, _>::new());
 ```
 
+#### `instruction::MemoryAccess`
+
+The `MemoryAccess` type has been removed.
+This struct was not in use within `quil-rs`, but it was part of the public API.
+
 ### Python (`quil`/`quil-py`) Breaking Changes
 
 If you're directly using the `quil` Python package that exposes bindings to `quil-rs`,
@@ -107,7 +141,7 @@ please be aware of the following changes required to upgrade to the newest `quil
     the `from_*`, `as_*`, `to_*`, `is_*`, and `inner` methods have been removed,
     You should replace their usage with more typical Python operations (see below for examples).
     Note that `to_quil` and `parse` are still there for converting to/from `str`s.
-- The following functions are now attributes (so you no longer call them),
+- The following functions are now `@property` attributes (so you no longer call them),
     making them consistent with other `getter`s already in `quil`:
     - `program.BasicBlock.label`
     - `program.BasicBlock.instructions`
