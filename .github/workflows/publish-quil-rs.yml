@@ -99,7 +99,7 @@ jobs:
           working-directory: quil-rs
           target: ${{ matrix.platform.target }}
           manylinux: auto
-          args: --release --features python,extension-module -i ${{ matrix.python-version }} --out dist
+          args: --release --features python,pyo3/extension-module -i ${{ matrix.python-version }} --out dist
 
       - name: Install Wheel
         if: ${{ matrix.platform.name != 'linux' || matrix.platform.target == 'x86_64' }}
