@@ -81,6 +81,7 @@ pub enum KeywordToken {
     Offset,
     PauliSum,
     Permutation,
+    Sequence,
     Sharing,
 }
 
@@ -94,6 +95,7 @@ impl From<KeywordToken> for Token {
             KeywordToken::Offset => Token::Offset,
             KeywordToken::PauliSum => Token::PauliSum,
             KeywordToken::Permutation => Token::Permutation,
+            KeywordToken::Sequence => Token::Sequence,
             KeywordToken::Sharing => Token::Sharing,
         }
     }
@@ -113,6 +115,7 @@ impl TryFrom<Token> for KeywordToken {
             Token::Offset => Ok(KeywordToken::Offset),
             Token::PauliSum => Ok(KeywordToken::PauliSum),
             Token::Permutation => Ok(KeywordToken::Permutation),
+            Token::Sequence => Ok(KeywordToken::Sequence),
             Token::Sharing => Ok(KeywordToken::Sharing),
 
             Token::Bang
@@ -169,6 +172,7 @@ pub enum Token {
     RBracket,
     RParenthesis,
     Semicolon,
+    Sequence,
     Sharing,
     String(String),
     Variable(String),
@@ -203,6 +207,7 @@ impl fmt::Display for Token {
             Token::RBracket => write!(f, "]"),
             Token::RParenthesis => write!(f, ")"),
             Token::Semicolon => write!(f, ";"),
+            Token::Sequence => write!(f, "{}", KeywordToken::Sequence),
             Token::Sharing => write!(f, "{}", KeywordToken::Sharing),
             Token::String(s) => write!(f, "{}", QuotedString(s)),
             Token::Variable(v) => write!(f, "{v}"),
@@ -239,6 +244,7 @@ impl fmt::Debug for Token {
             Token::RBracket => write!(f, "RBRACKET"),
             Token::RParenthesis => write!(f, "RPAREN"),
             Token::Semicolon => write!(f, "SEMICOLON"),
+            Token::Sequence => write!(f, "{self}"),
             Token::Sharing => write!(f, "{self}"),
             Token::String(s) => write!(f, "STRING({s:?})"),
             Token::Variable(v) => write!(f, "VARIABLE({v})"),

@@ -7,7 +7,7 @@ import numpy
 import numpy.typing
 import typing
 from quil import QuilError
-from quil.instructions import AttributeValue, CalibrationDefinition, CalibrationIdentifier, Declaration, FrameIdentifier, Gate, GateDefinition, Instruction, MeasureCalibrationDefinition, MeasureCalibrationIdentifier, Measurement, MemoryReference, Pragma, Qubit, QubitPlaceholder, Sharing, Target, TargetPlaceholder, Vector, Waveform
+from quil.instructions import AttributeValue, CalibrationDefinition, CalibrationIdentifier, Declaration, FrameIdentifier, Gate, GateDefinition, Instruction, MeasureCalibrationDefinition, MeasureCalibrationIdentifier, Measurement, MemoryReference, OwnedGateSignature, Pragma, Qubit, QubitPlaceholder, Sharing, Target, TargetPlaceholder, Vector, Waveform
 
 class BasicBlock:
     @property
@@ -58,7 +58,7 @@ class CalibrationExpansion:
         The calibration used to expand the instruction.
         """
     @property
-    def expansions(self) -> CalibrationExpansionSourceMap:
+    def expansions(self) -> InstructionSourceMap:
         r"""
         The source map describing the nested expansions made.
         """
@@ -70,80 +70,6 @@ class CalibrationExpansion:
         """
     def __eq__(self, other:builtins.object) -> builtins.bool: ...
     def __repr__(self) -> builtins.str: ...
-
-class CalibrationExpansionSourceMap:
-    def __repr__(self) -> builtins.str: ...
-    def entries(self) -> builtins.list[CalibrationExpansionSourceMapEntry]: ...
-    def list_sources_for_calibration_used(self, calibration_used:CalibrationSource) -> builtins.list[builtins.int]:
-        r"""
-        Given a particular calibration (`DEFCAL` or `DEFCAL MEASURE`), =
-        return the locations in the source which were expanded using that calibration.
-        
-        This is `O(n)` where `n` is the number of first-level calibration expansions performed.
-        """
-    def list_sources_for_target_index(self, target_index:builtins.int) -> builtins.list[builtins.int]:
-        r"""
-        Return all source ranges in the source map
-        which were used to generate the target index.
-        
-        This is `O(n)` where `n` is the number of entries in the map.
-        """
-    def list_targets_for_source_index(self, source_index:builtins.int) -> builtins.list[CalibrationExpansion]:
-        r"""
-        Return all target ranges which were used to generate the source range.
-        
-        This is `O(n)` where `n` is the number of entries in the map.
-        """
-
-class CalibrationExpansionSourceMapEntry:
-    r"""
-    A description of the expansion of one instruction into other instructions.
-    
-    If present, the instruction located at `source_location` was expanded using calibrations
-    into the instructions located at `target_location`.
-    
-    Note that both `source_location` and `target_location` are relative to the scope of expansion.
-    
-    In the case of a nested expansion, both describe the location relative only to that
-    level of expansion and *not* the original program.
-    
-    Consider the following example:
-    
-    ```python
-    DEFCAL A:
-        NOP
-        B
-        HALT
-    
-    
-    DEFCAL B:
-        NOP
-        WAIT
-    
-    NOP
-    NOP
-    NOP
-    A
-    ```
-    
-    In this program, `A` will expand into `NOP`, `B`, and `HALT`.
-    Then, `B` will expand into `NOP` and `WAIT`.
-    Each level of this expansion
-    will have its own ``CalibrationExpansionSourceMap`` describing the expansion.
-    In the map of `B` to `NOP` and `WAIT`, the `source_location` will be `1`
-    because `B` is the second instruction in `DEFCAL A`,
-    even though `A` is the 4th instruction (index = 3) in the original program.
-    """
-    def __repr__(self) -> builtins.str: ...
-    def source_location(self) -> builtins.int:
-        r"""
-        The instruction index within the source program's body instructions.
-        """
-    def target_location(self) -> CalibrationExpansion:
-        r"""
-        The location of the expanded instruction within the target
-        program's body instructions.
-        """
 
 class CalibrationSet:
     r"""
@@ -327,33 +253,85 @@ class FrameSet:
         Return the Quil instructions which describe the contained frames.
         """
 
-class MaybeCalibrationExpansion:
+class InstructionSourceMap:
+    def entries(self) -> builtins.list[InstructionSourceMapEntry]: ...
+    def list_sources_for_calibration_used(self, calibration_used:CalibrationSource) -> builtins.list[builtins.int]:
+        r"""
+        Given a particular calibration (`DEFCAL` or `DEFCAL MEASURE`), =
+        return the locations in the source which were expanded using that calibration.
+        
+        This is `O(n)` where `n` is the number of first-level calibration expansions performed,
+        which is at worst `O(i)` where `i` is the number of source instructions.
+        """
+    def list_sources_for_gate_expansion(self, gate_signature:OwnedGateSignature) -> builtins.list[builtins.int]:
+        r"""
+        Given a gate signature, return the locations in the source program which were
+        expanded using that gate signature.
+        
+        This is `O(n)` where `n` is the number of first-level sequence gate expansions performed,
+        which is at worst `O(i)` where `i` is the number of source instructions.
+        """
+    def list_sources_for_target_index(self, target_index:builtins.int) -> builtins.list[builtins.int]:
+        r"""
+        Return all source ranges in the source map
+        which were used to generate the target index.
+        
+        This is `O(n)` where `n` is the number of first-level expansions performed,
+        which is at worst `O(i)` where `i` is the number of source instructions.
+        """
+    def list_targets_for_source_index(self, source_index:builtins.int) -> builtins.list[InstructionTarget]:
+        r"""
+        Return all target ranges which were used to generate the source range.
+        
+        This is `O(n)` where `n` is the number of first-level expansions performed,
+        which is at worst `O(i)` where `i` is the number of source instructions.
+        """
+
+class InstructionSourceMapEntry:
+    def source_location(self) -> builtins.int:
+        r"""
+        The instruction index within the source program's body instructions.
+        """
+    def target_location(self) -> InstructionTarget:
+        r"""
+        The location of the expanded instruction within the target program's body instructions.
+        """
+
+class InstructionTarget:
     r"""
-    The result of an attempt to expand an instruction within a [`Program`]
+    A single type for the `TargetIndex` on a [`SourceMap`] that we expose to Python. This
+    can represent calibration expansions, gate sequence expansions, and other rewrites
+    we may want to perform in the future.
+    
+    Note, should we want to support rewrites from Python, we can expose an additional
+    pyo3 type that wraps classes implementing the required Python interface. See the pyo3
+    [trait bound](https://pyo3.rs/main/trait-bounds.html) documentation.
     """
     def __getnewargs__(self) -> tuple[CalibrationExpansion, builtins.int]: ...
     def __repr__(self) -> builtins.str: ...
-    class Expanded(MaybeCalibrationExpansion):
-        r"""
-        The instruction was expanded into others
-        """
+    class Calibration(InstructionTarget):
         __match_args__ = ("_0",)
         @property
         def _0(self) -> CalibrationExpansion: ...
         def __getitem__(self, key:builtins.int) -> typing.Any: ...
         def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0:CalibrationExpansion) -> MaybeCalibrationExpansion.Expanded: ...
+        def __new__(cls, _0:CalibrationExpansion) -> InstructionTarget.Calibration: ...
     
-    class Unexpanded(MaybeCalibrationExpansion):
-        r"""
-        The instruction was not expanded, but was simply copied over into the target program at the given instruction index
-        """
+    class DefGateSequence(InstructionTarget):
+        __match_args__ = ("_0",)
+        @property
+        def _0(self) -> OwnedDefGateSequenceExpansion: ...
+        def __getitem__(self, key:builtins.int) -> typing.Any: ...
+        def __len__(self) -> builtins.int: ...
+        def __new__(cls, _0:OwnedDefGateSequenceExpansion) -> InstructionTarget.DefGateSequence: ...
+    
+    class Unmodified(InstructionTarget):
         __match_args__ = ("_0",)
         @property
         def _0(self) -> builtins.int: ...
         def __getitem__(self, key:builtins.int) -> typing.Any: ...
         def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0:builtins.int) -> MaybeCalibrationExpansion.Unexpanded: ...
+        def __new__(cls, _0:builtins.int) -> InstructionTarget.Unmodified: ...
     
 
 class MemoryRegion:
@@ -366,6 +344,19 @@ class MemoryRegion:
     def __hash__(self) -> builtins.int: ...
     def __new__(cls, size:Vector, sharing:typing.Optional[Sharing]) -> MemoryRegion: ...
     def __repr__(self) -> builtins.str: ...
+
+class OwnedDefGateSequenceExpansion:
+    r"""
+    [`DefGateSequenceExpansion`] references data from [`quil_rs::instruction::GateDefinition`]s used to expand instructions.
+    As such, it is incompatible with Python's memory management,
+    so we define an owned type here.
+    """
+    @property
+    def range(self) -> range: ...
+    @property
+    def source_signature(self) -> OwnedGateSignature: ...
+    def __eq__(self, other:builtins.object) -> builtins.bool: ...
+    def expansions(self) -> InstructionSourceMap: ...
 
 class Program:
     r"""
@@ -434,7 +425,7 @@ class Program:
         """
     def clone_without_body_instructions(self) -> Program:
         r"""
-        Return a deep copy of the `Program`, but without the body instructions.
+        Like `Clone`, but does not clone the body instructions.
         """
     def control_flow_graph(self) -> ControlFlowGraph:
         r"""
@@ -465,13 +456,15 @@ class Program:
         
         See [`Program::expand_calibrations_with_source_map`] for a version that returns a source mapping.
         """
-    def expand_calibrations_with_source_map(self) -> ProgramCalibrationExpansion:
+    def expand_calibrations_with_source_map(self) -> tuple[Program, InstructionSourceMap]:
         r"""
         Expand any instructions in the program which have a matching calibration,
         leaving the others unchanged.
         Return the expanded copy of the program
         and a source mapping describing the expansions made.
         """
+    def expand_defgate_sequences(self, filter:collections.abc.Callable[[str], bool] | None=None) -> Program: ...
+    def expand_defgate_sequences_with_source_map(self, filter:collections.abc.Callable[[str], bool] | None=None) -> tuple[Program, InstructionSourceMap]: ...
     def filter_instructions(self, predicate:collections.abc.Callable[[Instruction], bool]) -> Program:
         r"""
         Return a new ``Program`` containing only the instructions
@@ -559,56 +552,6 @@ class Program:
         the program.
         
         If `iterations` is 0, then a copy of the program is returned without any changes.
-        """
-
-class ProgramCalibrationExpansion:
-    @property
-    def program(self) -> Program:
-        r"""
-        The program containing the instructions.
-        """
-    @property
-    def source_map(self) -> ProgramCalibrationExpansionSourceMap:
-        r"""
-        The source mapping describing the expansions made.
-        """
-    def __eq__(self, other:builtins.object) -> builtins.bool: ...
-    def __repr__(self) -> builtins.str: ...
-
-class ProgramCalibrationExpansionSourceMap:
-    def __repr__(self) -> builtins.str: ...
-    def entries(self) -> builtins.list[ProgramCalibrationExpansionSourceMapEntry]: ...
-    def list_sources_for_calibration_used(self, calibration_used:CalibrationSource) -> builtins.list[builtins.int]:
-        r"""
-        Given a particular calibration (`DEFCAL` or `DEFCAL MEASURE`), =
-        return the locations in the source which were expanded using that calibration.
-        
-        This is `O(n)` where `n` is the number of first-level calibration expansions performed.
-        """
-    def list_sources_for_target_index(self, target_index:builtins.int) -> builtins.list[builtins.int]:
-        r"""
-        Return all source ranges in the source map
-        which were used to generate the target index.
-        
-        This is `O(n)` where `n` is the number of entries in the map.
-        """
-    def list_targets_for_source_index(self, source_index:builtins.int) -> builtins.list[MaybeCalibrationExpansion]:
-        r"""
-        Return all target ranges which were used to generate the source range.
-        
-        This is `O(n)` where `n` is the number of entries in the map.
-        """
-
-class ProgramCalibrationExpansionSourceMapEntry:
-    def __repr__(self) -> builtins.str: ...
-    def source_location(self) -> builtins.int:
-        r"""
-        The instruction index within the source program's body instructions.
-        """
-    def target_location(self) -> MaybeCalibrationExpansion:
-        r"""
-        The location of the expanded instruction within the target
-        program's body instructions.
         """
 
 class ProgramError(QuilError):
