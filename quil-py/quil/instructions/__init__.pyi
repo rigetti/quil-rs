@@ -21,10 +21,13 @@ __all__ = [
     'ComparisonOperand',
     'ComparisonOperator',
     'Convert',
+    'DefGateSequence',
     'Exchange',
     'ExternParameter',
     'ExternParameterType',
     'ExternSignature',
+    'GateSignature',
+    'GateType',
     'Move',
     'UnaryLogic',
     'UnaryOperator',
@@ -1987,6 +1990,37 @@ class PauliSum:
     def terms(self, terms: Sequence[PauliTerm]) -> None: ...
 
 @final
+class GateSignature:
+    """A signature for a gate definition; this does not include the gate definition content.
+
+    To get a signature from a definition, use `GateDefinition.signature`.
+    """
+    def __new__(cls, name: str, gate_parameters: List[str], qubit_parameters: List[str], gate_type: GateType) -> Self: ...
+
+@final
+class DefGateSequence:
+    """A sequence of gates that make up a defined gate (i.e. with `DEFGATE ... AS SEQUENCE`)."""
+
+    def __new__(cls, qubits: List[str], gates: List[Gate]) -> Self:
+        """Creates a new `DefGateSequence` with the given qubits and gates.
+
+        :param qubits: A list of qubit names that the gates in the sequence will act on.
+        :param gates: A list of `Gate` objects that make up the sequence. Each gate must reference
+            qubits in the `qubits` list by name. They may not specify a fixed qubit.
+        """
+        ...
+
+    @property
+    def qubits(self) -> List[str]:
+        """Returns the list of qubit variable names in the gate signature."""
+        ...
+
+    @property
+    def gates(self) -> List[Gate]:
+        """Returns the list of `Gate` objects that make up the sequence."""
+        ...
+
+@final
 class GateSpecification:
     """A specification for a gate definition.
 
@@ -2007,18 +2041,23 @@ class GateSpecification:
     def is_matrix(self) -> bool: ...
     def is_permutation(self) -> bool: ...
     def is_pauli_sum(self) -> bool: ...
+    def is_sequence(self) -> bool: ...
     def as_matrix(self) -> Optional[List[List[Expression]]]: ...
     def to_matrix(self) -> List[List[Expression]]: ...
     def as_permutation(self) -> Optional[List[int]]: ...
     def to_permutation(self) -> List[int]: ...
     def as_pauli_sum(self) -> Optional[PauliSum]: ...
     def to_pauli_sum(self) -> PauliSum: ...
+    def as_sequence(self) -> Optional[DefGateSequence]: ...
+    def to_sequence(self) -> DefGateSequence: ...
     @staticmethod
     def from_matrix(inner: Sequence[Sequence[Expression]]) -> GateSpecification: ...
     @staticmethod
     def from_permutation(inner: Sequence[int]) -> GateSpecification: ...
     @staticmethod
     def from_pauli_sum(inner: PauliSum) -> GateSpecification: ...
+    @staticmethod
+    def from_sequence(inner: DefGateSequence) -> GateSpecification: ...
     def to_quil(self) -> str:
         """Attempt to convert the instruction to a valid Quil string.
 
@@ -2047,6 +2086,8 @@ class GateDefinition:
     @parameters.setter
     def parameters(self, parameters: Sequence[str]) -> None: ...
     @property
+    def signature(self) -> GateSignature: ...
+    @property
     def specification(self) -> GateSpecification: ...
     @specification.setter
     def specification(self, specification: GateSpecification) -> None: ...
@@ -2070,6 +2111,15 @@ class GateDefinition:
         """
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
+
+@final
+class GateType(Enum):
+    """The type of a gate definition; used within the `GateSignature`."""
+    Matrix = "Matrix"
+    Permutation = "Permutation"
+    PauliSum = "PauliSum"
+    Sequence = "Sequence"
+
 
 @final
 class Qubit:

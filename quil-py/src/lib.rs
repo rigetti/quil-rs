@@ -12,6 +12,29 @@ pub mod units;
 pub mod validation;
 pub mod waveforms;
 
+#[pyclass]
+#[derive(Clone, Debug)]
+struct Example {
+    #[pyo3(get, set)]
+    name: String,
+    #[pyo3(get, set)]
+    inner: Option<Py<Example>>,
+    #[pyo3(get, set)]
+    data: Vec<Example>,
+}
+
+#[pymethods]
+impl Example {
+    #[new]
+    fn new(name: String) -> Self {
+        Example {
+            name,
+            inner: None,
+            data: vec![],
+        }
+    }
+}
+
 create_init_submodule! {
     submodules: [
         "expression": expression::init_submodule,

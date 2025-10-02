@@ -1,4 +1,8 @@
-use super::InstructionIndex;
+use std::fmt::Debug;
+
+use crate::instruction::GateSignature;
+
+use super::{CalibrationSource, InstructionIndex};
 
 /// A SourceMap provides information necessary to understand which parts of a target
 /// were derived from which parts of a source artifact, in such a way that they can be
@@ -16,6 +20,10 @@ pub struct SourceMap<SourceIndex, TargetIndex> {
 }
 
 impl<SourceIndex, TargetIndex> SourceMap<SourceIndex, TargetIndex> {
+    pub fn new(entries: Vec<SourceMapEntry<SourceIndex, TargetIndex>>) -> Self {
+        Self { entries }
+    }
+
     /// Return all source ranges in the source map which were used to generate the target range.
     ///
     /// This is `O(n)` where `n` is the number of entries in the map.
@@ -26,7 +34,7 @@ impl<SourceIndex, TargetIndex> SourceMap<SourceIndex, TargetIndex> {
         self.entries
             .iter()
             .filter_map(|entry| {
-                if entry.target_location().intersects(target_index) {
+                if entry.target_location().contains(target_index) {
                     Some(entry.source_location())
                 } else {
                     None
@@ -45,7 +53,7 @@ impl<SourceIndex, TargetIndex> SourceMap<SourceIndex, TargetIndex> {
         self.entries
             .iter()
             .filter_map(|entry| {
-                if entry.source_location().intersects(source_index) {
+                if entry.source_location().contains(source_index) {
                     Some(entry.target_location())
                 } else {
                     None
@@ -79,6 +87,13 @@ pub struct SourceMapEntry<SourceIndex, TargetIndex> {
 }
 
 impl<SourceIndex, TargetIndex> SourceMapEntry<SourceIndex, TargetIndex> {
+    pub fn new(source_location: SourceIndex, target_location: TargetIndex) -> Self {
+        Self {
+            source_location,
+            target_location,
+        }
+    }
+
     pub fn source_location(&self) -> &SourceIndex {
         &self.source_location
     }
@@ -90,12 +105,56 @@ impl<SourceIndex, TargetIndex> SourceMapEntry<SourceIndex, TargetIndex> {
 
 /// A trait for types which can be used as lookup indices in a `SourceMap.`
 pub trait SourceMapIndexable<Index> {
-    /// Return `true` if a source or target index intersects `other`.
-    fn intersects(&self, other: &Index) -> bool;
+    /// Return `true` if `self` contains or is equal to `other`.
+    fn contains(&self, other: &Index) -> bool;
 }
 
 impl SourceMapIndexable<InstructionIndex> for InstructionIndex {
-    fn intersects(&self, other: &InstructionIndex) -> bool {
+    fn contains(&self, other: &InstructionIndex) -> bool {
         self == other
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum ExpansionResult<R> {
+    Unmodified(InstructionIndex),
+    Rewritten(R),
+}
+
+impl<R> SourceMapIndexable<InstructionIndex> for ExpansionResult<R>
+where
+    R: SourceMapIndexable<InstructionIndex>,
+{
+    fn contains(&self, other: &InstructionIndex) -> bool {
+        match self {
+            Self::Unmodified(index) => index == other,
+            Self::Rewritten(rewrite) => rewrite.contains(other),
+        }
+    }
+}
+
+impl<R> SourceMapIndexable<CalibrationSource> for ExpansionResult<R>
+where
+    R: SourceMapIndexable<CalibrationSource>,
+{
+    fn contains(&self, other: &CalibrationSource) -> bool {
+        if let Self::Rewritten(rewrite) = self {
+            rewrite.contains(other)
+        } else {
+            false
+        }
+    }
+}
+
+impl<'a, R> SourceMapIndexable<GateSignature<'a>> for ExpansionResult<R>
+where
+    R: SourceMapIndexable<GateSignature<'a>>,
+{
+    fn contains(&self, other: &GateSignature<'a>) -> bool {
+        if let Self::Rewritten(rewrite) = self {
+            rewrite.contains(other)
+        } else {
+            false
+        }
     }
 }

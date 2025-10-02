@@ -10,7 +10,7 @@ import inspect
 from quil.program import Program
 
 program_text = inspect.cleandoc(
-    \"\"\"
+    '''
     DEFCAL X 0:
         Y 0
 
@@ -19,17 +19,16 @@ program_text = inspect.cleandoc(
 
     X 0 # This instruction is index 0
     Y 0 # This instruction is index 1
-    \"\"\"
+    '''
 )
 
 # First, we parse the program and expand its calibrations
 program = Program.parse(program_text)
-expansion = program.expand_calibrations_with_source_map()
-source_map = expansion.source_map()
+expanded_program, source_map = program.expand_calibrations_with_source_map()
 
 # This is what we expect the expanded program to be. X and Y have each been replaced by Z.
 expected_program_text = inspect.cleandoc(
-    \"\"\"
+    '''
     DEFCAL X 0:
         Y 0
 
@@ -38,9 +37,9 @@ expected_program_text = inspect.cleandoc(
 
     Z 0 # This instruction is index 0
     Z 0 # This instruction is index 1
-    \"\"\"
+    '''
 )
-assert expansion.program().to_quil() == Program.parse(expected_program_text).to_quil()
+assert expanded_program.to_quil() == Program.parse(expected_program_text).to_quil()
 
 # In order to discover _which_ calibration led to the first Z in the resulting program, we
 # can interrogate the expansion source mapping.
@@ -52,23 +51,23 @@ assert expansion.program().to_quil() == Program.parse(expected_program_text).to_
 targets = source_map.list_targets_for_source_index(0)
 
 # ...then we extract the expanded instruction.
-# If the instruction had _not_ been expanded (i.e. there was no matching calibration), then `as_expanded()` would return `None`.
-expanded = targets[0].as_expanded()
+# If the instruction had _not_ been expanded (i.e. there was no matching calibration), then `as_calibration()` would return `None`.
+calibration_expansion = targets[0].as_calibration()
 
 # This line shows how that `X 0` was expanded into instruction index 0 (only) within the expanded program.
 # The end of the range is exclusive.
-assert expanded.range() == range(0, 1)
+assert calibration_expansion.range() == range(0, 1)
 
 # We can also map instructions in reverse: given an instruction index in the expanded program, we can find the source index.
 # This is useful for understanding the provenance of instructions in the expanded program.
 sources = source_map.list_sources_for_target_index(1)
 
 # In this case, the instruction was expanded from the source program at index 1.
-assert sources == [1]
+assert sources == [(1, 2)]
 ```
 """
 
-from typing import Callable, Dict, FrozenSet, List, Optional, Sequence, Set, Union, final
+from typing import Callable, Dict, FrozenSet, List, Optional, Sequence, Set, Tuple, Union, final
 
 import numpy as np
 from numpy.typing import NDArray
@@ -82,6 +81,7 @@ from quil.instructions import (
     FrameIdentifier,
     Gate,
     GateDefinition,
+    GateSignature,
     Instruction,
     MeasureCalibrationDefinition,
     MeasureCalibrationIdentifier,
@@ -101,13 +101,12 @@ __all__ = [
     'FrameSet',
     'Program',
     'CalibrationExpansion',
-    'CalibrationExpansionSourceMap',
-    'CalibrationExpansionSourceMapEntry',
+    'InstructionIndex',
+    'InstructionSourceMap',
+    'InstructionSourceMapEntry',
+    'InstructionTarget',
     'CalibrationSource',
-    'MaybeCalibrationExpansion',
-    'ProgramCalibrationExpansion',
-    'ProgramCalibrationExpansionSourceMap',
-    'ProgramCalibrationExpansionSourceMapEntry',
+    'DefGateSequenceExpansion',
     'CalibrationSet',
     'MemoryRegion',
     'BasicBlock',
@@ -160,10 +159,104 @@ class Program:
         expands directly or indirectly into itself)
         """
         ...
-    def expand_calibrations_with_source_map(self) -> ProgramCalibrationExpansion:
+    def expand_calibrations_with_source_map(self) -> Tuple["Program", InstructionSourceMap]:
         """Expand any instructions in the program which have a matching calibration, leaving the others unchanged.
 
         Return the expanded copy of the program and a source mapping describing the expansions made.
+        """
+        ...
+    def expand_defgate_sequences(self, /, filter: Optional[Callable[[str], bool]] = ...) -> "Program":
+        """Expand any instructions in the program which have a matching sequence gate definition, leaving
+        the others unchanged.
+
+        Recurses though each instruction while ensuring there is no cycle in the expansion graph (i.e. no sequence
+        gate definitions expands directly or indirectly into itself).
+
+        :param filter: If provided, only sequence gate definitions which match the filter will be expanded.
+            Defaults to expanding all sequence gate definitions.
+
+        # Example
+
+        Below, we show the results of gate sequence expansion on a program that has two gate
+        sequence definitions. The first, `seq1`, has a matching calibration and we do not
+        want to expand it. The second, `seq2`, does not have a matching calibration and
+        we do want to expand it.
+
+        >>> quil = '''
+        ... DEFCAL seq1 0 1:
+        ...     FENCE 0 1
+        ...     NONBLOCKING PULSE 0 "rf" drag_gaussian(duration: 6.000000000000001e-08, fwhm: 1.5000000000000002e-08, t0: 3.0000000000000004e-08, anh: -190000000.0, alpha: -1.6453719598238201, scale: 0.168265925924524, phase: 0.0, detuning: 0)
+        ...     NONBLOCKING PULSE 1 "rf" drag_gaussian(duration: 6.000000000000001e-08, fwhm: 1.5000000000000002e-08, t0: 3.0000000000000004e-08, anh: -190000000.0, alpha: -1.6453719598238201, scale: 0.168265925924524, phase: 0.0, detuning: 0)
+        ...     FENCE 0 1
+        ...
+        ... DEFGATE seq1() a b AS SEQUENCE:
+        ...     RX(pi/2) a
+        ...     RX(pi/2) b
+        ...
+        ... DEFGATE seq2(%theta, %psi, %phi) a AS SEQUENCE:
+        ...     RZ(%theta) a
+        ...     RX(pi/2) a
+        ...     RZ(%psi) a
+        ...     RX(pi/2) a
+        ...     RZ(%phi) a
+        ...
+        ... seq1 0 1
+        ... seq2(1.5707963267948966, 3.141592653589793, 0) 0
+        ... seq2(3.141592653589793, 0, 1.5707963267948966) 1
+        ... '''
+        >>> program = Program.parse(quil);
+        >>> calibrated_gate_names = {calibration.identifier.name for calibration in program.calibrations.calibrations}
+        >>> expanded_program = program.expand_defgate_sequences(lambda name: name not in calibrated_gate_names);
+        >>>
+        >>> expected_quil = '''
+        ... DEFCAL seq1 0 1:
+        ...     FENCE 0 1
+        ...     NONBLOCKING PULSE 0 "rf" drag_gaussian(duration: 6.000000000000001e-08, fwhm: 1.5000000000000002e-08, t0: 3.0000000000000004e-08, anh: -190000000.0, alpha: -1.6453719598238201, scale: 0.168265925924524, phase: 0.0, detuning: 0)
+        ...     NONBLOCKING PULSE 1 "rf" drag_gaussian(duration: 6.000000000000001e-08, fwhm: 1.5000000000000002e-08, t0: 3.0000000000000004e-08, anh: -190000000.0, alpha: -1.6453719598238201, scale: 0.168265925924524, phase: 0.0, detuning: 0)
+        ...     FENCE 0 1
+        ...
+        ... DEFGATE seq1 a b AS SEQUENCE:
+        ...     RX(pi/2) a
+        ...     RX(pi/2) b
+        ...
+        ... seq1 0 1
+        ...
+        ... RZ(1.5707963267948966) 0
+        ... RX(pi/2) 0
+        ... RZ(3.141592653589793) 0
+        ... RX(pi/2) 0
+        ... RZ(0) 0
+        ...
+        ... RZ(3.141592653589793) 1
+        ... RX(pi/2) 1
+        ... RZ(0) 1
+        ... RX(pi/2) 1
+        ... RZ(1.5707963267948966) 1
+        ... '''
+        >>>
+        >>> expected_program = Program.parse(expected_quil)
+        >>>
+        >>> assert expanded_program == expected_program
+        """
+        # NOTE: A similar example is documented in the Rust documentation for `Program::expand_defgate_sequences`.
+        # These examples should be kept in sync.
+        ...
+    def expand_defgate_sequences_with_source_map(self, filter: Optional[Callable[[str], bool]] = ...) -> Tuple["Program", InstructionSourceMap]:
+        """Expand any instructions in the program which have a matching sequence gate definition, leaving
+        the others unchanged. Note, the new program will drop any gate definitions which are no longer
+        referenced in the program.
+
+        Recurses though each instruction while ensuring there is no cycle in the expansion graph (i.e. no sequence
+        gate definitions expands directly or indirectly into itself).
+
+        :param filter: If provided, only sequence gate definitions which match the filter will be expanded.
+        Defaults to expanding all sequence gate definitions.
+
+        Return the expanded copy of the program and a source mapping describing the expansions made.
+
+        # Example
+
+        See `expand_defgate_sequences`.
         """
         ...
     def into_simplified(self) -> "Program":
@@ -359,33 +452,60 @@ class BasicBlock:
         If this is ``None``, the implicit behavior is to "continue" to the subsequent block.
         """
 
+
 @final
 class CalibrationExpansion:
     def calibration_used(self) -> CalibrationSource: ...
     """The calibration which was used to expand the instruction."""
     def range(self) -> range: ...
     """The range of instructions in the expanded list which were generated by this expansion."""
-    def expansions(self) -> CalibrationExpansionSourceMap: ...
+    def expansions(self) -> InstructionSourceMap: ...
     """The source map describing the nested expansions made."""
 
+
 @final
-class CalibrationExpansionSourceMap:
-    def entries(self) -> List[CalibrationExpansionSourceMapEntry]: ...
-    def list_sources_for_target_index(self, target_index: int) -> List[int]:
+class DefGateSequenceExpansion:
+    def defgate_sequence_source(self) -> GateSignature: ...
+    """The signature of the sequence gate definition which was used to expand the instruction."""
+    def range(self) -> range: ...
+    """The range of instructions in the expanded list which were generated by this expansion."""
+    def expansions(self) -> InstructionSourceMap: ...
+    """The source map describing the nested expansions made."""
+
+
+@final
+class InstructionSourceMap:
+    """A source map describing how instructions in a source program were expanded into a target program.
+    Each entry describes an instruction index in the source program which were expanded according
+    to either a calibration or a sequence gate definition.
+    """
+
+    def entries(self) -> List[InstructionSourceMapEntry]: ...
+    def list_sources_for_target_index(self, target_index: InstructionIndex) -> List[InstructionIndex]:
         """Return the locations in the source which were expanded to generate that instruction.
 
         This is `O(n)` where `n` is the number of first-level calibration expansions performed.
         """
         ...
 
-    def list_sources_for_calibration_used(self, calibration_used: CalibrationSource) -> List[int]:
+    def list_sources_for_calibration_used(self, calibration_used: CalibrationSource) -> List[InstructionIndex]:
         """Return the locations in the source program which were expanded using a calibration.
 
         This is `O(n)` where `n` is the number of first-level calibration expansions performed.
         """
         ...
 
-    def list_targets_for_source_index(self, source_index: int) -> List[CalibrationExpansion]:
+    def list_sources_for_gate_expansion(self, gate_signature: GateSignature) -> List[InstructionIndex]:
+        """Return the locations in the source program which were expanded using a particular
+        sequence gate definition.
+
+        This is `O(n)` where `n` is the number of first-level sequence gate definition
+        expansions performed.
+        """
+        ...
+
+
+    def list_targets_for_source_index(self, source_index: InstructionIndex) -> List[InstructionTarget]:
         """Given a source index, return information about its expansion.
 
         This is `O(n)` where `n` is the number of first-level calibration expansions performed.
@@ -393,11 +513,8 @@ class CalibrationExpansionSourceMap:
         ...
 
 @final
-class CalibrationExpansionSourceMapEntry:
-    """A description of the expansion of one instruction into other instructions.
-
-    If present, the instruction located at `source_location` was expanded using calibrations
-    into the instructions located at `target_location`.
+class InstructionSourceMapEntry:
+    """A source map entry, mapping a range of source instructions by index to a `InstructionTarget`.
 
     Note that both `source_location` and `target_location` are relative to the scope of expansion.
     In the case of a nested expansion, both describe the location relative only to that
@@ -423,13 +540,13 @@ class CalibrationExpansionSourceMapEntry:
     ```
 
     In this program, `A` will expand into `NOP`, `B`, and `HALT`. Then, `B` will expand into `NOP` and `WAIT`.
-    Each level of this expansion will have its own `CalibrationExpansionSourceMap` describing the expansion.
+    Each level of this expansion will have its own `InstructionSourceMap` describing the expansion.
     In the map of `B` to `NOP` and `WAIT`, the `source_location` will be `1` because `B` is the second instruction
     in `DEFCAL A`, even though `A` is the 4th instruction (index = 3) in the original program.
     """
     def source_location(self) -> int: ...
     """The instruction index within the source program's body instructions."""
-    def target_location(self) -> CalibrationExpansion: ...
+    def target_location(self) -> InstructionTarget: ...
     """The location of the expanded instruction within the target program's body instructions."""
 
 @final
@@ -510,27 +627,46 @@ class CalibrationSet:
         """Return the Quil instructions which describe the contained calibrations."""
         ...
 
+
 @final
-class MaybeCalibrationExpansion:
+class InstructionIndex:
+    """A simple wrapper around an integer representing the index of an instruction within a program's body instructions."""
+    def __new__(cls, index: int) -> "InstructionIndex": ...
+    def __eq__(self, other: object) -> bool: ...
+    def __repr__(self) -> str: ...
+    @property
+    def index(self) -> int:
+        """The integer index of the instruction within the program's body instructions."""
+
+@final
+class InstructionTarget:
     """The result of having expanded a certain instruction within a program.
 
-    Has two variants:
+    It has three variants:
 
-    - `expanded`: The instruction was expanded into other instructions, described by a `CalibrationExpansion`.
-    - `int`: The instruction was not expanded and is described by an integer, the index of the instruction
-        within the resulting program's body instructions.
+    - `calibration`: The instruction has a matching Quil-T calibration and was expanded by it into
+      other instructions, as described by a `CalibrationExpansion`.
+    - `defgate_sequence`: The instruction has a matching `DEFGATE ... AS SEQUENCE` and was expanded
+      by it into other instructions, as described by a `DefGateSequenceExpansion`.
+    - `unmodified`: The instruction was not expanded and is described by an integer, the index of the instruction
+      within the resulting program's body instructions.
     """
-    def as_expanded(self) -> CalibrationExpansion: ...
-    def as_unexpanded(self) -> int: ...
+    def as_calibration(self) -> CalibrationExpansion: ...
+    def as_unmodified(self) -> InstructionIndex: ...
+    def as_defgate_sequence(self) -> DefGateSequenceExpansion: ...
     @staticmethod
-    def from_expanded(inner: CalibrationExpansion): ...
+    def from_calibration(inner: CalibrationExpansion): ...
     @staticmethod
-    def from_unexpanded(inner: int): ...
-    def inner(self) -> Union[CalibrationExpansion, int]: ...
-    def is_expanded(self) -> bool: ...
-    def is_unexpanded(self) -> bool: ...
-    def to_expanded(self) -> CalibrationExpansion: ...
-    def to_unexpanded(self) -> int: ...
+    def from_unmodified(inner: int): ...
+    @staticmethod
+    def from_defgate_sequence(inner: DefGateSequenceExpansion): ...
+    def inner(self) -> Union[CalibrationExpansion, DefGateSequenceExpansion, InstructionIndex]: ...
+    def is_calibration(self) -> bool: ...
+    def is_unmodified(self) -> bool: ...
+    def is_defgate_sequence(self) -> bool: ...
+    def to_calibration(self) -> CalibrationExpansion: ...
+    def to_unmodified(self) -> InstructionIndex: ...
+    def to_defgate_sequence(self) -> DefGateSequenceExpansion: ...
 
 class ScheduleSecondsItem:
     """A single item within a fixed schedule, representing a single instruction within a basic block."""
@@ -627,44 +763,3 @@ class MemoryRegion:
     @sharing.setter
     def sharing(self, sharing: Optional[Sharing]): ...
 
-@final
-class ProgramCalibrationExpansion:
-    def program(self) -> Program: ...
-    """The program containing the expanded instructions"""
-    def source_map(self) -> ProgramCalibrationExpansionSourceMap: ...
-    """The source mapping describing the expansions made"""
-
-@final
-class ProgramCalibrationExpansionSourceMap:
-    def entries(self) -> List[ProgramCalibrationExpansionSourceMapEntry]: ...
-    def list_sources_for_target_index(self, target_index: int) -> List[int]:
-        """Return the locations in the source which were expanded to generate that instruction.
-
-        This is `O(n)` where `n` is the number of source instructions.
-        """
-        ...
-
-    def list_sources_for_calibration_used(self, calibration_used: CalibrationSource) -> List[int]:
-        """Return the locations in the source program which were expanded using a calibration.
-
-        This is `O(n)` where `n` is the number of source instructions.
-        """
-        ...
-
-    def list_targets_for_source_index(self, source_index: int) -> List[MaybeCalibrationExpansion]:
-        """Given a source index, return information about its expansion.
-
-        This is `O(n)` where `n` is the number of source instructions.
-        """
-        ...
-
-@final
-class ProgramCalibrationExpansionSourceMapEntry:
-    """A description of the possible expansion of one instruction into other instructions.
-
-    Valid within the scope of a program's calibrations.
-    """
-    def source_location(self) -> int: ...
-    """The instruction index within the source program's body instructions."""
-    def target_location(self) -> MaybeCalibrationExpansion: ...
-    """The location of the possibly-expanded instruction within the target program's body instructions."""

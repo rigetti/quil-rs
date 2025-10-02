@@ -2,8 +2,8 @@ use numpy::{PyArray2, ToPyArray};
 use quil_rs::{
     expression::Expression,
     instruction::{
-        Gate, GateDefinition, GateModifier, GateSpecification, PauliGate, PauliSum, PauliTerm,
-        Qubit,
+        DefGateSequence, Gate, GateDefinition, GateModifier, GateSignature, GateSpecification,
+        GateType, PauliGate, PauliSum, PauliTerm, Qubit,
     },
 };
 use rigetti_pyo3::{
@@ -127,6 +127,79 @@ impl_eq!(PyGateModifier);
 
 py_wrap_simple_enum! {
     #[derive(Debug, PartialEq, Eq)]
+    PyGateType(GateType) as "GateType" {
+        Matrix,
+        Permutation,
+        PauliSum,
+        Sequence
+    }
+}
+
+/// [`GateSignature`] references data from the [`GateDefinition`]; as such it is incompatible
+/// with Python's memory management, so we redefine a type with owned data.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct OwnedGateSignature {
+    name: String,
+    gate_parameters: Vec<String>,
+    qubit_parameters: Vec<String>,
+    gate_type: GateType,
+}
+
+impl<'a> From<GateSignature<'a>> for OwnedGateSignature {
+    fn from(signature: GateSignature) -> Self {
+        OwnedGateSignature {
+            name: signature.name().to_string(),
+            gate_parameters: signature.gate_parameters().to_vec(),
+            qubit_parameters: signature.qubit_parameters().to_vec(),
+            gate_type: signature.gate_type(),
+        }
+    }
+}
+
+impl<'a> TryFrom<&'a OwnedGateSignature> for GateSignature<'a> {
+    type Error = pyo3::PyErr;
+    fn try_from(signature: &'a OwnedGateSignature) -> Result<Self, Self::Error> {
+        GateSignature::try_new(
+            &signature.name,
+            signature.gate_parameters.as_slice(),
+            signature.qubit_parameters.as_slice(),
+            signature.gate_type,
+        )
+        .map_err(RustGateError::from)
+        .map_err(RustGateError::to_py_err)
+    }
+}
+
+py_wrap_type! {
+    #[derive(Debug, PartialEq, Eq)]
+    PyGateSignature(OwnedGateSignature) as "GateSignature"
+}
+
+#[pymethods]
+impl PyGateSignature {
+    #[new]
+    fn new(
+        py: Python<'_>,
+        name: String,
+        gate_parameters: Vec<String>,
+        qubit_parameters: Vec<String>,
+        gate_type: PyGateType,
+    ) -> PyResult<Self> {
+        Ok(Self(OwnedGateSignature {
+            name,
+            gate_parameters,
+            qubit_parameters,
+            gate_type: GateType::py_try_from(py, &gate_type)?,
+        }))
+    }
+}
+
+rigetti_pyo3::impl_as_mut_for_wrapper!(PyGateSignature);
+impl_repr!(PyGateSignature);
+impl_eq!(PyGateSignature);
+
+py_wrap_simple_enum! {
+    #[derive(Debug, PartialEq, Eq)]
     PyPauliGate(PauliGate) as "PauliGate" {
         I,
         X,
@@ -245,12 +318,56 @@ impl PyPauliSum {
     }
 }
 
+wrap_error!(RustDefGateSequenceError(
+    quil_rs::instruction::DefGateSequenceError
+));
+py_wrap_error!(
+    quil,
+    RustDefGateSequenceError,
+    DefGateSequenceError,
+    PyValueError
+);
+
+py_wrap_type! {
+    #[derive(Debug, PartialEq, Eq)]
+    PyDefGateSequence(DefGateSequence) as "DefGateSequence"
+}
+impl_repr!(PyDefGateSequence);
+impl_eq!(PyDefGateSequence);
+
+#[pymethods]
+impl PyDefGateSequence {
+    #[new]
+    pub fn new(qubits: Vec<String>, gates: Vec<PyGate>) -> PyResult<Self> {
+        Ok(Self(
+            DefGateSequence::try_new(qubits, gates.into_iter().map(|g| g.into_inner()).collect())
+                .map_err(RustDefGateSequenceError::from)
+                .map_err(RustDefGateSequenceError::to_py_err)?,
+        ))
+    }
+
+    #[getter]
+    pub fn qubits(&self) -> Vec<String> {
+        self.as_inner().qubits().to_vec()
+    }
+
+    #[getter]
+    pub fn gates(&self) -> Vec<PyGate> {
+        self.as_inner()
+            .gates()
+            .iter()
+            .map(PyGate::from)
+            .collect::<Vec<_>>()
+    }
+}
+
 py_wrap_union_enum! {
     #[derive(Debug, PartialEq, Eq)]
     PyGateSpecification(GateSpecification) as "GateSpecification" {
         matrix: Matrix => Vec<Vec<PyExpression>>,
         permutation: Permutation => Vec<Py<PyInt>>,
-        pauli_sum: PauliSum => PyPauliSum
+        pauli_sum: PauliSum => PyPauliSum,
+        sequence: Sequence => PyDefGateSequence
     }
 }
 impl_repr!(PyGateSpecification);
@@ -292,5 +409,10 @@ impl PyGateDefinition {
             .map_err(RustGateError::from)
             .map_err(RustGateError::to_py_err)?,
         ))
+    }
+
+    #[getter]
+    pub fn signature(&self) -> PyGateSignature {
+        OwnedGateSignature::from(self.as_inner().signature()).into()
     }
 }
