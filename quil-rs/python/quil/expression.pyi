@@ -2,11 +2,12 @@
 # ruff: noqa: E501, F401
 
 import builtins
-import quil.instructions
 import typing
+from quil import QuilError
+from quil.instructions import MemoryReference
 from enum import Enum
 
-class EvaluationError(builtins.QuilError):
+class EvaluationError(QuilError):
     r"""
     Errors that may occur while evaluation an ``Expression``.
     """
@@ -101,7 +102,7 @@ class Expression:
         def __new__(cls, _0:builtins.complex) -> Expression.Number: ...
     
     class Pi(Expression):
-        __match_args__ = ((),)
+        __match_args__ = ()
         def __getitem__(self, key:builtins.int) -> typing.Any: ...
         def __len__(self) -> builtins.int: ...
         def __new__(cls) -> Expression.Pi: ...
@@ -166,7 +167,7 @@ class InfixExpression:
     def __new__(cls, left:Expression, operator:InfixOperator, right:Expression) -> InfixExpression: ...
     def __repr__(self) -> builtins.str: ...
 
-class ParseExpressionError(builtins.QuilError):
+class ParseExpressionError(QuilError):
     r"""
     Errors that may occur while parsing an ``Expression``.
     """

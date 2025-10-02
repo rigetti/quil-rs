@@ -7,7 +7,7 @@ from . import instructions
 from . import program
 from . import waveforms
 
-class PickleError(builtins.QuilError):
+class PickleError(QuilError):
     r"""
     Errors when trying to pickle or deepcopy.
     """
@@ -19,13 +19,13 @@ class QuilError(builtins.Exception):
     """
     ...
 
-class QuilValueError(builtins.QuilError):
+class QuilValueError(QuilError):
     r"""
     Input value is invalid.
     """
     ...
 
-class ToQuilError(builtins.QuilError):
+class ToQuilError(QuilError):
     r"""
     Errors which can occur when converting a Quil item to a string.
     """

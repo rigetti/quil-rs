@@ -2,8 +2,9 @@
 # ruff: noqa: E501, F401
 
 import builtins
+from quil import QuilError
 
-class IdentifierValidationError(builtins.QuilError):
+class IdentifierValidationError(QuilError):
     r"""
     Errors that may occur when validating a Quil identifier.
     """

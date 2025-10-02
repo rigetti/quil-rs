@@ -5,8 +5,9 @@ import builtins
 import collections.abc
 import numpy
 import numpy.typing
-import quil.instructions
 import typing
+from quil import QuilError
+from quil.instructions import AttributeValue, CalibrationDefinition, CalibrationIdentifier, Declaration, FrameIdentifier, Gate, GateDefinition, Instruction, MeasureCalibrationDefinition, MeasureCalibrationIdentifier, Measurement, MemoryReference, Pragma, Qubit, QubitPlaceholder, Sharing, Target, TargetPlaceholder, Vector, Waveform
 
 class BasicBlock:
     @property
@@ -44,7 +45,7 @@ class BasicBlock:
             for it to be counted in the depth.
         """
 
-class BasicBlockScheduleError(builtins.ProgramError):
+class BasicBlockScheduleError(ProgramError):
     ...
 
 class CalibrationExpansion:
@@ -186,7 +187,7 @@ class CalibrationSet:
         """
     def get_match_for_gate(self, gate:Gate) -> typing.Optional[CalibrationDefinition]:
         r"""
-        Return the final calibration which matches the gate per the QuilT specification:
+        Return the final calibration which matches the gate per the `QuilT` specification:
         
         A calibration matches a gate if:
         1. It has the same name
@@ -262,7 +263,7 @@ class CalibrationSource:
         def __new__(cls, _0:MeasureCalibrationIdentifier) -> CalibrationSource.MeasureCalibration: ...
     
 
-class ComputedScheduleError(builtins.ProgramError):
+class ComputedScheduleError(ProgramError):
     r"""
     Error raised if the computed schedule is invalid.
     """
@@ -298,12 +299,12 @@ class FrameSet:
     def __repr__(self) -> builtins.str: ...
     def get(self, identifier:FrameIdentifier) -> typing.Optional[builtins.dict[builtins.str, AttributeValue]]:
         r"""
-        Retrieve the attributes of a frame by its identifier.
+        Retrieve the `FrameAttributes` of a `Frame` by its `FrameIdentifier`.
         """
     def get_all_frames(self) -> builtins.dict[FrameIdentifier, builtins.dict[builtins.str, AttributeValue]]: ...
     def get_keys(self) -> builtins.list[FrameIdentifier]:
         r"""
-        Return a list of all ``FrameIdentifier``s described by this ``FrameSet``.
+        Return a list of all `FrameIdentifier`s described by this `FrameSet`.
         """
     def insert(self, identifier:FrameIdentifier, attributes:typing.Mapping[builtins.str, AttributeValue]) -> None:
         r"""
@@ -311,7 +312,7 @@ class FrameSet:
         """
     def intersection(self, identifiers:builtins.set[FrameIdentifier]) -> FrameSet:
         r"""
-        Return a new [`FrameSet`] which describes only the given [`FrameIdentifier`]s.
+        Return a new `FrameSet` which describes only the given `FrameIdentifier`s.
         """
     def is_empty(self) -> builtins.bool:
         r"""
@@ -330,7 +331,7 @@ class MaybeCalibrationExpansion:
     r"""
     The result of an attempt to expand an instruction within a [`Program`]
     """
-    def __getnewargs__(self) -> tuple[CalibrationExpansion, InstructionIndex]: ...
+    def __getnewargs__(self) -> tuple[CalibrationExpansion, builtins.int]: ...
     def __repr__(self) -> builtins.str: ...
     class Expanded(MaybeCalibrationExpansion):
         r"""
@@ -378,32 +379,32 @@ class Program:
     def body_instructions(self) -> builtins.list[Instruction]: ...
     @property
     def calibrations(self) -> CalibrationSet: ...
+    @calibrations.setter
+    def calibrations(self, value: CalibrationSet) -> None: ...
     @property
     def declarations(self) -> builtins.dict[builtins.str, Declaration]: ...
     @property
     def frames(self) -> FrameSet: ...
+    @frames.setter
+    def frames(self, value: FrameSet) -> None: ...
     @property
     def gate_definitions(self) -> builtins.dict[builtins.str, GateDefinition]: ...
+    @gate_definitions.setter
+    def gate_definitions(self, value: builtins.dict[builtins.str, GateDefinition]) -> None: ...
     @property
     def instructions(self) -> builtins.list[Instruction]: ...
+    @instructions.setter
+    def instructions(self, value: builtins.list[Instruction]) -> None: ...
     @property
     def memory_regions(self) -> builtins.dict[builtins.str, MemoryRegion]: ...
+    @memory_regions.setter
+    def memory_regions(self, value: builtins.dict[builtins.str, MemoryRegion]) -> None: ...
     @property
-    def pragma_extern_map(self) -> builtins.set[typing.Optional[builtins.str], Pragma]: ...
+    def pragma_extern_map(self) -> builtins.dict[typing.Optional[builtins.str], Pragma]: ...
     @property
     def used_qubits(self) -> builtins.set[Qubit]: ...
     @property
     def waveforms(self) -> builtins.dict[builtins.str, Waveform]: ...
-    @calibrations.setter
-    def calibrations(self, value: CalibrationSet) -> None: ...
-    @frames.setter
-    def frames(self, value: FrameSet) -> None: ...
-    @gate_definitions.setter
-    def gate_definitions(self, value: builtins.dict[builtins.str, GateDefinition]) -> None: ...
-    @instructions.setter
-    def instructions(self, value: builtins.list[Instruction]) -> None: ...
-    @memory_regions.setter
-    def memory_regions(self, value: builtins.dict[builtins.str, MemoryRegion]) -> None: ...
     @waveforms.setter
     def waveforms(self, value: builtins.dict[builtins.str, Waveform]) -> None: ...
     def __add__(self, rhs:Program) -> Program: ...
@@ -498,9 +499,11 @@ class Program:
     @staticmethod
     def parse(input:builtins.str) -> Program:
         r"""
-        Parse a ``Program`` from a string.
+        Parse a `Program` from a string.
         
-        Raises a ``ProgramError`` if the string isn't a valid Quil expression.
+        # Errors
+        
+        Raises a `ProgramError` if the string isn't a valid ``Quil`` expression.
         """
     def resolve_placeholders(self) -> None:
         r"""
@@ -510,7 +513,7 @@ class Program:
         [`default_target_resolver`](Self::default_target_resolver),
         and [`default_qubit_resolver`](Self::default_qubit_resolver) for more information.
         """
-    def resolve_placeholders_with_custom_resolvers(self, *, target_resolver:typing.Optional[collections.abc.Callable[[TargetPlaceholder], str | None]]=None, qubit_resolver:typing.Optional[collections.abc.Callable[[QubitPlaceholder], int | None]]=None) -> None:
+    def resolve_placeholders_with_custom_resolvers(self, *, target_resolver:typing.Optional[collections.abc.Callable[[TargetPlaceholder], typing.Optional[builtins.str]]]=None, qubit_resolver:typing.Optional[collections.abc.Callable[[QubitPlaceholder], typing.Optional[builtins.int]]]=None) -> None:
         r"""
         Resolve ``TargetPlaceholder``s and ``QubitPlaceholder``s within the program.
         
@@ -608,13 +611,13 @@ class ProgramCalibrationExpansionSourceMapEntry:
         program's body instructions.
         """
 
-class ProgramError(builtins.QuilError):
+class ProgramError(QuilError):
     r"""
     Errors encountered related to a Program.
     """
     ...
 
-class QubitGraphError(builtins.ProgramError):
+class QubitGraphError(ProgramError):
     ...
 
 class ScheduleSeconds:

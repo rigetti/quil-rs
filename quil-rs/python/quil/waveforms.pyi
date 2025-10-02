@@ -12,8 +12,18 @@ class BoxcarKernel:
         r"""
         The phase, in cycles.
         """
+    @phase.setter
+    def phase(self, value: builtins.float) -> None:
+        r"""
+        The phase, in cycles.
+        """
     @property
     def sample_count(self) -> builtins.int:
+        r"""
+        Sample count, which must be positive.
+        """
+    @sample_count.setter
+    def sample_count(self, value: builtins.int) -> None:
         r"""
         Sample count, which must be positive.
         """
@@ -21,16 +31,6 @@ class BoxcarKernel:
     def scale(self) -> builtins.float:
         r"""
         Scale applied to the waveform envelope.
-        """
-    @phase.setter
-    def phase(self, value: builtins.float) -> None:
-        r"""
-        The phase, in cycles.
-        """
-    @sample_count.setter
-    def sample_count(self, value: builtins.int) -> None:
-        r"""
-        Sample count, which must be positive.
         """
     @scale.setter
     def scale(self, value: builtins.float) -> None:
@@ -63,8 +63,18 @@ class DragGaussian:
         r"""
         DRAG parameter - controls strength of the imaginary term
         """
+    @alpha.setter
+    def alpha(self, value: builtins.float) -> None:
+        r"""
+        DRAG parameter - controls strength of the imaginary term
+        """
     @property
     def anh(self) -> builtins.float:
+        r"""
+        Qubit anharmonicity - sets rate of evolution for the imaginary term (Hz)
+        """
+    @anh.setter
+    def anh(self, value: builtins.float) -> None:
         r"""
         Qubit anharmonicity - sets rate of evolution for the imaginary term (Hz)
         """
@@ -73,8 +83,18 @@ class DragGaussian:
         r"""
         Explicit detuning to bake into iq values
         """
+    @detuning.setter
+    def detuning(self, value: builtins.float) -> None:
+        r"""
+        Explicit detuning to bake into iq values
+        """
     @property
     def duration(self) -> builtins.float:
+        r"""
+        Full duration of the pulse (s)
+        """
+    @duration.setter
+    def duration(self, value: builtins.float) -> None:
         r"""
         Full duration of the pulse (s)
         """
@@ -83,8 +103,18 @@ class DragGaussian:
         r"""
         Full width half maximum of the pulse (s)
         """
+    @fwhm.setter
+    def fwhm(self, value: builtins.float) -> None:
+        r"""
+        Full width half maximum of the pulse (s)
+        """
     @property
     def phase(self) -> builtins.float:
+        r"""
+        Phase shift for entire waveform
+        """
+    @phase.setter
+    def phase(self, value: builtins.float) -> None:
         r"""
         Phase shift for entire waveform
         """
@@ -93,8 +123,18 @@ class DragGaussian:
         r"""
         Generate samples at this rate (Hz)
         """
+    @sample_rate.setter
+    def sample_rate(self, value: builtins.float) -> None:
+        r"""
+        Generate samples at this rate (Hz)
+        """
     @property
     def scale(self) -> builtins.float:
+        r"""
+        Scale to apply to waveform envelope
+        """
+    @scale.setter
+    def scale(self, value: builtins.float) -> None:
         r"""
         Scale to apply to waveform envelope
         """
@@ -102,46 +142,6 @@ class DragGaussian:
     def t0(self) -> builtins.float:
         r"""
         Center/offset for pulse centroid (s)
-        """
-    @alpha.setter
-    def alpha(self, value: builtins.float) -> None:
-        r"""
-        DRAG parameter - controls strength of the imaginary term
-        """
-    @anh.setter
-    def anh(self, value: builtins.float) -> None:
-        r"""
-        Qubit anharmonicity - sets rate of evolution for the imaginary term (Hz)
-        """
-    @detuning.setter
-    def detuning(self, value: builtins.float) -> None:
-        r"""
-        Explicit detuning to bake into iq values
-        """
-    @duration.setter
-    def duration(self, value: builtins.float) -> None:
-        r"""
-        Full duration of the pulse (s)
-        """
-    @fwhm.setter
-    def fwhm(self, value: builtins.float) -> None:
-        r"""
-        Full width half maximum of the pulse (s)
-        """
-    @phase.setter
-    def phase(self, value: builtins.float) -> None:
-        r"""
-        Phase shift for entire waveform
-        """
-    @sample_rate.setter
-    def sample_rate(self, value: builtins.float) -> None:
-        r"""
-        Generate samples at this rate (Hz)
-        """
-    @scale.setter
-    def scale(self, value: builtins.float) -> None:
-        r"""
-        Scale to apply to waveform envelope
         """
     @t0.setter
     def t0(self, value: builtins.float) -> None:
@@ -165,8 +165,18 @@ class ErfSquare:
         r"""
         Explicit detuning to bake into iq values
         """
+    @detuning.setter
+    def detuning(self, value: builtins.float) -> None:
+        r"""
+        Explicit detuning to bake into iq values
+        """
     @property
     def duration(self) -> builtins.float:
+        r"""
+        Full duration of the pulse (s)
+        """
+    @duration.setter
+    def duration(self, value: builtins.float) -> None:
         r"""
         Full duration of the pulse (s)
         """
@@ -175,8 +185,18 @@ class ErfSquare:
         r"""
         Length of zero padding to add to beginning of pulse (s)
         """
+    @pad_left.setter
+    def pad_left(self, value: builtins.float) -> None:
+        r"""
+        Length of zero padding to add to beginning of pulse (s)
+        """
     @property
     def pad_right(self) -> builtins.float:
+        r"""
+        Length of zero padding to add to end of pulse (s)
+        """
+    @pad_right.setter
+    def pad_right(self, value: builtins.float) -> None:
         r"""
         Length of zero padding to add to end of pulse (s)
         """
@@ -185,8 +205,18 @@ class ErfSquare:
         r"""
         Phase shift for entire waveform
         """
+    @phase.setter
+    def phase(self, value: builtins.float) -> None:
+        r"""
+        Phase shift for entire waveform
+        """
     @property
     def positive_polarity(self) -> builtins.bool:
+        r"""
+        Toggle for positive/negative polarity
+        """
+    @positive_polarity.setter
+    def positive_polarity(self, value: builtins.bool) -> None:
         r"""
         Toggle for positive/negative polarity
         """
@@ -195,8 +225,18 @@ class ErfSquare:
         r"""
         Slope of erf shoulders (2x FWHM of erf in s)
         """
+    @risetime.setter
+    def risetime(self, value: builtins.float) -> None:
+        r"""
+        Slope of erf shoulders (2x FWHM of erf in s)
+        """
     @property
     def sample_rate(self) -> builtins.float:
+        r"""
+        Generate wavform samples at this rate (Hz)
+        """
+    @sample_rate.setter
+    def sample_rate(self, value: builtins.float) -> None:
         r"""
         Generate wavform samples at this rate (Hz)
         """
@@ -204,46 +244,6 @@ class ErfSquare:
     def scale(self) -> builtins.float:
         r"""
         Scale to apply to waveform envelope
-        """
-    @detuning.setter
-    def detuning(self, value: builtins.float) -> None:
-        r"""
-        Explicit detuning to bake into iq values
-        """
-    @duration.setter
-    def duration(self, value: builtins.float) -> None:
-        r"""
-        Full duration of the pulse (s)
-        """
-    @pad_left.setter
-    def pad_left(self, value: builtins.float) -> None:
-        r"""
-        Length of zero padding to add to beginning of pulse (s)
-        """
-    @pad_right.setter
-    def pad_right(self, value: builtins.float) -> None:
-        r"""
-        Length of zero padding to add to end of pulse (s)
-        """
-    @phase.setter
-    def phase(self, value: builtins.float) -> None:
-        r"""
-        Phase shift for entire waveform
-        """
-    @positive_polarity.setter
-    def positive_polarity(self, value: builtins.bool) -> None:
-        r"""
-        Toggle for positive/negative polarity
-        """
-    @risetime.setter
-    def risetime(self, value: builtins.float) -> None:
-        r"""
-        Slope of erf shoulders (2x FWHM of erf in s)
-        """
-    @sample_rate.setter
-    def sample_rate(self, value: builtins.float) -> None:
-        r"""
-        Generate wavform samples at this rate (Hz)
         """
     @scale.setter
     def scale(self, value: builtins.float) -> None:
@@ -267,8 +267,18 @@ class Gaussian:
         r"""
         Explicit detuning to bake into IQ values
         """
+    @detuning.setter
+    def detuning(self, value: builtins.float) -> None:
+        r"""
+        Explicit detuning to bake into IQ values
+        """
     @property
     def duration(self) -> builtins.float:
+        r"""
+        Full duration of the pulse (s)
+        """
+    @duration.setter
+    def duration(self, value: builtins.float) -> None:
         r"""
         Full duration of the pulse (s)
         """
@@ -277,8 +287,18 @@ class Gaussian:
         r"""
         Full width half maximum of the pulse (s)
         """
+    @fwhm.setter
+    def fwhm(self, value: builtins.float) -> None:
+        r"""
+        Full width half maximum of the pulse (s)
+        """
     @property
     def phase(self) -> builtins.float:
+        r"""
+        Phase shift for entire waveform
+        """
+    @phase.setter
+    def phase(self, value: builtins.float) -> None:
         r"""
         Phase shift for entire waveform
         """
@@ -287,8 +307,18 @@ class Gaussian:
         r"""
         Generate waveform samples at this rate (Hz)
         """
+    @sample_rate.setter
+    def sample_rate(self, value: builtins.float) -> None:
+        r"""
+        Generate waveform samples at this rate (Hz)
+        """
     @property
     def scale(self) -> builtins.float:
+        r"""
+        Scale to apply to waveform envelope
+        """
+    @scale.setter
+    def scale(self, value: builtins.float) -> None:
         r"""
         Scale to apply to waveform envelope
         """
@@ -296,36 +326,6 @@ class Gaussian:
     def t0(self) -> builtins.float:
         r"""
         Center/offset for pulse centroid (s)
-        """
-    @detuning.setter
-    def detuning(self, value: builtins.float) -> None:
-        r"""
-        Explicit detuning to bake into IQ values
-        """
-    @duration.setter
-    def duration(self, value: builtins.float) -> None:
-        r"""
-        Full duration of the pulse (s)
-        """
-    @fwhm.setter
-    def fwhm(self, value: builtins.float) -> None:
-        r"""
-        Full width half maximum of the pulse (s)
-        """
-    @phase.setter
-    def phase(self, value: builtins.float) -> None:
-        r"""
-        Phase shift for entire waveform
-        """
-    @sample_rate.setter
-    def sample_rate(self, value: builtins.float) -> None:
-        r"""
-        Generate waveform samples at this rate (Hz)
-        """
-    @scale.setter
-    def scale(self, value: builtins.float) -> None:
-        r"""
-        Scale to apply to waveform envelope
         """
     @t0.setter
     def t0(self, value: builtins.float) -> None:
@@ -357,8 +357,18 @@ class HermiteGaussian:
         r"""
         DRAG parameter - controls strength of the imaginary term
         """
+    @alpha.setter
+    def alpha(self, value: builtins.float) -> None:
+        r"""
+        DRAG parameter - controls strength of the imaginary term
+        """
     @property
     def anh(self) -> builtins.float:
+        r"""
+        Qubit anharmonicity - sets rate of evolution for the imaginary term
+        """
+    @anh.setter
+    def anh(self, value: builtins.float) -> None:
         r"""
         Qubit anharmonicity - sets rate of evolution for the imaginary term
         """
@@ -367,8 +377,18 @@ class HermiteGaussian:
         r"""
         Explicit detuning to bake into iq values
         """
+    @detuning.setter
+    def detuning(self, value: builtins.float) -> None:
+        r"""
+        Explicit detuning to bake into iq values
+        """
     @property
     def duration(self) -> builtins.float:
+        r"""
+        Full duration of the pulse
+        """
+    @duration.setter
+    def duration(self, value: builtins.float) -> None:
         r"""
         Full duration of the pulse
         """
@@ -377,8 +397,18 @@ class HermiteGaussian:
         r"""
         Full width half maximum of the pulse
         """
+    @fwhm.setter
+    def fwhm(self, value: builtins.float) -> None:
+        r"""
+        Full width half maximum of the pulse
+        """
     @property
     def phase(self) -> builtins.float:
+        r"""
+        Phase shift for entire waveform
+        """
+    @phase.setter
+    def phase(self, value: builtins.float) -> None:
         r"""
         Phase shift for entire waveform
         """
@@ -387,8 +417,18 @@ class HermiteGaussian:
         r"""
         Generate samples at this rate
         """
+    @sample_rate.setter
+    def sample_rate(self, value: builtins.float) -> None:
+        r"""
+        Generate samples at this rate
+        """
     @property
     def scale(self) -> builtins.float:
+        r"""
+        Scale to apply to waveform envelope
+        """
+    @scale.setter
+    def scale(self, value: builtins.float) -> None:
         r"""
         Scale to apply to waveform envelope
         """
@@ -397,55 +437,15 @@ class HermiteGaussian:
         r"""
         Coefficient of the second order Hermite polynomial term.
         """
-    @property
-    def t0(self) -> builtins.float:
-        r"""
-        Center/offset for pulse centroid
-        """
-    @alpha.setter
-    def alpha(self, value: builtins.float) -> None:
-        r"""
-        DRAG parameter - controls strength of the imaginary term
-        """
-    @anh.setter
-    def anh(self, value: builtins.float) -> None:
-        r"""
-        Qubit anharmonicity - sets rate of evolution for the imaginary term
-        """
-    @detuning.setter
-    def detuning(self, value: builtins.float) -> None:
-        r"""
-        Explicit detuning to bake into iq values
-        """
-    @duration.setter
-    def duration(self, value: builtins.float) -> None:
-        r"""
-        Full duration of the pulse
-        """
-    @fwhm.setter
-    def fwhm(self, value: builtins.float) -> None:
-        r"""
-        Full width half maximum of the pulse
-        """
-    @phase.setter
-    def phase(self, value: builtins.float) -> None:
-        r"""
-        Phase shift for entire waveform
-        """
-    @sample_rate.setter
-    def sample_rate(self, value: builtins.float) -> None:
-        r"""
-        Generate samples at this rate
-        """
-    @scale.setter
-    def scale(self, value: builtins.float) -> None:
-        r"""
-        Scale to apply to waveform envelope
-        """
     @second_order_hrm_coeff.setter
     def second_order_hrm_coeff(self, value: builtins.float) -> None:
         r"""
         Coefficient of the second order Hermite polynomial term.
+        """
+    @property
+    def t0(self) -> builtins.float:
+        r"""
+        Center/offset for pulse centroid
         """
     @t0.setter
     def t0(self, value: builtins.float) -> None:

@@ -4,8 +4,9 @@
 import builtins
 import numpy
 import numpy.typing
-import quil.expression
 import typing
+from quil import QuilError
+from quil.expression import Expression
 from enum import Enum
 
 class Arithmetic:
@@ -93,8 +94,12 @@ class BinaryLogic:
 class CalibrationDefinition:
     @property
     def identifier(self) -> CalibrationIdentifier: ...
+    @identifier.setter
+    def identifier(self, value: CalibrationIdentifier) -> None: ...
     @property
     def instructions(self) -> builtins.list[Instruction]: ...
+    @instructions.setter
+    def instructions(self, value: builtins.list[Instruction]) -> None: ...
     @property
     def modifiers(self) -> builtins.list[GateModifier]:
         r"""
@@ -115,10 +120,6 @@ class CalibrationDefinition:
         r"""
         The list of [`Qubit`]s that this calibration definition is for.
         """
-    @identifier.setter
-    def identifier(self, value: CalibrationIdentifier) -> None: ...
-    @instructions.setter
-    def instructions(self, value: builtins.list[Instruction]) -> None: ...
     def __eq__(self, other:builtins.object) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[CalibrationIdentifier, builtins.list[Instruction]]: ...
     def __new__(cls, identifier:CalibrationIdentifier, instructions:typing.Sequence[Instruction]) -> CalibrationDefinition:
@@ -138,8 +139,18 @@ class CalibrationIdentifier:
         r"""
         The modifiers applied to the gate
         """
+    @modifiers.setter
+    def modifiers(self, value: builtins.list[GateModifier]) -> None:
+        r"""
+        The modifiers applied to the gate
+        """
     @property
     def name(self) -> builtins.str:
+        r"""
+        The name of the gate
+        """
+    @name.setter
+    def name(self, value: builtins.str) -> None:
         r"""
         The name of the gate
         """
@@ -148,25 +159,15 @@ class CalibrationIdentifier:
         r"""
         The parameters of the gate - these are the variables in the calibration definition
         """
-    @property
-    def qubits(self) -> builtins.list[Qubit]:
-        r"""
-        The qubits on which the gate is applied
-        """
-    @modifiers.setter
-    def modifiers(self, value: builtins.list[GateModifier]) -> None:
-        r"""
-        The modifiers applied to the gate
-        """
-    @name.setter
-    def name(self, value: builtins.str) -> None:
-        r"""
-        The name of the gate
-        """
     @parameters.setter
     def parameters(self, value: builtins.list[Expression]) -> None:
         r"""
         The parameters of the gate - these are the variables in the calibration definition
+        """
+    @property
+    def qubits(self) -> builtins.list[Qubit]:
+        r"""
+        The qubits on which the gate is applied
         """
     @qubits.setter
     def qubits(self, value: builtins.list[Qubit]) -> None:
@@ -267,7 +268,7 @@ class CallArgument:
         def __new__(cls, _0:MemoryReference) -> CallArgument.MemoryReference: ...
     
 
-class CallError(builtins.QuilError):
+class CallError(QuilError):
     r"""
     Errors that may occur when initializing a ``Call``.
     """
@@ -276,18 +277,18 @@ class CallError(builtins.QuilError):
 class Capture:
     @property
     def blocking(self) -> builtins.bool: ...
-    @property
-    def frame(self) -> FrameIdentifier: ...
-    @property
-    def memory_reference(self) -> MemoryReference: ...
-    @property
-    def waveform(self) -> WaveformInvocation: ...
     @blocking.setter
     def blocking(self, value: builtins.bool) -> None: ...
+    @property
+    def frame(self) -> FrameIdentifier: ...
     @frame.setter
     def frame(self, value: FrameIdentifier) -> None: ...
+    @property
+    def memory_reference(self) -> MemoryReference: ...
     @memory_reference.setter
     def memory_reference(self, value: MemoryReference) -> None: ...
+    @property
+    def waveform(self) -> WaveformInvocation: ...
     @waveform.setter
     def waveform(self, value: WaveformInvocation) -> None: ...
     def __eq__(self, other:builtins.object) -> builtins.bool: ...
@@ -300,18 +301,18 @@ class Capture:
 class CircuitDefinition:
     @property
     def instructions(self) -> builtins.list[Instruction]: ...
-    @property
-    def name(self) -> builtins.str: ...
-    @property
-    def parameters(self) -> builtins.list[builtins.str]: ...
-    @property
-    def qubit_variables(self) -> builtins.list[builtins.str]: ...
     @instructions.setter
     def instructions(self, value: builtins.list[Instruction]) -> None: ...
+    @property
+    def name(self) -> builtins.str: ...
     @name.setter
     def name(self, value: builtins.str) -> None: ...
+    @property
+    def parameters(self) -> builtins.list[builtins.str]: ...
     @parameters.setter
     def parameters(self, value: builtins.list[builtins.str]) -> None: ...
+    @property
+    def qubit_variables(self) -> builtins.list[builtins.str]: ...
     @qubit_variables.setter
     def qubit_variables(self, value: builtins.list[builtins.str]) -> None: ...
     def __eq__(self, other:builtins.object) -> builtins.bool: ...
@@ -424,7 +425,7 @@ class Exchange:
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
-class ExternError(builtins.QuilError):
+class ExternError(QuilError):
     r"""
     Errors that may occur when initializing or validating a ``PRAGMA EXTERN`` instruction.
     """
@@ -555,10 +556,10 @@ class Fence:
 class FrameDefinition:
     @property
     def attributes(self) -> builtins.dict[builtins.str, AttributeValue]: ...
-    @property
-    def identifier(self) -> FrameIdentifier: ...
     @attributes.setter
     def attributes(self, value: builtins.dict[builtins.str, AttributeValue]) -> None: ...
+    @property
+    def identifier(self) -> FrameIdentifier: ...
     @identifier.setter
     def identifier(self, value: FrameIdentifier) -> None: ...
     def __eq__(self, other:builtins.object) -> builtins.bool: ...
@@ -657,7 +658,7 @@ class GateDefinition:
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
-class GateError(builtins.QuilError):
+class GateError(QuilError):
     r"""
     Errors that may occur when performing operations on a ``Gate``.
     """
@@ -667,7 +668,7 @@ class GateSpecification:
     r"""
     An enum representing a the specification of a [`GateDefinition`] for a given [`GateType`]
     """
-    def __getnewargs__(self) -> tuple[list[list[Expression]] | list[int] | GateType.PauliSum]: ...
+    def __getnewargs__(self) -> tuple[list[list[Expression]] | list[int] | PauliSum]: ...
     def __repr__(self) -> builtins.str: ...
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -897,7 +898,7 @@ class Instruction:
         def __new__(cls, _0:GateDefinition) -> Instruction.GateDefinition: ...
     
     class Halt(Instruction):
-        __match_args__ = ((),)
+        __match_args__ = ()
         def __getitem__(self, key:builtins.int) -> typing.Any: ...
         def __len__(self) -> builtins.int: ...
         def __new__(cls) -> Instruction.Halt: ...
@@ -975,7 +976,7 @@ class Instruction:
         def __new__(cls, _0:Move) -> Instruction.Move: ...
     
     class Nop(Instruction):
-        __match_args__ = ((),)
+        __match_args__ = ()
         def __getitem__(self, key:builtins.int) -> typing.Any: ...
         def __len__(self) -> builtins.int: ...
         def __new__(cls) -> Instruction.Nop: ...
@@ -1077,7 +1078,7 @@ class Instruction:
         def __new__(cls, _0:UnaryLogic) -> Instruction.UnaryLogic: ...
     
     class Wait(Instruction):
-        __match_args__ = ((),)
+        __match_args__ = ()
         def __getitem__(self, key:builtins.int) -> typing.Any: ...
         def __len__(self) -> builtins.int: ...
         def __new__(cls) -> Instruction.Wait: ...
@@ -1091,7 +1092,7 @@ class Instruction:
         def __new__(cls, _0:WaveformDefinition) -> Instruction.WaveformDefinition: ...
     
 
-class InstructionError(builtins.QuilError):
+class InstructionError(QuilError):
     r"""
     Base error type for errors related to ``Instruction`` processing.
     """
@@ -1112,10 +1113,10 @@ class Jump:
 class JumpUnless:
     @property
     def condition(self) -> MemoryReference: ...
-    @property
-    def target(self) -> Target: ...
     @condition.setter
     def condition(self, value: MemoryReference) -> None: ...
+    @property
+    def target(self) -> Target: ...
     @target.setter
     def target(self, value: Target) -> None: ...
     def __eq__(self, other:builtins.object) -> builtins.bool: ...
@@ -1128,10 +1129,10 @@ class JumpUnless:
 class JumpWhen:
     @property
     def condition(self) -> MemoryReference: ...
-    @property
-    def target(self) -> Target: ...
     @condition.setter
     def condition(self, value: MemoryReference) -> None: ...
+    @property
+    def target(self) -> Target: ...
     @target.setter
     def target(self, value: Target) -> None: ...
     def __eq__(self, other:builtins.object) -> builtins.bool: ...
@@ -1170,8 +1171,12 @@ class Load:
 class MeasureCalibrationDefinition:
     @property
     def identifier(self) -> MeasureCalibrationIdentifier: ...
+    @identifier.setter
+    def identifier(self, value: MeasureCalibrationIdentifier) -> None: ...
     @property
     def instructions(self) -> builtins.list[Instruction]: ...
+    @instructions.setter
+    def instructions(self, value: builtins.list[Instruction]) -> None: ...
     @property
     def qubit(self) -> Qubit:
         r"""
@@ -1183,10 +1188,6 @@ class MeasureCalibrationDefinition:
         The name the measurement calibration uses for the variable it will write the measurement
         result to, if this is a measurement for record.
         """
-    @identifier.setter
-    def identifier(self, value: MeasureCalibrationIdentifier) -> None: ...
-    @instructions.setter
-    def instructions(self, value: builtins.list[Instruction]) -> None: ...
     def __eq__(self, other:builtins.object) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[MeasureCalibrationIdentifier, builtins.list[Instruction]]: ...
     def __new__(cls, identifier:MeasureCalibrationIdentifier, instructions:typing.Sequence[Instruction]) -> MeasureCalibrationDefinition: ...
@@ -1203,6 +1204,11 @@ class MeasureCalibrationIdentifier:
         r"""
         The qubit which is being measured.
         """
+    @qubit.setter
+    def qubit(self, value: Qubit) -> None:
+        r"""
+        The qubit which is being measured.
+        """
     @property
     def target(self) -> typing.Optional[builtins.str]:
         r"""
@@ -1210,11 +1216,6 @@ class MeasureCalibrationIdentifier:
         this is a measurement for record.
         
         If this is missing, this is a calibration for a measurement for effect.
-        """
-    @qubit.setter
-    def qubit(self, value: Qubit) -> None:
-        r"""
-        The qubit which is being measured.
         """
     @target.setter
     def target(self, value: typing.Optional[builtins.str]) -> None:
@@ -1285,13 +1286,13 @@ class Offset:
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
-class ParseInstructionError(builtins.InstructionError):
+class ParseInstructionError(InstructionError):
     r"""
     Errors that may occur while parsing an ``Instruction``.
     """
     ...
 
-class ParseMemoryReferenceError(builtins.QuilError):
+class ParseMemoryReferenceError(QuilError):
     r"""
     Errors that may occur while parsing a ``MemoryReference``.
     """
@@ -1359,14 +1360,14 @@ class PragmaArgument:
 class Pulse:
     @property
     def blocking(self) -> builtins.bool: ...
-    @property
-    def frame(self) -> FrameIdentifier: ...
-    @property
-    def waveform(self) -> WaveformInvocation: ...
     @blocking.setter
     def blocking(self, value: builtins.bool) -> None: ...
+    @property
+    def frame(self) -> FrameIdentifier: ...
     @frame.setter
     def frame(self, value: FrameIdentifier) -> None: ...
+    @property
+    def waveform(self) -> WaveformInvocation: ...
     @waveform.setter
     def waveform(self, value: WaveformInvocation) -> None: ...
     def __eq__(self, other:builtins.object) -> builtins.bool: ...
@@ -1412,7 +1413,7 @@ class QubitPlaceholder:
     """
     def __eq__(self, other:builtins.object) -> builtins.bool: ...
     def __ge__(self, other:builtins.object) -> builtins.bool: ...
-    def __getnewargs__(self) -> NoReturn:
+    def __getnewargs__(self) -> typing.NoReturn:
         r"""
         `QubitPlaceholder`s do not support `pickle` or `deepcopy`.
         Calling this method will raise an error.
