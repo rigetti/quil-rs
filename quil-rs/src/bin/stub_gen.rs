@@ -109,6 +109,15 @@ mod sort_stubs {
         }
     }
 
+    impl<T: ArbitraryOrd> ArbitraryOrd for (T, T) {
+        fn cmp(&self, other: &Self) -> Ordering {
+            match self.0.cmp(&other.0) {
+                Ordering::Equal => self.1.cmp(&other.1),
+                not_equal => not_equal,
+            }
+        }
+    }
+
     impl<T: ArbitraryOrd> ArbitraryOrd for Vec<T> {
         fn cmp<'a>(&'a self, other: &'a Self) -> Ordering {
             let sort = |vec: &'a Self| -> Vec<_> {
@@ -155,7 +164,7 @@ mod sort_stubs {
                 (
                     SignatureArg::Assign { default: left },
                     SignatureArg::Assign { default: right },
-                ) => left.cmp(right),
+                ) => left().cmp(&right()),
                 (SignatureArg::Assign { default: _ }, _) => Ordering::Less,
                 (_, SignatureArg::Assign { default: _ }) => Ordering::Greater,
 
@@ -198,7 +207,7 @@ mod sort_stubs {
         MethodDef { name, args, r#return, doc, r#type, is_async, deprecated, type_ignored };
         DeprecatedInfo { since, note };
         Arg { name, r#type, signature };
-        ClassDef { name, doc, attrs, getters, setters, methods, bases, classes, match_args };
+        ClassDef { name, doc, attrs, getter_setters, methods, bases, classes, match_args };
     }
 
     // Inside the sorting functions, we check *every field* to check if we should sort it.  In order
@@ -211,8 +220,7 @@ mod sort_stubs {
             name,
             doc,
             attrs: _, // Regardless of the type of the field, we can't reorder attributes
-            getters,
-            setters,
+            getter_setters,
             methods,  // A map from names to overload sets; overloads can't be reordered
             bases: _, // Regardless of the type of the field, we can't reorder base classes
             classes,
@@ -223,8 +231,10 @@ mod sort_stubs {
         let _: &str = doc;
 
         // [`MemberDef`]s are atomic and don't have contents that need to be sorted.
-        <[MemberDef]>::sort_by(getters, ArbitraryOrd::cmp);
-        <[MemberDef]>::sort_by(setters, ArbitraryOrd::cmp);
+        <IndexMap<String, (Option<MemberDef>, Option<MemberDef>)>>::sort_by_key(
+            getter_setters,
+            |k, _| k.clone(),
+        );
 
         // [`MethodDef`]s are atomic and don't have contents that need to be sorted.  We
         // have to `clone` in the sorting function because [`IndexMap::sort_by_key`]'s
@@ -234,7 +244,7 @@ mod sort_stubs {
         // Finally, [`ClassDef`]s both need to be sorted internally and need to be produced in
         // sorted order.
         <[ClassDef]>::iter_mut(classes).for_each(sort_class);
-        <[ClassDef]>::sort_by(classes, ArbitraryOrd::cmp)
+        <[ClassDef]>::sort_by(classes, ArbitraryOrd::cmp);
     }
 
     fn sort_enum(r#enum: &mut EnumDef) {
@@ -261,6 +271,7 @@ mod sort_stubs {
 
     fn sort_module(module: &mut Module) {
         let Module {
+            doc,
             class,
             enum_,
             function,
@@ -269,6 +280,9 @@ mod sort_stubs {
             default_module_name,
             submodules,
         } = module;
+
+        // Doc strings don't any adjustment.
+        let _: &str = doc;
 
         // `function` is an ordered map from function names to overload sets; since overload sets
         // themselves can't be reordered, there's nothing else to do.

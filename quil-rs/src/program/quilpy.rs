@@ -276,7 +276,7 @@ impl Program {
         let rs_qubit_resolver: Box<dyn Fn(&QubitPlaceholder) -> Option<u64>> =
             if let Some(resolver) = qubit_resolver {
                 Box::new(move |placeholder: &QubitPlaceholder| -> Option<u64> {
-                    Python::with_gil(|py| {
+                    Python::attach(|py| {
                         let placeholder = placeholder
                             .clone()
                             .into_pyobject(py)
@@ -298,7 +298,7 @@ impl Program {
         let rs_target_resolver: Box<dyn Fn(&TargetPlaceholder) -> Option<String>> =
             if let Some(resolver) = target_resolver {
                 Box::new(move |placeholder: &TargetPlaceholder| -> Option<String> {
-                    Python::with_gil(|py| {
+                    Python::attach(|py| {
                         let placeholder = placeholder
                             .clone()
                             .into_pyobject(py)
