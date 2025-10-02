@@ -162,9 +162,11 @@ impl_to_quil!(Program);
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl Program {
-    /// Parse a ``Program`` from a string.
+    /// Parse a `Program` from a string.
     ///
-    /// Raises a ``ProgramError`` if the string isn't a valid Quil expression.
+    /// # Errors
+    ///
+    /// Raises a `ProgramError` if the string isn't a valid ``Quil`` expression.
     #[staticmethod]
     fn parse(input: &str) -> Result<Self> {
         <Self as std::str::FromStr>::from_str(input)
@@ -463,13 +465,13 @@ impl ProgramCalibrationExpansion {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl FrameSet {
-    /// Retrieve the attributes of a frame by its identifier.
+    /// Retrieve the `FrameAttributes` of a `Frame` by its `FrameIdentifier`.
     #[pyo3(name = "get")]
     fn py_get(&self, identifier: &FrameIdentifier) -> Option<FrameAttributes> {
         self.get(identifier).cloned()
     }
 
-    /// Return a list of all ``FrameIdentifier``s described by this ``FrameSet``.
+    /// Return a list of all `FrameIdentifier`s described by this `FrameSet`.
     #[pyo3(name = "get_keys")]
     fn py_get_keys(&self) -> Vec<FrameIdentifier> {
         self.get_keys().into_iter().cloned().collect()
@@ -479,7 +481,7 @@ impl FrameSet {
         self.frames.clone()
     }
 
-    /// Return a new [`FrameSet`] which describes only the given [`FrameIdentifier`]s.
+    /// Return a new `FrameSet` which describes only the given `FrameIdentifier`s.
     #[pyo3(name = "intersection")]
     pub fn py_intersection(&self, identifiers: HashSet<FrameIdentifier>) -> Self {
         self.intersection(&identifiers)
