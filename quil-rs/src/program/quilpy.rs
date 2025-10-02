@@ -9,10 +9,7 @@ use pyo3::{
 };
 
 #[cfg(feature = "stubs")]
-use pyo3_stub_gen::{
-    derive::{gen_stub_pyclass, gen_stub_pymethods},
-    PyStubType,
-};
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::{
     instruction::{
@@ -175,7 +172,7 @@ impl Program {
 
     #[getter(body_instructions)]
     fn py_body_instructions(&self) -> Vec<Instruction> {
-        self.instructions.to_vec()
+        self.instructions.clone()
     }
 
     /// Return a deep copy of the `Program`.
@@ -221,7 +218,7 @@ impl Program {
     /// Add a list of instructions to the end of the program.
     #[pyo3(name = "add_instructions")]
     fn py_add_instructions(&mut self, instructions: Vec<Instruction>) {
-        self.add_instructions(instructions)
+        self.add_instructions(instructions);
     }
 
     /// Return a new ``Program`` containing only the instructions
@@ -340,7 +337,7 @@ impl Program {
     }
 
     fn __iadd__(&mut self, rhs: Self) {
-        *self += rhs
+        *self += rhs;
     }
 
     /// This will raise an error if the program contains any unresolved
@@ -351,7 +348,7 @@ impl Program {
     }
 
     pub fn __setstate__(&mut self, state: &Bound<'_, PyBytes>) -> PyResult<()> {
-        *self = Program::from_str(std::str::from_utf8(state.as_bytes())?)?;
+        *self = Self::from_str(std::str::from_utf8(state.as_bytes())?)?;
         Ok(())
     }
 }
@@ -415,7 +412,7 @@ impl Calibrations {
         self.get_match_for_measurement(measurement).cloned()
     }
 
-    /// Return the final calibration which matches the gate per the QuilT specification:
+    /// Return the final calibration which matches the gate per the `QuilT` specification:
     ///
     /// A calibration matches a gate if:
     /// 1. It has the same name
@@ -677,6 +674,7 @@ struct PyTargetResolver(Py<PyFunction>);
 mod stubs {
     use pyo3_stub_gen::{PyStubType, TypeInfo};
 
+    #[allow(clippy::wildcard_imports)]
     use super::*;
 
     /// Create a `Callable[[A], R]` stub.
@@ -863,6 +861,7 @@ impl BasicBlockOwned {
             .map(PyScheduleSeconds)
     }
 
+    #[expect(clippy::doc_markdown)]
     /// Return the length of the longest path
     /// from an initial instruction (one with no prerequisite instructions)
     /// to a final instruction (one with no dependent instructions),
