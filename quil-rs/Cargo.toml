@@ -37,6 +37,8 @@ optipy = "0.1.0"
 # Enabled with the "python" feature.
 numpy = { version = "0.26.0", optional = true }
 pyo3 = { version = "0.26.0", features = ["indexmap", "num-complex", "multiple-pymethods"], optional = true }
+
+# Enabled with the "stubs" feature.
 pyo3-stub-gen = { version = "0.14.0", features = ["numpy"], optional = true }
 
 [dev-dependencies]
