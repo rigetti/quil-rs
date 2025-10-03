@@ -1,4 +1,0 @@
-
-[alias]
-# Generate Python typestubs.
-generate-stubs = "run -p quil-rs --features stubs --bin stub_gen"

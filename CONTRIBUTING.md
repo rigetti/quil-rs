@@ -45,7 +45,7 @@ instruction categories onto the user,
 the `instruction` module publicly re-exports all of its types from its root.
 They are exposed to Python via the `instruction::quilpy` module's `init_submodule` function.
 
-## `quil-py` Development 
+## `quil-py` Development
 
 We use a `python` feature to gate code that exists exclusively to build `quil`.
 When we can, we isolate that code to a separate Rust module,
@@ -57,7 +57,7 @@ The `quilpy` modules export their contributions via an `init_submodule` function
 and the top-level `quilpy` module builds the final `quil` package layout,
 including the `QuilError` error hierarchy found in `quilpy::errors`.
 
-### `quil-py` Tooling 
+### `quil-py` Tooling
 
 For `quil-py` development,
 we use [`poetry`][] to manage a `virtualenv` within the local directory.
@@ -96,17 +96,9 @@ You can use these additional `cargo-make` tasks:
 The type stubs included in the [`python/quil`][quil-py-stubs] directory
 require building the `stub_gen` binary with the `stubs` feature enabled,
 then using the resulting binary to generate the stubs.
-You can do this using the configured alias:
-
-```sh
-cargo generate-stubs
-```
-
-which is equivalent to
-
-```sh
-cargo run -p quil-rs --features stubs --bin stub_gen
-```
+You can do this using `cargo make generate-stubs`,
+which handles some additional post-processing
+on the resulting stub files to ensure `mypy` compatibility.
 
 ### `quil-py` Testing
 

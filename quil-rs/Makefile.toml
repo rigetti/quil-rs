@@ -14,9 +14,8 @@ run_task = { name = ["generate-stubs-main", "generate-stubs-post"] }
 [tasks.generate-stubs-main]
 private = true
 description = "Build and run the stub_gen binary."
-dependencies = ["install-quil-deps"]
 command = "cargo"
-args = ["generate-stubs"]
+args = ["run", "-p", "quil-rs", "--features", "stubs", "--bin", "stub_gen"]
 install_crate = false
 
 [tasks.generate-stubs-post]
