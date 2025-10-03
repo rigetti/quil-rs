@@ -61,6 +61,7 @@ jobs:
     - name: Upload sdist
       uses: actions/upload-artifact@v4
       with:
+        # This is so-named to align with the pattern used to download and publish the artifacts.
         name: wheels-sdist
         path: quil-rs/dist
 
