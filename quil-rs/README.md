@@ -154,18 +154,18 @@ please be aware of the following changes required to upgrade to the newest `quil
     - `program.ScheduleSeconds.duration`
     - `program.ProgramCalibrationExpansion.program`
     - `program.ProgramCalibrationExpansion.source_map`
-- Classes which support `__hash__` are now immutable from Python.
-    These types were always semantically immutable
-    (because a Python object's hash is required to be stable throughout its lifetime),
-    but now it's enforced by marking the `#[pyclass]` as `frozen`.
-    If you previously were mutating these types, it was a bug, unfortunately.
-    Nevertheless, removing `__hash__` constitutes a breaking change.
+- Classes which implement `__hash__` are now immutable from Python,
+    and conversely, classes which are mutable from Python
+    no longer implement `__hash__` methods.
+    In Python, [a class should not be both hashable and mutable][python-hash][^note-hash].
+    We now enforce this, usually by making the type immutable so we can implement `__hash__`,
+    though in some cases we removed `__hash__` to allow the type to be mutable.
 - The manner in which classes support the `pickle` and `copy` modules now works
     so that `__getnewargs__` returns the appropriate arguments for the `__new__` constructor.
     This should reduce many edge cases around subclassing `quil` types,
     but may constitute a breaking change if you were relying on `__setstate__` support.
     To be clear, we do not recommend using `pickle` as a serialization format,
-    but understand it has its value for its relationship `copy` and `multiprocessing`.
+    but understand it has its value for its relationship to `copy` and `multiprocessing`.
 - Finally, some type stubs had incorrect parameter names, but now have been updated.
     They look like breaking changes when comparing the APIs,
     but in reality these were already required if you were using them as keyword arguments:
@@ -173,6 +173,14 @@ please be aware of the following changes required to upgrade to the newest `quil
     - `instructions.MemoryReference.parse`: `input` should be `string`
     - `instructions.TargetPlaceholder.__new__`: `base_target` should be `base_label`
     - `program.CalibrationSet.__new__`: `measure_calibration_definitions` should be `measure_calibrations`
+
+[python-hash]: https://docs.python.org/3/reference/datamodel.html#object.__hash__
+[^note-hash]: If it implements `__hash__`, it should implement `__eq__`,
+    but if it implements `__eq__` and is mutable, it should not implement `__hash__`.
+    Thus, a class that implements `__hash__` should not be mutable.
+    Put another way, a Python object's hash is required to be stable throughout its lifetime.
+    This is actually the same rule as in Rust, but in safe Rust you can only violate it
+    through a logic bug involving interior mutability.
 
 #### Specific Examples
 
