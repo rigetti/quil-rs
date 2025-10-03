@@ -20,7 +20,7 @@ as well as to share some general How-Tos for development, testing, and maintenan
 To build and test all parts of `quil-rs` and `quil-py`,
 you'll need a [Rust tool chain][rust-tooling] and [Python 3.10+][python-tooling].
 Many of this repository's development tasks have been simplified using [`cargo-make`][],
-which you can install via `Cargo`:
+which you can install via Cargo:
 
 ```sh
 cargo install --locked cargo-make
@@ -28,7 +28,7 @@ cargo install --locked cargo-make
 
 Using `cargo make` to execute tasks will install additional `cargo` plugins when necessary.
 For example, we use [`cargo-hack`][] to validate different combinations of our crate features,
-and running `cargo make check` will install it for you if its not yet available.
+and running `cargo make check` will install it for you if its not yet installed.
 
 ## Instruction Module
 
@@ -77,19 +77,19 @@ You can then use `poetry run python` to experiment with it.
 
 You can use these additional `cargo-make` tasks:
 
-| Task | Description |
-| ---- | ----------- |
-| `generate-stubs` | Generate Python type stubs for `quil` |
-| `stubtest` | Use [`stubtest`] to verify generated type stubs are consistent with `quil` exports |
-| `pytest` | Use [`pytest`] to run Python-based tests against the `quil` package |
-| `package-quil` | Build a release version of `quil` with up-to-date type stubs |
-| `install-quil` | Install `quil` to the local virtual environment |
-| `install-quil-with-stubs` | Like `install-quil`, but first regenerates type stubs |
-| `install-quil-deps` | Install `quil` development dependencies to the local virtual environment |
-| `document-quil` | Generate documentation for `quil` |
-| `check-api` | Check if `quil` has breaking API changes that aren't marked as such |
-| `test-quil` | Run all Python-related tests |
-| `test-all` | Run all Rust and Python tests |
+| Task                      | Description                                                                        |
+| ------------------------- | -----------                                                                        |
+| `generate-stubs`          | Generate Python type stubs for `quil`                                              |
+| `stubtest`                | Use [`stubtest`] to verify generated type stubs are consistent with `quil` exports |
+| `pytest`                  | Use [`pytest`] to run Python-based tests against the `quil` package                |
+| `package-quil`            | Build a release version of `quil` with up-to-date type stubs                       |
+| `install-quil`            | Install `quil` to the local virtual environment                                    |
+| `install-quil-with-stubs` | Like `install-quil`, but first regenerates type stubs                              |
+| `install-quil-deps`       | Install `quil` development dependencies to the local virtual environment           |
+| `document-quil`           | Generate documentation for `quil`                                                  |
+| `check-api`               | Check if `quil` has breaking API changes that aren't marked as such                |
+| `test-quil`               | Run all Python-related tests                                                       |
+| `test-all`                | Run all Rust and Python tests                                                      |
 
 ### Type Stubs
 
