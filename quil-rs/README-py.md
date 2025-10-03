@@ -16,7 +16,7 @@ that provide type hints and documentation to Python tooling
 and editors that support the [Language Server Protocol][] or similar.
 
 [quil-spec]: https://github.com/quil-lang/quil
-[`quil-rs`]: https://github.com/rigetti/quil-rs/quil-rs
+[`quil-rs`]: https://github.com/rigetti/quil-rs/tree/main/quil-rs
 [quil-py-docs]: https://rigetti.github.io/quil-rs/quil.html
 [quil-py-stubs]: https://github.com/rigetti/quil-rs/tree/main/quil-rs/python/quil
 [Language Server Protocol]: https://microsoft.github.io/language-server-protocol/
