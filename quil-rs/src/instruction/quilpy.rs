@@ -39,6 +39,7 @@ pub(crate) fn init_submodule(m: &Bound<'_, PyModule>) -> PyResult<()> {
         py,
         ArithmeticOperand,
         AttributeValue,
+        BinaryOperand,
         ComparisonOperand,
         ExternParameterType,
         GateSpecification,
