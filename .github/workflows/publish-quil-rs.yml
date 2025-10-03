@@ -4,7 +4,7 @@ on:
   release:
     types: [published]
   workflow_dispatch:
-    description: "Manually publish release"
+    # "Manually publish release"
     inputs:
       publishWheels:
         description: "Build and publish wheels to PyPI"
