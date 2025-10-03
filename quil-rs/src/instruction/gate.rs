@@ -41,7 +41,13 @@ pub struct Gate {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_enum)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, rename_all = "SCREAMING_SNAKE_CASE")
+    pyo3::pyclass(
+        module = "quil.instructions",
+        eq,
+        frozen,
+        hash,
+        rename_all = "SCREAMING_SNAKE_CASE"
+    )
 )]
 pub enum GateModifier {
     /// The `CONTROLLED` modifier makes the gate take an extra [`Qubit`] parameter as a control
@@ -817,7 +823,13 @@ mod test_gate_into_matrix {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_enum)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, rename_all = "SCREAMING_SNAKE_CASE")
+    pyo3::pyclass(
+        module = "quil.instructions",
+        eq,
+        frozen,
+        hash,
+        rename_all = "SCREAMING_SNAKE_CASE"
+    )
 )]
 #[strum(serialize_all = "UPPERCASE")]
 pub enum PauliGate {

@@ -90,7 +90,13 @@ impl From<MemoryReference> for ArithmeticOperand {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_enum)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, rename_all = "SCREAMING_SNAKE_CASE")
+    pyo3::pyclass(
+        module = "quil.instructions",
+        eq,
+        frozen,
+        hash,
+        rename_all = "SCREAMING_SNAKE_CASE"
+    )
 )]
 pub enum ArithmeticOperator {
     Add,
@@ -143,7 +149,13 @@ impl Quil for BinaryOperand {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_enum)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, rename_all = "SCREAMING_SNAKE_CASE")
+    pyo3::pyclass(
+        module = "quil.instructions",
+        eq,
+        frozen,
+        hash,
+        rename_all = "SCREAMING_SNAKE_CASE"
+    )
 )]
 pub enum BinaryOperator {
     And,
@@ -377,7 +389,13 @@ impl std::hash::Hash for ComparisonOperand {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_enum)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, rename_all = "SCREAMING_SNAKE_CASE")
+    pyo3::pyclass(
+        module = "quil.instructions",
+        eq,
+        frozen,
+        hash,
+        rename_all = "SCREAMING_SNAKE_CASE"
+    )
 )]
 pub enum ComparisonOperator {
     Equal,
@@ -438,7 +456,13 @@ impl Quil for UnaryLogic {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_enum)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, rename_all = "SCREAMING_SNAKE_CASE")
+    pyo3::pyclass(
+        module = "quil.instructions",
+        eq,
+        frozen,
+        hash,
+        rename_all = "SCREAMING_SNAKE_CASE"
+    )
 )]
 pub enum UnaryOperator {
     Neg,
