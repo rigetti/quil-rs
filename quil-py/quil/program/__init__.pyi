@@ -67,7 +67,8 @@ assert sources == [(1, 2)]
 ```
 """
 
-from typing import Callable, Dict, FrozenSet, List, Optional, Sequence, Set, Tuple, Union, final
+from typing_extensions import disjoint_base
+from typing import Any, Callable, Dict, FrozenSet, List, Optional, Sequence, Set, Tuple, Union, final
 
 import numpy as np
 from numpy.typing import NDArray
@@ -359,6 +360,7 @@ class Program:
         .. _control flow graph: https://en.wikipedia.org/wiki/Control-flow_graph
         """
 
+@disjoint_base
 class BasicBlock:
     def __new__(cls, instance: "BasicBlock") -> Self:
         """Create a new instance of a `BasicBlock` (or a subclass) using an existing instance."""
@@ -555,6 +557,7 @@ class CalibrationSource:
 
     Can be either a calibration (`DEFCAL`) or a measure calibration (`DEFCAL MEASURE`).
     """
+    def __new__(cls, input: Any) -> Self: ...
     def as_calibration(self) -> CalibrationIdentifier: ...
     def as_measure_calibration(self) -> MeasureCalibrationIdentifier: ...
     def is_calibration(self) -> bool: ...
@@ -573,7 +576,7 @@ class CalibrationSet:
     def __new__(
         cls,
         calibrations: Sequence[Calibration],
-        measure_calibration_definitions: Sequence[MeasureCalibrationDefinition],
+        measure_calibrations: Sequence[MeasureCalibrationDefinition],
     ) -> "CalibrationSet": ...
     @property
     def calibrations(self) -> List[Calibration]: ...
@@ -651,6 +654,7 @@ class InstructionTarget:
     - `unmodified`: The instruction was not expanded and is described by an integer, the index of the instruction
       within the resulting program's body instructions.
     """
+    def __new__(cls, input: Any) -> Self: ...
     def as_calibration(self) -> CalibrationExpansion: ...
     def as_unmodified(self) -> InstructionIndex: ...
     def as_defgate_sequence(self) -> DefGateSequenceExpansion: ...
@@ -668,6 +672,7 @@ class InstructionTarget:
     def to_unmodified(self) -> InstructionIndex: ...
     def to_defgate_sequence(self) -> DefGateSequenceExpansion: ...
 
+@disjoint_base
 class ScheduleSecondsItem:
     """A single item within a fixed schedule, representing a single instruction within a basic block."""
 
@@ -678,6 +683,7 @@ class ScheduleSecondsItem:
     def time_span(self) -> TimeSpanSeconds:
         """The time span during which the instruction is scheduled."""
 
+@disjoint_base
 class ControlFlowGraph:
     """Representation of a control flow graph (CFG) for a Quil program.
 
@@ -697,6 +703,7 @@ class ControlFlowGraph:
     def basic_blocks(self) -> List["BasicBlock"]:
         """Return a list of all the basic blocks in the control flow graph, in order of definition."""
 
+@disjoint_base
 class ScheduleSeconds:
     def items(self) -> List[ScheduleSecondsItem]:
         """All the items in the schedule, in unspecified order."""
@@ -706,6 +713,7 @@ class ScheduleSeconds:
         This is the maximum of the end time of all the items.
         """
 
+@disjoint_base
 class TimeSpanSeconds:
     """Representation of a time span in seconds."""
 
@@ -751,9 +759,10 @@ class FrameSet:
         ...
     def get_all_frames(self) -> Dict[FrameIdentifier, Dict[str, AttributeValue]]: ...
 
+@disjoint_base
 class MemoryRegion:
     @staticmethod
-    def __new__(cls, size: Vector, sharing: Optional[Sharing]) -> "MemoryRegion": ...
+    def __new__(cls, size: Vector, sharing: Optional[Sharing] = ...) -> "MemoryRegion": ...
     @property
     def size(self) -> Vector: ...
     @size.setter

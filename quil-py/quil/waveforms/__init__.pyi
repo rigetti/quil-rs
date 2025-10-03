@@ -1,3 +1,4 @@
+from typing_extensions import disjoint_base
 from typing import Iterable
 
 __all__ = [
@@ -12,6 +13,7 @@ __all__ = [
 def apply_phase_and_detuning(iq_values: Iterable[complex], phase: float, detuning: float, sample_rate: float):
     """Modulate and phase shift waveform IQ data in place."""
 
+@disjoint_base
 class BoxcarKernel:
     def __new__(cls, phase: float, scale: float, sample_count: int) -> BoxcarKernel:
         """Create a new BoxcarKernel."""
@@ -31,6 +33,7 @@ class BoxcarKernel:
     def into_iq_value(self) -> complex:
         """Convert BoxcarKernel into a Complex64 value."""
 
+@disjoint_base
 class ErfSquare:
     """A waveform with a flat top and edges that are error functions (erfs)."""
 
@@ -87,6 +90,7 @@ class ErfSquare:
     def into_iq_values(self) -> list[complex]:
         """Convert ErfSquare into a list of Complex64 values."""
 
+@disjoint_base
 class Gaussian:
     """A waveform with a Gaussian shape."""
 
@@ -133,6 +137,7 @@ class Gaussian:
     def into_iq_values(self) -> list[complex]:
         """Convert Gaussian into a list of Complex64 values."""
 
+@disjoint_base
 class DragGaussian:
     """A waveform with a DRAG-corrected Gaussian shape.
 
@@ -195,6 +200,7 @@ class DragGaussian:
     def into_iq_values(self) -> list[complex]:
         """Convert DragGaussian into a list of Complex64 values."""
 
+@disjoint_base
 class HermiteGaussian:
     """A Hermite Gaussian waveform.
 

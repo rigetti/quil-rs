@@ -1,7 +1,8 @@
 """The ``expression`` module contains classes for representing Quil expressions."""
 
 from enum import Enum
-from typing import Dict, Optional, Sequence, Union, final
+from typing_extensions import disjoint_base
+from typing import Any, Dict, Optional, Self, Sequence, Union, final
 
 from quil.instructions import MemoryReference
 
@@ -52,6 +53,7 @@ class Expression:
     If the variant doesn't have inner data (e.g. ``pi``)
     - ``new_*``: Creates a new ``Expression`` for the variant
     """
+    def __new__(cls, input: Any) -> Self: ...
 
     def inner(
         self,
@@ -138,6 +140,7 @@ class Expression:
         format that isn't valid Quil.
         """
 
+@final
 class FunctionCallExpression:
     """A Quil function call."""
     @staticmethod
@@ -151,6 +154,7 @@ class FunctionCallExpression:
     @expression.setter
     def expression(self, expression: Expression): ...
 
+@disjoint_base
 class InfixExpression:
     """A Quil infix expression."""
     @staticmethod
@@ -168,6 +172,7 @@ class InfixExpression:
     @right.setter
     def right(self, expression: Expression): ...
 
+@disjoint_base
 class PrefixExpression:
     """A Quil prefix expression."""
     @staticmethod
