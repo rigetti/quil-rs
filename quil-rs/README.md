@@ -31,13 +31,14 @@ but `PyQuil` offers higher-level abstractions and greater stability guarantees.
 The `python` feature enables code to build the `quil` Python package,
 which allows Python programs to use the features of `quil-rs`.
 The code related to the Python package is sometimes referred to as `quil-py`,
-both for historical reasons, and to distinguish it from other parts of `quil-rs`.
+both for [historical reasons][], and to distinguish it from other parts of `quil-rs`.
 
 Note that `maturin` commands (`maturin develop`, `maturin release`, etc.)
 automatically enable the `python` feature, as well as the `pyo3/extension-module` feature,
 which disables linking `libpython`, and is needed for [`manylinux`][extmod] builds.
 
 [extmod]: https://pyo3.rs/v0.25.1/building-and-distribution.html#the-extension-module-feature
+[historical reasons]: #migration-to-quil-v0320
 
 ## Development
 
@@ -173,7 +174,7 @@ please be aware of the following changes required to upgrade to the newest `quil
     - `instructions.TargetPlaceholder.__new__`: `base_target` should be `base_label`
     - `program.CalibrationSet.__new__`: `measure_calibration_definitions` should be `measure_calibrations`
 
-#### Specific Examples:
+#### Specific Examples
 
 Instead of using `from_*`, just use the target class's constructor directly.
 For example:
@@ -196,7 +197,6 @@ some_gate = Gate(
 + expr = Expression.Number(1.0+0.5j)
 ```
 
-
 Replace `is_*`, `to_*`, `as_*`, and `inner` with `match`.
 Here's an example of extracting `inner` elements:
 
@@ -215,7 +215,7 @@ def foo(x):
 
 If needed, you can replace `inner` with `_0`, usually paired with an `isinstance` check.
 Keep in mind that enumerated subclasses are often named after the class they take as a parameter.
-The following `assert`s are all valid: 
+The following `assert`s are all valid:
 
 ```python
 from quil.instructions import Qubit, Gate, Instruction
