@@ -28,7 +28,7 @@ cargo install --locked cargo-make
 
 Using `cargo make` to execute tasks will install additional `cargo` plugins when necessary.
 For example, we use [`cargo-hack`][] to validate different combinations of our crate features,
-and running `cargo make check` will install it for you if its not yet installed.
+and running `cargo make check` will install it for you if it's not yet installed.
 
 ## Instruction Module
 
