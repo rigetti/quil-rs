@@ -10,7 +10,7 @@ to get pretty-printed information about the overall package structure inferred b
 This works purely on the textual source, so it may make mistakes,
 especially among elements that share the same name.
 In particular, if there are multiple ``#[pyfunction]`` with the same Rust name,
-and at least one of them is added to a module, this script won't know which it is was.
+and at least one of them is added to a module, this script won't know which one it was.
 With ``pyo3_stub_gen`` annotations, the script can usually make a better guess about the intent,
 but without one, it just prints all the functions it finds with a guess about the export.
 """
