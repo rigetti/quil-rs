@@ -75,9 +75,19 @@ args = ["run", "stubtest", "quil"]
 # TODO(#475): Enable error reporting once stubtest is happy with stubgen's output.
 ignore_errors = true
 
+[tasks.lint-quil]
+description = "Find errors in quil-related Rust code."
+command = "poetry"
+args = ["run", "python", "./scripts/lint-quil-rs.py", "--base", "src", "--show-mistakes"]
+
+[tasks.show-package-layout]
+description = "Print the quil package layout as defined within quil-rs code."
+command = "poetry"
+args = ["run", "python", "./scripts/lint-quil-rs.py", "--base", "src", "--show-package"]
+
 [tasks.test-quil]
 description = "Run all Python-related tests."
-dependencies = ["pytest", "stubtest"]
+dependencies = ["pytest", "lint-quil", "stubtest"]
 
 [tasks.test-all]
 description = "Run all tests."
