@@ -58,7 +58,8 @@ def process_dir(root: Path) -> tuple[Package, Package]:
 
     annotated, exported = Package(), Package()
     for path in root.rglob("*.rs"):
-        extract_items_from_file(path, annotated, exported)
+        path = path.relative_to(root)
+        extract_items_from_file(root, path, annotated, exported)
     guess_function_modules(annotated, exported)
     return annotated, exported
 
@@ -620,13 +621,13 @@ def _pymod(exported: Package, path: Path, lines: Lines):
         mod.line_num = mod_line
 
 
-def extract_items_from_file(path: Path, annotated: Package, exported: Package):
+def extract_items_from_file(root: Path, path: Path, annotated: Package, exported: Package):
     """Update `annotated` and `exported` with, respectively,
     the items that are annotated to belong to a module
     and the items actually added to the module.
     """
 
-    lines = read_file(path)
+    lines = read_file(root / path)
     last_stub: StubAttr | None = None
     while line := next(lines, None):
         # Handle macros:
