@@ -334,6 +334,19 @@ impl AttributeValue {
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
+impl BinaryOperand {
+    #[gen_stub(override_return_type(type_repr = "tuple[int | MemoryReference]"))]
+    fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+        match self {
+            Self::LiteralInteger(value) => (value,).into_pyobject(py),
+            Self::MemoryReference(value) => (value.clone(),).into_pyobject(py),
+        }
+    }
+}
+
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
 impl ComparisonOperand {
     #[gen_stub(override_return_type(type_repr = "tuple[int | float | MemoryReference]"))]
     fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
