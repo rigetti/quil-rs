@@ -9,40 +9,9 @@ args = ["install", "--extras", "dev", "--no-root"]
 
 [tasks.generate-stubs]
 description = "Generate Python stub files for quil."
-run_task = { name = ["generate-stubs-main", "generate-stubs-post"] }
-
-[tasks.generate-stubs-main]
-private = true
-description = "Build and run the stub_gen binary."
 command = "cargo"
 args = ["run", "-p", "quil-rs", "--features", "stubs", "--bin", "stub_gen"]
 install_crate = false
-
-[tasks.generate-stubs-post]
-private = true
-script_runner = "@duckscript"
-description = "Execute tasks to run minor clean-up on generated stub files."
-script = [
-'''
-handle = glob_array "python/quil/**/*.pyi"
-for path in ${handle}
-    set_env TARGET ${path}
-    cm_run_task generate-stubs-fix-match-args
-end
-'''
-]
-
-[tasks.generate-stubs-fix-match-args]
-# Workaround for unit variants: https://github.com/Jij-Inc/pyo3-stub-gen/issues/312
-private = true
-condition = { env_set = ["TARGET"] }
-description = "Fix __match_args__ for empty tuple variants."
-command = "sed"
-args = [
-    "-i", "",
-    "-e", "s/__match_args__ = ((),)/__match_args__ = ()/",
-    "${TARGET}",
-]
 
 [tasks.package-quil]
 description = "Build a release version of quil."

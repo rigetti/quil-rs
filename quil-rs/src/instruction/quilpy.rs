@@ -404,35 +404,9 @@ pickleable_new! {
 }
 
 #[cfg(feature = "stubs")]
-mod stubs {
-    use pyo3_stub_gen::{PyStubType, TypeInfo};
-
-    use super::*;
-
-    /// Create a `dict[K, V]` stub.
-    ///
-    /// This is a workaround for this bug: https://github.com/Jij-Inc/pyo3-stub-gen/issues/310
-    fn dict_of<K: PyStubType, V: PyStubType>() -> TypeInfo {
-        let TypeInfo {
-            name: name_k,
-            mut import,
-        } = K::type_output();
-        let TypeInfo {
-            name: name_v,
-            import: import_v,
-        } = V::type_output();
-        import.extend(import_v);
-        import.insert("builtins".into());
-        TypeInfo {
-            name: format!("builtins.dict[{name_k}, {name_v}]"),
-            import,
-        }
-    }
-
-    impl PyStubType for ExternPragmaMap {
-        fn type_output() -> TypeInfo {
-            dict_of::<Option<String>, Pragma>()
-        }
+impl pyo3_stub_gen::PyStubType for ExternPragmaMap {
+    fn type_output() -> pyo3_stub_gen::TypeInfo {
+        pyo3_stub_gen::TypeInfo::dict_of::<Option<String>, Pragma>()
     }
 }
 
