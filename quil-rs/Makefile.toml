@@ -89,7 +89,6 @@ alias = "test-all"
 [tasks.check-api]
 description = "Check if quil API has breaking changes."
 dependencies = ["install-quil-with-stubs"]
-cwd = ".."
 script = { file = "./scripts/check-quil-api.sh" }
 
 [tasks.document-quil]

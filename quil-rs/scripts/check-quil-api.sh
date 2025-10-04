@@ -7,7 +7,11 @@
 
 set -u
 
-# `griffe` needs to run at the project root, but `poetry` needs `-P` to find `pyproject.toml`.
+# `griffe` needs to run at the project root. 
+pushd "$(git rev-parse --show-toplevel)" || exit
+trap popd EXIT
+
+# `poetry` needs `-P` to find `pyproject.toml`.
 # This adds both the locations for the `quil` package both before and after the crate merge.
 # `griffe` doesn't mind if the path doesn't exist, but if you compare tags across the merge,
 # it won't find the `quil` package at all, and it'll fail with a obscure error.
