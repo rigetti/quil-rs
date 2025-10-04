@@ -15,7 +15,7 @@ With ``pyo3_stub_gen`` annotations, the script can usually make a better guess a
 but without one, it just prints all the functions it finds with a guess about the export.
 """
 
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, replace
 from itertools import accumulate, chain
 from pathlib import Path
 from typing import TYPE_CHECKING
