@@ -12,7 +12,7 @@ import argparse
 import sys
 import logging
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger()
 
 from pyo3_linter import find_possible_mistakes, print_package_info, process_dir
