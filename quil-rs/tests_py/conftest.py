@@ -59,7 +59,7 @@ def phase(rng: Random) -> float:
 def sample_count(rng: Random) -> int:
     r"""Return a random sample count."""
 
-    return rng.randint(0, (1 << 64) - 1)
+    return rng.randint(1, (1 << 64) - 1)
 
 
 @fixture

@@ -19,15 +19,15 @@ class QuilError(builtins.Exception):
     """
     ...
 
-class QuilValueError(QuilError):
+class ToQuilStringError(QuilError):
     r"""
-    Input value is invalid.
+    Errors which can occur when converting a Quil item to a string.
     """
     ...
 
-class ToQuilError(QuilError):
+class ValueError(QuilError):
     r"""
-    Errors which can occur when converting a Quil item to a string.
+    Raised when an argument to a quil function has an inappropriate value.
     """
     ...
 

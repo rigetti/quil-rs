@@ -1,12 +1,11 @@
 use num_complex::Complex64;
-use pyo3::exceptions::PyValueError;
 use pyo3::{prelude::*, types::PyList};
 
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::{gen_stub_pyfunction, gen_stub_pymethods};
 
 use super::templates::*;
-use crate::quilpy::impl_repr;
+use crate::quilpy::{errors::ValueError, impl_repr};
 
 #[pymodule]
 #[pyo3(name = "waveforms", module = "quil", submodule)]
@@ -46,23 +45,44 @@ fn py_apply_phase_and_detuning(
     Ok(())
 }
 
+/// A simple wrapper around [`std::num::NonZeroU64`] with [`pyo3_stub_gen::PyStubType`] information.
+#[derive(Copy, Clone, Debug, PartialEq, PartialOrd, Eq, Hash, pyo3::IntoPyObject)]
+struct NonZeroU64(std::num::NonZeroU64);
+
+// PyO3 has a conversion we could derive from,
+// but it raises a TypeError that says "failed to extract field NonZeroU64.0".
+// By implementing it manually, an invalid value instead reads:
+// "quil.QuilValueError: expected a positive value".
+impl<'py> pyo3::FromPyObject<'py> for NonZeroU64 {
+    fn extract_bound(ob: &Bound<'py, PyAny>) -> PyResult<Self> {
+        ob.extract::<u64>().and_then(|value| {
+            std::num::NonZeroU64::try_from(value)
+                .map_err(|_err| ValueError::new_err("expected a positive value"))
+                .map(Self)
+        })
+    }
+}
+
+#[cfg(feature = "stubs")]
+impl pyo3_stub_gen::PyStubType for NonZeroU64 {
+    fn type_output() -> pyo3_stub_gen::TypeInfo {
+        pyo3_stub_gen::TypeInfo::builtin("int")
+    }
+}
+
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl BoxcarKernel {
     /// Create a new `BoxcarKernel`.
     ///
-    /// This raises a `ValueError` if `sample_count` is zero.
+    /// This raises an error if `sample_count` is zero.
     #[new]
-    pub fn __new__(phase: f64, scale: f64, sample_count: u64) -> PyResult<Self> {
-        if sample_count == 0 {
-            return Err(PyValueError::new_err("sample_count must be positive"));
-        }
-
-        Ok(Self {
+    fn __new__(phase: f64, scale: f64, sample_count: NonZeroU64) -> Self {
+        Self {
             phase: crate::units::Cycles(phase),
             scale,
-            sample_count,
-        })
+            sample_count: sample_count.0.into(),
+        }
     }
 
     /// Get the `complex` value this `BoxcarKernel` represents.

@@ -1,3 +1,6 @@
+import pytest
+
+import quil
 from quil import waveforms
 
 
@@ -13,6 +16,10 @@ class TestConstructors:
         assert wf.phase == phase
         assert wf.scale == scale
         assert wf.sample_count == sample_count
+
+    def test_boxcar_kernel_bad_sample_count(self, phase: float, scale: float):
+        with pytest.raises(quil.ValueError):
+            _ = waveforms.BoxcarKernel(phase=phase, scale=scale, sample_count=0)
 
     def test_erf_square(
         self,

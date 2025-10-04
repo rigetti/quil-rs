@@ -42,7 +42,7 @@ class BoxcarKernel:
         r"""
         Create a new `BoxcarKernel`.
         
-        This raises a `ValueError` if `sample_count` is zero.
+        This raises an error if `sample_count` is zero.
         """
     def __repr__(self) -> builtins.str: ...
     def into_iq_value(self) -> builtins.complex:

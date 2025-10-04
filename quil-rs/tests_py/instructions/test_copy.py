@@ -1,5 +1,5 @@
 import copy
-from typing import Any, Callable, Generator, Iterator
+from typing import Any, Callable, Iterator
 
 import pytest
 

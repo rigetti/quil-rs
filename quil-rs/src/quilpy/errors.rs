@@ -67,7 +67,12 @@ create_exception!(
     "Base exception type for errors raised by this package."
 );
 
-create_exception!(quil, QuilValueError, QuilError, "Input value is invalid.");
+create_exception!(
+    quil,
+    ValueError,
+    QuilError,
+    "Raised when an argument to a quil function has an inappropriate value."
+);
 
 create_exception!(
     quil,
@@ -79,7 +84,7 @@ create_exception!(
 exception!(
     crate::quil::ToQuilError,
     quil,
-    ToQuilError,
+    ToQuilStringError,
     QuilError,
     "Errors which can occur when converting a Quil item to a string."
 );

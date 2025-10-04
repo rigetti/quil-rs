@@ -29,8 +29,11 @@ fn init_module(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_wrapped(wrap_pymodule!(waveform::quilpy::init_submodule))?;
 
     m.add("QuilError", py.get_type::<errors::QuilError>())?;
-    m.add("QuilValueError", py.get_type::<errors::QuilValueError>())?;
-    m.add("ToQuilError", py.get_type::<errors::ToQuilError>())?;
+    m.add("ValueError", py.get_type::<errors::ValueError>())?;
+    m.add(
+        "ToQuilStringError",
+        py.get_type::<errors::ToQuilStringError>(),
+    )?;
     m.add("PickleError", py.get_type::<errors::PickleError>())?;
 
     let sys = PyModule::import(py, "sys")?;

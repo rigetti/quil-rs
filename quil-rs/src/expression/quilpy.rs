@@ -4,7 +4,7 @@ use pyo3::{prelude::*, types::PyTuple};
 use pyo3_stub_gen::derive::gen_stub_pymethods;
 
 use super::*;
-use crate::quilpy::{errors::QuilValueError, fix_complex_enums, impl_repr};
+use crate::quilpy::{errors::ValueError, fix_complex_enums, impl_repr};
 
 #[pymodule]
 #[pyo3(name = "expression", module = "quil", submodule)]
@@ -178,7 +178,7 @@ impl ExpressionFunction {
             val if val == Self::Exponent as isize => Ok(Self::Exponent),
             val if val == Self::Sine as isize => Ok(Self::Sine),
             val if val == Self::SquareRoot as isize => Ok(Self::SquareRoot),
-            _ => Err(QuilValueError::new_err("unknown value")),
+            _ => Err(ValueError::new_err("unknown value")),
         }
     }
 
@@ -196,7 +196,7 @@ impl PrefixOperator {
         match value {
             val if val == Self::Plus as isize => Ok(Self::Plus),
             val if val == Self::Minus as isize => Ok(Self::Minus),
-            _ => Err(QuilValueError::new_err("unknown value")),
+            _ => Err(ValueError::new_err("unknown value")),
         }
     }
 
@@ -217,7 +217,7 @@ impl InfixOperator {
             val if val == Self::Minus as isize => Ok(Self::Minus),
             val if val == Self::Slash as isize => Ok(Self::Slash),
             val if val == Self::Star as isize => Ok(Self::Star),
-            _ => Err(QuilValueError::new_err("unknown value")),
+            _ => Err(ValueError::new_err("unknown value")),
         }
     }
 
