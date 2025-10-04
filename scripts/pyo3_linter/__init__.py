@@ -247,6 +247,20 @@ def find_possible_mistakes(
                     )
                 )
                 issues.append(Issue(PackageKind.Export, msg))
+
+            elif item.stub_attr.kind is StubKind.Enumeration:
+                if item.props.get("rename_all") != "SCREAMING_SNAKE_CASE":
+                    msg = "\n".join(
+                        (
+                            (
+                                f"  Simple enum '{module}.{item.python_name}' doesn't have "
+                                'rename_all = "SCREAMING_SNAKE_CASE"'
+                            ),
+                            f"     ({item})",
+                        )
+                    )
+                    issues.append(Issue(PackageKind.Annotation, msg))
+
             elif item.stub_attr.kind is StubKind.ComplexEnumeration:
                 if item.rust_name not in expm._fixed_enums:
                     msg = "\n".join(

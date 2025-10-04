@@ -36,7 +36,7 @@ pub enum EnumB {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_enum)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil.instructions", eq, frozen, rename_all = "SCREAMING_SNAKE_CASE")
+    pyo3::pyclass(module = "quil.instructions", eq, frozen)
 )]
 pub enum SimpleEnum {
     Variant1,
@@ -50,7 +50,7 @@ pub enum SimpleEnum {
     feature = "python",
     pyo3::pyclass(module = "quil.instructions", subclass, get_all, set_all, eq)
 )]
-pub struct PyInstA {
+pub struct InstA {
     pub field: u64,
 }
 

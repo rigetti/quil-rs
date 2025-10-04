@@ -32,6 +32,18 @@ pub enum EnumB {
     InstC(InstC),
 }
 
+#[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass_enum)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, rename_all = "SCREAMING_SNAKE_CASE")
+)]
+pub enum SimpleEnum {
+    Variant1,
+    Variant2,
+    Variant3,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(

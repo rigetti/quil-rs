@@ -1,14 +1,14 @@
 [
   {
     "package_kind": "Annotation",
-    "message": "Suspicious method name for 'quil.instructions.PyInstA.py_name'\n     (fn 'PyInstA::py_name (py: py_name)' in tests/data/suspicious_name/submod.rs@72)\n     hint: did you forget a '#[pyo3(name = \"name\")] attribute?"
+    "message": "Suspicious method name for 'quil.instructions.PyInstA.py_name'\n     (fn 'PyInstA::py_name (py: py_name)' in tests/data/suspicious_name/submod.rs@73)\n     hint: did you forget a '#[pyo3(name = \"name\")] attribute?"
   },
   {
     "package_kind": "Annotation",
-    "message": "Suspicious method name for 'quil.instructions.InstC.py_arguments'\n     (fn 'InstC::py_arguments (py: py_arguments)' in tests/data/suspicious_name/submod.rs@91)\n     hint: did you forget a '#[pyo3(name = \"arguments\")] attribute?"
+    "message": "Suspicious method name for 'quil.instructions.InstC.py_arguments'\n     (fn 'InstC::py_arguments (py: py_arguments)' in tests/data/suspicious_name/submod.rs@92)\n     hint: did you forget a '#[pyo3(name = \"arguments\")] attribute?"
   },
   {
     "package_kind": "Export",
-    "message": "  Suspicious name for 'quil.instructions.PyInstA'\n     (struct 'PyInstA' in tests/data/suspicious_name/somecode.rs@41)\n     hint: did you forget a '#[pyo3(name = \"InstA)]\" attribute?"
+    "message": "  Suspicious name for 'quil.instructions.PyInstA'\n     (struct 'PyInstA' in tests/data/suspicious_name/somecode.rs@53)\n     hint: did you forget a '#[pyo3(name = \"InstA)]\" attribute?"
   }
 ]

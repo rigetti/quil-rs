@@ -65,6 +65,13 @@
         "stub_attr": null
       },
       {
+        "rust_name": "SimpleEnum",
+        "python_name": "SimpleEnum",
+        "kind": "Class",
+        "props": {},
+        "stub_attr": null
+      },
+      {
         "rust_name": "SomeKindOfError",
         "python_name": "SomeKindOfError",
         "kind": "Error",

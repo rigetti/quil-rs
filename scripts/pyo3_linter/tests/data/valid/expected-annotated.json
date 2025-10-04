@@ -90,6 +90,21 @@
         }
       },
       {
+        "rust_name": "SimpleEnum",
+        "python_name": "SimpleEnum",
+        "kind": "Enumeration",
+        "props": {
+          "module": "quil.instructions",
+          "eq": true,
+          "frozen": true,
+          "rename_all": "SCREAMING_SNAKE_CASE"
+        },
+        "stub_attr": {
+          "kind": "Enumeration",
+          "module": null
+        }
+      },
+      {
         "rust_name": "SomeKindOfError",
         "python_name": "SomeKindOfError",
         "kind": "Error",

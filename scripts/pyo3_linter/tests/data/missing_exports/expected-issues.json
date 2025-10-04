@@ -17,10 +17,14 @@
   },
   {
     "package_kind": "Export",
-    "message": "  Couldn't find export for 'quil.instructions.InstC'\n     (struct 'InstC' in tests/data/missing_exports/somecode.rs@61)"
+    "message": "  Couldn't find export for 'quil.instructions.InstC'\n     (struct 'InstC' in tests/data/missing_exports/somecode.rs@73)"
   },
   {
     "package_kind": "Export",
     "message": "  Couldn't find export for 'quil.instructions.InstructionError'\n     (error 'InstructionError' in tests/data/missing_exports/submod.rs@27)"
+  },
+  {
+    "package_kind": "Export",
+    "message": "  Couldn't find export for 'quil.instructions.SimpleEnum'\n     (enum 'SimpleEnum' in tests/data/missing_exports/somecode.rs@41)"
   }
 ]

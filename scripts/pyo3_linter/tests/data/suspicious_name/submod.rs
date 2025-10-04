@@ -11,6 +11,7 @@ pub(crate) fn init_submodule(m: &Bound<'_, PyModule>) -> PyResult<()> {
     
     m.add_class::<EnumA>()?;
     m.add_class::<EnumB>()?;
+    m.add_class::<SimpleEnum>()?;
 
     fix_complex_enums!(
         py,

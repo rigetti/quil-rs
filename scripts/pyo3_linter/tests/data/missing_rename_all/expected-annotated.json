@@ -32,6 +32,22 @@
         }
       },
       {
+        "rust_name": "InstA",
+        "python_name": "InstA",
+        "kind": "Struct",
+        "props": {
+          "module": "quil.instructions",
+          "subclass": true,
+          "get_all": true,
+          "set_all": true,
+          "eq": true
+        },
+        "stub_attr": {
+          "kind": "Class",
+          "module": null
+        }
+      },
+      {
         "rust_name": "InstB",
         "python_name": "InstB",
         "kind": "Struct",
@@ -74,30 +90,13 @@
         }
       },
       {
-        "rust_name": "PyInstA",
-        "python_name": "PyInstA",
-        "kind": "Struct",
-        "props": {
-          "module": "quil.instructions",
-          "subclass": true,
-          "get_all": true,
-          "set_all": true,
-          "eq": true
-        },
-        "stub_attr": {
-          "kind": "Class",
-          "module": null
-        }
-      },
-      {
         "rust_name": "SimpleEnum",
         "python_name": "SimpleEnum",
         "kind": "Enumeration",
         "props": {
           "module": "quil.instructions",
           "eq": true,
-          "frozen": true,
-          "rename_all": "SCREAMING_SNAKE_CASE"
+          "frozen": true
         },
         "stub_attr": {
           "kind": "Enumeration",
