@@ -137,7 +137,7 @@ def read_content(lines: Lines) -> Lines:
 
 def read_file(path: Path) -> Lines:
     logger.info(f"Processing {path}")
-    with path.open() as f:
+    with path.open(encoding="utf-8") as f:
         yield from read_content(
             Line(i, line.strip()) for i, line in enumerate(f, start=1)
         )
