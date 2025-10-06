@@ -63,6 +63,7 @@ skip-tree = [
   { name = "itertools", version = "*" },      # proptest relies on an older version of itertools than we use
   { name = "heck", version = "*" },           # conflicting dependency with pyo3 and clap
   { name = "hashbrown", version = "*" },      # conflicting versions between indexmap and (indirectly) dashmap
+  { name = "rand", version = "=0.8.5" },      # statrs has an outdated version
 ]
 
 # This section is considered when running `cargo deny check sources`.
