@@ -1,25 +1,32 @@
-use crate::{hash::hash_f64, quil::Quil};
+#[cfg(feature = "stubs")]
+use pyo3_stub_gen::derive::{
+    gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pyclass_enum,
+};
 
 use super::MemoryReference;
 
+use crate::pickleable_new;
+use crate::{hash::hash_f64, quil::Quil};
+
 #[derive(Clone, Debug, Hash, PartialEq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
+)]
 pub struct Arithmetic {
     pub operator: ArithmeticOperator,
     pub destination: MemoryReference,
     pub source: ArithmeticOperand,
 }
 
-impl Arithmetic {
-    pub fn new(
-        operator: ArithmeticOperator,
-        destination: MemoryReference,
-        source: ArithmeticOperand,
-    ) -> Self {
-        Self {
-            operator,
-            destination,
-            source,
-        }
+pickleable_new! {
+    impl Arithmetic {
+        pub fn new(
+            operator: ArithmeticOperator,
+            destination: MemoryReference,
+            source: ArithmeticOperand,
+        );
     }
 }
 
@@ -38,6 +45,11 @@ impl Quil for Arithmetic {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all)
+)]
 pub enum ArithmeticOperand {
     LiteralInteger(i64),
     LiteralReal(f64),
@@ -75,6 +87,17 @@ impl From<MemoryReference> for ArithmeticOperand {
 }
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass_enum)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(
+        module = "quil.instructions",
+        eq,
+        frozen,
+        hash,
+        rename_all = "SCREAMING_SNAKE_CASE"
+    )
+)]
 pub enum ArithmeticOperator {
     Add,
     Subtract,
@@ -99,6 +122,11 @@ impl Quil for ArithmeticOperator {
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all)
+)]
 pub enum BinaryOperand {
     LiteralInteger(i64),
     MemoryReference(MemoryReference),
@@ -118,6 +146,17 @@ impl Quil for BinaryOperand {
 }
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass_enum)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(
+        module = "quil.instructions",
+        eq,
+        frozen,
+        hash,
+        rename_all = "SCREAMING_SNAKE_CASE"
+    )
+)]
 pub enum BinaryOperator {
     And,
     Ior,
@@ -140,6 +179,11 @@ impl Quil for BinaryOperator {
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
+)]
 pub struct BinaryLogic {
     pub operator: BinaryOperator,
     pub destination: MemoryReference,
@@ -161,32 +205,30 @@ impl Quil for BinaryLogic {
     }
 }
 
-impl BinaryLogic {
-    pub fn new(
-        operator: BinaryOperator,
-        destination: MemoryReference,
-        source: BinaryOperand,
-    ) -> Self {
-        Self {
-            operator,
-            destination,
-            source,
-        }
+pickleable_new! {
+    impl BinaryLogic {
+        pub fn new(
+            operator: BinaryOperator,
+            destination: MemoryReference,
+            source: BinaryOperand,
+        );
     }
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
+)]
 pub struct Convert {
     pub destination: MemoryReference,
     pub source: MemoryReference,
 }
 
-impl Convert {
-    pub fn new(destination: MemoryReference, source: MemoryReference) -> Self {
-        Self {
-            destination,
-            source,
-        }
+pickleable_new! {
+    impl Convert {
+        pub fn new(destination: MemoryReference, source: MemoryReference);
     }
 }
 
@@ -205,17 +247,19 @@ impl Quil for Convert {
 }
 
 #[derive(Clone, Debug, Hash, PartialEq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
+)]
 pub struct Move {
     pub destination: MemoryReference,
     pub source: ArithmeticOperand,
 }
 
-impl Move {
-    pub fn new(destination: MemoryReference, source: ArithmeticOperand) -> Self {
-        Self {
-            destination,
-            source,
-        }
+pickleable_new! {
+    impl Move {
+        pub fn new(destination: MemoryReference, source: ArithmeticOperand);
     }
 }
 
@@ -234,6 +278,11 @@ impl Quil for Move {
 }
 
 #[derive(Clone, Debug, Hash, PartialEq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
+)]
 pub struct Exchange {
     pub left: MemoryReference,
     pub right: MemoryReference,
@@ -253,13 +302,18 @@ impl Quil for Exchange {
     }
 }
 
-impl Exchange {
-    pub fn new(left: MemoryReference, right: MemoryReference) -> Self {
-        Self { left, right }
+pickleable_new! {
+    impl Exchange {
+        pub fn new(left: MemoryReference, right: MemoryReference);
     }
 }
 
 #[derive(Clone, Debug, Hash, PartialEq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
+)]
 pub struct Comparison {
     pub operator: ComparisonOperator,
     pub destination: MemoryReference,
@@ -267,19 +321,14 @@ pub struct Comparison {
     pub rhs: ComparisonOperand,
 }
 
-impl Comparison {
-    pub fn new(
-        operator: ComparisonOperator,
-        destination: MemoryReference,
-        lhs: MemoryReference,
-        rhs: ComparisonOperand,
-    ) -> Self {
-        Self {
-            operator,
-            destination,
-            lhs,
-            rhs,
-        }
+pickleable_new! {
+    impl Comparison {
+        pub fn new(
+            operator: ComparisonOperator,
+            destination: MemoryReference,
+            lhs: MemoryReference,
+            rhs: ComparisonOperand,
+        );
     }
 }
 
@@ -301,6 +350,11 @@ impl Quil for Comparison {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all)
+)]
 pub enum ComparisonOperand {
     LiteralInteger(i64),
     LiteralReal(f64),
@@ -332,6 +386,17 @@ impl std::hash::Hash for ComparisonOperand {
 }
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass_enum)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(
+        module = "quil.instructions",
+        eq,
+        frozen,
+        hash,
+        rename_all = "SCREAMING_SNAKE_CASE"
+    )
+)]
 pub enum ComparisonOperator {
     Equal,
     GreaterThanOrEqual,
@@ -358,14 +423,19 @@ impl Quil for ComparisonOperator {
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
+)]
 pub struct UnaryLogic {
     pub operator: UnaryOperator,
     pub operand: MemoryReference,
 }
 
-impl UnaryLogic {
-    pub fn new(operator: UnaryOperator, operand: MemoryReference) -> Self {
-        Self { operator, operand }
+pickleable_new! {
+    impl UnaryLogic {
+        pub fn new(operator: UnaryOperator, operand: MemoryReference);
     }
 }
 
@@ -383,6 +453,17 @@ impl Quil for UnaryLogic {
 }
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass_enum)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(
+        module = "quil.instructions",
+        eq,
+        frozen,
+        hash,
+        rename_all = "SCREAMING_SNAKE_CASE"
+    )
+)]
 pub enum UnaryOperator {
     Neg,
     Not,

@@ -1,21 +1,25 @@
-use crate::quil::Quil;
+#[cfg(feature = "stubs")]
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyclass_complex_enum};
+
+use crate::{pickleable_new, quil::Quil};
 
 use super::QuotedString;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
+)]
 pub struct Pragma {
     pub name: String,
     pub arguments: Vec<PragmaArgument>,
     pub data: Option<String>,
 }
 
-impl Pragma {
-    pub fn new(name: String, arguments: Vec<PragmaArgument>, data: Option<String>) -> Self {
-        Self {
-            name,
-            arguments,
-            data,
-        }
+pickleable_new! {
+    impl Pragma {
+        pub fn new(name: String, arguments: Vec<PragmaArgument>, data: Option<String>);
     }
 }
 
@@ -38,6 +42,11 @@ impl Quil for Pragma {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash)
+)]
 pub enum PragmaArgument {
     Identifier(String),
     Integer(u64),
@@ -58,6 +67,11 @@ impl Quil for PragmaArgument {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
+)]
 pub struct Include {
     pub filename: String,
 }
@@ -72,9 +86,9 @@ impl Quil for Include {
     }
 }
 
-impl Include {
-    pub fn new(filename: String) -> Self {
-        Self { filename }
+pickleable_new! {
+    impl Include {
+        pub fn new(filename: String);
     }
 }
 

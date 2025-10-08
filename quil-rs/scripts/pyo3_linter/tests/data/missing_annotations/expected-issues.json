@@ -1,0 +1,14 @@
+[
+  {
+    "package_kind": "Annotation",
+    "message": "Module 'instructions' does not appear to be exported\n  Module found in: .\n  Items in module:\n    struct 'InstB' in somecode.rs@63 (props: eq, get_all, module = \"instructions\", set_all, subclass, text: Line(num=63, text='pub struct InstB {'))"
+  },
+  {
+    "package_kind": "Export",
+    "message": "  Wrong or missing module annotation for 'quil.instructions.InstB'\n     (class 'InstB' in submod.rs@46)"
+  },
+  {
+    "package_kind": "Export",
+    "message": "  Wrong or missing module annotation for 'quil.instructions.InstC'\n     (class 'InstC' in submod.rs@46)"
+  }
+]

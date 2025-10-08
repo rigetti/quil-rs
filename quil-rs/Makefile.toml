@@ -1,0 +1,83 @@
+[tasks.check]
+command = "cargo"
+args = ["hack", "--feature-powerset", "check"]
+
+[tasks.install-quil-deps]
+description = "Install quil dependencies using poetry"
+command = "poetry"
+args = ["install", "--extras", "dev", "--no-root"]
+
+[tasks.generate-stubs]
+description = "Generate Python stub files for quil."
+command = "cargo"
+args = ["run", "-p", "quil-rs", "--features", "stubs", "--bin", "stub_gen"]
+install_crate = false
+
+[tasks.package-quil]
+description = "Build a release version of quil."
+dependencies = ["generate-stubs"]
+command = "poetry"
+args = ["run", "maturin", "build", "--features", "python", "--release"]
+
+[tasks.install-quil]
+description = "Build the python package and install to the active virtual environment."
+dependencies = ["install-quil-deps"]
+command = "poetry"
+args = ["run", "maturin", "develop", "--features", "python"]
+
+[tasks.install-quil-with-stubs]
+description = "Install the python package with up-to-date stubs (not needed for testing)."
+dependencies = ["generate-stubs", "install-quil"]
+
+[tasks.pytest]
+description = "Run python tests."
+dependencies = ["install-quil"]
+command = "poetry"
+args = ["run", "pytest"]
+
+[tasks.stubtest]
+description = "Check python stubfiles."
+dependencies = ["install-quil-with-stubs"]
+command = "poetry"
+cwd = "python"
+args = ["run", "stubtest", "quil"]
+# TODO(#475): Enable error reporting once stubtest is happy with stubgen's output.
+ignore_errors = true
+
+[tasks.lint-quil]
+description = "Find errors in quil-related Rust code."
+command = "poetry"
+args = ["run", "python", "./scripts/lint-quil-rs.py", "--base", "src", "--show-mistakes"]
+
+[tasks.show-package-layout]
+description = "Print the quil package layout as defined within quil-rs code."
+command = "poetry"
+args = ["run", "python", "./scripts/lint-quil-rs.py", "--base", "src", "--show-package"]
+
+[tasks.test-quil]
+description = "Run all Python-related tests."
+dependencies = ["pytest", "lint-quil", "stubtest"]
+
+[tasks.test-all]
+description = "Run all tests."
+dependencies = ["test", "test-quil"]
+
+[tasks.default]
+alias = "test-all"
+
+[tasks.check-api]
+description = "Check if quil API has breaking changes."
+dependencies = ["install-quil-with-stubs"]
+script = { file = "./scripts/check-quil-api.sh" }
+
+[tasks.document-quil]
+description = "Generate quil documentation."
+dependencies = ["install-quil-with-stubs"]
+command = "poetry"
+args = [
+    "run",
+    "pdoc",
+    "-o", "build/docs",
+    "quil",
+    "--logo", "https://qcs.rigetti.com/static/img/rigetti-logo.svg",
+]

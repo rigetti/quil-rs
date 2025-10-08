@@ -15,32 +15,38 @@ jobs:
   publish-docs:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
+      - uses: actions/checkout@v5
       - uses: Swatinem/rust-cache@v2
-      - name: Install cargo-make
-        uses: actions-rs/cargo@v1
+      - uses: taiki-e/install-action@cargo-make
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          command: install
-          args: --debug cargo-make
-      - uses: syphar/restore-virtualenv@v1
+          python-version: '3.13'
+
+      - name: Install Poetry
+        uses: abatilo/actions-poetry@v4
+
+      - name: Configure Python Cache 
+        uses: actions/cache@v4
+        with:
+          path: './quil-rs/.venv/' 
+          key: ubuntu-latest-venv-${{ hashFiles('**/poetry.lock') }}
+
       - name: Build quil-py documentation
-        uses: actions-rs/cargo@v1
-        with:
-          command: make
-          args: --cwd quil-py --makefile Makefile.toml docs
+        run: cargo make --cwd quil-rs document-quil
+
       - name: Deploy preview
         if: ${{ github.event_name == 'pull_request' }}
         uses: rossjrw/pr-preview-action@v1
         with:
-          source-dir: quil-py/build/docs
+          source-dir: quil-rs/build/docs
           preview-branch: quil-py-docs
+
       - name: Deploy docs
         if: ${{ github.event_name == 'push' }}
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: quil-py/build/docs
+          publish_dir: quil-rs/build/docs
           publish_branch: quil-py-docs

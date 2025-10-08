@@ -68,7 +68,7 @@ fn parenthesized(expression: &Expression) -> String {
             parenthesized(right)
         ),
         Number(_) => format!("({})", expression.to_quil_or_debug()),
-        PiConstant => "pi".to_string(),
+        PiConstant() => "pi".to_string(),
         Prefix(PrefixExpression {
             operator,
             expression,
@@ -83,7 +83,7 @@ fn build(rng: &mut impl Rng, depth: u64) -> Expression {
         match rng.gen_range(0..4) {
             0 => addr(rng),
             1 => number(rng),
-            2 => Expression::PiConstant,
+            2 => Expression::PiConstant(),
             3 => var(rng),
             _ => unreachable!(),
         }

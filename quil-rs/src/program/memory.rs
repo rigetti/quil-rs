@@ -14,6 +14,9 @@
 
 use std::collections::HashSet;
 
+#[cfg(feature = "stubs")]
+use pyo3_stub_gen::derive::gen_stub_pyclass;
+
 use crate::expression::{Expression, FunctionCallExpression, InfixExpression, PrefixExpression};
 use crate::instruction::{
     Arithmetic, ArithmeticOperand, BinaryLogic, BinaryOperand, CallResolutionError, Capture,
@@ -23,26 +26,26 @@ use crate::instruction::{
     SetFrequency, SetPhase, SetScale, Sharing, ShiftFrequency, ShiftPhase, Store, UnaryLogic,
     Vector, WaveformInvocation,
 };
+use crate::pickleable_new;
 
 #[derive(Clone, Debug, Hash, PartialEq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.program", eq, frozen, hash, get_all, subclass)
+)]
 pub struct MemoryRegion {
     pub size: Vector,
     pub sharing: Option<Sharing>,
 }
 
-impl MemoryRegion {
-    pub fn new(size: Vector, sharing: Option<Sharing>) -> Self {
-        Self { size, sharing }
+pickleable_new! {
+    impl MemoryRegion {
+        pub fn new(size: Vector, sharing: Option<Sharing>);
     }
 }
 
 impl Eq for MemoryRegion {}
-
-#[derive(Clone, Debug)]
-pub struct MemoryAccess {
-    pub regions: HashSet<String>,
-    pub access_type: MemoryAccessType,
-}
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct MemoryAccesses {
@@ -313,12 +316,12 @@ impl Instruction {
             Instruction::Declaration(_)
             | Instruction::Fence(_)
             | Instruction::FrameDefinition(_)
-            | Instruction::Halt
-            | Instruction::Wait
+            | Instruction::Halt()
+            | Instruction::Wait()
             | Instruction::Include(_)
             | Instruction::Jump(_)
             | Instruction::Label(_)
-            | Instruction::Nop
+            | Instruction::Nop()
             | Instruction::Pragma(_)
             | Instruction::Reset(_)
             | Instruction::SwapPhases(_)
@@ -351,7 +354,7 @@ impl Expression {
                 result
             }
             Expression::Number(_) => vec![],
-            Expression::PiConstant => vec![],
+            Expression::PiConstant() => vec![],
             Expression::Prefix(PrefixExpression { expression, .. }) => {
                 expression.get_memory_references()
             }

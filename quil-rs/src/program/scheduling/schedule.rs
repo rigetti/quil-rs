@@ -20,6 +20,7 @@ use crate::{
 use super::{ExecutionDependency, ScheduledBasicBlock, ScheduledGraphNode};
 
 #[derive(Clone, Debug, Default, PartialEq, PartialOrd)]
+#[cfg_attr(feature = "python", derive(pyo3::FromPyObject, pyo3::IntoPyObject))]
 pub struct Seconds(pub f64);
 
 impl std::ops::Add<Seconds> for Seconds {
@@ -54,7 +55,7 @@ impl Zero for Seconds {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Schedule<TimeUnit> {
-    items: Vec<ComputedScheduleItem<TimeUnit>>,
+    pub(crate) items: Vec<ComputedScheduleItem<TimeUnit>>,
     /// The total duration of the block. This is the end time of the schedule when it starts at `TimeUnit::zero()`
     duration: TimeUnit,
 }

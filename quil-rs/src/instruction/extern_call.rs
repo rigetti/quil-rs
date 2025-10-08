@@ -11,10 +11,14 @@ use indexmap::IndexMap;
 use nom_locate::LocatedSpan;
 use num_complex::Complex64;
 
+#[cfg(feature = "stubs")]
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyclass_complex_enum};
+
 use crate::{
     expression::format_complex,
     hash::hash_f64,
     parser::lex,
+    pickleable_new,
     program::{disallow_leftover, MemoryAccesses, MemoryRegion, SyntaxError},
     quil::Quil,
     validation::identifier::{validate_user_identifier, IdentifierValidationError},
@@ -27,6 +31,11 @@ use super::{
 
 /// A parameter type within an extern signature.
 #[derive(Clone, Debug, PartialEq, Hash, Eq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash)
+)]
 pub enum ExternParameterType {
     /// A scalar parameter, which may accept a memory reference or immediate value.
     ///
@@ -63,6 +72,11 @@ impl Quil for ExternParameterType {
 
 /// An extern parameter with a name, mutability, and data type.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
+)]
 pub struct ExternParameter {
     /// The name of the parameter. This must be a valid user identifier.
     pub(crate) name: String,
@@ -72,22 +86,26 @@ pub struct ExternParameter {
     pub(crate) data_type: ExternParameterType,
 }
 
-impl ExternParameter {
-    /// Create a new extern parameter. This will fail if the parameter name
-    /// is not a valid user identifier.
-    pub fn try_new(
-        name: String,
-        mutable: bool,
-        data_type: ExternParameterType,
-    ) -> Result<Self, ExternError> {
-        validate_user_identifier(name.as_str()).map_err(ExternError::from_boxed)?;
-        Ok(Self {
-            name,
-            mutable,
-            data_type,
-        })
+pickleable_new! {
+    impl ExternParameter {
+        /// Create a new extern parameter. This will fail if the parameter name
+        /// is not a valid user identifier.
+        pub fn try_new(
+            name: String,
+            mutable: bool,
+            data_type: ExternParameterType,
+        ) -> Result<ExternParameter, ExternError> {
+            validate_user_identifier(name.as_str()).map_err(ExternError::from_boxed)?;
+            Ok(ExternParameter {
+                name,
+                mutable,
+                data_type,
+            })
+        }
     }
+}
 
+impl ExternParameter {
     pub fn name(&self) -> &str {
         self.name.as_str()
     }
@@ -116,7 +134,17 @@ impl Quil for ExternParameter {
 }
 
 /// An extern signature with a return type and parameters.
+///
+/// The signature of a ``PRAGMA EXTERN`` instruction.
+/// This signature is defined by a list of ``ExternParameter``s and an optional return type.
+/// See the [Quil Specification](https://github.com/quil-lang/quil/blob/7f532c7cdde9f51eae6abe7408cc868fba9f91f6/specgen/spec/sec-other.s)
+/// for details on how these signatures are formed.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
+)]
 pub struct ExternSignature {
     /// The return type of the extern signature, if any.
     pub(crate) return_type: Option<ScalarType>,
@@ -124,15 +152,14 @@ pub struct ExternSignature {
     pub(crate) parameters: Vec<ExternParameter>,
 }
 
-impl ExternSignature {
-    /// Create a new extern signature.
-    pub fn new(return_type: Option<ScalarType>, parameters: Vec<ExternParameter>) -> Self {
-        Self {
-            return_type,
-            parameters,
-        }
+pickleable_new! {
+    impl ExternSignature {
+        /// Create a new extern signature.
+        pub fn new(return_type: Option<ScalarType>, parameters: Vec<ExternParameter>);
     }
+}
 
+impl ExternSignature {
     pub fn return_type(&self) -> Option<&ScalarType> {
         self.return_type.as_ref()
     }
@@ -263,6 +290,7 @@ impl TryFrom<Pragma> for ExternSignature {
 /// the corresponding [`Pragma`] instruction. Note, keys are [`Option`]s, but a
 /// `None` key will be considered invalid when converting to an [`ExternSignatureMap`].
 #[derive(Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "python", derive(pyo3::IntoPyObject))]
 pub struct ExternPragmaMap(IndexMap<Option<String>, Pragma>);
 
 impl ExternPragmaMap {
@@ -402,6 +430,11 @@ pub enum CallArgumentResolutionError {
 /// with the appropriate [`ExternSignature`]. Resolution is required for building the
 /// [`crate::Program`] memory graph.
 #[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(name = "CallArgument", module = "quil.instructions", eq, frozen, hash)
+)]
 pub enum UnresolvedCallArgument {
     /// A reference to a declared memory location. Note, this may be resolved to either
     /// a scalar or vector. In the former case, the assumed index is 0.
@@ -682,7 +715,23 @@ pub enum CallError {
 }
 
 /// A call instruction with a name and arguments.
+///
+/// An instruction that calls an external function declared with a `PRAGMA EXTERN` instruction.
+/// These calls are generally specific to a particular hardware or virtual machine backend.
+///
+/// For further detail, see:
+///
+/// * [Other instructions and Directives](https://github.com/quil-lang/quil/blob/master/rfcs/extern-call.md) in the Quil specification.
+/// * [EXTERN / CALL RFC](https://github.com/quil-lang/quil/blob/master/rfcs/extern-call.md)
+/// * [quil#87](https://github.com/quil-lang/quil/issues/87)
+///
+/// Also see [`ExternSignature`].
 #[derive(Clone, Debug, PartialEq, Hash, Eq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, subclass, get_all)
+)]
 pub struct Call {
     /// The name of the call instruction. This must be a valid user identifier.
     pub name: String,
@@ -690,22 +739,22 @@ pub struct Call {
     pub arguments: Vec<UnresolvedCallArgument>,
 }
 
+pickleable_new! {
+    impl Call {
+        /// Create a new call instruction with resolved arguments.
+        /// This will validate the name as a user identifier.
+        pub fn try_new(
+            name: String,
+            arguments: Vec<UnresolvedCallArgument>,
+        ) -> Result<Call, CallError> {
+            validate_user_identifier(name.as_str()).map_err(CallError::Name)?;
+
+            Ok(Self { name, arguments })
+        }
+    }
+}
+
 impl Call {
-    /// Create a new call instruction with resolved arguments. This will validate the
-    /// name as a user identifier.
-    pub fn try_new(
-        name: String,
-        arguments: Vec<UnresolvedCallArgument>,
-    ) -> Result<Self, CallError> {
-        validate_user_identifier(name.as_str()).map_err(CallError::Name)?;
-
-        Ok(Self { name, arguments })
-    }
-
-    pub fn name(&self) -> &str {
-        self.name.as_str()
-    }
-
     pub fn arguments(&self) -> &[UnresolvedCallArgument] {
         self.arguments.as_slice()
     }

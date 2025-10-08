@@ -1,5 +1,5 @@
 ---
-source: src/program/graphviz_dot.rs
+source: quil-rs/src/program/scheduling/graphviz_dot.rs
 expression: dot_format
 ---
 digraph {
@@ -19,4 +19,3 @@ timing"];
     "block_0_end" [shape=circle, label="end"];
   }
 }
-

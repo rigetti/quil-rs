@@ -58,6 +58,7 @@ impl Display for ReservedToken {
 /// Every reserved Gate identifier
 #[derive(Clone, Copy, Debug, PartialEq, Eq, strum::Display, strum::EnumString)]
 #[strum(serialize_all = "UPPERCASE")]
+#[allow(clippy::upper_case_acronyms)]
 pub enum ReservedGate {
     CAN,
     CCNOT,

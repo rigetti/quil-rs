@@ -1,19 +1,27 @@
 # Quil Parser & Program Builder
 
-This library is the implementation of the [Quil spec](https://github.com/quil-lang/quil) in Rust.
+This repository is the home of [`quil-rs`][], [`quil-py`][], and [`quil-cli`][],
+tools for working with [Quil][quil-spec] programs in Rust and Python:
 
-It serves three purposes:
+- [`quil-rs`][] is the main Rust crate, with code to generate the Python bindings [`quil-py`][].
+- [`quil-cli`][] is a tool to validate a [Quil][quil-spec] program or expression.
 
-1. Parse Quil programs from strings, and output programs to strings
-2. Manipulate Quil programs within Rust
-3. Construct a dependency graph among program instructions
+These libraries should be considered unstable until the release of v1.0.
 
-It should be considered unstable until the release of v1.0.
+Note: For Rigetti's Python library for quantum programming with Quil, you likely want [`PyQuil`][].
+This code serves as the foundation of that library,
+but `PyQuil` offers higher-level abstractions and greater stability guarantees.
 
-## Testing
+[quil-spec]: https://github.com/quil-lang/quil
+[`quil-rs`]: https://github.com/rigetti/quil-rs/tree/main/quil-rs
+[`quil-py`]: https://github.com/rigetti/quil-rs/tree/main/quil-rs
+[`quil-cli`]: https://github.com/rigetti/quil-rs/tree/main/quil-cli
+[`PyQuil`]: https://github.com/rigetti/pyquil
 
-When testing this crate, you should run with the `--all-features` flag to ensure all tests are executed.
+## Development
 
-```sh
-cargo test --all-features
-```
+For more information on building, testing, or contributing to `quil-rs` and `quil-py`,
+please see [the Contribution Guide][contributing.md]
+
+[contributing.md]: https://github.com/rigetti/quil-rs/blob/main/CONTRIBUTING.md
+

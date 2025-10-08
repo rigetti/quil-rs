@@ -1,0 +1,55 @@
+{
+  "quil": {
+    "submodule": false,
+    "props": {
+      "name": "_quil"
+    },
+    "items": [
+      {
+        "rust_name": "SomeError",
+        "python_name": "SomeError",
+        "kind": "Error",
+        "props": {},
+        "stub_attr": null
+      }
+    ]
+  },
+  "quil.instructions": {
+    "submodule": true,
+    "props": {
+      "name": "instructions",
+      "module": "quil",
+      "submodule": true
+    },
+    "items": [
+      {
+        "rust_name": "EnumB",
+        "python_name": "EnumB",
+        "kind": "Class",
+        "props": {},
+        "stub_attr": null
+      },
+      {
+        "rust_name": "InstA",
+        "python_name": "InstA",
+        "kind": "Class",
+        "props": {},
+        "stub_attr": null
+      },
+      {
+        "rust_name": "InstB",
+        "python_name": "InstB",
+        "kind": "Class",
+        "props": {},
+        "stub_attr": null
+      },
+      {
+        "rust_name": "SomeKindOfError",
+        "python_name": "SomeKindOfError",
+        "kind": "Error",
+        "props": {},
+        "stub_attr": null
+      }
+    ]
+  }
+}

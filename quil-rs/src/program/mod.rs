@@ -12,7 +12,7 @@
 //See the License for the specific language governing permissions and
 // limitations under the License.
 
-// TODO: Address https://github.com/rigetti/quil-rs/issues/453
+// TODO (#453): Address large error types.
 #![allow(clippy::result_large_err)]
 
 use std::collections::{HashMap, HashSet};
@@ -22,6 +22,9 @@ use std::str::FromStr;
 use indexmap::{IndexMap, IndexSet};
 use ndarray::Array2;
 use nom_locate::LocatedSpan;
+
+#[cfg(feature = "stubs")]
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::instruction::{
     Arithmetic, ArithmeticOperand, ArithmeticOperator, Call, Declaration, ExternError,
@@ -33,9 +36,9 @@ use crate::instruction::{
 use crate::parser::{lex, parse_instructions, ParseError};
 use crate::quil::Quil;
 
-pub use self::calibration::Calibrations;
 pub use self::calibration::{
-    CalibrationExpansion, CalibrationExpansionOutput, CalibrationSource, MaybeCalibrationExpansion,
+    CalibrationExpansion, CalibrationExpansionOutput, CalibrationSource, Calibrations,
+    MaybeCalibrationExpansion,
 };
 pub use self::calibration_set::CalibrationSet;
 pub use self::error::{
@@ -43,9 +46,7 @@ pub use self::error::{
 };
 pub use self::frame::FrameSet;
 pub use self::frame::MatchedFrames;
-pub use self::memory::{
-    MemoryAccess, MemoryAccesses, MemoryAccessesError, MemoryAccessesResult, MemoryRegion,
-};
+pub use self::memory::{MemoryAccesses, MemoryAccessesError, MemoryAccessesResult, MemoryRegion};
 pub use self::source_map::{SourceMap, SourceMapEntry};
 
 pub mod analysis;
@@ -58,7 +59,12 @@ pub mod scheduling;
 mod source_map;
 pub mod type_check;
 
-// TODO: Address https://github.com/rigetti/quil-rs/issues/453
+#[cfg(not(feature = "python"))]
+use optipy::strip_pyo3;
+#[cfg(feature = "python")]
+pub(crate) mod quilpy;
+
+// TODO (#453): Address large error types.
 #[allow(clippy::large_enum_variant)]
 #[derive(Clone, Debug, PartialEq, thiserror::Error)]
 pub enum ProgramError {
@@ -86,65 +92,48 @@ type Result<T> = std::result::Result<T, ProgramError>;
 /// also the "headers" used to describe and manipulate those instructions, such as calibrations
 /// and frame definitions.
 #[derive(Clone, Debug, Default, PartialEq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.program", eq))]
+#[cfg_attr(not(feature = "python"), strip_pyo3)]
 pub struct Program {
+    #[pyo3(get, set)]
     pub calibrations: Calibrations,
+    #[pyo3(get, name = "pragma_extern_map")]
     pub extern_pragma_map: ExternPragmaMap,
+    #[pyo3(get, set)]
     pub frames: FrameSet,
+    #[pyo3(get, set)]
     pub memory_regions: IndexMap<String, MemoryRegion>,
+    #[pyo3(get, set)]
     pub waveforms: IndexMap<String, Waveform>,
+    #[pyo3(get, set)]
     pub gate_definitions: IndexMap<String, GateDefinition>,
+    #[pyo3(get, set)]
     instructions: Vec<Instruction>,
     // private field used for caching operations
+    #[pyo3(get)]
     used_qubits: HashSet<Qubit>,
 }
 
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[cfg_attr(feature = "python", pyo3::pymethods)]
+#[cfg_attr(not(feature = "python"), strip_pyo3)]
 impl Program {
+    #[new]
     pub fn new() -> Self {
-        Program {
-            calibrations: Calibrations::default(),
-            extern_pragma_map: ExternPragmaMap::default(),
-            frames: FrameSet::new(),
-            memory_regions: IndexMap::new(),
-            waveforms: IndexMap::new(),
-            gate_definitions: IndexMap::new(),
-            instructions: vec![],
-            used_qubits: HashSet::new(),
-        }
+        Program::default()
     }
 
-    /// Returns an iterator over immutable references to the instructions that make up the body of the program.
-    pub fn body_instructions(&self) -> impl Iterator<Item = &Instruction> {
-        self.instructions.iter()
-    }
-
-    pub fn into_body_instructions(self) -> impl Iterator<Item = Instruction> {
-        self.instructions.into_iter()
-    }
-
-    /// Returns an iterator over mutable references to the instructions that make up the body of the program.
-    #[cfg(test)]
-    pub(crate) fn for_each_body_instruction<F>(&mut self, closure: F)
-    where
-        F: FnMut(&mut Instruction),
-    {
-        let mut instructions = std::mem::take(&mut self.instructions);
-        self.used_qubits.clear();
-
-        instructions.iter_mut().for_each(closure);
-
-        self.add_instructions(instructions);
-    }
-
-    /// Like `Clone`, but does not clone the body instructions.
+    /// Return a deep copy of the `Program`, but without the body instructions.
     pub fn clone_without_body_instructions(&self) -> Self {
         Self {
-            instructions: Vec::new(),
             calibrations: self.calibrations.clone(),
             extern_pragma_map: self.extern_pragma_map.clone(),
             frames: self.frames.clone(),
             memory_regions: self.memory_regions.clone(),
-            gate_definitions: self.gate_definitions.clone(),
             waveforms: self.waveforms.clone(),
+            gate_definitions: self.gate_definitions.clone(),
+            instructions: Vec::new(),
             used_qubits: HashSet::new(),
         }
     }
@@ -220,6 +209,195 @@ impl Program {
         }
     }
 
+    /// Creates a new conjugate transpose of the [`Program`] by reversing the order of gate
+    /// instructions and applying the DAGGER modifier to each.
+    ///
+    /// # Errors
+    ///
+    /// Errors if any of the instructions in the program are not [`Instruction::Gate`]
+    pub fn dagger(&self) -> Result<Self> {
+        self.to_instructions().into_iter().try_rfold(
+            Program::new(),
+            |mut new_program, instruction| match instruction {
+                Instruction::Gate(gate) => {
+                    new_program.add_instruction(Instruction::Gate(gate.dagger()));
+                    Ok(new_program)
+                }
+                _ => Err(ProgramError::UnsupportedOperation(instruction)),
+            },
+        )
+    }
+
+    /// Expand any instructions in the program which have a matching calibration,
+    /// leaving the others unchanged.
+    /// Return the expanded copy of the program.
+    ///
+    /// Returns an error if any instruction expands into itself.
+    ///
+    /// See [`Program::expand_calibrations_with_source_map`] for a version that returns a source mapping.
+    pub fn expand_calibrations(&self) -> Result<Self> {
+        self.expand_calibrations_inner(None)
+    }
+
+    /// Simplify this program into a new [`Program`] which contains only instructions
+    /// and definitions which are executed; effectively, perform dead code removal.
+    ///
+    /// Removes:
+    /// - All calibrations, following calibration expansion
+    /// - Frame definitions which are not used by any instruction such as `PULSE` or `CAPTURE`
+    /// - Waveform definitions which are not used by any instruction
+    /// - `PRAGMA EXTERN` instructions which are not used by any `CALL` instruction (see
+    ///   [`Program::extern_pragma_map`]).
+    ///
+    /// When a valid program is simplified, it remains valid.
+    ///
+    /// # Note
+    ///
+    /// If you need custom instruction handling during simplification,
+    /// use [`InstructionHandler::simplify_program`] instead.
+    #[allow(clippy::wrong_self_convention)] // It's a Breaking Change to change it now.
+    pub fn into_simplified(&self) -> Result<Self> {
+        self.simplify_with_handler(&mut InstructionHandler::default())
+    }
+
+    /// Return a copy of the [`Program`] wrapped in a loop that repeats `iterations` times.
+    ///
+    /// The loop is constructed by wrapping the body of the program in classical Quil instructions.
+    /// The given `loop_count_reference` must refer to an INTEGER memory region. The value at the
+    /// reference given will be set to `iterations` and decremented in the loop. The loop will
+    /// terminate when the reference reaches 0. For this reason your program should not itself
+    /// modify the value at the reference unless you intend to modify the remaining number of
+    /// iterations (i.e. to break the loop).
+    ///
+    /// The given `start_target` and `end_target` will be used as the entry and exit points for the
+    /// loop, respectively. You should provide unique [`Target`]s that won't be used elsewhere in
+    /// the program.
+    ///
+    /// If `iterations` is 0, then a copy of the program is returned without any changes.
+    pub fn wrap_in_loop(
+        &self,
+        loop_count_reference: MemoryReference,
+        start_target: Target,
+        end_target: Target,
+        iterations: u32,
+    ) -> Self {
+        if iterations == 0 {
+            return self.clone();
+        }
+
+        let mut looped_program = self.clone_without_body_instructions();
+
+        looped_program.add_instructions(
+            vec![
+                Instruction::Declaration(Declaration {
+                    name: loop_count_reference.name.clone(),
+                    size: Vector {
+                        data_type: ScalarType::Integer,
+                        length: 1,
+                    },
+                    sharing: None,
+                }),
+                Instruction::Move(Move {
+                    destination: loop_count_reference.clone(),
+                    source: ArithmeticOperand::LiteralInteger(iterations.into()),
+                }),
+                Instruction::Label(Label {
+                    target: start_target.clone(),
+                }),
+            ]
+            .into_iter()
+            .chain(self.body_instructions().cloned())
+            .chain(vec![
+                Instruction::Arithmetic(Arithmetic {
+                    operator: ArithmeticOperator::Subtract,
+                    destination: MemoryReference {
+                        name: loop_count_reference.name.clone(),
+                        index: 0,
+                    },
+                    source: ArithmeticOperand::LiteralInteger(1),
+                }),
+                Instruction::JumpUnless(JumpUnless {
+                    target: end_target.clone(),
+                    condition: loop_count_reference,
+                }),
+                Instruction::Jump(Jump {
+                    target: start_target,
+                }),
+                Instruction::Label(Label { target: end_target }),
+            ])
+            .collect::<Vec<Instruction>>(),
+        );
+
+        looped_program
+    }
+
+    /// Resolve [`LabelPlaceholder`]s and [`QubitPlaceholder`]s within the program using default resolvers.
+    ///
+    /// See [`resolve_placeholders_with_custom_resolvers`](Self::resolve_placeholders_with_custom_resolvers),
+    /// [`default_target_resolver`](Self::default_target_resolver),
+    /// and [`default_qubit_resolver`](Self::default_qubit_resolver) for more information.
+    pub fn resolve_placeholders(&mut self) {
+        self.resolve_placeholders_with_custom_resolvers(
+            self.default_target_resolver(),
+            self.default_qubit_resolver(),
+        )
+    }
+
+    /// Return a copy of all of the instructions which constitute this [`Program`].
+    pub fn to_instructions(&self) -> Vec<Instruction> {
+        let mut instructions: Vec<Instruction> = Vec::with_capacity(self.len());
+
+        instructions.extend(self.extern_pragma_map.to_instructions());
+        instructions.extend(self.memory_regions.iter().map(|(name, descriptor)| {
+            Instruction::Declaration(Declaration {
+                name: name.clone(),
+                size: descriptor.size.clone(),
+                sharing: descriptor.sharing.clone(),
+            })
+        }));
+        instructions.extend(self.frames.to_instructions());
+        instructions.extend(self.waveforms.iter().map(|(name, definition)| {
+            Instruction::WaveformDefinition(WaveformDefinition {
+                name: name.clone(),
+                definition: definition.clone(),
+            })
+        }));
+        instructions.extend(self.calibrations.to_instructions());
+        instructions.extend(
+            self.gate_definitions
+                .values()
+                .cloned()
+                .map(Instruction::GateDefinition),
+        );
+        instructions.extend(self.instructions.clone());
+        instructions
+    }
+}
+
+impl Program {
+    /// Returns an iterator over immutable references to the instructions that make up the body of the program.
+    pub fn body_instructions(&self) -> impl Iterator<Item = &Instruction> {
+        self.instructions.iter()
+    }
+
+    pub fn into_body_instructions(self) -> impl Iterator<Item = Instruction> {
+        self.instructions.into_iter()
+    }
+
+    /// Returns an iterator over mutable references to the instructions that make up the body of the program.
+    #[cfg(test)]
+    pub(crate) fn for_each_body_instruction<F>(&mut self, closure: F)
+    where
+        F: FnMut(&mut Instruction),
+    {
+        let mut instructions = std::mem::take(&mut self.instructions);
+        self.used_qubits.clear();
+
+        instructions.iter_mut().for_each(closure);
+
+        self.add_instructions(instructions);
+    }
+
     pub fn add_instructions<I>(&mut self, instructions: I)
     where
         I: IntoIterator<Item = Instruction>,
@@ -238,36 +416,6 @@ impl Program {
                 .filter(predicate)
                 .collect(),
         )
-    }
-
-    /// Creates a new conjugate transpose of the [`Program`] by reversing the order of gate
-    /// instructions and applying the DAGGER modifier to each.
-    ///
-    ///
-    /// # Errors
-    ///
-    /// Errors if any of the instructions in the program are not [`Instruction::Gate`]
-    pub fn dagger(&self) -> Result<Self> {
-        self.to_instructions().into_iter().try_rfold(
-            Program::new(),
-            |mut new_program, instruction| match instruction {
-                Instruction::Gate(gate) => {
-                    new_program.add_instruction(Instruction::Gate(gate.dagger()));
-                    Ok(new_program)
-                }
-                _ => Err(ProgramError::UnsupportedOperation(instruction)),
-            },
-        )
-    }
-
-    /// Expand any instructions in the program which have a matching calibration, leaving the others
-    /// unchanged. Return the expanded copy of the program.
-    ///
-    /// Return an error if any instruction expands into itself.
-    ///
-    /// See [`Program::expand_calibrations_with_source_map`] for a version that returns a source mapping.
-    pub fn expand_calibrations(&self) -> Result<Self> {
-        self.expand_calibrations_inner(None)
     }
 
     /// Expand any instructions in the program which have a matching calibration, leaving the others
@@ -504,109 +652,6 @@ impl Program {
         Ok(expanded_program)
     }
 
-    /// Simplify this program into a new [`Program`] which contains only instructions
-    /// and definitions which are executed; effectively, perform dead code removal.
-    ///
-    /// Removes:
-    /// - All calibrations, following calibration expansion
-    /// - Frame definitions which are not used by any instruction such as `PULSE` or `CAPTURE`
-    /// - Waveform definitions which are not used by any instruction
-    /// - `PRAGMA EXTERN` instructions which are not used by any `CALL` instruction (see
-    ///   [`Program::extern_pragma_map`]).
-    ///
-    /// When a valid program is simplified, it remains valid.
-    ///
-    /// # Note
-    ///
-    /// If you need custom instruction handling during simplification, using
-    /// [`InstructionHandler::simplify_program`] instead.
-    pub fn into_simplified(&self) -> Result<Self> {
-        self.simplify_with_handler(&mut InstructionHandler::default())
-    }
-
-    /// Return a copy of the [`Program`] wrapped in a loop that repeats `iterations` times.
-    ///
-    /// The loop is constructed by wrapping the body of the program in classical Quil instructions.
-    /// The given `loop_count_reference` must refer to an INTEGER memory region. The value at the
-    /// reference given will be set to `iterations` and decremented in the loop. The loop will
-    /// terminate when the reference reaches 0. For this reason your program should not itself
-    /// modify the value at the reference unless you intend to modify the remaining number of
-    /// iterations (i.e. to break the loop).
-    ///
-    /// The given `start_target` and `end_target` will be used as the entry and exit points for the
-    /// loop, respectively. You should provide unique [`Target`]s that won't be used elsewhere in
-    /// the program.
-    ///
-    /// If `iterations` is 0, then a copy of the program is returned without any changes.
-    pub fn wrap_in_loop(
-        &self,
-        loop_count_reference: MemoryReference,
-        start_target: Target,
-        end_target: Target,
-        iterations: u32,
-    ) -> Self {
-        if iterations == 0 {
-            return self.clone();
-        }
-
-        let mut looped_program = self.clone_without_body_instructions();
-
-        looped_program.add_instructions(
-            vec![
-                Instruction::Declaration(Declaration {
-                    name: loop_count_reference.name.clone(),
-                    size: Vector {
-                        data_type: ScalarType::Integer,
-                        length: 1,
-                    },
-                    sharing: None,
-                }),
-                Instruction::Move(Move {
-                    destination: loop_count_reference.clone(),
-                    source: ArithmeticOperand::LiteralInteger(iterations.into()),
-                }),
-                Instruction::Label(Label {
-                    target: start_target.clone(),
-                }),
-            ]
-            .into_iter()
-            .chain(self.body_instructions().cloned())
-            .chain(vec![
-                Instruction::Arithmetic(Arithmetic {
-                    operator: ArithmeticOperator::Subtract,
-                    destination: MemoryReference {
-                        name: loop_count_reference.name.clone(),
-                        index: 0,
-                    },
-                    source: ArithmeticOperand::LiteralInteger(1),
-                }),
-                Instruction::JumpUnless(JumpUnless {
-                    target: end_target.clone(),
-                    condition: loop_count_reference,
-                }),
-                Instruction::Jump(Jump {
-                    target: start_target,
-                }),
-                Instruction::Label(Label { target: end_target }),
-            ])
-            .collect::<Vec<Instruction>>(),
-        );
-
-        looped_program
-    }
-
-    /// Resolve [`LabelPlaceholder`]s and [`QubitPlaceholder`]s within the program using default resolvers.
-    ///
-    /// See [`resolve_placeholders_with_custom_resolvers`](Self::resolve_placeholders_with_custom_resolvers),
-    /// [`default_target_resolver`](Self::default_target_resolver),
-    /// and [`default_qubit_resolver`](Self::default_qubit_resolver) for more information.
-    pub fn resolve_placeholders(&mut self) {
-        self.resolve_placeholders_with_custom_resolvers(
-            self.default_target_resolver(),
-            self.default_qubit_resolver(),
-        )
-    }
-
     /// Resolve [`TargetPlaceholder`]s and [`QubitPlaceholder`]s within the program such that the resolved values
     /// will remain unique to that placeholder within the scope of the program.
     ///
@@ -709,36 +754,6 @@ impl Program {
             + self.extern_pragma_map.len()
     }
 
-    /// Return a copy of all of the instructions which constitute this [`Program`].
-    pub fn to_instructions(&self) -> Vec<Instruction> {
-        let mut instructions: Vec<Instruction> = Vec::with_capacity(self.len());
-
-        instructions.extend(self.extern_pragma_map.to_instructions());
-        instructions.extend(self.memory_regions.iter().map(|(name, descriptor)| {
-            Instruction::Declaration(Declaration {
-                name: name.clone(),
-                size: descriptor.size.clone(),
-                sharing: descriptor.sharing.clone(),
-            })
-        }));
-        instructions.extend(self.frames.to_instructions());
-        instructions.extend(self.waveforms.iter().map(|(name, definition)| {
-            Instruction::WaveformDefinition(WaveformDefinition {
-                name: name.clone(),
-                definition: definition.clone(),
-            })
-        }));
-        instructions.extend(self.calibrations.to_instructions());
-        instructions.extend(
-            self.gate_definitions
-                .values()
-                .cloned()
-                .map(Instruction::GateDefinition),
-        );
-        instructions.extend(self.instructions.clone());
-        instructions
-    }
-
     /// Return the unitary of a program.
     ///
     /// # Errors
@@ -748,7 +763,7 @@ impl Program {
         let mut umat = Array2::eye(2usize.pow(n_qubits as u32));
         for instruction in self.instructions.clone() {
             match instruction {
-                Instruction::Halt => {}
+                Instruction::Halt() => {}
                 Instruction::Gate(mut gate) => {
                     umat = gate.to_unitary(n_qubits)?.dot(&umat);
                 }
@@ -839,6 +854,10 @@ impl ops::AddAssign<Program> for Program {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(
+    feature = "python",
+    derive(pyo3::FromPyObject, pyo3::IntoPyObject, pyo3::IntoPyObjectRef)
+)]
 pub struct InstructionIndex(pub usize);
 
 impl InstructionIndex {
@@ -851,16 +870,17 @@ pub type ProgramCalibrationExpansionSourceMap =
     SourceMap<InstructionIndex, MaybeCalibrationExpansion>;
 
 #[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.program", eq, frozen))]
+#[cfg_attr(not(feature = "python"), strip_pyo3)]
 pub struct ProgramCalibrationExpansion {
+    /// The program containing the instructions.
+    #[pyo3(get)]
     program: Program,
     source_map: ProgramCalibrationExpansionSourceMap,
 }
 
 impl ProgramCalibrationExpansion {
-    pub fn program(&self) -> &Program {
-        &self.program
-    }
-
     pub fn source_map(&self) -> &ProgramCalibrationExpansionSourceMap {
         &self.source_map
     }
@@ -1055,7 +1075,8 @@ NOP
                         calibration_used: CalibrationIdentifier {
                             name: "I".to_string(),
                             qubits: vec![Qubit::Fixed(0)],
-                            ..CalibrationIdentifier::default()
+                            modifiers: vec![],
+                            parameters: vec![],
                         }
                         .into(),
                         range: InstructionIndex(0)..InstructionIndex(3),
@@ -1088,7 +1109,8 @@ NOP
                         calibration_used: CalibrationIdentifier {
                             name: "I".to_string(),
                             qubits: vec![Qubit::Fixed(0)],
-                            ..CalibrationIdentifier::default()
+                            modifiers: vec![],
+                            parameters: vec![],
                         }
                         .into(),
                         range: InstructionIndex(4)..InstructionIndex(7),
@@ -1210,7 +1232,7 @@ DEFFRAME 0 1 \"2q\":
                 vec![],
             ),
         ] {
-            let instruction = Instruction::parse(instruction_string).unwrap();
+            let instruction = Instruction::parse_in_test(instruction_string).unwrap();
             let matched_frames = program.get_frames_for_instruction(&instruction).unwrap();
             let used_frames: HashSet<String> = matched_frames
                 .used
@@ -1309,7 +1331,7 @@ I 0
     #[test]
     fn test_add_instructions() {
         let mut p = Program::new();
-        let instrs = vec![Instruction::Nop, Instruction::Nop];
+        let instrs = vec![Instruction::Nop(), Instruction::Nop()];
         p.add_instructions(instrs.clone());
         assert_eq!(p.instructions, instrs);
     }

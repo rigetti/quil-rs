@@ -1,0 +1,6 @@
+[
+  {
+    "package_kind": "Annotation",
+    "message": "  Simple enum 'quil.instructions.SimpleEnum' doesn't have rename_all = \"SCREAMING_SNAKE_CASE\"\n     (enum 'SimpleEnum' in somecode.rs@41)"
+  }
+]

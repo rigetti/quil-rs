@@ -1,0 +1,30 @@
+[
+  {
+    "package_kind": "Annotation",
+    "message": "Function  'some_function' does not appear to be exported\n   fn 'a_different_name (py: some_function)' in submod.rs@23"
+  },
+  {
+    "package_kind": "Annotation",
+    "message": "Module 'instructions' does not appear to be exported\n  Module found in: .\n  Items in module:\n    enum 'EnumB' in somecode.rs@31 (props: eq, frozen, module = \"instructions\", text: Line(num=31, text='pub enum EnumB {'))"
+  },
+  {
+    "package_kind": "Export",
+    "message": "  Wrong or missing module annotation for 'quil.instructions.EnumB'\n     (class 'EnumB' in submod.rs@10)"
+  },
+  {
+    "package_kind": "Export",
+    "message": "  Couldn't find export for 'quil.instructions.EnumA'\n     (enum 'EnumA' in somecode.rs@20)"
+  },
+  {
+    "package_kind": "Export",
+    "message": "  Couldn't find export for 'quil.instructions.InstC'\n     (struct 'InstC' in somecode.rs@73)"
+  },
+  {
+    "package_kind": "Export",
+    "message": "  Couldn't find export for 'quil.instructions.InstructionError'\n     (error 'InstructionError' in submod.rs@27)"
+  },
+  {
+    "package_kind": "Export",
+    "message": "  Couldn't find export for 'quil.instructions.SimpleEnum'\n     (enum 'SimpleEnum' in somecode.rs@41)"
+  }
+]

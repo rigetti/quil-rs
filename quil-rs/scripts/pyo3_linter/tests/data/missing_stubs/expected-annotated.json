@@ -1,0 +1,121 @@
+{
+  "quil.instructions": {
+    "submodule": true,
+    "props": {},
+    "items": [
+      {
+        "rust_name": "EnumA",
+        "python_name": "EnumA",
+        "kind": "Enumeration",
+        "props": {
+          "module": "quil.instructions",
+          "eq": true,
+          "frozen": true
+        },
+        "stub_attr": null
+      },
+      {
+        "rust_name": "EnumB",
+        "python_name": "EnumB",
+        "kind": "Enumeration",
+        "props": {
+          "module": "quil.instructions",
+          "eq": true,
+          "frozen": true
+        },
+        "stub_attr": {
+          "kind": "ComplexEnumeration",
+          "module": null
+        }
+      },
+      {
+        "rust_name": "InstA",
+        "python_name": "InstA",
+        "kind": "Struct",
+        "props": {
+          "module": "quil.instructions",
+          "subclass": true,
+          "get_all": true,
+          "set_all": true,
+          "eq": true
+        },
+        "stub_attr": {
+          "kind": "Class",
+          "module": null
+        }
+      },
+      {
+        "rust_name": "InstB",
+        "python_name": "InstB",
+        "kind": "Struct",
+        "props": {
+          "module": "quil.instructions",
+          "subclass": true,
+          "get_all": true,
+          "set_all": true,
+          "eq": true
+        },
+        "stub_attr": {
+          "kind": "Class",
+          "module": null
+        }
+      },
+      {
+        "rust_name": "InstC",
+        "python_name": "InstC",
+        "kind": "Struct",
+        "props": {
+          "module": "quil.instructions",
+          "subclass": true,
+          "get_all": true,
+          "set_all": true,
+          "eq": true
+        },
+        "stub_attr": {
+          "kind": "Class",
+          "module": null
+        }
+      },
+      {
+        "rust_name": "InstructionError",
+        "python_name": "InstructionError",
+        "kind": "Error",
+        "props": {},
+        "stub_attr": {
+          "kind": "Class",
+          "module": "quil.instructions"
+        }
+      },
+      {
+        "rust_name": "SimpleEnum",
+        "python_name": "SimpleEnum",
+        "kind": "Enumeration",
+        "props": {
+          "module": "quil.instructions",
+          "eq": true,
+          "frozen": true,
+          "rename_all": "SCREAMING_SNAKE_CASE"
+        },
+        "stub_attr": {
+          "kind": "Enumeration",
+          "module": null
+        }
+      },
+      {
+        "rust_name": "SomeKindOfError",
+        "python_name": "SomeKindOfError",
+        "kind": "Error",
+        "props": {},
+        "stub_attr": {
+          "kind": "Class",
+          "module": "quil.instructions"
+        }
+      }
+    ]
+  },
+  "builtins": {
+    "submodule": true,
+    "props": {},
+    "items": []
+  }
+}

@@ -1,13 +1,15 @@
 //! Templates for generating discrete IQ value sequences representing Quil's defined set of waveforms.
-
 use std::f64::consts::PI;
 
-use crate::{imag, real};
 use ndarray::Array;
 use num_complex::Complex64;
+use serde::{Deserialize, Serialize};
 use statrs::function::erf::erf;
 
-use serde::{Deserialize, Serialize};
+#[cfg(feature = "stubs")]
+use pyo3_stub_gen::derive::gen_stub_pyclass;
+
+use crate::{imag, real};
 
 const J: Complex64 = Complex64::new(0f64, 1f64);
 
@@ -19,8 +21,20 @@ pub fn apply_phase_and_detuning(
     sample_rate: f64,
 ) {
     for (index, value) in iq_values.iter_mut().enumerate() {
-        *value *= (2.0 * PI * J * (detuning * (index as f64) / sample_rate + phase)).exp();
+        *value = apply_phase_and_detuning_impl(*value, phase, detuning, sample_rate, index);
     }
+}
+
+/// Internal Rust implementation of phase offset and detuning.
+#[inline]
+pub(super) fn apply_phase_and_detuning_impl(
+    iq_value: Complex64,
+    phase: f64,
+    detuning: f64,
+    sample_rate: f64,
+    index: usize,
+) -> Complex64 {
+    iq_value * (2.0 * PI * J * (detuning * (index as f64) / sample_rate + phase)).exp()
 }
 
 /// A custom `ceil()` method that includes a machine-epsilon sized region above each integer in the
@@ -43,10 +57,19 @@ pub trait WaveformTemplate {
     fn into_iq_values(self) -> Vec<Complex64>;
 }
 
+/// A Boxcar waveform.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.waveforms", subclass, get_all, set_all, eq)
+)]
 pub struct BoxcarKernel {
+    /// The phase, in cycles.
     pub phase: crate::units::Cycles<f64>,
+    /// Scale applied to the waveform envelope.
     pub scale: f64,
+    /// Sample count, which must be positive.
     pub sample_count: u64,
 }
 
@@ -56,8 +79,13 @@ impl BoxcarKernel {
     }
 }
 
-/// Creates a waveform with a flat top and edges that are error functions (erfs).
+/// A waveform with a flat top and edges that are error functions (erfs).
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.waveforms", subclass, get_all, set_all, eq)
+)]
 pub struct ErfSquare {
     /// Full duration of the pulse (s)
     pub duration: f64,
@@ -106,6 +134,11 @@ impl WaveformTemplate for ErfSquare {
 
 /// Creates a waveform with a Gaussian shape.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.waveforms", subclass, get_all, set_all, eq)
+)]
 pub struct Gaussian {
     /// Full duration of the pulse (s)
     pub duration: f64,
@@ -146,6 +179,11 @@ impl WaveformTemplate for Gaussian {
 ///
 /// See Motzoi F. et al., Phys. Rev. Lett., 103 (2009) 110501. for details.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.waveforms", subclass, get_all, set_all, eq)
+)]
 pub struct DragGaussian {
     /// Full duration of the pulse (s)
     pub duration: f64,
@@ -200,6 +238,11 @@ impl WaveformTemplate for DragGaussian {
 /// Warren S. Warren. 81, (1984); doi: 10.1063/1.447644
 /// for details.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.waveforms", subclass, get_all, set_all, eq)
+)]
 pub struct HermiteGaussian {
     /// Full duration of the pulse
     pub duration: f64,

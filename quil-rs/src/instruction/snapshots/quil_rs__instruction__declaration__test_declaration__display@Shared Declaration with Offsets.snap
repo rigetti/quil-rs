@@ -1,5 +1,5 @@
 ---
 source: quil-rs/src/instruction/declaration.rs
-expression: declaration.to_string()
+expression: declaration.to_quil_or_debug()
 ---
 DECLARE ro REAL[3] SHARING bar OFFSET 4 BIT 5 BIT

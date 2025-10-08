@@ -16,8 +16,8 @@ __pycache__
 **./.null-ls-cache*
 
 # quil-py documentation
-quil-py/build
-quil-py/pyrightconfig.json
+quil-rs/build
+quil-rs/pyrightconfig.json
 
 # unversioned developer notes
 scratch/

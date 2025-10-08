@@ -2,6 +2,7 @@ use crate::{
     expression::Expression,
     imag,
     instruction::{write_expression_parameter_string, write_parameter_string, write_qubits, Qubit},
+    pickleable_new,
     quil::{write_join_quil, Quil, INDENT},
     real,
     validation::identifier::{
@@ -16,8 +17,18 @@ use std::{
     collections::{HashMap, HashSet},
 };
 
+#[cfg(feature = "stubs")]
+use pyo3_stub_gen::derive::{
+    gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pyclass_enum,
+};
+
 /// A struct encapsulating all the properties of a Quil Quantum Gate.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
+)]
 pub struct Gate {
     pub name: String,
     pub parameters: Vec<Expression>,
@@ -27,6 +38,17 @@ pub struct Gate {
 
 /// An enum of all the possible modifiers on a quil [`Gate`]
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass_enum)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(
+        module = "quil.instructions",
+        eq,
+        frozen,
+        hash,
+        rename_all = "SCREAMING_SNAKE_CASE"
+    )
+)]
 pub enum GateModifier {
     /// The `CONTROLLED` modifier makes the gate take an extra [`Qubit`] parameter as a control
     /// qubit.
@@ -113,14 +135,18 @@ impl Gate {
             modifiers,
         })
     }
+}
 
+impl Gate {
     /// Apply a DAGGER modifier to the gate
+    #[must_use]
     pub fn dagger(mut self) -> Self {
         self.modifiers.insert(0, GateModifier::Dagger);
         self
     }
 
     /// Apply a CONTROLLED modifier to the gate
+    #[must_use]
     pub fn controlled(mut self, control_qubit: Qubit) -> Self {
         self.qubits.insert(0, control_qubit);
         self.modifiers.insert(0, GateModifier::Controlled);
@@ -157,6 +183,8 @@ impl Gate {
     /// Returns an error if any of the parameters of this gate are non-constant, if any of the
     /// qubits are variable, if the name of this gate is unknown, or if there are an unexpected
     /// number of parameters.
+    // TODO (#464): This method can lead to overflow.
+    #[allow(clippy::wrong_self_convention)] // It's a Breaking Change to change it now.
     pub fn to_unitary(&mut self, n_qubits: u64) -> Result<Matrix, GateError> {
         let qubits = self
             .qubits
@@ -406,6 +434,7 @@ fn two_swap_helper(j: u64, k: u64, n_qubits: u64, qubit_map: &mut [u64]) -> Matr
 fn qubit_adjacent_lifted_gate(i: u64, matrix: &Matrix, n_qubits: u64) -> Matrix {
     let bottom_matrix = Array2::eye(2usize.pow(i as u32));
     let gate_size = (matrix.shape()[0] as f64).log2().floor() as u64;
+    // TODO (#464): This can overflow and lead to silent errors in release builds.
     let top_qubits = n_qubits - i - gate_size;
     let top_matrix = Array2::eye(2usize.pow(top_qubits as u32));
     kron(&top_matrix, &kron(matrix, &bottom_matrix))
@@ -791,6 +820,17 @@ mod test_gate_into_matrix {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, strum::Display, strum::EnumString)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass_enum)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(
+        module = "quil.instructions",
+        eq,
+        frozen,
+        hash,
+        rename_all = "SCREAMING_SNAKE_CASE"
+    )
+)]
 #[strum(serialize_all = "UPPERCASE")]
 pub enum PauliGate {
     I,
@@ -800,19 +840,23 @@ pub enum PauliGate {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
+)]
 pub struct PauliTerm {
     pub arguments: Vec<(PauliGate, String)>,
     pub expression: Expression,
 }
 
-impl PauliTerm {
-    pub fn new(arguments: Vec<(PauliGate, String)>, expression: Expression) -> Self {
-        Self {
-            arguments,
-            expression,
-        }
+pickleable_new! {
+    impl PauliTerm {
+        pub fn new(arguments: Vec<(PauliGate, String)>, expression: Expression);
     }
+}
 
+impl PauliTerm {
     pub(crate) fn word(&self) -> impl Iterator<Item = &PauliGate> {
         self.arguments.iter().map(|(gate, _)| gate)
     }
@@ -823,34 +867,46 @@ impl PauliTerm {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
+)]
 pub struct PauliSum {
     pub arguments: Vec<String>,
     pub terms: Vec<PauliTerm>,
 }
 
-impl PauliSum {
-    pub fn new(arguments: Vec<String>, terms: Vec<PauliTerm>) -> Result<Self, GateError> {
-        let diff = terms
-            .iter()
-            .flat_map(|t| t.arguments())
-            .collect::<HashSet<_>>()
-            .difference(&arguments.iter().collect::<HashSet<_>>())
-            .copied()
-            .collect::<Vec<_>>();
+pickleable_new! {
+    impl PauliSum {
+        pub fn new(arguments: Vec<String>, terms: Vec<PauliTerm>) -> Result<PauliSum, GateError> {
+            let diff = terms
+                .iter()
+                .flat_map(|t| t.arguments())
+                .collect::<HashSet<_>>()
+                .difference(&arguments.iter().collect::<HashSet<_>>())
+                .copied()
+                .collect::<Vec<_>>();
 
-        if !diff.is_empty() {
-            return Err(GateError::PauliSumArgumentMismatch {
-                mismatches: diff.into_iter().cloned().collect(),
-                expected_arguments: arguments,
-            });
+            if !diff.is_empty() {
+                return Err(GateError::PauliSumArgumentMismatch {
+                    mismatches: diff.into_iter().cloned().collect(),
+                    expected_arguments: arguments,
+                });
+            }
+
+            Ok(Self { arguments, terms })
         }
-
-        Ok(Self { arguments, terms })
     }
 }
 
 /// An enum representing a the specification of a [`GateDefinition`] for a given [`GateType`]
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash)
+)]
 pub enum GateSpecification {
     /// A matrix of [`Expression`]s representing a unitary operation for a [`GateType::Matrix`].
     Matrix(Vec<Vec<Expression>>),
@@ -907,24 +963,31 @@ impl Quil for GateSpecification {
 
 /// A struct encapsulating a quil Gate Definition
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
+)]
 pub struct GateDefinition {
     pub name: String,
     pub parameters: Vec<String>,
     pub specification: GateSpecification,
 }
 
-impl GateDefinition {
-    pub fn new(
-        name: String,
-        parameters: Vec<String>,
-        specification: GateSpecification,
-    ) -> Result<Self, GateError> {
-        validate_user_identifier(&name)?;
-        Ok(Self {
-            name,
-            parameters,
-            specification,
-        })
+pickleable_new! {
+    impl GateDefinition {
+        pub fn new(
+            name: String,
+            parameters: Vec<String>,
+            specification: GateSpecification,
+        ) -> Result<GateDefinition, GateError> {
+            validate_user_identifier(&name)?;
+            Ok(Self {
+                name,
+                parameters,
+                specification,
+            })
+        }
     }
 }
 

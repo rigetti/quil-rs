@@ -19,6 +19,11 @@ use std::{
     fmt::Debug,
 };
 
+#[cfg(not(feature = "python"))]
+use optipy::strip_pyo3;
+#[cfg(feature = "stubs")]
+use pyo3_stub_gen::derive::gen_stub_pyclass;
+
 use crate::{
     instruction::{
         Instruction, InstructionHandler, Jump, JumpUnless, JumpWhen, Label, MemoryReference, Target,
@@ -56,8 +61,13 @@ impl<'p> ControlFlowGraph<'p> {
 }
 
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(name = "ControlFlowGraph", module = "quil.program", subclass, frozen)
+)]
 pub struct ControlFlowGraphOwned {
-    blocks: Vec<BasicBlockOwned>,
+    pub(crate) blocks: Vec<BasicBlockOwned>,
 }
 
 impl From<ControlFlowGraph<'_>> for ControlFlowGraphOwned {
@@ -117,11 +127,53 @@ impl<'p> BasicBlock<'p> {
 
     /// Compute the flattened schedule for this [`BasicBlock`] in terms of seconds,
     /// using a default built-in calculation for the duration of scheduled instructions.
+    /// See [`BasicBlockOwned::as_schedule`].
     ///
     /// # Arguments
     ///
-    /// * `program` - The program containing this basic block. This is used to retrieve frame
-    ///   and calibration information.
+    /// * `program` - The program containing this basic block.
+    ///   This is used to retrieve frame and calibration information.
+    ///   Generally, this should be the program
+    ///   from which the block was extracted.
+    ///
+    /// # How it Works
+    ///
+    /// * Expanding each instruction within the block using the program's calibration definitions
+    /// * Resolving the `ScheduleSeconds` of the expanded instructions
+    /// * Mapping calibrated instructions back to the original instructions within this block,
+    ///   such that the block's instruction is represented as a timespan encompassing all of its expanded instructions
+    ///
+    /// # Notes
+    ///
+    /// If the basic block contains gates,
+    /// the program must contain corresponding `DEFCAL`s for those gates.
+    /// Gates do not inherently have durations,
+    /// but rather inherit them from the `PULSE`, `CAPTURE`, `DELAY`,
+    /// and other instructions within their calibrations.
+    /// Without a calibration, a gate's duration cannot be computed.
+    ///
+    /// # Python Example
+    ///
+    /// For Python users, the following example demonstrates construction
+    /// of such a schedule for a simple program
+    /// without explicit control flow (and thus with only one basic block):
+    ///
+    /// ```python
+    /// from quil.program import Program
+    ///
+    /// program = Program.parse("CZ 0 1; CZ 0 2")
+    /// print(program.to_quil())
+    ///
+    /// control_flow_graph = program.control_flow_graph()
+    /// assert control_flow_graph.has_dynamic_control_flow() == False
+    ///
+    /// basic_blocks = control_flow_graph.basic_blocks()
+    /// assert len(basic_blocks) == 1
+    ///
+    /// schedule = blocks[0].as_schedule_seconds(program)
+    /// print(f"Duration = {schedule.duration()}")
+    /// print(schedule.items())
+    /// ```
     pub fn as_schedule_seconds(
         &self,
         program: &Program,
@@ -248,7 +300,7 @@ impl<'p> BasicBlock<'p> {
     }
 }
 
-// TODO: Address https://github.com/rigetti/quil-rs/issues/453
+// TODO (#453): Address large error types.
 #[allow(clippy::large_enum_variant)]
 #[allow(clippy::enum_variant_names)]
 #[derive(Debug, thiserror::Error)]
@@ -263,12 +315,28 @@ pub enum BasicBlockScheduleError {
     ProgramError(#[from] ProgramError),
 }
 
+// TODO (#472): The conversions to/from these Owned types and their non-Owned counterparts
+// involves a lot of Cloning, and they're the types exposed by the Python bindings.
+// Can we combine their relevant methods or otherwise avoid the costly conversions?
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(name = "BasicBlock", module = "quil.program", subclass)
+)]
+#[cfg_attr(not(feature = "python"), strip_pyo3)]
 pub struct BasicBlockOwned {
+    /// The label of the block, if any.
+    /// This is used to target this block in control flow.
+    #[pyo3(get)]
     label: Option<Target>,
+    /// A list of the instructions in the block, in order of definition.
+    ///
+    /// This does not include the label or terminator instructions.
+    #[pyo3(get)]
     instructions: Vec<Instruction>,
     instruction_index_offset: usize,
-    terminator: BasicBlockTerminatorOwned,
+    pub(crate) terminator: BasicBlockTerminatorOwned,
 }
 
 impl From<BasicBlock<'_>> for BasicBlockOwned {
@@ -349,7 +417,7 @@ impl BasicBlockTerminator<'_> {
             BasicBlockTerminator::Jump { target } => Some(Instruction::Jump(Jump {
                 target: target.clone(),
             })),
-            BasicBlockTerminator::Halt => Some(Instruction::Halt),
+            BasicBlockTerminator::Halt => Some(Instruction::Halt()),
         }
     }
 }
@@ -432,7 +500,7 @@ impl<'p> From<&'p Program> for ControlFlowGraph<'p> {
                 | Instruction::Pragma(_)
                 | Instruction::Measurement(_)
                 | Instruction::Move(_)
-                | Instruction::Nop
+                | Instruction::Nop()
                 | Instruction::Pulse(_)
                 | Instruction::RawCapture(_)
                 | Instruction::Reset(_)
@@ -444,7 +512,7 @@ impl<'p> From<&'p Program> for ControlFlowGraph<'p> {
                 | Instruction::Store(_)
                 | Instruction::SwapPhases(_)
                 | Instruction::UnaryLogic(_)
-                | Instruction::Wait => current_block_instructions.push(instruction),
+                | Instruction::Wait() => current_block_instructions.push(instruction),
 
                 Instruction::CalibrationDefinition(_)
                 | Instruction::CircuitDefinition(_)
@@ -474,7 +542,7 @@ impl<'p> From<&'p Program> for ControlFlowGraph<'p> {
                 Instruction::Jump(_)
                 | Instruction::JumpUnless(_)
                 | Instruction::JumpWhen(_)
-                | Instruction::Halt => {
+                | Instruction::Halt() => {
                     let terminator = match instruction {
                         Instruction::Jump(jump) => BasicBlockTerminator::Jump {
                             target: &jump.target,
@@ -491,7 +559,7 @@ impl<'p> From<&'p Program> for ControlFlowGraph<'p> {
                             target: &jump_when.target,
                             jump_if_condition_zero: false,
                         },
-                        Instruction::Halt => BasicBlockTerminator::Halt,
+                        Instruction::Halt() => BasicBlockTerminator::Halt,
                         _ => unreachable!(),
                     };
                     let block = BasicBlock {

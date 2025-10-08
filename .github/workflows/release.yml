@@ -1,4 +1,4 @@
-name: Release
+name: Prepare Release
 
 on:
   push:
@@ -11,35 +11,43 @@ on:
     inputs:
       type:
         description: Bump versions and trigger a new release.
+        type: choice
         required: true
         default: release
         options:
           - release
           - prerelease
+          - dry-run 
 
 jobs:
   release:
+    if: ${{ ! (github.event_name == 'push' && contains(github.event.head_commit.message, 'prepare release [skip ci]' )) }}
     runs-on: ubuntu-latest
     env:
       GITHUB_TOKEN: ${{ secrets.PAT }}
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v5
       with:
         fetch-depth: 0
-        token: ${{ secrets.PAT }}
+
+    - name: Configure Git
+      run: |
+        git config --global user.name "${{ github.triggering_actor }}"
+        git config --global user.email "${{ github.triggering_actor}}@users.noreply.github.com"
+
     - name: Install Knope
       uses: knope-dev/action@v2.1.0
       with:
         version: 0.21.3 # Test before updating, breaking changes likely: https://github.com/knope-dev/action#install-latest-version
-    - run: |
-        git config --global user.name "${{ github.triggering_actor }}"
-        git config --global user.email "${{ github.triggering_actor}}@users.noreply.github.com"
+
     - name: Dry-run Release
       run: knope release --verbose --dry-run
-      if: github.event_name == 'pull_request'
+      if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.type == 'dry-run')
+
     - name: Prepare Prerelease
       run: knope release --verbose --prerelease-label=rc
       if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.type == 'prerelease')
+
     - name: Prepare Release
       run: knope release --verbose
       if: github.event_name == 'workflow_dispatch' && inputs.type == 'release'

@@ -1,3 +1,368 @@
+## 0.33.0-rc.4 (2025-10-06)
+
+### Breaking Changes
+
+- Drop support for Python 3.9.
+- fix getters for Call arguments
+- remove unused-but-public `MemoryAccess` type
+- rename `Calibration` to `CalibrationDefinition` and clean up the associated code
+- fix `MeasureCalibrationDefinition`'s fields
+- backport breaking changes from #479 (#482)
+- upgrade pyo3 and stub_gen versions
+- use SCREAMING_SNAKE_CASE for simple enums
+
+### Features
+
+- add pickle impls for instructions
+- unite Instruction macros
+- impl __getnewargs__
+- feature-gate python-related elements
+- make WaveformInvocation pickleable
+- allow stripping only stub_gen attrs
+- generate python stubs
+- improve linting script
+- add command to generate stub files
+- add more generated stubs
+- add more stub gen attributes
+- generate stubs for base Quil exception
+- improve lint script stub attr discovery
+- make enums copyable and pickleable
+- teach lint script a bunch more tricks
+- strip more pyo3 attrs
+- update Python support
+- let knope manage quil-cli version
+- catch suspicious method names
+- generate `.pyi` stub files' contents in a consistent order
+- generate `.pyi` stub files' contents in a consistent order (#481)
+- correctly set module for error stubs
+- add __getnewargs__ to BinaryOperand
+- set default log-level to warning
+- teach linter to catch missing rename_all
+- upgrade pyo3-stub-gen and remove workarounds
+
+### Fixes
+
+- add missing parse impls
+- add missing rename annotation
+- expose missing error types
+- PiConstant should be named pi in Python
+- Program.filter_instruction from Python should return a Program
+- CalibrationIdentifier uses different argument order for Python constructor
+- add missing Python constructor for WaveformInvocation
+- Python version of TimeSpanSeconds calls "start_time" just "start"
+- adjust tests to fix modified quil API
+- remove unneeded get_all annotation on enum
+- typos and mistakes in module exports
+- transfer subclass annotations
+- gate enum naming
+- add getters for Gate
+- getters for interned expressions
+- enum casing
+- add missing constructors
+- add missing dagger method
+- share to_real impl
+- allow mutating FrameDefinition
+- FunctionCallExpression.expression is a getter
+- make parse static, not classmethod
+- allow setting properties on non-hash classes
+- restore module def on Expression
+- add missing module metadata
+- badly replaced error names
+- another badly replaced error name
+- add InstructionError to module
+- update validation module properties
+- make GateDefinition pickleable
+- make FrameIdentifier pickleable
+- significant clean-up for pickling
+- correct broken tests
+- to_unitary name and bounds
+- update sync_versions script
+- use correct macro for QuilError
+- use an f-string syntax supported in older pythons
+- restore original waveform public items
+- output correct types for some stub overrides
+
+## 0.33.0-rc.3 (2025-09-30)
+
+### Breaking Changes
+
+- Drop support for Python 3.9.
+- fix getters for Call arguments
+- remove unused-but-public `MemoryAccess` type
+- rename `Calibration` to `CalibrationDefinition` and clean up the associated code
+- fix `MeasureCalibrationDefinition`'s fields
+- backport breaking changes from #479 (#482)
+
+### Features
+
+- add pickle impls for instructions
+- unite Instruction macros
+- impl __getnewargs__
+- feature-gate python-related elements
+- make WaveformInvocation pickleable
+- allow stripping only stub_gen attrs
+- generate python stubs
+- improve linting script
+- add command to generate stub files
+- add more generated stubs
+- add more stub gen attributes
+- generate stubs for base Quil exception
+- improve lint script stub attr discovery
+- make enums copyable and pickleable
+- teach lint script a bunch more tricks
+- strip more pyo3 attrs
+- update Python support
+- let knope manage quil-cli version
+- catch suspicious method names
+- generate `.pyi` stub files' contents in a consistent order
+- generate `.pyi` stub files' contents in a consistent order (#481)
+
+### Fixes
+
+- add missing parse impls
+- add missing rename annotation
+- expose missing error types
+- PiConstant should be named pi in Python
+- Program.filter_instruction from Python should return a Program
+- CalibrationIdentifier uses different argument order for Python constructor
+- add missing Python constructor for WaveformInvocation
+- Python version of TimeSpanSeconds calls "start_time" just "start"
+- adjust tests to fix modified quil API
+- remove unneeded get_all annotation on enum
+- typos and mistakes in module exports
+- transfer subclass annotations
+- gate enum naming
+- add getters for Gate
+- getters for interned expressions
+- enum casing
+- add missing constructors
+- add missing dagger method
+- share to_real impl
+- allow mutating FrameDefinition
+- FunctionCallExpression.expression is a getter
+- make parse static, not classmethod
+- allow setting properties on non-hash classes
+- restore module def on Expression
+- add missing module metadata
+- badly replaced error names
+- another badly replaced error name
+- add InstructionError to module
+- update validation module properties
+- make GateDefinition pickleable
+- make FrameIdentifier pickleable
+- significant clean-up for pickling
+- correct broken tests
+- to_unitary name and bounds
+- update sync_versions script
+- use correct macro for QuilError
+- use an f-string syntax supported in older pythons
+- restore original waveform public items
+- output correct types for some stub overrides
+
+## 0.33.0-rc.2 (2025-09-17)
+
+### Breaking Changes
+
+- Drop support for Python 3.9.
+
+### Features
+
+- add pickle impls for instructions
+- unite Instruction macros
+- impl __getnewargs__
+- feature-gate python-related elements
+- make WaveformInvocation pickleable
+- allow stripping only stub_gen attrs
+- generate python stubs
+- improve linting script
+- add command to generate stub files
+- add more generated stubs
+- add more stub gen attributes
+- generate stubs for base Quil exception
+- improve lint script stub attr discovery
+- make enums copyable and pickleable
+- teach lint script a bunch more tricks
+- strip more pyo3 attrs
+- update Python support
+- let knope manage quil-cli version
+
+### Fixes
+
+- add missing parse impls
+- add missing rename annotation
+- expose missing error types
+- PiConstant should be named pi in Python
+- Program.filter_instruction from Python should return a Program
+- CalibrationIdentifier uses different argument order for Python constructor
+- add missing Python constructor for WaveformInvocation
+- Python version of TimeSpanSeconds calls "start_time" just "start"
+- adjust tests to fix modified quil API
+- remove unneeded get_all annotation on enum
+- typos and mistakes in module exports
+- transfer subclass annotations
+- gate enum naming
+- add getters for Gate
+- getters for interned expressions
+- enum casing
+- add missing constructors
+- add missing dagger method
+- share to_real impl
+- allow mutating FrameDefinition
+- FunctionCallExpression.expression is a getter
+- make parse static, not classmethod
+- allow setting properties on non-hash classes
+- restore module def on Expression
+- add missing module metadata
+- badly replaced error names
+- another badly replaced error name
+- add InstructionError to module
+- update validation module properties
+- make GateDefinition pickleable
+- make FrameIdentifier pickleable
+- significant clean-up for pickling
+- correct broken tests
+- to_unitary name and bounds
+- update sync_versions script
+- use correct macro for QuilError
+- use an f-string syntax supported in older pythons
+- restore original waveform public items
+
+## 0.33.0-rc.1 (2025-09-17)
+
+### Breaking Changes
+
+- Drop support for Python 3.9.
+
+### Features
+
+- add pickle impls for instructions
+- unite Instruction macros
+- impl __getnewargs__
+- feature-gate python-related elements
+- make WaveformInvocation pickleable
+- allow stripping only stub_gen attrs
+- generate python stubs
+- improve linting script
+- add command to generate stub files
+- add more generated stubs
+- add more stub gen attributes
+- generate stubs for base Quil exception
+- improve lint script stub attr discovery
+- make enums copyable and pickleable
+- teach lint script a bunch more tricks
+- strip more pyo3 attrs
+- update Python support
+- let knope manage quil-cli version
+
+### Fixes
+
+- add missing parse impls
+- add missing rename annotation
+- expose missing error types
+- PiConstant should be named pi in Python
+- Program.filter_instruction from Python should return a Program
+- CalibrationIdentifier uses different argument order for Python constructor
+- add missing Python constructor for WaveformInvocation
+- Python version of TimeSpanSeconds calls "start_time" just "start"
+- adjust tests to fix modified quil API
+- remove unneeded get_all annotation on enum
+- typos and mistakes in module exports
+- transfer subclass annotations
+- gate enum naming
+- add getters for Gate
+- getters for interned expressions
+- enum casing
+- add missing constructors
+- add missing dagger method
+- share to_real impl
+- allow mutating FrameDefinition
+- FunctionCallExpression.expression is a getter
+- make parse static, not classmethod
+- allow setting properties on non-hash classes
+- restore module def on Expression
+- add missing module metadata
+- badly replaced error names
+- another badly replaced error name
+- add InstructionError to module
+- update validation module properties
+- make GateDefinition pickleable
+- make FrameIdentifier pickleable
+- significant clean-up for pickling
+- correct broken tests
+- to_unitary name and bounds
+- update sync_versions script
+- use correct macro for QuilError
+- use an f-string syntax supported in older pythons
+- restore original waveform public items
+
+## 0.33.0-rc.0 (2025-09-17)
+
+### Breaking Changes
+
+- Drop support for Python 3.9.
+
+### Features
+
+- add pickle impls for instructions
+- unite Instruction macros
+- impl __getnewargs__
+- feature-gate python-related elements
+- make WaveformInvocation pickleable
+- allow stripping only stub_gen attrs
+- generate python stubs
+- improve linting script
+- add command to generate stub files
+- add more generated stubs
+- add more stub gen attributes
+- generate stubs for base Quil exception
+- improve lint script stub attr discovery
+- make enums copyable and pickleable
+- teach lint script a bunch more tricks
+- strip more pyo3 attrs
+- update Python support
+- let knope manage quil-cli version
+
+### Fixes
+
+- add missing parse impls
+- add missing rename annotation
+- expose missing error types
+- PiConstant should be named pi in Python
+- Program.filter_instruction from Python should return a Program
+- CalibrationIdentifier uses different argument order for Python constructor
+- add missing Python constructor for WaveformInvocation
+- Python version of TimeSpanSeconds calls "start_time" just "start"
+- adjust tests to fix modified quil API
+- remove unneeded get_all annotation on enum
+- typos and mistakes in module exports
+- transfer subclass annotations
+- gate enum naming
+- add getters for Gate
+- getters for interned expressions
+- enum casing
+- add missing constructors
+- add missing dagger method
+- share to_real impl
+- allow mutating FrameDefinition
+- FunctionCallExpression.expression is a getter
+- make parse static, not classmethod
+- allow setting properties on non-hash classes
+- restore module def on Expression
+- add missing module metadata
+- badly replaced error names
+- another badly replaced error name
+- add InstructionError to module
+- update validation module properties
+- make GateDefinition pickleable
+- make FrameIdentifier pickleable
+- significant clean-up for pickling
+- correct broken tests
+- to_unitary name and bounds
+- update sync_versions script
+- use correct macro for QuilError
+- use an f-string syntax supported in older pythons
+- restore original waveform public items
+
 ## 0.32.0 (2025-08-27)
 
 ### Breaking Changes

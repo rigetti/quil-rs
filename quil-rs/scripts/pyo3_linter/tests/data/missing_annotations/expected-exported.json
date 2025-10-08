@@ -1,0 +1,102 @@
+{
+  "quil": {
+    "submodule": false,
+    "props": {
+      "name": "_quil"
+    },
+    "items": [
+      {
+        "rust_name": "SomeError",
+        "python_name": "SomeError",
+        "kind": "Error",
+        "props": {},
+        "stub_attr": null
+      }
+    ]
+  },
+  "quil.instructions": {
+    "submodule": true,
+    "props": {
+      "name": "instructions",
+      "module": "quil",
+      "submodule": true
+    },
+    "items": [
+      {
+        "rust_name": "EnumA",
+        "python_name": "EnumA",
+        "kind": "Class",
+        "props": {},
+        "stub_attr": null
+      },
+      {
+        "rust_name": "EnumB",
+        "python_name": "EnumB",
+        "kind": "Class",
+        "props": {},
+        "stub_attr": null
+      },
+      {
+        "rust_name": "InstA",
+        "python_name": "InstA",
+        "kind": "Class",
+        "props": {},
+        "stub_attr": null
+      },
+      {
+        "rust_name": "InstB",
+        "python_name": "InstB",
+        "kind": "Class",
+        "props": {},
+        "stub_attr": null
+      },
+      {
+        "rust_name": "InstC",
+        "python_name": "InstC",
+        "kind": "Class",
+        "props": {},
+        "stub_attr": null
+      },
+      {
+        "rust_name": "InstructionError",
+        "python_name": "InstructionError",
+        "kind": "Error",
+        "props": {},
+        "stub_attr": null
+      },
+      {
+        "rust_name": "SimpleEnum",
+        "python_name": "SimpleEnum",
+        "kind": "Class",
+        "props": {},
+        "stub_attr": null
+      },
+      {
+        "rust_name": "SomeKindOfError",
+        "python_name": "SomeKindOfError",
+        "kind": "Error",
+        "props": {},
+        "stub_attr": null
+      },
+      {
+        "rust_name": "a_different_name",
+        "python_name": "a_different_name",
+        "kind": "Function",
+        "props": {},
+        "stub_attr": null
+      },
+      {
+        "rust_name": "a_different_name",
+        "python_name": "some_function",
+        "kind": "Function",
+        "props": {
+          "name": "some_function"
+        },
+        "stub_attr": {
+          "kind": "Function",
+          "module": "quil.instructions"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,6 @@
+[
+  {
+    "package_kind": "Export",
+    "message": "  Didn't find `fix_complex_enums!` for 'quil.instructions.EnumA'\n     (enum 'EnumA' in somecode.rs@20)"
+  }
+]

@@ -2,7 +2,7 @@
 //!
 //! See the [Quil spec](https://quil-lang.github.io/).
 
-// TODO: Address https://github.com/rigetti/quil-rs/issues/452
+// TODO (#452): Address large result types.
 #![allow(clippy::result_large_err)]
 
 use std::fmt::Debug;
@@ -250,7 +250,7 @@ fn should_be_real(
                 Ok(())
             }
         }
-        Expression::PiConstant => Ok(()),
+        Expression::PiConstant() => Ok(()),
         Expression::Prefix(PrefixExpression { expression, .. }) => {
             should_be_real(instruction, expression, memory_regions)
         }

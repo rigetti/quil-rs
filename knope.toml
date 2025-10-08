@@ -1,12 +1,23 @@
-[packages.quil-rs]
-versioned_files = ["quil-rs/Cargo.toml", "Cargo.lock"]
-changelog = "quil-rs/CHANGELOG.md"
-scopes = ["rs", "rust", "quil-rs"]
+# At one point, the Rust library and Python bindings were separate crates,
+# but now they live together, so now they share all the same scopes.
+# For a related reason, we now enforce the Rust crate and Python package
+# share the same version number; it also eliminates ambiguity
+# when discussing issues related to some version of the Python bindings,
+# as they necessarily reference the equivalent version of the Rust crate.
+#
+# Note that unscoped conventional commit messages (of `feat` or `fix` type)
+# will necessarily show up in the CHANGELOG for `quil-cli`.
 
-[packages.quil-py]
-versioned_files = ["quil-py/Cargo.toml", "quil-py/pyproject.toml", "Cargo.lock"]
-changelog = "quil-py/CHANGELOG.md"
-scopes = ["py", "python", "quil-py"]
+[packages.quil-rs]
+versioned_files = [
+    "quil-rs/Cargo.toml",
+    "quil-rs/pyproject.toml",
+    "Cargo.lock",
+    # Update the quil-rs version in quil-cli
+    { path = "quil-cli/Cargo.toml", dependency = "quil-rs" },
+]
+changelog = "quil-rs/CHANGELOG.md"
+scopes = ["quil-rs", "rs", "rust", "quil-py", "py", "python"]
 
 [packages.quil-cli]
 versioned_files = ["quil-cli/Cargo.toml", "Cargo.lock"]
@@ -18,18 +29,6 @@ name = "release"
 
 [[workflows.steps]]
 type = "PrepareRelease"
-
-[[workflows.steps]]
-type = "Command"
-command = "sh ./scripts/sync_versions.sh"
-
-[[workflows.steps]]
-type = "Command"
-command = "git add quil-py/Cargo.toml"
-
-[[workflows.steps]]
-type = "Command"
-command = "git add quil-cli/Cargo.toml"
 
 [[workflows.steps]]
 type = "Command"
