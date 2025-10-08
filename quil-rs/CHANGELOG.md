@@ -1,3 +1,9 @@
+## 0.33.0-rc.5 (2025-10-08)
+
+### Breaking Changes
+
+- merge quil-py into quil-rs (#462)
+
 ## 0.33.0-rc.4 (2025-10-06)
 
 ### Breaking Changes
