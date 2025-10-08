@@ -32,6 +32,34 @@
                     <li><a href="quil/waveforms.html">waveforms</a></li>
             </ul>
 
+            <h2>API Documentation</h2>
+                <ul class="memberlist">
+            <li>
+                    <a class="class" href="#QuilError">QuilError</a>
+                            <ul class="memberlist">
+                </ul>
+
+            </li>
+            <li>
+                    <a class="class" href="#ValueError">ValueError</a>
+                            <ul class="memberlist">
+                </ul>
+
+            </li>
+            <li>
+                    <a class="class" href="#ToQuilStringError">ToQuilStringError</a>
+                            <ul class="memberlist">
+                </ul>
+
+            </li>
+            <li>
+                    <a class="class" href="#PickleError">PickleError</a>
+                            <ul class="memberlist">
+                </ul>
+
+            </li>
+    </ul>
+
 
 
         <a class="attribution" title="pdoc: Python API documentation generator" href="https://pdoc.dev" target="_blank">
@@ -55,16 +83,80 @@ quil    </h1>
 
                         <label class="view-source-button" for="mod-quil-view-source"><span>View Source</span></label>
 
-                        <div class="pdoc-code codehilite"><pre><span></span><span id="L-1"><a href="#L-1"><span class="linenos">1</span></a><span class="sd">&quot;&quot;&quot;The `quil` package provides tools for constructing, manipulating, parsing, and printing [Quil](https://github.com/quil-lang/quil) programs.</span>
-</span><span id="L-2"><a href="#L-2"><span class="linenos">2</span></a>
-</span><span id="L-3"><a href="#L-3"><span class="linenos">3</span></a><span class="sd">⚠️ This package is still in early development and breaking changes should be expected between minor versions.</span>
-</span><span id="L-4"><a href="#L-4"><span class="linenos">4</span></a><span class="sd">&quot;&quot;&quot;</span>
-</span><span id="L-5"><a href="#L-5"><span class="linenos">5</span></a>
-</span><span id="L-6"><a href="#L-6"><span class="linenos">6</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">.quil</span><span class="w"> </span><span class="kn">import</span> <span class="o">*</span>
+                        <div class="pdoc-code codehilite"><pre><span></span><span id="L-1"><a href="#L-1"><span class="linenos"> 1</span></a><span class="sd">&quot;&quot;&quot;The `quil` package provides tools for constructing, manipulating, parsing, and printing [Quil](https://github.com/quil-lang/quil) programs.</span>
+</span><span id="L-2"><a href="#L-2"><span class="linenos"> 2</span></a>
+</span><span id="L-3"><a href="#L-3"><span class="linenos"> 3</span></a><span class="sd">⚠️ This package is still in early development and breaking changes should be expected between minor versions.</span>
+</span><span id="L-4"><a href="#L-4"><span class="linenos"> 4</span></a><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="L-5"><a href="#L-5"><span class="linenos"> 5</span></a>
+</span><span id="L-6"><a href="#L-6"><span class="linenos"> 6</span></a><span class="c1"># The following code exposes the _quil package contents under the namespace quil.</span>
+</span><span id="L-7"><a href="#L-7"><span class="linenos"> 7</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">.</span><span class="w"> </span><span class="kn">import</span> <span class="n">_quil</span>
+</span><span id="L-8"><a href="#L-8"><span class="linenos"> 8</span></a><span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">_quil</span><span class="o">.</span><span class="n">__all__</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">_quil</span><span class="o">.</span><span class="n">__all__</span><span class="p">)</span>
+</span><span id="L-9"><a href="#L-9"><span class="linenos"> 9</span></a><span class="n">exec</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;from ._quil import </span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">_quil</span><span class="o">.</span><span class="n">__all__</span><span class="p">)</span><span class="si">}</span><span class="s2">; __all__ = </span><span class="si">{</span><span class="n">_quil</span><span class="o">.</span><span class="n">__all__</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="L-10"><a href="#L-10"><span class="linenos">10</span></a><span class="k">del</span> <span class="n">_quil</span>
 </span></pre></div>
 
 
             </section>
+                <section id="QuilError">
+                    <div class="attr class">
+            
+    <span class="def">class</span>
+    <span class="name">QuilError</span><wbr>(<span class="base">builtins.Exception</span>):
+
+        
+    </div>
+    <a class="headerlink" href="#QuilError"></a>
+    
+            <div class="docstring"><p>Base exception type for errors raised by this package.</p>
+</div>
+
+
+                </section>
+                <section id="ValueError">
+                    <div class="attr class">
+            
+    <span class="def">class</span>
+    <span class="name">ValueError</span><wbr>(<span class="base"><a href="#QuilError">QuilError</a></span>):
+
+        
+    </div>
+    <a class="headerlink" href="#ValueError"></a>
+    
+            <div class="docstring"><p>Raised when an argument to a quil function has an inappropriate value.</p>
+</div>
+
+
+                </section>
+                <section id="ToQuilStringError">
+                    <div class="attr class">
+            
+    <span class="def">class</span>
+    <span class="name">ToQuilStringError</span><wbr>(<span class="base"><a href="#QuilError">QuilError</a></span>):
+
+        
+    </div>
+    <a class="headerlink" href="#ToQuilStringError"></a>
+    
+            <div class="docstring"><p>Errors which can occur when converting a Quil item to a string.</p>
+</div>
+
+
+                </section>
+                <section id="PickleError">
+                    <div class="attr class">
+            
+    <span class="def">class</span>
+    <span class="name">PickleError</span><wbr>(<span class="base"><a href="#QuilError">QuilError</a></span>):
+
+        
+    </div>
+    <a class="headerlink" href="#PickleError"></a>
+    
+            <div class="docstring"><p>Errors when trying to pickle or deepcopy.</p>
+</div>
+
+
+                </section>
     </main>
 <script>
     function escapeHTML(html) {

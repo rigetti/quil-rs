@@ -68,7 +68,7 @@
                     <div class="attr class">
             
     <span class="def">class</span>
-    <span class="name">IdentifierValidationError</span><wbr>(<span class="base">builtins.ValueError</span>):
+    <span class="name">IdentifierValidationError</span><wbr>(<span class="base"><a href="../../quil.html#QuilError">quil.QuilError</a></span>):
 
         
     </div>
@@ -83,13 +83,13 @@
                     <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">validate_identifier</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">ident</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">):</span></span>
+        <span class="name">validate_identifier</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">ident</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
         
     </div>
     <a class="headerlink" href="#validate_identifier"></a>
     
-            <div class="docstring"><p>Raises an `<code><a href="#IdentifierValidationError">IdentifierValidationError</a></code> if ident isn't a valid Quil identifier.</p>
+            <div class="docstring"><p>Returns an error if the given identifier is not a valid Quil Identifier.</p>
 </div>
 
 
@@ -98,13 +98,13 @@
                     <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">validate_user_identifier</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">ident</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">):</span></span>
+        <span class="name">validate_user_identifier</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">ident</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
 
         
     </div>
     <a class="headerlink" href="#validate_user_identifier"></a>
     
-            <div class="docstring"><p>Raises an `<code><a href="#IdentifierValidationError">IdentifierValidationError</a></code> if ident is reserved keyword or isn't a valid Quil identifier.</p>
+            <div class="docstring"><p>Returns an error if the given identifier is reserved, or if it is not a valid Quil identifier</p>
 </div>
 
 

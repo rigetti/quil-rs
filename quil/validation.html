@@ -33,6 +33,22 @@
                     <li><a href="validation/identifier.html">identifier</a></li>
             </ul>
 
+            <h2>API Documentation</h2>
+                <ul class="memberlist">
+            <li>
+                    <a class="class" href="#IdentifierValidationError">IdentifierValidationError</a>
+                            <ul class="memberlist">
+                </ul>
+
+            </li>
+            <li>
+                    <a class="function" href="#validate_identifier">validate_identifier</a>
+            </li>
+            <li>
+                    <a class="function" href="#validate_user_identifier">validate_user_identifier</a>
+            </li>
+    </ul>
+
 
 
         <a class="attribution" title="pdoc: Python API documentation generator" href="https://pdoc.dev" target="_blank">
@@ -52,6 +68,51 @@
                 
                 
             </section>
+                <section id="IdentifierValidationError">
+                    <div class="attr class">
+            
+    <span class="def">class</span>
+    <span class="name">IdentifierValidationError</span><wbr>(<span class="base"><a href="../quil.html#QuilError">quil.QuilError</a></span>):
+
+        
+    </div>
+    <a class="headerlink" href="#IdentifierValidationError"></a>
+    
+            <div class="docstring"><p>Errors that may occur when validating a Quil identifier.</p>
+</div>
+
+
+                </section>
+                <section id="validate_identifier">
+                    <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">validate_identifier</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">ident</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#validate_identifier"></a>
+    
+            <div class="docstring"><p>Returns an error if the given identifier is not a valid Quil Identifier.</p>
+</div>
+
+
+                </section>
+                <section id="validate_user_identifier">
+                    <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">validate_user_identifier</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">ident</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#validate_user_identifier"></a>
+    
+            <div class="docstring"><p>Returns an error if the given identifier is reserved, or if it is not a valid Quil identifier</p>
+</div>
+
+
+                </section>
     </main>
 <script>
     function escapeHTML(html) {
