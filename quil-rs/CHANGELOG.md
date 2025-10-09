@@ -1,3 +1,13 @@
+## 0.33.0-rc.6 (2025-10-09)
+
+### Breaking Changes
+
+- merge quil-py into quil-rs (#462)
+
+### Features
+
+- harmonize `PartialEq`, `Eq`, `Hash`, and floating point numbers (#474)
+
 ## 0.33.0-rc.5 (2025-10-08)
 
 ### Breaking Changes
