@@ -24,7 +24,7 @@ use super::{
 /// - [Read][Self::Read] and [write][Self::Write] actions are also plain instructions, since they
 ///   don't need to track any extra data.
 ///
-/// - The resulting [dependencies][Self::Dependency] are pairs consisting of a program instructions
+/// - The resulting [dependencies][Self::Dependency] are pairs consisting of a program instruction
 ///   and an enum value telling you whether that instruction performed a read or a write.
 ///
 /// The trait bounds on this type and its associated types are largely for convenient `derive`-ing
@@ -42,7 +42,7 @@ pub(super) trait Access: Copy + Eq + Hash + Debug {
     /// How dependencies on actions are reported.
     type Dependency: Copy + Eq + Hash + Debug;
 
-    /// Returns the implicit initial write action, if there is one
+    /// Returns the implicit initial write action, if there is one.
     fn initial_writer() -> Option<Self::Write>;
 
     /// Given an access type and an action, indicate whether that action was a read or a write of
@@ -158,8 +158,8 @@ impl Access for InstructionFrameInteraction {
     #[inline]
     fn classify(self, action: Self::Action) -> AccessingAction<Self> {
         match self {
-            InstructionFrameInteraction::Blocking => AccessingAction::Read(action),
-            InstructionFrameInteraction::Using => AccessingAction::Write(action),
+            Self::Blocking => AccessingAction::Read(action),
+            Self::Using => AccessingAction::Write(action),
         }
     }
 
@@ -183,14 +183,14 @@ impl Access for InstructionFrameInteraction {
 /// 2. All reads must happen-before subsequent writes.
 /// 3. There are no dependencies between reads.
 ///
-///  This allows scheduling to reorder reads without allowing them to lose track of where their
-///  value came from.
+/// This allows scheduling to reorder reads without allowing them to lose track of where their
+/// value came from.
 ///
 /// This queue keeps track of the most recent write access to the resource, if any, as well as all
 /// reads that have been performed since that write.  Every access (read or write)
 /// [recorded][Self::record_access_and_get_dependencies] after that write access incurs a dependency
 /// on said write.  When a subsequent write access is performed, it incurs as a dependency both the
-/// prior most recent write as well as all outstanding reads; this new write becomes the most recent
+/// prior most recent write as well as all reads between the two; this new write becomes the most recent
 /// write, with no reads that have been performed since it.
 ///
 /// # Examples

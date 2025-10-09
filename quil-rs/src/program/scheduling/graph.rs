@@ -692,7 +692,7 @@ MUL params2[0] 2                    # reads and writes params2
     }
 
     // Because memory reading and writing dependencies also apply to RfControl instructions, we
-    // expect edges from the first load to the first shift-phase (0 -> 1) as well as to the the
+    // expect edges from the first load to the first shift-phase (0 -> 1) as well as to the
     // second load (0 -> 2), from the first shift-phase to the second load (1 -> 2), and from the
     // second load to the second shift-phase (2 -> 3).
     build_dot_format_snapshot_test_case! {
