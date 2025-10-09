@@ -44,6 +44,20 @@ def test_measure_calibration_getters():
         [],
     )
 
+    assert calibration.name is None
+    assert calibration.qubit == placeholder
+    assert calibration.target == "addr"
+    assert calibration.instructions == []
+
+def test_named_measure_calibration_getters():
+    placeholder = Qubit.Placeholder(QubitPlaceholder())
+
+    calibration = MeasureCalibrationDefinition(
+        MeasureCalibrationIdentifier(placeholder, "addr", name = "midcircuit"),
+        [],
+    )
+
+    assert calibration.name == "midcircuit"
     assert calibration.qubit == placeholder
     assert calibration.target == "addr"
     assert calibration.instructions == []
