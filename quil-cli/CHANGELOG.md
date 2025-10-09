@@ -1,3 +1,19 @@
+## 0.10.0-rc.4 (2025-10-09)
+
+### Breaking Changes
+
+- merge quil-py into quil-rs (#462)
+- memory dependencies correctly remember writes (#477)
+
+### Features
+
+- harmonize `PartialEq`, `Eq`, `Hash`, and floating point numbers (#474)
+- per @mingyoungjeng, try unifying `MemoryAccessQueue` and `PreviousNodes`
+
+### Fixes
+
+- memory access dependency computation correctly remembers writes
+
 ## 0.10.0-rc.3 (2025-10-09)
 
 ### Breaking Changes
