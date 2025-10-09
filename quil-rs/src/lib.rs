@@ -36,7 +36,7 @@
 //! [serializer]: crate::program::Program#method.to_string
 
 pub mod expression;
-mod hash;
+mod floating_point_eq;
 pub mod instruction;
 mod macros;
 pub(crate) mod parser;

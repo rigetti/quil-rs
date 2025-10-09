@@ -13,8 +13,7 @@
 // limitations under the License.
 
 use crate::{
-    hash::hash_f64,
-    imag,
+    floating_point_eq, imag,
     instruction::MemoryReference,
     parser::{lex, parse_expression, ParseError},
     program::{disallow_leftover, ParseProgramError},
@@ -209,14 +208,25 @@ impl PartialEq for Expression {
             (Self::Address(left), Self::Address(right)) => left == right,
             (Self::Infix(left), Self::Infix(right)) => left == right,
             (Self::Number(left), Self::Number(right)) => {
-                (left.re == right.re || left.re.is_nan() && right.re.is_nan())
-                    && (left.im == right.im || left.im.is_nan() && right.im.is_nan())
+                floating_point_eq::complex64::eq(*left, *right)
             }
             (Self::Prefix(left), Self::Prefix(right)) => left == right,
             (Self::FunctionCall(left), Self::FunctionCall(right)) => left == right,
             (Self::Variable(left), Self::Variable(right)) => left == right,
             (Self::PiConstant(), Self::PiConstant()) => true,
-            _ => false,
+
+            // This explicit or-pattern ensures that we'll get a compilation error if
+            // `Expression` grows another constructor.
+            (
+                Self::Address(_)
+                | Self::Infix(_)
+                | Self::Number(_)
+                | Self::Prefix(_)
+                | Self::FunctionCall(_)
+                | Self::Variable(_)
+                | Self::PiConstant(),
+                _,
+            ) => false,
         }
     }
 }
@@ -252,13 +262,7 @@ impl Hash for Expression {
             }
             Self::Number(n) => {
                 "Number".hash(state);
-                // Skip zero values (akin to `format_complex`).
-                if n.re.abs() > 0f64 {
-                    hash_f64(n.re, state)
-                }
-                if n.im.abs() > 0f64 {
-                    hash_f64(n.im, state)
-                }
+                floating_point_eq::complex64::hash(*n, state);
             }
             Self::PiConstant() => {
                 "PiConstant()".hash(state);
