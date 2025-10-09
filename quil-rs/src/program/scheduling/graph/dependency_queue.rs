@@ -271,6 +271,8 @@ impl<A: Access> DependencyQueue<A> {
     /// These actions are ones that could potentially be dependencies of any future action performed
     /// on the managed resource.
     pub(super) fn into_pending_dependencies(self) -> HashSet<A::Dependency> {
+        // We `collect` into a `HashSet` rather than returning an `impl Iterator` so that we get the
+        // unique-items enforcement.
         self.reads
             .into_iter()
             .map(A::read_dependency)
