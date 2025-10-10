@@ -1,7 +1,7 @@
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::gen_stub_pyclass;
 
-use crate::{pickleable_new, quil::Quil};
+use crate::quil::Quil;
 
 use super::{MemoryReference, Qubit};
 
@@ -17,9 +17,13 @@ pub struct Measurement {
     pub target: Option<MemoryReference>,
 }
 
-pickleable_new! {
-    impl Measurement {
-        pub fn new(name: Option<String>, qubit: Qubit, target: Option<MemoryReference>);
+impl Measurement {
+    pub const fn new(name: Option<String>, qubit: Qubit, target: Option<MemoryReference>) -> Self {
+        Self {
+            name,
+            qubit,
+            target,
+        }
     }
 }
 

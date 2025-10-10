@@ -3,6 +3,7 @@ from quil.expression import Expression
 from quil.instructions import (
     MeasureCalibrationDefinition,
     MeasureCalibrationIdentifier,
+    Measurement,
     PauliGate,
     PauliTerm,
     Qubit,
@@ -61,6 +62,26 @@ def test_named_measure_calibration_getters():
     assert calibration.qubit == placeholder
     assert calibration.target == "addr"
     assert calibration.instructions == []
+
+
+def test_measurement_getters():
+    placeholder = Qubit.Placeholder(QubitPlaceholder())
+
+    measurement = Measurement(placeholder, "addr")
+
+    assert measurement.name is None
+    assert measurement.qubit == placeholder
+    assert measurement.target == "addr"
+
+
+def test_named_measurement_getters():
+    placeholder = Qubit.Placeholder(QubitPlaceholder())
+
+    measurement = Measurement(placeholder, "addr", name = "midcircuit")
+
+    assert measurement.name == "midcircuit"
+    assert measurement.qubit == placeholder
+    assert measurement.target == "addr"
 
 
 @pytest.mark.xfail(reason="This underflows, but should raise a proper exception.")
