@@ -47,6 +47,9 @@
                     <a class="class" href="#Expression">Expression</a>
                             <ul class="memberlist">
                         <li>
+                                <a class="function" href="#Expression.to_real">to_real</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#Expression.into_simplified">into_simplified</a>
                         </li>
                         <li>
@@ -57,9 +60,6 @@
                         </li>
                         <li>
                                 <a class="function" href="#Expression.parse">parse</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Expression.to_real">to_real</a>
                         </li>
                         <li>
                                 <a class="class" href="#Expression.Address">Expression.Address</a>
@@ -131,10 +131,10 @@
                     <a class="class" href="#FunctionCallExpression">FunctionCallExpression</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#FunctionCallExpression.function">function</a>
+                                <a class="variable" href="#FunctionCallExpression.expression">expression</a>
                         </li>
                         <li>
-                                <a class="variable" href="#FunctionCallExpression.expression">expression</a>
+                                <a class="variable" href="#FunctionCallExpression.function">function</a>
                         </li>
                 </ul>
 
@@ -143,13 +143,13 @@
                     <a class="class" href="#InfixExpression">InfixExpression</a>
                             <ul class="memberlist">
                         <li>
+                                <a class="variable" href="#InfixExpression.operator">operator</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#InfixExpression.left">left</a>
                         </li>
                         <li>
                                 <a class="variable" href="#InfixExpression.right">right</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#InfixExpression.operator">operator</a>
                         </li>
                 </ul>
 
@@ -179,10 +179,10 @@
                     <a class="class" href="#PrefixExpression">PrefixExpression</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#PrefixExpression.expression">expression</a>
+                                <a class="variable" href="#PrefixExpression.operator">operator</a>
                         </li>
                         <li>
-                                <a class="variable" href="#PrefixExpression.operator">operator</a>
+                                <a class="variable" href="#PrefixExpression.expression">expression</a>
                         </li>
                 </ul>
 
@@ -284,6 +284,22 @@ NaNs, not unequal, in contravention of the IEEE 754 spec.</p>
 </div>
 
 
+                            <div id="Expression.to_real" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">to_real</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Expression.to_real"></a>
+    
+            <div class="docstring"><p>If this is a number with imaginary part "equal to" zero (of _small_ absolute value), return
+that number. Otherwise, error with an evaluation error of a descriptive type.</p>
+</div>
+
+
+                            </div>
                             <div id="Expression.into_simplified" class="classattr">
                                 <div class="attr function">
             
@@ -348,22 +364,6 @@ NaNs, not unequal, in contravention of the IEEE 754 spec.</p>
 
 
                             </div>
-                            <div id="Expression.to_real" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">to_real</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Expression.to_real"></a>
-    
-            <div class="docstring"><p>If this is a number with imaginary part "equal to" zero (of _small_ absolute value), return
-that number. Otherwise, error with an evaluation error of a descriptive type.</p>
-</div>
-
-
-                            </div>
                 </section>
                 <section id="Expression.Address">
                     <div class="attr class">
@@ -381,11 +381,11 @@ that number. Otherwise, error with an evaluation error of a descriptive type.</p
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#Expression">Expression</a></dt>
-                                <dd id="Expression.Address.into_simplified" class="function"><a href="#Expression.into_simplified">into_simplified</a></dd>
+                                <dd id="Expression.Address.to_real" class="function"><a href="#Expression.to_real">to_real</a></dd>
+                <dd id="Expression.Address.into_simplified" class="function"><a href="#Expression.into_simplified">into_simplified</a></dd>
                 <dd id="Expression.Address.evaluate" class="function"><a href="#Expression.evaluate">evaluate</a></dd>
                 <dd id="Expression.Address.substitute_variables" class="function"><a href="#Expression.substitute_variables">substitute_variables</a></dd>
                 <dd id="Expression.Address.parse" class="function"><a href="#Expression.parse">parse</a></dd>
-                <dd id="Expression.Address.to_real" class="function"><a href="#Expression.to_real">to_real</a></dd>
                 <dd id="Expression.Address.Address" class="class"><a href="#Expression.Address">Address</a></dd>
                 <dd id="Expression.Address.FunctionCall" class="class"><a href="#Expression.FunctionCall">FunctionCall</a></dd>
                 <dd id="Expression.Address.Infix" class="class"><a href="#Expression.Infix">Infix</a></dd>
@@ -414,11 +414,11 @@ that number. Otherwise, error with an evaluation error of a descriptive type.</p
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#Expression">Expression</a></dt>
-                                <dd id="Expression.FunctionCall.into_simplified" class="function"><a href="#Expression.into_simplified">into_simplified</a></dd>
+                                <dd id="Expression.FunctionCall.to_real" class="function"><a href="#Expression.to_real">to_real</a></dd>
+                <dd id="Expression.FunctionCall.into_simplified" class="function"><a href="#Expression.into_simplified">into_simplified</a></dd>
                 <dd id="Expression.FunctionCall.evaluate" class="function"><a href="#Expression.evaluate">evaluate</a></dd>
                 <dd id="Expression.FunctionCall.substitute_variables" class="function"><a href="#Expression.substitute_variables">substitute_variables</a></dd>
                 <dd id="Expression.FunctionCall.parse" class="function"><a href="#Expression.parse">parse</a></dd>
-                <dd id="Expression.FunctionCall.to_real" class="function"><a href="#Expression.to_real">to_real</a></dd>
                 <dd id="Expression.FunctionCall.Address" class="class"><a href="#Expression.Address">Address</a></dd>
                 <dd id="Expression.FunctionCall.FunctionCall" class="class"><a href="#Expression.FunctionCall">FunctionCall</a></dd>
                 <dd id="Expression.FunctionCall.Infix" class="class"><a href="#Expression.Infix">Infix</a></dd>
@@ -447,11 +447,11 @@ that number. Otherwise, error with an evaluation error of a descriptive type.</p
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#Expression">Expression</a></dt>
-                                <dd id="Expression.Infix.into_simplified" class="function"><a href="#Expression.into_simplified">into_simplified</a></dd>
+                                <dd id="Expression.Infix.to_real" class="function"><a href="#Expression.to_real">to_real</a></dd>
+                <dd id="Expression.Infix.into_simplified" class="function"><a href="#Expression.into_simplified">into_simplified</a></dd>
                 <dd id="Expression.Infix.evaluate" class="function"><a href="#Expression.evaluate">evaluate</a></dd>
                 <dd id="Expression.Infix.substitute_variables" class="function"><a href="#Expression.substitute_variables">substitute_variables</a></dd>
                 <dd id="Expression.Infix.parse" class="function"><a href="#Expression.parse">parse</a></dd>
-                <dd id="Expression.Infix.to_real" class="function"><a href="#Expression.to_real">to_real</a></dd>
                 <dd id="Expression.Infix.Address" class="class"><a href="#Expression.Address">Address</a></dd>
                 <dd id="Expression.Infix.FunctionCall" class="class"><a href="#Expression.FunctionCall">FunctionCall</a></dd>
                 <dd id="Expression.Infix.Infix" class="class"><a href="#Expression.Infix">Infix</a></dd>
@@ -480,11 +480,11 @@ that number. Otherwise, error with an evaluation error of a descriptive type.</p
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#Expression">Expression</a></dt>
-                                <dd id="Expression.Number.into_simplified" class="function"><a href="#Expression.into_simplified">into_simplified</a></dd>
+                                <dd id="Expression.Number.to_real" class="function"><a href="#Expression.to_real">to_real</a></dd>
+                <dd id="Expression.Number.into_simplified" class="function"><a href="#Expression.into_simplified">into_simplified</a></dd>
                 <dd id="Expression.Number.evaluate" class="function"><a href="#Expression.evaluate">evaluate</a></dd>
                 <dd id="Expression.Number.substitute_variables" class="function"><a href="#Expression.substitute_variables">substitute_variables</a></dd>
                 <dd id="Expression.Number.parse" class="function"><a href="#Expression.parse">parse</a></dd>
-                <dd id="Expression.Number.to_real" class="function"><a href="#Expression.to_real">to_real</a></dd>
                 <dd id="Expression.Number.Address" class="class"><a href="#Expression.Address">Address</a></dd>
                 <dd id="Expression.Number.FunctionCall" class="class"><a href="#Expression.FunctionCall">FunctionCall</a></dd>
                 <dd id="Expression.Number.Infix" class="class"><a href="#Expression.Infix">Infix</a></dd>
@@ -513,11 +513,11 @@ that number. Otherwise, error with an evaluation error of a descriptive type.</p
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#Expression">Expression</a></dt>
-                                <dd id="Expression.Pi.into_simplified" class="function"><a href="#Expression.into_simplified">into_simplified</a></dd>
+                                <dd id="Expression.Pi.to_real" class="function"><a href="#Expression.to_real">to_real</a></dd>
+                <dd id="Expression.Pi.into_simplified" class="function"><a href="#Expression.into_simplified">into_simplified</a></dd>
                 <dd id="Expression.Pi.evaluate" class="function"><a href="#Expression.evaluate">evaluate</a></dd>
                 <dd id="Expression.Pi.substitute_variables" class="function"><a href="#Expression.substitute_variables">substitute_variables</a></dd>
                 <dd id="Expression.Pi.parse" class="function"><a href="#Expression.parse">parse</a></dd>
-                <dd id="Expression.Pi.to_real" class="function"><a href="#Expression.to_real">to_real</a></dd>
                 <dd id="Expression.Pi.Address" class="class"><a href="#Expression.Address">Address</a></dd>
                 <dd id="Expression.Pi.FunctionCall" class="class"><a href="#Expression.FunctionCall">FunctionCall</a></dd>
                 <dd id="Expression.Pi.Infix" class="class"><a href="#Expression.Infix">Infix</a></dd>
@@ -546,11 +546,11 @@ that number. Otherwise, error with an evaluation error of a descriptive type.</p
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#Expression">Expression</a></dt>
-                                <dd id="Expression.Prefix.into_simplified" class="function"><a href="#Expression.into_simplified">into_simplified</a></dd>
+                                <dd id="Expression.Prefix.to_real" class="function"><a href="#Expression.to_real">to_real</a></dd>
+                <dd id="Expression.Prefix.into_simplified" class="function"><a href="#Expression.into_simplified">into_simplified</a></dd>
                 <dd id="Expression.Prefix.evaluate" class="function"><a href="#Expression.evaluate">evaluate</a></dd>
                 <dd id="Expression.Prefix.substitute_variables" class="function"><a href="#Expression.substitute_variables">substitute_variables</a></dd>
                 <dd id="Expression.Prefix.parse" class="function"><a href="#Expression.parse">parse</a></dd>
-                <dd id="Expression.Prefix.to_real" class="function"><a href="#Expression.to_real">to_real</a></dd>
                 <dd id="Expression.Prefix.Address" class="class"><a href="#Expression.Address">Address</a></dd>
                 <dd id="Expression.Prefix.FunctionCall" class="class"><a href="#Expression.FunctionCall">FunctionCall</a></dd>
                 <dd id="Expression.Prefix.Infix" class="class"><a href="#Expression.Infix">Infix</a></dd>
@@ -579,11 +579,11 @@ that number. Otherwise, error with an evaluation error of a descriptive type.</p
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#Expression">Expression</a></dt>
-                                <dd id="Expression.Variable.into_simplified" class="function"><a href="#Expression.into_simplified">into_simplified</a></dd>
+                                <dd id="Expression.Variable.to_real" class="function"><a href="#Expression.to_real">to_real</a></dd>
+                <dd id="Expression.Variable.into_simplified" class="function"><a href="#Expression.into_simplified">into_simplified</a></dd>
                 <dd id="Expression.Variable.evaluate" class="function"><a href="#Expression.evaluate">evaluate</a></dd>
                 <dd id="Expression.Variable.substitute_variables" class="function"><a href="#Expression.substitute_variables">substitute_variables</a></dd>
                 <dd id="Expression.Variable.parse" class="function"><a href="#Expression.parse">parse</a></dd>
-                <dd id="Expression.Variable.to_real" class="function"><a href="#Expression.to_real">to_real</a></dd>
                 <dd id="Expression.Variable.Address" class="class"><a href="#Expression.Address">Address</a></dd>
                 <dd id="Expression.Variable.FunctionCall" class="class"><a href="#Expression.FunctionCall">FunctionCall</a></dd>
                 <dd id="Expression.Variable.Infix" class="class"><a href="#Expression.Infix">Infix</a></dd>
@@ -691,17 +691,6 @@ NaNs, not unequal, in contravention of the IEEE 754 spec.</p>
 </div>
 
 
-                            <div id="FunctionCallExpression.function" class="classattr">
-                                <div class="attr variable">
-            <span class="name">function</span>
-
-        
-    </div>
-    <a class="headerlink" href="#FunctionCallExpression.function"></a>
-    
-    
-
-                            </div>
                             <div id="FunctionCallExpression.expression" class="classattr">
                                 <div class="attr variable">
             <span class="name">expression</span>
@@ -709,6 +698,17 @@ NaNs, not unequal, in contravention of the IEEE 754 spec.</p>
         
     </div>
     <a class="headerlink" href="#FunctionCallExpression.expression"></a>
+    
+    
+
+                            </div>
+                            <div id="FunctionCallExpression.function" class="classattr">
+                                <div class="attr variable">
+            <span class="name">function</span>
+
+        
+    </div>
+    <a class="headerlink" href="#FunctionCallExpression.function"></a>
     
     
 
@@ -735,6 +735,17 @@ NaNs, not unequal, in contravention of the IEEE 754 spec.</p>
 </div>
 
 
+                            <div id="InfixExpression.operator" class="classattr">
+                                <div class="attr variable">
+            <span class="name">operator</span>
+
+        
+    </div>
+    <a class="headerlink" href="#InfixExpression.operator"></a>
+    
+    
+
+                            </div>
                             <div id="InfixExpression.left" class="classattr">
                                 <div class="attr variable">
             <span class="name">left</span>
@@ -753,17 +764,6 @@ NaNs, not unequal, in contravention of the IEEE 754 spec.</p>
         
     </div>
     <a class="headerlink" href="#InfixExpression.right"></a>
-    
-    
-
-                            </div>
-                            <div id="InfixExpression.operator" class="classattr">
-                                <div class="attr variable">
-            <span class="name">operator</span>
-
-        
-    </div>
-    <a class="headerlink" href="#InfixExpression.operator"></a>
     
     
 
@@ -862,17 +862,6 @@ NaNs, not unequal, in contravention of the IEEE 754 spec.</p>
 </div>
 
 
-                            <div id="PrefixExpression.expression" class="classattr">
-                                <div class="attr variable">
-            <span class="name">expression</span>
-
-        
-    </div>
-    <a class="headerlink" href="#PrefixExpression.expression"></a>
-    
-    
-
-                            </div>
                             <div id="PrefixExpression.operator" class="classattr">
                                 <div class="attr variable">
             <span class="name">operator</span>
@@ -880,6 +869,17 @@ NaNs, not unequal, in contravention of the IEEE 754 spec.</p>
         
     </div>
     <a class="headerlink" href="#PrefixExpression.operator"></a>
+    
+    
+
+                            </div>
+                            <div id="PrefixExpression.expression" class="classattr">
+                                <div class="attr variable">
+            <span class="name">expression</span>
+
+        
+    </div>
+    <a class="headerlink" href="#PrefixExpression.expression"></a>
     
     
 
