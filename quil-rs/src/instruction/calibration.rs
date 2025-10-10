@@ -276,40 +276,12 @@ pub struct MeasureCalibrationIdentifier {
 }
 
 impl MeasureCalibrationIdentifier {
-    const fn new(name: Option<String>, qubit: Qubit, target: Option<String>) -> Self {
+    pub const fn new(name: Option<String>, qubit: Qubit, target: Option<String>) -> Self {
         Self {
             name,
             qubit,
             target,
         }
-    }
-}
-
-// We don't use [`pickleable_new!`] here because we're separating Rust's
-// [`MeasureCalibrationIdentifier::new`] and Python's `MeasureCalibrationIdentifier.new`.
-#[cfg(feature = "python")]
-#[cfg_attr(feature = "stubs", pyo3_stub_gen::derive::gen_stub_pymethods)]
-#[pyo3::pymethods]
-impl MeasureCalibrationIdentifier {
-    // Note that the Python argument order is not the same as the Rust argument order!  Make sure
-    // `__getnewargs__` is consistent with `py_new`!
-    #[pyo3(signature = (qubit, target, *, name = None))]
-    #[new]
-    fn py_new(
-        qubit: Qubit,
-        target: Option<String>,
-        name: Option<String>,
-    ) -> MeasureCalibrationIdentifier {
-        Self::new(name, qubit, target)
-    }
-
-    fn __getnewargs__(&self) -> (Qubit, Option<String>, Option<String>) {
-        let Self {
-            name,
-            qubit,
-            target,
-        } = self;
-        (qubit.clone(), target.clone(), name.clone())
     }
 }
 
