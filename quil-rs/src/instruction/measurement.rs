@@ -1,7 +1,7 @@
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::gen_stub_pyclass;
 
-use crate::{pickleable_new, quil::Quil};
+use crate::quil::Quil;
 
 use super::{MemoryReference, Qubit};
 
@@ -12,13 +12,18 @@ use super::{MemoryReference, Qubit};
     pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
 )]
 pub struct Measurement {
+    pub name: Option<String>,
     pub qubit: Qubit,
     pub target: Option<MemoryReference>,
 }
 
-pickleable_new! {
-    impl Measurement {
-        pub fn new(qubit: Qubit, target: Option<MemoryReference>);
+impl Measurement {
+    pub const fn new(name: Option<String>, qubit: Qubit, target: Option<MemoryReference>) -> Self {
+        Self {
+            name,
+            qubit,
+            target,
+        }
     }
 }
 
@@ -28,9 +33,19 @@ impl Quil for Measurement {
         writer: &mut impl std::fmt::Write,
         fall_back_to_debug: bool,
     ) -> Result<(), crate::quil::ToQuilError> {
-        write!(writer, "MEASURE ")?;
-        self.qubit.write(writer, fall_back_to_debug)?;
-        if let Some(target) = &self.target {
+        let Self {
+            name,
+            qubit,
+            target,
+        } = self;
+
+        write!(writer, "MEASURE")?;
+        if let Some(name) = name {
+            write!(writer, "!{name}")?;
+        }
+        write!(writer, " ")?;
+        qubit.write(writer, fall_back_to_debug)?;
+        if let Some(target) = target {
             write!(writer, " ")?;
             target.write(writer, fall_back_to_debug)?;
         }

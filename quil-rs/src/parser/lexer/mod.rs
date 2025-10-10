@@ -289,6 +289,7 @@ fn lex_punctuation(input: LexInput) -> InternalLexResult {
     alt(
         "punctuation",
         (
+            value(Bang, tag("!")),
             value(Colon, tag(":")),
             value(Comma, tag(",")),
             value(

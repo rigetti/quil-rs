@@ -581,7 +581,11 @@ impl Calibrations {
             }
         }
 
-        let Measurement { qubit, target } = measurement;
+        let Measurement {
+            name,
+            qubit,
+            target,
+        } = measurement;
 
         // Find the last matching measurement calibration, but prefer an exact qubit match to a
         // wildcard qubit match.
@@ -591,7 +595,7 @@ impl Calibrations {
             .filter_map(|calibration| {
                 let identifier = &calibration.identifier;
 
-                if target.is_some() != identifier.target.is_some() {
+                if !(name == &identifier.name && target.is_some() == identifier.target.is_some()) {
                     return None;
                 }
 
@@ -796,6 +800,30 @@ mod tests {
         )
     )]
     #[case(
+        "Precedence-Require-No-Name-Match",
+        concat!(
+            "DEFCAL MEASURE q addr:\n",
+            "    PRAGMA CORRECT\n",
+            "DEFCAL MEASURE!wrong-name 0 addr:\n",
+            "    PRAGMA INCORRECT_NAME\n",
+            "DEFCAL MEASURE!midcircuit 0 addr:\n",
+            "    PRAGMA INCORRECT_NAME\n",
+            "MEASURE 0 ro\n",
+        )
+    )]
+    #[case(
+        "Precedence-Require-Name-Match",
+        concat!(
+            "DEFCAL MEASURE!midcircuit q addr:\n",
+            "    PRAGMA CORRECT\n",
+            "DEFCAL MEASURE!wrong-name 0 addr:\n",
+            "    PRAGMA INCORRECT_NAME\n",
+            "DEFCAL MEASURE 0 addr:\n",
+            "    PRAGMA INCORRECT_NAME\n",
+            "MEASURE!midcircuit 0 ro\n",
+        )
+    )]
+    #[case(
         "ShiftPhase",
         concat!(
             "DEFCAL RZ(%theta) %q:\n",
@@ -906,6 +934,7 @@ X 0
                             target_location: CalibrationExpansion {
                                 calibration_used: CalibrationSource::MeasureCalibration(
                                     MeasureCalibrationIdentifier {
+                                        name: None,
                                         qubit: crate::instruction::Qubit::Fixed(0),
                                         target: Some("addr".to_string()),
                                     },

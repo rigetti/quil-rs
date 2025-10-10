@@ -262,6 +262,9 @@ impl Quil for MeasureCalibrationDefinition {
     pyo3::pyclass(module = "quil.instructions", eq, get_all, set_all, subclass)
 )]
 pub struct MeasureCalibrationIdentifier {
+    /// The Quil-T name of the measurement, if any.
+    pub name: Option<String>,
+
     /// The qubit which is being measured.
     pub qubit: Qubit,
 
@@ -272,18 +275,27 @@ pub struct MeasureCalibrationIdentifier {
     pub target: Option<String>,
 }
 
-pickleable_new! {
-    impl MeasureCalibrationIdentifier {
-        pub fn new(qubit: Qubit, target: Option<String>);
+impl MeasureCalibrationIdentifier {
+    pub const fn new(name: Option<String>, qubit: Qubit, target: Option<String>) -> Self {
+        Self {
+            name,
+            qubit,
+            target,
+        }
     }
 }
 
 impl CalibrationSignature for MeasureCalibrationIdentifier {
-    type Signature<'a> = (&'a Qubit, Option<&'a str>);
+    type Signature<'a> = (Option<&'a str>, &'a Qubit, Option<&'a str>);
 
     fn signature(&self) -> Self::Signature<'_> {
-        let Self { qubit, target } = self;
-        (qubit, target.as_deref())
+        let Self {
+            name,
+            qubit,
+            target,
+        } = self;
+
+        (name.as_deref(), qubit, target.as_deref())
     }
 
     fn has_signature(&self, signature: &Self::Signature<'_>) -> bool {
@@ -297,9 +309,17 @@ impl Quil for MeasureCalibrationIdentifier {
         f: &mut impl std::fmt::Write,
         fall_back_to_debug: bool,
     ) -> crate::quil::ToQuilResult<()> {
-        let Self { qubit, target } = self;
+        let Self {
+            name,
+            qubit,
+            target,
+        } = self;
 
-        write!(f, "DEFCAL MEASURE ")?;
+        write!(f, "DEFCAL MEASURE")?;
+        if let Some(name) = name {
+            write!(f, "!{name}")?;
+        }
+        write!(f, " ")?;
         qubit.write(f, fall_back_to_debug)?;
         if let Some(target) = target {
             write!(f, " {target}")?;
@@ -324,6 +344,23 @@ mod test_measure_calibration_definition {
         "With Fixed Qubit",
         MeasureCalibrationDefinition {
             identifier: MeasureCalibrationIdentifier {
+                name: None,
+                qubit: Qubit::Fixed(0),
+                target: Some("theta".to_string()),
+            },
+            instructions: vec![Instruction::Gate(Gate {
+                name: "X".to_string(),
+                parameters: vec![Expression::Variable("theta".to_string())],
+                qubits: vec![Qubit::Fixed(0)],
+                modifiers: vec![],
+
+            })]},
+    )]
+    #[case(
+        "Named With Fixed Qubit",
+        MeasureCalibrationDefinition {
+            identifier: MeasureCalibrationIdentifier {
+                name: Some("midcircuit".to_string()),
                 qubit: Qubit::Fixed(0),
                 target: Some("theta".to_string()),
             },
@@ -339,6 +376,23 @@ mod test_measure_calibration_definition {
         "Effect With Fixed Qubit",
         MeasureCalibrationDefinition {
             identifier: MeasureCalibrationIdentifier {
+                name: None,
+                qubit: Qubit::Fixed(0),
+                target: None,
+            },
+            instructions: vec![Instruction::Gate(Gate {
+                name: "X".to_string(),
+                parameters: vec![Expression::PiConstant()],
+                qubits: vec![Qubit::Fixed(0)],
+                modifiers: vec![],
+
+            })]},
+    )]
+    #[case(
+        "Named Effect With Fixed Qubit",
+        MeasureCalibrationDefinition {
+            identifier: MeasureCalibrationIdentifier {
+                name: Some("midcircuit".to_string()),
                 qubit: Qubit::Fixed(0),
                 target: None,
             },
@@ -354,6 +408,22 @@ mod test_measure_calibration_definition {
         "With Variable Qubit",
         MeasureCalibrationDefinition {
             identifier: MeasureCalibrationIdentifier {
+                name: None,
+                qubit: Qubit::Variable("q".to_string()),
+                target: Some("theta".to_string()),
+            },
+            instructions: vec![Instruction::Gate(Gate {
+                name: "X".to_string(),
+                parameters: vec![Expression::Variable("theta".to_string())],
+                qubits: vec![Qubit::Variable("q".to_string())],
+                modifiers: vec![],
+            })]},
+    )]
+    #[case(
+        "Named With Variable Qubit",
+        MeasureCalibrationDefinition {
+            identifier: MeasureCalibrationIdentifier {
+                name: Some("midcircuit".to_string()),
                 qubit: Qubit::Variable("q".to_string()),
                 target: Some("theta".to_string()),
             },
@@ -368,6 +438,22 @@ mod test_measure_calibration_definition {
         "Effect Variable Qubit",
         MeasureCalibrationDefinition {
             identifier: MeasureCalibrationIdentifier {
+                name: None,
+                qubit: Qubit::Variable("q".to_string()),
+                target: None,
+            },
+            instructions: vec![Instruction::Gate(Gate {
+                name: "X".to_string(),
+                parameters: vec![Expression::PiConstant()],
+                qubits: vec![Qubit::Variable("q".to_string())],
+                modifiers: vec![],
+            })]},
+    )]
+    #[case(
+        "Named Effect Variable Qubit",
+        MeasureCalibrationDefinition {
+            identifier: MeasureCalibrationIdentifier {
+                name: Some("midcircuit".to_string()),
                 qubit: Qubit::Variable("q".to_string()),
                 target: None,
             },

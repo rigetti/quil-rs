@@ -235,6 +235,7 @@ pub(crate) fn parse_defcal_gate<'a>(
 pub(crate) fn parse_defcal_measure<'a>(
     input: ParserInput<'a>,
 ) -> InternalParserResult<'a, Instruction> {
+    let (input, name) = opt(preceded(token!(Bang), token!(Identifier(name))))(input)?;
     let (input, qubit) = parse_qubit(input)?;
     let (input, target) = opt(token!(Identifier(t)))(input)?;
     let (input, _) = token!(Colon)(input)?;
@@ -242,7 +243,11 @@ pub(crate) fn parse_defcal_measure<'a>(
     Ok((
         input,
         Instruction::MeasureCalibrationDefinition(MeasureCalibrationDefinition {
-            identifier: MeasureCalibrationIdentifier { qubit, target },
+            identifier: MeasureCalibrationIdentifier {
+                name,
+                qubit,
+                target,
+            },
             instructions,
         }),
     ))
@@ -610,7 +615,10 @@ pub(crate) fn parse_swap_phases(input: ParserInput) -> InternalParserResult<Inst
 }
 
 /// Parse the contents of a `MEASURE` instruction.
-pub(crate) fn parse_measurement(input: ParserInput) -> InternalParserResult<Instruction> {
+pub(crate) fn parse_measurement<'a>(
+    input: ParserInput<'a>,
+) -> InternalParserResult<'a, Instruction> {
+    let (input, name) = opt(preceded(token!(Bang), token!(Identifier(name))))(input)?;
     let (input, qubit) = parse_qubit(input)?;
     let (input, target) = match parse_memory_reference(input) {
         Ok((input, target)) => (input, Some(target)),
@@ -619,7 +627,11 @@ pub(crate) fn parse_measurement(input: ParserInput) -> InternalParserResult<Inst
 
     Ok((
         input,
-        Instruction::Measurement(Measurement { qubit, target }),
+        Instruction::Measurement(Measurement {
+            name,
+            qubit,
+            target,
+        }),
     ))
 }
 
@@ -730,6 +742,21 @@ mod tests {
         parse_measurement,
         "0 ro[0]",
         Instruction::Measurement(Measurement {
+            name: None,
+            qubit: Qubit::Fixed(0),
+            target: Some(MemoryReference {
+                name: String::from("ro"),
+                index: 0
+            })
+        })
+    );
+
+    make_test!(
+        named_measure_into_register,
+        parse_measurement,
+        "!midcircuit 0 ro[0]",
+        Instruction::Measurement(Measurement {
+            name: Some(String::from("midcircuit")),
             qubit: Qubit::Fixed(0),
             target: Some(MemoryReference {
                 name: String::from("ro"),
@@ -743,6 +770,18 @@ mod tests {
         parse_measurement,
         "0",
         Instruction::Measurement(Measurement {
+            name: None,
+            qubit: Qubit::Fixed(0),
+            target: None
+        })
+    );
+
+    make_test!(
+        named_measure_discard,
+        parse_measurement,
+        "!midcircuit 0",
+        Instruction::Measurement(Measurement {
+            name: Some(String::from("midcircuit")),
             qubit: Qubit::Fixed(0),
             target: None
         })
@@ -753,6 +792,21 @@ mod tests {
         parse_measurement,
         "q0 ro[0]",
         Instruction::Measurement(Measurement {
+            name: None,
+            qubit: Qubit::Variable(String::from("q0")),
+            target: Some(MemoryReference {
+                name: String::from("ro"),
+                index: 0
+            })
+        })
+    );
+
+    make_test!(
+        named_measure_named_qubit,
+        parse_measurement,
+        "!midcircuit q0 ro[0]",
+        Instruction::Measurement(Measurement {
+            name: Some(String::from("midcircuit")),
             qubit: Qubit::Variable(String::from("q0")),
             target: Some(MemoryReference {
                 name: String::from("ro"),
@@ -766,6 +820,18 @@ mod tests {
         parse_measurement,
         "q0",
         Instruction::Measurement(Measurement {
+            name: None,
+            qubit: Qubit::Variable(String::from("q0")),
+            target: None
+        })
+    );
+
+    make_test!(
+        named_measure_named_qubit_discard,
+        parse_measurement,
+        "!midcircuit q0",
+        Instruction::Measurement(Measurement {
+            name: Some(String::from("midcircuit")),
             qubit: Qubit::Variable(String::from("q0")),
             target: None
         })
