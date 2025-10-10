@@ -537,6 +537,7 @@ impl MeasureCalibrationDefinition {
 
 // We don't use [`pickleable_new!`] here because we're separating Rust's
 // [`MeasureCalibrationIdentifier::new`] and Python's `MeasureCalibrationIdentifier.new`.
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl MeasureCalibrationIdentifier {
@@ -549,6 +550,9 @@ impl MeasureCalibrationIdentifier {
         Self::new(name, qubit, target)
     }
 
+    #[gen_stub(override_return_type(
+        type_repr = "tuple[tuple[Qubit, str | None], dict[str, str | None]]"
+    ))]
     fn __getnewargs_ex__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
         let Self {
             name,
@@ -563,6 +567,7 @@ impl MeasureCalibrationIdentifier {
 
 // We don't use [`pickleable_new!`] here because we're separating Rust's [`Measurement::new`] and
 // Python's `Measurement.new`.
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl Measurement {
@@ -575,6 +580,9 @@ impl Measurement {
         Self::new(name, qubit, target)
     }
 
+    #[gen_stub(override_return_type(
+        type_repr = "tuple[tuple[Qubit, MemoryReference | None], dict[str, str | None]]"
+    ))]
     fn __getnewargs_ex__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
         let Self {
             name,
