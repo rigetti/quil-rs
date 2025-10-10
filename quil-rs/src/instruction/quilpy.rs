@@ -1,7 +1,10 @@
 use num_complex::Complex64;
 use numpy::{PyArray2, ToPyArray};
 use paste::paste;
-use pyo3::{prelude::*, types::PyTuple};
+use pyo3::{
+    prelude::*,
+    types::{IntoPyDict as _, PyDict, PyTuple},
+};
 
 use super::*;
 use crate::{
@@ -549,13 +552,15 @@ impl MeasureCalibrationIdentifier {
         Self::new(name, qubit, target)
     }
 
-    fn __getnewargs__(&self) -> (Qubit, Option<String>, Option<String>) {
+    fn __getnewargs_ex__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
         let Self {
             name,
             qubit,
             target,
         } = self;
-        (qubit.clone(), target.clone(), name.clone())
+        let positional: Bound<'py, PyTuple> = (qubit.clone(), target.clone()).into_pyobject(py)?;
+        let keyword: Bound<'py, PyDict> = [("name", name)].into_py_dict(py)?;
+        (positional, keyword).into_pyobject(py)
     }
 }
 
