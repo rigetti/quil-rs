@@ -967,8 +967,10 @@ impl Call {
     }
 
     /// Return the [`MemoryAccesses`] for the [`Call`] instruction given the [`ExternSignatureMap`].
-    /// This assumes ALL parameters are read, including mutable parameters.
-    pub(crate) fn get_memory_accesses(
+    /// If the type of the `EXTERN` has a return type, then the first argument is assumed to be
+    /// written to and not read from; all other parameters are assumed to be read from, and all
+    /// other mutable parameters are assumped to be written to as well.
+    pub(crate) fn memory_accesses(
         &self,
         extern_signatures: &ExternSignatureMap,
     ) -> Result<MemoryAccesses, CallResolutionError> {
@@ -979,10 +981,11 @@ impl Call {
 
         let mut reads = HashSet::new();
         let mut writes = HashSet::new();
+
         let mut arguments = self.arguments.iter();
+
         if extern_signature.return_type.is_some() {
-            if let Some(argument) = self.arguments.first() {
-                arguments.next();
+            if let Some(argument) = arguments.next() {
                 match argument {
                     UnresolvedCallArgument::MemoryReference(memory_reference) => {
                         reads.insert(memory_reference.name.clone());
@@ -996,6 +999,7 @@ impl Call {
                 }
             }
         }
+
         for (argument, parameter) in std::iter::zip(arguments, extern_signature.parameters.iter()) {
             match argument {
                 UnresolvedCallArgument::MemoryReference(memory_reference) => {
