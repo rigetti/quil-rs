@@ -12,24 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::HashSet;
-use std::fmt;
-use std::iter;
-use std::str::FromStr;
+use std::{collections::HashSet, fmt, iter, str::FromStr};
 
+use itertools::Itertools as _;
 use nom_locate::LocatedSpan;
 
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::{gen_stub_pyclass_complex_enum, gen_stub_pymethods};
 
-use crate::expression::Expression;
-use crate::parser::lex;
-use crate::parser::parse_instructions;
-use crate::program::frame::{FrameMatchCondition, FrameMatchConditions};
-use crate::program::ProgramError;
-use crate::program::{MatchedFrames, MemoryAccesses};
-use crate::quil::{write_join_quil, Quil, ToQuilResult};
-use crate::Program;
+use crate::{
+    expression::Expression,
+    parser::{lex, parse_instructions},
+    program::{
+        frame::{FrameMatchCondition, FrameMatchConditions},
+        MatchedFrames, MemoryAccesses, MemoryAccessesResult,
+    },
+    quil::{write_join_quil, Quil, ToQuilResult},
+    Program,
+};
 
 #[cfg(feature = "python")]
 pub(crate) mod quilpy;
@@ -49,35 +49,35 @@ mod reset;
 mod timing;
 mod waveform;
 
-pub use self::calibration::{
-    CalibrationDefinition, CalibrationIdentifier, CalibrationSignature,
-    MeasureCalibrationDefinition, MeasureCalibrationIdentifier,
+pub use self::{
+    calibration::{
+        CalibrationDefinition, CalibrationIdentifier, CalibrationSignature,
+        MeasureCalibrationDefinition, MeasureCalibrationIdentifier,
+    },
+    circuit::CircuitDefinition,
+    classical::{
+        Arithmetic, ArithmeticOperand, ArithmeticOperator, BinaryLogic, BinaryOperand,
+        BinaryOperator, ClassicalOperand, Comparison, ComparisonOperand, ComparisonOperator,
+        Convert, Exchange, Move, UnaryLogic, UnaryOperator,
+    },
+    control_flow::{Jump, JumpUnless, JumpWhen, Label, Target, TargetPlaceholder},
+    declaration::{Declaration, Load, MemoryReference, Offset, ScalarType, Sharing, Store, Vector},
+    extern_call::*,
+    frame::{
+        AttributeValue, Capture, FrameAttributes, FrameDefinition, FrameIdentifier, Pulse,
+        RawCapture, SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, SwapPhases,
+    },
+    gate::{
+        Gate, GateDefinition, GateError, GateModifier, GateSpecification, GateType, Matrix,
+        PauliGate, PauliSum, PauliTerm,
+    },
+    measurement::Measurement,
+    pragma::{Include, Pragma, PragmaArgument, RESERVED_PRAGMA_EXTERN},
+    qubit::{Qubit, QubitPlaceholder},
+    reset::Reset,
+    timing::{Delay, Fence},
+    waveform::{Waveform, WaveformDefinition, WaveformInvocation, WaveformParameters},
 };
-pub use self::circuit::CircuitDefinition;
-pub use self::classical::{
-    Arithmetic, ArithmeticOperand, ArithmeticOperator, BinaryLogic, BinaryOperand, BinaryOperator,
-    ClassicalOperand, Comparison, ComparisonOperand, ComparisonOperator, Convert, Exchange, Move,
-    UnaryLogic, UnaryOperator,
-};
-pub use self::control_flow::{Jump, JumpUnless, JumpWhen, Label, Target, TargetPlaceholder};
-pub use self::declaration::{
-    Declaration, Load, MemoryReference, Offset, ScalarType, Sharing, Store, Vector,
-};
-pub use self::extern_call::*;
-pub use self::frame::{
-    AttributeValue, Capture, FrameAttributes, FrameDefinition, FrameIdentifier, Pulse, RawCapture,
-    SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, SwapPhases,
-};
-pub use self::gate::{
-    Gate, GateDefinition, GateError, GateModifier, GateSpecification, GateType, Matrix, PauliGate,
-    PauliSum, PauliTerm,
-};
-pub use self::measurement::Measurement;
-pub use self::pragma::{Include, Pragma, PragmaArgument, RESERVED_PRAGMA_EXTERN};
-pub use self::qubit::{Qubit, QubitPlaceholder};
-pub use self::reset::Reset;
-pub use self::timing::{Delay, Fence};
-pub use self::waveform::{Waveform, WaveformDefinition, WaveformInvocation, WaveformParameters};
 
 #[derive(Clone, Debug, thiserror::Error, PartialEq, Eq)]
 pub enum ValidationError {
@@ -236,63 +236,40 @@ impl Instruction {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+/// What purpose an instruction serves in the program from a [Quil-T] perspective.
+///
+/// [Quil-T]: https://quil-lang.github.io/#12Annex-T--Pulse-Level-Control
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum InstructionRole {
-    ClassicalCompute,
-    ControlFlow,
+    /// An instruction that is relevant to the superstructure of the program but not to
+    /// [Quil-T][]–level execution, such as [`DECLARE`][Instruction::Declare].
+    ///
+    /// Note the callout of Quil-T above: the most surprising entries in this category, [by
+    /// default][DefaultHandler], are *[gate application][Instruction::Gate] and
+    /// [`MEASURE`][Instruction::Measurement]*.  This is because Quil-T expects all
+    /// gates/measurements to be expanded through
+    /// [`DEFCAL`][Instruction::CalibrationDefinition]/[`DEFCALMEASURE`][Instruction::MeasureCalibrationDefinition]
+    /// (or, for gates, through [`DEFGATE`][Instruction::GateDefinition`] or
+    /// [`DEFCIRCUIT`][Instruction::CircuitDefinition] until they can be calibrated).
+    ///
+    /// [Quil-T]: https://quil-lang.github.io/#12Annex-T--Pulse-Level-Control
     ProgramComposition,
-    RFControl,
-}
 
-impl From<&Instruction> for InstructionRole {
-    fn from(instruction: &Instruction) -> Self {
-        match instruction {
-            Instruction::CalibrationDefinition(_)
-            | Instruction::CircuitDefinition(_)
-            | Instruction::Declaration(_)
-            | Instruction::FrameDefinition(_)
-            | Instruction::Gate(_)
-            | Instruction::GateDefinition(_)
-            | Instruction::Include(_)
-            | Instruction::Label(_)
-            | Instruction::MeasureCalibrationDefinition(_)
-            | Instruction::Measurement(_)
-            | Instruction::WaveformDefinition(_) => InstructionRole::ProgramComposition,
-            Instruction::Reset(_)
-            | Instruction::Capture(_)
-            | Instruction::Delay(_)
-            | Instruction::Fence(_)
-            | Instruction::Pulse(_)
-            | Instruction::RawCapture(_)
-            | Instruction::SetFrequency(_)
-            | Instruction::SetPhase(_)
-            | Instruction::SetScale(_)
-            | Instruction::ShiftFrequency(_)
-            | Instruction::ShiftPhase(_)
-            | Instruction::SwapPhases(_) => InstructionRole::RFControl,
-            Instruction::Arithmetic(_)
-            | Instruction::Call(_)
-            | Instruction::Comparison(_)
-            | Instruction::Convert(_)
-            | Instruction::BinaryLogic(_)
-            | Instruction::UnaryLogic(_)
-            | Instruction::Move(_)
-            | Instruction::Exchange(_)
-            | Instruction::Load(_)
-            | Instruction::Nop()
-            | Instruction::Pragma(_)
-            | Instruction::Store(_) => InstructionRole::ClassicalCompute,
-            Instruction::Halt()
-            | Instruction::Jump(_)
-            | Instruction::JumpWhen(_)
-            | Instruction::JumpUnless(_)
-            | Instruction::Wait() => InstructionRole::ControlFlow,
-        }
-    }
+    /// An instruction affecting only classical state, such as [`ADD`][Instruction:ADD`].
+    ClassicalCompute,
+
+    /// An instruction affecting the pulse level portion of the program, such as [`PULSE`][Instruction::Pulse].  The RF stands for Radio Frequency.
+    ///
+    /// Unlike for [`MEASURE`][Instruction::Measurement], [`RESET`] is considered an RF control
+    /// instruction, as it is not realized through calibration into a lower-level instruction.
+    RFControl,
+
+    /// An instruction that can perform control flow, such as [`JUMP-WHEN`][Instruction::JumpWhen].
+    ControlFlow,
 }
 
 pub fn write_instruction_block<'i, I, Q>(
-    f: &mut impl std::fmt::Write,
+    f: &mut impl fmt::Write,
     fall_back_to_debug: bool,
     values: I,
 ) -> crate::quil::ToQuilResult<()>
@@ -304,11 +281,11 @@ where
 }
 
 pub(crate) fn write_join(
-    f: &mut impl std::fmt::Write,
-    values: &[impl std::fmt::Display],
+    f: &mut impl fmt::Write,
+    values: &[impl fmt::Display],
     separator: &str,
     prefix: &str,
-) -> std::fmt::Result {
+) -> fmt::Result {
     let mut iter = values.iter();
     if let Some(first) = iter.next() {
         write!(f, "{prefix}{first}")?;
@@ -330,7 +307,7 @@ pub fn format_integer_vector(values: &[u64]) -> String {
 
 /// Write a list of qubits, with each prefixed by a space (including the first)
 fn write_qubits(
-    f: &mut impl std::fmt::Write,
+    f: &mut impl fmt::Write,
     fall_back_to_debug: bool,
     qubits: &[Qubit],
 ) -> crate::quil::ToQuilResult<()> {
@@ -343,7 +320,7 @@ fn write_qubits(
 
 /// Write qubits as a Quil parameter list, where all are prefixed with ` `.
 fn write_qubit_parameters(
-    f: &mut impl std::fmt::Write,
+    f: &mut impl fmt::Write,
     fall_back_to_debug: bool,
     qubits: &[Qubit],
 ) -> ToQuilResult<()> {
@@ -355,7 +332,7 @@ fn write_qubit_parameters(
 }
 
 fn write_expression_parameter_string(
-    f: &mut impl std::fmt::Write,
+    f: &mut impl fmt::Write,
     fall_back_to_debug: bool,
     parameters: &[Expression],
 ) -> crate::quil::ToQuilResult<()> {
@@ -369,7 +346,7 @@ fn write_expression_parameter_string(
     Ok(())
 }
 
-fn write_parameter_string(f: &mut impl std::fmt::Write, parameters: &[String]) -> fmt::Result {
+fn write_parameter_string(f: &mut impl fmt::Write, parameters: &[String]) -> fmt::Result {
     if parameters.is_empty() {
         return Ok(());
     }
@@ -382,7 +359,7 @@ fn write_parameter_string(f: &mut impl std::fmt::Write, parameters: &[String]) -
 impl Quil for Instruction {
     fn write(
         &self,
-        f: &mut impl std::fmt::Write,
+        f: &mut impl fmt::Write,
         fall_back_to_debug: bool,
     ) -> Result<(), crate::quil::ToQuilError> {
         match self {
@@ -583,7 +560,7 @@ impl Instruction {
         }
     }
 
-    pub(crate) fn get_frame_match_condition<'a>(
+    pub(crate) fn default_frame_match_condition<'a>(
         &'a self,
         qubits_available: &'a HashSet<Qubit>,
     ) -> Option<FrameMatchConditions<'a>> {
@@ -793,54 +770,6 @@ impl Instruction {
         Ok(instruction)
     }
 
-    /// Per the Quil-T spec, whether this instruction's timing within the pulse
-    /// program must be precisely controlled so as to begin exactly on the end of
-    /// the latest preceding timed instruction
-    pub fn is_scheduled(&self) -> bool {
-        match self {
-            Instruction::Capture(_)
-            | Instruction::Delay(_)
-            | Instruction::Fence(_)
-            | Instruction::Pulse(_)
-            | Instruction::RawCapture(_)
-            | Instruction::SetFrequency(_)
-            | Instruction::SetPhase(_)
-            | Instruction::SetScale(_)
-            | Instruction::ShiftFrequency(_)
-            | Instruction::ShiftPhase(_)
-            | Instruction::SwapPhases(_)
-            | Instruction::Wait() => true,
-            Instruction::Arithmetic(_)
-            | Instruction::BinaryLogic(_)
-            | Instruction::CalibrationDefinition(_)
-            | Instruction::Call(_)
-            | Instruction::CircuitDefinition(_)
-            | Instruction::Convert(_)
-            | Instruction::Comparison(_)
-            | Instruction::Declaration(_)
-            | Instruction::Exchange(_)
-            | Instruction::FrameDefinition(_)
-            | Instruction::Gate(_)
-            | Instruction::GateDefinition(_)
-            | Instruction::Halt()
-            | Instruction::Include(_)
-            | Instruction::Jump(_)
-            | Instruction::JumpUnless(_)
-            | Instruction::JumpWhen(_)
-            | Instruction::Label(_)
-            | Instruction::Load(_)
-            | Instruction::MeasureCalibrationDefinition(_)
-            | Instruction::Measurement(_)
-            | Instruction::Move(_)
-            | Instruction::Nop()
-            | Instruction::Pragma(_)
-            | Instruction::Reset(_)
-            | Instruction::Store(_)
-            | Instruction::UnaryLogic(_)
-            | Instruction::WaveformDefinition(_) => false,
-        }
-    }
-
     pub(crate) fn resolve_placeholders<TR, QR>(&mut self, target_resolver: TR, qubit_resolver: QR)
     where
         TR: Fn(&TargetPlaceholder) -> Option<String>,
@@ -891,162 +820,471 @@ impl FromStr for Instruction {
     }
 }
 
-/// Trait signature for a function or closure that returns an optional override for whether
-/// an instruction should be scheduled.
-pub trait GetIsScheduledFnMut: FnMut(&Instruction) -> Option<bool> {}
-impl<F> GetIsScheduledFnMut for F where F: FnMut(&Instruction) -> Option<bool> {}
-
-/// Trait signature for a function or closure that returns an optional override for an
-/// instruction's [`InstructionRole`].
-pub trait GetRoleForInstructionFnMut: FnMut(&Instruction) -> Option<InstructionRole> {}
-impl<F> GetRoleForInstructionFnMut for F where F: FnMut(&Instruction) -> Option<InstructionRole> {}
-
-/// Trait signature for a function or closure that returns an optional override for an
-/// instruction's [`MatchedFrames`].
-pub trait GetMatchingFramesFnMut:
-    for<'p> FnMut(&Instruction, &'p Program) -> Option<Option<MatchedFrames<'p>>>
-{
-}
-impl<F> GetMatchingFramesFnMut for F where
-    F: for<'p> FnMut(&Instruction, &'p Program) -> Option<Option<MatchedFrames<'p>>>
-{
-}
-
-/// Trait signature for a function or closure that returns an optional override for an
-/// instruction's [`MemoryAccesses`].
-pub trait GetMemoryAccessesFnMut: FnMut(&Instruction) -> Option<MemoryAccesses> {}
-impl<F> GetMemoryAccessesFnMut for F where F: FnMut(&Instruction) -> Option<MemoryAccesses> {}
-
-/// A struct that allows setting optional overrides for key [`Instruction`] methods.
-///
-/// A common use case for this is to support custom `PRAGMA` instructions, which are treated as
-/// classical style no-ops by default.
-#[derive(Default)]
-pub struct InstructionHandler {
-    get_is_scheduled: Option<Box<dyn GetIsScheduledFnMut>>,
-    get_role_for_instruction: Option<Box<dyn GetRoleForInstructionFnMut>>,
-    get_matching_frames: Option<Box<dyn GetMatchingFramesFnMut>>,
-    get_memory_accesses: Option<Box<dyn GetMemoryAccessesFnMut>>,
-}
-
-impl InstructionHandler {
-    /// Set an override function for whether an instruction is scheduled.
+pub trait InstructionHandler {
+    /// Whether this instruction's timing within the pulse program must be precisely controlled so
+    /// as to begin exactly on the end of the latest preceding timed instruction.
     ///
-    /// If the provided function returns `None`, a default will be used.
-    /// See also [`InstructionHandler::is_scheduled`].
-    pub fn set_is_scheduled<F>(mut self, f: F) -> Self
-    where
-        F: GetIsScheduledFnMut + 'static,
-    {
-        self.get_is_scheduled = Some(Box::new(f));
-        self
+    /// See [the Quil-T portion of the Quil specification (Annex T)][Quil-T] for more information.
+    ///
+    /// [Quil-T]: https://quil-lang.github.io/#12Annex-T--Pulse-Level-Control
+    #[inline]
+    fn is_scheduled(&self, instruction: &Instruction) -> bool {
+        DefaultHandler.is_scheduled(instruction)
     }
 
-    /// Set an override function for determining an instruction's [`InstructionRole`].
-    ///
-    /// If the provided function returns `None`, a default will be used.
-    /// See also [`InstructionHandler::role_for_instruction`].
-    pub fn set_role_for_instruction<F>(mut self, f: F) -> Self
-    where
-        F: GetRoleForInstructionFnMut + 'static,
-    {
-        self.get_role_for_instruction = Some(Box::new(f));
-        self
+    /// Return this instruction's [role][InstructionRole].
+    #[inline]
+    fn role(&self, instruction: &Instruction) -> InstructionRole {
+        DefaultHandler.role(instruction)
     }
 
-    /// Set an override function for determining an instruction's [`MatchedFrames`].
+    /// Return the [frames][FrameIdentifier] which are either *used* or *blocked* by the given
+    /// instruction.
     ///
-    /// If the provided function returns `None`, a default will be used.
-    /// See also [`InstructionHandler::get_matching_frames`].
-    pub fn set_matching_frames<F>(mut self, f: F) -> Self
-    where
-        F: GetMatchingFramesFnMut + 'static,
-    {
-        self.get_matching_frames = Some(Box::new(f));
-        self
-    }
-
-    /// Set an override function for determining an instruction's [`MemoryAccesses`].
+    /// - An instruction `I` *uses* a frame `F` if the execution of `I` plays on `F`.
     ///
-    /// If the provided function returns `None`, a default will be used.
-    /// See also [`InstructionHandler::get_memory_accesses`].
-    pub fn set_memory_accesses<F>(mut self, f: F) -> Self
-    where
-        F: GetMemoryAccessesFnMut + 'static,
-    {
-        self.get_memory_accesses = Some(Box::new(f));
-        self
-    }
-
-    /// Determine whether the given instruction is scheduled.
+    /// - An instruction `I` *blocks* a frame `F` if `I` does not play on `F` but other instructions
+    ///   may also not play on `F` while `I` is executing.
     ///
-    /// This uses the return value of the override function, if set and returns `Some`. If not set
-    /// or the function returns `None`, defaults to the return value of
-    /// [`Instruction::is_scheduled`].
-    pub fn is_scheduled(&mut self, instruction: &Instruction) -> bool {
-        self.get_is_scheduled
-            .as_mut()
-            .and_then(|f| f(instruction))
-            .unwrap_or_else(|| instruction.is_scheduled())
-    }
-
-    /// Determine the [`InstructionRole`] for the given instruction.
+    /// Only one instruction may play on a given frame at a time, so using a frame is a stronger
+    /// condition than blocking a frame.
     ///
-    /// This uses the return value of the override function, if set and returns `Some`. If not set
-    /// or the function returns `None`, defaults to the return value of
-    /// [`InstructionRole::from`].
-    pub fn role_for_instruction(&mut self, instruction: &Instruction) -> InstructionRole {
-        self.get_role_for_instruction
-            .as_mut()
-            .and_then(|f| f(instruction))
-            .unwrap_or_else(|| InstructionRole::from(instruction))
-    }
-
-    /// Determine the [`MatchedFrames`] for the given instruction.
+    /// `None` is returned if the instruction does not execute in the context of a frame; this is
+    /// the case for purely classical instructions such as [`ADD`][Instruction::Add], for instance.
     ///
-    /// This uses the return value of the override function, if set and returns `Some`. If not set
-    /// or the function returns `None`, defaults to the return value of
-    /// [`Program::get_frames_for_instruction`].
-    pub fn matching_frames<'p>(
-        &mut self,
-        instruction: &Instruction,
+    /// See [the Quil-T portion of the Quil specification (Annex T)][Quil-T] for more information.
+    ///
+    /// [Quil-T]: https://quil-lang.github.io/#12Annex-T--Pulse-Level-Control
+    #[inline]
+    fn matching_frames<'p>(
+        &self,
         program: &'p Program,
-    ) -> Option<MatchedFrames<'p>> {
-        self.get_matching_frames
-            .as_mut()
-            .and_then(|f| f(instruction, program))
-            .unwrap_or_else(|| program.get_frames_for_instruction(instruction))
-    }
-
-    /// Determine the [`MemoryAccesses`] for the given instruction.
-    ///
-    /// This uses the return value of the override function, if set and returns `Some`. If not set
-    /// or the function returns `None`, defaults to the return value of
-    /// [`Instruction::get_memory_accesses`].
-    pub fn memory_accesses(
-        &mut self,
         instruction: &Instruction,
-        extern_signature_map: &ExternSignatureMap,
-    ) -> crate::program::MemoryAccessesResult {
-        self.get_memory_accesses
-            .as_mut()
-            .and_then(|f| f(instruction))
-            .map(Ok)
-            .unwrap_or_else(|| instruction.memory_accesses(extern_signature_map))
+    ) -> Option<MatchedFrames<'p>> {
+        DefaultHandler.matching_frames(program, instruction)
     }
 
-    /// Like [`Program::into_simplified`], but using custom instruction handling.
-    // TODO (#453): Address large error types.
-    #[allow(clippy::result_large_err)]
-    pub fn simplify_program(&mut self, program: &Program) -> Result<Program, ProgramError> {
-        program.simplify_with_handler(self)
+    /// Return all memory accesses by the instruction.
+    ///
+    /// Memory accesses may be performed by pure memory manipulation instructions (such as
+    /// [`MOVE`][Instruction::Move]), by instructions that perform memory accesses as part of their
+    /// semantics (such as [`CAPTURE`][Instruction::Capture]), by variable reads in expressions –
+    /// anywhere that memory is read.
+    ///
+    /// # Errors
+    ///
+    /// This function is always permitted to fail if the program contains
+    /// [`CALL`][Instruction::Call] instructions that cannot be resolved against a signature in the
+    /// provided [`ExternSignatureMap`], either because they attempt to call unknown functions or
+    /// because they call known functions with incorrect types.  Specific implementations may impose
+    /// other failure conditions, and are encouraged to call them out if so.
+    #[inline]
+    fn memory_accesses(
+        &self,
+        extern_signature_map: &ExternSignatureMap,
+        instruction: &Instruction,
+    ) -> MemoryAccessesResult {
+        DefaultHandler.memory_accesses(extern_signature_map, instruction)
+    }
+}
+
+/// The default instruction-handling behavior.
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+pub struct DefaultHandler;
+
+impl fmt::Display for DefaultHandler {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "default instruction handler")
+    }
+}
+
+impl InstructionHandler for DefaultHandler {
+    fn is_scheduled(&self, instruction: &Instruction) -> bool {
+        match instruction {
+            Instruction::Reset(_) => false,
+            Instruction::Wait() => true,
+            _ => self.role(instruction) == InstructionRole::RFControl,
+        }
+    }
+
+    fn role(&self, instruction: &Instruction) -> InstructionRole {
+        match instruction {
+            Instruction::CalibrationDefinition(_)
+            | Instruction::CircuitDefinition(_)
+            | Instruction::Declaration(_)
+            | Instruction::FrameDefinition(_)
+            | Instruction::Gate(_)
+            | Instruction::GateDefinition(_)
+            | Instruction::Include(_)
+            | Instruction::Label(_)
+            | Instruction::MeasureCalibrationDefinition(_)
+            | Instruction::Measurement(_)
+            | Instruction::WaveformDefinition(_) => InstructionRole::ProgramComposition,
+
+            Instruction::Reset(_)
+            | Instruction::Capture(_)
+            | Instruction::Delay(_)
+            | Instruction::Fence(_)
+            | Instruction::Pulse(_)
+            | Instruction::RawCapture(_)
+            | Instruction::SetFrequency(_)
+            | Instruction::SetPhase(_)
+            | Instruction::SetScale(_)
+            | Instruction::ShiftFrequency(_)
+            | Instruction::ShiftPhase(_)
+            | Instruction::SwapPhases(_) => InstructionRole::RFControl,
+
+            Instruction::Arithmetic(_)
+            | Instruction::Call(_)
+            | Instruction::Comparison(_)
+            | Instruction::Convert(_)
+            | Instruction::BinaryLogic(_)
+            | Instruction::UnaryLogic(_)
+            | Instruction::Move(_)
+            | Instruction::Exchange(_)
+            | Instruction::Load(_)
+            | Instruction::Nop()
+            | Instruction::Pragma(_)
+            | Instruction::Store(_) => InstructionRole::ClassicalCompute,
+
+            Instruction::Halt()
+            | Instruction::Jump(_)
+            | Instruction::JumpWhen(_)
+            | Instruction::JumpUnless(_)
+            | Instruction::Wait() => InstructionRole::ControlFlow,
+        }
+    }
+
+    fn matching_frames<'p>(
+        &self,
+        program: &'p Program,
+        instruction: &Instruction,
+    ) -> Option<MatchedFrames<'p>> {
+        instruction
+            .default_frame_match_condition(program.get_used_qubits())
+            .map(|condition| program.frames.filter(condition))
+    }
+
+    fn memory_accesses(
+        &self,
+        extern_signature_map: &ExternSignatureMap,
+        instruction: &Instruction,
+    ) -> MemoryAccessesResult {
+        // Building individual access sets
+
+        #[inline]
+        fn none() -> HashSet<String> {
+            HashSet::new()
+        }
+
+        #[inline]
+        fn access(reference: &MemoryReference) -> HashSet<String> {
+            [reference.name.clone()].into()
+        }
+
+        #[inline]
+        fn access_dynamic(region: &str) -> HashSet<String> {
+            [region.to_owned()].into()
+        }
+
+        #[inline]
+        fn accesses(reference1: &MemoryReference, reference2: &MemoryReference) -> HashSet<String> {
+            [reference1.name.clone(), reference2.name.clone()].into()
+        }
+
+        #[inline]
+        fn accesses_dynamic_index(region: &str, index: &MemoryReference) -> HashSet<String> {
+            [region.to_owned(), index.name.clone()].into()
+        }
+
+        #[inline]
+        fn access_opt(opt_reference: Option<&MemoryReference>) -> HashSet<String> {
+            opt_reference.map_or_else(HashSet::new, access)
+        }
+
+        #[inline]
+        fn access_operand(operand: &impl ClassicalOperand) -> HashSet<String> {
+            access_opt(operand.memory_reference())
+        }
+
+        #[inline]
+        fn accesses_with_operand(
+            reference: &MemoryReference,
+            operand: &impl ClassicalOperand,
+        ) -> HashSet<String> {
+            if let Some(other) = operand.memory_reference() {
+                accesses(reference, other)
+            } else {
+                access(reference)
+            }
+        }
+
+        // Building complete access patterns
+
+        // Move-like operations: those that read from at most one place and write to another
+        fn like_move(
+            destination: &MemoryReference,
+            source_accesses: HashSet<String>,
+        ) -> MemoryAccesses {
+            MemoryAccesses {
+                reads: source_accesses,
+                writes: access(destination),
+                captures: none(),
+            }
+        }
+
+        // Updating binary operators: read from a possible source, read and write to the
+        // destination.
+        fn binary(destination: &MemoryReference, source: &impl ClassicalOperand) -> MemoryAccesses {
+            MemoryAccesses {
+                reads: accesses_with_operand(destination, source),
+                writes: access(destination),
+                captures: none(),
+            }
+        }
+
+        // Read-write operations, whose inputs are the same as their outputs.
+        fn read_write(places: HashSet<String>) -> MemoryAccesses {
+            MemoryAccesses {
+                reads: places.clone(),
+                writes: places,
+                captures: none(),
+            }
+        }
+
+        // Classical instructions that read a single memory reference.
+        fn read_one(place: &MemoryReference) -> MemoryAccesses {
+            MemoryAccesses {
+                reads: access(place),
+                writes: none(),
+                captures: none(),
+            }
+        }
+
+        // Instructions that read from many memory references; for instance, those that take an
+        // expression as an argument.
+        fn read_all<'a>(places: impl IntoIterator<Item = &'a MemoryReference>) -> MemoryAccesses {
+            MemoryAccesses {
+                reads: places.into_iter().map(|r| r.name.clone()).collect(),
+                writes: none(),
+                captures: none(),
+            }
+        }
+
+        // The match
+
+        Ok(match instruction {
+            // Operations with simple memory access patterns as captured (heh) above
+            Instruction::Convert(Convert {
+                destination,
+                source,
+            }) => like_move(destination, access(source)),
+            Instruction::Move(Move {
+                destination,
+                source,
+            }) => like_move(destination, access_operand(source)),
+            Instruction::BinaryLogic(BinaryLogic {
+                destination,
+                source,
+                operator: _,
+            }) => binary(destination, source),
+            Instruction::Arithmetic(Arithmetic {
+                destination,
+                source,
+                ..
+            }) => binary(destination, source),
+            Instruction::UnaryLogic(UnaryLogic { operand, .. }) => read_write(access(operand)),
+            Instruction::Exchange(Exchange { left, right }) => read_write(accesses(left, right)),
+            Instruction::JumpWhen(JumpWhen {
+                target: _,
+                condition,
+            })
+            | Instruction::JumpUnless(JumpUnless {
+                target: _,
+                condition,
+            }) => read_one(condition),
+
+            // Our sole ternary operator: read from the operands, write to the destination.
+            Instruction::Comparison(Comparison {
+                destination,
+                lhs,
+                rhs,
+                operator: _,
+            }) => MemoryAccesses {
+                reads: accesses_with_operand(lhs, rhs),
+                writes: access(destination),
+                captures: none(),
+            },
+
+            // Quil-T instructions that read from a single expression.
+            Instruction::Delay(Delay { duration: expr, .. })
+            | Instruction::SetPhase(SetPhase { phase: expr, .. })
+            | Instruction::SetScale(SetScale { scale: expr, .. })
+            | Instruction::ShiftPhase(ShiftPhase { phase: expr, .. })
+            | Instruction::SetFrequency(SetFrequency {
+                frequency: expr, ..
+            })
+            | Instruction::ShiftFrequency(ShiftFrequency {
+                frequency: expr, ..
+            }) => read_all(expr.memory_references()),
+
+            // Operations that read from memory and nothing else because they interact with the
+            // quantum components of the system.
+            Instruction::Pulse(Pulse {
+                waveform,
+                blocking: _,
+                frame: _,
+            }) => read_all(waveform.memory_references()),
+            Instruction::Gate(Gate { parameters, .. }) => {
+                read_all(parameters.iter().flat_map(Expression::memory_references))
+            }
+
+            // Capturing operations; the Quil-T variants may also read from memory.
+            Instruction::Capture(Capture {
+                memory_reference,
+                waveform,
+                blocking: _,
+                frame: _,
+            }) => MemoryAccesses {
+                reads: waveform
+                    .memory_references()
+                    .map(|r| r.name.clone())
+                    .collect(),
+                captures: access(memory_reference),
+                writes: none(),
+            },
+            Instruction::Measurement(Measurement { target, .. }) => MemoryAccesses {
+                captures: access_opt(target.as_ref()),
+                reads: none(),
+                writes: none(),
+            },
+            Instruction::RawCapture(RawCapture {
+                duration,
+                memory_reference,
+                blocking: _,
+                frame: _,
+            }) => MemoryAccesses {
+                reads: duration
+                    .memory_references()
+                    .map(|r| r.name.clone())
+                    .collect(),
+                captures: access(memory_reference),
+                writes: none(),
+            },
+
+            // Calls to external functions, which handle their own logic by looking at their
+            // signature.
+            Instruction::Call(call) => call.default_memory_accesses(extern_signature_map)?,
+
+            // Parameterized definitions whose parameters can also themselves reference memory
+            Instruction::CalibrationDefinition(CalibrationDefinition {
+                identifier:
+                    CalibrationIdentifier {
+                        parameters,
+                        modifiers: _,
+                        name: _,
+                        qubits: _,
+                    },
+                instructions,
+            }) => {
+                let parameter_reads = MemoryAccesses {
+                    reads: parameters
+                        .iter()
+                        .flat_map(Expression::memory_references)
+                        .map(|r| r.name.clone())
+                        .collect(),
+                    writes: none(),
+                    captures: none(),
+                };
+                instructions
+                    .iter()
+                    .map(|instr| self.memory_accesses(extern_signature_map, instr))
+                    .fold_ok(parameter_reads, MemoryAccesses::union)?
+            }
+
+            // Parameterized definitions whose parameters cannot themselves reference memory.  Note
+            // that their memory accesses may refer to parameter names instead of global
+            // declarations.
+            Instruction::GateDefinition(GateDefinition {
+                specification,
+                name: _,
+                parameters: _,
+            }) => match specification {
+                GateSpecification::Matrix(matrix) => read_all(
+                    matrix
+                        .iter()
+                        .flat_map(|row| row.iter().flat_map(Expression::memory_references)),
+                ),
+                GateSpecification::Permutation(_) | GateSpecification::PauliSum(_) => {
+                    MemoryAccesses::none()
+                }
+            },
+            Instruction::CircuitDefinition(CircuitDefinition {
+                instructions,
+                name: _,
+                parameters: _,
+                qubit_variables: _,
+            })
+            | Instruction::MeasureCalibrationDefinition(MeasureCalibrationDefinition {
+                instructions,
+                identifier: _,
+            }) => instructions
+                .iter()
+                .map(|instr| self.memory_accesses(extern_signature_map, instr))
+                .fold_ok(MemoryAccesses::new(), MemoryAccesses::union)?,
+            Instruction::WaveformDefinition(WaveformDefinition {
+                definition:
+                    Waveform {
+                        matrix,
+                        parameters: _,
+                    },
+                name: _,
+            }) => read_all(matrix.iter().flat_map(Expression::memory_references)),
+
+            // Dynamic memory accesses.  If we ever track region indices precisely, these will
+            // require conservatively marking accesses (read for load, write for store) as blocking
+            // the whole region.
+            Instruction::Load(Load {
+                destination,
+                source,
+                offset,
+            }) => MemoryAccesses {
+                reads: accesses_dynamic_index(source, offset),
+                writes: access(destination),
+                captures: none(),
+            },
+            Instruction::Store(Store {
+                destination,
+                offset,
+                source,
+            }) => MemoryAccesses {
+                reads: accesses_with_operand(offset, source),
+                writes: access_dynamic(destination),
+                captures: none(),
+            },
+
+            // Instructions that can't contain any memory references.  Conservatively includes
+            // `INCLUDE`, which we don't handle here, and `PRAGMA`, which we can't.
+            Instruction::Declaration(_)
+            | Instruction::Fence(_)
+            | Instruction::FrameDefinition(_)
+            | Instruction::Halt()
+            | Instruction::Wait()
+            | Instruction::Include(_)
+            | Instruction::Jump(_)
+            | Instruction::Label(_)
+            | Instruction::Nop()
+            | Instruction::Pragma(_)
+            | Instruction::Reset(_)
+            | Instruction::SwapPhases(_) => MemoryAccesses::none(),
+        })
     }
 }
 
 #[cfg(test)]
 mod tests {
     use rstest::*;
-    use std::str::FromStr;
+    use std::str::FromStr as _;
 
     use crate::{expression::Expression, Program};
 
@@ -1183,6 +1421,25 @@ RX(%a) 0",
     mod instruction_handler {
         use super::super::*;
 
+        struct CustomFrameHandler;
+
+        impl InstructionHandler for CustomFrameHandler {
+            fn matching_frames<'p>(
+                &self,
+                program: &'p Program,
+                instruction: &Instruction,
+            ) -> Option<MatchedFrames<'p>> {
+                if let Instruction::Pragma(_) = instruction {
+                    Some(MatchedFrames {
+                        used: program.frames.get_keys().into_iter().collect(),
+                        blocked: HashSet::new(),
+                    })
+                } else {
+                    DefaultHandler.matching_frames(program, instruction)
+                }
+            }
+        }
+
         #[test]
         fn it_considers_custom_instruction_frames() {
             let program = r#"DEFFRAME 0 "rf":
@@ -1195,21 +1452,12 @@ PRAGMA USES-ALL-FRAMES
 
             // This test assumes that the default simplification behavior will not assign frames to
             // `PRAGMA` instructions. This is verified below.
-            assert!(program.into_simplified().unwrap().frames.is_empty());
+            assert!(program.simplify(&DefaultHandler).unwrap().frames.is_empty());
 
-            let mut handler =
-                InstructionHandler::default().set_matching_frames(|instruction, program| {
-                    if let Instruction::Pragma(_) = instruction {
-                        Some(Some(MatchedFrames {
-                            used: program.frames.get_keys().into_iter().collect(),
-                            blocked: HashSet::new(),
-                        }))
-                    } else {
-                        None
-                    }
-                });
-
-            assert_eq!(handler.simplify_program(&program).unwrap().frames.len(), 1);
+            assert_eq!(
+                program.simplify(&CustomFrameHandler).unwrap().frames.len(),
+                1
+            );
         }
     }
 }
