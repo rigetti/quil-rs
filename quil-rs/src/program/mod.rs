@@ -1882,13 +1882,13 @@ CALL foo octets[1] reals
 
         assert_eq!(
             Instruction::Pragma(pragma)
-                .get_memory_accesses(&extern_signature_map)
+                .memory_accesses(&extern_signature_map)
                 .expect("should be able to get memory accesses"),
             MemoryAccesses::default()
         );
 
         assert_eq!(
-            call.get_memory_accesses(&extern_signature_map)
+            call.memory_accesses(&extern_signature_map)
                 .expect("should be able to get memory accesses"),
             MemoryAccesses {
                 reads: ["octets", "reals"].into_iter().map(String::from).collect(),

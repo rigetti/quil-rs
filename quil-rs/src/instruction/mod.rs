@@ -56,8 +56,8 @@ pub use self::calibration::{
 pub use self::circuit::CircuitDefinition;
 pub use self::classical::{
     Arithmetic, ArithmeticOperand, ArithmeticOperator, BinaryLogic, BinaryOperand, BinaryOperator,
-    Comparison, ComparisonOperand, ComparisonOperator, Convert, Exchange, Move, UnaryLogic,
-    UnaryOperator,
+    ClassicalOperand, Comparison, ComparisonOperand, ComparisonOperator, Convert, Exchange, Move,
+    UnaryLogic, UnaryOperator,
 };
 pub use self::control_flow::{Jump, JumpUnless, JumpWhen, Label, Target, TargetPlaceholder};
 pub use self::declaration::{
@@ -1032,7 +1032,7 @@ impl InstructionHandler {
             .as_mut()
             .and_then(|f| f(instruction))
             .map(Ok)
-            .unwrap_or_else(|| instruction.get_memory_accesses(extern_signature_map))
+            .unwrap_or_else(|| instruction.memory_accesses(extern_signature_map))
     }
 
     /// Like [`Program::into_simplified`], but using custom instruction handling.
