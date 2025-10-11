@@ -103,10 +103,12 @@ pub enum MemoryAccessType {
     Capture,
 }
 
-#[derive(thiserror::Error, Debug, PartialEq, Clone)]
+#[derive(Debug, thiserror::Error)]
 pub enum MemoryAccessesError {
     #[error(transparent)]
     CallResolution(#[from] CallResolutionError),
+    #[error("Instruction handler reported an error when constructing memory accesses: {0}")]
+    InstructionHandlerError(Box<dyn std::error::Error + Send + Sync + 'static>),
 }
 
 pub mod expression {
