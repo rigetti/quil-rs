@@ -109,8 +109,6 @@ pub enum MemoryAccessesError {
     CallResolution(#[from] CallResolutionError),
 }
 
-pub type MemoryAccessesResult = Result<MemoryAccesses, MemoryAccessesError>;
-
 pub mod expression {
     // Contains an implementation of an iterator over all [`MemoryReference`]s read from by an
     // expression.  We construct a separate iterator here so we can avoid reifying a vector of
