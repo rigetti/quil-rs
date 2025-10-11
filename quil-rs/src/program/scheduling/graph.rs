@@ -494,6 +494,7 @@ mod graphviz_dot_tests {
         use crate::instruction::Pragma;
         use crate::instruction::PragmaArgument;
         use crate::program::frame::FrameMatchCondition;
+        use crate::program::MemoryAccessesError;
         use crate::program::{MatchedFrames, MemoryAccesses};
 
         /// A custom [`InstructionHandler`] that specially handles two `PRAGMA` instructions:
@@ -571,7 +572,7 @@ mod graphviz_dot_tests {
                 &self,
                 extern_signature_map: &ExternSignatureMap,
                 instruction: &Instruction,
-            ) -> crate::program::MemoryAccessesResult {
+            ) -> Result<MemoryAccesses, MemoryAccessesError> {
                 match instruction {
                     Instruction::Pragma(Pragma { name, .. }) if name == NO_OP => {
                         Ok(MemoryAccesses::none())

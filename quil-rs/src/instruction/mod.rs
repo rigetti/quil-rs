@@ -25,7 +25,7 @@ use crate::{
     parser::{lex, parse_instructions},
     program::{
         frame::{FrameMatchCondition, FrameMatchConditions},
-        MatchedFrames, MemoryAccesses, MemoryAccessesResult,
+        MatchedFrames, MemoryAccesses, MemoryAccessesError,
     },
     quil::{write_join_quil, Quil, ToQuilResult},
     Program,
@@ -883,7 +883,7 @@ pub trait InstructionHandler {
         &self,
         extern_signature_map: &ExternSignatureMap,
         instruction: &Instruction,
-    ) -> MemoryAccessesResult {
+    ) -> Result<MemoryAccesses, MemoryAccessesError> {
         DefaultHandler.memory_accesses(extern_signature_map, instruction)
     }
 }
@@ -969,7 +969,7 @@ impl InstructionHandler for DefaultHandler {
         &self,
         extern_signature_map: &ExternSignatureMap,
         instruction: &Instruction,
-    ) -> MemoryAccessesResult {
+    ) -> Result<MemoryAccesses, MemoryAccessesError> {
         // Building individual access sets
 
         #[inline]
