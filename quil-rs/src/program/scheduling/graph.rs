@@ -366,26 +366,36 @@ impl<'a> ScheduledBasicBlock<'a> {
                     .collect::<Vec<_>>()
             })
             .collect::<Vec<_>>();
-            let has_memory_dependencies = !memory_dependencies.is_empty();
+
+            // Does this instruction have no incoming edges?  (Only used if this instruction is
+            // classical.)
+            let mut leading_instruction = true;
+
             for memory_dependency in memory_dependencies {
                 // Test to make sure that no instructions depend directly on themselves
                 if memory_dependency.node_id != node {
                     let execution_dependency =
                         ExecutionDependency::AwaitMemoryAccess(memory_dependency.access_type);
+
                     add_dependency!(graph, memory_dependency.node_id => node, execution_dependency);
-                    // This memory dependency now has an outgoing edge, so it is no longer a trailing classical
-                    // instruction. If the memory dependency is not a classical instruction, this
-                    // has no effect.
+
+                    // This instruction now has an incoming edge, so it is not leading.
+                    leading_instruction = false;
+
+                    // This memory dependency now has an outgoing edge, so it is no longer a
+                    // trailing classical instruction. If the memory dependency is not a classical
+                    // instruction, this has no effect.
                     trailing_classical_instructions.remove(&memory_dependency.node_id);
                 }
             }
 
+            let leading_instruction = leading_instruction;
+
             match custom_handler.role_for_instruction(instruction) {
                 // Classical instructions must be ordered by appearance in the program
                 InstructionRole::ClassicalCompute => {
-                    // If this instruction has no memory dependencies, it is a leading classical
-                    // instruction and needs an incoming edge from the block start.
-                    if !has_memory_dependencies {
+                    // All classical instructions must occur after the block start.
+                    if leading_instruction {
                         add_dependency!(graph, ScheduledGraphNode::BlockStart => node, ExecutionDependency::StableOrdering);
                     }
                     trailing_classical_instructions.insert(node);
