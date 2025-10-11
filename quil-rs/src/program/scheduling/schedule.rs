@@ -11,7 +11,8 @@ use petgraph::{
 
 use crate::{
     instruction::{
-        AttributeValue, Capture, Delay, Instruction, Pulse, RawCapture, WaveformInvocation,
+        AttributeValue, Capture, Delay, Instruction, InstructionHandler, Pulse, RawCapture,
+        WaveformInvocation,
     },
     quil::Quil,
     Program,
@@ -177,14 +178,15 @@ impl<'p> ScheduledBasicBlock<'p> {
     /// * For supporting instructions like SET-*, SHIFT-*, and FENCE, it's 0
     ///
     /// Return `None` for other instructions.
-    pub(crate) fn get_instruction_duration_seconds(
+    pub(crate) fn instruction_duration_seconds<H: InstructionHandler>(
         program: &Program,
         instruction: &Instruction,
+        handler: &H,
     ) -> Option<Seconds> {
         match instruction {
             Instruction::Capture(Capture { waveform, .. })
             | Instruction::Pulse(Pulse { waveform, .. }) => {
-                Self::get_waveform_duration_seconds(program, instruction, waveform)
+                Self::get_waveform_duration_seconds(program, instruction, waveform, handler)
             }
             Instruction::Delay(Delay { duration, .. })
             | Instruction::RawCapture(RawCapture { duration, .. }) => {
@@ -208,16 +210,17 @@ impl<'p> ScheduledBasicBlock<'p> {
     ///
     /// Otherwise, it's the `duration` parameter of the waveform invocation. This relies on the assumption that
     /// all template waveforms in use have such a parameter in units of seconds.
-    fn get_waveform_duration_seconds(
+    fn get_waveform_duration_seconds<H: InstructionHandler>(
         program: &Program,
         instruction: &Instruction,
         WaveformInvocation { name, parameters }: &WaveformInvocation,
+        handler: &H,
     ) -> Option<Seconds> {
         if let Some(definition) = program.waveforms.get(name) {
             let sample_count = definition.matrix.len();
             let common_sample_rate =
-                program
-                    .get_frames_for_instruction(instruction)
+                handler
+                    .matching_frames(program, instruction)
                     .and_then(|frames| {
                         frames
                             .used
@@ -265,11 +268,14 @@ impl<'p> ScheduledBasicBlock<'p> {
 
     /// Compute the flattened schedule for this [`ScheduledBasicBlock`] in terms of seconds,
     /// using a default built-in calculation for the duration of scheduled instructions.
-    pub fn as_schedule_seconds(
+    pub fn as_schedule_seconds<H: InstructionHandler>(
         &self,
         program: &Program,
+        handler: &H,
     ) -> ComputedScheduleResult<ScheduleSeconds> {
-        self.as_schedule(program, Self::get_instruction_duration_seconds)
+        self.as_schedule(program, |prog, instr| {
+            Self::instruction_duration_seconds(prog, instr, handler)
+        })
     }
 
     /// Compute the flattened schedule for this [`ScheduledBasicBlock`] using a user-provided
@@ -361,7 +367,7 @@ mod tests {
     use core::panic;
     use std::str::FromStr;
 
-    use crate::{instruction::InstructionHandler, program::scheduling::TimeSpan, Program};
+    use crate::{instruction::DefaultHandler, program::scheduling::TimeSpan, Program};
 
     #[rstest::rstest]
     #[case("CAPTURE 0 \"a\" flat(duration: 1.0) ro", Some(1.0))]
@@ -386,9 +392,10 @@ mod tests {
             .unwrap();
         let instruction = program.into_instructions().remove(0);
         let duration =
-            crate::program::scheduling::ScheduledBasicBlock::get_instruction_duration_seconds(
+            crate::program::scheduling::ScheduledBasicBlock::instruction_duration_seconds(
                 &empty_program,
                 &instruction,
+                &DefaultHandler,
             );
         assert_eq!(
             expected_duration.map(crate::program::scheduling::Seconds),
@@ -458,12 +465,14 @@ PULSE 0 "a" flat(duration: 1.0)
     fn schedule_seconds(#[case] input_program: &str, #[case] expected_times: Result<Vec<f64>, ()>) {
         let program: Program = input_program.parse().unwrap();
         let block: crate::program::analysis::BasicBlock = (&program).try_into().unwrap();
-        let mut handler = InstructionHandler::default();
-        let scheduled_block =
-            crate::program::scheduling::ScheduledBasicBlock::build(block, &program, &mut handler)
-                .unwrap();
+        let scheduled_block = crate::program::scheduling::ScheduledBasicBlock::build(
+            block,
+            &program,
+            &DefaultHandler,
+        )
+        .unwrap();
         match (
-            scheduled_block.as_schedule_seconds(&program),
+            scheduled_block.as_schedule_seconds(&program, &DefaultHandler),
             expected_times,
         ) {
             (Ok(schedule), Ok(expected_times)) => {

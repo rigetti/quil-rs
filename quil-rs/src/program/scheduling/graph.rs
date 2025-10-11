@@ -294,10 +294,10 @@ impl PreviousNodes {
 
 impl<'a> ScheduledBasicBlock<'a> {
     /// Build a scheduled basic block from a basic block and a program.
-    pub fn build(
+    pub fn build<H: InstructionHandler>(
         basic_block: BasicBlock<'a>,
         program: &'a Program,
-        custom_handler: &mut InstructionHandler,
+        handler: &H,
     ) -> ScheduleResult<Self> {
         let mut graph: DependencyGraph = GraphMap::new();
         // Root node
@@ -337,8 +337,8 @@ impl<'a> ScheduledBasicBlock<'a> {
         for (node, instruction) in instructions_iter {
             graph.add_node(node);
 
-            let accesses = custom_handler
-                .memory_accesses(instruction, &extern_signature_map)
+            let accesses = handler
+                .memory_accesses(&extern_signature_map, instruction)
                 .map_err(|_| ScheduleError {
                     instruction_node: Some(node),
                     instruction: instruction.clone(),
@@ -391,7 +391,7 @@ impl<'a> ScheduledBasicBlock<'a> {
 
             let leading_instruction = leading_instruction;
 
-            match custom_handler.role_for_instruction(instruction) {
+            match handler.role(instruction) {
                 // Classical instructions must be ordered by appearance in the program
                 InstructionRole::ClassicalCompute => {
                     // All classical instructions must occur after the block start.
@@ -402,8 +402,8 @@ impl<'a> ScheduledBasicBlock<'a> {
                     Ok(())
                 }
                 InstructionRole::RFControl => {
-                    let matched_frames = custom_handler.matching_frames(instruction, program);
-                    let is_scheduled = custom_handler.is_scheduled(instruction);
+                    let matched_frames = handler.matching_frames(program, instruction);
+                    let is_scheduled = handler.is_scheduled(instruction);
 
                     if let Some(matched_frames) = matched_frames {
                         for frame in matched_frames.used {
@@ -543,16 +543,16 @@ pub struct ScheduledProgram<'a> {
 
 impl<'a> ScheduledProgram<'a> {
     /// Structure a sequential program
-    pub fn from_program(
+    pub fn from_program<H: InstructionHandler>(
         program: &'a Program,
-        custom_handler: &mut InstructionHandler,
+        handler: &H,
     ) -> ScheduleResult<Self> {
         let control_flow_graph = ControlFlowGraph::from(program);
         Ok(Self {
             basic_blocks: control_flow_graph
                 .into_blocks()
                 .into_iter()
-                .map(|block| ScheduledBasicBlock::build(block, program, custom_handler))
+                .map(|block| ScheduledBasicBlock::build(block, program, handler))
                 .collect::<ScheduleResult<Vec<_>>>()?,
         })
     }
@@ -599,12 +599,13 @@ mod graphviz_dot_tests {
     mod custom_handler {
         use super::*;
 
+        use crate::instruction::DefaultHandler;
         use crate::instruction::Pragma;
         use crate::instruction::PragmaArgument;
         use crate::program::frame::FrameMatchCondition;
         use crate::program::{MatchedFrames, MemoryAccesses};
 
-        /// Generates a custom [`InstructionHandler`] that specially handles two `PRAGMA` instructions:
+        /// A custom [`InstructionHandler`] that specially handles two `PRAGMA` instructions:
         ///
         /// - `NO-OP` is considered a `ClassicalCompute` instruction that does nothing
         /// - `RAW-INSTRUCTION` is an `RFControl` instruction that is scheduled on all frames by default
@@ -612,32 +613,42 @@ mod graphviz_dot_tests {
         ///
         /// Note that any program being tested must define at least one frame for `RAW-INSTRUCTION` to
         /// have any effect.
-        fn get_custom_handler() -> InstructionHandler {
-            const NO_OP: &str = "NO-OP";
-            const RAW_INSTRUCTION: &str = "RAW-INSTRUCTION";
+        struct CustomHandler;
 
-            InstructionHandler::default()
-                .set_is_scheduled(|instruction| match instruction {
-                    Instruction::Pragma(Pragma { name, .. }) if name == NO_OP => Some(false),
-                    Instruction::Pragma(Pragma { name, .. }) if name == RAW_INSTRUCTION => {
-                        Some(true)
-                    }
-                    _ => None,
-                })
-                .set_role_for_instruction(|instruction| match instruction {
+        const NO_OP: &str = "NO-OP";
+        const RAW_INSTRUCTION: &str = "RAW-INSTRUCTION";
+
+        impl InstructionHandler for CustomHandler {
+            fn is_scheduled(&self, instruction: &Instruction) -> bool {
+                match instruction {
+                    Instruction::Pragma(Pragma { name, .. }) if name == NO_OP => false,
+                    Instruction::Pragma(Pragma { name, .. }) if name == RAW_INSTRUCTION => true,
+                    _ => DefaultHandler.is_scheduled(instruction),
+                }
+            }
+
+            fn role(&self, instruction: &Instruction) -> InstructionRole {
+                match instruction {
                     Instruction::Pragma(Pragma { name, .. }) if name == NO_OP => {
-                        Some(InstructionRole::ClassicalCompute)
+                        InstructionRole::ClassicalCompute
                     }
                     Instruction::Pragma(Pragma { name, .. }) if name == RAW_INSTRUCTION => {
-                        Some(InstructionRole::RFControl)
+                        InstructionRole::RFControl
                     }
-                    _ => None,
-                })
-                .set_matching_frames(|instruction, program| match instruction {
-                    Instruction::Pragma(Pragma { name, .. }) if name == NO_OP => Some(None),
+                    _ => DefaultHandler.role(instruction),
+                }
+            }
+
+            fn matching_frames<'p>(
+                &self,
+                program: &'p Program,
+                instruction: &Instruction,
+            ) -> Option<MatchedFrames<'p>> {
+                match instruction {
+                    Instruction::Pragma(Pragma { name, .. }) if name == NO_OP => None,
                     Instruction::Pragma(Pragma {
                         name, arguments, ..
-                    }) if name == RAW_INSTRUCTION => Some(Some({
+                    }) if name == RAW_INSTRUCTION => {
                         let frame_condition = if arguments.is_empty() {
                             FrameMatchCondition::All
                         } else {
@@ -656,26 +667,34 @@ mod graphviz_dot_tests {
                             .frames
                             .get_matching_keys_for_condition(frame_condition);
 
-                        MatchedFrames {
+                        Some(MatchedFrames {
                             used,
                             blocked: HashSet::new(),
-                        }
-                    })),
-                    _ => None,
-                })
-                .set_memory_accesses(|instruction| match instruction {
-                    Instruction::Pragma(Pragma { name, .. }) if name == NO_OP => {
-                        Some(MemoryAccesses::default())
+                        })
                     }
-                    Instruction::Pragma(Pragma { name, .. }) if name == RAW_INSTRUCTION => Some({
-                        MemoryAccesses {
-                            captures: HashSet::new(),
-                            reads: [String::from("ro")].into(),
+                    _ => DefaultHandler.matching_frames(program, instruction),
+                }
+            }
+
+            fn memory_accesses(
+                &self,
+                extern_signature_map: &ExternSignatureMap,
+                instruction: &Instruction,
+            ) -> crate::program::MemoryAccessesResult {
+                match instruction {
+                    Instruction::Pragma(Pragma { name, .. }) if name == NO_OP => {
+                        Ok(MemoryAccesses::none())
+                    }
+                    Instruction::Pragma(Pragma { name, .. }) if name == RAW_INSTRUCTION => {
+                        Ok(MemoryAccesses {
+                            reads: ["ro".to_owned()].into(),
                             writes: HashSet::new(),
-                        }
-                    }),
-                    _ => None,
-                })
+                            captures: HashSet::new(),
+                        })
+                    }
+                    _ => DefaultHandler.memory_accesses(extern_signature_map, instruction),
+                }
+            }
         }
 
         build_dot_format_snapshot_test_case! {
@@ -690,7 +709,7 @@ PRAGMA RAW-INSTRUCTION
 PRAGMA NO-OP
 PRAGMA RAW-INSTRUCTION
 "#,
-            &mut get_custom_handler(),
+            &CustomHandler,
         }
 
         build_dot_format_snapshot_test_case! {
@@ -711,7 +730,7 @@ PRAGMA RAW-INSTRUCTION foo bar
 PRAGMA NO-OP
 PRAGMA RAW-INSTRUCTION foo
 "#,
-            &mut get_custom_handler(),
+            &CustomHandler,
         }
 
         build_dot_format_snapshot_test_case! {
@@ -736,7 +755,7 @@ PULSE 1 "bar" gaussian(duration: 1, fwhm: 2, t0: 3)
 PRAGMA NO-OP
 PRAGMA RAW-INSTRUCTION foo
 "#,
-            &mut get_custom_handler(),
+            &CustomHandler,
         }
     }
 

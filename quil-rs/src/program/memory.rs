@@ -14,23 +14,13 @@
 
 use std::collections::HashSet;
 
-use itertools::Itertools as _;
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::gen_stub_pyclass;
 
-use crate::instruction::Waveform;
-pub(crate) use crate::instruction::{
-    Arithmetic, BinaryLogic, CalibrationDefinition, CalibrationIdentifier, CallResolutionError,
-    Capture, CircuitDefinition, ClassicalOperand, Comparison, Convert, Delay, Exchange,
-    ExternSignatureMap, Gate, GateDefinition, GateSpecification, Instruction, JumpUnless, JumpWhen,
-    Load, MeasureCalibrationDefinition, Measurement, MemoryReference, Move, Pulse, RawCapture,
-    SetFrequency, SetPhase, SetScale, Sharing, ShiftFrequency, ShiftPhase, Store, UnaryLogic,
-    Vector, WaveformInvocation,
-};
-use crate::pickleable_new;
 use crate::{
     expression::{Expression, FunctionCallExpression, InfixExpression, PrefixExpression},
-    instruction::WaveformDefinition,
+    instruction::{CallResolutionError, MemoryReference, Sharing, Vector, WaveformInvocation},
+    pickleable_new,
 };
 
 #[derive(Clone, Debug, Hash, PartialEq)]
@@ -120,328 +110,6 @@ pub enum MemoryAccessesError {
 }
 
 pub type MemoryAccessesResult = Result<MemoryAccesses, MemoryAccessesError>;
-
-impl Instruction {
-    /// Return all memory accesses by the instruction - in expressions, captures, and memory manipulation.
-    ///
-    /// This will fail if the program contains [`Instruction::Call`] instructions that cannot
-    /// be resolved against a signature in the provided [`ExternSignatureMap`] (either because
-    /// they call functions that don't appear in the map or because the types of the parameters
-    /// are wrong).
-    pub fn memory_accesses(
-        &self,
-        extern_signature_map: &ExternSignatureMap,
-    ) -> MemoryAccessesResult {
-        // Building individual access sets
-
-        #[inline]
-        fn none() -> HashSet<String> {
-            HashSet::new()
-        }
-
-        #[inline]
-        fn access(reference: &MemoryReference) -> HashSet<String> {
-            [reference.name.clone()].into()
-        }
-
-        #[inline]
-        fn access_dynamic(region: &str) -> HashSet<String> {
-            [region.to_owned()].into()
-        }
-
-        #[inline]
-        fn accesses(reference1: &MemoryReference, reference2: &MemoryReference) -> HashSet<String> {
-            [reference1.name.clone(), reference2.name.clone()].into()
-        }
-
-        #[inline]
-        fn accesses_dynamic_index(region: &str, index: &MemoryReference) -> HashSet<String> {
-            [region.to_owned(), index.name.clone()].into()
-        }
-
-        #[inline]
-        fn access_opt(opt_reference: Option<&MemoryReference>) -> HashSet<String> {
-            opt_reference.map_or_else(HashSet::new, access)
-        }
-
-        #[inline]
-        fn access_operand(operand: &impl ClassicalOperand) -> HashSet<String> {
-            access_opt(operand.memory_reference())
-        }
-
-        #[inline]
-        fn accesses_with_operand(
-            reference: &MemoryReference,
-            operand: &impl ClassicalOperand,
-        ) -> HashSet<String> {
-            if let Some(other) = operand.memory_reference() {
-                accesses(reference, other)
-            } else {
-                access(reference)
-            }
-        }
-
-        // Building complete access patterns
-
-        // Move-like operations: those that read from at most one place and write to another
-        fn like_move(
-            destination: &MemoryReference,
-            source_accesses: HashSet<String>,
-        ) -> MemoryAccesses {
-            MemoryAccesses {
-                reads: source_accesses,
-                writes: access(destination),
-                captures: none(),
-            }
-        }
-
-        // Updating binary operators: read from a possible source, read and write to the
-        // destination.
-        fn binary(destination: &MemoryReference, source: &impl ClassicalOperand) -> MemoryAccesses {
-            MemoryAccesses {
-                reads: accesses_with_operand(destination, source),
-                writes: access(destination),
-                captures: none(),
-            }
-        }
-
-        // Read-write operations, whose inputs are the same as their outputs.
-        fn read_write(places: HashSet<String>) -> MemoryAccesses {
-            MemoryAccesses {
-                reads: places.clone(),
-                writes: places,
-                captures: none(),
-            }
-        }
-
-        // Classical instructions that read a single memory reference.
-        fn read_one(place: &MemoryReference) -> MemoryAccesses {
-            MemoryAccesses {
-                reads: access(place),
-                writes: none(),
-                captures: none(),
-            }
-        }
-
-        // Instructions that read from many memory references; for instance, those that take an
-        // expression as an argument.
-        fn read_all<'a>(places: impl IntoIterator<Item = &'a MemoryReference>) -> MemoryAccesses {
-            MemoryAccesses {
-                reads: places.into_iter().map(|r| r.name.clone()).collect(),
-                writes: none(),
-                captures: none(),
-            }
-        }
-
-        // The match
-
-        Ok(match self {
-            // Operations with simple memory access patterns as captured (heh) above
-            Instruction::Convert(Convert {
-                destination,
-                source,
-            }) => like_move(destination, access(source)),
-            Instruction::Move(Move {
-                destination,
-                source,
-            }) => like_move(destination, access_operand(source)),
-            Instruction::BinaryLogic(BinaryLogic {
-                destination,
-                source,
-                operator: _,
-            }) => binary(destination, source),
-            Instruction::Arithmetic(Arithmetic {
-                destination,
-                source,
-                ..
-            }) => binary(destination, source),
-            Instruction::UnaryLogic(UnaryLogic { operand, .. }) => read_write(access(operand)),
-            Instruction::Exchange(Exchange { left, right }) => read_write(accesses(left, right)),
-            Instruction::JumpWhen(JumpWhen {
-                target: _,
-                condition,
-            })
-            | Instruction::JumpUnless(JumpUnless {
-                target: _,
-                condition,
-            }) => read_one(condition),
-
-            // Our sole ternary operator: read from the operands, write to the destination.
-            Instruction::Comparison(Comparison {
-                destination,
-                lhs,
-                rhs,
-                operator: _,
-            }) => MemoryAccesses {
-                reads: accesses_with_operand(lhs, rhs),
-                writes: access(destination),
-                captures: none(),
-            },
-
-            // Quil-T instructions that read from a single expression.
-            Instruction::Delay(Delay { duration: expr, .. })
-            | Instruction::SetPhase(SetPhase { phase: expr, .. })
-            | Instruction::SetScale(SetScale { scale: expr, .. })
-            | Instruction::ShiftPhase(ShiftPhase { phase: expr, .. })
-            | Instruction::SetFrequency(SetFrequency {
-                frequency: expr, ..
-            })
-            | Instruction::ShiftFrequency(ShiftFrequency {
-                frequency: expr, ..
-            }) => read_all(expr.memory_references()),
-
-            // Operations that read from memory and nothing else because they interact with the
-            // quantum components of the system.
-            Instruction::Pulse(Pulse {
-                waveform,
-                blocking: _,
-                frame: _,
-            }) => read_all(waveform.memory_references()),
-            Instruction::Gate(Gate { parameters, .. }) => {
-                read_all(parameters.iter().flat_map(Expression::memory_references))
-            }
-
-            // Capturing operations; the Quil-T variants may also read from memory.
-            Instruction::Capture(Capture {
-                memory_reference,
-                waveform,
-                blocking: _,
-                frame: _,
-            }) => MemoryAccesses {
-                reads: waveform
-                    .memory_references()
-                    .map(|r| r.name.clone())
-                    .collect(),
-                captures: access(memory_reference),
-                writes: none(),
-            },
-            Instruction::Measurement(Measurement { target, .. }) => MemoryAccesses {
-                captures: access_opt(target.as_ref()),
-                reads: none(),
-                writes: none(),
-            },
-            Instruction::RawCapture(RawCapture {
-                duration,
-                memory_reference,
-                blocking: _,
-                frame: _,
-            }) => MemoryAccesses {
-                reads: duration
-                    .memory_references()
-                    .map(|r| r.name.clone())
-                    .collect(),
-                captures: access(memory_reference),
-                writes: none(),
-            },
-
-            // Calls to external functions, which handle their own logic by looking at their
-            // signature.
-            Instruction::Call(call) => call.memory_accesses(extern_signature_map)?,
-
-            // Parameterized definitions whose parameters can also themselves reference memory
-            Instruction::CalibrationDefinition(CalibrationDefinition {
-                identifier:
-                    CalibrationIdentifier {
-                        parameters,
-                        modifiers: _,
-                        name: _,
-                        qubits: _,
-                    },
-                instructions,
-            }) => {
-                let parameter_reads = MemoryAccesses {
-                    reads: parameters
-                        .iter()
-                        .flat_map(Expression::memory_references)
-                        .map(|r| r.name.clone())
-                        .collect(),
-                    writes: none(),
-                    captures: none(),
-                };
-                instructions
-                    .iter()
-                    .map(|instr| instr.memory_accesses(extern_signature_map))
-                    .fold_ok(parameter_reads, MemoryAccesses::union)?
-            }
-
-            // Parameterized definitions whose parameters cannot themselves reference memory.  Note
-            // that their memory accesses may refer to parameter names instead of global
-            // declarations.
-            Instruction::GateDefinition(GateDefinition {
-                specification,
-                name: _,
-                parameters: _,
-            }) => match specification {
-                GateSpecification::Matrix(matrix) => read_all(
-                    matrix
-                        .iter()
-                        .flat_map(|row| row.iter().flat_map(Expression::memory_references)),
-                ),
-                GateSpecification::Permutation(_) | GateSpecification::PauliSum(_) => {
-                    MemoryAccesses::none()
-                }
-            },
-            Instruction::CircuitDefinition(CircuitDefinition {
-                instructions,
-                name: _,
-                parameters: _,
-                qubit_variables: _,
-            })
-            | Instruction::MeasureCalibrationDefinition(MeasureCalibrationDefinition {
-                instructions,
-                identifier: _,
-            }) => instructions
-                .iter()
-                .map(|instr| instr.memory_accesses(extern_signature_map))
-                .fold_ok(MemoryAccesses::new(), MemoryAccesses::union)?,
-            Instruction::WaveformDefinition(WaveformDefinition {
-                definition:
-                    Waveform {
-                        matrix,
-                        parameters: _,
-                    },
-                name: _,
-            }) => read_all(matrix.iter().flat_map(Expression::memory_references)),
-
-            // Dynamic memory accesses.  If we ever track region indices precisely, these will
-            // require conservatively marking accesses (read for load, write for store) as blocking
-            // the whole region.
-            Instruction::Load(Load {
-                destination,
-                source,
-                offset,
-            }) => MemoryAccesses {
-                reads: accesses_dynamic_index(source, offset),
-                writes: access(destination),
-                captures: none(),
-            },
-            Instruction::Store(Store {
-                destination,
-                offset,
-                source,
-            }) => MemoryAccesses {
-                reads: accesses_with_operand(offset, source),
-                writes: access_dynamic(destination),
-                captures: none(),
-            },
-
-            // Instructions that can't contain any memory references.  Conservatively includes
-            // `INCLUDE`, which we don't handle here, and `PRAGMA`, which we can't.
-            Instruction::Declaration(_)
-            | Instruction::Fence(_)
-            | Instruction::FrameDefinition(_)
-            | Instruction::Halt()
-            | Instruction::Wait()
-            | Instruction::Include(_)
-            | Instruction::Jump(_)
-            | Instruction::Label(_)
-            | Instruction::Nop()
-            | Instruction::Pragma(_)
-            | Instruction::Reset(_)
-            | Instruction::SwapPhases(_) => MemoryAccesses::none(),
-        })
-    }
-}
 
 pub mod expression {
     // Contains an implementation of an iterator over all [`MemoryReference`]s read from by an
@@ -565,15 +233,19 @@ impl WaveformInvocation {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
     use rstest::rstest;
 
-    use crate::expression::Expression;
-    use crate::instruction::{
-        ArithmeticOperand, Convert, Exchange, ExternSignatureMap, FrameIdentifier, Instruction,
-        MemoryReference, Qubit, SetFrequency, ShiftFrequency, Store,
+    use crate::{
+        expression::Expression,
+        instruction::{
+            ArithmeticOperand, Convert, DefaultHandler, Exchange, ExternSignatureMap,
+            FrameIdentifier, Instruction, InstructionHandler as _, MemoryReference, Qubit,
+            SetFrequency, ShiftFrequency, Store,
+        },
+        program::MemoryAccesses,
     };
-    use crate::program::MemoryAccesses;
-    use std::collections::HashSet;
 
     #[rstest]
     #[case(
@@ -666,8 +338,8 @@ mod tests {
         #[case] instruction: Instruction,
         #[case] expected: MemoryAccesses,
     ) {
-        let memory_accesses = instruction
-            .memory_accesses(&ExternSignatureMap::default())
+        let memory_accesses = DefaultHandler
+            .memory_accesses(&ExternSignatureMap::default(), &instruction)
             .expect("must be able to get memory accesses");
         assert_eq!(memory_accesses.captures, expected.captures);
         assert_eq!(memory_accesses.reads, expected.reads);
