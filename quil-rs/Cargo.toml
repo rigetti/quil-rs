@@ -18,7 +18,7 @@ approx = { version = "0.5.1", features = ["num-complex"] }
 dot-writer = { version = "0.1.2", optional = true }
 internment = { version = "0.8.6", features = ["arc"] }
 itertools = "0.12.1"
-lexical = "7.0.1"
+lexical = { version = "7.0.1", features = ["format", "power-of-two"] }
 ndarray.workspace = true
 nom = "7.1.1"
 nom_locate = "4.0.0"

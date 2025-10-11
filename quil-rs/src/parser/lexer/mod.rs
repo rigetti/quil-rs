@@ -16,19 +16,21 @@ mod error;
 mod quoted_strings;
 mod wrapped_parsers;
 
-use std::str::FromStr;
+use std::{num::NonZeroU8, str::FromStr};
 
+use lexical::{
+    FromLexicalWithOptions, NumberFormatBuilder, ParseFloatOptions, ParseIntegerOptions,
+};
 use nom::{
     bytes::complete::{is_a, take_till, take_while, take_while1},
-    character::complete::{digit1, one_of},
-    combinator::{all_consuming, map, recognize, value},
+    character::complete::one_of,
+    combinator::{all_consuming, cut, map, peek, recognize, value},
     multi::many0,
-    number::complete::double,
     sequence::{pair, preceded, terminated, tuple},
-    Finish, IResult,
+    Finish, IResult, Slice as _,
 };
 use nom_locate::LocatedSpan;
-use wrapped_parsers::{alt, tag};
+use wrapped_parsers::{alt, tag, tag_no_case};
 
 pub use super::token::{KeywordToken, Token, TokenWithLocation};
 use crate::parser::lexer::wrapped_parsers::expecting;
@@ -168,12 +170,8 @@ fn lex_token(input: LexInput) -> InternalLexResult<TokenWithLocation> {
             token_with_location(lex_punctuation),
             token_with_location(lex_target),
             token_with_location(lex_string),
-            // Operator must come before number (or it may be parsed as a prefix)
             token_with_location(lex_operator),
             token_with_location(lex_variable),
-            // Identifiers must come before numbers so that `NaN`, `Inf`, and `Infinity` aren't
-            // parsed as floats; Nom, as of version 7.1.1, will parse those strings,
-            // case-insensitively, as floats
             token_with_location(lex_keyword_or_identifier),
             token_with_location(lex_number),
         ),
@@ -241,20 +239,160 @@ fn lex_target(input: LexInput) -> InternalLexResult {
     Ok((input, Token::Target(label)))
 }
 
+const fn number_format(prefix: Option<NonZeroU8>, radix: u8) -> u128 {
+    NumberFormatBuilder::new()
+        .mantissa_radix(radix)
+        .exponent_base(NonZeroU8::new(radix))
+        .exponent_radix(NonZeroU8::new(10))
+        .base_prefix(prefix)
+        .digit_separator(NonZeroU8::new(b'_'))
+        .required_integer_digits(false) // Allows `.1`
+        .required_fraction_digits(false) // Allows `1.`
+        .required_exponent_digits(true) // Forbids `1e`
+        .required_mantissa_digits(true) // Forbids `.`
+        .no_positive_mantissa_sign(true) // Forbids `+1`
+        .required_mantissa_sign(false) // Allows `1`, not just `-1`
+        .no_exponent_notation(false) // Allows `1e3`
+        .no_positive_exponent_sign(false) // Allows `1e+3`, not just `1e3`
+        .required_exponent_sign(false) // Allows `1e3`, not just `1e+3`
+        .no_exponent_without_fraction(false) // Allows `1e3`, not just `1.e3`
+        .no_special(true) // Forbids `nan` and `inf`
+        .no_integer_leading_zeros(false) // Allows `01`
+        .no_float_leading_zeros(false) // Allows `01.2`
+        .required_exponent_notation(false) // Allows `1.2`, not just `12e-1`
+        .case_sensitive_exponent(false) // Allows `1e3` and `1E3`
+        .case_sensitive_base_prefix(false) // Allows `0x1` and `0X1`
+        .digit_separator_flags(true) // Allows `1__2_.3__4_e_5__6_`, but…
+        .integer_leading_digit_separator(false) // Forbids `_1`
+        .fraction_leading_digit_separator(false) // Forbids `._1`
+        .special_digit_separator(false) // Must be `false` since we forbid special floats
+        .build_strict()
+}
+
+const INTEGER_OPTIONS: ParseIntegerOptions = ParseIntegerOptions::new();
+const FLOAT_OPTIONS: ParseFloatOptions = ParseFloatOptions::builder()
+    .exponent(b'e')
+    .decimal_point(b'.')
+    .build_strict();
+
+fn lex_and_parse_number<N: FromLexicalWithOptions, const FORMAT: u128>(
+    options: &'static N::Options,
+) -> impl FnMut(LexInput) -> InternalLexResult<N> {
+    // There appears to be a bug in lexical where in `0b.`, `0b` is parsed as the integer `0`
+    // even though `.` is not consumed.  This function handles that problem.
+    #[inline(always)]
+    fn parse<N: FromLexicalWithOptions, const FORMAT: u128>(
+        input: LexInput,
+        options: &'static N::Options,
+    ) -> lexical::Result<(N, usize)> {
+        let result @ (_, len) =
+            lexical::parse_partial_with_options::<N, _, FORMAT>(input, options)?;
+
+        if const {
+            NumberFormatBuilder::rebuild(FORMAT)
+                .get_base_prefix()
+                .is_some()
+        } && len == 2
+        {
+            return Err(lexical::Error::EmptyInteger(2));
+        }
+
+        Ok(result)
+    }
+
+    move |input| {
+        let (num, len) = parse::<N, FORMAT>(input, options).map_err(|lex_err| {
+            let error = InternalLexError::from_kind(input, lex_err.into());
+            match lex_err {
+                lexical::Error::Overflow(_) | lexical::Error::Underflow(_) => {
+                    // No need to backtrack – this was a number, just a bad one
+                    nom::Err::Failure(error)
+                }
+                _ => nom::Err::Error(error),
+            }
+        })?;
+
+        Ok((input.slice(len..), num))
+    }
+}
+
+fn raw_lex_integer<const PREFIX: u8, const FORMAT: u128>(
+    input: LexInput,
+) -> InternalLexResult<u64> {
+    const {
+        assert!(PREFIX <= 127, "PREFIX must be an ASCII character");
+    }
+
+    if PREFIX == 0 {
+        lex_and_parse_number::<u64, FORMAT>(&INTEGER_OPTIONS)(input)
+    } else {
+        let (_, _) = peek(tag_no_case(std::str::from_utf8(&[b'0', PREFIX]).unwrap()))(input)?;
+        cut(lex_and_parse_number::<u64, FORMAT>(&INTEGER_OPTIONS))(input)
+    }
+}
+
+macro_rules! def_radix {
+    ($name:ident, $radix:literal $(,)?) => {
+        def_radix!($name, $radix, 0);
+    };
+    ($name:ident, $radix:literal, $prefix:literal $(,)?) => {
+        paste::paste! {
+            #[inline]
+            fn [< lex_ $name _integer >](input: LexInput) -> InternalLexResult<u64> {
+                raw_lex_integer::<$prefix, { number_format(NonZeroU8::new($prefix), $radix) }>(
+                    input
+                )
+            }
+        }
+    };
+}
+
+def_radix!(binary, 2, b'b');
+def_radix!(decimal, 10);
+def_radix!(octal, 8, b'o');
+def_radix!(hexadecimal, 16, b'x');
+
+fn lex_decimal_number(input: LexInput) -> InternalLexResult {
+    let parse_float = |input| {
+        let (input, float) = cut(lex_and_parse_number::<f64, { number_format(None, 10) }>(
+            &FLOAT_OPTIONS,
+        ))(input)?;
+        if !float.is_finite() {
+            return Err(nom::Err::Failure(InternalLexError::from_kind(
+                input,
+                lexical::Error::Overflow(0).into(),
+            )));
+        }
+        Ok((input, Token::Float(float)))
+    };
+
+    if input.as_bytes().first() == Some(&b'.') {
+        parse_float(input)
+    } else {
+        let (input_if_int, int) = lex_decimal_integer(input)?;
+        if input_if_int
+            .as_bytes()
+            .first()
+            .is_some_and(|next| b".eE".contains(next))
+        {
+            // Actually it was a float all along!
+            parse_float(input)
+        } else {
+            Ok((input_if_int, Token::Integer(int)))
+        }
+    }
+}
+
 fn lex_number(input: LexInput) -> InternalLexResult {
-    let (input, float_string): (LexInput, LexInput) = recognize(double)(input)?;
-    let integer_parse_result: IResult<LexInput, _> = all_consuming(digit1)(float_string);
-    Ok((
-        input,
-        match integer_parse_result {
-            Ok(_) => float_string
-                .parse::<u64>()
-                .map(Token::Integer)
-                .map_err(|e| InternalLexError::from_kind(input, e.into()))
-                .map_err(nom::Err::Failure)?,
-            Err(_) => Token::Float(double(float_string)?.1),
-        },
-    ))
+    alt(
+        "number",
+        (
+            map(lex_binary_integer, Token::Integer),
+            map(lex_octal_integer, Token::Integer),
+            map(lex_hexadecimal_integer, Token::Integer),
+            lex_decimal_number,
+        ),
+    )(input)
 }
 
 fn lex_operator(input: LexInput) -> InternalLexResult {
@@ -361,8 +499,211 @@ mod tests {
         )
     }
 
+    #[rstest]
+    #[case::bin_dot("0b10.1", [Token::Integer(0b10), Token::Float(0.1)])]
+    #[case::oct_dot("0o777.7", [Token::Integer(0o777), Token::Float(0.7)])]
+    #[case::hex_dot("0x3.4", [Token::Integer(0x3), Token::Float(0.4)])]
+    #[case::imaginary("1i", [Token::Integer(1), Token::Identifier("i".to_owned())])]
+    #[case::complex(
+        "1 + 2i",
+        [
+            Token::Integer(1),
+            Token::Operator(Operator::Plus),
+            Token::Integer(2),
+            Token::Identifier("i".to_owned()),
+        ],
+    )]
+    #[case::bin_imaginary("0b10i", [Token::Integer(0b10), Token::Identifier("i".to_owned())])]
+    #[case::oct_imaginary("0o10i", [Token::Integer(0o10), Token::Identifier("i".to_owned())])]
+    #[case::hex_imaginary("0x10i", [Token::Integer(0x10), Token::Identifier("i".to_owned())])]
+    fn tokenization<const N: usize>(#[case] input: &str, #[case] expected: [Token; N]) {
+        let tokens = lex(LocatedSpan::new(input)).expect("lexing error");
+        assert_eq!(
+            tokens,
+            expected,
+            "lexing {input:?}:\n\
+             - got:      {plain_tokens:?},\n\
+             - expected: {expected:?}",
+            plain_tokens = tokens
+                .iter()
+                .map(|located| located.as_token())
+                .collect::<Vec<_>>(),
+        );
+    }
+
+    #[rstest]
+    #[case::bin_prefix_only("0b")]
+    #[case::oct_prefix_only("0o")]
+    #[case::hex_prefix_only("0x")]
+    #[case::bin_prefix_dot("0b.")]
+    #[case::oct_prefix_dot("0o.")]
+    #[case::hex_prefix_dot("0x.")]
+    #[case::bin_prefix_dot_one("0b.1")]
+    #[case::oct_prefix_dot_one("0o.1")]
+    #[case::hex_prefix_dot_one("0x.1")]
+    #[case::int_too_big("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")]
+    #[case::float_too_big("1e1_000_000")]
+    fn bad_token(#[case] input: &str) {
+        let _ = lex(LocatedSpan::new(input)).expect_err("lexing error");
+    }
+
+    macro_rules! number_test_builder {
+        {
+            { $($cases:tt)* }
+            $(#[$meta:meta])*
+            $number:literal,
+            $($rest:tt)*
+        } => {
+            number_test_builder! {
+                { $($cases)* }
+                $(#[$meta])*
+                { name: ($number), input: stringify!($number), expected: $number },
+                $($rest)*
+            }
+        };
+
+        {
+            { $($cases:tt)* }
+            $(#[$meta:meta])*
+            lit($($piece:tt)+) => $number:literal,
+            $($rest:tt)*
+        } => {
+            number_test_builder! {
+                { $($cases)* }
+                $(#[$meta])*
+                {
+                    name: ($($piece)+),
+                    input: concat!($(stringify!($piece)),+),
+                    expected: $number,
+                },
+                $($rest)*
+            }
+        };
+
+        {
+            { $($cases:tt)* }
+            $(#[$meta:meta])*
+            name($($piece:tt)+) => $number:literal,
+            $($rest:tt)*
+        } => {
+            number_test_builder! {
+                { $($cases)* }
+                $(#[$meta])*
+                {
+                    name: ($($piece)+),
+                    input: stringify!($number),
+                    expected: $number,
+                },
+                $($rest)*
+            }
+        };
+
+        (
+            { $($cases:tt)* }
+            $(#[$meta:meta])*
+            {
+                name: ($($name_fragment:tt)+),
+                input: $input:expr,
+                expected: $number:expr$(,)?
+            },
+            $($rest:tt)*
+        ) => {
+            paste::paste! {
+                number_test_builder! {
+                    {
+                        $($cases)*
+                        #[allow(
+                            non_snake_case,
+                            clippy::inconsistent_digit_grouping,
+                            clippy::unusual_byte_groupings,
+                            clippy::mixed_case_hex_literals,
+                            clippy::zero_prefixed_literal,
+                        )]
+                        $(#[$meta])*
+                        #[case::[<lex$(_$name_fragment)*>]($input, $number)]
+                    }
+                    $($rest)*
+                }
+            }
+        };
+
+        (
+            {
+                { $test_name:ident, $token:ident, $ty:ty }
+                $($cases:tt)*
+            }
+        ) => {
+            #[rstest]
+            $($cases)*
+            fn $test_name(#[case] input: &str, #[case] expected: $ty) {
+                tokenization(input, [Token::$token(expected)])
+            }
+        }
+    }
+
+    macro_rules! integer_tests {
+        ($($input:tt)*) => {
+            // Ensure that stringification preserves formatting
+            const _: () = assert!(matches!(
+                stringify!(0x_12__34_aBCd__).as_bytes(),
+                b"0x_12__34_aBCd__"
+            ));
+
+            number_test_builder! { { {integer, Integer, u64} } $($input)* }
+        }
+    }
+
+    macro_rules! float_tests {
+        ($($input:tt)*) => {
+            number_test_builder! { { {float, Float, f64} } $($input)* }
+        }
+    }
+
+    integer_tests! {
+        0,
+        1,
+        2_,
+        3__,
+        4_5,
+        6__7,
+        8__9__10,
+        0000042,
+        0x0,
+        0x7F,
+        lit(0X7f) => 0x7f,
+        0x__CaFe__B0bA__1234__,
+        0o0,
+        0o10,
+        lit(0O10) => 0o10,
+        0o__777__555__,
+        0b0,
+        0b101010,
+        lit(0B101010) => 0b101010,
+        0b__1111__0000__,
+    }
+
+    float_tests! {
+        name(0dot) => 0.,
+        { name: (dot0), input: ".0", expected: 0.0 },
+        name(0dot0) => 0.0,
+        name(1dot) => 1.,
+        { name: (dot1), input: ".1", expected: 0.1 },
+        name(1dot1) => 1.1,
+        name(1__2__dot3__4__eplus__1__5__) => 1__2__.3__4__e+__1__5__,
+        name(1__2__dot3__4__eminus__1__5__) => 1__2__.3__4__e-__1__5__,
+        {
+            name: (1__2__dot3__4__e__1__5__),
+            input: "1__2__.3__4__e__1__5__",
+            expected: 1__2__.3__4__e+__1__5__
+        },
+        1e5,
+        { name: (1dote5), input: "1.e5", expected: 1e5 },
+        { name: (dot1e5), input: ".1e5", expected: 0.1e5 },
+        name(1dot1e5) => 1.1e5,
+    }
+
     #[test]
-    fn number() {
+    fn a_bunch_of_numbers() {
         let input = LocatedSpan::new("2 2i 2.0 2e3 2.0e3 (1+2i)");
         let tokens = lex(input).unwrap();
         assert_eq!(
