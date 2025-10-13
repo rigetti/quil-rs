@@ -1,29 +1,113 @@
 use num_complex::Complex64;
-use pyo3::{prelude::*, types::PyList};
+use pyo3::{
+    prelude::*,
+    types::{IntoPyDict as _, PyList, PyTuple},
+};
 
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::{gen_stub_pyfunction, gen_stub_pymethods};
 
-use super::templates::*;
-use crate::quilpy::{errors::ValueError, impl_repr};
+use crate::{quilpy::impl_repr, units::Cycles, waveform::builtin::*};
 
 #[pymodule]
 #[pyo3(name = "waveforms", module = "quil", submodule)]
 pub(crate) fn init_submodule(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_class::<BoxcarKernel>()?;
-    m.add_class::<ErfSquare>()?;
+    m.add_class::<CommonBuiltinParameters>()?;
+    m.add_class::<ExplicitCommonBuiltinParameters>()?;
+    m.add_class::<Flat>()?;
     m.add_class::<Gaussian>()?;
     m.add_class::<DragGaussian>()?;
+    m.add_class::<ErfSquare>()?;
     m.add_class::<HermiteGaussian>()?;
+    m.add_class::<BoxcarKernel>()?;
     m.add_function(wrap_pyfunction!(py_apply_phase_and_detuning, m)?)?;
     Ok(())
 }
 
-impl_repr!(BoxcarKernel);
-impl_repr!(DragGaussian);
-impl_repr!(ErfSquare);
-impl_repr!(Gaussian);
-impl_repr!(HermiteGaussian);
+impl_repr! {
+    CommonBuiltinParameters,
+    ExplicitCommonBuiltinParameters,
+    Flat,
+    Gaussian,
+    DragGaussian,
+    ErfSquare,
+    HermiteGaussian,
+    BoxcarKernel,
+}
+
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl CommonBuiltinParameters {
+    #[pyo3(signature = (*, duration, scale = None, phase = None, detuning = None))]
+    #[new]
+    fn __new__(
+        duration: f64,
+        scale: Option<f64>,
+        phase: Option<f64>,
+        detuning: Option<f64>,
+    ) -> Self {
+        Self {
+            duration,
+            scale,
+            phase: phase.map(Cycles),
+            detuning,
+        }
+    }
+
+    #[pyo3(name = "explicit")]
+    fn py_explicit(&self) -> ExplicitCommonBuiltinParameters {
+        (*self).into()
+    }
+
+    fn __getnewargs_ex__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+        let Self {
+            duration,
+            scale,
+            phase,
+            detuning,
+        } = *self;
+        let arguments = [
+            ("duration", Some(duration)),
+            ("scale", scale),
+            ("phase", phase.map(|p| p.0)),
+            ("detuning", detuning),
+        ]
+        .into_py_dict(py)?;
+        (PyTuple::empty(py), arguments).into_pyobject(py)
+    }
+}
+
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl ExplicitCommonBuiltinParameters {
+    #[pyo3(signature = (*, duration, scale, phase, detuning))]
+    #[new]
+    fn __new__(duration: f64, scale: f64, phase: f64, detuning: f64) -> Self {
+        Self {
+            duration,
+            scale,
+            phase: Cycles(phase),
+            detuning,
+        }
+    }
+
+    fn __getnewargs_ex__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+        let Self {
+            duration,
+            scale,
+            phase,
+            detuning,
+        } = *self;
+        let arguments = [
+            ("duration", duration),
+            ("scale", scale),
+            ("phase", phase.0),
+            ("detuning", detuning),
+        ]
+        .into_py_dict(py)?;
+        (PyTuple::empty(py), arguments).into_pyobject(py)
+    }
+}
 
 /// Modulate and phase shift waveform IQ data in place.
 #[cfg_attr(feature = "stubs", gen_stub_pyfunction(module = "quil.waveforms"))]
@@ -38,197 +122,73 @@ fn py_apply_phase_and_detuning(
     // this version allows us to iterate only once and avoid allocating a new `Vec<Complex64>`.
     for (index, value) in iq_values.iter().enumerate() {
         let value = value.extract::<Complex64>()?;
-        let value = apply_phase_and_detuning_impl(value, phase, detuning, sample_rate, index);
+        let value =
+            apply_phase_and_detuning_at_index(value, Cycles(phase), detuning, sample_rate, index);
         iq_values.set_item(index, value)?;
     }
 
     Ok(())
 }
 
-/// A simple wrapper around [`std::num::NonZeroU64`] with [`pyo3_stub_gen::PyStubType`] information.
-#[derive(Copy, Clone, Debug, PartialEq, PartialOrd, Eq, Hash, pyo3::IntoPyObject)]
-struct NonZeroU64(std::num::NonZeroU64);
+macro_rules! first_ty {
+    ($first:ty $(, $rest:ty)*) => {
+        $first
+    };
+}
 
-// PyO3 has a conversion we could derive from,
-// but it raises a TypeError that says "failed to extract field NonZeroU64.0".
-// By implementing it manually, an invalid value instead reads:
-// "quil.QuilValueError: expected a positive value".
-impl<'py> pyo3::FromPyObject<'py> for NonZeroU64 {
-    fn extract_bound(ob: &Bound<'py, PyAny>) -> PyResult<Self> {
-        ob.extract::<u64>().and_then(|value| {
-            std::num::NonZeroU64::try_from(value)
-                .map_err(|_err| ValueError::new_err("expected a positive value"))
-                .map(Self)
-        })
+macro_rules! python_waveforms {
+    ($($waveform:ident { $($field:ident: $ty:ty),* $(,)? })*) => {
+        $(
+            #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+            #[pymethods]
+            impl $waveform {
+                #[pyo3(signature = (* $(, $field)*))]
+                #[new]
+                fn __new__($($field: $ty),*) -> Self {
+                    Self { $($field),* }
+                }
+
+                fn __getnewargs_ex__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+                    let Self { $($field),* } = *self;
+                    let arguments: [(&'static str, first_ty!($($ty,)* ())); _] =
+                        [$((stringify!($field), $field)),*];
+                    (PyTuple::empty(py), arguments.into_py_dict(py)?).into_pyobject(py)
+                }
+            }
+        )*
     }
 }
 
-#[cfg(feature = "stubs")]
-impl pyo3_stub_gen::PyStubType for NonZeroU64 {
-    fn type_output() -> pyo3_stub_gen::TypeInfo {
-        pyo3_stub_gen::TypeInfo::builtin("int")
-    }
-}
-
-#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[pymethods]
-impl BoxcarKernel {
-    /// Create a new `BoxcarKernel`.
-    ///
-    /// This raises an error if `sample_count` is zero.
-    #[new]
-    fn __new__(phase: f64, scale: f64, sample_count: NonZeroU64) -> Self {
-        Self {
-            phase: crate::units::Cycles(phase),
-            scale,
-            sample_count: sample_count.0.into(),
-        }
+python_waveforms! {
+    Flat {
+        iq: Complex64,
     }
 
-    /// Get the `complex` value this `BoxcarKernel` represents.
-    #[pyo3(name = "into_iq_value")]
-    fn py_into_iq_value(&self) -> Complex64 {
-        self.into_iq_value()
+    Gaussian {
+        fwhm: f64,
+        t0: f64,
     }
-}
 
-#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[pymethods]
-impl ErfSquare {
-    #[new]
-    #[allow(clippy::too_many_arguments)]
-    fn __new__(
-        duration: f64,
+    DragGaussian {
+        fwhm: f64,
+        t0: f64,
+        anh: f64,
+        alpha: f64,
+    }
+
+    ErfSquare {
         risetime: f64,
-        sample_rate: f64,
         pad_left: f64,
         pad_right: f64,
-        positive_polarity: bool,
-        scale: f64,
-        phase: f64,
-        detuning: f64,
-    ) -> Self {
-        Self {
-            duration,
-            risetime,
-            sample_rate,
-            pad_left,
-            pad_right,
-            positive_polarity,
-            scale,
-            phase,
-            detuning,
-        }
     }
 
-    /// Get the a list of `complex` values from this waveform.
-    #[pyo3(name = "into_iq_value")]
-    fn py_into_iq_values(&self) -> Vec<Complex64> {
-        self.into_iq_values()
-    }
-}
-
-#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[pymethods]
-impl Gaussian {
-    #[new]
-    fn __new__(
-        duration: f64,
-        fwhm: f64,
-        t0: f64,
-        sample_rate: f64,
-        scale: f64,
-        phase: f64,
-        detuning: f64,
-    ) -> Self {
-        Self {
-            duration,
-            fwhm,
-            t0,
-            sample_rate,
-            scale,
-            phase,
-            detuning,
-        }
-    }
-
-    /// Get the a list of `complex` values from this waveform.
-    #[pyo3(name = "into_iq_value")]
-    fn py_into_iq_values(&self) -> Vec<Complex64> {
-        self.into_iq_values()
-    }
-}
-
-#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[pymethods]
-impl DragGaussian {
-    #[new]
-    #[allow(clippy::too_many_arguments)]
-    fn __new__(
-        duration: f64,
+    HermiteGaussian {
         fwhm: f64,
         t0: f64,
         anh: f64,
         alpha: f64,
-        sample_rate: f64,
-        scale: f64,
-        phase: f64,
-        detuning: f64,
-    ) -> Self {
-        Self {
-            duration,
-            fwhm,
-            t0,
-            anh,
-            alpha,
-            sample_rate,
-            scale,
-            phase,
-            detuning,
-        }
-    }
-
-    /// Get the a list of `complex` values from this waveform.
-    #[pyo3(name = "into_iq_value")]
-    fn py_into_iq_values(&self) -> Vec<Complex64> {
-        self.into_iq_values()
-    }
-}
-
-#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[pymethods]
-impl HermiteGaussian {
-    #[allow(clippy::too_many_arguments)]
-    #[new]
-    fn __new__(
-        duration: f64,
-        fwhm: f64,
-        t0: f64,
-        anh: f64,
-        alpha: f64,
-        sample_rate: f64,
         second_order_hrm_coeff: f64,
-        scale: f64,
-        phase: f64,
-        detuning: f64,
-    ) -> Self {
-        Self {
-            duration,
-            fwhm,
-            t0,
-            anh,
-            alpha,
-            sample_rate,
-            second_order_hrm_coeff,
-            scale,
-            phase,
-            detuning,
-        }
     }
 
-    /// Get the a list of `complex` values from this waveform.
-    #[pyo3(name = "into_iq_value")]
-    fn py_into_iq_values(&self) -> Vec<Complex64> {
-        self.into_iq_values()
-    }
+    BoxcarKernel {}
 }
