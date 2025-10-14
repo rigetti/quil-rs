@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::HashSet;
+use std::{collections::HashSet, sync::Arc};
 
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::gen_stub_pyclass;
@@ -107,8 +107,10 @@ pub enum MemoryAccessType {
 pub enum MemoryAccessesError {
     #[error(transparent)]
     CallResolution(#[from] CallResolutionError),
+
+    // We use an `Arc` here instead of a `Box` so we can clone this type
     #[error("Instruction handler reported an error when constructing memory accesses: {0}")]
-    InstructionHandlerError(Box<dyn std::error::Error + Send + Sync + 'static>),
+    InstructionHandlerError(Arc<dyn std::error::Error + Send + Sync>),
 }
 
 pub mod expression {
