@@ -258,10 +258,12 @@ pub enum InstructionRole {
     /// An instruction affecting only classical state, such as [`ADD`][Instruction:ADD`].
     ClassicalCompute,
 
-    /// An instruction affecting the pulse level portion of the program, such as [`PULSE`][Instruction::Pulse].  The RF stands for Radio Frequency.
+    /// An instruction affecting the pulse level portion of the program, such as
+    /// [`PULSE`][Instruction::Pulse].  The RF stands for Radio Frequency.
     ///
-    /// Unlike for [`MEASURE`][Instruction::Measurement], [`RESET`] is considered an RF control
-    /// instruction, as it is not realized through calibration into a lower-level instruction.
+    /// Unlike for [`MEASURE`][Instruction::Measurement], [`RESET`] is, [by
+    /// default][DefaultHandler], considered an RF control instruction, as it is not realized
+    /// through calibration into a lower-level instruction.
     RFControl,
 
     /// An instruction that can perform control flow, such as [`JUMP-WHEN`][Instruction::JumpWhen].
