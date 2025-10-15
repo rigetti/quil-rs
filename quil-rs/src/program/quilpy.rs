@@ -11,6 +11,7 @@ use pyo3::{
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
+use crate::instruction::DefaultHandler;
 use crate::{
     instruction::{
         CalibrationDefinition, Declaration, FrameAttributes, FrameIdentifier, Gate, Instruction,
@@ -859,7 +860,7 @@ impl BasicBlockOwned {
         program: &Program,
     ) -> std::result::Result<PyScheduleSeconds, BasicBlockScheduleError> {
         BasicBlock::from(self)
-            .as_schedule_seconds(program)
+            .as_schedule_seconds(program, &DefaultHandler)
             .map(PyScheduleSeconds)
     }
 
@@ -879,7 +880,8 @@ impl BasicBlockOwned {
         // TODO (#472): This copies everything twice: once to make the block,
         // and again for the graph. Then it throws them both away. There's got to be a better way.
         let block = BasicBlock::from(self);
-        QubitGraph::try_from(&block).map(|graph| graph.gate_depth(gate_minimum_qubit_count))
+        QubitGraph::try_from_basic_block(&block, &DefaultHandler)
+            .map(|graph| graph.gate_depth(gate_minimum_qubit_count))
     }
 
     /// The control flow terminator instruction of the block, if any.

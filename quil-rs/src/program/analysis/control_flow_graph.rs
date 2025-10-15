@@ -174,13 +174,15 @@ impl<'p> BasicBlock<'p> {
     /// print(f"Duration = {schedule.duration()}")
     /// print(schedule.items())
     /// ```
-    pub fn as_schedule_seconds(
+    pub fn as_schedule_seconds<H: InstructionHandler>(
         &self,
         program: &Program,
+        handler: &H,
     ) -> Result<Schedule<Seconds>, BasicBlockScheduleError> {
         self.as_schedule(
             program,
-            ScheduledBasicBlock::get_instruction_duration_seconds,
+            |prog, instr| ScheduledBasicBlock::instruction_duration_seconds(prog, instr, handler),
+            handler,
         )
     }
 
@@ -223,12 +225,14 @@ impl<'p> BasicBlock<'p> {
     ///
     /// `B 0` will be scheduled from time 0 to time 2, because its inner `FENCE` is scheduled for time 0.
     /// This may be unexpected if the user expects to see only the timing of the inner `PULSE`.
-    pub fn as_schedule<F, Time>(
+    pub fn as_schedule<H, F, Time>(
         &self,
         program: &'p Program,
         get_duration: F,
+        handler: &H,
     ) -> Result<Schedule<Time>, BasicBlockScheduleError>
     where
+        H: InstructionHandler,
         F: Fn(&Program, &Instruction) -> Option<Time>,
         Time: Clone
             + Debug
@@ -262,9 +266,7 @@ impl<'p> BasicBlock<'p> {
         };
 
         // 2: attempt to schedule the newly-expanded block
-        let mut instruction_handler = InstructionHandler::default();
-        let scheduled_self =
-            ScheduledBasicBlock::build(calibrated_block, program, &mut instruction_handler)?;
+        let scheduled_self = ScheduledBasicBlock::build(calibrated_block, program, handler)?;
         let schedule = scheduled_self.as_schedule(program, get_duration)?;
 
         // 3: map that schedule back to the original instructions from this basic block using the source mapping
@@ -612,6 +614,7 @@ pub struct ProgramEmptyOrContainsMultipleBasicBlocks;
 
 #[cfg(test)]
 mod tests {
+    use crate::instruction::DefaultHandler;
     use crate::Program;
     use rstest::rstest;
 
@@ -707,7 +710,9 @@ PULSE 0 "a" flat(duration: 1.0)
         let blocks = graph.into_blocks();
         println!("blocks: {blocks:#?}");
 
-        let schedule = blocks[0].as_schedule_seconds(&program).unwrap();
+        let schedule = blocks[0]
+            .as_schedule_seconds(&program, &DefaultHandler)
+            .unwrap();
         println!("schedule: {schedule:#?}");
         assert_eq!(schedule.duration().0, 21.0);
         let schedule_items = schedule.into_items();
@@ -832,7 +837,9 @@ CZ 0 2
         let blocks = graph.into_blocks();
         println!("blocks: {blocks:#?}");
 
-        let schedule = blocks[0].as_schedule_seconds(&program).unwrap();
+        let schedule = blocks[0]
+            .as_schedule_seconds(&program, &DefaultHandler)
+            .unwrap();
         let mut schedule_items = schedule.into_items();
         schedule_items.sort_by_key(|item| item.instruction_index);
 

@@ -16,7 +16,7 @@ use super::{LexErrorKind, LexInput, LexResult};
 
 use crate::parser::lexer::{InternalLexError, InternalLexResult};
 use nom::branch::{alt as nom_alt, Alt};
-use nom::bytes::complete::tag as nom_tag;
+use nom::bytes::complete::{tag as nom_tag, tag_no_case as nom_tag_no_case};
 use nom::error::ParseError;
 use nom::Parser;
 use std::fmt;
@@ -80,8 +80,8 @@ where
     expecting(context, parser)
 }
 
-/// A wrapper for [`nom::bytes::complete::tag`] that replaces the error with one that indicates
-/// what tag string was expected.
+/// A wrapper for [`nom::bytes::complete::tag`] that replaces the error with one that indicates what
+/// tag string was expected.
 pub(crate) fn tag<'a>(
     lit: &'static str,
 ) -> impl FnMut(LexInput<'a>) -> InternalLexResult<'a, LexInput<'a>> {
@@ -89,5 +89,23 @@ pub(crate) fn tag<'a>(
         map_err(nom_tag(lit), |err: nom::error::Error<LexInput<'a>>| {
             InternalLexError::from_kind(err.input, LexErrorKind::ExpectedString(lit))
         })(input)
+    }
+}
+
+/// A wrapper for [`nom::bytes::complete::tag_no_case`] that replaces the error with one that
+/// indicates what tag string was expected.
+pub(crate) fn tag_no_case<'a>(
+    lit: &'static str,
+) -> impl FnMut(LexInput<'a>) -> InternalLexResult<'a, LexInput<'a>> {
+    move |input| {
+        map_err(
+            nom_tag_no_case(lit),
+            |err: nom::error::Error<LexInput<'a>>| {
+                InternalLexError::from_kind(
+                    err.input,
+                    LexErrorKind::ExpectedCaseInsensitiveString(lit),
+                )
+            },
+        )(input)
     }
 }
