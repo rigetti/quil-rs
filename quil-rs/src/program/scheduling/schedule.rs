@@ -186,7 +186,7 @@ impl<'p> ScheduledBasicBlock<'p> {
         match instruction {
             Instruction::Capture(Capture { waveform, .. })
             | Instruction::Pulse(Pulse { waveform, .. }) => {
-                Self::get_waveform_duration_seconds(program, instruction, waveform, handler)
+                Self::waveform_duration_seconds(program, instruction, waveform, handler)
             }
             Instruction::Delay(Delay { duration, .. })
             | Instruction::RawCapture(RawCapture { duration, .. }) => {
@@ -210,7 +210,7 @@ impl<'p> ScheduledBasicBlock<'p> {
     ///
     /// Otherwise, it's the `duration` parameter of the waveform invocation. This relies on the assumption that
     /// all template waveforms in use have such a parameter in units of seconds.
-    fn get_waveform_duration_seconds<H: InstructionHandler>(
+    fn waveform_duration_seconds<H: InstructionHandler>(
         program: &Program,
         instruction: &Instruction,
         WaveformInvocation { name, parameters }: &WaveformInvocation,
