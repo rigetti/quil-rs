@@ -18,7 +18,7 @@ use crate::{
     units::{Cycles, Radians},
 };
 
-use super::sampling::IqSamples;
+use super::sampling::{IqSamples, SamplingError};
 
 ////////////////////////////////////////////////////////////////////////////////
 // General built-in waveform types
@@ -60,7 +60,7 @@ pub struct CommonBuiltinParameters {
     pub detuning: Option<f64>,
 }
 
-/// Like [`CommonBuiltinParameters`], but with the defaults resolved.
+/// Like [`CommonBuiltinParameters`], but with the defaults resolved and the duration discretized.
 #[derive(Clone, Copy, PartialEq, Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
@@ -68,8 +68,10 @@ pub struct CommonBuiltinParameters {
     pyo3::pyclass(module = "quil.waveforms", subclass, get_all, set_all, eq)
 )]
 pub struct ExplicitCommonBuiltinParameters {
-    /// Full duration of the pulse (s)
-    pub duration: f64,
+    /// Integral number of samples that should be taken of the pulse
+    ///
+    /// Corresponds to [`CommonBuiltinParameters::duration`].
+    pub sample_count: f64,
     /// Scale to apply to waveform envelope
     pub scale: f64,
     /// Phase shift for the entire waveform
@@ -78,20 +80,54 @@ pub struct ExplicitCommonBuiltinParameters {
     pub detuning: f64,
 }
 
-impl From<CommonBuiltinParameters> for ExplicitCommonBuiltinParameters {
-    fn from(parameters: CommonBuiltinParameters) -> Self {
+impl CommonBuiltinParameters {
+    /// Given a sample rate, return the corresponding [explicit
+    /// parameters][ExplicitCommonBuiltinParameters].
+    ///
+    /// For the three optional fields ([`scale`][Self::scale], [`phase`][Self::phase], and
+    /// [`detuning`][Self::detuning]), the explicit version is either their original value (if
+    /// present) or their default value (if missing).
+    ///
+    /// For the [`duration`][Self::duration], the explicit version is [the integer number of
+    /// samples][ExplicitCommonBuiltinParameters::sample_count] required to fill out the
+    /// [`Self::duration`].  If the requested duration is misaligned with respect to the sample
+    /// rate, returns an error.
+    ///
+    /// *Misalignment* means that to fill the duration would require a nonintegral number of
+    /// samples.  This function will ignore any error less than 1% – that is, if the function would
+    /// an integer number of samples plus one fractional sample of size between 99% and 101%, then
+    /// that last sample is considered another integral sample.
+    #[inline]
+    pub fn resolve_with_sample_rate(
+        self,
+        sample_rate: f64,
+    ) -> Result<ExplicitCommonBuiltinParameters, SamplingError> {
         let CommonBuiltinParameters {
             duration,
             scale,
             phase,
             detuning,
-        } = parameters;
-        Self {
-            duration,
+        } = self;
+
+        let sample_count_fract = duration * sample_rate;
+        let sample_count = sample_count_fract.round();
+        let misalignment = sample_count_fract - sample_count;
+        let max_misalignment = 1.0 / (sample_rate * 100.0);
+        if misalignment.abs() >= max_misalignment {
+            return Err(SamplingError::MisalignedDuration {
+                duration,
+                sample_rate,
+                misalignment,
+                max_misalignment,
+            });
+        }
+
+        Ok(ExplicitCommonBuiltinParameters {
+            sample_count,
             scale: scale.unwrap_or(1.0),
             phase: phase.unwrap_or(Cycles(0.0)),
             detuning: detuning.unwrap_or(0.0),
-        }
+        })
     }
 }
 
@@ -107,7 +143,7 @@ pub trait BuiltinWaveformParameters:
         self,
         common: CommonBuiltinParameters,
         sample_rate: f64,
-    ) -> IqSamples;
+    ) -> Result<IqSamples, SamplingError>;
 }
 
 mod private {
@@ -266,7 +302,7 @@ impl BuiltinWaveformParameters for BuiltinWaveform {
         self,
         common: CommonBuiltinParameters,
         sample_rate: f64,
-    ) -> IqSamples {
+    ) -> Result<IqSamples, SamplingError> {
         match self {
             BuiltinWaveform::Flat(flat) => flat.iq_values_at_sample_rate(common, sample_rate),
 
@@ -298,20 +334,19 @@ impl BuiltinWaveformParameters for Flat {
         self,
         common: CommonBuiltinParameters,
         sample_rate: f64,
-    ) -> IqSamples {
+    ) -> Result<IqSamples, SamplingError> {
         let ExplicitCommonBuiltinParameters {
-            duration,
+            sample_count,
             scale,
             phase,
             detuning,
-        } = common.into();
+        } = common.resolve_with_sample_rate(sample_rate)?;
         let Self { iq } = self;
 
-        // TODO: no verification of integer sample count
-        let sample_count = ceiling_with_epsilon(duration * sample_rate) as usize;
+        let sample_count = sample_count as usize;
         let scaled_iq = scale * iq;
 
-        if detuning == 0.0 {
+        Ok(if detuning == 0.0 {
             IqSamples::Flat {
                 iq: apply_phase(scaled_iq, phase),
                 sample_count,
@@ -320,7 +355,7 @@ impl BuiltinWaveformParameters for Flat {
             let mut samples = vec![scaled_iq; sample_count];
             apply_phase_and_detuning(&mut samples, phase, detuning, sample_rate);
             IqSamples::Samples(samples)
-        }
+        })
     }
 }
 
@@ -329,7 +364,7 @@ impl BuiltinWaveformParameters for Gaussian {
         self,
         common: CommonBuiltinParameters,
         sample_rate: f64,
-    ) -> IqSamples {
+    ) -> Result<IqSamples, SamplingError> {
         let Self { fwhm, t0 } = self;
 
         build_samples_and_adjust_for_common_parameters(
@@ -349,7 +384,7 @@ impl BuiltinWaveformParameters for DragGaussian {
         self,
         common: CommonBuiltinParameters,
         sample_rate: f64,
-    ) -> IqSamples {
+    ) -> Result<IqSamples, SamplingError> {
         let Self {
             fwhm,
             t0,
@@ -379,7 +414,7 @@ impl BuiltinWaveformParameters for ErfSquare {
         self,
         common: CommonBuiltinParameters,
         sample_rate: f64,
-    ) -> IqSamples {
+    ) -> Result<IqSamples, SamplingError> {
         let CommonBuiltinParameters { duration, .. } = common;
         let Self {
             risetime,
@@ -413,7 +448,7 @@ impl BuiltinWaveformParameters for HermiteGaussian {
         self,
         common: CommonBuiltinParameters,
         sample_rate: f64,
-    ) -> IqSamples {
+    ) -> Result<IqSamples, SamplingError> {
         let Self {
             fwhm,
             t0,
@@ -447,19 +482,18 @@ impl BuiltinWaveformParameters for BoxcarKernel {
         self,
         common: CommonBuiltinParameters,
         sample_rate: f64,
-    ) -> IqSamples {
+    ) -> Result<IqSamples, SamplingError> {
         let ExplicitCommonBuiltinParameters {
-            duration,
+            sample_count,
             scale,
             phase,
             detuning,
-        } = common.into();
+        } = common.resolve_with_sample_rate(sample_rate)?;
         let Self = self; // Get errors if the definition changes
 
-        // TODO: no verification of integer sample count
-        let sample_count = ceiling_with_epsilon(duration * sample_rate) as usize;
+        let sample_count = sample_count as usize;
 
-        if detuning == 0.0 {
+        Ok(if detuning == 0.0 {
             let iq = polar_to_rectangular(scale / sample_count as f64, phase);
             IqSamples::Flat { iq, sample_count }
         } else {
@@ -470,7 +504,7 @@ impl BuiltinWaveformParameters for BoxcarKernel {
                 )
             });
             IqSamples::Samples(samples.collect())
-        }
+        })
     }
 }
 
@@ -501,20 +535,19 @@ fn build_samples_and_adjust_for_common_parameters<I: IntoIterator<Item = Complex
     parameters: SamplingParameters,
     common: CommonBuiltinParameters,
     build: impl FnOnce(SamplingInfo) -> I,
-) -> IqSamples {
+) -> Result<IqSamples, SamplingError> {
     let SamplingParameters { sample_rate, fwhm } = parameters;
     let ExplicitCommonBuiltinParameters {
-        duration,
+        sample_count,
         scale,
         phase,
         detuning,
-    } = common.into();
+    } = common.resolve_with_sample_rate(sample_rate)?;
 
     // It would be nice to be able to optimize `scale: 0.0` to `IqSamples::Flat`, but we'd have to
     // figure out how to take care of the `erf_squared` padding durations.
 
-    let length = ceiling_with_epsilon(duration * sample_rate);
-    let time_steps = Array::range(0.0, length, 1.0) / sample_rate;
+    let time_steps = Array::range(0.0, sample_count, 1.0) / sample_rate;
     let sigma = 0.5 * fwhm / (2.0 * LN_2).sqrt();
 
     let mut samples: Vec<_> = build(SamplingInfo { time_steps, sigma })
@@ -526,7 +559,7 @@ fn build_samples_and_adjust_for_common_parameters<I: IntoIterator<Item = Complex
             apply_phase_and_detuning_at_index(scale * *sample, phase, detuning, sample_rate, index);
     }
 
-    IqSamples::Samples(samples)
+    Ok(IqSamples::Samples(samples))
 }
 
 /// Modulate and phase shift waveform IQ data in place.
@@ -560,20 +593,6 @@ pub(super) fn apply_phase_and_detuning_at_index(
 #[inline]
 fn apply_phase(iq_value: Complex64, phase: Cycles<f64>) -> Complex64 {
     iq_value * Complex64::cis(Radians::from(phase).0)
-}
-
-/// A custom `ceil()` method that includes a machine-epsilon sized region above each integer in the
-/// set of values that are mapped to that integer. In other words:
-/// ceil_eps(x) = n, for all x and integers n s.t. n <= x < (n + n*epsilon)
-///
-/// To handle accumulated floating point errors in sweeps above typical floating point imprecision
-/// we make epsilon 10x larger than floating point epsilon.
-fn ceiling_with_epsilon(value: f64) -> f64 {
-    // This isn't really what EPSILON is for:
-    // <https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/>.
-    // However, changing this now might break behavior, so we leave it be.
-    let truncated = value - (value * 10.0 * f64::EPSILON);
-    truncated.ceil()
 }
 
 /// Convert polar coordinates to rectangular coordinates.
@@ -611,15 +630,18 @@ mod tests {
     #[case(-1.0, Cycles(0.0), Complex64::new(-0.1, 0.0))]
     #[case(0.0, Cycles(0.0), Complex64::new(0.0, 0.0))]
     fn boxcar_kernel(#[case] scale: f64, #[case] phase: Cycles<f64>, #[case] expected: Complex64) {
-        match BoxcarKernel.iq_values_at_sample_rate(
-            CommonBuiltinParameters {
-                duration: 0.1,
-                scale: Some(scale),
-                phase: Some(phase),
-                detuning: None,
-            },
-            100.0,
-        ) {
+        match BoxcarKernel
+            .iq_values_at_sample_rate(
+                CommonBuiltinParameters {
+                    duration: 0.1,
+                    scale: Some(scale),
+                    phase: Some(phase),
+                    detuning: None,
+                },
+                100.0,
+            )
+            .unwrap()
+        {
             IqSamples::Flat { iq, sample_count } => {
                 assert_eq!(sample_count, 10);
                 assert_almost_eq(iq, expected, 1e-10);
@@ -634,14 +656,74 @@ mod tests {
     }
 
     #[rstest::rstest]
-    #[case(0.0, 0.0)]
-    #[case(-f64::EPSILON, 0.0)]
-    #[case(f64::EPSILON, 1.0)]
-    // Based on a past edge case
-    #[case(8.800_000_000_000_001e-8 * 1.0e9, 88.0)]
-    fn ceiling_with_epsilon(#[case] value: f64, #[case] expected: f64) {
-        let result = super::ceiling_with_epsilon(value);
-        assert_eq!(result, expected);
+    #[case(0.0, 0.0, Some(0.0))]
+    #[case(0.0, 1e9, Some(0.0))]
+    #[case(1e9, 0.0, Some(0.0))]
+    #[case(f64::EPSILON, 1.0, Some(0.0))]
+    #[case(-f64::EPSILON, 1.0, Some(0.0))]
+    #[case(0.9999999, 101.0, Some(101.0))]
+    #[case(1.0000001, 101.0, Some(101.0))]
+    #[case(0.99, 101.0, None)]
+    #[case(1.01, 101.0, None)]
+    #[case(8.800_000_000_000_001e-8, 1.0e9, Some(88.0))] // Based on a past edge case
+    #[case(0.5, 3.0, None)]
+    fn sample_count(
+        #[case] duration: f64,
+        #[case] sample_rate: f64,
+        #[case] expected: Option<f64>,
+    ) {
+        let actual = CommonBuiltinParameters {
+            duration,
+            scale: None,
+            phase: None,
+            detuning: None,
+        }
+        .resolve_with_sample_rate(sample_rate);
+
+        match (actual, expected) {
+            (
+                Ok(ExplicitCommonBuiltinParameters {
+                    sample_count: actual,
+                    ..
+                }),
+                Some(expected),
+            ) => {
+                assert_eq!(
+                    expected, actual,
+                    "duration = {duration} s,\n\
+                     sample_rate = {sample_rate} Hz,\n\
+                     expected = {expected} samples,\n\
+                     actual = {actual} samples"
+                )
+            }
+            (Err(_), None) => {}
+            (
+                Ok(ExplicitCommonBuiltinParameters {
+                    sample_count: actual,
+                    ..
+                }),
+                None,
+            ) => {
+                panic!(
+                    "duration = {duration} s, sample_rate = {sample_rate} Hz: \
+                     expected to be unable to generate a sample count, but generated {actual}",
+                    duration = duration,
+                    sample_rate = sample_rate,
+                    actual = actual,
+                )
+            }
+            (Err(actual), Some(expected)) => {
+                panic!(
+                    "duration = {duration} s, sample_rate = {sample_rate} Hz: \
+                     expected a sample count of {expected} samples, but got the following error:\n\
+                     {actual}",
+                    duration = duration,
+                    sample_rate = sample_rate,
+                    expected = expected,
+                    actual = actual,
+                )
+            }
+        }
     }
 
     /// Assert that for some exemplar waveform templates, the right IQ values are generated.
@@ -717,6 +799,7 @@ mod tests {
     ) {
         let iq_values = parameters
             .iq_values_at_sample_rate(common, 1e6)
+            .unwrap()
             .into_iq_values();
         let count = iq_values.len();
 

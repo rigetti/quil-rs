@@ -1,5 +1,6 @@
 use num_complex::Complex64;
 use pyo3::{
+    exceptions::PyValueError,
     prelude::*,
     types::{IntoPyDict as _, PyList, PyTuple},
 };
@@ -7,11 +8,20 @@ use pyo3::{
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::{gen_stub_pyfunction, gen_stub_pymethods};
 
-use crate::{quilpy::impl_repr, units::Cycles, waveform::builtin::*};
+use crate::{
+    quilpy::impl_repr,
+    units::Cycles,
+    waveform::{
+        builtin::*,
+        sampling::{IqSamples, SamplingError},
+    },
+};
 
 #[pymodule]
 #[pyo3(name = "waveforms", module = "quil", submodule)]
 pub(crate) fn init_submodule(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    m.add_class::<IqSamples>()?;
+    m.add_class::<SamplingError>()?;
     m.add_class::<CommonBuiltinParameters>()?;
     m.add_class::<ExplicitCommonBuiltinParameters>()?;
     m.add_class::<Flat>()?;
@@ -25,6 +35,8 @@ pub(crate) fn init_submodule(m: &Bound<'_, PyModule>) -> PyResult<()> {
 }
 
 impl_repr! {
+    IqSamples,
+    SamplingError,
     CommonBuiltinParameters,
     ExplicitCommonBuiltinParameters,
     Flat,
@@ -54,11 +66,6 @@ impl CommonBuiltinParameters {
         }
     }
 
-    #[pyo3(name = "explicit")]
-    fn py_explicit(&self) -> ExplicitCommonBuiltinParameters {
-        (*self).into()
-    }
-
     fn __getnewargs_ex__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
         let Self {
             duration,
@@ -75,16 +82,25 @@ impl CommonBuiltinParameters {
         .into_py_dict(py)?;
         (PyTuple::empty(py), arguments).into_pyobject(py)
     }
+
+    #[pyo3(name = "resolve_with_sample_rate")]
+    fn py_resolve_with_sample_rate(
+        &self,
+        sample_rate: f64,
+    ) -> PyResult<ExplicitCommonBuiltinParameters> {
+        self.resolve_with_sample_rate(sample_rate)
+            .map_err(PyValueError::new_err)
+    }
 }
 
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl ExplicitCommonBuiltinParameters {
-    #[pyo3(signature = (*, duration, scale, phase, detuning))]
+    #[pyo3(signature = (*, sample_count, scale, phase, detuning))]
     #[new]
-    fn __new__(duration: f64, scale: f64, phase: f64, detuning: f64) -> Self {
+    fn __new__(sample_count: f64, scale: f64, phase: f64, detuning: f64) -> Self {
         Self {
-            duration,
+            sample_count,
             scale,
             phase: Cycles(phase),
             detuning,
@@ -93,13 +109,13 @@ impl ExplicitCommonBuiltinParameters {
 
     fn __getnewargs_ex__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
         let Self {
-            duration,
+            sample_count,
             scale,
             phase,
             detuning,
         } = *self;
         let arguments = [
-            ("duration", duration),
+            ("sample_count", sample_count),
             ("scale", scale),
             ("phase", phase.0),
             ("detuning", detuning),
@@ -154,6 +170,17 @@ macro_rules! python_waveforms {
                         [$((stringify!($field), $field)),*];
                     (PyTuple::empty(py), arguments.into_py_dict(py)?).into_pyobject(py)
                 }
+
+                #[pyo3(name = "iq_values_at_sample_rate")]
+                fn py_iq_values_at_sample_rate(
+                    &self,
+                    common: CommonBuiltinParameters,
+                    sample_rate: f64,
+                ) -> PyResult<IqSamples> {
+                    self.iq_values_at_sample_rate(common, sample_rate)
+                        .map_err(PyValueError::new_err)
+
+                }
             }
         )*
     }
@@ -191,4 +218,36 @@ python_waveforms! {
     }
 
     BoxcarKernel {}
+}
+
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl BuiltinWaveform {
+    #[pyo3(name = "iq_values_at_sample_rate")]
+    fn py_iq_values_at_sample_rate(
+        &self,
+        common: CommonBuiltinParameters,
+        sample_rate: f64,
+    ) -> PyResult<IqSamples> {
+        self.iq_values_at_sample_rate(common, sample_rate)
+            .map_err(PyValueError::new_err)
+    }
+}
+
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl IqSamples {
+    #[pyo3(name = "sample_count")]
+    pub fn py_sample_count(&self) -> usize {
+        self.sample_count()
+    }
+
+    #[pyo3(name = "get")]
+    pub fn py_get(&self, index: usize) -> Option<Complex64> {
+        self.get(index)
+    }
+
+    pub fn iq_values(&self) -> Vec<Complex64> {
+        self.clone().into_iq_values()
+    }
 }
