@@ -269,7 +269,7 @@ const fn number_format(radix: u8, prefix: Option<NonZeroU8>) -> u128 {
         .case_sensitive_base_prefix(false) // Allows `0x1` and `0X1`
         .digit_separator_flags(true) // Allows `1__2_.3__4_e_5__6_`, but…
         .integer_leading_digit_separator(false) // Forbids `_1` (already a variable name)
-        .fraction_leading_digit_separator(false) // Forbids `._1`
+        .fraction_leading_digit_separator(false) // Forbids `._1` (but buggy in lexical 7.0.5)
         .special_digit_separator(false) // Must be `false` since we forbid special floats
         .build_strict()
 }
@@ -283,8 +283,6 @@ const FLOAT_OPTIONS: ParseFloatOptions = ParseFloatOptions::builder()
 fn lex_and_parse_number<N: FromLexicalWithOptions, const FORMAT: u128>(
     options: &'static N::Options,
 ) -> impl FnMut(LexInput) -> InternalLexResult<N> {
-    // There appears to be a bug in lexical where in `0b.`, `0b` is parsed as the integer `0`
-    // even though `.` is not consumed.  This function handles that problem.
     #[inline(always)]
     fn parse<N: FromLexicalWithOptions, const FORMAT: u128>(
         input: LexInput,
@@ -293,6 +291,8 @@ fn lex_and_parse_number<N: FromLexicalWithOptions, const FORMAT: u128>(
         let result @ (_, len) =
             lexical::parse_partial_with_options::<N, _, FORMAT>(input, options)?;
 
+        // There appears to be a bug in lexical where in `0b.`, `0b` is parsed as the integer `0`
+        // even though `.` is not consumed.  This check is a workaround for that.
         if const {
             NumberFormatBuilder::rebuild(FORMAT)
                 .get_base_prefix()
@@ -300,6 +300,15 @@ fn lex_and_parse_number<N: FromLexicalWithOptions, const FORMAT: u128>(
         } && len == 2
         {
             return Err(lexical::Error::EmptyInteger(2));
+        }
+
+        // There appears to be a bug in lexical where `._1` is accepted even though
+        // `fraction_leading_digit_separator` is `false`.  This check is a workaround for that.
+        if let Some(dot) = input.slice(..len).find("._") {
+            let include_dot = dot + 1;
+            let number =
+                lexical::parse_with_options::<N, _, FORMAT>(input.slice(..include_dot), options)?;
+            return Ok((number, include_dot));
         }
 
         Ok(result)
@@ -362,12 +371,14 @@ fn lex_decimal_number(input: LexInput) -> InternalLexResult {
         let (input, float) = cut(lex_and_parse_number::<f64, { number_format(10, None) }>(
             &FLOAT_OPTIONS,
         ))(input)?;
+
         if !float.is_finite() {
             return Err(nom::Err::Failure(InternalLexError::from_kind(
                 input,
                 lexical::Error::Overflow(0).into(),
             )));
         }
+
         Ok((input, Token::Float(float)))
     };
 
@@ -521,6 +532,8 @@ mod tests {
     #[case::bin_imaginary("0b10i", [Token::Integer(0b10), Token::Identifier("i".to_owned())])]
     #[case::oct_imaginary("0o10i", [Token::Integer(0o10), Token::Identifier("i".to_owned())])]
     #[case::hex_imaginary("0x10i", [Token::Integer(0x10), Token::Identifier("i".to_owned())])]
+    #[case::zero_dot_underscore_one("0._1", [Token::Float(0.0), Token::Identifier("_1".to_owned())])]
+    #[case::zero_dot_underscore("0._", [Token::Float(0.0), Token::Identifier("_".to_owned())])]
     fn tokenization<const N: usize>(#[case] input: &str, #[case] expected: [Token; N]) {
         let tokens = lex(LocatedSpan::new(input)).expect("lexing error");
         assert_eq!(
@@ -548,6 +561,8 @@ mod tests {
     #[case::hex_prefix_dot_one("0x.1")]
     #[case::int_too_big("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")]
     #[case::float_too_big("1e1_000_000")]
+    #[case::dot_underscore_one("._1")]
+    #[case::dot_underscore("._")]
     fn bad_token(#[case] input: &str) {
         let _ = lex(LocatedSpan::new(input)).expect_err("lexing error");
     }
