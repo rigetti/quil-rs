@@ -239,7 +239,12 @@ fn lex_target(input: LexInput) -> InternalLexResult {
     Ok((input, Token::Target(label)))
 }
 
-const fn number_format(prefix: Option<NonZeroU8>, radix: u8) -> u128 {
+/// Create a [`lexical`] [formatting constant][lexical::NumberFormat] from a
+/// [`radix`][lexical::NumberFormat::radix] (base) and an optional [prefix
+/// character][lexical::NumberFormat::base_prefix] (which comes after a leading `0`).
+///
+/// For instance, hexadecimal literals have a radix of `16` and a prefix character of `b'x'`.
+const fn number_format(radix: u8, prefix: Option<NonZeroU8>) -> u128 {
     NumberFormatBuilder::new()
         .mantissa_radix(radix)
         .exponent_base(NonZeroU8::new(radix))
@@ -339,7 +344,7 @@ macro_rules! def_radix {
         paste::paste! {
             #[inline]
             fn [< lex_ $name _integer >](input: LexInput) -> InternalLexResult<u64> {
-                raw_lex_integer::<$prefix, { number_format(NonZeroU8::new($prefix), $radix) }>(
+                raw_lex_integer::<$prefix, { number_format($radix, NonZeroU8::new($prefix)) }>(
                     input
                 )
             }
@@ -354,7 +359,7 @@ def_radix!(hexadecimal, 16, b'x');
 
 fn lex_decimal_number(input: LexInput) -> InternalLexResult {
     let parse_float = |input| {
-        let (input, float) = cut(lex_and_parse_number::<f64, { number_format(None, 10) }>(
+        let (input, float) = cut(lex_and_parse_number::<f64, { number_format(10, None) }>(
             &FLOAT_OPTIONS,
         ))(input)?;
         if !float.is_finite() {
