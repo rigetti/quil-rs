@@ -256,7 +256,7 @@ const fn number_format(radix: u8, prefix: Option<NonZeroU8>) -> u128 {
         .required_exponent_digits(true) // Forbids `1e`
         .required_mantissa_digits(true) // Forbids `.`
         .no_positive_mantissa_sign(true) // Forbids `+1`
-        .required_mantissa_sign(false) // Allows `1`, not just `-1`
+        .required_mantissa_sign(false) // Allows `1`, not just `-1` (though `-1` parses as `-(1)`)
         .no_exponent_notation(false) // Allows `1e3`
         .no_positive_exponent_sign(false) // Allows `1e+3`, not just `1e3`
         .required_exponent_sign(false) // Allows `1e3`, not just `1e+3`
@@ -268,7 +268,7 @@ const fn number_format(radix: u8, prefix: Option<NonZeroU8>) -> u128 {
         .case_sensitive_exponent(false) // Allows `1e3` and `1E3`
         .case_sensitive_base_prefix(false) // Allows `0x1` and `0X1`
         .digit_separator_flags(true) // Allows `1__2_.3__4_e_5__6_`, but…
-        .integer_leading_digit_separator(false) // Forbids `_1`
+        .integer_leading_digit_separator(false) // Forbids `_1` (already a variable name)
         .fraction_leading_digit_separator(false) // Forbids `._1`
         .special_digit_separator(false) // Must be `false` since we forbid special floats
         .build_strict()
