@@ -76,10 +76,10 @@
                                 <a class="variable" href="#BasicBlock.instructions">instructions</a>
                         </li>
                         <li>
-                                <a class="variable" href="#BasicBlock.label">label</a>
+                                <a class="variable" href="#BasicBlock.terminator">terminator</a>
                         </li>
                         <li>
-                                <a class="variable" href="#BasicBlock.terminator">terminator</a>
+                                <a class="variable" href="#BasicBlock.label">label</a>
                         </li>
                 </ul>
 
@@ -88,13 +88,13 @@
                     <a class="class" href="#CalibrationExpansion">CalibrationExpansion</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#CalibrationExpansion.calibration_used">calibration_used</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#CalibrationExpansion.range">range</a>
                         </li>
                         <li>
                                 <a class="variable" href="#CalibrationExpansion.expansions">expansions</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#CalibrationExpansion.calibration_used">calibration_used</a>
                         </li>
                 </ul>
 
@@ -259,30 +259,6 @@
                     <a class="class" href="#Program">Program</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="function" href="#Program.clone_without_body_instructions">clone_without_body_instructions</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Program.add_instruction">add_instruction</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Program.dagger">dagger</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Program.expand_calibrations">expand_calibrations</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Program.into_simplified">into_simplified</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Program.wrap_in_loop">wrap_in_loop</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Program.resolve_placeholders">resolve_placeholders</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Program.to_instructions">to_instructions</a>
-                        </li>
-                        <li>
                                 <a class="function" href="#Program.parse">parse</a>
                         </li>
                         <li>
@@ -313,19 +289,34 @@
                                 <a class="function" href="#Program.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
+                                <a class="function" href="#Program.clone_without_body_instructions">clone_without_body_instructions</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Program.add_instruction">add_instruction</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Program.dagger">dagger</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Program.expand_calibrations">expand_calibrations</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Program.into_simplified">into_simplified</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Program.wrap_in_loop">wrap_in_loop</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Program.resolve_placeholders">resolve_placeholders</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Program.to_instructions">to_instructions</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#Program.calibrations">calibrations</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.waveforms">waveforms</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#Program.frames">frames</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Program.gate_definitions">gate_definitions</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Program.declarations">declarations</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Program.pragma_extern_map">pragma_extern_map</a>
@@ -334,13 +325,22 @@
                                 <a class="variable" href="#Program.instructions">instructions</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.used_qubits">used_qubits</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#Program.body_instructions">body_instructions</a>
                         </li>
                         <li>
+                                <a class="variable" href="#Program.used_qubits">used_qubits</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#Program.memory_regions">memory_regions</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Program.waveforms">waveforms</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Program.gate_definitions">gate_definitions</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Program.declarations">declarations</a>
                         </li>
                 </ul>
 
@@ -349,10 +349,10 @@
                     <a class="class" href="#ProgramCalibrationExpansion">ProgramCalibrationExpansion</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#ProgramCalibrationExpansion.program">program</a>
+                                <a class="variable" href="#ProgramCalibrationExpansion.source_map">source_map</a>
                         </li>
                         <li>
-                                <a class="variable" href="#ProgramCalibrationExpansion.source_map">source_map</a>
+                                <a class="variable" href="#ProgramCalibrationExpansion.program">program</a>
                         </li>
                 </ul>
 
@@ -403,10 +403,10 @@
                     <a class="class" href="#ScheduleSecondsItem">ScheduleSecondsItem</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#ScheduleSecondsItem.time_span">time_span</a>
+                                <a class="variable" href="#ScheduleSecondsItem.instruction_index">instruction_index</a>
                         </li>
                         <li>
-                                <a class="variable" href="#ScheduleSecondsItem.instruction_index">instruction_index</a>
+                                <a class="variable" href="#ScheduleSecondsItem.time_span">time_span</a>
                         </li>
                 </ul>
 
@@ -415,13 +415,13 @@
                     <a class="class" href="#TimeSpanSeconds">TimeSpanSeconds</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#TimeSpanSeconds.end">end</a>
+                                <a class="variable" href="#TimeSpanSeconds.duration">duration</a>
                         </li>
                         <li>
                                 <a class="variable" href="#TimeSpanSeconds.start">start</a>
                         </li>
                         <li>
-                                <a class="variable" href="#TimeSpanSeconds.duration">duration</a>
+                                <a class="variable" href="#TimeSpanSeconds.end">end</a>
                         </li>
                 </ul>
 
@@ -640,20 +640,6 @@ for it to be counted in the depth.</li>
 
 
                             </div>
-                            <div id="BasicBlock.label" class="classattr">
-                                <div class="attr variable">
-            <span class="name">label</span>
-
-        
-    </div>
-    <a class="headerlink" href="#BasicBlock.label"></a>
-    
-            <div class="docstring"><p>The label of the block, if any.
-This is used to target this block in control flow.</p>
-</div>
-
-
-                            </div>
                             <div id="BasicBlock.terminator" class="classattr">
                                 <div class="attr variable">
             <span class="name">terminator</span>
@@ -665,6 +651,20 @@ This is used to target this block in control flow.</p>
             <div class="docstring"><p>The control flow terminator instruction of the block, if any.</p>
 
 <p>If this is <code>None</code>, the implicit behavior is to "continue" to the subsequent block.</p>
+</div>
+
+
+                            </div>
+                            <div id="BasicBlock.label" class="classattr">
+                                <div class="attr variable">
+            <span class="name">label</span>
+
+        
+    </div>
+    <a class="headerlink" href="#BasicBlock.label"></a>
+    
+            <div class="docstring"><p>The label of the block, if any.
+This is used to target this block in control flow.</p>
 </div>
 
 
@@ -684,19 +684,6 @@ This is used to target this block in control flow.</p>
 </div>
 
 
-                            <div id="CalibrationExpansion.calibration_used" class="classattr">
-                                <div class="attr variable">
-            <span class="name">calibration_used</span>
-
-        
-    </div>
-    <a class="headerlink" href="#CalibrationExpansion.calibration_used"></a>
-    
-            <div class="docstring"><p>The calibration used to expand the instruction.</p>
-</div>
-
-
-                            </div>
                             <div id="CalibrationExpansion.range" class="classattr">
                                 <div class="attr variable">
             <span class="name">range</span>
@@ -720,6 +707,19 @@ which were generated by this expansion.</p>
     <a class="headerlink" href="#CalibrationExpansion.expansions"></a>
     
             <div class="docstring"><p>The source map describing the nested expansions made.</p>
+</div>
+
+
+                            </div>
+                            <div id="CalibrationExpansion.calibration_used" class="classattr">
+                                <div class="attr variable">
+            <span class="name">calibration_used</span>
+
+        
+    </div>
+    <a class="headerlink" href="#CalibrationExpansion.calibration_used"></a>
+    
+            <div class="docstring"><p>The calibration used to expand the instruction.</p>
 </div>
 
 
@@ -1447,177 +1447,6 @@ and frame definitions.</p>
 </div>
 
 
-                            <div id="Program.clone_without_body_instructions" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">clone_without_body_instructions</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.clone_without_body_instructions"></a>
-    
-            <div class="docstring"><p>Return a deep copy of the <code><a href="#Program">Program</a></code>, but without the body instructions.</p>
-</div>
-
-
-                            </div>
-                            <div id="Program.add_instruction" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">add_instruction</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">instruction</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.add_instruction"></a>
-    
-            <div class="docstring"><p>Add an instruction to the end of the program.</p>
-
-<p>Note, parsing extern signatures is deferred here to maintain infallibility
-of [<code>Program::add_instruction</code>]. This means that invalid <code>PRAGMA EXTERN</code>
-instructions are still added to the [<code>Program::extern_pragma_map</code>];
-duplicate <code>PRAGMA EXTERN</code> names are overwritten.</p>
-</div>
-
-
-                            </div>
-                            <div id="Program.dagger" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">dagger</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.dagger"></a>
-    
-            <div class="docstring"><p>Creates a new conjugate transpose of the [<code><a href="#Program">Program</a></code>] by reversing the order of gate
-instructions and applying the DAGGER modifier to each.</p>
-
-<h1 id="errors">Errors</h1>
-
-<p>Errors if any of the instructions in the program are not [<code>Instruction::Gate</code>]</p>
-</div>
-
-
-                            </div>
-                            <div id="Program.expand_calibrations" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">expand_calibrations</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.expand_calibrations"></a>
-    
-            <div class="docstring"><p>Expand any instructions in the program which have a matching calibration,
-leaving the others unchanged.
-Return the expanded copy of the program.</p>
-
-<p>Returns an error if any instruction expands into itself.</p>
-
-<p>See [<code>Program::expand_calibrations_with_source_map</code>] for a version that returns a source mapping.</p>
-</div>
-
-
-                            </div>
-                            <div id="Program.into_simplified" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">into_simplified</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.into_simplified"></a>
-    
-            <div class="docstring"><p>Simplify this program into a new [<code><a href="#Program">Program</a></code>] which contains only instructions
-and definitions which are executed; effectively, perform dead code removal.</p>
-
-<p>Removes:</p>
-
-<ul>
-<li>All calibrations, following calibration expansion</li>
-<li>Frame definitions which are not used by any instruction such as <code>PULSE</code> or <code>CAPTURE</code></li>
-<li>Waveform definitions which are not used by any instruction</li>
-<li><code>PRAGMA EXTERN</code> instructions which are not used by any <code>CALL</code> instruction (see
-[<code>Program::extern_pragma_map</code>]).</li>
-</ul>
-
-<p>When a valid program is simplified, it remains valid.</p>
-
-<h1 id="note">Note</h1>
-
-<p>If you need custom instruction handling during simplification,
-use [<code>InstructionHandler::simplify_program</code>] instead.</p>
-</div>
-
-
-                            </div>
-                            <div id="Program.wrap_in_loop" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">wrap_in_loop</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">loop_count_reference</span>, </span><span class="param"><span class="n">start_target</span>, </span><span class="param"><span class="n">end_target</span>, </span><span class="param"><span class="n">iterations</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.wrap_in_loop"></a>
-    
-            <div class="docstring"><p>Return a copy of the [<code><a href="#Program">Program</a></code>] wrapped in a loop that repeats <code>iterations</code> times.</p>
-
-<p>The loop is constructed by wrapping the body of the program in classical Quil instructions.
-The given <code>loop_count_reference</code> must refer to an INTEGER memory region. The value at the
-reference given will be set to <code>iterations</code> and decremented in the loop. The loop will
-terminate when the reference reaches 0. For this reason your program should not itself
-modify the value at the reference unless you intend to modify the remaining number of
-iterations (i.e. to break the loop).</p>
-
-<p>The given <code>start_target</code> and <code>end_target</code> will be used as the entry and exit points for the
-loop, respectively. You should provide unique [<code>Target</code>]s that won't be used elsewhere in
-the program.</p>
-
-<p>If <code>iterations</code> is 0, then a copy of the program is returned without any changes.</p>
-</div>
-
-
-                            </div>
-                            <div id="Program.resolve_placeholders" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">resolve_placeholders</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.resolve_placeholders"></a>
-    
-            <div class="docstring"><p>Resolve [<code>LabelPlaceholder</code>]s and [<code>QubitPlaceholder</code>]s within the program using default resolvers.</p>
-
-<p>See <a href="Self::resolve_placeholders_with_custom_resolvers"><code>resolve_placeholders_with_custom_resolvers</code></a>,
-<a href="Self::default_target_resolver"><code>default_target_resolver</code></a>,
-and <a href="Self::default_qubit_resolver"><code>default_qubit_resolver</code></a> for more information.</p>
-</div>
-
-
-                            </div>
-                            <div id="Program.to_instructions" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">to_instructions</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.to_instructions"></a>
-    
-            <div class="docstring"><p>Return a copy of all of the instructions which constitute this [<code><a href="#Program">Program</a></code>].</p>
-</div>
-
-
-                            </div>
                             <div id="Program.parse" class="classattr">
                                 <div class="attr function">
             
@@ -1792,6 +1621,177 @@ while ensuring that unique value is not already in use within the program.</p>
 
 
                             </div>
+                            <div id="Program.clone_without_body_instructions" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">clone_without_body_instructions</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.clone_without_body_instructions"></a>
+    
+            <div class="docstring"><p>Return a deep copy of the <code><a href="#Program">Program</a></code>, but without the body instructions.</p>
+</div>
+
+
+                            </div>
+                            <div id="Program.add_instruction" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">add_instruction</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">instruction</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.add_instruction"></a>
+    
+            <div class="docstring"><p>Add an instruction to the end of the program.</p>
+
+<p>Note, parsing extern signatures is deferred here to maintain infallibility
+of [<code>Program::add_instruction</code>]. This means that invalid <code>PRAGMA EXTERN</code>
+instructions are still added to the [<code>Program::extern_pragma_map</code>];
+duplicate <code>PRAGMA EXTERN</code> names are overwritten.</p>
+</div>
+
+
+                            </div>
+                            <div id="Program.dagger" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">dagger</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.dagger"></a>
+    
+            <div class="docstring"><p>Creates a new conjugate transpose of the [<code><a href="#Program">Program</a></code>] by reversing the order of gate
+instructions and applying the DAGGER modifier to each.</p>
+
+<h1 id="errors">Errors</h1>
+
+<p>Errors if any of the instructions in the program are not [<code>Instruction::Gate</code>]</p>
+</div>
+
+
+                            </div>
+                            <div id="Program.expand_calibrations" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">expand_calibrations</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.expand_calibrations"></a>
+    
+            <div class="docstring"><p>Expand any instructions in the program which have a matching calibration,
+leaving the others unchanged.
+Return the expanded copy of the program.</p>
+
+<p>Returns an error if any instruction expands into itself.</p>
+
+<p>See [<code>Program::expand_calibrations_with_source_map</code>] for a version that returns a source mapping.</p>
+</div>
+
+
+                            </div>
+                            <div id="Program.into_simplified" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">into_simplified</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.into_simplified"></a>
+    
+            <div class="docstring"><p>Simplify this program into a new [<code><a href="#Program">Program</a></code>] which contains only instructions
+and definitions which are executed; effectively, perform dead code removal.</p>
+
+<p>Removes:</p>
+
+<ul>
+<li>All calibrations, following calibration expansion</li>
+<li>Frame definitions which are not used by any instruction such as <code>PULSE</code> or <code>CAPTURE</code></li>
+<li>Waveform definitions which are not used by any instruction</li>
+<li><code>PRAGMA EXTERN</code> instructions which are not used by any <code>CALL</code> instruction (see
+[<code>Program::extern_pragma_map</code>]).</li>
+</ul>
+
+<p>When a valid program is simplified, it remains valid.</p>
+
+<h1 id="note">Note</h1>
+
+<p>If you need custom instruction handling during simplification,
+use [<code>InstructionHandler::simplify_program</code>] instead.</p>
+</div>
+
+
+                            </div>
+                            <div id="Program.wrap_in_loop" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">wrap_in_loop</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">loop_count_reference</span>, </span><span class="param"><span class="n">start_target</span>, </span><span class="param"><span class="n">end_target</span>, </span><span class="param"><span class="n">iterations</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.wrap_in_loop"></a>
+    
+            <div class="docstring"><p>Return a copy of the [<code><a href="#Program">Program</a></code>] wrapped in a loop that repeats <code>iterations</code> times.</p>
+
+<p>The loop is constructed by wrapping the body of the program in classical Quil instructions.
+The given <code>loop_count_reference</code> must refer to an INTEGER memory region. The value at the
+reference given will be set to <code>iterations</code> and decremented in the loop. The loop will
+terminate when the reference reaches 0. For this reason your program should not itself
+modify the value at the reference unless you intend to modify the remaining number of
+iterations (i.e. to break the loop).</p>
+
+<p>The given <code>start_target</code> and <code>end_target</code> will be used as the entry and exit points for the
+loop, respectively. You should provide unique [<code>Target</code>]s that won't be used elsewhere in
+the program.</p>
+
+<p>If <code>iterations</code> is 0, then a copy of the program is returned without any changes.</p>
+</div>
+
+
+                            </div>
+                            <div id="Program.resolve_placeholders" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">resolve_placeholders</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.resolve_placeholders"></a>
+    
+            <div class="docstring"><p>Resolve [<code>LabelPlaceholder</code>]s and [<code>QubitPlaceholder</code>]s within the program using default resolvers.</p>
+
+<p>See <a href="Self::resolve_placeholders_with_custom_resolvers"><code>resolve_placeholders_with_custom_resolvers</code></a>,
+<a href="Self::default_target_resolver"><code>default_target_resolver</code></a>,
+and <a href="Self::default_qubit_resolver"><code>default_qubit_resolver</code></a> for more information.</p>
+</div>
+
+
+                            </div>
+                            <div id="Program.to_instructions" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">to_instructions</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.to_instructions"></a>
+    
+            <div class="docstring"><p>Return a copy of all of the instructions which constitute this [<code><a href="#Program">Program</a></code>].</p>
+</div>
+
+
+                            </div>
                             <div id="Program.calibrations" class="classattr">
                                 <div class="attr variable">
             <span class="name">calibrations</span>
@@ -1803,17 +1803,6 @@ while ensuring that unique value is not already in use within the program.</p>
     
 
                             </div>
-                            <div id="Program.waveforms" class="classattr">
-                                <div class="attr variable">
-            <span class="name">waveforms</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.waveforms"></a>
-    
-    
-
-                            </div>
                             <div id="Program.frames" class="classattr">
                                 <div class="attr variable">
             <span class="name">frames</span>
@@ -1821,28 +1810,6 @@ while ensuring that unique value is not already in use within the program.</p>
         
     </div>
     <a class="headerlink" href="#Program.frames"></a>
-    
-    
-
-                            </div>
-                            <div id="Program.gate_definitions" class="classattr">
-                                <div class="attr variable">
-            <span class="name">gate_definitions</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.gate_definitions"></a>
-    
-    
-
-                            </div>
-                            <div id="Program.declarations" class="classattr">
-                                <div class="attr variable">
-            <span class="name">declarations</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.declarations"></a>
     
     
 
@@ -1869,17 +1836,6 @@ while ensuring that unique value is not already in use within the program.</p>
     
 
                             </div>
-                            <div id="Program.used_qubits" class="classattr">
-                                <div class="attr variable">
-            <span class="name">used_qubits</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.used_qubits"></a>
-    
-    
-
-                            </div>
                             <div id="Program.body_instructions" class="classattr">
                                 <div class="attr variable">
             <span class="name">body_instructions</span>
@@ -1891,6 +1847,17 @@ while ensuring that unique value is not already in use within the program.</p>
     
 
                             </div>
+                            <div id="Program.used_qubits" class="classattr">
+                                <div class="attr variable">
+            <span class="name">used_qubits</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.used_qubits"></a>
+    
+    
+
+                            </div>
                             <div id="Program.memory_regions" class="classattr">
                                 <div class="attr variable">
             <span class="name">memory_regions</span>
@@ -1898,6 +1865,39 @@ while ensuring that unique value is not already in use within the program.</p>
         
     </div>
     <a class="headerlink" href="#Program.memory_regions"></a>
+    
+    
+
+                            </div>
+                            <div id="Program.waveforms" class="classattr">
+                                <div class="attr variable">
+            <span class="name">waveforms</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.waveforms"></a>
+    
+    
+
+                            </div>
+                            <div id="Program.gate_definitions" class="classattr">
+                                <div class="attr variable">
+            <span class="name">gate_definitions</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.gate_definitions"></a>
+    
+    
+
+                            </div>
+                            <div id="Program.declarations" class="classattr">
+                                <div class="attr variable">
+            <span class="name">declarations</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.declarations"></a>
     
     
 
@@ -1915,19 +1915,6 @@ while ensuring that unique value is not already in use within the program.</p>
     
     
 
-                            <div id="ProgramCalibrationExpansion.program" class="classattr">
-                                <div class="attr variable">
-            <span class="name">program</span>
-
-        
-    </div>
-    <a class="headerlink" href="#ProgramCalibrationExpansion.program"></a>
-    
-            <div class="docstring"><p>The program containing the instructions.</p>
-</div>
-
-
-                            </div>
                             <div id="ProgramCalibrationExpansion.source_map" class="classattr">
                                 <div class="attr variable">
             <span class="name">source_map</span>
@@ -1937,6 +1924,19 @@ while ensuring that unique value is not already in use within the program.</p>
     <a class="headerlink" href="#ProgramCalibrationExpansion.source_map"></a>
     
             <div class="docstring"><p>The source mapping describing the expansions made.</p>
+</div>
+
+
+                            </div>
+                            <div id="ProgramCalibrationExpansion.program" class="classattr">
+                                <div class="attr variable">
+            <span class="name">program</span>
+
+        
+    </div>
+    <a class="headerlink" href="#ProgramCalibrationExpansion.program"></a>
+    
+            <div class="docstring"><p>The program containing the instructions.</p>
 </div>
 
 
@@ -2125,19 +2125,6 @@ each of which is assigned a start time and duration.</p>
 </div>
 
 
-                            <div id="ScheduleSecondsItem.time_span" class="classattr">
-                                <div class="attr variable">
-            <span class="name">time_span</span>
-
-        
-    </div>
-    <a class="headerlink" href="#ScheduleSecondsItem.time_span"></a>
-    
-            <div class="docstring"><p>The index of the instruction within the basic block.</p>
-</div>
-
-
-                            </div>
                             <div id="ScheduleSecondsItem.instruction_index" class="classattr">
                                 <div class="attr variable">
             <span class="name">instruction_index</span>
@@ -2147,6 +2134,19 @@ each of which is assigned a start time and duration.</p>
     <a class="headerlink" href="#ScheduleSecondsItem.instruction_index"></a>
     
             <div class="docstring"><p>The time span during which the instruction is scheduled.</p>
+</div>
+
+
+                            </div>
+                            <div id="ScheduleSecondsItem.time_span" class="classattr">
+                                <div class="attr variable">
+            <span class="name">time_span</span>
+
+        
+    </div>
+    <a class="headerlink" href="#ScheduleSecondsItem.time_span"></a>
+    
+            <div class="docstring"><p>The index of the instruction within the basic block.</p>
 </div>
 
 
@@ -2166,17 +2166,15 @@ each of which is assigned a start time and duration.</p>
 </div>
 
 
-                            <div id="TimeSpanSeconds.end" class="classattr">
+                            <div id="TimeSpanSeconds.duration" class="classattr">
                                 <div class="attr variable">
-            <span class="name">end</span>
+            <span class="name">duration</span>
 
         
     </div>
-    <a class="headerlink" href="#TimeSpanSeconds.end"></a>
+    <a class="headerlink" href="#TimeSpanSeconds.duration"></a>
     
-            <div class="docstring"><p>The end time of the time span, in seconds.</p>
-
-<p>This is the sum of the start time and duration.</p>
+            <div class="docstring"><p>The duration of the time span, in seconds.</p>
 </div>
 
 
@@ -2195,15 +2193,17 @@ in seconds relative to the start of the scheduling context (such as the basic bl
 
 
                             </div>
-                            <div id="TimeSpanSeconds.duration" class="classattr">
+                            <div id="TimeSpanSeconds.end" class="classattr">
                                 <div class="attr variable">
-            <span class="name">duration</span>
+            <span class="name">end</span>
 
         
     </div>
-    <a class="headerlink" href="#TimeSpanSeconds.duration"></a>
+    <a class="headerlink" href="#TimeSpanSeconds.end"></a>
     
-            <div class="docstring"><p>The duration of the time span, in seconds.</p>
+            <div class="docstring"><p>The end time of the time span, in seconds.</p>
+
+<p>This is the sum of the start time and duration.</p>
 </div>
 
 
