@@ -1,7 +1,10 @@
 use crate::{
     expression::Expression,
     imag,
-    instruction::{write_expression_parameter_string, write_parameter_string, write_qubits, Qubit},
+    instruction::{
+        write_expression_parameter_string, write_parameter_string, write_qubits, DefGateSequence,
+        Qubit,
+    },
     pickleable_new,
     quil::{write_join_quil, Quil, INDENT},
     real,
@@ -915,6 +918,8 @@ pub enum GateSpecification {
     /// A Hermitian operator specified as a Pauli sum, a sum of combinations of Pauli operators,
     /// used for a [`GateType::PauliSum`]
     PauliSum(PauliSum),
+    /// A sequence of gates.
+    Sequence(DefGateSequence),
 }
 
 impl Quil for GateSpecification {
@@ -956,6 +961,13 @@ impl Quil for GateSpecification {
                     writeln!(f)?;
                 }
             }
+            GateSpecification::Sequence(sequence) => {
+                for gate in sequence.gates.iter() {
+                    write!(f, "{INDENT}")?;
+                    gate.write(f, fall_back_to_debug)?;
+                    writeln!(f)?;
+                }
+            }
         }
         Ok(())
     }
@@ -991,25 +1003,99 @@ pickleable_new! {
     }
 }
 
+impl GateDefinition {
+    pub fn signature(&self) -> GateSignature<'_> {
+        let GateDefinition {
+            name,
+            parameters: gate_parameters,
+            specification,
+        } = self;
+
+        let (qubit_parameters, gate_type) = match specification {
+            GateSpecification::Matrix(_) => (None, GateType::Matrix),
+            GateSpecification::Permutation(_) => (None, GateType::Permutation),
+            GateSpecification::PauliSum(sum) => {
+                (Some(sum.arguments.as_slice()), GateType::PauliSum)
+            }
+            GateSpecification::Sequence(seq) => (Some(seq.qubits.as_slice()), GateType::Sequence),
+        };
+        GateSignature {
+            name,
+            gate_parameters,
+            qubit_parameters: qubit_parameters.unwrap_or(&[]),
+            gate_type,
+        }
+    }
+}
+
 impl Quil for GateDefinition {
     fn write(
         &self,
         f: &mut impl std::fmt::Write,
         fall_back_to_debug: bool,
     ) -> crate::quil::ToQuilResult<()> {
-        write!(f, "DEFGATE {}", self.name,)?;
-        write_parameter_string(f, &self.parameters)?;
-        match &self.specification {
-            GateSpecification::Matrix(_) => writeln!(f, " AS MATRIX:")?,
-            GateSpecification::Permutation(_) => writeln!(f, " AS PERMUTATION:")?,
-            GateSpecification::PauliSum(sum) => {
-                for arg in &sum.arguments {
-                    write!(f, " {arg}")?;
-                }
-                writeln!(f, " AS PAULI-SUM:")?
-            }
-        }
+        let signature = self.signature();
+        signature.write(f, fall_back_to_debug)?;
+        writeln!(f, ":")?;
         self.specification.write(f, fall_back_to_debug)?;
+        Ok(())
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct GateSignature<'a> {
+    name: &'a String,
+    gate_parameters: &'a [String],
+    qubit_parameters: &'a [String],
+    gate_type: GateType,
+}
+
+impl<'a> GateSignature<'a> {
+    pub fn try_new(
+        name: &'a String,
+        gate_parameters: &'a [String],
+        qubit_parameters: &'a [String],
+        gate_type: GateType,
+    ) -> Result<Self, GateError> {
+        validate_user_identifier(name)?;
+        Ok(Self {
+            name,
+            gate_parameters,
+            qubit_parameters,
+            gate_type,
+        })
+    }
+
+    pub fn name(&self) -> &str {
+        self.name
+    }
+
+    pub fn gate_parameters(&self) -> &[String] {
+        self.gate_parameters
+    }
+
+    pub fn qubit_parameters(&self) -> &[String] {
+        self.qubit_parameters
+    }
+
+    pub fn gate_type(&self) -> GateType {
+        self.gate_type
+    }
+}
+
+impl<'a> Quil for GateSignature<'a> {
+    fn write(
+        &self,
+        f: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
+    ) -> Result<(), crate::quil::ToQuilError> {
+        write!(f, "DEFGATE {}", self.name,)?;
+        write_parameter_string(f, self.gate_parameters)?;
+        for qubit in self.qubit_parameters.iter() {
+            write!(f, " {qubit}")?;
+        }
+        write!(f, " AS ")?;
+        self.gate_type.write(f, fall_back_to_debug)?;
         Ok(())
     }
 }
@@ -1142,12 +1228,24 @@ mod test_gate_definition {
     }
 }
 
-/// The type of a [`GateDefinition`]
+/// The type of a [`GateDefinition`] used within the [`GateSignature`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass_enum)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(
+        module = "quil.instructions",
+        eq,
+        frozen,
+        hash,
+        rename_all = "SCREAMING_SNAKE_CASE"
+    )
+)]
 pub enum GateType {
     Matrix,
     Permutation,
     PauliSum,
+    Sequence,
 }
 
 impl Quil for GateType {
@@ -1160,6 +1258,7 @@ impl Quil for GateType {
             Self::Matrix => write!(f, "MATRIX"),
             Self::Permutation => write!(f, "PERMUTATION"),
             Self::PauliSum => write!(f, "PAULI-SUM"),
+            Self::Sequence => write!(f, "SEQUENCE"),
         }
         .map_err(Into::into)
     }
