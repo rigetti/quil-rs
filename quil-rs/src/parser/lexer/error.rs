@@ -20,10 +20,14 @@ pub type LexError = Error<LexErrorKind>;
 
 /// Kinds of errors that may occur while lexing Quil input.
 #[derive(Clone, Debug, thiserror::Error, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum LexErrorKind {
     /// Expected this particular raw string.
     #[error("expected {0:?}")]
     ExpectedString(&'static str),
+    /// Expected this particular raw string in any case.
+    #[error("expected {0:?} (case-insensitive)")]
+    ExpectedCaseInsensitiveString(&'static str),
     /// Expected something specific.
     #[error("expected {0}")]
     ExpectedContext(&'static str),
@@ -33,6 +37,6 @@ pub enum LexErrorKind {
     /// Encountered an unexpected EOF
     #[error("unexpected EOF while parsing")]
     UnexpectedEOF,
-    #[error("error parsing an integer: {0}")]
-    ParseInt(#[from] std::num::ParseIntError),
+    #[error("malformed number literal: {0}")]
+    BadNumber(#[from] lexical::Error),
 }

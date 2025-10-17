@@ -563,7 +563,21 @@ SET-SCALE 0 \"xy\" pi
 SHIFT-FREQUENCY 0 \"ro\" 6100000000
 SHIFT-PHASE 0 \"xy\" (-pi)
 SHIFT-PHASE 0 \"xy\" (%theta*(2/pi))
-SWAP-PHASES 2 3 \"xy\" 3 4 \"xy\"";
+SWAP-PHASES 2 3 \"xy\" 3 4 \"xy\"
+
+DECLARE fancy_integer INTEGER
+DECLARE fancy_float REAL
+
+MOVE fancy_integer 0b__0010__1010__
+MOVE fancy_integer 0o__000__755__
+MOVE fancy_integer 0x__0000_DEAD__BEEF__
+MOVE fancy_integer 001__000__000__
+
+MOVE fancy_float 9__8__.7__6__e+__1__2__
+MOVE fancy_float 9__8__.e__1__2__
+MOVE fancy_float .7__6__e-__1__2__
+MOVE fancy_float 3__1_4_1_5_9__e-__5__
+";
 
     #[test]
     fn waveform_invocation() {
