@@ -536,7 +536,7 @@ impl GateSpecification {
 /// To get a signature from a definition, use `GateDefinition.signature`.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)]
+#[pyo3::pyclass(module = "quil.instructions", name = "GateSignature", eq, frozen, hash, get_all, subclass)]
 pub struct OwnedGateSignature {
     name: String,
     gate_parameters: Vec<String>,

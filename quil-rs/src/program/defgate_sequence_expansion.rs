@@ -86,7 +86,8 @@ pub(crate) struct ExpandedInstructionsWithSourceMap<'a> {
 
 impl<'a, F> ProgramDefGateSequenceExpander<'a, F>
 where
-    F: Fn(&String) -> bool,
+    // F: Fn(&String) -> bool,
+    F: Fn(&str) -> bool
 {
     /// Creates a new `ProgramDefGateSequenceExpander`.
     ///
@@ -289,7 +290,7 @@ mod tests {
     /// A test case for the [`ProgramDefGateSequenceExpander`] functionality.
     struct DefGateSequenceExpansionTestCase {
         program: &'static str,
-        filter: Box<dyn Fn(&String) -> bool>,
+        filter: Box<dyn Fn(&str) -> bool>,
         expected: Result<&'static str, DefGateSequenceExpansionError>,
         source_map_entry_builders:
             Vec<SourceMapEntry<InstructionIndex, ExpansionResult<DefGateSequenceExpansionBuilder>>>,

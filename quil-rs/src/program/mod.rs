@@ -579,7 +579,7 @@ impl Program {
     ///  ```
     pub fn expand_defgate_sequences<F>(self, filter: F) -> Result<Self>
     where
-        F: Fn(&String) -> bool,
+        F: Fn(&str) -> bool,
     {
         let (expansion, gate_definitions) = self.initialize_defgate_sequence_expander(filter);
         let new_instructions = expansion.expand(&self.instructions)?;
@@ -618,7 +618,7 @@ impl Program {
         SourceMap<InstructionIndex, ExpansionResult<DefGateSequenceExpansion<'_>>>,
     )>
     where
-        F: Fn(&String) -> bool,
+        F: Fn(&str) -> bool,
     {
         let (expander, gate_definitions) = self.initialize_defgate_sequence_expander(filter);
         let ExpandedInstructionsWithSourceMap { instructions: new_instructions, source_map } =
@@ -646,7 +646,7 @@ impl Program {
         IndexMap<String, GateDefinition>,
     )
     where
-        F: Fn(&String) -> bool,
+        F: Fn(&str) -> bool,
     {
         let gate_definitions_to_keep =
             filter_sequence_gate_definitions_to_keep(&self.gate_definitions, &filter);
@@ -976,7 +976,7 @@ fn filter_sequence_gate_definitions_to_keep<F>(
     filter: &F,
 ) -> IndexMap<String, GateDefinition>
 where
-    F: Fn(&String) -> bool,
+    F: Fn(&str) -> bool,
 {
     let mut graph: Graph<usize, u8> = Graph::new();
     let gate_sequence_definitions = gate_definitions
@@ -2359,7 +2359,7 @@ MEASURE 1 ro[1]
             .into_iter()
             .map(String::from)
             .collect::<HashSet<_>>();
-        let filter = |key: &String| !exclude.contains(key);
+        let filter = |key: &str| !exclude.contains(key);
         let expanded_program = program
             .expand_defgate_sequences(filter)
             .expect("should expand gate sequences");
@@ -2406,7 +2406,7 @@ MEASURE 1 ro[1]
             .into_iter()
             .map(String::from)
             .collect::<HashSet<_>>();
-        let filter = |key: &String| !exclude.contains(key);
+        let filter = |key: &str| !exclude.contains(key);
         let expanded_program = program
             .expand_defgate_sequences(filter)
             .expect("should expand gate sequences");

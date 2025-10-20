@@ -265,7 +265,7 @@ impl Program {
     ) -> Result<ExpandedProgram> {
         // Note, the filter must be infallible, so if the Python function errors or returns a non-bool,
         // we just default to true.
-        let filter = |key: &String| -> bool {
+        let filter = |key: &str| -> bool {
             filter
                 .map(|f| {
                     f.filter.call1(py, (key,))
@@ -367,7 +367,7 @@ impl Program {
         )]
         filter: Option<&Bound<'_, PyFunction>>,
     ) -> Result<Self> {
-        let filter = |key: &String| -> bool {
+        let filter = |key: &str| -> bool {
             filter
                 .map(|f| {
                     f.call1((key,))
