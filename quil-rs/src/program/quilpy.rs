@@ -168,10 +168,7 @@ pub struct DefGateExpansionFilter {
 impl DefGateExpansionFilter {
     #[new]
     #[pyo3(signature = (/, filter, on_error))]
-    fn new(
-        filter: Py<PyFunction>,
-        on_error: Py<PyFunction>,
-    ) -> Self {
+    fn new(filter: Py<PyFunction>, on_error: Py<PyFunction>) -> Self {
         Self { filter, on_error }
     }
 }
@@ -271,7 +268,8 @@ impl Program {
         let filter = |key: &str| -> bool {
             filter
                 .map(|f| {
-                    f.filter.call1(py, (key,))
+                    f.filter
+                        .call1(py, (key,))
                         .and_then(|v| v.extract::<bool>(py))
                         .inspect_err(|e| {
                             f.on_error.call1(py, (e,)).expect("on_error must not error");

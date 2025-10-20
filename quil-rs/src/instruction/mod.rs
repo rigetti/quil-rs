@@ -375,13 +375,25 @@ fn write_expression_parameter_string(
     Ok(())
 }
 
-fn write_parameter_string<T: AsRef<str>>(f: &mut impl std::fmt::Write, parameters: &[T]) -> fmt::Result {
+fn write_parameter_string<T: AsRef<str>>(
+    f: &mut impl std::fmt::Write,
+    parameters: &[T],
+) -> fmt::Result {
     if parameters.is_empty() {
         return Ok(());
     }
 
     write!(f, "(")?;
-    write_join(f, parameters.iter().map(|p| p.as_ref()).collect::<Vec<_>>().as_slice(), ", ", "%")?;
+    write_join(
+        f,
+        parameters
+            .iter()
+            .map(|p| p.as_ref())
+            .collect::<Vec<_>>()
+            .as_slice(),
+        ", ",
+        "%",
+    )?;
     write!(f, ")")
 }
 

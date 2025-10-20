@@ -37,7 +37,9 @@ use crate::instruction::{
     RESERVED_PRAGMA_EXTERN,
 };
 use crate::parser::{lex, parse_instructions, ParseError};
-use crate::program::defgate_sequence_expansion::{ExpandedInstructionsWithSourceMap, ProgramDefGateSequenceExpander};
+use crate::program::defgate_sequence_expansion::{
+    ExpandedInstructionsWithSourceMap, ProgramDefGateSequenceExpander,
+};
 use crate::quil::Quil;
 
 pub use self::calibration::{
@@ -621,8 +623,10 @@ impl Program {
         F: Fn(&str) -> bool,
     {
         let (expander, gate_definitions) = self.initialize_defgate_sequence_expander(filter);
-        let ExpandedInstructionsWithSourceMap { instructions: new_instructions, source_map } =
-            expander.expand_with_source_map(&self.instructions)?;
+        let ExpandedInstructionsWithSourceMap {
+            instructions: new_instructions,
+            source_map,
+        } = expander.expand_with_source_map(&self.instructions)?;
 
         let mut new_program = Self {
             calibrations: self.calibrations.clone(),

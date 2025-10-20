@@ -86,7 +86,7 @@ pub(crate) struct ExpandedInstructionsWithSourceMap<'a> {
 
 impl<'a, F> ProgramDefGateSequenceExpander<'a, F>
 where
-    F: Fn(&str) -> bool
+    F: Fn(&str) -> bool,
 {
     /// Creates a new `ProgramDefGateSequenceExpander`.
     ///
@@ -95,10 +95,7 @@ where
     /// * `gate_definitions` - A reference to the gate definitions of the program.
     /// * `filter` - A filter to apply to the gate definitions, allowing for selective
     ///   expansion.
-    pub(crate) fn new(
-        gate_definitions: &'a IndexMap<String, GateDefinition>,
-        filter: F,
-    ) -> Self {
+    pub(crate) fn new(gate_definitions: &'a IndexMap<String, GateDefinition>, filter: F) -> Self {
         Self {
             gate_definitions,
             filter,
@@ -110,10 +107,7 @@ where
         &self,
         source_instructions: &[Instruction],
     ) -> Result<Vec<Instruction>, DefGateSequenceExpansionError> {
-        self.expand_without_source_map_impl(
-            source_instructions,
-            &mut IndexSet::new(),
-        )
+        self.expand_without_source_map_impl(source_instructions, &mut IndexSet::new())
     }
 
     /// Expands sequence gate definitions in the provided instructions and returns a source map
@@ -121,20 +115,13 @@ where
     pub(crate) fn expand_with_source_map(
         &self,
         source_instructions: &'a [Instruction],
-    ) -> Result<
-        ExpandedInstructionsWithSourceMap<'a>,
-        DefGateSequenceExpansionError,
-    > {
+    ) -> Result<ExpandedInstructionsWithSourceMap<'a>, DefGateSequenceExpansionError> {
         let mut source_map = SourceMap::default();
-        self.expand_with_source_map_impl(
-            source_instructions,
-            &mut source_map,
-            &mut IndexSet::new(),
-        )
-        .map(|instructions| ExpandedInstructionsWithSourceMap {
-            instructions,
-            source_map,
-        })
+        self.expand_with_source_map_impl(source_instructions, &mut source_map, &mut IndexSet::new())
+            .map(|instructions| ExpandedInstructionsWithSourceMap {
+                instructions,
+                source_map,
+            })
     }
 
     fn expand_with_source_map_impl(
@@ -157,12 +144,11 @@ where
                 gate_expansion_stack.insert(gate_sequence_signature.name().to_string());
 
                 let mut recursive_source_map = SourceMap::default();
-                let recursive_target_gate_instructions = self
-                    .expand_with_source_map_impl(
-                        &target_gate_instructions,
-                        &mut recursive_source_map,
-                        &mut gate_expansion_stack,
-                    )?;
+                let recursive_target_gate_instructions = self.expand_with_source_map_impl(
+                    &target_gate_instructions,
+                    &mut recursive_source_map,
+                    &mut gate_expansion_stack,
+                )?;
                 let target_instruction_start_index = InstructionIndex(target_instructions.len());
                 let target_instruction_end_index = InstructionIndex(
                     target_instruction_start_index.0 + recursive_target_gate_instructions.len(),
@@ -206,11 +192,10 @@ where
                 let mut gate_expansion_stack = gate_expansion_stack.clone();
                 gate_expansion_stack.insert(source.name().to_string());
 
-                let recursive_target_gate_instructions = self
-                    .expand_without_source_map_impl(
-                        &target_gate_instructions,
-                        &mut gate_expansion_stack,
-                    )?;
+                let recursive_target_gate_instructions = self.expand_without_source_map_impl(
+                    &target_gate_instructions,
+                    &mut gate_expansion_stack,
+                )?;
                 target_instructions.extend(recursive_target_gate_instructions);
             } else {
                 target_instructions.push(source_instruction.clone());
@@ -230,8 +215,7 @@ where
         &self,
         instruction: &Instruction,
         gate_expansion_stack: &mut IndexSet<String>,
-    ) -> Result<Option<(Vec<Instruction>, GateSignature<'a>)>, DefGateSequenceExpansionError>
-    {
+    ) -> Result<Option<(Vec<Instruction>, GateSignature<'a>)>, DefGateSequenceExpansionError> {
         if let Instruction::Gate(gate) = instruction {
             if let Some(gate_definition) = self.gate_definitions.get(&gate.name) {
                 if let GateSpecification::Sequence(gate_sequence) = &gate_definition.specification {
@@ -834,8 +818,7 @@ DAGGER seq1(pi/2) 0
             gate_definitions: &program.gate_definitions,
             filter: &test_case.filter,
         };
-        let result =
-            program_expansion.expand_with_source_map(&program.instructions);
+        let result = program_expansion.expand_with_source_map(&program.instructions);
 
         match (&test_case.expected, result) {
             (Ok(expected), Ok(result)) => {
@@ -858,7 +841,10 @@ DAGGER seq1(pi/2) 0
                 panic!("Expected instructions:\n\n{expected:?}\n\ngot error:\n\n{e:?}");
             }
             (Err(expected), Ok(result)) => {
-                panic!("Expected error:\n\n{expected:?}\n\ngot:\n\n{:?}", result.instructions);
+                panic!(
+                    "Expected error:\n\n{expected:?}\n\ngot:\n\n{:?}",
+                    result.instructions
+                );
             }
             (Err(expected), Err(found)) => {
                 pretty_assertions::assert_eq!(*expected, found);
