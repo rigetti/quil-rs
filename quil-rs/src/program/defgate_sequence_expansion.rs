@@ -73,12 +73,18 @@ type SequenceGateDefinitionSourceMap<'a> =
 
 /// A utility to expand sequence gate definitions in a Quil program.
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct ProgramDefGateSequenceExpander<'program, F> {
-    gate_definitions: &'program IndexMap<String, GateDefinition>,
+pub(crate) struct ProgramDefGateSequenceExpander<'a, F> {
+    gate_definitions: &'a IndexMap<String, GateDefinition>,
     filter: F,
 }
 
-impl<'program, F> ProgramDefGateSequenceExpander<'program, F>
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct ExpandedInstructionsWithSourceMap<'a> {
+    pub(crate) instructions: Vec<Instruction>,
+    pub(crate) source_map: SequenceGateDefinitionSourceMap<'a>,
+}
+
+impl<'a, F> ProgramDefGateSequenceExpander<'a, F>
 where
     F: Fn(&String) -> bool,
 {
@@ -90,7 +96,7 @@ where
     /// * `filter` - A filter to apply to the gate definitions, allowing for selective
     ///   expansion.
     pub(crate) fn new(
-        gate_definitions: &'program IndexMap<String, GateDefinition>,
+        gate_definitions: &'a IndexMap<String, GateDefinition>,
         filter: F,
     ) -> Self {
         Self {
@@ -114,9 +120,9 @@ where
     /// detailing the expansion.
     pub(crate) fn expand_with_source_map(
         &self,
-        source_instructions: &'program [Instruction],
+        source_instructions: &'a [Instruction],
     ) -> Result<
-        (Vec<Instruction>, SequenceGateDefinitionSourceMap<'program>),
+        ExpandedInstructionsWithSourceMap<'a>,
         DefGateSequenceExpansionError,
     > {
         let mut source_map = SourceMap::default();
@@ -125,13 +131,16 @@ where
             &mut source_map,
             &mut IndexSet::new(),
         )
-        .map(|instructions| (instructions, source_map))
+        .map(|instructions| ExpandedInstructionsWithSourceMap {
+            instructions,
+            source_map,
+        })
     }
 
     fn expand_with_source_map_impl(
         &self,
         source_instructions: &[Instruction],
-        source_map: &mut SequenceGateDefinitionSourceMap<'program>,
+        source_map: &mut SequenceGateDefinitionSourceMap<'a>,
         gate_expansion_stack: &mut IndexSet<String>,
     ) -> Result<Vec<Instruction>, DefGateSequenceExpansionError> {
         let mut target_instructions = vec![];
@@ -140,8 +149,8 @@ where
             if let Some((target_gate_instructions, gate_sequence_signature)) =
                 self.gate_sequence_from_instruction(source_instruction, gate_expansion_stack)?
             {
-                // if this instruction is a sequence gate definition, we need to expand it. Before
-                // doing so, we add the gate sequence signature to the the `gate_expansion_stack`,
+                // If this instruction is a sequence gate definition, we need to expand it. Before
+                // doing so, we add the gate sequence signature to the `gate_expansion_stack`,
                 // so all nested expansions within this sequence have access to the stack of
                 // already expanded gate definitions.
                 let mut gate_expansion_stack = gate_expansion_stack.clone();
@@ -221,7 +230,7 @@ where
         &self,
         instruction: &Instruction,
         gate_expansion_stack: &mut IndexSet<String>,
-    ) -> Result<Option<(Vec<Instruction>, GateSignature<'program>)>, DefGateSequenceExpansionError>
+    ) -> Result<Option<(Vec<Instruction>, GateSignature<'a>)>, DefGateSequenceExpansionError>
     {
         if let Instruction::Gate(gate) = instruction {
             if let Some(gate_definition) = self.gate_definitions.get(&gate.name) {
@@ -829,14 +838,14 @@ DAGGER seq1(pi/2) 0
             program_expansion.expand_with_source_map(&program.instructions);
 
         match (&test_case.expected, result) {
-            (Ok(expected), Ok((actual, source_map))) => {
+            (Ok(expected), Ok(result)) => {
                 let expected_program =
                     Program::from_str(expected).expect("expected program must be valid Quil");
                 let mut actual_program = Program::new();
-                actual_program.add_instructions(actual);
+                actual_program.add_instructions(result.instructions);
 
                 pretty_assertions::assert_eq!(expected_program, actual_program);
-                pretty_assertions::assert_eq!(test_case.to_source_map(), source_map);
+                pretty_assertions::assert_eq!(test_case.to_source_map(), result.source_map);
 
                 let actual_program_without_source_map = Program::from_instructions(
                     program_expansion
@@ -848,8 +857,8 @@ DAGGER seq1(pi/2) 0
             (Ok(expected), Err(e)) => {
                 panic!("Expected instructions:\n\n{expected:?}\n\ngot error:\n\n{e:?}");
             }
-            (Err(expected), Ok((actual, _))) => {
-                panic!("Expected error:\n\n{expected:?}\n\ngot:\n\n{actual:?}");
+            (Err(expected), Ok(result)) => {
+                panic!("Expected error:\n\n{expected:?}\n\ngot:\n\n{:?}", result.instructions);
             }
             (Err(expected), Err(found)) => {
                 pretty_assertions::assert_eq!(*expected, found);
