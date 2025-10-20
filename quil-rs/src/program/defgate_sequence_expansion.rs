@@ -86,7 +86,6 @@ pub(crate) struct ExpandedInstructionsWithSourceMap<'a> {
 
 impl<'a, F> ProgramDefGateSequenceExpander<'a, F>
 where
-    // F: Fn(&String) -> bool,
     F: Fn(&str) -> bool
 {
     /// Creates a new `ProgramDefGateSequenceExpander`.

@@ -1004,7 +1004,7 @@ pickleable_new! {
 }
 
 impl GateDefinition {
-    pub fn signature(&self) -> GateSignature<'_> {
+    pub fn signature(&self) -> GateSignature<'_, String> {
         let GateDefinition {
             name,
             parameters: gate_parameters,
@@ -1043,21 +1043,21 @@ impl Quil for GateDefinition {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct GateSignature<'a> {
-    name: &'a String,
-    gate_parameters: &'a [String],
-    qubit_parameters: &'a [String],
+pub struct GateSignature<'a, T: AsRef<str> = String> {
+    name: &'a T,
+    gate_parameters: &'a [T],
+    qubit_parameters: &'a [T],
     gate_type: GateType,
 }
 
-impl<'a> GateSignature<'a> {
+impl<'a, T: AsRef<str>> GateSignature<'a, T> {
     pub fn try_new(
-        name: &'a String,
-        gate_parameters: &'a [String],
-        qubit_parameters: &'a [String],
+        name: &'a T,
+        gate_parameters: &'a [T],
+        qubit_parameters: &'a [T],
         gate_type: GateType,
     ) -> Result<Self, GateError> {
-        validate_user_identifier(name)?;
+        validate_user_identifier(name.as_ref())?;
         Ok(Self {
             name,
             gate_parameters,
@@ -1067,14 +1067,14 @@ impl<'a> GateSignature<'a> {
     }
 
     pub fn name(&self) -> &str {
-        self.name
+        self.name.as_ref()
     }
 
-    pub fn gate_parameters(&self) -> &[String] {
+    pub fn gate_parameters(&self) -> &[T] {
         self.gate_parameters
     }
 
-    pub fn qubit_parameters(&self) -> &[String] {
+    pub fn qubit_parameters(&self) -> &[T] {
         self.qubit_parameters
     }
 
@@ -1089,10 +1089,10 @@ impl<'a> Quil for GateSignature<'a> {
         f: &mut impl std::fmt::Write,
         fall_back_to_debug: bool,
     ) -> Result<(), crate::quil::ToQuilError> {
-        write!(f, "DEFGATE {}", self.name,)?;
+        write!(f, "DEFGATE {}", <String as AsRef<str>>::as_ref(self.name))?;
         write_parameter_string(f, self.gate_parameters)?;
         for qubit in self.qubit_parameters.iter() {
-            write!(f, " {qubit}")?;
+            write!(f, " {}", <String as AsRef<str>>::as_ref(qubit))?;
         }
         write!(f, " AS ")?;
         self.gate_type.write(f, fall_back_to_debug)?;
