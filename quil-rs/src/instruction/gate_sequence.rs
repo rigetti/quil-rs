@@ -30,12 +30,12 @@ pub enum DefGateSequenceExpansionError {
     /// Gate sequence element is a gate application where the formal qubit must be an argument. Note,
     /// this error should never occur because gate sequence elements are validated in [`DefGateSequence::try_new`].
     /// We still prefer returning an error to panicking.
-    #[error("Internal error!  Gate sequence elements must reference parameters, but found {}", .0.to_quil_or_debug())]
+    #[error("gate sequence elements must reference parameters, but found {}", .0.to_quil_or_debug())]
     InvalidGateSequenceElementQubit(Qubit),
     /// Qubit variable in gate sequence is undefined. Note, this error should never occur because gate
     /// sequence elements are validated in [`DefGateSequence::try_new`]. We still prefer returning
     /// an error to panicking.
-    #[error("Internal error!  Qubit variable {0} in gate sequence is undefined")]
+    #[error("qubit variable {0} in gate sequence is undefined")]
     UndefinedGateSequenceElementQubit(String),
 }
 

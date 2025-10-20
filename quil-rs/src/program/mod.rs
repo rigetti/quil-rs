@@ -493,10 +493,8 @@ impl Program {
     /// by the filter are removed from the program's gate definitions, unless they are referenced
     /// by unexpanded sequence gate definitions.
     ///
-    /// # Arguments
-    ///
-    /// * `filter` - A filter that determines which sequence gate definitions to keep in the
-    ///   program. Gates are kept if the filter returns `true` for their name.
+    /// The `filter` that determines which sequence gate definitions to keep in the
+    /// program. Gates are kept if the filter returns `true` for their name.
     ///
     /// # Example
     ///
@@ -509,6 +507,9 @@ impl Program {
     //  These examples should be kept in sync.
     ///
     /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use quil_rs::program::Program;
     /// use quil_rs::quil::Quil;
     /// use std::collections::HashSet;
@@ -573,13 +574,15 @@ impl Program {
     ///  let expected_program: Program = expected_quil.parse().unwrap();
     ///
     ///  assert_eq!(expanded_program, expected_program);
+    ///  # Ok(())
+    ///  # }
     ///  ```
     pub fn expand_defgate_sequences<F>(self, filter: F) -> Result<Self>
     where
         F: Fn(&String) -> bool,
     {
         let (expansion, gate_definitions) = self.initialize_defgate_sequence_expander(filter);
-        let new_instructions = expansion.expand_defgate_sequences(&self.instructions)?;
+        let new_instructions = expansion.expand(&self.instructions)?;
 
         let mut new_program = Self {
             calibrations: self.calibrations,
@@ -619,7 +622,7 @@ impl Program {
     {
         let (expander, gate_definitions) = self.initialize_defgate_sequence_expander(filter);
         let (new_instructions, source_map) =
-            expander.expand_defgate_sequences_with_source_map(&self.instructions)?;
+            expander.expand_with_source_map(&self.instructions)?;
 
         let mut new_program = Self {
             calibrations: self.calibrations.clone(),
@@ -965,6 +968,9 @@ impl Program {
 
 /// Filter the sequence gate definitions in the program to keep only those that are
 /// excluded by the filter or are referenced by those that are excluded by the filter.
+///
+/// As with [`Program::expand_defgate_sequences`], gates are kept if the filter
+/// returns `true` for their name.
 fn filter_sequence_gate_definitions_to_keep<F>(
     gate_definitions: &IndexMap<String, GateDefinition>,
     filter: &F,

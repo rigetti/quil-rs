@@ -100,11 +100,11 @@ where
     }
 
     /// Expands sequence gate definitions in the provided instructions.
-    pub(crate) fn expand_defgate_sequences(
+    pub(crate) fn expand(
         &self,
         source_instructions: &[Instruction],
     ) -> Result<Vec<Instruction>, DefGateSequenceExpansionError> {
-        self.expand_defgate_sequences_without_source_map_inner(
+        self.expand_without_source_map_impl(
             source_instructions,
             &mut IndexSet::new(),
         )
@@ -112,7 +112,7 @@ where
 
     /// Expands sequence gate definitions in the provided instructions and returns a source map
     /// detailing the expansion.
-    pub(crate) fn expand_defgate_sequences_with_source_map(
+    pub(crate) fn expand_with_source_map(
         &self,
         source_instructions: &'program [Instruction],
     ) -> Result<
@@ -120,7 +120,7 @@ where
         DefGateSequenceExpansionError,
     > {
         let mut source_map = SourceMap::default();
-        self.expand_defgate_sequences_with_source_map_inner(
+        self.expand_with_source_map_impl(
             source_instructions,
             &mut source_map,
             &mut IndexSet::new(),
@@ -128,7 +128,7 @@ where
         .map(|instructions| (instructions, source_map))
     }
 
-    fn expand_defgate_sequences_with_source_map_inner(
+    fn expand_with_source_map_impl(
         &self,
         source_instructions: &[Instruction],
         source_map: &mut SequenceGateDefinitionSourceMap<'program>,
@@ -149,7 +149,7 @@ where
 
                 let mut recursive_source_map = SourceMap::default();
                 let recursive_target_gate_instructions = self
-                    .expand_defgate_sequences_with_source_map_inner(
+                    .expand_with_source_map_impl(
                         &target_gate_instructions,
                         &mut recursive_source_map,
                         &mut gate_expansion_stack,
@@ -180,7 +180,7 @@ where
         Ok(target_instructions)
     }
 
-    fn expand_defgate_sequences_without_source_map_inner(
+    fn expand_without_source_map_impl(
         &self,
         source_instructions: &[Instruction],
         gate_expansion_stack: &mut IndexSet<String>,
@@ -198,7 +198,7 @@ where
                 gate_expansion_stack.insert(source.name().to_string());
 
                 let recursive_target_gate_instructions = self
-                    .expand_defgate_sequences_without_source_map_inner(
+                    .expand_without_source_map_impl(
                         &target_gate_instructions,
                         &mut gate_expansion_stack,
                     )?;
@@ -826,7 +826,7 @@ DAGGER seq1(pi/2) 0
             filter: &test_case.filter,
         };
         let result =
-            program_expansion.expand_defgate_sequences_with_source_map(&program.instructions);
+            program_expansion.expand_with_source_map(&program.instructions);
 
         match (&test_case.expected, result) {
             (Ok(expected), Ok((actual, source_map))) => {
@@ -840,7 +840,7 @@ DAGGER seq1(pi/2) 0
 
                 let actual_program_without_source_map = Program::from_instructions(
                     program_expansion
-                        .expand_defgate_sequences(&program.instructions)
+                        .expand(&program.instructions)
                         .expect("expansion without source map should succeed"),
                 );
                 pretty_assertions::assert_eq!(expected_program, actual_program_without_source_map);
