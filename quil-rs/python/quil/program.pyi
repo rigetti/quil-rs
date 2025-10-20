@@ -14,7 +14,7 @@ class BasicBlock:
     def instructions(self) -> builtins.list[Instruction]:
         r"""
         A list of the instructions in the block, in order of definition.
-        
+
         This does not include the label or terminator instructions.
         """
     @property
@@ -27,7 +27,7 @@ class BasicBlock:
     def terminator(self) -> typing.Optional[Instruction]:
         r"""
         The control flow terminator instruction of the block, if any.
-        
+
         If this is ``None``, the implicit behavior is to "continue" to the subsequent block.
         """
     def __new__(cls, instance:BasicBlock) -> BasicBlock: ...
@@ -39,7 +39,7 @@ class BasicBlock:
         from an initial instruction (one with no prerequisite instructions)
         to a final instruction (one with no dependent instructions),
         where the length of a path is the number of gate instructions in the path.
-        
+
         :param gate_minimum_qubit_count:
             The minimum number of qubits in a gate
             for it to be counted in the depth.
@@ -74,7 +74,7 @@ class CalibrationExpansion:
 class CalibrationSet:
     r"""
     A collection of Quil calibrations (`DEFCAL` instructions) with utility methods.
-    
+
     This exposes the semantics similar to [`CalibrationSet`] to Python users,
     so see the documentation there for more information.
     """
@@ -100,21 +100,21 @@ class CalibrationSet:
         Given an instruction, return the instructions to which it is expanded if there is a match.
         Recursively calibrate instructions, returning an error if a calibration directly or indirectly
         expands into itself.
-        
+
         Return only the expanded instructions; for more information about the expansion process,
         see [`Self::expand_with_detail`].
         """
     def extend(self, other:CalibrationSet) -> None:
         r"""
         Append another [`CalibrationSet`] onto this one.
-        
+
         Calibrations with conflicting [`CalibrationSignature`]s are overwritten by the ones in the
         given set.
         """
     def get_match_for_gate(self, gate:Gate) -> typing.Optional[CalibrationDefinition]:
         r"""
         Return the final calibration which matches the gate per the `QuilT` specification:
-        
+
         A calibration matches a gate if:
         1. It has the same name
         2. It has the same modifiers
@@ -127,26 +127,26 @@ class CalibrationSet:
         r"""
         Returns the last-specified ``MeasureCalibrationDefinition`` that matches the target
         qubit (if any), or otherwise the last-specified one that specified no qubit.
-        
+
         If multiple calibrations match the measurement, the precedence is as follows:
-        
+
           1. Match fixed qubit.
           2. Match variable qubit.
           3. Match no qubit.
-        
+
         In the case of multiple calibrations with equal precedence, the last one wins.
         """
     def insert_calibration(self, calibration:CalibrationDefinition) -> typing.Optional[CalibrationDefinition]:
         r"""
         Insert a [`CalibrationDefinition`] into the set.
-        
+
         If a calibration with the same [signature][crate::instruction::CalibrationSignature] already
         exists in the set, it will be replaced and the old calibration will be returned.
         """
     def insert_measurement_calibration(self, calibration:MeasureCalibrationDefinition) -> typing.Optional[MeasureCalibrationDefinition]:
         r"""
         Insert a [`MeasureCalibrationDefinition`] into the set.
-        
+
         If a calibration with the same [signature][crate::instruction::CalibrationSignature] already
         exists in the set, it will be replaced and the old calibration will be returned.
         """
@@ -176,7 +176,7 @@ class CalibrationSource:
         def __getitem__(self, key:builtins.int) -> typing.Any: ...
         def __len__(self) -> builtins.int: ...
         def __new__(cls, _0:CalibrationIdentifier) -> CalibrationSource.Calibration: ...
-    
+
     class MeasureCalibration(CalibrationSource):
         r"""
         Describes a `DEFCAL MEASURE` instruction
@@ -187,7 +187,7 @@ class CalibrationSource:
         def __getitem__(self, key:builtins.int) -> typing.Any: ...
         def __len__(self) -> builtins.int: ...
         def __new__(cls, _0:MeasureCalibrationIdentifier) -> CalibrationSource.MeasureCalibration: ...
-    
+
 
 class ComputedScheduleError(ProgramError):
     r"""
@@ -205,7 +205,7 @@ class ControlFlowGraph:
     def has_dynamic_control_flow(self) -> builtins.bool:
         r"""
         Return ``True`` if the program has dynamic control flow, i.e. contains a conditional branch instruction.
-        
+
         ``False`` does not imply that there is only one basic block in the program.
         Multiple basic blocks may have non-conditional control flow among them,
         in which the execution order is deterministic and does not depend on program state.
@@ -265,7 +265,7 @@ class InstructionSourceMap:
         r"""
         Given a particular calibration (`DEFCAL` or `DEFCAL MEASURE`), =
         return the locations in the source which were expanded using that calibration.
-        
+
         This is `O(n)` where `n` is the number of first-level calibration expansions performed,
         which is at worst `O(i)` where `i` is the number of source instructions.
         """
@@ -273,7 +273,7 @@ class InstructionSourceMap:
         r"""
         Given a gate signature, return the locations in the source program which were
         expanded using that gate signature.
-        
+
         This is `O(n)` where `n` is the number of first-level sequence gate expansions performed,
         which is at worst `O(i)` where `i` is the number of source instructions.
         """
@@ -281,14 +281,14 @@ class InstructionSourceMap:
         r"""
         Return all source ranges in the source map
         which were used to generate the target index.
-        
+
         This is `O(n)` where `n` is the number of first-level expansions performed,
         which is at worst `O(i)` where `i` is the number of source instructions.
         """
     def list_targets_for_source_index(self, source_index:builtins.int) -> builtins.list[InstructionTarget]:
         r"""
         Return all target ranges which were used to generate the source range.
-        
+
         This is `O(n)` where `n` is the number of first-level expansions performed,
         which is at worst `O(i)` where `i` is the number of source instructions.
         """
@@ -297,7 +297,7 @@ class InstructionSourceMapEntry:
     r"""
     A source map entry, mapping a range of source instructions by index to an
     `InstructionTarget`.
-    
+
     Note that both `source_location` and `target_location` are relative to the scope of expansion.
     In the case of a nested expansion, both describe the location relative only to that
     level of expansion and *not* the original program.
@@ -314,7 +314,7 @@ class InstructionSourceMapEntry:
 class InstructionTarget:
     r"""
     The result of having expanded a certain instruction within a program.
-    
+
     - `calibration`: The instruction has a matching Quil-T calibration and was expanded by it into
       other instructions, as described by a `CalibrationExpansion`.
     - `defgate_sequence`: The instruction has a matching `DEFGATE ... AS SEQUENCE` and was expanded
@@ -331,7 +331,7 @@ class InstructionTarget:
         def __getitem__(self, key:builtins.int) -> typing.Any: ...
         def __len__(self) -> builtins.int: ...
         def __new__(cls, _0:CalibrationExpansion) -> InstructionTarget.Calibration: ...
-    
+
     class DefGateSequence(InstructionTarget):
         __match_args__ = ("_0",)
         @property
@@ -339,7 +339,7 @@ class InstructionTarget:
         def __getitem__(self, key:builtins.int) -> typing.Any: ...
         def __len__(self) -> builtins.int: ...
         def __new__(cls, _0:OwnedDefGateSequenceExpansion) -> InstructionTarget.DefGateSequence: ...
-    
+
     class Unmodified(InstructionTarget):
         __match_args__ = ("_0",)
         @property
@@ -347,7 +347,7 @@ class InstructionTarget:
         def __getitem__(self, key:builtins.int) -> typing.Any: ...
         def __len__(self) -> builtins.int: ...
         def __new__(cls, _0:builtins.int) -> InstructionTarget.Unmodified: ...
-    
+
 
 class MemoryRegion:
     @property
@@ -385,7 +385,7 @@ class OwnedDefGateSequenceExpansion:
 class Program:
     r"""
     A Quil Program instance describes a quantum program with metadata used in execution.
-    
+
     This contains not only instructions which are executed in turn on the quantum processor, but
     also the "headers" used to describe and manipulate those instructions, such as calibrations
     and frame definitions.
@@ -437,7 +437,7 @@ class Program:
     def add_instruction(self, instruction:Instruction) -> None:
         r"""
         Add an instruction to the end of the program.
-        
+
         Note, parsing extern signatures is deferred here to maintain infallibility
         of [`Program::add_instruction`]. This means that invalid `PRAGMA EXTERN`
         instructions are still added to the [`Program::extern_pragma_map`];
@@ -454,7 +454,7 @@ class Program:
     def control_flow_graph(self) -> ControlFlowGraph:
         r"""
         Return the [control flow graph][] of the program.
-        
+
         [control flow graph]: https://en.wikipedia.org/wiki/Control-flow_graph
         """
     def copy(self) -> Program:
@@ -465,9 +465,9 @@ class Program:
         r"""
         Creates a new conjugate transpose of the [`Program`] by reversing the order of gate
         instructions and applying the DAGGER modifier to each.
-        
+
         # Errors
-        
+
         Errors if any of the instructions in the program are not [`Instruction::Gate`]
         """
     def expand_calibrations(self) -> Program:
@@ -475,9 +475,9 @@ class Program:
         Expand any instructions in the program which have a matching calibration,
         leaving the others unchanged.
         Return the expanded copy of the program.
-        
+
         Returns an error if any instruction expands into itself.
-        
+
         See [`Program::expand_calibrations_with_source_map`] for a version that returns a source mapping.
         """
     def expand_calibrations_with_source_map(self) -> tuple[Program, InstructionSourceMap]:
@@ -491,20 +491,20 @@ class Program:
         r"""
         Expand any instructions in the program which have a matching sequence gate definition, leaving
         the others unchanged.
-        
+
         Recurses though each instruction while ensuring there is no cycle in the expansion graph (i.e. no sequence
-        gate definitions expands directly or indirectly into itself).
-        
+        gate definitions expand directly or indirectly into itself).
+
         :param filter: If provided, only sequence gate definitions which match the filter will be expanded.
             Defaults to expanding all sequence gate definitions.
-        
+
         # Example
-        
+
         Below, we show the results of gate sequence expansion on a program that has two gate
         sequence definitions. The first, `seq1`, has a matching calibration and we do not
         want to expand it. The second, `seq2`, does not have a matching calibration and
         we do want to expand it.
-        
+
         >>> quil = '''
         ... DEFCAL seq1 0 1:
         ...     FENCE 0 1
@@ -564,17 +564,17 @@ class Program:
         Expand any instructions in the program which have a matching sequence gate definition, leaving
         the others unchanged. Note, the new program will drop any gate definitions which are no longer
         referenced in the program.
-        
+
         Recurses though each instruction while ensuring there is no cycle in the expansion graph (i.e. no sequence
-        gate definitions expands directly or indirectly into itself).
-        
+        gate definitions expand directly or indirectly into itself).
+
         :param filter: If provided, only sequence gate definitions which match the filter will be expanded.
         Defaults to expanding all sequence gate definitions.
-        
+
         Return the expanded copy of the program and a source mapping describing the expansions made.
-        
+
         # Example
-        
+
         See `expand_defgate_sequences`.
         """
     def filter_instructions(self, predicate:collections.abc.Callable[[Instruction], bool]) -> Program:
@@ -586,18 +586,18 @@ class Program:
         r"""
         Simplify this program into a new [`Program`] which contains only instructions
         and definitions which are executed; effectively, perform dead code removal.
-        
+
         Removes:
         - All calibrations, following calibration expansion
         - Frame definitions which are not used by any instruction such as `PULSE` or `CAPTURE`
         - Waveform definitions which are not used by any instruction
         - `PRAGMA EXTERN` instructions which are not used by any `CALL` instruction (see
           [`Program::extern_pragma_map`]).
-        
+
         When a valid program is simplified, it remains valid.
-        
+
         # Note
-        
+
         If you need custom instruction handling during simplification,
         use [`InstructionHandler::simplify_program`] instead.
         """
@@ -605,15 +605,15 @@ class Program:
     def parse(input:builtins.str) -> Program:
         r"""
         Parse a `Program` from a string.
-        
+
         # Errors
-        
+
         Raises a `ProgramError` if the string isn't a valid ``Quil`` expression.
         """
     def resolve_placeholders(self) -> None:
         r"""
         Resolve [`LabelPlaceholder`]s and [`QubitPlaceholder`]s within the program using default resolvers.
-        
+
         See [`resolve_placeholders_with_custom_resolvers`](Self::resolve_placeholders_with_custom_resolvers),
         [`default_target_resolver`](Self::default_target_resolver),
         and [`default_qubit_resolver`](Self::default_qubit_resolver) for more information.
@@ -621,7 +621,7 @@ class Program:
     def resolve_placeholders_with_custom_resolvers(self, *, target_resolver:typing.Optional[collections.abc.Callable[[TargetPlaceholder], typing.Optional[builtins.str]]]=None, qubit_resolver:typing.Optional[collections.abc.Callable[[QubitPlaceholder], typing.Optional[builtins.int]]]=None) -> None:
         r"""
         Resolve ``TargetPlaceholder``s and ``QubitPlaceholder``s within the program.
-        
+
         The resolved values will remain unique to that placeholder
         within the scope of the program.
         If you provide ``target_resolver`` and/or ``qubit_resolver``,
@@ -643,26 +643,26 @@ class Program:
     def to_unitary(self, n_qubits:builtins.int) -> numpy.typing.NDArray[numpy.complex128]:
         r"""
         Return the unitary of a program.
-        
+
         # Errors
-        
+
         Returns an error if the program contains instructions other than `Gate`s.
         """
     def wrap_in_loop(self, loop_count_reference:MemoryReference, start_target:Target, end_target:Target, iterations:builtins.int) -> Program:
         r"""
         Return a copy of the [`Program`] wrapped in a loop that repeats `iterations` times.
-        
+
         The loop is constructed by wrapping the body of the program in classical Quil instructions.
         The given `loop_count_reference` must refer to an INTEGER memory region. The value at the
         reference given will be set to `iterations` and decremented in the loop. The loop will
         terminate when the reference reaches 0. For this reason your program should not itself
         modify the value at the reference unless you intend to modify the remaining number of
         iterations (i.e. to break the loop).
-        
+
         The given `start_target` and `end_target` will be used as the entry and exit points for the
         loop, respectively. You should provide unique [`Target`]s that won't be used elsewhere in
         the program.
-        
+
         If `iterations` is 0, then a copy of the program is returned without any changes.
         """
 
@@ -684,7 +684,7 @@ class ScheduleSeconds:
     def duration(self) -> builtins.float:
         r"""
         The schedule duration, in seconds.
-        
+
         This is the maximum end time among all scheduled items.
         """
     @property
@@ -725,7 +725,7 @@ class TimeSpanSeconds:
     def end(self) -> builtins.float:
         r"""
         The end time of the time span, in seconds.
-        
+
         This is the sum of the start time and duration.
         """
     @property

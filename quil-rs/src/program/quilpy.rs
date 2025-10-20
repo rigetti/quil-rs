@@ -241,7 +241,7 @@ impl Program {
     /// referenced in the program.
     ///
     /// Recurses though each instruction while ensuring there is no cycle in the expansion graph (i.e. no sequence
-    /// gate definitions expands directly or indirectly into itself).
+    /// gate definitions expand directly or indirectly into itself).
     ///
     /// :param filter: If provided, only sequence gate definitions which match the filter will be expanded.
     /// Defaults to expanding all sequence gate definitions.
@@ -291,7 +291,7 @@ impl Program {
     /// the others unchanged.
     ///
     /// Recurses though each instruction while ensuring there is no cycle in the expansion graph (i.e. no sequence
-    /// gate definitions expands directly or indirectly into itself).
+    /// gate definitions expand directly or indirectly into itself).
     ///
     /// :param filter: If provided, only sequence gate definitions which match the filter will be expanded.
     ///     Defaults to expanding all sequence gate definitions.
