@@ -155,6 +155,24 @@ impl_to_quil!(Program);
 
 type ExpandedProgram = (Program, InstructionSourceMap);
 
+#[pyclass]
+struct Filter {
+    filter: Py<PyFunction>,
+    on_error: Py<PyFunction>,
+}
+
+#[pymethods]
+impl Filter {
+    #[new]
+    #[pyo3(signature = (/, filter, on_error))]
+    fn new(
+        filter: Py<PyFunction>,
+        on_error: Py<PyFunction>,
+    ) -> Self {
+        Self { filter, on_error }
+    }
+}
+
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
@@ -215,27 +233,46 @@ impl Program {
         Ok((expanded, source_map.into()))
     }
 
+    /// Expand any instructions in the program which have a matching sequence gate definition, leaving
+    /// the others unchanged. Note, the new program will drop any gate definitions which are no longer
+    /// referenced in the program.
+    ///
+    /// Recurses though each instruction while ensuring there is no cycle in the expansion graph (i.e. no sequence
+    /// gate definitions expands directly or indirectly into itself).
+    ///
+    /// :param filter: If provided, only sequence gate definitions which match the filter will be expanded.
+    /// Defaults to expanding all sequence gate definitions.
+    ///
+    /// Return the expanded copy of the program and a source mapping describing the expansions made.
+    ///
+    /// # Example
+    ///
+    /// See `expand_defgate_sequences`.
     #[pyo3(
         signature = (filter = None),
         name = "expand_defgate_sequences_with_source_map",
     )]
     fn py_expand_defgate_sequences_with_source_map(
         &self,
+        py: Python<'_>,
         #[gen_stub(
             override_type(
                 type_repr="collections.abc.Callable[[str], bool] | None",
                 imports=("collections.abc")
             )
         )]
-        filter: Option<&Bound<'_, PyFunction>>,
+        filter: Option<&Filter>,
     ) -> Result<ExpandedProgram> {
         // Note, the filter must be infallible, so if the Python function errors or returns a non-bool,
         // we just default to true.
         let filter = |key: &String| -> bool {
             filter
                 .map(|f| {
-                    f.call1((key,))
-                        .and_then(|v| v.extract::<bool>())
+                    f.filter.call1(py, (key,))
+                        .and_then(|v| v.extract::<bool>(py))
+                        .inspect_err(|e| {
+                            f.on_error.call1(py, (e,)).expect("on_error must not error");
+                        })
                         .unwrap_or(true)
                 })
                 .unwrap_or(true)
@@ -247,6 +284,78 @@ impl Program {
         Ok((expanded_program, source_map.into()))
     }
 
+    /// Expand any instructions in the program which have a matching sequence gate definition, leaving
+    /// the others unchanged.
+    ///
+    /// Recurses though each instruction while ensuring there is no cycle in the expansion graph (i.e. no sequence
+    /// gate definitions expands directly or indirectly into itself).
+    ///
+    /// :param filter: If provided, only sequence gate definitions which match the filter will be expanded.
+    ///     Defaults to expanding all sequence gate definitions.
+    ///
+    /// # Example
+    ///
+    /// Below, we show the results of gate sequence expansion on a program that has two gate
+    /// sequence definitions. The first, `seq1`, has a matching calibration and we do not
+    /// want to expand it. The second, `seq2`, does not have a matching calibration and
+    /// we do want to expand it.
+    ///
+    /// >>> quil = '''
+    /// ... DEFCAL seq1 0 1:
+    /// ...     FENCE 0 1
+    /// ...     NONBLOCKING PULSE 0 "rf" drag_gaussian(duration: 6.000000000000001e-08, fwhm: 1.5000000000000002e-08, t0: 3.0000000000000004e-08, anh: -190000000.0, alpha: -1.6453719598238201, scale: 0.168265925924524, phase: 0.0, detuning: 0)
+    /// ...     NONBLOCKING PULSE 1 "rf" drag_gaussian(duration: 6.000000000000001e-08, fwhm: 1.5000000000000002e-08, t0: 3.0000000000000004e-08, anh: -190000000.0, alpha: -1.6453719598238201, scale: 0.168265925924524, phase: 0.0, detuning: 0)
+    /// ...     FENCE 0 1
+    /// ...
+    /// ... DEFGATE seq1() a b AS SEQUENCE:
+    /// ...     RX(pi/2) a
+    /// ...     RX(pi/2) b
+    /// ...
+    /// ... DEFGATE seq2(%theta, %psi, %phi) a AS SEQUENCE:
+    /// ...     RZ(%theta) a
+    /// ...     RX(pi/2) a
+    /// ...     RZ(%phi) a
+    /// ...
+    /// ... seq1 0 1
+    /// ... seq2(1.5707963267948966, 3.141592653589793, 0) 0
+    /// ... seq2(3.141592653589793, 0, 1.5707963267948966) 1
+    /// ... '''
+    /// >>> program = Program.parse(quil);
+    /// >>> calibrated_gate_names = {calibration.identifier.name for calibration in program.calibrations.calibrations}
+    /// >>> expanded_program = program.expand_defgate_sequences(lambda name: name not in calibrated_gate_names)
+    /// >>>
+    /// >>> expected_quil = '''
+    /// ... DEFCAL seq1 0 1:
+    /// ...     FENCE 0 1
+    /// ...     NONBLOCKING PULSE 0 "rf" drag_gaussian(duration: 6.000000000000001e-08, fwhm: 1.5000000000000002e-08, t0: 3.0000000000000004e-08, anh: -190000000.0, alpha: -1.6453719598238201, scale: 0.168265925924524, phase: 0.0, detuning: 0)
+    /// ...     NONBLOCKING PULSE 1 "rf" drag_gaussian(duration: 6.000000000000001e-08, fwhm: 1.5000000000000002e-08, t0: 3.0000000000000004e-08, anh: -190000000.0, alpha: -1.6453719598238201, scale: 0.168265925924524, phase: 0.0, detuning: 0)
+    /// ...     FENCE 0 1
+    /// ...
+    /// ... DEFGATE seq1 a b AS SEQUENCE:
+    /// ...     RX(pi/2) a
+    /// ...     RX(pi/2) b
+    /// ...
+    /// ... seq1 0 1
+    /// ...
+    /// ... RZ(1.5707963267948966) 0
+    /// ... RX(pi/2) 0
+    /// ... RZ(3.141592653589793) 0
+    /// ... RX(pi/2) 0
+    /// ... RZ(0) 0
+    /// ...
+    /// ... RZ(3.141592653589793) 1
+    /// ... RX(pi/2) 1
+    /// ... RZ(0) 1
+    /// ... RX(pi/2) 1
+    /// ... RZ(1.5707963267948966) 1
+    /// ... '''
+    /// >>>
+    /// >>> expected_program = Program.parse(expected_quil)
+    /// >>>
+    /// >>> assert expanded_program == expected_program
+    ///
+    // NOTE: A similar example is documented in the Rust documentation for `Program::expand_defgate_sequences`.
+    // These examples should be kept in sync.
     #[pyo3(signature = (filter = None), name = "expand_defgate_sequences")]
     fn py_expand_defgate_sequences(
         &self,
