@@ -122,6 +122,7 @@ pub(crate) fn init_submodule(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<CalibrationSource>()?;
     m.add_class::<Calibrations>()?; // Python: CalibrationSet
     m.add_class::<ControlFlowGraphOwned>()?; // Python: ControlFlowGraph
+    m.add_class::<DefGateExpansionFilter>()?;
     m.add_class::<FlatExpansionResult>()?; // Python: InstructionTarget
     m.add_class::<FrameSet>()?;
     m.add_class::<InstructionSourceMap>()?;
@@ -155,14 +156,16 @@ impl_to_quil!(Program);
 
 type ExpandedProgram = (Program, InstructionSourceMap);
 
-#[pyclass]
-struct Filter {
+#[derive(Debug)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[pyclass(module = "quil.program", frozen)]
+pub struct DefGateExpansionFilter {
     filter: Py<PyFunction>,
     on_error: Py<PyFunction>,
 }
 
 #[pymethods]
-impl Filter {
+impl DefGateExpansionFilter {
     #[new]
     #[pyo3(signature = (/, filter, on_error))]
     fn new(
@@ -261,7 +264,7 @@ impl Program {
                 imports=("collections.abc")
             )
         )]
-        filter: Option<&Filter>,
+        filter: Option<&DefGateExpansionFilter>,
     ) -> Result<ExpandedProgram> {
         // Note, the filter must be infallible, so if the Python function errors or returns a non-bool,
         // we just default to true.

@@ -1,3 +1,4 @@
+import inspect
 import pickle
 from typing import Optional
 
@@ -5,7 +6,7 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 
 from quil.instructions import Gate, Instruction, Jump, Qubit, QubitPlaceholder, Target, TargetPlaceholder
-from quil.program import CalibrationExpansion, InstructionTarget, Program
+from quil.program import DefGateExpansionFilter, InstructionTarget, Program
 from quil import QuilError
 
 
@@ -355,8 +356,10 @@ def test_defgate_sequence_expansion_with_filtering():
         """
     )
     program = Program.parse(program_text)
-    filter_str = lambda key: key != "seq1"
-    expanded_program, source_map = program.expand_defgate_sequences_with_source_map(filter=filter_str)
+    def on_error(error):
+        raise RuntimeError("unexpected error during defgate expansion filtering") from error
+    expansion_filter = DefGateExpansionFilter(filter=lambda key: key != "seq1", on_error=on_error)
+    expanded_program, source_map = program.expand_defgate_sequences_with_source_map(filter=expansion_filter)
 
     expected_program_text = inspect.cleandoc(
         """
@@ -397,3 +400,27 @@ def test_defgate_sequence_expansion_with_filtering():
             assert False, f"unexpected targets: {targets}"
 
     assert expanded.range == range(1, 2)
+
+def test_defgate_sequence_expansion_with_error_handling():
+    """
+    Ensure that filter function errors are handled as expected during defgate sequence expansion.
+
+    In particular, ensure the process does not panic if the user silently handles the error.
+    """
+    def filter_fn(key: str) -> bool:
+        raise KeyError(f"Gate {key} not found")
+    filter_obj = DefGateExpansionFilter(
+        filter=filter_fn,
+        on_error=lambda error: None,
+    )
+    program = Program.parse(
+        inspect.cleandoc(
+        """
+        DEFGATE seq1() a AS SEQUENCE:
+            H a
+
+        seq1() 0
+        """
+        )
+    )
+    _, _ = program.expand_defgate_sequences_with_source_map(filter=filter_obj)
