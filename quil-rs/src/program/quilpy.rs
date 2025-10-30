@@ -122,7 +122,6 @@ pub(crate) fn init_submodule(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<CalibrationSource>()?;
     m.add_class::<Calibrations>()?; // Python: CalibrationSet
     m.add_class::<ControlFlowGraphOwned>()?; // Python: ControlFlowGraph
-    m.add_class::<DefGateExpansionFilter>()?;
     m.add_class::<FlatExpansionResult>()?; // Python: InstructionTarget
     m.add_class::<FrameSet>()?;
     m.add_class::<InstructionSourceMap>()?;
@@ -155,23 +154,6 @@ impl_repr!(TimeSpanSeconds);
 impl_to_quil!(Program);
 
 type ExpandedProgram = (Program, InstructionSourceMap);
-
-#[derive(Debug)]
-#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[pyclass(module = "quil.program", frozen)]
-pub struct DefGateExpansionFilter {
-    filter: Py<PyFunction>,
-    on_error: Py<PyFunction>,
-}
-
-#[pymethods]
-impl DefGateExpansionFilter {
-    #[new]
-    #[pyo3(signature = (/, filter, on_error))]
-    fn new(filter: Py<PyFunction>, on_error: Py<PyFunction>) -> Self {
-        Self { filter, on_error }
-    }
-}
 
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
@@ -240,7 +222,7 @@ impl Program {
     /// Recurses though each instruction while ensuring there is no cycle in the expansion graph (i.e. no sequence
     /// gate definitions expand directly or indirectly into itself).
     ///
-    /// :param filter: If provided, only sequence gate definitions which match the filter will be expanded.
+    /// :param predicate: If provided, only sequence gate definitions which match the predicate will be expanded.
     /// Defaults to expanding all sequence gate definitions.
     ///
     /// Return the expanded copy of the program and a source mapping describing the expansions made.
@@ -249,38 +231,27 @@ impl Program {
     ///
     /// See `expand_defgate_sequences`.
     #[pyo3(
-        signature = (filter = None),
+        signature = (predicate = None),
         name = "expand_defgate_sequences_with_source_map",
     )]
-    fn py_expand_defgate_sequences_with_source_map(
+    fn py_expand_defgate_sequences_with_source_map<'py>(
         &self,
-        py: Python<'_>,
+        py: Python<'py>,
         #[gen_stub(
             override_type(
                 type_repr="collections.abc.Callable[[str], bool] | None",
                 imports=("collections.abc")
             )
         )]
-        filter: Option<&DefGateExpansionFilter>,
+        predicate: Option<&Bound<'py, PyFunction>>,
     ) -> Result<ExpandedProgram> {
-        // Note, the filter must be infallible, so if the Python function errors or returns a non-bool,
-        // we just default to true.
-        let filter = |key: &str| -> bool {
-            filter
-                .map(|f| {
-                    f.filter
-                        .call1(py, (key,))
-                        .and_then(|v| v.extract::<bool>(py))
-                        .inspect_err(|e| {
-                            f.on_error.call1(py, (e,)).expect("on_error must not error");
-                        })
-                        .unwrap_or(true)
-                })
-                .unwrap_or(true)
-        };
-
         let (expanded_program, source_map) =
-            self.expand_defgate_sequences_with_source_map(filter)?;
+            self.expand_defgate_sequences_with_source_map(|key: &str| -> bool {
+                predicate.map_or(true, |f| match call_user_func(py, f, key) {
+                    Ok(val) => val,
+                    Err(err) => panic!("error calling predicate: {err}"),
+                })
+            })?;
 
         Ok((expanded_program, source_map.into()))
     }
@@ -291,7 +262,7 @@ impl Program {
     /// Recurses though each instruction while ensuring there is no cycle in the expansion graph (i.e. no sequence
     /// gate definitions expand directly or indirectly into itself).
     ///
-    /// :param filter: If provided, only sequence gate definitions which match the filter will be expanded.
+    /// :param predicate: If provided, only sequence gate definitions which match the predicate will be expanded.
     ///     Defaults to expanding all sequence gate definitions.
     ///
     /// # Example
@@ -357,27 +328,24 @@ impl Program {
     ///
     // NOTE: A similar example is documented in the Rust documentation for `Program::expand_defgate_sequences`.
     // These examples should be kept in sync.
-    #[pyo3(signature = (filter = None), name = "expand_defgate_sequences")]
-    fn py_expand_defgate_sequences(
+    #[pyo3(signature = (predicate = None), name = "expand_defgate_sequences")]
+    fn py_expand_defgate_sequences<'py>(
         &self,
+        py: Python<'py>,
         #[gen_stub(
             override_type(
                 type_repr="collections.abc.Callable[[str], bool] | None",
                 imports=("collections.abc")
             )
         )]
-        filter: Option<&Bound<'_, PyFunction>>,
+        predicate: Option<&Bound<'py, PyFunction>>,
     ) -> Result<Self> {
-        let filter = |key: &str| -> bool {
-            filter
-                .map(|f| {
-                    f.call1((key,))
-                        .and_then(|v| v.extract::<bool>())
-                        .unwrap_or(true)
-                })
-                .unwrap_or(true)
-        };
-        self.clone().expand_defgate_sequences(filter)
+        self.clone().expand_defgate_sequences(|key: &str| -> bool {
+            predicate.map_or(true, |f| match call_user_func(py, f, key) {
+                Ok(val) => val,
+                Err(err) => panic!("error calling predicate: {err}"),
+            })
+        })
     }
 
     /// Add a list of instructions to the end of the program.
@@ -400,12 +368,9 @@ impl Program {
         )]
         predicate: &Bound<'py, PyFunction>,
     ) -> Self {
-        self.filter_instructions(|inst| {
-            predicate
-                .call1((inst.clone().into_pyobject(py).unwrap(),))
-                .unwrap_or_else(|err| panic!("predicate function returned an error: {err}"))
-                .extract()
-                .unwrap_or_else(|err| panic!("predicate function must return a bool: {err}"))
+        self.filter_instructions(|inst| match call_user_func(py, predicate, inst.clone()) {
+            Ok(val) => val,
+            Err(err) => panic!("error calling predicate: {err}"),
         })
     }
 
@@ -516,6 +481,42 @@ impl Program {
         *self = Self::from_str(std::str::from_utf8(state.as_bytes())?)?;
         Ok(())
     }
+}
+
+/// Errors returned when calling a user-supplied `Callable`.
+#[derive(Debug, thiserror::Error)]
+enum UserFunctionError {
+    #[error("calling the function resulted in an error: {0}")]
+    CallError(#[source] PyErr),
+    #[error("function returned the wrong type")]
+    TypeError(#[source] PyErr),
+}
+
+/// Given `user_func: fn(T) -> U` and `param: T`, return `user_func(param)`.
+///
+/// # Errors
+///
+/// This returns a [`UserFunctionError::CallError`] if calling the user's function fails,
+/// or a [`UserFunctionError::TypeError`] if the user's function returns the wrong type.
+#[inline]
+fn call_user_func<'py, T, U>(
+    py: Python<'py>,
+    user_func: &Bound<'py, PyFunction>,
+    param: T,
+) -> std::result::Result<U, UserFunctionError>
+where
+    T: IntoPyObject<'py>,
+    U: FromPyObject<'py>,
+{
+    user_func
+        .call1(
+            (param,)
+                .into_pyobject(py)
+                .expect("Tuple::into_pyobject() should be infallible"),
+        )
+        .map_err(UserFunctionError::CallError)?
+        .extract()
+        .map_err(UserFunctionError::TypeError)
 }
 
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
@@ -763,11 +764,9 @@ impl<R: Into<FlatExpansionResult> + Clone> From<SourceMap<InstructionIndex, Expa
         let entries = value
             .entries
             .into_iter()
-            .map(|entry| {
-                SourceMapEntry::new(
-                    entry.source_location,
-                    FlatExpansionResult::from(entry.target_location),
-                )
+            .map(|entry| SourceMapEntry {
+                source_location: entry.source_location,
+                target_location: FlatExpansionResult::from(entry.target_location),
             })
             .collect();
         InstructionSourceMap(SourceMap::new(entries))
@@ -781,12 +780,9 @@ impl<R: Into<FlatExpansionResult> + Clone> From<&SourceMap<InstructionIndex, Exp
         let entries = value
             .entries
             .iter()
-            .cloned()
-            .map(|entry| {
-                SourceMapEntry::new(
-                    *entry.source_location(),
-                    FlatExpansionResult::from(entry.target_location()),
-                )
+            .map(|entry| SourceMapEntry {
+                source_location: *entry.source_location(),
+                target_location: FlatExpansionResult::from(entry.target_location()),
             })
             .collect();
         InstructionSourceMap(SourceMap::new(entries))
@@ -819,9 +815,9 @@ impl<'a> From<&'a DefGateSequenceExpansion<'a>> for OwnedDefGateSequenceExpansio
                     .iter()
                     .map(|entry| {
                         let target_location = entry.target_location();
-                        SourceMapEntry::new(
-                            *entry.source_location(),
-                            match target_location {
+                        SourceMapEntry {
+                            source_location: *entry.source_location(),
+                            target_location: match target_location {
                                 ExpansionResult::Unmodified(index) => {
                                     ExpansionResult::Unmodified(*index)
                                 }
@@ -829,7 +825,7 @@ impl<'a> From<&'a DefGateSequenceExpansion<'a>> for OwnedDefGateSequenceExpansio
                                     OwnedDefGateSequenceExpansion::from(rewrite),
                                 ),
                             },
-                        )
+                        }
                     })
                     .collect(),
             ),
