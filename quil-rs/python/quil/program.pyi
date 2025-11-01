@@ -212,9 +212,6 @@ class ControlFlowGraph:
         This may be a sequence of basic blocks with fixed `JUMP`s or without explicit terminators.
         """
 
-class DefGateExpansionFilter:
-    ...
-
 class FrameSet:
     r"""
     A collection of Quil frames (`DEFFRAME` instructions) with utility methods.
@@ -490,7 +487,7 @@ class Program:
         Return the expanded copy of the program
         and a source mapping describing the expansions made.
         """
-    def expand_defgate_sequences(self, filter:collections.abc.Callable[[str], bool] | None=None) -> Program:
+    def expand_defgate_sequences(self, predicate:collections.abc.Callable[[str], bool] | None=None) -> Program:
         r"""
         Expand any instructions in the program which have a matching sequence gate definition, leaving
         the others unchanged.
@@ -498,7 +495,7 @@ class Program:
         Recurses though each instruction while ensuring there is no cycle in the expansion graph (i.e. no sequence
         gate definitions expand directly or indirectly into itself).
         
-        :param filter: If provided, only sequence gate definitions which match the filter will be expanded.
+        :param predicate: If provided, only sequence gate definitions which match the predicate will be expanded.
             Defaults to expanding all sequence gate definitions.
         
         # Example
@@ -562,7 +559,7 @@ class Program:
         >>>
         >>> assert expanded_program == expected_program
         """
-    def expand_defgate_sequences_with_source_map(self, filter:collections.abc.Callable[[str], bool] | None=None) -> tuple[Program, InstructionSourceMap]:
+    def expand_defgate_sequences_with_source_map(self, predicate:collections.abc.Callable[[str], bool] | None=None) -> tuple[Program, InstructionSourceMap]:
         r"""
         Expand any instructions in the program which have a matching sequence gate definition, leaving
         the others unchanged. Note, the new program will drop any gate definitions which are no longer
@@ -571,7 +568,7 @@ class Program:
         Recurses though each instruction while ensuring there is no cycle in the expansion graph (i.e. no sequence
         gate definitions expand directly or indirectly into itself).
         
-        :param filter: If provided, only sequence gate definitions which match the filter will be expanded.
+        :param predicate: If provided, only sequence gate definitions which match the predicate will be expanded.
         Defaults to expanding all sequence gate definitions.
         
         Return the expanded copy of the program and a source mapping describing the expansions made.
