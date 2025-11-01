@@ -981,8 +981,6 @@ impl SourceMapIndexable<OwnedGateSignature> for FlatExpansionResult {
     }
 }
 
-// --------------------------------
-
 #[derive(FromPyObject, IntoPyObject, IntoPyObjectRef)]
 struct PyQubitResolver(Py<PyFunction>);
 #[derive(FromPyObject, IntoPyObject, IntoPyObjectRef)]
