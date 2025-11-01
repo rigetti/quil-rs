@@ -1,7 +1,7 @@
 /// This module implements the expansion of sequence gate definitions in a Quil program,
 /// as well as the associated source map that tracks how the original
 /// instructions map to the expanded instructions.
-use std::{collections::HashMap, ops::Range};
+use std::{collections::HashMap, ops::Range, vec};
 
 use indexmap::{IndexMap, IndexSet};
 
@@ -38,8 +38,8 @@ pub struct DefGateSequenceExpansion<'a> {
 }
 
 impl<'a> DefGateSequenceExpansion<'a> {
-    /// Returns the source gate signature of the sequence gate definition
-    pub fn source_signature(&self) -> &GateSignature<'a> {
+    /// Borrow the source gate signature of the sequence gate definition
+    pub(crate) fn source_signature(&self) -> &GateSignature<'a> {
         &self.source_signature
     }
 
@@ -56,7 +56,7 @@ impl<'a> DefGateSequenceExpansion<'a> {
     }
 }
 
-impl<'a> SourceMapIndexable<InstructionIndex> for DefGateSequenceExpansion<'a> {
+impl SourceMapIndexable<InstructionIndex> for DefGateSequenceExpansion<'_> {
     fn contains(&self, other: &InstructionIndex) -> bool {
         self.range.contains(other)
     }
@@ -84,6 +84,39 @@ pub(crate) struct ExpandedInstructionsWithSourceMap<'a> {
     pub(crate) source_map: SequenceGateDefinitionSourceMap<'a>,
 }
 
+struct ExpansionStack(IndexSet<String>);
+
+impl ExpansionStack {
+    fn new() -> Self {
+        Self(IndexSet::new())
+    }
+
+    /// Check if the name is in the stack and, if so, return an error.
+    fn check(&self, name: impl AsRef<str>) -> Result<(), DefGateSequenceExpansionError> {
+        if self.0.contains(name.as_ref()) {
+            let cycle = self.0.iter().cloned().collect();
+            Err(DefGateSequenceExpansionError::CyclicSequenceGateDefinition(
+                cycle,
+            ))
+        } else {
+            Ok(())
+        }
+    }
+
+    /// Execute a closure with an gate added to the stack.
+    fn with_gate_sequence<F, R>(&mut self, name: String, f: F) -> R
+    where
+        F: FnOnce(&mut Self) -> R,
+    {
+        let must_pop = self.0.insert(name);
+        let result = f(self);
+        if must_pop {
+            self.0.pop();
+        }
+        result
+    }
+}
+
 impl<'a, F> ProgramDefGateSequenceExpander<'a, F>
 where
     F: Fn(&str) -> bool,
@@ -107,7 +140,7 @@ where
         &self,
         source_instructions: &[Instruction],
     ) -> Result<Vec<Instruction>, DefGateSequenceExpansionError> {
-        self.expand_without_source_map_impl(source_instructions, &mut IndexSet::new())
+        self.expand_without_source_map_impl(source_instructions, &mut ExpansionStack::new())
     }
 
     /// Expands sequence gate definitions in the provided instructions and returns a source map
@@ -117,38 +150,45 @@ where
         source_instructions: &'a [Instruction],
     ) -> Result<ExpandedInstructionsWithSourceMap<'a>, DefGateSequenceExpansionError> {
         let mut source_map = SourceMap::default();
-        self.expand_with_source_map_impl(source_instructions, &mut source_map, &mut IndexSet::new())
-            .map(|instructions| ExpandedInstructionsWithSourceMap {
-                instructions,
-                source_map,
-            })
+        self.expand_with_source_map_impl(
+            source_instructions,
+            &mut source_map,
+            &mut ExpansionStack::new(),
+        )
+        .map(|instructions| ExpandedInstructionsWithSourceMap {
+            instructions,
+            source_map,
+        })
     }
 
     fn expand_with_source_map_impl(
         &self,
         source_instructions: &[Instruction],
         source_map: &mut SequenceGateDefinitionSourceMap<'a>,
-        gate_expansion_stack: &mut IndexSet<String>,
+        stack: &mut ExpansionStack,
     ) -> Result<Vec<Instruction>, DefGateSequenceExpansionError> {
         let mut target_instructions = vec![];
         for (source_instruction_index, source_instruction) in source_instructions.iter().enumerate()
         {
             if let Some((target_gate_instructions, gate_sequence_signature)) =
-                self.gate_sequence_from_instruction(source_instruction, gate_expansion_stack)?
+                self.gate_sequence_from_instruction(source_instruction, stack)?
             {
                 // If this instruction is a sequence gate definition, we need to expand it. Before
                 // doing so, we add the gate sequence signature to the `gate_expansion_stack`,
                 // so all nested expansions within this sequence have access to the stack of
                 // already expanded gate definitions.
-                let mut gate_expansion_stack = gate_expansion_stack.clone();
-                gate_expansion_stack.insert(gate_sequence_signature.name().to_string());
-
-                let mut recursive_source_map = SourceMap::default();
-                let recursive_target_gate_instructions = self.expand_with_source_map_impl(
-                    &target_gate_instructions,
-                    &mut recursive_source_map,
-                    &mut gate_expansion_stack,
+                let mut nested_expansions = SourceMap::default();
+                let recursive_target_gate_instructions = stack.with_gate_sequence(
+                    gate_sequence_signature.name().to_string(),
+                    |stack| {
+                        self.expand_with_source_map_impl(
+                            &target_gate_instructions,
+                            &mut nested_expansions,
+                            stack,
+                        )
+                    },
                 )?;
+
                 let target_instruction_start_index = InstructionIndex(target_instructions.len());
                 let target_instruction_end_index = InstructionIndex(
                     target_instruction_start_index.0 + recursive_target_gate_instructions.len(),
@@ -158,7 +198,7 @@ where
                     target_location: ExpansionResult::Rewritten(DefGateSequenceExpansion {
                         source_signature: gate_sequence_signature,
                         range: target_instruction_start_index..target_instruction_end_index,
-                        nested_expansions: recursive_source_map,
+                        nested_expansions,
                     }),
                 });
                 target_instructions.extend(recursive_target_gate_instructions);
@@ -178,24 +218,21 @@ where
     fn expand_without_source_map_impl(
         &self,
         source_instructions: &[Instruction],
-        gate_expansion_stack: &mut IndexSet<String>,
+        stack: &mut ExpansionStack,
     ) -> Result<Vec<Instruction>, DefGateSequenceExpansionError> {
         let mut target_instructions = vec![];
-        for source_instruction in source_instructions.iter() {
+        for source_instruction in source_instructions {
             if let Some((target_gate_instructions, source)) =
-                self.gate_sequence_from_instruction(source_instruction, gate_expansion_stack)?
+                self.gate_sequence_from_instruction(source_instruction, stack)?
             {
-                // if this instruction is a sequence gate definition, we need to expand it. Before
+                // If this instruction is a sequence gate definition, we need to expand it. Before
                 // doing so, we add the gate sequence signature to the the `gate_expansion_stack`,
                 // so all nested expansions within this sequence have access to the stack of
                 // already expanded gate definitions.
-                let mut gate_expansion_stack = gate_expansion_stack.clone();
-                gate_expansion_stack.insert(source.name().to_string());
-
-                let recursive_target_gate_instructions = self.expand_without_source_map_impl(
-                    &target_gate_instructions,
-                    &mut gate_expansion_stack,
-                )?;
+                let recursive_target_gate_instructions = stack
+                    .with_gate_sequence(source.name().to_string(), |stack| {
+                        self.expand_without_source_map_impl(&target_gate_instructions, stack)
+                    })?;
                 target_instructions.extend(recursive_target_gate_instructions);
             } else {
                 target_instructions.push(source_instruction.clone());
@@ -214,7 +251,7 @@ where
     fn gate_sequence_from_instruction(
         &self,
         instruction: &Instruction,
-        gate_expansion_stack: &mut IndexSet<String>,
+        stack: &ExpansionStack,
     ) -> Result<Option<(Vec<Instruction>, GateSignature<'a>)>, DefGateSequenceExpansionError> {
         if let Instruction::Gate(gate) = instruction {
             if let Some(gate_definition) = self.gate_definitions.get(&gate.name) {
@@ -239,12 +276,7 @@ where
                             ));
                         }
                         let source = gate_definition.signature();
-                        if gate_expansion_stack.contains(source.name()) {
-                            let cycle = gate_expansion_stack.iter().cloned().collect();
-                            return Err(
-                                DefGateSequenceExpansionError::CyclicSequenceGateDefinition(cycle),
-                            );
-                        }
+                        stack.check(source.name())?;
 
                         let target_gate_instructions = gate_sequence
                             .expand(gate_parameter_arguments, gate.qubits.clone())?
@@ -375,6 +407,7 @@ RZ(pi/2) 1
             }
         }
 
+        #[expect(clippy::too_many_lines)]
         fn triple_recursize() -> Self {
             const QUIL: &str = r"
 DEFGATE some_u2_cycle(%param1, %param2, %param3, %param4, %param5, %param6) a b AS SEQUENCE:
@@ -866,8 +899,8 @@ DAGGER seq1(pi/2) 0
         ) -> Self {
             Self {
                 gate_name: gate_name.to_string(),
-                gate_parameters: gate_parameters.iter().map(|s| s.to_string()).collect(),
-                gate_qubits: gate_qubits.iter().map(|s| s.to_string()).collect(),
+                gate_parameters: gate_parameters.iter().map(|&s| s.to_string()).collect(),
+                gate_qubits: gate_qubits.iter().map(|&s| s.to_string()).collect(),
             }
         }
 
