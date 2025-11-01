@@ -1017,7 +1017,7 @@ where
         .iter()
         .filter(|(name, _)| !filter(name))
     {
-        for (gate_name, (j, _)) in gate_sequence_definitions.iter() {
+        for (gate_name, (j, _)) in &gate_sequence_definitions {
             if petgraph::algo::has_path_connecting(&graph, *i, *j, Some(&mut space)) {
                 seq_defgates_referenced_by_unfiltered_seq_defgates.insert(gate_name.clone());
             }

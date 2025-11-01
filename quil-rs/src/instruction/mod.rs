@@ -70,8 +70,8 @@ pub use self::frame::{
     SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, SwapPhases,
 };
 pub use self::gate::{
-    Gate, GateDefinition, GateError, GateModifier, GateSignature, GateSpecification, GateType,
-    Matrix, PauliGate, PauliSum, PauliTerm,
+    Gate, GateDefinition, GateError, GateModifier, GateSpecification, GateType, Matrix, PauliGate,
+    PauliSum, PauliTerm,
 };
 pub use self::gate_sequence::{
     DefGateSequence, DefGateSequenceError, DefGateSequenceExpansionError,
@@ -82,6 +82,8 @@ pub use self::qubit::{Qubit, QubitPlaceholder};
 pub use self::reset::Reset;
 pub use self::timing::{Delay, Fence};
 pub use self::waveform::{Waveform, WaveformDefinition, WaveformInvocation, WaveformParameters};
+
+pub(crate) use self::gate::GateSignature;
 
 #[derive(Clone, Debug, thiserror::Error, PartialEq, Eq)]
 pub enum ValidationError {
@@ -388,7 +390,7 @@ fn write_parameter_string<T: AsRef<str>>(
         f,
         parameters
             .iter()
-            .map(|p| p.as_ref())
+            .map(AsRef::as_ref)
             .collect::<Vec<_>>()
             .as_slice(),
         ", ",

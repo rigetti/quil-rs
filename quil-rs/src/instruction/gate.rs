@@ -962,7 +962,7 @@ impl Quil for GateSpecification {
                 }
             }
             GateSpecification::Sequence(sequence) => {
-                for gate in sequence.gates.iter() {
+                for gate in &sequence.gates {
                     write!(f, "{INDENT}")?;
                     gate.write(f, fall_back_to_debug)?;
                     writeln!(f)?;
@@ -1004,7 +1004,7 @@ pickleable_new! {
 }
 
 impl GateDefinition {
-    pub fn signature(&self) -> GateSignature<'_, String> {
+    pub(crate) fn signature(&self) -> GateSignature<'_, String> {
         let GateDefinition {
             name,
             parameters: gate_parameters,
@@ -1043,7 +1043,7 @@ impl Quil for GateDefinition {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct GateSignature<'a, T: AsRef<str> = String> {
+pub(crate) struct GateSignature<'a, T: AsRef<str> = String> {
     name: &'a T,
     gate_parameters: &'a [T],
     qubit_parameters: &'a [T],
@@ -1083,7 +1083,7 @@ impl<'a, T: AsRef<str>> GateSignature<'a, T> {
     }
 }
 
-impl<'a> Quil for GateSignature<'a> {
+impl Quil for GateSignature<'_> {
     fn write(
         &self,
         f: &mut impl std::fmt::Write,
@@ -1091,7 +1091,7 @@ impl<'a> Quil for GateSignature<'a> {
     ) -> Result<(), crate::quil::ToQuilError> {
         write!(f, "DEFGATE {}", <String as AsRef<str>>::as_ref(self.name))?;
         write_parameter_string(f, self.gate_parameters)?;
-        for qubit in self.qubit_parameters.iter() {
+        for qubit in self.qubit_parameters {
             write!(f, " {}", <String as AsRef<str>>::as_ref(qubit))?;
         }
         write!(f, " AS ")?;

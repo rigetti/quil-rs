@@ -107,33 +107,26 @@ impl DefGateSequence {
                 let gate_parameters = gate
                     .parameters
                     .iter()
-                    .cloned()
                     .map(|parameter| parameter.substitute_variables(&gate_parameter_arguments))
                     .collect::<Vec<_>>();
+
                 let gate_qubits = gate
                     .qubits
                     .iter()
                     .map(|qubit| {
                         if let Qubit::Variable(qubit_variable) = qubit {
-                            if let Some(qubit) = qubit_argument_map.get(qubit_variable) {
-                                Ok(qubit.clone())
-                            } else {
-                                Err(
-                                DefGateSequenceExpansionError::UndefinedGateSequenceElementQubit(
-                                    qubit_variable.clone(),
-                                ),
-                            )
-                            }
+                            qubit_argument_map.get(qubit_variable)
+                                .map_or_else(||
+                                    Err(DefGateSequenceExpansionError::UndefinedGateSequenceElementQubit(qubit_variable.clone())),
+                                    |qubit| Ok(qubit.clone())
+                                )
                         } else {
                             // Spec states that a sequence element is effectively a gate application where the formal qubit must be an argument.
-                            Err(
-                                DefGateSequenceExpansionError::InvalidGateSequenceElementQubit(
-                                    qubit.clone(),
-                                ),
-                            )
+                            Err(DefGateSequenceExpansionError::InvalidGateSequenceElementQubit(qubit.clone()))
                         }
                     })
                     .collect::<Result<Vec<Qubit>, _>>()?;
+
                 // Note, we don't use `Gate::new` here because the gate name is already validated,
                 // and we've performed all necessary validations on the gate parameters and qubits.
                 Ok(Gate {
