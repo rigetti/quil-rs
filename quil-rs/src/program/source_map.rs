@@ -4,7 +4,7 @@ use crate::instruction::GateSignature;
 
 use super::{CalibrationSource, InstructionIndex};
 
-/// A SourceMap provides information necessary to understand which parts of a target
+/// A `SourceMap` provides information necessary to understand which parts of a target
 /// were derived from which parts of a source artifact, in such a way that they can be
 /// mapped in either direction.
 ///
@@ -14,7 +14,7 @@ use super::{CalibrationSource, InstructionIndex};
 ///
 /// This is also intended to be mergeable in a chain, such that the combined result of a series
 /// of transformations can be expressed within a single source mapping.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SourceMap<SourceIndex, TargetIndex> {
     pub(crate) entries: Vec<SourceMapEntry<SourceIndex, TargetIndex>>,
 }
@@ -33,13 +33,8 @@ impl<SourceIndex, TargetIndex> SourceMap<SourceIndex, TargetIndex> {
     {
         self.entries
             .iter()
-            .filter_map(|entry| {
-                if entry.target_location().contains(target_index) {
-                    Some(entry.source_location())
-                } else {
-                    None
-                }
-            })
+            .filter(|&entry| entry.target_location().contains(target_index))
+            .map(SourceMapEntry::source_location)
             .collect()
     }
 
@@ -52,13 +47,8 @@ impl<SourceIndex, TargetIndex> SourceMap<SourceIndex, TargetIndex> {
     {
         self.entries
             .iter()
-            .filter_map(|entry| {
-                if entry.source_location().contains(source_index) {
-                    Some(entry.target_location())
-                } else {
-                    None
-                }
-            })
+            .filter(|entry| entry.source_location().contains(source_index))
+            .map(SourceMapEntry::target_location)
             .collect()
     }
 }
@@ -77,7 +67,7 @@ impl<SourceIndex, TargetIndex> SourceMap<SourceIndex, TargetIndex> {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SourceMapEntry<SourceIndex, TargetIndex> {
     /// The locator within the source artifact
     pub(crate) source_location: SourceIndex,

@@ -217,6 +217,7 @@ impl fmt::Display for Token {
 
 impl fmt::Debug for Token {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        #[expect(clippy::match_same_arms)]
         match self {
             Token::As => write!(f, "{self}"),
             Token::Bang => write!(f, "BANG"),

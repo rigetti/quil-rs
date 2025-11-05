@@ -8,6 +8,7 @@ use pyo3::{
 
 use super::*;
 use crate::{
+    instruction::gate::GateSignature,
     pickleable_new,
     quilpy::{errors::PickleError, fix_complex_enums, impl_repr, impl_to_quil},
     validation::identifier::IdentifierValidationError,
@@ -558,7 +559,7 @@ pickleable_new! {
     }
 }
 
-impl<'a> From<GateSignature<'a>> for OwnedGateSignature {
+impl From<GateSignature<'_>> for OwnedGateSignature {
     fn from(signature: GateSignature) -> Self {
         OwnedGateSignature {
             name: signature.name().to_string(),
