@@ -23,7 +23,7 @@ use crate::{
     pickleable_new,
 };
 
-#[derive(Clone, Debug, Hash, PartialEq)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
