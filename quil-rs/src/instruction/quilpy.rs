@@ -1,7 +1,10 @@
 use num_complex::Complex64;
 use numpy::{PyArray2, ToPyArray};
 use paste::paste;
-use pyo3::{prelude::*, types::PyTuple};
+use pyo3::{
+    prelude::*,
+    types::{IntoPyDict as _, PyDict, PyTuple},
+};
 
 use super::*;
 use crate::{
@@ -512,6 +515,12 @@ impl GateSpecification {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl MeasureCalibrationDefinition {
+    /// The Quil-T name of the measurement that this measure calibration definition is for, if any.
+    #[getter]
+    fn name(&self) -> Option<&str> {
+        self.identifier.name.as_deref()
+    }
+
     /// The qubit that this measure calibration definition is for.
     #[getter]
     fn qubit(&self) -> Qubit {
@@ -523,6 +532,66 @@ impl MeasureCalibrationDefinition {
     #[getter]
     fn target(&self) -> Option<&str> {
         self.identifier.target.as_deref()
+    }
+}
+
+// We don't use [`pickleable_new!`] here because we're separating Rust's
+// [`MeasureCalibrationIdentifier::new`] and Python's `MeasureCalibrationIdentifier.new`.
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl MeasureCalibrationIdentifier {
+    // Note that the Python argument order is not the same as the Rust argument order for
+    // [`Self::new`], and that this function requires keywords on the Python side!  Make sure
+    // `__getnewargs_ex__` is consistent with `__new__`!
+    #[pyo3(signature = (qubit, target, *, name = None))]
+    #[new]
+    fn __new__(qubit: Qubit, target: Option<String>, name: Option<String>) -> Self {
+        Self::new(name, qubit, target)
+    }
+
+    #[gen_stub(override_return_type(
+        type_repr = "tuple[tuple[Qubit, str | None], dict[str, str | None]]"
+    ))]
+    fn __getnewargs_ex__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+        let Self {
+            name,
+            qubit,
+            target,
+        } = self;
+        let positional: Bound<'py, PyTuple> = (qubit.clone(), target.clone()).into_pyobject(py)?;
+        let keyword: Bound<'py, PyDict> = [("name", name)].into_py_dict(py)?;
+        (positional, keyword).into_pyobject(py)
+    }
+}
+
+// We don't use [`pickleable_new!`] here because we're separating Rust's [`Measurement::new`] and
+// Python's `Measurement.new`.
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl Measurement {
+    // Note that the Python argument order is not the same as the Rust argument order for
+    // [`Self::new`], and that this function requires keywords on the Python side!  Make sure
+    // `__getnewargs_ex__` is consistent with `__new__`!
+    #[pyo3(signature = (qubit, target, *, name = None))]
+    #[new]
+    fn __new__(qubit: Qubit, target: Option<MemoryReference>, name: Option<String>) -> Self {
+        Self::new(name, qubit, target)
+    }
+
+    #[gen_stub(override_return_type(
+        type_repr = "tuple[tuple[Qubit, MemoryReference | None], dict[str, str | None]]"
+    ))]
+    fn __getnewargs_ex__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+        let Self {
+            name,
+            qubit,
+            target,
+        } = self;
+        let positional: Bound<'py, PyTuple> = (qubit.clone(), target.clone()).into_pyobject(py)?;
+        let keyword: Bound<'py, PyDict> = [("name", name)].into_py_dict(py)?;
+        (positional, keyword).into_pyobject(py)
     }
 }
 

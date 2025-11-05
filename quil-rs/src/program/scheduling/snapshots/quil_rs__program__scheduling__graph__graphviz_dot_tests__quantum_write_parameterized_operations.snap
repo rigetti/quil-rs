@@ -16,6 +16,7 @@ timing"];
 timing"];
     "block_0_0" [shape=rectangle, label="[0] LOAD params2[0] params1 integers[0]"];
     "block_0_0" -> "block_0_1" [label="await write"];
+    "block_0_0" -> "block_0_2" [label="await write"];
     "block_0_1" [shape=rectangle, label="[1] SHIFT-PHASE 0 \"rf\" params2[0]"];
     "block_0_1" -> "block_0_2" [label="await read"];
     "block_0_1" -> "block_0_end" [label="ordering

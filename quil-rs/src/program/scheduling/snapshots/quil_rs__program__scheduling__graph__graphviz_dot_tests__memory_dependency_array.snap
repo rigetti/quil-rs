@@ -1,0 +1,43 @@
+---
+source: quil-rs/src/program/scheduling/graph.rs
+expression: dot_format
+---
+digraph {
+  entry -> "block_0_start";
+  entry [label="Entry Point"];
+  subgraph cluster_0 {
+    label="block_0";
+    node [style="filled"];
+    "block_0_start" [shape=circle, label="start"];
+    "block_0_start" -> "block_0_1" [label="ordering"];
+    "block_0_start" -> "block_0_3" [label="ordering
+timing"];
+    "block_0_start" -> "block_0_4" [label="ordering
+timing"];
+    "block_0_start" -> "block_0_5" [label="ordering
+timing"];
+    "block_0_start" -> "block_0_6" [label="ordering
+timing"];
+    "block_0_start" -> "block_0_end" [label="ordering
+timing"];
+    "block_0_0" [shape=rectangle, label="[0] DELAY 2e-8"];
+    "block_0_1" [shape=rectangle, label="[1] MOVE phase[0] 0.1"];
+    "block_0_1" -> "block_0_2" [label="await write"];
+    "block_0_2" [shape=rectangle, label="[2] MOVE phase[1] 0.1"];
+    "block_0_2" -> "block_0_3" [label="await write"];
+    "block_0_2" -> "block_0_4" [label="await write"];
+    "block_0_3" [shape=rectangle, label="[3] SET-PHASE 0 \"frame0\" (2*pi)*phase[0]"];
+    "block_0_3" -> "block_0_5" [label="ordering
+timing"];
+    "block_0_4" [shape=rectangle, label="[4] SET-PHASE 1 \"frame1\" (2*pi)*phase[1]"];
+    "block_0_4" -> "block_0_6" [label="ordering
+timing"];
+    "block_0_5" [shape=rectangle, label="[5] PULSE 0 \"frame0\" flat(duration: 4e-9, iq: 1)"];
+    "block_0_5" -> "block_0_end" [label="ordering
+timing"];
+    "block_0_6" [shape=rectangle, label="[6] PULSE 1 \"frame1\" flat(duration: 4e-9, iq: 1)"];
+    "block_0_6" -> "block_0_end" [label="ordering
+timing"];
+    "block_0_end" [shape=circle, label="end"];
+  }
+}

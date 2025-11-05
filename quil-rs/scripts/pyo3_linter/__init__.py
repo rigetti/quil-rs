@@ -347,7 +347,7 @@ ADD_CLASS_RE = re.compile(
 )
 STUB_GEN_RE = re.compile(
     _cfg(
-        r"gen_stub_py(class(?:(?:_complex)?_enum)?|methods|function)(?:\((\s*?[^)]+)\))?"
+        r"(?:(?:pyo3_stub_gen::)?derive::)?gen_stub_py(class(?:(?:_complex)?_enum)?|methods|function)(?:\((\s*?[^)]+)\))?"
     )
 )
 
