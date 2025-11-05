@@ -1,3 +1,9 @@
+## 0.34.0-rc.0 (2025-11-05)
+
+### Breaking Changes
+
+- defgate as sequence
+
 ## 0.33.0 (2025-10-17)
 
 ### Breaking Changes
