@@ -73,13 +73,13 @@
                                 <a class="function" href="#BasicBlock.gate_depth">gate_depth</a>
                         </li>
                         <li>
-                                <a class="variable" href="#BasicBlock.instructions">instructions</a>
+                                <a class="variable" href="#BasicBlock.terminator">terminator</a>
                         </li>
                         <li>
                                 <a class="variable" href="#BasicBlock.label">label</a>
                         </li>
                         <li>
-                                <a class="variable" href="#BasicBlock.terminator">terminator</a>
+                                <a class="variable" href="#BasicBlock.instructions">instructions</a>
                         </li>
                 </ul>
 
@@ -88,13 +88,13 @@
                     <a class="class" href="#CalibrationExpansion">CalibrationExpansion</a>
                             <ul class="memberlist">
                         <li>
+                                <a class="variable" href="#CalibrationExpansion.range">range</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#CalibrationExpansion.expansions">expansions</a>
                         </li>
                         <li>
                                 <a class="variable" href="#CalibrationExpansion.calibration_used">calibration_used</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#CalibrationExpansion.range">range</a>
                         </li>
                 </ul>
 
@@ -121,6 +121,15 @@
                     <a class="class" href="#CalibrationSet">CalibrationSet</a>
                             <ul class="memberlist">
                         <li>
+                                <a class="function" href="#CalibrationSet.expand">expand</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#CalibrationSet.get_match_for_measurement">get_match_for_measurement</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#CalibrationSet.get_match_for_gate">get_match_for_gate</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#CalibrationSet.is_empty">is_empty</a>
                         </li>
                         <li>
@@ -136,19 +145,10 @@
                                 <a class="function" href="#CalibrationSet.to_instructions">to_instructions</a>
                         </li>
                         <li>
-                                <a class="function" href="#CalibrationSet.expand">expand</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#CalibrationSet.get_match_for_measurement">get_match_for_measurement</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#CalibrationSet.get_match_for_gate">get_match_for_gate</a>
+                                <a class="variable" href="#CalibrationSet.calibrations">calibrations</a>
                         </li>
                         <li>
                                 <a class="variable" href="#CalibrationSet.measure_calibrations">measure_calibrations</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#CalibrationSet.calibrations">calibrations</a>
                         </li>
                 </ul>
 
@@ -162,12 +162,6 @@
                         <li>
                                 <a class="function" href="#ControlFlowGraph.basic_blocks">basic_blocks</a>
                         </li>
-                </ul>
-
-            </li>
-            <li>
-                    <a class="class" href="#DefGateExpansionFilter">DefGateExpansionFilter</a>
-                            <ul class="memberlist">
                 </ul>
 
             </li>
@@ -199,18 +193,6 @@
                     <a class="class" href="#FrameSet">FrameSet</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="function" href="#FrameSet.insert">insert</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#FrameSet.merge">merge</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#FrameSet.is_empty">is_empty</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#FrameSet.to_instructions">to_instructions</a>
-                        </li>
-                        <li>
                                 <a class="function" href="#FrameSet.get">get</a>
                         </li>
                         <li>
@@ -221,6 +203,18 @@
                         </li>
                         <li>
                                 <a class="function" href="#FrameSet.intersection">intersection</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#FrameSet.insert">insert</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#FrameSet.merge">merge</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#FrameSet.is_empty">is_empty</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#FrameSet.to_instructions">to_instructions</a>
                         </li>
                 </ul>
 
@@ -262,10 +256,10 @@
                     <a class="class" href="#MemoryRegion">MemoryRegion</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#MemoryRegion.size">size</a>
+                                <a class="variable" href="#MemoryRegion.sharing">sharing</a>
                         </li>
                         <li>
-                                <a class="variable" href="#MemoryRegion.sharing">sharing</a>
+                                <a class="variable" href="#MemoryRegion.size">size</a>
                         </li>
                 </ul>
 
@@ -349,34 +343,34 @@
                                 <a class="function" href="#Program.to_instructions">to_instructions</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.frames">frames</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Program.body_instructions">body_instructions</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Program.memory_regions">memory_regions</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Program.gate_definitions">gate_definitions</a>
+                                <a class="variable" href="#Program.waveforms">waveforms</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Program.pragma_extern_map">pragma_extern_map</a>
                         </li>
                         <li>
+                                <a class="variable" href="#Program.declarations">declarations</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#Program.instructions">instructions</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.used_qubits">used_qubits</a>
+                                <a class="variable" href="#Program.memory_regions">memory_regions</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Program.calibrations">calibrations</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.declarations">declarations</a>
+                                <a class="variable" href="#Program.gate_definitions">gate_definitions</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.waveforms">waveforms</a>
+                                <a class="variable" href="#Program.body_instructions">body_instructions</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Program.frames">frames</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Program.used_qubits">used_qubits</a>
                         </li>
                 </ul>
 
@@ -409,13 +403,13 @@
                     <a class="class" href="#TimeSpanSeconds">TimeSpanSeconds</a>
                             <ul class="memberlist">
                         <li>
+                                <a class="variable" href="#TimeSpanSeconds.duration">duration</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#TimeSpanSeconds.end">end</a>
                         </li>
                         <li>
                                 <a class="variable" href="#TimeSpanSeconds.start">start</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#TimeSpanSeconds.duration">duration</a>
                         </li>
                 </ul>
 
@@ -619,17 +613,17 @@ for it to be counted in the depth.</li>
 
 
                             </div>
-                            <div id="BasicBlock.instructions" class="classattr">
+                            <div id="BasicBlock.terminator" class="classattr">
                                 <div class="attr variable">
-            <span class="name">instructions</span>
+            <span class="name">terminator</span>
 
         
     </div>
-    <a class="headerlink" href="#BasicBlock.instructions"></a>
+    <a class="headerlink" href="#BasicBlock.terminator"></a>
     
-            <div class="docstring"><p>A list of the instructions in the block, in order of definition.</p>
+            <div class="docstring"><p>The control flow terminator instruction of the block, if any.</p>
 
-<p>This does not include the label or terminator instructions.</p>
+<p>If this is <code>None</code>, the implicit behavior is to "continue" to the subsequent block.</p>
 </div>
 
 
@@ -648,17 +642,17 @@ This is used to target this block in control flow.</p>
 
 
                             </div>
-                            <div id="BasicBlock.terminator" class="classattr">
+                            <div id="BasicBlock.instructions" class="classattr">
                                 <div class="attr variable">
-            <span class="name">terminator</span>
+            <span class="name">instructions</span>
 
         
     </div>
-    <a class="headerlink" href="#BasicBlock.terminator"></a>
+    <a class="headerlink" href="#BasicBlock.instructions"></a>
     
-            <div class="docstring"><p>The control flow terminator instruction of the block, if any.</p>
+            <div class="docstring"><p>A list of the instructions in the block, in order of definition.</p>
 
-<p>If this is <code>None</code>, the implicit behavior is to "continue" to the subsequent block.</p>
+<p>This does not include the label or terminator instructions.</p>
 </div>
 
 
@@ -678,6 +672,20 @@ This is used to target this block in control flow.</p>
 </div>
 
 
+                            <div id="CalibrationExpansion.range" class="classattr">
+                                <div class="attr variable">
+            <span class="name">range</span>
+
+        
+    </div>
+    <a class="headerlink" href="#CalibrationExpansion.range"></a>
+    
+            <div class="docstring"><p>The range of instructions in the expanded list
+which were generated by this expansion.</p>
+</div>
+
+
+                            </div>
                             <div id="CalibrationExpansion.expansions" class="classattr">
                                 <div class="attr variable">
             <span class="name">expansions</span>
@@ -700,20 +708,6 @@ This is used to target this block in control flow.</p>
     <a class="headerlink" href="#CalibrationExpansion.calibration_used"></a>
     
             <div class="docstring"><p>The calibration used to expand the instruction.</p>
-</div>
-
-
-                            </div>
-                            <div id="CalibrationExpansion.range" class="classattr">
-                                <div class="attr variable">
-            <span class="name">range</span>
-
-        
-    </div>
-    <a class="headerlink" href="#CalibrationExpansion.range"></a>
-    
-            <div class="docstring"><p>The range of instructions in the expanded list
-which were generated by this expansion.</p>
 </div>
 
 
@@ -798,6 +792,78 @@ so see the documentation there for more information.</p>
 </div>
 
 
+                            <div id="CalibrationSet.expand" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">expand</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">instruction</span>, </span><span class="param"><span class="n">previous_calibrations</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#CalibrationSet.expand"></a>
+    
+            <div class="docstring"><p>Given an instruction, return the instructions to which it is expanded if there is a match.
+Recursively calibrate instructions, returning an error if a calibration directly or indirectly
+expands into itself.</p>
+
+<p>Return only the expanded instructions; for more information about the expansion process,
+see [<code>Self::expand_with_detail</code>].</p>
+</div>
+
+
+                            </div>
+                            <div id="CalibrationSet.get_match_for_measurement" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">get_match_for_measurement</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">measurement</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#CalibrationSet.get_match_for_measurement"></a>
+    
+            <div class="docstring"><p>Returns the last-specified <code>MeasureCalibrationDefinition</code> that matches the target
+qubit (if any), or otherwise the last-specified one that specified no qubit.</p>
+
+<p>If multiple calibrations match the measurement, the precedence is as follows:</p>
+
+<ol>
+<li>Match fixed qubit.</li>
+<li>Match variable qubit.</li>
+<li>Match no qubit.</li>
+</ol>
+
+<p>In the case of multiple calibrations with equal precedence, the last one wins.</p>
+</div>
+
+
+                            </div>
+                            <div id="CalibrationSet.get_match_for_gate" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">get_match_for_gate</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">gate</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#CalibrationSet.get_match_for_gate"></a>
+    
+            <div class="docstring"><p>Return the final calibration which matches the gate per the <code>QuilT</code> specification:</p>
+
+<p>A calibration matches a gate if:</p>
+
+<ol>
+<li>It has the same name</li>
+<li>It has the same modifiers</li>
+<li>It has the same qubit count (any mix of fixed &amp; variable)</li>
+<li>It has the same parameter count (both specified and unspecified)</li>
+<li>All fixed qubits in the calibration definition match those in the gate</li>
+<li>All specified parameters in the calibration definition match those in the gate</li>
+</ol>
+</div>
+
+
+                            </div>
                             <div id="CalibrationSet.is_empty" class="classattr">
                                 <div class="attr function">
             
@@ -882,74 +948,15 @@ given set.</p>
 
 
                             </div>
-                            <div id="CalibrationSet.expand" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">expand</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">instruction</span>, </span><span class="param"><span class="n">previous_calibrations</span></span><span class="return-annotation">):</span></span>
+                            <div id="CalibrationSet.calibrations" class="classattr">
+                                <div class="attr variable">
+            <span class="name">calibrations</span>
 
         
     </div>
-    <a class="headerlink" href="#CalibrationSet.expand"></a>
+    <a class="headerlink" href="#CalibrationSet.calibrations"></a>
     
-            <div class="docstring"><p>Given an instruction, return the instructions to which it is expanded if there is a match.
-Recursively calibrate instructions, returning an error if a calibration directly or indirectly
-expands into itself.</p>
-
-<p>Return only the expanded instructions; for more information about the expansion process,
-see [<code>Self::expand_with_detail</code>].</p>
-</div>
-
-
-                            </div>
-                            <div id="CalibrationSet.get_match_for_measurement" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">get_match_for_measurement</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">measurement</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#CalibrationSet.get_match_for_measurement"></a>
-    
-            <div class="docstring"><p>Returns the last-specified <code>MeasureCalibrationDefinition</code> that matches the target
-qubit (if any), or otherwise the last-specified one that specified no qubit.</p>
-
-<p>If multiple calibrations match the measurement, the precedence is as follows:</p>
-
-<ol>
-<li>Match fixed qubit.</li>
-<li>Match variable qubit.</li>
-<li>Match no qubit.</li>
-</ol>
-
-<p>In the case of multiple calibrations with equal precedence, the last one wins.</p>
-</div>
-
-
-                            </div>
-                            <div id="CalibrationSet.get_match_for_gate" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">get_match_for_gate</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">gate</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#CalibrationSet.get_match_for_gate"></a>
-    
-            <div class="docstring"><p>Return the final calibration which matches the gate per the <code>QuilT</code> specification:</p>
-
-<p>A calibration matches a gate if:</p>
-
-<ol>
-<li>It has the same name</li>
-<li>It has the same modifiers</li>
-<li>It has the same qubit count (any mix of fixed &amp; variable)</li>
-<li>It has the same parameter count (both specified and unspecified)</li>
-<li>All fixed qubits in the calibration definition match those in the gate</li>
-<li>All specified parameters in the calibration definition match those in the gate</li>
-</ol>
+            <div class="docstring"><p>Return a list of all [<code>CalibrationDefinition</code>]s in the set.</p>
 </div>
 
 
@@ -963,19 +970,6 @@ qubit (if any), or otherwise the last-specified one that specified no qubit.</p>
     <a class="headerlink" href="#CalibrationSet.measure_calibrations"></a>
     
             <div class="docstring"><p>Return a list of all [<code>MeasureCalibrationDefinition</code>]s in the set.</p>
-</div>
-
-
-                            </div>
-                            <div id="CalibrationSet.calibrations" class="classattr">
-                                <div class="attr variable">
-            <span class="name">calibrations</span>
-
-        
-    </div>
-    <a class="headerlink" href="#CalibrationSet.calibrations"></a>
-    
-            <div class="docstring"><p>Return a list of all [<code>CalibrationDefinition</code>]s in the set.</p>
 </div>
 
 
@@ -1028,19 +1022,6 @@ This may be a sequence of basic blocks with fixed <code>JUMP</code>s or without 
 
 
                             </div>
-                </section>
-                <section id="DefGateExpansionFilter">
-                    <div class="attr class">
-            
-    <span class="def">class</span>
-    <span class="name">DefGateExpansionFilter</span>:
-
-        
-    </div>
-    <a class="headerlink" href="#DefGateExpansionFilter"></a>
-    
-    
-
                 </section>
                 <section id="InstructionTarget">
                     <div class="attr class">
@@ -1152,66 +1133,6 @@ within the resulting program's body instructions.</li>
 </div>
 
 
-                            <div id="FrameSet.insert" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">insert</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">identifier</span>, </span><span class="param"><span class="n">attributes</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#FrameSet.insert"></a>
-    
-            <div class="docstring"><p>Insert a new frame by ID, overwriting any existing one.</p>
-</div>
-
-
-                            </div>
-                            <div id="FrameSet.merge" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">merge</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">other</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#FrameSet.merge"></a>
-    
-            <div class="docstring"><p>Merge another [FrameSet] with this one, overwriting any existing keys</p>
-</div>
-
-
-                            </div>
-                            <div id="FrameSet.is_empty" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">is_empty</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#FrameSet.is_empty"></a>
-    
-            <div class="docstring"><p>Return true if this describes no frames.</p>
-</div>
-
-
-                            </div>
-                            <div id="FrameSet.to_instructions" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">to_instructions</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#FrameSet.to_instructions"></a>
-    
-            <div class="docstring"><p>Return the Quil instructions which describe the contained frames.</p>
-</div>
-
-
-                            </div>
                             <div id="FrameSet.get" class="classattr">
                                 <div class="attr function">
             
@@ -1268,6 +1189,66 @@ within the resulting program's body instructions.</li>
     <a class="headerlink" href="#FrameSet.intersection"></a>
     
             <div class="docstring"><p>Return a new <code><a href="#FrameSet">FrameSet</a></code> which describes only the given <code>FrameIdentifier</code>s.</p>
+</div>
+
+
+                            </div>
+                            <div id="FrameSet.insert" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">insert</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">identifier</span>, </span><span class="param"><span class="n">attributes</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#FrameSet.insert"></a>
+    
+            <div class="docstring"><p>Insert a new frame by ID, overwriting any existing one.</p>
+</div>
+
+
+                            </div>
+                            <div id="FrameSet.merge" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">merge</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">other</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#FrameSet.merge"></a>
+    
+            <div class="docstring"><p>Merge another [FrameSet] with this one, overwriting any existing keys</p>
+</div>
+
+
+                            </div>
+                            <div id="FrameSet.is_empty" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">is_empty</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#FrameSet.is_empty"></a>
+    
+            <div class="docstring"><p>Return true if this describes no frames.</p>
+</div>
+
+
+                            </div>
+                            <div id="FrameSet.to_instructions" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">to_instructions</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#FrameSet.to_instructions"></a>
+    
+            <div class="docstring"><p>Return the Quil instructions which describe the contained frames.</p>
 </div>
 
 
@@ -1443,17 +1424,6 @@ level of expansion and <em>not</em> the original program.</p>
     
     
 
-                            <div id="MemoryRegion.size" class="classattr">
-                                <div class="attr variable">
-            <span class="name">size</span>
-
-        
-    </div>
-    <a class="headerlink" href="#MemoryRegion.size"></a>
-    
-    
-
-                            </div>
                             <div id="MemoryRegion.sharing" class="classattr">
                                 <div class="attr variable">
             <span class="name">sharing</span>
@@ -1461,6 +1431,17 @@ level of expansion and <em>not</em> the original program.</p>
         
     </div>
     <a class="headerlink" href="#MemoryRegion.sharing"></a>
+    
+    
+
+                            </div>
+                            <div id="MemoryRegion.size" class="classattr">
+                                <div class="attr variable">
+            <span class="name">size</span>
+
+        
+    </div>
+    <a class="headerlink" href="#MemoryRegion.size"></a>
     
     
 
@@ -1613,7 +1594,7 @@ and a source mapping describing the expansions made.</p>
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">expand_defgate_sequences_with_source_map</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="nb">filter</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
+        <span class="name">expand_defgate_sequences_with_source_map</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">predicate</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
@@ -1629,7 +1610,7 @@ gate definitions expand directly or indirectly into itself).</p>
 <h6 id="parameters">Parameters</h6>
 
 <ul>
-<li><strong>filter</strong>:  If provided, only sequence gate definitions which match the filter will be expanded.
+<li><strong>predicate</strong>:  If provided, only sequence gate definitions which match the predicate will be expanded.
 Defaults to expanding all sequence gate definitions.</li>
 </ul>
 
@@ -1646,7 +1627,7 @@ Defaults to expanding all sequence gate definitions.</li>
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">expand_defgate_sequences</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="nb">filter</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
+        <span class="name">expand_defgate_sequences</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">predicate</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
@@ -1661,7 +1642,7 @@ gate definitions expand directly or indirectly into itself).</p>
 <h6 id="parameters">Parameters</h6>
 
 <ul>
-<li><strong>filter</strong>:  If provided, only sequence gate definitions which match the filter will be expanded.
+<li><strong>predicate</strong>:  If provided, only sequence gate definitions which match the predicate will be expanded.
 Defaults to expanding all sequence gate definitions.</li>
 </ul>
 
@@ -2010,46 +1991,13 @@ and <a href="Self::default_qubit_resolver"><code>default_qubit_resolver</code></
 
 
                             </div>
-                            <div id="Program.frames" class="classattr">
+                            <div id="Program.waveforms" class="classattr">
                                 <div class="attr variable">
-            <span class="name">frames</span>
+            <span class="name">waveforms</span>
 
         
     </div>
-    <a class="headerlink" href="#Program.frames"></a>
-    
-    
-
-                            </div>
-                            <div id="Program.body_instructions" class="classattr">
-                                <div class="attr variable">
-            <span class="name">body_instructions</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.body_instructions"></a>
-    
-    
-
-                            </div>
-                            <div id="Program.memory_regions" class="classattr">
-                                <div class="attr variable">
-            <span class="name">memory_regions</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.memory_regions"></a>
-    
-    
-
-                            </div>
-                            <div id="Program.gate_definitions" class="classattr">
-                                <div class="attr variable">
-            <span class="name">gate_definitions</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.gate_definitions"></a>
+    <a class="headerlink" href="#Program.waveforms"></a>
     
     
 
@@ -2065,6 +2013,17 @@ and <a href="Self::default_qubit_resolver"><code>default_qubit_resolver</code></
     
 
                             </div>
+                            <div id="Program.declarations" class="classattr">
+                                <div class="attr variable">
+            <span class="name">declarations</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.declarations"></a>
+    
+    
+
+                            </div>
                             <div id="Program.instructions" class="classattr">
                                 <div class="attr variable">
             <span class="name">instructions</span>
@@ -2076,13 +2035,13 @@ and <a href="Self::default_qubit_resolver"><code>default_qubit_resolver</code></
     
 
                             </div>
-                            <div id="Program.used_qubits" class="classattr">
+                            <div id="Program.memory_regions" class="classattr">
                                 <div class="attr variable">
-            <span class="name">used_qubits</span>
+            <span class="name">memory_regions</span>
 
         
     </div>
-    <a class="headerlink" href="#Program.used_qubits"></a>
+    <a class="headerlink" href="#Program.memory_regions"></a>
     
     
 
@@ -2098,24 +2057,46 @@ and <a href="Self::default_qubit_resolver"><code>default_qubit_resolver</code></
     
 
                             </div>
-                            <div id="Program.declarations" class="classattr">
+                            <div id="Program.gate_definitions" class="classattr">
                                 <div class="attr variable">
-            <span class="name">declarations</span>
+            <span class="name">gate_definitions</span>
 
         
     </div>
-    <a class="headerlink" href="#Program.declarations"></a>
+    <a class="headerlink" href="#Program.gate_definitions"></a>
     
     
 
                             </div>
-                            <div id="Program.waveforms" class="classattr">
+                            <div id="Program.body_instructions" class="classattr">
                                 <div class="attr variable">
-            <span class="name">waveforms</span>
+            <span class="name">body_instructions</span>
 
         
     </div>
-    <a class="headerlink" href="#Program.waveforms"></a>
+    <a class="headerlink" href="#Program.body_instructions"></a>
+    
+    
+
+                            </div>
+                            <div id="Program.frames" class="classattr">
+                                <div class="attr variable">
+            <span class="name">frames</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.frames"></a>
+    
+    
+
+                            </div>
+                            <div id="Program.used_qubits" class="classattr">
+                                <div class="attr variable">
+            <span class="name">used_qubits</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.used_qubits"></a>
     
     
 
@@ -2220,6 +2201,19 @@ each of which is assigned a start time and duration.</p>
 </div>
 
 
+                            <div id="TimeSpanSeconds.duration" class="classattr">
+                                <div class="attr variable">
+            <span class="name">duration</span>
+
+        
+    </div>
+    <a class="headerlink" href="#TimeSpanSeconds.duration"></a>
+    
+            <div class="docstring"><p>The duration of the time span, in seconds.</p>
+</div>
+
+
+                            </div>
                             <div id="TimeSpanSeconds.end" class="classattr">
                                 <div class="attr variable">
             <span class="name">end</span>
@@ -2245,19 +2239,6 @@ each of which is assigned a start time and duration.</p>
     
             <div class="docstring"><p>The inclusive start time of the time span,
 in seconds relative to the start of the scheduling context (such as the basic block).</p>
-</div>
-
-
-                            </div>
-                            <div id="TimeSpanSeconds.duration" class="classattr">
-                                <div class="attr variable">
-            <span class="name">duration</span>
-
-        
-    </div>
-    <a class="headerlink" href="#TimeSpanSeconds.duration"></a>
-    
-            <div class="docstring"><p>The duration of the time span, in seconds.</p>
 </div>
 
 
