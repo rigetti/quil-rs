@@ -202,7 +202,7 @@ pub mod expression {
                             operator: _,
                         }) => {
                             stack.push(right);
-                            expr = left
+                            expr = left;
                         }
                     }
                 }
@@ -224,7 +224,7 @@ impl Expression {
 }
 
 impl WaveformInvocation {
-    /// Return, if any, the memory references contained within this WaveformInvocation.
+    /// Return, if any, the memory references contained within this `WaveformInvocation`.
     pub fn memory_references(&self) -> impl std::iter::FusedIterator<Item = &MemoryReference> {
         self.parameters
             .values()
