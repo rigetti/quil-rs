@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use std::ops::Range;
 use std::str::FromStr;
 
 use numpy::{Complex64, PyArray2, ToPyArray};
@@ -9,8 +10,10 @@ use pyo3::{
 };
 
 #[cfg(feature = "stubs")]
-use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pymethods};
 
+use crate::instruction::quilpy::OwnedGateSignature;
+use crate::program::{DefGateSequenceExpansion, ExpansionResult};
 use crate::{
     instruction::{
         CalibrationDefinition, Declaration, FrameAttributes, FrameIdentifier, Gate, Instruction,
@@ -27,8 +30,7 @@ use super::{
     },
     scheduling::{ComputedScheduleItem, Schedule, Seconds, TimeSpan},
     CalibrationExpansion, CalibrationSource, Calibrations, FrameSet, InstructionIndex,
-    MaybeCalibrationExpansion, MemoryRegion, Program, ProgramCalibrationExpansion, Result,
-    SourceMap, SourceMapEntry,
+    MemoryRegion, Program, Result, SourceMap, SourceMapEntry, SourceMapIndexable,
 };
 
 /// The `quil.program` module contains classes for constructing and representing a Quil program.
@@ -117,46 +119,41 @@ pub(crate) fn init_submodule(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     m.add_class::<BasicBlockOwned>()?; // Python name: BasicBlock
     m.add_class::<CalibrationExpansion>()?;
-    m.add_class::<PyCalibrationExpansionSourceMap>()?; // Python: CalibrationExpansionSourceMap
-    m.add_class::<PyCalibrationExpansionSourceMapEntry>()?; // Python: CalibrationExpansionSourceMapEntry
-    m.add_class::<Calibrations>()?; // Python: CalibrationSet
     m.add_class::<CalibrationSource>()?;
+    m.add_class::<Calibrations>()?; // Python: CalibrationSet
     m.add_class::<ControlFlowGraphOwned>()?; // Python: ControlFlowGraph
+    m.add_class::<FlatExpansionResult>()?; // Python: InstructionTarget
     m.add_class::<FrameSet>()?;
-    m.add_class::<MaybeCalibrationExpansion>()?;
+    m.add_class::<InstructionSourceMap>()?;
+    m.add_class::<InstructionSourceMapEntry>()?;
     m.add_class::<MemoryRegion>()?;
+    m.add_class::<OwnedDefGateSequenceExpansion>()?;
     m.add_class::<Program>()?;
-    m.add_class::<ProgramCalibrationExpansion>()?;
-    m.add_class::<PyProgramCalibrationExpansionSourceMap>()?;
-    m.add_class::<PyProgramCalibrationExpansionSourceMapEntry>()?;
     m.add_class::<PyScheduleSeconds>()?;
     m.add_class::<ScheduleSecondsItem>()?;
     m.add_class::<TimeSpanSeconds>()?;
 
-    fix_complex_enums!(py, CalibrationSource, MaybeCalibrationExpansion);
+    fix_complex_enums!(py, CalibrationSource, FlatExpansionResult);
 
     Ok(())
 }
 
 impl_repr!(BasicBlockOwned);
 impl_repr!(CalibrationExpansion);
-impl_repr!(PyCalibrationExpansionSourceMap);
-impl_repr!(PyCalibrationExpansionSourceMapEntry);
 impl_repr!(Calibrations);
 impl_repr!(CalibrationSource);
 impl_repr!(ControlFlowGraphOwned);
 impl_repr!(FrameSet);
-impl_repr!(MaybeCalibrationExpansion);
+impl_repr!(FlatExpansionResult);
 impl_repr!(MemoryRegion);
 impl_repr!(Program);
-impl_repr!(ProgramCalibrationExpansion);
-impl_repr!(PyProgramCalibrationExpansionSourceMap);
-impl_repr!(PyProgramCalibrationExpansionSourceMapEntry);
 impl_repr!(PyScheduleSeconds);
 impl_repr!(ScheduleSecondsItem);
 impl_repr!(TimeSpanSeconds);
 
 impl_to_quil!(Program);
+
+type ExpandedProgram = (Program, InstructionSourceMap);
 
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
@@ -213,8 +210,142 @@ impl Program {
     /// Return the expanded copy of the program
     /// and a source mapping describing the expansions made.
     #[pyo3(name = "expand_calibrations_with_source_map")]
-    fn py_expand_calibrations_with_source_map(&self) -> Result<ProgramCalibrationExpansion> {
-        self.expand_calibrations_with_source_map()
+    fn py_expand_calibrations_with_source_map(&self) -> Result<ExpandedProgram> {
+        let (expanded, source_map) = self.expand_calibrations_with_source_map()?;
+        Ok((expanded, source_map.into()))
+    }
+
+    /// Expand any instructions in the program which have a matching sequence gate definition, leaving
+    /// the others unchanged. Note, the new program will drop any gate definitions which are no longer
+    /// referenced in the program.
+    ///
+    /// Recurses though each instruction while ensuring there is no cycle in the expansion graph (i.e. no sequence
+    /// gate definitions expand directly or indirectly into itself).
+    ///
+    /// :param predicate: If provided, only sequence gate definitions which match the predicate will be expanded.
+    /// Defaults to expanding all sequence gate definitions.
+    ///
+    /// Return the expanded copy of the program and a source mapping describing the expansions made.
+    ///
+    /// # Example
+    ///
+    /// See `expand_defgate_sequences`.
+    #[pyo3(
+        signature = (predicate = None),
+        name = "expand_defgate_sequences_with_source_map",
+    )]
+    fn py_expand_defgate_sequences_with_source_map<'py>(
+        &self,
+        py: Python<'py>,
+        #[gen_stub(
+            override_type(
+                type_repr="collections.abc.Callable[[str], bool] | None",
+                imports=("collections.abc")
+            )
+        )]
+        predicate: Option<&Bound<'py, PyFunction>>,
+    ) -> Result<ExpandedProgram> {
+        let (expanded_program, source_map) =
+            self.expand_defgate_sequences_with_source_map(|key: &str| -> bool {
+                predicate.map_or(true, |f| match call_user_func(py, f, key) {
+                    Ok(val) => val,
+                    Err(err) => panic!("error calling predicate: {err}"),
+                })
+            })?;
+
+        Ok((expanded_program, source_map.into()))
+    }
+
+    /// Expand any instructions in the program which have a matching sequence gate definition, leaving
+    /// the others unchanged.
+    ///
+    /// Recurses though each instruction while ensuring there is no cycle in the expansion graph (i.e. no sequence
+    /// gate definitions expand directly or indirectly into itself).
+    ///
+    /// :param predicate: If provided, only sequence gate definitions which match the predicate will be expanded.
+    ///     Defaults to expanding all sequence gate definitions.
+    ///
+    /// # Example
+    ///
+    /// Below, we show the results of gate sequence expansion on a program that has two gate
+    /// sequence definitions. The first, `seq1`, has a matching calibration and we do not
+    /// want to expand it. The second, `seq2`, does not have a matching calibration and
+    /// we do want to expand it.
+    ///
+    /// >>> quil = '''
+    /// ... DEFCAL seq1 0 1:
+    /// ...     FENCE 0 1
+    /// ...     NONBLOCKING PULSE 0 "rf" drag_gaussian(duration: 6.000000000000001e-08, fwhm: 1.5000000000000002e-08, t0: 3.0000000000000004e-08, anh: -190000000.0, alpha: -1.6453719598238201, scale: 0.168265925924524, phase: 0.0, detuning: 0)
+    /// ...     NONBLOCKING PULSE 1 "rf" drag_gaussian(duration: 6.000000000000001e-08, fwhm: 1.5000000000000002e-08, t0: 3.0000000000000004e-08, anh: -190000000.0, alpha: -1.6453719598238201, scale: 0.168265925924524, phase: 0.0, detuning: 0)
+    /// ...     FENCE 0 1
+    /// ...
+    /// ... DEFGATE seq1() a b AS SEQUENCE:
+    /// ...     RX(pi/2) a
+    /// ...     RX(pi/2) b
+    /// ...
+    /// ... DEFGATE seq2(%theta, %psi, %phi) a AS SEQUENCE:
+    /// ...     RZ(%theta) a
+    /// ...     RX(pi/2) a
+    /// ...     RZ(%phi) a
+    /// ...
+    /// ... seq1 0 1
+    /// ... seq2(1.5707963267948966, 3.141592653589793, 0) 0
+    /// ... seq2(3.141592653589793, 0, 1.5707963267948966) 1
+    /// ... '''
+    /// >>> program = Program.parse(quil);
+    /// >>> calibrated_gate_names = {calibration.identifier.name for calibration in program.calibrations.calibrations}
+    /// >>> expanded_program = program.expand_defgate_sequences(lambda name: name not in calibrated_gate_names)
+    /// >>>
+    /// >>> expected_quil = '''
+    /// ... DEFCAL seq1 0 1:
+    /// ...     FENCE 0 1
+    /// ...     NONBLOCKING PULSE 0 "rf" drag_gaussian(duration: 6.000000000000001e-08, fwhm: 1.5000000000000002e-08, t0: 3.0000000000000004e-08, anh: -190000000.0, alpha: -1.6453719598238201, scale: 0.168265925924524, phase: 0.0, detuning: 0)
+    /// ...     NONBLOCKING PULSE 1 "rf" drag_gaussian(duration: 6.000000000000001e-08, fwhm: 1.5000000000000002e-08, t0: 3.0000000000000004e-08, anh: -190000000.0, alpha: -1.6453719598238201, scale: 0.168265925924524, phase: 0.0, detuning: 0)
+    /// ...     FENCE 0 1
+    /// ...
+    /// ... DEFGATE seq1 a b AS SEQUENCE:
+    /// ...     RX(pi/2) a
+    /// ...     RX(pi/2) b
+    /// ...
+    /// ... seq1 0 1
+    /// ...
+    /// ... RZ(1.5707963267948966) 0
+    /// ... RX(pi/2) 0
+    /// ... RZ(3.141592653589793) 0
+    /// ... RX(pi/2) 0
+    /// ... RZ(0) 0
+    /// ...
+    /// ... RZ(3.141592653589793) 1
+    /// ... RX(pi/2) 1
+    /// ... RZ(0) 1
+    /// ... RX(pi/2) 1
+    /// ... RZ(1.5707963267948966) 1
+    /// ... '''
+    /// >>>
+    /// >>> expected_program = Program.parse(expected_quil)
+    /// >>>
+    /// >>> assert expanded_program == expected_program
+    ///
+    // NOTE: A similar example is documented in the Rust documentation for `Program::expand_defgate_sequences`.
+    // These examples should be kept in sync.
+    #[pyo3(signature = (predicate = None), name = "expand_defgate_sequences")]
+    fn py_expand_defgate_sequences<'py>(
+        &self,
+        py: Python<'py>,
+        #[gen_stub(
+            override_type(
+                type_repr="collections.abc.Callable[[str], bool] | None",
+                imports=("collections.abc")
+            )
+        )]
+        predicate: Option<&Bound<'py, PyFunction>>,
+    ) -> Result<Self> {
+        self.clone().expand_defgate_sequences(|key: &str| -> bool {
+            predicate.map_or(true, |f| match call_user_func(py, f, key) {
+                Ok(val) => val,
+                Err(err) => panic!("error calling predicate: {err}"),
+            })
+        })
     }
 
     /// Add a list of instructions to the end of the program.
@@ -237,12 +368,9 @@ impl Program {
         )]
         predicate: &Bound<'py, PyFunction>,
     ) -> Self {
-        self.filter_instructions(|inst| {
-            predicate
-                .call1((inst.clone().into_pyobject(py).unwrap(),))
-                .unwrap_or_else(|err| panic!("predicate function returned an error: {err}"))
-                .extract()
-                .unwrap_or_else(|err| panic!("predicate function must return a bool: {err}"))
+        self.filter_instructions(|inst| match call_user_func(py, predicate, inst.clone()) {
+            Ok(val) => val,
+            Err(err) => panic!("error calling predicate: {err}"),
         })
     }
 
@@ -355,6 +483,42 @@ impl Program {
     }
 }
 
+/// Errors returned when calling a user-supplied `Callable`.
+#[derive(Debug, thiserror::Error)]
+enum UserFunctionError {
+    #[error("calling the function resulted in an error: {0}")]
+    CallError(#[source] PyErr),
+    #[error("function returned the wrong type")]
+    TypeError(#[source] PyErr),
+}
+
+/// Given `user_func: fn(T) -> U` and `param: T`, return `user_func(param)`.
+///
+/// # Errors
+///
+/// This returns a [`UserFunctionError::CallError`] if calling the user's function fails,
+/// or a [`UserFunctionError::TypeError`] if the user's function returns the wrong type.
+#[inline]
+fn call_user_func<'py, T, U>(
+    py: Python<'py>,
+    user_func: &Bound<'py, PyFunction>,
+    param: T,
+) -> std::result::Result<U, UserFunctionError>
+where
+    T: IntoPyObject<'py>,
+    U: FromPyObject<'py>,
+{
+    user_func
+        .call1(
+            (param,)
+                .into_pyobject(py)
+                .expect("Tuple::into_pyobject() should be infallible"),
+        )
+        .map_err(UserFunctionError::CallError)?
+        .extract()
+        .map_err(UserFunctionError::TypeError)
+}
+
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl Calibrations {
@@ -447,18 +611,8 @@ impl CalibrationExpansion {
 
     /// The source map describing the nested expansions made.
     #[getter(expansions)]
-    fn py_expansions(&self) -> PyCalibrationExpansionSourceMap {
-        PyCalibrationExpansionSourceMap(self.expansions.clone())
-    }
-}
-
-#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[pymethods]
-impl ProgramCalibrationExpansion {
-    /// The source mapping describing the expansions made.
-    #[getter(source_map)]
-    fn py_source_map(&self) -> PyProgramCalibrationExpansionSourceMap {
-        PyProgramCalibrationExpansionSourceMap(self.source_map.clone())
+    fn py_expansions(&self) -> InstructionSourceMap {
+        (&self.expansions).into()
     }
 }
 
@@ -503,168 +657,328 @@ impl CalibrationSource {
     }
 }
 
-#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+// --------------------------------
+
+/// A source map describing how instructions in a source program were
+/// expanded into a target program. Each entry describes an instruction
+/// index in the source program which were expanded accordingto either
+/// a calibration or a sequence gate definition.
+#[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[pyclass(name = "InstructionSourceMap", module = "quil.program", frozen)]
+pub(crate) struct InstructionSourceMap(SourceMap<InstructionIndex, FlatExpansionResult>);
+
+/// A source map entry, mapping a range of source instructions by index to an
+/// `InstructionTarget`.
+///
+/// Note that both `source_location` and `target_location` are relative to the scope of expansion.
+/// In the case of a nested expansion, both describe the location relative only to that
+/// level of expansion and *not* the original program.
+#[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[pyclass(name = "InstructionSourceMapEntry", module = "quil.program", frozen)]
+pub(crate) struct InstructionSourceMapEntry(SourceMapEntry<InstructionIndex, FlatExpansionResult>);
+
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
-impl MaybeCalibrationExpansion {
-    #[gen_stub(override_return_type(type_repr = "tuple[CalibrationExpansion, builtins.int]"))]
-    fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
-        match self {
-            Self::Expanded(value) => (value.clone(),).into_pyobject(py),
-            Self::Unexpanded(value) => (value,).into_pyobject(py),
+impl InstructionSourceMapEntry {
+    /// The instruction index within the source program's body instructions.
+    pub fn source_location(&self) -> InstructionIndex {
+        *self.0.source_location()
+    }
+
+    /// The location of the expanded instruction within the target program's body instructions.
+    pub fn target_location(&self) -> FlatExpansionResult {
+        self.0.target_location().clone()
+    }
+}
+
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl InstructionSourceMap {
+    fn entries(&self) -> Vec<InstructionSourceMapEntry> {
+        self.0
+            .entries
+            .iter()
+            .cloned()
+            .map(InstructionSourceMapEntry)
+            .collect()
+    }
+
+    /// Return all source ranges in the source map
+    /// which were used to generate the target index.
+    ///
+    /// This is `O(n)` where `n` is the number of first-level expansions performed,
+    /// which is at worst `O(i)` where `i` is the number of source instructions.
+    fn list_sources_for_target_index(
+        &self,
+        target_index: InstructionIndex,
+    ) -> Vec<&InstructionIndex> {
+        self.0.list_sources(&target_index)
+    }
+
+    /// Given a particular calibration (`DEFCAL` or `DEFCAL MEASURE`), =
+    /// return the locations in the source which were expanded using that calibration.
+    ///
+    /// This is `O(n)` where `n` is the number of first-level calibration expansions performed,
+    /// which is at worst `O(i)` where `i` is the number of source instructions.
+    fn list_sources_for_calibration_used(
+        &self,
+        calibration_used: CalibrationSource,
+    ) -> Vec<&InstructionIndex> {
+        self.0.list_sources(&calibration_used)
+    }
+
+    /// Given a gate signature, return the locations in the source program which were
+    /// expanded using that gate signature.
+    ///
+    /// This is `O(n)` where `n` is the number of first-level sequence gate expansions performed,
+    /// which is at worst `O(i)` where `i` is the number of source instructions.
+    pub fn list_sources_for_gate_expansion(
+        &self,
+        gate_signature: OwnedGateSignature,
+    ) -> Vec<&InstructionIndex> {
+        self.0.list_sources(&gate_signature)
+    }
+
+    /// Return all target ranges which were used to generate the source range.
+    ///
+    /// This is `O(n)` where `n` is the number of first-level expansions performed,
+    /// which is at worst `O(i)` where `i` is the number of source instructions.
+    fn list_targets_for_source_index(
+        &self,
+        source_index: InstructionIndex,
+    ) -> Vec<FlatExpansionResult> {
+        self.0
+            .list_targets(&source_index)
+            .into_iter()
+            .cloned()
+            .collect()
+    }
+}
+
+impl<R: Into<FlatExpansionResult> + Clone> From<SourceMap<InstructionIndex, ExpansionResult<R>>>
+    for InstructionSourceMap
+{
+    fn from(value: SourceMap<InstructionIndex, ExpansionResult<R>>) -> Self {
+        let entries = value
+            .entries
+            .into_iter()
+            .map(|entry| SourceMapEntry {
+                source_location: entry.source_location,
+                target_location: FlatExpansionResult::from(entry.target_location),
+            })
+            .collect();
+        InstructionSourceMap(SourceMap::new(entries))
+    }
+}
+
+impl<R: Into<FlatExpansionResult> + Clone> From<&SourceMap<InstructionIndex, ExpansionResult<R>>>
+    for InstructionSourceMap
+{
+    fn from(value: &SourceMap<InstructionIndex, ExpansionResult<R>>) -> Self {
+        let entries = value
+            .entries
+            .iter()
+            .map(|entry| SourceMapEntry {
+                source_location: *entry.source_location(),
+                target_location: FlatExpansionResult::from(entry.target_location()),
+            })
+            .collect();
+        InstructionSourceMap(SourceMap::new(entries))
+    }
+}
+
+/// [`DefGateSequenceExpansion`] references data from [`quil_rs::instruction::GateDefinition`]s used to expand instructions.
+/// As such, it is incompatible with Python's memory management,
+/// so we define an owned type here.
+#[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[pyo3::pyclass(module = "quil.program", eq)]
+pub struct OwnedDefGateSequenceExpansion {
+    /// The signature of the sequence gate definition which was used to expand the instruction.
+    #[pyo3(get)]
+    source_signature: OwnedGateSignature,
+    range: Range<InstructionIndex>,
+    nested_expansions: SourceMap<InstructionIndex, ExpansionResult<OwnedDefGateSequenceExpansion>>,
+}
+
+impl<'a> From<&'a DefGateSequenceExpansion<'a>> for OwnedDefGateSequenceExpansion {
+    fn from(value: &'a DefGateSequenceExpansion<'a>) -> Self {
+        Self {
+            source_signature: value.source_signature().clone().into(),
+            range: value.range().clone(),
+            nested_expansions: SourceMap::new(
+                value
+                    .nested_expansions()
+                    .entries()
+                    .iter()
+                    .map(|entry| {
+                        let target_location = entry.target_location();
+                        SourceMapEntry {
+                            source_location: *entry.source_location(),
+                            target_location: match target_location {
+                                ExpansionResult::Unmodified(index) => {
+                                    ExpansionResult::Unmodified(*index)
+                                }
+                                ExpansionResult::Rewritten(rewrite) => ExpansionResult::Rewritten(
+                                    OwnedDefGateSequenceExpansion::from(rewrite),
+                                ),
+                            },
+                        }
+                    })
+                    .collect(),
+            ),
         }
     }
 }
 
-/// Creates Python wrappers for `SourceMap<$srcT, $tgtT>` and `SourceMapEntry<$T, $U>`,
-/// then implements `pymethods` for them to forward to the inner type.
-/// This is necessary because a `#[pyclass]` can't have generic parameters,
-/// and concrete implementations must be generated explicitly.
-///
-/// The syntax of the macro is meant to look like a regular newtype declaration
-/// for a wrappers around the above types, except you can't specify the `SourceMapEntry` types
-/// (they're forced to match the types for the `SourceMap` itself).
-/// The structs automatically get `#[pyclass]` and `#[derive(Clone, Debug, PartialEq)]`,
-/// but you can add additional annotations as desired, e.g. to change the Python name and module:
-///
-/// ```ignore
-/// py_source_map! {
-///     #[pyo3(name = "CalibrationExpansionSourceMap", module = "quil.program", frozen)]
-///     pub struct PyCalibrationExpansionSourceMap(SourceMap<InstructionIndex, MaybeCalibrationExpansion>);
-///
-///     #[pyo3(name = "CalibrationExpansionSourceMapEntry", module = "quil.program", frozen)]
-///     pub struct PyCalibrationExpansionSourceMapEntry(SourceMapEntry<...>);
-/// }
-/// ```
-macro_rules! py_source_map {
-    (
-        $(#[$meta_map: meta])*
-        $mapvis:vis struct $mapT: ident(SourceMap<$srcT: ty, $tgtT: ty>);
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[pymethods]
+impl OwnedDefGateSequenceExpansion {
+    /// The range of instructions in the expanded list which were generated by this expansion.
+    #[gen_stub(override_return_type(type_repr = "range"))]
+    #[getter(range)]
+    pub fn py_range<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyRange>> {
+        PyRange::new(
+            py,
+            self.range.start.0.try_into()?,
+            self.range.end.0.try_into()?,
+        )
+    }
 
-        $(#[$meta_entry: meta])*
-        $entryvis:vis struct $entryT: ident(SourceMapEntry<...>);
-    ) => {
-        #[derive(Clone, Debug, PartialEq)]
-        #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-        #[pyclass]
-        $(#[$meta_map])*
-        $mapvis struct $mapT(pub SourceMap<$srcT, $tgtT>);
-
-        #[derive(Clone, Debug, PartialEq)]
-        #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-        #[pyclass]
-        $(#[$meta_entry])*
-        $entryvis struct $entryT(pub SourceMapEntry<$srcT, $tgtT>);
-
-        #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-        #[pymethods]
-        impl $entryT {
-            /// The instruction index within the source program's body instructions.
-            pub fn source_location(&self) -> $srcT {
-                *self.0.source_location()
-            }
-
-            /// The location of the expanded instruction within the target
-            /// program's body instructions.
-            pub fn target_location(&self) -> $tgtT {
-                self.0.target_location().clone()
-            }
-        }
-
-        #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-        #[pymethods]
-        impl $mapT {
-            fn entries(&self) -> Vec<$entryT> {
-                self.0
-                    .entries()
-                    .iter()
-                    .map(|entry| $entryT(entry.clone()))
-                    .collect()
-            }
-
-            /// Return all source ranges in the source map
-            /// which were used to generate the target index.
-            ///
-            /// This is `O(n)` where `n` is the number of entries in the map.
-            fn list_sources_for_target_index(&self, target_index: $srcT) -> Vec<&$srcT> {
-                self.0.list_sources(&target_index)
-            }
-
-            /// Given a particular calibration (`DEFCAL` or `DEFCAL MEASURE`), =
-            /// return the locations in the source which were expanded using that calibration.
-            ///
-            /// This is `O(n)` where `n` is the number of first-level calibration expansions performed.
-            fn list_sources_for_calibration_used(
-                &self,
-                calibration_used: CalibrationSource,
-            ) -> Vec<&$srcT> {
-                self.0.list_sources(&calibration_used)
-            }
-
-            /// Return all target ranges which were used to generate the source range.
-            ///
-            /// This is `O(n)` where `n` is the number of entries in the map.
-            fn list_targets_for_source_index(&self, source_index: $srcT) -> Vec<$tgtT> {
-                self.0
-                    .list_targets(&source_index)
-                    .into_iter()
-                    .map(|ext| ext.clone())
-                    .collect()
-            }
-        }
-    };
+    /// The source map describing the nested expansions made.
+    #[pyo3(name = "expansions")]
+    fn py_expansions(&self) -> InstructionSourceMap {
+        (&self.nested_expansions).into()
+    }
 }
 
-py_source_map! {
-    #[pyo3(name = "CalibrationExpansionSourceMap", module = "quil.program", frozen)]
-    pub(crate) struct PyCalibrationExpansionSourceMap(SourceMap<InstructionIndex, CalibrationExpansion>);
-
-    /// A description of the expansion of one instruction into other instructions.
-    ///
-    /// If present, the instruction located at `source_location` was expanded using calibrations
-    /// into the instructions located at `target_location`.
-    ///
-    /// Note that both `source_location` and `target_location` are relative to the scope of expansion.
-    ///
-    /// In the case of a nested expansion, both describe the location relative only to that
-    /// level of expansion and *not* the original program.
-    ///
-    /// Consider the following example:
-    ///
-    /// ```python
-    /// DEFCAL A:
-    ///     NOP
-    ///     B
-    ///     HALT
-    ///
-    ///
-    /// DEFCAL B:
-    ///     NOP
-    ///     WAIT
-    ///
-    /// NOP
-    /// NOP
-    /// NOP
-    /// A
-    /// ```
-    ///
-    /// In this program, `A` will expand into `NOP`, `B`, and `HALT`.
-    /// Then, `B` will expand into `NOP` and `WAIT`.
-    /// Each level of this expansion
-    /// will have its own ``CalibrationExpansionSourceMap`` describing the expansion.
-    /// In the map of `B` to `NOP` and `WAIT`, the `source_location` will be `1`
-    /// because `B` is the second instruction in `DEFCAL A`,
-    /// even though `A` is the 4th instruction (index = 3) in the original program.
-    #[pyo3(name = "CalibrationExpansionSourceMapEntry", module = "quil.program", frozen)]
-    pub(crate) struct PyCalibrationExpansionSourceMapEntry(SourceMapEntry<...>);
+/// The result of having expanded a certain instruction within a program.
+///
+/// - `calibration`: The instruction has a matching Quil-T calibration and was expanded by it into
+///   other instructions, as described by a `CalibrationExpansion`.
+/// - `defgate_sequence`: The instruction has a matching `DEFGATE ... AS SEQUENCE` and was expanded
+///   by it into other instructions, as described by a `DefGateSequenceExpansion`.
+/// - `unmodified`: The instruction was not expanded and is described by an integer, the index of the instruction
+///   within the resulting program's body instructions.
+//
+// Note, should we want to support rewrites from Python, we can expose an additional
+// pyo3 type that wraps classes implementing the required Python interface. See the pyo3
+// [trait bound](https://pyo3.rs/main/trait-bounds.html) documentation.
+#[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
+#[pyo3::pyclass(name = "InstructionTarget", module = "quil.program", eq, frozen)]
+pub enum FlatExpansionResult {
+    Unmodified(InstructionIndex),
+    Calibration(CalibrationExpansion),
+    DefGateSequence(OwnedDefGateSequenceExpansion),
 }
 
-py_source_map! {
-    #[pyo3(name = "ProgramCalibrationExpansionSourceMap", module = "quil.program", frozen)]
-    pub(crate) struct PyProgramCalibrationExpansionSourceMap(SourceMap<InstructionIndex, MaybeCalibrationExpansion>);
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl FlatExpansionResult {
+    #[gen_stub(override_return_type(type_repr = "tuple[CalibrationExpansion, builtins.int]"))]
+    fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+        match self {
+            Self::Unmodified(value) => (value,).into_pyobject(py),
+            Self::Calibration(value) => (value.clone(),).into_pyobject(py),
+            Self::DefGateSequence(value) => (value.clone(),).into_pyobject(py),
+        }
+    }
+}
 
-    #[pyo3(name = "ProgramCalibrationExpansionSourceMapEntry", module = "quil.program", frozen)]
-    pub(crate) struct PyProgramCalibrationExpansionSourceMapEntry(SourceMapEntry<...>);
+impl From<CalibrationExpansion> for FlatExpansionResult {
+    fn from(value: CalibrationExpansion) -> Self {
+        Self::Calibration(value)
+    }
+}
+
+impl<'a> From<DefGateSequenceExpansion<'a>> for FlatExpansionResult {
+    fn from(value: DefGateSequenceExpansion<'a>) -> Self {
+        Self::DefGateSequence(OwnedDefGateSequenceExpansion::from(&value))
+    }
+}
+
+impl From<OwnedDefGateSequenceExpansion> for FlatExpansionResult {
+    fn from(value: OwnedDefGateSequenceExpansion) -> Self {
+        Self::DefGateSequence(value)
+    }
+}
+
+impl<R: Into<FlatExpansionResult> + Clone> From<&ExpansionResult<R>> for FlatExpansionResult {
+    fn from(value: &ExpansionResult<R>) -> Self {
+        match value {
+            ExpansionResult::Unmodified(index) => Self::Unmodified(*index),
+            ExpansionResult::Rewritten(rewrite) => rewrite.clone().into(),
+        }
+    }
+}
+
+impl<R: Into<FlatExpansionResult>> From<ExpansionResult<R>> for FlatExpansionResult {
+    fn from(value: ExpansionResult<R>) -> Self {
+        match value {
+            ExpansionResult::Unmodified(index) => Self::Unmodified(index),
+            ExpansionResult::Rewritten(rewrite) => rewrite.into(),
+        }
+    }
+}
+
+impl SourceMapIndexable<InstructionIndex> for FlatExpansionResult {
+    fn contains(&self, other: &InstructionIndex) -> bool {
+        match self {
+            Self::Unmodified(index) => index == other,
+            Self::Calibration(expansion) => expansion.contains(other),
+            Self::DefGateSequence(expansion) => expansion.contains(other),
+        }
+    }
+}
+
+impl SourceMapIndexable<CalibrationSource> for FlatExpansionResult {
+    fn contains(&self, other: &CalibrationSource) -> bool {
+        if let Self::Calibration(expansion) = self {
+            expansion.contains(other)
+        } else {
+            false
+        }
+    }
+}
+
+impl SourceMapIndexable<InstructionIndex> for OwnedDefGateSequenceExpansion {
+    fn contains(&self, other: &InstructionIndex) -> bool {
+        self.range.contains(other)
+    }
+}
+
+impl SourceMapIndexable<OwnedGateSignature> for OwnedDefGateSequenceExpansion {
+    fn contains(&self, other: &OwnedGateSignature) -> bool {
+        &self.source_signature == other
+    }
+}
+
+impl<R> SourceMapIndexable<OwnedGateSignature> for ExpansionResult<R>
+where
+    R: SourceMapIndexable<OwnedGateSignature>,
+{
+    fn contains(&self, other: &OwnedGateSignature) -> bool {
+        if let Self::Rewritten(rewrite) = self {
+            rewrite.contains(other)
+        } else {
+            false
+        }
+    }
+}
+
+impl SourceMapIndexable<OwnedGateSignature> for FlatExpansionResult {
+    fn contains(&self, other: &OwnedGateSignature) -> bool {
+        if let Self::DefGateSequence(expansion) = self {
+            expansion.contains(other)
+        } else {
+            false
+        }
+    }
 }
 
 #[derive(FromPyObject, IntoPyObject, IntoPyObjectRef)]
