@@ -242,15 +242,16 @@ impl Instruction {
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum InstructionRole {
     /// An instruction that is relevant to the superstructure of the program but not to
-    /// [Quil-T][]–level execution, such as [`DECLARE`][Instruction::Declare].
+    /// [Quil-T][]–level execution; for example, [`DECLARE`][Instruction::Declare].
     ///
     /// Note the callout of Quil-T above: the most surprising entries in this category, [by
     /// default][DefaultHandler], are *[gate application][Instruction::Gate] and
     /// [`MEASURE`][Instruction::Measurement]*.  This is because Quil-T expects all
     /// gates/measurements to be expanded through
-    /// [`DEFCAL`][Instruction::CalibrationDefinition]/[`DEFCALMEASURE`][Instruction::MeasureCalibrationDefinition]
-    /// (or, for gates, through [`DEFGATE`][Instruction::GateDefinition`] or
-    /// [`DEFCIRCUIT`][Instruction::CircuitDefinition] until they can be calibrated).
+    /// [`DEFCAL`][Instruction::CalibrationDefinition]/[`DEFCAL
+    /// MEASURE`][Instruction::MeasureCalibrationDefinition] (or, for gates, through
+    /// [`DEFGATE`][Instruction::GateDefinition`] or [`DEFCIRCUIT`][Instruction::CircuitDefinition]
+    /// until they can be calibrated).
     ///
     /// [Quil-T]: https://quil-lang.github.io/#12Annex-T--Pulse-Level-Control
     ProgramComposition,
