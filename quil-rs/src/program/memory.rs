@@ -77,8 +77,8 @@ impl MemoryAccesses {
         Self::new()
     }
 
-    pub fn union(mut self, rhs: MemoryAccesses) -> Self {
-        let MemoryAccesses {
+    pub fn union(mut self, rhs: Self) -> Self {
+        let Self {
             captures,
             reads,
             writes,
