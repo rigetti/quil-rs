@@ -6,7 +6,8 @@ from collections import deque
 from dataclasses import dataclass
 from itertools import chain
 from pathlib import Path
-from typing import Iterator, TypeAlias, Self
+from typing import Iterator, TypeAlias
+from typing_extensions import Self
 import logging
 import re
 
