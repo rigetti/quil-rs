@@ -356,6 +356,36 @@ impl Program {
     }
 }
 
+// Define methods that we should not call from Rust
+#[expect(deprecated)]
+mod python_only {
+    use super::*;
+
+    #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+    #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+    #[pymethods]
+    impl Program {
+        // These docs are copied from [`Program::simplify`].
+        /// Simplify this program into a new [`Program`] which contains only instructions
+        /// and definitions which are executed; effectively, perform dead code removal.
+        ///
+        /// Removes:
+        /// - All calibrations, following calibration expansion
+        /// - Frame definitions which are not used by any instruction such as `PULSE` or `CAPTURE`
+        /// - Waveform definitions which are not used by any instruction
+        /// - `PRAGMA EXTERN` instructions which are not used by any `CALL` instruction (see
+        ///   [`Program::extern_pragma_map`]).
+        ///
+        /// When a valid program is simplified, it remains valid.
+        #[deprecated = "Use `Program::simplify` instead; \
+                        this method only exists to be exposed to Python."]
+        #[pyo3(name = "into_simplified")]
+        fn py_into_simplified(&self) -> Result<Self> {
+            self.simplify(&DefaultHandler)
+        }
+    }
+}
+
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl Calibrations {
