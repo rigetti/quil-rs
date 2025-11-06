@@ -17,7 +17,7 @@ on:
         options:
           - release
           - prerelease
-          - dry-run 
+          - dry-run
 
 jobs:
   release:
