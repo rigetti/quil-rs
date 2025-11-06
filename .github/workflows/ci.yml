@@ -104,7 +104,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ matrix.platform.venv }}
-          key: ${{ runner.os }}-venv-${{ hashFiles('**/poetry.lock') }}
+          key: ${{ runner.os }}-${{ matrix.python-version }}-venv-${{ hashFiles('**/poetry.lock') }}
 
       - name: Install Python dev dependencies
         run: cargo make --cwd quil-rs install-quil-deps
