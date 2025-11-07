@@ -22,36 +22,43 @@ use std::str::FromStr;
 use indexmap::{IndexMap, IndexSet};
 use ndarray::Array2;
 use nom_locate::LocatedSpan;
+use petgraph::algo::DfsSpace;
+use petgraph::Graph;
 
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::instruction::{
-    Arithmetic, ArithmeticOperand, ArithmeticOperator, Call, Declaration, ExternError,
-    ExternPragmaMap, ExternSignatureMap, FrameDefinition, FrameIdentifier, GateDefinition,
-    GateError, Instruction, InstructionHandler, Jump, JumpUnless, Label, Matrix, MemoryReference,
-    Move, Pragma, Qubit, QubitPlaceholder, ScalarType, Target, TargetPlaceholder, Vector, Waveform,
-    WaveformDefinition, RESERVED_PRAGMA_EXTERN,
+    Arithmetic, ArithmeticOperand, ArithmeticOperator, Call, Declaration,
+    DefGateSequenceExpansionError, ExternError, ExternPragmaMap, ExternSignatureMap,
+    FrameDefinition, FrameIdentifier, GateDefinition, GateError, GateSpecification, Instruction,
+    InstructionHandler, Jump, JumpUnless, Label, Matrix, MemoryReference, Move, Pragma, Qubit,
+    QubitPlaceholder, ScalarType, Target, TargetPlaceholder, Vector, Waveform, WaveformDefinition,
+    RESERVED_PRAGMA_EXTERN,
 };
 use crate::parser::{lex, parse_instructions, ParseError};
+use crate::program::defgate_sequence_expansion::{
+    ExpandedInstructionsWithSourceMap, ProgramDefGateSequenceExpander,
+};
 use crate::quil::Quil;
 
 pub use self::calibration::{
     CalibrationExpansion, CalibrationExpansionOutput, CalibrationSource, Calibrations,
-    MaybeCalibrationExpansion,
 };
 pub use self::calibration_set::CalibrationSet;
+pub use self::defgate_sequence_expansion::DefGateSequenceExpansion;
 pub use self::error::{
     disallow_leftover, map_parsed, recover, LeftoverError, ParseProgramError, SyntaxError,
 };
 pub use self::frame::FrameSet;
 pub use self::frame::MatchedFrames;
 pub use self::memory::{MemoryAccesses, MemoryAccessesError, MemoryRegion};
-pub use self::source_map::{SourceMap, SourceMapEntry};
+pub use self::source_map::{ExpansionResult, SourceMap, SourceMapEntry, SourceMapIndexable};
 
 pub mod analysis;
 mod calibration;
 mod calibration_set;
+mod defgate_sequence_expansion;
 mod error;
 pub(crate) mod frame;
 mod memory;
@@ -79,6 +86,9 @@ pub enum ProgramError {
 
     #[error("{0}")]
     GateError(#[from] GateError),
+
+    #[error(transparent)]
+    DefGateSequenceExpansionError(#[from] DefGateSequenceExpansionError),
 
     #[error("can only compute program unitary for programs composed of `Gate`s; found unsupported instruction: {}", .0.to_quil_or_debug())]
     UnsupportedForUnitary(Instruction),
@@ -124,7 +134,7 @@ impl Program {
         Program::default()
     }
 
-    /// Return a deep copy of the `Program`, but without the body instructions.
+    /// Like `Clone`, but does not clone the body instructions.
     pub fn clone_without_body_instructions(&self) -> Self {
         Self {
             calibrations: self.calibrations.clone(),
@@ -367,7 +377,7 @@ impl Program {
     #[cfg(test)]
     pub(crate) fn for_each_body_instruction<F>(&mut self, closure: F)
     where
-        F: FnMut(&mut Instruction),
+        F: Fn(&mut Instruction),
     {
         let mut instructions = std::mem::take(&mut self.instructions);
         self.used_qubits.clear();
@@ -399,14 +409,16 @@ impl Program {
 
     /// Expand any instructions in the program which have a matching calibration, leaving the others
     /// unchanged. Return the expanded copy of the program and a source mapping of the expansions made.
-    pub fn expand_calibrations_with_source_map(&self) -> Result<ProgramCalibrationExpansion> {
+    pub fn expand_calibrations_with_source_map(
+        &self,
+    ) -> Result<(
+        Program,
+        SourceMap<InstructionIndex, ExpansionResult<CalibrationExpansion>>,
+    )> {
         let mut source_mapping = ProgramCalibrationExpansionSourceMap::default();
         let new_program = self.expand_calibrations_inner(Some(&mut source_mapping))?;
 
-        Ok(ProgramCalibrationExpansion {
-            program: new_program,
-            source_map: source_mapping,
-        })
+        Ok((new_program, source_mapping))
     }
 
     /// Expand calibrations, writing expansions to a [`SourceMap`] if provided.
@@ -445,9 +457,9 @@ impl Program {
                     if let Some(source_mapping) = source_mapping.as_mut() {
                         source_mapping.entries.push(SourceMapEntry {
                             source_location: index,
-                            target_location: MaybeCalibrationExpansion::Unexpanded(
-                                InstructionIndex(new_program.instructions.len() - 1),
-                            ),
+                            target_location: ExpansionResult::Unmodified(InstructionIndex(
+                                new_program.instructions.len() - 1,
+                            )),
                         });
                     }
                 }
@@ -455,6 +467,174 @@ impl Program {
         }
 
         Ok(new_program)
+    }
+
+    /// Expand any `DefGateSequence` instructions in the program, leaving the others unchanged.
+    /// Return the expanded copy of the program. Any sequence gate definitions that are included
+    /// by the filter are removed from the program's gate definitions, unless they are referenced
+    /// by unexpanded sequence gate definitions.
+    ///
+    /// The `filter` that determines which sequence gate definitions to keep in the
+    /// program. Gates are kept if the filter returns `true` for their name.
+    ///
+    /// # Example
+    ///
+    /// Below, we show the results of gate sequence expansion on a program that has two gate
+    /// sequence definitions. The first, `seq1`, has a matching calibration and we do not
+    /// want to expand it. The second, `seq2`, does not have a matching calibration and
+    /// we do want to expand it.
+    ///
+    //  NOTE: A similar example is documented in the Python documentation for `Program.expand_defgate_sequences`.
+    //  These examples should be kept in sync.
+    ///
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use quil_rs::program::Program;
+    /// use quil_rs::quil::Quil;
+    /// use std::collections::HashSet;
+    ///
+    /// let quil = r#"
+    /// DEFCAL seq1 0 1:
+    ///     FENCE 0 1
+    ///     NONBLOCKING PULSE 0 "rf" drag_gaussian(duration: 6.000000000000001e-08, fwhm: 1.5000000000000002e-08, t0: 3.0000000000000004e-08, anh: -190000000.0, alpha: -1.6453719598238201, scale: 0.168265925924524, phase: 0.0, detuning: 0)
+    ///     NONBLOCKING PULSE 1 "rf" drag_gaussian(duration: 6.000000000000001e-08, fwhm: 1.5000000000000002e-08, t0: 3.0000000000000004e-08, anh: -190000000.0, alpha: -1.6453719598238201, scale: 0.168265925924524, phase: 0.0, detuning: 0)
+    ///     FENCE 0 1
+    ///
+    /// DEFGATE seq1() a b AS SEQUENCE:
+    ///     RX(pi/2) a
+    ///     RX(pi/2) b
+    ///
+    /// DEFGATE seq2(%theta, %psi, %phi) a AS SEQUENCE:
+    ///     RZ(%theta) a
+    ///     RX(pi/2) a
+    ///     RZ(%psi) a
+    ///     RX(pi/2) a
+    ///     RZ(%phi) a
+    ///
+    ///  seq1 0 1
+    ///  seq2(1.5707963267948966, 3.141592653589793, 0) 0
+    ///  seq2(3.141592653589793, 0, 1.5707963267948966) 1
+    ///  "#;
+    ///
+    ///  let program: Program = quil.parse().unwrap();
+    ///  let calibrated_gate_names = program.calibrations.calibrations.iter().fold(HashSet::new(), |mut acc, calibration| {
+    ///     acc.insert(calibration.identifier.name.clone());
+    ///     acc
+    ///  });
+    ///
+    ///  let expanded_program = program.expand_defgate_sequences(|name| !calibrated_gate_names.contains(name)).unwrap();
+    ///
+    ///  let expected_quil = r#"
+    /// DEFCAL seq1 0 1:
+    ///     FENCE 0 1
+    ///     NONBLOCKING PULSE 0 "rf" drag_gaussian(duration: 6.000000000000001e-08, fwhm: 1.5000000000000002e-08, t0: 3.0000000000000004e-08, anh: -190000000.0, alpha: -1.6453719598238201, scale: 0.168265925924524, phase: 0.0, detuning: 0)
+    ///     NONBLOCKING PULSE 1 "rf" drag_gaussian(duration: 6.000000000000001e-08, fwhm: 1.5000000000000002e-08, t0: 3.0000000000000004e-08, anh: -190000000.0, alpha: -1.6453719598238201, scale: 0.168265925924524, phase: 0.0, detuning: 0)
+    ///     FENCE 0 1
+    ///
+    /// DEFGATE seq1 a b AS SEQUENCE:
+    ///     RX(pi/2) a
+    ///     RX(pi/2) b
+    ///
+    /// seq1 0 1
+    ///
+    /// RZ(1.5707963267948966) 0
+    /// RX(pi/2) 0
+    /// RZ(3.141592653589793) 0
+    /// RX(pi/2) 0
+    /// RZ(0) 0
+    ///
+    /// RZ(3.141592653589793) 1
+    /// RX(pi/2) 1
+    /// RZ(0) 1
+    /// RX(pi/2) 1
+    /// RZ(1.5707963267948966) 1
+    ///  "#;
+    ///
+    ///  let expected_program: Program = expected_quil.parse().unwrap();
+    ///
+    ///  assert_eq!(expanded_program, expected_program);
+    ///  # Ok(())
+    ///  # }
+    ///  ```
+    pub fn expand_defgate_sequences<F>(self, filter: F) -> Result<Self>
+    where
+        F: Fn(&str) -> bool,
+    {
+        let (expansion, gate_definitions) = self.initialize_defgate_sequence_expander(filter);
+        let new_instructions = expansion.expand(&self.instructions)?;
+
+        let mut new_program = Self {
+            calibrations: self.calibrations,
+            extern_pragma_map: self.extern_pragma_map,
+            frames: self.frames,
+            memory_regions: self.memory_regions,
+            waveforms: self.waveforms,
+            gate_definitions,
+            instructions: Vec::new(),
+            used_qubits: HashSet::new(),
+        };
+        new_program.add_instructions(new_instructions);
+        Ok(new_program)
+    }
+
+    /// Expand any sequence gate definitions in the program, leaving the others unchanged.
+    /// Return the expanded copy of the program and a source mapping of the expansions made.
+    /// Any sequence gate definitions that are included by the filter are removed from
+    /// the program's gate definitions, unless they are referenced by unexpanded
+    /// sequence gate definitions.
+    ///
+    /// # Arguments
+    ///
+    /// * `filter` - A filter that determines which sequence gate definitions to keep in the
+    ///   program. Gates are kept if the filter returns `true` for their name.
+    ///
+    /// See [`Program::expand_defgate_sequences`](Self::expand_defgate_sequences) for an example.
+    pub fn expand_defgate_sequences_with_source_map<F>(
+        &self,
+        filter: F,
+    ) -> Result<(
+        Self,
+        SourceMap<InstructionIndex, ExpansionResult<DefGateSequenceExpansion<'_>>>,
+    )>
+    where
+        F: Fn(&str) -> bool,
+    {
+        let (expander, gate_definitions) = self.initialize_defgate_sequence_expander(filter);
+        let ExpandedInstructionsWithSourceMap {
+            instructions: new_instructions,
+            source_map,
+        } = expander.expand_with_source_map(&self.instructions)?;
+
+        let mut new_program = Self {
+            calibrations: self.calibrations.clone(),
+            extern_pragma_map: self.extern_pragma_map.clone(),
+            frames: self.frames.clone(),
+            memory_regions: self.memory_regions.clone(),
+            waveforms: self.waveforms.clone(),
+            gate_definitions,
+            instructions: Vec::new(),
+            used_qubits: HashSet::new(),
+        };
+        new_program.add_instructions(new_instructions);
+        Ok((new_program, source_map))
+    }
+
+    fn initialize_defgate_sequence_expander<F>(
+        &self,
+        filter: F,
+    ) -> (
+        ProgramDefGateSequenceExpander<'_, F>,
+        IndexMap<String, GateDefinition>,
+    )
+    where
+        F: Fn(&str) -> bool,
+    {
+        let gate_definitions_to_keep =
+            filter_sequence_gate_definitions_to_keep(&self.gate_definitions, &filter);
+        let expansion = ProgramDefGateSequenceExpander::new(&self.gate_definitions, filter);
+        (expansion, gate_definitions_to_keep)
     }
 
     /// Append the result of a calibration expansion to this program, being aware of which expanded instructions
@@ -494,7 +674,7 @@ impl Program {
             if !expansion_output.detail.range.is_empty() {
                 source_mapping.entries.push(SourceMapEntry {
                     source_location: source_index,
-                    target_location: MaybeCalibrationExpansion::Expanded(expansion_output.detail),
+                    target_location: ExpansionResult::Rewritten(expansion_output.detail),
                 });
             }
         } else {
@@ -754,6 +934,74 @@ impl Program {
     }
 }
 
+/// Filter the sequence gate definitions in the program to keep only those that are
+/// excluded by the filter or are referenced by those that are excluded by the filter.
+///
+/// As with [`Program::expand_defgate_sequences`], gates are kept if the filter
+/// returns `true` for their name.
+fn filter_sequence_gate_definitions_to_keep<F>(
+    gate_definitions: &IndexMap<String, GateDefinition>,
+    filter: &F,
+) -> IndexMap<String, GateDefinition>
+where
+    F: Fn(&str) -> bool,
+{
+    let mut graph: Graph<usize, u8> = Graph::new();
+    let gate_sequence_definitions = gate_definitions
+        .iter()
+        .filter_map(|(gate_name, definition)| {
+            if let GateSpecification::Sequence(sequence) = &definition.specification {
+                Some((gate_name.clone(), sequence.clone()))
+            } else {
+                None
+            }
+        })
+        .map(|(gate_name, sequence)| (gate_name, (graph.add_node(1), sequence)))
+        .collect::<HashMap<_, _>>();
+
+    gate_sequence_definitions
+        .values()
+        .flat_map(|(i, sequence)| {
+            sequence.gates.iter().filter_map(|gate| {
+                if let Some((j, _)) = gate_sequence_definitions.get(&gate.name) {
+                    Some((*i, *j))
+                } else {
+                    None
+                }
+            })
+        })
+        .for_each(|edge| {
+            graph.add_edge(edge.0, edge.1, 1);
+        });
+
+    let mut space = DfsSpace::new(&graph);
+    let mut seq_defgates_referenced_by_unfiltered_seq_defgates = HashSet::new();
+
+    for (_, (i, _)) in gate_sequence_definitions
+        .iter()
+        .filter(|(name, _)| !filter(name))
+    {
+        for (gate_name, (j, _)) in &gate_sequence_definitions {
+            if petgraph::algo::has_path_connecting(&graph, *i, *j, Some(&mut space)) {
+                seq_defgates_referenced_by_unfiltered_seq_defgates.insert(gate_name.clone());
+            }
+        }
+    }
+
+    gate_definitions
+        .iter()
+        .filter(|(gate_name, definition)| {
+            if let GateSpecification::Sequence(_) = definition.specification {
+                !filter(gate_name)
+                    || seq_defgates_referenced_by_unfiltered_seq_defgates.contains(*gate_name)
+            } else {
+                true
+            }
+        })
+        .map(|(gate_name, definition)| (gate_name.clone(), definition.clone()))
+        .collect()
+}
+
 impl Quil for Program {
     fn write(
         &self,
@@ -830,40 +1078,27 @@ impl InstructionIndex {
     }
 }
 
-pub type ProgramCalibrationExpansionSourceMap =
-    SourceMap<InstructionIndex, MaybeCalibrationExpansion>;
-
-#[derive(Clone, Debug, PartialEq)]
-#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.program", eq, frozen))]
-#[cfg_attr(not(feature = "python"), strip_pyo3)]
-pub struct ProgramCalibrationExpansion {
-    /// The program containing the instructions.
-    #[pyo3(get)]
-    program: Program,
-    source_map: ProgramCalibrationExpansionSourceMap,
-}
-
-impl ProgramCalibrationExpansion {
-    pub fn source_map(&self) -> &ProgramCalibrationExpansionSourceMap {
-        &self.source_map
-    }
-}
+type ProgramCalibrationExpansionSourceMap =
+    SourceMap<InstructionIndex, ExpansionResult<CalibrationExpansion>>;
 
 #[cfg(test)]
 mod tests {
     use super::Program;
     use crate::{
+        expression::{
+            Expression, InfixExpression, InfixOperator, PrefixExpression, PrefixOperator,
+        },
         imag,
         instruction::{
-            CalibrationIdentifier, Call, Declaration, DefaultHandler, ExternSignatureMap, Gate,
-            Instruction, InstructionHandler, Jump, JumpUnless, JumpWhen, Label, Matrix,
-            MemoryReference, Qubit, QubitPlaceholder, ScalarType, Target, TargetPlaceholder,
-            UnresolvedCallArgument, Vector, RESERVED_PRAGMA_EXTERN,
+            CalibrationIdentifier, Call, Declaration, DefGateSequence, DefaultHandler,
+            ExternSignatureMap, Gate, GateDefinition, GateSpecification, Instruction,
+            InstructionHandler, Jump, JumpUnless, JumpWhen, Label, Matrix, MemoryReference, Qubit,
+            QubitPlaceholder, ScalarType, Target, TargetPlaceholder, UnresolvedCallArgument,
+            Vector, RESERVED_PRAGMA_EXTERN,
         },
         program::{
-            calibration::{CalibrationExpansion, CalibrationSource, MaybeCalibrationExpansion},
-            source_map::{SourceMap, SourceMapEntry},
+            calibration::{CalibrationExpansion, CalibrationSource},
+            source_map::{ExpansionResult, SourceMap, SourceMapEntry},
             InstructionIndex, MemoryAccesses,
         },
         quil::{Quil, INDENT},
@@ -871,9 +1106,11 @@ mod tests {
     };
     use approx::assert_abs_diff_eq;
     use insta::{assert_debug_snapshot, assert_snapshot};
+    use internment::ArcIntern;
     use ndarray::{array, linalg::kron, Array2};
     use num_complex::Complex64;
     use once_cell::sync::Lazy;
+
     use rstest::rstest;
     use std::{
         collections::{HashMap, HashSet},
@@ -1035,7 +1272,7 @@ NOP
             entries: vec![
                 SourceMapEntry {
                     source_location: InstructionIndex(0),
-                    target_location: MaybeCalibrationExpansion::Expanded(CalibrationExpansion {
+                    target_location: ExpansionResult::Rewritten(CalibrationExpansion {
                         calibration_used: CalibrationIdentifier {
                             name: "I".to_string(),
                             qubits: vec![Qubit::Fixed(0)],
@@ -1045,31 +1282,64 @@ NOP
                         .into(),
                         range: InstructionIndex(0)..InstructionIndex(3),
                         expansions: SourceMap {
-                            entries: vec![SourceMapEntry {
-                                source_location: InstructionIndex(0),
-                                target_location: CalibrationExpansion {
-                                    calibration_used: CalibrationSource::Calibration(
-                                        CalibrationIdentifier {
-                                            modifiers: vec![],
-                                            name: "DECLAREMEM".to_string(),
-                                            parameters: vec![],
-                                            qubits: vec![],
+                            entries: vec![
+                                SourceMapEntry {
+                                    source_location: InstructionIndex(0),
+                                    target_location: ExpansionResult::Rewritten(
+                                        CalibrationExpansion {
+                                            calibration_used: CalibrationSource::Calibration(
+                                                CalibrationIdentifier {
+                                                    modifiers: vec![],
+                                                    name: "DECLAREMEM".to_string(),
+                                                    parameters: vec![],
+                                                    qubits: vec![],
+                                                },
+                                            ),
+                                            range: InstructionIndex(0)..InstructionIndex(1),
+                                            expansions: SourceMap {
+                                                entries: vec![
+                                                    SourceMapEntry {
+                                                        source_location: InstructionIndex(0),
+                                                        target_location:
+                                                            ExpansionResult::Unmodified(
+                                                                InstructionIndex(0),
+                                                            ),
+                                                    },
+                                                    SourceMapEntry {
+                                                        source_location: InstructionIndex(1),
+                                                        target_location:
+                                                            ExpansionResult::Unmodified(
+                                                                InstructionIndex(1),
+                                                            ),
+                                                    },
+                                                ],
+                                            },
                                         },
                                     ),
-                                    range: InstructionIndex(0)..InstructionIndex(1),
-                                    expansions: SourceMap { entries: vec![] },
                                 },
-                            }],
+                                SourceMapEntry {
+                                    source_location: InstructionIndex(1),
+                                    target_location: ExpansionResult::Unmodified(InstructionIndex(
+                                        2,
+                                    )),
+                                },
+                                SourceMapEntry {
+                                    source_location: InstructionIndex(2),
+                                    target_location: ExpansionResult::Unmodified(InstructionIndex(
+                                        3,
+                                    )),
+                                },
+                            ],
                         },
                     }),
                 },
                 SourceMapEntry {
                     source_location: InstructionIndex(1),
-                    target_location: MaybeCalibrationExpansion::Unexpanded(InstructionIndex(3)),
+                    target_location: ExpansionResult::Unmodified(InstructionIndex(3)),
                 },
                 SourceMapEntry {
                     source_location: InstructionIndex(2),
-                    target_location: MaybeCalibrationExpansion::Expanded(CalibrationExpansion {
+                    target_location: ExpansionResult::Rewritten(CalibrationExpansion {
                         calibration_used: CalibrationIdentifier {
                             name: "I".to_string(),
                             qubits: vec![Qubit::Fixed(0)],
@@ -1079,21 +1349,54 @@ NOP
                         .into(),
                         range: InstructionIndex(4)..InstructionIndex(7),
                         expansions: SourceMap {
-                            entries: vec![SourceMapEntry {
-                                source_location: InstructionIndex(0),
-                                target_location: CalibrationExpansion {
-                                    calibration_used: CalibrationSource::Calibration(
-                                        CalibrationIdentifier {
-                                            modifiers: vec![],
-                                            name: "DECLAREMEM".to_string(),
-                                            parameters: vec![],
-                                            qubits: vec![],
+                            entries: vec![
+                                SourceMapEntry {
+                                    source_location: InstructionIndex(0),
+                                    target_location: ExpansionResult::Rewritten(
+                                        CalibrationExpansion {
+                                            calibration_used: CalibrationSource::Calibration(
+                                                CalibrationIdentifier {
+                                                    modifiers: vec![],
+                                                    name: "DECLAREMEM".to_string(),
+                                                    parameters: vec![],
+                                                    qubits: vec![],
+                                                },
+                                            ),
+                                            range: InstructionIndex(0)..InstructionIndex(1),
+                                            expansions: SourceMap {
+                                                entries: vec![
+                                                    SourceMapEntry {
+                                                        source_location: InstructionIndex(0),
+                                                        target_location:
+                                                            ExpansionResult::Unmodified(
+                                                                InstructionIndex(0),
+                                                            ),
+                                                    },
+                                                    SourceMapEntry {
+                                                        source_location: InstructionIndex(1),
+                                                        target_location:
+                                                            ExpansionResult::Unmodified(
+                                                                InstructionIndex(1),
+                                                            ),
+                                                    },
+                                                ],
+                                            },
                                         },
                                     ),
-                                    range: InstructionIndex(0)..InstructionIndex(1),
-                                    expansions: SourceMap { entries: vec![] },
                                 },
-                            }],
+                                SourceMapEntry {
+                                    source_location: InstructionIndex(1),
+                                    target_location: ExpansionResult::Unmodified(InstructionIndex(
+                                        2,
+                                    )),
+                                },
+                                SourceMapEntry {
+                                    source_location: InstructionIndex(2),
+                                    target_location: ExpansionResult::Unmodified(InstructionIndex(
+                                        3,
+                                    )),
+                                },
+                            ],
                         },
                     }),
                 },
@@ -1101,9 +1404,9 @@ NOP
         };
 
         let program = Program::from_str(input).unwrap();
-        let expanded_program = program.expand_calibrations_with_source_map().unwrap();
-        pretty_assertions::assert_eq!(expanded_program.program.to_quil().unwrap(), expected);
-        pretty_assertions::assert_eq!(expanded_program.source_map, expected_source_map);
+        let (expanded_program, source_map) = program.expand_calibrations_with_source_map().unwrap();
+        pretty_assertions::assert_eq!(expanded_program.to_quil().unwrap(), expected);
+        pretty_assertions::assert_eq!(source_map, expected_source_map);
     }
 
     #[test]
@@ -1890,5 +2193,211 @@ CALL foo octets[1] reals
             .to_quil()
             .expect("should be able to serialize program");
         assert_eq!(expected, reserialized);
+    }
+
+    /// Test that we can construct a sequence gate definition, add it to a program, and ensure
+    /// that the definition is included during [`Program::clone_without_body_instructions`].
+    #[test]
+    fn test_defgate_as_sequence_mechanics() {
+        let pi_divided_by_2 = Expression::Infix(InfixExpression {
+            operator: InfixOperator::Slash,
+            left: ArcIntern::new(Expression::PiConstant()),
+            right: ArcIntern::new(Expression::Number(Complex64 { re: 2.0, im: 0.0 })),
+        });
+        let negate_variable = |variable: String| {
+            Expression::Prefix(PrefixExpression {
+                operator: PrefixOperator::Minus,
+                expression: ArcIntern::new(Expression::Variable(variable)),
+            })
+        };
+        let new_gate = |gate_name: &str, param: Expression, qubit: String| {
+            Gate::new(gate_name, vec![param], vec![Qubit::Variable(qubit)], vec![])
+                .expect("must be a valid gate")
+        };
+        let pmw3 = |param_prefix: String, qubit: String| {
+            (0..3)
+                .flat_map(|i| {
+                    vec![
+                        new_gate(
+                            "RZ",
+                            Expression::Variable(format!("{param_prefix}{i}")),
+                            qubit.clone(),
+                        ),
+                        new_gate("RX", pi_divided_by_2.clone(), qubit.clone()),
+                        new_gate(
+                            "RZ",
+                            negate_variable(format!("{param_prefix}{i}")),
+                            qubit.clone(),
+                        ),
+                    ]
+                })
+                .collect::<Vec<_>>()
+        };
+        let gate_sequence = DefGateSequence::try_new(
+            ["q0", "q1"].map(String::from).to_vec(),
+            pmw3("theta".to_string(), "q0".to_string())
+                .into_iter()
+                .chain(pmw3("phi".to_string(), "q1".to_string()))
+                .collect(),
+        )
+        .expect("must be valid gate sequence");
+        let gate_definition = GateDefinition {
+            name: "PMW3".to_string(),
+            parameters: vec![
+                "theta0".to_string(),
+                "theta1".to_string(),
+                "theta2".to_string(),
+                "phi0".to_string(),
+                "phi1".to_string(),
+                "phi2".to_string(),
+            ],
+            specification: GateSpecification::Sequence(gate_sequence),
+        };
+        let mut program = Program::new();
+        program.add_instruction(Instruction::GateDefinition(gate_definition.clone()));
+        assert_eq!(program.gate_definitions.len(), 1);
+        assert_eq!(program.body_instructions().count(), 0);
+
+        let invocation = Gate::new(
+            "PMW3",
+            vec![
+                Expression::Address(MemoryReference {
+                    name: "theta".to_string(),
+                    index: 0,
+                }),
+                Expression::Address(MemoryReference {
+                    name: "theta".to_string(),
+                    index: 1,
+                }),
+                Expression::Address(MemoryReference {
+                    name: "theta".to_string(),
+                    index: 2,
+                }),
+                Expression::Address(MemoryReference {
+                    name: "phi".to_string(),
+                    index: 0,
+                }),
+                Expression::Address(MemoryReference {
+                    name: "phi".to_string(),
+                    index: 1,
+                }),
+                Expression::Address(MemoryReference {
+                    name: "phi".to_string(),
+                    index: 2,
+                }),
+            ],
+            vec![Qubit::Fixed(0), Qubit::Fixed(1)],
+            vec![],
+        )
+        .expect("must be a valid gate");
+        program.add_instruction(Instruction::Gate(invocation));
+        assert_eq!(program.body_instructions().count(), 1);
+
+        let program_copy = program.clone_without_body_instructions();
+        assert_eq!(program_copy.gate_definitions.len(), 1);
+        assert_eq!(
+            program_copy
+                .gate_definitions
+                .get("PMW3")
+                .expect("must exist"),
+            &gate_definition
+        );
+        assert_eq!(program_copy.body_instructions().count(), 0);
+    }
+
+    /// Test that we can expand a gate sequence definition in a program. Note, for more
+    /// comprehensive tests on gate sequence expansion and corresponding source maps,
+    /// see [`super::defgate_sequence_expansion::ProgramDefGateSequenceExpander`]
+    /// tests.
+    #[test]
+    fn test_gate_sequence_expansion() {
+        const QUIL: &str = r"
+DECLARE ro BIT[2]
+
+DEFGATE seq1(%param1) a AS SEQUENCE:
+    RZ(%param1) a
+
+DEFGATE seq2() a AS SEQUENCE:
+    X a
+
+seq1(pi/2) 0
+seq2 1
+
+MEASURE 0 ro[0]
+MEASURE 1 ro[1]
+";
+        let program = Program::from_str(QUIL).expect("should parse program");
+        let exclude = ["seq1"]
+            .into_iter()
+            .map(String::from)
+            .collect::<HashSet<_>>();
+        let filter = |key: &str| !exclude.contains(key);
+        let expanded_program = program
+            .expand_defgate_sequences(filter)
+            .expect("should expand gate sequences");
+        const EXPECTED: &str = r"
+DECLARE ro BIT[2]
+DEFGATE seq1(%param1) a AS SEQUENCE:
+    RZ(%param1) a
+
+seq1(pi/2) 0
+X 1
+MEASURE 0 ro[0]
+MEASURE 1 ro[1]
+";
+        let expected_program = Program::from_str(EXPECTED).expect("should parse expected program");
+        pretty_assertions::assert_eq!(expanded_program, expected_program);
+    }
+
+    /// Test that gate definitions that are referenced by unexpanded sequence gate definitions
+    /// are preserved.
+    #[test]
+    fn test_gate_sequence_expansion_preserves_referred_gates() {
+        const QUIL: &str = r"
+DECLARE ro BIT[2]
+
+DEFGATE seq1(%param1) a AS SEQUENCE:
+    RZ(%param1) a
+    seq2() a
+
+DEFGATE seq2() a AS SEQUENCE:
+    H a
+
+DEFGATE seq3() a AS SEQUENCE:
+    X a
+
+seq1(pi/2) 0
+seq2() 1
+seq3 2
+
+MEASURE 0 ro[0]
+MEASURE 1 ro[1]
+";
+        let program = Program::from_str(QUIL).expect("should parse program");
+        let exclude = ["seq1"]
+            .into_iter()
+            .map(String::from)
+            .collect::<HashSet<_>>();
+        let filter = |key: &str| !exclude.contains(key);
+        let expanded_program = program
+            .expand_defgate_sequences(filter)
+            .expect("should expand gate sequences");
+        const EXPECTED: &str = r"
+DECLARE ro BIT[2]
+DEFGATE seq1(%param1) a AS SEQUENCE:
+    RZ(%param1) a
+    seq2() a
+
+DEFGATE seq2() a AS SEQUENCE:
+    H a
+
+seq1(pi/2) 0
+H 1
+X 2
+MEASURE 0 ro[0]
+MEASURE 1 ro[1]
+";
+        let expected_program = Program::from_str(EXPECTED).expect("should parse expected program");
+        pretty_assertions::assert_eq!(expanded_program, expected_program);
     }
 }

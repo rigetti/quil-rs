@@ -6,11 +6,11 @@ from collections import defaultdict
 from collections.abc import ItemsView, KeysView, MutableMapping, MutableSet, ValuesView
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing_extensions import Self
 from typing import (
     Iterable,
     Iterator,
     TypeVar,
-    Self,
     overload,
 )
 import enum

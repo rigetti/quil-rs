@@ -8,10 +8,14 @@ use pyo3::{
 
 use super::*;
 use crate::{
+    instruction::gate::GateSignature,
     pickleable_new,
     quilpy::{errors::PickleError, fix_complex_enums, impl_repr, impl_to_quil},
     validation::identifier::IdentifierValidationError,
 };
+
+#[cfg(feature = "stubs")]
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 #[pymodule]
 #[pyo3(name = "instructions", module = "quil", submodule)]
@@ -27,6 +31,10 @@ pub(crate) fn init_submodule(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("CallError", py.get_type::<errors::CallError>())?;
     m.add("ExternError", py.get_type::<errors::ExternError>())?;
     m.add("GateError", py.get_type::<errors::GateError>())?;
+    m.add(
+        "DefGateSequenceError",
+        py.get_type::<errors::DefGateSequenceError>(),
+    )?;
     m.add(
         "ParseInstructionError",
         py.get_type::<errors::ParseInstructionError>(),
@@ -157,6 +165,7 @@ impl_instruction!([
     Convert,
     Declaration,
     Delay,
+    DefGateSequence[repr],
     Exchange,
     ExternParameter,
     ExternParameterType,
@@ -168,6 +177,7 @@ impl_instruction!([
     GateDefinition,
     GateModifier,
     GateSpecification,
+    GateType,
     Include,
     Instruction[repr + quil + parse],
     Jump,
@@ -181,6 +191,7 @@ impl_instruction!([
     MemoryReference[repr + quil + parse],
     Move,
     Offset,
+    OwnedGateSignature[repr],
     PauliGate[repr],
     PauliTerm[repr],
     PauliSum[repr],
@@ -496,19 +507,78 @@ impl Gate {
     }
 }
 
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl GateDefinition {
+    #[getter(signature)]
+    fn py_signature(&self) -> OwnedGateSignature {
+        self.signature().into()
+    }
+}
+
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl GateSpecification {
     #[gen_stub(override_return_type(
-        type_repr = "tuple[list[list[Expression]] | list[int] | PauliSum]"
+        type_repr = "tuple[list[list[Expression]] | list[int] | PauliSum | DefGateSequence]"
     ))]
     fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
         match self {
             Self::Matrix(value) => (value.clone(),).into_pyobject(py),
             Self::Permutation(value) => (value.clone(),).into_pyobject(py),
             Self::PauliSum(value) => (value.clone(),).into_pyobject(py),
+            Self::Sequence(value) => (value.clone(),).into_pyobject(py),
         }
+    }
+}
+
+/// A signature for a gate definition; this does not include the gate definition content.
+/// To get a signature from a definition, use `GateDefinition.signature`.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[pyo3::pyclass(
+    module = "quil.instructions",
+    name = "GateSignature",
+    eq,
+    frozen,
+    hash,
+    get_all,
+    subclass
+)]
+pub struct OwnedGateSignature {
+    name: String,
+    gate_parameters: Vec<String>,
+    qubit_parameters: Vec<String>,
+    gate_type: GateType,
+}
+
+pickleable_new! {
+    impl OwnedGateSignature {
+        fn new(name: String, gate_parameters: Vec<String>, qubit_parameters: Vec<String>, gate_type: GateType);
+    }
+}
+
+impl From<GateSignature<'_>> for OwnedGateSignature {
+    fn from(signature: GateSignature) -> Self {
+        OwnedGateSignature {
+            name: signature.name().to_string(),
+            gate_parameters: signature.gate_parameters().to_vec(),
+            qubit_parameters: signature.qubit_parameters().to_vec(),
+            gate_type: signature.gate_type(),
+        }
+    }
+}
+
+impl<'a> TryFrom<&'a OwnedGateSignature> for GateSignature<'a> {
+    type Error = GateError;
+    fn try_from(signature: &'a OwnedGateSignature) -> Result<Self, Self::Error> {
+        GateSignature::try_new(
+            &signature.name,
+            signature.gate_parameters.as_slice(),
+            signature.qubit_parameters.as_slice(),
+            signature.gate_type,
+        )
     }
 }
 
