@@ -43,10 +43,7 @@ impl FrameSet {
         self.frames.keys().collect()
     }
 
-    pub(crate) fn get_matching_keys_for_conditions<'s>(
-        &'s self,
-        condition: FrameMatchConditions,
-    ) -> MatchedFrames<'s> {
+    pub(crate) fn filter<'s>(&'s self, condition: FrameMatchConditions) -> MatchedFrames<'s> {
         let used = condition
             .used
             .map_or_else(HashSet::new, |c| self.get_matching_keys_for_condition(c));

@@ -12,13 +12,13 @@ use pyo3::{
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pymethods};
 
-use crate::instruction::quilpy::OwnedGateSignature;
-use crate::program::{DefGateSequenceExpansion, ExpansionResult};
 use crate::{
     instruction::{
-        CalibrationDefinition, Declaration, FrameAttributes, FrameIdentifier, Gate, Instruction,
-        MeasureCalibrationDefinition, Measurement, QubitPlaceholder, TargetPlaceholder,
+        quilpy::OwnedGateSignature, CalibrationDefinition, Declaration, DefaultHandler,
+        FrameAttributes, FrameIdentifier, Gate, Instruction, MeasureCalibrationDefinition,
+        Measurement, QubitPlaceholder, TargetPlaceholder,
     },
+    program::{DefGateSequenceExpansion, ExpansionResult},
     quil::Quil,
     quilpy::{fix_complex_enums, impl_repr, impl_to_quil},
 };
@@ -445,6 +445,23 @@ impl Program {
             };
 
         self.resolve_placeholders_with_custom_resolvers(rs_target_resolver, rs_qubit_resolver);
+    }
+
+    // These docs are copied from [`Program::simplify`].
+    /// Simplify this program into a new [`Program`] which contains only instructions
+    /// and definitions which are executed; effectively, perform dead code removal.
+    ///
+    /// Removes:
+    /// - All calibrations, following calibration expansion
+    /// - Frame definitions which are not used by any instruction such as `PULSE` or `CAPTURE`
+    /// - Waveform definitions which are not used by any instruction
+    /// - `PRAGMA EXTERN` instructions which are not used by any `CALL` instruction (see
+    ///   [`Program::extern_pragma_map`]).
+    ///
+    /// When a valid program is simplified, it remains valid.
+    #[pyo3(name = "into_simplified")]
+    fn py_into_simplified(&self) -> Result<Self> {
+        self.simplify(&DefaultHandler)
     }
 
     /// Return the unitary of a program.
@@ -1173,7 +1190,7 @@ impl BasicBlockOwned {
         program: &Program,
     ) -> std::result::Result<PyScheduleSeconds, BasicBlockScheduleError> {
         BasicBlock::from(self)
-            .as_schedule_seconds(program)
+            .as_schedule_seconds(program, &DefaultHandler)
             .map(PyScheduleSeconds)
     }
 
@@ -1193,7 +1210,8 @@ impl BasicBlockOwned {
         // TODO (#472): This copies everything twice: once to make the block,
         // and again for the graph. Then it throws them both away. There's got to be a better way.
         let block = BasicBlock::from(self);
-        QubitGraph::try_from(&block).map(|graph| graph.gate_depth(gate_minimum_qubit_count))
+        QubitGraph::try_from_basic_block(&block, &DefaultHandler)
+            .map(|graph| graph.gate_depth(gate_minimum_qubit_count))
     }
 
     /// The control flow terminator instruction of the block, if any.

@@ -420,6 +420,28 @@ impl std::hash::Hash for ComparisonOperand {
     }
 }
 
+pub trait ClassicalOperand: Clone + std::fmt::Debug {
+    fn memory_reference(&self) -> Option<&MemoryReference>;
+}
+
+macro_rules! classical_operands {
+    ($($operand:ident),* $(,)?) => {
+        $(
+            impl ClassicalOperand for $operand {
+                fn memory_reference(&self) -> Option<&MemoryReference> {
+                    if let Self::MemoryReference(memory_reference) = self {
+                        Some(memory_reference)
+                    } else {
+                        None
+                    }
+                }
+            }
+        )*
+    }
+}
+
+classical_operands! { ArithmeticOperand, BinaryOperand, ComparisonOperand }
+
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_enum)]
 #[cfg_attr(
