@@ -1089,6 +1089,11 @@ impl InstructionHandler for DefaultHandler {
             }
         }
 
+        // Memory accesses done by gate applications
+        fn gate_application(Gate { parameters, .. }: &Gate) -> MemoryAccesses {
+            read_all(parameters.iter().flat_map(Expression::memory_references))
+        }
+
         // The match
 
         Ok(match instruction {
@@ -1153,9 +1158,7 @@ impl InstructionHandler for DefaultHandler {
                 blocking: _,
                 frame: _,
             }) => read_all(waveform.memory_references()),
-            Instruction::Gate(Gate { parameters, .. }) => {
-                read_all(parameters.iter().flat_map(Expression::memory_references))
-            }
+            Instruction::Gate(gate) => gate_application(gate),
 
             // Capturing operations; the Quil-T variants may also read from memory.
             Instruction::Capture(Capture {
@@ -1236,6 +1239,10 @@ impl InstructionHandler for DefaultHandler {
                 GateSpecification::Permutation(_) | GateSpecification::PauliSum(_) => {
                     MemoryAccesses::none()
                 }
+                GateSpecification::Sequence(DefGateSequence { gates, qubits: _ }) => gates
+                    .iter()
+                    .map(gate_application)
+                    .fold(MemoryAccesses::new(), MemoryAccesses::union),
             },
             Instruction::CircuitDefinition(CircuitDefinition {
                 instructions,
