@@ -7,6 +7,7 @@ use pyo3::{
     prelude::*,
     types::{PyBytes, PyFunction, PyRange},
 };
+use rigetti_pyo3::{create_init_submodule, impl_repr};
 
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
@@ -17,7 +18,7 @@ use crate::{
         MeasureCalibrationDefinition, Measurement, QubitPlaceholder, TargetPlaceholder,
     },
     quil::Quil,
-    quilpy::{fix_complex_enums, impl_repr, impl_to_quil},
+    quilpy::{errors, impl_to_quil},
 };
 
 use super::{
@@ -31,111 +32,98 @@ use super::{
     SourceMap, SourceMapEntry,
 };
 
-/// The `quil.program` module contains classes for constructing and representing a Quil program.
-///
-/// # Examples
-///
-/// ## Source Mapping for Calibration Expansion
-///
-/// ```python
-/// import inspect
-/// from quil.program import Program
-///
-/// program_text = inspect.cleandoc(
-///     """
-///     DEFCAL X 0:
-///         Y 0
-///
-///     DEFCAL Y 0:
-///         Z 0
-///
-///     X 0 # This instruction is index 0
-///     Y 0 # This instruction is index 1
-///     """
-/// )
-///
-/// # First, we parse the program and expand its calibrations
-/// program = Program.parse(program_text)
-/// expansion = program.expand_calibrations_with_source_map()
-/// source_map = expansion.source_map()
-///
-/// # This is what we expect the expanded program to be. X and Y have each been replaced by Z.
-/// expected_program_text = inspect.cleandoc(
-///     """
-///     DEFCAL X 0:
-///         Y 0
-///
-///     DEFCAL Y 0:
-///         Z 0
-///
-///     Z 0 # This instruction is index 0
-///     Z 0 # This instruction is index 1
-///     """
-/// )
-/// assert expansion.program().to_quil() == Program.parse(expected_program_text).to_quil()
-///
-/// # In order to discover _which_ calibration led to the first Z in the resulting program, we
-/// # can interrogate the expansion source mapping.
-/// #
-/// # For instance, the X at index 0 should have been replaced with a Z at index 0.
-/// # Here's how we can confirm that:
-///
-/// # First, we list the calibration expansion targets for that first instruction...
-/// targets = source_map.list_targets_for_source_index(0)
-///
-/// # ...then we extract the expanded instruction.
-/// # If the instruction had _not_ been expanded (i.e. there was no matching calibration), then `as_expanded()` would return `None`.
-/// expanded = targets[0].as_expanded()
-///
-/// # This line shows how that `X 0` was expanded into instruction index 0 (only) within the expanded program.
-/// # The end of the range is exclusive.
-/// assert expanded.range() == range(0, 1)
-///
-/// # We can also map instructions in reverse: given an instruction index in the expanded program, we can find the source index.
-/// # This is useful for understanding the provenance of instructions in the expanded program.
-/// sources = source_map.list_sources_for_target_index(1)
-///
-/// # In this case, the instruction was expanded from the source program at index 1.
-/// assert sources == [1]
-/// ```
-#[pymodule]
-#[pyo3(name = "program", module = "quil", submodule)]
-pub(crate) fn init_submodule(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    use crate::quilpy::errors;
-
-    let py = m.py();
-    m.add("ProgramError", py.get_type::<errors::ProgramError>())?;
-    m.add(
-        "ComputedScheduleError",
-        py.get_type::<errors::ComputedScheduleError>(),
-    )?;
-    m.add(
-        "BasicBlockScheduleError",
-        py.get_type::<errors::BasicBlockScheduleError>(),
-    )?;
-    m.add("QubitGraphError", py.get_type::<errors::QubitGraphError>())?;
-
-    m.add_class::<BasicBlockOwned>()?; // Python name: BasicBlock
-    m.add_class::<CalibrationExpansion>()?;
-    m.add_class::<PyCalibrationExpansionSourceMap>()?; // Python: CalibrationExpansionSourceMap
-    m.add_class::<PyCalibrationExpansionSourceMapEntry>()?; // Python: CalibrationExpansionSourceMapEntry
-    m.add_class::<Calibrations>()?; // Python: CalibrationSet
-    m.add_class::<CalibrationSource>()?;
-    m.add_class::<ControlFlowGraphOwned>()?; // Python: ControlFlowGraph
-    m.add_class::<FrameSet>()?;
-    m.add_class::<MaybeCalibrationExpansion>()?;
-    m.add_class::<MemoryRegion>()?;
-    m.add_class::<Program>()?;
-    m.add_class::<ProgramCalibrationExpansion>()?;
-    m.add_class::<PyProgramCalibrationExpansionSourceMap>()?;
-    m.add_class::<PyProgramCalibrationExpansionSourceMapEntry>()?;
-    m.add_class::<PyScheduleSeconds>()?;
-    m.add_class::<ScheduleSecondsItem>()?;
-    m.add_class::<TimeSpanSeconds>()?;
-
-    fix_complex_enums!(py, CalibrationSource, MaybeCalibrationExpansion);
-
-    Ok(())
+create_init_submodule! {
+    /// The `quil.program` module contains classes for constructing and representing a Quil program.
+    ///
+    /// # Examples
+    ///
+    /// ## Source Mapping for Calibration Expansion
+    ///
+    /// ```python
+    /// import inspect
+    /// from quil.program import Program
+    ///
+    /// program_text = inspect.cleandoc(
+    ///     """
+    ///     DEFCAL X 0:
+    ///         Y 0
+    ///
+    ///     DEFCAL Y 0:
+    ///         Z 0
+    ///
+    ///     X 0 # This instruction is index 0
+    ///     Y 0 # This instruction is index 1
+    ///     """
+    /// )
+    ///
+    /// # First, we parse the program and expand its calibrations
+    /// program = Program.parse(program_text)
+    /// expansion = program.expand_calibrations_with_source_map()
+    /// source_map = expansion.source_map()
+    ///
+    /// # This is what we expect the expanded program to be. X and Y have each been replaced by Z.
+    /// expected_program_text = inspect.cleandoc(
+    ///     """
+    ///     DEFCAL X 0:
+    ///         Y 0
+    ///
+    ///     DEFCAL Y 0:
+    ///         Z 0
+    ///
+    ///     Z 0 # This instruction is index 0
+    ///     Z 0 # This instruction is index 1
+    ///     """
+    /// )
+    /// assert expansion.program().to_quil() == Program.parse(expected_program_text).to_quil()
+    ///
+    /// # In order to discover _which_ calibration led to the first Z in the resulting program, we
+    /// # can interrogate the expansion source mapping.
+    /// #
+    /// # For instance, the X at index 0 should have been replaced with a Z at index 0.
+    /// # Here's how we can confirm that:
+    ///
+    /// # First, we list the calibration expansion targets for that first instruction...
+    /// targets = source_map.list_targets_for_source_index(0)
+    ///
+    /// # ...then we extract the expanded instruction.
+    /// # If the instruction had _not_ been expanded (i.e. there was no matching calibration), then `as_expanded()` would return `None`.
+    /// expanded = targets[0].as_expanded()
+    ///
+    /// # This line shows how that `X 0` was expanded into instruction index 0 (only) within the expanded program.
+    /// # The end of the range is exclusive.
+    /// assert expanded.range() == range(0, 1)
+    ///
+    /// # We can also map instructions in reverse: given an instruction index in the expanded program, we can find the source index.
+    /// # This is useful for understanding the provenance of instructions in the expanded program.
+    /// sources = source_map.list_sources_for_target_index(1)
+    ///
+    /// # In this case, the instruction was expanded from the source program at index 1.
+    /// assert sources == [1]
+    /// ```
+    classes: [
+        BasicBlockOwned, // Python name: BasicBlock
+        CalibrationExpansion,
+        PyCalibrationExpansionSourceMap, // Python: CalibrationExpansionSourceMap
+        PyCalibrationExpansionSourceMapEntry, // Python: CalibrationExpansionSourceMapEntry
+        Calibrations, // Python: CalibrationSet
+        ControlFlowGraphOwned, // Python: ControlFlowGraph
+        FrameSet,
+        MemoryRegion,
+        Program,
+        ProgramCalibrationExpansion,
+        PyProgramCalibrationExpansionSourceMap,
+        PyProgramCalibrationExpansionSourceMapEntry,
+        PyScheduleSeconds,
+        ScheduleSecondsItem,
+        TimeSpanSeconds
+    ],
+    complex_enums: [ CalibrationSource, MaybeCalibrationExpansion ],
+    errors: [
+        errors::ProgramError,
+        errors::ComputedScheduleError,
+        errors::BasicBlockScheduleError,
+        errors::QubitGraphError
+    ],
 }
 
 impl_repr!(BasicBlockOwned);

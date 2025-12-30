@@ -37,9 +37,10 @@ optipy = "0.1.0"
 # Enabled with the "python" feature.
 numpy = { version = "0.27.1", optional = true }
 pyo3 = { version = "0.27.2", features = ["indexmap", "num-complex", "multiple-pymethods"], optional = true }
+rigetti-pyo3 = { git = "https://github.com/rigetti/rigetti-pyo3.git", rev = "refs/pull/62/head", optional = true }
 
 # Enabled with the "stubs" feature.
-pyo3-stub-gen = { version = "0.14.1", features = ["numpy"], optional = true }
+pyo3-stub-gen = { version = "0.17.2", features = ["numpy"], optional = true }
 
 [dev-dependencies]
 clap = { version = "4.3.19", features = ["derive", "string"] }
@@ -60,8 +61,8 @@ pyo3-build-config = { version = "0.27.2", optional = true }
 [features]
 graphviz-dot = ["dep:dot-writer"]
 wasm-bindgen = []
-python = [ "dep:numpy", "dep:pyo3", "dep:pyo3-build-config" ]
-stubs = [ "python", "dep:pyo3-stub-gen" ]
+python = [ "dep:numpy", "dep:pyo3", "dep:pyo3-build-config", "dep:rigetti-pyo3" ]
+stubs = [ "python", "dep:pyo3-stub-gen", "rigetti-pyo3/stubs" ]
 
 [[bench]]
 name = "parser"

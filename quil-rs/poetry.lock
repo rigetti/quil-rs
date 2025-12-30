@@ -533,4 +533,4 @@ dev = ["maturin", "mypy", "pdoc", "pytest", "ruff", "syrupy"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<4"
-content-hash = "f7b2a0c666095dd8d1f63f01345128aaa794005ce24dd667d944e8747762d514"
+content-hash = "75d259e18454688130f06a24e905f45096145e9cff41d10611efa757604b3566"
