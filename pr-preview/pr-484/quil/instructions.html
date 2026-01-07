@@ -83,13 +83,13 @@
                                 <a class="function" href="#Arithmetic.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
+                                <a class="variable" href="#Arithmetic.operator">operator</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#Arithmetic.destination">destination</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Arithmetic.source">source</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Arithmetic.operator">operator</a>
                         </li>
                 </ul>
 
@@ -185,10 +185,10 @@
                                 <a class="variable" href="#BinaryLogic.destination">destination</a>
                         </li>
                         <li>
-                                <a class="variable" href="#BinaryLogic.source">source</a>
+                                <a class="variable" href="#BinaryLogic.operator">operator</a>
                         </li>
                         <li>
-                                <a class="variable" href="#BinaryLogic.operator">operator</a>
+                                <a class="variable" href="#BinaryLogic.source">source</a>
                         </li>
                 </ul>
 
@@ -251,10 +251,10 @@
                                 <a class="variable" href="#CalibrationDefinition.instructions">instructions</a>
                         </li>
                         <li>
-                                <a class="variable" href="#CalibrationDefinition.parameters">parameters</a>
+                                <a class="variable" href="#CalibrationDefinition.name">name</a>
                         </li>
                         <li>
-                                <a class="variable" href="#CalibrationDefinition.qubits">qubits</a>
+                                <a class="variable" href="#CalibrationDefinition.parameters">parameters</a>
                         </li>
                         <li>
                                 <a class="variable" href="#CalibrationDefinition.modifiers">modifiers</a>
@@ -263,7 +263,7 @@
                                 <a class="variable" href="#CalibrationDefinition.identifier">identifier</a>
                         </li>
                         <li>
-                                <a class="variable" href="#CalibrationDefinition.name">name</a>
+                                <a class="variable" href="#CalibrationDefinition.qubits">qubits</a>
                         </li>
                 </ul>
 
@@ -281,13 +281,13 @@
                                 <a class="variable" href="#CalibrationIdentifier.name">name</a>
                         </li>
                         <li>
-                                <a class="variable" href="#CalibrationIdentifier.qubits">qubits</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#CalibrationIdentifier.parameters">parameters</a>
                         </li>
                         <li>
                                 <a class="variable" href="#CalibrationIdentifier.modifiers">modifiers</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#CalibrationIdentifier.qubits">qubits</a>
                         </li>
                 </ul>
 
@@ -302,10 +302,10 @@
                                 <a class="function" href="#Call.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Call.arguments">arguments</a>
+                                <a class="variable" href="#Call.name">name</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Call.name">name</a>
+                                <a class="variable" href="#Call.arguments">arguments</a>
                         </li>
                 </ul>
 
@@ -320,6 +320,9 @@
                                 <a class="function" href="#Capture.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
+                                <a class="variable" href="#Capture.blocking">blocking</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#Capture.memory_reference">memory_reference</a>
                         </li>
                         <li>
@@ -327,9 +330,6 @@
                         </li>
                         <li>
                                 <a class="variable" href="#Capture.waveform">waveform</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Capture.blocking">blocking</a>
                         </li>
                 </ul>
 
@@ -344,9 +344,6 @@
                                 <a class="function" href="#CircuitDefinition.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#CircuitDefinition.qubit_variables">qubit_variables</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#CircuitDefinition.parameters">parameters</a>
                         </li>
                         <li>
@@ -354,6 +351,9 @@
                         </li>
                         <li>
                                 <a class="variable" href="#CircuitDefinition.instructions">instructions</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#CircuitDefinition.qubit_variables">qubit_variables</a>
                         </li>
                 </ul>
 
@@ -368,13 +368,13 @@
                                 <a class="function" href="#Comparison.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Comparison.destination">destination</a>
+                                <a class="variable" href="#Comparison.operator">operator</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Comparison.rhs">rhs</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Comparison.operator">operator</a>
+                                <a class="variable" href="#Comparison.destination">destination</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Comparison.lhs">lhs</a>
@@ -449,10 +449,10 @@
                                 <a class="function" href="#Convert.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Convert.source">source</a>
+                                <a class="variable" href="#Convert.destination">destination</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Convert.destination">destination</a>
+                                <a class="variable" href="#Convert.source">source</a>
                         </li>
                 </ul>
 
@@ -467,13 +467,13 @@
                                 <a class="function" href="#Declaration.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
+                                <a class="variable" href="#Declaration.name">name</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#Declaration.size">size</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Declaration.sharing">sharing</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Declaration.name">name</a>
                         </li>
                 </ul>
 
@@ -488,13 +488,13 @@
                                 <a class="function" href="#Delay.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
+                                <a class="variable" href="#Delay.qubits">qubits</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#Delay.duration">duration</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Delay.frame_names">frame_names</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Delay.qubits">qubits</a>
                         </li>
                 </ul>
 
@@ -641,10 +641,10 @@
                                 <a class="function" href="#FrameIdentifier.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#FrameIdentifier.name">name</a>
+                                <a class="variable" href="#FrameIdentifier.qubits">qubits</a>
                         </li>
                         <li>
-                                <a class="variable" href="#FrameIdentifier.qubits">qubits</a>
+                                <a class="variable" href="#FrameIdentifier.name">name</a>
                         </li>
                 </ul>
 
@@ -671,16 +671,16 @@
                                 <a class="function" href="#Gate.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Gate.parameters">parameters</a>
+                                <a class="variable" href="#Gate.qubits">qubits</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Gate.qubits">qubits</a>
+                                <a class="variable" href="#Gate.name">name</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Gate.modifiers">modifiers</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Gate.name">name</a>
+                                <a class="variable" href="#Gate.parameters">parameters</a>
                         </li>
                 </ul>
 
@@ -698,13 +698,13 @@
                                 <a class="variable" href="#GateDefinition.name">name</a>
                         </li>
                         <li>
-                                <a class="variable" href="#GateDefinition.parameters">parameters</a>
+                                <a class="variable" href="#GateDefinition.signature">signature</a>
                         </li>
                         <li>
                                 <a class="variable" href="#GateDefinition.specification">specification</a>
                         </li>
                         <li>
-                                <a class="variable" href="#GateDefinition.signature">signature</a>
+                                <a class="variable" href="#GateDefinition.parameters">parameters</a>
                         </li>
                 </ul>
 
@@ -809,9 +809,6 @@
                     <a class="class" href="#Instruction">Instruction</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="function" href="#Instruction.is_quil_t">is_quil_t</a>
-                        </li>
-                        <li>
                                 <a class="function" href="#Instruction.parse">parse</a>
                         </li>
                         <li>
@@ -819,6 +816,9 @@
                         </li>
                         <li>
                                 <a class="function" href="#Instruction.to_quil_or_debug">to_quil_or_debug</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Instruction.is_quil_t">is_quil_t</a>
                         </li>
                         <li>
                                 <a class="class" href="#Instruction.Arithmetic">Instruction.Arithmetic</a>
@@ -1088,10 +1088,10 @@
                                 <a class="function" href="#JumpUnless.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#JumpUnless.condition">condition</a>
+                                <a class="variable" href="#JumpUnless.target">target</a>
                         </li>
                         <li>
-                                <a class="variable" href="#JumpUnless.target">target</a>
+                                <a class="variable" href="#JumpUnless.condition">condition</a>
                         </li>
                 </ul>
 
@@ -1106,10 +1106,10 @@
                                 <a class="function" href="#JumpWhen.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#JumpWhen.target">target</a>
+                                <a class="variable" href="#JumpWhen.condition">condition</a>
                         </li>
                         <li>
-                                <a class="variable" href="#JumpWhen.condition">condition</a>
+                                <a class="variable" href="#JumpWhen.target">target</a>
                         </li>
                 </ul>
 
@@ -1139,13 +1139,13 @@
                                 <a class="function" href="#Load.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Load.destination">destination</a>
+                                <a class="variable" href="#Load.offset">offset</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Load.source">source</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Load.offset">offset</a>
+                                <a class="variable" href="#Load.destination">destination</a>
                         </li>
                 </ul>
 
@@ -1160,19 +1160,19 @@
                                 <a class="function" href="#MeasureCalibrationDefinition.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
+                                <a class="variable" href="#MeasureCalibrationDefinition.instructions">instructions</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#MeasureCalibrationDefinition.name">name</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#MeasureCalibrationDefinition.qubit">qubit</a>
                         </li>
                         <li>
                                 <a class="variable" href="#MeasureCalibrationDefinition.identifier">identifier</a>
                         </li>
                         <li>
                                 <a class="variable" href="#MeasureCalibrationDefinition.target">target</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#MeasureCalibrationDefinition.instructions">instructions</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#MeasureCalibrationDefinition.qubit">qubit</a>
                         </li>
                 </ul>
 
@@ -1208,13 +1208,13 @@
                                 <a class="function" href="#Measurement.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Measurement.target">target</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#Measurement.name">name</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Measurement.qubit">qubit</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Measurement.target">target</a>
                         </li>
                 </ul>
 
@@ -1223,19 +1223,19 @@
                     <a class="class" href="#MemoryReference">MemoryReference</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="function" href="#MemoryReference.parse">parse</a>
-                        </li>
-                        <li>
                                 <a class="function" href="#MemoryReference.to_quil">to_quil</a>
                         </li>
                         <li>
                                 <a class="function" href="#MemoryReference.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#MemoryReference.index">index</a>
+                                <a class="function" href="#MemoryReference.parse">parse</a>
                         </li>
                         <li>
                                 <a class="variable" href="#MemoryReference.name">name</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#MemoryReference.index">index</a>
                         </li>
                 </ul>
 
@@ -1280,10 +1280,10 @@
                     <a class="class" href="#GateSignature">GateSignature</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#GateSignature.gate_parameters">gate_parameters</a>
+                                <a class="variable" href="#GateSignature.qubit_parameters">qubit_parameters</a>
                         </li>
                         <li>
-                                <a class="variable" href="#GateSignature.qubit_parameters">qubit_parameters</a>
+                                <a class="variable" href="#GateSignature.gate_parameters">gate_parameters</a>
                         </li>
                         <li>
                                 <a class="variable" href="#GateSignature.gate_type">gate_type</a>
@@ -1331,10 +1331,10 @@
                     <a class="class" href="#PauliSum">PauliSum</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#PauliSum.arguments">arguments</a>
+                                <a class="variable" href="#PauliSum.terms">terms</a>
                         </li>
                         <li>
-                                <a class="variable" href="#PauliSum.terms">terms</a>
+                                <a class="variable" href="#PauliSum.arguments">arguments</a>
                         </li>
                 </ul>
 
@@ -1349,13 +1349,13 @@
                                 <a class="function" href="#Pragma.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
+                                <a class="variable" href="#Pragma.name">name</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#Pragma.data">data</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Pragma.arguments">arguments</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Pragma.name">name</a>
                         </li>
                 </ul>
 
@@ -1394,10 +1394,10 @@
                                 <a class="function" href="#Pulse.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Pulse.blocking">blocking</a>
+                                <a class="variable" href="#Pulse.waveform">waveform</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Pulse.waveform">waveform</a>
+                                <a class="variable" href="#Pulse.blocking">blocking</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Pulse.frame">frame</a>
@@ -1451,13 +1451,13 @@
                                 <a class="function" href="#RawCapture.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#RawCapture.blocking">blocking</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#RawCapture.duration">duration</a>
                         </li>
                         <li>
                                 <a class="variable" href="#RawCapture.memory_reference">memory_reference</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#RawCapture.blocking">blocking</a>
                         </li>
                         <li>
                                 <a class="variable" href="#RawCapture.frame">frame</a>
@@ -1514,10 +1514,10 @@
                                 <a class="function" href="#SetFrequency.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#SetFrequency.frequency">frequency</a>
+                                <a class="variable" href="#SetFrequency.frame">frame</a>
                         </li>
                         <li>
-                                <a class="variable" href="#SetFrequency.frame">frame</a>
+                                <a class="variable" href="#SetFrequency.frequency">frequency</a>
                         </li>
                 </ul>
 
@@ -1550,10 +1550,10 @@
                                 <a class="function" href="#SetScale.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#SetScale.frame">frame</a>
+                                <a class="variable" href="#SetScale.scale">scale</a>
                         </li>
                         <li>
-                                <a class="variable" href="#SetScale.scale">scale</a>
+                                <a class="variable" href="#SetScale.frame">frame</a>
                         </li>
                 </ul>
 
@@ -1562,10 +1562,10 @@
                     <a class="class" href="#Sharing">Sharing</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#Sharing.name">name</a>
+                                <a class="variable" href="#Sharing.offsets">offsets</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Sharing.offsets">offsets</a>
+                                <a class="variable" href="#Sharing.name">name</a>
                         </li>
                 </ul>
 
@@ -1580,10 +1580,10 @@
                                 <a class="function" href="#ShiftFrequency.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#ShiftFrequency.frequency">frequency</a>
+                                <a class="variable" href="#ShiftFrequency.frame">frame</a>
                         </li>
                         <li>
-                                <a class="variable" href="#ShiftFrequency.frame">frame</a>
+                                <a class="variable" href="#ShiftFrequency.frequency">frequency</a>
                         </li>
                 </ul>
 
@@ -1616,13 +1616,13 @@
                                 <a class="function" href="#Store.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Store.source">source</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#Store.destination">destination</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Store.offset">offset</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Store.source">source</a>
                         </li>
                 </ul>
 
@@ -1688,10 +1688,10 @@
                                 <a class="function" href="#UnaryLogic.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#UnaryLogic.operator">operator</a>
+                                <a class="variable" href="#UnaryLogic.operand">operand</a>
                         </li>
                         <li>
-                                <a class="variable" href="#UnaryLogic.operand">operand</a>
+                                <a class="variable" href="#UnaryLogic.operator">operator</a>
                         </li>
                 </ul>
 
@@ -1766,10 +1766,10 @@
                     <a class="class" href="#Waveform">Waveform</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#Waveform.matrix">matrix</a>
+                                <a class="variable" href="#Waveform.parameters">parameters</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Waveform.parameters">parameters</a>
+                                <a class="variable" href="#Waveform.matrix">matrix</a>
                         </li>
                 </ul>
 
@@ -1784,10 +1784,10 @@
                                 <a class="function" href="#WaveformDefinition.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#WaveformDefinition.definition">definition</a>
+                                <a class="variable" href="#WaveformDefinition.name">name</a>
                         </li>
                         <li>
-                                <a class="variable" href="#WaveformDefinition.name">name</a>
+                                <a class="variable" href="#WaveformDefinition.definition">definition</a>
                         </li>
                 </ul>
 
@@ -1802,10 +1802,10 @@
                                 <a class="function" href="#WaveformInvocation.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#WaveformInvocation.parameters">parameters</a>
+                                <a class="variable" href="#WaveformInvocation.name">name</a>
                         </li>
                         <li>
-                                <a class="variable" href="#WaveformInvocation.name">name</a>
+                                <a class="variable" href="#WaveformInvocation.parameters">parameters</a>
                         </li>
                 </ul>
 
@@ -1978,6 +1978,17 @@
 
 
                             </div>
+                            <div id="Arithmetic.operator" class="classattr">
+                                <div class="attr variable">
+            <span class="name">operator</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Arithmetic.operator"></a>
+    
+    
+
+                            </div>
                             <div id="Arithmetic.destination" class="classattr">
                                 <div class="attr variable">
             <span class="name">destination</span>
@@ -1996,17 +2007,6 @@
         
     </div>
     <a class="headerlink" href="#Arithmetic.source"></a>
-    
-    
-
-                            </div>
-                            <div id="Arithmetic.operator" class="classattr">
-                                <div class="attr variable">
-            <span class="name">operator</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Arithmetic.operator"></a>
     
     
 
@@ -2370,17 +2370,6 @@
     
 
                             </div>
-                            <div id="BinaryLogic.source" class="classattr">
-                                <div class="attr variable">
-            <span class="name">source</span>
-
-        
-    </div>
-    <a class="headerlink" href="#BinaryLogic.source"></a>
-    
-    
-
-                            </div>
                             <div id="BinaryLogic.operator" class="classattr">
                                 <div class="attr variable">
             <span class="name">operator</span>
@@ -2388,6 +2377,17 @@
         
     </div>
     <a class="headerlink" href="#BinaryLogic.operator"></a>
+    
+    
+
+                            </div>
+                            <div id="BinaryLogic.source" class="classattr">
+                                <div class="attr variable">
+            <span class="name">source</span>
+
+        
+    </div>
+    <a class="headerlink" href="#BinaryLogic.source"></a>
     
     
 
@@ -2618,6 +2618,19 @@
     
 
                             </div>
+                            <div id="CalibrationDefinition.name" class="classattr">
+                                <div class="attr variable">
+            <span class="name">name</span>
+
+        
+    </div>
+    <a class="headerlink" href="#CalibrationDefinition.name"></a>
+    
+            <div class="docstring"><p>The gate name that this calibration definition is for.</p>
+</div>
+
+
+                            </div>
                             <div id="CalibrationDefinition.parameters" class="classattr">
                                 <div class="attr variable">
             <span class="name">parameters</span>
@@ -2627,19 +2640,6 @@
     <a class="headerlink" href="#CalibrationDefinition.parameters"></a>
     
             <div class="docstring"><p>The list of parameters that this calibration definition is for.</p>
-</div>
-
-
-                            </div>
-                            <div id="CalibrationDefinition.qubits" class="classattr">
-                                <div class="attr variable">
-            <span class="name">qubits</span>
-
-        
-    </div>
-    <a class="headerlink" href="#CalibrationDefinition.qubits"></a>
-    
-            <div class="docstring"><p>The list of [<code><a href="#Qubit">Qubit</a></code>]s that this calibration definition is for.</p>
 </div>
 
 
@@ -2668,15 +2668,15 @@
     
 
                             </div>
-                            <div id="CalibrationDefinition.name" class="classattr">
+                            <div id="CalibrationDefinition.qubits" class="classattr">
                                 <div class="attr variable">
-            <span class="name">name</span>
+            <span class="name">qubits</span>
 
         
     </div>
-    <a class="headerlink" href="#CalibrationDefinition.name"></a>
+    <a class="headerlink" href="#CalibrationDefinition.qubits"></a>
     
-            <div class="docstring"><p>The gate name that this calibration definition is for.</p>
+            <div class="docstring"><p>The list of [<code><a href="#Qubit">Qubit</a></code>]s that this calibration definition is for.</p>
 </div>
 
 
@@ -2739,19 +2739,6 @@
 
 
                             </div>
-                            <div id="CalibrationIdentifier.qubits" class="classattr">
-                                <div class="attr variable">
-            <span class="name">qubits</span>
-
-        
-    </div>
-    <a class="headerlink" href="#CalibrationIdentifier.qubits"></a>
-    
-            <div class="docstring"><p>The qubits on which the gate is applied</p>
-</div>
-
-
-                            </div>
                             <div id="CalibrationIdentifier.parameters" class="classattr">
                                 <div class="attr variable">
             <span class="name">parameters</span>
@@ -2774,6 +2761,19 @@
     <a class="headerlink" href="#CalibrationIdentifier.modifiers"></a>
     
             <div class="docstring"><p>The modifiers applied to the gate</p>
+</div>
+
+
+                            </div>
+                            <div id="CalibrationIdentifier.qubits" class="classattr">
+                                <div class="attr variable">
+            <span class="name">qubits</span>
+
+        
+    </div>
+    <a class="headerlink" href="#CalibrationIdentifier.qubits"></a>
+    
+            <div class="docstring"><p>The qubits on which the gate is applied</p>
 </div>
 
 
@@ -2836,19 +2836,6 @@ These calls are generally specific to a particular hardware or virtual machine b
 
 
                             </div>
-                            <div id="Call.arguments" class="classattr">
-                                <div class="attr variable">
-            <span class="name">arguments</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Call.arguments"></a>
-    
-            <div class="docstring"><p>The arguments of the call instruction.</p>
-</div>
-
-
-                            </div>
                             <div id="Call.name" class="classattr">
                                 <div class="attr variable">
             <span class="name">name</span>
@@ -2858,6 +2845,19 @@ These calls are generally specific to a particular hardware or virtual machine b
     <a class="headerlink" href="#Call.name"></a>
     
             <div class="docstring"><p>The name of the call instruction. This must be a valid user identifier.</p>
+</div>
+
+
+                            </div>
+                            <div id="Call.arguments" class="classattr">
+                                <div class="attr variable">
+            <span class="name">arguments</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Call.arguments"></a>
+    
+            <div class="docstring"><p>The arguments of the call instruction.</p>
 </div>
 
 
@@ -2905,6 +2905,17 @@ These calls are generally specific to a particular hardware or virtual machine b
 
 
                             </div>
+                            <div id="Capture.blocking" class="classattr">
+                                <div class="attr variable">
+            <span class="name">blocking</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Capture.blocking"></a>
+    
+    
+
+                            </div>
                             <div id="Capture.memory_reference" class="classattr">
                                 <div class="attr variable">
             <span class="name">memory_reference</span>
@@ -2934,17 +2945,6 @@ These calls are generally specific to a particular hardware or virtual machine b
         
     </div>
     <a class="headerlink" href="#Capture.waveform"></a>
-    
-    
-
-                            </div>
-                            <div id="Capture.blocking" class="classattr">
-                                <div class="attr variable">
-            <span class="name">blocking</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Capture.blocking"></a>
     
     
 
@@ -2992,17 +2992,6 @@ These calls are generally specific to a particular hardware or virtual machine b
 
 
                             </div>
-                            <div id="CircuitDefinition.qubit_variables" class="classattr">
-                                <div class="attr variable">
-            <span class="name">qubit_variables</span>
-
-        
-    </div>
-    <a class="headerlink" href="#CircuitDefinition.qubit_variables"></a>
-    
-    
-
-                            </div>
                             <div id="CircuitDefinition.parameters" class="classattr">
                                 <div class="attr variable">
             <span class="name">parameters</span>
@@ -3032,6 +3021,17 @@ These calls are generally specific to a particular hardware or virtual machine b
         
     </div>
     <a class="headerlink" href="#CircuitDefinition.instructions"></a>
+    
+    
+
+                            </div>
+                            <div id="CircuitDefinition.qubit_variables" class="classattr">
+                                <div class="attr variable">
+            <span class="name">qubit_variables</span>
+
+        
+    </div>
+    <a class="headerlink" href="#CircuitDefinition.qubit_variables"></a>
     
     
 
@@ -3079,13 +3079,13 @@ These calls are generally specific to a particular hardware or virtual machine b
 
 
                             </div>
-                            <div id="Comparison.destination" class="classattr">
+                            <div id="Comparison.operator" class="classattr">
                                 <div class="attr variable">
-            <span class="name">destination</span>
+            <span class="name">operator</span>
 
         
     </div>
-    <a class="headerlink" href="#Comparison.destination"></a>
+    <a class="headerlink" href="#Comparison.operator"></a>
     
     
 
@@ -3101,13 +3101,13 @@ These calls are generally specific to a particular hardware or virtual machine b
     
 
                             </div>
-                            <div id="Comparison.operator" class="classattr">
+                            <div id="Comparison.destination" class="classattr">
                                 <div class="attr variable">
-            <span class="name">operator</span>
+            <span class="name">destination</span>
 
         
     </div>
-    <a class="headerlink" href="#Comparison.operator"></a>
+    <a class="headerlink" href="#Comparison.destination"></a>
     
     
 
@@ -3390,17 +3390,6 @@ These calls are generally specific to a particular hardware or virtual machine b
 
 
                             </div>
-                            <div id="Convert.source" class="classattr">
-                                <div class="attr variable">
-            <span class="name">source</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Convert.source"></a>
-    
-    
-
-                            </div>
                             <div id="Convert.destination" class="classattr">
                                 <div class="attr variable">
             <span class="name">destination</span>
@@ -3408,6 +3397,17 @@ These calls are generally specific to a particular hardware or virtual machine b
         
     </div>
     <a class="headerlink" href="#Convert.destination"></a>
+    
+    
+
+                            </div>
+                            <div id="Convert.source" class="classattr">
+                                <div class="attr variable">
+            <span class="name">source</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Convert.source"></a>
     
     
 
@@ -3455,6 +3455,17 @@ These calls are generally specific to a particular hardware or virtual machine b
 
 
                             </div>
+                            <div id="Declaration.name" class="classattr">
+                                <div class="attr variable">
+            <span class="name">name</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Declaration.name"></a>
+    
+    
+
+                            </div>
                             <div id="Declaration.size" class="classattr">
                                 <div class="attr variable">
             <span class="name">size</span>
@@ -3473,17 +3484,6 @@ These calls are generally specific to a particular hardware or virtual machine b
         
     </div>
     <a class="headerlink" href="#Declaration.sharing"></a>
-    
-    
-
-                            </div>
-                            <div id="Declaration.name" class="classattr">
-                                <div class="attr variable">
-            <span class="name">name</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Declaration.name"></a>
     
     
 
@@ -3531,6 +3531,17 @@ These calls are generally specific to a particular hardware or virtual machine b
 
 
                             </div>
+                            <div id="Delay.qubits" class="classattr">
+                                <div class="attr variable">
+            <span class="name">qubits</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Delay.qubits"></a>
+    
+    
+
+                            </div>
                             <div id="Delay.duration" class="classattr">
                                 <div class="attr variable">
             <span class="name">duration</span>
@@ -3549,17 +3560,6 @@ These calls are generally specific to a particular hardware or virtual machine b
         
     </div>
     <a class="headerlink" href="#Delay.frame_names"></a>
-    
-    
-
-                            </div>
-                            <div id="Delay.qubits" class="classattr">
-                                <div class="attr variable">
-            <span class="name">qubits</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Delay.qubits"></a>
     
     
 
@@ -4115,17 +4115,6 @@ for details on how these signatures are formed.</p>
 
 
                             </div>
-                            <div id="FrameIdentifier.name" class="classattr">
-                                <div class="attr variable">
-            <span class="name">name</span>
-
-        
-    </div>
-    <a class="headerlink" href="#FrameIdentifier.name"></a>
-    
-    
-
-                            </div>
                             <div id="FrameIdentifier.qubits" class="classattr">
                                 <div class="attr variable">
             <span class="name">qubits</span>
@@ -4133,6 +4122,17 @@ for details on how these signatures are formed.</p>
         
     </div>
     <a class="headerlink" href="#FrameIdentifier.qubits"></a>
+    
+    
+
+                            </div>
+                            <div id="FrameIdentifier.name" class="classattr">
+                                <div class="attr variable">
+            <span class="name">name</span>
+
+        
+    </div>
+    <a class="headerlink" href="#FrameIdentifier.name"></a>
     
     
 
@@ -4264,17 +4264,6 @@ other invalid input parameters may silently return an invalid result.</p>
 
 
                             </div>
-                            <div id="Gate.parameters" class="classattr">
-                                <div class="attr variable">
-            <span class="name">parameters</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Gate.parameters"></a>
-    
-    
-
-                            </div>
                             <div id="Gate.qubits" class="classattr">
                                 <div class="attr variable">
             <span class="name">qubits</span>
@@ -4282,6 +4271,17 @@ other invalid input parameters may silently return an invalid result.</p>
         
     </div>
     <a class="headerlink" href="#Gate.qubits"></a>
+    
+    
+
+                            </div>
+                            <div id="Gate.name" class="classattr">
+                                <div class="attr variable">
+            <span class="name">name</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Gate.name"></a>
     
     
 
@@ -4297,13 +4297,13 @@ other invalid input parameters may silently return an invalid result.</p>
     
 
                             </div>
-                            <div id="Gate.name" class="classattr">
+                            <div id="Gate.parameters" class="classattr">
                                 <div class="attr variable">
-            <span class="name">name</span>
+            <span class="name">parameters</span>
 
         
     </div>
-    <a class="headerlink" href="#Gate.name"></a>
+    <a class="headerlink" href="#Gate.parameters"></a>
     
     
 
@@ -4364,13 +4364,13 @@ other invalid input parameters may silently return an invalid result.</p>
     
 
                             </div>
-                            <div id="GateDefinition.parameters" class="classattr">
+                            <div id="GateDefinition.signature" class="classattr">
                                 <div class="attr variable">
-            <span class="name">parameters</span>
+            <span class="name">signature</span>
 
         
     </div>
-    <a class="headerlink" href="#GateDefinition.parameters"></a>
+    <a class="headerlink" href="#GateDefinition.signature"></a>
     
     
 
@@ -4386,13 +4386,13 @@ other invalid input parameters may silently return an invalid result.</p>
     
 
                             </div>
-                            <div id="GateDefinition.signature" class="classattr">
+                            <div id="GateDefinition.parameters" class="classattr">
                                 <div class="attr variable">
-            <span class="name">signature</span>
+            <span class="name">parameters</span>
 
         
     </div>
-    <a class="headerlink" href="#GateDefinition.signature"></a>
+    <a class="headerlink" href="#GateDefinition.parameters"></a>
     
     
 
@@ -4840,21 +4840,6 @@ You can check for different instruction variants and destructure them using <cod
 </div>
 
 
-                            <div id="Instruction.is_quil_t" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">is_quil_t</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Instruction.is_quil_t"></a>
-    
-            <div class="docstring"><p>Returns true if the instruction is a Quil-T instruction.</p>
-</div>
-
-
-                            </div>
                             <div id="Instruction.parse" class="classattr">
                                 <div class="attr function">
             
@@ -4900,6 +4885,21 @@ You can check for different instruction variants and destructure them using <cod
 
 
                             </div>
+                            <div id="Instruction.is_quil_t" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">is_quil_t</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Instruction.is_quil_t"></a>
+    
+            <div class="docstring"><p>Returns true if the instruction is a Quil-T instruction.</p>
+</div>
+
+
+                            </div>
                 </section>
                 <section id="Instruction.Arithmetic">
                     <div class="attr class">
@@ -4917,10 +4917,10 @@ You can check for different instruction variants and destructure them using <cod
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#Instruction">Instruction</a></dt>
-                                <dd id="Instruction.Arithmetic.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
-                <dd id="Instruction.Arithmetic.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
+                                <dd id="Instruction.Arithmetic.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
                 <dd id="Instruction.Arithmetic.to_quil" class="function"><a href="#Instruction.to_quil">to_quil</a></dd>
                 <dd id="Instruction.Arithmetic.to_quil_or_debug" class="function"><a href="#Instruction.to_quil_or_debug">to_quil_or_debug</a></dd>
+                <dd id="Instruction.Arithmetic.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
                 <dd id="Instruction.Arithmetic.Arithmetic" class="class"><a href="#Instruction.Arithmetic">Arithmetic</a></dd>
                 <dd id="Instruction.Arithmetic.BinaryLogic" class="class"><a href="#Instruction.BinaryLogic">BinaryLogic</a></dd>
                 <dd id="Instruction.Arithmetic.CalibrationDefinition" class="class"><a href="#Instruction.CalibrationDefinition">CalibrationDefinition</a></dd>
@@ -4982,10 +4982,10 @@ You can check for different instruction variants and destructure them using <cod
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#Instruction">Instruction</a></dt>
-                                <dd id="Instruction.BinaryLogic.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
-                <dd id="Instruction.BinaryLogic.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
+                                <dd id="Instruction.BinaryLogic.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
                 <dd id="Instruction.BinaryLogic.to_quil" class="function"><a href="#Instruction.to_quil">to_quil</a></dd>
                 <dd id="Instruction.BinaryLogic.to_quil_or_debug" class="function"><a href="#Instruction.to_quil_or_debug">to_quil_or_debug</a></dd>
+                <dd id="Instruction.BinaryLogic.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
                 <dd id="Instruction.BinaryLogic.Arithmetic" class="class"><a href="#Instruction.Arithmetic">Arithmetic</a></dd>
                 <dd id="Instruction.BinaryLogic.BinaryLogic" class="class"><a href="#Instruction.BinaryLogic">BinaryLogic</a></dd>
                 <dd id="Instruction.BinaryLogic.CalibrationDefinition" class="class"><a href="#Instruction.CalibrationDefinition">CalibrationDefinition</a></dd>
@@ -5047,10 +5047,10 @@ You can check for different instruction variants and destructure them using <cod
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#Instruction">Instruction</a></dt>
-                                <dd id="Instruction.CalibrationDefinition.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
-                <dd id="Instruction.CalibrationDefinition.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
+                                <dd id="Instruction.CalibrationDefinition.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
                 <dd id="Instruction.CalibrationDefinition.to_quil" class="function"><a href="#Instruction.to_quil">to_quil</a></dd>
                 <dd id="Instruction.CalibrationDefinition.to_quil_or_debug" class="function"><a href="#Instruction.to_quil_or_debug">to_quil_or_debug</a></dd>
+                <dd id="Instruction.CalibrationDefinition.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
                 <dd id="Instruction.CalibrationDefinition.Arithmetic" class="class"><a href="#Instruction.Arithmetic">Arithmetic</a></dd>
                 <dd id="Instruction.CalibrationDefinition.BinaryLogic" class="class"><a href="#Instruction.BinaryLogic">BinaryLogic</a></dd>
                 <dd id="Instruction.CalibrationDefinition.CalibrationDefinition" class="class"><a href="#Instruction.CalibrationDefinition">CalibrationDefinition</a></dd>
@@ -5112,10 +5112,10 @@ You can check for different instruction variants and destructure them using <cod
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#Instruction">Instruction</a></dt>
-                                <dd id="Instruction.Call.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
-                <dd id="Instruction.Call.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
+                                <dd id="Instruction.Call.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
                 <dd id="Instruction.Call.to_quil" class="function"><a href="#Instruction.to_quil">to_quil</a></dd>
                 <dd id="Instruction.Call.to_quil_or_debug" class="function"><a href="#Instruction.to_quil_or_debug">to_quil_or_debug</a></dd>
+                <dd id="Instruction.Call.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
                 <dd id="Instruction.Call.Arithmetic" class="class"><a href="#Instruction.Arithmetic">Arithmetic</a></dd>
                 <dd id="Instruction.Call.BinaryLogic" class="class"><a href="#Instruction.BinaryLogic">BinaryLogic</a></dd>
                 <dd id="Instruction.Call.CalibrationDefinition" class="class"><a href="#Instruction.CalibrationDefinition">CalibrationDefinition</a></dd>
@@ -5177,10 +5177,10 @@ You can check for different instruction variants and destructure them using <cod
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#Instruction">Instruction</a></dt>
-                                <dd id="Instruction.Capture.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
-                <dd id="Instruction.Capture.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
+                                <dd id="Instruction.Capture.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
                 <dd id="Instruction.Capture.to_quil" class="function"><a href="#Instruction.to_quil">to_quil</a></dd>
                 <dd id="Instruction.Capture.to_quil_or_debug" class="function"><a href="#Instruction.to_quil_or_debug">to_quil_or_debug</a></dd>
+                <dd id="Instruction.Capture.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
                 <dd id="Instruction.Capture.Arithmetic" class="class"><a href="#Instruction.Arithmetic">Arithmetic</a></dd>
                 <dd id="Instruction.Capture.BinaryLogic" class="class"><a href="#Instruction.BinaryLogic">BinaryLogic</a></dd>
                 <dd id="Instruction.Capture.CalibrationDefinition" class="class"><a href="#Instruction.CalibrationDefinition">CalibrationDefinition</a></dd>
@@ -5242,10 +5242,10 @@ You can check for different instruction variants and destructure them using <cod
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#Instruction">Instruction</a></dt>
-                                <dd id="Instruction.CircuitDefinition.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
-                <dd id="Instruction.CircuitDefinition.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
+                                <dd id="Instruction.CircuitDefinition.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
                 <dd id="Instruction.CircuitDefinition.to_quil" class="function"><a href="#Instruction.to_quil">to_quil</a></dd>
                 <dd id="Instruction.CircuitDefinition.to_quil_or_debug" class="function"><a href="#Instruction.to_quil_or_debug">to_quil_or_debug</a></dd>
+                <dd id="Instruction.CircuitDefinition.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
                 <dd id="Instruction.CircuitDefinition.Arithmetic" class="class"><a href="#Instruction.Arithmetic">Arithmetic</a></dd>
                 <dd id="Instruction.CircuitDefinition.BinaryLogic" class="class"><a href="#Instruction.BinaryLogic">BinaryLogic</a></dd>
                 <dd id="Instruction.CircuitDefinition.CalibrationDefinition" class="class"><a href="#Instruction.CalibrationDefinition">CalibrationDefinition</a></dd>
@@ -5307,10 +5307,10 @@ You can check for different instruction variants and destructure them using <cod
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#Instruction">Instruction</a></dt>
-                                <dd id="Instruction.Convert.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
-                <dd id="Instruction.Convert.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
+                                <dd id="Instruction.Convert.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
                 <dd id="Instruction.Convert.to_quil" class="function"><a href="#Instruction.to_quil">to_quil</a></dd>
                 <dd id="Instruction.Convert.to_quil_or_debug" class="function"><a href="#Instruction.to_quil_or_debug">to_quil_or_debug</a></dd>
+                <dd id="Instruction.Convert.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
                 <dd id="Instruction.Convert.Arithmetic" class="class"><a href="#Instruction.Arithmetic">Arithmetic</a></dd>
                 <dd id="Instruction.Convert.BinaryLogic" class="class"><a href="#Instruction.BinaryLogic">BinaryLogic</a></dd>
                 <dd id="Instruction.Convert.CalibrationDefinition" class="class"><a href="#Instruction.CalibrationDefinition">CalibrationDefinition</a></dd>
@@ -5372,10 +5372,10 @@ You can check for different instruction variants and destructure them using <cod
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#Instruction">Instruction</a></dt>
-                                <dd id="Instruction.Comparison.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
-                <dd id="Instruction.Comparison.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
+                                <dd id="Instruction.Comparison.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
                 <dd id="Instruction.Comparison.to_quil" class="function"><a href="#Instruction.to_quil">to_quil</a></dd>
                 <dd id="Instruction.Comparison.to_quil_or_debug" class="function"><a href="#Instruction.to_quil_or_debug">to_quil_or_debug</a></dd>
+                <dd id="Instruction.Comparison.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
                 <dd id="Instruction.Comparison.Arithmetic" class="class"><a href="#Instruction.Arithmetic">Arithmetic</a></dd>
                 <dd id="Instruction.Comparison.BinaryLogic" class="class"><a href="#Instruction.BinaryLogic">BinaryLogic</a></dd>
                 <dd id="Instruction.Comparison.CalibrationDefinition" class="class"><a href="#Instruction.CalibrationDefinition">CalibrationDefinition</a></dd>
@@ -5437,10 +5437,10 @@ You can check for different instruction variants and destructure them using <cod
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#Instruction">Instruction</a></dt>
-                                <dd id="Instruction.Declaration.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
-                <dd id="Instruction.Declaration.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
+                                <dd id="Instruction.Declaration.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
                 <dd id="Instruction.Declaration.to_quil" class="function"><a href="#Instruction.to_quil">to_quil</a></dd>
                 <dd id="Instruction.Declaration.to_quil_or_debug" class="function"><a href="#Instruction.to_quil_or_debug">to_quil_or_debug</a></dd>
+                <dd id="Instruction.Declaration.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
                 <dd id="Instruction.Declaration.Arithmetic" class="class"><a href="#Instruction.Arithmetic">Arithmetic</a></dd>
                 <dd id="Instruction.Declaration.BinaryLogic" class="class"><a href="#Instruction.BinaryLogic">BinaryLogic</a></dd>
                 <dd id="Instruction.Declaration.CalibrationDefinition" class="class"><a href="#Instruction.CalibrationDefinition">CalibrationDefinition</a></dd>
@@ -5502,10 +5502,10 @@ You can check for different instruction variants and destructure them using <cod
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#Instruction">Instruction</a></dt>
-                                <dd id="Instruction.Delay.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
-                <dd id="Instruction.Delay.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
+                                <dd id="Instruction.Delay.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
                 <dd id="Instruction.Delay.to_quil" class="function"><a href="#Instruction.to_quil">to_quil</a></dd>
                 <dd id="Instruction.Delay.to_quil_or_debug" class="function"><a href="#Instruction.to_quil_or_debug">to_quil_or_debug</a></dd>
+                <dd id="Instruction.Delay.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
                 <dd id="Instruction.Delay.Arithmetic" class="class"><a href="#Instruction.Arithmetic">Arithmetic</a></dd>
                 <dd id="Instruction.Delay.BinaryLogic" class="class"><a href="#Instruction.BinaryLogic">BinaryLogic</a></dd>
                 <dd id="Instruction.Delay.CalibrationDefinition" class="class"><a href="#Instruction.CalibrationDefinition">CalibrationDefinition</a></dd>
@@ -5567,10 +5567,10 @@ You can check for different instruction variants and destructure them using <cod
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#Instruction">Instruction</a></dt>
-                                <dd id="Instruction.Exchange.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
-                <dd id="Instruction.Exchange.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
+                                <dd id="Instruction.Exchange.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
                 <dd id="Instruction.Exchange.to_quil" class="function"><a href="#Instruction.to_quil">to_quil</a></dd>
                 <dd id="Instruction.Exchange.to_quil_or_debug" class="function"><a href="#Instruction.to_quil_or_debug">to_quil_or_debug</a></dd>
+                <dd id="Instruction.Exchange.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
                 <dd id="Instruction.Exchange.Arithmetic" class="class"><a href="#Instruction.Arithmetic">Arithmetic</a></dd>
                 <dd id="Instruction.Exchange.BinaryLogic" class="class"><a href="#Instruction.BinaryLogic">BinaryLogic</a></dd>
                 <dd id="Instruction.Exchange.CalibrationDefinition" class="class"><a href="#Instruction.CalibrationDefinition">CalibrationDefinition</a></dd>
@@ -5632,10 +5632,10 @@ You can check for different instruction variants and destructure them using <cod
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#Instruction">Instruction</a></dt>
-                                <dd id="Instruction.Fence.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
-                <dd id="Instruction.Fence.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
+                                <dd id="Instruction.Fence.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
                 <dd id="Instruction.Fence.to_quil" class="function"><a href="#Instruction.to_quil">to_quil</a></dd>
                 <dd id="Instruction.Fence.to_quil_or_debug" class="function"><a href="#Instruction.to_quil_or_debug">to_quil_or_debug</a></dd>
+                <dd id="Instruction.Fence.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
                 <dd id="Instruction.Fence.Arithmetic" class="class"><a href="#Instruction.Arithmetic">Arithmetic</a></dd>
                 <dd id="Instruction.Fence.BinaryLogic" class="class"><a href="#Instruction.BinaryLogic">BinaryLogic</a></dd>
                 <dd id="Instruction.Fence.CalibrationDefinition" class="class"><a href="#Instruction.CalibrationDefinition">CalibrationDefinition</a></dd>
@@ -5697,10 +5697,10 @@ You can check for different instruction variants and destructure them using <cod
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#Instruction">Instruction</a></dt>
-                                <dd id="Instruction.FrameDefinition.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
-                <dd id="Instruction.FrameDefinition.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
+                                <dd id="Instruction.FrameDefinition.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
                 <dd id="Instruction.FrameDefinition.to_quil" class="function"><a href="#Instruction.to_quil">to_quil</a></dd>
                 <dd id="Instruction.FrameDefinition.to_quil_or_debug" class="function"><a href="#Instruction.to_quil_or_debug">to_quil_or_debug</a></dd>
+                <dd id="Instruction.FrameDefinition.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
                 <dd id="Instruction.FrameDefinition.Arithmetic" class="class"><a href="#Instruction.Arithmetic">Arithmetic</a></dd>
                 <dd id="Instruction.FrameDefinition.BinaryLogic" class="class"><a href="#Instruction.BinaryLogic">BinaryLogic</a></dd>
                 <dd id="Instruction.FrameDefinition.CalibrationDefinition" class="class"><a href="#Instruction.CalibrationDefinition">CalibrationDefinition</a></dd>
@@ -5762,10 +5762,10 @@ You can check for different instruction variants and destructure them using <cod
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#Instruction">Instruction</a></dt>
-                                <dd id="Instruction.Gate.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
-                <dd id="Instruction.Gate.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
+                                <dd id="Instruction.Gate.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
                 <dd id="Instruction.Gate.to_quil" class="function"><a href="#Instruction.to_quil">to_quil</a></dd>
                 <dd id="Instruction.Gate.to_quil_or_debug" class="function"><a href="#Instruction.to_quil_or_debug">to_quil_or_debug</a></dd>
+                <dd id="Instruction.Gate.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
                 <dd id="Instruction.Gate.Arithmetic" class="class"><a href="#Instruction.Arithmetic">Arithmetic</a></dd>
                 <dd id="Instruction.Gate.BinaryLogic" class="class"><a href="#Instruction.BinaryLogic">BinaryLogic</a></dd>
                 <dd id="Instruction.Gate.CalibrationDefinition" class="class"><a href="#Instruction.CalibrationDefinition">CalibrationDefinition</a></dd>
@@ -5827,10 +5827,10 @@ You can check for different instruction variants and destructure them using <cod
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#Instruction">Instruction</a></dt>
-                                <dd id="Instruction.GateDefinition.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
-                <dd id="Instruction.GateDefinition.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
+                                <dd id="Instruction.GateDefinition.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
                 <dd id="Instruction.GateDefinition.to_quil" class="function"><a href="#Instruction.to_quil">to_quil</a></dd>
                 <dd id="Instruction.GateDefinition.to_quil_or_debug" class="function"><a href="#Instruction.to_quil_or_debug">to_quil_or_debug</a></dd>
+                <dd id="Instruction.GateDefinition.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
                 <dd id="Instruction.GateDefinition.Arithmetic" class="class"><a href="#Instruction.Arithmetic">Arithmetic</a></dd>
                 <dd id="Instruction.GateDefinition.BinaryLogic" class="class"><a href="#Instruction.BinaryLogic">BinaryLogic</a></dd>
                 <dd id="Instruction.GateDefinition.CalibrationDefinition" class="class"><a href="#Instruction.CalibrationDefinition">CalibrationDefinition</a></dd>
@@ -5892,10 +5892,10 @@ You can check for different instruction variants and destructure them using <cod
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#Instruction">Instruction</a></dt>
-                                <dd id="Instruction.Halt.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
-                <dd id="Instruction.Halt.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
+                                <dd id="Instruction.Halt.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
                 <dd id="Instruction.Halt.to_quil" class="function"><a href="#Instruction.to_quil">to_quil</a></dd>
                 <dd id="Instruction.Halt.to_quil_or_debug" class="function"><a href="#Instruction.to_quil_or_debug">to_quil_or_debug</a></dd>
+                <dd id="Instruction.Halt.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
                 <dd id="Instruction.Halt.Arithmetic" class="class"><a href="#Instruction.Arithmetic">Arithmetic</a></dd>
                 <dd id="Instruction.Halt.BinaryLogic" class="class"><a href="#Instruction.BinaryLogic">BinaryLogic</a></dd>
                 <dd id="Instruction.Halt.CalibrationDefinition" class="class"><a href="#Instruction.CalibrationDefinition">CalibrationDefinition</a></dd>
@@ -5957,10 +5957,10 @@ You can check for different instruction variants and destructure them using <cod
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#Instruction">Instruction</a></dt>
-                                <dd id="Instruction.Include.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
-                <dd id="Instruction.Include.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
+                                <dd id="Instruction.Include.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
                 <dd id="Instruction.Include.to_quil" class="function"><a href="#Instruction.to_quil">to_quil</a></dd>
                 <dd id="Instruction.Include.to_quil_or_debug" class="function"><a href="#Instruction.to_quil_or_debug">to_quil_or_debug</a></dd>
+                <dd id="Instruction.Include.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
                 <dd id="Instruction.Include.Arithmetic" class="class"><a href="#Instruction.Arithmetic">Arithmetic</a></dd>
                 <dd id="Instruction.Include.BinaryLogic" class="class"><a href="#Instruction.BinaryLogic">BinaryLogic</a></dd>
                 <dd id="Instruction.Include.CalibrationDefinition" class="class"><a href="#Instruction.CalibrationDefinition">CalibrationDefinition</a></dd>
@@ -6022,10 +6022,10 @@ You can check for different instruction variants and destructure them using <cod
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#Instruction">Instruction</a></dt>
-                                <dd id="Instruction.Jump.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
-                <dd id="Instruction.Jump.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
+                                <dd id="Instruction.Jump.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
                 <dd id="Instruction.Jump.to_quil" class="function"><a href="#Instruction.to_quil">to_quil</a></dd>
                 <dd id="Instruction.Jump.to_quil_or_debug" class="function"><a href="#Instruction.to_quil_or_debug">to_quil_or_debug</a></dd>
+                <dd id="Instruction.Jump.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
                 <dd id="Instruction.Jump.Arithmetic" class="class"><a href="#Instruction.Arithmetic">Arithmetic</a></dd>
                 <dd id="Instruction.Jump.BinaryLogic" class="class"><a href="#Instruction.BinaryLogic">BinaryLogic</a></dd>
                 <dd id="Instruction.Jump.CalibrationDefinition" class="class"><a href="#Instruction.CalibrationDefinition">CalibrationDefinition</a></dd>
@@ -6087,10 +6087,10 @@ You can check for different instruction variants and destructure them using <cod
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#Instruction">Instruction</a></dt>
-                                <dd id="Instruction.JumpUnless.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
-                <dd id="Instruction.JumpUnless.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
+                                <dd id="Instruction.JumpUnless.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
                 <dd id="Instruction.JumpUnless.to_quil" class="function"><a href="#Instruction.to_quil">to_quil</a></dd>
                 <dd id="Instruction.JumpUnless.to_quil_or_debug" class="function"><a href="#Instruction.to_quil_or_debug">to_quil_or_debug</a></dd>
+                <dd id="Instruction.JumpUnless.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
                 <dd id="Instruction.JumpUnless.Arithmetic" class="class"><a href="#Instruction.Arithmetic">Arithmetic</a></dd>
                 <dd id="Instruction.JumpUnless.BinaryLogic" class="class"><a href="#Instruction.BinaryLogic">BinaryLogic</a></dd>
                 <dd id="Instruction.JumpUnless.CalibrationDefinition" class="class"><a href="#Instruction.CalibrationDefinition">CalibrationDefinition</a></dd>
@@ -6152,10 +6152,10 @@ You can check for different instruction variants and destructure them using <cod
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#Instruction">Instruction</a></dt>
-                                <dd id="Instruction.JumpWhen.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
-                <dd id="Instruction.JumpWhen.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
+                                <dd id="Instruction.JumpWhen.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
                 <dd id="Instruction.JumpWhen.to_quil" class="function"><a href="#Instruction.to_quil">to_quil</a></dd>
                 <dd id="Instruction.JumpWhen.to_quil_or_debug" class="function"><a href="#Instruction.to_quil_or_debug">to_quil_or_debug</a></dd>
+                <dd id="Instruction.JumpWhen.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
                 <dd id="Instruction.JumpWhen.Arithmetic" class="class"><a href="#Instruction.Arithmetic">Arithmetic</a></dd>
                 <dd id="Instruction.JumpWhen.BinaryLogic" class="class"><a href="#Instruction.BinaryLogic">BinaryLogic</a></dd>
                 <dd id="Instruction.JumpWhen.CalibrationDefinition" class="class"><a href="#Instruction.CalibrationDefinition">CalibrationDefinition</a></dd>
@@ -6217,10 +6217,10 @@ You can check for different instruction variants and destructure them using <cod
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#Instruction">Instruction</a></dt>
-                                <dd id="Instruction.Label.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
-                <dd id="Instruction.Label.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
+                                <dd id="Instruction.Label.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
                 <dd id="Instruction.Label.to_quil" class="function"><a href="#Instruction.to_quil">to_quil</a></dd>
                 <dd id="Instruction.Label.to_quil_or_debug" class="function"><a href="#Instruction.to_quil_or_debug">to_quil_or_debug</a></dd>
+                <dd id="Instruction.Label.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
                 <dd id="Instruction.Label.Arithmetic" class="class"><a href="#Instruction.Arithmetic">Arithmetic</a></dd>
                 <dd id="Instruction.Label.BinaryLogic" class="class"><a href="#Instruction.BinaryLogic">BinaryLogic</a></dd>
                 <dd id="Instruction.Label.CalibrationDefinition" class="class"><a href="#Instruction.CalibrationDefinition">CalibrationDefinition</a></dd>
@@ -6282,10 +6282,10 @@ You can check for different instruction variants and destructure them using <cod
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#Instruction">Instruction</a></dt>
-                                <dd id="Instruction.Load.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
-                <dd id="Instruction.Load.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
+                                <dd id="Instruction.Load.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
                 <dd id="Instruction.Load.to_quil" class="function"><a href="#Instruction.to_quil">to_quil</a></dd>
                 <dd id="Instruction.Load.to_quil_or_debug" class="function"><a href="#Instruction.to_quil_or_debug">to_quil_or_debug</a></dd>
+                <dd id="Instruction.Load.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
                 <dd id="Instruction.Load.Arithmetic" class="class"><a href="#Instruction.Arithmetic">Arithmetic</a></dd>
                 <dd id="Instruction.Load.BinaryLogic" class="class"><a href="#Instruction.BinaryLogic">BinaryLogic</a></dd>
                 <dd id="Instruction.Load.CalibrationDefinition" class="class"><a href="#Instruction.CalibrationDefinition">CalibrationDefinition</a></dd>
@@ -6347,10 +6347,10 @@ You can check for different instruction variants and destructure them using <cod
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#Instruction">Instruction</a></dt>
-                                <dd id="Instruction.MeasureCalibrationDefinition.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
-                <dd id="Instruction.MeasureCalibrationDefinition.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
+                                <dd id="Instruction.MeasureCalibrationDefinition.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
                 <dd id="Instruction.MeasureCalibrationDefinition.to_quil" class="function"><a href="#Instruction.to_quil">to_quil</a></dd>
                 <dd id="Instruction.MeasureCalibrationDefinition.to_quil_or_debug" class="function"><a href="#Instruction.to_quil_or_debug">to_quil_or_debug</a></dd>
+                <dd id="Instruction.MeasureCalibrationDefinition.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
                 <dd id="Instruction.MeasureCalibrationDefinition.Arithmetic" class="class"><a href="#Instruction.Arithmetic">Arithmetic</a></dd>
                 <dd id="Instruction.MeasureCalibrationDefinition.BinaryLogic" class="class"><a href="#Instruction.BinaryLogic">BinaryLogic</a></dd>
                 <dd id="Instruction.MeasureCalibrationDefinition.CalibrationDefinition" class="class"><a href="#Instruction.CalibrationDefinition">CalibrationDefinition</a></dd>
@@ -6412,10 +6412,10 @@ You can check for different instruction variants and destructure them using <cod
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#Instruction">Instruction</a></dt>
-                                <dd id="Instruction.Measurement.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
-                <dd id="Instruction.Measurement.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
+                                <dd id="Instruction.Measurement.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
                 <dd id="Instruction.Measurement.to_quil" class="function"><a href="#Instruction.to_quil">to_quil</a></dd>
                 <dd id="Instruction.Measurement.to_quil_or_debug" class="function"><a href="#Instruction.to_quil_or_debug">to_quil_or_debug</a></dd>
+                <dd id="Instruction.Measurement.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
                 <dd id="Instruction.Measurement.Arithmetic" class="class"><a href="#Instruction.Arithmetic">Arithmetic</a></dd>
                 <dd id="Instruction.Measurement.BinaryLogic" class="class"><a href="#Instruction.BinaryLogic">BinaryLogic</a></dd>
                 <dd id="Instruction.Measurement.CalibrationDefinition" class="class"><a href="#Instruction.CalibrationDefinition">CalibrationDefinition</a></dd>
@@ -6477,10 +6477,10 @@ You can check for different instruction variants and destructure them using <cod
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#Instruction">Instruction</a></dt>
-                                <dd id="Instruction.Move.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
-                <dd id="Instruction.Move.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
+                                <dd id="Instruction.Move.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
                 <dd id="Instruction.Move.to_quil" class="function"><a href="#Instruction.to_quil">to_quil</a></dd>
                 <dd id="Instruction.Move.to_quil_or_debug" class="function"><a href="#Instruction.to_quil_or_debug">to_quil_or_debug</a></dd>
+                <dd id="Instruction.Move.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
                 <dd id="Instruction.Move.Arithmetic" class="class"><a href="#Instruction.Arithmetic">Arithmetic</a></dd>
                 <dd id="Instruction.Move.BinaryLogic" class="class"><a href="#Instruction.BinaryLogic">BinaryLogic</a></dd>
                 <dd id="Instruction.Move.CalibrationDefinition" class="class"><a href="#Instruction.CalibrationDefinition">CalibrationDefinition</a></dd>
@@ -6542,10 +6542,10 @@ You can check for different instruction variants and destructure them using <cod
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#Instruction">Instruction</a></dt>
-                                <dd id="Instruction.Nop.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
-                <dd id="Instruction.Nop.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
+                                <dd id="Instruction.Nop.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
                 <dd id="Instruction.Nop.to_quil" class="function"><a href="#Instruction.to_quil">to_quil</a></dd>
                 <dd id="Instruction.Nop.to_quil_or_debug" class="function"><a href="#Instruction.to_quil_or_debug">to_quil_or_debug</a></dd>
+                <dd id="Instruction.Nop.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
                 <dd id="Instruction.Nop.Arithmetic" class="class"><a href="#Instruction.Arithmetic">Arithmetic</a></dd>
                 <dd id="Instruction.Nop.BinaryLogic" class="class"><a href="#Instruction.BinaryLogic">BinaryLogic</a></dd>
                 <dd id="Instruction.Nop.CalibrationDefinition" class="class"><a href="#Instruction.CalibrationDefinition">CalibrationDefinition</a></dd>
@@ -6607,10 +6607,10 @@ You can check for different instruction variants and destructure them using <cod
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#Instruction">Instruction</a></dt>
-                                <dd id="Instruction.Pragma.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
-                <dd id="Instruction.Pragma.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
+                                <dd id="Instruction.Pragma.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
                 <dd id="Instruction.Pragma.to_quil" class="function"><a href="#Instruction.to_quil">to_quil</a></dd>
                 <dd id="Instruction.Pragma.to_quil_or_debug" class="function"><a href="#Instruction.to_quil_or_debug">to_quil_or_debug</a></dd>
+                <dd id="Instruction.Pragma.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
                 <dd id="Instruction.Pragma.Arithmetic" class="class"><a href="#Instruction.Arithmetic">Arithmetic</a></dd>
                 <dd id="Instruction.Pragma.BinaryLogic" class="class"><a href="#Instruction.BinaryLogic">BinaryLogic</a></dd>
                 <dd id="Instruction.Pragma.CalibrationDefinition" class="class"><a href="#Instruction.CalibrationDefinition">CalibrationDefinition</a></dd>
@@ -6672,10 +6672,10 @@ You can check for different instruction variants and destructure them using <cod
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#Instruction">Instruction</a></dt>
-                                <dd id="Instruction.Pulse.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
-                <dd id="Instruction.Pulse.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
+                                <dd id="Instruction.Pulse.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
                 <dd id="Instruction.Pulse.to_quil" class="function"><a href="#Instruction.to_quil">to_quil</a></dd>
                 <dd id="Instruction.Pulse.to_quil_or_debug" class="function"><a href="#Instruction.to_quil_or_debug">to_quil_or_debug</a></dd>
+                <dd id="Instruction.Pulse.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
                 <dd id="Instruction.Pulse.Arithmetic" class="class"><a href="#Instruction.Arithmetic">Arithmetic</a></dd>
                 <dd id="Instruction.Pulse.BinaryLogic" class="class"><a href="#Instruction.BinaryLogic">BinaryLogic</a></dd>
                 <dd id="Instruction.Pulse.CalibrationDefinition" class="class"><a href="#Instruction.CalibrationDefinition">CalibrationDefinition</a></dd>
@@ -6737,10 +6737,10 @@ You can check for different instruction variants and destructure them using <cod
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#Instruction">Instruction</a></dt>
-                                <dd id="Instruction.RawCapture.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
-                <dd id="Instruction.RawCapture.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
+                                <dd id="Instruction.RawCapture.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
                 <dd id="Instruction.RawCapture.to_quil" class="function"><a href="#Instruction.to_quil">to_quil</a></dd>
                 <dd id="Instruction.RawCapture.to_quil_or_debug" class="function"><a href="#Instruction.to_quil_or_debug">to_quil_or_debug</a></dd>
+                <dd id="Instruction.RawCapture.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
                 <dd id="Instruction.RawCapture.Arithmetic" class="class"><a href="#Instruction.Arithmetic">Arithmetic</a></dd>
                 <dd id="Instruction.RawCapture.BinaryLogic" class="class"><a href="#Instruction.BinaryLogic">BinaryLogic</a></dd>
                 <dd id="Instruction.RawCapture.CalibrationDefinition" class="class"><a href="#Instruction.CalibrationDefinition">CalibrationDefinition</a></dd>
@@ -6802,10 +6802,10 @@ You can check for different instruction variants and destructure them using <cod
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#Instruction">Instruction</a></dt>
-                                <dd id="Instruction.Reset.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
-                <dd id="Instruction.Reset.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
+                                <dd id="Instruction.Reset.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
                 <dd id="Instruction.Reset.to_quil" class="function"><a href="#Instruction.to_quil">to_quil</a></dd>
                 <dd id="Instruction.Reset.to_quil_or_debug" class="function"><a href="#Instruction.to_quil_or_debug">to_quil_or_debug</a></dd>
+                <dd id="Instruction.Reset.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
                 <dd id="Instruction.Reset.Arithmetic" class="class"><a href="#Instruction.Arithmetic">Arithmetic</a></dd>
                 <dd id="Instruction.Reset.BinaryLogic" class="class"><a href="#Instruction.BinaryLogic">BinaryLogic</a></dd>
                 <dd id="Instruction.Reset.CalibrationDefinition" class="class"><a href="#Instruction.CalibrationDefinition">CalibrationDefinition</a></dd>
@@ -6867,10 +6867,10 @@ You can check for different instruction variants and destructure them using <cod
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#Instruction">Instruction</a></dt>
-                                <dd id="Instruction.SetFrequency.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
-                <dd id="Instruction.SetFrequency.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
+                                <dd id="Instruction.SetFrequency.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
                 <dd id="Instruction.SetFrequency.to_quil" class="function"><a href="#Instruction.to_quil">to_quil</a></dd>
                 <dd id="Instruction.SetFrequency.to_quil_or_debug" class="function"><a href="#Instruction.to_quil_or_debug">to_quil_or_debug</a></dd>
+                <dd id="Instruction.SetFrequency.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
                 <dd id="Instruction.SetFrequency.Arithmetic" class="class"><a href="#Instruction.Arithmetic">Arithmetic</a></dd>
                 <dd id="Instruction.SetFrequency.BinaryLogic" class="class"><a href="#Instruction.BinaryLogic">BinaryLogic</a></dd>
                 <dd id="Instruction.SetFrequency.CalibrationDefinition" class="class"><a href="#Instruction.CalibrationDefinition">CalibrationDefinition</a></dd>
@@ -6932,10 +6932,10 @@ You can check for different instruction variants and destructure them using <cod
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#Instruction">Instruction</a></dt>
-                                <dd id="Instruction.SetPhase.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
-                <dd id="Instruction.SetPhase.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
+                                <dd id="Instruction.SetPhase.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
                 <dd id="Instruction.SetPhase.to_quil" class="function"><a href="#Instruction.to_quil">to_quil</a></dd>
                 <dd id="Instruction.SetPhase.to_quil_or_debug" class="function"><a href="#Instruction.to_quil_or_debug">to_quil_or_debug</a></dd>
+                <dd id="Instruction.SetPhase.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
                 <dd id="Instruction.SetPhase.Arithmetic" class="class"><a href="#Instruction.Arithmetic">Arithmetic</a></dd>
                 <dd id="Instruction.SetPhase.BinaryLogic" class="class"><a href="#Instruction.BinaryLogic">BinaryLogic</a></dd>
                 <dd id="Instruction.SetPhase.CalibrationDefinition" class="class"><a href="#Instruction.CalibrationDefinition">CalibrationDefinition</a></dd>
@@ -6997,10 +6997,10 @@ You can check for different instruction variants and destructure them using <cod
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#Instruction">Instruction</a></dt>
-                                <dd id="Instruction.SetScale.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
-                <dd id="Instruction.SetScale.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
+                                <dd id="Instruction.SetScale.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
                 <dd id="Instruction.SetScale.to_quil" class="function"><a href="#Instruction.to_quil">to_quil</a></dd>
                 <dd id="Instruction.SetScale.to_quil_or_debug" class="function"><a href="#Instruction.to_quil_or_debug">to_quil_or_debug</a></dd>
+                <dd id="Instruction.SetScale.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
                 <dd id="Instruction.SetScale.Arithmetic" class="class"><a href="#Instruction.Arithmetic">Arithmetic</a></dd>
                 <dd id="Instruction.SetScale.BinaryLogic" class="class"><a href="#Instruction.BinaryLogic">BinaryLogic</a></dd>
                 <dd id="Instruction.SetScale.CalibrationDefinition" class="class"><a href="#Instruction.CalibrationDefinition">CalibrationDefinition</a></dd>
@@ -7062,10 +7062,10 @@ You can check for different instruction variants and destructure them using <cod
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#Instruction">Instruction</a></dt>
-                                <dd id="Instruction.ShiftFrequency.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
-                <dd id="Instruction.ShiftFrequency.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
+                                <dd id="Instruction.ShiftFrequency.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
                 <dd id="Instruction.ShiftFrequency.to_quil" class="function"><a href="#Instruction.to_quil">to_quil</a></dd>
                 <dd id="Instruction.ShiftFrequency.to_quil_or_debug" class="function"><a href="#Instruction.to_quil_or_debug">to_quil_or_debug</a></dd>
+                <dd id="Instruction.ShiftFrequency.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
                 <dd id="Instruction.ShiftFrequency.Arithmetic" class="class"><a href="#Instruction.Arithmetic">Arithmetic</a></dd>
                 <dd id="Instruction.ShiftFrequency.BinaryLogic" class="class"><a href="#Instruction.BinaryLogic">BinaryLogic</a></dd>
                 <dd id="Instruction.ShiftFrequency.CalibrationDefinition" class="class"><a href="#Instruction.CalibrationDefinition">CalibrationDefinition</a></dd>
@@ -7127,10 +7127,10 @@ You can check for different instruction variants and destructure them using <cod
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#Instruction">Instruction</a></dt>
-                                <dd id="Instruction.ShiftPhase.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
-                <dd id="Instruction.ShiftPhase.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
+                                <dd id="Instruction.ShiftPhase.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
                 <dd id="Instruction.ShiftPhase.to_quil" class="function"><a href="#Instruction.to_quil">to_quil</a></dd>
                 <dd id="Instruction.ShiftPhase.to_quil_or_debug" class="function"><a href="#Instruction.to_quil_or_debug">to_quil_or_debug</a></dd>
+                <dd id="Instruction.ShiftPhase.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
                 <dd id="Instruction.ShiftPhase.Arithmetic" class="class"><a href="#Instruction.Arithmetic">Arithmetic</a></dd>
                 <dd id="Instruction.ShiftPhase.BinaryLogic" class="class"><a href="#Instruction.BinaryLogic">BinaryLogic</a></dd>
                 <dd id="Instruction.ShiftPhase.CalibrationDefinition" class="class"><a href="#Instruction.CalibrationDefinition">CalibrationDefinition</a></dd>
@@ -7192,10 +7192,10 @@ You can check for different instruction variants and destructure them using <cod
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#Instruction">Instruction</a></dt>
-                                <dd id="Instruction.Store.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
-                <dd id="Instruction.Store.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
+                                <dd id="Instruction.Store.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
                 <dd id="Instruction.Store.to_quil" class="function"><a href="#Instruction.to_quil">to_quil</a></dd>
                 <dd id="Instruction.Store.to_quil_or_debug" class="function"><a href="#Instruction.to_quil_or_debug">to_quil_or_debug</a></dd>
+                <dd id="Instruction.Store.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
                 <dd id="Instruction.Store.Arithmetic" class="class"><a href="#Instruction.Arithmetic">Arithmetic</a></dd>
                 <dd id="Instruction.Store.BinaryLogic" class="class"><a href="#Instruction.BinaryLogic">BinaryLogic</a></dd>
                 <dd id="Instruction.Store.CalibrationDefinition" class="class"><a href="#Instruction.CalibrationDefinition">CalibrationDefinition</a></dd>
@@ -7257,10 +7257,10 @@ You can check for different instruction variants and destructure them using <cod
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#Instruction">Instruction</a></dt>
-                                <dd id="Instruction.SwapPhases.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
-                <dd id="Instruction.SwapPhases.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
+                                <dd id="Instruction.SwapPhases.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
                 <dd id="Instruction.SwapPhases.to_quil" class="function"><a href="#Instruction.to_quil">to_quil</a></dd>
                 <dd id="Instruction.SwapPhases.to_quil_or_debug" class="function"><a href="#Instruction.to_quil_or_debug">to_quil_or_debug</a></dd>
+                <dd id="Instruction.SwapPhases.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
                 <dd id="Instruction.SwapPhases.Arithmetic" class="class"><a href="#Instruction.Arithmetic">Arithmetic</a></dd>
                 <dd id="Instruction.SwapPhases.BinaryLogic" class="class"><a href="#Instruction.BinaryLogic">BinaryLogic</a></dd>
                 <dd id="Instruction.SwapPhases.CalibrationDefinition" class="class"><a href="#Instruction.CalibrationDefinition">CalibrationDefinition</a></dd>
@@ -7322,10 +7322,10 @@ You can check for different instruction variants and destructure them using <cod
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#Instruction">Instruction</a></dt>
-                                <dd id="Instruction.UnaryLogic.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
-                <dd id="Instruction.UnaryLogic.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
+                                <dd id="Instruction.UnaryLogic.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
                 <dd id="Instruction.UnaryLogic.to_quil" class="function"><a href="#Instruction.to_quil">to_quil</a></dd>
                 <dd id="Instruction.UnaryLogic.to_quil_or_debug" class="function"><a href="#Instruction.to_quil_or_debug">to_quil_or_debug</a></dd>
+                <dd id="Instruction.UnaryLogic.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
                 <dd id="Instruction.UnaryLogic.Arithmetic" class="class"><a href="#Instruction.Arithmetic">Arithmetic</a></dd>
                 <dd id="Instruction.UnaryLogic.BinaryLogic" class="class"><a href="#Instruction.BinaryLogic">BinaryLogic</a></dd>
                 <dd id="Instruction.UnaryLogic.CalibrationDefinition" class="class"><a href="#Instruction.CalibrationDefinition">CalibrationDefinition</a></dd>
@@ -7387,10 +7387,10 @@ You can check for different instruction variants and destructure them using <cod
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#Instruction">Instruction</a></dt>
-                                <dd id="Instruction.WaveformDefinition.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
-                <dd id="Instruction.WaveformDefinition.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
+                                <dd id="Instruction.WaveformDefinition.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
                 <dd id="Instruction.WaveformDefinition.to_quil" class="function"><a href="#Instruction.to_quil">to_quil</a></dd>
                 <dd id="Instruction.WaveformDefinition.to_quil_or_debug" class="function"><a href="#Instruction.to_quil_or_debug">to_quil_or_debug</a></dd>
+                <dd id="Instruction.WaveformDefinition.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
                 <dd id="Instruction.WaveformDefinition.Arithmetic" class="class"><a href="#Instruction.Arithmetic">Arithmetic</a></dd>
                 <dd id="Instruction.WaveformDefinition.BinaryLogic" class="class"><a href="#Instruction.BinaryLogic">BinaryLogic</a></dd>
                 <dd id="Instruction.WaveformDefinition.CalibrationDefinition" class="class"><a href="#Instruction.CalibrationDefinition">CalibrationDefinition</a></dd>
@@ -7452,10 +7452,10 @@ You can check for different instruction variants and destructure them using <cod
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#Instruction">Instruction</a></dt>
-                                <dd id="Instruction.Wait.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
-                <dd id="Instruction.Wait.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
+                                <dd id="Instruction.Wait.parse" class="function"><a href="#Instruction.parse">parse</a></dd>
                 <dd id="Instruction.Wait.to_quil" class="function"><a href="#Instruction.to_quil">to_quil</a></dd>
                 <dd id="Instruction.Wait.to_quil_or_debug" class="function"><a href="#Instruction.to_quil_or_debug">to_quil_or_debug</a></dd>
+                <dd id="Instruction.Wait.is_quil_t" class="function"><a href="#Instruction.is_quil_t">is_quil_t</a></dd>
                 <dd id="Instruction.Wait.Arithmetic" class="class"><a href="#Instruction.Arithmetic">Arithmetic</a></dd>
                 <dd id="Instruction.Wait.BinaryLogic" class="class"><a href="#Instruction.BinaryLogic">BinaryLogic</a></dd>
                 <dd id="Instruction.Wait.CalibrationDefinition" class="class"><a href="#Instruction.CalibrationDefinition">CalibrationDefinition</a></dd>
@@ -7597,17 +7597,6 @@ You can check for different instruction variants and destructure them using <cod
 
 
                             </div>
-                            <div id="JumpUnless.condition" class="classattr">
-                                <div class="attr variable">
-            <span class="name">condition</span>
-
-        
-    </div>
-    <a class="headerlink" href="#JumpUnless.condition"></a>
-    
-    
-
-                            </div>
                             <div id="JumpUnless.target" class="classattr">
                                 <div class="attr variable">
             <span class="name">target</span>
@@ -7615,6 +7604,17 @@ You can check for different instruction variants and destructure them using <cod
         
     </div>
     <a class="headerlink" href="#JumpUnless.target"></a>
+    
+    
+
+                            </div>
+                            <div id="JumpUnless.condition" class="classattr">
+                                <div class="attr variable">
+            <span class="name">condition</span>
+
+        
+    </div>
+    <a class="headerlink" href="#JumpUnless.condition"></a>
     
     
 
@@ -7662,17 +7662,6 @@ You can check for different instruction variants and destructure them using <cod
 
 
                             </div>
-                            <div id="JumpWhen.target" class="classattr">
-                                <div class="attr variable">
-            <span class="name">target</span>
-
-        
-    </div>
-    <a class="headerlink" href="#JumpWhen.target"></a>
-    
-    
-
-                            </div>
                             <div id="JumpWhen.condition" class="classattr">
                                 <div class="attr variable">
             <span class="name">condition</span>
@@ -7680,6 +7669,17 @@ You can check for different instruction variants and destructure them using <cod
         
     </div>
     <a class="headerlink" href="#JumpWhen.condition"></a>
+    
+    
+
+                            </div>
+                            <div id="JumpWhen.target" class="classattr">
+                                <div class="attr variable">
+            <span class="name">target</span>
+
+        
+    </div>
+    <a class="headerlink" href="#JumpWhen.target"></a>
     
     
 
@@ -7781,13 +7781,13 @@ You can check for different instruction variants and destructure them using <cod
 
 
                             </div>
-                            <div id="Load.destination" class="classattr">
+                            <div id="Load.offset" class="classattr">
                                 <div class="attr variable">
-            <span class="name">destination</span>
+            <span class="name">offset</span>
 
         
     </div>
-    <a class="headerlink" href="#Load.destination"></a>
+    <a class="headerlink" href="#Load.offset"></a>
     
     
 
@@ -7803,13 +7803,13 @@ You can check for different instruction variants and destructure them using <cod
     
 
                             </div>
-                            <div id="Load.offset" class="classattr">
+                            <div id="Load.destination" class="classattr">
                                 <div class="attr variable">
-            <span class="name">offset</span>
+            <span class="name">destination</span>
 
         
     </div>
-    <a class="headerlink" href="#Load.offset"></a>
+    <a class="headerlink" href="#Load.destination"></a>
     
     
 
@@ -7857,6 +7857,17 @@ You can check for different instruction variants and destructure them using <cod
 
 
                             </div>
+                            <div id="MeasureCalibrationDefinition.instructions" class="classattr">
+                                <div class="attr variable">
+            <span class="name">instructions</span>
+
+        
+    </div>
+    <a class="headerlink" href="#MeasureCalibrationDefinition.instructions"></a>
+    
+    
+
+                            </div>
                             <div id="MeasureCalibrationDefinition.name" class="classattr">
                                 <div class="attr variable">
             <span class="name">name</span>
@@ -7866,6 +7877,19 @@ You can check for different instruction variants and destructure them using <cod
     <a class="headerlink" href="#MeasureCalibrationDefinition.name"></a>
     
             <div class="docstring"><p>The Quil-T name of the measurement that this measure calibration definition is for, if any.</p>
+</div>
+
+
+                            </div>
+                            <div id="MeasureCalibrationDefinition.qubit" class="classattr">
+                                <div class="attr variable">
+            <span class="name">qubit</span>
+
+        
+    </div>
+    <a class="headerlink" href="#MeasureCalibrationDefinition.qubit"></a>
+    
+            <div class="docstring"><p>The qubit that this measure calibration definition is for.</p>
 </div>
 
 
@@ -7891,30 +7915,6 @@ You can check for different instruction variants and destructure them using <cod
     
             <div class="docstring"><p>The name the measurement calibration uses for the variable it will write the measurement
 result to, if this is a measurement for record.</p>
-</div>
-
-
-                            </div>
-                            <div id="MeasureCalibrationDefinition.instructions" class="classattr">
-                                <div class="attr variable">
-            <span class="name">instructions</span>
-
-        
-    </div>
-    <a class="headerlink" href="#MeasureCalibrationDefinition.instructions"></a>
-    
-    
-
-                            </div>
-                            <div id="MeasureCalibrationDefinition.qubit" class="classattr">
-                                <div class="attr variable">
-            <span class="name">qubit</span>
-
-        
-    </div>
-    <a class="headerlink" href="#MeasureCalibrationDefinition.qubit"></a>
-    
-            <div class="docstring"><p>The qubit that this measure calibration definition is for.</p>
 </div>
 
 
@@ -8049,17 +8049,6 @@ this is a measurement for record.</p>
 
 
                             </div>
-                            <div id="Measurement.target" class="classattr">
-                                <div class="attr variable">
-            <span class="name">target</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Measurement.target"></a>
-    
-    
-
-                            </div>
                             <div id="Measurement.name" class="classattr">
                                 <div class="attr variable">
             <span class="name">name</span>
@@ -8082,6 +8071,17 @@ this is a measurement for record.</p>
     
 
                             </div>
+                            <div id="Measurement.target" class="classattr">
+                                <div class="attr variable">
+            <span class="name">target</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Measurement.target"></a>
+    
+    
+
+                            </div>
                 </section>
                 <section id="MemoryReference">
                     <div class="attr class">
@@ -8095,21 +8095,6 @@ this is a measurement for record.</p>
     
     
 
-                            <div id="MemoryReference.parse" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">parse</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">string</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#MemoryReference.parse"></a>
-    
-            <div class="docstring"><p>The type of the None singleton.</p>
-</div>
-
-
-                            </div>
                             <div id="MemoryReference.to_quil" class="classattr">
                                 <div class="attr function">
             
@@ -8140,15 +8125,19 @@ this is a measurement for record.</p>
 
 
                             </div>
-                            <div id="MemoryReference.index" class="classattr">
-                                <div class="attr variable">
-            <span class="name">index</span>
+                            <div id="MemoryReference.parse" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">parse</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">string</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
-    <a class="headerlink" href="#MemoryReference.index"></a>
+    <a class="headerlink" href="#MemoryReference.parse"></a>
     
-    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
 
                             </div>
                             <div id="MemoryReference.name" class="classattr">
@@ -8158,6 +8147,17 @@ this is a measurement for record.</p>
         
     </div>
     <a class="headerlink" href="#MemoryReference.name"></a>
+    
+    
+
+                            </div>
+                            <div id="MemoryReference.index" class="classattr">
+                                <div class="attr variable">
+            <span class="name">index</span>
+
+        
+    </div>
+    <a class="headerlink" href="#MemoryReference.index"></a>
     
     
 
@@ -8308,17 +8308,6 @@ To get a signature from a definition, use <code><a href="#GateDefinition.signatu
 </div>
 
 
-                            <div id="GateSignature.gate_parameters" class="classattr">
-                                <div class="attr variable">
-            <span class="name">gate_parameters</span>
-
-        
-    </div>
-    <a class="headerlink" href="#GateSignature.gate_parameters"></a>
-    
-    
-
-                            </div>
                             <div id="GateSignature.qubit_parameters" class="classattr">
                                 <div class="attr variable">
             <span class="name">qubit_parameters</span>
@@ -8326,6 +8315,17 @@ To get a signature from a definition, use <code><a href="#GateDefinition.signatu
         
     </div>
     <a class="headerlink" href="#GateSignature.qubit_parameters"></a>
+    
+    
+
+                            </div>
+                            <div id="GateSignature.gate_parameters" class="classattr">
+                                <div class="attr variable">
+            <span class="name">gate_parameters</span>
+
+        
+    </div>
+    <a class="headerlink" href="#GateSignature.gate_parameters"></a>
     
     
 
@@ -8478,17 +8478,6 @@ To get a signature from a definition, use <code><a href="#GateDefinition.signatu
     
     
 
-                            <div id="PauliSum.arguments" class="classattr">
-                                <div class="attr variable">
-            <span class="name">arguments</span>
-
-        
-    </div>
-    <a class="headerlink" href="#PauliSum.arguments"></a>
-    
-    
-
-                            </div>
                             <div id="PauliSum.terms" class="classattr">
                                 <div class="attr variable">
             <span class="name">terms</span>
@@ -8496,6 +8485,17 @@ To get a signature from a definition, use <code><a href="#GateDefinition.signatu
         
     </div>
     <a class="headerlink" href="#PauliSum.terms"></a>
+    
+    
+
+                            </div>
+                            <div id="PauliSum.arguments" class="classattr">
+                                <div class="attr variable">
+            <span class="name">arguments</span>
+
+        
+    </div>
+    <a class="headerlink" href="#PauliSum.arguments"></a>
     
     
 
@@ -8543,6 +8543,17 @@ To get a signature from a definition, use <code><a href="#GateDefinition.signatu
 
 
                             </div>
+                            <div id="Pragma.name" class="classattr">
+                                <div class="attr variable">
+            <span class="name">name</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Pragma.name"></a>
+    
+    
+
+                            </div>
                             <div id="Pragma.data" class="classattr">
                                 <div class="attr variable">
             <span class="name">data</span>
@@ -8561,17 +8572,6 @@ To get a signature from a definition, use <code><a href="#GateDefinition.signatu
         
     </div>
     <a class="headerlink" href="#Pragma.arguments"></a>
-    
-    
-
-                            </div>
-                            <div id="Pragma.name" class="classattr">
-                                <div class="attr variable">
-            <span class="name">name</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Pragma.name"></a>
     
     
 
@@ -8712,17 +8712,6 @@ To get a signature from a definition, use <code><a href="#GateDefinition.signatu
 
 
                             </div>
-                            <div id="Pulse.blocking" class="classattr">
-                                <div class="attr variable">
-            <span class="name">blocking</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Pulse.blocking"></a>
-    
-    
-
-                            </div>
                             <div id="Pulse.waveform" class="classattr">
                                 <div class="attr variable">
             <span class="name">waveform</span>
@@ -8730,6 +8719,17 @@ To get a signature from a definition, use <code><a href="#GateDefinition.signatu
         
     </div>
     <a class="headerlink" href="#Pulse.waveform"></a>
+    
+    
+
+                            </div>
+                            <div id="Pulse.blocking" class="classattr">
+                                <div class="attr variable">
+            <span class="name">blocking</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Pulse.blocking"></a>
     
     
 
@@ -8924,17 +8924,6 @@ To get a signature from a definition, use <code><a href="#GateDefinition.signatu
 
 
                             </div>
-                            <div id="RawCapture.blocking" class="classattr">
-                                <div class="attr variable">
-            <span class="name">blocking</span>
-
-        
-    </div>
-    <a class="headerlink" href="#RawCapture.blocking"></a>
-    
-    
-
-                            </div>
                             <div id="RawCapture.duration" class="classattr">
                                 <div class="attr variable">
             <span class="name">duration</span>
@@ -8953,6 +8942,17 @@ To get a signature from a definition, use <code><a href="#GateDefinition.signatu
         
     </div>
     <a class="headerlink" href="#RawCapture.memory_reference"></a>
+    
+    
+
+                            </div>
+                            <div id="RawCapture.blocking" class="classattr">
+                                <div class="attr variable">
+            <span class="name">blocking</span>
+
+        
+    </div>
+    <a class="headerlink" href="#RawCapture.blocking"></a>
     
     
 
@@ -9156,17 +9156,6 @@ To get a signature from a definition, use <code><a href="#GateDefinition.signatu
 
 
                             </div>
-                            <div id="SetFrequency.frequency" class="classattr">
-                                <div class="attr variable">
-            <span class="name">frequency</span>
-
-        
-    </div>
-    <a class="headerlink" href="#SetFrequency.frequency"></a>
-    
-    
-
-                            </div>
                             <div id="SetFrequency.frame" class="classattr">
                                 <div class="attr variable">
             <span class="name">frame</span>
@@ -9174,6 +9163,17 @@ To get a signature from a definition, use <code><a href="#GateDefinition.signatu
         
     </div>
     <a class="headerlink" href="#SetFrequency.frame"></a>
+    
+    
+
+                            </div>
+                            <div id="SetFrequency.frequency" class="classattr">
+                                <div class="attr variable">
+            <span class="name">frequency</span>
+
+        
+    </div>
+    <a class="headerlink" href="#SetFrequency.frequency"></a>
     
     
 
@@ -9286,17 +9286,6 @@ To get a signature from a definition, use <code><a href="#GateDefinition.signatu
 
 
                             </div>
-                            <div id="SetScale.frame" class="classattr">
-                                <div class="attr variable">
-            <span class="name">frame</span>
-
-        
-    </div>
-    <a class="headerlink" href="#SetScale.frame"></a>
-    
-    
-
-                            </div>
                             <div id="SetScale.scale" class="classattr">
                                 <div class="attr variable">
             <span class="name">scale</span>
@@ -9304,6 +9293,17 @@ To get a signature from a definition, use <code><a href="#GateDefinition.signatu
         
     </div>
     <a class="headerlink" href="#SetScale.scale"></a>
+    
+    
+
+                            </div>
+                            <div id="SetScale.frame" class="classattr">
+                                <div class="attr variable">
+            <span class="name">frame</span>
+
+        
+    </div>
+    <a class="headerlink" href="#SetScale.frame"></a>
     
     
 
@@ -9321,17 +9321,6 @@ To get a signature from a definition, use <code><a href="#GateDefinition.signatu
     
     
 
-                            <div id="Sharing.name" class="classattr">
-                                <div class="attr variable">
-            <span class="name">name</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Sharing.name"></a>
-    
-    
-
-                            </div>
                             <div id="Sharing.offsets" class="classattr">
                                 <div class="attr variable">
             <span class="name">offsets</span>
@@ -9339,6 +9328,17 @@ To get a signature from a definition, use <code><a href="#GateDefinition.signatu
         
     </div>
     <a class="headerlink" href="#Sharing.offsets"></a>
+    
+    
+
+                            </div>
+                            <div id="Sharing.name" class="classattr">
+                                <div class="attr variable">
+            <span class="name">name</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Sharing.name"></a>
     
     
 
@@ -9386,17 +9386,6 @@ To get a signature from a definition, use <code><a href="#GateDefinition.signatu
 
 
                             </div>
-                            <div id="ShiftFrequency.frequency" class="classattr">
-                                <div class="attr variable">
-            <span class="name">frequency</span>
-
-        
-    </div>
-    <a class="headerlink" href="#ShiftFrequency.frequency"></a>
-    
-    
-
-                            </div>
                             <div id="ShiftFrequency.frame" class="classattr">
                                 <div class="attr variable">
             <span class="name">frame</span>
@@ -9404,6 +9393,17 @@ To get a signature from a definition, use <code><a href="#GateDefinition.signatu
         
     </div>
     <a class="headerlink" href="#ShiftFrequency.frame"></a>
+    
+    
+
+                            </div>
+                            <div id="ShiftFrequency.frequency" class="classattr">
+                                <div class="attr variable">
+            <span class="name">frequency</span>
+
+        
+    </div>
+    <a class="headerlink" href="#ShiftFrequency.frequency"></a>
     
     
 
@@ -9516,17 +9516,6 @@ To get a signature from a definition, use <code><a href="#GateDefinition.signatu
 
 
                             </div>
-                            <div id="Store.source" class="classattr">
-                                <div class="attr variable">
-            <span class="name">source</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Store.source"></a>
-    
-    
-
-                            </div>
                             <div id="Store.destination" class="classattr">
                                 <div class="attr variable">
             <span class="name">destination</span>
@@ -9545,6 +9534,17 @@ To get a signature from a definition, use <code><a href="#GateDefinition.signatu
         
     </div>
     <a class="headerlink" href="#Store.offset"></a>
+    
+    
+
+                            </div>
+                            <div id="Store.source" class="classattr">
+                                <div class="attr variable">
+            <span class="name">source</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Store.source"></a>
     
     
 
@@ -9777,17 +9777,6 @@ at a later time.</p>
 
 
                             </div>
-                            <div id="UnaryLogic.operator" class="classattr">
-                                <div class="attr variable">
-            <span class="name">operator</span>
-
-        
-    </div>
-    <a class="headerlink" href="#UnaryLogic.operator"></a>
-    
-    
-
-                            </div>
                             <div id="UnaryLogic.operand" class="classattr">
                                 <div class="attr variable">
             <span class="name">operand</span>
@@ -9795,6 +9784,17 @@ at a later time.</p>
         
     </div>
     <a class="headerlink" href="#UnaryLogic.operand"></a>
+    
+    
+
+                            </div>
+                            <div id="UnaryLogic.operator" class="classattr">
+                                <div class="attr variable">
+            <span class="name">operator</span>
+
+        
+    </div>
+    <a class="headerlink" href="#UnaryLogic.operator"></a>
     
     
 
@@ -10069,17 +10069,6 @@ with the appropriate [<code><a href="#ExternSignature">ExternSignature</a></code
     
     
 
-                            <div id="Waveform.matrix" class="classattr">
-                                <div class="attr variable">
-            <span class="name">matrix</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Waveform.matrix"></a>
-    
-    
-
-                            </div>
                             <div id="Waveform.parameters" class="classattr">
                                 <div class="attr variable">
             <span class="name">parameters</span>
@@ -10087,6 +10076,17 @@ with the appropriate [<code><a href="#ExternSignature">ExternSignature</a></code
         
     </div>
     <a class="headerlink" href="#Waveform.parameters"></a>
+    
+    
+
+                            </div>
+                            <div id="Waveform.matrix" class="classattr">
+                                <div class="attr variable">
+            <span class="name">matrix</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Waveform.matrix"></a>
     
     
 
@@ -10134,17 +10134,6 @@ with the appropriate [<code><a href="#ExternSignature">ExternSignature</a></code
 
 
                             </div>
-                            <div id="WaveformDefinition.definition" class="classattr">
-                                <div class="attr variable">
-            <span class="name">definition</span>
-
-        
-    </div>
-    <a class="headerlink" href="#WaveformDefinition.definition"></a>
-    
-    
-
-                            </div>
                             <div id="WaveformDefinition.name" class="classattr">
                                 <div class="attr variable">
             <span class="name">name</span>
@@ -10152,6 +10141,17 @@ with the appropriate [<code><a href="#ExternSignature">ExternSignature</a></code
         
     </div>
     <a class="headerlink" href="#WaveformDefinition.name"></a>
+    
+    
+
+                            </div>
+                            <div id="WaveformDefinition.definition" class="classattr">
+                                <div class="attr variable">
+            <span class="name">definition</span>
+
+        
+    </div>
+    <a class="headerlink" href="#WaveformDefinition.definition"></a>
     
     
 
@@ -10199,17 +10199,6 @@ with the appropriate [<code><a href="#ExternSignature">ExternSignature</a></code
 
 
                             </div>
-                            <div id="WaveformInvocation.parameters" class="classattr">
-                                <div class="attr variable">
-            <span class="name">parameters</span>
-
-        
-    </div>
-    <a class="headerlink" href="#WaveformInvocation.parameters"></a>
-    
-    
-
-                            </div>
                             <div id="WaveformInvocation.name" class="classattr">
                                 <div class="attr variable">
             <span class="name">name</span>
@@ -10217,6 +10206,17 @@ with the appropriate [<code><a href="#ExternSignature">ExternSignature</a></code
         
     </div>
     <a class="headerlink" href="#WaveformInvocation.name"></a>
+    
+    
+
+                            </div>
+                            <div id="WaveformInvocation.parameters" class="classattr">
+                                <div class="attr variable">
+            <span class="name">parameters</span>
+
+        
+    </div>
+    <a class="headerlink" href="#WaveformInvocation.parameters"></a>
     
     
 
