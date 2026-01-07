@@ -861,8 +861,8 @@ pub trait InstructionHandler {
     ///
     /// - An instruction `I` *uses* a frame `F` if the execution of `I` plays on `F`.
     ///
-    /// - An instruction `I` *blocks* a frame `F` if `I` does not play on `F` but other instructions
-    ///   may also not play on `F` while `I` is executing.
+    /// - An instruction `I` *blocks* a frame `F` if `I` does not play on `F` but, even so, other
+    ///   instructions may not play on `F` while `I` is executing.
     ///
     /// Only one instruction may play on a given frame at a time, so using a frame is a stronger
     /// condition than blocking a frame.
