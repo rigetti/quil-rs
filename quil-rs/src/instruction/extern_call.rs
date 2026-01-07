@@ -969,7 +969,7 @@ impl Call {
     /// Return the [`MemoryAccesses`] for the [`Call`] instruction given the [`ExternSignatureMap`].
     /// If the type of the `EXTERN` has a return type, then the first argument is assumed to be
     /// written to and not read from; all other parameters are assumed to be read from, and all
-    /// other mutable parameters are assumped to be written to as well.
+    /// other mutable parameters are assumed to be written to as well.
     pub(crate) fn default_memory_accesses(
         &self,
         extern_signatures: &ExternSignatureMap,
