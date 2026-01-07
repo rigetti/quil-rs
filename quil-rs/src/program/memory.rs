@@ -46,17 +46,17 @@ pickleable_new! {
 /// individual indices that were accessed.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct MemoryAccesses {
-    /// All ways these instructions can read from memory.
+    /// All memory regions these instructions can read from.
     pub reads: HashSet<String>,
 
-    /// All ways these instructions can write to memory from within the processor.
+    /// All memory regions these instructions can write to from within the processor.
     ///
     /// The "within the processor" clause indicates that this covers the write to the destination of
     /// a [`MOVE`][Instruction::Move], but not the write to the target of a
     /// [`MEASURE`][Instruction::Measurement].
     pub writes: HashSet<String>,
 
-    /// All ways these instructions can write to memory from outside the processor.
+    /// All memory regions these instructions can write to from outside the processor.
     ///
     /// The "outside the processor" clause indicates that this covers the write to the target of a
     /// [`MEASURE`][Instruction::Measurement], but not the write to the destination of a
