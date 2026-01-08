@@ -42,6 +42,7 @@ mod declaration;
 mod extern_call;
 mod frame;
 mod gate;
+mod gate_sequence;
 mod measurement;
 mod pragma;
 mod qubit;
@@ -72,6 +73,9 @@ pub use self::gate::{
     Gate, GateDefinition, GateError, GateModifier, GateSpecification, GateType, Matrix, PauliGate,
     PauliSum, PauliTerm,
 };
+pub use self::gate_sequence::{
+    DefGateSequence, DefGateSequenceError, DefGateSequenceExpansionError,
+};
 pub use self::measurement::Measurement;
 pub use self::pragma::{Include, Pragma, PragmaArgument, RESERVED_PRAGMA_EXTERN};
 pub use self::qubit::{Qubit, QubitPlaceholder};
@@ -79,10 +83,14 @@ pub use self::reset::Reset;
 pub use self::timing::{Delay, Fence};
 pub use self::waveform::{Waveform, WaveformDefinition, WaveformInvocation, WaveformParameters};
 
+pub(crate) use self::gate::GateSignature;
+
 #[derive(Clone, Debug, thiserror::Error, PartialEq, Eq)]
 pub enum ValidationError {
     #[error(transparent)]
     GateError(#[from] GateError),
+    #[error(transparent)]
+    DefGateSequenceError(#[from] DefGateSequenceError),
 }
 
 /// A Quil instruction.
@@ -369,13 +377,25 @@ fn write_expression_parameter_string(
     Ok(())
 }
 
-fn write_parameter_string(f: &mut impl std::fmt::Write, parameters: &[String]) -> fmt::Result {
+fn write_parameter_string<T: AsRef<str>>(
+    f: &mut impl std::fmt::Write,
+    parameters: &[T],
+) -> fmt::Result {
     if parameters.is_empty() {
         return Ok(());
     }
 
     write!(f, "(")?;
-    write_join(f, parameters, ", ", "%")?;
+    write_join(
+        f,
+        parameters
+            .iter()
+            .map(AsRef::as_ref)
+            .collect::<Vec<_>>()
+            .as_slice(),
+        ", ",
+        "%",
+    )?;
     write!(f, ")")
 }
 

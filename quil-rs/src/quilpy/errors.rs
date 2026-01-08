@@ -89,6 +89,14 @@ exception!(
 );
 
 exception!(
+    crate::instruction::DefGateSequenceError,
+    quil.instructions,
+    DefGateSequenceError,
+    InstructionError,
+    "Errors that can occur when initializing a sequence gate definition."
+);
+
+exception!(
     crate::instruction::ParseInstructionError,
     quil.instructions,
     ParseInstructionError,

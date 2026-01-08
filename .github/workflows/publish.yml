@@ -33,7 +33,7 @@ jobs:
       - run: echo "Publishing wheels"
 
   publish-quil-rs:
-    name: Publish quil-rs 
+    name: Publish quil-rs
     needs: [ is-release, should-publish-crate ]
     runs-on: ubuntu-latest
     steps:
@@ -95,7 +95,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Build Wheel
-        uses: messense/maturin-action@v1
+        uses: PyO3/maturin-action@v1
         with:
           working-directory: quil-rs
           target: ${{ matrix.platform.target }}
@@ -126,6 +126,11 @@ jobs:
     # can be published.
     needs: [ build-wheels, sdist ]
     if: always() && needs.sdist.result == 'success'
+    # The `permissions` and `environment` used for PyPI's trusted publishing.
+    # Note that if you change the name of this workflow or environment,
+    # you'll need to update the settings in PyPI's UI as well.
+    # For more details, see: https://www.maturin.rs/distribution.html#using-pypis-trusted-publishing
+    environment: pypi
     permissions:
       id-token: write
     steps:
@@ -136,7 +141,7 @@ jobs:
           merge-multiple: true
       - run: ls -R wheels
       - name: Publish to PyPI
-        uses: messense/maturin-action@v1
+        uses: PyO3/maturin-action@v1
         with:
           command: upload
           args: --skip-existing wheels/*

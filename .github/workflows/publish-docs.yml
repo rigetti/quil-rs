@@ -14,6 +14,8 @@ on:
 jobs:
   publish-docs:
     runs-on: ubuntu-latest
+    env:
+      PYTHON_VERSION: '3.13'
     steps:
       - uses: actions/checkout@v5
       - uses: Swatinem/rust-cache@v2
@@ -22,16 +24,16 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install Poetry
         uses: abatilo/actions-poetry@v4
 
-      - name: Configure Python Cache 
+      - name: Configure Python Cache
         uses: actions/cache@v4
         with:
-          path: './quil-rs/.venv/' 
-          key: ubuntu-latest-venv-${{ hashFiles('**/poetry.lock') }}
+          path: './quil-rs/.venv/'
+          key: ${{ runner.os }}-${{ env.PYTHON_VERSION }}-venv-${{ hashFiles('**/poetry.lock') }}
 
       - name: Build quil-py documentation
         run: cargo make --cwd quil-rs document-quil
