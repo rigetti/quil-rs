@@ -244,6 +244,64 @@ mod tests {
 
     #[rstest]
     #[case(
+        r#"
+cis(func_ref[0]) ^
+cos(func_ref[1]) +
+exp(func_ref[2]) -
+sin(func_ref[3]) /
+sqrt(func_ref[4]) *
+
+(infix_ref[0] ^ infix_ref[0]) ^
+(infix_ref[1] + infix_ref[1]) +
+(infix_ref[2] - infix_ref[2]) -
+(infix_ref[3] / infix_ref[3]) /
+(infix_ref[4] * infix_ref[4]) *
+
+1.0 ^
+
+pi +
+
+(-prefix_ref) -
+
+%variable
+"#,
+        &[
+            ("func_ref", 0),
+            ("func_ref", 1),
+            ("func_ref", 2),
+            ("func_ref", 3),
+            ("func_ref", 4),
+            ("infix_ref", 0),
+            ("infix_ref", 0),
+            ("infix_ref", 1),
+            ("infix_ref", 1),
+            ("infix_ref", 2),
+            ("infix_ref", 2),
+            ("infix_ref", 3),
+            ("infix_ref", 3),
+            ("infix_ref", 4),
+            ("infix_ref", 4),
+            ("prefix_ref", 0),
+        ]
+    )]
+    fn expr_references(#[case] expr: &str, #[case] expected_refs: &[(&str, u64)]) {
+        let expr = expr.replace('\n', " ").parse::<Expression>().unwrap();
+
+        let computed_refs: Vec<_> = expr.memory_references().cloned().collect();
+
+        let expected_refs: Vec<_> = expected_refs
+            .iter()
+            .map(|(name, index)| MemoryReference {
+                name: (*name).to_owned(),
+                index: *index,
+            })
+            .collect();
+
+        assert_eq!(computed_refs, expected_refs);
+    }
+
+    #[rstest]
+    #[case(
         Instruction::Store(Store {
             destination: "destination".to_string(),
             offset: MemoryReference {

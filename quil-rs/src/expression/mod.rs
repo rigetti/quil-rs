@@ -952,6 +952,7 @@ pub mod interned {
     }
 
     atoms! {
+        address: Address(MemoryReference),
         function_call_expr: FunctionCall(FunctionCallExpression),
         infix_expr: Infix(InfixExpression),
         pi: PiConstant(),
@@ -1001,12 +1002,116 @@ pub mod interned {
 }
 
 #[cfg(test)]
+pub mod proptest_helpers {
+    use super::*;
+
+    use std::f64::consts::TAU;
+
+    use proptest::prelude::*;
+
+    use crate::reserved::ReservedToken;
+
+    pub fn arb_name() -> impl Strategy<Value = String> {
+        r"[A-Za-z_]([A-Za-z0-9_-]*[A-Za-z0-9_])?".prop_filter("Exclude reserved tokens", |t| {
+            ReservedToken::from_str(t).is_err()
+        })
+    }
+
+    // Better behaved than the auto-derived version re: names & indices
+    pub fn arb_memory_reference() -> impl Strategy<Value = MemoryReference> {
+        (arb_name(), any::<u64>()).prop_map(|(name, index)| MemoryReference { name, index })
+    }
+
+    // Better behaved than the auto-derived version via arbitrary floats
+    pub fn arb_complex64() -> impl Strategy<Value = Complex64> {
+        ((-TAU..TAU), (-TAU..TAU)).prop_map(|(re, im)| Complex64 { re, im })
+    }
+
+    /// Filter an [`Expression`] to not be constantly zero.
+    pub fn arb_expr_nonzero(
+        strat: impl Strategy<Value = Expression>,
+    ) -> impl Strategy<Value = Expression> {
+        strat.prop_filter("Exclude constantly-zero expressions", |expr| {
+            expr.clone().into_simplified() != Expression::Number(Complex64::new(0.0, 0.0))
+        })
+    }
+
+    /// Generate an arbitrary [`Expression`] for a property test, with custom leaf generation.
+    pub fn arb_expr_custom_leaves<
+        MemRefStrat: Strategy<Value = MemoryReference> + 'static,
+        VariableStrat: Strategy<Value = String> + 'static,
+        ComplexStrat: Strategy<Value = Complex64> + 'static,
+    >(
+        mut arb_memory_reference: impl FnMut() -> MemRefStrat,
+        mut arb_variable: impl FnMut() -> VariableStrat,
+        mut arb_complex64: impl FnMut() -> ComplexStrat,
+    ) -> impl Strategy<Value = Expression> {
+        use Expression::*;
+        let leaf = prop_oneof![
+            arb_memory_reference().prop_map(Address),
+            arb_complex64().prop_map(Number),
+            Just(PiConstant()),
+            arb_variable().prop_map(Variable),
+        ];
+        leaf.prop_recursive(
+            4,  // No more than 4 branch levels deep
+            64, // Target around 64 total nodes
+            16, // Each "collection" is up to 16 elements
+            |expr| {
+                let inner = expr.clone();
+                prop_oneof![
+                    (any::<ExpressionFunction>(), expr.clone()).prop_map(|(function, e)| {
+                        Expression::FunctionCall(FunctionCallExpression {
+                            function,
+                            expression: ArcIntern::new(e),
+                        })
+                    }),
+                    (expr.clone(), any::<InfixOperator>())
+                        .prop_flat_map(move |(left, operator)| {
+                            (
+                                Just(left),
+                                Just(operator),
+                                // Avoid division by 0 so that we can reliably assert equality
+                                if let InfixOperator::Slash = operator {
+                                    arb_expr_nonzero(inner.clone()).boxed()
+                                } else {
+                                    inner.clone().boxed()
+                                },
+                            )
+                        })
+                        .prop_map(|(l, operator, r)| {
+                            Infix(InfixExpression {
+                                left: ArcIntern::new(l),
+                                operator,
+                                right: ArcIntern::new(r),
+                            })
+                        }),
+                    (any::<PrefixOperator>(), expr).prop_map(|(operator, e)| {
+                        Prefix(PrefixExpression {
+                            operator,
+                            expression: ArcIntern::new(e),
+                        })
+                    }),
+                ]
+            },
+        )
+    }
+
+    /// Generate an arbitrary [`Expression`] for a property test.
+    pub fn arb_expr() -> impl Strategy<Value = Expression> {
+        arb_expr_custom_leaves(arb_memory_reference, arb_name, arb_complex64)
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
-    use crate::reserved::ReservedToken;
+
+    use std::collections::{hash_map::DefaultHasher, HashSet};
+
     use proptest::prelude::*;
-    use std::collections::hash_map::DefaultHasher;
-    use std::collections::HashSet;
+
+    use super::proptest_helpers::*;
 
     /// Hash value helper: turn a hashable thing into a u64.
     #[inline]
@@ -1132,82 +1237,7 @@ mod tests {
         }
     }
 
-    // Better behaved than the auto-derived version for names
-    fn arb_name() -> impl Strategy<Value = String> {
-        r"[a-z][a-zA-Z0-9]{1,10}".prop_filter("Exclude reserved tokens", |t| {
-            ReservedToken::from_str(t).is_err() && !t.to_lowercase().starts_with("nan")
-        })
-    }
-
-    // Better behaved than the auto-derived version re: names & indices
-    fn arb_memory_reference() -> impl Strategy<Value = MemoryReference> {
-        (arb_name(), (u64::MIN..u32::MAX as u64))
-            .prop_map(|(name, index)| MemoryReference { name, index })
-    }
-
-    // Better behaved than the auto-derived version via arbitrary floats
-    fn arb_complex64() -> impl Strategy<Value = Complex64> {
-        let tau = std::f64::consts::TAU;
-        ((-tau..tau), (-tau..tau)).prop_map(|(re, im)| Complex64 { re, im })
-    }
-
-    /// Filter an Expression to not be constantly zero.
-    fn nonzero(strat: impl Strategy<Value = Expression>) -> impl Strategy<Value = Expression> {
-        strat.prop_filter("Exclude constantly-zero expressions", |expr| {
-            expr.clone().into_simplified() != Expression::Number(Complex64::new(0.0, 0.0))
-        })
-    }
-
-    /// Generate an arbitrary Expression for a property test.
-    /// See https://docs.rs/proptest/1.0.0/proptest/prelude/trait.Strategy.html#method.prop_recursive
-    fn arb_expr() -> impl Strategy<Value = Expression> {
-        use Expression::*;
-        let leaf = prop_oneof![
-            arb_memory_reference().prop_map(Address),
-            arb_complex64().prop_map(Number),
-            Just(PiConstant()),
-            arb_name().prop_map(Variable),
-        ];
-        leaf.prop_recursive(
-            4,  // No more than 4 branch levels deep
-            64, // Target around 64 total nodes
-            16, // Each "collection" is up to 16 elements
-            |expr| {
-                let inner = expr.clone();
-                prop_oneof![
-                    (any::<ExpressionFunction>(), expr.clone()).prop_map(|(function, e)| {
-                        Expression::FunctionCall(FunctionCallExpression {
-                            function,
-                            expression: ArcIntern::new(e),
-                        })
-                    }),
-                    (expr.clone(), any::<InfixOperator>())
-                        .prop_flat_map(move |(left, operator)| (
-                            Just(left),
-                            Just(operator),
-                            // Avoid division by 0 so that we can reliably assert equality
-                            if let InfixOperator::Slash = operator {
-                                nonzero(inner.clone()).boxed()
-                            } else {
-                                inner.clone().boxed()
-                            }
-                        ))
-                        .prop_map(|(l, operator, r)| Infix(InfixExpression {
-                            left: ArcIntern::new(l),
-                            operator,
-                            right: ArcIntern::new(r)
-                        })),
-                    expr.prop_map(|e| Prefix(PrefixExpression {
-                        operator: PrefixOperator::Minus,
-                        expression: ArcIntern::new(e)
-                    }))
-                ]
-            },
-        )
-    }
-
     proptest! {
-
         #[test]
         fn eq(a in any::<f64>(), b in any::<f64>()) {
             let first = Expression::Infix (InfixExpression {
@@ -1327,14 +1357,14 @@ mod tests {
 
         // Avoid division by 0 so that we can reliably assert equality
         #[test]
-        fn division_works_as_expected(left in arb_expr(), right in nonzero(arb_expr())) {
+        fn division_works_as_expected(left in arb_expr(), right in arb_expr_nonzero(arb_expr())) {
             let expected = Expression::Infix (InfixExpression { left: ArcIntern::new(left.clone()), operator: InfixOperator::Slash, right: ArcIntern::new(right.clone()) } );
             prop_assert_eq!(left / right, expected);
         }
 
         // Avoid division by 0 so that we can reliably assert equality
         #[test]
-        fn in_place_division_works_as_expected(left in arb_expr(), right in nonzero(arb_expr())) {
+        fn in_place_division_works_as_expected(left in arb_expr(), right in arb_expr_nonzero(arb_expr())) {
             let expected = Expression::Infix (InfixExpression { left: ArcIntern::new(left.clone()), operator: InfixOperator::Slash, right: ArcIntern::new(right.clone()) } );
             let mut x = left;
             x /= right;
