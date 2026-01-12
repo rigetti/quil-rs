@@ -1242,7 +1242,7 @@ impl InstructionHandler for DefaultHandler {
                 GateSpecification::Sequence(DefGateSequence { gates, qubits: _ }) => gates
                     .iter()
                     .map(gate_application)
-                    .fold(MemoryAccesses::new(), MemoryAccesses::union),
+                    .fold(MemoryAccesses::none(), MemoryAccesses::union),
             },
             Instruction::CircuitDefinition(CircuitDefinition {
                 instructions,
@@ -1256,7 +1256,7 @@ impl InstructionHandler for DefaultHandler {
             }) => instructions
                 .iter()
                 .map(|instr| self.memory_accesses(extern_signature_map, instr))
-                .fold_ok(MemoryAccesses::new(), MemoryAccesses::union)?,
+                .fold_ok(MemoryAccesses::none(), MemoryAccesses::union)?,
             Instruction::WaveformDefinition(WaveformDefinition {
                 definition:
                     Waveform {

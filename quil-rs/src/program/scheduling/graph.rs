@@ -266,6 +266,7 @@ impl<'a> ScheduledBasicBlock<'a> {
                 }
             }
 
+            // We're done defining `leading_instruction`, it's no longer `mut`.
             let leading_instruction = leading_instruction;
 
             match handler.role(instruction) {

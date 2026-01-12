@@ -65,16 +65,10 @@ pub struct MemoryAccesses {
 }
 
 impl MemoryAccesses {
-    /// Returns a new empty set of memory accesses
-    #[inline]
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// A more semantically-meaningful alias for [`Self::new`].
+    /// An empty set of memory accesses
     #[inline]
     pub fn none() -> Self {
-        Self::new()
+        Self::default()
     }
 
     pub fn union(mut self, rhs: Self) -> Self {
@@ -192,7 +186,7 @@ pub mod expression {
                             operator: _,
                         }) => expr = expression,
 
-                        // This expression has two subexpression; we delay searching through the
+                        // This expression has two subexpressions; we delay searching through the
                         // right child by pushing it on the stack, and "tail call" to search through
                         // the left child immediately as we did with the single-subexpression case
                         // above.
