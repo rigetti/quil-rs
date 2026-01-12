@@ -1001,9 +1001,6 @@ pub mod interned {
 }
 
 #[cfg(test)]
-// This lint should be re-enabled once this proptest issue is resolved
-// https://github.com/proptest-rs/proptest/issues/364
-#[allow(clippy::arc_with_non_send_sync)]
 mod tests {
     use super::*;
     use crate::reserved::ReservedToken;
