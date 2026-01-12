@@ -37,8 +37,7 @@ optipy = "0.1.0"
 # Enabled with the "python" feature.
 numpy = { version = "0.27.1", optional = true }
 pyo3 = { version = "0.27.2", features = ["indexmap", "num-complex", "multiple-pymethods"], optional = true }
-# rigetti-pyo3 = { git = "https://github.com/rigetti/rigetti-pyo3.git", rev = "refs/pull/62/head", optional = true }
-rigetti-pyo3 = { path = "../../rigetti-pyo3/rigetti-pyo3", optional = true }
+rigetti-pyo3 = { git = "https://github.com/rigetti/rigetti-pyo3.git", rev = "refs/pull/62/head", optional = true }
 
 # Enabled with the "stubs" feature.
 pyo3-stub-gen = { version = "0.17.2", features = ["numpy"], optional = true }
