@@ -595,11 +595,6 @@ class Program:
           [`Program::extern_pragma_map`]).
         
         When a valid program is simplified, it remains valid.
-        
-        # Note
-        
-        If you need custom instruction handling during simplification,
-        use [`InstructionHandler::simplify_program`] instead.
         """
     @staticmethod
     def parse(input:builtins.str) -> Program:

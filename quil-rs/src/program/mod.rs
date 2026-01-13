@@ -52,7 +52,7 @@ pub use self::error::{
 };
 pub use self::frame::FrameSet;
 pub use self::frame::MatchedFrames;
-pub use self::memory::{MemoryAccesses, MemoryAccessesError, MemoryAccessesResult, MemoryRegion};
+pub use self::memory::{MemoryAccesses, MemoryAccessesError, MemoryRegion};
 pub use self::source_map::{ExpansionResult, SourceMap, SourceMapEntry, SourceMapIndexable};
 
 pub mod analysis;
@@ -247,27 +247,6 @@ impl Program {
     /// See [`Program::expand_calibrations_with_source_map`] for a version that returns a source mapping.
     pub fn expand_calibrations(&self) -> Result<Self> {
         self.expand_calibrations_inner(None)
-    }
-
-    /// Simplify this program into a new [`Program`] which contains only instructions
-    /// and definitions which are executed; effectively, perform dead code removal.
-    ///
-    /// Removes:
-    /// - All calibrations, following calibration expansion
-    /// - Frame definitions which are not used by any instruction such as `PULSE` or `CAPTURE`
-    /// - Waveform definitions which are not used by any instruction
-    /// - `PRAGMA EXTERN` instructions which are not used by any `CALL` instruction (see
-    ///   [`Program::extern_pragma_map`]).
-    ///
-    /// When a valid program is simplified, it remains valid.
-    ///
-    /// # Note
-    ///
-    /// If you need custom instruction handling during simplification,
-    /// use [`InstructionHandler::simplify_program`] instead.
-    #[allow(clippy::wrong_self_convention)] // It's a Breaking Change to change it now.
-    pub fn into_simplified(&self) -> Result<Self> {
-        self.simplify_with_handler(&mut InstructionHandler::default())
     }
 
     /// Return a copy of the [`Program`] wrapped in a loop that repeats `iterations` times.
@@ -712,27 +691,6 @@ impl Program {
         program
     }
 
-    /// Return the frames which are either "used" or "blocked" by the given instruction.
-    ///
-    /// An instruction "uses" a frame if it plays on that frame; it "blocks" a frame
-    /// if the instruction prevents other instructions from playing on that frame until complete.
-    ///
-    /// Return `None` if the instruction does not execute in the context of a frame - such
-    /// as classical instructions.
-    ///
-    /// See the [Quil-T spec](https://github.com/quil-lang/quil/blob/master/rfcs/analog/proposal.md)
-    /// for more information.
-    pub fn get_frames_for_instruction<'p>(
-        &'p self,
-        instruction: &Instruction,
-    ) -> Option<MatchedFrames<'p>> {
-        let qubits_used_by_program = self.get_used_qubits();
-
-        instruction
-            .get_frame_match_condition(qubits_used_by_program)
-            .map(|condition| self.frames.get_matching_keys_for_conditions(condition))
-    }
-
     /// Return references to all targets used in the program.
     fn get_targets(&self) -> Vec<&Target> {
         self.instructions
@@ -787,10 +745,18 @@ impl Program {
         instructions
     }
 
-    pub(crate) fn simplify_with_handler(
-        &self,
-        instruction_handler: &mut InstructionHandler,
-    ) -> Result<Self> {
+    /// Simplify this program into a new [`Program`] which contains only instructions
+    /// and definitions which are executed; effectively, perform dead code removal.
+    ///
+    /// Removes:
+    /// - All calibrations, following calibration expansion
+    /// - Frame definitions which are not used by any instruction such as `PULSE` or `CAPTURE`
+    /// - Waveform definitions which are not used by any instruction
+    /// - `PRAGMA EXTERN` instructions which are not used by any `CALL` instruction (see
+    ///   [`Program::extern_pragma_map`]).
+    ///
+    /// When a valid program is simplified, it remains valid.
+    pub fn simplify<H: InstructionHandler>(&self, handler: &H) -> Result<Self> {
         let mut expanded_program = self.expand_calibrations()?;
         // Remove calibrations such that the resulting program contains
         // only instructions. Calibrations have already been expanded, so
@@ -802,9 +768,7 @@ impl Program {
         let mut extern_signatures_used: HashSet<&String> = HashSet::new();
 
         for instruction in &expanded_program.instructions {
-            if let Some(matched_frames) =
-                instruction_handler.matching_frames(instruction, &expanded_program)
-            {
+            if let Some(matched_frames) = handler.matching_frames(&expanded_program, instruction) {
                 frames_used.extend(matched_frames.used)
             }
 
@@ -1126,10 +1090,11 @@ mod tests {
         },
         imag,
         instruction::{
-            CalibrationIdentifier, Call, Declaration, DefGateSequence, ExternSignatureMap, Gate,
-            GateDefinition, GateSpecification, Instruction, Jump, JumpUnless, JumpWhen, Label,
-            Matrix, MemoryReference, Qubit, QubitPlaceholder, ScalarType, Target,
-            TargetPlaceholder, UnresolvedCallArgument, Vector, RESERVED_PRAGMA_EXTERN,
+            CalibrationIdentifier, Call, Declaration, DefGateSequence, DefaultHandler,
+            ExternSignatureMap, Gate, GateDefinition, GateSpecification, Instruction,
+            InstructionHandler, Jump, JumpUnless, JumpWhen, Label, Matrix, MemoryReference, Qubit,
+            QubitPlaceholder, ScalarType, Target, TargetPlaceholder, UnresolvedCallArgument,
+            Vector, RESERVED_PRAGMA_EXTERN,
         },
         program::{
             calibration::{CalibrationExpansion, CalibrationSource},
@@ -1535,7 +1500,9 @@ DEFFRAME 0 1 \"2q\":
             ),
         ] {
             let instruction = Instruction::parse_in_test(instruction_string).unwrap();
-            let matched_frames = program.get_frames_for_instruction(&instruction).unwrap();
+            let matched_frames = DefaultHandler
+                .matching_frames(&program, &instruction)
+                .unwrap();
             let used_frames: HashSet<String> = matched_frames
                 .used
                 .iter()
@@ -1603,7 +1570,7 @@ DEFWAVEFORM custom:
 CAPTURE 0 \"ro_rx\" custom ro
 ";
         let program = Program::from_str(input).map_err(|e| e.to_string()).unwrap();
-        let program = program.into_simplified().unwrap();
+        let program = program.simplify(&DefaultHandler).unwrap();
         assert_eq!(program, Program::from_str(expected).unwrap());
     }
 
@@ -2183,14 +2150,15 @@ CALL foo octets[1] reals
         assert_eq!(extern_signature_map.len(), 1);
 
         assert_eq!(
-            Instruction::Pragma(pragma)
-                .get_memory_accesses(&extern_signature_map)
+            DefaultHandler
+                .memory_accesses(&extern_signature_map, &Instruction::Pragma(pragma))
                 .expect("should be able to get memory accesses"),
             MemoryAccesses::default()
         );
 
         assert_eq!(
-            call.get_memory_accesses(&extern_signature_map)
+            DefaultHandler
+                .memory_accesses(&extern_signature_map, &Instruction::Call(call))
                 .expect("should be able to get memory accesses"),
             MemoryAccesses {
                 reads: ["octets", "reals"].into_iter().map(String::from).collect(),
@@ -2220,7 +2188,7 @@ CALL foo octets[1] reals
         let reserialized = program
             .expand_calibrations()
             .expect("should be able to expand calibrations")
-            .into_simplified()
+            .simplify(&DefaultHandler)
             .expect("should be able to simplify program")
             .to_quil()
             .expect("should be able to serialize program");

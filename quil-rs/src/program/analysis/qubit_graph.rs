@@ -40,15 +40,15 @@ pub struct QubitGraph<'a> {
 }
 
 impl<'a> QubitGraph<'a> {
-    pub(crate) fn new(
+    pub(crate) fn new<H: InstructionHandler>(
         instructions: impl Iterator<Item = &'a Instruction>,
+        handler: &H,
     ) -> Result<Self, QubitGraphError> {
         let mut last_instruction_for_qubit = HashMap::new();
         let mut graph = DiGraph::new();
-        let mut handler = InstructionHandler::default();
 
         for instruction in instructions {
-            match handler.role_for_instruction(instruction) {
+            match handler.role(instruction) {
                 InstructionRole::ClassicalCompute => {
                     if let Instruction::Pragma(_) = instruction {
                         return Err(QubitGraphError::UnsupportedInstruction(instruction.clone()));
@@ -80,6 +80,13 @@ impl<'a> QubitGraph<'a> {
         }
 
         Ok(Self { graph })
+    }
+
+    pub fn try_from_basic_block<H: InstructionHandler>(
+        block: &BasicBlock<'a>,
+        handler: &H,
+    ) -> Result<Self, QubitGraphError> {
+        QubitGraph::new(block.instructions().iter().copied(), handler)
     }
 
     /// Fold over all paths over the graph, starting from sources (nodes with no incoming edges),
@@ -170,16 +177,9 @@ impl<'a> QubitGraph<'a> {
     }
 }
 
-impl<'a> TryFrom<&'_ BasicBlock<'a>> for QubitGraph<'a> {
-    type Error = QubitGraphError;
-
-    fn try_from(block: &BasicBlock<'a>) -> Result<Self, Self::Error> {
-        QubitGraph::new(block.instructions().iter().copied())
-    }
-}
-
 #[cfg(test)]
 mod tests {
+    use crate::instruction::DefaultHandler;
     use crate::Program;
     use rstest::rstest;
 
@@ -197,7 +197,7 @@ mod tests {
     fn gate_depth(#[case] input: &str, #[case] expected: usize) {
         let program: Program = input.parse().unwrap();
         let block: BasicBlock = (&program).try_into().unwrap();
-        let graph: QubitGraph = (&block).try_into().unwrap();
+        let graph = QubitGraph::try_from_basic_block(&block, &DefaultHandler).unwrap();
         let depth = graph.gate_depth(1);
         assert_eq!(expected, depth);
     }
@@ -212,7 +212,7 @@ mod tests {
     fn multiqubit_gate_depth(#[case] input: &str, #[case] expected: usize) {
         let program: Program = input.parse().unwrap();
         let block: BasicBlock = (&program).try_into().unwrap();
-        let graph: QubitGraph = (&block).try_into().unwrap();
+        let graph = QubitGraph::try_from_basic_block(&block, &DefaultHandler).unwrap();
         let depth = graph.gate_depth(2);
         assert_eq!(expected, depth);
     }
@@ -241,7 +241,7 @@ mod tests {
             }
         };
 
-        let maybe_graph: Result<QubitGraph, _> = (&block).try_into();
+        let maybe_graph = QubitGraph::try_from_basic_block(&block, &DefaultHandler);
         match maybe_graph {
             Ok(graph) => {
                 let depth = graph.gate_depth(1);

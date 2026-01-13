@@ -220,7 +220,12 @@ mod test_declaration {
     feature = "python",
     pyo3::pyclass(module = "quil.instructions", get_all, eq, frozen, hash, subclass)
 )]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub struct MemoryReference {
+    #[cfg_attr(
+        test,
+        proptest(strategy = "crate::expression::proptest_helpers::arb_name()")
+    )]
     pub name: String,
     pub index: u64,
 }
