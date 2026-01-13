@@ -1,3 +1,10 @@
+## 0.34.0-rc.3 (2026-01-13)
+
+### Breaking Changes
+
+- defgate as sequence
+- change `InstructionHandler` to be a trait and require it everywhere in Rust (#484)
+
 ## 0.34.0-rc.2 (2025-11-07)
 
 ### Breaking Changes
