@@ -29,7 +29,7 @@ use petgraph::Graph;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::instruction::{
-    Arithmetic, ArithmeticOperand, ArithmeticOperator, Call, Declaration,
+    Arithmetic, ArithmeticOperand, ArithmeticOperator, Call, CircuitDefinition, Declaration,
     DefGateSequenceExpansionError, ExternError, ExternPragmaMap, ExternSignatureMap,
     FrameDefinition, FrameIdentifier, GateDefinition, GateError, GateSpecification, Instruction,
     InstructionHandler, Jump, JumpUnless, Label, Matrix, MemoryReference, Move, Pragma, Qubit,
@@ -119,6 +119,8 @@ pub struct Program {
     #[pyo3(get, set)]
     pub gate_definitions: IndexMap<String, GateDefinition>,
     #[pyo3(get, set)]
+    pub circuits: IndexMap<String, CircuitDefinition>,
+    #[pyo3(get, set)]
     instructions: Vec<Instruction>,
     // private field used for caching operations
     #[pyo3(get)]
@@ -143,6 +145,7 @@ impl Program {
             memory_regions: self.memory_regions.clone(),
             waveforms: self.waveforms.clone(),
             gate_definitions: self.gate_definitions.clone(),
+            circuits: self.circuits.clone(),
             instructions: Vec::new(),
             used_qubits: HashSet::new(),
         }
@@ -161,6 +164,9 @@ impl Program {
         match instruction {
             Instruction::CalibrationDefinition(calibration) => {
                 self.calibrations.insert_calibration(calibration);
+            }
+            Instruction::CircuitDefinition(circuit) => {
+                self.circuits.insert(circuit.name.clone(), circuit);
             }
             Instruction::FrameDefinition(FrameDefinition {
                 identifier,
@@ -358,6 +364,12 @@ impl Program {
                 .cloned()
                 .map(Instruction::GateDefinition),
         );
+        instructions.extend(
+            self.circuits
+                .values()
+                .cloned()
+                .map(Instruction::CircuitDefinition),
+        );
         instructions.extend(self.instructions.clone());
         instructions
     }
@@ -430,16 +442,7 @@ impl Program {
         &self,
         mut source_mapping: Option<&mut ProgramCalibrationExpansionSourceMap>,
     ) -> Result<Self> {
-        let mut new_program = Self {
-            calibrations: self.calibrations.clone(),
-            extern_pragma_map: self.extern_pragma_map.clone(),
-            frames: self.frames.clone(),
-            memory_regions: self.memory_regions.clone(),
-            waveforms: self.waveforms.clone(),
-            gate_definitions: self.gate_definitions.clone(),
-            instructions: Vec::new(),
-            used_qubits: HashSet::new(),
-        };
+        let mut new_program = self.clone_without_body_instructions();
 
         for (index, instruction) in self.instructions.iter().enumerate() {
             let index = InstructionIndex(index);
@@ -572,6 +575,7 @@ impl Program {
             memory_regions: self.memory_regions,
             waveforms: self.waveforms,
             gate_definitions,
+            circuits: self.circuits.clone(),
             instructions: Vec::new(),
             used_qubits: HashSet::new(),
         };
@@ -614,6 +618,7 @@ impl Program {
             memory_regions: self.memory_regions.clone(),
             waveforms: self.waveforms.clone(),
             gate_definitions,
+            circuits: self.circuits.clone(),
             instructions: Vec::new(),
             used_qubits: HashSet::new(),
         };
@@ -739,6 +744,11 @@ impl Program {
             self.gate_definitions
                 .into_values()
                 .map(Instruction::GateDefinition),
+        );
+        instructions.extend(
+            self.circuits
+                .into_values()
+                .map(Instruction::CircuitDefinition),
         );
         instructions.extend(self.extern_pragma_map.into_instructions());
         instructions.extend(self.instructions);
@@ -894,6 +904,7 @@ impl Program {
             + self.frames.len()
             + self.waveforms.len()
             + self.gate_definitions.len()
+            + self.circuits.len()
             + self.instructions.len()
             + self.extern_pragma_map.len()
     }
@@ -1059,6 +1070,7 @@ impl ops::AddAssign<Program> for Program {
         self.frames.merge(rhs.frames);
         self.waveforms.extend(rhs.waveforms);
         self.gate_definitions.extend(rhs.gate_definitions);
+        self.circuits.extend(rhs.circuits);
         self.extern_pragma_map.extend(rhs.extern_pragma_map);
         self.instructions.extend(rhs.instructions);
         self.used_qubits.extend(rhs.used_qubits);
