@@ -115,7 +115,7 @@ type Result<T> = std::result::Result<T, ProgramError>;
 /// from quil.program import Program
 ///
 /// program_text = inspect.cleandoc(
-///     """
+///     '''
 ///     DEFCAL X 0:
 ///         Y 0
 ///
@@ -124,7 +124,7 @@ type Result<T> = std::result::Result<T, ProgramError>;
 ///
 ///     X 0 # This instruction is index 0
 ///     Y 0 # This instruction is index 1
-///     """
+///     '''
 /// )
 ///
 /// # First, we parse the program and expand its calibrations
@@ -134,7 +134,7 @@ type Result<T> = std::result::Result<T, ProgramError>;
 ///
 /// # This is what we expect the expanded program to be. X and Y have each been replaced by Z.
 /// expected_program_text = inspect.cleandoc(
-///     """
+///     '''
 ///     DEFCAL X 0:
 ///         Y 0
 ///
@@ -143,7 +143,7 @@ type Result<T> = std::result::Result<T, ProgramError>;
 ///
 ///     Z 0 # This instruction is index 0
 ///     Z 0 # This instruction is index 1
-///     """
+///     '''
 /// )
 /// assert expansion.program().to_quil() == Program.parse(expected_program_text).to_quil()
 ///
