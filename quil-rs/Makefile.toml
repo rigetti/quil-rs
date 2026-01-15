@@ -43,9 +43,12 @@ description = "Check python stubfiles."
 dependencies = ["install-quil-with-stubs"]
 command = "poetry"
 cwd = "python"
-args = ["run", "stubtest", "quil"]
 # TODO(#475): Enable error reporting once stubtest is happy with stubgen's output.
-ignore_errors = true
+args = [
+    "run", "stubtest", "quil",
+    "--allowlist", "stubtest-allowlist",
+    "--ignore-disjoint-bases",
+]
 
 [tasks.lint-quil]
 description = "Find errors in quil-related Rust code."
