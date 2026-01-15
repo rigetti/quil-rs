@@ -10,6 +10,7 @@ from typing_extensions import Self
 from typing import (
     Iterable,
     Iterator,
+    TypeAlias,
     TypeVar,
     overload,
 )
@@ -180,6 +181,7 @@ class Item:
     line: Line = field(compare=False, hash=False)
     props: PyO3Props = field(compare=False, hash=False, default_factory=PyO3Props)
     stub_attr: StubAttr | None = field(compare=False, hash=False, default=None)
+    attrs: list[Line] = field(compare=False, hash=False, default_factory=list)
 
     def __str__(self) -> str:
         name = self.rust_name
@@ -225,6 +227,26 @@ class Module(MutableSet[Item]):
         """Return an `item` in this `Module` that has the same Rust name as the given `item`."""
         target = item.rust_name if isinstance(item, Item) else item
         return next((i for i in self if i.rust_name == target), None)
+
+
+@dataclass
+class SubmoduleInfo:
+    """Information extracted from a `create_init_submodule!` macro invocation."""
+
+    path: Path
+    line: Line
+
+    classes: list[str] = field(default_factory=list)
+    complex_enums: list[str] = field(default_factory=list)
+    errors: list[str] = field(default_factory=list)
+    funcs: list[str] = field(default_factory=list)
+
+    submodules: dict[str, str] = field(default_factory=dict)
+    """Last part of submodule name -> Rust initialization function name."""
+
+# Graph of submodules related via `create_init_submodule!` invocations. 
+SubmoduleRegistry: TypeAlias = dict[str, SubmoduleInfo]
+
 
 _T = TypeVar("_T")
 

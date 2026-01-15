@@ -37,6 +37,7 @@ optipy = "0.1.0"
 # Enabled with the "python" feature.
 numpy = { version = "0.27.1", optional = true }
 pyo3 = { version = "0.27.2", features = ["indexmap", "num-complex", "multiple-pymethods"], optional = true }
+# TODO: update after PR is merged.
 rigetti-pyo3 = { git = "https://github.com/rigetti/rigetti-pyo3.git", rev = "refs/pull/62/head", optional = true }
 
 # Enabled with the "stubs" feature.

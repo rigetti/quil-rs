@@ -80,22 +80,10 @@
       },
       {
         "rust_name": "a_different_name",
-        "python_name": "a_different_name",
+        "python_name": "some_function",
         "kind": "Function",
         "props": {},
         "stub_attr": null
-      },
-      {
-        "rust_name": "a_different_name",
-        "python_name": "some_function",
-        "kind": "Function",
-        "props": {
-          "name": "some_function"
-        },
-        "stub_attr": {
-          "kind": "Function",
-          "module": "quil.instructions"
-        }
       }
     ]
   }

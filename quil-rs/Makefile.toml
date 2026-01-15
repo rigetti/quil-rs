@@ -1,4 +1,7 @@
 [tasks.check]
+dependencies = ["hack-check", "check-quil"]
+
+[tasks.hack-check]
 command = "cargo"
 args = ["hack", "--feature-powerset", "check"]
 
@@ -64,6 +67,9 @@ dependencies = ["test", "test-quil"]
 
 [tasks.default]
 alias = "test-all"
+
+[tasks.check-quil]
+dependencies = ["lint-quil", "stubtest", "check-api"]
 
 [tasks.check-api]
 description = "Check if quil API has breaking changes."

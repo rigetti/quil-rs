@@ -1051,7 +1051,14 @@ pub(crate) struct GateSignature<'a, T: AsRef<str> = String> {
 }
 
 impl<'a, T: AsRef<str>> GateSignature<'a, T> {
-    pub fn try_new(
+    pub fn name(&self) -> &str {
+        self.name.as_ref()
+    }
+}
+
+#[cfg(feature = "python")]
+impl<'a, T: AsRef<str>> GateSignature<'a, T> {
+    pub(crate) fn try_new(
         name: &'a T,
         gate_parameters: &'a [T],
         qubit_parameters: &'a [T],
@@ -1066,19 +1073,15 @@ impl<'a, T: AsRef<str>> GateSignature<'a, T> {
         })
     }
 
-    pub fn name(&self) -> &str {
-        self.name.as_ref()
-    }
-
-    pub fn gate_parameters(&self) -> &[T] {
+    pub(crate) fn gate_parameters(&self) -> &[T] {
         self.gate_parameters
     }
 
-    pub fn qubit_parameters(&self) -> &[T] {
+    pub(crate) fn qubit_parameters(&self) -> &[T] {
         self.qubit_parameters
     }
 
-    pub fn gate_type(&self) -> GateType {
+    pub(crate) fn gate_type(&self) -> GateType {
         self.gate_type
     }
 }

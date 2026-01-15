@@ -103,7 +103,7 @@ def join_lines(lines: Lines, /, first: Line | None = None, sep: str = " ") -> Li
     first = next(lines, first)
     if first is None:
         raise ValueError("no lines to iterate")
-    return Line(first.num, sep.join(l.text for l in chain((first,), lines)))
+    return Line(first.num, sep.join(l.text for l in chain((first,), lines)).strip())
 
 
 MARKERS = re.compile(r"(?P<cblock>/\*)|(?P<cline>//)|(?P<macrodef>macro_rules!)")
