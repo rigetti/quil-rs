@@ -106,6 +106,21 @@ pub enum Expression {
     Variable(String),
 }
 
+#[cfg(test)]
+impl proptest::prelude::Arbitrary for Expression {
+    type Parameters = ();
+    type Strategy = proptest::prelude::BoxedStrategy<Self>;
+
+    fn arbitrary_with(args: Self::Parameters) -> Self::Strategy {
+        use self::proptest_helpers::{arb_complex64, arb_expr_custom_leaves, arb_name};
+        use proptest::prelude::*;
+
+        let () = args;
+
+        arb_expr_custom_leaves(any::<MemoryReference>, arb_name, arb_complex64).boxed()
+    }
+}
+
 /// The type of function call Quil expressions, e.g. `sin(e)`.
 ///
 /// Quil expressions take advantage of *structural sharing*, which is why the `expression` here is
@@ -952,6 +967,7 @@ pub mod interned {
     }
 
     atoms! {
+        address: Address(MemoryReference),
         function_call_expr: FunctionCall(FunctionCallExpression),
         infix_expr: Infix(InfixExpression),
         pi: PiConstant(),
@@ -1001,15 +1017,106 @@ pub mod interned {
 }
 
 #[cfg(test)]
-// This lint should be re-enabled once this proptest issue is resolved
-// https://github.com/proptest-rs/proptest/issues/364
-#[allow(clippy::arc_with_non_send_sync)]
+pub mod proptest_helpers {
+    use super::*;
+
+    use std::f64::consts::TAU;
+
+    use proptest::prelude::*;
+
+    use crate::reserved::ReservedToken;
+
+    pub fn arb_name() -> impl Strategy<Value = String> {
+        r"[A-Za-z_]([A-Za-z0-9_-]*[A-Za-z0-9_])?".prop_filter("Exclude reserved tokens", |t| {
+            ReservedToken::from_str(t).is_err()
+        })
+    }
+
+    // Better behaved than the auto-derived version via arbitrary floats
+    pub fn arb_complex64() -> impl Strategy<Value = Complex64> {
+        ((-TAU..TAU), (-TAU..TAU)).prop_map(|(re, im)| Complex64 { re, im })
+    }
+
+    /// Filter an [`Expression`] to not be constantly zero.
+    pub fn arb_expr_nonzero(
+        strat: impl Strategy<Value = Expression>,
+    ) -> impl Strategy<Value = Expression> {
+        strat.prop_filter("Exclude constantly-zero expressions", |expr| {
+            expr.clone().into_simplified() != Expression::Number(Complex64::new(0.0, 0.0))
+        })
+    }
+
+    /// Generate an arbitrary [`Expression`] for a property test, with custom leaf generation.
+    pub fn arb_expr_custom_leaves<
+        MemRefStrat: Strategy<Value = MemoryReference> + 'static,
+        VariableStrat: Strategy<Value = String> + 'static,
+        ComplexStrat: Strategy<Value = Complex64> + 'static,
+    >(
+        mut arb_memory_reference: impl FnMut() -> MemRefStrat,
+        mut arb_variable: impl FnMut() -> VariableStrat,
+        mut arb_complex64: impl FnMut() -> ComplexStrat,
+    ) -> impl Strategy<Value = Expression> {
+        use Expression::*;
+        let leaf = prop_oneof![
+            arb_memory_reference().prop_map(Address),
+            arb_complex64().prop_map(Number),
+            Just(PiConstant()),
+            arb_variable().prop_map(Variable),
+        ];
+        leaf.prop_recursive(
+            4,  // No more than 4 branch levels deep
+            64, // Target around 64 total nodes
+            16, // Each "collection" is up to 16 elements
+            |expr| {
+                let inner = expr.clone();
+                prop_oneof![
+                    (any::<ExpressionFunction>(), expr.clone()).prop_map(|(function, e)| {
+                        Expression::FunctionCall(FunctionCallExpression {
+                            function,
+                            expression: ArcIntern::new(e),
+                        })
+                    }),
+                    (expr.clone(), any::<InfixOperator>())
+                        .prop_flat_map(move |(left, operator)| {
+                            (
+                                Just(left),
+                                Just(operator),
+                                // Avoid division by 0 so that we can reliably assert equality
+                                if let InfixOperator::Slash = operator {
+                                    arb_expr_nonzero(inner.clone()).boxed()
+                                } else {
+                                    inner.clone().boxed()
+                                },
+                            )
+                        })
+                        .prop_map(|(l, operator, r)| {
+                            Infix(InfixExpression {
+                                left: ArcIntern::new(l),
+                                operator,
+                                right: ArcIntern::new(r),
+                            })
+                        }),
+                    (any::<PrefixOperator>(), expr).prop_map(|(operator, e)| {
+                        Prefix(PrefixExpression {
+                            operator,
+                            expression: ArcIntern::new(e),
+                        })
+                    }),
+                ]
+            },
+        )
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
-    use crate::reserved::ReservedToken;
+
+    use std::collections::{hash_map::DefaultHasher, HashSet};
+
     use proptest::prelude::*;
-    use std::collections::hash_map::DefaultHasher;
-    use std::collections::HashSet;
+
+    use super::proptest_helpers::*;
 
     /// Hash value helper: turn a hashable thing into a u64.
     #[inline]
@@ -1135,84 +1242,9 @@ mod tests {
         }
     }
 
-    // Better behaved than the auto-derived version for names
-    fn arb_name() -> impl Strategy<Value = String> {
-        r"[a-z][a-zA-Z0-9]{1,10}".prop_filter("Exclude reserved tokens", |t| {
-            ReservedToken::from_str(t).is_err() && !t.to_lowercase().starts_with("nan")
-        })
-    }
-
-    // Better behaved than the auto-derived version re: names & indices
-    fn arb_memory_reference() -> impl Strategy<Value = MemoryReference> {
-        (arb_name(), (u64::MIN..u32::MAX as u64))
-            .prop_map(|(name, index)| MemoryReference { name, index })
-    }
-
-    // Better behaved than the auto-derived version via arbitrary floats
-    fn arb_complex64() -> impl Strategy<Value = Complex64> {
-        let tau = std::f64::consts::TAU;
-        ((-tau..tau), (-tau..tau)).prop_map(|(re, im)| Complex64 { re, im })
-    }
-
-    /// Filter an Expression to not be constantly zero.
-    fn nonzero(strat: impl Strategy<Value = Expression>) -> impl Strategy<Value = Expression> {
-        strat.prop_filter("Exclude constantly-zero expressions", |expr| {
-            expr.clone().into_simplified() != Expression::Number(Complex64::new(0.0, 0.0))
-        })
-    }
-
-    /// Generate an arbitrary Expression for a property test.
-    /// See https://docs.rs/proptest/1.0.0/proptest/prelude/trait.Strategy.html#method.prop_recursive
-    fn arb_expr() -> impl Strategy<Value = Expression> {
-        use Expression::*;
-        let leaf = prop_oneof![
-            arb_memory_reference().prop_map(Address),
-            arb_complex64().prop_map(Number),
-            Just(PiConstant()),
-            arb_name().prop_map(Variable),
-        ];
-        leaf.prop_recursive(
-            4,  // No more than 4 branch levels deep
-            64, // Target around 64 total nodes
-            16, // Each "collection" is up to 16 elements
-            |expr| {
-                let inner = expr.clone();
-                prop_oneof![
-                    (any::<ExpressionFunction>(), expr.clone()).prop_map(|(function, e)| {
-                        Expression::FunctionCall(FunctionCallExpression {
-                            function,
-                            expression: ArcIntern::new(e),
-                        })
-                    }),
-                    (expr.clone(), any::<InfixOperator>())
-                        .prop_flat_map(move |(left, operator)| (
-                            Just(left),
-                            Just(operator),
-                            // Avoid division by 0 so that we can reliably assert equality
-                            if let InfixOperator::Slash = operator {
-                                nonzero(inner.clone()).boxed()
-                            } else {
-                                inner.clone().boxed()
-                            }
-                        ))
-                        .prop_map(|(l, operator, r)| Infix(InfixExpression {
-                            left: ArcIntern::new(l),
-                            operator,
-                            right: ArcIntern::new(r)
-                        })),
-                    expr.prop_map(|e| Prefix(PrefixExpression {
-                        operator: PrefixOperator::Minus,
-                        expression: ArcIntern::new(e)
-                    }))
-                ]
-            },
-        )
-    }
-
     proptest! {
-
         #[test]
-        fn eq(a in any::<f64>(), b in any::<f64>()) {
+        fn eq(a: f64, b: f64) {
             let first = Expression::Infix (InfixExpression {
                 left: ArcIntern::new(Expression::Number(real!(a))),
                 operator: InfixOperator::Plus,
@@ -1224,7 +1256,7 @@ mod tests {
         }
 
         #[test]
-        fn hash(a in any::<f64>(), b in any::<f64>()) {
+        fn hash(a: f64, b: f64) {
             let first = Expression::Infix (InfixExpression {
                 left: ArcIntern::new(Expression::Number(real!(a))),
                 operator: InfixOperator::Plus,
@@ -1239,17 +1271,17 @@ mod tests {
         }
 
         #[test]
-        fn eq_iff_hash_eq(x in arb_expr(), y in arb_expr()) {
+        fn eq_iff_hash_eq(x: Expression, y: Expression) {
             prop_assert_eq!(x == y, hash_to_u64(&x) == hash_to_u64(&y));
         }
 
         #[test]
-        fn reals_are_real(x in any::<f64>()) {
+        fn reals_are_real(x: f64) {
             prop_assert_eq!(Expression::Number(real!(x)).to_real(), Ok(x))
         }
 
         #[test]
-        fn some_nums_are_real(re in any::<f64>(), im in any::<f64>()) {
+        fn some_nums_are_real(re: f64, im: f64) {
             let result = Expression::Number(Complex64{re, im}).to_real();
             if is_small(im) {
                 prop_assert_eq!(result, Ok(re))
@@ -1259,7 +1291,7 @@ mod tests {
         }
 
         #[test]
-        fn no_other_exps_are_real(expr in arb_expr().prop_filter("Not numbers", |e| !matches!(e, Expression::Number(_) | Expression::PiConstant()))) {
+        fn no_other_exps_are_real(expr in any::<Expression>().prop_filter("Not numbers", |e| !matches!(e, Expression::Number(_) | Expression::PiConstant()))) {
             prop_assert_eq!(expr.to_real(), Err(EvaluationError::NotANumber))
         }
 
@@ -1272,13 +1304,13 @@ mod tests {
         }
 
         #[test]
-        fn exponentiation_works_as_expected(left in arb_expr(), right in arb_expr()) {
+        fn exponentiation_works_as_expected(left: Expression, right: Expression) {
             let expected = Expression::Infix (InfixExpression { left: ArcIntern::new(left.clone()), operator: InfixOperator::Caret, right: ArcIntern::new(right.clone()) } );
             prop_assert_eq!(left ^ right, expected);
         }
 
         #[test]
-        fn in_place_exponentiation_works_as_expected(left in arb_expr(), right in arb_expr()) {
+        fn in_place_exponentiation_works_as_expected(left: Expression, right: Expression) {
             let expected = Expression::Infix (InfixExpression { left: ArcIntern::new(left.clone()), operator: InfixOperator::Caret, right: ArcIntern::new(right.clone()) } );
             let mut x = left;
             x ^= right;
@@ -1286,13 +1318,13 @@ mod tests {
         }
 
         #[test]
-        fn addition_works_as_expected(left in arb_expr(), right in arb_expr()) {
+        fn addition_works_as_expected(left: Expression, right: Expression) {
             let expected = Expression::Infix (InfixExpression { left: ArcIntern::new(left.clone()), operator: InfixOperator::Plus, right: ArcIntern::new(right.clone()) } );
             prop_assert_eq!(left + right, expected);
         }
 
         #[test]
-        fn in_place_addition_works_as_expected(left in arb_expr(), right in arb_expr()) {
+        fn in_place_addition_works_as_expected(left: Expression, right: Expression) {
             let expected = Expression::Infix (InfixExpression { left: ArcIntern::new(left.clone()), operator: InfixOperator::Plus, right: ArcIntern::new(right.clone()) } );
             let mut x = left;
             x += right;
@@ -1300,13 +1332,13 @@ mod tests {
         }
 
         #[test]
-        fn subtraction_works_as_expected(left in arb_expr(), right in arb_expr()) {
+        fn subtraction_works_as_expected(left: Expression, right: Expression) {
             let expected = Expression::Infix (InfixExpression { left: ArcIntern::new(left.clone()), operator: InfixOperator::Minus, right: ArcIntern::new(right.clone()) } );
             prop_assert_eq!(left - right, expected);
         }
 
         #[test]
-        fn in_place_subtraction_works_as_expected(left in arb_expr(), right in arb_expr()) {
+        fn in_place_subtraction_works_as_expected(left: Expression, right: Expression) {
             let expected = Expression::Infix (InfixExpression { left: ArcIntern::new(left.clone()), operator: InfixOperator::Minus, right: ArcIntern::new(right.clone()) } );
             let mut x = left;
             x -= right;
@@ -1314,13 +1346,13 @@ mod tests {
         }
 
         #[test]
-        fn multiplication_works_as_expected(left in arb_expr(), right in arb_expr()) {
+        fn multiplication_works_as_expected(left: Expression, right: Expression) {
             let expected = Expression::Infix (InfixExpression { left: ArcIntern::new(left.clone()), operator: InfixOperator::Star, right: ArcIntern::new(right.clone()) } );
             prop_assert_eq!(left * right, expected);
         }
 
         #[test]
-        fn in_place_multiplication_works_as_expected(left in arb_expr(), right in arb_expr()) {
+        fn in_place_multiplication_works_as_expected(left: Expression, right: Expression) {
             let expected = Expression::Infix (InfixExpression { left: ArcIntern::new(left.clone()), operator: InfixOperator::Star, right: ArcIntern::new(right.clone()) } );
             let mut x = left;
             x *= right;
@@ -1330,14 +1362,14 @@ mod tests {
 
         // Avoid division by 0 so that we can reliably assert equality
         #[test]
-        fn division_works_as_expected(left in arb_expr(), right in nonzero(arb_expr())) {
+        fn division_works_as_expected(left: Expression, right in arb_expr_nonzero(any::<Expression>())) {
             let expected = Expression::Infix (InfixExpression { left: ArcIntern::new(left.clone()), operator: InfixOperator::Slash, right: ArcIntern::new(right.clone()) } );
             prop_assert_eq!(left / right, expected);
         }
 
         // Avoid division by 0 so that we can reliably assert equality
         #[test]
-        fn in_place_division_works_as_expected(left in arb_expr(), right in nonzero(arb_expr())) {
+        fn in_place_division_works_as_expected(left: Expression, right in arb_expr_nonzero(any::<Expression>())) {
             let expected = Expression::Infix (InfixExpression { left: ArcIntern::new(left.clone()), operator: InfixOperator::Slash, right: ArcIntern::new(right.clone()) } );
             let mut x = left;
             x /= right;
@@ -1347,7 +1379,7 @@ mod tests {
         // Redundant clone: clippy does not correctly introspect the prop_assert_eq! macro
         #[allow(clippy::redundant_clone)]
         #[test]
-        fn round_trip(e in arb_expr()) {
+        fn round_trip(e: Expression) {
             let simple_e = e.clone().into_simplified();
             let s = parenthesized(&e);
             let p = Expression::from_str(&s);

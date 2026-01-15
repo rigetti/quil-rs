@@ -292,8 +292,6 @@ fn get_node_id(node: &ScheduledGraphNode, prefix: &str) -> String {
 pub(crate) mod tests {
     pub(crate) use graph::build_dot_format_snapshot_test_case;
     mod graph {
-
-        use crate::instruction::InstructionHandler;
         use crate::program::Program;
 
         /// Build a test case which compiles the input program, builds the dot-format string from the program,
@@ -309,7 +307,7 @@ pub(crate) mod tests {
                 crate::program::scheduling::graphviz_dot::tests::build_dot_format_snapshot_test_case!(
                     $name,
                     $input,
-                    &mut InstructionHandler::default(),
+                    &crate::instruction::DefaultHandler,
                 );
             };
             ($name: ident, $input:expr, $handler: expr $(,)?) => {

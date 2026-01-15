@@ -17,16 +17,11 @@ use std::collections::HashSet;
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::gen_stub_pyclass;
 
-use crate::expression::{Expression, FunctionCallExpression, InfixExpression, PrefixExpression};
-use crate::instruction::{
-    Arithmetic, ArithmeticOperand, BinaryLogic, BinaryOperand, CallResolutionError, Capture,
-    CircuitDefinition, Comparison, ComparisonOperand, Convert, Delay, Exchange, ExternSignatureMap,
-    Gate, GateDefinition, GateSpecification, Instruction, JumpUnless, JumpWhen, Load,
-    MeasureCalibrationDefinition, Measurement, MemoryReference, Move, Pulse, RawCapture,
-    SetFrequency, SetPhase, SetScale, Sharing, ShiftFrequency, ShiftPhase, Store, UnaryLogic,
-    Vector, WaveformInvocation,
+use crate::{
+    expression::{Expression, FunctionCallExpression, InfixExpression, PrefixExpression},
+    instruction::{CallResolutionError, MemoryReference, Sharing, Vector, WaveformInvocation},
+    pickleable_new,
 };
-use crate::pickleable_new;
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
@@ -45,11 +40,48 @@ pickleable_new! {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+/// How an instruction or sequence of instructions can access memory.
+///
+/// Each access is stored as the name of the region that was accessed.  We do not store the
+/// individual indices that were accessed.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct MemoryAccesses {
-    pub captures: HashSet<String>,
+    /// All memory regions these instructions can read from.
     pub reads: HashSet<String>,
+
+    /// All memory regions these instructions can write to from within the processor.
+    ///
+    /// The "within the processor" clause indicates that this covers the write to the destination of
+    /// a [`MOVE`][Instruction::Move], but not the write to the target of a
+    /// [`MEASURE`][Instruction::Measurement].
     pub writes: HashSet<String>,
+
+    /// All memory regions these instructions can write to from outside the processor.
+    ///
+    /// The "outside the processor" clause indicates that this covers the write to the target of a
+    /// [`MEASURE`][Instruction::Measurement], but not the write to the destination of a
+    /// [`MOVE`][Instruction::Move].
+    pub captures: HashSet<String>,
+}
+
+impl MemoryAccesses {
+    /// An empty set of memory accesses
+    #[inline]
+    pub fn none() -> Self {
+        Self::default()
+    }
+
+    pub fn union(mut self, rhs: Self) -> Self {
+        let Self {
+            captures,
+            reads,
+            writes,
+        } = rhs;
+        self.captures.extend(captures);
+        self.reads.extend(reads);
+        self.writes.extend(writes);
+        self
+    }
 }
 
 /// Express a mode of memory access.
@@ -65,323 +97,208 @@ pub enum MemoryAccessType {
     Capture,
 }
 
-macro_rules! merge_sets {
-    ($left:expr, $right:expr) => {
-        $left.union(&$right).cloned().collect::<HashSet<String>>()
-    };
-}
-
-/// Build a HashSet<String> from a Vec<&str> by cloning
-macro_rules! set_from_reference_vec {
-    ($vec:expr) => {
-        $vec.into_iter()
-            .map(|el| el.clone())
-            .collect::<HashSet<String>>()
-    };
-}
-
-/// Build a HashSet<String> from an Option<&MemoryReference>
-macro_rules! set_from_optional_memory_reference {
-    ($reference:expr) => {
-        set_from_reference_vec![$reference.map_or_else(Vec::new, |reference| vec![&reference.name])]
-    };
-}
-
-/// Build a HashSet<&String> from a Vec<&MemoryReference>
-macro_rules! set_from_memory_references {
-    ($references:expr) => {
-        set_from_reference_vec![$references.iter().map(|reference| &reference.name)]
-    };
-}
-
-#[derive(thiserror::Error, Debug, PartialEq, Clone)]
+#[derive(Clone, PartialEq, Debug, thiserror::Error)]
 pub enum MemoryAccessesError {
     #[error(transparent)]
     CallResolution(#[from] CallResolutionError),
+
+    #[error("Instruction handler reported an error when constructing memory accesses: {0}")]
+    InstructionHandlerError(String),
 }
 
-pub type MemoryAccessesResult = Result<MemoryAccesses, MemoryAccessesError>;
+pub mod expression {
+    // Contains an implementation of an iterator over all [`MemoryReference`]s read from by an
+    // expression.  We construct a separate iterator here so we can avoid reifying a vector of
+    // [`MemoryReference`]s that we will then immediately consume.
 
-impl Instruction {
-    /// Return all memory accesses by the instruction - in expressions, captures, and memory manipulation.
-    ///
-    /// This will fail if the program contains [`Instruction::Call`] instructions that cannot
-    /// be resolved against a signature in the provided [`ExternSignatureMap`] (either because
-    /// they call functions that don't appear in the map or because the types of the parameters
-    /// are wrong).
-    pub fn get_memory_accesses(
-        &self,
-        extern_signature_map: &ExternSignatureMap,
-    ) -> MemoryAccessesResult {
-        Ok(match self {
-            Instruction::Convert(Convert {
-                source,
-                destination,
-            }) => MemoryAccesses {
-                reads: set_from_memory_references![[source]],
-                writes: set_from_memory_references![[destination]],
-                ..Default::default()
-            },
-            Instruction::Call(call) => call.get_memory_accesses(extern_signature_map)?,
-            Instruction::Comparison(Comparison {
-                destination,
-                lhs,
-                rhs,
-                operator: _,
-            }) => {
-                let mut reads = HashSet::from([lhs.name.clone()]);
-                let writes = HashSet::from([destination.name.clone()]);
-                if let ComparisonOperand::MemoryReference(mem) = &rhs {
-                    reads.insert(mem.name.clone());
-                }
+    use super::*;
 
-                MemoryAccesses {
-                    reads,
-                    writes,
-                    ..Default::default()
-                }
-            }
-            Instruction::BinaryLogic(BinaryLogic {
-                destination,
-                source,
-                operator: _,
-            }) => {
-                let mut reads = HashSet::new();
-                let mut writes = HashSet::new();
-                reads.insert(destination.name.clone());
-                writes.insert(destination.name.clone());
-                if let BinaryOperand::MemoryReference(mem) = &source {
-                    reads.insert(mem.name.clone());
-                }
-
-                MemoryAccesses {
-                    reads,
-                    writes,
-                    ..Default::default()
-                }
-            }
-            Instruction::UnaryLogic(UnaryLogic { operand, .. }) => MemoryAccesses {
-                reads: HashSet::from([operand.name.clone()]),
-                writes: HashSet::from([operand.name.clone()]),
-                ..Default::default()
-            },
-            Instruction::Arithmetic(Arithmetic {
-                destination,
-                source,
-                ..
-            }) => MemoryAccesses {
-                writes: HashSet::from([destination.name.clone()]),
-                reads: set_from_optional_memory_reference![source.get_memory_reference()],
-                ..Default::default()
-            },
-            Instruction::Move(Move {
-                destination,
-                source,
-            }) => MemoryAccesses {
-                writes: set_from_memory_references![[destination]],
-                reads: set_from_optional_memory_reference![source.get_memory_reference()],
-                ..Default::default()
-            },
-            Instruction::CalibrationDefinition(definition) => {
-                let references: Vec<&MemoryReference> = definition
-                    .identifier
-                    .parameters
-                    .iter()
-                    .flat_map(|expr| expr.get_memory_references())
-                    .collect();
-                MemoryAccesses {
-                    reads: set_from_memory_references![references],
-                    ..Default::default()
-                }
-            }
-            Instruction::Capture(Capture {
-                memory_reference,
-                waveform,
-                ..
-            }) => MemoryAccesses {
-                captures: set_from_memory_references!([memory_reference]),
-                reads: set_from_memory_references!(waveform.get_memory_references()),
-                ..Default::default()
-            },
-            Instruction::CircuitDefinition(CircuitDefinition { instructions, .. })
-            | Instruction::MeasureCalibrationDefinition(MeasureCalibrationDefinition {
-                instructions,
-                ..
-            }) => instructions.iter().try_fold(
-                Default::default(),
-                |acc: MemoryAccesses, el| -> MemoryAccessesResult {
-                    let el_accesses = el.get_memory_accesses(extern_signature_map)?;
-                    Ok(MemoryAccesses {
-                        reads: merge_sets!(acc.reads, el_accesses.reads),
-                        writes: merge_sets!(acc.writes, el_accesses.writes),
-                        captures: merge_sets!(acc.captures, el_accesses.captures),
-                    })
-                },
-            )?,
-            Instruction::Delay(Delay { duration, .. }) => MemoryAccesses {
-                reads: set_from_memory_references!(duration.get_memory_references()),
-                ..Default::default()
-            },
-            Instruction::Exchange(Exchange { left, right }) => MemoryAccesses {
-                reads: set_from_memory_references![[left, right]],
-                writes: set_from_memory_references![[left, right]],
-                ..Default::default()
-            },
-            Instruction::Gate(Gate { parameters, .. }) => MemoryAccesses {
-                reads: set_from_memory_references!(parameters
-                    .iter()
-                    .flat_map(|param| param.get_memory_references())
-                    .collect::<Vec<&MemoryReference>>()),
-                ..Default::default()
-            },
-            Instruction::GateDefinition(GateDefinition { specification, .. }) => {
-                if let GateSpecification::Matrix(matrix) = specification {
-                    let references = matrix
-                        .iter()
-                        .flat_map(|row| row.iter().flat_map(|cell| cell.get_memory_references()))
-                        .collect::<Vec<&MemoryReference>>();
-                    MemoryAccesses {
-                        reads: set_from_memory_references!(references),
-                        ..Default::default()
-                    }
-                } else {
-                    Default::default()
-                }
-            }
-            Instruction::JumpWhen(JumpWhen {
-                target: _,
-                condition,
-            })
-            | Instruction::JumpUnless(JumpUnless {
-                target: _,
-                condition,
-            }) => MemoryAccesses {
-                reads: set_from_memory_references!([condition]),
-                ..Default::default()
-            },
-            Instruction::Load(Load {
-                destination,
-                source,
-                offset,
-            }) => MemoryAccesses {
-                writes: set_from_memory_references![[destination]],
-                reads: set_from_reference_vec![vec![source, &offset.name]],
-                ..Default::default()
-            },
-            Instruction::Measurement(Measurement { target, .. }) => MemoryAccesses {
-                captures: set_from_optional_memory_reference!(target.as_ref()),
-                ..Default::default()
-            },
-            Instruction::Pulse(Pulse { waveform, .. }) => MemoryAccesses {
-                reads: set_from_memory_references![waveform.get_memory_references()],
-                ..Default::default()
-            },
-            Instruction::RawCapture(RawCapture {
-                duration,
-                memory_reference,
-                ..
-            }) => MemoryAccesses {
-                reads: set_from_memory_references![duration.get_memory_references()],
-                captures: set_from_memory_references![[memory_reference]],
-                ..Default::default()
-            },
-            Instruction::SetPhase(SetPhase { phase: expr, .. })
-            | Instruction::SetScale(SetScale { scale: expr, .. })
-            | Instruction::ShiftPhase(ShiftPhase { phase: expr, .. }) => MemoryAccesses {
-                reads: set_from_memory_references!(expr.get_memory_references()),
-                ..Default::default()
-            },
-            Instruction::SetFrequency(SetFrequency { frequency, .. })
-            | Instruction::ShiftFrequency(ShiftFrequency { frequency, .. }) => MemoryAccesses {
-                reads: set_from_memory_references!(frequency.get_memory_references()),
-                ..Default::default()
-            },
-            Instruction::Store(Store {
-                destination,
-                offset,
-                source,
-            }) => {
-                let mut reads = vec![&offset.name];
-                if let Some(source) = source.get_memory_reference() {
-                    reads.push(&source.name);
-                }
-                MemoryAccesses {
-                    reads: set_from_reference_vec![reads],
-                    writes: set_from_reference_vec![vec![destination]],
-                    ..Default::default()
-                }
-            }
-            Instruction::Declaration(_)
-            | Instruction::Fence(_)
-            | Instruction::FrameDefinition(_)
-            | Instruction::Halt()
-            | Instruction::Wait()
-            | Instruction::Include(_)
-            | Instruction::Jump(_)
-            | Instruction::Label(_)
-            | Instruction::Nop()
-            | Instruction::Pragma(_)
-            | Instruction::Reset(_)
-            | Instruction::SwapPhases(_)
-            | Instruction::WaveformDefinition(_) => Default::default(),
-        })
+    /// An iterator over all the memory references contained in an expression.
+    #[derive(Clone, Debug)]
+    pub struct MemoryReferences<'a> {
+        pub(super) stack: Vec<&'a Expression>,
     }
-}
 
-impl ArithmeticOperand {
-    pub fn get_memory_reference(&self) -> Option<&MemoryReference> {
-        match self {
-            ArithmeticOperand::LiteralInteger(_) => None,
-            ArithmeticOperand::LiteralReal(_) => None,
-            ArithmeticOperand::MemoryReference(reference) => Some(reference),
+    impl<'a> Iterator for MemoryReferences<'a> {
+        type Item = &'a MemoryReference;
+
+        fn next(&mut self) -> Option<Self::Item> {
+            // If we imagine collecting into a vector, this function is roughly
+            //
+            // ```
+            // fn collect_into(expr: &Expression, output: &mut Vec<&MemoryReference>) {
+            //     match expr {
+            //         Expression::NoReferences(_) => (),
+            //         Expression::Address(reference) => output.push(reference),
+            //         Expression::OneSubexpression(expression) => collect_into(expression, output),
+            //         Expression::TwoSubexpressions(left, right) => {
+            //             collect_into(left, output);
+            //             collect_into(right, output);
+            //         }
+            //     }
+            // }
+            // ```
+            //
+            // In order to implement an iterator without allocating the whole vector, we still have
+            // to reify the stack for the two-subexpression case; that's what `self.stack` is.
+            //
+            // We then implement this function with two loops.  The outer loop, `'stack_search`, is
+            // our stack traversal; it finds the nearest stack frame.  The inner loop is effectively
+            // our *tail calls*, where we don't need to allocate another stack frame; instead, we
+            // assign to the current stack frame and keep going.  We don't have to write back to the
+            // vector in the tail call case because no leaf node has more than one reference, so
+            // once we've popped a stack frame off it'll fully bottom out.
+            //
+            // Note also that in the two-subexpression case we actually swap the order from the
+            // `collect_into` example.  This is because `collect_into` reuses the same `output`, so
+            // the state is preserved and `collect_into(right, output)` appends after `left`.
+            // However, when we are emitting our results immediately, the tail call will happen
+            // *before* the delayed stack frame.
+            //
+            // And yes, this would all be simpler with `gen` blocks.
+
+            let Self { stack } = self;
+
+            // Search through all parent expressions
+            'stack_search: while let Some(mut expr) = stack.pop() {
+                // An optimization for when there's only one child expression
+                loop {
+                    match expr {
+                        // We're done with this expression and didn't find anything; time to walk down
+                        // another tree branch, if there are any left.
+                        Expression::Number(_)
+                        | Expression::PiConstant()
+                        | Expression::Variable(_) => continue 'stack_search,
+
+                        // We're done with this expression and it was successful; stop iterating here,
+                        // and when we return, walk down another tree branch if there are any left.
+                        Expression::Address(reference) => return Some(reference),
+
+                        // This expression only has one subexpression; we can avoid pushing a new
+                        // "stack frame" and immediately popping it by overwriting the current stack
+                        // frame.
+                        Expression::FunctionCall(FunctionCallExpression {
+                            expression,
+                            function: _,
+                        })
+                        | Expression::Prefix(PrefixExpression {
+                            expression,
+                            operator: _,
+                        }) => expr = expression,
+
+                        // This expression has two subexpressions; we delay searching through the
+                        // right child by pushing it on the stack, and "tail call" to search through
+                        // the left child immediately as we did with the single-subexpression case
+                        // above.
+                        Expression::Infix(InfixExpression {
+                            left,
+                            right,
+                            operator: _,
+                        }) => {
+                            stack.push(right);
+                            expr = left;
+                        }
+                    }
+                }
+            }
+
+            // We've finished our traversal; there are no subexpressions left.
+            None
         }
     }
+
+    impl std::iter::FusedIterator for MemoryReferences<'_> {}
 }
 
 impl Expression {
-    /// Return, if any, the memory references contained within this Expression.
-    pub fn get_memory_references(&self) -> Vec<&MemoryReference> {
-        match self {
-            Expression::Address(reference) => vec![reference],
-            Expression::FunctionCall(FunctionCallExpression { expression, .. }) => {
-                expression.get_memory_references()
-            }
-            Expression::Infix(InfixExpression { left, right, .. }) => {
-                let mut result = left.get_memory_references();
-                result.extend(right.get_memory_references());
-                result
-            }
-            Expression::Number(_) => vec![],
-            Expression::PiConstant() => vec![],
-            Expression::Prefix(PrefixExpression { expression, .. }) => {
-                expression.get_memory_references()
-            }
-            Expression::Variable(_) => vec![],
-        }
+    /// Return an iterator over all the memory references contained within this expression.
+    pub fn memory_references(&self) -> expression::MemoryReferences<'_> {
+        expression::MemoryReferences { stack: vec![self] }
     }
 }
 
 impl WaveformInvocation {
-    /// Return, if any, the memory references contained within this WaveformInvocation.
-    pub fn get_memory_references(&self) -> Vec<&MemoryReference> {
+    /// Return, if any, the memory references contained within this `WaveformInvocation`.
+    pub fn memory_references(&self) -> impl std::iter::FusedIterator<Item = &MemoryReference> {
         self.parameters
             .values()
-            .flat_map(Expression::get_memory_references)
-            .collect()
+            .flat_map(Expression::memory_references)
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
     use rstest::rstest;
 
-    use crate::expression::Expression;
-    use crate::instruction::{
-        ArithmeticOperand, Convert, Exchange, ExternSignatureMap, FrameIdentifier, Instruction,
-        MemoryReference, Qubit, SetFrequency, ShiftFrequency, Store,
+    use crate::{
+        expression::Expression,
+        instruction::{
+            ArithmeticOperand, Convert, DefaultHandler, Exchange, ExternSignatureMap,
+            FrameIdentifier, Instruction, InstructionHandler as _, MemoryReference, Qubit,
+            SetFrequency, ShiftFrequency, Store,
+        },
+        program::MemoryAccesses,
     };
-    use crate::program::MemoryAccesses;
-    use std::collections::HashSet;
+
+    #[rstest]
+    #[case(
+        r#"
+cis(func_ref[0]) ^
+cos(func_ref[1]) +
+exp(func_ref[2]) -
+sin(func_ref[3]) /
+sqrt(func_ref[4]) *
+
+(infix_ref[0] ^ infix_ref[0]) ^
+(infix_ref[1] + infix_ref[1]) +
+(infix_ref[2] - infix_ref[2]) -
+(infix_ref[3] / infix_ref[3]) /
+(infix_ref[4] * infix_ref[4]) *
+
+1.0 ^
+
+pi +
+
+(-prefix_ref) -
+
+%variable
+"#,
+        &[
+            ("func_ref", 0),
+            ("func_ref", 1),
+            ("func_ref", 2),
+            ("func_ref", 3),
+            ("func_ref", 4),
+            ("infix_ref", 0),
+            ("infix_ref", 0),
+            ("infix_ref", 1),
+            ("infix_ref", 1),
+            ("infix_ref", 2),
+            ("infix_ref", 2),
+            ("infix_ref", 3),
+            ("infix_ref", 3),
+            ("infix_ref", 4),
+            ("infix_ref", 4),
+            ("prefix_ref", 0),
+        ]
+    )]
+    fn expr_references(#[case] expr: &str, #[case] expected_refs: &[(&str, u64)]) {
+        let expr = expr.replace('\n', " ").parse::<Expression>().unwrap();
+
+        let computed_refs: Vec<_> = expr.memory_references().cloned().collect();
+
+        let expected_refs: Vec<_> = expected_refs
+            .iter()
+            .map(|(name, index)| MemoryReference {
+                name: (*name).to_owned(),
+                index: *index,
+            })
+            .collect();
+
+        assert_eq!(computed_refs, expected_refs);
+    }
 
     #[rstest]
     #[case(
@@ -474,8 +391,8 @@ mod tests {
         #[case] instruction: Instruction,
         #[case] expected: MemoryAccesses,
     ) {
-        let memory_accesses = instruction
-            .get_memory_accesses(&ExternSignatureMap::default())
+        let memory_accesses = DefaultHandler
+            .memory_accesses(&ExternSignatureMap::default(), &instruction)
             .expect("must be able to get memory accesses");
         assert_eq!(memory_accesses.captures, expected.captures);
         assert_eq!(memory_accesses.reads, expected.reads);
