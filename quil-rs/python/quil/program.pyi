@@ -446,7 +446,7 @@ class Program:
     from quil.program import Program
     
     program_text = inspect.cleandoc(
-        ''' 
+        '''
         DEFCAL X 0:
             Y 0
     
@@ -474,7 +474,7 @@ class Program:
     
         Z 0 # This instruction is index 0
         Z 0 # This instruction is index 1
-        ''' 
+        '''
     )
     assert expansion.program().to_quil() == Program.parse(expected_program_text).to_quil()
     
