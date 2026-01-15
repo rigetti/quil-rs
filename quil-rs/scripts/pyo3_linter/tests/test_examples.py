@@ -32,7 +32,7 @@ def issues_to_list(issues: Iterable[Issue]) -> list:
     return [
         {
             "package_kind": issue.package_kind.name,
-            "message": issue.message,
+            "message": issue.message.replace("\\", "/"),  # Prevent spurious errors on Windows.
         }
         for issue in issues
     ]
