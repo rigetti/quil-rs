@@ -37,7 +37,6 @@ pub struct DefGateSequenceExpansion<'a> {
     nested_expansions: SourceMap<InstructionIndex, ExpansionResult<DefGateSequenceExpansion<'a>>>,
 }
 
-#[cfg(feature = "python")]
 impl<'a> DefGateSequenceExpansion<'a> {
     /// Borrow the source gate signature of the sequence gate definition
     pub(crate) fn source_signature(&self) -> &GateSignature<'a> {
@@ -45,12 +44,12 @@ impl<'a> DefGateSequenceExpansion<'a> {
     }
 
     /// Returns the range of target instruction indices produced by the expansion
-    pub(crate) fn range(&self) -> &Range<InstructionIndex> {
+    pub fn range(&self) -> &Range<InstructionIndex> {
         &self.range
     }
 
     /// Returns the nested expansions of this sequence gate definition
-    pub(crate) fn nested_expansions(
+    pub fn nested_expansions(
         &self,
     ) -> &SourceMap<InstructionIndex, ExpansionResult<DefGateSequenceExpansion<'a>>> {
         &self.nested_expansions
