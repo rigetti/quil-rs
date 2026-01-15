@@ -40,6 +40,8 @@ from .package import (
     PyO3Props,
     StubAttr,
     StubKind,
+    SubmoduleInfo,
+    SubmoduleRegistry
 )
 
 logger = logging.getLogger(__name__)
@@ -56,23 +58,131 @@ def process_dir(root: Path) -> tuple[Package, Package]:
     returning the ``(annotated, exported)`` `Package`s.
     """
 
+    submodule_registry: SubmoduleRegistry = {}
+
     annotated, exported = Package(), Package()
     for path in root.rglob("*.rs"):
         path = path.relative_to(root)
-        extract_items_from_file(root, path, annotated, exported)
+        extract_items_from_file(root, path, annotated, exported, submodule_registry)
+
+    # Resolve module names from create_init_submodule! macro invocations
+    _resolve_submodule_exports(exported, submodule_registry)
+
     guess_function_modules(annotated, exported)
     return annotated, exported
+
+
+def _resolve_submodule_exports(exported: Package, registry: SubmoduleRegistry):
+    """Resolve module names from the submodule registry.
+
+    Starting from the entrypoint (quilpy::init_submodule with root "quil"),
+    recursively traverse the submodule graph and populate the exported package.
+    """
+
+    def resolve(func_path: str, module_name: str):
+        if func_path not in registry:
+            logger.debug(f"No submodule info for {func_path}")
+            return
+
+        info = registry[func_path]
+        logger.info(f"Resolving {func_path} as module '{module_name}'")
+
+        # Add classes to exported
+        for class_name in info.classes:
+            # Strip path prefix if present (e.g., "errors::QuilError" -> "QuilError")
+            simple_name = class_name.split("::")[-1]
+            item = Item(
+                kind=Kind.Class,
+                python_name=simple_name,
+                rust_name=simple_name,
+                path=info.path,
+                line=info.line,
+            )
+            exported[module_name].add(item)
+
+        # Add complex_enums to exported and mark as fixed
+        for enum_name in info.complex_enums:
+            simple_name = enum_name.split("::")[-1]
+            item = Item(
+                kind=Kind.Class,
+                python_name=simple_name,
+                rust_name=simple_name,
+                path=info.path,
+                line=info.line,
+            )
+            exported[module_name].add(item)
+            exported[module_name]._fixed_enums.add(simple_name)
+
+        # Add errors to exported
+        for error_name in info.errors:
+            simple_name = error_name.split("::")[-1]
+            item = Item(
+                kind=Kind.Error,
+                python_name=simple_name,
+                rust_name=simple_name,
+                path=info.path,
+                line=info.line,
+            )
+            exported[module_name].add(item)
+
+        # Add funcs to exported
+        for func_name in info.funcs:
+            simple_name = func_name.split("::")[-1]
+            item = Item(
+                kind=Kind.Function,
+                python_name=simple_name,
+                rust_name=simple_name,
+                path=info.path,
+                line=info.line,
+            )
+            exported[module_name].add(item)
+
+        # Recursively resolve submodules
+        for key, child_func_path in info.submodules.items():
+            child_module = f"{module_name}.{key}"
+            # Try to find the child in the registry
+            # The path might be relative, so try multiple resolutions
+            if child_func_path in registry:
+                resolve(child_func_path, child_module)
+            else:
+                # Try to resolve relative to parent's path
+                # e.g., "identifier::init_submodule" relative to "validation::quilpy"
+                # becomes "validation::quilpy::identifier::init_submodule"
+                parent_base = func_path.rsplit("::init_submodule", 1)[0]
+                relative_path = f"{parent_base}::{child_func_path}"
+                if relative_path in registry:
+                    resolve(relative_path, child_module)
+                else:
+                    logger.warning(
+                        f"Could not resolve submodule '{key}' -> '{child_func_path}' "
+                        f"(tried '{relative_path}')"
+                    )
+
+    # Find the entrypoint - quilpy::init_submodule or similar
+    # The entrypoint is the one in quilpy/mod.rs
+    for func_path, info in registry.items():
+        if "quilpy" in func_path and "mod.rs" in str(info.path):
+            # Check if this is the root (has submodules pointing to other quilpy modules)
+            if info.submodules:
+                logger.info(f"Found entrypoint at {func_path}")
+                resolve(func_path, "quil")
+                break
 
 
 def guess_function_modules(annotated: Package, exported: Package):
     """Try to match functions to modules.
 
     The ``pyfunction`` annotation doesn't include a ``module`` property,
-    so we can only guess the module it belongs to if we can find a matching export
+    so the parsing code attempts to collect it ``gen_stub_pyfunction``,
+    but if that's not present either, the parser puts it in ``builtins``;
+    we can only guess the module it belongs to if we can find a matching export
     (that is, a ``pymodule`` it appears to have been added to).
     """
 
-    builtins = annotated["builtins"]
+    builtins = annotated.get("builtins")
+    if builtins is None:
+        return
+
     funcs = [f for f in builtins if f.kind is Kind.Function]
     for func in funcs:
         matching = (
@@ -126,17 +236,20 @@ def find_possible_mistakes(
             continue
 
         module, item = found
-        if method.python_name.startswith("Py") or method.python_name.startswith("py_"):
+
+        is_new = any(attr.text.strip() == "#[new]" for attr in method.attrs)
+        if not is_new and (method.python_name.startswith("Py") or method.python_name.startswith("py_")):
+            if method.python_name == "py_new" or method.python_name == "__new__":
+                hint = f"hint: did you forget a '#[new]' attribute? ({method.attrs})"
+            else:
+                suggestion = method.python_name.lower().removeprefix("py").removeprefix("_")
+                hint = f"""hint: did you forget a '#[pyo3(name = "{suggestion}")] attribute?"""
+
             msg = "\n".join(
                 (
                     f"Suspicious method name for '{module}.{item.python_name}.{method.python_name}'",
                     f"     ({method})",
-                    (
-                        "     "
-                        "hint: did you forget a '#[pyo3(name = "
-                        f'"{method.python_name.lower().removeprefix("py").removeprefix("_")}"'
-                        ')] attribute?'
-                    ),
+                    f"     {hint}",
                 )
             )
             issues.append(Issue(PackageKind.Annotation, msg))
@@ -313,8 +426,8 @@ def print_package_info(annotated: Package) -> None:
                     f"{full_qual:50} | {item.rust_name:20} | {item.path}:{item.line.num}"
                 )
 
-                if category == "Structs":
-                    print("  ", item.props - {"name", "module"})
+                if category == "Structs" and (props := item.props - {"name", "module"}):
+                    print("  ", props)
 
 
 def _meta(regex: str) -> str:
@@ -374,9 +487,11 @@ def _pymethods(annotated: Package, path: Path, lines: Lines):
     lines = iter_delim(lines, "{}")
 
     props = PyO3Props()
+    attrs = []
     while (line := next(lines, None)):
         if line.text.strip().startswith("#["):
             line = join_lines(iter_delim(lines, "[]", first=line))
+            attrs.append(line)
             if m := PYO3_RE.search(line.text):
                 props |= PyO3Props.parse(m.group(1) or m.group(2))
             elif m := GETTER_SETTER_RE.search(line.text):
@@ -386,20 +501,24 @@ def _pymethods(annotated: Package, path: Path, lines: Lines):
             continue
 
         kind: Kind = Kind(item_match.group("kind"))
-        rust_name: str = item_match.group("rust_name")
+        rust_name: str | None = item_match.group("rust_name")
 
         if not isinstance(rust_name, str):
             logger.error(f"Couldn't find Rust name for {path}@{line}: {kind}")
             return
 
-        python_name = props.get("name") or props.get("getter")
+        python_name = props.get("name") or props.get("getter") or rust_name
+        if not isinstance(python_name, str):
+            logger.error(f"Invalid Python name for {path}@{line}: {kind}")
+            return
 
         item = Item(
             kind=kind,
-            python_name=props.gets("name", rust_name),
+            python_name=python_name,
             rust_name=f"{rust_type}::{rust_name}",
             path=path,
             line=line,
+            attrs=attrs,
         )
         assert item.kind is Kind.Function, str(item)
         if item.python_name.startswith("Py") or item.python_name.startswith("py_"):
@@ -461,17 +580,22 @@ def _pyitem(
     if item.python_name.startswith("Py") or item.python_name.startswith("py_"):
         logger.warning(f"Suspicious name for {path}@{line}: {item}")
 
-    if last_stub is None:
-        logger.warning(f"No stub annotation found for {path} {item}.")
-    elif not last_stub.kind.is_like(item.kind):
-        logger.warning(
-            f"Mismatched stub {last_stub} (vs {item.kind}) found for {path} {item}."
-        )
-    elif last_stub.kind is StubKind.Function and last_stub.module:
+    if (mod := props.get("module")) and isinstance(mod, str):
+        module = mod
+    elif last_stub is not None and last_stub.module:
         logger.info(f"Moving fn to {last_stub.module}")
+        if not last_stub.kind.is_like(item.kind):
+            logger.warning(
+                f"Mismatched stub {last_stub} (vs {item.kind}) found for {path} {item}."
+            )
         module = last_stub.module
+    else:
+        if last_stub is None:
+            logger.warning(f"No stub annotation found for {path} {item}.")
+        elif last_stub.kind is not StubKind.Function or not last_stub.module:
+            logger.warning(f"No module found for {path} {item}.")
+        module = "builtins"
 
-    module = props.gets("module", "builtins")
     annotated[module].add(item)
     return annotated[module], item
 
@@ -549,6 +673,84 @@ def _fix_complex_enums(module: Module, line: Line, lines: Lines):
     )
 
 
+def _create_init_submodule(
+    path: Path,
+    line: Line,
+    lines: Lines,
+    mod_context: list[str],
+    registry: SubmoduleRegistry,
+):
+    """Process the `create_init_submodule!` macro from rigetti-pyo3.
+
+    The macro generates an `init_submodule` function that exports items to a Python module.
+    The actual module name is resolved later by traversing the submodule graph,
+    which is built up into the `registry` parameter.
+    We expect to eventually find an entrypoint to the graph, that is,
+    an actual ``#[pymodule]`` annotated function that calls ``init_submodule`` manually.
+
+    The `mod_context` parameter is a stack of names of nested modules,
+    since resolving the graph will require determining the actual Rust item paths.
+    We technically should be doing that anyway for all items, but we haven't yet issues;
+    if we do find later that we need it, it's likely time for this script to become more robust,
+    and use an actual Rust parser to sort out the code ahead of time.
+    At that point, it may be appropriate to RiiR and make use of `syn` or maybe `tree-sitter`.
+    """
+
+    # Build the function path from file path and mod context
+    # e.g., "quilpy/mod.rs" with context [] -> "quilpy::init_submodule"
+    # e.g., "validation/quilpy.rs" with context ["identifier"] -> "validation::quilpy::identifier::init_submodule"
+    func_path = "::".join(chain(
+        path.parts[:-1],
+        ((path.stem,) if path.stem != "mod" else ()),
+        mod_context,
+        ("init_submodule",)
+    ))
+
+    logger.info(f"Parsing create_init_submodule! at {path}:{line.num} -> {func_path}")
+
+    info = SubmoduleInfo(path=path, line=line)
+
+    # Read the macro body
+    body = join_lines(iter_delim(lines, "{}", first=line))
+    text = body.text
+
+    # Parse classes: [...]
+    if m := re.search(r"classes:\s*\[([^\]]*)\]", text):
+        info.classes = [c.strip() for c in m.group(1).split(",") if c.strip()]
+
+    # Parse complex_enums: [...]
+    if m := re.search(r"complex_enums:\s*\[([^\]]*)\]", text):
+        info.complex_enums = [c.strip() for c in m.group(1).split(",") if c.strip()]
+
+    # Parse errors: [...]
+    if m := re.search(r"errors:\s*\[([^\]]*)\]", text):
+        info.errors = [c.strip() for c in m.group(1).split(",") if c.strip()]
+
+    # Parse funcs: [...]
+    if m := re.search(r"funcs:\s*\[([^\]]*)\]", text):
+        info.funcs = [c.strip() for c in m.group(1).split(",") if c.strip()]
+
+    # Parse submodules: ["key": func_path, ...]
+    # Match pattern like "expression": expression::quilpy::init_submodule
+    submod_match = re.search(r"submodules:\s*\[([^\]]*)\]", text)
+    if submod_match:
+        submod_text = submod_match.group(1)
+        # Match "key": path::to::init_submodule patterns
+        for m in re.finditer(r'"([^"]+)":\s*([a-zA-Z_][a-zA-Z0-9_:]*)', submod_text):
+            key = m.group(1)
+            child_path = m.group(2)
+            info.submodules[key] = child_path
+            logger.debug(f"  submodule '{key}' -> {child_path}")
+
+    logger.debug(f"  classes: {info.classes}")
+    logger.debug(f"  complex_enums: {info.complex_enums}")
+    logger.debug(f"  errors: {info.errors}")
+    logger.debug(f"  funcs: {info.funcs}")
+    logger.debug(f"  submodules: {info.submodules}")
+
+    registry[func_path] = info
+
+
 def _pymod(exported: Package, path: Path, lines: Lines):
     """Process the body of a #[pymodule] annotated function."""
 
@@ -621,13 +823,32 @@ def _pymod(exported: Package, path: Path, lines: Lines):
         mod.line_num = mod_line
 
 
-def extract_items_from_file(root: Path, path: Path, annotated: Package, exported: Package):
+def extract_items_from_file(
+    root: Path,
+    path: Path,
+    annotated: Package,
+    exported: Package,
+    registry: SubmoduleRegistry,
+):
     """Update `annotated` and `exported` with, respectively,
     the items that are annotated to belong to a module
     and the items actually added to the module.
     """
 
     lines = read_file(root / path)
+    _extract_items(path, annotated, exported, lines, mod_context=[], registry=registry)
+
+
+def _extract_items(
+    path: Path,
+    annotated: Package,
+    exported: Package,
+    lines: Lines,
+    mod_context: list[str],
+    registry: SubmoduleRegistry,
+):
+    """Internal helper that processes lines with a given mod context."""
+
     last_stub: StubAttr | None = None
     while line := next(lines, None):
         # Handle macros:
@@ -641,9 +862,23 @@ def extract_items_from_file(root: Path, path: Path, annotated: Package, exported
             _impl_instruction(exported, path, line, lines)
             continue
 
+        if "create_init_submodule!" in line.text:
+            logger.info(f"Discovered create_init_submodule! in {path}: {line}")
+            _create_init_submodule(path, line, lines, mod_context, registry)
+            continue
+
         elif re.search(r"\b(?:create_)?exception!", line.text):
             logger.info(f"Discovered Error in {path}: {line}")
             _exceptions(annotated, path, line, lines)
+            continue
+
+        # Handle nested mod declarations: mod name { ... }
+        if mod_match := re.match(r"^\s*(?:pub\s*)?mod\s+(\w+)\s*\{", line.text):
+            mod_name = mod_match.group(1)
+            logger.info(f"Entering nested mod '{mod_name}' in {path}")
+            nested_lines = iter_delim(lines, "{}", first=line)
+            next(nested_lines, None)  # Skip the opening line
+            _extract_items(path, annotated, exported, nested_lines, mod_context + [mod_name], registry)
             continue
 
         # Skip non-attributes:

@@ -5,49 +5,87 @@ use pyo3::{
     prelude::*,
     types::{IntoPyDict as _, PyDict, PyTuple},
 };
+use rigetti_pyo3::{create_init_submodule, impl_repr};
+
+#[cfg(feature = "stubs")]
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use super::*;
 use crate::{
     instruction::gate::GateSignature,
     pickleable_new,
-    quilpy::{errors::PickleError, fix_complex_enums, impl_repr, impl_to_quil},
+    quilpy::{
+        errors::{self, PickleError},
+        impl_to_quil,
+    },
     validation::identifier::IdentifierValidationError,
 };
 
-#[cfg(feature = "stubs")]
-use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
+create_init_submodule! {
+    classes: [
+        Arithmetic,
+        ArithmeticOperator,
+        AttributeValue,
+        BinaryLogic,
+        BinaryOperator,
+        CalibrationDefinition,
+        CalibrationIdentifier,
+        Call,
+        Capture,
+        CircuitDefinition,
+        Comparison,
+        ComparisonOperator,
+        Convert,
+        Declaration,
+        Delay,
+        Exchange,
+        ExternParameter,
+        ExternSignature,
+        Fence,
+        FrameDefinition,
+        FrameIdentifier,
+        Gate,
+        GateDefinition,
+        GateModifier,
+        Include,
+        Jump,
+        JumpUnless,
+        JumpWhen,
+        Label,
+        Load,
+        MeasureCalibrationDefinition,
+        MeasureCalibrationIdentifier,
+        Measurement,
+        MemoryReference,
+        Move,
+        Offset,
+        PauliGate,
+        PauliTerm,
+        PauliSum,
+        Pragma,
+        Pulse,
+        QubitPlaceholder,
+        RawCapture,
+        Reset,
+        ScalarType,
+        SetFrequency,
+        SetPhase,
+        SetScale,
+        Sharing,
+        ShiftFrequency,
+        ShiftPhase,
+        Store,
+        SwapPhases,
+        TargetPlaceholder,
+        UnaryLogic,
+        UnaryOperator,
+        Vector,
+        Waveform,
+        WaveformDefinition,
+        WaveformInvocation
+    ],
 
-#[pymodule]
-#[pyo3(name = "instructions", module = "quil", submodule)]
-pub(crate) fn init_submodule(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    use crate::quilpy::errors;
-
-    let py = m.py();
-
-    m.add(
-        "InstructionError",
-        py.get_type::<errors::InstructionError>(),
-    )?;
-    m.add("CallError", py.get_type::<errors::CallError>())?;
-    m.add("ExternError", py.get_type::<errors::ExternError>())?;
-    m.add("GateError", py.get_type::<errors::GateError>())?;
-    m.add(
-        "DefGateSequenceError",
-        py.get_type::<errors::DefGateSequenceError>(),
-    )?;
-    m.add(
-        "ParseInstructionError",
-        py.get_type::<errors::ParseInstructionError>(),
-    )?;
-    m.add(
-        "ParseMemoryReferenceError",
-        py.get_type::<errors::ParseMemoryReferenceError>(),
-    )?;
-
-    add_instruction_classes(m)?;
-
-    fix_complex_enums!(
-        py,
+    complex_enums: [
         ArithmeticOperand,
         AttributeValue,
         BinaryOperand,
@@ -58,10 +96,18 @@ pub(crate) fn init_submodule(m: &Bound<'_, PyModule>) -> PyResult<()> {
         PragmaArgument,
         Qubit,
         Target,
-        UnresolvedCallArgument,
-    );
+        UnresolvedCallArgument
+    ],
 
-    Ok(())
+    errors: [
+        errors::InstructionError,
+        errors::CallError,
+        errors::DefGateSequenceError,
+        errors::ExternError,
+        errors::GateError,
+        errors::ParseInstructionError,
+        errors::ParseMemoryReferenceError
+    ],
 }
 
 /// Add a `parse` implementation to a `#[pyclass]` to use the type's `from_str` implementation.
@@ -100,13 +146,6 @@ macro_rules! impl_instruction {
     // After we generate that, the entire input is passed on to the @list rule,
     // which will chew through the tokens recursively.
     ([$( $name:ident $([$($args: tt)*])? ),* ,]) => {
-
-        /// Adds instruction classes to the given module, assumed to be `quil.instructions`.
-        fn add_instruction_classes(m: &Bound<'_, PyModule>) -> PyResult<()> {
-            $(m.add_class::<$name>()?;)*
-            Ok(())
-        }
-
         impl_instruction!(@list [$($name $([$($args)*])? ,)*]);
     };
 

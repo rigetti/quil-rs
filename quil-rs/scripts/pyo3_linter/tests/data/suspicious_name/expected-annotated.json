@@ -115,10 +115,5 @@
         }
       }
     ]
-  },
-  "builtins": {
-    "submodule": true,
-    "props": {},
-    "items": []
   }
 }

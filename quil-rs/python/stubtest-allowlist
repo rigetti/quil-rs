@@ -1,0 +1,61 @@
+# This is a list of types stubtest will ignore errors for.
+#
+# Use it with `stubtest --allowlist stubtest-allowlist quil`.
+# You'll likely want the `--ignore-disjoint-bases` option as well.
+
+# stubtest complains because the actual extension module has `__all__`s,
+# but pyo3_stubgen doesn't generate those in the stub files;
+# we could ignore it using the `--ignore-missing-stub` option,
+# but that's broader than necessary.
+.*\.__all__
+
+# Since pyo3_stubgen doesn't generate __all__, stubtest only notices submodules if imported;
+# unfortunately, in this case, pyo3_stubgen doesn't generate imports for the validation submodule.
+quil.validation
+quil.validation.identifier
+
+# Basic enums are annotated as "...", which is technically incorrect,
+# but doesn't really matter in practice, since the enum values are opaque anyway;
+# hence, we just ignore those.
+# If you have added new enums to the extension module,
+# you can use the `--generate-allowlist` option to generate the additions.
+quil.expression.ExpressionFunction.CIS
+quil.expression.ExpressionFunction.COSINE
+quil.expression.ExpressionFunction.EXPONENT
+quil.expression.ExpressionFunction.SINE
+quil.expression.ExpressionFunction.SQUARE_ROOT
+quil.expression.InfixOperator.CARET
+quil.expression.InfixOperator.MINUS
+quil.expression.InfixOperator.PLUS
+quil.expression.InfixOperator.SLASH
+quil.expression.InfixOperator.STAR
+quil.expression.PrefixOperator.MINUS
+quil.expression.PrefixOperator.PLUS
+quil.instructions.ArithmeticOperator.ADD
+quil.instructions.ArithmeticOperator.DIVIDE
+quil.instructions.ArithmeticOperator.MULTIPLY
+quil.instructions.ArithmeticOperator.SUBTRACT
+quil.instructions.BinaryOperator.AND
+quil.instructions.BinaryOperator.IOR
+quil.instructions.BinaryOperator.XOR
+quil.instructions.ComparisonOperator.EQUAL
+quil.instructions.ComparisonOperator.GREATER_THAN
+quil.instructions.ComparisonOperator.GREATER_THAN_OR_EQUAL
+quil.instructions.ComparisonOperator.LESS_THAN
+quil.instructions.ComparisonOperator.LESS_THAN_OR_EQUAL
+quil.instructions.DefGateSequence
+quil.instructions.GateModifier.CONTROLLED
+quil.instructions.GateModifier.DAGGER
+quil.instructions.GateModifier.FORKED
+quil.instructions.GateSignature
+quil.instructions.GateType
+quil.instructions.PauliGate.I
+quil.instructions.PauliGate.X
+quil.instructions.PauliGate.Y
+quil.instructions.PauliGate.Z
+quil.instructions.ScalarType.BIT
+quil.instructions.ScalarType.INTEGER
+quil.instructions.ScalarType.OCTET
+quil.instructions.ScalarType.REAL
+quil.instructions.UnaryOperator.NEG
+quil.instructions.UnaryOperator.NOT

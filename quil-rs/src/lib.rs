@@ -35,15 +35,6 @@
 //! [programs]: crate::program::Program
 //! [serializer]: crate::program::Program#method.to_string
 
-#![cfg_attr(
-    feature = "stubs",
-    expect(
-        clippy::incompatible_msrv,
-        reason = "false positive when function pointers are used but not called in const contexts; \
-                  see rust-lang/rust-clippy#15792"
-    )
-)]
-
 pub mod expression;
 mod floating_point_eq;
 pub mod instruction;

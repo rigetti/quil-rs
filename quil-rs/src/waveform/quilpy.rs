@@ -1,22 +1,22 @@
 use num_complex::Complex64;
 use pyo3::{prelude::*, types::PyList};
+use rigetti_pyo3::{create_init_submodule, impl_repr};
 
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::{gen_stub_pyfunction, gen_stub_pymethods};
 
 use super::templates::*;
-use crate::quilpy::{errors::ValueError, impl_repr};
+use crate::quilpy::errors::ValueError;
 
-#[pymodule]
-#[pyo3(name = "waveforms", module = "quil", submodule)]
-pub(crate) fn init_submodule(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_class::<BoxcarKernel>()?;
-    m.add_class::<ErfSquare>()?;
-    m.add_class::<Gaussian>()?;
-    m.add_class::<DragGaussian>()?;
-    m.add_class::<HermiteGaussian>()?;
-    m.add_function(wrap_pyfunction!(py_apply_phase_and_detuning, m)?)?;
-    Ok(())
+create_init_submodule! {
+    classes: [
+        BoxcarKernel,
+        DragGaussian,
+        ErfSquare,
+        Gaussian,
+        HermiteGaussian
+    ],
+    funcs: [ py_apply_phase_and_detuning ],
 }
 
 impl_repr!(BoxcarKernel);
@@ -53,8 +53,10 @@ struct NonZeroU64(std::num::NonZeroU64);
 // but it raises a TypeError that says "failed to extract field NonZeroU64.0".
 // By implementing it manually, an invalid value instead reads:
 // "quil.QuilValueError: expected a positive value".
-impl<'py> pyo3::FromPyObject<'py> for NonZeroU64 {
-    fn extract_bound(ob: &Bound<'py, PyAny>) -> PyResult<Self> {
+impl<'a, 'py> pyo3::FromPyObject<'a, 'py> for NonZeroU64 {
+    type Error = pyo3::PyErr;
+
+    fn extract(ob: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
         ob.extract::<u64>().and_then(|value| {
             std::num::NonZeroU64::try_from(value)
                 .map_err(|_err| ValueError::new_err("expected a positive value"))

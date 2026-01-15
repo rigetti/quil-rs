@@ -99,6 +99,18 @@
           "kind": "Class",
           "module": "quil.instructions"
         }
+      },
+      {
+        "rust_name": "a_different_name",
+        "python_name": "some_function",
+        "kind": "Function",
+        "props": {
+          "name": "some_function"
+        },
+        "stub_attr": {
+          "kind": "Function",
+          "module": "quil.instructions"
+        }
       }
     ]
   },
@@ -118,24 +130,6 @@
         "stub_attr": {
           "kind": "ComplexEnumeration",
           "module": null
-        }
-      }
-    ]
-  },
-  "builtins": {
-    "submodule": true,
-    "props": {},
-    "items": [
-      {
-        "rust_name": "a_different_name",
-        "python_name": "some_function",
-        "kind": "Function",
-        "props": {
-          "name": "some_function"
-        },
-        "stub_attr": {
-          "kind": "Function",
-          "module": "quil.instructions"
         }
       }
     ]
