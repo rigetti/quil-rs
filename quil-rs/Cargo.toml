@@ -16,10 +16,10 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 approx = { version = "0.5.1", features = ["num-complex"] }
 dot-writer = { version = "0.1.2", optional = true }
-internment = { version = "0.8.6", features = ["arc"] }
+internment = { version = "0.8.6", default-features = false, features = ["arc"] }
 itertools = "0.12.1"
 lexical = { version = "7.0.5", features = ["format", "power-of-two"] }
-ndarray.workspace = true
+ndarray = { version = "0.17.1", features = ["approx"] }
 nom = "7.1.1"
 nom_locate = "4.0.0"
 num-complex = "0.4.6"
@@ -27,24 +27,24 @@ once_cell = "1.17.1"
 petgraph = "0.6.4"
 regex = "1.7.1"
 serde = { version = "1.0.125", features = ["derive"] }
-strum.workspace = true
+strum = { version = "0.26.0", features = ["derive"] }
 thiserror = "1.0.56"
-indexmap.workspace = true
+indexmap = "2.10.0"
 statrs = "0.16.0"
 paste = "1.0.15"
-optipy = "0.1.0"
 
 # Enabled with the "python" feature.
 numpy = { version = "0.27.1", optional = true }
 pyo3 = { version = "0.27.2", features = ["indexmap", "num-complex", "multiple-pymethods"], optional = true }
 # TODO: update after PR is merged.
-rigetti-pyo3 = { git = "https://github.com/rigetti/rigetti-pyo3.git", rev = "refs/pull/62/head", optional = true }
+rigetti-pyo3 = { git = "https://github.com/rigetti/rigetti-pyo3.git", rev = "refs/pull/62/head", optional = true, version = "0.4.4" }
+optipy = { git = "https://github.com/rigetti/rigetti-pyo3.git", rev = "refs/pull/62/head", version = "0.1.0" }
 
 # Enabled with the "stubs" feature.
 pyo3-stub-gen = { version = "0.17.2", features = ["numpy"], optional = true }
 
 [dev-dependencies]
-clap = { version = "4.3.19", features = ["derive", "string"] }
+clap = { workspace = true, features = ["derive", "string"] }
 criterion = { version = "0.5.1", features = ["html_reports"] }
 insta = "1.37.0"
 petgraph = "0.6.2"
