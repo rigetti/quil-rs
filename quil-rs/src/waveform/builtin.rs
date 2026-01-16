@@ -415,7 +415,6 @@ impl BuiltinWaveformParameters for ErfSquare {
         common: CommonBuiltinParameters,
         sample_rate: f64,
     ) -> Result<IqSamples, SamplingError> {
-        let CommonBuiltinParameters { duration, .. } = common;
         let Self {
             risetime,
             pad_left,
@@ -424,7 +423,7 @@ impl BuiltinWaveformParameters for ErfSquare {
 
         let fwhm = 0.5 * risetime;
         let t1 = fwhm;
-        let t2 = duration - fwhm;
+        let t2 = common.duration - fwhm;
 
         build_samples_and_adjust_for_common_parameters(
             SamplingParameters { sample_rate, fwhm },
@@ -554,6 +553,7 @@ fn build_samples_and_adjust_for_common_parameters<I: IntoIterator<Item = Complex
         .into_iter()
         .collect();
 
+    // Like [`apply_phase_and_detuning`], but also applies the scale
     for (index, sample) in samples.iter_mut().enumerate() {
         *sample =
             apply_phase_and_detuning_at_index(scale * *sample, phase, detuning, sample_rate, index);
@@ -563,6 +563,7 @@ fn build_samples_and_adjust_for_common_parameters<I: IntoIterator<Item = Complex
 }
 
 /// Modulate and phase shift waveform IQ data in place.
+#[inline]
 pub fn apply_phase_and_detuning(
     iq_values: &mut [Complex64],
     phase: Cycles<f64>,
@@ -596,6 +597,7 @@ fn apply_phase(iq_value: Complex64, phase: Cycles<f64>) -> Complex64 {
 }
 
 /// Convert polar coordinates to rectangular coordinates.
+#[inline]
 fn polar_to_rectangular(magnitude: f64, angle: Cycles<f64>) -> Complex64 {
     Complex64::from_polar(magnitude, Radians::from(angle).0)
 }
