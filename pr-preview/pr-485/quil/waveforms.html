@@ -68,7 +68,7 @@
                                 <a class="function" href="#CommonBuiltinParameters.resolve_with_sample_rate">resolve_with_sample_rate</a>
                         </li>
                         <li>
-                                <a class="variable" href="#CommonBuiltinParameters.scale">scale</a>
+                                <a class="variable" href="#CommonBuiltinParameters.phase">phase</a>
                         </li>
                         <li>
                                 <a class="variable" href="#CommonBuiltinParameters.detuning">detuning</a>
@@ -77,7 +77,7 @@
                                 <a class="variable" href="#CommonBuiltinParameters.duration">duration</a>
                         </li>
                         <li>
-                                <a class="variable" href="#CommonBuiltinParameters.phase">phase</a>
+                                <a class="variable" href="#CommonBuiltinParameters.scale">scale</a>
                         </li>
                 </ul>
 
@@ -86,16 +86,16 @@
                     <a class="class" href="#ExplicitCommonBuiltinParameters">ExplicitCommonBuiltinParameters</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#ExplicitCommonBuiltinParameters.phase">phase</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#ExplicitCommonBuiltinParameters.detuning">detuning</a>
                         </li>
                         <li>
-                                <a class="variable" href="#ExplicitCommonBuiltinParameters.scale">scale</a>
+                                <a class="variable" href="#ExplicitCommonBuiltinParameters.sample_count">sample_count</a>
                         </li>
                         <li>
-                                <a class="variable" href="#ExplicitCommonBuiltinParameters.sample_count">sample_count</a>
+                                <a class="variable" href="#ExplicitCommonBuiltinParameters.phase">phase</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#ExplicitCommonBuiltinParameters.scale">scale</a>
                         </li>
                 </ul>
 
@@ -119,10 +119,10 @@
                                 <a class="function" href="#Gaussian.iq_values_at_sample_rate">iq_values_at_sample_rate</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Gaussian.t0">t0</a>
+                                <a class="variable" href="#Gaussian.fwhm">fwhm</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Gaussian.fwhm">fwhm</a>
+                                <a class="variable" href="#Gaussian.t0">t0</a>
                         </li>
                 </ul>
 
@@ -134,16 +134,16 @@
                                 <a class="function" href="#DragGaussian.iq_values_at_sample_rate">iq_values_at_sample_rate</a>
                         </li>
                         <li>
-                                <a class="variable" href="#DragGaussian.t0">t0</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#DragGaussian.fwhm">fwhm</a>
                         </li>
                         <li>
-                                <a class="variable" href="#DragGaussian.anh">anh</a>
+                                <a class="variable" href="#DragGaussian.alpha">alpha</a>
                         </li>
                         <li>
-                                <a class="variable" href="#DragGaussian.alpha">alpha</a>
+                                <a class="variable" href="#DragGaussian.t0">t0</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#DragGaussian.anh">anh</a>
                         </li>
                 </ul>
 
@@ -173,6 +173,12 @@
                                 <a class="function" href="#HermiteGaussian.iq_values_at_sample_rate">iq_values_at_sample_rate</a>
                         </li>
                         <li>
+                                <a class="variable" href="#HermiteGaussian.t0">t0</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#HermiteGaussian.second_order_hrm_coeff">second_order_hrm_coeff</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#HermiteGaussian.fwhm">fwhm</a>
                         </li>
                         <li>
@@ -180,12 +186,6 @@
                         </li>
                         <li>
                                 <a class="variable" href="#HermiteGaussian.alpha">alpha</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#HermiteGaussian.t0">t0</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#HermiteGaussian.second_order_hrm_coeff">second_order_hrm_coeff</a>
                         </li>
                 </ul>
 
@@ -361,15 +361,15 @@
 
 
                             </div>
-                            <div id="CommonBuiltinParameters.scale" class="classattr">
+                            <div id="CommonBuiltinParameters.phase" class="classattr">
                                 <div class="attr variable">
-            <span class="name">scale</span>
+            <span class="name">phase</span>
 
         
     </div>
-    <a class="headerlink" href="#CommonBuiltinParameters.scale"></a>
+    <a class="headerlink" href="#CommonBuiltinParameters.phase"></a>
     
-            <div class="docstring"><p>Scale to apply to waveform envelope (default: <code>1.0</code>)</p>
+            <div class="docstring"><p>Phase shift for the entire waveform (default: <code>0.0</code>)</p>
 </div>
 
 
@@ -400,15 +400,15 @@
 
 
                             </div>
-                            <div id="CommonBuiltinParameters.phase" class="classattr">
+                            <div id="CommonBuiltinParameters.scale" class="classattr">
                                 <div class="attr variable">
-            <span class="name">phase</span>
+            <span class="name">scale</span>
 
         
     </div>
-    <a class="headerlink" href="#CommonBuiltinParameters.phase"></a>
+    <a class="headerlink" href="#CommonBuiltinParameters.scale"></a>
     
-            <div class="docstring"><p>Phase shift for the entire waveform (default: <code>0.0</code>)</p>
+            <div class="docstring"><p>Scale to apply to waveform envelope (default: <code>1.0</code>)</p>
 </div>
 
 
@@ -428,19 +428,6 @@
 </div>
 
 
-                            <div id="ExplicitCommonBuiltinParameters.phase" class="classattr">
-                                <div class="attr variable">
-            <span class="name">phase</span>
-
-        
-    </div>
-    <a class="headerlink" href="#ExplicitCommonBuiltinParameters.phase"></a>
-    
-            <div class="docstring"><p>Phase shift for the entire waveform</p>
-</div>
-
-
-                            </div>
                             <div id="ExplicitCommonBuiltinParameters.detuning" class="classattr">
                                 <div class="attr variable">
             <span class="name">detuning</span>
@@ -450,19 +437,6 @@
     <a class="headerlink" href="#ExplicitCommonBuiltinParameters.detuning"></a>
     
             <div class="docstring"><p>Explicit detuning to bake into IQ values</p>
-</div>
-
-
-                            </div>
-                            <div id="ExplicitCommonBuiltinParameters.scale" class="classattr">
-                                <div class="attr variable">
-            <span class="name">scale</span>
-
-        
-    </div>
-    <a class="headerlink" href="#ExplicitCommonBuiltinParameters.scale"></a>
-    
-            <div class="docstring"><p>Scale to apply to waveform envelope</p>
 </div>
 
 
@@ -478,6 +452,32 @@
             <div class="docstring"><p>Integral number of samples that should be taken of the pulse</p>
 
 <p>Corresponds to [<code>CommonBuiltinParameters::duration</code>].</p>
+</div>
+
+
+                            </div>
+                            <div id="ExplicitCommonBuiltinParameters.phase" class="classattr">
+                                <div class="attr variable">
+            <span class="name">phase</span>
+
+        
+    </div>
+    <a class="headerlink" href="#ExplicitCommonBuiltinParameters.phase"></a>
+    
+            <div class="docstring"><p>Phase shift for the entire waveform</p>
+</div>
+
+
+                            </div>
+                            <div id="ExplicitCommonBuiltinParameters.scale" class="classattr">
+                                <div class="attr variable">
+            <span class="name">scale</span>
+
+        
+    </div>
+    <a class="headerlink" href="#ExplicitCommonBuiltinParameters.scale"></a>
+    
+            <div class="docstring"><p>Scale to apply to waveform envelope</p>
 </div>
 
 
@@ -559,19 +559,6 @@
 
 
                             </div>
-                            <div id="Gaussian.t0" class="classattr">
-                                <div class="attr variable">
-            <span class="name">t0</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Gaussian.t0"></a>
-    
-            <div class="docstring"><p>Center/offset for pulse centroid (s)</p>
-</div>
-
-
-                            </div>
                             <div id="Gaussian.fwhm" class="classattr">
                                 <div class="attr variable">
             <span class="name">fwhm</span>
@@ -581,6 +568,19 @@
     <a class="headerlink" href="#Gaussian.fwhm"></a>
     
             <div class="docstring"><p>Full width half maximum of the pulse (s)</p>
+</div>
+
+
+                            </div>
+                            <div id="Gaussian.t0" class="classattr">
+                                <div class="attr variable">
+            <span class="name">t0</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Gaussian.t0"></a>
+    
+            <div class="docstring"><p>Center/offset for pulse centroid (s)</p>
 </div>
 
 
@@ -626,19 +626,6 @@ F. Motzoi, J. M. Gambetta, J. M., P. Rebentrost, and F. K. Wilhelm, Physical Rev
 
 
                             </div>
-                            <div id="DragGaussian.t0" class="classattr">
-                                <div class="attr variable">
-            <span class="name">t0</span>
-
-        
-    </div>
-    <a class="headerlink" href="#DragGaussian.t0"></a>
-    
-            <div class="docstring"><p>Center/offset for pulse centroid (s)</p>
-</div>
-
-
-                            </div>
                             <div id="DragGaussian.fwhm" class="classattr">
                                 <div class="attr variable">
             <span class="name">fwhm</span>
@@ -652,19 +639,6 @@ F. Motzoi, J. M. Gambetta, J. M., P. Rebentrost, and F. K. Wilhelm, Physical Rev
 
 
                             </div>
-                            <div id="DragGaussian.anh" class="classattr">
-                                <div class="attr variable">
-            <span class="name">anh</span>
-
-        
-    </div>
-    <a class="headerlink" href="#DragGaussian.anh"></a>
-    
-            <div class="docstring"><p>Qubit anharmonicity - sets rate of evolution for the imaginary term (Hz)</p>
-</div>
-
-
-                            </div>
                             <div id="DragGaussian.alpha" class="classattr">
                                 <div class="attr variable">
             <span class="name">alpha</span>
@@ -674,6 +648,32 @@ F. Motzoi, J. M. Gambetta, J. M., P. Rebentrost, and F. K. Wilhelm, Physical Rev
     <a class="headerlink" href="#DragGaussian.alpha"></a>
     
             <div class="docstring"><p>DRAG parameter - controls strength of the imaginary term</p>
+</div>
+
+
+                            </div>
+                            <div id="DragGaussian.t0" class="classattr">
+                                <div class="attr variable">
+            <span class="name">t0</span>
+
+        
+    </div>
+    <a class="headerlink" href="#DragGaussian.t0"></a>
+    
+            <div class="docstring"><p>Center/offset for pulse centroid (s)</p>
+</div>
+
+
+                            </div>
+                            <div id="DragGaussian.anh" class="classattr">
+                                <div class="attr variable">
+            <span class="name">anh</span>
+
+        
+    </div>
+    <a class="headerlink" href="#DragGaussian.anh"></a>
+    
+            <div class="docstring"><p>Qubit anharmonicity - sets rate of evolution for the imaginary term (Hz)</p>
 </div>
 
 
@@ -789,6 +789,32 @@ coherence", Warren S. Warren, The Journal of Chemical Physics 81(12) (December 2
 
 
                             </div>
+                            <div id="HermiteGaussian.t0" class="classattr">
+                                <div class="attr variable">
+            <span class="name">t0</span>
+
+        
+    </div>
+    <a class="headerlink" href="#HermiteGaussian.t0"></a>
+    
+            <div class="docstring"><p>Center/offset for pulse centroid (s)</p>
+</div>
+
+
+                            </div>
+                            <div id="HermiteGaussian.second_order_hrm_coeff" class="classattr">
+                                <div class="attr variable">
+            <span class="name">second_order_hrm_coeff</span>
+
+        
+    </div>
+    <a class="headerlink" href="#HermiteGaussian.second_order_hrm_coeff"></a>
+    
+            <div class="docstring"><p>Coefficient of the second order Hermite polynomial term.</p>
+</div>
+
+
+                            </div>
                             <div id="HermiteGaussian.fwhm" class="classattr">
                                 <div class="attr variable">
             <span class="name">fwhm</span>
@@ -824,32 +850,6 @@ coherence", Warren S. Warren, The Journal of Chemical Physics 81(12) (December 2
     <a class="headerlink" href="#HermiteGaussian.alpha"></a>
     
             <div class="docstring"><p>DRAG parameter - controls strength of the imaginary term</p>
-</div>
-
-
-                            </div>
-                            <div id="HermiteGaussian.t0" class="classattr">
-                                <div class="attr variable">
-            <span class="name">t0</span>
-
-        
-    </div>
-    <a class="headerlink" href="#HermiteGaussian.t0"></a>
-    
-            <div class="docstring"><p>Center/offset for pulse centroid (s)</p>
-</div>
-
-
-                            </div>
-                            <div id="HermiteGaussian.second_order_hrm_coeff" class="classattr">
-                                <div class="attr variable">
-            <span class="name">second_order_hrm_coeff</span>
-
-        
-    </div>
-    <a class="headerlink" href="#HermiteGaussian.second_order_hrm_coeff"></a>
-    
-            <div class="docstring"><p>Coefficient of the second order Hermite polynomial term.</p>
 </div>
 
 
