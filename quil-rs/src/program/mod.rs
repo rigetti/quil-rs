@@ -1215,6 +1215,8 @@ I 0
         assert_eq!(program.memory_regions.len(), 1);
         assert_eq!(program.frames.len(), 1);
         assert_eq!(program.waveforms.len(), 1);
+        assert_eq!(program.gate_definitions.len(), 1);
+        assert_eq!(program.circuits.len(), 1);
         assert_eq!(program.instructions.len(), 1);
 
         assert_eq!(
@@ -1698,6 +1700,8 @@ DEFCIRCUIT BELL2 q0 q1:
             assert_eq!(program.memory_regions.len(), 2);
             assert_eq!(program.frames.len(), 2);
             assert_eq!(program.waveforms.len(), 2);
+            assert_eq!(program.gate_definitions.len(), 2);
+            assert_eq!(program.circuits.len(), 2);
             assert_eq!(program.instructions.len(), 5);
             assert_eq!(expected_qubits, sum.get_used_qubits().iter().collect());
         }
