@@ -1,3 +1,9 @@
+## 0.35.0-rc.0 (2026-01-16)
+
+### Breaking Changes
+
+- move circuit definitions into its own field in program (#492)
+
 ## 0.34.0 (2026-01-14)
 
 ### Breaking Changes
