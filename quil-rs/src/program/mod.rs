@@ -1200,6 +1200,14 @@ DEFFRAME 0 \"rx\":
     HARDWARE-OBJECT: \"hardware\"
 DEFWAVEFORM custom:
     1, 2
+DEFGATE FOO:
+    1, 0
+    0, 1
+
+DEFCIRCUIT BELL q0 q1:
+    H q1
+    CNOT q1 q0
+
 I 0
 ";
         let program = Program::from_str(input).unwrap();
@@ -1218,6 +1226,14 @@ DEFWAVEFORM custom:
     1, 2
 DEFCAL I 0:
     DELAY 0 1
+DEFGATE FOO AS MATRIX:
+    1, 0
+    0, 1
+
+DEFCIRCUIT BELL q0 q1:
+    H q1
+    CNOT q1 q0
+
 I 0
 "
         );
@@ -1634,6 +1650,11 @@ DEFWAVEFORM custom:
 DEFGATE FOO:
     1, 0
     0, 1
+
+DEFCIRCUIT BELL q0 q1:
+    H q1
+    CNOT q1 q0
+
 I 0
 ";
         let rhs_input = "
@@ -1650,6 +1671,11 @@ DEFWAVEFORM custom2:
 DEFGATE BAR:
     0, 1
     1, 0
+
+DEFCIRCUIT BELL2 q0 q1:
+    H q1
+    CNOT q1 q0
+    X q1
 ";
         let lhs = Program::from_str(lhs_input).unwrap();
         let rhs = Program::from_str(rhs_input).unwrap();
@@ -1699,6 +1725,11 @@ DEFFRAME 0 \"rx\":
     HARDWARE-OBJECT: \"hardware\"
 DEFWAVEFORM custom:
     1,2
+
+DEFCIRCUIT BELL q0 q1:
+    H q1
+    CNOT q1 q0
+
 I 0
 ";
         // Test is invalid if there are no body instructions
