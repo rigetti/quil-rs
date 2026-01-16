@@ -247,7 +247,7 @@ impl Program {
     ) -> Result<ExpandedProgram> {
         let (expanded_program, source_map) =
             self.expand_defgate_sequences_with_source_map(|key: &str| -> bool {
-                predicate.map_or(true, |f| match call_user_func(py, f, key) {
+                predicate.is_none_or(|f| match call_user_func(py, f, key) {
                     Ok(val) => val,
                     Err(err) => panic!("error calling predicate: {err}"),
                 })
@@ -341,7 +341,7 @@ impl Program {
         predicate: Option<&Bound<'py, PyFunction>>,
     ) -> Result<Self> {
         self.clone().expand_defgate_sequences(|key: &str| -> bool {
-            predicate.map_or(true, |f| match call_user_func(py, f, key) {
+            predicate.is_none_or(|f| match call_user_func(py, f, key) {
                 Ok(val) => val,
                 Err(err) => panic!("error calling predicate: {err}"),
             })
