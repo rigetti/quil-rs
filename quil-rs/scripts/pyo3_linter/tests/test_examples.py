@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 from typing import Iterable
 
-from pyo3_linter import process_dir, find_possible_mistakes, Issue, Package, PackageKind
+from pyo3_linter import process_dir, find_possible_mistakes, Issue, Package, PackageKind, PackageConfig, MacroHandlers
 
 
 def package_to_dict(package: Package) -> dict:
@@ -51,13 +51,13 @@ def _save_generated(data, paths):
             json.dump(d, f, indent=2)
 
 
-def test_find_mistakes(root: Path, generating: bool):
+def test_find_mistakes(root: Path, package_config: PackageConfig, macro_handlers: MacroHandlers, generating: bool):
     """Processes files under the `root` and compares the results to expected output,
     stored in JSON files under that root directory.
     """
 
-    annotated, exported = process_dir(root)
-    issues = find_possible_mistakes(annotated, exported)
+    annotated, exported = process_dir(root, package_config, macro_handlers)
+    issues = find_possible_mistakes(package_config, annotated, exported)
 
     # These are dicts/lists so they'll be valid JSON and easier to manipulate/check.
     got_data, expected_paths = list(zip(*(

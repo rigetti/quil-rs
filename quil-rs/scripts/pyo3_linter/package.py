@@ -22,6 +22,27 @@ from .reader import Line
 
 logger = logging.getLogger(__name__)
 
+
+@dataclass
+class PackageConfig:
+    """Configuration for the package's module naming conventions."""
+
+    root_module: str
+    """The name of the top-level Python module (e.g., "quil")."""
+    internal_module: str
+    """The name of the internal module produced by maturin (e.g., "_quil")."""
+    entrypoint_pattern: str
+    """
+    A pattern to match the entrypoint function path in the registry,
+    assuming you're using `create_init_submodule!` for the rest of the module graph.
+    """
+
+    @property
+    def implicit_exports(self) -> set[str]:
+        """Module names considered implicitly exported."""
+        return {"builtins", self.root_module, f".{self.internal_module}"}
+
+
 class PackageKind(enum.Enum):
     Annotation = "Annotation"
     Export = "Export"
@@ -244,11 +265,15 @@ class SubmoduleInfo:
     submodules: dict[str, str] = field(default_factory=dict)
     """Last part of submodule name -> Rust initialization function name."""
 
-# Graph of submodules related via `create_init_submodule!` invocations. 
+    root: str | None = None
+
+
+# Graph of submodules related via `create_init_submodule!` invocations.
 SubmoduleRegistry: TypeAlias = dict[str, SubmoduleInfo]
 
 
 _T = TypeVar("_T")
+
 
 @dataclass
 class Package(MutableMapping[str, Module]):
@@ -327,4 +352,3 @@ class Package(MutableMapping[str, Module]):
 
     def items(self) -> ItemsView[str, Module]:
         return self._modules.items()
-

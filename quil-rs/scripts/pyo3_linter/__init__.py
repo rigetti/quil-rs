@@ -1,11 +1,15 @@
 """
-A lint helper for ``quil-rs``'s PyO3 wrappers.
+A lint helper for PyO3 wrappers.
 
 You'd typically use this by giving the root source path to the `process_dir` function,
 then pass the resulting `Package`s to the `find_possible_mistakes` function,
 getting back a list of `Issue`s that you can choose to print or further process.
 You can instead (or in addition) pass the `Package`s to `print_package_info`
 to get pretty-printed information about the overall package structure inferred by this code.
+
+You can customize the behavior by providing:
+- `ModuleConfig`: for module naming conventions (root module, internal module names)
+- `MacroHandler`s: To add project-specific macro parsing behavior
 
 This works purely on the textual source, so it may make mistakes,
 especially among elements that share the same name.
@@ -36,13 +40,21 @@ from .package import (
     Kind,
     Module,
     Package,
+    PackageConfig,
     PackageKind,
     PyO3Props,
     StubAttr,
     StubKind,
     SubmoduleInfo,
-    SubmoduleRegistry
+    SubmoduleRegistry,
 )
+
+from .macros import (
+    MacroContext,
+    MacroHandlers,
+    macro_handler,
+)
+
 
 logger = logging.getLogger(__name__)
 
@@ -53,9 +65,27 @@ class Issue:
     message: str
 
 
-def process_dir(root: Path) -> tuple[Package, Package]:
+def default_macro_handlers() -> MacroHandlers:
+    """Return a new collection of default macro handlers."""
+    return [
+        _create_init_submodule,
+        _exceptions,
+        _fix_complex_enums,
+    ]
+
+
+def process_dir(
+    root: Path,
+    config: PackageConfig,
+    macro_handlers: MacroHandlers,
+) -> tuple[Package, Package]:
     """Process sources recursively from the root path,
     returning the ``(annotated, exported)`` `Package`s.
+
+    Args:
+        root: The root directory to scan for .rs files.
+        config: Configuration for module naming.
+        macro_handlers: List of macro handlers for custom macro parsing.
     """
 
     submodule_registry: SubmoduleRegistry = {}
@@ -63,7 +93,9 @@ def process_dir(root: Path) -> tuple[Package, Package]:
     annotated, exported = Package(), Package()
     for path in root.rglob("*.rs"):
         path = path.relative_to(root)
-        extract_items_from_file(root, path, annotated, exported, submodule_registry)
+        extract_items_from_file(
+            root, path, annotated, exported, submodule_registry, macro_handlers, config
+        )
 
     # Resolve module names from create_init_submodule! macro invocations
     _resolve_submodule_exports(exported, submodule_registry)
@@ -72,16 +104,16 @@ def process_dir(root: Path) -> tuple[Package, Package]:
     return annotated, exported
 
 
-def _resolve_submodule_exports(exported: Package, registry: SubmoduleRegistry):
+def _resolve_submodule_exports(exported: Package, registry: SubmoduleRegistry) -> None:
     """Resolve module names from the submodule registry.
 
-    Starting from the entrypoint (quilpy::init_submodule with root "quil"),
-    recursively traverse the submodule graph and populate the exported package.
+    Starting from the entrypoint, recursively traverse the submodule graph
+    and populate the exported package.
     """
 
     def resolve(func_path: str, module_name: str):
         if func_path not in registry:
-            logger.debug(f"No submodule info for {func_path}")
+            logger.warning(f"No submodule info for {func_path}")
             return
 
         info = registry[func_path]
@@ -139,7 +171,7 @@ def _resolve_submodule_exports(exported: Package, registry: SubmoduleRegistry):
 
         # Recursively resolve submodules
         for key, child_func_path in info.submodules.items():
-            child_module = f"{module_name}.{key}"
+            child_module = f"{module_name}.{key}" if module_name else key
             # Try to find the child in the registry
             # The path might be relative, so try multiple resolutions
             if child_func_path in registry:
@@ -154,19 +186,17 @@ def _resolve_submodule_exports(exported: Package, registry: SubmoduleRegistry):
                     resolve(relative_path, child_module)
                 else:
                     logger.warning(
-                        f"Could not resolve submodule '{key}' -> '{child_func_path}' "
-                        f"(tried '{relative_path}')"
+                        f"Could not resolve submodule '{key}' -> '{child_func_path}' (tried '{relative_path}')"
                     )
 
-    # Find the entrypoint - quilpy::init_submodule or similar
-    # The entrypoint is the one in quilpy/mod.rs
+    # Find the entrypoint - look for the pattern in mod.rs with submodules
     for func_path, info in registry.items():
-        if "quilpy" in func_path and "mod.rs" in str(info.path):
-            # Check if this is the root (has submodules pointing to other quilpy modules)
-            if info.submodules:
-                logger.info(f"Found entrypoint at {func_path}")
-                resolve(func_path, "quil")
-                break
+        if info.root is not None:
+            logger.info(f"Found entrypoint at {func_path}")
+            resolve(func_path, "")
+        # if module_config.entrypoint_pattern in func_path and info.submodules:
+        #     resolve(func_path, module_config.root_module)
+        #     break
 
 
 def guess_function_modules(annotated: Package, exported: Package):
@@ -200,28 +230,20 @@ def guess_function_modules(annotated: Package, exported: Package):
 
 
 def find_possible_mistakes(
-    annotated: Package, exported: Package, found_exports: set[str] | None = None
+    config: PackageConfig,
+    annotated: Package,
+    exported: Package,
 ) -> list[Issue]:
     """Return potential mistakes between the `annotated` and `exported` ``Package``s.
 
-    The `found_exports` parameter is a set of module names considered exported implicitly.
-    If you're using this to lint code other than ``quil-rs``, you'll probably want to change them,
-    but keep in mind, this linter is designed with consideration of macros used in ``quil-rs``.
-    If they are not given, it uses these defaults:
-
-    - "builtins": This is implicitly "exported".
-    - "quil": This is the name of the top-level package, so it doesn't need an export.
-    - "_quil": This is the name of the internal package produced by the build process,
-        and its contents are exported as the top-level package within the ``__init__.py``.
-
-    The split between the "internal" ``_quil`` and "external" ``quil`` packages
-    is based on ``maturin's recommendations <https://www.maturin.rs/project_layout.html>_``,
-    specifically for "Adding Python type information".
+    Args:
+        config: Configuration for module naming.
+        annotated: Package containing items with PyO3 annotations.
+        exported: Package containing items added to Python modules.
     """
 
     logger.debug("Checking that annotated items are added to the correct module.")
     issues: list[Issue] = []
-
 
     for method in annotated._methods:
         rust_type, _ = method.rust_name.split("::", 1)
@@ -238,11 +260,15 @@ def find_possible_mistakes(
         module, item = found
 
         is_new = any(attr.text.strip() == "#[new]" for attr in method.attrs)
-        if not is_new and (method.python_name.startswith("Py") or method.python_name.startswith("py_")):
+        if not is_new and (
+            method.python_name.startswith("Py") or method.python_name.startswith("py_")
+        ):
             if method.python_name == "py_new" or method.python_name == "__new__":
                 hint = f"hint: did you forget a '#[new]' attribute? ({method.attrs})"
             else:
-                suggestion = method.python_name.lower().removeprefix("py").removeprefix("_")
+                suggestion = (
+                    method.python_name.lower().removeprefix("py").removeprefix("_")
+                )
                 hint = f"""hint: did you forget a '#[pyo3(name = "{suggestion}")] attribute?"""
 
             msg = "\n".join(
@@ -254,9 +280,7 @@ def find_possible_mistakes(
             )
             issues.append(Issue(PackageKind.Annotation, msg))
 
-
-    if found_exports is None:
-        found_exports = {"builtins", "quil", "._quil"}
+    found_exports = config.implicit_exports
 
     for module, anno in sorted(annotated.items()):
         if module == "builtins":
@@ -336,9 +360,7 @@ def find_possible_mistakes(
                         f"  Suspicious name for '{module}.{item.python_name}'",
                         f"     ({item})",
                         (
-                            "     "
-                            "hint: did you forget a '#[pyo3(name = "
-                            f'"{item.python_name.strip("Py")})]" attribute?'
+                            f'     hint: did you forget a \'#[pyo3(name = "{item.python_name.strip("Py")})]" attribute?'
                         ),
                     )
                 )
@@ -464,6 +486,7 @@ STUB_GEN_RE = re.compile(
     )
 )
 
+
 def _pymethods(annotated: Package, path: Path, lines: Lines):
     """Process the body of a ``#[pymethods]`` annotated ``impl`` block."""
 
@@ -488,7 +511,7 @@ def _pymethods(annotated: Package, path: Path, lines: Lines):
 
     props = PyO3Props()
     attrs = []
-    while (line := next(lines, None)):
+    while line := next(lines, None):
         if line.text.strip().startswith("#["):
             line = join_lines(iter_delim(lines, "[]", first=line))
             attrs.append(line)
@@ -600,29 +623,16 @@ def _pyitem(
     return annotated[module], item
 
 
-def _py_source_map(annotated: Package, path: Path, line: Line, lines: Lines):
-    """Process the content of the ``py_source_map!`` macro."""
-
-    # Synthesize the match.
-    pyclass_match = PYITEM_RE.search("#[pyclass]")
-    assert pyclass_match is not None
-    last_stub = StubAttr(StubKind.Class)
-
-    # Read the macro content.
-    body = iter_delim(chain((line,), lines), "{}")
-    next(body)  # Skip the first line, which contains the opening delimiter.
-    _pyitem(annotated, path, body, pyclass_match, last_stub)  # SourceMap
-    _pyitem(annotated, path, body, pyclass_match, last_stub)  # SourceMapEntry
-
-
-def _exceptions(annotated: Package, path: Path, line: Line, lines: Lines):
+@macro_handler(r"\b(?:create_)?exception!")
+def _exceptions(ctx: MacroContext, module: str | None = None) -> None:
     """Process the content of the ``exception!`` and ``create_exception!`` macros."""
 
-    body = join_lines(iter_delim(lines, "()", first=line))
-    if "create_exception!(" in line:
-        module, err_name, _ = body.text.split(",", maxsplit=2)
+    body = join_lines(iter_delim(ctx.lines, "()"))
+
+    if "create_exception!(" in body.text:
+        module, err_name = body.text.split(",", maxsplit=2)[:2]
     else:
-        _, module, err_name, _ = body.text.split(",", maxsplit=3)
+        _, module, err_name = body.text.split(",", maxsplit=3)[:3]
 
     module = module[module.find("!") + 2 :].strip()
 
@@ -630,56 +640,40 @@ def _exceptions(annotated: Package, path: Path, line: Line, lines: Lines):
         kind=Kind.Error,
         python_name=err_name.strip(),
         rust_name=err_name.strip(),
-        path=path,
-        line=line,
+        path=ctx.path,
+        line=body,
         stub_attr=StubAttr(kind=StubKind.Class, module=module),
     )
-    annotated[module].add(item)
+    ctx.annotated[module].add(item)
 
 
-def _impl_instruction(exported: Package, path: Path, line: Line, lines: Lines):
-    """Process the input to the ``impl_instruction!`` macro."""
+@macro_handler(r"fix_complex_enums!")
+def _fix_complex_enums(ctx: MacroContext, module: str | None = None) -> None:
+    """Process the input to the ``fix_complex_enums!`` macro."""
 
-    exported["quil.instructions"].update(
-        Item(
-            kind=Kind.Class,
-            python_name=rust_name,
-            rust_name=rust_name,
-            path=path,
-            line=line,
+    line = join_lines(iter_delim(ctx.lines, "()"))
+
+    if module is None:
+        logger.error(
+            f"Found fix_complex_enums! outside a #[pymodule] annotated function at {ctx.path}@{line}"
         )
-        for name in join_lines(iter_delim(lines, "[]", first=line))
-        .text.replace(" ", "")
-        .removeprefix("impl_instruction!([")
-        .removesuffix("]);")
-        .split(",")
-        if (rust_name := name.partition("[")[0].strip()) != ""
-    )
+        return
 
-
-def _fix_complex_enums(module: Module, line: Line, lines: Lines):
-    """Process the input to the ``_fix_complex_enums!`` macro."""
-
-    module._fixed_enums.update(
+    ctx.exported[module]._fixed_enums.update(
         name
         for n in (
-            join_lines(iter_delim(lines, "()", first=line))
-            .text.replace(" ", "")
+            line.text.replace(" ", "")
             .removeprefix("fix_complex_enums!(")
             .removesuffix(");")
             .split(",")
         )
         if (name := n.strip()) != "" and name != "py"
     )
+    logger.info(f"Fixed enums for {module}: {ctx.exported[module]._fixed_enums}")
 
 
-def _create_init_submodule(
-    path: Path,
-    line: Line,
-    lines: Lines,
-    mod_context: list[str],
-    registry: SubmoduleRegistry,
-):
+@macro_handler(r"create_init_submodule!")
+def _create_init_submodule(ctx: MacroContext, module: str | None = None) -> None:
     """Process the `create_init_submodule!` macro from rigetti-pyo3.
 
     The macro generates an `init_submodule` function that exports items to a Python module.
@@ -699,19 +693,27 @@ def _create_init_submodule(
     # Build the function path from file path and mod context
     # e.g., "quilpy/mod.rs" with context [] -> "quilpy::init_submodule"
     # e.g., "validation/quilpy.rs" with context ["identifier"] -> "validation::quilpy::identifier::init_submodule"
-    func_path = "::".join(chain(
-        path.parts[:-1],
-        ((path.stem,) if path.stem != "mod" else ()),
-        mod_context,
-        ("init_submodule",)
-    ))
+    func_path = "::".join(
+        chain(
+            ctx.path.parts[:-1],
+            ((ctx.path.stem,) if ctx.path.stem != "mod" else ()),
+            ctx.mod_context,
+            ("init_submodule",),
+        )
+    )
 
-    logger.info(f"Parsing create_init_submodule! at {path}:{line.num} -> {func_path}")
+    if (line := next(ctx.lines, None)) is None:
+        logger.error(f"Unexpected EOF processing fix_complex_enums macro in {ctx.path}")
+        return
 
-    info = SubmoduleInfo(path=path, line=line)
+    logger.info(
+        f"Parsing create_init_submodule! at {ctx.path}:{line.num} -> {func_path}"
+    )
+
+    info = SubmoduleInfo(path=ctx.path, line=line)
 
     # Read the macro body
-    body = join_lines(iter_delim(lines, "{}", first=line))
+    body = join_lines(iter_delim(chain((line,), ctx.lines), "{}"))
     text = body.text
 
     # Parse classes: [...]
@@ -748,41 +750,99 @@ def _create_init_submodule(
     logger.debug(f"  funcs: {info.funcs}")
     logger.debug(f"  submodules: {info.submodules}")
 
-    registry[func_path] = info
+    ctx.registry[func_path] = info
 
 
-def _pymod(exported: Package, path: Path, lines: Lines):
+def _pymod(ctx: MacroContext, config: PackageConfig, macro_handlers: MacroHandlers):
     """Process the body of a #[pymodule] annotated function."""
 
     mod_line = -1
     props = PyO3Props()
-    while (line := next(lines, None)) and line.text.strip().startswith("#["):
-        line = join_lines(iter_delim(lines, "[]", first=line))
+    while (line := next(ctx.lines, None)) and line.text.strip().startswith("#["):
+        line = join_lines(iter_delim(ctx.lines, "[]", first=line))
         if m := PYO3_RE.search(line.text):
             props |= PyO3Props.parse(m.group(1) or m.group(2))
             mod_line = line.num
             break
 
     if mod_line < 0:
-        logger.error(f"Could not find module properties for {path}.")
+        logger.error(f"Could not find module properties for {ctx.path}.")
 
     if line is None:
         return
 
     name = props.gets("name", "")
     module = f"{props.gets('module', '')}.{name}"
-    if name == "_quil":
-        module = "quil"
-    exported[module].props |= props
+    if name == config.internal_module:
+        module = config.root_module
+    ctx.exported[module].props |= props
 
-    body = iter_delim(lines, "{}", first=line)
+    while (line := next(ctx.lines, None)) and "{" not in line.text:
+        continue
+
+    body = iter_delim(ctx.lines, "{}", first=line)
+    if (fn_name_line := next(body, None)) is None:
+        logger.error(
+            f"Unexpected EOF looking for function name when processing #[pymodule]  at {ctx.path}@{line}"
+        )
+        return
+
+    if (m := re.search(r"\bfn\s+(\w+)\s*\(", fn_name_line.text)) is None:
+        logger.error(
+            f"Unable to find function name when processing #[pymodule]  at {ctx.path}@{line}"
+        )
+        return
+
+    fn_name = m.group(1)
+    func_path = "::".join(
+        chain(
+            ctx.path.parts[:-1],
+            ((ctx.path.stem,) if ctx.path.stem != "mod" else ()),
+            ctx.mod_context,
+            (fn_name,),
+        )
+    )
+    info = SubmoduleInfo(
+        path=ctx.path, line=fn_name_line, root="" if config.root_module else module
+    )
+    ctx.registry[func_path] = info
+
     while line := next(body, None):
-        if "fix_complex_enums!(" in line.text:
-            _fix_complex_enums(exported[module], line, lines)
+        if _handle_macros(line, macro_handlers, ctx, module):
+            continue
+
+        # For calls to generated `init_submodule` functions, add them to the registry info.
+        if "init_submodule" in line.text:
+            line = join_lines(iter_delim(ctx.lines, "()", first=line))
+            m = re.search(
+                r'((?:[a-zA-Z0-9_:]+::)?init_submodule)\(\s*"([a-zA-Z0-9_.]*)"',
+                line.text,
+            )
+            if m is None:
+                logger.error(
+                    f"Failed to parse `init_submodule` call at {ctx.path}@{line}"
+                )
+            else:
+                child_path = m.group(1).strip()
+                key = m.group(2).strip()
+                if child_path == "init_submodule":
+                    # Assume it was defined within this module.
+                    child_path = "::".join(
+                        chain(
+                            ctx.path.parts[:-1],
+                            ((ctx.path.stem,) if ctx.path.stem != "mod" else ()),
+                            ctx.mod_context,
+                            ("init_submodule",),
+                        )
+                    )
+                logger.info(
+                    f"Found package entrypoint {module} with submodule '{key}' -> {child_path} at {ctx.path}@{line}"
+                )
+                info.submodules[key] = child_path
             continue
 
         if "add" in line.text:
-            line = join_lines(iter_delim(lines, "()", first=line))
+            line = join_lines(iter_delim(ctx.lines, "()", first=line))
 
         if add_match := ADD_ERROR_RE.search(line.text):
             python_name, rust_name = add_match.groups(("python_name", "rust_name"))
@@ -795,10 +855,10 @@ def _pymod(exported: Package, path: Path, lines: Lines):
                 kind=Kind.Error,
                 python_name=python_name,
                 rust_name=rust_name,
-                path=path,
+                path=ctx.path,
                 line=line,
             )
-            exported[module].add(item)
+            ctx.exported[module].add(item)
 
         elif add_match := ADD_CLASS_RE.search(line.text):
             if rust_name := add_match.group("rust_name"):
@@ -812,14 +872,14 @@ def _pymod(exported: Package, path: Path, lines: Lines):
                 kind=kind,
                 python_name=python_name,
                 rust_name=rust_name,
-                path=path,
+                path=ctx.path,
                 line=line,
             )
-            exported[module].add(item)
+            ctx.exported[module].add(item)
 
-        mod = exported[module]
+        mod = ctx.exported[module]
         mod.submodule = props.is_("submodule")
-        mod.path = path
+        mod.path = ctx.path
         mod.line_num = mod_line
 
 
@@ -829,6 +889,8 @@ def extract_items_from_file(
     annotated: Package,
     exported: Package,
     registry: SubmoduleRegistry,
+    macro_handlers: MacroHandlers,
+    config: PackageConfig,
 ):
     """Update `annotated` and `exported` with, respectively,
     the items that are annotated to belong to a module
@@ -836,49 +898,58 @@ def extract_items_from_file(
     """
 
     lines = read_file(root / path)
-    _extract_items(path, annotated, exported, lines, mod_context=[], registry=registry)
+    ctx = MacroContext(
+        path=path,
+        lines=lines,
+        annotated=annotated,
+        exported=exported,
+        mod_context=[],
+        registry=registry,
+    )
+    _extract_items(config, macro_handlers, ctx)
+
+
+def _handle_macros(
+    line: Line,
+    macro_handlers: MacroHandlers,
+    ctx: MacroContext,
+    module: str | None = None,
+) -> bool:
+    """Check if a line contains a macro that needs handling.
+    If so, handle it and return True. Otherwise, return False.
+    """
+    for handler in macro_handlers:
+        if handler.matches(line):
+            logger.info(f"Discovered macro in {ctx.path}: {line}")
+            nested_ctx = replace(ctx, lines=chain((line,), ctx.lines))
+            handler.handle(nested_ctx, module)
+            return True
+    return False
 
 
 def _extract_items(
-    path: Path,
-    annotated: Package,
-    exported: Package,
-    lines: Lines,
-    mod_context: list[str],
-    registry: SubmoduleRegistry,
+    config: PackageConfig,
+    macro_handlers: MacroHandlers,
+    ctx: MacroContext,
 ):
     """Internal helper that processes lines with a given mod context."""
 
     last_stub: StubAttr | None = None
-    while line := next(lines, None):
-        # Handle macros:
-        if "py_source_map!" in line:
-            logger.info(f"Discovered SourceMap in {path}: {line}")
-            _py_source_map(annotated, path, line, lines)
-            continue
-
-        if "impl_instruction!" in line:
-            logger.info(f"Discovered impl_implementation! in {path}: {line}")
-            _impl_instruction(exported, path, line, lines)
-            continue
-
-        if "create_init_submodule!" in line.text:
-            logger.info(f"Discovered create_init_submodule! in {path}: {line}")
-            _create_init_submodule(path, line, lines, mod_context, registry)
-            continue
-
-        elif re.search(r"\b(?:create_)?exception!", line.text):
-            logger.info(f"Discovered Error in {path}: {line}")
-            _exceptions(annotated, path, line, lines)
+    while line := next(ctx.lines, None):
+        # Check macro handlers first
+        if _handle_macros(line, macro_handlers, ctx):
             continue
 
         # Handle nested mod declarations: mod name { ... }
         if mod_match := re.match(r"^\s*(?:pub\s*)?mod\s+(\w+)\s*\{", line.text):
             mod_name = mod_match.group(1)
-            logger.info(f"Entering nested mod '{mod_name}' in {path}")
-            nested_lines = iter_delim(lines, "{}", first=line)
+            logger.info(f"Entering nested mod '{mod_name}' in {ctx.path}")
+            nested_lines = iter_delim(ctx.lines, "{}", first=line)
             next(nested_lines, None)  # Skip the opening line
-            _extract_items(path, annotated, exported, nested_lines, mod_context + [mod_name], registry)
+            nested_ctx = replace(
+                ctx, lines=nested_lines, mod_context=ctx.mod_context + [mod_name]
+            )
+            _extract_items(config, macro_handlers, nested_ctx)
             continue
 
         # Skip non-attributes:
@@ -886,38 +957,39 @@ def _extract_items(
             last_stub = None
             continue
 
-        line = join_lines(iter_delim(lines, "[]", first=line))
-        logger.debug(f"Found Attribute in {path}: {line}.")
+        line = join_lines(iter_delim(ctx.lines, "[]", first=line))
+        logger.debug(f"Found Attribute in {ctx.path}: {line}.")
 
         # Note that gen_stub_* attributes must come before pyo3 attributes.
         if stubgen_match := STUB_GEN_RE.search(line.text):
-            logger.info(f"Discovered stub_gen attr in {path}: {line}")
+            logger.info(f"Discovered stub_gen attr in {ctx.path}: {line}")
             last_stub = StubAttr.from_match(stubgen_match)
         elif "gen_stub" in line and "override_" not in line:
-            logger.error(f"We're probably missing this annotation: {path} {line}")
+            logger.error(f"We're probably missing this annotation: {ctx.path} {line}")
 
         if pyclass_match := PYITEM_RE.search(line.text):
-            logger.info(f"Discovered Item in {path}: {line}")
-            _pyitem(annotated, path, lines, pyclass_match, last_stub)
+            logger.info(f"Discovered Item in {ctx.path}: {line}")
+            _pyitem(ctx.annotated, ctx.path, ctx.lines, pyclass_match, last_stub)
         elif ("pyclass" in line.text or "pyfunction" in line.text) and not (
             "gen_stub" in line.text or "use " in line.text
         ):
-            logger.error(f"We're probably missing this annotation: {path} {line}")
+            logger.error(f"We're probably missing this annotation: {ctx.path} {line}")
 
         if PYMETHODS_RE.search(line.text):
-            logger.info(f"Discovered impl block in {path}: {line}")
+            logger.info(f"Discovered impl block in {ctx.path}: {line}")
             if last_stub is None:
-                logger.warning(f"No stub annotation found for {path} {line}.")
-            _pymethods(annotated, path, chain((line,), lines))
+                logger.warning(f"No stub annotation found for {ctx.path} {line}.")
+            _pymethods(ctx.annotated, ctx.path, chain((line,), ctx.lines))
         elif "pymethods" in line.text and not (
             "gen_stub" in line.text or "use " in line.text
         ):
-            logger.error(f"We're probably missing this annotation: {path} {line}")
+            logger.error(f"We're probably missing this annotation: {ctx.path} {line}")
 
         if PYMODULE_RE.search(line.text):
-            logger.info(f"Discovered Module in {path}: {line}")
-            _pymod(exported, path, chain((line,), lines))
+            logger.info(f"Discovered Module in {ctx.path}: {line}")
+            mod_ctx = replace(ctx, lines=chain((line,), ctx.lines))
+            _pymod(mod_ctx, config, macro_handlers)
         elif "pymodule" in line.text and not (
             "gen_stub" in line.text or "use " in line.text
         ):
-            logger.error(f"We're probably missing this annotation: {path} {line}")
+            logger.error(f"We're probably missing this annotation: {ctx.path} {line}")
