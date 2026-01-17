@@ -5,10 +5,6 @@
   },
   {
     "package_kind": "Export",
-    "message": "  Wrong or missing module annotation for 'quil.instructions.EnumB'\n     (class 'EnumB' in submod.rs@10)"
-  },
-  {
-    "package_kind": "Export",
     "message": "  Couldn't find export for 'quil.instructions.EnumA'\n     (enum 'EnumA' in somecode.rs@20)"
   },
   {
@@ -26,5 +22,9 @@
   {
     "package_kind": "Export",
     "message": "  Couldn't find export for 'quil.instructions.some_function'\n     (fn 'a_different_name (py: some_function)' in submod.rs@23)"
+  },
+  {
+    "package_kind": "Export",
+    "message": "  Wrong or missing module annotation for 'quil.instructions.EnumB'\n     (class 'EnumB' in submod.rs@10)"
   }
 ]

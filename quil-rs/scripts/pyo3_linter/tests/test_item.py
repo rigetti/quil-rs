@@ -2,6 +2,7 @@ from pathlib import Path
 
 from pyo3_linter import Item, Line
 
+
 def test_item():
     """Verify that hash and equality checks work as expected.
 
@@ -18,6 +19,3 @@ def test_item():
     assert i1 not in {i3}
     assert i2 not in {i3}
     assert i3 not in {i1, i2}
-
-
-

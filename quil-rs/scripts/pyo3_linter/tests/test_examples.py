@@ -2,7 +2,15 @@ import json
 from pathlib import Path
 from typing import Iterable
 
-from pyo3_linter import process_dir, find_possible_mistakes, Issue, Package, PackageKind, PackageConfig, MacroHandlers
+from pyo3_linter import (
+    process_dir,
+    find_possible_mistakes,
+    Issue,
+    Package,
+    PackageKind,
+    PackageConfig,
+    MacroHandlers,
+)
 
 
 def package_to_dict(package: Package) -> dict:
@@ -16,31 +24,40 @@ def package_to_dict(package: Package) -> dict:
                     "python_name": item.python_name,
                     "kind": item.kind.name,
                     "props": item.props,
-                    "stub_attr": {
-                        "kind": item.stub_attr.kind.name,
-                        "module": item.stub_attr.module,
-                    } if item.stub_attr else None,
+                    "stub_attr": (
+                        {
+                            "kind": item.stub_attr.kind.name,
+                            "module": item.stub_attr.module,
+                        }
+                        if item.stub_attr
+                        else None
+                    ),
                 }
                 for item in sorted(mod)
-            ]
+            ],
         }
         for name, mod in package.items()
     }
 
 
 def issues_to_list(issues: Iterable[Issue]) -> list:
-    return [
-        {
-            "package_kind": issue.package_kind.name,
-            "message": issue.message.replace("\\", "/"),  # Prevent spurious errors on Windows.
-        }
-        for issue in issues
-    ]
+    return sorted(
+        [
+            {
+                "package_kind": issue.package_kind.name,
+                "message": issue.message.replace(
+                    "\\", "/"
+                ),  # Prevent spurious errors on Windows.
+            }
+            for issue in issues
+        ],
+        key=lambda x: tuple(x.values()),
+    )
 
 
 def list_to_issues(issues: list[dict]) -> set[Issue]:
     return {
-        Issue(package_kind = PackageKind(issue["package_kind"]), message=issue["message"])
+        Issue(package_kind=PackageKind(issue["package_kind"]), message=issue["message"])
         for issue in issues
     }
 
@@ -51,7 +68,12 @@ def _save_generated(data, paths):
             json.dump(d, f, indent=2)
 
 
-def test_find_mistakes(root: Path, package_config: PackageConfig, macro_handlers: MacroHandlers, generating: bool):
+def test_find_mistakes(
+    root: Path,
+    package_config: PackageConfig,
+    macro_handlers: MacroHandlers,
+    generating: bool,
+):
     """Processes files under the `root` and compares the results to expected output,
     stored in JSON files under that root directory.
     """
@@ -60,19 +82,25 @@ def test_find_mistakes(root: Path, package_config: PackageConfig, macro_handlers
     issues = find_possible_mistakes(package_config, annotated, exported)
 
     # These are dicts/lists so they'll be valid JSON and easier to manipulate/check.
-    got_data, expected_paths = list(zip(*(
-        ( package_to_dict(annotated), (root / "expected-annotated.json") ),
-        ( package_to_dict(exported), (root / "expected-exported.json") ),
-        ( issues_to_list(issues), (root / "expected-issues.json") ),
-    )))
+    got_data, expected_paths = list(
+        zip(
+            *(
+                (package_to_dict(annotated), (root / "expected-annotated.json")),
+                (package_to_dict(exported), (root / "expected-exported.json")),
+                (issues_to_list(issues), (root / "expected-issues.json")),
+            )
+        )
+    )
 
     if generating:
         _save_generated(got_data, expected_paths)
         expected_data = got_data
     else:
         for p in expected_paths:
-            assert p.exists() and p.is_file(), f"missing comparison file for {root.name}"
-        expected_data = [ json.loads(p.read_text()) for p in expected_paths ]
+            assert (
+                p.exists() and p.is_file()
+            ), f"missing comparison file for {root.name}"
+        expected_data = [json.loads(p.read_text()) for p in expected_paths]
 
     for got, expected in zip(got_data, expected_data):
         if isinstance(got, list):
@@ -80,4 +108,3 @@ def test_find_mistakes(root: Path, package_config: PackageConfig, macro_handlers
             got = list_to_issues(got)
             expected = list_to_issues(expected)
         assert got == expected
-
