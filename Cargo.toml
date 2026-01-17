@@ -1,11 +1,11 @@
 [workspace]
 default-members = ["quil-rs"]
-members = ["quil-rs", "quil-cli"]
+members = ["quil-cli", "quil-rs"]
 resolver = "2"
+
+[workspace.dependencies]
+clap = { version = "4.5.4", features = ["derive"] }
 
 [profile.release]
 lto = true
 codegen-units = 1
-
-[workspace.dependencies]
-clap = { version = "4.5.4", features = ["derive"] }
