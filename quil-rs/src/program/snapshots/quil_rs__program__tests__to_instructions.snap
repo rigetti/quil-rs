@@ -122,6 +122,45 @@ expression: program.to_instructions()
             ),
         },
     ),
+    CircuitDefinition(
+        CircuitDefinition {
+            name: "BELL",
+            parameters: [],
+            qubit_variables: [
+                "q0",
+                "q1",
+            ],
+            instructions: [
+                Gate(
+                    Gate {
+                        name: "H",
+                        parameters: [],
+                        qubits: [
+                            Variable(
+                                "q1",
+                            ),
+                        ],
+                        modifiers: [],
+                    },
+                ),
+                Gate(
+                    Gate {
+                        name: "CNOT",
+                        parameters: [],
+                        qubits: [
+                            Variable(
+                                "q1",
+                            ),
+                            Variable(
+                                "q0",
+                            ),
+                        ],
+                        modifiers: [],
+                    },
+                ),
+            ],
+        },
+    ),
     Gate(
         Gate {
             name: "H",
