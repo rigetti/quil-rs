@@ -61,7 +61,7 @@ def macro_handlers() -> MacroHandlers:
 
 @pytest.fixture(scope="session")
 def package_config() -> PackageConfig:
-    return PackageConfig("quil", "_quil", "quilpy")
+    return PackageConfig("quil", "_quil")
 
 
 @pytest.fixture(scope="session")

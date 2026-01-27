@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Iterable
+from collections.abc import Iterable
 
 from pyo3_linter import (
     process_dir,
@@ -63,7 +63,7 @@ def list_to_issues(issues: list[dict]) -> set[Issue]:
 
 
 def _save_generated(data, paths):
-    for d, p in zip(data, paths):
+    for d, p in zip(data, paths, strict=True):
         with open(p, "w") as f:
             json.dump(d, f, indent=2)
 
@@ -88,7 +88,8 @@ def test_find_mistakes(
                 (package_to_dict(annotated), (root / "expected-annotated.json")),
                 (package_to_dict(exported), (root / "expected-exported.json")),
                 (issues_to_list(issues), (root / "expected-issues.json")),
-            )
+            ),
+            strict=True,
         )
     )
 
@@ -102,7 +103,7 @@ def test_find_mistakes(
             ), f"missing comparison file for {root.name}"
         expected_data = [json.loads(p.read_text()) for p in expected_paths]
 
-    for got, expected in zip(got_data, expected_data):
+    for got, expected in zip(got_data, expected_data, strict=True):
         if isinstance(got, list):
             # Compare as sets, because order isn't important.
             got = list_to_issues(got)

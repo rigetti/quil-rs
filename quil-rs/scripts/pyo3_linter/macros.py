@@ -2,7 +2,7 @@
 Protocols for parsing Rust ``macro_rules!`` invocations.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import (
     Callable,
@@ -22,10 +22,10 @@ class MacroContext:
 
     path: Path
     lines: Lines
-    annotated: Package
-    exported: Package
-    mod_context: list[str]
-    registry: SubmoduleRegistry
+    annotated: Package = field(default_factory=Package)
+    exported: Package = field(default_factory=Package)
+    mod_context: list[str] = field(default_factory=list)
+    registry: SubmoduleRegistry = field(default_factory=dict)
 
 
 @runtime_checkable

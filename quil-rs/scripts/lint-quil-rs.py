@@ -35,7 +35,7 @@ def main():
     if args.log_level is not None:
         logger.setLevel(args.log_level)
 
-    package_config = PackageConfig(root_module="quil", internal_module="_quil", entrypoint_pattern="quilpy")
+    package_config = PackageConfig(root_module="quil", internal_module="_quil")
     annotated, exported = process_dir(args.base, package_config, default_macro_handlers() + [_impl_instruction])
 
     issues = find_possible_mistakes(package_config, annotated, exported)

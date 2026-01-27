@@ -32,6 +32,7 @@ from .reader import (
     read_file,
     Line,
     Lines,
+    resplit,
     skip,
 )
 
@@ -71,6 +72,7 @@ def default_macro_handlers() -> MacroHandlers:
         _create_init_submodule,
         _exceptions,
         _fix_complex_enums,
+        _pyfunction_sync_async,
     ]
 
 
@@ -93,9 +95,7 @@ def process_dir(
     annotated, exported = Package(), Package()
     for path in root.rglob("*.rs"):
         path = path.relative_to(root)
-        extract_items_from_file(
-            root, path, annotated, exported, submodule_registry, macro_handlers, config
-        )
+        extract_items_from_file(root, path, annotated, exported, submodule_registry, macro_handlers, config)
 
     # Resolve module names from create_init_submodule! macro invocations
     _resolve_submodule_exports(exported, submodule_registry)
@@ -119,67 +119,40 @@ def _resolve_submodule_exports(exported: Package, registry: SubmoduleRegistry) -
         info = registry[func_path]
         logger.info(f"Resolving {func_path} as module '{module_name}'")
 
-        # Add classes to exported
-        for class_name in info.classes:
+        def _add_item(kind: Kind, name: str, is_complex: bool = False):
             # Strip path prefix if present (e.g., "errors::QuilError" -> "QuilError")
-            simple_name = class_name.split("::")[-1]
+            name = name.split("::")[-1]
             item = Item(
-                kind=Kind.Class,
-                python_name=simple_name,
-                rust_name=simple_name,
+                kind=kind,
+                python_name=name,
+                rust_name=name,
                 path=info.path,
                 line=info.line,
             )
             exported[module_name].add(item)
+            if is_complex:
+                exported[module_name]._fixed_enums.add(name)
 
-        # Add complex_enums to exported and mark as fixed
-        for enum_name in info.complex_enums:
-            simple_name = enum_name.split("::")[-1]
-            item = Item(
-                kind=Kind.Class,
-                python_name=simple_name,
-                rust_name=simple_name,
-                path=info.path,
-                line=info.line,
-            )
-            exported[module_name].add(item)
-            exported[module_name]._fixed_enums.add(simple_name)
-
-        # Add errors to exported
-        for error_name in info.errors:
-            simple_name = error_name.split("::")[-1]
-            item = Item(
-                kind=Kind.Error,
-                python_name=simple_name,
-                rust_name=simple_name,
-                path=info.path,
-                line=info.line,
-            )
-            exported[module_name].add(item)
-
-        # Add funcs to exported
-        for func_name in info.funcs:
-            simple_name = func_name.split("::")[-1]
-            item = Item(
-                kind=Kind.Function,
-                python_name=simple_name,
-                rust_name=simple_name,
-                path=info.path,
-                line=info.line,
-            )
-            exported[module_name].add(item)
+        for kind, names, is_complex in (
+            (Kind.Class, info.classes, False),
+            (Kind.Class, info.complex_enums, True),
+            (Kind.Error, info.errors, False),
+            (Kind.Function, info.funcs, False),
+        ):
+            for name in names:
+                _add_item(kind, name, is_complex)
 
         # Recursively resolve submodules
         for key, child_func_path in info.submodules.items():
             child_module = f"{module_name}.{key}" if module_name else key
-            # Try to find the child in the registry
-            # The path might be relative, so try multiple resolutions
+            # Try to find the child in the registry.
+            # The path might be relative, so try multiple resolutions.
             if child_func_path in registry:
                 resolve(child_func_path, child_module)
             else:
-                # Try to resolve relative to parent's path
+                # Try to resolve relative to parent's path;
                 # e.g., "identifier::init_submodule" relative to "validation::quilpy"
-                # becomes "validation::quilpy::identifier::init_submodule"
+                # becomes "validation::quilpy::identifier::init_submodule".
                 parent_base = func_path.rsplit("::init_submodule", 1)[0]
                 relative_path = f"{parent_base}::{child_func_path}"
                 if relative_path in registry:
@@ -260,15 +233,11 @@ def find_possible_mistakes(
         module, item = found
 
         is_new = any(attr.text.strip() == "#[new]" for attr in method.attrs)
-        if not is_new and (
-            method.python_name.startswith("Py") or method.python_name.startswith("py_")
-        ):
+        if not is_new and (method.python_name.startswith("Py") or method.python_name.startswith("py_")):
             if method.python_name == "py_new" or method.python_name == "__new__":
                 hint = f"hint: did you forget a '#[new]' attribute? ({method.attrs})"
             else:
-                suggestion = (
-                    method.python_name.lower().removeprefix("py").removeprefix("_")
-                )
+                suggestion = method.python_name.lower().removeprefix("py").removeprefix("_")
                 hint = f"""hint: did you forget a '#[pyo3(name = "{suggestion}")] attribute?"""
 
             msg = "\n".join(
@@ -298,9 +267,7 @@ def find_possible_mistakes(
         logger.debug(f"Looking for `#[pymodule]` matching '{module}'")
         expm = exported.get(module)
         if expm is None:
-            items = "\n".join(
-                f"    {item} (props: {item.props}, text: {item.line})" for item in anno
-            )
+            items = "\n".join(f"    {item} (props: {item.props}, text: {item.line})" for item in anno)
             msg = "\n".join(
                 (
                     f"Module '{module}' does not appear to be exported",
@@ -322,9 +289,7 @@ def find_possible_mistakes(
         # we'll try to find it by Rust name in this collection,
         # and if it has a matching `kind`, we'll assume it's the same item.
         rust_to_py_anno = {item.rust_name: item for item in anno}
-        logger.debug(
-            f"Checking for items added to '{module}' but not annotated as such."
-        )
+        logger.debug(f"Checking for items added to '{module}' but not annotated as such.")
         for item in sorted(expm):
             if (
                 item not in anno
@@ -339,9 +304,7 @@ def find_possible_mistakes(
 
             if not (item in anno or item.kind is Kind.Function):
                 if alt := exported.find_rust(item):
-                    hint = (
-                        f"\n     (hint: item may belong to module '{alt[0]}': {alt[1]})"
-                    )
+                    hint = f"\n     (hint: item may belong to module '{alt[0]}': {alt[1]})"
                 else:
                     hint = ""
                 msg = "\n".join(
@@ -359,9 +322,7 @@ def find_possible_mistakes(
                     (
                         f"  Suspicious name for '{module}.{item.python_name}'",
                         f"     ({item})",
-                        (
-                            f'     hint: did you forget a \'#[pyo3(name = "{item.python_name.strip("Py")})]" attribute?'
-                        ),
+                        (f'     hint: did you forget a \'#[pyo3(name = "{item.python_name.strip("Py")})]" attribute?'),
                     )
                 )
                 issues.append(Issue(PackageKind.Export, msg))
@@ -420,21 +381,19 @@ def print_package_info(annotated: Package) -> None:
     for module, anno in sorted(annotated.items()):
         items = sorted(anno)
         all_enums = [item for item in items if item.kind is Kind.Enumeration]
-        complex_enums = [
-            e
-            for e in all_enums
-            if (stubs := e.stub_attr) and stubs.kind is StubKind.ComplexEnumeration
-        ]
+        complex_enums = [e for e in all_enums if (stubs := e.stub_attr) and stubs.kind is StubKind.ComplexEnumeration]
 
         enums = [e for e in all_enums if e not in complex_enums]
         errors = [item for item in items if item.kind is Kind.Error]
         structs = [item for item in items if item.kind is Kind.Struct]
+        funcs = [item for item in items if item.kind is Kind.Function]
 
         to_print = [
             ("Complex Enums", complex_enums),
             ("Enums", enums),
             ("Errors", errors),
             ("Structs", structs),
+            ("Funcs", funcs),
         ]
 
         for category, items in to_print:
@@ -444,9 +403,7 @@ def print_package_info(annotated: Package) -> None:
             print(f"\n---- {module} {category} ----")
             for item in items:
                 full_qual = f"{module}.{item.python_name}"
-                print(
-                    f"{full_qual:50} | {item.rust_name:20} | {item.path}:{item.line.num}"
-                )
+                print(f"{full_qual:50} | {item.rust_name:20} | {item.path}:{item.line.num}")
 
                 if category == "Structs" and (props := item.props - {"name", "module"}):
                     print("  ", props)
@@ -461,7 +418,11 @@ def _cfg(regex: str, cond: str = r"[^,]+") -> str:
     r"""Create an RE to match content of a configurable attribute;
     i.e., match either ``#[{regex}]`` or ``#[cfg_attr({cond}, {regex})]``.
     """
-    return _meta(rf"(?:cfg_attr\s*?\({cond},\s*?{regex}\s*?\)|{regex})")
+    return _meta(
+        rf"(?:cfg_attr\s*?\({cond},"
+        rf"(?:\s*?{regex}\s*?|[^,]+,)+"
+        rf"\)|{regex})"
+    )
 
 
 CONFIG_ATTR = r'(?:cfg_attr\(feature\s*?=\s*?"python",\s*?)?'
@@ -470,12 +431,8 @@ PYMODULE_RE = re.compile(_cfg(f"(?:pyo3::)?pymodule"))
 PYMETHODS_RE = re.compile(_cfg(r"(?:pyo3::)?pymethods"))
 PYO3_RE = re.compile(_cfg(r"pyo3\(([^)]+)\)"))
 GETTER_SETTER_RE = re.compile(_cfg(r"(getter|setter)\(([^)]+)\)"))
-ITEM_RE = re.compile(
-    r"(?P<kind>struct|enum|fn)\s+(?:\(\s*)?(?P<rust_name>[A-Za-z_][A-Za-z0-9_]*)"
-)
-ADD_ERROR_RE = re.compile(
-    r'\.add\(\s*"(?P<python_name>[^"]*?)"[^<]*<(?P<rust_name>[^>]*?)>'
-)
+ITEM_RE = re.compile(r"(?P<kind>struct|enum|fn)\s+(?:\(\s*)?(?P<rust_name>[A-Za-z_][A-Za-z0-9_]*)")
+ADD_ERROR_RE = re.compile(r'\.add\(\s*"(?P<python_name>[^"]*?)"[^<]*<(?P<rust_name>[^>]*?)>')
 ADD_CLASS_RE = re.compile(
     r"\.add_class::<(?P<rust_name>[^>]*?)>|"
     r"\.add_function\(wrap_pyfunction!\((?P<func_name>[^>]*?),.*\)"
@@ -557,7 +514,7 @@ def _pyitem(
     annotated: Package,
     path: Path,
     lines: Lines,
-    pyclass_match: re.Match,
+    pyclass_match: re.Match | None,
     last_stub: StubAttr | None = None,
 ) -> tuple[Module, Item] | tuple[None, None]:
     """Process #[pyclass] and #[pyfunction] annotated items,
@@ -567,7 +524,10 @@ def _pyitem(
     where ``module`` is the `Module` where `Item` ``item`` is added.
     """
 
-    props = PyO3Props.parse(pyclass_match.group(1) or pyclass_match.group(2) or "")
+    if pyclass_match is not None:
+        props = PyO3Props.parse(pyclass_match.group(1) or pyclass_match.group(2) or "")
+    else:
+        props = PyO3Props()
 
     # Skip over additional `#[...]` lines, looking for more props.
     while (line := next(lines, None)) and line.text.strip().startswith("#["):
@@ -608,9 +568,7 @@ def _pyitem(
     elif last_stub is not None and last_stub.module:
         logger.info(f"Moving fn to {last_stub.module}")
         if not last_stub.kind.is_like(item.kind):
-            logger.warning(
-                f"Mismatched stub {last_stub} (vs {item.kind}) found for {path} {item}."
-            )
+            logger.warning(f"Mismatched stub {last_stub} (vs {item.kind}) found for {path} {item}.")
         module = last_stub.module
     else:
         if last_stub is None:
@@ -620,6 +578,14 @@ def _pyitem(
         module = "builtins"
 
     annotated[module].add(item)
+    if last_stub is not None and last_stub.is_builder_struct:
+        builder_item = replace(
+            item,
+            rust_name=f"{item.rust_name}Builder",
+            python_name=f"{item.python_name}Builder",
+        )
+        annotated[module].add(builder_item)
+
     return annotated[module], item
 
 
@@ -654,22 +620,59 @@ def _fix_complex_enums(ctx: MacroContext, module: str | None = None) -> None:
     line = join_lines(iter_delim(ctx.lines, "()"))
 
     if module is None:
-        logger.error(
-            f"Found fix_complex_enums! outside a #[pymodule] annotated function at {ctx.path}@{line}"
-        )
+        logger.error(f"Found fix_complex_enums! outside a #[pymodule] annotated function at {ctx.path}@{line}")
         return
 
     ctx.exported[module]._fixed_enums.update(
         name
-        for n in (
-            line.text.replace(" ", "")
-            .removeprefix("fix_complex_enums!(")
-            .removesuffix(");")
-            .split(",")
-        )
+        for n in (line.text.replace(" ", "").removeprefix("fix_complex_enums!(").removesuffix(");").split(","))
         if (name := n.strip()) != "" and name != "py"
     )
     logger.info(f"Fixed enums for {module}: {ctx.exported[module]._fixed_enums}")
+
+
+@macro_handler(r"py_function_sync_async!")
+def _pyfunction_sync_async(ctx: MacroContext, module: str | None = None) -> None:
+    """
+    Handle the `py_function_sync_async!` macro from rigetti-pyo3.
+
+    For example, given this Rust code::
+
+        py_function_sync_async! {
+            #[cfg_attr(feature = "stubs", gen_stub_pyfunction(module = "qcs_api_client_common.configuration"))]
+            #[pyfunction]
+            async fn get_oauth_session(tokens: Option<TokenDispatcher>) -> PyResult<OAuthSession> {
+                Ok(tokens.ok_or(TokenError::NoRefreshToken)?.tokens().await)
+            }
+        }
+
+    We process the macro context like we would for a regular `#[pyfunction]` macro,
+    except we expect two functions, one named `py_get_oauth_session_sync`
+    and another named `py_get_oauth_session_async`.
+    """
+
+    logger.info("Processing `py_function_sync_async!` macro content.")
+
+    body = join_lines(iter_delim(ctx.lines, "{}"), sep="\n")
+    lines = resplit(
+        Line(body.num, body.text.strip().removeprefix("pyfunction_sync_async! {").removeprefix("}")),
+    )
+
+    subctx = MacroContext(path=ctx.path, lines=lines)
+    _extract_items(PackageConfig("", ""), [], subctx)
+
+    packages = ((ctx.annotated, subctx.annotated), (ctx.exported, subctx.exported))
+    for main_pkg, sub_pkg in packages:
+        for mod_name, content in sub_pkg.items():
+            for item in content:
+                sync_item = replace(item, rust_name=f"py_{item.rust_name}")
+                async_item = replace(
+                    item, rust_name=f"py_{item.rust_name}_async",
+                    python_name=f"{item.python_name}_async",
+                )
+                logger.info(f"Adding sync and async functions {sync_item} and {async_item}.")
+                main_pkg[mod_name].add(sync_item)
+                main_pkg[mod_name].add(async_item)
 
 
 @macro_handler(r"create_init_submodule!")
@@ -706,9 +709,7 @@ def _create_init_submodule(ctx: MacroContext, module: str | None = None) -> None
         logger.error(f"Unexpected EOF processing fix_complex_enums macro in {ctx.path}")
         return
 
-    logger.info(
-        f"Parsing create_init_submodule! at {ctx.path}:{line.num} -> {func_path}"
-    )
+    logger.info(f"Parsing create_init_submodule! at {ctx.path}:{line.num} -> {func_path}")
 
     info = SubmoduleInfo(path=ctx.path, line=line)
 
@@ -782,15 +783,11 @@ def _pymod(ctx: MacroContext, config: PackageConfig, macro_handlers: MacroHandle
 
     body = iter_delim(ctx.lines, "{}", first=line)
     if (fn_name_line := next(body, None)) is None:
-        logger.error(
-            f"Unexpected EOF looking for function name when processing #[pymodule]  at {ctx.path}@{line}"
-        )
+        logger.error(f"Unexpected EOF looking for function name when processing #[pymodule]  at {ctx.path}@{line}")
         return
 
     if (m := re.search(r"\bfn\s+(\w+)\s*\(", fn_name_line.text)) is None:
-        logger.error(
-            f"Unable to find function name when processing #[pymodule]  at {ctx.path}@{line}"
-        )
+        logger.error(f"Unable to find function name when processing #[pymodule]  at {ctx.path}@{line}")
         return
 
     fn_name = m.group(1)
@@ -802,9 +799,7 @@ def _pymod(ctx: MacroContext, config: PackageConfig, macro_handlers: MacroHandle
             (fn_name,),
         )
     )
-    info = SubmoduleInfo(
-        path=ctx.path, line=fn_name_line, root="" if config.root_module else module
-    )
+    info = SubmoduleInfo(path=ctx.path, line=fn_name_line, root="" if config.root_module else module)
     ctx.registry[func_path] = info
 
     while line := next(body, None):
@@ -819,9 +814,7 @@ def _pymod(ctx: MacroContext, config: PackageConfig, macro_handlers: MacroHandle
                 line.text,
             )
             if m is None:
-                logger.error(
-                    f"Failed to parse `init_submodule` call at {ctx.path}@{line}"
-                )
+                logger.error(f"Failed to parse `init_submodule` call at {ctx.path}@{line}")
             else:
                 child_path = m.group(1).strip()
                 key = m.group(2).strip()
@@ -946,9 +939,7 @@ def _extract_items(
             logger.info(f"Entering nested mod '{mod_name}' in {ctx.path}")
             nested_lines = iter_delim(ctx.lines, "{}", first=line)
             next(nested_lines, None)  # Skip the opening line
-            nested_ctx = replace(
-                ctx, lines=nested_lines, mod_context=ctx.mod_context + [mod_name]
-            )
+            nested_ctx = replace(ctx, lines=nested_lines, mod_context=ctx.mod_context + [mod_name])
             _extract_items(config, macro_handlers, nested_ctx)
             continue
 
@@ -964,7 +955,9 @@ def _extract_items(
         if stubgen_match := STUB_GEN_RE.search(line.text):
             logger.info(f"Discovered stub_gen attr in {ctx.path}: {line}")
             last_stub = StubAttr.from_match(stubgen_match)
-        elif "gen_stub" in line and "override_" not in line:
+            if "builder_struct_attr" in line.text:
+                last_stub.is_builder_struct = True
+        elif "gen_stub" in line and not ("override_" in line or "builder_field_attr" in line):
             logger.error(f"We're probably missing this annotation: {ctx.path} {line}")
 
         if pyclass_match := PYITEM_RE.search(line.text):
@@ -980,16 +973,12 @@ def _extract_items(
             if last_stub is None:
                 logger.warning(f"No stub annotation found for {ctx.path} {line}.")
             _pymethods(ctx.annotated, ctx.path, chain((line,), ctx.lines))
-        elif "pymethods" in line.text and not (
-            "gen_stub" in line.text or "use " in line.text
-        ):
+        elif "pymethods" in line.text and not ("gen_stub" in line.text or "use " in line.text):
             logger.error(f"We're probably missing this annotation: {ctx.path} {line}")
 
         if PYMODULE_RE.search(line.text):
             logger.info(f"Discovered Module in {ctx.path}: {line}")
             mod_ctx = replace(ctx, lines=chain((line,), ctx.lines))
             _pymod(mod_ctx, config, macro_handlers)
-        elif "pymodule" in line.text and not (
-            "gen_stub" in line.text or "use " in line.text
-        ):
+        elif "pymodule" in line.text and not ("gen_stub" in line.text or "use " in line.text):
             logger.error(f"We're probably missing this annotation: {ctx.path} {line}")

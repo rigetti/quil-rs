@@ -31,11 +31,6 @@ class PackageConfig:
     """The name of the top-level Python module (e.g., "quil")."""
     internal_module: str
     """The name of the internal module produced by maturin (e.g., "_quil")."""
-    entrypoint_pattern: str
-    """
-    A pattern to match the entrypoint function path in the registry,
-    assuming you're using `create_init_submodule!` for the rest of the module graph.
-    """
 
     @property
     def implicit_exports(self) -> set[str]:
@@ -108,6 +103,7 @@ class StubAttr:
 
     kind: StubKind
     module: str | None = None
+    is_builder_struct: bool = False
 
     @classmethod
     def from_match(cls, stubgen_match: re.Match) -> Self:

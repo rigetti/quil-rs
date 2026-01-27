@@ -82,7 +82,8 @@ def iter_delim(
 
     if count != 0 or line is not None:
         raise ValueError(
-            f"mismatched delimiters: EOF when count('{start}') - count('{stop}') = {count}"
+            f"mismatched delimiters: EOF when count('{start}') - count('{stop}') = {count}\n"
+            f"  (note: \n    {first=}\n    {line=}\n  )"
         )
 
 
@@ -106,7 +107,22 @@ def join_lines(lines: Lines, /, first: Line | None = None, sep: str = " ") -> Li
     return Line(first.num, sep.join(l.text for l in chain((first,), lines)).strip())
 
 
-MARKERS = re.compile(r"(?P<cblock>/\*)|(?P<cline>//)|(?P<macrodef>macro_rules!)")
+def resplit(line: Line, sep: str = "\n") -> Lines:
+    """Break a line into multiple lines, renumbered appropriately.
+
+    This is useful for cases where a macro definition spans multiple lines,
+    and we want to slurp the whole definition into a single item,
+    but then process the content while maintaining line numbering matching the original.
+
+    You can think of this as something of the opposite of `join_lines`.
+    """
+    yield from read_content(
+        Line(i, line.strip())
+        for i, line in enumerate(line.text.split(sep), start=line.num)
+    )
+
+
+MARKERS = re.compile(r"(?P<cblock>/\*)|(?P<cline>(?:^|[^:])//)|(?P<macrodef>macro_rules!)")
 
 
 def read_content(lines: Lines) -> Lines:
