@@ -489,6 +489,27 @@ files = [
 windows-terminal = ["colorama (>=0.4.6)"]
 
 [[package]]
+name = "pyo3-linter"
+version = "0.0.1"
+description = "A linter for Rust code that uses PyO3 and rigetti-pyo3."
+optional = true
+python-versions = ">=3.10,<4"
+groups = ["main"]
+markers = "extra == \"dev\""
+files = []
+develop = false
+
+[package.dependencies]
+typing-extensions = "^4.15.0"
+
+[package.source]
+type = "git"
+url = "https://github.com/rigetti/rigetti-pyo3.git"
+reference = "feat-pyo3-linter"
+resolved_reference = "d43c02b77df8c23ca7a989a00166f3287f2e1e8b"
+subdirectory = "pyo3_linter"
+
+[[package]]
 name = "pytest"
 version = "8.4.1"
 description = "pytest: simple powerful testing with Python"
@@ -616,9 +637,9 @@ files = [
 ]
 
 [extras]
-dev = ["maturin", "mypy", "pdoc", "pytest", "ruff", "syrupy"]
+dev = ["maturin", "mypy", "pdoc", "pyo3_linter", "pytest", "ruff", "syrupy"]
 
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<4"
-content-hash = "a6f41aa4cd712a13f611d5f4c819b0a89aa0998d847678d5707ef3db7cc71443"
+content-hash = "0dca616d6960ab6c00c6756da41b2978e39a257c91bf255a55de245fedf0bdfa"
