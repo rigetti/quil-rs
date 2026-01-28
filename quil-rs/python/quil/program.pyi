@@ -7,7 +7,7 @@ import numpy
 import numpy.typing
 import typing
 from quil import QuilError
-from quil.instructions import AttributeValue, CalibrationDefinition, CalibrationIdentifier, Declaration, FrameIdentifier, Gate, GateDefinition, GateSignature, Instruction, MeasureCalibrationDefinition, MeasureCalibrationIdentifier, Measurement, MemoryReference, Pragma, Qubit, QubitPlaceholder, Sharing, Target, TargetPlaceholder, Vector, Waveform
+from quil.instructions import AttributeValue, CalibrationDefinition, CalibrationIdentifier, CircuitDefinition, Declaration, FrameIdentifier, Gate, GateDefinition, GateSignature, Instruction, MeasureCalibrationDefinition, MeasureCalibrationIdentifier, Measurement, MemoryReference, Pragma, Qubit, QubitPlaceholder, Sharing, Target, TargetPlaceholder, Vector, Waveform
 
 class BasicBlock:
     @property
@@ -509,6 +509,10 @@ class Program:
     def calibrations(self) -> CalibrationSet: ...
     @calibrations.setter
     def calibrations(self, value: CalibrationSet) -> None: ...
+    @property
+    def circuits(self) -> builtins.dict[builtins.str, CircuitDefinition]: ...
+    @circuits.setter
+    def circuits(self, value: builtins.dict[builtins.str, CircuitDefinition]) -> None: ...
     @property
     def declarations(self) -> builtins.dict[builtins.str, Declaration]: ...
     @property
