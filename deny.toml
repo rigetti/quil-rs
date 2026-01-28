@@ -17,7 +17,17 @@ db-urls = ["https://github.com/rustsec/advisory-db"]
 
 ignore = [
   { id = "RUSTSEC-2024-0436", reason = "We use `paste` to generate type stubs." },
+  # `pyo3-stub-gen` uses `rustpython-parser` which uses `rust-unic` crates, which are now unmaintained.
+  # Hopefully `pyo3-stub-gen` will switch to `ruff_python_parser`: https://github.com/Jij-Inc/pyo3-stub-gen/issues/359
+  # We'll ignore it for now, since `pyo3-stub-gen` is effectively a build-time dependency anyway.
+  { id = "RUSTSEC-2025-0075", reason = "rust-unic is unmaintained, but a transitive dependency of pyo3-stub-gen" },
+  { id = "RUSTSEC-2025-0080", reason = "rust-unic is unmaintained, but a transitive dependency of pyo3-stub-gen" },
+  { id = "RUSTSEC-2025-0081", reason = "rust-unic is unmaintained, but a transitive dependency of pyo3-stub-gen" },
+  { id = "RUSTSEC-2025-0098", reason = "rust-unic is unmaintained, but a transitive dependency of pyo3-stub-gen" },
+  { id = "RUSTSEC-2025-0090", reason = "rust-unic is unmaintained, but a transitive dependency of pyo3-stub-gen" },
+  { id = "RUSTSEC-2025-0100", reason = "rust-unic is unmaintained, but a transitive dependency of pyo3-stub-gen" },
 ]
+
 
 # This section is considered when running `cargo deny check licenses`
 # More documentation for the licenses section can be found here:
@@ -29,6 +39,7 @@ allow = [
   "Apache-2.0 WITH LLVM-exception",
   "BSD-2-Clause",
   "BSD-3-Clause",
+  "CC0-1.0",
   "MIT",
   "Unicode-DFS-2016",
   "Unicode-3.0",
@@ -53,18 +64,19 @@ multiple-versions = "deny"
 wildcards = "deny"
 highlight = "all"
 skip-tree = [
-  { name = "syn", version = "*", depth = 5 }, # Used in both serde_derive and proptest-derive
-  { name = "quick-error", version = "*" },    # proptest relies on two versions of this
-  { name = "itoa", version = "*" },           # various dependencies rely on two versions of this
-  { name = "hermit-abi", version = "*" },     # various dependencies rely on two versions of this
-  { name = "windows-sys", version = "*" },    # various dependencies rely on two versions of this
-  { name = "regex-syntax", version = "*" },   # proptest and criterion rely on two versions of this
-  { name = "redox_syscall", version = "*" },  # proptest and pyo3 rely on two versions of this
-  { name = "itertools", version = "*" },      # proptest relies on an older version of itertools than we use
-  { name = "heck", version = "*" },           # conflicting dependency with pyo3 and clap
-  { name = "hashbrown", version = "*" },      # conflicting versions between indexmap and (indirectly) dashmap
   { name = "rand", version = "=0.8.5" },      # statrs has an outdated version
 ]
+
+skip = [
+    { crate = "hashbrown", reason = "indexmap, internment, and dashmap (used by internment) all use different versions" },
+    { crate = "itertools", reason = "pyo3-stub-gen depends on rustpython-parser and numpy, and each use a different version" },
+    { crate = "rustc-hash", reason = "pyo3-stub-gen depends on rustpython-parser and numpy, and each use a different version" },
+]
+
+[[bans.features]]
+  # This feature is being deprecated in favor of build tooling (particularly, maturin).
+  crate = "pyo3"
+  deny = ["extension-module"]
 
 # This section is considered when running `cargo deny check sources`.
 # More documentation about the 'sources' section can be found here:
@@ -79,3 +91,6 @@ unknown-git = "deny"
 # List of URLs for allowed crate registries. Defaults to the crates.io index
 # if not specified. If it is specified but empty, no registries are allowed.
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = [
+    "https://github.com/rigetti/rigetti-pyo3",
+]

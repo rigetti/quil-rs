@@ -1,26 +1,16 @@
-use pyo3::{prelude::*, wrap_pymodule};
+use rigetti_pyo3::create_init_submodule;
 
-use super::identifier::{validate_identifier, validate_user_identifier};
+mod identifier {
+    use crate::quilpy::errors;
+    use crate::validation::identifier::{validate_identifier, validate_user_identifier};
+    use rigetti_pyo3::create_init_submodule;
 
-#[pymodule]
-#[pyo3(name = "validation", module = "quil", submodule)]
-pub(crate) fn init_submodule(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_wrapped(wrap_pymodule!(init_submodule_identifier))?;
-    init_submodule_identifier(m)?;
-    Ok(())
+    create_init_submodule! {
+        errors: [ errors::IdentifierValidationError ],
+        funcs: [ validate_identifier, validate_user_identifier ],
+    }
 }
 
-#[pymodule]
-#[pyo3(name = "identifier", module = "quil.validation", submodule)]
-fn init_submodule_identifier(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    use crate::quilpy::errors;
-
-    let py = m.py();
-    m.add(
-        "IdentifierValidationError",
-        py.get_type::<errors::IdentifierValidationError>(),
-    )?;
-    m.add_function(wrap_pyfunction!(validate_identifier, m)?)?;
-    m.add_function(wrap_pyfunction!(validate_user_identifier, m)?)?;
-    Ok(())
+create_init_submodule! {
+    submodules: [ "identifier": identifier::init_submodule ],
 }
