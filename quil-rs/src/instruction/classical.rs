@@ -177,6 +177,9 @@ pub enum BinaryOperator {
     And,
     Ior,
     Xor,
+    ShiftLeft,
+    ShiftRight,
+    ArithmeticShiftRight,
 }
 
 impl Quil for BinaryOperator {
@@ -185,10 +188,13 @@ impl Quil for BinaryOperator {
         f: &mut impl std::fmt::Write,
         _fall_back_to_debug: bool,
     ) -> crate::quil::ToQuilResult<()> {
-        match &self {
+        match self {
             BinaryOperator::And => write!(f, "AND"),
             BinaryOperator::Ior => write!(f, "IOR"),
             BinaryOperator::Xor => write!(f, "XOR"),
+            BinaryOperator::ShiftLeft => write!(f, "SHIFT-LEFT"),
+            BinaryOperator::ShiftRight => write!(f, "SHIFT-RIGHT"),
+            BinaryOperator::ArithmeticShiftRight => write!(f, "ARITHMETIC-SHIFT-RIGHT"),
         }
         .map_err(Into::into)
     }
