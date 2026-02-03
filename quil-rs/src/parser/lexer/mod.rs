@@ -43,6 +43,7 @@ pub use error::{LexError, LexErrorKind};
 pub enum Command {
     Add,
     And,
+    ArithmeticShiftRight,
     Call,
     Capture,
     Convert,
@@ -88,7 +89,9 @@ pub enum Command {
     SetPhase,
     SetScale,
     ShiftFrequency,
+    ShiftLeft,
     ShiftPhase,
+    ShiftRight,
     SwapPhases,
     Store,
     Sub,
