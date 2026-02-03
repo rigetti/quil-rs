@@ -41,6 +41,7 @@ pyo3 = { version = "0.26.0", features = ["indexmap", "num-complex", "multiple-py
 # Enabled with the "stubs" feature.
 pyo3-stub-gen = { version = "0.14.1", features = ["numpy"], optional = true }
 derive_more = { version = "2.0.1", features = ["add", "add_assign", "from", "not"] }
+derive-where = { version = "1.6.0", features = ["serde"] }
 
 [dev-dependencies]
 clap = { version = "4.3.19", features = ["derive", "string"] }

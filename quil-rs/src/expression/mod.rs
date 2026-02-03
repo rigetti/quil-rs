@@ -55,11 +55,11 @@ mod simplification;
 /// The different possible types of errors that could occur during expression evaluation.
 #[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
 pub enum EvaluationError {
-    #[error("There wasn't enough information to completely evaluate the expression.")]
+    #[error("there wasn't enough information to completely evaluate the expression.")]
     Incomplete,
-    #[error("The operation expected a real number but received a complex one.")]
+    #[error("the operation expected a real number but received a complex one.")]
     NumberNotReal,
-    #[error("The operation expected a number but received a different type of expression.")]
+    #[error("the operation expected a number but received a different type of expression.")]
     NotANumber,
 }
 

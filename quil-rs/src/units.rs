@@ -15,6 +15,16 @@
 #[cfg_attr(feature = "python", pyo3(transparent))]
 pub struct Cycles<T>(pub T);
 
+impl<S> Cycles<S> {
+    pub fn map<T>(self, f: impl FnOnce(S) -> T) -> Cycles<T> {
+        Cycles(f(self.0))
+    }
+
+    pub fn try_map<T, E>(self, f: impl FnOnce(S) -> Result<T, E>) -> Result<Cycles<T>, E> {
+        Ok(Cycles(f(self.0)?))
+    }
+}
+
 #[derive(
     Clone,
     Copy,
@@ -31,6 +41,16 @@ pub struct Cycles<T>(pub T);
 #[cfg_attr(feature = "python", derive(pyo3::FromPyObject, pyo3::IntoPyObject))]
 #[cfg_attr(feature = "python", pyo3(transparent))]
 pub struct Radians<T>(pub T);
+
+impl<S> Radians<S> {
+    pub fn map<T>(self, f: impl FnOnce(S) -> T) -> Radians<T> {
+        Radians(f(self.0))
+    }
+
+    pub fn try_map<T, E>(self, f: impl FnOnce(S) -> Result<T, E>) -> Result<Radians<T>, E> {
+        Ok(Radians(f(self.0)?))
+    }
+}
 
 impl From<Cycles<f64>> for Radians<f64> {
     #[inline]

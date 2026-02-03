@@ -5,6 +5,7 @@ use std::{
     iter::repeat_n,
 };
 
+use derive_where::derive_where;
 use ndarray::{Array, Array1};
 use num_complex::{c64, Complex64};
 use serde::{Deserialize, Serialize};
@@ -18,49 +19,55 @@ use crate::{
     units::{Cycles, Radians},
 };
 
-use super::sampling::{IqSamples, SamplingError};
+use super::{
+    sampling::{IqSamples, SamplingError},
+    Concrete, Syntactic, WaveformType,
+};
 
 ////////////////////////////////////////////////////////////////////////////////
 // General built-in waveform types
 ////////////////////////////////////////////////////////////////////////////////
 
 /// One of the waveforms that is always available to Quil programs.
-#[derive(Clone, Copy, PartialEq, Debug, derive_more::From)]
-#[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
-#[cfg_attr(
-    feature = "python",
-    pyo3::pyclass(module = "quil.waveforms", eq, frozen)
-)]
-pub enum BuiltinWaveform {
+#[derive_where(Clone, PartialEq, Debug)]
+#[derive_where(Copy; T::Real, T::Complex)]
+#[derive(derive_more::From)]
+pub enum BuiltinWaveform<T: WaveformType> {
     // Quil-T spec
-    Flat(Flat),
-    Gaussian(Gaussian),
-    DragGaussian(DragGaussian),
-    ErfSquare(ErfSquare),
+    Flat(Flat<T>),
+    Gaussian(Gaussian<T>),
+    DragGaussian(DragGaussian<T>),
+    ErfSquare(ErfSquare<T>),
     // Rigetti extensions
-    HermiteGaussian(HermiteGaussian),
+    HermiteGaussian(HermiteGaussian<T>),
     BoxcarKernel(BoxcarKernel),
 }
 
 /// Parameters that can be applied to all built-in waveforms.
-#[derive(Clone, Copy, PartialEq, Debug, Serialize, Deserialize)]
-#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[cfg_attr(
-    feature = "python",
-    pyo3::pyclass(module = "quil.waveforms", subclass, get_all, set_all, eq)
-)]
-pub struct CommonBuiltinParameters {
-    /// Full duration of the pulse (s)
+#[derive_where(Clone, PartialEq, Debug)]
+#[derive_where(Copy, Serialize, Deserialize; T::Real)]
+pub struct CommonBuiltinParameters<T: WaveformType> {
+    /// Full duration of the pulse, in seconds.
+    ///
+    /// Note that this is *always* a concrete real number, even for [`Syntactic`] parameters!  It
+    /// must be possible to know the exact duration of a waveform at all times.
     pub duration: f64,
-    /// Scale to apply to waveform envelope (default: `1.0`)
-    pub scale: Option<f64>,
-    /// Phase shift for the entire waveform (default: `0.0`)
-    pub phase: Option<Cycles<f64>>,
-    /// Explicit detuning to bake into IQ values (default: `0.0`)
-    pub detuning: Option<f64>,
+
+    /// Scale to apply to waveform envelope (default: `1.0`).
+    pub scale: Option<T::Real>,
+
+    /// Phase shift for the entire waveform (default: `0.0`).
+    pub phase: Option<Cycles<T::Real>>,
+
+    /// Explicit detuning to bake into IQ values (default: `0.0`).
+    pub detuning: Option<T::Real>,
 }
 
-/// Like [`CommonBuiltinParameters`], but with the defaults resolved and the duration discretized.
+/// Like [`CommonBuiltinParameters<Concrete>`], but with the defaults resolved and the duration
+/// discretized.
+///
+/// This does not take a [`WaveformType`] parameter because it only makes sense for [`Concrete`]
+/// waveforms.
 #[derive(Clone, Copy, PartialEq, Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
@@ -72,15 +79,40 @@ pub struct ExplicitCommonBuiltinParameters {
     ///
     /// Corresponds to [`CommonBuiltinParameters::duration`].
     pub sample_count: f64,
-    /// Scale to apply to waveform envelope
+
+    /// Scale to apply to waveform envelope.
     pub scale: f64,
-    /// Phase shift for the entire waveform
+
+    /// Phase shift for the entire waveform.
     pub phase: Cycles<f64>,
-    /// Explicit detuning to bake into IQ values
+
+    /// Explicit detuning to bake into IQ values.
     pub detuning: f64,
 }
 
-impl CommonBuiltinParameters {
+impl<S: WaveformType> CommonBuiltinParameters<S> {
+    pub fn try_evaluate<T: WaveformType, E>(
+        self,
+        real: impl Fn(S::Real) -> Result<T::Real, E>,
+        complex: impl Fn(S::Complex) -> Result<T::Complex, E>,
+    ) -> Result<CommonBuiltinParameters<T>, E> {
+        let _ = complex; // We want a uniform API
+        let Self {
+            duration,
+            scale,
+            phase,
+            detuning,
+        } = self;
+        Ok(CommonBuiltinParameters {
+            duration,
+            scale: scale.map(&real).transpose()?,
+            phase: phase.map(|phase| phase.try_map(&real)).transpose()?,
+            detuning: detuning.map(&real).transpose()?,
+        })
+    }
+}
+
+impl CommonBuiltinParameters<Concrete> {
     /// Given a sample rate, return the corresponding [explicit
     /// parameters][ExplicitCommonBuiltinParameters].
     ///
@@ -134,173 +166,420 @@ impl CommonBuiltinParameters {
 /// A trait for all built-in waveform types.
 ///
 /// This is a closed trait, corresponding precisely to the constructors of [`BuiltinWaveform`] as
-/// well as [`BuiltinWaveform`] itself.
+/// well as [`BuiltinWaveform`] itself, all instantiated with [`Concrete`].
 pub trait BuiltinWaveformParameters:
-    Into<BuiltinWaveform> + Copy + PartialEq + std::fmt::Debug + private::Sealed
+    Into<BuiltinWaveform<Concrete>> + Copy + PartialEq + std::fmt::Debug + private::Sealed
 {
     /// Convert this waveform into a sequence of sampled IQ values.
     fn iq_values_at_sample_rate(
         self,
-        common: CommonBuiltinParameters,
+        common: CommonBuiltinParameters<Concrete>,
         sample_rate: f64,
     ) -> Result<IqSamples, SamplingError>;
-}
-
-mod private {
-    pub trait Sealed {}
-    impl Sealed for super::BuiltinWaveform {}
-    impl Sealed for super::Flat {}
-    impl Sealed for super::Gaussian {}
-    impl Sealed for super::DragGaussian {}
-    impl Sealed for super::ErfSquare {}
-    impl Sealed for super::HermiteGaussian {}
-    impl Sealed for super::BoxcarKernel {}
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Built-in waveform types (parameters only)
 ////////////////////////////////////////////////////////////////////////////////
 
-/// A flat waveform, repeating a given IQ value for the given duration.
-///
-/// This waveform is part of the [Quil-T][] spec ([§12.2, Waveforms][]).
-///
-/// [Quil-T]: https://quil-lang.github.io/#12Annex-T--Pulse-Level-Control
-/// [§12.2, Waveforms]: https://quil-lang.github.io/#12-2Waveforms
-#[derive(Clone, Copy, PartialEq, Debug)]
-#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[cfg_attr(
-    feature = "python",
-    pyo3::pyclass(module = "quil.waveforms", subclass, get_all, set_all, eq)
-)]
-pub struct Flat {
-    /// The IQ value to play
-    pub iq: Complex64,
+macro_rules! field_parser {
+    (ConcreteReal) => {
+        super::concrete_real
+    };
+    (Real) => {
+        super::mandatory
+    };
+    (Complex) => {
+        super::mandatory
+    };
 }
 
-/// A waveform with a Gaussian shape.
-///
-/// This waveform is part of the [Quil-T][] spec ([§12.2, Waveforms][]).
-///
-/// [Quil-T]: https://quil-lang.github.io/#12Annex-T--Pulse-Level-Control
-/// [§12.2, Waveforms]: https://quil-lang.github.io/#12-2Waveforms
-#[derive(Clone, Copy, PartialEq, Debug, Serialize, Deserialize)]
-#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[cfg_attr(
-    feature = "python",
-    pyo3::pyclass(module = "quil.waveforms", subclass, get_all, set_all, eq)
-)]
-pub struct Gaussian {
-    /// Full width half maximum of the pulse (s)
-    pub fwhm: f64,
-    /// Center/offset for pulse centroid (s)
-    pub t0: f64,
+macro_rules! field_type {
+    ($waveform_type:ident, $field_type:ident) => {
+        field_type!(($waveform_type), $field_type)
+    };
+    (($($waveform_type:tt)+), ConcreteReal) => {
+        f64
+    };
+    (($($waveform_type:tt)+), Real) => {
+        $($waveform_type)+::Real
+    };
+    (($($waveform_type:tt)+), Complex) => {
+        $($waveform_type)+::Complex
+    };
 }
 
-/// Creates a waveform with a DRAG-corrected Gaussian shape.
-///
-/// This is a Gaussian shape with an additional component proportional to the time derivative of the
-/// main Gaussian pulse.
-///
-/// For details, see "Simple Pulses for Elimination of Leakage in Weakly Nonlinear Qubits",
-/// F. Motzoi, J. M. Gambetta, J. M., P. Rebentrost, and F. K. Wilhelm, Physical Review Letters 103,
-/// 110501 (September 8, 2009).  DOI: 10.1103/PhysRevLett.103.110501; publication URL:
-/// <https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.103.110501>, preprint URL:
-/// <https://arxiv.org/abs/0901.0534>.
-///
-/// This waveform is part of the [Quil-T][] spec ([§12.2, Waveforms][]).
-///
-/// [Quil-T]: https://quil-lang.github.io/#12Annex-T--Pulse-Level-Control
-/// [§12.2, Waveforms]: https://quil-lang.github.io/#12-2Waveforms
-#[derive(Clone, Copy, PartialEq, Debug, Serialize, Deserialize)]
-#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[cfg_attr(
-    feature = "python",
-    pyo3::pyclass(module = "quil.waveforms", subclass, get_all, set_all, eq)
-)]
-pub struct DragGaussian {
-    /// Full width half maximum of the pulse (s)
-    pub fwhm: f64,
-    /// Center/offset for pulse centroid (s)
-    pub t0: f64,
-    /// Qubit anharmonicity - sets rate of evolution for the imaginary term (Hz)
-    pub anh: f64,
-    /// DRAG parameter - controls strength of the imaginary term
-    pub alpha: f64,
+macro_rules! field_derive_where {
+    ($($ty:ident)?; ConcreteReal $(, $($rest:tt)*)?) => {
+        field_derive_where!($($ty)?; $($($rest)*)?)
+    };
+    ($(Real)?; Real $(, $($rest:tt)*)?) => {
+        field_derive_where!(Real; $($($rest)*)?)
+    };
+    ($(Complex)?; Complex $(, $($rest:tt)*)?) => {
+        field_derive_where!(Complex; $($($rest)*)?)
+    };
+    ($ty:ident;) => {
+        T::$ty
+    };
+    ($($rest:tt)*) => {
+        compile_error!(concat!(
+            "Invalid struct for `field_derive_where!`:",
+            stringify!($($rest)*)
+        ))
+    }
 }
 
-/// A waveform with a flat top and edges that are error functions (erfs).
-///
-/// This waveform is part of the [Quil-T][] spec ([§12.2, Waveforms][]).
-///
-/// [Quil-T]: https://quil-lang.github.io/#12Annex-T--Pulse-Level-Control
-/// [§12.2, Waveforms]: https://quil-lang.github.io/#12-2Waveforms
-#[derive(Clone, Copy, PartialEq, Debug, Serialize, Deserialize)]
-#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[cfg_attr(
-    feature = "python",
-    pyo3::pyclass(module = "quil.waveforms", subclass, get_all, set_all, eq)
-)]
-pub struct ErfSquare {
-    /// Slope of erf shoulders (2x FWHM of erf in s)
-    pub risetime: f64,
-    /// Length of zero padding to add to beginning of pulse (s)
-    pub pad_left: f64,
-    /// Length of zero padding to add to end of pulse (s)
-    pub pad_right: f64,
+macro_rules! field_evaluator {
+    (ConcreteReal, real = $real:ident, complex = $complex:ident, $field:expr) => {
+        $field
+    };
+    (Real, real = $real:ident, complex = $complex:ident, $field:expr) => {
+        $real($field)?
+    };
+    (Complex, real = $real:ident, complex = $complex:ident, $field:expr) => {
+        $complex($field)?
+    };
 }
 
-/// Creates a Hermite Gaussian waveform.
-///
-/// This extends the basic DRAG pulse by adding an additional imaginary term to the pulse envelope
-/// consisting of a Gaussian pulse modified by the second order Hermite polynomial.
-///
-/// For details, see "Effects of arbitrary laser or NMR pulse shapes on population inversion and
-/// coherence", Warren S. Warren, The Journal of Chemical Physics 81(12) (December 20, 1984).  DOI:
-/// 10.1063/1.447644; publication URL:
-/// <https://pubs.aip.org/aip/jcp/article-abstract/81/12/5437/90781/Effects-of-arbitrary-laser-or-NMR-pulse-shapes-on>.
-///
-/// This waveform is a Rigetti extension to Quil-T.
-#[derive(Clone, Copy, PartialEq, Debug, Serialize, Deserialize)]
-#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[cfg_attr(
-    feature = "python",
-    pyo3::pyclass(module = "quil.waveforms", subclass, get_all, set_all, eq)
-)]
-pub struct HermiteGaussian {
-    /// Full width half maximum of the pulse (s)
-    pub fwhm: f64,
-    /// Center/offset for pulse centroid (s)
-    pub t0: f64,
-    /// Qubit anharmonicity - sets rate of evolution for the imaginary term (Hz)
-    pub anh: f64,
-    /// DRAG parameter - controls strength of the imaginary term
-    pub alpha: f64,
-    /// Coefficient of the second order Hermite polynomial term.
-    pub second_order_hrm_coeff: f64,
+macro_rules! waveform_source {
+    (QuilT) => {
+        r#"This waveform is part of the [Quil-T][] spec ([§12.2, Waveforms][]).
+
+[Quil-T]: https://quil-lang.github.io/#12Annex-T--Pulse-Level-Control
+[§12.2, Waveforms]: https://quil-lang.github.io/#12-2Waveforms"#
+    };
+    (Rigetti) => {
+        r#"This waveform is a Rigetti extension to Quil-T."#
+    };
 }
 
-/// A boxcar waveform.
-///
-/// This waveform is a Rigetti extension to Quil-T.
-#[derive(Clone, Copy, PartialEq, Debug, Serialize, Deserialize)]
-#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[cfg_attr(
-    feature = "python",
-    pyo3::pyclass(module = "quil.waveforms", subclass, eq)
-)]
-pub struct BoxcarKernel;
+macro_rules! concrete_waveform {
+    ($name:ident, $($field:ident)+) => {
+        super::$name<super::Concrete>
+    };
+    ($name:ident,) => {
+        super::$name
+    };
+}
+
+macro_rules! define_python_waveform_wrapper {
+    (
+        $name:ident,
+        $waveform_type:ident,
+        derive($($derive:ident),*),
+        { $($field:ident: $ty:ident),+ }
+    ) => {
+        paste::paste! {
+            #[derive(Clone, PartialEq, Debug $(, $derive)*)]
+            #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+            #[cfg_attr(
+                feature = "python",
+                pyo3::pyclass(module = "quil.waveforms", subclass, eq)
+            )]
+            pub struct [<$waveform_type $name>](pub $name<$waveform_type>);
+
+            #[cfg(feature = "python")]
+            #[pyo3::pymethods]
+            impl [<$waveform_type $name>] {
+                $(
+                    #[getter($field)]
+                    fn [<py_get_$field>](
+                        &self
+                    ) -> field_type!((<$waveform_type as WaveformType>), $ty) {
+                        self.0.$field.clone()
+                    }
+
+                    #[setter($field)]
+                    fn [<py_set_$field>](
+                        &mut self,
+                        $field: field_type!((<$waveform_type as WaveformType>), $ty),
+                    ) {
+                        self.0.$field = $field;
+                    }
+                )+
+            }
+        }
+    }
+}
+
+macro_rules! define_python_waveform {
+    ($name:ident) => {};
+
+    ($name:ident { $($field:ident: $ty:ident),+ }) => {
+        define_python_waveform_wrapper!($name, Syntactic, derive(), { $($field: $ty),+ });
+        define_python_waveform_wrapper!($name, Concrete, derive(Copy), { $($field: $ty),+ });
+
+        paste::paste! {
+            #[cfg(feature = "python")]
+            #[pyo3::pymethods]
+            impl [<Syntactic $name>] {
+                #[pyo3(name = "try_evaluate")]
+                fn py_try_evaluate(
+                    &self,
+                    variables: std::collections::HashMap<String, Complex64>,
+                    memory_references: std::collections::HashMap<String, Vec<f64>>,
+                ) -> pyo3::PyResult<[<Concrete $name>]> {
+                    let complex = |expr: crate::expression::Expression| {
+                        expr.evaluate(&variables, &memory_references)
+                    };
+
+                    let real = |expr| {
+                        let Complex64 { re, im } = complex(expr)?;
+                        if im == 0.0 {
+                            Ok(re)
+                        } else {
+                            Err(crate::expression::EvaluationError::NumberNotReal)
+                        }
+                    };
+
+                    Ok([<Concrete $name>](self.0.clone().try_evaluate(real, complex)?))
+                }
+            }
+        }
+    }
+}
+
+macro_rules! define_waveform {
+    {
+        $(#[$struct_meta:meta])*
+        pub struct $name:ident
+    } => {
+        $(#[$struct_meta])*
+        #[derive(Clone, PartialEq, Debug, Copy, Serialize, Deserialize)]
+        #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+        #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.waveforms", subclass, eq))]
+        pub struct $name;
+
+        #[automatically_derived]
+        impl super::Extractable for $name {
+            fn extract_from(
+                parameters: &mut super::WaveformParameters
+            ) -> Result<Self, super::WaveformParameterError> {
+                Ok(Self)
+            }
+        }
+    };
+
+    {
+        $(#[$struct_meta:meta])*
+        pub struct $name:ident {
+            $(
+                $(#[$field_meta:meta])*
+                pub $field:ident: $ty:ident
+            ),+
+            $(,)?
+        }
+    } => {
+        $(#[$struct_meta])*
+        #[derive_where(Clone, PartialEq, Debug)]
+        #[derive_where(Copy, Serialize, Deserialize; field_derive_where!(; $($ty),+))]
+        pub struct $name<T: WaveformType> {
+            $(
+                $(#[$field_meta])*
+                pub $field: field_type!(T, $ty)
+            ),+
+        }
+
+        #[automatically_derived]
+        impl super::Extractable for $name<Syntactic> {
+            fn extract_from(
+                parameters: &mut super::WaveformParameters,
+            ) -> Result<Self, super::WaveformParameterError> {
+                $(
+                    let $field = field_parser!($ty)(parameters, stringify!($field))?;
+                )+
+                Ok(Self { $($field),+ })
+            }
+        }
+
+        impl<S: WaveformType> $name<S> {
+            #[allow(unused_variables, reason = "macro-generated code")]
+            pub fn try_evaluate<T: WaveformType, E>(
+                self,
+                real: impl Fn(S::Real) -> Result<T::Real, E>,
+                complex: impl Fn(S::Complex) -> Result<T::Complex, E>,
+            ) -> Result<$name<T>, E> {
+                let Self { $($field),+ } = self;
+                Ok($name {
+                    $($field: field_evaluator!($ty, real = real, complex = complex, $field)),+
+                })
+            }
+        }
+    }
+}
+
+macro_rules! define_waveforms {
+    (
+        $(
+            $(#[doc = $struct_doc:literal])*
+            #[waveform_source($waveform_source:ident)]
+            $(#[$struct_meta:meta])*
+            pub struct $name:ident $({
+                $(
+                    $(#[$field_meta:meta])*
+                    pub $field:ident: $ty:ident
+                ),+
+                $(,)?
+            })?
+            $(;)?
+        )+
+    ) => {
+        $(
+            define_waveform! {
+                $(#[doc = $struct_doc])*
+                ///
+                #[doc = waveform_source!($waveform_source)]
+                $(#[$struct_meta])*
+                pub struct $name $({
+                    $(
+                        $(#[$field_meta])*
+                        pub $field: $ty
+                    ),+
+                })?
+            }
+        )+
+
+        mod quilpy_waveforms {
+            use super::*;
+
+            $(define_python_waveform!($name $({ $($field: $ty),+ })?);)*
+        }
+
+        mod private {
+            pub trait Sealed {}
+            impl Sealed for super::BuiltinWaveform<super::Concrete> {}
+            $(
+                #[automatically_derived]
+                impl Sealed for concrete_waveform!($name, $($($field)+)?) {}
+            )*
+        }
+    }
+}
+
+define_waveforms! {
+    /// A flat waveform, repeating a given IQ value for the given duration.
+    #[waveform_source(QuilT)]
+    pub struct Flat {
+        /// The IQ value to play
+        pub iq: Complex,
+    }
+
+    /// A waveform with a Gaussian shape.
+    #[waveform_source(QuilT)]
+    pub struct Gaussian {
+        /// Full width half maximum of the pulse (s)
+        pub fwhm: Real,
+        /// Center/offset for pulse centroid (s)
+        pub t0: Real,
+    }
+
+    /// Creates a waveform with a DRAG-corrected Gaussian shape.
+    ///
+    /// This is a Gaussian shape with an additional component proportional to the time derivative of
+    /// the main Gaussian pulse.
+    ///
+    /// For details, see "Simple Pulses for Elimination of Leakage in Weakly Nonlinear Qubits",
+    /// F. Motzoi, J. M. Gambetta, J. M., P. Rebentrost, and F. K. Wilhelm, Physical Review Letters
+    /// 103, 110501 (September 8, 2009).  DOI: 10.1103/PhysRevLett.103.110501; publication URL:
+    /// <https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.103.110501>, preprint URL:
+    /// <https://arxiv.org/abs/0901.0534>.
+    #[waveform_source(QuilT)]
+    pub struct DragGaussian {
+        /// Full width half maximum of the pulse (s)
+        pub fwhm: Real,
+        /// Center/offset for pulse centroid (s)
+        pub t0: Real,
+        /// Qubit anharmonicity - sets rate of evolution for the imaginary term (Hz)
+        pub anh: Real,
+        /// DRAG parameter - controls strength of the imaginary term
+        pub alpha: Real,
+    }
+
+    /// A waveform with a flat top and edges that are error functions (erfs).
+    #[waveform_source(QuilT)]
+    pub struct ErfSquare {
+        /// Slope of erf shoulders (2x FWHM of erf in s)
+        pub risetime: Real,
+
+        /// Length of zero padding to add to beginning of pulse (s)
+        ///
+        /// Note that this is *always* a concrete real number, even if the waveform is
+        /// [`Syntactic`]!  It must be possible to know the exact duration of a waveform at all
+        /// times.
+        pub pad_left: ConcreteReal,
+
+        /// Length of zero padding to add to end of pulse (s)
+        ///
+        /// Note that this is *always* a concrete real number, even if the waveform is
+        /// [`Syntactic`]!  It must be possible to know the exact duration of a waveform at all
+        /// times.
+        pub pad_right: ConcreteReal,
+    }
+
+    /// Creates a Hermite Gaussian waveform.
+    ///
+    /// This extends the basic DRAG pulse by adding an additional imaginary term to the pulse
+    /// envelope consisting of a Gaussian pulse modified by the second order Hermite polynomial.
+    ///
+    /// For details, see "Effects of arbitrary laser or NMR pulse shapes on population inversion and
+    /// coherence", Warren S. Warren, The Journal of Chemical Physics 81(12) (December 20, 1984).
+    /// DOI: 10.1063/1.447644; publication URL:
+    /// <https://pubs.aip.org/aip/jcp/article-abstract/81/12/5437/90781/Effects-of-arbitrary-laser-or-NMR-pulse-shapes-on>.
+    #[waveform_source(Rigetti)]
+    pub struct HermiteGaussian {
+        /// Full width half maximum of the pulse (s)
+        pub fwhm: Real,
+        /// Center/offset for pulse centroid (s)
+        pub t0: Real,
+        /// Qubit anharmonicity - sets rate of evolution for the imaginary term (Hz)
+        pub anh: Real,
+        /// DRAG parameter - controls strength of the imaginary term
+        pub alpha: Real,
+        /// Coefficient of the second order Hermite polynomial term.
+        pub second_order_hrm_coeff: Real,
+    }
+
+    /// A boxcar waveform.
+    #[waveform_source(Rigetti)]
+    pub struct BoxcarKernel;
+}
+
+impl<S: WaveformType> BuiltinWaveform<S> {
+    pub fn try_evaluate<T: WaveformType, E>(
+        self,
+        real: impl Fn(S::Real) -> Result<T::Real, E>,
+        complex: impl Fn(S::Complex) -> Result<T::Complex, E>,
+    ) -> Result<BuiltinWaveform<T>, E> {
+        match self {
+            Self::Flat(flat) => flat.try_evaluate(real, complex).map(BuiltinWaveform::Flat),
+            Self::Gaussian(gaussian) => gaussian
+                .try_evaluate(real, complex)
+                .map(BuiltinWaveform::Gaussian),
+            Self::DragGaussian(drag_gaussian) => drag_gaussian
+                .try_evaluate(real, complex)
+                .map(BuiltinWaveform::DragGaussian),
+            Self::ErfSquare(erf_square) => erf_square
+                .try_evaluate(real, complex)
+                .map(BuiltinWaveform::ErfSquare),
+            Self::HermiteGaussian(hermite_gaussian) => hermite_gaussian
+                .try_evaluate(real, complex)
+                .map(BuiltinWaveform::HermiteGaussian),
+            Self::BoxcarKernel(boxcar_kernel) => Ok(BuiltinWaveform::BoxcarKernel(boxcar_kernel)),
+        }
+    }
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // IQ sample computation
 ////////////////////////////////////////////////////////////////////////////////
 
-impl BuiltinWaveformParameters for BuiltinWaveform {
+impl BuiltinWaveformParameters for BuiltinWaveform<Concrete> {
     /// Sample the given waveform (with the additional common parameters) at the given sample rate
     /// (in Hz).
     fn iq_values_at_sample_rate(
         self,
-        common: CommonBuiltinParameters,
+        common: CommonBuiltinParameters<Concrete>,
         sample_rate: f64,
     ) -> Result<IqSamples, SamplingError> {
         match self {
@@ -329,10 +608,10 @@ impl BuiltinWaveformParameters for BuiltinWaveform {
     }
 }
 
-impl BuiltinWaveformParameters for Flat {
+impl BuiltinWaveformParameters for Flat<Concrete> {
     fn iq_values_at_sample_rate(
         self,
-        common: CommonBuiltinParameters,
+        common: CommonBuiltinParameters<Concrete>,
         sample_rate: f64,
     ) -> Result<IqSamples, SamplingError> {
         let ExplicitCommonBuiltinParameters {
@@ -359,10 +638,10 @@ impl BuiltinWaveformParameters for Flat {
     }
 }
 
-impl BuiltinWaveformParameters for Gaussian {
+impl BuiltinWaveformParameters for Gaussian<Concrete> {
     fn iq_values_at_sample_rate(
         self,
-        common: CommonBuiltinParameters,
+        common: CommonBuiltinParameters<Concrete>,
         sample_rate: f64,
     ) -> Result<IqSamples, SamplingError> {
         let Self { fwhm, t0 } = self;
@@ -379,10 +658,10 @@ impl BuiltinWaveformParameters for Gaussian {
     }
 }
 
-impl BuiltinWaveformParameters for DragGaussian {
+impl BuiltinWaveformParameters for DragGaussian<Concrete> {
     fn iq_values_at_sample_rate(
         self,
-        common: CommonBuiltinParameters,
+        common: CommonBuiltinParameters<Concrete>,
         sample_rate: f64,
     ) -> Result<IqSamples, SamplingError> {
         let Self {
@@ -409,10 +688,10 @@ impl BuiltinWaveformParameters for DragGaussian {
     }
 }
 
-impl BuiltinWaveformParameters for ErfSquare {
+impl BuiltinWaveformParameters for ErfSquare<Concrete> {
     fn iq_values_at_sample_rate(
         self,
-        common: CommonBuiltinParameters,
+        common: CommonBuiltinParameters<Concrete>,
         sample_rate: f64,
     ) -> Result<IqSamples, SamplingError> {
         let Self {
@@ -442,10 +721,10 @@ impl BuiltinWaveformParameters for ErfSquare {
     }
 }
 
-impl BuiltinWaveformParameters for HermiteGaussian {
+impl BuiltinWaveformParameters for HermiteGaussian<Concrete> {
     fn iq_values_at_sample_rate(
         self,
-        common: CommonBuiltinParameters,
+        common: CommonBuiltinParameters<Concrete>,
         sample_rate: f64,
     ) -> Result<IqSamples, SamplingError> {
         let Self {
@@ -479,7 +758,7 @@ impl BuiltinWaveformParameters for HermiteGaussian {
 impl BuiltinWaveformParameters for BoxcarKernel {
     fn iq_values_at_sample_rate(
         self,
-        common: CommonBuiltinParameters,
+        common: CommonBuiltinParameters<Concrete>,
         sample_rate: f64,
     ) -> Result<IqSamples, SamplingError> {
         let ExplicitCommonBuiltinParameters {
@@ -532,7 +811,7 @@ struct SamplingInfo {
 /// 4. Apply the phase adjustment and detuning to those samples.
 fn build_samples_and_adjust_for_common_parameters<I: IntoIterator<Item = Complex64>>(
     parameters: SamplingParameters,
-    common: CommonBuiltinParameters,
+    common: CommonBuiltinParameters<Concrete>,
     build: impl FnOnce(SamplingInfo) -> I,
 ) -> Result<IqSamples, SamplingError> {
     let SamplingParameters { sample_rate, fwhm } = parameters;
@@ -602,6 +881,134 @@ fn polar_to_rectangular(magnitude: f64, angle: Cycles<f64>) -> Complex64 {
     Complex64::from_polar(magnitude, Radians::from(angle).0)
 }
 
+pub mod quilpy {
+    use super::*;
+
+    use crate::expression::Expression;
+
+    pub use quilpy_waveforms::*;
+
+    #[derive(Clone, PartialEq, Debug)]
+    #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+    #[cfg_attr(
+        feature = "python",
+        pyo3::pyclass(module = "quil.waveforms", subclass, eq)
+    )]
+    pub struct SyntacticBuiltinWaveform(pub BuiltinWaveform<Syntactic>);
+
+    #[derive(Clone, Copy, PartialEq, Debug)]
+    #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+    #[cfg_attr(
+        feature = "python",
+        pyo3::pyclass(module = "quil.waveforms", subclass, eq)
+    )]
+    pub struct ConcreteBuiltinWaveform(pub BuiltinWaveform<Concrete>);
+
+    #[derive(Clone, PartialEq, Debug)]
+    #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+    #[cfg_attr(
+        feature = "python",
+        pyo3::pyclass(module = "quil.waveforms", subclass, eq)
+    )]
+    pub struct SyntacticCommonBuiltinParameters(pub CommonBuiltinParameters<Syntactic>);
+
+    #[derive(Clone, Copy, PartialEq, Debug)]
+    #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+    #[cfg_attr(
+        feature = "python",
+        pyo3::pyclass(module = "quil.waveforms", subclass, eq)
+    )]
+    pub struct ConcreteCommonBuiltinParameters(pub CommonBuiltinParameters<Concrete>);
+
+    #[cfg(feature = "python")]
+    #[pyo3::pymethods]
+    impl SyntacticCommonBuiltinParameters {
+        #[getter(duration)]
+        fn py_get_duration(&self) -> f64 {
+            self.0.duration
+        }
+
+        #[setter(duration)]
+        fn py_set_duration(&mut self, duration: f64) {
+            self.0.duration = duration;
+        }
+
+        #[getter(scale)]
+        fn py_get_scale(&self) -> Option<Expression> {
+            self.0.scale.clone()
+        }
+
+        #[setter(scale)]
+        fn py_set_scale(&mut self, scale: Option<Expression>) {
+            self.0.scale = scale;
+        }
+
+        #[getter(phase)]
+        fn py_get_phase(&self) -> Option<Expression> {
+            self.0.phase.clone().map(|Cycles(phase)| phase)
+        }
+
+        #[setter(phase)]
+        fn py_set_phase(&mut self, phase: Option<Expression>) {
+            self.0.phase = phase.map(Cycles);
+        }
+
+        #[getter(detuning)]
+        fn py_get_detuning(&self) -> Option<Expression> {
+            self.0.detuning.clone()
+        }
+
+        #[setter(detuning)]
+        fn py_set_detuning(&mut self, detuning: Option<Expression>) {
+            self.0.detuning = detuning;
+        }
+    }
+
+    #[cfg(feature = "python")]
+    #[pyo3::pymethods]
+    impl ConcreteCommonBuiltinParameters {
+        #[getter(duration)]
+        fn py_get_duration(&self) -> f64 {
+            self.0.duration
+        }
+
+        #[setter(duration)]
+        fn py_set_duration(&mut self, duration: f64) {
+            self.0.duration = duration;
+        }
+
+        #[getter(scale)]
+        fn py_get_scale(&self) -> Option<f64> {
+            self.0.scale
+        }
+
+        #[setter(scale)]
+        fn py_set_scale(&mut self, scale: Option<f64>) {
+            self.0.scale = scale;
+        }
+
+        #[getter(phase)]
+        fn py_get_phase(&self) -> Option<f64> {
+            self.0.phase.map(|Cycles(phase)| phase)
+        }
+
+        #[setter(phase)]
+        fn py_set_phase(&mut self, phase: Option<f64>) {
+            self.0.phase = phase.map(Cycles);
+        }
+
+        #[getter(detuning)]
+        fn py_get_detuning(&self) -> Option<f64> {
+            self.0.detuning
+        }
+
+        #[setter(detuning)]
+        fn py_set_detuning(&mut self, detuning: Option<f64>) {
+            self.0.detuning = detuning;
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -611,7 +1018,7 @@ mod tests {
     /// It's important that this remain stable or there'll be a mess of updating snapshot files.
     fn format_snapshot_name(
         waveform: impl BuiltinWaveformParameters,
-        common: CommonBuiltinParameters,
+        common: CommonBuiltinParameters<Concrete>,
         tag: &str,
     ) -> String {
         format!("{waveform:?}__{common:?}__{tag}")
@@ -797,7 +1204,7 @@ mod tests {
     )]
     fn into_iq_values(
         #[case] parameters: impl BuiltinWaveformParameters,
-        #[case] common: CommonBuiltinParameters,
+        #[case] common: CommonBuiltinParameters<Concrete>,
     ) {
         let iq_values = parameters
             .iq_values_at_sample_rate(common, 1e6)
