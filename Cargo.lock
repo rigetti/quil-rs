@@ -1067,7 +1067,7 @@ checksum = "d6790f58c7ff633d8771f42965289203411a5e5c68388703c06e14f24770b41e"
 [[package]]
 name = "optipy"
 version = "0.1.0"
-source = "git+https://github.com/rigetti/rigetti-pyo3.git?rev=refs%2Fpull%2F62%2Fhead#176605fb8893b109b54dcc3f1a57f2f2ca2a9f79"
+source = "git+https://github.com/rigetti/rigetti-pyo3.git?rev=refs%2Fpull%2F62%2Fhead#165c37d90961392b2e669b7e4721b8c013351575"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1590,7 +1590,7 @@ checksum = "ba39f3699c378cd8970968dcbff9c43159ea4cfbd88d43c00b22f2ef10a435d2"
 [[package]]
 name = "rigetti-pyo3"
 version = "0.4.4"
-source = "git+https://github.com/rigetti/rigetti-pyo3.git?rev=refs%2Fpull%2F62%2Fhead#176605fb8893b109b54dcc3f1a57f2f2ca2a9f79"
+source = "git+https://github.com/rigetti/rigetti-pyo3.git?rev=refs%2Fpull%2F62%2Fhead#165c37d90961392b2e669b7e4721b8c013351575"
 dependencies = [
  "indexmap",
  "itertools 0.14.0",
