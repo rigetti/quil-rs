@@ -1,29 +1,181 @@
 use num_complex::Complex64;
-use pyo3::{prelude::*, types::PyList};
+use pyo3::{
+    exceptions::PyValueError,
+    prelude::*,
+    types::{IntoPyDict as _, PyList, PyTuple},
+    IntoPyObjectExt,
+};
 
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::{gen_stub_pyfunction, gen_stub_pymethods};
 
-use super::templates::*;
-use crate::quilpy::{errors::ValueError, impl_repr};
+use crate::{
+    quilpy::impl_repr,
+    units::Cycles,
+    waveform::{
+        builtin::quilpy::*,
+        builtin::*,
+        sampling::{IqSamples, SamplingError},
+    },
+};
 
 #[pymodule]
 #[pyo3(name = "waveforms", module = "quil", submodule)]
 pub(crate) fn init_submodule(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    m.add_class::<IqSamples>()?;
+    m.add_class::<SamplingError>()?;
+    m.add_class::<SyntacticCommonBuiltinParameters>()?;
+    m.add_class::<ConcreteCommonBuiltinParameters>()?;
+    m.add_class::<ExplicitCommonBuiltinParameters>()?;
+    m.add_class::<SyntacticFlat>()?;
+    m.add_class::<ConcreteFlat>()?;
+    m.add_class::<SyntacticGaussian>()?;
+    m.add_class::<ConcreteGaussian>()?;
+    m.add_class::<SyntacticDragGaussian>()?;
+    m.add_class::<ConcreteDragGaussian>()?;
+    m.add_class::<SyntacticErfSquare>()?;
+    m.add_class::<ConcreteErfSquare>()?;
+    m.add_class::<SyntacticHermiteGaussian>()?;
+    m.add_class::<ConcreteHermiteGaussian>()?;
     m.add_class::<BoxcarKernel>()?;
-    m.add_class::<ErfSquare>()?;
-    m.add_class::<Gaussian>()?;
-    m.add_class::<DragGaussian>()?;
-    m.add_class::<HermiteGaussian>()?;
     m.add_function(wrap_pyfunction!(py_apply_phase_and_detuning, m)?)?;
     Ok(())
 }
 
-impl_repr!(BoxcarKernel);
-impl_repr!(DragGaussian);
-impl_repr!(ErfSquare);
-impl_repr!(Gaussian);
-impl_repr!(HermiteGaussian);
+impl_repr! {
+    IqSamples,
+    SamplingError,
+    SyntacticCommonBuiltinParameters,
+    ConcreteCommonBuiltinParameters,
+    ExplicitCommonBuiltinParameters,
+    SyntacticFlat,
+    ConcreteFlat,
+    SyntacticGaussian,
+    ConcreteGaussian,
+    SyntacticDragGaussian,
+    ConcreteDragGaussian,
+    SyntacticErfSquare,
+    ConcreteErfSquare,
+    SyntacticHermiteGaussian,
+    ConcreteHermiteGaussian,
+    BoxcarKernel,
+}
+
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl SyntacticCommonBuiltinParameters {
+    #[pyo3(signature = (*, duration, scale = None, phase = None, detuning = None))]
+    #[new]
+    fn __new__(
+        duration: f64,
+        scale: Option<crate::expression::Expression>,
+        phase: Option<crate::expression::Expression>,
+        detuning: Option<crate::expression::Expression>,
+    ) -> Self {
+        Self(CommonBuiltinParameters {
+            duration,
+            scale,
+            phase: phase.map(Cycles),
+            detuning,
+        })
+    }
+
+    fn __getnewargs_ex__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+        let Self(CommonBuiltinParameters {
+            duration,
+            scale,
+            phase,
+            detuning,
+        }) = self;
+        let arguments = [
+            ("duration", duration.into_py_any(py)?),
+            ("scale", scale.clone().into_py_any(py)?),
+            ("phase", phase.clone().map(|p| p.0).into_py_any(py)?),
+            ("detuning", detuning.clone().into_py_any(py)?),
+        ]
+        .into_py_dict(py)?;
+        (PyTuple::empty(py), arguments).into_pyobject(py)
+    }
+}
+
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl ConcreteCommonBuiltinParameters {
+    #[pyo3(signature = (*, duration, scale = None, phase = None, detuning = None))]
+    #[new]
+    fn __new__(
+        duration: f64,
+        scale: Option<f64>,
+        phase: Option<f64>,
+        detuning: Option<f64>,
+    ) -> Self {
+        Self(CommonBuiltinParameters {
+            duration,
+            scale,
+            phase: phase.map(Cycles),
+            detuning,
+        })
+    }
+
+    fn __getnewargs_ex__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+        let Self(CommonBuiltinParameters {
+            duration,
+            scale,
+            phase,
+            detuning,
+        }) = *self;
+        let arguments = [
+            ("duration", Some(duration)),
+            ("scale", scale),
+            ("phase", phase.map(|p| p.0)),
+            ("detuning", detuning),
+        ]
+        .into_py_dict(py)?;
+        (PyTuple::empty(py), arguments).into_pyobject(py)
+    }
+
+    #[pyo3(name = "resolve_with_sample_rate")]
+    fn py_resolve_with_sample_rate(
+        &self,
+        sample_rate: f64,
+    ) -> PyResult<ExplicitCommonBuiltinParameters> {
+        self.0
+            .resolve_with_sample_rate(sample_rate)
+            .map_err(PyValueError::new_err)
+    }
+}
+
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl ExplicitCommonBuiltinParameters {
+    #[pyo3(signature = (*, sample_count, scale, phase, detuning))]
+    #[new]
+    fn __new__(sample_count: f64, scale: f64, phase: f64, detuning: f64) -> Self {
+        Self {
+            sample_count,
+            scale,
+            phase: Cycles(phase),
+            detuning,
+        }
+    }
+
+    fn __getnewargs_ex__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+        let Self {
+            sample_count,
+            scale,
+            phase,
+            detuning,
+        } = *self;
+        let arguments = [
+            ("sample_count", sample_count),
+            ("scale", scale),
+            ("phase", phase.0),
+            ("detuning", detuning),
+        ]
+        .into_py_dict(py)?;
+        (PyTuple::empty(py), arguments).into_pyobject(py)
+    }
+}
 
 /// Modulate and phase shift waveform IQ data in place.
 #[cfg_attr(feature = "stubs", gen_stub_pyfunction(module = "quil.waveforms"))]
@@ -38,197 +190,130 @@ fn py_apply_phase_and_detuning(
     // this version allows us to iterate only once and avoid allocating a new `Vec<Complex64>`.
     for (index, value) in iq_values.iter().enumerate() {
         let value = value.extract::<Complex64>()?;
-        let value = apply_phase_and_detuning_impl(value, phase, detuning, sample_rate, index);
+        let value =
+            apply_phase_and_detuning_at_index(value, Cycles(phase), detuning, sample_rate, index);
         iq_values.set_item(index, value)?;
     }
 
     Ok(())
 }
 
-/// A simple wrapper around [`std::num::NonZeroU64`] with [`pyo3_stub_gen::PyStubType`] information.
-#[derive(Copy, Clone, Debug, PartialEq, PartialOrd, Eq, Hash, pyo3::IntoPyObject)]
-struct NonZeroU64(std::num::NonZeroU64);
-
-// PyO3 has a conversion we could derive from,
-// but it raises a TypeError that says "failed to extract field NonZeroU64.0".
-// By implementing it manually, an invalid value instead reads:
-// "quil.QuilValueError: expected a positive value".
-impl<'py> pyo3::FromPyObject<'py> for NonZeroU64 {
-    fn extract_bound(ob: &Bound<'py, PyAny>) -> PyResult<Self> {
-        ob.extract::<u64>().and_then(|value| {
-            std::num::NonZeroU64::try_from(value)
-                .map_err(|_err| ValueError::new_err("expected a positive value"))
-                .map(Self)
-        })
-    }
+macro_rules! first_ty {
+    ($first:ty $(, $rest:ty)*) => {
+        $first
+    };
 }
 
-#[cfg(feature = "stubs")]
-impl pyo3_stub_gen::PyStubType for NonZeroU64 {
-    fn type_output() -> pyo3_stub_gen::TypeInfo {
-        pyo3_stub_gen::TypeInfo::builtin("int")
-    }
+macro_rules! python_access_inner {
+    ($item:expr,) => {
+        $item
+    };
+
+    ($item:expr, $concrete:ident) => {
+        $item.0
+    };
 }
 
-#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[pymethods]
-impl BoxcarKernel {
-    /// Create a new `BoxcarKernel`.
-    ///
-    /// This raises an error if `sample_count` is zero.
-    #[new]
-    fn __new__(phase: f64, scale: f64, sample_count: NonZeroU64) -> Self {
-        Self {
-            phase: crate::units::Cycles(phase),
-            scale,
-            sample_count: sample_count.0.into(),
+macro_rules! python_waveforms {
+    ($($waveform:ident $(($concrete:ident))? $({ $($field:ident: $ty:ty),+ $(,)? })?)*) => {
+        paste::paste! {
+            $(
+                #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+                #[pymethods]
+                impl [<$($concrete)? $waveform>] {
+                    #[pyo3(signature = ($(* $(, $field)+)?))]
+                    #[new]
+                    fn __new__($($($field: $ty),+)?) -> Self {
+                        [<$($concrete)? $waveform>]$(($waveform { $($field),* }))?
+                    }
+
+                    fn __getnewargs_ex__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+                        let Self$(($waveform { $($field),* }))? = *self;
+                        let arguments: [(&'static str, first_ty!($($($ty,)+)? ())); _] =
+                            [$($((stringify!($field), $field)),+)?];
+                        (PyTuple::empty(py), arguments.into_py_dict(py)?).into_pyobject(py)
+                    }
+
+                    #[pyo3(name = "iq_values_at_sample_rate")]
+                    fn py_iq_values_at_sample_rate(
+                        &self,
+                        common: ConcreteCommonBuiltinParameters,
+                        sample_rate: f64,
+                    ) -> PyResult<IqSamples> {
+                        python_access_inner!(self, $($concrete)?)
+                            .iq_values_at_sample_rate(common.0, sample_rate)
+                            .map_err(PyValueError::new_err)
+
+                    }
+                }
+            )*
         }
     }
-
-    /// Get the `complex` value this `BoxcarKernel` represents.
-    #[pyo3(name = "into_iq_value")]
-    fn py_into_iq_value(&self) -> Complex64 {
-        self.into_iq_value()
-    }
 }
 
-#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[pymethods]
-impl ErfSquare {
-    #[new]
-    #[allow(clippy::too_many_arguments)]
-    fn __new__(
-        duration: f64,
+python_waveforms! {
+    Flat (Concrete) {
+        iq: Complex64,
+    }
+
+    Gaussian (Concrete) {
+        fwhm: f64,
+        t0: f64,
+    }
+
+    DragGaussian (Concrete) {
+        fwhm: f64,
+        t0: f64,
+        anh: f64,
+        alpha: f64,
+    }
+
+    ErfSquare (Concrete) {
         risetime: f64,
-        sample_rate: f64,
         pad_left: f64,
         pad_right: f64,
-        positive_polarity: bool,
-        scale: f64,
-        phase: f64,
-        detuning: f64,
-    ) -> Self {
-        Self {
-            duration,
-            risetime,
-            sample_rate,
-            pad_left,
-            pad_right,
-            positive_polarity,
-            scale,
-            phase,
-            detuning,
-        }
     }
 
-    /// Get the a list of `complex` values from this waveform.
-    #[pyo3(name = "into_iq_value")]
-    fn py_into_iq_values(&self) -> Vec<Complex64> {
-        self.into_iq_values()
-    }
-}
-
-#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[pymethods]
-impl Gaussian {
-    #[new]
-    fn __new__(
-        duration: f64,
-        fwhm: f64,
-        t0: f64,
-        sample_rate: f64,
-        scale: f64,
-        phase: f64,
-        detuning: f64,
-    ) -> Self {
-        Self {
-            duration,
-            fwhm,
-            t0,
-            sample_rate,
-            scale,
-            phase,
-            detuning,
-        }
-    }
-
-    /// Get the a list of `complex` values from this waveform.
-    #[pyo3(name = "into_iq_value")]
-    fn py_into_iq_values(&self) -> Vec<Complex64> {
-        self.into_iq_values()
-    }
-}
-
-#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[pymethods]
-impl DragGaussian {
-    #[new]
-    #[allow(clippy::too_many_arguments)]
-    fn __new__(
-        duration: f64,
+    HermiteGaussian (Concrete) {
         fwhm: f64,
         t0: f64,
         anh: f64,
         alpha: f64,
-        sample_rate: f64,
-        scale: f64,
-        phase: f64,
-        detuning: f64,
-    ) -> Self {
-        Self {
-            duration,
-            fwhm,
-            t0,
-            anh,
-            alpha,
-            sample_rate,
-            scale,
-            phase,
-            detuning,
-        }
-    }
-
-    /// Get the a list of `complex` values from this waveform.
-    #[pyo3(name = "into_iq_value")]
-    fn py_into_iq_values(&self) -> Vec<Complex64> {
-        self.into_iq_values()
-    }
-}
-
-#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[pymethods]
-impl HermiteGaussian {
-    #[allow(clippy::too_many_arguments)]
-    #[new]
-    fn __new__(
-        duration: f64,
-        fwhm: f64,
-        t0: f64,
-        anh: f64,
-        alpha: f64,
-        sample_rate: f64,
         second_order_hrm_coeff: f64,
-        scale: f64,
-        phase: f64,
-        detuning: f64,
-    ) -> Self {
-        Self {
-            duration,
-            fwhm,
-            t0,
-            anh,
-            alpha,
-            sample_rate,
-            second_order_hrm_coeff,
-            scale,
-            phase,
-            detuning,
-        }
     }
 
-    /// Get the a list of `complex` values from this waveform.
-    #[pyo3(name = "into_iq_value")]
-    fn py_into_iq_values(&self) -> Vec<Complex64> {
-        self.into_iq_values()
+    BoxcarKernel
+}
+
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl ConcreteBuiltinWaveform {
+    #[pyo3(name = "iq_values_at_sample_rate")]
+    fn py_iq_values_at_sample_rate(
+        &self,
+        common: ConcreteCommonBuiltinParameters,
+        sample_rate: f64,
+    ) -> PyResult<IqSamples> {
+        self.0
+            .iq_values_at_sample_rate(common.0, sample_rate)
+            .map_err(PyValueError::new_err)
+    }
+}
+
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl IqSamples {
+    #[pyo3(name = "sample_count")]
+    pub fn py_sample_count(&self) -> usize {
+        self.sample_count()
+    }
+
+    #[pyo3(name = "get")]
+    pub fn py_get(&self, index: usize) -> Option<Complex64> {
+        self.get(index)
+    }
+
+    pub fn iq_values(&self) -> Vec<Complex64> {
+        self.clone().into_iq_values()
     }
 }

@@ -177,14 +177,16 @@ macro_rules! impl_to_quil {
 
 /// Add a `__repr__` method that returns the Rust type's `Debug` string.
 macro_rules! impl_repr {
-    ($name: ident) => {
-        #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-        #[pyo3::pymethods]
-        impl $name {
-            fn __repr__(&self) -> String {
-                format!("{self:?}")
+    ($($name: ident),* $(,)?) => {
+        $(
+            #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+            #[pyo3::pymethods]
+            impl $name {
+                fn __repr__(&self) -> String {
+                    format!("{self:?}")
+                }
             }
-        }
+        )*
     };
 }
 

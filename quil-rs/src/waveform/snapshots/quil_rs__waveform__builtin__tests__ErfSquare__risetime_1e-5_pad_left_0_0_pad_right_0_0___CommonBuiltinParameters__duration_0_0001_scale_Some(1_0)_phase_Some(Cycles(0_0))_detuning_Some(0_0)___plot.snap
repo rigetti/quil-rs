@@ -1,5 +1,5 @@
 ---
-source: quil-rs/src/waveform/templates.rs
+source: quil-rs/src/waveform/builtin.rs
 expression: res
 ---
  1.00 ┤        ╭────────────────────────────────────────────────────────────────────────────────────────────╮        
