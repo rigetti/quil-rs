@@ -73,13 +73,13 @@
                                 <a class="function" href="#BasicBlock.gate_depth">gate_depth</a>
                         </li>
                         <li>
-                                <a class="variable" href="#BasicBlock.terminator">terminator</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#BasicBlock.instructions">instructions</a>
                         </li>
                         <li>
                                 <a class="variable" href="#BasicBlock.label">label</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#BasicBlock.terminator">terminator</a>
                         </li>
                 </ul>
 
@@ -88,10 +88,10 @@
                     <a class="class" href="#CalibrationExpansion">CalibrationExpansion</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#CalibrationExpansion.range">range</a>
+                                <a class="variable" href="#CalibrationExpansion.calibration_used">calibration_used</a>
                         </li>
                         <li>
-                                <a class="variable" href="#CalibrationExpansion.calibration_used">calibration_used</a>
+                                <a class="variable" href="#CalibrationExpansion.range">range</a>
                         </li>
                         <li>
                                 <a class="variable" href="#CalibrationExpansion.expansions">expansions</a>
@@ -145,10 +145,10 @@
                                 <a class="function" href="#CalibrationSet.to_instructions">to_instructions</a>
                         </li>
                         <li>
-                                <a class="variable" href="#CalibrationSet.calibrations">calibrations</a>
+                                <a class="variable" href="#CalibrationSet.measure_calibrations">measure_calibrations</a>
                         </li>
                         <li>
-                                <a class="variable" href="#CalibrationSet.measure_calibrations">measure_calibrations</a>
+                                <a class="variable" href="#CalibrationSet.calibrations">calibrations</a>
                         </li>
                 </ul>
 
@@ -256,10 +256,10 @@
                     <a class="class" href="#MemoryRegion">MemoryRegion</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#MemoryRegion.size">size</a>
+                                <a class="variable" href="#MemoryRegion.sharing">sharing</a>
                         </li>
                         <li>
-                                <a class="variable" href="#MemoryRegion.sharing">sharing</a>
+                                <a class="variable" href="#MemoryRegion.size">size</a>
                         </li>
                 </ul>
 
@@ -271,10 +271,10 @@
                                 <a class="function" href="#OwnedDefGateSequenceExpansion.expansions">expansions</a>
                         </li>
                         <li>
-                                <a class="variable" href="#OwnedDefGateSequenceExpansion.range">range</a>
+                                <a class="variable" href="#OwnedDefGateSequenceExpansion.source_signature">source_signature</a>
                         </li>
                         <li>
-                                <a class="variable" href="#OwnedDefGateSequenceExpansion.source_signature">source_signature</a>
+                                <a class="variable" href="#OwnedDefGateSequenceExpansion.range">range</a>
                         </li>
                 </ul>
 
@@ -343,19 +343,25 @@
                                 <a class="function" href="#Program.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.waveforms">waveforms</a>
+                                <a class="variable" href="#Program.pragma_extern_map">pragma_extern_map</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Program.frames">frames</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.body_instructions">body_instructions</a>
+                                <a class="variable" href="#Program.gate_definitions">gate_definitions</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Program.instructions">instructions</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.pragma_extern_map">pragma_extern_map</a>
+                                <a class="variable" href="#Program.used_qubits">used_qubits</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Program.calibrations">calibrations</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Program.body_instructions">body_instructions</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Program.declarations">declarations</a>
@@ -364,16 +370,10 @@
                                 <a class="variable" href="#Program.memory_regions">memory_regions</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.calibrations">calibrations</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Program.used_qubits">used_qubits</a>
+                                <a class="variable" href="#Program.waveforms">waveforms</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Program.circuits">circuits</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Program.gate_definitions">gate_definitions</a>
                         </li>
                 </ul>
 
@@ -406,10 +406,10 @@
                     <a class="class" href="#TimeSpanSeconds">TimeSpanSeconds</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#TimeSpanSeconds.duration">duration</a>
+                                <a class="variable" href="#TimeSpanSeconds.end">end</a>
                         </li>
                         <li>
-                                <a class="variable" href="#TimeSpanSeconds.end">end</a>
+                                <a class="variable" href="#TimeSpanSeconds.duration">duration</a>
                         </li>
                         <li>
                                 <a class="variable" href="#TimeSpanSeconds.start">start</a>
@@ -616,21 +616,6 @@ for it to be counted in the depth.</li>
 
 
                             </div>
-                            <div id="BasicBlock.terminator" class="classattr">
-                                <div class="attr variable">
-            <span class="name">terminator</span>
-
-        
-    </div>
-    <a class="headerlink" href="#BasicBlock.terminator"></a>
-    
-            <div class="docstring"><p>The control flow terminator instruction of the block, if any.</p>
-
-<p>If this is <code>None</code>, the implicit behavior is to "continue" to the subsequent block.</p>
-</div>
-
-
-                            </div>
                             <div id="BasicBlock.instructions" class="classattr">
                                 <div class="attr variable">
             <span class="name">instructions</span>
@@ -660,6 +645,21 @@ This is used to target this block in control flow.</p>
 
 
                             </div>
+                            <div id="BasicBlock.terminator" class="classattr">
+                                <div class="attr variable">
+            <span class="name">terminator</span>
+
+        
+    </div>
+    <a class="headerlink" href="#BasicBlock.terminator"></a>
+    
+            <div class="docstring"><p>The control flow terminator instruction of the block, if any.</p>
+
+<p>If this is <code>None</code>, the implicit behavior is to "continue" to the subsequent block.</p>
+</div>
+
+
+                            </div>
                 </section>
                 <section id="CalibrationExpansion">
                     <div class="attr class">
@@ -675,6 +675,19 @@ This is used to target this block in control flow.</p>
 </div>
 
 
+                            <div id="CalibrationExpansion.calibration_used" class="classattr">
+                                <div class="attr variable">
+            <span class="name">calibration_used</span>
+
+        
+    </div>
+    <a class="headerlink" href="#CalibrationExpansion.calibration_used"></a>
+    
+            <div class="docstring"><p>The calibration used to expand the instruction.</p>
+</div>
+
+
+                            </div>
                             <div id="CalibrationExpansion.range" class="classattr">
                                 <div class="attr variable">
             <span class="name">range</span>
@@ -685,19 +698,6 @@ This is used to target this block in control flow.</p>
     
             <div class="docstring"><p>The range of instructions in the expanded list
 which were generated by this expansion.</p>
-</div>
-
-
-                            </div>
-                            <div id="CalibrationExpansion.calibration_used" class="classattr">
-                                <div class="attr variable">
-            <span class="name">calibration_used</span>
-
-        
-    </div>
-    <a class="headerlink" href="#CalibrationExpansion.calibration_used"></a>
-    
-            <div class="docstring"><p>The calibration used to expand the instruction.</p>
 </div>
 
 
@@ -951,19 +951,6 @@ given set.</p>
 
 
                             </div>
-                            <div id="CalibrationSet.calibrations" class="classattr">
-                                <div class="attr variable">
-            <span class="name">calibrations</span>
-
-        
-    </div>
-    <a class="headerlink" href="#CalibrationSet.calibrations"></a>
-    
-            <div class="docstring"><p>Return a list of all [<code>CalibrationDefinition</code>]s in the set.</p>
-</div>
-
-
-                            </div>
                             <div id="CalibrationSet.measure_calibrations" class="classattr">
                                 <div class="attr variable">
             <span class="name">measure_calibrations</span>
@@ -973,6 +960,19 @@ given set.</p>
     <a class="headerlink" href="#CalibrationSet.measure_calibrations"></a>
     
             <div class="docstring"><p>Return a list of all [<code>MeasureCalibrationDefinition</code>]s in the set.</p>
+</div>
+
+
+                            </div>
+                            <div id="CalibrationSet.calibrations" class="classattr">
+                                <div class="attr variable">
+            <span class="name">calibrations</span>
+
+        
+    </div>
+    <a class="headerlink" href="#CalibrationSet.calibrations"></a>
+    
+            <div class="docstring"><p>Return a list of all [<code>CalibrationDefinition</code>]s in the set.</p>
 </div>
 
 
@@ -1427,17 +1427,6 @@ level of expansion and <em>not</em> the original program.</p>
     
     
 
-                            <div id="MemoryRegion.size" class="classattr">
-                                <div class="attr variable">
-            <span class="name">size</span>
-
-        
-    </div>
-    <a class="headerlink" href="#MemoryRegion.size"></a>
-    
-    
-
-                            </div>
                             <div id="MemoryRegion.sharing" class="classattr">
                                 <div class="attr variable">
             <span class="name">sharing</span>
@@ -1445,6 +1434,17 @@ level of expansion and <em>not</em> the original program.</p>
         
     </div>
     <a class="headerlink" href="#MemoryRegion.sharing"></a>
+    
+    
+
+                            </div>
+                            <div id="MemoryRegion.size" class="classattr">
+                                <div class="attr variable">
+            <span class="name">size</span>
+
+        
+    </div>
+    <a class="headerlink" href="#MemoryRegion.size"></a>
     
     
 
@@ -1481,19 +1481,6 @@ so we define an owned type here.</p>
 
 
                             </div>
-                            <div id="OwnedDefGateSequenceExpansion.range" class="classattr">
-                                <div class="attr variable">
-            <span class="name">range</span>
-
-        
-    </div>
-    <a class="headerlink" href="#OwnedDefGateSequenceExpansion.range"></a>
-    
-            <div class="docstring"><p>The range of instructions in the expanded list which were generated by this expansion.</p>
-</div>
-
-
-                            </div>
                             <div id="OwnedDefGateSequenceExpansion.source_signature" class="classattr">
                                 <div class="attr variable">
             <span class="name">source_signature</span>
@@ -1503,6 +1490,19 @@ so we define an owned type here.</p>
     <a class="headerlink" href="#OwnedDefGateSequenceExpansion.source_signature"></a>
     
             <div class="docstring"><p>The signature of the sequence gate definition which was used to expand the instruction.</p>
+</div>
+
+
+                            </div>
+                            <div id="OwnedDefGateSequenceExpansion.range" class="classattr">
+                                <div class="attr variable">
+            <span class="name">range</span>
+
+        
+    </div>
+    <a class="headerlink" href="#OwnedDefGateSequenceExpansion.range"></a>
+    
+            <div class="docstring"><p>The range of instructions in the expanded list which were generated by this expansion.</p>
 </div>
 
 
@@ -1989,13 +1989,13 @@ and definitions which are executed; effectively, perform dead code removal.</p>
 
 
                             </div>
-                            <div id="Program.waveforms" class="classattr">
+                            <div id="Program.pragma_extern_map" class="classattr">
                                 <div class="attr variable">
-            <span class="name">waveforms</span>
+            <span class="name">pragma_extern_map</span>
 
         
     </div>
-    <a class="headerlink" href="#Program.waveforms"></a>
+    <a class="headerlink" href="#Program.pragma_extern_map"></a>
     
     
 
@@ -2011,13 +2011,13 @@ and definitions which are executed; effectively, perform dead code removal.</p>
     
 
                             </div>
-                            <div id="Program.body_instructions" class="classattr">
+                            <div id="Program.gate_definitions" class="classattr">
                                 <div class="attr variable">
-            <span class="name">body_instructions</span>
+            <span class="name">gate_definitions</span>
 
         
     </div>
-    <a class="headerlink" href="#Program.body_instructions"></a>
+    <a class="headerlink" href="#Program.gate_definitions"></a>
     
     
 
@@ -2033,13 +2033,35 @@ and definitions which are executed; effectively, perform dead code removal.</p>
     
 
                             </div>
-                            <div id="Program.pragma_extern_map" class="classattr">
+                            <div id="Program.used_qubits" class="classattr">
                                 <div class="attr variable">
-            <span class="name">pragma_extern_map</span>
+            <span class="name">used_qubits</span>
 
         
     </div>
-    <a class="headerlink" href="#Program.pragma_extern_map"></a>
+    <a class="headerlink" href="#Program.used_qubits"></a>
+    
+    
+
+                            </div>
+                            <div id="Program.calibrations" class="classattr">
+                                <div class="attr variable">
+            <span class="name">calibrations</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.calibrations"></a>
+    
+    
+
+                            </div>
+                            <div id="Program.body_instructions" class="classattr">
+                                <div class="attr variable">
+            <span class="name">body_instructions</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.body_instructions"></a>
     
     
 
@@ -2066,24 +2088,13 @@ and definitions which are executed; effectively, perform dead code removal.</p>
     
 
                             </div>
-                            <div id="Program.calibrations" class="classattr">
+                            <div id="Program.waveforms" class="classattr">
                                 <div class="attr variable">
-            <span class="name">calibrations</span>
+            <span class="name">waveforms</span>
 
         
     </div>
-    <a class="headerlink" href="#Program.calibrations"></a>
-    
-    
-
-                            </div>
-                            <div id="Program.used_qubits" class="classattr">
-                                <div class="attr variable">
-            <span class="name">used_qubits</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.used_qubits"></a>
+    <a class="headerlink" href="#Program.waveforms"></a>
     
     
 
@@ -2095,17 +2106,6 @@ and definitions which are executed; effectively, perform dead code removal.</p>
         
     </div>
     <a class="headerlink" href="#Program.circuits"></a>
-    
-    
-
-                            </div>
-                            <div id="Program.gate_definitions" class="classattr">
-                                <div class="attr variable">
-            <span class="name">gate_definitions</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.gate_definitions"></a>
     
     
 
@@ -2210,19 +2210,6 @@ each of which is assigned a start time and duration.</p>
 </div>
 
 
-                            <div id="TimeSpanSeconds.duration" class="classattr">
-                                <div class="attr variable">
-            <span class="name">duration</span>
-
-        
-    </div>
-    <a class="headerlink" href="#TimeSpanSeconds.duration"></a>
-    
-            <div class="docstring"><p>The duration of the time span, in seconds.</p>
-</div>
-
-
-                            </div>
                             <div id="TimeSpanSeconds.end" class="classattr">
                                 <div class="attr variable">
             <span class="name">end</span>
@@ -2234,6 +2221,19 @@ each of which is assigned a start time and duration.</p>
             <div class="docstring"><p>The end time of the time span, in seconds.</p>
 
 <p>This is the sum of the start time and duration.</p>
+</div>
+
+
+                            </div>
+                            <div id="TimeSpanSeconds.duration" class="classattr">
+                                <div class="attr variable">
+            <span class="name">duration</span>
+
+        
+    </div>
+    <a class="headerlink" href="#TimeSpanSeconds.duration"></a>
+    
+            <div class="docstring"><p>The duration of the time span, in seconds.</p>
 </div>
 
 
