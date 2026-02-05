@@ -162,8 +162,8 @@ impl Extractable for CommonBuiltinParameters<Syntactic> {
     fn extract_from(parameters: &mut WaveformParameters) -> Result<Self, WaveformParameterError> {
         let duration = concrete_real(parameters, "duration")?;
         let scale = parameters.shift_remove("scale");
-        let phase = parameters.shift_remove("scale").map(Cycles);
-        let detuning = parameters.shift_remove("scale");
+        let phase = parameters.shift_remove("phase").map(Cycles);
+        let detuning = parameters.shift_remove("detuning");
 
         Ok(Self {
             duration,
