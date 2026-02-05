@@ -45,9 +45,7 @@ pub(crate) fn parse_instruction(input: ParserInput) -> InternalParserResult<Inst
         Some((Token::Command(command), remainder)) => match command {
             Command::Add => command::parse_arithmetic(ArithmeticOperator::Add, remainder),
             Command::And => command::parse_logical_binary(BinaryOperator::And, remainder),
-            Command::ArithmeticShiftRight => {
-                command::parse_logical_binary(BinaryOperator::ArithmeticShiftRight, remainder)
-            }
+            Command::Ashr => command::parse_logical_binary(BinaryOperator::Ashr, remainder),
             Command::Call => command::parse_call(remainder),
             Command::Capture => command::parse_capture(remainder, true),
             Command::Convert => command::parse_convert(remainder),
@@ -92,13 +90,9 @@ pub(crate) fn parse_instruction(input: ParserInput) -> InternalParserResult<Inst
             Command::SetPhase => command::parse_set_phase(remainder),
             Command::SetScale => command::parse_set_scale(remainder),
             Command::ShiftFrequency => command::parse_shift_frequency(remainder),
-            Command::ShiftLeft => {
-                command::parse_logical_binary(BinaryOperator::ShiftLeft, remainder)
-            }
             Command::ShiftPhase => command::parse_shift_phase(remainder),
-            Command::ShiftRight => {
-                command::parse_logical_binary(BinaryOperator::ShiftRight, remainder)
-            }
+            Command::Shl => command::parse_logical_binary(BinaryOperator::Shl, remainder),
+            Command::Shr => command::parse_logical_binary(BinaryOperator::Shr, remainder),
             Command::SwapPhases => command::parse_swap_phases(remainder),
             Command::Store => command::parse_store(remainder),
             Command::Sub => command::parse_arithmetic(ArithmeticOperator::Subtract, remainder),
@@ -356,15 +350,15 @@ mod tests {
             "AND ro[1] ro[11]",
             "IOR ro[2] ro[12]",
             "XOR ro[3] ro[13]",
-            "SHIFT-LEFT ro[4] ro[14]",
-            "SHIFT-RIGHT ro[5] ro[15]",
-            "ARITHMETIC-SHIFT-RIGHT ro[6] ro[16]",
+            "SHL ro[4] ro[14]",
+            "SHR ro[5] ro[15]",
+            "ASHR ro[6] ro[16]",
             "AND ro 21",
             "IOR ro 22",
             "XOR ro 23",
-            "SHIFT-LEFT ro 24",
-            "SHIFT-RIGHT ro 25",
-            "ARITHMETIC-SHIFT-RIGHT ro 26",
+            "SHL ro 24",
+            "SHR ro 25",
+            "ASHR ro 26",
         ]
         .join("\n"),
         vec![
@@ -402,7 +396,7 @@ mod tests {
                 }),
             }),
             Instruction::BinaryLogic(BinaryLogic {
-                operator: BinaryOperator::ShiftLeft,
+                operator: BinaryOperator::Shl,
                 destination: MemoryReference {
                     name: "ro".to_owned(),
                     index: 4,
@@ -413,7 +407,7 @@ mod tests {
                 }),
             }),
             Instruction::BinaryLogic(BinaryLogic {
-                operator: BinaryOperator::ShiftRight,
+                operator: BinaryOperator::Shr,
                 destination: MemoryReference {
                     name: "ro".to_owned(),
                     index: 5,
@@ -424,7 +418,7 @@ mod tests {
                 }),
             }),
             Instruction::BinaryLogic(BinaryLogic {
-                operator: BinaryOperator::ArithmeticShiftRight,
+                operator: BinaryOperator::Ashr,
                 destination: MemoryReference {
                     name: "ro".to_owned(),
                     index: 6,
@@ -459,7 +453,7 @@ mod tests {
                 source: BinaryOperand::LiteralInteger(23),
             }),
             Instruction::BinaryLogic(BinaryLogic {
-                operator: BinaryOperator::ShiftLeft,
+                operator: BinaryOperator::Shl,
                 destination: MemoryReference {
                     name: "ro".to_owned(),
                     index: 0,
@@ -467,7 +461,7 @@ mod tests {
                 source: BinaryOperand::LiteralInteger(24),
             }),
             Instruction::BinaryLogic(BinaryLogic {
-                operator: BinaryOperator::ShiftRight,
+                operator: BinaryOperator::Shr,
                 destination: MemoryReference {
                     name: "ro".to_owned(),
                     index: 0,
@@ -475,7 +469,7 @@ mod tests {
                 source: BinaryOperand::LiteralInteger(25),
             }),
             Instruction::BinaryLogic(BinaryLogic {
-                operator: BinaryOperator::ArithmeticShiftRight,
+                operator: BinaryOperator::Ashr,
                 destination: MemoryReference {
                     name: "ro".to_owned(),
                     index: 0,

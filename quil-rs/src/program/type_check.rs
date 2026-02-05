@@ -729,15 +729,7 @@ DECLARE left {left_type}
         #[values("REAL", "INTEGER", "BIT", "OCTET")] dst_type: &str,
         #[values("y")] src_decl: &str,
         #[values("REAL", "INTEGER", "BIT", "OCTET")] src_type: &str,
-        #[values(
-            "AND",
-            "IOR",
-            "XOR",
-            "SHIFT-LEFT",
-            "SHIFT-RIGHT",
-            "ARITHMETIC-SHIFT-RIGHT"
-        )]
-        operator: &str,
+        #[values("AND", "IOR", "XOR", "SHL", "SHR", "ASHR")] operator: &str,
         #[values("x", "not_x")] dst_ref: &str,
         #[values("y", "not_y")] src_ref: &str,
     ) {
@@ -758,15 +750,7 @@ DECLARE {src_decl} {src_type}
     fn test_binary_logic_immediate_values(
         #[values("x")] dst_decl: &str,
         #[values("REAL", "INTEGER", "BIT", "OCTET")] dst_type: &str,
-        #[values(
-            "AND",
-            "IOR",
-            "XOR",
-            "SHIFT-LEFT",
-            "SHIFT-RIGHT",
-            "ARITHMETIC-SHIFT-RIGHT"
-        )]
-        operator: &str,
+        #[values("AND", "IOR", "XOR", "SHL", "SHR", "ASHR")] operator: &str,
         #[values("x", "not_x")] dst_ref: &str,
     ) {
         let p = Program::from_str(&format!(

@@ -177,9 +177,9 @@ pub enum BinaryOperator {
     And,
     Ior,
     Xor,
-    ShiftLeft,
-    ShiftRight,
-    ArithmeticShiftRight,
+    Shl,
+    Shr,
+    Ashr,
 }
 
 impl Quil for BinaryOperator {
@@ -192,9 +192,9 @@ impl Quil for BinaryOperator {
             BinaryOperator::And => write!(f, "AND"),
             BinaryOperator::Ior => write!(f, "IOR"),
             BinaryOperator::Xor => write!(f, "XOR"),
-            BinaryOperator::ShiftLeft => write!(f, "SHIFT-LEFT"),
-            BinaryOperator::ShiftRight => write!(f, "SHIFT-RIGHT"),
-            BinaryOperator::ArithmeticShiftRight => write!(f, "ARITHMETIC-SHIFT-RIGHT"),
+            BinaryOperator::Shl => write!(f, "SHL"),
+            BinaryOperator::Shr => write!(f, "SHR"),
+            BinaryOperator::Ashr => write!(f, "ASHR"),
         }
         .map_err(Into::into)
     }
