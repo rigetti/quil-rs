@@ -24,6 +24,7 @@ nom = "7.1.1"
 nom_locate = "4.0.0"
 num-complex = "0.4.6"
 once_cell = "1.17.1"
+optipy = "0.1.0"
 petgraph = "0.6.4"
 regex = "1.7.1"
 serde = { version = "1.0.125", features = ["derive"] }
@@ -36,9 +37,7 @@ paste = "1.0.15"
 # Enabled with the "python" feature.
 numpy = { version = "0.27.1", optional = true }
 pyo3 = { version = "0.27.2", features = ["indexmap", "num-complex", "multiple-pymethods"], optional = true }
-# TODO: update after PR is merged.
-rigetti-pyo3 = { git = "https://github.com/rigetti/rigetti-pyo3.git", rev = "refs/pull/62/head", optional = true, version = "0.4.4" }
-optipy = { git = "https://github.com/rigetti/rigetti-pyo3.git", rev = "refs/pull/62/head", version = "0.1.0" }
+rigetti-pyo3 = { version = "0.5.0", optional = true }
 
 # Enabled with the "stubs" feature.
 pyo3-stub-gen = { version = "0.17.2", features = ["numpy"], optional = true }
