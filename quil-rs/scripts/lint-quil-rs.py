@@ -7,26 +7,38 @@ Afterward, it may print some messages about potential mistakes.
 Run the script with ``--help`` to see its options.
 """
 
-from pathlib import Path
-import argparse
 import sys
 import logging
 
 logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger()
 
-from pyo3_linter import find_possible_mistakes, print_package_info, process_dir
+from pyo3_linter import (
+    find_possible_mistakes,
+    print_package_info,
+    process_dir,
+    parser,
+    PackageConfig,
+    Item,
+    Kind,
+    MacroContext,
+    join_lines,
+    iter_delim,
+    macro_handler,
+    default_macro_handlers,
+)
 
 
 def main():
-    args = get_parser().parse_args()
+    args = parser.get_parser().parse_args()
 
     if args.log_level is not None:
         logger.setLevel(args.log_level)
 
-    annotated, exported = process_dir(args.base)
+    package_config = PackageConfig(root_module="quil", internal_module="_quil")
+    annotated, exported = process_dir(args.base, package_config, default_macro_handlers() + [_impl_instruction])
 
-    issues = find_possible_mistakes(annotated, exported)
+    issues = find_possible_mistakes(package_config, annotated, exported)
     if args.show_mistakes:
         for issue in issues:
             print(issue.message)
@@ -41,62 +53,22 @@ def main():
         sys.exit(1)
 
 
-def get_parser() -> argparse.ArgumentParser:
-    DEFAULT_PATH = Path("./src")
+@macro_handler(r"impl_instruction!")
+def _impl_instruction(ctx: MacroContext, module: str | None = None) -> None:
+    """Process the input to the ``impl_instruction!`` macro."""
 
-    parser = argparse.ArgumentParser(description="Lint quil-py source files.")
-
-    parser.add_argument(
-        "-b",
-        "--base",
-        metavar="PATH",
-        type=Path,
-        help=f"the base path to source files (default: '{DEFAULT_PATH}')",
-        default=DEFAULT_PATH,
+    line = join_lines(iter_delim(ctx.lines, "[]"))
+    ctx.exported["quil.instructions"].update(
+        Item(
+            kind=Kind.Class,
+            python_name=rust_name,
+            rust_name=rust_name,
+            path=ctx.path,
+            line=line,
+        )
+        for name in line.text.replace(" ", "").removeprefix("impl_instruction!([").removesuffix("]);").split(",")
+        if (rust_name := name.partition("[")[0].strip()) != ""
     )
-
-    parser.add_argument(
-        "-m",
-        "--show-mistakes",
-        action="store_true",
-        default="",
-        help="Show likely mistakes (default: enabled).",
-    )
-
-    parser.add_argument(
-        "-M",
-        "--no-show-mistakes",
-        action="store_false",
-        dest="show_mistakes",
-        help="Don't show likely mistakes.",
-    )
-
-    parser.add_argument(
-        "-p",
-        "--show-package",
-        action="store_true",
-        help="Show package details (default: disabled).",
-    )
-
-    parser.add_argument(
-        "-P",
-        "--no-show-package",
-        action="store_false",
-        dest="show_package",
-        default="",
-        help="Don't show package details.",
-    )
-
-    parser.add_argument(
-        "--log-level",
-        help="set the logger level",
-        choices=tuple(
-            logging.getLevelName(level)
-            for level in (logging.DEBUG, logging.INFO, logging.WARNING, logging.ERROR)
-        ),
-    )
-
-    return parser
 
 
 if __name__ == "__main__":

@@ -1,4 +1,7 @@
 [tasks.check]
+dependencies = ["hack-check", "check-quil"]
+
+[tasks.hack-check]
 command = "cargo"
 args = ["hack", "--feature-powerset", "check"]
 
@@ -40,9 +43,12 @@ description = "Check python stubfiles."
 dependencies = ["install-quil-with-stubs"]
 command = "poetry"
 cwd = "python"
-args = ["run", "stubtest", "quil"]
 # TODO(#475): Enable error reporting once stubtest is happy with stubgen's output.
-ignore_errors = true
+args = [
+    "run", "stubtest", "quil",
+    "--allowlist", "stubtest-allowlist",
+    "--ignore-disjoint-bases",
+]
 
 [tasks.lint-quil]
 description = "Find errors in quil-related Rust code."
@@ -64,6 +70,9 @@ dependencies = ["test", "test-quil"]
 
 [tasks.default]
 alias = "test-all"
+
+[tasks.check-quil]
+dependencies = ["lint-quil", "stubtest", "check-api"]
 
 [tasks.check-api]
 description = "Check if quil API has breaking changes."

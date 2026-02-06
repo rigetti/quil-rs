@@ -37,14 +37,18 @@ class BoxcarKernel:
         r"""
         Scale applied to the waveform envelope.
         """
-    def __eq__(self, other:builtins.object) -> builtins.bool: ...
-    def __new__(cls, phase:builtins.float, scale:builtins.float, sample_count:builtins.int) -> BoxcarKernel:
+    def __eq__(self, other: builtins.object) -> builtins.bool: ...
+    def __new__(cls, phase: builtins.float, scale: builtins.float, sample_count: builtins.int) -> BoxcarKernel:
         r"""
         Create a new `BoxcarKernel`.
         
         This raises an error if `sample_count` is zero.
         """
-    def __repr__(self) -> builtins.str: ...
+    def __repr__(self) -> builtins.str:
+        r"""
+        Implements `__repr__` for Python in terms of the Rust
+        [`Debug`](std::fmt::Debug) implementation.
+        """
     def into_iq_value(self) -> builtins.complex:
         r"""
         Get the `complex` value this `BoxcarKernel` represents.
@@ -148,9 +152,13 @@ class DragGaussian:
         r"""
         Center/offset for pulse centroid (s)
         """
-    def __eq__(self, other:builtins.object) -> builtins.bool: ...
-    def __new__(cls, duration:builtins.float, fwhm:builtins.float, t0:builtins.float, anh:builtins.float, alpha:builtins.float, sample_rate:builtins.float, scale:builtins.float, phase:builtins.float, detuning:builtins.float) -> DragGaussian: ...
-    def __repr__(self) -> builtins.str: ...
+    def __eq__(self, other: builtins.object) -> builtins.bool: ...
+    def __new__(cls, duration: builtins.float, fwhm: builtins.float, t0: builtins.float, anh: builtins.float, alpha: builtins.float, sample_rate: builtins.float, scale: builtins.float, phase: builtins.float, detuning: builtins.float) -> DragGaussian: ...
+    def __repr__(self) -> builtins.str:
+        r"""
+        Implements `__repr__` for Python in terms of the Rust
+        [`Debug`](std::fmt::Debug) implementation.
+        """
     def into_iq_value(self) -> builtins.list[builtins.complex]:
         r"""
         Get the a list of `complex` values from this waveform.
@@ -250,9 +258,13 @@ class ErfSquare:
         r"""
         Scale to apply to waveform envelope
         """
-    def __eq__(self, other:builtins.object) -> builtins.bool: ...
-    def __new__(cls, duration:builtins.float, risetime:builtins.float, sample_rate:builtins.float, pad_left:builtins.float, pad_right:builtins.float, positive_polarity:builtins.bool, scale:builtins.float, phase:builtins.float, detuning:builtins.float) -> ErfSquare: ...
-    def __repr__(self) -> builtins.str: ...
+    def __eq__(self, other: builtins.object) -> builtins.bool: ...
+    def __new__(cls, duration: builtins.float, risetime: builtins.float, sample_rate: builtins.float, pad_left: builtins.float, pad_right: builtins.float, positive_polarity: builtins.bool, scale: builtins.float, phase: builtins.float, detuning: builtins.float) -> ErfSquare: ...
+    def __repr__(self) -> builtins.str:
+        r"""
+        Implements `__repr__` for Python in terms of the Rust
+        [`Debug`](std::fmt::Debug) implementation.
+        """
     def into_iq_value(self) -> builtins.list[builtins.complex]:
         r"""
         Get the a list of `complex` values from this waveform.
@@ -332,9 +344,13 @@ class Gaussian:
         r"""
         Center/offset for pulse centroid (s)
         """
-    def __eq__(self, other:builtins.object) -> builtins.bool: ...
-    def __new__(cls, duration:builtins.float, fwhm:builtins.float, t0:builtins.float, sample_rate:builtins.float, scale:builtins.float, phase:builtins.float, detuning:builtins.float) -> Gaussian: ...
-    def __repr__(self) -> builtins.str: ...
+    def __eq__(self, other: builtins.object) -> builtins.bool: ...
+    def __new__(cls, duration: builtins.float, fwhm: builtins.float, t0: builtins.float, sample_rate: builtins.float, scale: builtins.float, phase: builtins.float, detuning: builtins.float) -> Gaussian: ...
+    def __repr__(self) -> builtins.str:
+        r"""
+        Implements `__repr__` for Python in terms of the Rust
+        [`Debug`](std::fmt::Debug) implementation.
+        """
     def into_iq_value(self) -> builtins.list[builtins.complex]:
         r"""
         Get the a list of `complex` values from this waveform.
@@ -452,15 +468,19 @@ class HermiteGaussian:
         r"""
         Center/offset for pulse centroid
         """
-    def __eq__(self, other:builtins.object) -> builtins.bool: ...
-    def __new__(cls, duration:builtins.float, fwhm:builtins.float, t0:builtins.float, anh:builtins.float, alpha:builtins.float, sample_rate:builtins.float, second_order_hrm_coeff:builtins.float, scale:builtins.float, phase:builtins.float, detuning:builtins.float) -> HermiteGaussian: ...
-    def __repr__(self) -> builtins.str: ...
+    def __eq__(self, other: builtins.object) -> builtins.bool: ...
+    def __new__(cls, duration: builtins.float, fwhm: builtins.float, t0: builtins.float, anh: builtins.float, alpha: builtins.float, sample_rate: builtins.float, second_order_hrm_coeff: builtins.float, scale: builtins.float, phase: builtins.float, detuning: builtins.float) -> HermiteGaussian: ...
+    def __repr__(self) -> builtins.str:
+        r"""
+        Implements `__repr__` for Python in terms of the Rust
+        [`Debug`](std::fmt::Debug) implementation.
+        """
     def into_iq_value(self) -> builtins.list[builtins.complex]:
         r"""
         Get the a list of `complex` values from this waveform.
         """
 
-def apply_phase_and_detuning(iq_values:list, phase:builtins.float, detuning:builtins.float, sample_rate:builtins.float) -> None:
+def apply_phase_and_detuning(iq_values: list, phase: builtins.float, detuning: builtins.float, sample_rate: builtins.float) -> None:
     r"""
     Modulate and phase shift waveform IQ data in place.
     """
