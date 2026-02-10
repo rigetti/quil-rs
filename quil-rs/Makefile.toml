@@ -8,7 +8,7 @@ args = ["hack", "--feature-powerset", "check"]
 [tasks.install-quil-deps]
 description = "Install quil dependencies using poetry"
 command = "poetry"
-args = ["install", "--extras", "dev", "--no-root"]
+args = ["install", "--with", "dev", "--no-root"]
 
 [tasks.generate-stubs]
 description = "Generate Python stub files for quil."
