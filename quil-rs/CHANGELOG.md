@@ -1,3 +1,17 @@
+## 0.35.0 (2026-02-10)
+
+### Breaking Changes
+
+- move circuit definitions into its own field in program (#492)
+
+### Features
+
+- update pyo3 (#491)
+
+### Fixes
+
+- manage optional dependencies properly (#496)
+
 ## 0.35.0-rc.5 (2026-02-10)
 
 ### Breaking Changes
