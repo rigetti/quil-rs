@@ -38,6 +38,9 @@ quil.instructions.ArithmeticOperator.SUBTRACT
 quil.instructions.BinaryOperator.AND
 quil.instructions.BinaryOperator.IOR
 quil.instructions.BinaryOperator.XOR
+quil.instructions.BinaryOperator.SHL
+quil.instructions.BinaryOperator.SHR
+quil.instructions.BinaryOperator.ASHR
 quil.instructions.ComparisonOperator.EQUAL
 quil.instructions.ComparisonOperator.GREATER_THAN
 quil.instructions.ComparisonOperator.GREATER_THAN_OR_EQUAL
