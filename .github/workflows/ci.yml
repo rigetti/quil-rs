@@ -49,12 +49,6 @@ jobs:
           python-version: '3.13'
       - uses: abatilo/actions-poetry@v4
 
-      - name: Configure Python Cache
-        uses: actions/cache@v4
-        with:
-          path: ./quil-rs/.venv
-          key: ${{ runner.os }}-venv-${{ hashFiles('**/poetry.lock') }}
-
       - name: Check for unmarked Breaking Changes
         run: cargo make --cwd quil-rs check-api
 
@@ -99,12 +93,6 @@ jobs:
 
       - name: Install Poetry
         uses: abatilo/actions-poetry@v4
-
-      - name: Configure Python Cache for ${{ matrix.platform.os }}
-        uses: actions/cache@v4
-        with:
-          path: ${{ matrix.platform.venv }}
-          key: ${{ runner.os }}-${{ matrix.python-version }}-venv-${{ hashFiles('**/poetry.lock') }}
 
       - name: Install Python dev dependencies
         run: cargo make --cwd quil-rs install-quil-deps
