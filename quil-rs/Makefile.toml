@@ -38,17 +38,30 @@ dependencies = ["install-quil"]
 command = "poetry"
 args = ["run", "pytest"]
 
-[tasks.stubtest]
-description = "Check python stubfiles."
+[tasks.stubtest-template]
+private = true
 dependencies = ["install-quil-with-stubs"]
-command = "poetry"
 cwd = "python"
+command = "poetry"
 # TODO(#475): Enable error reporting once stubtest is happy with stubgen's output.
 args = [
     "run", "stubtest", "quil",
     "--allowlist", "stubtest-allowlist",
     "--ignore-disjoint-bases",
+    "@@remove-empty(STUBTEST_EXTRA_ARG)",
 ]
+
+[tasks.stubtest]
+extend = "stubtest-template"
+private = false
+description = "Check python stubfiles."
+env = { STUBTEST_EXTRA_ARG = "" }
+
+[tasks.stubtest-print-missing-allowlist]
+extend = "stubtest-template"
+private = false
+description = "Print the missing items that belong in `quil-rs/python/stubtest-allowlist`."
+env = { STUBTEST_EXTRA_ARG = "--generate-allowlist" }
 
 [tasks.lint-quil]
 description = "Find errors in quil-related Rust code."
