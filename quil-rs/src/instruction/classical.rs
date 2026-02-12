@@ -161,6 +161,8 @@ impl Quil for BinaryOperand {
     }
 }
 
+/// Bitwise operators.  These are "binary" in the sense that they operate on *binary
+/// representations*, not in the sense that they take two arguments (although they also do that).
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_enum)]
 #[cfg_attr(
@@ -174,11 +176,35 @@ impl Quil for BinaryOperand {
     )
 )]
 pub enum BinaryOperator {
+    /// Bitwise and.  The same as Rust's and Python's `&`.
     And,
+
+    /// Bitwise (inclusive) or.  The same as Rust's and Python's `|`.
     Ior,
+
+    /// Bitwise exclusive or.  The same as Rust's and Python's `^`.
     Xor,
+
+    /// Bitwise left shift.  The same as Rust's and Python's `<<`.
+    ///
+    /// As per the Quil specification, shifting by a negative number of bits is forbidden, and
+    /// shifting by as many or more bits than are present in a word fills the entire word with `0`s.
     Shl,
+
+    /// Bitwise logical right shift.  The same as Rust's unsigned-type `>>`.  Python does not
+    /// provide this operation, as its integers are natively infinite-width.
+    ///
+    /// As per the Quil specification, shifting by a negative number of bits is forbidden, and
+    /// shifting by as many or more bits than are present in a word fills the entire word with `0`s.
     Shr,
+
+    /// Bitwise logical right shift.  The same as Rust's signed-type `>>` and the same as Python's
+    /// `>>` (as Python natively has infinite-width signed integers).  `ASHR n k` is equivalent to
+    /// `⌊n / 2ᵏ⌋` assuming a 2's complement representation of integers.
+    ///
+    /// As per the Quil specification, shifting by a negative number of bits is forbidden, and
+    /// shifting by as many or more bits than are present in a word fills the entire word with the
+    /// existing top bit of the word.
     Ashr,
 }
 
