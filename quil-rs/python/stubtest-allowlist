@@ -14,11 +14,11 @@
 quil.validation
 quil.validation.identifier
 
-# Basic enums are annotated as "...", which is technically incorrect,
-# but doesn't really matter in practice, since the enum values are opaque anyway;
-# hence, we just ignore those.
-# If you have added new enums to the extension module,
-# you can use the `--generate-allowlist` option to generate the additions.
+# Basic enums are annotated as "...", which is technically incorrect, but
+# doesn't really matter in practice, since the enum values are opaque anyway;
+# hence, we just ignore those.  If you have added new enums or constructors, you
+# can run `cargo make stubtest-print-missing-allowlist` from the `quil-rs`
+# directory to print out the missing items that you need to add to the following list.
 quil.expression.ExpressionFunction.CIS
 quil.expression.ExpressionFunction.COSINE
 quil.expression.ExpressionFunction.EXPONENT
@@ -38,6 +38,9 @@ quil.instructions.ArithmeticOperator.SUBTRACT
 quil.instructions.BinaryOperator.AND
 quil.instructions.BinaryOperator.IOR
 quil.instructions.BinaryOperator.XOR
+quil.instructions.BinaryOperator.SHL
+quil.instructions.BinaryOperator.SHR
+quil.instructions.BinaryOperator.ASHR
 quil.instructions.ComparisonOperator.EQUAL
 quil.instructions.ComparisonOperator.GREATER_THAN
 quil.instructions.ComparisonOperator.GREATER_THAN_OR_EQUAL
