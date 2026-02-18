@@ -1,3 +1,9 @@
+## 0.36.0-rc.0 (2026-02-18)
+
+### Breaking Changes
+
+- bitshifts in Quil (#493)
+
 ## 0.35.0 (2026-02-10)
 
 ### Breaking Changes
