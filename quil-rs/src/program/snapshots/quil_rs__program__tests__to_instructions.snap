@@ -126,9 +126,13 @@ expression: program.to_instructions()
         CircuitDefinition {
             name: "BELL",
             parameters: [],
-            qubit_variables: [
-                "q0",
-                "q1",
+            qubits: [
+                Variable(
+                    "q0",
+                ),
+                Variable(
+                    "q1",
+                ),
             ],
             instructions: [
                 Gate(

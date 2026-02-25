@@ -685,81 +685,220 @@ impl Instruction {
     }
 
     /// Return immutable references to the [`Qubit`]s contained within an instruction
-    #[allow(dead_code)]
-    pub fn get_qubits(&self) -> Vec<&Qubit> {
+    pub(crate) fn default_qubits<'a, T>(&'a self) -> T
+    where
+        T: FromIterator<&'a Qubit> + IntoIterator<Item = &'a Qubit>,
+    {
         match self {
-            Instruction::Gate(gate) => gate.qubits.iter().collect(),
-            Instruction::CalibrationDefinition(calibration) => calibration
-                .identifier
+            Instruction::CircuitDefinition(CircuitDefinition {
+                qubits,
+                instructions,
+                name: _,
+                parameters: _,
+            }) => qubits
+                .iter()
+                .chain(
+                    instructions
+                        .iter()
+                        .flat_map(|inst| inst.default_qubits::<T>()),
+                )
+                .collect(),
+
+            Instruction::CalibrationDefinition(CalibrationDefinition {
+                identifier,
+                instructions,
+            }) => identifier
                 .qubits
                 .iter()
                 .chain(
-                    calibration
-                        .instructions
+                    instructions
                         .iter()
-                        .flat_map(|inst| inst.get_qubits()),
+                        .flat_map(|inst| inst.default_qubits::<T>()),
                 )
                 .collect(),
-            Instruction::MeasureCalibrationDefinition(measurement) => {
-                iter::once(&measurement.identifier.qubit)
-                    .chain(
-                        measurement
-                            .instructions
-                            .iter()
-                            .flat_map(|inst| inst.get_qubits()),
-                    )
-                    .collect()
+
+            Instruction::MeasureCalibrationDefinition(MeasureCalibrationDefinition {
+                identifier,
+                instructions,
+            }) => iter::once(&identifier.qubit)
+                .chain(
+                    instructions
+                        .iter()
+                        .flat_map(|inst| inst.default_qubits::<T>()),
+                )
+                .collect(),
+
+            Instruction::Measurement(Measurement {
+                qubit,
+                name: _,
+                target: _,
+            }) => iter::once(qubit).collect(),
+
+            Instruction::Reset(Reset { qubit }) => qubit.iter().collect(),
+
+            Instruction::Gate(Gate {
+                qubits,
+                name: _,
+                parameters: _,
+                modifiers: _,
+            })
+            | Instruction::Fence(Fence { qubits })
+            | Instruction::Delay(Delay {
+                qubits,
+                duration: _,
+                frame_names: _,
+            }) => qubits.iter().collect(),
+
+            Instruction::FrameDefinition(FrameDefinition {
+                identifier: frame,
+                attributes: _,
+            })
+            | Instruction::Capture(Capture {
+                frame,
+                blocking: _,
+                memory_reference: _,
+                waveform: _,
+            })
+            | Instruction::Pulse(Pulse {
+                frame,
+                blocking: _,
+                waveform: _,
+            })
+            | Instruction::RawCapture(RawCapture {
+                frame,
+                blocking: _,
+                duration: _,
+                memory_reference: _,
+            })
+            | Instruction::SetFrequency(SetFrequency {
+                frame,
+                frequency: _,
+            })
+            | Instruction::SetPhase(SetPhase { frame, phase: _ })
+            | Instruction::SetScale(SetScale { frame, scale: _ })
+            | Instruction::ShiftFrequency(ShiftFrequency {
+                frame,
+                frequency: _,
+            })
+            | Instruction::ShiftPhase(ShiftPhase { frame, phase: _ }) => {
+                frame.qubits.iter().collect()
             }
-            Instruction::Measurement(measurement) => vec![&measurement.qubit],
-            Instruction::Reset(reset) => match &reset.qubit {
-                Some(qubit) => vec![qubit],
-                None => vec![],
-            },
-            Instruction::Delay(delay) => delay.qubits.iter().collect(),
-            Instruction::Fence(fence) => fence.qubits.iter().collect(),
-            Instruction::Capture(capture) => capture.frame.qubits.iter().collect(),
-            Instruction::Pulse(pulse) => pulse.frame.qubits.iter().collect(),
-            Instruction::RawCapture(raw_capture) => raw_capture.frame.qubits.iter().collect(),
-            _ => vec![],
+
+            Instruction::SwapPhases(SwapPhases { frame_1, frame_2 }) => {
+                frame_1.qubits.iter().chain(frame_2.qubits.iter()).collect()
+            }
+
+            _ => iter::empty().collect(),
         }
     }
 
     /// Return mutable references to the [`Qubit`]s contained within an instruction
-    pub fn get_qubits_mut(&mut self) -> Vec<&mut Qubit> {
+    pub(crate) fn default_qubits_mut<'a, T>(&'a mut self) -> T
+    where
+        T: FromIterator<&'a mut Qubit> + IntoIterator<Item = &'a mut Qubit>,
+    {
         match self {
-            Instruction::Gate(gate) => gate.qubits.iter_mut().collect(),
-            Instruction::CalibrationDefinition(calibration) => calibration
-                .identifier
+            Instruction::CircuitDefinition(CircuitDefinition {
+                qubits,
+                instructions,
+                name: _,
+                parameters: _,
+            }) => qubits
+                .iter_mut()
+                .chain(
+                    instructions
+                        .iter_mut()
+                        .flat_map(|inst| inst.default_qubits_mut::<T>()),
+                )
+                .collect(),
+
+            Instruction::CalibrationDefinition(CalibrationDefinition {
+                identifier,
+                instructions,
+            }) => identifier
                 .qubits
                 .iter_mut()
                 .chain(
-                    calibration
-                        .instructions
+                    instructions
                         .iter_mut()
-                        .flat_map(|inst| inst.get_qubits_mut()),
+                        .flat_map(|inst| inst.default_qubits_mut::<T>()),
                 )
                 .collect(),
-            Instruction::MeasureCalibrationDefinition(measurement) => {
-                iter::once(&mut measurement.identifier.qubit)
-                    .chain(
-                        measurement
-                            .instructions
-                            .iter_mut()
-                            .flat_map(|inst| inst.get_qubits_mut()),
-                    )
-                    .collect()
+
+            Instruction::MeasureCalibrationDefinition(MeasureCalibrationDefinition {
+                identifier,
+                instructions,
+            }) => iter::once(&mut identifier.qubit)
+                .chain(
+                    instructions
+                        .iter_mut()
+                        .flat_map(|inst| inst.default_qubits_mut::<T>()),
+                )
+                .collect(),
+
+            Instruction::Measurement(Measurement {
+                qubit,
+                name: _,
+                target: _,
+            }) => iter::once(qubit).collect(),
+
+            Instruction::Reset(Reset { qubit }) => qubit.iter_mut().collect(),
+
+            Instruction::Gate(Gate {
+                qubits,
+                name: _,
+                parameters: _,
+                modifiers: _,
+            })
+            | Instruction::Fence(Fence { qubits })
+            | Instruction::Delay(Delay {
+                qubits,
+                duration: _,
+                frame_names: _,
+            }) => qubits.iter_mut().collect(),
+
+            Instruction::FrameDefinition(FrameDefinition {
+                identifier: frame,
+                attributes: _,
+            })
+            | Instruction::Capture(Capture {
+                frame,
+                blocking: _,
+                memory_reference: _,
+                waveform: _,
+            })
+            | Instruction::Pulse(Pulse {
+                frame,
+                blocking: _,
+                waveform: _,
+            })
+            | Instruction::RawCapture(RawCapture {
+                frame,
+                blocking: _,
+                duration: _,
+                memory_reference: _,
+            })
+            | Instruction::SetFrequency(SetFrequency {
+                frame,
+                frequency: _,
+            })
+            | Instruction::SetPhase(SetPhase { frame, phase: _ })
+            | Instruction::SetScale(SetScale { frame, scale: _ })
+            | Instruction::ShiftFrequency(ShiftFrequency {
+                frame,
+                frequency: _,
+            })
+            | Instruction::ShiftPhase(ShiftPhase { frame, phase: _ }) => {
+                frame.qubits.iter_mut().collect()
             }
-            Instruction::Measurement(measurement) => vec![&mut measurement.qubit],
-            Instruction::Reset(reset) => match &mut reset.qubit {
-                Some(qubit) => vec![qubit],
-                None => vec![],
-            },
-            Instruction::Delay(delay) => delay.qubits.iter_mut().collect(),
-            Instruction::Fence(fence) => fence.qubits.iter_mut().collect(),
-            Instruction::Capture(capture) => capture.frame.qubits.iter_mut().collect(),
-            Instruction::Pulse(pulse) => pulse.frame.qubits.iter_mut().collect(),
-            Instruction::RawCapture(raw_capture) => raw_capture.frame.qubits.iter_mut().collect(),
-            _ => vec![],
+
+            Instruction::SwapPhases(SwapPhases { frame_1, frame_2 }) => frame_1
+                .qubits
+                .iter_mut()
+                .chain(frame_2.qubits.iter_mut())
+                .collect(),
+
+            _ => iter::empty().collect(),
         }
     }
 
@@ -807,7 +946,7 @@ impl Instruction {
                 jump_unless.target.resolve_placeholder(target_resolver);
             }
             other => {
-                for qubit in other.get_qubits_mut() {
+                for qubit in other.default_qubits_mut::<Vec<_>>() {
                     qubit.resolve_placeholder(&qubit_resolver);
                 }
             }
@@ -904,6 +1043,16 @@ pub trait InstructionHandler {
     ) -> Result<MemoryAccesses, MemoryAccessesError> {
         DefaultHandler.memory_accesses(extern_signature_map, instruction)
     }
+
+    #[inline]
+    fn get_qubits<'a>(&self, instruction: &'a Instruction) -> HashSet<&'a Qubit> {
+        DefaultHandler.get_qubits(instruction)
+    }
+
+    #[inline]
+    fn get_qubits_mut<'a>(&self, instruction: &'a mut Instruction) -> HashSet<&'a mut Qubit> {
+        DefaultHandler.get_qubits_mut(instruction)
+    }
 }
 
 /// The default instruction-handling behavior.
@@ -981,6 +1130,14 @@ impl InstructionHandler for DefaultHandler {
         instruction
             .default_frame_match_condition(program.get_used_qubits())
             .map(|condition| program.frames.filter(condition))
+    }
+
+    fn get_qubits<'a>(&self, instruction: &'a Instruction) -> HashSet<&'a Qubit> {
+        instruction.default_qubits()
+    }
+
+    fn get_qubits_mut<'a>(&self, instruction: &'a mut Instruction) -> HashSet<&'a mut Qubit> {
+        instruction.default_qubits_mut()
     }
 
     fn memory_accesses(
@@ -1248,7 +1405,7 @@ impl InstructionHandler for DefaultHandler {
                 instructions,
                 name: _,
                 parameters: _,
-                qubit_variables: _,
+                ..
             })
             | Instruction::MeasureCalibrationDefinition(MeasureCalibrationDefinition {
                 instructions,
