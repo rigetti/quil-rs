@@ -30,11 +30,11 @@ use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::instruction::{
     Arithmetic, ArithmeticOperand, ArithmeticOperator, Call, CircuitDefinition, Declaration,
-    DefGateSequenceExpansionError, ExternError, ExternPragmaMap, ExternSignatureMap,
-    FrameDefinition, FrameIdentifier, GateDefinition, GateError, GateSpecification, Instruction,
-    InstructionHandler, Jump, JumpUnless, Label, Matrix, MemoryReference, Move, Pragma, Qubit,
-    QubitPlaceholder, ScalarType, Target, TargetPlaceholder, Vector, Waveform, WaveformDefinition,
-    RESERVED_PRAGMA_EXTERN,
+    DefGateSequenceExpansionError, DefaultHandler, ExternError, ExternPragmaMap,
+    ExternSignatureMap, FrameDefinition, FrameIdentifier, GateDefinition, GateError,
+    GateSpecification, Instruction, InstructionHandler, Jump, JumpUnless, Label, Matrix,
+    MemoryReference, Move, Pragma, Qubit, QubitPlaceholder, ScalarType, Target, TargetPlaceholder,
+    Vector, Waveform, WaveformDefinition, RESERVED_PRAGMA_EXTERN,
 };
 use crate::parser::{lex, parse_instructions, ParseError};
 use crate::program::defgate_sequence_expansion::{
@@ -265,7 +265,7 @@ impl Program {
             }
             other => {
                 self.used_qubits
-                    .extend(other.default_qubits::<HashSet<_>>().into_iter().cloned());
+                    .extend(DefaultHandler.get_qubits(&other).into_iter().cloned());
                 self.instructions.push(other)
             }
         }
@@ -765,12 +765,7 @@ impl Program {
         self.used_qubits = self
             .to_instructions()
             .iter()
-            .flat_map(|instruction| {
-                instruction
-                    .default_qubits::<HashSet<_>>()
-                    .into_iter()
-                    .cloned()
-            })
+            .flat_map(|instruction| DefaultHandler.get_qubits(instruction).into_iter().cloned())
             .collect()
     }
 
@@ -923,7 +918,7 @@ impl Program {
 
         // Stable iteration order makes placeholder resolution deterministic
         for instruction in &self.instructions {
-            let qubits = instruction.default_qubits::<HashSet<_>>();
+            let qubits = DefaultHandler.get_qubits(instruction);
 
             for qubit in qubits {
                 match qubit {
