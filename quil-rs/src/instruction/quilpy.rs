@@ -456,6 +456,20 @@ pickleable_new! {
     }
 }
 
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl CircuitDefinition {
+    fn __getnewargs__<'py>(&self, py: pyo3::Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+        (
+            self.name.clone(),
+            self.parameters.clone(),
+            self.qubits.clone(),
+            self.instructions.clone(),
+        )
+            .into_pyobject(py)
+    }
+}
+
 #[cfg(feature = "stubs")]
 impl pyo3_stub_gen::PyStubType for ExternPragmaMap {
     fn type_output() -> pyo3_stub_gen::TypeInfo {

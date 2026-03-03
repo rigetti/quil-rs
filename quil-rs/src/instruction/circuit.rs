@@ -1,5 +1,5 @@
 #[cfg(feature = "stubs")]
-use pyo3_stub_gen::derive::gen_stub_pyclass;
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 #[cfg(not(feature = "python"))]
 use optipy::strip_pyo3;
@@ -12,7 +12,7 @@ use crate::{
 use super::Instruction;
 
 #[derive(Clone, Debug, PartialEq)]
-#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass, gen_stub_pymethods)]
 #[cfg_attr(
     feature = "python",
     pyo3::pyclass(module = "quil.instructions", eq, subclass)
@@ -25,9 +25,8 @@ pub struct CircuitDefinition {
     #[pyo3(get, set)]
     pub parameters: Vec<String>,
 
-    // These cannot be fixed qubits and thus cannot be accessed directly
-    // outside of this crate
-    #[pyo3(get, set)]
+    // These should always be Qubit::Variable
+    #[pyo3(get)]
     pub(crate) qubits: Vec<Qubit>,
 
     #[pyo3(get, set)]

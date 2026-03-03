@@ -765,6 +765,18 @@ impl Program {
         self.used_qubits = self
             .to_instructions()
             .iter()
+            // This ensures parity with the behavior of `Self::add_instruction`
+            .filter(|instruction| match instruction {
+                Instruction::CalibrationDefinition(_)
+                | Instruction::CircuitDefinition(_)
+                | Instruction::FrameDefinition(_)
+                | Instruction::Declaration(_)
+                | Instruction::GateDefinition(_)
+                | Instruction::MeasureCalibrationDefinition(_)
+                | Instruction::WaveformDefinition(_) => false,
+                Instruction::Pragma(pragma) if pragma.name == RESERVED_PRAGMA_EXTERN => false,
+                _ => true,
+            })
             .flat_map(|instruction| DefaultHandler.get_qubits(instruction).into_iter().cloned())
             .collect()
     }

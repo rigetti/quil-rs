@@ -1056,8 +1056,23 @@ impl<'a, T: AsRef<str>> GateSignature<'a, T> {
     }
 }
 
+#[cfg(feature = "python")]
 impl<'a, T: AsRef<str>> GateSignature<'a, T> {
-    #[cfg(any(feature = "python", test))]
+    pub(crate) fn gate_parameters(&self) -> &[T] {
+        self.gate_parameters
+    }
+
+    pub(crate) fn qubit_parameters(&self) -> &[T] {
+        self.qubit_parameters
+    }
+
+    pub(crate) fn gate_type(&self) -> GateType {
+        self.gate_type
+    }
+}
+
+#[cfg(any(feature = "python", test))]
+impl<'a, T: AsRef<str>> GateSignature<'a, T> {
     pub(crate) fn try_new(
         name: &'a T,
         gate_parameters: &'a [T],
@@ -1071,21 +1086,6 @@ impl<'a, T: AsRef<str>> GateSignature<'a, T> {
             qubit_parameters,
             gate_type,
         })
-    }
-
-    #[cfg(feature = "python")]
-    pub(crate) fn gate_parameters(&self) -> &[T] {
-        self.gate_parameters
-    }
-
-    #[cfg(feature = "python")]
-    pub(crate) fn qubit_parameters(&self) -> &[T] {
-        self.qubit_parameters
-    }
-
-    #[cfg(feature = "python")]
-    pub(crate) fn gate_type(&self) -> GateType {
-        self.gate_type
     }
 }
 
