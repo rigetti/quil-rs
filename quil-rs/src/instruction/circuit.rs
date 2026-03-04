@@ -12,7 +12,7 @@ use crate::{
 use super::Instruction;
 
 #[derive(Clone, Debug, PartialEq)]
-#[cfg_attr(feature = "stubs", gen_stub_pyclass, gen_stub_pymethods)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
     pyo3::pyclass(module = "quil.instructions", eq, subclass)
