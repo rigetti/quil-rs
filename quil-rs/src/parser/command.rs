@@ -362,12 +362,12 @@ pub(crate) fn parse_defcircuit<'a>(
 
     Ok((
         input,
-        Instruction::CircuitDefinition(CircuitDefinition {
+        Instruction::CircuitDefinition(CircuitDefinition::new(
             name,
             parameters,
             qubit_variables,
             instructions,
-        }),
+        )),
     ))
 }
 
@@ -904,7 +904,10 @@ mod tests {
         Instruction::CircuitDefinition(CircuitDefinition {
             name: "BELL".to_owned(),
             parameters: vec![],
-            qubit_variables: vec!["a".to_owned(), "b".to_owned()],
+            qubits: vec![
+                Qubit::Variable("a".to_owned()),
+                Qubit::Variable("b".to_owned())
+            ],
             instructions: vec![
                 Instruction::Gate(Gate {
                     name: "H".to_owned(),
@@ -936,7 +939,10 @@ mod tests {
         Instruction::CircuitDefinition(CircuitDefinition {
             name: "BELL".to_owned(),
             parameters: vec!["a".to_owned()],
-            qubit_variables: vec!["a".to_owned(), "b".to_owned()],
+            qubits: vec![
+                Qubit::Variable("a".to_owned()),
+                Qubit::Variable("b".to_owned())
+            ],
             instructions: vec![
                 Instruction::Gate(Gate {
                     name: "RZ".to_owned(),

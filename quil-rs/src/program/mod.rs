@@ -30,11 +30,11 @@ use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::instruction::{
     Arithmetic, ArithmeticOperand, ArithmeticOperator, Call, CircuitDefinition, Declaration,
-    DefGateSequenceExpansionError, ExternError, ExternPragmaMap, ExternSignatureMap,
-    FrameDefinition, FrameIdentifier, GateDefinition, GateError, GateSpecification, Instruction,
-    InstructionHandler, Jump, JumpUnless, Label, Matrix, MemoryReference, Move, Pragma, Qubit,
-    QubitPlaceholder, ScalarType, Target, TargetPlaceholder, Vector, Waveform, WaveformDefinition,
-    RESERVED_PRAGMA_EXTERN,
+    DefGateSequenceExpansionError, DefaultHandler, ExternError, ExternPragmaMap,
+    ExternSignatureMap, FrameDefinition, FrameIdentifier, GateDefinition, GateError,
+    GateSpecification, Instruction, InstructionHandler, Jump, JumpUnless, Label, Matrix,
+    MemoryReference, Move, Pragma, Qubit, QubitPlaceholder, ScalarType, Target, TargetPlaceholder,
+    Vector, Waveform, WaveformDefinition, RESERVED_PRAGMA_EXTERN,
 };
 use crate::parser::{lex, parse_instructions, ParseError};
 use crate::program::defgate_sequence_expansion::{
@@ -228,9 +228,6 @@ impl Program {
     /// instructions are still added to the [`Program::extern_pragma_map`];
     /// duplicate `PRAGMA EXTERN` names are overwritten.
     pub fn add_instruction(&mut self, instruction: Instruction) {
-        self.used_qubits
-            .extend(instruction.get_qubits().into_iter().cloned());
-
         match instruction {
             Instruction::CalibrationDefinition(calibration) => {
                 self.calibrations.insert_calibration(calibration);
@@ -263,35 +260,14 @@ impl Program {
             Instruction::WaveformDefinition(WaveformDefinition { name, definition }) => {
                 self.waveforms.insert(name, definition);
             }
-            Instruction::Gate(gate) => {
-                self.instructions.push(Instruction::Gate(gate));
-            }
-            Instruction::Measurement(measurement) => {
-                self.instructions
-                    .push(Instruction::Measurement(measurement));
-            }
-            Instruction::Reset(reset) => {
-                self.instructions.push(Instruction::Reset(reset));
-            }
-            Instruction::Delay(delay) => {
-                self.instructions.push(Instruction::Delay(delay));
-            }
-            Instruction::Fence(fence) => {
-                self.instructions.push(Instruction::Fence(fence));
-            }
-            Instruction::Capture(capture) => {
-                self.instructions.push(Instruction::Capture(capture));
-            }
-            Instruction::Pulse(pulse) => {
-                self.instructions.push(Instruction::Pulse(pulse));
-            }
             Instruction::Pragma(pragma) if pragma.name == RESERVED_PRAGMA_EXTERN => {
                 self.extern_pragma_map.insert(pragma);
             }
-            Instruction::RawCapture(raw_capture) => {
-                self.instructions.push(Instruction::RawCapture(raw_capture));
+            other => {
+                self.used_qubits
+                    .extend(DefaultHandler.get_qubits(&other).into_iter().cloned());
+                self.instructions.push(other)
             }
-            other => self.instructions.push(other),
         }
     }
 
@@ -371,7 +347,7 @@ impl Program {
                 }),
             ]
             .into_iter()
-            .chain(self.body_instructions().cloned())
+            .chain(self.body_instructions().iter().cloned())
             .chain(vec![
                 Instruction::Arithmetic(Arithmetic {
                     operator: ArithmeticOperator::Subtract,
@@ -446,18 +422,17 @@ impl Program {
 }
 
 impl Program {
-    /// Returns an iterator over immutable references to the instructions that make up the body of the program.
-    pub fn body_instructions(&self) -> impl Iterator<Item = &Instruction> {
-        self.instructions.iter()
+    /// Returns a slice of immutable references to the instructions that make up the body of the program.
+    pub fn body_instructions(&self) -> &[Instruction] {
+        &self.instructions
     }
 
-    pub fn into_body_instructions(self) -> impl Iterator<Item = Instruction> {
-        self.instructions.into_iter()
+    pub fn into_body_instructions(self) -> Vec<Instruction> {
+        self.instructions
     }
 
     /// Returns an iterator over mutable references to the instructions that make up the body of the program.
-    #[cfg(test)]
-    pub(crate) fn for_each_body_instruction<F>(&mut self, closure: F)
+    pub fn for_each_body_instruction<F>(&mut self, closure: F)
     where
         F: Fn(&mut Instruction),
     {
@@ -790,7 +765,19 @@ impl Program {
         self.used_qubits = self
             .to_instructions()
             .iter()
-            .flat_map(|instruction| instruction.get_qubits().into_iter().cloned())
+            // This ensures parity with the behavior of `Self::add_instruction`
+            .filter(|instruction| match instruction {
+                Instruction::CalibrationDefinition(_)
+                | Instruction::CircuitDefinition(_)
+                | Instruction::FrameDefinition(_)
+                | Instruction::Declaration(_)
+                | Instruction::GateDefinition(_)
+                | Instruction::MeasureCalibrationDefinition(_)
+                | Instruction::WaveformDefinition(_) => false,
+                Instruction::Pragma(pragma) if pragma.name == RESERVED_PRAGMA_EXTERN => false,
+                _ => true,
+            })
+            .flat_map(|instruction| DefaultHandler.get_qubits(instruction).into_iter().cloned())
             .collect()
     }
 
@@ -943,7 +930,7 @@ impl Program {
 
         // Stable iteration order makes placeholder resolution deterministic
         for instruction in &self.instructions {
-            let qubits = instruction.get_qubits();
+            let qubits = DefaultHandler.get_qubits(instruction);
 
             for qubit in qubits {
                 match qubit {
@@ -2377,7 +2364,7 @@ CALL foo octets[1] reals
         let mut program = Program::new();
         program.add_instruction(Instruction::GateDefinition(gate_definition.clone()));
         assert_eq!(program.gate_definitions.len(), 1);
-        assert_eq!(program.body_instructions().count(), 0);
+        assert_eq!(program.body_instructions().len(), 0);
 
         let invocation = Gate::new(
             "PMW3",
@@ -2412,7 +2399,7 @@ CALL foo octets[1] reals
         )
         .expect("must be a valid gate");
         program.add_instruction(Instruction::Gate(invocation));
-        assert_eq!(program.body_instructions().count(), 1);
+        assert_eq!(program.body_instructions().len(), 1);
 
         let program_copy = program.clone_without_body_instructions();
         assert_eq!(program_copy.gate_definitions.len(), 1);
@@ -2423,7 +2410,7 @@ CALL foo octets[1] reals
                 .expect("must exist"),
             &gate_definition
         );
-        assert_eq!(program_copy.body_instructions().count(), 0);
+        assert_eq!(program_copy.body_instructions().len(), 0);
     }
 
     /// Test that we can expand a gate sequence definition in a program. Note, for more

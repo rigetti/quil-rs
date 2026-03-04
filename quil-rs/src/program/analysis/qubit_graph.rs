@@ -68,11 +68,9 @@ impl<'a> QubitGraph<'a> {
                 }
             }
 
-            let qubits: Vec<_> = instruction.get_qubits().into_iter().collect();
-
             let node = graph.add_node(instruction);
 
-            for qubit in qubits {
+            for qubit in handler.get_qubits(instruction) {
                 if let Some(last_instruction) = last_instruction_for_qubit.insert(qubit, node) {
                     graph.add_edge(last_instruction, node, ());
                 }
