@@ -848,7 +848,11 @@ impl Program {
         let mut extern_signatures_used: HashSet<&String> = HashSet::new();
 
         for instruction in &expanded_program.instructions {
-            if let Some(matched_frames) = handler.matching_frames(&expanded_program, instruction) {
+            if let Some(matched_frames) = handler.matching_frames(
+                &expanded_program.frames,
+                expanded_program.get_used_qubits(),
+                instruction,
+            ) {
                 frames_used.extend(matched_frames.used)
             }
 
@@ -1601,7 +1605,7 @@ DEFFRAME 0 1 \"2q\":
         ] {
             let instruction = Instruction::parse_in_test(instruction_string).unwrap();
             let matched_frames = DefaultHandler
-                .matching_frames(&program, &instruction)
+                .matching_frames(&program.frames, program.get_used_qubits(), &instruction)
                 .unwrap();
             let used_frames: HashSet<String> = matched_frames
                 .used

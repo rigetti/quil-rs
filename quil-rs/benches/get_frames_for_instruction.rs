@@ -16,7 +16,11 @@ fn benchmark_quil_corpus(c: &mut Criterion) {
                 |prog| {
                     for instruction in prog.body_instructions() {
                         for _ in 0..50 {
-                            let frames = DefaultHandler.matching_frames(&prog, instruction);
+                            let frames = DefaultHandler.matching_frames(
+                                &prog.frames,
+                                prog.get_used_qubits(),
+                                instruction,
+                            );
                             black_box(frames);
                         }
                     }

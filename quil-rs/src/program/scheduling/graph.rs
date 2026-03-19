@@ -280,7 +280,11 @@ impl<'a> ScheduledBasicBlock<'a> {
                     Ok(())
                 }
                 InstructionRole::RFControl => {
-                    let matched_frames = handler.matching_frames(program, instruction);
+                    let matched_frames = handler.matching_frames(
+                        &program.frames,
+                        program.get_used_qubits(),
+                        instruction,
+                    );
                     let is_scheduled = handler.is_scheduled(instruction);
 
                     if let Some(matched_frames) = matched_frames {
