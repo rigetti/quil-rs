@@ -280,7 +280,11 @@ impl<'a> ScheduledBasicBlock<'a> {
                     Ok(())
                 }
                 InstructionRole::RFControl => {
-                    let matched_frames = handler.matching_frames(program, instruction);
+                    let matched_frames = handler.matching_frames(
+                        &program.frames,
+                        program.get_used_qubits(),
+                        instruction,
+                    );
                     let is_scheduled = handler.is_scheduled(instruction);
 
                     if let Some(matched_frames) = matched_frames {
@@ -494,7 +498,9 @@ mod graphviz_dot_tests {
         use crate::instruction::DefaultHandler;
         use crate::instruction::Pragma;
         use crate::instruction::PragmaArgument;
+        use crate::instruction::Qubit;
         use crate::program::frame::FrameMatchCondition;
+        use crate::program::FrameSet;
         use crate::program::MemoryAccessesError;
         use crate::program::{MatchedFrames, MemoryAccesses};
 
@@ -532,11 +538,12 @@ mod graphviz_dot_tests {
                 }
             }
 
-            fn matching_frames<'p>(
+            fn matching_frames<'f>(
                 &self,
-                program: &'p Program,
+                frames: &'f FrameSet,
+                available_qubits: &'f HashSet<Qubit>,
                 instruction: &Instruction,
-            ) -> Option<MatchedFrames<'p>> {
+            ) -> Option<MatchedFrames<'f>> {
                 match instruction {
                     Instruction::Pragma(Pragma { name, .. }) if name == NO_OP => None,
                     Instruction::Pragma(Pragma {
@@ -556,16 +563,14 @@ mod graphviz_dot_tests {
                             )
                         };
 
-                        let used = program
-                            .frames
-                            .get_matching_keys_for_condition(frame_condition);
+                        let used = frames.get_matching_keys_for_condition(frame_condition);
 
                         Some(MatchedFrames {
                             used,
                             blocked: HashSet::new(),
                         })
                     }
-                    _ => DefaultHandler.matching_frames(program, instruction),
+                    _ => DefaultHandler.matching_frames(frames, available_qubits, instruction),
                 }
             }
 

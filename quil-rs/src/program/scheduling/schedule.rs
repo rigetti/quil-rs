@@ -218,30 +218,26 @@ impl<'p> ScheduledBasicBlock<'p> {
     ) -> Option<Seconds> {
         if let Some(definition) = program.waveforms.get(name) {
             let sample_count = definition.matrix.len();
-            let common_sample_rate =
-                handler
-                    .matching_frames(program, instruction)
-                    .and_then(|frames| {
-                        frames
-                            .used
-                            .into_iter()
-                            .filter_map(|frame| {
-                                program
-                                    .frames
-                                    .get(frame)
-                                    .and_then(|frame_definition| {
-                                        frame_definition.get("SAMPLE-RATE")
-                                    })
-                                    .and_then(|sample_rate_expression| match sample_rate_expression
-                                    {
-                                        AttributeValue::String(_) => None,
-                                        AttributeValue::Expression(expression) => Some(expression),
-                                    })
-                                    .and_then(|expression| expression.to_real().ok())
-                            })
-                            .all_equal_value()
-                            .ok()
-                    });
+            let common_sample_rate = handler
+                .matching_frames(&program.frames, program.get_used_qubits(), instruction)
+                .and_then(|frames| {
+                    frames
+                        .used
+                        .into_iter()
+                        .filter_map(|frame| {
+                            program
+                                .frames
+                                .get(frame)
+                                .and_then(|frame_definition| frame_definition.get("SAMPLE-RATE"))
+                                .and_then(|sample_rate_expression| match sample_rate_expression {
+                                    AttributeValue::String(_) => None,
+                                    AttributeValue::Expression(expression) => Some(expression),
+                                })
+                                .and_then(|expression| expression.to_real().ok())
+                        })
+                        .all_equal_value()
+                        .ok()
+                });
 
             common_sample_rate
                 .map(|sample_rate| sample_count as f64 / sample_rate)
