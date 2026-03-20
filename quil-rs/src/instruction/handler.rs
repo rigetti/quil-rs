@@ -38,7 +38,7 @@ pub trait InstructionHandler<I = super::Instruction> {
     /// [Quil-T]: https://quil-lang.github.io/#12Annex-T--Pulse-Level-Control
     fn matching_frames<'f>(
         &self,
-        program: &'f FrameSet,
+        frames: &'f FrameSet,
         qubits_available: &'f HashSet<Qubit>,
         instruction: &I,
     ) -> Option<MatchedFrames<'f>>;
