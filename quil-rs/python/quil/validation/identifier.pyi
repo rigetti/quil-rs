@@ -10,12 +10,12 @@ class IdentifierValidationError(QuilError):
     """
     ...
 
-def validate_identifier(ident:builtins.str) -> None:
+def validate_identifier(ident: builtins.str) -> None:
     r"""
     Returns an error if the given identifier is not a valid Quil Identifier.
     """
 
-def validate_user_identifier(ident:builtins.str) -> None:
+def validate_user_identifier(ident: builtins.str) -> None:
     r"""
     Returns an error if the given identifier is reserved, or if it is not a valid Quil identifier
     """

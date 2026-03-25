@@ -1,3 +1,77 @@
+## 0.36.0 (2026-02-18)
+
+### Breaking Changes
+
+- bitshifts in Quil (#493)
+
+## 0.36.0-rc.0 (2026-02-18)
+
+### Breaking Changes
+
+- bitshifts in Quil (#493)
+
+## 0.35.0 (2026-02-10)
+
+### Breaking Changes
+
+- move circuit definitions into its own field in program (#492)
+
+### Features
+
+- update pyo3 (#491)
+
+### Fixes
+
+- manage optional dependencies properly (#496)
+
+## 0.35.0-rc.5 (2026-02-10)
+
+### Breaking Changes
+
+- move circuit definitions into its own field in program (#492)
+
+### Features
+
+- update pyo3 (#491)
+
+### Fixes
+
+- manage optional dependencies properly (#496)
+
+## 0.35.0-rc.2 (2026-02-06)
+
+### Breaking Changes
+
+- move circuit definitions into its own field in program (#492)
+
+### Features
+
+- update pyo3 (#491)
+
+## 0.35.0-rc.1 (2026-02-06)
+
+### Breaking Changes
+
+- move circuit definitions into its own field in program (#492)
+
+### Features
+
+- upgrade PyO3 and use new rigetti-pyo3
+- teach lint script about create_init_submodule!
+- generalize lint script beyond quil
+
+### Fixes
+
+- bump ndarray version to be compatible with numpy
+- quotes in Program for Python compatibility
+- regenerate program typestub
+
+## 0.35.0-rc.0 (2026-01-16)
+
+### Breaking Changes
+
+- move circuit definitions into its own field in program (#492)
+
 ## 0.34.0 (2026-01-14)
 
 ### Breaking Changes

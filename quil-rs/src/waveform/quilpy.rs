@@ -5,12 +5,12 @@ use pyo3::{
     types::{IntoPyDict as _, PyList, PyTuple},
     IntoPyObjectExt,
 };
+use rigetti_pyo3::{create_init_submodule, impl_repr};
 
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::{gen_stub_pyfunction, gen_stub_pymethods};
 
 use crate::{
-    quilpy::impl_repr,
     units::Cycles,
     waveform::{
         builtin::quilpy::*,
@@ -19,27 +19,26 @@ use crate::{
     },
 };
 
-#[pymodule]
-#[pyo3(name = "waveforms", module = "quil", submodule)]
-pub(crate) fn init_submodule(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_class::<IqSamples>()?;
-    m.add_class::<SamplingError>()?;
-    m.add_class::<SyntacticCommonBuiltinParameters>()?;
-    m.add_class::<ConcreteCommonBuiltinParameters>()?;
-    m.add_class::<ExplicitCommonBuiltinParameters>()?;
-    m.add_class::<SyntacticFlat>()?;
-    m.add_class::<ConcreteFlat>()?;
-    m.add_class::<SyntacticGaussian>()?;
-    m.add_class::<ConcreteGaussian>()?;
-    m.add_class::<SyntacticDragGaussian>()?;
-    m.add_class::<ConcreteDragGaussian>()?;
-    m.add_class::<SyntacticErfSquare>()?;
-    m.add_class::<ConcreteErfSquare>()?;
-    m.add_class::<SyntacticHermiteGaussian>()?;
-    m.add_class::<ConcreteHermiteGaussian>()?;
-    m.add_class::<BoxcarKernel>()?;
-    m.add_function(wrap_pyfunction!(py_apply_phase_and_detuning, m)?)?;
-    Ok(())
+create_init_submodule! {
+    classes: [
+        IqSamples,
+        SamplingError,
+        SyntacticCommonBuiltinParameters,
+        ConcreteCommonBuiltinParameters,
+        ExplicitCommonBuiltinParameters,
+        SyntacticFlat,
+        ConcreteFlat,
+        SyntacticGaussian,
+        ConcreteGaussian,
+        SyntacticDragGaussian,
+        ConcreteDragGaussian,
+        SyntacticErfSquare,
+        ConcreteErfSquare,
+        SyntacticHermiteGaussian,
+        ConcreteHermiteGaussian,
+        BoxcarKernel,
+    ],
+    funcs: [ py_apply_phase_and_detuning ],
 }
 
 impl_repr! {

@@ -1,34 +1,23 @@
 use pyo3::{prelude::*, types::PyTuple};
+use rigetti_pyo3::{create_init_submodule, impl_repr};
 
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::gen_stub_pymethods;
 
 use super::*;
-use crate::quilpy::{errors::ValueError, fix_complex_enums, impl_repr};
+use crate::quilpy::errors::{self, ValueError};
 
-#[pymodule]
-#[pyo3(name = "expression", module = "quil", submodule)]
-pub(crate) fn init_submodule(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    use crate::quilpy::errors;
-
-    let py = m.py();
-    m.add("EvaluationError", py.get_type::<errors::EvaluationError>())?;
-    m.add(
-        "ParseExpressionError",
-        py.get_type::<errors::ParseExpressionError>(),
-    )?;
-
-    m.add_class::<Expression>()?;
-    m.add_class::<ExpressionFunction>()?;
-    m.add_class::<FunctionCallExpression>()?;
-    m.add_class::<InfixExpression>()?;
-    m.add_class::<InfixOperator>()?;
-    m.add_class::<PrefixExpression>()?;
-    m.add_class::<PrefixOperator>()?;
-
-    fix_complex_enums!(py, Expression);
-
-    Ok(())
+create_init_submodule! {
+    classes: [
+        ExpressionFunction,
+        FunctionCallExpression,
+        InfixExpression,
+        InfixOperator,
+        PrefixExpression,
+        PrefixOperator
+    ],
+    complex_enums: [ Expression ],
+    errors: [ errors::EvaluationError, errors::ParseExpressionError ],
 }
 
 impl_repr!(Expression);

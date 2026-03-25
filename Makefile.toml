@@ -1,0 +1,19 @@
+[tasks.check]
+dependencies = ["check-format", "check-clippy", "check-deny", "hack-check"]
+
+[tasks.hack-check]
+command = "cargo"
+args = ["hack", "check", "workspace", "--feature-powerset"]
+
+[tasks.check-format]
+command = "cargo"
+args = ["fmt", "--all", "--", "--check"]
+
+[tasks.check-clippy]
+command = "cargo"
+args = ["clippy", "--workspace", "--all-targets", "--all-features", "--", "-D", "warnings"]
+
+[tasks.check-deny]
+command = "cargo"
+args = ["deny", "--workspace", "--all-features", "check"]
+

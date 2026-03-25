@@ -29,7 +29,7 @@ use petgraph::Graph;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::instruction::{
-    Arithmetic, ArithmeticOperand, ArithmeticOperator, Call, Declaration,
+    Arithmetic, ArithmeticOperand, ArithmeticOperator, Call, CircuitDefinition, Declaration,
     DefGateSequenceExpansionError, ExternError, ExternPragmaMap, ExternSignatureMap,
     FrameDefinition, FrameIdentifier, GateDefinition, GateError, GateSpecification, Instruction,
     InstructionHandler, Jump, JumpUnless, Label, Matrix, MemoryReference, Move, Pragma, Qubit,
@@ -101,6 +101,76 @@ type Result<T> = std::result::Result<T, ProgramError>;
 /// This contains not only instructions which are executed in turn on the quantum processor, but
 /// also the "headers" used to describe and manipulate those instructions, such as calibrations
 /// and frame definitions.
+///
+/// # For Python Users
+///
+/// The `quil.program` module contains classes for constructing and representing a Quil program.
+///
+/// ## Examples
+///
+/// ### Source Mapping for Calibration Expansion
+///
+/// ```python
+/// import inspect
+/// from quil.program import Program
+///
+/// program_text = inspect.cleandoc(
+///     '''
+///     DEFCAL X 0:
+///         Y 0
+///
+///     DEFCAL Y 0:
+///         Z 0
+///
+///     X 0 # This instruction is index 0
+///     Y 0 # This instruction is index 1
+///     '''
+/// )
+///
+/// # First, we parse the program and expand its calibrations
+/// program = Program.parse(program_text)
+/// expansion = program.expand_calibrations_with_source_map()
+/// source_map = expansion.source_map()
+///
+/// # This is what we expect the expanded program to be. X and Y have each been replaced by Z.
+/// expected_program_text = inspect.cleandoc(
+///     '''
+///     DEFCAL X 0:
+///         Y 0
+///
+///     DEFCAL Y 0:
+///         Z 0
+///
+///     Z 0 # This instruction is index 0
+///     Z 0 # This instruction is index 1
+///     '''
+/// )
+/// assert expansion.program().to_quil() == Program.parse(expected_program_text).to_quil()
+///
+/// # In order to discover _which_ calibration led to the first Z in the resulting program, we
+/// # can interrogate the expansion source mapping.
+/// #
+/// # For instance, the X at index 0 should have been replaced with a Z at index 0.
+/// # Here's how we can confirm that:
+///
+/// # First, we list the calibration expansion targets for that first instruction...
+/// targets = source_map.list_targets_for_source_index(0)
+///
+/// # ...then we extract the expanded instruction.
+/// # If the instruction had _not_ been expanded (i.e. there was no matching calibration), then `as_expanded()` would return `None`.
+/// expanded = targets[0].as_expanded()
+///
+/// # This line shows how that `X 0` was expanded into instruction index 0 (only) within the expanded program.
+/// # The end of the range is exclusive.
+/// assert expanded.range() == range(0, 1)
+///
+/// # We can also map instructions in reverse: given an instruction index in the expanded program, we can find the source index.
+/// # This is useful for understanding the provenance of instructions in the expanded program.
+/// sources = source_map.list_sources_for_target_index(1)
+///
+/// # In this case, the instruction was expanded from the source program at index 1.
+/// assert sources == [1]
+/// ```
 #[derive(Clone, Debug, Default, PartialEq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.program", eq))]
@@ -118,6 +188,8 @@ pub struct Program {
     pub waveforms: IndexMap<String, Waveform>,
     #[pyo3(get, set)]
     pub gate_definitions: IndexMap<String, GateDefinition>,
+    #[pyo3(get, set)]
+    pub circuits: IndexMap<String, CircuitDefinition>,
     #[pyo3(get, set)]
     instructions: Vec<Instruction>,
     // private field used for caching operations
@@ -143,6 +215,7 @@ impl Program {
             memory_regions: self.memory_regions.clone(),
             waveforms: self.waveforms.clone(),
             gate_definitions: self.gate_definitions.clone(),
+            circuits: self.circuits.clone(),
             instructions: Vec::new(),
             used_qubits: HashSet::new(),
         }
@@ -161,6 +234,9 @@ impl Program {
         match instruction {
             Instruction::CalibrationDefinition(calibration) => {
                 self.calibrations.insert_calibration(calibration);
+            }
+            Instruction::CircuitDefinition(circuit) => {
+                self.circuits.insert(circuit.name.clone(), circuit);
             }
             Instruction::FrameDefinition(FrameDefinition {
                 identifier,
@@ -358,6 +434,12 @@ impl Program {
                 .cloned()
                 .map(Instruction::GateDefinition),
         );
+        instructions.extend(
+            self.circuits
+                .values()
+                .cloned()
+                .map(Instruction::CircuitDefinition),
+        );
         instructions.extend(self.instructions.clone());
         instructions
     }
@@ -430,16 +512,7 @@ impl Program {
         &self,
         mut source_mapping: Option<&mut ProgramCalibrationExpansionSourceMap>,
     ) -> Result<Self> {
-        let mut new_program = Self {
-            calibrations: self.calibrations.clone(),
-            extern_pragma_map: self.extern_pragma_map.clone(),
-            frames: self.frames.clone(),
-            memory_regions: self.memory_regions.clone(),
-            waveforms: self.waveforms.clone(),
-            gate_definitions: self.gate_definitions.clone(),
-            instructions: Vec::new(),
-            used_qubits: HashSet::new(),
-        };
+        let mut new_program = self.clone_without_body_instructions();
 
         for (index, instruction) in self.instructions.iter().enumerate() {
             let index = InstructionIndex(index);
@@ -572,6 +645,7 @@ impl Program {
             memory_regions: self.memory_regions,
             waveforms: self.waveforms,
             gate_definitions,
+            circuits: self.circuits.clone(),
             instructions: Vec::new(),
             used_qubits: HashSet::new(),
         };
@@ -614,6 +688,7 @@ impl Program {
             memory_regions: self.memory_regions.clone(),
             waveforms: self.waveforms.clone(),
             gate_definitions,
+            circuits: self.circuits.clone(),
             instructions: Vec::new(),
             used_qubits: HashSet::new(),
         };
@@ -739,6 +814,11 @@ impl Program {
             self.gate_definitions
                 .into_values()
                 .map(Instruction::GateDefinition),
+        );
+        instructions.extend(
+            self.circuits
+                .into_values()
+                .map(Instruction::CircuitDefinition),
         );
         instructions.extend(self.extern_pragma_map.into_instructions());
         instructions.extend(self.instructions);
@@ -894,6 +974,7 @@ impl Program {
             + self.frames.len()
             + self.waveforms.len()
             + self.gate_definitions.len()
+            + self.circuits.len()
             + self.instructions.len()
             + self.extern_pragma_map.len()
     }
@@ -1059,6 +1140,7 @@ impl ops::AddAssign<Program> for Program {
         self.frames.merge(rhs.frames);
         self.waveforms.extend(rhs.waveforms);
         self.gate_definitions.extend(rhs.gate_definitions);
+        self.circuits.extend(rhs.circuits);
         self.extern_pragma_map.extend(rhs.extern_pragma_map);
         self.instructions.extend(rhs.instructions);
         self.used_qubits.extend(rhs.used_qubits);
@@ -1188,6 +1270,14 @@ DEFFRAME 0 \"rx\":
     HARDWARE-OBJECT: \"hardware\"
 DEFWAVEFORM custom:
     1, 2
+DEFGATE FOO:
+    1, 0
+    0, 1
+
+DEFCIRCUIT BELL q0 q1:
+    H q1
+    CNOT q1 q0
+
 I 0
 ";
         let program = Program::from_str(input).unwrap();
@@ -1195,6 +1285,8 @@ I 0
         assert_eq!(program.memory_regions.len(), 1);
         assert_eq!(program.frames.len(), 1);
         assert_eq!(program.waveforms.len(), 1);
+        assert_eq!(program.gate_definitions.len(), 1);
+        assert_eq!(program.circuits.len(), 1);
         assert_eq!(program.instructions.len(), 1);
 
         assert_eq!(
@@ -1206,6 +1298,14 @@ DEFWAVEFORM custom:
     1, 2
 DEFCAL I 0:
     DELAY 0 1
+DEFGATE FOO AS MATRIX:
+    1, 0
+    0, 1
+
+DEFCIRCUIT BELL q0 q1:
+    H q1
+    CNOT q1 q0
+
 I 0
 "
         );
@@ -1622,6 +1722,11 @@ DEFWAVEFORM custom:
 DEFGATE FOO:
     1, 0
     0, 1
+
+DEFCIRCUIT BELL q0 q1:
+    H q1
+    CNOT q1 q0
+
 I 0
 ";
         let rhs_input = "
@@ -1638,6 +1743,11 @@ DEFWAVEFORM custom2:
 DEFGATE BAR:
     0, 1
     1, 0
+
+DEFCIRCUIT BELL2 q0 q1:
+    H q1
+    CNOT q1 q0
+    X q1
 ";
         let lhs = Program::from_str(lhs_input).unwrap();
         let rhs = Program::from_str(rhs_input).unwrap();
@@ -1660,6 +1770,8 @@ DEFGATE BAR:
             assert_eq!(program.memory_regions.len(), 2);
             assert_eq!(program.frames.len(), 2);
             assert_eq!(program.waveforms.len(), 2);
+            assert_eq!(program.gate_definitions.len(), 2);
+            assert_eq!(program.circuits.len(), 2);
             assert_eq!(program.instructions.len(), 5);
             assert_eq!(expected_qubits, sum.get_used_qubits().iter().collect());
         }
@@ -1687,6 +1799,11 @@ DEFFRAME 0 \"rx\":
     HARDWARE-OBJECT: \"hardware\"
 DEFWAVEFORM custom:
     1,2
+
+DEFCIRCUIT BELL q0 q1:
+    H q1
+    CNOT q1 q0
+
 I 0
 ";
         // Test is invalid if there are no body instructions
@@ -1750,6 +1867,10 @@ DEFCAL I 1:
 DEFGATE BAR AS MATRIX:
 {INDENT}0, 1
 {INDENT}1, 0
+
+DEFCIRCUIT BELL q0 q1:
+{INDENT}H q1
+{INDENT}CNOT q1 q0
 
 H 1
 CNOT 2 3
