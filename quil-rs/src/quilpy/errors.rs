@@ -130,6 +130,14 @@ exception!(
     "Errors that may occur when parsing a waveform."
 );
 
+exception!(
+    crate::waveform::sampling::SamplingError,
+    quil.waveform,
+    SamplingError,
+    QuilError,
+    "Errors that may occur when sampling waveforms."
+);
+
 // program errors
 exception!(
     crate::program::ProgramError,

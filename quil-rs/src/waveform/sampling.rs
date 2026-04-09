@@ -3,7 +3,7 @@
 use num_complex::Complex64;
 
 #[cfg(feature = "stubs")]
-use pyo3_stub_gen::derive::gen_stub_pyclass_complex_enum;
+use pyo3_stub_gen::derive::{gen_stub_pyclass_complex_enum, gen_stub_pymethods};
 
 /// The result of sampling a waveform, representing a sequence of IQ value samples.
 #[derive(Clone, PartialEq, Debug)]
@@ -23,7 +23,11 @@ pub enum IqSamples {
     Samples(Vec<Complex64>),
 }
 
+#[cfg_attr(not(feature = "python"), strip_pyo3)]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[cfg_attr(feature = "python", pyo3::pymethods)]
 impl IqSamples {
+    #[getter(sample_count)]
     /// The number of samples.
     pub fn sample_count(&self) -> usize {
         match self {
@@ -42,7 +46,9 @@ impl IqSamples {
             Self::Samples(samples) => samples.get(index).copied(),
         }
     }
+}
 
+impl IqSamples {
     /// Convert this sequence of samples into an explicit vector.
     ///
     /// The length of this vector is [`self.sample_count()`][Self::sample_count], and its values are
@@ -56,11 +62,6 @@ impl IqSamples {
 }
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize, thiserror::Error)]
-#[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
-#[cfg_attr(
-    feature = "python",
-    pyo3::pyclass(module = "quil.waveform", eq, frozen)
-)]
 pub enum SamplingError {
     #[error(
         "A duration of {duration} s cannot be discretized with a sample rate of {sample_rate} Hz, \

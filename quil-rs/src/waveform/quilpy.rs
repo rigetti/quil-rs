@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use num_complex::Complex64;
 use numpy::{IntoPyArray as _, PyArray1, PyArrayMethods as _};
 use pyo3::{
-    exceptions::PyValueError,
     prelude::*,
     types::{IntoPyDict as _, PyDict, PyTuple},
 };
@@ -17,7 +16,7 @@ use crate::{
     units::Cycles,
     waveform::{
         builtin::{quilpy::*, *},
-        sampling::{IqSamples, SamplingError},
+        sampling::IqSamples,
         *,
     },
 };
@@ -25,7 +24,6 @@ use crate::{
 create_init_submodule! {
     classes: [
         IqSamples,
-        SamplingError,
         SyntacticWaveform,
         ConcreteWaveform,
         SyntacticBuiltinWaveform,
@@ -48,13 +46,13 @@ create_init_submodule! {
     errors: [
          errors::WaveformParameterError,
          errors::WaveformInvocationError,
+         errors::SamplingError,
     ],
     funcs: [ py_apply_phase_and_detuning ],
 }
 
 impl_repr! {
     IqSamples,
-    SamplingError,
     SyntacticWaveform,
     ConcreteWaveform,
     SyntacticBuiltinWaveform,
@@ -326,9 +324,7 @@ impl ConcreteCommonBuiltinParameters {
         &self,
         sample_rate: f64,
     ) -> PyResult<ExplicitCommonBuiltinParameters> {
-        self.0
-            .resolve_with_sample_rate(sample_rate)
-            .map_err(PyValueError::new_err)
+        Ok(self.0.resolve_with_sample_rate(sample_rate)?)
     }
 }
 
@@ -584,9 +580,10 @@ macro_rules! python_waveforms {
                         common: ConcreteCommonBuiltinParameters,
                         sample_rate: f64,
                     ) -> PyResult<IqSamples> {
-                        python_access_inner!(self, $($($specific_data)?)?)
-                            .iq_values_at_sample_rate(common.0, sample_rate)
-                            .map_err(PyValueError::new_err)
+                        Ok(
+                            python_access_inner!(self, $($($specific_data)?)?)
+                                .iq_values_at_sample_rate(common.0, sample_rate)?
+                        )
                     }
                 }
 
@@ -674,25 +671,13 @@ impl ConcreteBuiltinWaveform {
         common: ConcreteCommonBuiltinParameters,
         sample_rate: f64,
     ) -> PyResult<IqSamples> {
-        self.0
-            .iq_values_at_sample_rate(common.0, sample_rate)
-            .map_err(PyValueError::new_err)
+        Ok(self.0.iq_values_at_sample_rate(common.0, sample_rate)?)
     }
 }
 
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl IqSamples {
-    #[getter(sample_count)]
-    pub fn py_sample_count(&self) -> usize {
-        self.sample_count()
-    }
-
-    #[pyo3(name = "get")]
-    pub fn py_get(&self, index: usize) -> Option<Complex64> {
-        self.get(index)
-    }
-
     #[pyo3(name = "iq_values")]
     pub fn py_iq_values<'py>(&self, py: Python<'py>) -> Bound<'py, PyArray1<Complex64>> {
         self.clone().into_iq_values().into_pyarray(py)
