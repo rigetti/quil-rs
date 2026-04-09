@@ -146,10 +146,10 @@
                                 <a class="variable" href="#SyntacticCommonBuiltinParameters.duration">duration</a>
                         </li>
                         <li>
-                                <a class="variable" href="#SyntacticCommonBuiltinParameters.scale">scale</a>
+                                <a class="variable" href="#SyntacticCommonBuiltinParameters.phase">phase</a>
                         </li>
                         <li>
-                                <a class="variable" href="#SyntacticCommonBuiltinParameters.phase">phase</a>
+                                <a class="variable" href="#SyntacticCommonBuiltinParameters.scale">scale</a>
                         </li>
                         <li>
                                 <a class="variable" href="#SyntacticCommonBuiltinParameters.detuning">detuning</a>
@@ -164,13 +164,13 @@
                                 <a class="function" href="#ConcreteCommonBuiltinParameters.resolve_with_sample_rate">resolve_with_sample_rate</a>
                         </li>
                         <li>
-                                <a class="variable" href="#ConcreteCommonBuiltinParameters.duration">duration</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#ConcreteCommonBuiltinParameters.scale">scale</a>
                         </li>
                         <li>
                                 <a class="variable" href="#ConcreteCommonBuiltinParameters.detuning">detuning</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#ConcreteCommonBuiltinParameters.duration">duration</a>
                         </li>
                         <li>
                                 <a class="variable" href="#ConcreteCommonBuiltinParameters.phase">phase</a>
@@ -185,13 +185,13 @@
                                 <a class="variable" href="#ExplicitCommonBuiltinParameters.detuning">detuning</a>
                         </li>
                         <li>
+                                <a class="variable" href="#ExplicitCommonBuiltinParameters.phase">phase</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#ExplicitCommonBuiltinParameters.sample_count">sample_count</a>
                         </li>
                         <li>
                                 <a class="variable" href="#ExplicitCommonBuiltinParameters.scale">scale</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#ExplicitCommonBuiltinParameters.phase">phase</a>
                         </li>
                 </ul>
 
@@ -227,10 +227,10 @@
                                 <a class="function" href="#SyntacticGaussian.try_evaluate">try_evaluate</a>
                         </li>
                         <li>
-                                <a class="variable" href="#SyntacticGaussian.t0">t0</a>
+                                <a class="variable" href="#SyntacticGaussian.fwhm">fwhm</a>
                         </li>
                         <li>
-                                <a class="variable" href="#SyntacticGaussian.fwhm">fwhm</a>
+                                <a class="variable" href="#SyntacticGaussian.t0">t0</a>
                         </li>
                 </ul>
 
@@ -257,16 +257,16 @@
                                 <a class="function" href="#SyntacticDragGaussian.try_evaluate">try_evaluate</a>
                         </li>
                         <li>
-                                <a class="variable" href="#SyntacticDragGaussian.anh">anh</a>
+                                <a class="variable" href="#SyntacticDragGaussian.alpha">alpha</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#SyntacticDragGaussian.fwhm">fwhm</a>
                         </li>
                         <li>
                                 <a class="variable" href="#SyntacticDragGaussian.t0">t0</a>
                         </li>
                         <li>
-                                <a class="variable" href="#SyntacticDragGaussian.alpha">alpha</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#SyntacticDragGaussian.fwhm">fwhm</a>
+                                <a class="variable" href="#SyntacticDragGaussian.anh">anh</a>
                         </li>
                 </ul>
 
@@ -281,10 +281,10 @@
                                 <a class="variable" href="#ConcreteDragGaussian.alpha">alpha</a>
                         </li>
                         <li>
-                                <a class="variable" href="#ConcreteDragGaussian.t0">t0</a>
+                                <a class="variable" href="#ConcreteDragGaussian.anh">anh</a>
                         </li>
                         <li>
-                                <a class="variable" href="#ConcreteDragGaussian.anh">anh</a>
+                                <a class="variable" href="#ConcreteDragGaussian.t0">t0</a>
                         </li>
                         <li>
                                 <a class="variable" href="#ConcreteDragGaussian.fwhm">fwhm</a>
@@ -299,13 +299,13 @@
                                 <a class="function" href="#SyntacticErfSquare.try_evaluate">try_evaluate</a>
                         </li>
                         <li>
+                                <a class="variable" href="#SyntacticErfSquare.risetime">risetime</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#SyntacticErfSquare.pad_left">pad_left</a>
                         </li>
                         <li>
                                 <a class="variable" href="#SyntacticErfSquare.pad_right">pad_right</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#SyntacticErfSquare.risetime">risetime</a>
                         </li>
                 </ul>
 
@@ -317,13 +317,13 @@
                                 <a class="function" href="#ConcreteErfSquare.iq_values_at_sample_rate">iq_values_at_sample_rate</a>
                         </li>
                         <li>
+                                <a class="variable" href="#ConcreteErfSquare.pad_right">pad_right</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#ConcreteErfSquare.pad_left">pad_left</a>
                         </li>
                         <li>
                                 <a class="variable" href="#ConcreteErfSquare.risetime">risetime</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#ConcreteErfSquare.pad_right">pad_right</a>
                         </li>
                 </ul>
 
@@ -338,16 +338,16 @@
                                 <a class="variable" href="#SyntacticHermiteGaussian.t0">t0</a>
                         </li>
                         <li>
-                                <a class="variable" href="#SyntacticHermiteGaussian.second_order_hrm_coeff">second_order_hrm_coeff</a>
+                                <a class="variable" href="#SyntacticHermiteGaussian.anh">anh</a>
                         </li>
                         <li>
-                                <a class="variable" href="#SyntacticHermiteGaussian.anh">anh</a>
+                                <a class="variable" href="#SyntacticHermiteGaussian.alpha">alpha</a>
                         </li>
                         <li>
                                 <a class="variable" href="#SyntacticHermiteGaussian.fwhm">fwhm</a>
                         </li>
                         <li>
-                                <a class="variable" href="#SyntacticHermiteGaussian.alpha">alpha</a>
+                                <a class="variable" href="#SyntacticHermiteGaussian.second_order_hrm_coeff">second_order_hrm_coeff</a>
                         </li>
                 </ul>
 
@@ -359,19 +359,19 @@
                                 <a class="function" href="#ConcreteHermiteGaussian.iq_values_at_sample_rate">iq_values_at_sample_rate</a>
                         </li>
                         <li>
-                                <a class="variable" href="#ConcreteHermiteGaussian.second_order_hrm_coeff">second_order_hrm_coeff</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#ConcreteHermiteGaussian.anh">anh</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#ConcreteHermiteGaussian.alpha">alpha</a>
                         </li>
                         <li>
                                 <a class="variable" href="#ConcreteHermiteGaussian.fwhm">fwhm</a>
                         </li>
                         <li>
+                                <a class="variable" href="#ConcreteHermiteGaussian.second_order_hrm_coeff">second_order_hrm_coeff</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#ConcreteHermiteGaussian.t0">t0</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#ConcreteHermiteGaussian.alpha">alpha</a>
                         </li>
                 </ul>
 
@@ -899,17 +899,6 @@
     
 
                             </div>
-                            <div id="SyntacticCommonBuiltinParameters.scale" class="classattr">
-                                <div class="attr variable">
-            <span class="name">scale</span>
-
-        
-    </div>
-    <a class="headerlink" href="#SyntacticCommonBuiltinParameters.scale"></a>
-    
-    
-
-                            </div>
                             <div id="SyntacticCommonBuiltinParameters.phase" class="classattr">
                                 <div class="attr variable">
             <span class="name">phase</span>
@@ -917,6 +906,17 @@
         
     </div>
     <a class="headerlink" href="#SyntacticCommonBuiltinParameters.phase"></a>
+    
+    
+
+                            </div>
+                            <div id="SyntacticCommonBuiltinParameters.scale" class="classattr">
+                                <div class="attr variable">
+            <span class="name">scale</span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyntacticCommonBuiltinParameters.scale"></a>
     
     
 
@@ -960,17 +960,6 @@
 
 
                             </div>
-                            <div id="ConcreteCommonBuiltinParameters.duration" class="classattr">
-                                <div class="attr variable">
-            <span class="name">duration</span>
-
-        
-    </div>
-    <a class="headerlink" href="#ConcreteCommonBuiltinParameters.duration"></a>
-    
-    
-
-                            </div>
                             <div id="ConcreteCommonBuiltinParameters.scale" class="classattr">
                                 <div class="attr variable">
             <span class="name">scale</span>
@@ -989,6 +978,17 @@
         
     </div>
     <a class="headerlink" href="#ConcreteCommonBuiltinParameters.detuning"></a>
+    
+    
+
+                            </div>
+                            <div id="ConcreteCommonBuiltinParameters.duration" class="classattr">
+                                <div class="attr variable">
+            <span class="name">duration</span>
+
+        
+    </div>
+    <a class="headerlink" href="#ConcreteCommonBuiltinParameters.duration"></a>
     
     
 
@@ -1036,6 +1036,19 @@ waveforms.</p>
 
 
                             </div>
+                            <div id="ExplicitCommonBuiltinParameters.phase" class="classattr">
+                                <div class="attr variable">
+            <span class="name">phase</span>
+
+        
+    </div>
+    <a class="headerlink" href="#ExplicitCommonBuiltinParameters.phase"></a>
+    
+            <div class="docstring"><p>Phase shift for the entire waveform.</p>
+</div>
+
+
+                            </div>
                             <div id="ExplicitCommonBuiltinParameters.sample_count" class="classattr">
                                 <div class="attr variable">
             <span class="name">sample_count</span>
@@ -1060,19 +1073,6 @@ waveforms.</p>
     <a class="headerlink" href="#ExplicitCommonBuiltinParameters.scale"></a>
     
             <div class="docstring"><p>Scale to apply to waveform envelope.</p>
-</div>
-
-
-                            </div>
-                            <div id="ExplicitCommonBuiltinParameters.phase" class="classattr">
-                                <div class="attr variable">
-            <span class="name">phase</span>
-
-        
-    </div>
-    <a class="headerlink" href="#ExplicitCommonBuiltinParameters.phase"></a>
-    
-            <div class="docstring"><p>Phase shift for the entire waveform.</p>
 </div>
 
 
@@ -1183,17 +1183,6 @@ waveforms.</p>
 
 
                             </div>
-                            <div id="SyntacticGaussian.t0" class="classattr">
-                                <div class="attr variable">
-            <span class="name">t0</span>
-
-        
-    </div>
-    <a class="headerlink" href="#SyntacticGaussian.t0"></a>
-    
-    
-
-                            </div>
                             <div id="SyntacticGaussian.fwhm" class="classattr">
                                 <div class="attr variable">
             <span class="name">fwhm</span>
@@ -1201,6 +1190,17 @@ waveforms.</p>
         
     </div>
     <a class="headerlink" href="#SyntacticGaussian.fwhm"></a>
+    
+    
+
+                            </div>
+                            <div id="SyntacticGaussian.t0" class="classattr">
+                                <div class="attr variable">
+            <span class="name">t0</span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyntacticGaussian.t0"></a>
     
     
 
@@ -1283,28 +1283,6 @@ waveforms.</p>
 
 
                             </div>
-                            <div id="SyntacticDragGaussian.anh" class="classattr">
-                                <div class="attr variable">
-            <span class="name">anh</span>
-
-        
-    </div>
-    <a class="headerlink" href="#SyntacticDragGaussian.anh"></a>
-    
-    
-
-                            </div>
-                            <div id="SyntacticDragGaussian.t0" class="classattr">
-                                <div class="attr variable">
-            <span class="name">t0</span>
-
-        
-    </div>
-    <a class="headerlink" href="#SyntacticDragGaussian.t0"></a>
-    
-    
-
-                            </div>
                             <div id="SyntacticDragGaussian.alpha" class="classattr">
                                 <div class="attr variable">
             <span class="name">alpha</span>
@@ -1323,6 +1301,28 @@ waveforms.</p>
         
     </div>
     <a class="headerlink" href="#SyntacticDragGaussian.fwhm"></a>
+    
+    
+
+                            </div>
+                            <div id="SyntacticDragGaussian.t0" class="classattr">
+                                <div class="attr variable">
+            <span class="name">t0</span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyntacticDragGaussian.t0"></a>
+    
+    
+
+                            </div>
+                            <div id="SyntacticDragGaussian.anh" class="classattr">
+                                <div class="attr variable">
+            <span class="name">anh</span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyntacticDragGaussian.anh"></a>
     
     
 
@@ -1366,17 +1366,6 @@ waveforms.</p>
     
 
                             </div>
-                            <div id="ConcreteDragGaussian.t0" class="classattr">
-                                <div class="attr variable">
-            <span class="name">t0</span>
-
-        
-    </div>
-    <a class="headerlink" href="#ConcreteDragGaussian.t0"></a>
-    
-    
-
-                            </div>
                             <div id="ConcreteDragGaussian.anh" class="classattr">
                                 <div class="attr variable">
             <span class="name">anh</span>
@@ -1384,6 +1373,17 @@ waveforms.</p>
         
     </div>
     <a class="headerlink" href="#ConcreteDragGaussian.anh"></a>
+    
+    
+
+                            </div>
+                            <div id="ConcreteDragGaussian.t0" class="classattr">
+                                <div class="attr variable">
+            <span class="name">t0</span>
+
+        
+    </div>
+    <a class="headerlink" href="#ConcreteDragGaussian.t0"></a>
     
     
 
@@ -1427,6 +1427,17 @@ waveforms.</p>
 
 
                             </div>
+                            <div id="SyntacticErfSquare.risetime" class="classattr">
+                                <div class="attr variable">
+            <span class="name">risetime</span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyntacticErfSquare.risetime"></a>
+    
+    
+
+                            </div>
                             <div id="SyntacticErfSquare.pad_left" class="classattr">
                                 <div class="attr variable">
             <span class="name">pad_left</span>
@@ -1445,17 +1456,6 @@ waveforms.</p>
         
     </div>
     <a class="headerlink" href="#SyntacticErfSquare.pad_right"></a>
-    
-    
-
-                            </div>
-                            <div id="SyntacticErfSquare.risetime" class="classattr">
-                                <div class="attr variable">
-            <span class="name">risetime</span>
-
-        
-    </div>
-    <a class="headerlink" href="#SyntacticErfSquare.risetime"></a>
     
     
 
@@ -1488,6 +1488,17 @@ waveforms.</p>
 
 
                             </div>
+                            <div id="ConcreteErfSquare.pad_right" class="classattr">
+                                <div class="attr variable">
+            <span class="name">pad_right</span>
+
+        
+    </div>
+    <a class="headerlink" href="#ConcreteErfSquare.pad_right"></a>
+    
+    
+
+                            </div>
                             <div id="ConcreteErfSquare.pad_left" class="classattr">
                                 <div class="attr variable">
             <span class="name">pad_left</span>
@@ -1506,17 +1517,6 @@ waveforms.</p>
         
     </div>
     <a class="headerlink" href="#ConcreteErfSquare.risetime"></a>
-    
-    
-
-                            </div>
-                            <div id="ConcreteErfSquare.pad_right" class="classattr">
-                                <div class="attr variable">
-            <span class="name">pad_right</span>
-
-        
-    </div>
-    <a class="headerlink" href="#ConcreteErfSquare.pad_right"></a>
     
     
 
@@ -1560,17 +1560,6 @@ waveforms.</p>
     
 
                             </div>
-                            <div id="SyntacticHermiteGaussian.second_order_hrm_coeff" class="classattr">
-                                <div class="attr variable">
-            <span class="name">second_order_hrm_coeff</span>
-
-        
-    </div>
-    <a class="headerlink" href="#SyntacticHermiteGaussian.second_order_hrm_coeff"></a>
-    
-    
-
-                            </div>
                             <div id="SyntacticHermiteGaussian.anh" class="classattr">
                                 <div class="attr variable">
             <span class="name">anh</span>
@@ -1578,6 +1567,17 @@ waveforms.</p>
         
     </div>
     <a class="headerlink" href="#SyntacticHermiteGaussian.anh"></a>
+    
+    
+
+                            </div>
+                            <div id="SyntacticHermiteGaussian.alpha" class="classattr">
+                                <div class="attr variable">
+            <span class="name">alpha</span>
+
+        
+    </div>
+    <a class="headerlink" href="#SyntacticHermiteGaussian.alpha"></a>
     
     
 
@@ -1593,13 +1593,13 @@ waveforms.</p>
     
 
                             </div>
-                            <div id="SyntacticHermiteGaussian.alpha" class="classattr">
+                            <div id="SyntacticHermiteGaussian.second_order_hrm_coeff" class="classattr">
                                 <div class="attr variable">
-            <span class="name">alpha</span>
+            <span class="name">second_order_hrm_coeff</span>
 
         
     </div>
-    <a class="headerlink" href="#SyntacticHermiteGaussian.alpha"></a>
+    <a class="headerlink" href="#SyntacticHermiteGaussian.second_order_hrm_coeff"></a>
     
     
 
@@ -1632,17 +1632,6 @@ waveforms.</p>
 
 
                             </div>
-                            <div id="ConcreteHermiteGaussian.second_order_hrm_coeff" class="classattr">
-                                <div class="attr variable">
-            <span class="name">second_order_hrm_coeff</span>
-
-        
-    </div>
-    <a class="headerlink" href="#ConcreteHermiteGaussian.second_order_hrm_coeff"></a>
-    
-    
-
-                            </div>
                             <div id="ConcreteHermiteGaussian.anh" class="classattr">
                                 <div class="attr variable">
             <span class="name">anh</span>
@@ -1650,17 +1639,6 @@ waveforms.</p>
         
     </div>
     <a class="headerlink" href="#ConcreteHermiteGaussian.anh"></a>
-    
-    
-
-                            </div>
-                            <div id="ConcreteHermiteGaussian.alpha" class="classattr">
-                                <div class="attr variable">
-            <span class="name">alpha</span>
-
-        
-    </div>
-    <a class="headerlink" href="#ConcreteHermiteGaussian.alpha"></a>
     
     
 
@@ -1676,6 +1654,17 @@ waveforms.</p>
     
 
                             </div>
+                            <div id="ConcreteHermiteGaussian.second_order_hrm_coeff" class="classattr">
+                                <div class="attr variable">
+            <span class="name">second_order_hrm_coeff</span>
+
+        
+    </div>
+    <a class="headerlink" href="#ConcreteHermiteGaussian.second_order_hrm_coeff"></a>
+    
+    
+
+                            </div>
                             <div id="ConcreteHermiteGaussian.t0" class="classattr">
                                 <div class="attr variable">
             <span class="name">t0</span>
@@ -1683,6 +1672,17 @@ waveforms.</p>
         
     </div>
     <a class="headerlink" href="#ConcreteHermiteGaussian.t0"></a>
+    
+    
+
+                            </div>
+                            <div id="ConcreteHermiteGaussian.alpha" class="classattr">
+                                <div class="attr variable">
+            <span class="name">alpha</span>
+
+        
+    </div>
+    <a class="headerlink" href="#ConcreteHermiteGaussian.alpha"></a>
     
     
 
