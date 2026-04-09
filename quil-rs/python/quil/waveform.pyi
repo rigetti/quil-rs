@@ -265,13 +265,19 @@ class IqSamples:
     The result of sampling a waveform, representing a sequence of IQ value samples.
     """
     @property
-    def sample_count(self) -> builtins.int: ...
+    def sample_count(self) -> builtins.int:
+        r"""
+        The number of samples.
+        """
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
-    def get(self, index: builtins.int) -> typing.Optional[builtins.complex]: ...
+    def get(self, index: builtins.int) -> typing.Optional[builtins.complex]:
+        r"""
+        Get the nth sample.
+        """
     def iq_values(self) -> numpy.typing.NDArray[numpy.complex128]: ...
     @typing.final
     class Flat(IqSamples):
@@ -301,36 +307,11 @@ class IqSamples:
         def __new__(cls, _0: typing.Sequence[builtins.complex]) -> IqSamples.Samples: ...
     
 
-class SamplingError:
-    def __repr__(self) -> builtins.str:
-        r"""
-        Implements `__repr__` for Python in terms of the Rust
-        [`Debug`](std::fmt::Debug) implementation.
-        """
-    @typing.final
-    class MisalignedDuration(SamplingError):
-        __match_args__ = ("duration", "sample_rate", "misalignment", "max_misalignment",)
-        @property
-        def duration(self) -> builtins.float: ...
-        @property
-        def max_misalignment(self) -> builtins.float: ...
-        @property
-        def misalignment(self) -> builtins.float: ...
-        @property
-        def sample_rate(self) -> builtins.float: ...
-        def __new__(cls, duration: builtins.float, sample_rate: builtins.float, misalignment: builtins.float, max_misalignment: builtins.float) -> SamplingError.MisalignedDuration: ...
-    
-    @typing.final
-    class SampleCountOutOfRange(SamplingError):
-        __match_args__ = ("duration", "sample_rate", "sample_count",)
-        @property
-        def duration(self) -> builtins.float: ...
-        @property
-        def sample_count(self) -> builtins.float: ...
-        @property
-        def sample_rate(self) -> builtins.float: ...
-        def __new__(cls, duration: builtins.float, sample_rate: builtins.float, sample_count: builtins.float) -> SamplingError.SampleCountOutOfRange: ...
-    
+class SamplingError(QuilError):
+    r"""
+    Errors that may occur when sampling waveforms.
+    """
+    ...
 
 class SyntacticBuiltinWaveform:
     def __eq__(self, other: builtins.object) -> builtins.bool: ...
