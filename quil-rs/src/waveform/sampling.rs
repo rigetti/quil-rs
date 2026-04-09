@@ -66,7 +66,7 @@ pub enum SamplingError {
     #[error(
         "A duration of {duration} s cannot be discretized with a sample rate of {sample_rate} Hz, \
          as the resulting number of samples ({sample_count}) \
-         is not in the representable range [0, 2³²)."
+         is not in the representable range [0, 2³²)." // ], so as not to confuse our linter
     )]
     SampleCountOutOfRange {
         duration: f64,
