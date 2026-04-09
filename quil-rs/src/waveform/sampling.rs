@@ -66,7 +66,9 @@ pub enum SamplingError {
     #[error(
         "A duration of {duration} s cannot be discretized with a sample rate of {sample_rate} Hz, \
          as the resulting number of samples ({sample_count}) \
-         is not in the representable range [0, 2³²)." // ], so as not to confuse our linter
+         is not in the representable range \u{5B}0, 2³²)."
+        // U+005B is `[` (i.e., LEFT SQUARE BRACKET), but we have to hide it with an escape so as
+        // not to confuse our homegrown PyO3 linter script (`quil-rs/scripts/lint-quil-rs.py`).
     )]
     SampleCountOutOfRange {
         duration: f64,
