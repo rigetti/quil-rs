@@ -3,7 +3,7 @@
 import cmath
 import textwrap
 from cmath import pi
-from typing import Any, Optional, Union
+from typing import Any, Optional, TypeVar, Union
 
 from hypothesis import given
 from hypothesis import strategies as st
@@ -26,7 +26,9 @@ def in_range(min: float, max: float) -> SearchStrategy[float]:
     return st.floats(min_value=min, max_value=max)
 
 
-def optional[T](strategy: SearchStrategy[T]) -> SearchStrategy[Optional[T]]:
+T = TypeVar('T')
+
+def optional(strategy: SearchStrategy[T]) -> SearchStrategy[Optional[T]]:
     # Hypothesis says it knows better about weighted distributions than I do
     return st.one_of(st.none(), strategy)
 
