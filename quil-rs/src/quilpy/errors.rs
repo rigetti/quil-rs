@@ -119,6 +119,14 @@ exception!(
     quil.waveform,
     WaveformParameterError,
     QuilError,
+    "Errors that may occur when parsing waveform parameters."
+);
+
+exception!(
+    crate::waveform::WaveformInvocationError,
+    quil.waveform,
+    WaveformInvocationError,
+    QuilError,
     "Errors that may occur when parsing a waveform."
 );
 

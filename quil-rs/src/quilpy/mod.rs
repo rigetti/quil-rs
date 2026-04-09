@@ -24,7 +24,7 @@ create_init_submodule! {
         "instructions": instruction::quilpy::init_submodule,
         "program": program::quilpy::init_submodule,
         "validation": validation::quilpy::init_submodule,
-        "waveforms": waveform::quilpy::init_submodule
+        "waveform": waveform::quilpy::init_submodule
     ],
 }
 

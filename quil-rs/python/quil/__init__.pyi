@@ -5,7 +5,7 @@ import builtins
 from . import expression
 from . import instructions
 from . import program
-from . import waveforms
+from . import waveform
 
 class PickleError(QuilError):
     r"""

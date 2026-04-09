@@ -5,12 +5,12 @@ use num_complex::Complex64;
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::gen_stub_pyclass_complex_enum;
 
-/// The result of sampling a waveform, representing a sequence of IQ-value samples.
+/// The result of sampling a waveform, representing a sequence of IQ value samples.
 #[derive(Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil.waveforms", eq, frozen)
+    pyo3::pyclass(module = "quil.waveform", eq, frozen)
 )]
 pub enum IqSamples {
     /// A flat waveform, consisting of a single IQ value repeated some number of times.
@@ -59,9 +59,20 @@ impl IqSamples {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil.waveforms", eq, frozen)
+    pyo3::pyclass(module = "quil.waveform", eq, frozen)
 )]
 pub enum SamplingError {
+    #[error(
+        "A duration of {duration} s cannot be discretized with a sample rate of {sample_rate} Hz, \
+         as the resulting number of samples ({sample_count}) \
+         is not in the representable range [0, 2³²)."
+    )]
+    SampleCountOutOfRange {
+        duration: f64,
+        sample_rate: f64,
+        sample_count: f64,
+    },
+
     #[error(
         "A duration of {duration} s cannot be produced with a sample rate of {sample_rate} Hz.  \
          There is a {misalignment_type} of {abs_misalignment} s that is not accounted for, \

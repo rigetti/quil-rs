@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use statrs::function::erf::erf;
 
 #[cfg(feature = "stubs")]
-use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyclass_complex_enum};
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::{
     real,
@@ -20,8 +20,9 @@ use crate::{
 };
 
 use super::{
+    parse,
     sampling::{IqSamples, SamplingError},
-    Concrete, Syntactic, WaveformType,
+    Concrete, Syntactic, WaveformData, WaveformParameterError,
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -32,7 +33,7 @@ use super::{
 #[derive_where(Clone, PartialEq, Debug)]
 #[derive_where(Copy; T::Real, T::Complex)]
 #[derive(derive_more::From)]
-pub enum BuiltinWaveform<T: WaveformType> {
+pub enum BuiltinWaveform<T: WaveformData> {
     // Quil-T spec
     Flat(Flat<T>),
     Gaussian(Gaussian<T>),
@@ -46,7 +47,7 @@ pub enum BuiltinWaveform<T: WaveformType> {
 /// Parameters that can be applied to all built-in waveforms.
 #[derive_where(Clone, PartialEq, Debug)]
 #[derive_where(Copy, Serialize, Deserialize; T::Real)]
-pub struct CommonBuiltinParameters<T: WaveformType> {
+pub struct CommonBuiltinParameters<T: WaveformData> {
     /// Full duration of the pulse, in seconds.
     ///
     /// Note that this is *always* a concrete real number, even for [`Syntactic`] parameters!  It
@@ -63,22 +64,40 @@ pub struct CommonBuiltinParameters<T: WaveformType> {
     pub detuning: Option<T::Real>,
 }
 
+impl parse::Extractable for CommonBuiltinParameters<Syntactic> {
+    fn extract_from(
+        parameters: &mut crate::instruction::WaveformParameters,
+    ) -> Result<Self, WaveformParameterError> {
+        let duration = parse::concrete_real(parameters, "duration")?;
+        let scale = parameters.shift_remove("scale");
+        let phase = parameters.shift_remove("phase").map(Cycles);
+        let detuning = parameters.shift_remove("detuning");
+
+        Ok(Self {
+            duration,
+            scale,
+            phase,
+            detuning,
+        })
+    }
+}
+
 /// Like [`CommonBuiltinParameters<Concrete>`], but with the defaults resolved and the duration
 /// discretized.
 ///
-/// This does not take a [`WaveformType`] parameter because it only makes sense for [`Concrete`]
+/// This does not take a [`WaveformData`] parameter because it only makes sense for [`Concrete`]
 /// waveforms.
 #[derive(Clone, Copy, PartialEq, Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil.waveforms", subclass, get_all, set_all, eq)
+    pyo3::pyclass(module = "quil.waveform", subclass, get_all, set_all, eq)
 )]
 pub struct ExplicitCommonBuiltinParameters {
     /// Integral number of samples that should be taken of the pulse
     ///
     /// Corresponds to [`CommonBuiltinParameters::duration`].
-    pub sample_count: f64,
+    pub sample_count: u32,
 
     /// Scale to apply to waveform envelope.
     pub scale: f64,
@@ -90,13 +109,31 @@ pub struct ExplicitCommonBuiltinParameters {
     pub detuning: f64,
 }
 
-impl<S: WaveformType> CommonBuiltinParameters<S> {
-    pub fn try_evaluate<T: WaveformType, E>(
+/// We require this so we can cast
+/// [`ExplicitCommonBuiltinParameters::sample_count`] to [`usize`] later.
+const _USIZE_MUST_BE_AT_LEAST_32_BITS: () =
+    assert!(std::mem::size_of::<usize>() >= std::mem::size_of::<u32>());
+
+impl<S: WaveformData> CommonBuiltinParameters<S> {
+    /// Convert one [`CommonBuiltinParameters`] value into another by replacing its associated data.
+    ///
+    /// Given two forms of waveform data, `S` and `T`, the user specifies how to evaluate `S`'s real
+    /// numbers into `T`'s real numbers and how to evaluate `S`'s complex numbers to `T`'s complex
+    /// numbers.  For example, to convert parsed ([`Syntactic`]) parameters into sampleable
+    /// ([`Concrete`]) parameters, you can pass
+    /// [`Expression::evaluate`][crate::expression::Expression::evaluate] to this function.
+    ///
+    /// For a more detailed example, see the documentation for
+    /// [`Waveform::try_evaluate`][crate::waveform::Waveform::try_evaluate], which has the same
+    /// structure as this function.
+    pub fn try_evaluate<T: WaveformData, E>(
         self,
         real: impl Fn(S::Real) -> Result<T::Real, E>,
         complex: impl Fn(S::Complex) -> Result<T::Complex, E>,
     ) -> Result<CommonBuiltinParameters<T>, E> {
-        let _ = complex; // We want a uniform API
+        // We want a uniform API with other `try_evaluate` functions, so we take
+        // a `complex` evaluator even though we don't use it
+        let _ = complex;
         let Self {
             duration,
             scale,
@@ -145,21 +182,28 @@ impl CommonBuiltinParameters<Concrete> {
         let sample_count = sample_count_fract.round();
         let misalignment = sample_count_fract - sample_count;
         let max_misalignment = 1.0 / (sample_rate * 100.0);
-        if misalignment.abs() >= max_misalignment {
-            return Err(SamplingError::MisalignedDuration {
+
+        if sample_count < 0.0 || sample_count >= f64::from(u32::MAX) {
+            Err(SamplingError::SampleCountOutOfRange {
+                duration,
+                sample_rate,
+                sample_count,
+            })
+        } else if misalignment.abs() >= max_misalignment {
+            Err(SamplingError::MisalignedDuration {
                 duration,
                 sample_rate,
                 misalignment,
                 max_misalignment,
-            });
+            })
+        } else {
+            Ok(ExplicitCommonBuiltinParameters {
+                sample_count: sample_count as u32,
+                scale: scale.unwrap_or(1.0),
+                phase: phase.unwrap_or(Cycles(0.0)),
+                detuning: detuning.unwrap_or(0.0),
+            })
         }
-
-        Ok(ExplicitCommonBuiltinParameters {
-            sample_count,
-            scale: scale.unwrap_or(1.0),
-            phase: phase.unwrap_or(Cycles(0.0)),
-            detuning: detuning.unwrap_or(0.0),
-        })
     }
 }
 
@@ -170,7 +214,8 @@ impl CommonBuiltinParameters<Concrete> {
 pub trait BuiltinWaveformParameters:
     Into<BuiltinWaveform<Concrete>> + Copy + PartialEq + std::fmt::Debug + private::Sealed
 {
-    /// Convert this waveform into a sequence of sampled IQ values.
+    /// Sample the given waveform (with the additional common parameters) at the given sample rate
+    /// (in Hz).
     fn iq_values_at_sample_rate(
         self,
         common: CommonBuiltinParameters<Concrete>,
@@ -180,20 +225,91 @@ pub trait BuiltinWaveformParameters:
 
 ////////////////////////////////////////////////////////////////////////////////
 // Built-in waveform types (parameters only)
+//
+// We have to declare a bunch of waveforms which all look very similar but have
+// slightly different contents.  This is done in the `define_waveforms!` macro
+// block below, but to get there, we have to define a number of helper macros.
+// A waveform definition looks like this:
+//
+// ```
+// /// A description of this waveform.
+// #[waveform_source(QuilT)]
+// pub struct MathematicalFunction {
+//     /// A description of `parameter_0`
+//     pub parameter_0: Complex,
+//
+//     /// A description of `parameter_1`
+//     pub parameter_1: Real,
+//
+//     /// A description of `parameter_2`
+//     pub parameter_2: ConcreteReal,
+// }
+// ```
+//
+// and is expanded to something along the lines of
+//
+// ```
+// /// A description of this waveform.
+// ///
+// /// This waveform is part of the [Quil-T][] spec …
+// #[derive_where(Clone, Copy, PartailEq, Debug, Serialize, Deserialize; …)]
+// pub struct MathematicalFunction<T: WaveformData> {
+//     /// A description of `parameter_0`
+//     pub parameter_0: T::Complex,
+//
+//     /// A description of `parameter_1`
+//     pub parameter_1: T::Real,
+//
+//     /// A description of `parameter_2`
+//     pub parameter_2: f64,
+// }
+//
+// impl parse::Extractable for MathematicalFunction<Syntactic> {
+//     …
+// }
+//
+// impl <S: WaveformData> MathematicalFunction<S> {
+//     pub fn try_evaluate<T: WaveformData, E>(
+//         self,
+//         real: impl Fn(S::Real) -> Result<T::Real, E>,
+//         complex: impl Fn(S::Complex) -> Result<T::Complex,E>,
+//     ) -> Result<MathematicalFunction<T> ,E>  {
+//         … evaluate each field …
+//     }
+// }
+//
+// TODO Python ...
+// ```
+//
+// A couple of notes that may not be obvious:
+//
+// - The `#[waveform_source(...)]` attribute is just for documentation, and
+//   reports whether this waveform comes from the Quil-T spec (`QuilT`) or is a
+//   Rigetti extension to it (`Rigetti`).
+//
+// - The pseudo-types of the fields must be one of the three examples given
+//   above.  `ConcreteReal` is for `duration`-like parameters that need to be
+//   statically known; the other two will depend on the `WaveformData`
+//   parameter.
 ////////////////////////////////////////////////////////////////////////////////
 
+/// Return the appropriate parser for one of the field pseudo-types.  These are for use in
+/// [`parse::Extractable`] implementations.
 macro_rules! field_parser {
     (ConcreteReal) => {
-        super::concrete_real
+        parse::concrete_real
     };
     (Real) => {
-        super::mandatory
+        parse::mandatory
     };
     (Complex) => {
-        super::mandatory
+        parse::mandatory
     };
 }
 
+/// Given a [`WaveformData`] marker, convert one of the field pseudo-types into the corresponding
+/// actual Rust type.  Non-identifier types must be wrapped in parentheses because macros can't
+/// match balanced angle brackets.
 macro_rules! field_type {
     ($waveform_type:ident, $field_type:ident) => {
         field_type!(($waveform_type), $field_type)
@@ -209,27 +325,31 @@ macro_rules! field_type {
     };
 }
 
-macro_rules! field_derive_where {
-    ($($ty:ident)?; ConcreteReal $(, $($rest:tt)*)?) => {
-        field_derive_where!($($ty)?; $($($rest)*)?)
+/// `extract_type_if_generic_field!($pseudo_type; ...)` evaluates to `T::$pseudo_type` for the
+/// `$pseudo_type`s `Real` and `Complex` if they occur in the type list `...`, and to `()`
+/// otherwise.
+///
+/// This lets us e.g. get the appropriate [`Copy`] bounds on our types with [`derive_where`], since
+/// `()` trivially satisfies the bounds.
+macro_rules! extract_type_if_generic_field {
+    (Real; Real $($rest:tt)*) => {
+        T::Real
     };
-    ($(Real)?; Real $(, $($rest:tt)*)?) => {
-        field_derive_where!(Real; $($($rest)*)?)
+    (Complex; Complex $($rest:tt)*) => {
+        T::Complex
     };
-    ($(Complex)?; Complex $(, $($rest:tt)*)?) => {
-        field_derive_where!(Complex; $($($rest)*)?)
+    ($ty:ident; $other:tt $($rest:tt)*) => {
+        extract_type_if_generic_field!($ty; $($rest)*)
     };
     ($ty:ident;) => {
-        T::$ty
+        ()
     };
-    ($($rest:tt)*) => {
-        compile_error!(concat!(
-            "Invalid struct for `field_derive_where!`:",
-            stringify!($($rest)*)
-        ))
-    }
 }
 
+/// Part of the implementation of the `try_evaluate` function for waveforms; given a pseudo-typed
+/// field `$field: $pseudo_type` and the `$real` and `$complex` evaluator parameters to
+/// `try_evaluate`, `field_evaluator!($pseudo_type, real = $real, complex = $complex, field)` will
+/// transform that `field` from one [`WaveformData`] to another.
 macro_rules! field_evaluator {
     (ConcreteReal, real = $real:ident, complex = $complex:ident, $field:expr) => {
         $field
@@ -242,6 +362,8 @@ macro_rules! field_evaluator {
     };
 }
 
+/// Constant strings documenting the origin of waveforms, powering the `#[waveform_source(...)]`
+/// attribute within [`define_waveforms!`].
 macro_rules! waveform_source {
     (QuilT) => {
         r#"This waveform is part of the [Quil-T][] spec ([§12.2, Waveforms][]).
@@ -254,6 +376,9 @@ macro_rules! waveform_source {
     };
 }
 
+/// `concrete_waveform!($ty, ...fields of $ty...)` is effectively the same as `$ty<Concrete>`,
+/// except (a) it uses `super` because it's intended for use within a submodule, and (b) it just
+/// emits `$ty` if there are no fields, since fieldless waveforms aren't generic.
 macro_rules! concrete_waveform {
     ($name:ident, $($field:ident)+) => {
         super::$name<super::Concrete>
@@ -263,6 +388,9 @@ macro_rules! concrete_waveform {
     };
 }
 
+/// Generates either `Syntactic$name` or `Concrete$name` Python wrapper types, depending on what's
+/// provided as `$waveform_type`.  These wrapper types are thin public wrappers around
+/// `$name<$waveform_type>` and provide Python setters and getters for the fields.
 macro_rules! define_python_waveform_wrapper {
     (
         $name:ident,
@@ -275,10 +403,11 @@ macro_rules! define_python_waveform_wrapper {
             #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
             #[cfg_attr(
                 feature = "python",
-                pyo3::pyclass(module = "quil.waveforms", subclass, eq)
+                pyo3::pyclass(module = "quil.waveform", subclass, eq)
             )]
             pub struct [<$waveform_type $name>](pub $name<$waveform_type>);
 
+            #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
             #[cfg(feature = "python")]
             #[pyo3::pymethods]
             impl [<$waveform_type $name>] {
@@ -286,14 +415,14 @@ macro_rules! define_python_waveform_wrapper {
                     #[getter($field)]
                     fn [<py_get_$field>](
                         &self
-                    ) -> field_type!((<$waveform_type as WaveformType>), $ty) {
+                    ) -> field_type!((<$waveform_type as WaveformData>), $ty) {
                         self.0.$field.clone()
                     }
 
                     #[setter($field)]
                     fn [<py_set_$field>](
                         &mut self,
-                        $field: field_type!((<$waveform_type as WaveformType>), $ty),
+                        $field: field_type!((<$waveform_type as WaveformData>), $ty),
                     ) {
                         self.0.$field = $field;
                     }
@@ -303,43 +432,19 @@ macro_rules! define_python_waveform_wrapper {
     }
 }
 
+/// Generate Python syntactic and concrete waveforms.
 macro_rules! define_python_waveform {
     ($name:ident) => {};
 
     ($name:ident { $($field:ident: $ty:ident),+ }) => {
         define_python_waveform_wrapper!($name, Syntactic, derive(), { $($field: $ty),+ });
         define_python_waveform_wrapper!($name, Concrete, derive(Copy), { $($field: $ty),+ });
-
-        paste::paste! {
-            #[cfg(feature = "python")]
-            #[pyo3::pymethods]
-            impl [<Syntactic $name>] {
-                #[pyo3(name = "try_evaluate")]
-                fn py_try_evaluate(
-                    &self,
-                    variables: std::collections::HashMap<String, Complex64>,
-                    memory_references: std::collections::HashMap<String, Vec<f64>>,
-                ) -> pyo3::PyResult<[<Concrete $name>]> {
-                    let complex = |expr: crate::expression::Expression| {
-                        expr.evaluate(&variables, &memory_references)
-                    };
-
-                    let real = |expr| {
-                        let Complex64 { re, im } = complex(expr)?;
-                        if im == 0.0 {
-                            Ok(re)
-                        } else {
-                            Err(crate::expression::EvaluationError::NumberNotReal)
-                        }
-                    };
-
-                    Ok([<Concrete $name>](self.0.clone().try_evaluate(real, complex)?))
-                }
-            }
-        }
     }
 }
 
+/// Define a single waveform, as described in the introduction to this section.  Note that we handle
+/// fieldless waveforms specially; these get to omit a lot of work because they aren't generic.
+/// Documentation is handled in `define_waveforms!`.
 macro_rules! define_waveform {
     {
         $(#[$struct_meta:meta])*
@@ -348,14 +453,14 @@ macro_rules! define_waveform {
         $(#[$struct_meta])*
         #[derive(Clone, PartialEq, Debug, Copy, Serialize, Deserialize)]
         #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-        #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.waveforms", subclass, eq))]
+        #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.waveform", subclass, eq))]
         pub struct $name;
 
         #[automatically_derived]
-        impl super::Extractable for $name {
+        impl parse::Extractable for $name {
             fn extract_from(
-                parameters: &mut super::WaveformParameters
-            ) -> Result<Self, super::WaveformParameterError> {
+                parameters: &mut crate::instruction::WaveformParameters
+            ) -> Result<Self, WaveformParameterError> {
                 Ok(Self)
             }
         }
@@ -373,8 +478,12 @@ macro_rules! define_waveform {
     } => {
         $(#[$struct_meta])*
         #[derive_where(Clone, PartialEq, Debug)]
-        #[derive_where(Copy, Serialize, Deserialize; field_derive_where!(; $($ty),+))]
-        pub struct $name<T: WaveformType> {
+        #[derive_where(
+            Copy, Serialize, Deserialize;
+            extract_type_if_generic_field!(Real; $($ty),+),
+            extract_type_if_generic_field!(Complex; $($ty),+)
+        )]
+        pub struct $name<T: WaveformData> {
             $(
                 $(#[$field_meta])*
                 pub $field: field_type!(T, $ty)
@@ -382,10 +491,10 @@ macro_rules! define_waveform {
         }
 
         #[automatically_derived]
-        impl super::Extractable for $name<Syntactic> {
+        impl parse::Extractable for $name<Syntactic> {
             fn extract_from(
-                parameters: &mut super::WaveformParameters,
-            ) -> Result<Self, super::WaveformParameterError> {
+                parameters: &mut crate::instruction::WaveformParameters,
+            ) -> Result<Self, WaveformParameterError> {
                 $(
                     let $field = field_parser!($ty)(parameters, stringify!($field))?;
                 )+
@@ -393,9 +502,23 @@ macro_rules! define_waveform {
             }
         }
 
-        impl<S: WaveformType> $name<S> {
+        impl<S: WaveformData> $name<S> {
+            #[doc = concat!(
+                "Convert one [`", stringify!($name), "`] into another ",
+                "by replacing its associated data."
+            )]
+            ///
+            /// Given two forms of waveform data, `S` and `T`, the user specifies how to evaluate
+            /// `S`'s real numbers into `T`'s real numbers and how to evaluate `S`'s complex numbers
+            /// to `T`'s complex numbers.  For example, to convert parsed ([`Syntactic`]) parameters
+            /// into sampleable ([`Concrete`]) parameters, you can pass
+            /// [`Expression::evaluate`][crate::expression::Expression::evaluate] to this function.
+            ///
+            /// For a more detailed example, see the documentation for
+            /// [`Waveform::try_evaluate`][crate::waveform::Waveform::try_evaluate], which has the same
+            /// structure as this function.
             #[allow(unused_variables, reason = "macro-generated code")]
-            pub fn try_evaluate<T: WaveformType, E>(
+            pub fn try_evaluate<T: WaveformData, E>(
                 self,
                 real: impl Fn(S::Real) -> Result<T::Real, E>,
                 complex: impl Fn(S::Complex) -> Result<T::Complex, E>,
@@ -409,6 +532,9 @@ macro_rules! define_waveform {
     }
 }
 
+/// Define a collection of waveforms, as described in the introduction to this section.  Also
+/// generates Python wrappers in a submodule and creates the `Sealed` trait used for
+/// [`BuiltinWaveformParameters`].
 macro_rules! define_waveforms {
     (
         $(
@@ -545,8 +671,18 @@ define_waveforms! {
     pub struct BoxcarKernel;
 }
 
-impl<S: WaveformType> BuiltinWaveform<S> {
-    pub fn try_evaluate<T: WaveformType, E>(
+impl<S: WaveformData> BuiltinWaveform<S> {
+    /// Convert one [`BuiltinWaveform`] into another by replacing its associated data.
+    ///
+    /// Given two forms of waveform data, `S` and `T`, the user specifies how to evaluate `S`'s real
+    /// numbers into `T`'s real numbers and how to evaluate `S`'s complex numbers to `T`'s complex
+    /// numbers.  For example, to convert parsed ([`Syntactic`]) parameters into sampleable
+    /// ([`Concrete`]) parameters, you can pass [`Expression::evaluate`] to this function.
+    ///
+    /// For a more detailed example, see the documentation for
+    /// [`Waveform::try_evaluate`][crate::waveform::Waveform::try_evaluate], which has the same
+    /// structure as this function.
+    pub fn try_evaluate<T: WaveformData, E>(
         self,
         real: impl Fn(S::Real) -> Result<T::Real, E>,
         complex: impl Fn(S::Complex) -> Result<T::Complex, E>,
@@ -575,8 +711,6 @@ impl<S: WaveformType> BuiltinWaveform<S> {
 ////////////////////////////////////////////////////////////////////////////////
 
 impl BuiltinWaveformParameters for BuiltinWaveform<Concrete> {
-    /// Sample the given waveform (with the additional common parameters) at the given sample rate
-    /// (in Hz).
     fn iq_values_at_sample_rate(
         self,
         common: CommonBuiltinParameters<Concrete>,
@@ -825,7 +959,7 @@ fn build_samples_and_adjust_for_common_parameters<I: IntoIterator<Item = Complex
     // It would be nice to be able to optimize `scale: 0.0` to `IqSamples::Flat`, but we'd have to
     // figure out how to take care of the `erf_squared` padding durations.
 
-    let time_steps = Array::range(0.0, sample_count, 1.0) / sample_rate;
+    let time_steps = Array::range(0.0, sample_count.into(), 1.0) / sample_rate;
     let sigma = 0.5 * fwhm / (2.0 * LN_2).sqrt();
 
     let mut samples: Vec<_> = build(SamplingInfo { time_steps, sigma })
@@ -884,6 +1018,7 @@ fn polar_to_rectangular(magnitude: f64, angle: Cycles<f64>) -> Complex64 {
 pub mod quilpy {
     use super::*;
 
+    #[cfg(feature = "python")]
     use crate::expression::Expression;
 
     pub use quilpy_waveforms::*;
@@ -892,7 +1027,7 @@ pub mod quilpy {
     #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
     #[cfg_attr(
         feature = "python",
-        pyo3::pyclass(module = "quil.waveforms", subclass, eq)
+        pyo3::pyclass(module = "quil.waveform", subclass, eq)
     )]
     pub struct SyntacticBuiltinWaveform(pub BuiltinWaveform<Syntactic>);
 
@@ -900,7 +1035,7 @@ pub mod quilpy {
     #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
     #[cfg_attr(
         feature = "python",
-        pyo3::pyclass(module = "quil.waveforms", subclass, eq)
+        pyo3::pyclass(module = "quil.waveform", subclass, eq)
     )]
     pub struct ConcreteBuiltinWaveform(pub BuiltinWaveform<Concrete>);
 
@@ -908,7 +1043,7 @@ pub mod quilpy {
     #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
     #[cfg_attr(
         feature = "python",
-        pyo3::pyclass(module = "quil.waveforms", subclass, eq)
+        pyo3::pyclass(module = "quil.waveform", subclass, eq)
     )]
     pub struct SyntacticCommonBuiltinParameters(pub CommonBuiltinParameters<Syntactic>);
 
@@ -916,10 +1051,11 @@ pub mod quilpy {
     #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
     #[cfg_attr(
         feature = "python",
-        pyo3::pyclass(module = "quil.waveforms", subclass, eq)
+        pyo3::pyclass(module = "quil.waveform", subclass, eq)
     )]
     pub struct ConcreteCommonBuiltinParameters(pub CommonBuiltinParameters<Concrete>);
 
+    #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
     #[cfg(feature = "python")]
     #[pyo3::pymethods]
     impl SyntacticCommonBuiltinParameters {
@@ -964,6 +1100,7 @@ pub mod quilpy {
         }
     }
 
+    #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
     #[cfg(feature = "python")]
     #[pyo3::pymethods]
     impl ConcreteCommonBuiltinParameters {
@@ -1098,7 +1235,8 @@ mod tests {
                 Some(expected),
             ) => {
                 assert_eq!(
-                    expected, actual,
+                    expected,
+                    f64::from(actual),
                     "duration = {duration} s,\n\
                      sample_rate = {sample_rate} Hz,\n\
                      expected = {expected} samples,\n\
