@@ -23,7 +23,6 @@ use crate::{
 
 create_init_submodule! {
     classes: [
-        IqSamples,
         SyntacticWaveform,
         ConcreteWaveform,
         SyntacticBuiltinWaveform,
@@ -43,6 +42,7 @@ create_init_submodule! {
         ConcreteHermiteGaussian,
         BoxcarKernel,
     ],
+    complex_enums: [ IqSamples ],
     errors: [
          errors::WaveformParameterError,
          errors::WaveformInvocationError,
