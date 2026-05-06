@@ -7,13 +7,16 @@ Afterward, it may print some messages about potential mistakes.
 Run the script with ``--help`` to see its options.
 """
 
-import sys
 import logging
+import re
+import sys
 
 logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger()
 
 from pyo3_linter import (
+    StubAttr,
+    StubKind,
     find_possible_mistakes,
     print_package_info,
     process_dir,
@@ -36,7 +39,15 @@ def main():
         logger.setLevel(args.log_level)
 
     package_config = PackageConfig(root_module="quil", internal_module="_quil")
-    annotated, exported = process_dir(args.base, package_config, default_macro_handlers() + [_impl_instruction])
+    annotated, exported = process_dir(
+        args.base,
+        package_config,
+        default_macro_handlers()
+        + [
+            _impl_instruction,
+            _python_waveforms,
+        ],
+    )
 
     issues = find_possible_mistakes(package_config, annotated, exported)
     if args.show_mistakes:
@@ -51,6 +62,45 @@ def main():
         if not args.show_mistakes:
             print("  (use --show-mistakes to see)", file=sys.stderr)
         sys.exit(1)
+
+
+@macro_handler(r"python_waveforms!")
+def _python_waveforms(ctx: MacroContext, module: str | None = None) -> None:
+    """Process the input to the ``python_waveforms!`` macro."""
+    logger.info("Processing waveforms")
+
+    lines = join_lines(iter_delim(ctx.lines, "{}"))
+    text = lines.text.removeprefix("python_waveforms! {").removesuffix("}")
+    parts = re.finditer(r"(?P<fields>\{.+?\})|(?P<name>[^\s {]+)", text)
+    m = next(parts, None)
+
+    while m is not None:
+        if m.lastgroup == "fields":
+            m = next(parts, None)
+            continue
+
+        name = m.group("name")
+
+        # If the next part is a group of fields, we add two structs with prefixes;
+        # otherwise, we just add the struct with the name given.
+        if (m := next(parts, None)) and m.lastgroup == "fields":
+            prefixes = ["Concrete", "Syntactic"]
+        else:
+            prefixes = [""]
+
+        for prefix in prefixes:
+            struct_name = f"{prefix}{name}"
+            logger.info("Found waveform: " + struct_name)
+            ctx.annotated["quil.waveform"].add(
+                Item(
+                    kind=Kind.Struct,
+                    python_name=struct_name,
+                    rust_name=struct_name,
+                    path=ctx.path,
+                    line=lines,
+                    stub_attr=StubAttr(kind=StubKind.Class),
+                )
+            )
 
 
 @macro_handler(r"impl_instruction!")
