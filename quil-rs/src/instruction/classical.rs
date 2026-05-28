@@ -122,6 +122,28 @@ pub enum BinaryOperator {
     And,
     Ior,
     Xor,
+
+    /// Bitwise left shift.  The same as Rust's and Python's `<<`.
+    ///
+    /// As per the Quil specification, shifting by a negative number of bits is forbidden, and
+    /// shifting by as many or more bits than are present in a word fills the entire word with `0`s.
+    Shl,
+
+    /// Bitwise logical right shift.  The same as Rust's unsigned-type `>>`.  Python does not
+    /// provide this operation, as its integers are natively infinite-width.
+    ///
+    /// As per the Quil specification, shifting by a negative number of bits is forbidden, and
+    /// shifting by as many or more bits than are present in a word fills the entire word with `0`s.
+    Shr,
+
+    /// Bitwise logical right shift.  The same as Rust's signed-type `>>` and the same as Python's
+    /// `>>` (as Python natively has infinite-width signed integers).  `ASHR n k` is equivalent to
+    /// `⌊n / 2ᵏ⌋` assuming a 2's complement representation of integers.
+    ///
+    /// As per the Quil specification, shifting by a negative number of bits is forbidden, and
+    /// shifting by as many or more bits than are present in a word fills the entire word with the
+    /// existing top bit of the word.
+    Ashr,
 }
 
 impl Quil for BinaryOperator {
@@ -134,6 +156,9 @@ impl Quil for BinaryOperator {
             BinaryOperator::And => write!(f, "AND"),
             BinaryOperator::Ior => write!(f, "IOR"),
             BinaryOperator::Xor => write!(f, "XOR"),
+            BinaryOperator::Shl => write!(f, "SHL"),
+            BinaryOperator::Shr => write!(f, "SHR"),
+            BinaryOperator::Ashr => write!(f, "ASHR"),
         }
         .map_err(Into::into)
     }

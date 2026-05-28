@@ -618,7 +618,10 @@ class BinaryOperand:
 @final
 class BinaryOperator(Enum):
     And = "AND"
+    Ashr = "ASHR"
     Ior = "IOR"
+    Shl = "SHL"
+    Shr = "SHR"
     Xor = "XOR"
     def to_quil(self) -> str:
         """Attempt to convert the instruction to a valid Quil string.

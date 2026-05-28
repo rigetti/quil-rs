@@ -41,6 +41,7 @@ pub use error::{LexError, LexErrorKind};
 pub enum Command {
     Add,
     And,
+    Ashr,
     Call,
     Capture,
     Convert,
@@ -87,9 +88,11 @@ pub enum Command {
     SetScale,
     ShiftFrequency,
     ShiftPhase,
-    SwapPhases,
+    Shl,
+    Shr,
     Store,
     Sub,
+    SwapPhases,
     Wait,
     Xor,
 }
