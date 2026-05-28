@@ -18,6 +18,7 @@ db-urls = ["https://github.com/rustsec/advisory-db"]
 ignore = [
   { id = "RUSTSEC-2025-0020", reason = "We will resolve this when we update PyO3 in rigetti-pyo3" },
   { id = "RUSTSEC-2024-0436", reason = "We will resolve this when we update PyO3 in rigetti-pyo3" },
+  { id = "RUSTSEC-2026-0009", reason = "We will resolve this when we update PyO3 in rigetti-pyo3" },
 ]
 
 # This section is considered when running `cargo deny check licenses`
