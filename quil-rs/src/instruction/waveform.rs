@@ -103,7 +103,7 @@ impl Quil for WaveformInvocation {
             .iter()
             .collect::<Vec<(&String, &Expression)>>();
 
-        key_value_pairs.sort_by(|(k1, _), (k2, _)| k1.cmp(k2));
+        key_value_pairs.sort_by_key(|(k1, _)| *k1);
 
         if key_value_pairs.is_empty() {
             write!(f, "{}", self.name,)?;
