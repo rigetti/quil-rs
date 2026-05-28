@@ -35,10 +35,46 @@
                     <a class="class" href="#Expression">Expression</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="function" href="#Expression.from_number">from_number</a>
+                                <a class="function" href="#Expression.simplify">simplify</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Expression.into_simplified">into_simplified</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Expression.evaluate">evaluate</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Expression.substitute_variables">substitute_variables</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Expression.to_real">to_real</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Expression.parse">parse</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Expression.from_variable">from_variable</a>
                         </li>
                         <li>
                                 <a class="function" href="#Expression.from_infix">from_infix</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Expression.from_address">from_address</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Expression.from_number">from_number</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Expression.to_quil">to_quil</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Expression.to_quil_or_debug">to_quil_or_debug</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Expression.from_prefix">from_prefix</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Expression.from_function_call">from_function_call</a>
                         </li>
                         <li>
                                 <a class="function" href="#Expression.inner">inner</a>
@@ -101,43 +137,7 @@
                                 <a class="function" href="#Expression.to_variable">to_variable</a>
                         </li>
                         <li>
-                                <a class="function" href="#Expression.from_function_call">from_function_call</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Expression.from_variable">from_variable</a>
-                        </li>
-                        <li>
                                 <a class="function" href="#Expression.new_pi">new_pi</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Expression.simplify">simplify</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Expression.into_simplified">into_simplified</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Expression.evaluate">evaluate</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Expression.substitute_variables">substitute_variables</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Expression.to_real">to_real</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Expression.parse">parse</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Expression.from_address">from_address</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Expression.from_prefix">from_prefix</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Expression.to_quil">to_quil</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Expression.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                 </ul>
 
@@ -158,13 +158,13 @@
                     <a class="class" href="#InfixExpression">InfixExpression</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#InfixExpression.operator">operator</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#InfixExpression.right">right</a>
                         </li>
                         <li>
                                 <a class="variable" href="#InfixExpression.left">left</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#InfixExpression.operator">operator</a>
                         </li>
                 </ul>
 
@@ -280,17 +280,98 @@
     
     
 
-                            <div id="Expression.from_number" class="classattr">
+                            <div id="Expression.simplify" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">from_number</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+        <span class="name">simplify</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
-    <a class="headerlink" href="#Expression.from_number"></a>
+    <a class="headerlink" href="#Expression.simplify"></a>
     
-            <div class="docstring"><p>The Python wrapper for [<code>Expression::Number</code>], creating a [<code>PyExpression</code>] and taking a Python argument.</p>
+    
+
+                            </div>
+                            <div id="Expression.into_simplified" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">into_simplified</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Expression.into_simplified"></a>
+    
+    
+
+                            </div>
+                            <div id="Expression.evaluate" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">evaluate</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">variables</span>, </span><span class="param"><span class="n">memory_references</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Expression.evaluate"></a>
+    
+    
+
+                            </div>
+                            <div id="Expression.substitute_variables" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">substitute_variables</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">variable_values</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Expression.substitute_variables"></a>
+    
+    
+
+                            </div>
+                            <div id="Expression.to_real" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">to_real</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Expression.to_real"></a>
+    
+    
+
+                            </div>
+                            <div id="Expression.parse" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">parse</span><span class="signature pdoc-code condensed">(<span class="param"><span class="nb">input</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Expression.parse"></a>
+    
+            <div class="docstring"><p>Implements a static <code><a href="#Expression.parse">parse</a></code> method for Python in terms of the
+Rust <a href="std::str::FromStr"><code>FromStr</code></a> instance.</p>
+</div>
+
+
+                            </div>
+                            <div id="Expression.from_variable" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">from_variable</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Expression.from_variable"></a>
+    
+            <div class="docstring"><p>The Python wrapper for [<code>Expression::Variable</code>], creating a [<code>PyExpression</code>] and taking a Python argument.</p>
 </div>
 
 
@@ -306,6 +387,92 @@
     <a class="headerlink" href="#Expression.from_infix"></a>
     
             <div class="docstring"><p>The Python wrapper for [<code>Expression::Infix</code>], creating a [<code>PyExpression</code>] and taking a Python argument.</p>
+</div>
+
+
+                            </div>
+                            <div id="Expression.from_address" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">from_address</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Expression.from_address"></a>
+    
+            <div class="docstring"><p>The Python wrapper for [<code>Expression::Address</code>], creating a [<code>PyExpression</code>] and taking a Python argument.</p>
+</div>
+
+
+                            </div>
+                            <div id="Expression.from_number" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">from_number</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Expression.from_number"></a>
+    
+            <div class="docstring"><p>The Python wrapper for [<code>Expression::Number</code>], creating a [<code>PyExpression</code>] and taking a Python argument.</p>
+</div>
+
+
+                            </div>
+                            <div id="Expression.to_quil" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">to_quil</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Expression.to_quil"></a>
+    
+    
+
+                            </div>
+                            <div id="Expression.to_quil_or_debug" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">to_quil_or_debug</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Expression.to_quil_or_debug"></a>
+    
+    
+
+                            </div>
+                            <div id="Expression.from_prefix" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">from_prefix</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Expression.from_prefix"></a>
+    
+            <div class="docstring"><p>The Python wrapper for [<code>Expression::Prefix</code>], creating a [<code>PyExpression</code>] and taking a Python argument.</p>
+</div>
+
+
+                            </div>
+                            <div id="Expression.from_function_call" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">from_function_call</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Expression.from_function_call"></a>
+    
+            <div class="docstring"><p>The Python wrapper for [<code>Expression::FunctionCall</code>], creating a [<code>PyExpression</code>] and taking a Python argument.</p>
 </div>
 
 
@@ -610,36 +777,6 @@
 
 
                             </div>
-                            <div id="Expression.from_function_call" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">from_function_call</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Expression.from_function_call"></a>
-    
-            <div class="docstring"><p>The Python wrapper for [<code>Expression::FunctionCall</code>], creating a [<code>PyExpression</code>] and taking a Python argument.</p>
-</div>
-
-
-                            </div>
-                            <div id="Expression.from_variable" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">from_variable</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Expression.from_variable"></a>
-    
-            <div class="docstring"><p>The Python wrapper for [<code>Expression::Variable</code>], creating a [<code>PyExpression</code>] and taking a Python argument.</p>
-</div>
-
-
-                            </div>
                             <div id="Expression.new_pi" class="classattr">
                                 <div class="attr function">
             
@@ -653,143 +790,6 @@
             <div class="docstring"><p>Create a new [<code>PyExpression</code>] wrapping a [<code>Expression::PiConstant</code>].</p>
 </div>
 
-
-                            </div>
-                            <div id="Expression.simplify" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">simplify</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Expression.simplify"></a>
-    
-    
-
-                            </div>
-                            <div id="Expression.into_simplified" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">into_simplified</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Expression.into_simplified"></a>
-    
-    
-
-                            </div>
-                            <div id="Expression.evaluate" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">evaluate</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">variables</span>, </span><span class="param"><span class="n">memory_references</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Expression.evaluate"></a>
-    
-    
-
-                            </div>
-                            <div id="Expression.substitute_variables" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">substitute_variables</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">variable_values</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Expression.substitute_variables"></a>
-    
-    
-
-                            </div>
-                            <div id="Expression.to_real" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">to_real</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Expression.to_real"></a>
-    
-    
-
-                            </div>
-                            <div id="Expression.parse" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">parse</span><span class="signature pdoc-code condensed">(<span class="param"><span class="nb">input</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Expression.parse"></a>
-    
-            <div class="docstring"><p>Implements a static <code><a href="#Expression.parse">parse</a></code> method for Python in terms of the
-Rust <a href="std::str::FromStr"><code>FromStr</code></a> instance.</p>
-</div>
-
-
-                            </div>
-                            <div id="Expression.from_address" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">from_address</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Expression.from_address"></a>
-    
-            <div class="docstring"><p>The Python wrapper for [<code>Expression::Address</code>], creating a [<code>PyExpression</code>] and taking a Python argument.</p>
-</div>
-
-
-                            </div>
-                            <div id="Expression.from_prefix" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">from_prefix</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Expression.from_prefix"></a>
-    
-            <div class="docstring"><p>The Python wrapper for [<code>Expression::Prefix</code>], creating a [<code>PyExpression</code>] and taking a Python argument.</p>
-</div>
-
-
-                            </div>
-                            <div id="Expression.to_quil" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">to_quil</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Expression.to_quil"></a>
-    
-    
-
-                            </div>
-                            <div id="Expression.to_quil_or_debug" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">to_quil_or_debug</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Expression.to_quil_or_debug"></a>
-    
-    
 
                             </div>
                 </section>
@@ -844,19 +844,6 @@ Rust <a href="std::str::FromStr"><code>FromStr</code></a> instance.</p>
     
     
 
-                            <div id="InfixExpression.operator" class="classattr">
-                                <div class="attr variable">
-            <span class="name">operator</span>
-
-        
-    </div>
-    <a class="headerlink" href="#InfixExpression.operator"></a>
-    
-            <div class="docstring"><p>Get the operator field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
                             <div id="InfixExpression.right" class="classattr">
                                 <div class="attr variable">
             <span class="name">right</span>
@@ -879,6 +866,19 @@ Rust <a href="std::str::FromStr"><code>FromStr</code></a> instance.</p>
     <a class="headerlink" href="#InfixExpression.left"></a>
     
             <div class="docstring"><p>Get the left field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
+                            <div id="InfixExpression.operator" class="classattr">
+                                <div class="attr variable">
+            <span class="name">operator</span>
+
+        
+    </div>
+    <a class="headerlink" href="#InfixExpression.operator"></a>
+    
+            <div class="docstring"><p>Get the operator field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 

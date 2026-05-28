@@ -35,6 +35,27 @@
                     <a class="class" href="#Instruction">Instruction</a>
                             <ul class="memberlist">
                         <li>
+                                <a class="function" href="#Instruction.from_declaration">from_declaration</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Instruction.from_set_scale">from_set_scale</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Instruction.to_quil">to_quil</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Instruction.to_quil_or_debug">to_quil_or_debug</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Instruction.from_jump_when">from_jump_when</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Instruction.from_set_phase">from_set_phase</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Instruction.from_shift_phase">from_shift_phase</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#Instruction.from_raw_capture">from_raw_capture</a>
                         </li>
                         <li>
@@ -383,112 +404,103 @@
                                 <a class="function" href="#Instruction.is_wait">is_wait</a>
                         </li>
                         <li>
-                                <a class="function" href="#Instruction.from_frame_definition">from_frame_definition</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Instruction.from_pragma">from_pragma</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Instruction.from_jump_when">from_jump_when</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Instruction.from_include">from_include</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Instruction.from_gate">from_gate</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Instruction.from_load">from_load</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Instruction.from_convert">from_convert</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Instruction.from_pulse">from_pulse</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Instruction.from_comparison">from_comparison</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Instruction.from_swap_phases">from_swap_phases</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Instruction.from_calibration_definition">from_calibration_definition</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Instruction.from_delay">from_delay</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Instruction.from_binary_logic">from_binary_logic</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Instruction.from_declaration">from_declaration</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Instruction.from_unary_logic">from_unary_logic</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Instruction.new_nop">new_nop</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Instruction.from_measure_calibration_definition">from_measure_calibration_definition</a>
-                        </li>
-                        <li>
                                 <a class="function" href="#Instruction.from_capture">from_capture</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Instruction.from_move">from_move</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Instruction.from_label">from_label</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Instruction.from_reset">from_reset</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Instruction.new_wait">new_wait</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Instruction.new_halt">new_halt</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Instruction.from_shift_frequency">from_shift_frequency</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Instruction.from_shift_phase">from_shift_phase</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Instruction.from_set_phase">from_set_phase</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Instruction.from_call">from_call</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Instruction.from_jump">from_jump</a>
                         </li>
                         <li>
                                 <a class="function" href="#Instruction.from_circuit_definition">from_circuit_definition</a>
                         </li>
                         <li>
-                                <a class="function" href="#Instruction.from_fence">from_fence</a>
+                                <a class="function" href="#Instruction.from_arithmetic">from_arithmetic</a>
                         </li>
                         <li>
-                                <a class="function" href="#Instruction.from_exchange">from_exchange</a>
+                                <a class="function" href="#Instruction.from_include">from_include</a>
                         </li>
                         <li>
-                                <a class="function" href="#Instruction.from_set_scale">from_set_scale</a>
+                                <a class="function" href="#Instruction.from_store">from_store</a>
                         </li>
                         <li>
-                                <a class="function" href="#Instruction.from_gate_definition">from_gate_definition</a>
+                                <a class="function" href="#Instruction.from_pragma">from_pragma</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Instruction.from_comparison">from_comparison</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Instruction.from_measure_calibration_definition">from_measure_calibration_definition</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Instruction.from_call">from_call</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Instruction.from_reset">from_reset</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Instruction.new_nop">new_nop</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Instruction.from_pulse">from_pulse</a>
                         </li>
                         <li>
                                 <a class="function" href="#Instruction.from_set_frequency">from_set_frequency</a>
                         </li>
                         <li>
-                                <a class="function" href="#Instruction.from_waveform_definition">from_waveform_definition</a>
+                                <a class="function" href="#Instruction.from_frame_definition">from_frame_definition</a>
                         </li>
                         <li>
                                 <a class="function" href="#Instruction.from_measurement">from_measurement</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Instruction.from_gate">from_gate</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Instruction.from_fence">from_fence</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Instruction.from_waveform_definition">from_waveform_definition</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Instruction.from_calibration_definition">from_calibration_definition</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Instruction.from_convert">from_convert</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Instruction.from_move">from_move</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Instruction.from_gate_definition">from_gate_definition</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Instruction.from_swap_phases">from_swap_phases</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Instruction.from_jump_unless">from_jump_unless</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Instruction.from_exchange">from_exchange</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Instruction.from_label">from_label</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Instruction.from_unary_logic">from_unary_logic</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Instruction.new_halt">new_halt</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Instruction.from_load">from_load</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Instruction.from_delay">from_delay</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Instruction.from_jump">from_jump</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Instruction.from_binary_logic">from_binary_logic</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Instruction.new_wait">new_wait</a>
                         </li>
                         <li>
                                 <a class="function" href="#Instruction.is_quil_t">is_quil_t</a>
@@ -497,19 +509,7 @@
                                 <a class="function" href="#Instruction.parse">parse</a>
                         </li>
                         <li>
-                                <a class="function" href="#Instruction.from_arithmetic">from_arithmetic</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Instruction.from_jump_unless">from_jump_unless</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Instruction.to_quil">to_quil</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Instruction.to_quil_or_debug">to_quil_or_debug</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Instruction.from_store">from_store</a>
+                                <a class="function" href="#Instruction.from_shift_frequency">from_shift_frequency</a>
                         </li>
                 </ul>
 
@@ -524,13 +524,13 @@
                                 <a class="function" href="#Arithmetic.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Arithmetic.operator">operator</a>
+                                <a class="variable" href="#Arithmetic.destination">destination</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Arithmetic.source">source</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Arithmetic.destination">destination</a>
+                                <a class="variable" href="#Arithmetic.operator">operator</a>
                         </li>
                 </ul>
 
@@ -538,6 +538,9 @@
             <li>
                     <a class="class" href="#ArithmeticOperand">ArithmeticOperand</a>
                             <ul class="memberlist">
+                        <li>
+                                <a class="function" href="#ArithmeticOperand.from_literal_integer">from_literal_integer</a>
+                        </li>
                         <li>
                                 <a class="function" href="#ArithmeticOperand.inner">inner</a>
                         </li>
@@ -569,7 +572,7 @@
                                 <a class="function" href="#ArithmeticOperand.to_memory_reference">to_memory_reference</a>
                         </li>
                         <li>
-                                <a class="function" href="#ArithmeticOperand.from_memory_reference">from_memory_reference</a>
+                                <a class="function" href="#ArithmeticOperand.from_literal_real">from_literal_real</a>
                         </li>
                         <li>
                                 <a class="function" href="#ArithmeticOperand.to_quil">to_quil</a>
@@ -578,10 +581,7 @@
                                 <a class="function" href="#ArithmeticOperand.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="function" href="#ArithmeticOperand.from_literal_integer">from_literal_integer</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#ArithmeticOperand.from_literal_real">from_literal_real</a>
+                                <a class="function" href="#ArithmeticOperand.from_memory_reference">from_memory_reference</a>
                         </li>
                 </ul>
 
@@ -620,13 +620,13 @@
                                 <a class="function" href="#BinaryLogic.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
+                                <a class="variable" href="#BinaryLogic.operator">operator</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#BinaryLogic.destination">destination</a>
                         </li>
                         <li>
                                 <a class="variable" href="#BinaryLogic.source">source</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#BinaryLogic.operator">operator</a>
                         </li>
                 </ul>
 
@@ -656,16 +656,16 @@
                                 <a class="function" href="#BinaryOperand.to_memory_reference">to_memory_reference</a>
                         </li>
                         <li>
-                                <a class="function" href="#BinaryOperand.to_quil">to_quil</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#BinaryOperand.to_quil_or_debug">to_quil_or_debug</a>
-                        </li>
-                        <li>
                                 <a class="function" href="#BinaryOperand.from_memory_reference">from_memory_reference</a>
                         </li>
                         <li>
                                 <a class="function" href="#BinaryOperand.from_literal_integer">from_literal_integer</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#BinaryOperand.to_quil">to_quil</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#BinaryOperand.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                 </ul>
 
@@ -722,13 +722,13 @@
                     <a class="class" href="#CallArgument">CallArgument</a>
                             <ul class="memberlist">
                         <li>
+                                <a class="function" href="#CallArgument.to_quil">to_quil</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#CallArgument.to_quil_or_debug">to_quil_or_debug</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#CallArgument.from_identifier">from_identifier</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#CallArgument.from_memory_reference">from_memory_reference</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#CallArgument.from_immediate">from_immediate</a>
                         </li>
                         <li>
                                 <a class="function" href="#CallArgument.inner">inner</a>
@@ -761,10 +761,10 @@
                                 <a class="function" href="#CallArgument.to_immediate">to_immediate</a>
                         </li>
                         <li>
-                                <a class="function" href="#CallArgument.to_quil">to_quil</a>
+                                <a class="function" href="#CallArgument.from_immediate">from_immediate</a>
                         </li>
                         <li>
-                                <a class="function" href="#CallArgument.to_quil_or_debug">to_quil_or_debug</a>
+                                <a class="function" href="#CallArgument.from_memory_reference">from_memory_reference</a>
                         </li>
                 </ul>
 
@@ -779,6 +779,9 @@
                                 <a class="function" href="#Comparison.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
+                                <a class="variable" href="#Comparison.operator">operator</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#Comparison.rhs">rhs</a>
                         </li>
                         <li>
@@ -787,9 +790,6 @@
                         <li>
                                 <a class="variable" href="#Comparison.destination">destination</a>
                         </li>
-                        <li>
-                                <a class="variable" href="#Comparison.operator">operator</a>
-                        </li>
                 </ul>
 
             </li>
@@ -797,7 +797,7 @@
                     <a class="class" href="#ComparisonOperand">ComparisonOperand</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="function" href="#ComparisonOperand.from_memory_reference">from_memory_reference</a>
+                                <a class="function" href="#ComparisonOperand.from_literal_integer">from_literal_integer</a>
                         </li>
                         <li>
                                 <a class="function" href="#ComparisonOperand.to_quil">to_quil</a>
@@ -809,7 +809,7 @@
                                 <a class="function" href="#ComparisonOperand.from_literal_real">from_literal_real</a>
                         </li>
                         <li>
-                                <a class="function" href="#ComparisonOperand.from_literal_integer">from_literal_integer</a>
+                                <a class="function" href="#ComparisonOperand.from_memory_reference">from_memory_reference</a>
                         </li>
                         <li>
                                 <a class="function" href="#ComparisonOperand.inner">inner</a>
@@ -893,10 +893,10 @@
                                 <a class="function" href="#Exchange.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Exchange.right">right</a>
+                                <a class="variable" href="#Exchange.left">left</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Exchange.left">left</a>
+                                <a class="variable" href="#Exchange.right">right</a>
                         </li>
                 </ul>
 
@@ -911,13 +911,13 @@
                                 <a class="function" href="#ExternParameter.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#ExternParameter.name">name</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#ExternParameter.mutable">mutable</a>
                         </li>
                         <li>
                                 <a class="variable" href="#ExternParameter.data_type">data_type</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#ExternParameter.name">name</a>
                         </li>
                 </ul>
 
@@ -926,13 +926,13 @@
                     <a class="class" href="#ExternParameterType">ExternParameterType</a>
                             <ul class="memberlist">
                         <li>
+                                <a class="function" href="#ExternParameterType.from_scalar">from_scalar</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#ExternParameterType.from_variable_length_vector">from_variable_length_vector</a>
                         </li>
                         <li>
-                                <a class="function" href="#ExternParameterType.to_quil">to_quil</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#ExternParameterType.to_quil_or_debug">to_quil_or_debug</a>
+                                <a class="function" href="#ExternParameterType.from_fixed_length_vector">from_fixed_length_vector</a>
                         </li>
                         <li>
                                 <a class="function" href="#ExternParameterType.inner">inner</a>
@@ -965,10 +965,10 @@
                                 <a class="function" href="#ExternParameterType.to_variable_length_vector">to_variable_length_vector</a>
                         </li>
                         <li>
-                                <a class="function" href="#ExternParameterType.from_fixed_length_vector">from_fixed_length_vector</a>
+                                <a class="function" href="#ExternParameterType.to_quil">to_quil</a>
                         </li>
                         <li>
-                                <a class="function" href="#ExternParameterType.from_scalar">from_scalar</a>
+                                <a class="function" href="#ExternParameterType.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                 </ul>
 
@@ -1019,10 +1019,10 @@
                                 <a class="function" href="#UnaryLogic.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#UnaryLogic.operator">operator</a>
+                                <a class="variable" href="#UnaryLogic.operand">operand</a>
                         </li>
                         <li>
-                                <a class="variable" href="#UnaryLogic.operand">operand</a>
+                                <a class="variable" href="#UnaryLogic.operator">operator</a>
                         </li>
                 </ul>
 
@@ -1055,13 +1055,13 @@
                                 <a class="function" href="#Calibration.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Calibration.name">name</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Calibration.identifier">identifier</a>
+                                <a class="variable" href="#Calibration.modifiers">modifiers</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Calibration.parameters">parameters</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Calibration.identifier">identifier</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Calibration.instructions">instructions</a>
@@ -1070,7 +1070,7 @@
                                 <a class="variable" href="#Calibration.qubits">qubits</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Calibration.modifiers">modifiers</a>
+                                <a class="variable" href="#Calibration.name">name</a>
                         </li>
                 </ul>
 
@@ -1085,13 +1085,13 @@
                                 <a class="function" href="#CalibrationIdentifier.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
+                                <a class="variable" href="#CalibrationIdentifier.modifiers">modifiers</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#CalibrationIdentifier.qubits">qubits</a>
                         </li>
                         <li>
                                 <a class="variable" href="#CalibrationIdentifier.parameters">parameters</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#CalibrationIdentifier.modifiers">modifiers</a>
                         </li>
                         <li>
                                 <a class="variable" href="#CalibrationIdentifier.name">name</a>
@@ -1109,13 +1109,13 @@
                                 <a class="function" href="#CircuitDefinition.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
+                                <a class="variable" href="#CircuitDefinition.name">name</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#CircuitDefinition.qubit_variables">qubit_variables</a>
                         </li>
                         <li>
                                 <a class="variable" href="#CircuitDefinition.instructions">instructions</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#CircuitDefinition.name">name</a>
                         </li>
                         <li>
                                 <a class="variable" href="#CircuitDefinition.parameters">parameters</a>
@@ -1133,16 +1133,16 @@
                                 <a class="function" href="#MeasureCalibrationDefinition.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#MeasureCalibrationDefinition.qubit">qubit</a>
+                                <a class="variable" href="#MeasureCalibrationDefinition.instructions">instructions</a>
                         </li>
                         <li>
                                 <a class="variable" href="#MeasureCalibrationDefinition.parameter">parameter</a>
                         </li>
                         <li>
-                                <a class="variable" href="#MeasureCalibrationDefinition.instructions">instructions</a>
+                                <a class="variable" href="#MeasureCalibrationDefinition.identifier">identifier</a>
                         </li>
                         <li>
-                                <a class="variable" href="#MeasureCalibrationDefinition.identifier">identifier</a>
+                                <a class="variable" href="#MeasureCalibrationDefinition.qubit">qubit</a>
                         </li>
                 </ul>
 
@@ -1157,10 +1157,10 @@
                                 <a class="function" href="#MeasureCalibrationIdentifier.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#MeasureCalibrationIdentifier.parameter">parameter</a>
+                                <a class="variable" href="#MeasureCalibrationIdentifier.qubit">qubit</a>
                         </li>
                         <li>
-                                <a class="variable" href="#MeasureCalibrationIdentifier.qubit">qubit</a>
+                                <a class="variable" href="#MeasureCalibrationIdentifier.parameter">parameter</a>
                         </li>
                 </ul>
 
@@ -1175,13 +1175,13 @@
                                 <a class="function" href="#Declaration.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Declaration.name">name</a>
+                                <a class="variable" href="#Declaration.sharing">sharing</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Declaration.size">size</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Declaration.sharing">sharing</a>
+                                <a class="variable" href="#Declaration.name">name</a>
                         </li>
                 </ul>
 
@@ -1196,13 +1196,13 @@
                                 <a class="function" href="#Load.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Load.destination">destination</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#Load.source">source</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Load.offset">offset</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Load.destination">destination</a>
                         </li>
                 </ul>
 
@@ -1217,10 +1217,10 @@
                                 <a class="function" href="#Offset.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Offset.data_type">data_type</a>
+                                <a class="variable" href="#Offset.offset">offset</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Offset.offset">offset</a>
+                                <a class="variable" href="#Offset.data_type">data_type</a>
                         </li>
                 </ul>
 
@@ -1229,10 +1229,10 @@
                     <a class="class" href="#Sharing">Sharing</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#Sharing.name">name</a>
+                                <a class="variable" href="#Sharing.offsets">offsets</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Sharing.offsets">offsets</a>
+                                <a class="variable" href="#Sharing.name">name</a>
                         </li>
                 </ul>
 
@@ -1247,13 +1247,13 @@
                                 <a class="function" href="#Store.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
+                                <a class="variable" href="#Store.source">source</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#Store.destination">destination</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Store.offset">offset</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Store.source">source</a>
                         </li>
                 </ul>
 
@@ -1343,10 +1343,10 @@
                                 <a class="function" href="#Pragma.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Pragma.arguments">arguments</a>
+                                <a class="variable" href="#Pragma.data">data</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Pragma.data">data</a>
+                                <a class="variable" href="#Pragma.arguments">arguments</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Pragma.name">name</a>
@@ -1357,15 +1357,6 @@
             <li>
                     <a class="class" href="#PragmaArgument">PragmaArgument</a>
                             <ul class="memberlist">
-                        <li>
-                                <a class="function" href="#PragmaArgument.to_quil">to_quil</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#PragmaArgument.to_quil_or_debug">to_quil_or_debug</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#PragmaArgument.from_integer">from_integer</a>
-                        </li>
                         <li>
                                 <a class="function" href="#PragmaArgument.from_identifier">from_identifier</a>
                         </li>
@@ -1390,21 +1381,21 @@
                         <li>
                                 <a class="function" href="#PragmaArgument.to_integer">to_integer</a>
                         </li>
+                        <li>
+                                <a class="function" href="#PragmaArgument.to_quil">to_quil</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#PragmaArgument.to_quil_or_debug">to_quil_or_debug</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#PragmaArgument.from_integer">from_integer</a>
+                        </li>
                 </ul>
 
             </li>
             <li>
                     <a class="class" href="#AttributeValue">AttributeValue</a>
                             <ul class="memberlist">
-                        <li>
-                                <a class="function" href="#AttributeValue.from_expression">from_expression</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#AttributeValue.to_quil">to_quil</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#AttributeValue.to_quil_or_debug">to_quil_or_debug</a>
-                        </li>
                         <li>
                                 <a class="function" href="#AttributeValue.inner">inner</a>
                         </li>
@@ -1427,7 +1418,16 @@
                                 <a class="function" href="#AttributeValue.to_expression">to_expression</a>
                         </li>
                         <li>
+                                <a class="function" href="#AttributeValue.from_expression">from_expression</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#AttributeValue.from_string">from_string</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#AttributeValue.to_quil">to_quil</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#AttributeValue.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                 </ul>
 
@@ -1484,10 +1484,10 @@
                                 <a class="function" href="#FrameIdentifier.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#FrameIdentifier.name">name</a>
+                                <a class="variable" href="#FrameIdentifier.qubits">qubits</a>
                         </li>
                         <li>
-                                <a class="variable" href="#FrameIdentifier.qubits">qubits</a>
+                                <a class="variable" href="#FrameIdentifier.name">name</a>
                         </li>
                 </ul>
 
@@ -1526,13 +1526,13 @@
                                 <a class="variable" href="#RawCapture.frame">frame</a>
                         </li>
                         <li>
+                                <a class="variable" href="#RawCapture.duration">duration</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#RawCapture.memory_reference">memory_reference</a>
                         </li>
                         <li>
                                 <a class="variable" href="#RawCapture.blocking">blocking</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#RawCapture.duration">duration</a>
                         </li>
                 </ul>
 
@@ -1583,10 +1583,10 @@
                                 <a class="function" href="#SetScale.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#SetScale.frame">frame</a>
+                                <a class="variable" href="#SetScale.scale">scale</a>
                         </li>
                         <li>
-                                <a class="variable" href="#SetScale.scale">scale</a>
+                                <a class="variable" href="#SetScale.frame">frame</a>
                         </li>
                 </ul>
 
@@ -1601,10 +1601,10 @@
                                 <a class="function" href="#ShiftFrequency.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#ShiftFrequency.frequency">frequency</a>
+                                <a class="variable" href="#ShiftFrequency.frame">frame</a>
                         </li>
                         <li>
-                                <a class="variable" href="#ShiftFrequency.frame">frame</a>
+                                <a class="variable" href="#ShiftFrequency.frequency">frequency</a>
                         </li>
                 </ul>
 
@@ -1649,12 +1649,6 @@
                     <a class="class" href="#Gate">Gate</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="function" href="#Gate.to_quil">to_quil</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Gate.to_quil_or_debug">to_quil_or_debug</a>
-                        </li>
-                        <li>
                                 <a class="function" href="#Gate.dagger">dagger</a>
                         </li>
                         <li>
@@ -1667,16 +1661,22 @@
                                 <a class="function" href="#Gate.to_unitary_mut">to_unitary_mut</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Gate.parameters">parameters</a>
+                                <a class="function" href="#Gate.to_quil">to_quil</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Gate.modifiers">modifiers</a>
+                                <a class="function" href="#Gate.to_quil_or_debug">to_quil_or_debug</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Gate.parameters">parameters</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Gate.qubits">qubits</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Gate.name">name</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Gate.modifiers">modifiers</a>
                         </li>
                 </ul>
 
@@ -1691,13 +1691,13 @@
                                 <a class="function" href="#GateDefinition.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#GateDefinition.specification">specification</a>
+                                <a class="variable" href="#GateDefinition.parameters">parameters</a>
                         </li>
                         <li>
                                 <a class="variable" href="#GateDefinition.name">name</a>
                         </li>
                         <li>
-                                <a class="variable" href="#GateDefinition.parameters">parameters</a>
+                                <a class="variable" href="#GateDefinition.specification">specification</a>
                         </li>
                 </ul>
 
@@ -1727,12 +1727,6 @@
                     <a class="class" href="#GateSpecification">GateSpecification</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="function" href="#GateSpecification.to_quil">to_quil</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#GateSpecification.to_quil_or_debug">to_quil_or_debug</a>
-                        </li>
-                        <li>
                                 <a class="function" href="#GateSpecification.from_matrix">from_matrix</a>
                         </li>
                         <li>
@@ -1740,6 +1734,12 @@
                         </li>
                         <li>
                                 <a class="function" href="#GateSpecification.from_pauli_sum">from_pauli_sum</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#GateSpecification.to_quil">to_quil</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#GateSpecification.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
                                 <a class="function" href="#GateSpecification.inner">inner</a>
@@ -1799,10 +1799,10 @@
                     <a class="class" href="#PauliTerm">PauliTerm</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#PauliTerm.expression">expression</a>
+                                <a class="variable" href="#PauliTerm.arguments">arguments</a>
                         </li>
                         <li>
-                                <a class="variable" href="#PauliTerm.arguments">arguments</a>
+                                <a class="variable" href="#PauliTerm.expression">expression</a>
                         </li>
                 </ul>
 
@@ -1862,10 +1862,10 @@
                                 <a class="function" href="#JumpUnless.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#JumpUnless.condition">condition</a>
+                                <a class="variable" href="#JumpUnless.target">target</a>
                         </li>
                         <li>
-                                <a class="variable" href="#JumpUnless.target">target</a>
+                                <a class="variable" href="#JumpUnless.condition">condition</a>
                         </li>
                 </ul>
 
@@ -1889,10 +1889,10 @@
                     <a class="class" href="#Target">Target</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="function" href="#Target.to_quil">to_quil</a>
+                                <a class="function" href="#Target.from_fixed">from_fixed</a>
                         </li>
                         <li>
-                                <a class="function" href="#Target.to_quil_or_debug">to_quil_or_debug</a>
+                                <a class="function" href="#Target.from_placeholder">from_placeholder</a>
                         </li>
                         <li>
                                 <a class="function" href="#Target.inner">inner</a>
@@ -1916,10 +1916,10 @@
                                 <a class="function" href="#Target.to_placeholder">to_placeholder</a>
                         </li>
                         <li>
-                                <a class="function" href="#Target.from_placeholder">from_placeholder</a>
+                                <a class="function" href="#Target.to_quil">to_quil</a>
                         </li>
                         <li>
-                                <a class="function" href="#Target.from_fixed">from_fixed</a>
+                                <a class="function" href="#Target.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                 </ul>
 
@@ -1937,19 +1937,19 @@
                     <a class="class" href="#MemoryReference">MemoryReference</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="function" href="#MemoryReference.parse">parse</a>
-                        </li>
-                        <li>
                                 <a class="function" href="#MemoryReference.to_quil">to_quil</a>
                         </li>
                         <li>
                                 <a class="function" href="#MemoryReference.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#MemoryReference.name">name</a>
+                                <a class="function" href="#MemoryReference.parse">parse</a>
                         </li>
                         <li>
                                 <a class="variable" href="#MemoryReference.index">index</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#MemoryReference.name">name</a>
                         </li>
                 </ul>
 
@@ -1957,15 +1957,6 @@
             <li>
                     <a class="class" href="#Qubit">Qubit</a>
                             <ul class="memberlist">
-                        <li>
-                                <a class="function" href="#Qubit.from_fixed">from_fixed</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Qubit.to_quil">to_quil</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Qubit.to_quil_or_debug">to_quil_or_debug</a>
-                        </li>
                         <li>
                                 <a class="function" href="#Qubit.inner">inner</a>
                         </li>
@@ -2002,6 +1993,15 @@
                         <li>
                                 <a class="function" href="#Qubit.from_placeholder">from_placeholder</a>
                         </li>
+                        <li>
+                                <a class="function" href="#Qubit.to_quil">to_quil</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Qubit.to_quil_or_debug">to_quil_or_debug</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Qubit.from_fixed">from_fixed</a>
+                        </li>
                 </ul>
 
             </li>
@@ -2036,13 +2036,13 @@
                                 <a class="function" href="#Delay.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
+                                <a class="variable" href="#Delay.qubits">qubits</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#Delay.duration">duration</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Delay.frame_names">frame_names</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Delay.qubits">qubits</a>
                         </li>
                 </ul>
 
@@ -2084,10 +2084,10 @@
                                 <a class="function" href="#WaveformDefinition.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#WaveformDefinition.name">name</a>
+                                <a class="variable" href="#WaveformDefinition.definition">definition</a>
                         </li>
                         <li>
-                                <a class="variable" href="#WaveformDefinition.definition">definition</a>
+                                <a class="variable" href="#WaveformDefinition.name">name</a>
                         </li>
                 </ul>
 
@@ -2167,6 +2167,107 @@
     
     
 
+                            <div id="Instruction.from_declaration" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">from_declaration</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Instruction.from_declaration"></a>
+    
+            <div class="docstring"><p>The Python wrapper for [<code>Instruction::Declaration</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
+</div>
+
+
+                            </div>
+                            <div id="Instruction.from_set_scale" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">from_set_scale</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Instruction.from_set_scale"></a>
+    
+            <div class="docstring"><p>The Python wrapper for [<code>Instruction::SetScale</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
+</div>
+
+
+                            </div>
+                            <div id="Instruction.to_quil" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">to_quil</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Instruction.to_quil"></a>
+    
+    
+
+                            </div>
+                            <div id="Instruction.to_quil_or_debug" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">to_quil_or_debug</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Instruction.to_quil_or_debug"></a>
+    
+    
+
+                            </div>
+                            <div id="Instruction.from_jump_when" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">from_jump_when</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Instruction.from_jump_when"></a>
+    
+            <div class="docstring"><p>The Python wrapper for [<code>Instruction::JumpWhen</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
+</div>
+
+
+                            </div>
+                            <div id="Instruction.from_set_phase" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">from_set_phase</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Instruction.from_set_phase"></a>
+    
+            <div class="docstring"><p>The Python wrapper for [<code>Instruction::SetPhase</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
+</div>
+
+
+                            </div>
+                            <div id="Instruction.from_shift_phase" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">from_shift_phase</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Instruction.from_shift_phase"></a>
+    
+            <div class="docstring"><p>The Python wrapper for [<code>Instruction::ShiftPhase</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
+</div>
+
+
+                            </div>
                             <div id="Instruction.from_raw_capture" class="classattr">
                                 <div class="attr function">
             
@@ -3907,261 +4008,6 @@
 
 
                             </div>
-                            <div id="Instruction.from_frame_definition" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">from_frame_definition</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Instruction.from_frame_definition"></a>
-    
-            <div class="docstring"><p>The Python wrapper for [<code>Instruction::FrameDefinition</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
-</div>
-
-
-                            </div>
-                            <div id="Instruction.from_pragma" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">from_pragma</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Instruction.from_pragma"></a>
-    
-            <div class="docstring"><p>The Python wrapper for [<code>Instruction::Pragma</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
-</div>
-
-
-                            </div>
-                            <div id="Instruction.from_jump_when" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">from_jump_when</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Instruction.from_jump_when"></a>
-    
-            <div class="docstring"><p>The Python wrapper for [<code>Instruction::JumpWhen</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
-</div>
-
-
-                            </div>
-                            <div id="Instruction.from_include" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">from_include</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Instruction.from_include"></a>
-    
-            <div class="docstring"><p>The Python wrapper for [<code>Instruction::Include</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
-</div>
-
-
-                            </div>
-                            <div id="Instruction.from_gate" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">from_gate</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Instruction.from_gate"></a>
-    
-            <div class="docstring"><p>The Python wrapper for [<code>Instruction::Gate</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
-</div>
-
-
-                            </div>
-                            <div id="Instruction.from_load" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">from_load</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Instruction.from_load"></a>
-    
-            <div class="docstring"><p>The Python wrapper for [<code>Instruction::Load</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
-</div>
-
-
-                            </div>
-                            <div id="Instruction.from_convert" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">from_convert</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Instruction.from_convert"></a>
-    
-            <div class="docstring"><p>The Python wrapper for [<code>Instruction::Convert</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
-</div>
-
-
-                            </div>
-                            <div id="Instruction.from_pulse" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">from_pulse</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Instruction.from_pulse"></a>
-    
-            <div class="docstring"><p>The Python wrapper for [<code>Instruction::Pulse</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
-</div>
-
-
-                            </div>
-                            <div id="Instruction.from_comparison" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">from_comparison</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Instruction.from_comparison"></a>
-    
-            <div class="docstring"><p>The Python wrapper for [<code>Instruction::Comparison</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
-</div>
-
-
-                            </div>
-                            <div id="Instruction.from_swap_phases" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">from_swap_phases</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Instruction.from_swap_phases"></a>
-    
-            <div class="docstring"><p>The Python wrapper for [<code>Instruction::SwapPhases</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
-</div>
-
-
-                            </div>
-                            <div id="Instruction.from_calibration_definition" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">from_calibration_definition</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Instruction.from_calibration_definition"></a>
-    
-            <div class="docstring"><p>The Python wrapper for [<code>Instruction::CalibrationDefinition</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
-</div>
-
-
-                            </div>
-                            <div id="Instruction.from_delay" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">from_delay</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Instruction.from_delay"></a>
-    
-            <div class="docstring"><p>The Python wrapper for [<code>Instruction::Delay</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
-</div>
-
-
-                            </div>
-                            <div id="Instruction.from_binary_logic" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">from_binary_logic</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Instruction.from_binary_logic"></a>
-    
-            <div class="docstring"><p>The Python wrapper for [<code>Instruction::BinaryLogic</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
-</div>
-
-
-                            </div>
-                            <div id="Instruction.from_declaration" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">from_declaration</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Instruction.from_declaration"></a>
-    
-            <div class="docstring"><p>The Python wrapper for [<code>Instruction::Declaration</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
-</div>
-
-
-                            </div>
-                            <div id="Instruction.from_unary_logic" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">from_unary_logic</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Instruction.from_unary_logic"></a>
-    
-            <div class="docstring"><p>The Python wrapper for [<code>Instruction::UnaryLogic</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
-</div>
-
-
-                            </div>
-                            <div id="Instruction.new_nop" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">new_nop</span><span class="signature pdoc-code condensed">(<span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Instruction.new_nop"></a>
-    
-            <div class="docstring"><p>Create a new [<code>PyInstruction</code>] wrapping a [<code>Instruction::Nop</code>].</p>
-</div>
-
-
-                            </div>
-                            <div id="Instruction.from_measure_calibration_definition" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">from_measure_calibration_definition</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Instruction.from_measure_calibration_definition"></a>
-    
-            <div class="docstring"><p>The Python wrapper for [<code>Instruction::MeasureCalibrationDefinition</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
-</div>
-
-
-                            </div>
                             <div id="Instruction.from_capture" class="classattr">
                                 <div class="attr function">
             
@@ -4173,156 +4019,6 @@
     <a class="headerlink" href="#Instruction.from_capture"></a>
     
             <div class="docstring"><p>The Python wrapper for [<code>Instruction::Capture</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
-</div>
-
-
-                            </div>
-                            <div id="Instruction.from_move" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">from_move</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Instruction.from_move"></a>
-    
-            <div class="docstring"><p>The Python wrapper for [<code>Instruction::Move</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
-</div>
-
-
-                            </div>
-                            <div id="Instruction.from_label" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">from_label</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Instruction.from_label"></a>
-    
-            <div class="docstring"><p>The Python wrapper for [<code>Instruction::Label</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
-</div>
-
-
-                            </div>
-                            <div id="Instruction.from_reset" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">from_reset</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Instruction.from_reset"></a>
-    
-            <div class="docstring"><p>The Python wrapper for [<code>Instruction::Reset</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
-</div>
-
-
-                            </div>
-                            <div id="Instruction.new_wait" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">new_wait</span><span class="signature pdoc-code condensed">(<span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Instruction.new_wait"></a>
-    
-            <div class="docstring"><p>Create a new [<code>PyInstruction</code>] wrapping a [<code>Instruction::Wait</code>].</p>
-</div>
-
-
-                            </div>
-                            <div id="Instruction.new_halt" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">new_halt</span><span class="signature pdoc-code condensed">(<span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Instruction.new_halt"></a>
-    
-            <div class="docstring"><p>Create a new [<code>PyInstruction</code>] wrapping a [<code>Instruction::Halt</code>].</p>
-</div>
-
-
-                            </div>
-                            <div id="Instruction.from_shift_frequency" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">from_shift_frequency</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Instruction.from_shift_frequency"></a>
-    
-            <div class="docstring"><p>The Python wrapper for [<code>Instruction::ShiftFrequency</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
-</div>
-
-
-                            </div>
-                            <div id="Instruction.from_shift_phase" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">from_shift_phase</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Instruction.from_shift_phase"></a>
-    
-            <div class="docstring"><p>The Python wrapper for [<code>Instruction::ShiftPhase</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
-</div>
-
-
-                            </div>
-                            <div id="Instruction.from_set_phase" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">from_set_phase</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Instruction.from_set_phase"></a>
-    
-            <div class="docstring"><p>The Python wrapper for [<code>Instruction::SetPhase</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
-</div>
-
-
-                            </div>
-                            <div id="Instruction.from_call" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">from_call</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Instruction.from_call"></a>
-    
-            <div class="docstring"><p>The Python wrapper for [<code>Instruction::Call</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
-</div>
-
-
-                            </div>
-                            <div id="Instruction.from_jump" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">from_jump</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Instruction.from_jump"></a>
-    
-            <div class="docstring"><p>The Python wrapper for [<code>Instruction::Jump</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
 </div>
 
 
@@ -4342,62 +4038,152 @@
 
 
                             </div>
-                            <div id="Instruction.from_fence" class="classattr">
+                            <div id="Instruction.from_arithmetic" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">from_fence</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+        <span class="name">from_arithmetic</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
-    <a class="headerlink" href="#Instruction.from_fence"></a>
+    <a class="headerlink" href="#Instruction.from_arithmetic"></a>
     
-            <div class="docstring"><p>The Python wrapper for [<code>Instruction::Fence</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
+            <div class="docstring"><p>The Python wrapper for [<code>Instruction::Arithmetic</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
 </div>
 
 
                             </div>
-                            <div id="Instruction.from_exchange" class="classattr">
+                            <div id="Instruction.from_include" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">from_exchange</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+        <span class="name">from_include</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
-    <a class="headerlink" href="#Instruction.from_exchange"></a>
+    <a class="headerlink" href="#Instruction.from_include"></a>
     
-            <div class="docstring"><p>The Python wrapper for [<code>Instruction::Exchange</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
+            <div class="docstring"><p>The Python wrapper for [<code>Instruction::Include</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
 </div>
 
 
                             </div>
-                            <div id="Instruction.from_set_scale" class="classattr">
+                            <div id="Instruction.from_store" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">from_set_scale</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+        <span class="name">from_store</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
-    <a class="headerlink" href="#Instruction.from_set_scale"></a>
+    <a class="headerlink" href="#Instruction.from_store"></a>
     
-            <div class="docstring"><p>The Python wrapper for [<code>Instruction::SetScale</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
+            <div class="docstring"><p>The Python wrapper for [<code>Instruction::Store</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
 </div>
 
 
                             </div>
-                            <div id="Instruction.from_gate_definition" class="classattr">
+                            <div id="Instruction.from_pragma" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">from_gate_definition</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+        <span class="name">from_pragma</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
-    <a class="headerlink" href="#Instruction.from_gate_definition"></a>
+    <a class="headerlink" href="#Instruction.from_pragma"></a>
     
-            <div class="docstring"><p>The Python wrapper for [<code>Instruction::GateDefinition</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
+            <div class="docstring"><p>The Python wrapper for [<code>Instruction::Pragma</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
+</div>
+
+
+                            </div>
+                            <div id="Instruction.from_comparison" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">from_comparison</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Instruction.from_comparison"></a>
+    
+            <div class="docstring"><p>The Python wrapper for [<code>Instruction::Comparison</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
+</div>
+
+
+                            </div>
+                            <div id="Instruction.from_measure_calibration_definition" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">from_measure_calibration_definition</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Instruction.from_measure_calibration_definition"></a>
+    
+            <div class="docstring"><p>The Python wrapper for [<code>Instruction::MeasureCalibrationDefinition</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
+</div>
+
+
+                            </div>
+                            <div id="Instruction.from_call" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">from_call</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Instruction.from_call"></a>
+    
+            <div class="docstring"><p>The Python wrapper for [<code>Instruction::Call</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
+</div>
+
+
+                            </div>
+                            <div id="Instruction.from_reset" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">from_reset</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Instruction.from_reset"></a>
+    
+            <div class="docstring"><p>The Python wrapper for [<code>Instruction::Reset</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
+</div>
+
+
+                            </div>
+                            <div id="Instruction.new_nop" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">new_nop</span><span class="signature pdoc-code condensed">(<span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Instruction.new_nop"></a>
+    
+            <div class="docstring"><p>Create a new [<code>PyInstruction</code>] wrapping a [<code>Instruction::Nop</code>].</p>
+</div>
+
+
+                            </div>
+                            <div id="Instruction.from_pulse" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">from_pulse</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Instruction.from_pulse"></a>
+    
+            <div class="docstring"><p>The Python wrapper for [<code>Instruction::Pulse</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
 </div>
 
 
@@ -4417,17 +4203,17 @@
 
 
                             </div>
-                            <div id="Instruction.from_waveform_definition" class="classattr">
+                            <div id="Instruction.from_frame_definition" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">from_waveform_definition</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+        <span class="name">from_frame_definition</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
-    <a class="headerlink" href="#Instruction.from_waveform_definition"></a>
+    <a class="headerlink" href="#Instruction.from_frame_definition"></a>
     
-            <div class="docstring"><p>The Python wrapper for [<code>Instruction::WaveformDefinition</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
+            <div class="docstring"><p>The Python wrapper for [<code>Instruction::FrameDefinition</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
 </div>
 
 
@@ -4443,6 +4229,276 @@
     <a class="headerlink" href="#Instruction.from_measurement"></a>
     
             <div class="docstring"><p>The Python wrapper for [<code>Instruction::Measurement</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
+</div>
+
+
+                            </div>
+                            <div id="Instruction.from_gate" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">from_gate</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Instruction.from_gate"></a>
+    
+            <div class="docstring"><p>The Python wrapper for [<code>Instruction::Gate</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
+</div>
+
+
+                            </div>
+                            <div id="Instruction.from_fence" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">from_fence</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Instruction.from_fence"></a>
+    
+            <div class="docstring"><p>The Python wrapper for [<code>Instruction::Fence</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
+</div>
+
+
+                            </div>
+                            <div id="Instruction.from_waveform_definition" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">from_waveform_definition</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Instruction.from_waveform_definition"></a>
+    
+            <div class="docstring"><p>The Python wrapper for [<code>Instruction::WaveformDefinition</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
+</div>
+
+
+                            </div>
+                            <div id="Instruction.from_calibration_definition" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">from_calibration_definition</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Instruction.from_calibration_definition"></a>
+    
+            <div class="docstring"><p>The Python wrapper for [<code>Instruction::CalibrationDefinition</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
+</div>
+
+
+                            </div>
+                            <div id="Instruction.from_convert" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">from_convert</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Instruction.from_convert"></a>
+    
+            <div class="docstring"><p>The Python wrapper for [<code>Instruction::Convert</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
+</div>
+
+
+                            </div>
+                            <div id="Instruction.from_move" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">from_move</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Instruction.from_move"></a>
+    
+            <div class="docstring"><p>The Python wrapper for [<code>Instruction::Move</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
+</div>
+
+
+                            </div>
+                            <div id="Instruction.from_gate_definition" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">from_gate_definition</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Instruction.from_gate_definition"></a>
+    
+            <div class="docstring"><p>The Python wrapper for [<code>Instruction::GateDefinition</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
+</div>
+
+
+                            </div>
+                            <div id="Instruction.from_swap_phases" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">from_swap_phases</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Instruction.from_swap_phases"></a>
+    
+            <div class="docstring"><p>The Python wrapper for [<code>Instruction::SwapPhases</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
+</div>
+
+
+                            </div>
+                            <div id="Instruction.from_jump_unless" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">from_jump_unless</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Instruction.from_jump_unless"></a>
+    
+            <div class="docstring"><p>The Python wrapper for [<code>Instruction::JumpUnless</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
+</div>
+
+
+                            </div>
+                            <div id="Instruction.from_exchange" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">from_exchange</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Instruction.from_exchange"></a>
+    
+            <div class="docstring"><p>The Python wrapper for [<code>Instruction::Exchange</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
+</div>
+
+
+                            </div>
+                            <div id="Instruction.from_label" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">from_label</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Instruction.from_label"></a>
+    
+            <div class="docstring"><p>The Python wrapper for [<code>Instruction::Label</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
+</div>
+
+
+                            </div>
+                            <div id="Instruction.from_unary_logic" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">from_unary_logic</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Instruction.from_unary_logic"></a>
+    
+            <div class="docstring"><p>The Python wrapper for [<code>Instruction::UnaryLogic</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
+</div>
+
+
+                            </div>
+                            <div id="Instruction.new_halt" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">new_halt</span><span class="signature pdoc-code condensed">(<span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Instruction.new_halt"></a>
+    
+            <div class="docstring"><p>Create a new [<code>PyInstruction</code>] wrapping a [<code>Instruction::Halt</code>].</p>
+</div>
+
+
+                            </div>
+                            <div id="Instruction.from_load" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">from_load</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Instruction.from_load"></a>
+    
+            <div class="docstring"><p>The Python wrapper for [<code>Instruction::Load</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
+</div>
+
+
+                            </div>
+                            <div id="Instruction.from_delay" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">from_delay</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Instruction.from_delay"></a>
+    
+            <div class="docstring"><p>The Python wrapper for [<code>Instruction::Delay</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
+</div>
+
+
+                            </div>
+                            <div id="Instruction.from_jump" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">from_jump</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Instruction.from_jump"></a>
+    
+            <div class="docstring"><p>The Python wrapper for [<code>Instruction::Jump</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
+</div>
+
+
+                            </div>
+                            <div id="Instruction.from_binary_logic" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">from_binary_logic</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Instruction.from_binary_logic"></a>
+    
+            <div class="docstring"><p>The Python wrapper for [<code>Instruction::BinaryLogic</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
+</div>
+
+
+                            </div>
+                            <div id="Instruction.new_wait" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">new_wait</span><span class="signature pdoc-code condensed">(<span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Instruction.new_wait"></a>
+    
+            <div class="docstring"><p>Create a new [<code>PyInstruction</code>] wrapping a [<code>Instruction::Wait</code>].</p>
 </div>
 
 
@@ -4473,73 +4529,17 @@
     
 
                             </div>
-                            <div id="Instruction.from_arithmetic" class="classattr">
+                            <div id="Instruction.from_shift_frequency" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">from_arithmetic</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+        <span class="name">from_shift_frequency</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
-    <a class="headerlink" href="#Instruction.from_arithmetic"></a>
+    <a class="headerlink" href="#Instruction.from_shift_frequency"></a>
     
-            <div class="docstring"><p>The Python wrapper for [<code>Instruction::Arithmetic</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
-</div>
-
-
-                            </div>
-                            <div id="Instruction.from_jump_unless" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">from_jump_unless</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Instruction.from_jump_unless"></a>
-    
-            <div class="docstring"><p>The Python wrapper for [<code>Instruction::JumpUnless</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
-</div>
-
-
-                            </div>
-                            <div id="Instruction.to_quil" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">to_quil</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Instruction.to_quil"></a>
-    
-    
-
-                            </div>
-                            <div id="Instruction.to_quil_or_debug" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">to_quil_or_debug</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Instruction.to_quil_or_debug"></a>
-    
-    
-
-                            </div>
-                            <div id="Instruction.from_store" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">from_store</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Instruction.from_store"></a>
-    
-            <div class="docstring"><p>The Python wrapper for [<code>Instruction::Store</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
+            <div class="docstring"><p>The Python wrapper for [<code>Instruction::ShiftFrequency</code>], creating a [<code>PyInstruction</code>] and taking a Python argument.</p>
 </div>
 
 
@@ -4583,15 +4583,15 @@
     
 
                             </div>
-                            <div id="Arithmetic.operator" class="classattr">
+                            <div id="Arithmetic.destination" class="classattr">
                                 <div class="attr variable">
-            <span class="name">operator</span>
+            <span class="name">destination</span>
 
         
     </div>
-    <a class="headerlink" href="#Arithmetic.operator"></a>
+    <a class="headerlink" href="#Arithmetic.destination"></a>
     
-            <div class="docstring"><p>Get the operator field from Python.  Annotated with <code>@property</code>.</p>
+            <div class="docstring"><p>Get the destination field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -4609,15 +4609,15 @@
 
 
                             </div>
-                            <div id="Arithmetic.destination" class="classattr">
+                            <div id="Arithmetic.operator" class="classattr">
                                 <div class="attr variable">
-            <span class="name">destination</span>
+            <span class="name">operator</span>
 
         
     </div>
-    <a class="headerlink" href="#Arithmetic.destination"></a>
+    <a class="headerlink" href="#Arithmetic.operator"></a>
     
-            <div class="docstring"><p>Get the destination field from Python.  Annotated with <code>@property</code>.</p>
+            <div class="docstring"><p>Get the operator field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -4635,6 +4635,21 @@
     
     
 
+                            <div id="ArithmeticOperand.from_literal_integer" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">from_literal_integer</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#ArithmeticOperand.from_literal_integer"></a>
+    
+            <div class="docstring"><p>The Python wrapper for [<code>ArithmeticOperand::LiteralInteger</code>], creating a [<code>PyArithmeticOperand</code>] and taking a Python argument.</p>
+</div>
+
+
+                            </div>
                             <div id="ArithmeticOperand.inner" class="classattr">
                                 <div class="attr function">
             
@@ -4785,17 +4800,17 @@
 
 
                             </div>
-                            <div id="ArithmeticOperand.from_memory_reference" class="classattr">
+                            <div id="ArithmeticOperand.from_literal_real" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">from_memory_reference</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+        <span class="name">from_literal_real</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
-    <a class="headerlink" href="#ArithmeticOperand.from_memory_reference"></a>
+    <a class="headerlink" href="#ArithmeticOperand.from_literal_real"></a>
     
-            <div class="docstring"><p>The Python wrapper for [<code>ArithmeticOperand::MemoryReference</code>], creating a [<code>PyArithmeticOperand</code>] and taking a Python argument.</p>
+            <div class="docstring"><p>The Python wrapper for [<code>ArithmeticOperand::LiteralReal</code>], creating a [<code>PyArithmeticOperand</code>] and taking a Python argument.</p>
 </div>
 
 
@@ -4826,32 +4841,17 @@
     
 
                             </div>
-                            <div id="ArithmeticOperand.from_literal_integer" class="classattr">
+                            <div id="ArithmeticOperand.from_memory_reference" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">from_literal_integer</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+        <span class="name">from_memory_reference</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
-    <a class="headerlink" href="#ArithmeticOperand.from_literal_integer"></a>
+    <a class="headerlink" href="#ArithmeticOperand.from_memory_reference"></a>
     
-            <div class="docstring"><p>The Python wrapper for [<code>ArithmeticOperand::LiteralInteger</code>], creating a [<code>PyArithmeticOperand</code>] and taking a Python argument.</p>
-</div>
-
-
-                            </div>
-                            <div id="ArithmeticOperand.from_literal_real" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">from_literal_real</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#ArithmeticOperand.from_literal_real"></a>
-    
-            <div class="docstring"><p>The Python wrapper for [<code>ArithmeticOperand::LiteralReal</code>], creating a [<code>PyArithmeticOperand</code>] and taking a Python argument.</p>
+            <div class="docstring"><p>The Python wrapper for [<code>ArithmeticOperand::MemoryReference</code>], creating a [<code>PyArithmeticOperand</code>] and taking a Python argument.</p>
 </div>
 
 
@@ -4982,6 +4982,19 @@
     
 
                             </div>
+                            <div id="BinaryLogic.operator" class="classattr">
+                                <div class="attr variable">
+            <span class="name">operator</span>
+
+        
+    </div>
+    <a class="headerlink" href="#BinaryLogic.operator"></a>
+    
+            <div class="docstring"><p>Get the operator field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
                             <div id="BinaryLogic.destination" class="classattr">
                                 <div class="attr variable">
             <span class="name">destination</span>
@@ -5004,19 +5017,6 @@
     <a class="headerlink" href="#BinaryLogic.source"></a>
     
             <div class="docstring"><p>Get the source field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
-                            <div id="BinaryLogic.operator" class="classattr">
-                                <div class="attr variable">
-            <span class="name">operator</span>
-
-        
-    </div>
-    <a class="headerlink" href="#BinaryLogic.operator"></a>
-    
-            <div class="docstring"><p>Get the operator field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -5139,32 +5139,6 @@
 
 
                             </div>
-                            <div id="BinaryOperand.to_quil" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">to_quil</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#BinaryOperand.to_quil"></a>
-    
-    
-
-                            </div>
-                            <div id="BinaryOperand.to_quil_or_debug" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">to_quil_or_debug</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#BinaryOperand.to_quil_or_debug"></a>
-    
-    
-
-                            </div>
                             <div id="BinaryOperand.from_memory_reference" class="classattr">
                                 <div class="attr function">
             
@@ -5193,6 +5167,32 @@
             <div class="docstring"><p>The Python wrapper for [<code>BinaryOperand::LiteralInteger</code>], creating a [<code>PyBinaryOperand</code>] and taking a Python argument.</p>
 </div>
 
+
+                            </div>
+                            <div id="BinaryOperand.to_quil" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">to_quil</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#BinaryOperand.to_quil"></a>
+    
+    
+
+                            </div>
+                            <div id="BinaryOperand.to_quil_or_debug" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">to_quil_or_debug</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#BinaryOperand.to_quil_or_debug"></a>
+    
+    
 
                             </div>
                 </section>
@@ -5380,6 +5380,32 @@
     
     
 
+                            <div id="CallArgument.to_quil" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">to_quil</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#CallArgument.to_quil"></a>
+    
+    
+
+                            </div>
+                            <div id="CallArgument.to_quil_or_debug" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">to_quil_or_debug</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#CallArgument.to_quil_or_debug"></a>
+    
+    
+
+                            </div>
                             <div id="CallArgument.from_identifier" class="classattr">
                                 <div class="attr function">
             
@@ -5391,36 +5417,6 @@
     <a class="headerlink" href="#CallArgument.from_identifier"></a>
     
             <div class="docstring"><p>The Python wrapper for [<code>UnresolvedCallArgument::Identifier</code>], creating a [<code>PyCallArgument</code>] and taking a Python argument.</p>
-</div>
-
-
-                            </div>
-                            <div id="CallArgument.from_memory_reference" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">from_memory_reference</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#CallArgument.from_memory_reference"></a>
-    
-            <div class="docstring"><p>The Python wrapper for [<code>UnresolvedCallArgument::MemoryReference</code>], creating a [<code>PyCallArgument</code>] and taking a Python argument.</p>
-</div>
-
-
-                            </div>
-                            <div id="CallArgument.from_immediate" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">from_immediate</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#CallArgument.from_immediate"></a>
-    
-            <div class="docstring"><p>The Python wrapper for [<code>UnresolvedCallArgument::Immediate</code>], creating a [<code>PyCallArgument</code>] and taking a Python argument.</p>
 </div>
 
 
@@ -5575,30 +5571,34 @@
 
 
                             </div>
-                            <div id="CallArgument.to_quil" class="classattr">
+                            <div id="CallArgument.from_immediate" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">to_quil</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+        <span class="name">from_immediate</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
-    <a class="headerlink" href="#CallArgument.to_quil"></a>
+    <a class="headerlink" href="#CallArgument.from_immediate"></a>
     
-    
+            <div class="docstring"><p>The Python wrapper for [<code>UnresolvedCallArgument::Immediate</code>], creating a [<code>PyCallArgument</code>] and taking a Python argument.</p>
+</div>
+
 
                             </div>
-                            <div id="CallArgument.to_quil_or_debug" class="classattr">
+                            <div id="CallArgument.from_memory_reference" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">to_quil_or_debug</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+        <span class="name">from_memory_reference</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
-    <a class="headerlink" href="#CallArgument.to_quil_or_debug"></a>
+    <a class="headerlink" href="#CallArgument.from_memory_reference"></a>
     
-    
+            <div class="docstring"><p>The Python wrapper for [<code>UnresolvedCallArgument::MemoryReference</code>], creating a [<code>PyCallArgument</code>] and taking a Python argument.</p>
+</div>
+
 
                             </div>
                 </section>
@@ -5640,6 +5640,19 @@
     
 
                             </div>
+                            <div id="Comparison.operator" class="classattr">
+                                <div class="attr variable">
+            <span class="name">operator</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Comparison.operator"></a>
+    
+            <div class="docstring"><p>Get the operator field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
                             <div id="Comparison.rhs" class="classattr">
                                 <div class="attr variable">
             <span class="name">rhs</span>
@@ -5679,19 +5692,6 @@
 
 
                             </div>
-                            <div id="Comparison.operator" class="classattr">
-                                <div class="attr variable">
-            <span class="name">operator</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Comparison.operator"></a>
-    
-            <div class="docstring"><p>Get the operator field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
                 </section>
                 <section id="ComparisonOperand">
                     <div class="attr class">
@@ -5705,17 +5705,17 @@
     
     
 
-                            <div id="ComparisonOperand.from_memory_reference" class="classattr">
+                            <div id="ComparisonOperand.from_literal_integer" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">from_memory_reference</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+        <span class="name">from_literal_integer</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
-    <a class="headerlink" href="#ComparisonOperand.from_memory_reference"></a>
+    <a class="headerlink" href="#ComparisonOperand.from_literal_integer"></a>
     
-            <div class="docstring"><p>The Python wrapper for [<code>ComparisonOperand::MemoryReference</code>], creating a [<code>PyComparisonOperand</code>] and taking a Python argument.</p>
+            <div class="docstring"><p>The Python wrapper for [<code>ComparisonOperand::LiteralInteger</code>], creating a [<code>PyComparisonOperand</code>] and taking a Python argument.</p>
 </div>
 
 
@@ -5761,17 +5761,17 @@
 
 
                             </div>
-                            <div id="ComparisonOperand.from_literal_integer" class="classattr">
+                            <div id="ComparisonOperand.from_memory_reference" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">from_literal_integer</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+        <span class="name">from_memory_reference</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
-    <a class="headerlink" href="#ComparisonOperand.from_literal_integer"></a>
+    <a class="headerlink" href="#ComparisonOperand.from_memory_reference"></a>
     
-            <div class="docstring"><p>The Python wrapper for [<code>ComparisonOperand::LiteralInteger</code>], creating a [<code>PyComparisonOperand</code>] and taking a Python argument.</p>
+            <div class="docstring"><p>The Python wrapper for [<code>ComparisonOperand::MemoryReference</code>], creating a [<code>PyComparisonOperand</code>] and taking a Python argument.</p>
 </div>
 
 
@@ -6103,19 +6103,6 @@
     
 
                             </div>
-                            <div id="Exchange.right" class="classattr">
-                                <div class="attr variable">
-            <span class="name">right</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Exchange.right"></a>
-    
-            <div class="docstring"><p>Get the right field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
                             <div id="Exchange.left" class="classattr">
                                 <div class="attr variable">
             <span class="name">left</span>
@@ -6125,6 +6112,19 @@
     <a class="headerlink" href="#Exchange.left"></a>
     
             <div class="docstring"><p>Get the left field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
+                            <div id="Exchange.right" class="classattr">
+                                <div class="attr variable">
+            <span class="name">right</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Exchange.right"></a>
+    
+            <div class="docstring"><p>Get the right field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -6168,17 +6168,6 @@
     
 
                             </div>
-                            <div id="ExternParameter.name" class="classattr">
-                                <div class="attr variable">
-            <span class="name">name</span>
-
-        
-    </div>
-    <a class="headerlink" href="#ExternParameter.name"></a>
-    
-    
-
-                            </div>
                             <div id="ExternParameter.mutable" class="classattr">
                                 <div class="attr variable">
             <span class="name">mutable</span>
@@ -6201,6 +6190,17 @@
     
 
                             </div>
+                            <div id="ExternParameter.name" class="classattr">
+                                <div class="attr variable">
+            <span class="name">name</span>
+
+        
+    </div>
+    <a class="headerlink" href="#ExternParameter.name"></a>
+    
+    
+
+                            </div>
                 </section>
                 <section id="ExternParameterType">
                     <div class="attr class">
@@ -6214,6 +6214,21 @@
     
     
 
+                            <div id="ExternParameterType.from_scalar" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">from_scalar</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#ExternParameterType.from_scalar"></a>
+    
+            <div class="docstring"><p>The Python wrapper for [<code>ExternParameterType::Scalar</code>], creating a [<code>PyExternParameterType</code>] and taking a Python argument.</p>
+</div>
+
+
+                            </div>
                             <div id="ExternParameterType.from_variable_length_vector" class="classattr">
                                 <div class="attr function">
             
@@ -6229,30 +6244,19 @@
 
 
                             </div>
-                            <div id="ExternParameterType.to_quil" class="classattr">
+                            <div id="ExternParameterType.from_fixed_length_vector" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">to_quil</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+        <span class="name">from_fixed_length_vector</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
-    <a class="headerlink" href="#ExternParameterType.to_quil"></a>
+    <a class="headerlink" href="#ExternParameterType.from_fixed_length_vector"></a>
     
-    
+            <div class="docstring"><p>The Python wrapper for [<code>ExternParameterType::FixedLengthVector</code>], creating a [<code>PyExternParameterType</code>] and taking a Python argument.</p>
+</div>
 
-                            </div>
-                            <div id="ExternParameterType.to_quil_or_debug" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">to_quil_or_debug</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#ExternParameterType.to_quil_or_debug"></a>
-    
-    
 
                             </div>
                             <div id="ExternParameterType.inner" class="classattr">
@@ -6405,34 +6409,30 @@
 
 
                             </div>
-                            <div id="ExternParameterType.from_fixed_length_vector" class="classattr">
+                            <div id="ExternParameterType.to_quil" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">from_fixed_length_vector</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+        <span class="name">to_quil</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
-    <a class="headerlink" href="#ExternParameterType.from_fixed_length_vector"></a>
+    <a class="headerlink" href="#ExternParameterType.to_quil"></a>
     
-            <div class="docstring"><p>The Python wrapper for [<code>ExternParameterType::FixedLengthVector</code>], creating a [<code>PyExternParameterType</code>] and taking a Python argument.</p>
-</div>
-
+    
 
                             </div>
-                            <div id="ExternParameterType.from_scalar" class="classattr">
+                            <div id="ExternParameterType.to_quil_or_debug" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">from_scalar</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+        <span class="name">to_quil_or_debug</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
-    <a class="headerlink" href="#ExternParameterType.from_scalar"></a>
+    <a class="headerlink" href="#ExternParameterType.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>The Python wrapper for [<code>ExternParameterType::Scalar</code>], creating a [<code>PyExternParameterType</code>] and taking a Python argument.</p>
-</div>
-
+    
 
                             </div>
                 </section>
@@ -6600,19 +6600,6 @@
     
 
                             </div>
-                            <div id="UnaryLogic.operator" class="classattr">
-                                <div class="attr variable">
-            <span class="name">operator</span>
-
-        
-    </div>
-    <a class="headerlink" href="#UnaryLogic.operator"></a>
-    
-            <div class="docstring"><p>Get the operator field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
                             <div id="UnaryLogic.operand" class="classattr">
                                 <div class="attr variable">
             <span class="name">operand</span>
@@ -6622,6 +6609,19 @@
     <a class="headerlink" href="#UnaryLogic.operand"></a>
     
             <div class="docstring"><p>Get the operand field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
+                            <div id="UnaryLogic.operator" class="classattr">
+                                <div class="attr variable">
+            <span class="name">operator</span>
+
+        
+    </div>
+    <a class="headerlink" href="#UnaryLogic.operator"></a>
+    
+            <div class="docstring"><p>Get the operator field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -6728,13 +6728,24 @@
     
 
                             </div>
-                            <div id="Calibration.name" class="classattr">
+                            <div id="Calibration.modifiers" class="classattr">
                                 <div class="attr variable">
-            <span class="name">name</span>
+            <span class="name">modifiers</span>
 
         
     </div>
-    <a class="headerlink" href="#Calibration.name"></a>
+    <a class="headerlink" href="#Calibration.modifiers"></a>
+    
+    
+
+                            </div>
+                            <div id="Calibration.parameters" class="classattr">
+                                <div class="attr variable">
+            <span class="name">parameters</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Calibration.parameters"></a>
     
     
 
@@ -6750,17 +6761,6 @@
             <div class="docstring"><p>Get the identifier field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
-
-                            </div>
-                            <div id="Calibration.parameters" class="classattr">
-                                <div class="attr variable">
-            <span class="name">parameters</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Calibration.parameters"></a>
-    
-    
 
                             </div>
                             <div id="Calibration.instructions" class="classattr">
@@ -6787,13 +6787,13 @@
     
 
                             </div>
-                            <div id="Calibration.modifiers" class="classattr">
+                            <div id="Calibration.name" class="classattr">
                                 <div class="attr variable">
-            <span class="name">modifiers</span>
+            <span class="name">name</span>
 
         
     </div>
-    <a class="headerlink" href="#Calibration.modifiers"></a>
+    <a class="headerlink" href="#Calibration.name"></a>
     
     
 
@@ -6837,6 +6837,19 @@
     
 
                             </div>
+                            <div id="CalibrationIdentifier.modifiers" class="classattr">
+                                <div class="attr variable">
+            <span class="name">modifiers</span>
+
+        
+    </div>
+    <a class="headerlink" href="#CalibrationIdentifier.modifiers"></a>
+    
+            <div class="docstring"><p>Get the modifiers field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
                             <div id="CalibrationIdentifier.qubits" class="classattr">
                                 <div class="attr variable">
             <span class="name">qubits</span>
@@ -6859,19 +6872,6 @@
     <a class="headerlink" href="#CalibrationIdentifier.parameters"></a>
     
             <div class="docstring"><p>Get the parameters field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
-                            <div id="CalibrationIdentifier.modifiers" class="classattr">
-                                <div class="attr variable">
-            <span class="name">modifiers</span>
-
-        
-    </div>
-    <a class="headerlink" href="#CalibrationIdentifier.modifiers"></a>
-    
-            <div class="docstring"><p>Get the modifiers field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -6928,6 +6928,19 @@
     
 
                             </div>
+                            <div id="CircuitDefinition.name" class="classattr">
+                                <div class="attr variable">
+            <span class="name">name</span>
+
+        
+    </div>
+    <a class="headerlink" href="#CircuitDefinition.name"></a>
+    
+            <div class="docstring"><p>Get the name field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
                             <div id="CircuitDefinition.qubit_variables" class="classattr">
                                 <div class="attr variable">
             <span class="name">qubit_variables</span>
@@ -6950,19 +6963,6 @@
     <a class="headerlink" href="#CircuitDefinition.instructions"></a>
     
             <div class="docstring"><p>Get the instructions field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
-                            <div id="CircuitDefinition.name" class="classattr">
-                                <div class="attr variable">
-            <span class="name">name</span>
-
-        
-    </div>
-    <a class="headerlink" href="#CircuitDefinition.name"></a>
-    
-            <div class="docstring"><p>Get the name field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -7019,28 +7019,6 @@
     
 
                             </div>
-                            <div id="MeasureCalibrationDefinition.qubit" class="classattr">
-                                <div class="attr variable">
-            <span class="name">qubit</span>
-
-        
-    </div>
-    <a class="headerlink" href="#MeasureCalibrationDefinition.qubit"></a>
-    
-    
-
-                            </div>
-                            <div id="MeasureCalibrationDefinition.parameter" class="classattr">
-                                <div class="attr variable">
-            <span class="name">parameter</span>
-
-        
-    </div>
-    <a class="headerlink" href="#MeasureCalibrationDefinition.parameter"></a>
-    
-    
-
-                            </div>
                             <div id="MeasureCalibrationDefinition.instructions" class="classattr">
                                 <div class="attr variable">
             <span class="name">instructions</span>
@@ -7054,6 +7032,17 @@
 
 
                             </div>
+                            <div id="MeasureCalibrationDefinition.parameter" class="classattr">
+                                <div class="attr variable">
+            <span class="name">parameter</span>
+
+        
+    </div>
+    <a class="headerlink" href="#MeasureCalibrationDefinition.parameter"></a>
+    
+    
+
+                            </div>
                             <div id="MeasureCalibrationDefinition.identifier" class="classattr">
                                 <div class="attr variable">
             <span class="name">identifier</span>
@@ -7065,6 +7054,17 @@
             <div class="docstring"><p>Get the identifier field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
+
+                            </div>
+                            <div id="MeasureCalibrationDefinition.qubit" class="classattr">
+                                <div class="attr variable">
+            <span class="name">qubit</span>
+
+        
+    </div>
+    <a class="headerlink" href="#MeasureCalibrationDefinition.qubit"></a>
+    
+    
 
                             </div>
                 </section>
@@ -7106,19 +7106,6 @@
     
 
                             </div>
-                            <div id="MeasureCalibrationIdentifier.parameter" class="classattr">
-                                <div class="attr variable">
-            <span class="name">parameter</span>
-
-        
-    </div>
-    <a class="headerlink" href="#MeasureCalibrationIdentifier.parameter"></a>
-    
-            <div class="docstring"><p>Get the parameter field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
                             <div id="MeasureCalibrationIdentifier.qubit" class="classattr">
                                 <div class="attr variable">
             <span class="name">qubit</span>
@@ -7128,6 +7115,19 @@
     <a class="headerlink" href="#MeasureCalibrationIdentifier.qubit"></a>
     
             <div class="docstring"><p>Get the qubit field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
+                            <div id="MeasureCalibrationIdentifier.parameter" class="classattr">
+                                <div class="attr variable">
+            <span class="name">parameter</span>
+
+        
+    </div>
+    <a class="headerlink" href="#MeasureCalibrationIdentifier.parameter"></a>
+    
+            <div class="docstring"><p>Get the parameter field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -7171,15 +7171,15 @@
     
 
                             </div>
-                            <div id="Declaration.name" class="classattr">
+                            <div id="Declaration.sharing" class="classattr">
                                 <div class="attr variable">
-            <span class="name">name</span>
+            <span class="name">sharing</span>
 
         
     </div>
-    <a class="headerlink" href="#Declaration.name"></a>
+    <a class="headerlink" href="#Declaration.sharing"></a>
     
-            <div class="docstring"><p>Get the name field from Python.  Annotated with <code>@property</code>.</p>
+            <div class="docstring"><p>Get the sharing field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -7197,15 +7197,15 @@
 
 
                             </div>
-                            <div id="Declaration.sharing" class="classattr">
+                            <div id="Declaration.name" class="classattr">
                                 <div class="attr variable">
-            <span class="name">sharing</span>
+            <span class="name">name</span>
 
         
     </div>
-    <a class="headerlink" href="#Declaration.sharing"></a>
+    <a class="headerlink" href="#Declaration.name"></a>
     
-            <div class="docstring"><p>Get the sharing field from Python.  Annotated with <code>@property</code>.</p>
+            <div class="docstring"><p>Get the name field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -7249,19 +7249,6 @@
     
 
                             </div>
-                            <div id="Load.destination" class="classattr">
-                                <div class="attr variable">
-            <span class="name">destination</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Load.destination"></a>
-    
-            <div class="docstring"><p>Get the destination field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
                             <div id="Load.source" class="classattr">
                                 <div class="attr variable">
             <span class="name">source</span>
@@ -7284,6 +7271,19 @@
     <a class="headerlink" href="#Load.offset"></a>
     
             <div class="docstring"><p>Get the offset field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
+                            <div id="Load.destination" class="classattr">
+                                <div class="attr variable">
+            <span class="name">destination</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Load.destination"></a>
+    
+            <div class="docstring"><p>Get the destination field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -7327,19 +7327,6 @@
     
 
                             </div>
-                            <div id="Offset.data_type" class="classattr">
-                                <div class="attr variable">
-            <span class="name">data_type</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Offset.data_type"></a>
-    
-            <div class="docstring"><p>Get the data_type field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
                             <div id="Offset.offset" class="classattr">
                                 <div class="attr variable">
             <span class="name">offset</span>
@@ -7349,6 +7336,19 @@
     <a class="headerlink" href="#Offset.offset"></a>
     
             <div class="docstring"><p>Get the offset field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
+                            <div id="Offset.data_type" class="classattr">
+                                <div class="attr variable">
+            <span class="name">data_type</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Offset.data_type"></a>
+    
+            <div class="docstring"><p>Get the data_type field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -7366,19 +7366,6 @@
     
     
 
-                            <div id="Sharing.name" class="classattr">
-                                <div class="attr variable">
-            <span class="name">name</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Sharing.name"></a>
-    
-            <div class="docstring"><p>Get the name field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
                             <div id="Sharing.offsets" class="classattr">
                                 <div class="attr variable">
             <span class="name">offsets</span>
@@ -7388,6 +7375,19 @@
     <a class="headerlink" href="#Sharing.offsets"></a>
     
             <div class="docstring"><p>Get the offsets field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
+                            <div id="Sharing.name" class="classattr">
+                                <div class="attr variable">
+            <span class="name">name</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Sharing.name"></a>
+    
+            <div class="docstring"><p>Get the name field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -7431,6 +7431,19 @@
     
 
                             </div>
+                            <div id="Store.source" class="classattr">
+                                <div class="attr variable">
+            <span class="name">source</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Store.source"></a>
+    
+            <div class="docstring"><p>Get the source field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
                             <div id="Store.destination" class="classattr">
                                 <div class="attr variable">
             <span class="name">destination</span>
@@ -7453,19 +7466,6 @@
     <a class="headerlink" href="#Store.offset"></a>
     
             <div class="docstring"><p>Get the offset field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
-                            <div id="Store.source" class="classattr">
-                                <div class="attr variable">
-            <span class="name">source</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Store.source"></a>
-    
-            <div class="docstring"><p>Get the source field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -7778,19 +7778,6 @@
     
 
                             </div>
-                            <div id="Pragma.arguments" class="classattr">
-                                <div class="attr variable">
-            <span class="name">arguments</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Pragma.arguments"></a>
-    
-            <div class="docstring"><p>Get the arguments field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
                             <div id="Pragma.data" class="classattr">
                                 <div class="attr variable">
             <span class="name">data</span>
@@ -7800,6 +7787,19 @@
     <a class="headerlink" href="#Pragma.data"></a>
     
             <div class="docstring"><p>Get the data field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
+                            <div id="Pragma.arguments" class="classattr">
+                                <div class="attr variable">
+            <span class="name">arguments</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Pragma.arguments"></a>
+    
+            <div class="docstring"><p>Get the arguments field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -7830,47 +7830,6 @@
     
     
 
-                            <div id="PragmaArgument.to_quil" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">to_quil</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#PragmaArgument.to_quil"></a>
-    
-    
-
-                            </div>
-                            <div id="PragmaArgument.to_quil_or_debug" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">to_quil_or_debug</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#PragmaArgument.to_quil_or_debug"></a>
-    
-    
-
-                            </div>
-                            <div id="PragmaArgument.from_integer" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">from_integer</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#PragmaArgument.from_integer"></a>
-    
-            <div class="docstring"><p>The Python wrapper for [<code>PragmaArgument::Integer</code>], creating a [<code>PyPragmaArgument</code>] and taking a Python argument.</p>
-</div>
-
-
-                            </div>
                             <div id="PragmaArgument.from_identifier" class="classattr">
                                 <div class="attr function">
             
@@ -7991,6 +7950,47 @@
 
 
                             </div>
+                            <div id="PragmaArgument.to_quil" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">to_quil</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#PragmaArgument.to_quil"></a>
+    
+    
+
+                            </div>
+                            <div id="PragmaArgument.to_quil_or_debug" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">to_quil_or_debug</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#PragmaArgument.to_quil_or_debug"></a>
+    
+    
+
+                            </div>
+                            <div id="PragmaArgument.from_integer" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">from_integer</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#PragmaArgument.from_integer"></a>
+    
+            <div class="docstring"><p>The Python wrapper for [<code>PragmaArgument::Integer</code>], creating a [<code>PyPragmaArgument</code>] and taking a Python argument.</p>
+</div>
+
+
+                            </div>
                 </section>
                 <section id="AttributeValue">
                     <div class="attr class">
@@ -8004,47 +8004,6 @@
     
     
 
-                            <div id="AttributeValue.from_expression" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">from_expression</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#AttributeValue.from_expression"></a>
-    
-            <div class="docstring"><p>The Python wrapper for [<code>AttributeValue::Expression</code>], creating a [<code>PyAttributeValue</code>] and taking a Python argument.</p>
-</div>
-
-
-                            </div>
-                            <div id="AttributeValue.to_quil" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">to_quil</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#AttributeValue.to_quil"></a>
-    
-    
-
-                            </div>
-                            <div id="AttributeValue.to_quil_or_debug" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">to_quil_or_debug</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#AttributeValue.to_quil_or_debug"></a>
-    
-    
-
-                            </div>
                             <div id="AttributeValue.inner" class="classattr">
                                 <div class="attr function">
             
@@ -8150,6 +8109,21 @@
 
 
                             </div>
+                            <div id="AttributeValue.from_expression" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">from_expression</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#AttributeValue.from_expression"></a>
+    
+            <div class="docstring"><p>The Python wrapper for [<code>AttributeValue::Expression</code>], creating a [<code>PyAttributeValue</code>] and taking a Python argument.</p>
+</div>
+
+
+                            </div>
                             <div id="AttributeValue.from_string" class="classattr">
                                 <div class="attr function">
             
@@ -8163,6 +8137,32 @@
             <div class="docstring"><p>The Python wrapper for [<code>AttributeValue::String</code>], creating a [<code>PyAttributeValue</code>] and taking a Python argument.</p>
 </div>
 
+
+                            </div>
+                            <div id="AttributeValue.to_quil" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">to_quil</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#AttributeValue.to_quil"></a>
+    
+    
+
+                            </div>
+                            <div id="AttributeValue.to_quil_or_debug" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">to_quil_or_debug</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#AttributeValue.to_quil_or_debug"></a>
+    
+    
 
                             </div>
                 </section>
@@ -8360,19 +8360,6 @@
     
 
                             </div>
-                            <div id="FrameIdentifier.name" class="classattr">
-                                <div class="attr variable">
-            <span class="name">name</span>
-
-        
-    </div>
-    <a class="headerlink" href="#FrameIdentifier.name"></a>
-    
-            <div class="docstring"><p>Get the name field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
                             <div id="FrameIdentifier.qubits" class="classattr">
                                 <div class="attr variable">
             <span class="name">qubits</span>
@@ -8382,6 +8369,19 @@
     <a class="headerlink" href="#FrameIdentifier.qubits"></a>
     
             <div class="docstring"><p>Get the qubits field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
+                            <div id="FrameIdentifier.name" class="classattr">
+                                <div class="attr variable">
+            <span class="name">name</span>
+
+        
+    </div>
+    <a class="headerlink" href="#FrameIdentifier.name"></a>
+    
+            <div class="docstring"><p>Get the name field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -8516,6 +8516,19 @@
 
 
                             </div>
+                            <div id="RawCapture.duration" class="classattr">
+                                <div class="attr variable">
+            <span class="name">duration</span>
+
+        
+    </div>
+    <a class="headerlink" href="#RawCapture.duration"></a>
+    
+            <div class="docstring"><p>Get the duration field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
                             <div id="RawCapture.memory_reference" class="classattr">
                                 <div class="attr variable">
             <span class="name">memory_reference</span>
@@ -8538,19 +8551,6 @@
     <a class="headerlink" href="#RawCapture.blocking"></a>
     
             <div class="docstring"><p>Get the blocking field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
-                            <div id="RawCapture.duration" class="classattr">
-                                <div class="attr variable">
-            <span class="name">duration</span>
-
-        
-    </div>
-    <a class="headerlink" href="#RawCapture.duration"></a>
-    
-            <div class="docstring"><p>Get the duration field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -8724,19 +8724,6 @@
     
 
                             </div>
-                            <div id="SetScale.frame" class="classattr">
-                                <div class="attr variable">
-            <span class="name">frame</span>
-
-        
-    </div>
-    <a class="headerlink" href="#SetScale.frame"></a>
-    
-            <div class="docstring"><p>Get the frame field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
                             <div id="SetScale.scale" class="classattr">
                                 <div class="attr variable">
             <span class="name">scale</span>
@@ -8746,6 +8733,19 @@
     <a class="headerlink" href="#SetScale.scale"></a>
     
             <div class="docstring"><p>Get the scale field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
+                            <div id="SetScale.frame" class="classattr">
+                                <div class="attr variable">
+            <span class="name">frame</span>
+
+        
+    </div>
+    <a class="headerlink" href="#SetScale.frame"></a>
+    
+            <div class="docstring"><p>Get the frame field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -8789,19 +8789,6 @@
     
 
                             </div>
-                            <div id="ShiftFrequency.frequency" class="classattr">
-                                <div class="attr variable">
-            <span class="name">frequency</span>
-
-        
-    </div>
-    <a class="headerlink" href="#ShiftFrequency.frequency"></a>
-    
-            <div class="docstring"><p>Get the frequency field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
                             <div id="ShiftFrequency.frame" class="classattr">
                                 <div class="attr variable">
             <span class="name">frame</span>
@@ -8811,6 +8798,19 @@
     <a class="headerlink" href="#ShiftFrequency.frame"></a>
     
             <div class="docstring"><p>Get the frame field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
+                            <div id="ShiftFrequency.frequency" class="classattr">
+                                <div class="attr variable">
+            <span class="name">frequency</span>
+
+        
+    </div>
+    <a class="headerlink" href="#ShiftFrequency.frequency"></a>
+    
+            <div class="docstring"><p>Get the frequency field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -8958,32 +8958,6 @@
     
     
 
-                            <div id="Gate.to_quil" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">to_quil</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Gate.to_quil"></a>
-    
-    
-
-                            </div>
-                            <div id="Gate.to_quil_or_debug" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">to_quil_or_debug</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Gate.to_quil_or_debug"></a>
-    
-    
-
-                            </div>
                             <div id="Gate.dagger" class="classattr">
                                 <div class="attr function">
             
@@ -9036,6 +9010,32 @@
     
 
                             </div>
+                            <div id="Gate.to_quil" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">to_quil</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Gate.to_quil"></a>
+    
+    
+
+                            </div>
+                            <div id="Gate.to_quil_or_debug" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">to_quil_or_debug</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Gate.to_quil_or_debug"></a>
+    
+    
+
+                            </div>
                             <div id="Gate.parameters" class="classattr">
                                 <div class="attr variable">
             <span class="name">parameters</span>
@@ -9045,19 +9045,6 @@
     <a class="headerlink" href="#Gate.parameters"></a>
     
             <div class="docstring"><p>Get the parameters field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
-                            <div id="Gate.modifiers" class="classattr">
-                                <div class="attr variable">
-            <span class="name">modifiers</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Gate.modifiers"></a>
-    
-            <div class="docstring"><p>Get the modifiers field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -9084,6 +9071,19 @@
     <a class="headerlink" href="#Gate.name"></a>
     
             <div class="docstring"><p>Get the name field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
+                            <div id="Gate.modifiers" class="classattr">
+                                <div class="attr variable">
+            <span class="name">modifiers</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Gate.modifiers"></a>
+    
+            <div class="docstring"><p>Get the modifiers field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -9127,15 +9127,15 @@
     
 
                             </div>
-                            <div id="GateDefinition.specification" class="classattr">
+                            <div id="GateDefinition.parameters" class="classattr">
                                 <div class="attr variable">
-            <span class="name">specification</span>
+            <span class="name">parameters</span>
 
         
     </div>
-    <a class="headerlink" href="#GateDefinition.specification"></a>
+    <a class="headerlink" href="#GateDefinition.parameters"></a>
     
-            <div class="docstring"><p>Get the specification field from Python.  Annotated with <code>@property</code>.</p>
+            <div class="docstring"><p>Get the parameters field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -9153,15 +9153,15 @@
 
 
                             </div>
-                            <div id="GateDefinition.parameters" class="classattr">
+                            <div id="GateDefinition.specification" class="classattr">
                                 <div class="attr variable">
-            <span class="name">parameters</span>
+            <span class="name">specification</span>
 
         
     </div>
-    <a class="headerlink" href="#GateDefinition.parameters"></a>
+    <a class="headerlink" href="#GateDefinition.specification"></a>
     
-            <div class="docstring"><p>Get the parameters field from Python.  Annotated with <code>@property</code>.</p>
+            <div class="docstring"><p>Get the specification field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -9254,32 +9254,6 @@
     
     
 
-                            <div id="GateSpecification.to_quil" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">to_quil</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#GateSpecification.to_quil"></a>
-    
-    
-
-                            </div>
-                            <div id="GateSpecification.to_quil_or_debug" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">to_quil_or_debug</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#GateSpecification.to_quil_or_debug"></a>
-    
-    
-
-                            </div>
                             <div id="GateSpecification.from_matrix" class="classattr">
                                 <div class="attr function">
             
@@ -9323,6 +9297,32 @@
             <div class="docstring"><p>The Python wrapper for [<code>GateSpecification::PauliSum</code>], creating a [<code>PyGateSpecification</code>] and taking a Python argument.</p>
 </div>
 
+
+                            </div>
+                            <div id="GateSpecification.to_quil" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">to_quil</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#GateSpecification.to_quil"></a>
+    
+    
+
+                            </div>
+                            <div id="GateSpecification.to_quil_or_debug" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">to_quil_or_debug</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#GateSpecification.to_quil_or_debug"></a>
+    
+    
 
                             </div>
                             <div id="GateSpecification.inner" class="classattr">
@@ -9565,6 +9565,17 @@ Rust <a href="std::str::FromStr"><code>FromStr</code></a> instance.</p>
     
     
 
+                            <div id="PauliTerm.arguments" class="classattr">
+                                <div class="attr variable">
+            <span class="name">arguments</span>
+
+        
+    </div>
+    <a class="headerlink" href="#PauliTerm.arguments"></a>
+    
+    
+
+                            </div>
                             <div id="PauliTerm.expression" class="classattr">
                                 <div class="attr variable">
             <span class="name">expression</span>
@@ -9574,19 +9585,6 @@ Rust <a href="std::str::FromStr"><code>FromStr</code></a> instance.</p>
     <a class="headerlink" href="#PauliTerm.expression"></a>
     
             <div class="docstring"><p>Get the expression field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
-                            <div id="PauliTerm.arguments" class="classattr">
-                                <div class="attr variable">
-            <span class="name">arguments</span>
-
-        
-    </div>
-    <a class="headerlink" href="#PauliTerm.arguments"></a>
-    
-            <div class="docstring"><p>Get the arguments field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -9786,19 +9784,6 @@ Rust <a href="std::str::FromStr"><code>FromStr</code></a> instance.</p>
     
 
                             </div>
-                            <div id="JumpUnless.condition" class="classattr">
-                                <div class="attr variable">
-            <span class="name">condition</span>
-
-        
-    </div>
-    <a class="headerlink" href="#JumpUnless.condition"></a>
-    
-            <div class="docstring"><p>Get the condition field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
                             <div id="JumpUnless.target" class="classattr">
                                 <div class="attr variable">
             <span class="name">target</span>
@@ -9808,6 +9793,19 @@ Rust <a href="std::str::FromStr"><code>FromStr</code></a> instance.</p>
     <a class="headerlink" href="#JumpUnless.target"></a>
     
             <div class="docstring"><p>Get the target field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
+                            <div id="JumpUnless.condition" class="classattr">
+                                <div class="attr variable">
+            <span class="name">condition</span>
+
+        
+    </div>
+    <a class="headerlink" href="#JumpUnless.condition"></a>
+    
+            <div class="docstring"><p>Get the condition field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -9877,30 +9875,34 @@ Rust <a href="std::str::FromStr"><code>FromStr</code></a> instance.</p>
     
     
 
-                            <div id="Target.to_quil" class="classattr">
+                            <div id="Target.from_fixed" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">to_quil</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+        <span class="name">from_fixed</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
-    <a class="headerlink" href="#Target.to_quil"></a>
+    <a class="headerlink" href="#Target.from_fixed"></a>
     
-    
+            <div class="docstring"><p>The Python wrapper for [<code>Target::Fixed</code>], creating a [<code>PyTarget</code>] and taking a Python argument.</p>
+</div>
+
 
                             </div>
-                            <div id="Target.to_quil_or_debug" class="classattr">
+                            <div id="Target.from_placeholder" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">to_quil_or_debug</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+        <span class="name">from_placeholder</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
-    <a class="headerlink" href="#Target.to_quil_or_debug"></a>
+    <a class="headerlink" href="#Target.from_placeholder"></a>
     
-    
+            <div class="docstring"><p>The Python wrapper for [<code>Target::Placeholder</code>], creating a [<code>PyTarget</code>] and taking a Python argument.</p>
+</div>
+
 
                             </div>
                             <div id="Target.inner" class="classattr">
@@ -10008,34 +10010,30 @@ Rust <a href="std::str::FromStr"><code>FromStr</code></a> instance.</p>
 
 
                             </div>
-                            <div id="Target.from_placeholder" class="classattr">
+                            <div id="Target.to_quil" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">from_placeholder</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+        <span class="name">to_quil</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
-    <a class="headerlink" href="#Target.from_placeholder"></a>
+    <a class="headerlink" href="#Target.to_quil"></a>
     
-            <div class="docstring"><p>The Python wrapper for [<code>Target::Placeholder</code>], creating a [<code>PyTarget</code>] and taking a Python argument.</p>
-</div>
-
+    
 
                             </div>
-                            <div id="Target.from_fixed" class="classattr">
+                            <div id="Target.to_quil_or_debug" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">from_fixed</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+        <span class="name">to_quil_or_debug</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
-    <a class="headerlink" href="#Target.from_fixed"></a>
+    <a class="headerlink" href="#Target.to_quil_or_debug"></a>
     
-            <div class="docstring"><p>The Python wrapper for [<code>Target::Fixed</code>], creating a [<code>PyTarget</code>] and taking a Python argument.</p>
-</div>
-
+    
 
                             </div>
                 </section>
@@ -10075,22 +10073,6 @@ Rust <a href="std::str::FromStr"><code>FromStr</code></a> instance.</p>
     
     
 
-                            <div id="MemoryReference.parse" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">parse</span><span class="signature pdoc-code condensed">(<span class="param"><span class="nb">input</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#MemoryReference.parse"></a>
-    
-            <div class="docstring"><p>Implements a static <code><a href="#MemoryReference.parse">parse</a></code> method for Python in terms of the
-Rust <a href="std::str::FromStr"><code>FromStr</code></a> instance.</p>
-</div>
-
-
-                            </div>
                             <div id="MemoryReference.to_quil" class="classattr">
                                 <div class="attr function">
             
@@ -10117,15 +10099,18 @@ Rust <a href="std::str::FromStr"><code>FromStr</code></a> instance.</p>
     
 
                             </div>
-                            <div id="MemoryReference.name" class="classattr">
-                                <div class="attr variable">
-            <span class="name">name</span>
+                            <div id="MemoryReference.parse" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">parse</span><span class="signature pdoc-code condensed">(<span class="param"><span class="nb">input</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
-    <a class="headerlink" href="#MemoryReference.name"></a>
+    <a class="headerlink" href="#MemoryReference.parse"></a>
     
-            <div class="docstring"><p>Get the name field from Python.  Annotated with <code>@property</code>.</p>
+            <div class="docstring"><p>Implements a static <code><a href="#MemoryReference.parse">parse</a></code> method for Python in terms of the
+Rust <a href="std::str::FromStr"><code>FromStr</code></a> instance.</p>
 </div>
 
 
@@ -10143,6 +10128,19 @@ Rust <a href="std::str::FromStr"><code>FromStr</code></a> instance.</p>
 
 
                             </div>
+                            <div id="MemoryReference.name" class="classattr">
+                                <div class="attr variable">
+            <span class="name">name</span>
+
+        
+    </div>
+    <a class="headerlink" href="#MemoryReference.name"></a>
+    
+            <div class="docstring"><p>Get the name field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
                 </section>
                 <section id="Qubit">
                     <div class="attr class">
@@ -10156,47 +10154,6 @@ Rust <a href="std::str::FromStr"><code>FromStr</code></a> instance.</p>
     
     
 
-                            <div id="Qubit.from_fixed" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">from_fixed</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Qubit.from_fixed"></a>
-    
-            <div class="docstring"><p>The Python wrapper for [<code>Qubit::Fixed</code>], creating a [<code>PyQubit</code>] and taking a Python argument.</p>
-</div>
-
-
-                            </div>
-                            <div id="Qubit.to_quil" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">to_quil</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Qubit.to_quil"></a>
-    
-    
-
-                            </div>
-                            <div id="Qubit.to_quil_or_debug" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">to_quil_or_debug</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Qubit.to_quil_or_debug"></a>
-    
-    
-
-                            </div>
                             <div id="Qubit.inner" class="classattr">
                                 <div class="attr function">
             
@@ -10377,6 +10334,47 @@ Rust <a href="std::str::FromStr"><code>FromStr</code></a> instance.</p>
 
 
                             </div>
+                            <div id="Qubit.to_quil" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">to_quil</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Qubit.to_quil"></a>
+    
+    
+
+                            </div>
+                            <div id="Qubit.to_quil_or_debug" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">to_quil_or_debug</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Qubit.to_quil_or_debug"></a>
+    
+    
+
+                            </div>
+                            <div id="Qubit.from_fixed" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">from_fixed</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">inner</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Qubit.from_fixed"></a>
+    
+            <div class="docstring"><p>The Python wrapper for [<code>Qubit::Fixed</code>], creating a [<code>PyQubit</code>] and taking a Python argument.</p>
+</div>
+
+
+                            </div>
                 </section>
                 <section id="QubitPlaceholder">
                     <div class="attr class">
@@ -10481,6 +10479,19 @@ Rust <a href="std::str::FromStr"><code>FromStr</code></a> instance.</p>
     
 
                             </div>
+                            <div id="Delay.qubits" class="classattr">
+                                <div class="attr variable">
+            <span class="name">qubits</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Delay.qubits"></a>
+    
+            <div class="docstring"><p>Get the qubits field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
                             <div id="Delay.duration" class="classattr">
                                 <div class="attr variable">
             <span class="name">duration</span>
@@ -10503,19 +10514,6 @@ Rust <a href="std::str::FromStr"><code>FromStr</code></a> instance.</p>
     <a class="headerlink" href="#Delay.frame_names"></a>
     
             <div class="docstring"><p>Get the frame_names field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
-                            <div id="Delay.qubits" class="classattr">
-                                <div class="attr variable">
-            <span class="name">qubits</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Delay.qubits"></a>
-    
-            <div class="docstring"><p>Get the qubits field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
@@ -10650,19 +10648,6 @@ Rust <a href="std::str::FromStr"><code>FromStr</code></a> instance.</p>
     
 
                             </div>
-                            <div id="WaveformDefinition.name" class="classattr">
-                                <div class="attr variable">
-            <span class="name">name</span>
-
-        
-    </div>
-    <a class="headerlink" href="#WaveformDefinition.name"></a>
-    
-            <div class="docstring"><p>Get the name field from Python.  Annotated with <code>@property</code>.</p>
-</div>
-
-
-                            </div>
                             <div id="WaveformDefinition.definition" class="classattr">
                                 <div class="attr variable">
             <span class="name">definition</span>
@@ -10672,6 +10657,19 @@ Rust <a href="std::str::FromStr"><code>FromStr</code></a> instance.</p>
     <a class="headerlink" href="#WaveformDefinition.definition"></a>
     
             <div class="docstring"><p>Get the definition field from Python.  Annotated with <code>@property</code>.</p>
+</div>
+
+
+                            </div>
+                            <div id="WaveformDefinition.name" class="classattr">
+                                <div class="attr variable">
+            <span class="name">name</span>
+
+        
+    </div>
+    <a class="headerlink" href="#WaveformDefinition.name"></a>
+    
+            <div class="docstring"><p>Get the name field from Python.  Annotated with <code>@property</code>.</p>
 </div>
 
 
