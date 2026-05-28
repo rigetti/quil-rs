@@ -44,7 +44,7 @@ assert expansion.program().to_quil() == Program.parse(expected_program_text).to_
 
 # In order to discover _which_ calibration led to the first Z in the resulting program, we
 # can interrogate the expansion source mapping.
-# 
+#
 # For instance, the X at index 0 should have been replaced with a Z at index 0.
 # Here's how we can confirm that:
 
@@ -72,7 +72,7 @@ from typing import Callable, Dict, FrozenSet, List, Optional, Sequence, Set, Uni
 
 import numpy as np
 from numpy.typing import NDArray
-from typing_extensions import Self
+from typing_extensions import Self, disjoint_base
 
 from quil.instructions import (
     AttributeValue,
@@ -199,7 +199,7 @@ class Program:
         ...
     def clone_without_body_instructions(self) -> "Program":
         """Creates a clone of this ``Program`` with an empty body instructions list."""
-    def __add__(self, rhs: Program) -> Program: ...
+    def __add__(self, rhs: Program, /) -> Program: ...
     def to_quil(self) -> str:
         """Attempt to convert the instruction to a valid Quil string.
 
@@ -266,6 +266,7 @@ class Program:
         .. _control flow graph: https://en.wikipedia.org/wiki/Control-flow_graph
         """
 
+@disjoint_base
 class BasicBlock:
     def __new__(cls, instance: "BasicBlock") -> Self:
         """Create a new instance of a `BasicBlock` (or a subclass) using an existing instance."""
@@ -438,6 +439,7 @@ class CalibrationSource:
 
     Can be either a calibration (`DEFCAL`) or a measure calibration (`DEFCAL MEASURE`).
     """
+    def __new__(cls, input: Union[CalibrationIdentifier, MeasureCalibrationIdentifier]) -> "CalibrationSource": ...
     def as_calibration(self) -> CalibrationIdentifier: ...
     def as_measure_calibration(self) -> MeasureCalibrationIdentifier: ...
     def is_calibration(self) -> bool: ...
@@ -456,7 +458,7 @@ class CalibrationSet:
     def __new__(
         cls,
         calibrations: Sequence[Calibration],
-        measure_calibration_definitions: Sequence[MeasureCalibrationDefinition],
+        measure_calibrations: Sequence[MeasureCalibrationDefinition],
     ) -> "CalibrationSet": ...
     @property
     def calibrations(self) -> List[Calibration]: ...
@@ -520,6 +522,7 @@ class MaybeCalibrationExpansion:
     - `int`: The instruction was not expanded and is described by an integer, the index of the instruction
         within the resulting program's body instructions.
     """
+    def __new__(cls, input: Union[CalibrationExpansion, int]) -> "MaybeCalibrationExpansion": ...
     def as_expanded(self) -> CalibrationExpansion: ...
     def as_unexpanded(self) -> int: ...
     @staticmethod
@@ -532,6 +535,7 @@ class MaybeCalibrationExpansion:
     def to_expanded(self) -> CalibrationExpansion: ...
     def to_unexpanded(self) -> int: ...
 
+@disjoint_base
 class ScheduleSecondsItem:
     """A single item within a fixed schedule, representing a single instruction within a basic block."""
 
@@ -542,6 +546,7 @@ class ScheduleSecondsItem:
     def time_span(self) -> TimeSpanSeconds:
         """The time span during which the instruction is scheduled."""
 
+@disjoint_base
 class ControlFlowGraph:
     """Representation of a control flow graph (CFG) for a Quil program.
 
@@ -561,6 +566,7 @@ class ControlFlowGraph:
     def basic_blocks(self) -> List["BasicBlock"]:
         """Return a list of all the basic blocks in the control flow graph, in order of definition."""
 
+@disjoint_base
 class ScheduleSeconds:
     def items(self) -> List[ScheduleSecondsItem]:
         """All the items in the schedule, in unspecified order."""
@@ -570,6 +576,7 @@ class ScheduleSeconds:
         This is the maximum of the end time of all the items.
         """
 
+@disjoint_base
 class TimeSpanSeconds:
     """Representation of a time span in seconds."""
 
@@ -615,9 +622,10 @@ class FrameSet:
         ...
     def get_all_frames(self) -> Dict[FrameIdentifier, Dict[str, AttributeValue]]: ...
 
+@disjoint_base
 class MemoryRegion:
     @staticmethod
-    def __new__(cls, size: Vector, sharing: Optional[Sharing]) -> "MemoryRegion": ...
+    def __new__(cls, size: Vector, sharing: Optional[Sharing] = None) -> "MemoryRegion": ...
     @property
     def size(self) -> Vector: ...
     @size.setter

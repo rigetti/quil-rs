@@ -3,7 +3,7 @@ from typing import Dict, List, Optional, Sequence, Tuple, Union, final
 
 import numpy as np
 from numpy.typing import NDArray
-from typing_extensions import Self
+from typing_extensions import Self, disjoint_base
 
 from quil.expression import Expression
 
@@ -152,7 +152,7 @@ class Instruction:
 
     def __new__(
         cls,
-        instruction: Union[
+        input: Union[
             Arithmetic,
             Calibration,
             Capture,
@@ -485,6 +485,7 @@ class ArithmeticOperand:
     - ``from_*``: Creates a new ``ArithmeticOperand`` of the given variant from an instance of the inner type.
     """
 
+    def __new__(cls, input: Union[int, float, MemoryReference]) -> "ArithmeticOperand": ...
     def inner(self) -> Union[int, float, MemoryReference]:
         """Returns the inner value of the variant. Raises a ``RuntimeError`` if inner data doesn't exist."""
         ...
@@ -535,6 +536,7 @@ class ArithmeticOperator(Enum):
         If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
+@disjoint_base
 class Arithmetic:
     def __new__(
         cls,
@@ -589,6 +591,7 @@ class BinaryOperand:
     - ``from_*``: Creates a new ``BinaryOperand`` of the given variant from an instance of the inner type.
     """
 
+    def __new__(cls, input: Union[int, MemoryReference]) -> "BinaryOperand": ...
     def inner(self) -> Union[int, MemoryReference]:
         """Returns the inner value of the variant. Raises a ``RuntimeError`` if inner data doesn't exist."""
         ...
@@ -634,6 +637,7 @@ class BinaryOperator(Enum):
         If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
+@disjoint_base
 class BinaryLogic:
     def __new__(
         cls,
@@ -674,6 +678,7 @@ class BinaryLogic:
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
+@disjoint_base
 class Convert:
     def __new__(cls, destination: MemoryReference, source: MemoryReference) -> Self: ...
     @property
@@ -705,6 +710,7 @@ class Convert:
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
+@disjoint_base
 class Move:
     def __new__(cls, destination: MemoryReference, source: ArithmeticOperand) -> Self: ...
     @property
@@ -736,6 +742,7 @@ class Move:
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
+@disjoint_base
 class Exchange:
     def __new__(cls, left: MemoryReference, right: MemoryReference) -> Self: ...
     @property
@@ -783,6 +790,7 @@ class ComparisonOperand:
     - ``from_*``: Creates a new ``BinaryOperand`` of the given variant from an instance of the inner type.
     """
 
+    def __new__(cls, input: Union[int, float, MemoryReference]) -> "ComparisonOperand": ...
     def inner(self) -> Union[int, float, MemoryReference]:
         """Returns the inner value of the variant."""
         ...
@@ -823,6 +831,7 @@ class ComparisonOperator(Enum):
     LessThanOrEqual = "GREATERTHANOREQUAL"
     LessThan = "LESSTHAN"
 
+@disjoint_base
 class Comparison:
     def __new__(
         cls,
@@ -884,6 +893,7 @@ class UnaryOperator(Enum):
         If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
+@disjoint_base
 class UnaryLogic:
     def __new__(cls, operator: UnaryOperator, operand: MemoryReference) -> Self: ...
     @property
@@ -915,6 +925,7 @@ class UnaryLogic:
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
+@disjoint_base
 class CalibrationIdentifier:
     def __new__(
         cls,
@@ -960,6 +971,7 @@ class CalibrationIdentifier:
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
+@disjoint_base
 class Calibration:
     def __new__(
         cls,
@@ -1010,6 +1022,7 @@ class Calibration:
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
+@disjoint_base
 class MeasureCalibrationIdentifier:
     def __new__(
         cls,
@@ -1045,6 +1058,7 @@ class MeasureCalibrationIdentifier:
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
+@disjoint_base
 class MeasureCalibrationDefinition:
     def __new__(
         cls,
@@ -1084,6 +1098,7 @@ class MeasureCalibrationDefinition:
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
+@disjoint_base
 class CircuitDefinition:
     def __new__(
         cls,
@@ -1129,6 +1144,7 @@ class CircuitDefinition:
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
+@disjoint_base
 class Offset:
     def __new__(
         cls,
@@ -1155,6 +1171,7 @@ class Offset:
         If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
+@disjoint_base
 class Sharing:
     def __new__(
         cls,
@@ -1170,8 +1187,9 @@ class Sharing:
     @offsets.setter
     def offsets(self, offsets: Sequence[Offset]) -> None: ...
 
+@disjoint_base
 class Declaration:
-    def __new__(cls, name: str, size: Vector, sharing: Optional[Sharing]) -> Self: ...
+    def __new__(cls, name: str, size: Vector, sharing: Optional[Sharing] = None) -> Self: ...
     @property
     def name(self) -> str: ...
     @name.setter
@@ -1205,6 +1223,7 @@ class Declaration:
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
+@disjoint_base
 class Vector:
     def __new__(cls, data_type: ScalarType, length: int) -> Self: ...
     @property
@@ -1260,6 +1279,7 @@ class AttributeValue:
     - ``from_*``: Creates a new ``AttributeValue`` of the given variant from an instance of the inner type.
     """
 
+    def __new__(cls, input: Union[str, Expression]) -> "AttributeValue": ...
     def inner(self) -> Union[str, Expression]:
         """Returns the inner value of the variant. Raises a ``RuntimeError`` if inner data doesn't exist."""
         ...
@@ -1285,6 +1305,7 @@ class AttributeValue:
         If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
+@disjoint_base
 class FrameDefinition:
     def __new__(
         cls,
@@ -1320,6 +1341,7 @@ class FrameDefinition:
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
+@disjoint_base
 class FrameIdentifier:
     def __new__(cls, name: str, qubits: Sequence[Qubit]) -> Self: ...
     @property
@@ -1352,6 +1374,7 @@ class CallArgument:
     Additionally, an argument's resolved type must match the expected type of the corresponding ``ExternParameter``
     in the ``ExternSignature``.
     """
+    def __new__(cls, input: Union[str, "MemoryReference", complex]) -> "CallArgument": ...
     def inner(self) -> Union[List[List[Expression]], List[int], PauliSum]:
         """Returns the inner value of the variant. Raises a ``RuntimeError`` if inner data doesn't exist."""
         ...
@@ -1387,6 +1410,7 @@ class CallError(ValueError):
 
     ...
 
+@disjoint_base
 class Call:
     """An instruction that calls an external function declared with a `PRAGMA EXTERN` instruction.
 
@@ -1442,6 +1466,7 @@ class ExternParameterType:
     distinct ``ExternParameterType``s.
     """
 
+    def __new__(cls, input: Union["ScalarType", "Vector"]) -> "ExternParameterType": ...
     def inner(self) -> Union["ScalarType", "Vector"]:
         """Returns the inner value of the variant. Raises a ``RuntimeError`` if inner data doesn't exist."""
         ...
@@ -1472,6 +1497,7 @@ class ExternParameterType:
         If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
+@disjoint_base
 class ExternParameter:
     """A parameter within an ``ExternSignature``. These are defined by a name, mutability, and type."""
     def __new__(
@@ -1507,6 +1533,7 @@ class ExternParameter:
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
+@disjoint_base
 class ExternSignature:
     """The signature of a ``PRAGMA EXTERN`` instruction.
 
@@ -1517,7 +1544,7 @@ class ExternSignature:
     def __new__(
         cls,
         parameters: List[ExternParameter],
-        return_type: Optional[ScalarType],
+        return_type: Optional[ScalarType] = None,
     ) -> Self: ...
     @property
     def parameters(self) -> List[ExternParameter]: ...
@@ -1549,6 +1576,7 @@ class ExternError(ValueError):
 
     ...
 
+@disjoint_base
 class Capture:
     def __new__(
         cls,
@@ -1594,6 +1622,7 @@ class Capture:
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
+@disjoint_base
 class Pulse:
     def __new__(
         cls,
@@ -1634,6 +1663,7 @@ class Pulse:
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
+@disjoint_base
 class RawCapture:
     def __new__(
         cls,
@@ -1679,6 +1709,7 @@ class RawCapture:
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
+@disjoint_base
 class SetFrequency:
     def __new__(cls, frame: FrameIdentifier, frequency: Expression) -> Self: ...
     @property
@@ -1710,6 +1741,7 @@ class SetFrequency:
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
+@disjoint_base
 class SetPhase:
     def __new__(cls, frame: FrameIdentifier, phase: Expression) -> Self: ...
     @property
@@ -1741,8 +1773,9 @@ class SetPhase:
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
+@disjoint_base
 class SetScale:
-    def __new__(cls, frame: FrameIdentifier, phase: Expression) -> Self: ...
+    def __new__(cls, frame: FrameIdentifier, scale: Expression) -> Self: ...
     @property
     def frame(self) -> FrameIdentifier: ...
     @frame.setter
@@ -1772,6 +1805,7 @@ class SetScale:
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
+@disjoint_base
 class ShiftFrequency:
     def __new__(cls, frame: FrameIdentifier, frequency: Expression) -> Self: ...
     @property
@@ -1803,6 +1837,7 @@ class ShiftFrequency:
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
+@disjoint_base
 class ShiftPhase:
     def __new__(cls, frame: FrameIdentifier, phase: Expression) -> Self: ...
     @property
@@ -1834,6 +1869,7 @@ class ShiftPhase:
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
+@disjoint_base
 class SwapPhases:
     def __new__(cls, frame_1: FrameIdentifier, frame_2: FrameIdentifier) -> Self: ...
     @property
@@ -1887,6 +1923,7 @@ class GateModifier(Enum):
         If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
+@disjoint_base
 class Gate:
     def __new__(
         cls,
@@ -1963,6 +2000,7 @@ class PauliGate(Enum):
         """Parses a ``PauliGate`` from a string. Raises a ``ParseEnumError`` if the string isn't a valid Pauli word."""
         ...
 
+@disjoint_base
 class PauliTerm:
     def __new__(
         cls,
@@ -1978,6 +2016,7 @@ class PauliTerm:
     @expression.setter
     def expression(self, expression: Expression) -> None: ...
 
+@disjoint_base
 class PauliSum:
     def __new__(cls, arguments: Sequence[str], terms: Sequence[PauliTerm]) -> Self: ...
     @property
@@ -2004,6 +2043,7 @@ class GateSpecification:
     - from_*: Creates a new ``GateSpecification`` using an instance of the inner type for the variant.
     """
 
+    def __new__(cls, input: Union[Sequence[Sequence[Expression]], Sequence[int], PauliSum]) -> "GateSpecification": ...
     def inner(self) -> Union[List[List[Expression]], List[int], PauliSum]:
         """Returns the inner value of the variant. Raises a ``RuntimeError`` if inner data doesn't exist."""
         ...
@@ -2034,6 +2074,7 @@ class GateSpecification:
         If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
+@disjoint_base
 class GateDefinition:
     def __new__(
         cls,
@@ -2089,6 +2130,7 @@ class Qubit:
     - ``from_*``: Creates a new ``Qubit`` using an instance of the inner type for the variant.
     """
 
+    def __new__(cls, input: Union[int, str, "QubitPlaceholder"]) -> "Qubit": ...
     def inner(self) -> Union[int, str]:
         """Returns the inner value of the variant. Raises a ``RuntimeError`` if inner data doesn't exist."""
         ...
@@ -2119,6 +2161,7 @@ class Qubit:
         If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
+@disjoint_base
 class QubitPlaceholder:
     """A qubit that can be used as a placeholder.
 
@@ -2126,10 +2169,11 @@ class QubitPlaceholder:
     """
 
     def __new__(cls) -> Self: ...
-    def __lt__(self, other: QubitPlaceholder) -> bool: ...
+    def __lt__(self, other: QubitPlaceholder, /) -> bool: ...
 
+@disjoint_base
 class Reset:
-    def __new__(cls, qubit: Optional[Qubit]) -> Self: ...
+    def __new__(cls, qubit: Optional[Qubit] = None) -> Self: ...
     @property
     def qubit(self) -> Optional[Qubit]: ...
     @qubit.setter
@@ -2155,6 +2199,7 @@ class Reset:
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
+@disjoint_base
 class Delay:
     def __new__(cls, duration: Expression, frame_names: Sequence[str], qubits: Sequence[Qubit]) -> Self: ...
     @property
@@ -2190,6 +2235,7 @@ class Delay:
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
+@disjoint_base
 class Fence:
     def __new__(cls, qubits: Sequence[Qubit]) -> Self: ...
     @property
@@ -2232,6 +2278,7 @@ class PragmaArgument:
     - ``from_*``: Creates a new ``PragmaArgument`` using an instance of the inner type for the variant.
     """
 
+    def __new__(cls, input: Union[str, int]) -> "PragmaArgument": ...
     def inner(self) -> Union[str, int]:
         """Returns the inner value of the variant. Raises a ``RuntimeError`` if inner data doesn't exist."""
         ...
@@ -2257,6 +2304,7 @@ class PragmaArgument:
         If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
+@disjoint_base
 class Include:
     def __new__(cls, filename: str) -> Self: ...
     @property
@@ -2284,8 +2332,9 @@ class Include:
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
+@disjoint_base
 class Pragma:
-    def __new__(cls, name: str, arguments: Sequence[PragmaArgument], data: Optional[str]) -> Self: ...
+    def __new__(cls, name: str, arguments: Sequence[PragmaArgument], data: Optional[str] = None) -> Self: ...
     @property
     def name(self) -> str: ...
     @name.setter
@@ -2319,8 +2368,9 @@ class Pragma:
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
+@disjoint_base
 class Measurement:
-    def __new__(cls, qubit: Qubit, target: Optional[MemoryReference]) -> Self: ...
+    def __new__(cls, qubit: Qubit, target: Optional[MemoryReference] = None) -> Self: ...
     @property
     def qubit(self) -> Qubit: ...
     @qubit.setter
@@ -2353,6 +2403,7 @@ class Measurement:
 class ParseMemoryReferenceError(ValueError):
     """Errors that may occur while parsing a ``MemoryReference``."""
 
+@disjoint_base
 class MemoryReference:
     def __new__(cls, name: str, index: int) -> Self: ...
     @staticmethod
@@ -2382,6 +2433,7 @@ class MemoryReference:
         If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
+@disjoint_base
 class Load:
     def __new__(cls, destination: MemoryReference, source: str, offset: MemoryReference) -> Self: ...
     @property
@@ -2417,6 +2469,7 @@ class Load:
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
+@disjoint_base
 class Store:
     def __new__(cls, destination: str, offset: MemoryReference, source: ArithmeticOperand) -> Self: ...
     @property
@@ -2452,6 +2505,7 @@ class Store:
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
+@disjoint_base
 class Waveform:
     def __new__(cls, matrix: Sequence[Expression], parameters: Sequence[str]) -> Self: ...
     @property
@@ -2463,6 +2517,7 @@ class Waveform:
     @parameters.setter
     def parameters(self, parameters: Sequence[str]) -> None: ...
 
+@disjoint_base
 class WaveformDefinition:
     def __new__(cls, name: str, definition: Waveform) -> Self: ...
     @property
@@ -2494,6 +2549,7 @@ class WaveformDefinition:
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
+@disjoint_base
 class WaveformInvocation:
     def __new__(cls, name: str, parameters: Dict[str, Expression]) -> Self: ...
     @property
@@ -2516,6 +2572,7 @@ class WaveformInvocation:
         If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
+@disjoint_base
 class Label:
     def __new__(cls, target: Target) -> Self: ...
     @property
@@ -2558,7 +2615,7 @@ class Target:
     - ``from_*``: Creates a new ``PragmaArgument`` using an instance of the inner type for the variant.
     """
 
-    def __new__(cls, inner: Union[str, TargetPlaceholder]) -> Target: ...
+    def __new__(cls, input: Union[str, TargetPlaceholder]) -> Target: ...
     @staticmethod
     def from_fixed(inner: str) -> Target: ...
     @staticmethod
@@ -2582,16 +2639,18 @@ class Target:
         If any part of the instruction can't be converted to valid Quil, it will be printed in a human-readable debug format.
         """
 
+@disjoint_base
 class TargetPlaceholder:
     """A placeholder target that must be assigned a fixed name before creating a program with valid quil.
 
     See ``quil.program.Program#resolve_placeholders`` for more information.
     """
 
-    def __new__(cls, base_target: str) -> Self: ...
+    def __new__(cls, base_label: str) -> Self: ...
     @property
     def base_label(self) -> str: ...
 
+@disjoint_base
 class Jump:
     def __new__(cls, target: Target) -> Self: ...
     @property
@@ -2619,6 +2678,7 @@ class Jump:
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
+@disjoint_base
 class JumpWhen:
     def __new__(cls, target: Target, condition: MemoryReference) -> Self: ...
     @property
@@ -2650,6 +2710,7 @@ class JumpWhen:
     def __copy__(self) -> Self:
         """Returns a shallow copy of the class."""
 
+@disjoint_base
 class JumpUnless:
     def __new__(cls, target: Target, condition: MemoryReference) -> Self: ...
     @property
