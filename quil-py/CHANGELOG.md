@@ -1,3 +1,9 @@
+## 0.18.0-rc.0 (2026-05-29)
+
+### Breaking Changes
+
+- support bitshifts prior to pyo3 upgrade (#503)
+
 ## 0.17.0 (2025-08-27)
 
 ### Breaking Changes
