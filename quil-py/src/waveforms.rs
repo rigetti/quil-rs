@@ -10,7 +10,7 @@ use quil_rs::{
     },
 };
 
-use crate::{impl_eq, units::PyCycles};
+use crate::impl_eq;
 
 create_init_submodule! {
     classes: [PyBoxcarKernel, PyErfSquare, PyGaussian, PyDragGaussian, PyHermiteGaussian],
@@ -47,7 +47,6 @@ py_wrap_data_struct! {
     #[derive(Debug, PartialEq)]
     #[pyo3(subclass)]
     PyBoxcarKernel(BoxcarKernel) as "BoxcarKernel" {
-        phase: Cycles<f64> => PyCycles,
         scale: f64 => f64,
         sample_count: u64 => u64
     }
@@ -71,7 +70,6 @@ impl PyBoxcarKernel {
         self.as_inner().into_iq_value()
     }
 
-    /// Override the implementation from `py_wrap_data_struct` so that f64 is returned directly.
     #[getter]
     pub fn phase(&self) -> f64 {
         self.as_inner().phase.0
