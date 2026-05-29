@@ -3,6 +3,8 @@
 from enum import Enum
 from typing import Dict, Optional, Sequence, Union, final
 
+from typing_extensions import disjoint_base
+
 from quil.instructions import MemoryReference
 
 __all__ = [
@@ -53,6 +55,17 @@ class Expression:
     - ``new_*``: Creates a new ``Expression`` for the variant
     """
 
+    def __new__(
+        cls,
+        input: Union[
+            MemoryReference,
+            FunctionCallExpression,
+            InfixExpression,
+            complex,
+            PrefixExpression,
+            str,
+        ],
+    ) -> "Expression": ...
     def inner(
         self,
     ) -> Union[
@@ -124,10 +137,10 @@ class Expression:
         ...
     def to_real(self) -> float:
         """If this is a number with imaginary part "equal to" zero (of <em>small</em> absolute value), return that number. Otherwise, raises an ``EvaluationError``."""
-    def __add__(self, other: "Expression") -> "Expression": ...
-    def __sub__(self, other: "Expression") -> "Expression": ...
-    def __mul__(self, other: "Expression") -> "Expression": ...
-    def __truediv__(self, other: "Expression") -> "Expression": ...
+    def __add__(self, other: "Expression", /) -> "Expression": ...
+    def __sub__(self, other: "Expression", /) -> "Expression": ...
+    def __mul__(self, other: "Expression", /) -> "Expression": ...
+    def __truediv__(self, other: "Expression", /) -> "Expression": ...
     def to_quil(self) -> str:
         """Attempt to convert the instruction to a valid Quil string. Raises an exception if the instruction can't be converted to valid Quil."""
         ...
@@ -138,6 +151,7 @@ class Expression:
         format that isn't valid Quil.
         """
 
+@disjoint_base
 class FunctionCallExpression:
     """A Quil function call."""
     @staticmethod
@@ -151,6 +165,7 @@ class FunctionCallExpression:
     @expression.setter
     def expression(self, expression: Expression): ...
 
+@disjoint_base
 class InfixExpression:
     """A Quil infix expression."""
     @staticmethod
@@ -168,6 +183,7 @@ class InfixExpression:
     @right.setter
     def right(self, expression: Expression): ...
 
+@disjoint_base
 class PrefixExpression:
     """A Quil prefix expression."""
     @staticmethod

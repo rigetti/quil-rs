@@ -94,7 +94,10 @@ py_wrap_simple_enum! {
     #[derive(Debug, PartialEq, Eq)]
     PyBinaryOperator(BinaryOperator) as "BinaryOperator" {
         And,
+        Ashr,
         Ior,
+        Shl,
+        Shr,
         Xor
     }
 }
