@@ -764,7 +764,7 @@ class Program:
         
         Returns an error if the program contains instructions other than `Gate`s.
         """
-    def wrap_in_loop(self, loop_count_reference: MemoryReference, start_target: Target, end_target: Target, iterations: builtins.int) -> Program:
+    def wrap_in_loop(self, loop_count_reference: MemoryReference, start_target: Target, iterations: builtins.int) -> Program:
         r"""
         Return a copy of the [`Program`] wrapped in a loop that repeats `iterations` times.
         
@@ -775,11 +775,11 @@ class Program:
         modify the value at the reference unless you intend to modify the remaining number of
         iterations (i.e. to break the loop).
         
-        The given `start_target` and `end_target` will be used as the entry and exit points for the
-        loop, respectively. You should provide unique [`Target`]s that won't be used elsewhere in
-        the program.
+        The given `start_target` will be used as the entry point for the loop, respectively. You
+        should provide a unique [`Target`] that won't be used elsewhere in the program.
         
-        If `iterations` is 0, then a copy of the program is returned without any changes.
+        If `iterations` is 0, then an empty program is returned.  If `iterations` is `1`, then a
+        copy of the program is returned without any changes.
         """
 
 class ProgramError(QuilError):

@@ -32,7 +32,7 @@ use crate::instruction::{
     Arithmetic, ArithmeticOperand, ArithmeticOperator, Call, CircuitDefinition, Declaration,
     DefGateSequenceExpansionError, ExternError, ExternPragmaMap, ExternSignatureMap,
     FrameDefinition, FrameIdentifier, GateDefinition, GateError, GateSpecification, Instruction,
-    InstructionHandler, Jump, JumpUnless, Label, Matrix, MemoryReference, Move, Pragma, Qubit,
+    InstructionHandler, JumpWhen, Label, Matrix, MemoryReference, Move, Pragma, Qubit,
     QubitPlaceholder, ScalarType, Target, TargetPlaceholder, Vector, Waveform, WaveformDefinition,
     RESERVED_PRAGMA_EXTERN,
 };
@@ -334,20 +334,21 @@ impl Program {
     /// modify the value at the reference unless you intend to modify the remaining number of
     /// iterations (i.e. to break the loop).
     ///
-    /// The given `start_target` and `end_target` will be used as the entry and exit points for the
-    /// loop, respectively. You should provide unique [`Target`]s that won't be used elsewhere in
-    /// the program.
+    /// The given `start_target` will be used as the entry point for the loop, respectively. You
+    /// should provide a unique [`Target`] that won't be used elsewhere in the program.
     ///
-    /// If `iterations` is 0, then a copy of the program is returned without any changes.
+    /// If `iterations` is 0, then an empty program is returned.  If `iterations` is `1`, then a
+    /// copy of the program is returned without any changes.
     pub fn wrap_in_loop(
         &self,
         loop_count_reference: MemoryReference,
         start_target: Target,
-        end_target: Target,
         iterations: u32,
     ) -> Self {
-        if iterations == 0 {
-            return self.clone();
+        match iterations {
+            0 => return self.clone_without_body_instructions(),
+            1 => return self.clone(),
+            _ => {}
         }
 
         let mut looped_program = self.clone_without_body_instructions();
@@ -381,14 +382,10 @@ impl Program {
                     },
                     source: ArithmeticOperand::LiteralInteger(1),
                 }),
-                Instruction::JumpUnless(JumpUnless {
-                    target: end_target.clone(),
+                Instruction::JumpWhen(JumpWhen {
+                    target: start_target,
                     condition: loop_count_reference,
                 }),
-                Instruction::Jump(Jump {
-                    target: start_target,
-                }),
-                Instruction::Label(Label { target: end_target }),
             ])
             .collect::<Vec<Instruction>>(),
         );
@@ -2061,7 +2058,6 @@ I 0
                 index: 0,
             },
             Target::Fixed("loop-start".to_string()),
-            Target::Fixed("loop-end".to_string()),
             10,
         );
 
