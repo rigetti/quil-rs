@@ -1211,7 +1211,7 @@ dependencies = [
 
 [[package]]
 name = "quil-py"
-version = "0.18.0-rc.1"
+version = "0.18.0-rc.2"
 dependencies = [
  "indexmap",
  "internment",

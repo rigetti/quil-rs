@@ -1,3 +1,13 @@
+## 0.18.0-rc.2 (2026-06-12)
+
+### Breaking Changes
+
+- support bitshifts prior to pyo3 upgrade (#503)
+
+### Fixes
+
+- pauli term arguments collision
+
 ## 0.18.0-rc.1 (2026-05-29)
 
 ### Breaking Changes
