@@ -608,7 +608,7 @@ class Program:
         instructions are still added to the [`Program::extern_pragma_map`];
         duplicate `PRAGMA EXTERN` names are overwritten.
         """
-    def add_instructions(self, instructions: typing.Sequence[_quil.instructions.Instruction]) -> None:
+    def add_instructions(self, instructions: typing.Sequence[_quil.instructions.Instruction], *more: typing.Any) -> None:
         r"""
         Add a list of instructions to the end of the program.
         """

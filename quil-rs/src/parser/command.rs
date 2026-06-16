@@ -755,10 +755,10 @@ mod tests {
         Instruction::Measurement(Measurement {
             name: None,
             qubit: Qubit::Fixed(0),
-            target: Some(MemoryReference {
-                name: String::from("ro"),
-                index: 0
-            })
+            target: Some(MemoryReference::new(
+                String::from("ro"),
+                0,
+            )),
         })
     );
 
@@ -769,10 +769,10 @@ mod tests {
         Instruction::Measurement(Measurement {
             name: Some(String::from("midcircuit")),
             qubit: Qubit::Fixed(0),
-            target: Some(MemoryReference {
-                name: String::from("ro"),
-                index: 0
-            })
+            target: Some(MemoryReference::new(
+                String::from("ro"),
+                0
+            ))
         })
     );
 
@@ -805,10 +805,10 @@ mod tests {
         Instruction::Measurement(Measurement {
             name: None,
             qubit: Qubit::Variable(String::from("q0")),
-            target: Some(MemoryReference {
-                name: String::from("ro"),
-                index: 0
-            })
+            target: Some(MemoryReference::new(
+                String::from("ro"),
+                0
+            ))
         })
     );
 
@@ -819,10 +819,10 @@ mod tests {
         Instruction::Measurement(Measurement {
             name: Some(String::from("midcircuit")),
             qubit: Qubit::Variable(String::from("q0")),
-            target: Some(MemoryReference {
-                name: String::from("ro"),
-                index: 0
-            })
+            target: Some(MemoryReference::new(
+                String::from("ro"),
+                0
+            ))
         })
     );
 

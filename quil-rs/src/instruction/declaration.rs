@@ -245,6 +245,7 @@ mod test_declaration {
     }
 }
 
+/// Representation of a reference to a classical memory address.
 #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
@@ -261,17 +262,21 @@ mod test_declaration {
 )]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub struct MemoryReference {
+    /// The name of the variable.
     #[cfg_attr(
         test,
         proptest(strategy = "crate::expression::proptest_helpers::arb_name()")
     )]
     pub name: String,
+
+    // TODO(migration-guide): PyQuil v4 calls this `offset`.
+    /// The offset into the memory region.
     pub index: u64,
 }
 
-pickleable_new! {
-    impl MemoryReference {
-        pub fn new(name: String, index: u64);
+impl MemoryReference {
+    pub fn new(name: String, index: u64) -> Self {
+        Self { name, index }
     }
 }
 
