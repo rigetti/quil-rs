@@ -29,9 +29,9 @@ pub struct Label {
     pub target: Target,
 }
 
-pickleable_new! {
-    impl Label {
-        pub fn new(target: Target);
+impl Label {
+    pub fn new(target: Target) -> Self {
+        Self { target }
     }
 }
 
@@ -109,26 +109,26 @@ type TargetPlaceholderInner = Arc<String>;
 )]
 pub struct TargetPlaceholder(TargetPlaceholderInner);
 
-#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[cfg_attr(feature = "python", pyo3::pymethods)]
-#[cfg_attr(not(feature = "python"), strip_pyo3)]
 impl TargetPlaceholder {
-    #[new]
     pub fn new(base_label: String) -> Self {
         Self(Arc::new(base_label))
     }
 
+    fn address(&self) -> usize {
+        &*self.0 as *const _ as usize
+    }
+}
+
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[cfg_attr(feature = "python", pyo3::pymethods)]
+#[cfg_attr(not(feature = "python"), strip_pyo3)]
+impl TargetPlaceholder {
     #[getter(base_label)]
     pub fn as_inner(&self) -> &str {
         &self.0
     }
 }
 
-impl TargetPlaceholder {
-    fn address(&self) -> usize {
-        &*self.0 as *const _ as usize
-    }
-}
 
 impl std::hash::Hash for TargetPlaceholder {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {

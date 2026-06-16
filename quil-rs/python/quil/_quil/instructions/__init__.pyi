@@ -7,6 +7,7 @@ import numpy
 import numpy.typing
 from quil import _quil
 from quil._quil import expression
+from quil import expression
 import typing
 __all__ = [
     "Arithmetic",
@@ -821,13 +822,23 @@ class FrameIdentifier:
     @property
     def qubits(self) -> builtins.list[Qubit]: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __getnewargs__(self) -> tuple[builtins.str, builtins.list[Qubit]]: ...
+    def __getnewargs__(self) -> tuple[builtins.list[Qubit], builtins.str]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, name: builtins.str, qubits: typing.Sequence[Qubit]) -> FrameIdentifier: ...
+    def __new__(cls, qubits: typing.Sequence[QubitPlaceholder  |  builtins.int  |  builtins.str], name: builtins.str) -> FrameIdentifier: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
+        """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -845,9 +856,12 @@ class Gate:
     @property
     def qubits(self) -> builtins.list[Qubit]: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __getnewargs__(self) -> tuple[builtins.str, builtins.list[expression.Expression], builtins.list[Qubit], builtins.list[GateModifier]]: ...
+    def __getnewargs__(self) -> tuple: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, name: builtins.str, parameters: typing.Sequence[expression.Expression], qubits: typing.Sequence[Qubit], modifiers: typing.Sequence[GateModifier]) -> Gate: ...
+    def __new__(cls, name: builtins.str, parameters: Sequence[quil.expression.ParameterLike], qubits: Sequence[Qubit], modifiers: Sequence[GateModifierDesignator] = None) -> Self:
+        r"""
+        Create a new ``Gate``.
+        """
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -1506,15 +1520,71 @@ class JumpWhen:
 
 class Label:
     @property
+    def name(self) -> builtins.str:
+        r"""
+        Get the `Label`'s name, assuming it is a `Fixed` target.
+        
+        This is deprecated because a `Label`'s `target` might not be `Fixed`.
+        """
+    @property
     def target(self) -> Target: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[Target]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, target: Target) -> Label: ...
+    def __new__(cls, target: typing.Optional[builtins.str  |  Target] = None, *, placeholder: typing.Optional[builtins.bool] = None) -> Label:
+        r"""
+        Create a new `Label`.
+        
+        A `Label` represents a ``LABEL`` instruction, which in Quil reads as ``LABEL @some-name``.
+        You can make a program execute from that point onward via a ``JUMP @some-name`` instruction
+        or its siblings, ``JUMP-WHEN @some-name foo[0]`` and ``JUMP-UNLESS @some-name bar[0]``.
+        The `@some-name` part of these instructions is the "target".
+        
+        You can construct a `Label` with a fixed `target` using ``Label("some-name")``,
+        and then you can reference that point using, for example, ``Jump("some-name")``.
+        
+        When constructing a `Program` in code,
+        you can reference the `Label` object itself when creating a `Jump` instruction.
+        In fact, in this case, you don't need to give an explicit `Label` name::
+        
+        ```python
+        def get_body() -> list[Instruction]:
+            return []
+        
+        top = Label()
+        prog = Program(top, *get_body(), Jump(top))
+        
+        prog.resolve_placeholders()  # Use this to automatically assign targets for Labels/Jumps.
+        print(prog.to_quil())
+        ```
+        
+        You can create a new `Label` from a particular `Target`,
+        or you can let the constructor create the `Target` instance for you.
+        Use ``Label("name")`` for fixed target or ``Label()`` to create a placeholder target;
+        if you want a placeholder with a specific `base_label`,
+        you'll need to specify ``Label("name", placeholder=True)``.
+        
+        To summarize:
+        
+        | Simple                           | Equivalent                                                      |
+        | `Label("A")`                     | `Label(Target::Fixed("A"))`                                     |
+        | `Label()`                        | `Label(Target::Placeholder(TargetPlaceholder(base_label="L")))` |
+        | `Label("A", placeholder=True)`   | `Label(Target::Placeholder(TargetPlaceholder(base_label="A")))` |
+        """
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
+        """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -1651,18 +1721,54 @@ class Measurement:
     def to_quil_or_debug(self) -> builtins.str: ...
 
 class MemoryReference:
+    r"""
+    Representation of a reference to a classical memory address.
+    """
     @property
-    def index(self) -> builtins.int: ...
+    def index(self) -> builtins.int:
+        r"""
+        The offset into the memory region.
+        """
     @property
-    def name(self) -> builtins.str: ...
+    def name(self) -> builtins.str:
+        r"""
+        The name of the variable.
+        """
+    @property
+    def offset(self) -> builtins.int: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __getnewargs__(self) -> tuple[builtins.str, builtins.int]: ...
+    def __getitem__(self, index: builtins.int) -> MemoryReference:
+        r"""
+        Return a new `MemoryReference` with the given `index`.
+        
+        This requires that `self` has an `index` of 0.
+        """
+    def __getnewargs__(self) -> tuple[str, int, int | None]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, name: builtins.str, index: builtins.int) -> MemoryReference: ...
+    def __new__(cls, name: builtins.str, index: builtins.int = 0, *, offset: typing.Optional[builtins.int] = None) -> MemoryReference:
+        r"""
+        Construct a new `MemoryReference`.
+        
+        Note that `offset` is an older (deprecated) term for `index`.
+        New code should use `index`, but using `offset` as a keyword argument is still accepted;
+        if it is not `None`, it'll be used instead of `index`, regardless of how `index` is passed.
+        """
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
+        """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
+    @staticmethod
+    def _from_parameter_str(memory_reference_str: builtins.str) -> MemoryReference: ...
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     @staticmethod
     def parse(string: builtins.str) -> MemoryReference: ...
@@ -1821,6 +1927,7 @@ class Pulse:
 
 class Qubit:
     def __getnewargs__(self) -> builtins.tuple[builtins.int | builtins.str | QubitPlaceholder]: ...
+    def __new__(cls, q: QubitPlaceholder  |  builtins.int  |  builtins.str) -> Qubit: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -1876,6 +1983,11 @@ class QubitPlaceholder:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
+        """
+    @staticmethod
+    def register(n: builtins.int) -> builtins.list[QubitPlaceholder]:
+        r"""
+        Return a 'register' of ``n`` qubit placeholders.
         """
 
 class RawCapture:
@@ -2085,13 +2197,32 @@ class TargetPlaceholder:
     """
     @property
     def base_label(self) -> builtins.str: ...
+    @property
+    def prefix(self) -> builtins.str:
+        r"""
+        Get the `Placeholder`'s `base_label`.
+        
+        This is deprecated; use `base_label` instead.
+        """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __ge__(self, other: builtins.object, /) -> builtins.bool: ...
+    def __getnewargs__(self) -> tuple[builtins.str]: ...
     def __gt__(self, other: builtins.object, /) -> builtins.bool: ...
     def __hash__(self) -> builtins.int: ...
     def __le__(self, other: builtins.object, /) -> builtins.bool: ...
     def __lt__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __new__(cls, base_label: builtins.str) -> TargetPlaceholder: ...
+    def __new__(cls, base_label: builtins.str = 'L', *, prefix: typing.Optional[builtins.str] = None, placeholder: typing.Optional[TargetPlaceholder] = None) -> TargetPlaceholder:
+        r"""
+        Create a new `TargetPlaceholder`.
+        
+        If you are only constructing a `TargetPlaceholder` to pass to the `Label` constructor,
+        note that you can use ``Label()`` or ``Label("L", placeholder=True)``
+        and access the ``target`` attribute instead.
+        
+        The keyword-only `prefix` and `placeholder` parameters are deprecated,
+        but made available to ease the transition from PyQuil v4's `LabelPlaceholder`.
+        New code should use ``Label("L", placeholder=True)`` instead.
+        """
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -2170,11 +2301,21 @@ class WaveformInvocation:
     def parameters(self) -> builtins.dict[builtins.str, expression.Expression]: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[builtins.str, builtins.dict[builtins.str, expression.Expression]]: ...
-    def __new__(cls, name: builtins.str, parameters: typing.Mapping[builtins.str, expression.Expression]) -> WaveformInvocation: ...
+    def __new__(cls, name: builtins.str, parameters: typing.Optional[typing.Mapping[builtins.str, expression.Expression  |  MemoryReference  |  builtins.int  |  builtins.float  |  builtins.complex]] = None) -> WaveformInvocation: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
+        """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -2287,6 +2428,8 @@ class GateModifier(enum.Enum):
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    @staticmethod
+    def from_str(modifier: builtins.str) -> GateModifier: ...
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 

@@ -5,7 +5,7 @@ use std::str::FromStr;
 use indexmap::IndexMap;
 use numpy::{Complex64, PyArray2, ToPyArray};
 use pyo3::{
-    exceptions::{PyDeprecationWarning, PyTypeError, PyUnicodeDecodeError, PyValueError},
+    exceptions::{PyTypeError, PyUnicodeDecodeError, PyValueError},
     prelude::*,
     types::{PyBytes, PyFunction, PyRange, PyTuple},
     PyErr,
@@ -23,7 +23,7 @@ use crate::{
         Target, TargetPlaceholder, Waveform,
     },
     quil::Quil,
-    quilpy::{errors, impl_to_quil},
+    quilpy::{errors, impl_to_quil, py_deprecated},
 };
 
 use super::{
@@ -80,6 +80,12 @@ impl_repr!(TimeSpanSeconds);
 impl_to_quil!(Program);
 
 type ExpandedProgram = (Program, InstructionSourceMap);
+
+#[derive(pyo3::FromPyObject)]
+enum OneOrMore<T> {
+    One(T),
+    More(Vec<T>),
+}
 
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
@@ -317,16 +323,32 @@ impl Program {
     }
 
     /// Add a list of instructions to the end of the program.
-    #[pyo3(name = "add_instructions")]
+    #[pyo3(name = "add_instructions", signature = (instructions, *more))]
     fn py_add_instructions(
         &mut self,
+        py: Python<'_>,
         #[gen_stub(override_type(
             type_repr = "typing.Sequence[_quil.instructions.Instruction]",
             imports = ("quil._quil", "typing"),
         ))]
-        instructions: Vec<Instruction>,
-    ) {
-        self.add_instructions(instructions);
+        instructions: OneOrMore<Instruction>,
+        more: Vec<Instruction>,
+    ) -> PyResult<()> {
+        match instructions {
+            OneOrMore::One(instruction) => {
+                self.add_instruction(instruction);
+            }
+            OneOrMore::More(instructions) => {
+                py_deprecated!(py, c"`instructions` should no longer be wrapped in a sequence")?;
+                self.add_instructions(instructions);
+            }
+        }
+
+        if !more.is_empty() {
+            self.add_instructions(more);
+        }
+
+        Ok(())
     }
 
     /// Return a new ``Program`` containing only the instructions
@@ -484,12 +506,7 @@ impl Program {
             // - `program.wrap_in_loop(loop_count_reference, start_target, end_target, iterations)`
             // - `program.wrap_in_loop(loop_count_reference, start_target, end_target, iterations = iterations)`
             (Some(EndTargetParam::Target(_)), Some(iterations)) => {
-                PyErr::warn(
-                    py,
-                    &py.get_type::<PyDeprecationWarning>(),
-                    c"`end_target` is deprecated and will be ignored",
-                    1,
-                )?;
+                py_deprecated!(py, c"`end_target` is deprecated and will be ignored")?;
                 iterations
             }
 
