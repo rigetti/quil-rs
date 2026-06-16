@@ -91,6 +91,7 @@ impl Quil for FrameDefinition {
     }
 }
 
+// TODO(migration-guide): This class is now frozen. 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
@@ -110,9 +111,9 @@ pub struct FrameIdentifier {
     pub qubits: Vec<Qubit>,
 }
 
-pickleable_new! {
-    impl FrameIdentifier {
-        pub fn new(name: String, qubits: Vec<Qubit>);
+impl FrameIdentifier {
+    pub fn new(name: String, qubits: Vec<Qubit>) -> FrameIdentifier {
+        Self { name, qubits }
     }
 }
 

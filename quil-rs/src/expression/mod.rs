@@ -497,6 +497,22 @@ impl Expression {
         K1: Borrow<str> + Hash + Eq,
         K2: Borrow<str> + Hash + Eq,
     {
+        match self.evaluate_partial(variables, memory_references) {
+            Ok(Expression::Number(value)) => Ok(value),
+            Ok(_) => Err(EvaluationError::Incomplete),
+            Err(e) => Err(e),
+        }
+    }
+
+    pub(crate) fn evaluate_partial<K1, K2>(
+        &self,
+        variables: &HashMap<K1, Complex64>,
+        memory_references: &HashMap<K2, Vec<f64>>,
+    ) -> Result<Expression, EvaluationError>
+    where
+        K1: Borrow<str> + Hash + Eq,
+        K2: Borrow<str> + Hash + Eq,
+    {
         use Expression::*;
 
         match self {
@@ -504,43 +520,69 @@ impl Expression {
                 function,
                 expression,
             }) => {
-                let evaluated = expression.evaluate(variables, memory_references)?;
-                Ok(calculate_function(*function, evaluated))
+                match expression.evaluate_partial(variables, memory_references)? {
+                    Expression::Number(value) => {
+                        Ok(Expression::Number(calculate_function(*function, value)))
+                    }
+                    other => {
+                        Ok(Expression::FunctionCall(FunctionCallExpression {
+                            function: *function,
+                            expression: ArcIntern::new(other),
+                        }))
+                    }
+                }
             }
             Infix(InfixExpression {
                 left,
                 operator,
                 right,
             }) => {
-                let left_evaluated = left.evaluate(variables, memory_references)?;
-                let right_evaluated = right.evaluate(variables, memory_references)?;
-                Ok(calculate_infix(left_evaluated, *operator, right_evaluated))
+                let left = left.evaluate_partial(variables, memory_references)?;
+                let right = right.evaluate_partial(variables, memory_references)?;
+                match (left, right) {
+                    (Expression::Number(left), Expression::Number(right)) => {
+                        Ok(Expression::Number(calculate_infix(left, *operator, right)))
+                    }
+                    (left, right) => {
+                        Ok(Expression::Infix(InfixExpression {
+                            left: ArcIntern::new(left),
+                            operator: *operator,
+                            right: ArcIntern::new(right),
+                        }))
+                    }
+                }
             }
             Prefix(PrefixExpression {
                 operator,
                 expression,
             }) => {
                 use PrefixOperator::*;
-                let value = expression.evaluate(variables, memory_references)?;
-                if matches!(operator, Minus) {
-                    Ok(-value)
-                } else {
-                    Ok(value)
+                match (expression.evaluate_partial(variables, memory_references)?, operator) {
+                    (Number(value), Plus) => Ok(Number(value)),
+                    (Number(value), Minus) => Ok(Number(-value)),
+                    (expression, operator) => Ok(Prefix(PrefixExpression {
+                        operator: *operator,
+                        expression: ArcIntern::new(expression),
+                    })),
                 }
             }
             Variable(identifier) => match variables.get(identifier) {
-                Some(&value) => Ok(value),
-                None => Err(EvaluationError::Incomplete),
+                Some(&value) => Ok(Expression::Number(value)),
+                None => Ok(Variable(identifier.clone())),
             },
-            Address(memory_reference) => memory_references
-                .get(memory_reference.name.as_str())
-                .and_then(|values| {
-                    let value = values.get(memory_reference.index as usize)?;
-                    Some(real!(*value))
-                })
-                .ok_or(EvaluationError::Incomplete),
-            PiConstant() => Ok(real!(PI)),
-            Number(number) => Ok(*number),
+            Address(memory_reference) => {
+                Ok(
+                    memory_references
+                    .get(memory_reference.name.as_str())
+                    .and_then(|values| {
+                        let value = values.get(memory_reference.index as usize)?;
+                        Some(Expression::Number(real!(*value)))
+                    })
+                    .unwrap_or_else(|| Expression::Address(memory_reference.clone()))
+                )
+            },
+            PiConstant() => Ok(Expression::PiConstant()),
+            Number(number) => Ok(Expression::Number(*number)),
         }
     }
 
@@ -564,9 +606,18 @@ impl Expression {
     /// assert_eq!(evaluated, Expression::from_str("1.0 + %y").unwrap())
     /// ```
     #[must_use]
-    pub fn substitute_variables<K>(&self, variable_values: &HashMap<K, Expression>) -> Self
+    pub fn substitute_variables<K>(&self, variable_values: &'_ HashMap<K, Expression>) -> Self
     where
         K: Borrow<str> + Hash + Eq,
+    {
+        self.substitute_variables_impl(variable_values)
+    }
+
+    #[must_use]
+    pub(crate) fn substitute_variables_impl<K, V>(&self, variable_values: &'_ HashMap<K, V>) -> Self
+    where
+        K: Borrow<str> + Hash + Eq,
+        V: Into<Expression> + Clone,
     {
         use Expression::*;
 
@@ -576,15 +627,15 @@ impl Expression {
                 expression,
             }) => Expression::FunctionCall(FunctionCallExpression {
                 function: *function,
-                expression: expression.substitute_variables(variable_values).into(),
+                expression: expression.substitute_variables_impl(variable_values).into(),
             }),
             Infix(InfixExpression {
                 left,
                 operator,
                 right,
             }) => {
-                let left = left.substitute_variables(variable_values).into();
-                let right = right.substitute_variables(variable_values).into();
+                let left = left.substitute_variables_impl(variable_values).into();
+                let right = right.substitute_variables_impl(variable_values).into();
                 Infix(InfixExpression {
                     left,
                     operator: *operator,
@@ -596,10 +647,10 @@ impl Expression {
                 expression,
             }) => Prefix(PrefixExpression {
                 operator: *operator,
-                expression: expression.substitute_variables(variable_values).into(),
+                expression: expression.substitute_variables_impl(variable_values).into(),
             }),
             Variable(identifier) => match variable_values.get(identifier) {
-                Some(value) => value.clone(),
+                Some(value) => value.clone().into(),
                 None => Variable(identifier.clone()),
             },
             other => other.clone(),
@@ -1456,10 +1507,10 @@ mod tests {
             ("1.0/(1.0-1.0)", Expression::Number(f64::NAN.into())),
             (
                 "(a[0]*2*pi)/6.283185307179586",
-                Expression::Address(MemoryReference {
-                    name: String::from("a"),
-                    index: 0,
-                }),
+                Expression::Address(MemoryReference::new(
+                    String::from("a"),
+                    0,
+                )),
             ),
         ] {
             assert_eq!(
