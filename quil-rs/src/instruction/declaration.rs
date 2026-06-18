@@ -1,3 +1,4 @@
+#[cfg(feature = "python")]
 use std::str::FromStr;
 
 use nom_locate::LocatedSpan;
