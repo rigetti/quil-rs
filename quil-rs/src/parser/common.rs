@@ -310,7 +310,7 @@ pub(crate) fn parse_memory_reference<'a>(
         token!(RBracket),
     ))(input)?;
     let index = index.unwrap_or(0);
-    Ok((input, MemoryReference::new(name, index )))
+    Ok((input, MemoryReference { name, index }))
 }
 
 /// Parse a reference to a memory location, such as `ro[5]` requiring the brackets
@@ -320,7 +320,7 @@ pub(crate) fn parse_memory_reference_with_brackets<'a>(
 ) -> InternalParserResult<'a, MemoryReference> {
     let (input, name) = token!(Identifier(v))(input)?;
     let (input, index) = delimited(token!(LBracket), token!(Integer(v)), token!(RBracket))(input)?;
-    Ok((input, MemoryReference::new(name, index )))
+    Ok((input, MemoryReference { name, index }))
 }
 
 /// Parse a named argument key-value pair, such as `foo: 42`.
@@ -630,10 +630,10 @@ MOVE fancy_float 3__1_4_1_5_9__e-__5__
                 ("b".to_owned(), Expression::Variable("var".to_owned())),
                 (
                     "c".to_owned(),
-                    Expression::Address(MemoryReference::new(
-                        "ro".to_owned(),
-                        0
-                    ))
+                    Expression::Address(MemoryReference {
+                        name: "ro".to_owned(),
+                        index: 0
+                    })
                 )
             ]
             .into_iter()

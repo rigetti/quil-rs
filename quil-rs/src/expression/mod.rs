@@ -498,9 +498,8 @@ impl Expression {
         K2: Borrow<str> + Hash + Eq,
     {
         match self.evaluate_partial(variables, memory_references) {
-            Ok(Expression::Number(value)) => Ok(value),
-            Ok(_) => Err(EvaluationError::Incomplete),
-            Err(e) => Err(e),
+            Expression::Number(value) => Ok(value),
+            _ => Err(EvaluationError::Incomplete),
         }
     }
 
@@ -508,7 +507,7 @@ impl Expression {
         &self,
         variables: &HashMap<K1, Complex64>,
         memory_references: &HashMap<K2, Vec<f64>>,
-    ) -> Result<Expression, EvaluationError>
+    ) -> Expression
     where
         K1: Borrow<str> + Hash + Eq,
         K2: Borrow<str> + Hash + Eq,
@@ -520,15 +519,18 @@ impl Expression {
                 function,
                 expression,
             }) => {
-                match expression.evaluate_partial(variables, memory_references)? {
+                match expression.evaluate_partial(variables, memory_references) {
                     Expression::Number(value) => {
-                        Ok(Expression::Number(calculate_function(*function, value)))
+                        Expression::Number(calculate_function(*function, value))
+                    }
+                    Expression::PiConstant() => {
+                        Expression::Number(calculate_function(*function, Complex64::from(PI)))
                     }
                     other => {
-                        Ok(Expression::FunctionCall(FunctionCallExpression {
+                        Expression::FunctionCall(FunctionCallExpression {
                             function: *function,
                             expression: ArcIntern::new(other),
-                        }))
+                        })
                     }
                 }
             }
@@ -537,18 +539,27 @@ impl Expression {
                 operator,
                 right,
             }) => {
-                let left = left.evaluate_partial(variables, memory_references)?;
-                let right = right.evaluate_partial(variables, memory_references)?;
+                let left = left.evaluate_partial(variables, memory_references);
+                let right = right.evaluate_partial(variables, memory_references);
                 match (left, right) {
                     (Expression::Number(left), Expression::Number(right)) => {
-                        Ok(Expression::Number(calculate_infix(left, *operator, right)))
+                        Expression::Number(calculate_infix(left, *operator, right))
+                    }
+                    (Expression::Number(left), Expression::PiConstant()) => {
+                        Expression::Number(calculate_infix(left, *operator, Complex64::from(PI)))
+                    }
+                    (Expression::PiConstant(), Expression::Number(right)) => {
+                        Expression::Number(calculate_infix(Complex64::from(PI), *operator, right))
+                    }
+                    (Expression::PiConstant(), Expression::PiConstant()) => {
+                        Expression::Number(calculate_infix(Complex64::from(PI), *operator, Complex64::from(PI)))
                     }
                     (left, right) => {
-                        Ok(Expression::Infix(InfixExpression {
+                        Expression::Infix(InfixExpression {
                             left: ArcIntern::new(left),
                             operator: *operator,
                             right: ArcIntern::new(right),
-                        }))
+                        })
                     }
                 }
             }
@@ -557,32 +568,33 @@ impl Expression {
                 expression,
             }) => {
                 use PrefixOperator::*;
-                match (expression.evaluate_partial(variables, memory_references)?, operator) {
-                    (Number(value), Plus) => Ok(Number(value)),
-                    (Number(value), Minus) => Ok(Number(-value)),
-                    (expression, operator) => Ok(Prefix(PrefixExpression {
+                match (expression.evaluate_partial(variables, memory_references), operator) {
+                    (Number(value), Plus) => Number(value),
+                    (Number(value), Minus) => Number(-value),
+                    // Leave positive pi as a pi constant;
+                    // if it's needed in a function, it will be converted to a number then.
+                    (Expression::PiConstant(), Minus) => Number(-Complex64::from(PI)),
+                    (expression, operator) => Prefix(PrefixExpression {
                         operator: *operator,
                         expression: ArcIntern::new(expression),
-                    })),
+                    }),
                 }
             }
             Variable(identifier) => match variables.get(identifier) {
-                Some(&value) => Ok(Expression::Number(value)),
-                None => Ok(Variable(identifier.clone())),
+                Some(&value) => Expression::Number(value),
+                None => Variable(identifier.clone()),
             },
             Address(memory_reference) => {
-                Ok(
-                    memory_references
-                    .get(memory_reference.name.as_str())
-                    .and_then(|values| {
-                        let value = values.get(memory_reference.index as usize)?;
-                        Some(Expression::Number(real!(*value)))
-                    })
-                    .unwrap_or_else(|| Expression::Address(memory_reference.clone()))
-                )
+                memory_references
+                .get(memory_reference.name.as_str())
+                .and_then(|values| {
+                    let value = values.get(memory_reference.index as usize)?;
+                    Some(Expression::Number(real!(*value)))
+                })
+                .unwrap_or_else(|| Expression::Address(memory_reference.clone()))
             },
-            PiConstant() => Ok(Expression::PiConstant()),
-            Number(number) => Ok(Expression::Number(*number)),
+            PiConstant() => Expression::PiConstant(),
+            Number(number) => Expression::Number(*number),
         }
     }
 
@@ -1507,10 +1519,10 @@ mod tests {
             ("1.0/(1.0-1.0)", Expression::Number(f64::NAN.into())),
             (
                 "(a[0]*2*pi)/6.283185307179586",
-                Expression::Address(MemoryReference::new(
-                    String::from("a"),
-                    0,
-                )),
+                Expression::Address(MemoryReference {
+                    name: String::from("a"),
+                    index: 0,
+                }),
             ),
         ] {
             assert_eq!(

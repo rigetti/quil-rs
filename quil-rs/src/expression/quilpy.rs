@@ -42,6 +42,14 @@ pub(crate) enum ExpressionLike {
     Complex(Complex64),
 }
 
+fn from_like<'a, 'py, T, U>(value: &'a Bound<'py, PyAny>) -> Result<U, T::Error>
+where
+    T: FromPyObject<'a, 'py>,
+    U: From<T>,
+{
+    value.extract::<T>().map(U::from)
+}
+
 impl From<ExpressionLike> for Expression {
     fn from(value: ExpressionLike) -> Self {
         match value {
@@ -122,6 +130,22 @@ impl Expression {
         expression.into()
     }
 
+    #[gen_stub(override_return_type(
+        type_repr = "builtins.tuple[instructions.MemoryReference | FunctionCallExpression | InfixExpression | builtins.complex | PrefixExpression | builtins.str]",
+        imports = ("quil._quil.instructions", "builtins")
+    ))]
+    fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+        match self {
+            Self::Address(value) => (value.clone(),).into_pyobject(py),
+            Self::FunctionCall(value) => (value.clone(),).into_pyobject(py),
+            Self::Infix(value) => (value.clone(),).into_pyobject(py),
+            Self::Number(value) => (value,).into_pyobject(py),
+            Self::PiConstant() => (Self::PiConstant(),).into_pyobject(py),
+            Self::Prefix(value) => (value.clone(),).into_pyobject(py),
+            Self::Variable(value) => (value.clone(),).into_pyobject(py),
+        }
+    }
+
     /// Return an expression derived from this one, simplified as much as possible.
     #[pyo3(name = "into_simplified")]
     fn py_into_simplified(&self) -> Self {
@@ -187,7 +211,7 @@ impl Expression {
             }
         }
 
-        let res = match self.evaluate_partial(&variable, &memory_reference)? {
+        let res = match self.evaluate_partial(&variable, &memory_reference) {
             Expression::Number(n) => SubstitutionResult(Expression::Number(n)),
             Expression::PiConstant() => SubstitutionResult(Expression::Number(Complex64::new(PI, 0.0))),
             other => SubstitutionResult(other)
@@ -200,16 +224,32 @@ impl Expression {
         self.clone() + Expression::from(other)
     }
 
+    fn __radd__(&self, other: ExpressionLike) -> Self {
+        Expression::from(other) + self.clone()
+    }
+
     fn __sub__(&self, other: ExpressionLike) -> Self {
         self.clone() - Expression::from(other)
+    }
+
+    fn __rsub__(&self, other: ExpressionLike) -> Self {
+        Expression::from(other) - self.clone()
     }
 
     fn __mul__(&self, other: ExpressionLike) -> Self {
         self.clone() * Expression::from(other)
     }
 
+    fn __rmul__(&self, other: ExpressionLike) -> Self {
+        Expression::from(other) * self.clone()
+    }
+
     fn __truediv__(&self, other: ExpressionLike) -> Self {
         self.clone() / Expression::from(other)
+    }
+
+    fn __rtruediv__(&self, other: ExpressionLike) -> Self {
+        Expression::from(other) / self.clone()
     }
 
     /// Raise `self` to a complex power.
@@ -226,6 +266,17 @@ impl Expression {
             return Err(PyNotImplementedError::new_err("`modulo` is not supported for `Expression`"));
         }
         Ok(self.clone() ^ Expression::from(exponent))
+    }
+
+    fn __rpow__<'py>(&self, base: ExpressionLike, modulo: Option<Bound<'py, PyAny>>) -> PyResult<Self> {
+        if modulo.is_some() {
+            return Err(PyNotImplementedError::new_err("`modulo` is not supported for `Expression`"));
+        }
+        Ok(Expression::from(base) ^ self.clone())
+    }
+
+    fn __pos__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
+        slf
     }
 
     fn __neg__(&self) -> Self {
@@ -326,22 +377,6 @@ impl Expression {
     #[staticmethod]
     fn parse(input: &str) -> PyResult<Self> {
         Ok(<Self as std::str::FromStr>::from_str(input)?)
-    }
-
-    #[gen_stub(override_return_type(
-        type_repr = "builtins.tuple[instructions.MemoryReference | FunctionCallExpression | InfixExpression | builtins.complex | PrefixExpression | builtins.str]",
-        imports = ("quil._quil.instructions", "builtins")
-    ))]
-    fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
-        match self {
-            Self::Address(value) => (value.clone(),).into_pyobject(py),
-            Self::FunctionCall(value) => (value.clone(),).into_pyobject(py),
-            Self::Infix(value) => (value.clone(),).into_pyobject(py),
-            Self::Number(value) => (value,).into_pyobject(py),
-            Self::PiConstant() => (Self::PiConstant(),).into_pyobject(py),
-            Self::Prefix(value) => (value.clone(),).into_pyobject(py),
-            Self::Variable(value) => (value.clone(),).into_pyobject(py),
-        }
     }
 }
 

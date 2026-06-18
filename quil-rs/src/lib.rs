@@ -125,20 +125,29 @@ pub mod quilpy;
 /// which includes the `#[pymethods]` block with its `#[new]` and `__getnewargs__` methods,
 /// and a second that for when the `python` feature is not enabled,
 /// which simply implements the constructor.
+#[macro_export]
 macro_rules! pickleable_new {
     // Default implementation: just list the fields and types, and this will do the rest.
     (
         $(#[$impl_meta:meta])*
         impl $name:ident {
             $(#[$meta:meta])*
-            $pub:vis fn $new:ident( $($field:ident: $field_type:ty$(,)?)*);
+            $pub:vis fn $new:ident(
+                $(
+                    $(#[$field_meta:meta])*
+                    $field:ident: $field_type:ty$(,)?
+                )*
+            );
         }
     ) => {
         pickleable_new! {
             $(#[$impl_meta])*
             impl $name {
                 $(#[$meta])*
-                $pub fn $new($($field: $field_type,)*) -> $name {
+                $pub fn $new($(
+                        $(#[$field_meta])*
+                        $field: $field_type,
+                    )*) -> $name {
                     Self {
                         $($field,)*
                     }
@@ -152,7 +161,10 @@ macro_rules! pickleable_new {
         $(#[$impl_meta:meta])*
         impl $name:ident {
             $(#[$meta:meta])*
-            $pub:vis fn $new:ident( $($field:ident: $field_type:ty$(,)?)*) -> $ret:ty {
+            $pub:vis fn $new:ident( $(
+                    $(#[$field_meta:meta])*
+                    $field:ident: $field_type:ty$(,)?
+                )*) -> $ret:ty {
                 $($body:tt)+
             }
         }
@@ -164,7 +176,10 @@ macro_rules! pickleable_new {
         impl $name {
             $(#[$meta])*
             #[new]
-            $pub fn $new($($field: $field_type,)*) -> $ret {
+            $pub fn $new($(
+                    $(#[$field_meta])*
+                    $field: $field_type,
+                )*) -> $ret {
                 $($body)+
             }
 
@@ -177,13 +192,17 @@ macro_rules! pickleable_new {
 
         $(#[$impl_meta])*
         #[cfg(not(feature = "python"))]
+        #[optipy::strip_pyo3]
         impl $name {
             $(#[$meta])*
-            $pub fn $new($($field: $field_type,)*) -> $ret {
+            $pub fn $new($(
+                    $(#[$field_meta])*
+                    $field: $field_type,
+                )*) -> $ret {
                 $($body)+
             }
         }
     };
 }
 
-pub(crate) use pickleable_new;
+// pub(crate) use pickleable_new;
