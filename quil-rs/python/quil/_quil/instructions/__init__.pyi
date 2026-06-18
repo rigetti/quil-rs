@@ -824,7 +824,7 @@ class FrameIdentifier:
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[builtins.list[Qubit], builtins.str]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, qubits: typing.Sequence[QubitPlaceholder  |  builtins.int  |  builtins.str], name: builtins.str) -> FrameIdentifier: ...
+    def __new__(cls, qubits: typing.Sequence[Qubit], name: builtins.str) -> FrameIdentifier: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -1725,6 +1725,8 @@ class MemoryReference:
     Representation of a reference to a classical memory address.
     """
     @property
+    def declared_size(self) -> typing.Optional[None]: ...
+    @property
     def index(self) -> builtins.int:
         r"""
         The offset into the memory region.
@@ -1745,9 +1747,15 @@ class MemoryReference:
         """
     def __getnewargs__(self) -> tuple[str, int, int | None]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, name: builtins.str, index: builtins.int = 0, *, offset: typing.Optional[builtins.int] = None) -> MemoryReference:
+    def __new__(cls, name: builtins.str, index: builtins.int = 0, declared_size: typing.Optional[builtins.int] = None, *, offset: typing.Optional[builtins.int] = None) -> MemoryReference:
         r"""
         Construct a new `MemoryReference`.
+        
+        The `declared_size` parameter is deprecated and no longer used.
+        Previously, it was only used to pretty-print `MemoryReference`s
+        by hiding the square brackets (``[]``) when they weren't technically necessary.
+        If the parameter is passed or the attribute accessed,
+        it'll issue a ``DeprecationWarning``.
         
         Note that `offset` is an older (deprecated) term for `index`.
         New code should use `index`, but using `offset` as a keyword argument is still accepted;

@@ -176,10 +176,10 @@ fn parse_expression_identifier(input: ParserInput) -> InternalParserResult<Expre
             "sqrt" => parse_function_call(remainder, ExpressionFunction::SquareRoot),
             name => Ok((
                 remainder,
-                Expression::Address(MemoryReference::new(
-                    name.to_owned(),
-                    0,
-                )),
+                Expression::Address(MemoryReference {
+                    name: name.to_owned(),
+                    index: 0,
+                }),
             )),
         },
         Some((other_token, _)) => expected_token!(input, other_token, "identifier".to_owned()),
@@ -385,10 +385,10 @@ mod tests {
             right: ArcIntern::new(Expression::Infix(InfixExpression {
                 left: ArcIntern::new(Expression::Number(real!(2f64))),
                 operator: InfixOperator::Star,
-                right: ArcIntern::new(Expression::Address(MemoryReference::new(
-                    "theta".to_string(),
-                    0,
-                ))),
+                right: ArcIntern::new(Expression::Address(MemoryReference {
+                    name: "theta".to_string(),
+                    index: 0,
+                })),
             })),
         })
     );

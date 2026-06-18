@@ -18,15 +18,9 @@ use pyo3_stub_gen::{
 
 use super::*;
 use crate::{
-    expression::quilpy::ExpressionLike,
-    instruction::gate::GateSignature,
-    pickleable_new,
-    quilpy::{
-        deprecated_param,
-        errors::{self, PickleError},
-        impl_to_quil, py_deprecated,
-    },
-    validation::identifier::IdentifierValidationError,
+    expression::quilpy::ExpressionLike, instruction::gate::GateSignature, pickleable_new, quilpy::{
+        NonZeroU64, deprecated_or_new, deprecated_param, errors::{self, PickleError}, from_sequence, impl_to_quil, py_deprecated,
+    }, validation::identifier::IdentifierValidationError,
 };
 
 create_init_submodule! {
@@ -487,7 +481,9 @@ pickleable_new! {
         /// Raises an error if the given name isn't a valid Quil identifier.
         fn __new__(
             name: String,
+            #[pyo3(from_py_with = from_sequence::<ExpressionLike, _>)]
             parameters: Vec<Expression>,
+            #[pyo3(from_py_with = from_sequence::<QubitDesignator, _>)]
             qubits: Vec<Qubit>,
             modifiers: Vec<GateModifier>,
         ) -> Result<CalibrationIdentifier, IdentifierValidationError> {
@@ -561,6 +557,7 @@ submit! {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl Gate {
+    // TODO(migration-guide): `params` was renamed `parameters`.
     #[new]
     #[gen_stub(skip)]
     #[pyo3(signature = (name, parameters, qubits, modifiers = None, *, params = None))]
@@ -568,22 +565,16 @@ impl Gate {
         py: Python<'_>,
         name: String,
         parameters: Vec<ExpressionLike>,
-        qubits: Vec<QubitDesignator>,
+        #[pyo3(from_py_with = from_sequence::<QubitDesignator, _>)]
+        qubits: Vec<Qubit>,
         modifiers: Option<Vec<GateModifierDesignator>>,
         // `params` is for backwards compatibility and will raise a deprecation warning if used.
         params: Option<Vec<ExpressionLike>>,
     ) -> PyResult<Gate> {
-        let qubits = qubits.into_iter().map(|q| Qubit::__new__(q)).collect();
-
-        let parameters = if let Some(params) = params {
-            deprecated_param!(py, param, parameters)?;
-            params
-        } else {
-            parameters
-        }
-        .into_iter()
-        .map(|p| p.into())
-        .collect();
+        let parameters = deprecated_or_new!(py, new=parameters, old=params)?
+            .into_iter()
+            .map(|p| p.into())
+            .collect();
 
         let modifiers = modifiers
             .unwrap_or_default()
@@ -754,19 +745,17 @@ impl<'a> TryFrom<&'a OwnedGateSignature> for GateSignature<'a> {
 // Since this is easy to find (`rg Frame\(`), easily caught by static type checkers,
 // and will fail unambiguously at runtime, we'll just point this out in the migration guide.
 
-#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[pymethods]
-impl FrameIdentifier {
-    // Note: the parameter order here is swapped around
-    // for backwards compatibility with PyQuil's `quilatom.Frame`.
-    #[new]
-    fn __new__(qubits: Vec<QubitDesignator>, name: String) -> Self {
-        let qubits = qubits.into_iter().map(|q| q.into()).collect();
-        Self::new(name, qubits)
-    }
-
-    fn __getnewargs__(&self) -> (Vec<Qubit>, String) {
-        (self.qubits.clone(), self.name.clone())
+pickleable_new! {
+    impl FrameIdentifier {
+        // Note: the parameter order here is swapped around
+        // for backwards compatibility with PyQuil's `quilatom.Frame`.
+        fn __new__(
+            #[pyo3(from_py_with = from_sequence::<QubitDesignator, _>)]
+            qubits: Vec<Qubit>,
+            name: String,
+            ) -> FrameIdentifier {
+            Self::new(name, qubits)
+        }
     }
 }
 
@@ -1007,22 +996,34 @@ impl MemoryReference {
     // PyQuil v4 uses the term `offset` instead of `index`, so this handles both.
     /// Construct a new `MemoryReference`.
     ///
+    /// The `declared_size` parameter is deprecated and no longer used.
+    /// Previously, it was only used to pretty-print `MemoryReference`s
+    /// by hiding the square brackets (``[]``) when they weren't technically necessary.
+    /// If the parameter is passed or the attribute accessed,
+    /// it'll issue a ``DeprecationWarning``.
+    ///
     /// Note that `offset` is an older (deprecated) term for `index`.
     /// New code should use `index`, but using `offset` as a keyword argument is still accepted;
     /// if it is not `None`, it'll be used instead of `index`, regardless of how `index` is passed.
     #[new]
-    #[pyo3(signature = (name, index = 0, *, offset = None))]
-    fn py_new(py: Python<'_>, name: String, index: u64, offset: Option<u64>) -> PyResult<Self> {
-        let index = if let Some(offset) = offset {
-            deprecated_param!(py, offset, index)?;
-            offset
-        } else {
-            index
-        };
+    #[pyo3(signature = (name, index = 0, declared_size = None, *, offset = None))]
+    fn py_new(
+        py: Python<'_>,
+        name: String,
+        index: u64,
+        declared_size: Option<NonZeroU64>,
+        offset: Option<u64>,
+    ) -> PyResult<Self> {
+        let index = deprecated_or_new!(py, new=index, old=offset)?;
+        if declared_size.is_some() {
+            py_deprecated!(py, c"`declared_size` is deprecated and no longer used")?;
+        }
 
         Ok(Self { name, index })
     }
 
+    // This is implemented manually (rather than with `pickleable_new!`)
+    // because the Rust struct doesn't include `declared_size`.
     #[gen_stub(override_return_type(type_repr = "tuple[str, int, int | None]"))]
     fn __getnewargs__(&self) -> (String, u64) {
         (self.name.clone(), self.index)
@@ -1049,9 +1050,19 @@ impl MemoryReference {
     // -------------------------------------------------------------------------------------
 
     #[getter]
+    #[deprecated]
     fn offset(&self, py: Python<'_>) -> PyResult<u64> {
         py_deprecated!(py, c"`offset` is deprecated; use `index` instead")?;
         Ok(self.index)
+    }
+
+    // TODO(migration-guide): `declared_size` was only used for pretty-printing,
+    // and it can't be inferred from parsing, so we're dropping that implementation.
+    #[getter]
+    #[deprecated]
+    fn declared_size(&self, py: Python<'_>) -> PyResult<Option<()>> {
+        py_deprecated!(py, c"`declared_size` is deprecated and only returns None")?;
+        Ok(None)
     }
 
     #[staticmethod]
@@ -1150,21 +1161,22 @@ impl PragmaArgument {
     }
 }
 
+/// Types we'll accept from Python as parameters when we need a `Qubit`.
 #[derive(FromPyObject)]
 enum QubitDesignator {
-    Fixed(u64),
-    Placeholder(QubitPlaceholder),
-    Variable(String),
     Qubit(Qubit),
+    Placeholder(QubitPlaceholder),
+    Fixed(u64),
+    Variable(String),
 }
 
 impl From<QubitDesignator> for Qubit {
     fn from(value: QubitDesignator) -> Self {
         match value {
-            QubitDesignator::Fixed(value) => Self::Fixed(value),
-            QubitDesignator::Placeholder(value) => Self::Placeholder(value),
-            QubitDesignator::Variable(value) => Self::Variable(value),
             QubitDesignator::Qubit(value) => value,
+            QubitDesignator::Placeholder(value) => Self::Placeholder(value),
+            QubitDesignator::Fixed(value) => Self::Fixed(value),
+            QubitDesignator::Variable(value) => Self::Variable(value),
         }
     }
 }
@@ -1268,7 +1280,7 @@ impl TargetPlaceholder {
             py_deprecated!(py, c"passing a `placeholder` is deprecated")?;
             Ok(Self::new(label.as_inner().to_string()))
         } else if let Some(label) = prefix {
-            deprecated_param!(py, prefix, base_label)?;
+            deprecated_param!(py, new=base_label, old=prefix)?;
             Ok(Self::new(label))
         } else {
             Ok(Self::new(base_label.to_string()))
@@ -1283,6 +1295,7 @@ impl TargetPlaceholder {
     ///
     /// This is deprecated; use `base_label` instead.
     #[getter]
+    #[deprecated]
     fn prefix(&self, py: Python<'_>) -> PyResult<&str> {
         py_deprecated!(py, c"`prefix` is deprecated; use `base_label`")?;
         Ok(self.as_inner())
