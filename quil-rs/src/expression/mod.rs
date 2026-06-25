@@ -591,7 +591,7 @@ impl Expression {
                     let value = values.get(memory_reference.index as usize)?;
                     Some(Expression::Number(real!(*value)))
                 })
-                .unwrap_or_else(|| Expression::Address(memory_reference.clone()))
+                .unwrap_or_else(|| Expression::Address((*memory_reference).clone()))
             },
             PiConstant() => Expression::PiConstant(),
             Number(number) => Expression::Number(*number),

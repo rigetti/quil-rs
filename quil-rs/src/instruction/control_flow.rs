@@ -50,7 +50,8 @@ impl Quil for Label {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash, from_py_object)
+    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash, skip_from_py_object),
+    derive(pyo3::FromPyObject)
 )]
 pub enum Target {
     Fixed(String),
