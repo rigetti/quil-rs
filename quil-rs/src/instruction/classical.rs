@@ -61,8 +61,9 @@ impl Quil for Arithmetic {
         frozen,
         hash,
         get_all,
-        from_py_object
-    )
+        skip_from_py_object
+    ),
+    derive(pyo3::FromPyObject)
 )]
 pub enum ArithmeticOperand {
     LiteralInteger(i64),
@@ -163,8 +164,9 @@ impl Quil for ArithmeticOperator {
         frozen,
         hash,
         get_all,
-        from_py_object
-    )
+        skip_from_py_object
+    ),
+    derive(pyo3::FromPyObject)
 )]
 pub enum BinaryOperand {
     LiteralInteger(i64),

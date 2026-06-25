@@ -249,7 +249,6 @@ pub(crate) fn from_sequence<T, U>(values: &Bound<'_, PyAny>) -> PyResult<Vec<U>>
         for<'a, 'py> T: FromPyObject<'a, 'py>,
         for<'a, 'py> U: PyClass + PyTypeCheck + From<T> + ToOwned<Owned = U>, //+ From<&'a Bound<'py, T>>,
         for<'a, 'py> PyErr: From<<T as FromPyObject<'a, 'py>>::Error>,
-        // for<'a, 'py> T: PyClass + FromPyObject<'a, 'py>,
 {
     values.try_iter()?
         .map(|i|
@@ -259,8 +258,6 @@ pub(crate) fn from_sequence<T, U>(values: &Bound<'_, PyAny>) -> PyResult<Vec<U>>
                 } else {
                     obj.extract::<T>().map(U::from).map_err(Into::into)
                 }
-                // any_variant::<T>(&i).map(U::from)
-                // from_like::<T, U>(&i) .map_err(Into::into)
                 )
         )
         .collect()
