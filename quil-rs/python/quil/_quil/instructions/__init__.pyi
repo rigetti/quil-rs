@@ -867,7 +867,7 @@ class Gate:
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
-    def controlled(self, control_qubit: Qubit) -> Gate:
+    def controlled(self, control_qubit: Qubit  |  QubitPlaceholder  |  builtins.int  |  builtins.str) -> Gate:
         r"""
         Return a copy of the ``Gate`` with the ``CONTROLLED`` modifier added to it.
         """
@@ -875,7 +875,7 @@ class Gate:
         r"""
         Return a copy of the ``Gate`` with the ``DAGGER`` modifier added to it.
         """
-    def forked(self, fork_qubit: Qubit, alt_params: typing.Sequence[expression.Expression]) -> Gate:
+    def forked(self, fork_qubit: Qubit  |  QubitPlaceholder  |  builtins.int  |  builtins.str, alt_params: typing.Sequence[expression.Expression]) -> Gate:
         r"""
         Return a copy of the ``Gate`` with the ``FORKED`` modifier added to it.
         
@@ -1935,7 +1935,7 @@ class Pulse:
 
 class Qubit:
     def __getnewargs__(self) -> builtins.tuple[builtins.int | builtins.str | QubitPlaceholder]: ...
-    def __new__(cls, q: QubitPlaceholder  |  builtins.int  |  builtins.str) -> Qubit: ...
+    def __new__(cls, arg: Qubit  |  QubitPlaceholder  |  builtins.int  |  builtins.str, /) -> Qubit: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust

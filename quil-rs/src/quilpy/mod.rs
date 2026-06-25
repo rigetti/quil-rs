@@ -1,4 +1,10 @@
-use pyo3::{prelude::*, PyClass};
+use std::marker::PhantomData;
+
+use pyo3::prelude::*;
+use pyo3::PyClass;
+use pyo3::PyTypeCheck;
+use pyo3::pyclass::boolean_struct::True;
+use pyo3::types::PyTuple;
 use rigetti_pyo3::create_init_submodule;
 
 use crate::expression;
@@ -241,17 +247,301 @@ impl pyo3_stub_gen::PyStubType for NonZeroU64 {
 pub(crate) fn from_sequence<T, U>(values: &Bound<'_, PyAny>) -> PyResult<Vec<U>>
     where
         for<'a, 'py> T: FromPyObject<'a, 'py>,
-        U: From<T>
+        for<'a, 'py> U: PyClass + PyTypeCheck + From<T> + ToOwned<Owned = U>, //+ From<&'a Bound<'py, T>>,
+        for<'a, 'py> PyErr: From<<T as FromPyObject<'a, 'py>>::Error>,
+        // for<'a, 'py> T: PyClass + FromPyObject<'a, 'py>,
 {
     values.try_iter()?
         .map(|i|
-            i.and_then(|i|
-                i.extract::<T>()
-                .map_err(Into::into)
-                .map(U::from))
+            i.and_then(|obj|
+                if let Ok(obj) = obj.cast::<U>() {
+                    Ok(obj.borrow().to_owned())
+                } else {
+                    obj.extract::<T>().map(U::from).map_err(Into::into)
+                }
+                // any_variant::<T>(&i).map(U::from)
+                // from_like::<T, U>(&i) .map_err(Into::into)
                 )
+        )
         .collect()
 }
+
+#[cfg(test)]
+mod wrapper_tests {
+    use pyo3::prelude::*;
+    use pyo3::types::{PyString, PyInt};
+
+    use super::*;
+
+    #[derive(Debug, Clone, Eq, PartialEq, FromPyObject)]
+    #[pyclass(skip_from_py_object)]
+    enum MyClass {
+        Int(i64),
+        Str(String),
+    }
+
+    #[pyfunction]
+    fn foo(#[pyo3(from_py_with = any_variant::<MyClass>)] inst: MyClass) -> String {
+        match inst {
+            MyClass::Int(value) => format!("Int({value})"),
+            MyClass::Str(value) => format!("Str({value})"),
+        }
+    }
+
+    #[pyfunction]
+    fn foo2(inst: Like<MyClass>) -> String {
+        match inst.get() {
+            MyClass::Int(value) => format!("Int({value})"),
+            MyClass::Str(value) => format!("Str({value})"),
+        }
+    }
+
+    #[test]
+    fn test_any_variant_python_fn() {
+        Python::initialize();
+        Python::attach(|py| {
+            #[allow(non_snake_case)]
+            let MyClass = py.get_type::<MyClass>();
+            let foo = pyo3::wrap_pyfunction!(foo2, py).unwrap();
+            pyo3::py_run!(py, foo MyClass, r#"
+                values = [foo("foo"), foo(MyClass.Str("foo")), "Str(foo)"]
+                assert values[0] == values[1] == values[2], f"values: {values}"
+                values = [foo(42), foo(MyClass.Int(42)), "Int(42)"]
+                assert values[0] == values[1] == values[2], f"values: {values}"
+            "#);
+        });
+    }
+
+    #[test]
+    fn test_any_variant_class() {
+        Python::initialize();
+        Python::attach(|py| {
+            let py_str = PyString::new(py, "foo").into_any();
+            let py_int = PyInt::new(py, 42).into_any();
+
+            let my_str = MyClass::Str("foo".to_string());
+            let my_int = MyClass::Int(42);
+            assert_eq!(my_str, any_variant::<MyClass>(&py_str).unwrap());
+            assert_eq!(my_int, any_variant::<MyClass>(&py_int).unwrap());
+
+            let inst_str = MyClass::Str("foo".to_string()).into_pyobject(py).unwrap().into_any();
+            let inst_int = MyClass::Int(42).into_pyobject(py).unwrap().into_any();
+            assert_eq!(my_str, any_variant::<MyClass>(&inst_str).unwrap());
+            assert_eq!(my_int, any_variant::<MyClass>(&inst_int).unwrap());
+        });
+    }
+}
+
+/// Extract a value of type `T` from a Python object,
+/// or try to convert it from a variant that `T` supports.
+///
+/// PyO3's `FromPyObject` trait can automatically convert from a Python type
+/// to the first variant of an enum that matches the Python type,
+/// but when accepting `T` as a parameter, the input must be an instance of the enum.
+///
+/// If you want to be able to accept any of the variants of `T` directly as well,
+/// you can use this function in a `#[pyo3(from_py_with = ...)]` attribute on the parameter,
+/// and it will first try to extract `T` directly, and if that fails,
+/// it will try to extract any of the variants of `T` and convert it to `T` with
+///
+/// This is useful when you have a complex enum `T`
+/// that you want to be able to accept as a parameter in Python,
+/// but you also want to allow users to pass in any of the variants of `T`
+/// directly without having to wrap them in the enum themselves.
+pub(crate) fn any_variant<'a, 'py, T>(obj: &'a Bound<'py, PyAny>) -> PyResult<T>
+where
+    T: FromPyObject<'a, 'py> + PyTypeCheck + PyClass + Clone,
+    PyErr: From<<T as FromPyObject<'a, 'py>>::Error>
+{
+    if let Ok(obj) = obj.cast::<T>() {
+        Ok(obj.borrow().to_owned())
+    } else {
+        obj.extract().map_err(Into::into)
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
+pub(crate) enum Like<'a, 'py, T> {
+    Borrowed(Borrowed<'a, 'py, T>),
+    Extracted(T),
+}
+
+impl <'a, 'py, T> FromPyObject<'a, 'py> for Like<'a, 'py, T>
+where
+    T: PyClass + FromPyObject<'a, 'py>,
+{
+    type Error = <T as FromPyObject<'a, 'py>>::Error;
+
+    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
+        obj.cast::<T>().map(Self::Borrowed).or_else(|_| obj.extract::<T>().map(Self::Extracted))
+    }
+}
+
+pub(crate) struct NewArgs<'py, T>(Bound<'py, PyTuple>, PhantomData<T>);
+
+impl<'py, T> NewArgs<'py, T> {
+    pub(crate) fn new<U>(py: Python<'py>, value: U) -> PyResult<Self>
+        where U: IntoPyObject<'py>
+    {
+        Ok(NewArgs((value,).into_pyobject(py)?, PhantomData))
+    }
+}
+
+impl<'py, T> IntoPyObject<'py> for NewArgs<'py, T> {
+    type Target = PyTuple;
+    type Output = Bound<'py, Self::Target>;
+    type Error = std::convert::Infallible;
+
+    fn into_pyobject(self, _py: Python<'py>) -> Result<Self::Output, Self::Error> {
+        Ok(self.0)
+    }
+}
+
+macro_rules! py_friendly_enum {
+    (for $T:ty $( = $($variant:ty)|+)?) => {
+        impl From<Like<'_, '_, $T>> for $T {
+            fn from(like: Like<'_, '_, $T>) -> Self {
+                like.into_inner()
+            }
+        }
+
+        #[cfg(feature = "stubs")]
+        impl<'py> pyo3_stub_gen::PyStubType for $crate::quilpy::NewArgs<'py, $T>
+        {
+            fn type_output() -> pyo3_stub_gen::TypeInfo {
+                let pyo3_stub_gen::TypeInfo {
+                    name: _, // We don't include the base class name.
+                    mut import,
+                    // TODO(rebase-main): Check if these need to be updated.
+                    source_module,
+                    type_refs,
+                } = <$T as pyo3_stub_gen::PyStubType>::type_output();
+
+                import.insert("builtins".into());
+                let mut name = "builtins.tuple[".to_string();
+
+                // TODO: handle the case where we're given zero or one.
+                $(
+                    $(
+                        let type_info = <$variant as pyo3_stub_gen::PyStubType>::type_output();
+                        name += &type_info.name;
+                        name += " | ";
+                        import.extend(type_info.import);
+                    )+
+                )?
+
+                name += "]";
+
+                pyo3_stub_gen::TypeInfo {
+                    name,
+                    import,
+                    source_module,
+                    type_refs,
+                }
+            }
+        }
+
+        #[cfg(feature = "stubs")]
+        impl pyo3_stub_gen::PyStubType for Like<'_, '_, $T> {
+            fn type_input() -> pyo3_stub_gen::TypeInfo {
+                let pyo3_stub_gen::TypeInfo {
+                    mut name,
+                    mut import,
+                    // TODO(rebase-main): Check if these need to be updated.
+                    source_module,
+                    type_refs,
+                } = <$T as pyo3_stub_gen::PyStubType>::type_output();
+
+                $(
+                    $(
+                        let type_info = <$variant as pyo3_stub_gen::PyStubType>::type_output();
+                        name += " | ";
+                        name += &type_info.name;
+                        import.extend(type_info.import);
+                    )+
+                )?
+
+                pyo3_stub_gen::TypeInfo {
+                    name,
+                    import,
+                    source_module,
+                    type_refs,
+                }
+            }
+
+            fn type_output() -> pyo3_stub_gen::TypeInfo {
+                <$T as pyo3_stub_gen::PyStubType>::type_output()
+            }
+        }
+
+        #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+        #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+        #[pymethods]
+        impl $T {
+            #[new]
+            #[pyo3(signature = (arg, /))]
+            fn __new__<'py>(py: Python<'py>, arg: Like<$T>) -> PyResult<Bound<'py, $T>> {
+                arg.into_inner().into_pyobject(py)
+            }
+        }
+    };
+}
+
+pub(crate) use py_friendly_enum;
+
+impl<'a, 'py, T> Like<'a, 'py, T> {
+    pub(crate) fn into_inner(self) -> T
+    where
+        T: PyClass + std::borrow::ToOwned<Owned = T>,
+    {
+        match self {
+            Self::Borrowed(b) => b.borrow().to_owned(),
+            Self::Extracted(extracted) => extracted,
+        }
+    }
+
+    pub(crate) fn extract<O>(self) -> Result<O, O::Error>
+        where O: FromPyObject<'a, 'py> + From<T>,
+    {
+        match self {
+            Self::Borrowed(b) => b.extract::<O>(),
+            Self::Extracted(extracted) => Ok(extracted.into()),
+        }
+    }
+
+    pub(crate) fn get(&self) -> &T
+    where
+        T: PyClass<Frozen = True> + Sync,
+    {
+        match self {
+            Self::Borrowed(bound) => bound.get(),
+            Self::Extracted(extracted) => extracted,
+        }
+    }
+}
+
+/*
+impl<'a, 'py, T> AsRef<T> for Like<'a, 'py, T>
+    where
+        T: PyClass<Frozen = True> + Sync,
+{
+    fn as_ref(&self) -> &T {
+        self.get()
+    }
+}
+*/
+
+pub(crate) fn from_like<'a, 'py, T, U>(obj: &'a Bound<'py, PyAny>) -> Result<U, T::Error>
+where
+    T: PyClass + FromPyObject<'a, 'py>,
+    U: From<&'a Bound<'py, T>> + From<T>,
+{
+    if let Ok(extracted) = obj.cast::<T>() {
+        return Ok(U::from(extracted));
+    }
+    obj.extract::<T>().map(U::from)
+}
+
 
 /// Add Python `to_quil` and `to_quil_or_debug` methods
 /// for types that implement [`Quil`](crate::quil::Quil).

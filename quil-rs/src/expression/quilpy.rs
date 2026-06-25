@@ -42,14 +42,6 @@ pub(crate) enum ExpressionLike {
     Complex(Complex64),
 }
 
-fn from_like<'a, 'py, T, U>(value: &'a Bound<'py, PyAny>) -> Result<U, T::Error>
-where
-    T: FromPyObject<'a, 'py>,
-    U: From<T>,
-{
-    value.extract::<T>().map(U::from)
-}
-
 impl From<ExpressionLike> for Expression {
     fn from(value: ExpressionLike) -> Self {
         match value {
