@@ -107,7 +107,9 @@ pub mod quilpy;
 /// ```ignore
 /// pickleable_new! {
 ///     impl Foo {
-///         pub fn new(bar: i32, baz: &str) -> Self {
+///         // You MUST name the return type; `Self` won't be valid in the macro body.
+///         //                                  v---`Self` won't work here! 
+///         pub fn new(bar: i32, baz: &str) -> Foo {
 ///             Self {
 ///                 bar,
 ///                 baz: baz.to_string(),
@@ -125,7 +127,6 @@ pub mod quilpy;
 /// which includes the `#[pymethods]` block with its `#[new]` and `__getnewargs__` methods,
 /// and a second that for when the `python` feature is not enabled,
 /// which simply implements the constructor.
-#[macro_export]
 macro_rules! pickleable_new {
     // Default implementation: just list the fields and types, and this will do the rest.
     (
@@ -205,4 +206,4 @@ macro_rules! pickleable_new {
     };
 }
 
-// pub(crate) use pickleable_new;
+pub(crate) use pickleable_new;
