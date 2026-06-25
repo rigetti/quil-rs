@@ -21,6 +21,9 @@ use crate::{
     expression::quilpy::ExpressionLike, instruction::gate::GateSignature, pickleable_new, quilpy::{
         NonZeroU64, deprecated_or_new, deprecated_param, errors::{self, PickleError}, from_sequence, impl_to_quil, py_deprecated,
     }, validation::identifier::IdentifierValidationError,
+    quilpy::{
+        Like, NewArgs, py_friendly_enum
+    }
 };
 
 create_init_submodule! {
@@ -483,7 +486,7 @@ pickleable_new! {
             name: String,
             #[pyo3(from_py_with = from_sequence::<ExpressionLike, _>)]
             parameters: Vec<Expression>,
-            #[pyo3(from_py_with = from_sequence::<QubitDesignator, _>)]
+            #[pyo3(from_py_with = from_sequence::<Qubit, _>)]
             qubits: Vec<Qubit>,
             modifiers: Vec<GateModifier>,
         ) -> Result<CalibrationIdentifier, IdentifierValidationError> {
@@ -565,7 +568,7 @@ impl Gate {
         py: Python<'_>,
         name: String,
         parameters: Vec<ExpressionLike>,
-        #[pyo3(from_py_with = from_sequence::<QubitDesignator, _>)]
+        #[pyo3(from_py_with = from_sequence::<Qubit, _>)]
         qubits: Vec<Qubit>,
         modifiers: Option<Vec<GateModifierDesignator>>,
         // `params` is for backwards compatibility and will raise a deprecation warning if used.
@@ -579,20 +582,20 @@ impl Gate {
         let modifiers = modifiers
             .unwrap_or_default()
             .into_iter()
-            .map(|m| TryInto::<GateModifier>::try_into(m))
+            .map(TryInto::<GateModifier>::try_into)
             .collect::<Result<Vec<GateModifier>, PyErr>>()?;
 
         Ok(Self::new(&name, parameters, qubits, modifiers)?)
     }
 
     fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
-        Ok((
+        (
             self.name.clone(),
             self.parameters.clone(),
             self.qubits.clone(),
             self.modifiers.clone(),
         )
-            .into_pyobject_or_pyerr(py)?)
+            .into_pyobject_or_pyerr(py)
     }
 
     /// Return a copy of the ``Gate`` with the ``DAGGER`` modifier added to it.
@@ -605,8 +608,8 @@ impl Gate {
     /// Return a copy of the ``Gate`` with the ``CONTROLLED`` modifier added to it.
     #[pyo3(name = "controlled")]
     #[must_use]
-    fn py_controlled(&self, control_qubit: Qubit) -> Self {
-        self.clone().controlled(control_qubit)
+    fn py_controlled(&self, control_qubit: Like<Qubit>) -> Self {
+        self.clone().controlled(control_qubit.into_inner())
     }
 
     /// Return a copy of the ``Gate`` with the ``FORKED`` modifier added to it.
@@ -614,8 +617,8 @@ impl Gate {
     /// Raises a ``GateError`` if the number of provided alternate parameters
     /// don't equal the number of existing parameters.
     #[pyo3(name = "forked")]
-    fn py_forked(&self, fork_qubit: Qubit, alt_params: Vec<Expression>) -> Result<Self, GateError> {
-        self.clone().forked(fork_qubit, alt_params)
+    fn py_forked(&self, fork_qubit: Like<Qubit>, alt_params: Vec<Expression>) -> Result<Self, GateError> {
+        self.clone().forked(fork_qubit.into_inner(), alt_params)
     }
 
     /// Get the matrix resulting from lifting this ``Gate``
@@ -750,7 +753,7 @@ pickleable_new! {
         // Note: the parameter order here is swapped around
         // for backwards compatibility with PyQuil's `quilatom.Frame`.
         fn __new__(
-            #[pyo3(from_py_with = from_sequence::<QubitDesignator, _>)]
+            #[pyo3(from_py_with = from_sequence::<Qubit, _>)]
             qubits: Vec<Qubit>,
             name: String,
             ) -> FrameIdentifier {
@@ -1161,41 +1164,50 @@ impl PragmaArgument {
     }
 }
 
-/// Types we'll accept from Python as parameters when we need a `Qubit`.
-#[derive(FromPyObject)]
-enum QubitDesignator {
-    Qubit(Qubit),
-    Placeholder(QubitPlaceholder),
-    Fixed(u64),
-    Variable(String),
-}
+py_friendly_enum!(
+    for Qubit = QubitPlaceholder | i64 | String
+);
 
-impl From<QubitDesignator> for Qubit {
-    fn from(value: QubitDesignator) -> Self {
-        match value {
-            QubitDesignator::Qubit(value) => value,
-            QubitDesignator::Placeholder(value) => Self::Placeholder(value),
-            QubitDesignator::Fixed(value) => Self::Fixed(value),
-            QubitDesignator::Variable(value) => Self::Variable(value),
+/*
+#[cfg(feature = "stubs")]
+impl pyo3_stub_gen::PyStubType for Like<'_, '_, Qubit> {
+    fn type_input() -> pyo3_stub_gen::TypeInfo {
+        let pyo3_stub_gen::TypeInfo {
+            mut name,
+            mut import,
+        } = <Qubit as pyo3_stub_gen::PyStubType>::type_output();
+        for type_info in [
+            <i64 as pyo3_stub_gen::PyStubType>::type_output(),
+            <String as pyo3_stub_gen::PyStubType>::type_output(),
+            <QubitPlaceholder as pyo3_stub_gen::PyStubType>::type_output(),
+        ] {
+            name = name + " | " + &type_info.name;
+            import.extend(type_info.import);
+        }
+
+        pyo3_stub_gen::TypeInfo {
+            name,
+            import,
         }
     }
+
+    fn type_output() -> pyo3_stub_gen::TypeInfo {
+        <Qubit as pyo3_stub_gen::PyStubType>::type_output()
+    }
 }
+
+*/
 
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl Qubit {
-    #[new]
-    fn __new__(q: QubitDesignator) -> Self {
-        q.into()
-    }
-
     #[gen_stub(override_return_type(type_repr = "builtins.tuple[builtins.int | builtins.str | QubitPlaceholder]", imports = ("builtins")))]
-    fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+    fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<NewArgs<'py, Qubit>> {
         match self {
-            Self::Fixed(value) => (value,).into_pyobject(py),
-            Self::Variable(value) => (value,).into_pyobject(py),
-            Self::Placeholder(value) => (value.clone(),).into_pyobject(py),
+            Self::Fixed(value) => NewArgs::new(py, *value),
+            Self::Variable(value) => NewArgs::new(py, value),
+            Self::Placeholder(value) => NewArgs::new(py, value.clone()),
         }
     }
 }
@@ -1207,9 +1219,10 @@ mod stubs {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    // TODO(migration-guide): The QubitDesignator type alias is replaced by Qubit,
-    // covering ints (the old "Qubit" type), strings (the old "FormalArgument"), and placeholders.
-    impl_stub_type!(QubitDesignator = QubitPlaceholder | i64 | String);
+    // TODO(migration-guide):
+    // There was a `QubitDesignator` type alias = `QubitPlaceholder | int | str` in PyQuil v4,
+    // but now we can explicitly type parameters to accept those (or a `Qubit` itself) instead.
+    // impl_stub_type!(Like<'_, '_, Qubit> = Qubit | i64 | String | QubitPlaceholder);
     impl_stub_type!(LabelTargetParameter = String | Target);
     impl_stub_type!(GateModifierDesignator = GateModifier | String);
 }
