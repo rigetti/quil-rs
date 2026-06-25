@@ -517,17 +517,6 @@ impl<'a, 'py, T> Like<'a, 'py, T> {
     }
 }
 
-/*
-impl<'a, 'py, T> AsRef<T> for Like<'a, 'py, T>
-    where
-        T: PyClass<Frozen = True> + Sync,
-{
-    fn as_ref(&self) -> &T {
-        self.get()
-    }
-}
-*/
-
 pub(crate) fn from_like<'a, 'py, T, U>(obj: &'a Bound<'py, PyAny>) -> Result<U, T::Error>
 where
     T: PyClass + FromPyObject<'a, 'py>,
