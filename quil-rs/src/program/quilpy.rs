@@ -1061,14 +1061,14 @@ impl OwnedDefGateSequenceExpansion {
 // Note, should we want to support rewrites from Python, we can expose an additional
 // pyo3 type that wraps classes implementing the required Python interface. See the pyo3
 // [trait bound](https://pyo3.rs/main/trait-bounds.html) documentation.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, FromPyObject)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
 #[pyo3::pyclass(
     name = "InstructionTarget",
     module = "quil._quil.program",
     eq,
     frozen,
-    from_py_object
+    skip_from_py_object
 )]
 pub enum FlatExpansionResult {
     Unmodified(InstructionIndex),
