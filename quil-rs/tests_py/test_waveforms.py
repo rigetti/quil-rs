@@ -77,13 +77,13 @@ def drag() -> SearchStrategy[float]:
 def common_builtin_parameters(draw: DrawFn) -> ConcreteCommonBuiltinParameters:
     t = draw(duration())
     s = draw(scale())
-    ϕ = draw(phase())
+    phi = draw(phase())
     d = draw(detuning())
     common = ConcreteCommonBuiltinParameters(duration=t, scale=s, phase=ϕ, detuning=d)
     assert type(common) == ConcreteCommonBuiltinParameters
     assert common.duration == t
     assert common.scale == s
-    assert common.phase == ϕ
+    assert common.phase == phi
     assert common.detuning == d
     return common
 

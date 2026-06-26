@@ -254,7 +254,7 @@ pub trait BuiltinWaveformParameters:
 // /// A description of this waveform.
 // ///
 // /// This waveform is part of the [Quil-T][] spec …
-// #[derive_where(Clone, Copy, PartailEq, Debug, Serialize, Deserialize; …)]
+// #[derive_where(Clone, Copy, PartialEq, Debug, Serialize, Deserialize; …)]
 // pub struct MathematicalFunction<T: WaveformData> {
 //     /// A description of `parameter_0`
 //     pub parameter_0: T::Complex,
@@ -280,7 +280,62 @@ pub trait BuiltinWaveformParameters:
 //     }
 // }
 //
-// TODO Python ...
+// // Exported from the `quilpy` submodule
+// mod quilpy_waveforms {
+//     use super::*;
+//
+//     #[derive(Clone, PartialEq, Debug)]
+//     #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+//     #[cfg_attr(
+//         feature = "python",
+//         pyo3::pyclass(module = "quil.waveform", subclass, eq)
+//     )]
+//     pub struct SyntacticMathematicalFunction(pub MathematicalFunction<Syntactic>);
+//
+//     #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+//     #[cfg(feature = "python")]
+//     #[pyo3::pymethods]
+//     impl SyntacticMathematicalFunction {
+//         #[getter(parameter_0)]
+//         fn py_get_parameter_0(&self) -> Syntactic::Complex {
+//             self.0.parameter_0.clone()
+//         }
+//
+//         #[setter(parameter_0)]
+//         fn py_set_parameter_0(&mut self, parameter_0: Syntactic::Complex) {
+//             self.0.parameter_0 = parameter_0;
+//         }
+//
+//         // ... and the same for `parameter_1` and `Syntactic::Real`, and for
+//         // `parameter_2` and `f64` ...
+//     }
+//
+//     #[derive(Clone, PartialEq, Debug, Copy)]
+//     #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+//     #[cfg_attr(
+//         feature = "python",
+//         pyo3::pyclass(module = "quil.waveform", subclass, eq)
+//     )]
+//     pub struct ConcreteMathematicalFunction(pub MathematicalFunction<Concrete>);
+//
+//     #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+//     #[cfg(feature = "python")]
+//     #[pyo3::pymethods]
+//     impl ConcreteMathematicalFunction {
+//         #[getter(parameter_0)]
+//         fn py_get_parameter_0(&self) -> Concrete::Complex {
+//             self.0.parameter_0.clone()
+//         }
+//
+//         #[setter(parameter_0)]
+//         fn py_set_parameter_0(&mut self, parameter_0: Concrete::Complex) {
+//             self.0.parameter_0 = parameter_0;
+//         }
+//
+//         // ... and the same for `parameter_1` and `Concrete::Real`, and for
+//         // `parameter_2` and `f64` ...
+//     }
+// }
 // ```
 //
 // A couple of notes that may not be obvious:

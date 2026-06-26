@@ -191,7 +191,7 @@ impl ConcreteWaveform {
     }
 
     #[gen_stub(override_return_type(
-        type_repr = "tuple[builtins.str, builtins.dict[builtins.str, builtins.complex]]",
+        type_repr = "tuple[builtins.str, builtins.dict[builtins.str, builtins.complex]] | None",
         imports = ("builtins")
     ))]
     fn as_custom<'py>(&self, py: Python<'py>) -> PyResult<Option<(String, Bound<'py, PyDict>)>> {
