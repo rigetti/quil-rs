@@ -14,7 +14,8 @@ use rigetti_pyo3::{create_init_submodule, impl_repr};
 
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pymethods};
-
+use crate::instruction::{MemoryReference, Target};
+use crate::quilpy::from_sequence;
 use crate::{
     instruction::{
         quilpy::OwnedGateSignature, CalibrationDefinition, Declaration, DefaultHandler,
@@ -332,6 +333,7 @@ impl Program {
             imports = ("quil._quil", "typing"),
         ))]
         instructions: OneOrMore<Instruction>,
+        #[pyo3(from_py_with = from_sequence::<Instruction, _>)]
         more: Vec<Instruction>,
     ) -> PyResult<()> {
         match instructions {
@@ -1188,21 +1190,28 @@ struct PyTargetResolver(Py<PyFunction>);
 
 #[cfg(feature = "stubs")]
 mod stubs {
-    use pyo3_stub_gen::{PyStubType, TypeInfo};
+    use pyo3_stub_gen::{PyStubType, TypeInfo, impl_stub_type};
+    use std::collections::HashMap;
 
-    use super::{InstructionIndex, Seconds};
+    use pyo3_stub_gen::{ImportKind, ModuleRef, PyStubType, TypeIdentifierRef, TypeInfo, impl_stub_type, type_alias};
 
-    impl PyStubType for InstructionIndex {
-        fn type_output() -> TypeInfo {
-            TypeInfo::builtin("int")
-        }
-    }
+    use super::{
+        EndTargetParam,
+        Instruction,
+        OneOrMore,
+        PyQubitResolver,
+        PyTargetResolver,
+        QubitPlaceholder,
+        Target,
+        TargetPlaceholder,
+    };
 
-    impl PyStubType for Seconds {
-        fn type_output() -> TypeInfo {
-            TypeInfo::builtin("float")
-        }
-    }
+    impl_stub_type!(EndTargetParam = Target | u32);
+    impl_stub_type!(OneOrMore<Instruction> = Instruction | Vec<Instruction>);
+    impl_stub_type!(super::InstructionIndex = usize);
+    impl_stub_type!(super::Seconds = f64);
+    type_alias!("quil.program", InstructionIndex = super::InstructionIndex);
+    type_alias!("quil.program", Seconds = super::Seconds);
 }
 
 /// A Schedule is a ``DependencyGraph`` flattened into a linear sequence of instructions,
