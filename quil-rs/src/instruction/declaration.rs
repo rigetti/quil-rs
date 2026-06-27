@@ -25,7 +25,7 @@ use super::ArithmeticOperand;
         frozen,
         hash,
         rename_all = "SCREAMING_SNAKE_CASE",
-        from_py_object
+        skip_from_py_object
     )
 )]
 pub enum ScalarType {
@@ -151,6 +151,7 @@ impl Quil for Offset {
     }
 }
 
+// TODO(migration-guide): PyQuil v4 calls this `Declare`.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
@@ -171,9 +172,13 @@ pub struct Declaration {
     pub sharing: Option<Sharing>,
 }
 
-pickleable_new! {
-    impl Declaration {
-        pub fn new(name: String, size: Vector, sharing: Option<Sharing>);
+impl Declaration {
+    pub fn new(name: String, size: Vector, sharing: Option<Sharing>) -> Self {
+        Self {
+            name,
+            size,
+            sharing,
+        }
     }
 }
 
