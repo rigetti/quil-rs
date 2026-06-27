@@ -138,7 +138,7 @@ macro_rules! impl_parse {
 /// The method reports that it is deprecated and recommends using `to_quil` instead.
 /// It is added to maintain backwards compatibility with `QuilAtom` types.
 macro_rules! impl_out {
-    ($($name: ty),*) => {
+    ($($name: ty),* $(,)?) => {
         $(
         #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
         #[pyo3::pymethods]
@@ -222,6 +222,15 @@ macro_rules! impl_instruction {
     };
 }
 
+impl_out!(
+    FrameIdentifier,
+    Gate,
+    Label,
+    MemoryReference,
+    WaveformInvocation
+);
+    // FormatArgument / ? an arg in a DEFCIRCUIT / DEFGATE
+
 impl_instruction!([
     Arithmetic,
     ArithmeticOperand,
@@ -302,8 +311,8 @@ impl_instruction!([
 /// making it compatible with the `copy` and `pickle` modules,
 /// (provided the variant itself supports it).
 ///
-/// Note that we have to manually handle `Halt`, `Nop`, and `Wait`, since they don't actually have
-/// an inner value.
+/// Note that we have to manually handle `Halt`, `Nop`, and `Wait`,
+/// since they don't actually have an inner value.
 ///
 /// Finally, this macro makes use of `paste` to generate the `pyo3_stub_gen` return type,
 /// since it's a union of an empty tuple and a tuple of variant's inner type.
@@ -341,6 +350,20 @@ macro_rules! instruction_getnewargs {
                         Ok(PyTuple::empty(py))
                     },
                     $(Instruction::$kind(instr) => (instr.clone(),).into_pyobject(py),)*
+                }
+            }
+        }
+
+        impl<'a, 'py> pyo3::FromPyObject<'a, 'py> for Instruction {
+            type Error = pyo3::PyErr;
+
+            fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
+                if let Ok(value) = obj.cast::<Instruction>() {
+                    Ok(value.borrow().clone())
+                }$( else if let Ok(value) = obj.cast::<$kind>() {
+                    Ok(Instruction::$kind(value.borrow().clone()))
+                })* else {
+                    Err(PyTypeError::new_err("not an Instruction"))
                 }
             }
         }
@@ -493,6 +516,55 @@ pickleable_new! {
             // Note that  the parameter order is different for the Python version :(
             Self::new(name, modifiers, parameters, qubits)
         }
+    }
+}
+
+enum DeclarationMemoryParam {
+    Str(String),
+    ScalarType(ScalarType),
+}
+
+#[pymethods]
+impl Declaration {
+    // TODO(migration-guide): The `__new__` method here is adjusted to match PyQuil v4's `Declare` constructor.
+    #[new]
+    #[pyo3(signature = (name, memory_type, memory_size = 1, shared_region = None, offsets = None))]
+    fn __new__(
+        name: String,
+        memory_type: ScalarType,
+        memory_size: u64,
+        shared_region: Option<String>,
+        offsets: Option<Vec<(u64, ScalarType)>>,
+    ) -> Self {
+        Self {
+            name,
+            size: Vector::new(memory_type, memory_size),
+            sharing: shared_region.map(|name| Sharing {
+                name,
+                offsets: offsets.unwrap_or_default()
+                    .into_iter()
+                    .map(|(offset, data_type)| Offset::new(offset, data_type))
+                    .collect(),
+            }),
+        }
+    }
+
+    fn __getnewargs__(&self) -> (String, ScalarType, u64, Option<String>, Option<Vec<(u64, ScalarType)>>) {
+        let (shared_region, offsets) = match &self.sharing {
+            None => (None, None),
+            Some(s) => (
+                Some(s.name.clone()),
+                Some(s.offsets.iter().map(|o| (o.offset(), o.data_type())).collect::<Vec<_>>())
+            )
+        };
+
+        (
+            self.name.clone(),
+            self.size.data_type,
+            self.size.length,
+            shared_region,
+            offsets,
+        )
     }
 }
 
@@ -747,6 +819,11 @@ impl<'a> TryFrom<&'a OwnedGateSignature> for GateSignature<'a> {
 // TODO(migration-guide): The `FrameIdentifier` corresponds to PyQuil's `quilatom.Frame`.
 // Since this is easy to find (`rg Frame\(`), easily caught by static type checkers,
 // and will fail unambiguously at runtime, we'll just point this out in the migration guide.
+//
+// TODO(migration-guide): PyQuil v4 had a `quilatom.FormalArgument` class,
+// which corresponds to `Qubit.Variable`, which here is just backed by a `String`.
+// At best, we could create an "alias" class for it, but it probably isn't worth it,
+// since users need to update the namespace for `quilatom` anyway.
 
 pickleable_new! {
     impl FrameIdentifier {
@@ -764,9 +841,9 @@ pickleable_new! {
 
 /// Used to create `Label`s from existing `Target`s as well as Python `str` instances.
 #[derive(FromPyObject)]
-enum LabelTargetParameter {
-    Fixed(String),
-    Target(Target),
+enum LabelTargetLike {
+    Str(String),
+    Existing(Target),
 }
 
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
@@ -818,6 +895,7 @@ impl Label {
     //
     //   Note the `LabelPlaceholder("L", placeholder=p)` was technically legal,
     //   but the `prefix` was ignored, so it is equivalent to just giving a `placeholder`.
+
     /// Create a new `Label`.
     ///
     /// A `Label` represents a ``LABEL`` instruction, which in Quil reads as ``LABEL @some-name``.
@@ -825,23 +903,28 @@ impl Label {
     /// or its siblings, ``JUMP-WHEN @some-name foo[0]`` and ``JUMP-UNLESS @some-name bar[0]``.
     /// The `@some-name` part of these instructions is the "target".
     ///
-    /// You can construct a `Label` with a fixed `target` using ``Label("some-name")``,
-    /// and then you can reference that point using, for example, ``Jump("some-name")``.
+    /// # Basic Usage
     ///
-    /// When constructing a `Program` in code,
-    /// you can reference the `Label` object itself when creating a `Jump` instruction.
-    /// In fact, in this case, you don't need to give an explicit `Label` name::
+    /// You can use a `Label` directly as the `target` of a ``Jump`` instruction.
+    /// Use ``Program.resolve_placeholders()`` to fill in the value before outputting Quil::
     ///
     /// ```python
     /// def get_body() -> list[Instruction]:
-    ///     return []
+    ///     return [] # Likely you would fill this with instructions.
     ///
     /// top = Label()
-    /// prog = Program(top, *get_body(), Jump(top))
-    ///
-    /// prog.resolve_placeholders()  # Use this to automatically assign targets for Labels/Jumps.
+    /// prog = Program(
+    ///     top,
+    ///     *get_body(),
+    ///     Jump(top),
+    /// )
+    /// prog.resolve_placeholders()
     /// print(prog.to_quil())
     /// ```
+    ///
+    /// You can construct a `Label` with a fixed `target` using ``Label("some-name")``,
+    /// and then you can reference that point using, for example, ``Jump("some-name")``.
+    ///
     ///
     /// You can create a new `Label` from a particular `Target`,
     /// or you can let the constructor create the `Target` instance for you.
@@ -855,10 +938,23 @@ impl Label {
     /// | `Label("A")`                     | `Label(Target::Fixed("A"))`                                     |
     /// | `Label()`                        | `Label(Target::Placeholder(TargetPlaceholder(base_label="L")))` |
     /// | `Label("A", placeholder=True)`   | `Label(Target::Placeholder(TargetPlaceholder(base_label="A")))` |
+
     #[new]
     #[pyo3(signature = (target=None, *, placeholder=None))]
+<<<<<<< HEAD
     fn __new__(target: Option<LabelTargetParameter>, placeholder: Option<bool>) -> PyResult<Self> {
+||||||| parent of 99aa102c (wip: fix type stubs)
+    fn __new__(
+        target: Option<LabelTargetParameter>,
+        placeholder: Option<bool>,
+        ) -> PyResult<Self> {
+
+=======
+    fn __new__(target: Option<LabelTargetLike>, placeholder: Option<bool>) -> PyResult<Self> {
+
+>>>>>>> 99aa102c (wip: fix type stubs)
         let target = match (target, placeholder) {
+<<<<<<< HEAD
             (Some(LabelTargetParameter::Target(target)), None) => target,
             (Some(LabelTargetParameter::Target(_)), Some(_)) => {
                 return Err(PyValueError::new_err(
@@ -869,12 +965,76 @@ impl Label {
             (Some(LabelTargetParameter::Fixed(label)), Some(true)) => {
                 Target::Placeholder(TargetPlaceholder::new(label))
             }
+||||||| parent of 99aa102c (wip: fix type stubs)
+            (Some(LabelTargetParameter::Target(target)), None) => {
+                target
+            },
+            (Some(LabelTargetParameter::Target(_)), Some(_)) => {
+                return Err(PyValueError::new_err("`placeholder` is not permitted with an explicit `target`"));
+            },
+            (Some(LabelTargetParameter::Fixed(label)), Some(false) | None) => {
+                Target::Fixed(label)
+            },
+            (Some(LabelTargetParameter::Fixed(label)), Some(true)) => {
+                Target::Placeholder(TargetPlaceholder::new(label))
+            },
+=======
+            // Label(placeholder=False)
+            (None, Some(false)) => {
+                return Err(PyValueError::new_err("`target` cannot be `None` if `placeholder=False`"));
+            },
+
+            // Label(target=Target.Placeholder(TargetPlaceholder()), placeholder=False)
+            (Some(LabelTargetLike::Existing(Target::Placeholder(_))), Some(false)) => {
+                return Err(PyValueError::new_err("`target` is a `Placeholder`, so `placeholder=False` is invalid"));
+            },
+
+>>>>>>> 99aa102c (wip: fix type stubs)
             (None, Some(true) | None) => {
                 Target::Placeholder(TargetPlaceholder::new("L".to_string()))
+<<<<<<< HEAD
             }
             (None, Some(false)) => {
                 return Err(PyValueError::new_err("missing label target"));
             }
+||||||| parent of 99aa102c (wip: fix type stubs)
+            },
+            (None, Some(false)) => {
+                return Err(PyValueError::new_err("missing label target"));
+            },
+=======
+            },
+
+            // Label("name"), Label("name", placeholder=False), Label("name", placeholder=None)
+            // Label(target="name"), Label(target="name", placeholder=False), Label(target="name", placeholder=None)
+            (Some(LabelTargetLike::Str(label)), Some(false) | None) => {
+                Target::Fixed(label)
+            },
+
+            // Label("prefix", placeholder=True), Label(target="prefix", placeholder=True)
+            (Some(LabelTargetLike::Str(base)), Some(true)) => {
+                Target::Placeholder(TargetPlaceholder::new(base))
+            },
+
+            // assert isinstance(t, Target)
+            // Label(t), Label(t, placeholder=None), Label(target=t, placeholder=None)
+            (Some(LabelTargetLike::Existing(target)), None) => {
+                target
+            },
+
+            // t = Target.Fixed(name)
+            // Label(t), Label(t, placeholder=False), Label(target=t), Label(target=t, placeholder=False)
+            (Some(LabelTargetLike::Existing(Target::Fixed(name))), Some(false)) => {
+                Target::Placeholder(TargetPlaceholder::new(name))
+            },
+
+            // t = Target.Placeholder(p)
+            // Label(t, placeholder=True), Label(target=t, placeholder=True)
+            (Some(LabelTargetLike::Existing(target)), Some(true)) => {
+                target
+            },
+
+>>>>>>> 99aa102c (wip: fix type stubs)
         };
 
         Ok(Self { target })
@@ -1081,6 +1241,43 @@ impl MemoryReference {
     }
 }
 
+impl<'a, 'py> FromPyObject<'a, 'py> for ScalarType {
+    type Error = PyErr;
+
+    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
+        if let Ok(scalar_type) = obj.cast::<ScalarType>() {
+            Ok(*scalar_type.get())
+        } else if let Ok(mut type_str) = obj.extract::<String>() {
+            type_str.make_ascii_uppercase();
+            let ret = match type_str.as_str() {
+                "BIT" => ScalarType::Bit,
+                "INTEGER" => ScalarType::Integer,
+                "REAL" => ScalarType::Real,
+                "OCTET" => ScalarType::Octet,
+                _ => return Err(PyValueError::new_err(format!("{type_str} is not a valid ScalarType"))),
+            };
+
+            // Compile-time check that we cover all variants.
+            #[cfg(debug_assertions)]
+            {
+                let _ = match ret {
+                    ScalarType::Bit => (),
+                    ScalarType::Integer => (),
+                    ScalarType::Real => (),
+                    ScalarType::Octet => (),
+                };
+            }
+
+            Ok(ret)
+        } else {
+            match obj.str() {
+                Ok(s) => Err(PyTypeError::new_err(format!("{s} is not a valid ScalarType"))),
+                Err(_) => Err(PyTypeError::new_err("object is not a valid ScalarType")),
+            }
+        }
+    }
+}
+
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl Sharing {
@@ -1214,7 +1411,7 @@ impl Qubit {
 
 #[cfg(feature = "stubs")]
 mod stubs {
-    use pyo3_stub_gen::impl_stub_type;
+    use pyo3_stub_gen::{impl_stub_type, type_alias};
 
     #[allow(clippy::wildcard_imports)]
     use super::*;
@@ -1223,7 +1420,8 @@ mod stubs {
     // There was a `QubitDesignator` type alias = `QubitPlaceholder | int | str` in PyQuil v4,
     // but now we can explicitly type parameters to accept those (or a `Qubit` itself) instead.
     // impl_stub_type!(Like<'_, '_, Qubit> = Qubit | i64 | String | QubitPlaceholder);
-    impl_stub_type!(LabelTargetParameter = String | Target);
+    impl_stub_type!(LabelTargetLike = String | Target);
+    type_alias!("quil.instructions", LabelTargetParameter = LabelTargetLike);
     impl_stub_type!(GateModifierDesignator = GateModifier | String);
 }
 

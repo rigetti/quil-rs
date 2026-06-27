@@ -1,10 +1,20 @@
 use std::marker::PhantomData;
 
+<<<<<<< HEAD
 use pyo3::prelude::*;
 use pyo3::PyClass;
 use pyo3::PyTypeCheck;
 use pyo3::pyclass::boolean_struct::True;
 use pyo3::types::PyTuple;
+||||||| parent of 99aa102c (wip: fix type stubs)
+use pyo3::PyClass;
+use pyo3::PyTypeCheck;
+use pyo3::prelude::*;
+use pyo3::pyclass::boolean_struct::True;
+use pyo3::types::PyTuple;
+=======
+use pyo3::{PyClass, PyTypeCheck, prelude::*, pyclass::boolean_struct::True, types::PyTuple};
+>>>>>>> 99aa102c (wip: fix type stubs)
 use rigetti_pyo3::create_init_submodule;
 
 use crate::expression;
@@ -42,7 +52,7 @@ fn init_module(m: &Bound<'_, PyModule>) -> PyResult<()> {
     Ok(())
 }
 
-mod nonzero {
+pub(crate) mod nonzero {
     /// A simple wrapper around [`std::num::NonZeroU64`] with [`pyo3_stub_gen::PyStubType`] information.
     #[derive(Copy, Clone, Debug, PartialEq, PartialOrd, Ord, Eq, Hash, pyo3::IntoPyObject)]
     #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
@@ -61,6 +71,13 @@ mod nonzero {
     }
 
     impl NonZeroU64 {
+        pub const fn new(value: u64) -> Option<Self> {
+            match std::num::NonZeroU64::new(value) {
+                Some(nonzero) => Some(Self(nonzero)),
+                None => None,
+            }
+        }
+
         pub fn get(&self) -> u64 {
             self.0.get()
         }
@@ -72,7 +89,6 @@ pub use nonzero::NonZeroU64;
 #[cfg(not(test))]
 pub(crate) use nonzero::NonZeroU64;
 
-
 // PyO3 has a conversion we could derive from,
 // but it raises a TypeError that says "failed to extract field NonZeroU64.0".
 // By implementing it manually, an invalid value instead reads:
@@ -80,8 +96,8 @@ pub(crate) use nonzero::NonZeroU64;
 impl<'a, 'py> pyo3::FromPyObject<'a, 'py> for NonZeroU64 {
     type Error = pyo3::PyErr;
 
-    fn extract(ob: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
-        ob.extract::<u64>().and_then(|value| {
+    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
+        obj.extract::<u64>().and_then(|value| {
             std::num::NonZeroU64::try_from(value)
                 .map_err(|_err| errors::ValueError::new_err("expected a positive value"))
                 .map(Self)
@@ -395,13 +411,15 @@ impl<'py, T> IntoPyObject<'py> for NewArgs<'py, T> {
 }
 
 macro_rules! py_friendly_enum {
-    (for $T:ty $( = $($variant:ty)|+)?) => {
+    (for $T:ty = $first:ty $(| $variant:ty)*) => {
         impl From<Like<'_, '_, $T>> for $T {
             fn from(like: Like<'_, '_, $T>) -> Self {
                 like.into_inner()
             }
         }
 
+        // Define a stub type for `NewArgs<'py, T>` as a tuple of `T`'s variants' stub types.
+        // This can be used as the output type of `__getnewargs__`.
         #[cfg(feature = "stubs")]
         impl<'py> pyo3_stub_gen::PyStubType for $crate::quilpy::NewArgs<'py, $T>
         {
@@ -417,15 +435,17 @@ macro_rules! py_friendly_enum {
                 import.insert("builtins".into());
                 let mut name = "builtins.tuple[".to_string();
 
-                // TODO: handle the case where we're given zero or one.
+                let type_info = <$first as pyo3_stub_gen::PyStubType>::type_output();
+                name += &type_info.name;
+                import.extend(type_info.import);
+
+                // TODO: we may need to merge the type_refs of the variants.
                 $(
-                    $(
-                        let type_info = <$variant as pyo3_stub_gen::PyStubType>::type_output();
-                        name += &type_info.name;
-                        name += " | ";
-                        import.extend(type_info.import);
-                    )+
-                )?
+                    let type_info = <$variant as pyo3_stub_gen::PyStubType>::type_output();
+                    name += " | ";
+                    name += &type_info.name;
+                    import.extend(type_info.import);
+                )*
 
                 name += "]";
 
@@ -438,9 +458,16 @@ macro_rules! py_friendly_enum {
             }
         }
 
+        // Generate stubs so that, when `Like<_, _, T>` is used as an (input) parameter,
+        // the stubs will show the parameter as `T | Variant1 | Variant2 | ...`
+        // (or rather, as the union of their input stub types).
+        //
+        // The `type_output` is just a tuple of the variants' output stub types,
+        // which is useful for `__getnewargs__`.
         #[cfg(feature = "stubs")]
         impl pyo3_stub_gen::PyStubType for Like<'_, '_, $T> {
             fn type_input() -> pyo3_stub_gen::TypeInfo {
+<<<<<<< HEAD
                 let pyo3_stub_gen::TypeInfo {
                     mut name,
                     mut import,
@@ -464,10 +491,40 @@ macro_rules! py_friendly_enum {
                     source_module,
                     type_refs,
                 }
+||||||| parent of 99aa102c (wip: fix type stubs)
+                let pyo3_stub_gen::TypeInfo {
+                    mut name,
+                    mut import,
+                    source_module,
+                    type_refs,
+                } = <$T as pyo3_stub_gen::PyStubType>::type_output();
+
+
+                $(
+                    $(
+                        let type_info = <$variant as pyo3_stub_gen::PyStubType>::type_output();
+                        name += " | ";
+                        name += &type_info.name;
+                        import.extend(type_info.import);
+                    )+
+                )?
+
+                pyo3_stub_gen::TypeInfo {
+                    name,
+                    import,
+                    source_module,
+                    type_refs,
+                }
+=======
+                <$T as pyo3_stub_gen::PyStubType>::type_input()
+                      | <$first   as pyo3_stub_gen::PyStubType>::type_input()
+                    $(| <$variant as pyo3_stub_gen::PyStubType>::type_input())*
+>>>>>>> 99aa102c (wip: fix type stubs)
             }
 
             fn type_output() -> pyo3_stub_gen::TypeInfo {
-                <$T as pyo3_stub_gen::PyStubType>::type_output()
+                    <$first   as pyo3_stub_gen::PyStubType>::type_output()
+                $(| <$variant as pyo3_stub_gen::PyStubType>::type_output())*
             }
         }
 
@@ -527,7 +584,6 @@ where
     }
     obj.extract::<T>().map(U::from)
 }
-
 
 /// Add Python `to_quil` and `to_quil_or_debug` methods
 /// for types that implement [`Quil`](crate::quil::Quil).
