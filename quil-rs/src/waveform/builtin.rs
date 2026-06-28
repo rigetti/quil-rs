@@ -222,7 +222,7 @@ pub trait BuiltinWaveformParameters:
         self,
         common: CommonBuiltinParameters<Concrete>,
         sample_rate: f64,
-    ) -> Result<IqSamples, SamplingError>;
+    ) -> Result<IqSamples<Complex64>, SamplingError>;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -773,7 +773,7 @@ impl BuiltinWaveformParameters for BuiltinWaveform<Concrete> {
         self,
         common: CommonBuiltinParameters<Concrete>,
         sample_rate: f64,
-    ) -> Result<IqSamples, SamplingError> {
+    ) -> Result<IqSamples<Complex64>, SamplingError> {
         match self {
             BuiltinWaveform::Flat(flat) => flat.iq_values_at_sample_rate(common, sample_rate),
 
@@ -805,7 +805,7 @@ impl BuiltinWaveformParameters for Flat<Concrete> {
         self,
         common: CommonBuiltinParameters<Concrete>,
         sample_rate: f64,
-    ) -> Result<IqSamples, SamplingError> {
+    ) -> Result<IqSamples<Complex64>, SamplingError> {
         let ExplicitCommonBuiltinParameters {
             sample_count,
             scale,
@@ -835,7 +835,7 @@ impl BuiltinWaveformParameters for Gaussian<Concrete> {
         self,
         common: CommonBuiltinParameters<Concrete>,
         sample_rate: f64,
-    ) -> Result<IqSamples, SamplingError> {
+    ) -> Result<IqSamples<Complex64>, SamplingError> {
         let Self { fwhm, t0 } = self;
 
         build_samples_and_adjust_for_common_parameters(
@@ -855,7 +855,7 @@ impl BuiltinWaveformParameters for DragGaussian<Concrete> {
         self,
         common: CommonBuiltinParameters<Concrete>,
         sample_rate: f64,
-    ) -> Result<IqSamples, SamplingError> {
+    ) -> Result<IqSamples<Complex64>, SamplingError> {
         let Self {
             fwhm,
             t0,
@@ -885,7 +885,7 @@ impl BuiltinWaveformParameters for ErfSquare<Concrete> {
         self,
         common: CommonBuiltinParameters<Concrete>,
         sample_rate: f64,
-    ) -> Result<IqSamples, SamplingError> {
+    ) -> Result<IqSamples<Complex64>, SamplingError> {
         let Self {
             risetime,
             pad_left,
@@ -918,7 +918,7 @@ impl BuiltinWaveformParameters for HermiteGaussian<Concrete> {
         self,
         common: CommonBuiltinParameters<Concrete>,
         sample_rate: f64,
-    ) -> Result<IqSamples, SamplingError> {
+    ) -> Result<IqSamples<Complex64>, SamplingError> {
         let Self {
             fwhm,
             t0,
@@ -952,7 +952,7 @@ impl BuiltinWaveformParameters for BoxcarKernel {
         self,
         common: CommonBuiltinParameters<Concrete>,
         sample_rate: f64,
-    ) -> Result<IqSamples, SamplingError> {
+    ) -> Result<IqSamples<Complex64>, SamplingError> {
         let ExplicitCommonBuiltinParameters {
             sample_count,
             scale,
@@ -1005,7 +1005,7 @@ fn build_samples_and_adjust_for_common_parameters<I: IntoIterator<Item = Complex
     parameters: SamplingParameters,
     common: CommonBuiltinParameters<Concrete>,
     build: impl FnOnce(SamplingInfo) -> I,
-) -> Result<IqSamples, SamplingError> {
+) -> Result<IqSamples<Complex64>, SamplingError> {
     let SamplingParameters { sample_rate, fwhm } = parameters;
     let ExplicitCommonBuiltinParameters {
         sample_count,

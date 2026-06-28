@@ -1,33 +1,23 @@
 //! Representations of IQ value sequences.
 
-use num_complex::Complex64;
+use std::iter::{repeat_n, RepeatN};
 
-#[cfg(feature = "stubs")]
-use pyo3_stub_gen::derive::{gen_stub_pyclass_complex_enum, gen_stub_pymethods};
+use itertools::Either;
 
-/// The result of sampling a waveform, representing a sequence of IQ value samples.
-#[derive(Clone, PartialEq, Debug)]
-#[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
-#[cfg_attr(
-    feature = "python",
-    pyo3::pyclass(module = "quil.waveform", eq, frozen)
-)]
-pub enum IqSamples {
+/// The result of sampling a waveform, representing a sequence of IQ value samples (of type `T`).
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum IqSamples<T> {
     /// A flat waveform, consisting of a single IQ value repeated some number of times.
     ///
     /// This is a more optimizable special-case representation for [`IqSamples::Samples(vec![iq;
     /// sample_count])`][Self::Samples], but is otherwise equivalent.
-    Flat { iq: Complex64, sample_count: usize },
+    Flat { iq: T, sample_count: usize },
 
     /// A literal sequence of IQ samples.
-    Samples(Vec<Complex64>),
+    Samples(Vec<T>),
 }
 
-#[cfg_attr(not(feature = "python"), optipy::strip_pyo3)]
-#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[cfg_attr(feature = "python", pyo3::pymethods)]
-impl IqSamples {
-    #[getter(sample_count)]
+impl<T> IqSamples<T> {
     /// The number of samples.
     pub fn sample_count(&self) -> usize {
         match self {
@@ -39,27 +29,116 @@ impl IqSamples {
         }
     }
 
-    /// Get the nth sample.
-    pub fn get(&self, index: usize) -> Option<Complex64> {
+    /// Get a reference to the nth sample.
+    pub fn get_ref(&self, index: usize) -> Option<&T> {
         match self {
-            Self::Flat { iq, sample_count } => (index < *sample_count).then_some(*iq),
-            Self::Samples(samples) => samples.get(index).copied(),
+            Self::Flat { iq, sample_count } => (index < *sample_count).then_some(iq),
+            Self::Samples(samples) => samples.get(index),
         }
     }
-}
 
-impl IqSamples {
+    /// Get the nth sample.
+    pub fn get(&self, index: usize) -> Option<T>
+    where
+        T: Clone,
+    {
+        self.get_ref(index).cloned()
+    }
+
+    /// Iterate over (references to) every sample in this sequence.
+    pub fn iter(&self) -> Iter<'_, T> {
+        match self {
+            Self::Flat { iq, sample_count } => Either::Left(repeat_n(iq, *sample_count)),
+            Self::Samples(samples) => Either::Right(samples.iter()),
+        }
+    }
+
     /// Convert this sequence of samples into an explicit vector.
     ///
     /// The length of this vector is [`self.sample_count()`][Self::sample_count], and its values are
     /// given by [`self.get(_)`][Self::get].
-    pub fn into_iq_values(self) -> Vec<Complex64> {
+    pub fn into_iq_values(self) -> Vec<T>
+    where
+        T: Clone,
+    {
         match self {
             Self::Flat { iq, sample_count } => vec![iq; sample_count],
             Self::Samples(samples) => samples,
         }
     }
 }
+
+impl<T: Clone> IntoIterator for IqSamples<T> {
+    type Item = T;
+
+    type IntoIter = IntoIter<T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        match self {
+            Self::Flat { iq, sample_count } => Either::Left(repeat_n(iq, sample_count)),
+            Self::Samples(samples) => Either::Right(samples.into_iter()),
+        }
+    }
+}
+
+impl<'a, T> IntoIterator for &'a IqSamples<T> {
+    type Item = &'a T;
+
+    type IntoIter = Iter<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+/// An iterator that moves out of an [`IqSamples`].
+///
+/// **NOTE:** The *specific type* defining `IntoIter` is *not considered an exposed interface
+/// detail*, and *is not stable*.  What is stable are the trait implementations:
+///
+/// - [`std::clone::Clone`] if `T: std::clone::Clone`
+/// - [`std::fmt::Debug`] if `T: std::fmt::Debug`
+/// - [`std::iter::Iterator<Item = T>`]
+/// - [`std::iter::DoubleEndedIterator`]
+/// - [`std::iter::ExactSizeIterator`]
+/// - [`std::iter::FusedIterator`]
+pub type IntoIter<T> = Either<RepeatN<T>, std::vec::IntoIter<T>>;
+
+/// An iterator that provides a view of an [`IqSamples`].
+///
+/// **NOTE:** The *specific type* defining `Iter` is *not considered an exposed interface detail*,
+/// and *is not stable*.  What is stable are the trait implementations:
+///
+/// - [`std::clone::Clone`]
+/// - [`std::fmt::Debug`] if `T: std::fmt::Debug`
+/// - [`std::iter::Iterator<Item = T>`]
+/// - [`std::iter::DoubleEndedIterator`]
+/// - [`std::iter::ExactSizeIterator`]
+/// - [`std::iter::FusedIterator`]
+pub type Iter<'a, T> = Either<RepeatN<&'a T>, std::slice::Iter<'a, T>>;
+
+#[derive(Clone, Debug)]
+struct _ExampleCloneDebug(String);
+
+#[derive(Debug)]
+struct _ExampleDebug(String);
+
+const fn _guarantee_iterator_trait_impls<I, T>()
+where
+    I: std::clone::Clone
+        + std::fmt::Debug
+        + std::iter::Iterator<Item = T>
+        + std::iter::DoubleEndedIterator
+        + std::iter::ExactSizeIterator
+        + std::iter::FusedIterator,
+{
+}
+
+const _GUARANTEE_INTO_ITER_TRAIT_IMPLS: () =
+    _guarantee_iterator_trait_impls::<IntoIter<_ExampleCloneDebug>, _ExampleCloneDebug>();
+
+const _GUARANTEE_ITER_TRAIT_IMPLS: () =
+    _guarantee_iterator_trait_impls::<Iter<'static, _ExampleDebug>, &'static _ExampleDebug>();
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize, thiserror::Error)]
 pub enum SamplingError {

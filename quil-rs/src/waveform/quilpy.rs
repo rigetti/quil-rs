@@ -3,13 +3,20 @@ use std::collections::HashMap;
 use num_complex::Complex64;
 use numpy::{IntoPyArray as _, PyArray1, PyArrayMethods as _};
 use pyo3::{
+    exceptions::{PyIndexError, PyStopIteration},
     prelude::*,
-    types::{IntoPyDict as _, PyDict, PyTuple},
+    types::{IntoPyDict as _, PyDict, PySlice, PySliceIndices, PyTuple},
 };
 use rigetti_pyo3::{create_init_submodule, impl_repr};
 
 #[cfg(feature = "stubs")]
-use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pymethods};
+use pyo3_stub_gen::{
+    derive::{
+        gen_methods_from_python, gen_stub_pyclass, gen_stub_pyclass_complex_enum,
+        gen_stub_pyfunction, gen_stub_pymethods,
+    },
+    PyStubType, TypeInfo,
+};
 
 use crate::{
     quilpy::errors,
@@ -23,6 +30,8 @@ use crate::{
 
 create_init_submodule! {
     classes: [
+        PyIqSamplesIter,
+        PyIqSamplesRevIter,
         SyntacticWaveform,
         ConcreteWaveform,
         SyntacticBuiltinWaveform,
@@ -42,7 +51,7 @@ create_init_submodule! {
         ConcreteHermiteGaussian,
         BoxcarKernel,
     ],
-    complex_enums: [ IqSamples ],
+    complex_enums: [ PyIqSamples ],
     errors: [
          errors::WaveformParameterError,
          errors::WaveformInvocationError,
@@ -52,7 +61,9 @@ create_init_submodule! {
 }
 
 impl_repr! {
-    IqSamples,
+    PyIqSamples,
+    PyIqSamplesIter,
+    PyIqSamplesRevIter,
     SyntacticWaveform,
     ConcreteWaveform,
     SyntacticBuiltinWaveform,
@@ -71,6 +82,271 @@ impl_repr! {
     SyntacticHermiteGaussian,
     ConcreteHermiteGaussian,
     BoxcarKernel,
+}
+
+// A duplication of [`crate::waveform::sampling::IqSamples<Complex64>`], but nongeneric so it can be
+// exposed to Python.  It also uses a named argument for the `Samples` constructor because that
+// produces a nicer Python interface and avoids conflicting `__getitem__` definitions.
+/// The result of sampling a waveform, representing a sequence of IQ value samples.
+#[derive(Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
+#[pyclass(module = "quil.waveform", name = "IqSamples", eq, frozen)]
+pub enum PyIqSamples {
+    /// A flat waveform, consisting of a single IQ value repeated some number of times.
+    ///
+    /// This is a more optimizable special-case representation for [`IqSamples::Samples(vec![iq;
+    /// sample_count])`][Self::Samples], but is otherwise equivalent.
+    Flat { iq: Complex64, sample_count: usize },
+
+    /// A literal sequence of IQ samples.
+    Samples { samples: Vec<Complex64> },
+}
+
+#[derive(Clone, Debug, derive_more::From, derive_more::Into)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[pyclass(module = "quil.waveform", name = "IqSamplesIter")]
+pub struct PyIqSamplesIter(pub sampling::IntoIter<Complex64>);
+
+#[derive(Clone, Debug, derive_more::From, derive_more::Into)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[pyclass(module = "quil.waveform", name = "IqSamplesRevIter")]
+pub struct PyIqSamplesRevIter(pub std::iter::Rev<sampling::IntoIter<Complex64>>);
+
+impl From<IqSamples<Complex64>> for PyIqSamples {
+    fn from(value: IqSamples<Complex64>) -> Self {
+        match value {
+            IqSamples::Flat { iq, sample_count } => Self::Flat { iq, sample_count },
+            IqSamples::Samples(samples) => Self::Samples { samples },
+        }
+    }
+}
+
+impl From<PyIqSamples> for IqSamples<Complex64> {
+    fn from(value: PyIqSamples) -> Self {
+        match value {
+            PyIqSamples::Flat { iq, sample_count } => Self::Flat { iq, sample_count },
+            PyIqSamples::Samples { samples } => Self::Samples(samples),
+        }
+    }
+}
+
+#[derive(Debug, FromPyObject)]
+pub enum IqSamplesIndex<'py> {
+    Int(isize),
+    Slice(Bound<'py, PySlice>),
+}
+
+#[derive(Debug, IntoPyObject)]
+pub enum IqSamplesIndexed {
+    One(Complex64),
+    Many(Vec<Complex64>),
+}
+
+#[cfg(feature = "stubs")]
+impl PyStubType for IqSamplesIndex<'_> {
+    fn type_output() -> TypeInfo {
+        isize::type_output() | TypeInfo::builtin("slice[int,int,int]")
+    }
+}
+
+#[cfg(feature = "stubs")]
+impl PyStubType for IqSamplesIndexed {
+    fn type_output() -> TypeInfo {
+        Complex64::type_output() | TypeInfo::list_of::<Complex64>()
+    }
+}
+
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl PyIqSamples {
+    /// The number of samples.  The same as `len`.
+    // This is a reimplementation of [`IqSamples::sample_count`]
+    #[getter(sample_count)]
+    pub fn sample_count(&self) -> usize {
+        match self {
+            Self::Flat {
+                sample_count,
+                iq: _,
+            } => *sample_count,
+
+            Self::Samples { samples } => samples.len(),
+        }
+    }
+
+    /// The number of samples.  The same as `sample_count`.
+    #[pyo3(name = "__len__")]
+    pub fn len(&self) -> usize {
+        self.sample_count()
+    }
+
+    #[pyo3(name = "__length_hint__")]
+    pub fn len_hint(&self) -> usize {
+        self.sample_count()
+    }
+
+    /// Get the nth sample.  The same as indexing, but returns `None` instead of raising an error if
+    /// the index is out of range.
+    // This contains a reimplementation of [`IqSamples::get`], but handles Pythonic conventions as
+    // well.
+    #[pyo3(name = "get")]
+    #[gen_stub(skip)] // Overloads handled below
+    pub fn get(&self, index: IqSamplesIndex<'_>) -> PyResult<Option<IqSamplesIndexed>> {
+        #[inline]
+        fn get_one(this: &PyIqSamples, mut index: isize) -> Option<Complex64> {
+            if index < 0 {
+                index = index.checked_add_unsigned(this.sample_count())?;
+            }
+            let index = usize::try_from(index).ok()?;
+            match this {
+                PyIqSamples::Flat { iq, sample_count } => (index < *sample_count).then_some(*iq),
+                PyIqSamples::Samples { samples } => samples.get(index).copied(),
+            }
+        }
+
+        match index {
+            IqSamplesIndex::Int(index) => Ok(get_one(self, index).map(IqSamplesIndexed::One)),
+
+            IqSamplesIndex::Slice(indices) => {
+                let PySliceIndices {
+                    start,
+                    stop,
+                    step,
+                    slicelength,
+                } = indices.indices(self.sample_count() as isize)?;
+                debug_assert!(step != 0);
+                debug_assert!(slicelength <= self.sample_count());
+                debug_assert!(start >= 0 || (start == -1 && step < 0));
+                debug_assert!(stop >= 0 || (stop == -1 && step < 0));
+
+                let sliced_samples = match self {
+                    Self::Flat {
+                        iq,
+                        sample_count: _,
+                    } => vec![*iq; slicelength],
+
+                    Self::Samples { samples } => {
+                        if step > 0 {
+                            let start = start as usize; // Guaranteed by documentation
+                            let stop = stop as usize; // Guaranteed by documentation
+                            let step = step as usize;
+                            if step == 1 {
+                                samples[start..stop].to_owned()
+                            } else {
+                                let mut result = Vec::with_capacity(slicelength);
+                                let mut i = start;
+                                while i < stop {
+                                    result.push(samples[i]);
+                                    i += step;
+                                }
+                                result
+                            }
+                        } else {
+                            let mut result = Vec::with_capacity(slicelength);
+                            // If `start` is `-1`, this loop will never iterate, as `stop` is at
+                            // least `-1`.  Moreover, `i` will never reach `-1` at all, for the same
+                            // reason.  Thus, `i` will always be an in-range `usize`.
+                            let mut i = start;
+                            while i > stop {
+                                result.push(samples[i as usize]);
+                                i += step; // Counts down, since `step < 0`
+                            }
+                            result
+                        }
+                    }
+                };
+
+                Ok(Some(IqSamplesIndexed::Many(sliced_samples)))
+            }
+        }
+    }
+
+    /// Get the nth sample.
+    #[pyo3(name = "__getitem__")]
+    #[gen_stub(skip)] // Overloads handled below
+    pub fn getitem(&self, index: IqSamplesIndex<'_>) -> PyResult<IqSamplesIndexed> {
+        self.get(index)?
+            .ok_or_else(|| PyIndexError::new_err("sample index out of range"))
+    }
+
+    #[pyo3(name = "__iter__")]
+    pub fn iter(&self) -> PyIqSamplesIter {
+        PyIqSamplesIter(IqSamples::from(self.clone()).into_iter())
+    }
+
+    #[pyo3(name = "__reversed__")]
+    pub fn reversed(&self) -> PyIqSamplesRevIter {
+        PyIqSamplesRevIter(self.iter().0.rev())
+    }
+
+    #[pyo3(name = "__contains__")]
+    pub fn contains(&self, item: Bound<'_, PyAny>) -> bool {
+        let Ok(item) = item.extract::<Complex64>() else {
+            return false;
+        };
+        match self {
+            Self::Flat { iq, sample_count } => *sample_count > 0 && *iq == item,
+            Self::Samples { samples } => samples.contains(&item),
+        }
+    }
+
+    /// Convert this sequence of samples into an explicit numpy array.
+    ///
+    /// The length of this array is [`self.sample_count()`][Self::sample_count], and its values are
+    /// given by [`self[_]`][Self::get].
+    pub fn iq_values<'py>(&self, py: Python<'py>) -> Bound<'py, PyArray1<Complex64>> {
+        IqSamples::from(self.clone())
+            .into_iq_values()
+            .into_pyarray(py)
+    }
+}
+
+#[cfg(feature = "stubs")]
+pyo3::inventory::submit! {
+    gen_methods_from_python! {r#"
+        class PyIqSamples:
+            @overload
+            def get(self, index: int) -> typing.Optional[complex]: ...
+            @overload
+            def get(self, index: slice[int,int,int]) -> list[complex]: ...
+            @overload
+            def get(self, index: pyo3_stub_gen.RustType["IqSamplesIndex<'_>"]) -> pyo3_stub_gen.RustType["Option<IqSamplesIndexed>"]: ...
+
+            @overload
+            def __getitem__(self, index: int) -> complex: ...
+            @overload
+            def __getitem__(self, index: slice[int,int,int]) -> list[complex]: ...
+            @overload
+            def __getitem__(self, index: pyo3_stub_gen.RustType["IqSamplesIndex<'_>"]) -> pyo3_stub_gen.RustType["IqSamplesIndexed"]: ...
+    "#}
+}
+
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl PyIqSamplesIter {
+    #[pyo3(name = "__next__")]
+    pub fn next(&mut self) -> PyResult<Complex64> {
+        self.0.next().ok_or_else(|| PyStopIteration::new_err(()))
+    }
+
+    #[pyo3(name = "__iter__")]
+    pub fn iter(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
+        slf
+    }
+}
+
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl PyIqSamplesRevIter {
+    #[pyo3(name = "__next__")]
+    pub fn next(&mut self) -> PyResult<Complex64> {
+        self.0.next().ok_or_else(|| PyStopIteration::new_err(()))
+    }
+
+    #[pyo3(name = "__iter__")]
+    pub fn iter(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
+        slf
+    }
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -579,10 +855,11 @@ macro_rules! python_waveforms {
                         &self,
                         common: ConcreteCommonBuiltinParameters,
                         sample_rate: f64,
-                    ) -> PyResult<IqSamples> {
+                    ) -> PyResult<PyIqSamples> {
                         Ok(
                             python_access_inner!(self, $($($specific_data)?)?)
                                 .iq_values_at_sample_rate(common.0, sample_rate)?
+                                .into()
                         )
                     }
                 }
@@ -670,16 +947,10 @@ impl ConcreteBuiltinWaveform {
         &self,
         common: ConcreteCommonBuiltinParameters,
         sample_rate: f64,
-    ) -> PyResult<IqSamples> {
-        Ok(self.0.iq_values_at_sample_rate(common.0, sample_rate)?)
-    }
-}
-
-#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[pymethods]
-impl IqSamples {
-    #[pyo3(name = "iq_values")]
-    pub fn py_iq_values<'py>(&self, py: Python<'py>) -> Bound<'py, PyArray1<Complex64>> {
-        self.clone().into_iq_values().into_pyarray(py)
+    ) -> PyResult<PyIqSamples> {
+        Ok(self
+            .0
+            .iq_values_at_sample_rate(common.0, sample_rate)?
+            .into())
     }
 }

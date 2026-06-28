@@ -183,7 +183,7 @@ class ConcreteWaveform:
         [`Debug`](std::fmt::Debug) implementation.
         """
     def as_builtin(self) -> typing.Optional[tuple[ConcreteBuiltinWaveform, ConcreteCommonBuiltinParameters]]: ...
-    def as_custom(self) -> tuple[builtins.str, builtins.dict[builtins.str, builtins.complex]]: ...
+    def as_custom(self) -> tuple[builtins.str, builtins.dict[builtins.str, builtins.complex]] | None: ...
     @staticmethod
     def boxcar_kernel(*, duration: builtins.float, scale: typing.Optional[builtins.float] = None, phase: typing.Optional[builtins.float] = None, detuning: typing.Optional[builtins.float] = None) -> ConcreteWaveform: ...
     @staticmethod
@@ -267,18 +267,40 @@ class IqSamples:
     @property
     def sample_count(self) -> builtins.int:
         r"""
-        The number of samples.
+        The number of samples.  The same as `len`.
         """
+    def __contains__(self, item: typing.Any) -> builtins.bool: ...
+    @typing.overload
+    def __getitem__(self, index: int) -> complex: ...
+    @typing.overload
+    def __getitem__(self, index: slice[int, int, int]) -> list[complex]: ...
+    @typing.overload
+    def __getitem__(self, index: builtins.int | builtins.slice[int,int,int]) -> builtins.complex | builtins.list[builtins.complex]: ...
+    def __iter__(self) -> IqSamplesIter: ...
+    def __len__(self) -> builtins.int:
+        r"""
+        The number of samples.  The same as `sample_count`.
+        """
+    def __length_hint__(self) -> builtins.int: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
-    def get(self, index: builtins.int) -> typing.Optional[builtins.complex]:
+    def __reversed__(self) -> IqSamplesRevIter: ...
+    @typing.overload
+    def get(self, index: int) -> typing.Optional[complex]: ...
+    @typing.overload
+    def get(self, index: slice[int, int, int]) -> list[complex]: ...
+    @typing.overload
+    def get(self, index: builtins.int | builtins.slice[int,int,int]) -> typing.Optional[builtins.complex | builtins.list[builtins.complex]]: ...
+    def iq_values(self) -> numpy.typing.NDArray[numpy.complex128]:
         r"""
-        Get the nth sample.
+        Convert this sequence of samples into an explicit numpy array.
+        
+        The length of this array is [`self.sample_count()`][Self::sample_count], and its values are
+        given by [`self[_]`][Self::get].
         """
-    def iq_values(self) -> numpy.typing.NDArray[numpy.complex128]: ...
     @typing.final
     class Flat(IqSamples):
         r"""
@@ -299,13 +321,31 @@ class IqSamples:
         r"""
         A literal sequence of IQ samples.
         """
-        __match_args__ = ("_0",)
+        __match_args__ = ("samples",)
         @property
-        def _0(self) -> builtins.list[builtins.complex]: ...
-        def __getitem__(self, key: builtins.int) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: typing.Sequence[builtins.complex]) -> IqSamples.Samples: ...
+        def samples(self) -> builtins.list[builtins.complex]: ...
+        def __new__(cls, samples: typing.Sequence[builtins.complex]) -> IqSamples.Samples: ...
     
+
+@typing.final
+class IqSamplesIter:
+    def __iter__(self) -> IqSamplesIter: ...
+    def __next__(self) -> builtins.complex: ...
+    def __repr__(self) -> builtins.str:
+        r"""
+        Implements `__repr__` for Python in terms of the Rust
+        [`Debug`](std::fmt::Debug) implementation.
+        """
+
+@typing.final
+class IqSamplesRevIter:
+    def __iter__(self) -> IqSamplesRevIter: ...
+    def __next__(self) -> builtins.complex: ...
+    def __repr__(self) -> builtins.str:
+        r"""
+        Implements `__repr__` for Python in terms of the Rust
+        [`Debug`](std::fmt::Debug) implementation.
+        """
 
 class SamplingError(QuilError):
     r"""

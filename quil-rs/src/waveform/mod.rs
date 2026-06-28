@@ -54,6 +54,14 @@ pub enum Syntactic {}
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub enum Concrete {}
 
+/// A transformer of [`WaveformData`] implementors indicating that this waveform may be instantiated
+/// with the wrapped data *or* that data may be absent.  Waveforms with this sort of data may be
+/// generated during complilation in order to account for those waveforms that can have their data
+/// modified at patch time.
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+#[repr(transparent)]
+pub struct Partial<T>(pub T);
+
 impl WaveformData for Syntactic {
     type Real = Expression;
     type Complex = Expression;
@@ -62,6 +70,11 @@ impl WaveformData for Syntactic {
 impl WaveformData for Concrete {
     type Real = f64;
     type Complex = Complex64;
+}
+
+impl<T: WaveformData> WaveformData for Partial<T> {
+    type Real = Option<T::Real>;
+    type Complex = Option<T::Complex>;
 }
 
 /// A waveform, as specified in a [Quil-T][] [`Instruction`][crate::instruction::Instruction].
