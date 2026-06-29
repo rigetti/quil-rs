@@ -14,8 +14,6 @@ use rigetti_pyo3::{create_init_submodule, impl_repr};
 
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pymethods};
-use crate::instruction::{MemoryReference, Target};
-use crate::quilpy::from_sequence;
 use crate::{
     instruction::{
         quilpy::OwnedGateSignature, CalibrationDefinition, Declaration, DefaultHandler,
@@ -1190,21 +1188,9 @@ struct PyTargetResolver(Py<PyFunction>);
 
 #[cfg(feature = "stubs")]
 mod stubs {
-    use pyo3_stub_gen::{PyStubType, TypeInfo, impl_stub_type};
-    use std::collections::HashMap;
+    use pyo3_stub_gen::{impl_stub_type, type_alias};
 
-    use pyo3_stub_gen::{ImportKind, ModuleRef, PyStubType, TypeIdentifierRef, TypeInfo, impl_stub_type, type_alias};
-
-    use super::{
-        EndTargetParam,
-        Instruction,
-        OneOrMore,
-        PyQubitResolver,
-        PyTargetResolver,
-        QubitPlaceholder,
-        Target,
-        TargetPlaceholder,
-    };
+    use super::{EndTargetParam, Instruction, OneOrMore, Target};
 
     impl_stub_type!(EndTargetParam = Target | u32);
     impl_stub_type!(OneOrMore<Instruction> = Instruction | Vec<Instruction>);

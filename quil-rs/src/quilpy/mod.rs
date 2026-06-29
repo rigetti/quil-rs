@@ -1,20 +1,10 @@
 use std::marker::PhantomData;
 
-<<<<<<< HEAD
 use pyo3::prelude::*;
 use pyo3::PyClass;
 use pyo3::PyTypeCheck;
 use pyo3::pyclass::boolean_struct::True;
 use pyo3::types::PyTuple;
-||||||| parent of 99aa102c (wip: fix type stubs)
-use pyo3::PyClass;
-use pyo3::PyTypeCheck;
-use pyo3::prelude::*;
-use pyo3::pyclass::boolean_struct::True;
-use pyo3::types::PyTuple;
-=======
-use pyo3::{PyClass, PyTypeCheck, prelude::*, pyclass::boolean_struct::True, types::PyTuple};
->>>>>>> 99aa102c (wip: fix type stubs)
 use rigetti_pyo3::create_init_submodule;
 
 use crate::expression;
@@ -263,7 +253,7 @@ impl pyo3_stub_gen::PyStubType for NonZeroU64 {
 pub(crate) fn from_sequence<T, U>(values: &Bound<'_, PyAny>) -> PyResult<Vec<U>>
     where
         for<'a, 'py> T: FromPyObject<'a, 'py>,
-        for<'a, 'py> U: PyClass + PyTypeCheck + From<T> + ToOwned<Owned = U>, //+ From<&'a Bound<'py, T>>,
+        for<'a, 'py> U: PyClass + PyTypeCheck + From<T> + ToOwned<Owned = U>,
         for<'a, 'py> PyErr: From<<T as FromPyObject<'a, 'py>>::Error>,
 {
     values.try_iter()?
@@ -274,10 +264,24 @@ pub(crate) fn from_sequence<T, U>(values: &Bound<'_, PyAny>) -> PyResult<Vec<U>>
                 } else {
                     obj.extract::<T>().map(U::from).map_err(Into::into)
                 }
-                )
+            )
         )
         .collect()
 }
+
+pub(crate) fn from_like<T, U>(obj: &Bound<'_, PyAny>) -> PyResult<U>
+where
+    for<'a, 'py> T: FromPyObject<'a, 'py>,
+    for<'a, 'py> U: PyClass + PyTypeCheck + From<T> + ToOwned<Owned = U>,
+    for<'a, 'py> PyErr: From<<T as FromPyObject<'a, 'py>>::Error>,
+{
+    if let Ok(obj) = obj.cast::<U>() {
+        Ok(obj.borrow().to_owned())
+    } else {
+        obj.extract::<T>().map(U::from).map_err(Into::into)
+    }
+}
+
 
 #[cfg(test)]
 mod wrapper_tests {
@@ -373,6 +377,7 @@ where
     }
 }
 
+
 #[derive(Debug, Copy, Clone)]
 pub(crate) enum Like<'a, 'py, T> {
     Borrowed(Borrowed<'a, 'py, T>),
@@ -467,59 +472,9 @@ macro_rules! py_friendly_enum {
         #[cfg(feature = "stubs")]
         impl pyo3_stub_gen::PyStubType for Like<'_, '_, $T> {
             fn type_input() -> pyo3_stub_gen::TypeInfo {
-<<<<<<< HEAD
-                let pyo3_stub_gen::TypeInfo {
-                    mut name,
-                    mut import,
-                    // TODO(rebase-main): Check if these need to be updated.
-                    source_module,
-                    type_refs,
-                } = <$T as pyo3_stub_gen::PyStubType>::type_output();
-
-                $(
-                    $(
-                        let type_info = <$variant as pyo3_stub_gen::PyStubType>::type_output();
-                        name += " | ";
-                        name += &type_info.name;
-                        import.extend(type_info.import);
-                    )+
-                )?
-
-                pyo3_stub_gen::TypeInfo {
-                    name,
-                    import,
-                    source_module,
-                    type_refs,
-                }
-||||||| parent of 99aa102c (wip: fix type stubs)
-                let pyo3_stub_gen::TypeInfo {
-                    mut name,
-                    mut import,
-                    source_module,
-                    type_refs,
-                } = <$T as pyo3_stub_gen::PyStubType>::type_output();
-
-
-                $(
-                    $(
-                        let type_info = <$variant as pyo3_stub_gen::PyStubType>::type_output();
-                        name += " | ";
-                        name += &type_info.name;
-                        import.extend(type_info.import);
-                    )+
-                )?
-
-                pyo3_stub_gen::TypeInfo {
-                    name,
-                    import,
-                    source_module,
-                    type_refs,
-                }
-=======
                 <$T as pyo3_stub_gen::PyStubType>::type_input()
                       | <$first   as pyo3_stub_gen::PyStubType>::type_input()
                     $(| <$variant as pyo3_stub_gen::PyStubType>::type_input())*
->>>>>>> 99aa102c (wip: fix type stubs)
             }
 
             fn type_output() -> pyo3_stub_gen::TypeInfo {
@@ -572,17 +527,6 @@ impl<'a, 'py, T> Like<'a, 'py, T> {
             Self::Extracted(extracted) => extracted,
         }
     }
-}
-
-pub(crate) fn from_like<'a, 'py, T, U>(obj: &'a Bound<'py, PyAny>) -> Result<U, T::Error>
-where
-    T: PyClass + FromPyObject<'a, 'py>,
-    U: From<&'a Bound<'py, T>> + From<T>,
-{
-    if let Ok(extracted) = obj.cast::<T>() {
-        return Ok(U::from(extracted));
-    }
-    obj.extract::<T>().map(U::from)
 }
 
 /// Add Python `to_quil` and `to_quil_or_debug` methods
