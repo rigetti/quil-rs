@@ -26,6 +26,8 @@ ignore = [
   { id = "RUSTSEC-2025-0098", reason = "rust-unic is unmaintained, but a transitive dependency of pyo3-stub-gen" },
   { id = "RUSTSEC-2025-0090", reason = "rust-unic is unmaintained, but a transitive dependency of pyo3-stub-gen" },
   { id = "RUSTSEC-2025-0100", reason = "rust-unic is unmaintained, but a transitive dependency of pyo3-stub-gen" },
+  { id = "RUSTSEC-2026-0176", reason = "we never call the affected functions (`Bound{List,Tuple}Iterator::{nth,nth_back}`, which have an OOB read in PyO3 >=0.24,<0.29)" },
+  { id = "RUSTSEC-2026-0177", reason = "we never call the affected function (`PyCFunction::new_closure`, which is missing a `Sync` bound in PyO3 >=0.15,<0.29; also `PyCFunction::new_closure_bound`, which is missing a `Sync` bound in >=0.21,<0.23 and thus not relevant for our version)" },
 ]
 
 
