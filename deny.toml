@@ -65,6 +65,7 @@ wildcards = "deny"
 highlight = "all"
 skip-tree = [
   { name = "rand", version = "=0.8.6" },      # statrs has an outdated version
+  { name = "winnow", version = "=0.7.15" },   # toml v0.9.12 depends on both (a) winnow v0.7.15 and (b) toml_parser v1.1.2, which itself depends on a more recent winnow
 ]
 
 skip = [
