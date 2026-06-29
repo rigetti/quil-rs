@@ -3,9 +3,9 @@ use std::collections::HashMap;
 use num_complex::Complex64;
 use numpy::{IntoPyArray as _, PyArray1, PyArrayMethods as _};
 use pyo3::{
-    exceptions::{PyIndexError, PyStopIteration},
+    exceptions::{PyIndexError, PyStopIteration, PyValueError},
     prelude::*,
-    types::{IntoPyDict as _, PyDict, PySlice, PySliceIndices, PyTuple},
+    types::{IntoPyDict as _, PyDict, PySequence, PySlice, PySliceIndices, PyTuple},
 };
 use rigetti_pyo3::{create_init_submodule, impl_repr};
 
@@ -58,6 +58,15 @@ create_init_submodule! {
          errors::SamplingError,
     ],
     funcs: [ py_apply_phase_and_detuning ],
+}
+
+/// Register the relevant classes as subclasses of `collections.abc.*`.  Must be called exactly one;
+/// ideally would be called from `init_submodule`, but we can't hook into that, so we expose this as
+/// a `pub(crate)` function (to get warnings if it's unused) and then call it from the root
+/// `#[pymodule]` function.
+pub(crate) fn register_abcs<'py>(py: Python<'py>) -> PyResult<()> {
+    PySequence::register::<PyIqSamples>(py)?;
+    Ok(())
 }
 
 impl_repr! {
@@ -145,7 +154,7 @@ pub enum IqSamplesIndexed {
 #[cfg(feature = "stubs")]
 impl PyStubType for IqSamplesIndex<'_> {
     fn type_output() -> TypeInfo {
-        isize::type_output() | TypeInfo::builtin("slice[int,int,int]")
+        isize::type_output() | TypeInfo::builtin("slice[int | None]")
     }
 }
 
@@ -185,12 +194,137 @@ impl PyIqSamples {
         self.sample_count()
     }
 
+    #[pyo3(name = "__iter__")]
+    pub fn iter(&self) -> PyIqSamplesIter {
+        PyIqSamplesIter(IqSamples::from(self.clone()).into_iter())
+    }
+
+    #[pyo3(name = "__reversed__")]
+    pub fn reversed(&self) -> PyIqSamplesRevIter {
+        PyIqSamplesRevIter(self.iter().0.rev())
+    }
+
+    #[pyo3(name = "__contains__")]
+    pub fn contains(&self, value: Bound<'_, PyAny>) -> bool {
+        let Ok(value) = value.extract::<Complex64>() else {
+            return false;
+        };
+        match self {
+            Self::Flat { iq, sample_count } => *sample_count > 0 && *iq == value,
+            Self::Samples { samples } => samples.contains(&value),
+        }
+    }
+
+    /// Return the number of occurrences of the specified sample.
+    ///
+    /// Part of the `collections.abc.Sequence` interface.
+    pub fn count(&self, value: Bound<'_, PyAny>) -> usize {
+        let Ok(value) = value.extract::<Complex64>() else {
+            return 0;
+        };
+        match self {
+            Self::Flat { iq, sample_count } => {
+                if *iq == value {
+                    *sample_count
+                } else {
+                    0
+                }
+            }
+            Self::Samples { samples } => samples.iter().filter(|sample| **sample == value).count(),
+        }
+    }
+
+    /// Return the first occurrences of the specified sample.  Raises `ValueError` if the value is
+    /// not present.
+    ///
+    /// Part of the `collections.abc.Sequence` interface.
+    #[pyo3(signature = (value, start = 0, stop = None))]
+    pub fn index(
+        &self,
+        value: Bound<'_, PyAny>,
+        start: isize,
+        stop: Option<isize>,
+    ) -> PyResult<usize> {
+        let error = || PyValueError::new_err(format!("{value:?} is not in samples"));
+
+        let Ok(value) = value.extract::<Complex64>() else {
+            return Err(error());
+        };
+
+        let sample_count = self.sample_count();
+
+        // If this is a positive index or a legal negative index, returns `Ok(Some(_))` of the
+        // corresponding positive index.  If this is an illegal negative index, returns `Ok(None)`.
+        // If there's arithmetic overflow, returns an error.
+        let fix_negative_index = |i: isize| -> PyResult<Option<usize>> {
+            if i < 0 {
+                let i = i.checked_add_unsigned(sample_count).ok_or_else(error)?;
+                Ok(usize::try_from(i).ok())
+            } else {
+                // Positive `isize` fits in `usize`
+                Ok(Some(i as usize))
+            }
+        };
+
+        // Starting "before the beginning" is allowed, and is the same as starting at the beginning.
+        let start = fix_negative_index(start)?.unwrap_or(0);
+        let stop = match stop {
+            Some(stop) => fix_negative_index(stop)?
+                .ok_or_else(error)? // We can't *stop* before the beginning, …
+                .min(sample_count), // … but we *can* stop "after the end", so we clamp to the count.
+            None => sample_count,
+        };
+
+        if start >= stop {
+            // The range of indices is empty
+            return Err(error());
+        }
+
+        // Since `start < stop`, and since we clamped `stop` to be at most `sample_count`, `start`
+        // is a legal index and `start..stop` is a legal range of indices.
+
+        match self {
+            Self::Flat {
+                iq,
+                sample_count: _,
+            } => {
+                if *iq == value {
+                    Ok(start)
+                } else {
+                    Err(error())
+                }
+            }
+            Self::Samples { samples } => samples[start..stop]
+                .iter()
+                .position(|sample| *sample == value)
+                .map(|i| i + start)
+                .ok_or_else(error),
+        }
+    }
+
+    /// Convert this sequence of samples into an explicit numpy array.
+    ///
+    /// The length of this array is [`self.sample_count()`][Self::sample_count], and its values are
+    /// given by [`self[_]`][Self::get].
+    pub fn iq_values<'py>(&self, py: Python<'py>) -> Bound<'py, PyArray1<Complex64>> {
+        IqSamples::from(self.clone())
+            .into_iq_values()
+            .into_pyarray(py)
+    }
+}
+
+// Pymethods that need manual stub generation for overloads (handled below).  Our linter doesn't
+// know about `#[gen_stub(skip)]` and gets concerned when we have a `pymethods` block without any
+// stub generation, so we have to move this to a different impl block and then lie to the linter
+// about generating stubs.
+#[cfg_attr(false, gen_stub_pymethods)]
+#[pymethods]
+impl PyIqSamples {
     /// Get the nth sample.  The same as indexing, but returns `None` instead of raising an error if
     /// the index is out of range.
     // This contains a reimplementation of [`IqSamples::get`], but handles Pythonic conventions as
     // well.
     #[pyo3(name = "get")]
-    #[gen_stub(skip)] // Overloads handled below
     pub fn get(&self, index: IqSamplesIndex<'_>) -> PyResult<Option<IqSamplesIndexed>> {
         #[inline]
         fn get_one(this: &PyIqSamples, mut index: isize) -> Option<Complex64> {
@@ -263,41 +397,9 @@ impl PyIqSamples {
 
     /// Get the nth sample.
     #[pyo3(name = "__getitem__")]
-    #[gen_stub(skip)] // Overloads handled below
     pub fn getitem(&self, index: IqSamplesIndex<'_>) -> PyResult<IqSamplesIndexed> {
         self.get(index)?
             .ok_or_else(|| PyIndexError::new_err("sample index out of range"))
-    }
-
-    #[pyo3(name = "__iter__")]
-    pub fn iter(&self) -> PyIqSamplesIter {
-        PyIqSamplesIter(IqSamples::from(self.clone()).into_iter())
-    }
-
-    #[pyo3(name = "__reversed__")]
-    pub fn reversed(&self) -> PyIqSamplesRevIter {
-        PyIqSamplesRevIter(self.iter().0.rev())
-    }
-
-    #[pyo3(name = "__contains__")]
-    pub fn contains(&self, item: Bound<'_, PyAny>) -> bool {
-        let Ok(item) = item.extract::<Complex64>() else {
-            return false;
-        };
-        match self {
-            Self::Flat { iq, sample_count } => *sample_count > 0 && *iq == item,
-            Self::Samples { samples } => samples.contains(&item),
-        }
-    }
-
-    /// Convert this sequence of samples into an explicit numpy array.
-    ///
-    /// The length of this array is [`self.sample_count()`][Self::sample_count], and its values are
-    /// given by [`self[_]`][Self::get].
-    pub fn iq_values<'py>(&self, py: Python<'py>) -> Bound<'py, PyArray1<Complex64>> {
-        IqSamples::from(self.clone())
-            .into_iq_values()
-            .into_pyarray(py)
     }
 }
 
@@ -308,14 +410,14 @@ pyo3::inventory::submit! {
             @overload
             def get(self, index: int) -> typing.Optional[complex]: ...
             @overload
-            def get(self, index: slice[int,int,int]) -> list[complex]: ...
+            def get(self, index: slice[typing.Optional[int]]) -> list[complex]: ...
             @overload
             def get(self, index: pyo3_stub_gen.RustType["IqSamplesIndex<'_>"]) -> pyo3_stub_gen.RustType["Option<IqSamplesIndexed>"]: ...
 
             @overload
             def __getitem__(self, index: int) -> complex: ...
             @overload
-            def __getitem__(self, index: slice[int,int,int]) -> list[complex]: ...
+            def __getitem__(self, index: slice[typing.Optional[int]]) -> list[complex]: ...
             @overload
             def __getitem__(self, index: pyo3_stub_gen.RustType["IqSamplesIndex<'_>"]) -> pyo3_stub_gen.RustType["IqSamplesIndexed"]: ...
     "#}

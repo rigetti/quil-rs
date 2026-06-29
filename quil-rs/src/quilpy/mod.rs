@@ -31,7 +31,10 @@ create_init_submodule! {
 #[pymodule]
 #[pyo3(name = "_quil")]
 fn init_module(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    init_submodule("quil", m.py(), m)
+    let py = m.py();
+    init_submodule("quil", py, m)?;
+    waveform::quilpy::register_abcs(py)?;
+    Ok(())
 }
 
 /// Add Python `to_quil` and `to_quil_or_debug` methods
