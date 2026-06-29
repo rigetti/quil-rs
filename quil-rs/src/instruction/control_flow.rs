@@ -51,7 +51,6 @@ impl Quil for Label {
 #[cfg_attr(
     feature = "python",
     pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash, skip_from_py_object),
-    derive(pyo3::FromPyObject)
 )]
 pub enum Target {
     Fixed(String),
