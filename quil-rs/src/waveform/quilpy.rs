@@ -36,6 +36,10 @@ fn py_apply_phase_and_detuning(
 ) -> PyResult<()> {
     // Though we could call the Rust version of this function and then modify the Python list,
     // this version allows us to iterate only once and avoid allocating a new `Vec<Complex64>`.
+    #[expect(
+        clippy::disallowed_methods,
+        reason = "the RUSTSEC issue here is only on `nth` and `nth_back`"
+    )]
     for (index, value) in iq_values.iter().enumerate() {
         let value = value.extract::<Complex64>()?;
         let value = apply_phase_and_detuning_impl(value, phase, detuning, sample_rate, index);
