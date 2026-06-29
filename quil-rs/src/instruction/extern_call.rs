@@ -458,7 +458,6 @@ pub enum CallArgumentResolutionError {
         hash,
         skip_from_py_object
     ),
-    pyo3::pyclass(name = "CallArgument", module = "quil.instructions", eq, frozen, hash, skip_from_py_object),
     derive(pyo3::FromPyObject)
 )]
 pub enum UnresolvedCallArgument {

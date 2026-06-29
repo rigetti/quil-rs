@@ -3,10 +3,8 @@ use num_complex::Complex64;
 use numpy::{PyArray2, ToPyArray};
 use paste::paste;
 use pyo3::{
-    exceptions::PyValueError,
-    prelude::*,
-    types::{IntoPyDict as _, PyDict, PyTuple},
-    IntoPyObjectExt,
+    PyTypeCheck,
+    CastError, IntoPyObjectExt, PyClass, PyTraverseError, PyVisit, exceptions::{PyIndexError, PyTypeError, PyValueError}, prelude::*, types::{IntoPyDict as _, PyDict, PyList, PyString, PyTuple},
 };
 use rigetti_pyo3::{create_init_submodule, impl_repr};
 
@@ -19,11 +17,8 @@ use pyo3_stub_gen::{
 use super::*;
 use crate::{
     expression::quilpy::ExpressionLike, instruction::gate::GateSignature, pickleable_new, quilpy::{
-        NonZeroU64, deprecated_or_new, deprecated_param, errors::{self, PickleError}, from_sequence, impl_to_quil, py_deprecated,
-    }, validation::identifier::IdentifierValidationError,
-    quilpy::{
-        Like, NewArgs, py_friendly_enum
-    }
+        Like, NewArgs, NonZeroU64, deprecated_or_new, deprecated_param, errors::{self, PickleError}, from_sequence, impl_to_quil, py_deprecated, py_friendly_enum
+    }, validation::identifier::IdentifierValidationError
 };
 
 create_init_submodule! {
@@ -159,8 +154,6 @@ macro_rules! impl_out {
         )*
     };
 }
-
-impl_out!(FrameIdentifier, Label, MemoryReference, WaveformInvocation);
 
 /// Implement expected methods on each of the instruction-related types, given as a list.
 /// This makes it easy to see which classes make up the `instructions` module,
@@ -307,6 +300,21 @@ impl_instruction!([
     WaveformInvocation,
 ]);
 
+/// Trait for things that can be converted into an `Instruction`.
+trait ToInstruction {
+    fn to_instruction(&self) -> Instruction;
+}
+
+/// Convert bound python objects into their corresponding `Instruction` variant.
+impl<'py, T> From<Bound<'py, T>> for Instruction
+where
+    T: ToInstruction + PyClass,
+{
+    fn from(value: Bound<'py, T>) -> Self {
+        value.borrow().to_instruction()
+    }
+}
+
 /// This macro expands to the `__getnewargs__` definition for the `Instruction` enum,
 /// making it compatible with the `copy` and `pickle` modules,
 /// (provided the variant itself supports it).
@@ -354,6 +362,15 @@ macro_rules! instruction_getnewargs {
             }
         }
 
+        /// Implement `ToInstruction` by wrapping it in the appropriate `Instruction` variant.
+        $(
+            impl ToInstruction for $kind {
+                fn to_instruction(&self) -> Instruction {
+                    Instruction::$kind(self.clone())
+                }
+            }
+        )*
+
         impl<'a, 'py> pyo3::FromPyObject<'a, 'py> for Instruction {
             type Error = pyo3::PyErr;
 
@@ -363,7 +380,7 @@ macro_rules! instruction_getnewargs {
                 }$( else if let Ok(value) = obj.cast::<$kind>() {
                     Ok(Instruction::$kind(value.borrow().clone()))
                 })* else {
-                    Err(PyTypeError::new_err("not an Instruction"))
+                    Err(CastError::new(obj, Instruction::classinfo_object(obj.py())))?
                 }
             }
         }
@@ -519,11 +536,6 @@ pickleable_new! {
     }
 }
 
-enum DeclarationMemoryParam {
-    Str(String),
-    ScalarType(ScalarType),
-}
-
 #[pymethods]
 impl Declaration {
     // TODO(migration-guide): The `__new__` method here is adjusted to match PyQuil v4's `Declare` constructor.
@@ -565,6 +577,114 @@ impl Declaration {
             shared_region,
             offsets,
         )
+    }
+
+    /// Return a new `DeclarationAt` to this `Declaration` at the given `index`.
+    ///
+    /// The result can be used in places where a `MemoryReference` is expected,
+    /// but has the advantage of sharing the underlying `Declaration` object;
+    /// that allows it to use less memory and to validate certain memory operations
+    /// while constructing a `quil.program.Program`.
+    fn __getitem__(slf: Bound<'_, Self>, index: u64) -> PyResult<DeclarationAt> {
+        let length = slf.get().size.length;
+        if index >= length {
+            return Err(PyIndexError::new_err(format!(
+                "index {index} out of bounds for declaration of size {length}",
+            )));
+        }
+
+        Ok(DeclarationAt {
+            declaration: slf.unbind(),
+            index,
+        })
+    }
+}
+
+impl Declaration {
+    /// Create a `MemoryReference` from `self`, copying the underlying `Declaration`'s name.
+    fn to_memory_reference(&self, index: u64) -> MemoryReference {
+        MemoryReference::new(self.name.clone(), index)
+    }
+}
+
+
+/// A wrapper around a [`Declaration`] for use in places we'd normally need a `MemoryReference`.
+///
+/// You can get an instance of `DeclarationAt` by indexing a `Declaration`,
+/// and you can then use it in places where a `MemoryReference` is expected.
+/// The underlying objects share the same `Declaration` memory
+/// and can provide additional validation on bounds-checking.
+///
+/// # Example
+///
+/// With use of the warlus operator, you can often write a list of instructions
+/// without needing to explicitly declare `MemoryReference` objects:
+///
+/// ```python
+/// instructions = [
+///     top := Label("top"),                                        # LABEL @top
+///     counter := Declaration("counter", ScalarType.INTEGER),      # DECLARE counter INTEGER
+///     counter[0].move(10),                                        # MOVE counter[0] 10
+///     # additional instructions...
+///     counter[0] - 1,                                             # SUB counter[0] 1
+///     JumpWhen(top, counter[0]),                                  # JUMP-WHEN @top counter[0]
+/// ]
+/// ```
+#[derive(Debug)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[pyclass(module = "quil._quil.instructions", frozen, skip_from_py_object)]
+struct DeclarationAt {
+    declaration: Py<Declaration>,
+    index: u64,
+}
+
+impl DeclarationAt {
+    fn memref<'py>(&self, py: Python<'py>) -> MemoryReference {
+        self.declaration.bind(py).get().to_memory_reference(self.index)
+    }
+}
+
+#[pymethods]
+impl DeclarationAt {
+    /// Return a new `Arithmetic` instruction representing `self = self + other`.
+    ///
+    /// # Example
+    ///
+    /// ```python
+    /// from quil.instructions import Declaration, ScalarType
+    ///
+    /// x = Declaration("x", ScalarType.INTEGER, 3)
+    /// arith = x[2] + 5
+    /// assert isinstance(arith, Arithmetic)
+    /// assert arith.to_quil() == "ADD x[2] 5"
+    /// ```
+    fn __add__<'py>(&self, py: Python<'py>, other: ArithmeticOperand) -> Arithmetic {
+        Arithmetic { operator: ArithmeticOperator::Add, destination: self.memref(py), source: other }
+    }
+
+    fn __sub__<'py>(&self, py: Python<'py>, other: ArithmeticOperand) -> Arithmetic {
+        Arithmetic { operator: ArithmeticOperator::Subtract, destination: self.memref(py), source: other }
+    }
+
+    fn __truediv__<'py>(&self, py: Python<'py>, other: ArithmeticOperand) -> Arithmetic {
+        Arithmetic { operator: ArithmeticOperator::Divide, destination: self.memref(py), source: other }
+    }
+
+    fn __mul__<'py>(&self, py: Python<'py>, other: ArithmeticOperand) -> Arithmetic {
+        Arithmetic { operator: ArithmeticOperator::Multiply, destination: self.memref(py), source: other }
+    }
+
+    /// Return a new `Move` instruction representing `self = source`.
+    #[pyo3(name = "move")]
+    fn py_move<'py>(&self, py: Python<'py>, source: ArithmeticOperand) -> Move {
+        Move { destination: self.memref(py), source }
+    }
+
+    // Garbage collection integration. For more information, see:
+    // https://pyo3.rs/v0.29.0/class/protocols.html#garbage-collector-integration
+    fn __traverse__(&self, visit: PyVisit<'_>) -> Result<(), PyTraverseError> {
+        visit.call(&self.declaration)?;
+        Ok(())
     }
 }
 
@@ -839,7 +959,57 @@ pickleable_new! {
     }
 }
 
+/// Attempt to extract a `MemoryReference` existing Python objects of the same type,
+/// their wrapped `Instruction` variant, and related `Declaration` types.
+impl<'a, 'py> FromPyObject<'a, 'py> for MemoryReference {
+    type Error = CastError<'a, 'py>;
+
+    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
+        if let Ok(mem_ref) = obj.cast::<MemoryReference>() {
+            // This is the implementation PyO3 would use and clones the existing `MemoryReference`.
+            Ok(mem_ref.borrow().clone())
+        } else if let Ok(decl) = obj.cast::<DeclarationAt>() {
+            // Create a new `MemoryReference` from an underlying `Declaration` and index.
+            Ok(decl.get().memref(obj.py()))
+        } else if let Ok(decl) = obj.cast::<Declaration>() {
+            // Create a new `MemoryReference` from a `Declaration` assuming an index of 0.
+            Ok(decl.get().to_memory_reference(0))
+        } else if let Ok(instr) = obj.cast::<Instruction>() {
+            // Like above, but borrow the declaration from an `Instruction` wrapper.
+            match instr.get() {
+                Instruction::Declaration(decl) => Ok(decl.to_memory_reference(0)),
+                _ => Err(CastError::new(obj, MemoryReference::classinfo_object(obj.py()))),
+            }
+        } else if let Ok(s) = obj.cast::<PyTuple>() {
+            // Create a new `MemoryReference` from a tuple of `(str, int)` pair.
+            let MemoryReferencePair(name, index) = s.extract()
+                .map_err(|_| CastError::new(obj, MemoryReference::classinfo_object(obj.py())))?;
+            Ok(MemoryReference::new(name, index))
+        } else if let Ok(s) = obj.cast::<PyList>() {
+            // As above, but from a list of `[str, int]` pair.
+            let MemoryReferencePair(name, index) = s.extract()
+                .map_err(|_| CastError::new(obj, MemoryReference::classinfo_object(obj.py())))?;
+            Ok(MemoryReference::new(name, index))
+        } else if let Ok(s) = obj.cast::<PyString>() {
+            let name = s.extract()
+                .map_err(|_| CastError::new(obj, MemoryReference::classinfo_object(obj.py())))?;
+            Ok(MemoryReference::new(name, 0))
+        } else {
+            Err(CastError::new(obj, MemoryReference::classinfo_object(obj.py())))
+        }
+    }
+}
+
+#[derive(FromPyObject)]
+struct MemoryReferencePair(String, u64);
+
 /// Used to create `Label`s from existing `Target`s as well as Python `str` instances.
+///
+/// Since a `Label`'s `target` can be either a `Target::Fixed` or a `Target::Placeholder`,
+/// and we implement `FromPyObject` for `Target` to accept either a `str` or a `Target`,
+/// we need a way to distinguish between the two cases when constructing a `Label` from Python.
+///
+/// See the documentation on `Label.__new__` for more information.
 #[derive(FromPyObject)]
 enum LabelTargetLike {
     Str(String),
@@ -850,11 +1020,6 @@ enum LabelTargetLike {
 #[pymethods]
 impl Label {
     // TODO(migration-guide):
-    //   Quil has `LABEL @jump-target` instructions,
-    //   but it's handy for programmatic `Program` construction
-    //   to not need to give an explicit `jump-target` name,
-    //   but instead just to correlate via `Label` instances.
-    //
     //   In `quil-rs`, the `Label` struct represents a Quil `LABEL` instruction,
     //   but the real meat of its behavior comes from the `Target` enum,
     //   which can be a `Fixed(String)` or a `Placeholder(TargetPlaceholder)`.
@@ -863,24 +1028,17 @@ impl Label {
     //   The `Placeholder` is for the benefit of `Program` construction,
     //   particularly loops.
     //
-    //   The old PyQuil v4 had `QuilAtom`s named `Label` and `LabelPlaceholder`,
-    //   which each had a `target` parameter of type `Target`.
-    //   The former was always `Target::Fixed` while the latter was `Target::Placeholder`.
-    //   That is, neither was actually a `quil-rs` `Label`!.
+    //   The old PyQuil v4 had `quilatom.Label` and `quilatom.LabelPlaceholder`,
+    //   which each had a `target` parameter of type `quil.Target`.
+    //   The former was always `Target::Fixed` while the latter was `Target::Placeholder`,
+    //   meaning the class basically represented the `quil.Target` type anyway,
+    //   and neither was the actual `quil.Label` class.
     //
-    //   So, in v5, `Label` and `LabelPlaceholder` are merged into simply `Label`,
-    //   which can be constructed with a string or an actual `Target`.
-    //   To specify that the `target` should be a placeholder,
-    //   users can pass the argument `placeholder=True`.
-    //
-    //   Backwards compatibility with the old `LabelPlaceholder` class is maintained
-    //   via a `partial` that sets this value for the user;
-    //   however, that specific class accepted a parameter by that name,
-    //   which was expected to be an existing `TargetPlaceholder` instance,
-    //   so this constructor handles that instance specifically.
-    //
-    //   Since much of this constructor trickery exists just for backwards compatibility,
-    //   it'll raise deprecation warnings, and can (and should) be removed in the future.
+    //   So, in v5, we get rid of those and tell users to just use the `Label` class directly,
+    //   and let them construct it from an existing `Target`, or from a `str` or `None`,
+    //   letting the constructor create the `Target::Fixed` or `Target::Placeholder` for them.
+    //   On the offchance they want to specify the `TargetPlaceholder`'s `base_label` explicitly,
+    //   they can pass a `str` and use the keyword-only `placeholder=True` argument.
     //
     //   The old uses can be updated as follows:
     //
@@ -895,33 +1053,33 @@ impl Label {
     //
     //   Note the `LabelPlaceholder("L", placeholder=p)` was technically legal,
     //   but the `prefix` was ignored, so it is equivalent to just giving a `placeholder`.
+    //   Since we repurposed the `placeholder` name to be a `bool` for the new `Label` constructor,
+    //   that usage is no longer valid, and will raise a `TypeError`.
 
     /// Create a new `Label`.
     ///
-    /// A `Label` represents a ``LABEL`` instruction, which in Quil reads as ``LABEL @some-name``.
-    /// You can make a program execute from that point onward via a ``JUMP @some-name`` instruction
-    /// or its siblings, ``JUMP-WHEN @some-name foo[0]`` and ``JUMP-UNLESS @some-name bar[0]``.
-    /// The `@some-name` part of these instructions is the "target".
+    /// A `Label` represents a ``LABEL`` instruction, which in Quil reads as ``LABEL @target-name``.
+    /// Labels are used by unconditional jump instructions, e.g. ``JUMP @target-name``,
+    /// and its siblings, ``JUMP-WHEN @target-name foo[0]`` and ``JUMP-UNLESS @target-name bar[0]``.
+    /// The `@target-name` part of these instructions is this class's ``target`` attribute.
     ///
     /// # Basic Usage
     ///
-    /// You can use a `Label` directly as the `target` of a ``Jump`` instruction.
-    /// Use ``Program.resolve_placeholders()`` to fill in the value before outputting Quil::
+    /// You can use a `Label` directly as the ``target`` of a ``Jump`` instruction.
     ///
     /// ```python
-    /// def get_body() -> list[Instruction]:
-    ///     return [] # Likely you would fill this with instructions.
-    ///
-    /// top = Label()
     /// prog = Program(
-    ///     top,
-    ///     *get_body(),
+    ///     top := Label("top"),
+    ///     counter_memory := Declaration("counter", ScalarType.INTEGER),
+    ///     Declaration("ro", ScalarType.BIT, 2),
+    ///     H(0),
     ///     Jump(top),
     /// )
     /// prog.resolve_placeholders()
     /// print(prog.to_quil())
     /// ```
     ///
+    /// Use ``Program.resolve_placeholders()`` to fill in the value before outputting Quil::
     /// You can construct a `Label` with a fixed `target` using ``Label("some-name")``,
     /// and then you can reference that point using, for example, ``Jump("some-name")``.
     ///
@@ -941,44 +1099,8 @@ impl Label {
 
     #[new]
     #[pyo3(signature = (target=None, *, placeholder=None))]
-<<<<<<< HEAD
-    fn __new__(target: Option<LabelTargetParameter>, placeholder: Option<bool>) -> PyResult<Self> {
-||||||| parent of 99aa102c (wip: fix type stubs)
-    fn __new__(
-        target: Option<LabelTargetParameter>,
-        placeholder: Option<bool>,
-        ) -> PyResult<Self> {
-
-=======
     fn __new__(target: Option<LabelTargetLike>, placeholder: Option<bool>) -> PyResult<Self> {
-
->>>>>>> 99aa102c (wip: fix type stubs)
         let target = match (target, placeholder) {
-<<<<<<< HEAD
-            (Some(LabelTargetParameter::Target(target)), None) => target,
-            (Some(LabelTargetParameter::Target(_)), Some(_)) => {
-                return Err(PyValueError::new_err(
-                    "`placeholder` is not permitted with an explicit `target`",
-                ));
-            }
-            (Some(LabelTargetParameter::Fixed(label)), Some(false) | None) => Target::Fixed(label),
-            (Some(LabelTargetParameter::Fixed(label)), Some(true)) => {
-                Target::Placeholder(TargetPlaceholder::new(label))
-            }
-||||||| parent of 99aa102c (wip: fix type stubs)
-            (Some(LabelTargetParameter::Target(target)), None) => {
-                target
-            },
-            (Some(LabelTargetParameter::Target(_)), Some(_)) => {
-                return Err(PyValueError::new_err("`placeholder` is not permitted with an explicit `target`"));
-            },
-            (Some(LabelTargetParameter::Fixed(label)), Some(false) | None) => {
-                Target::Fixed(label)
-            },
-            (Some(LabelTargetParameter::Fixed(label)), Some(true)) => {
-                Target::Placeholder(TargetPlaceholder::new(label))
-            },
-=======
             // Label(placeholder=False)
             (None, Some(false)) => {
                 return Err(PyValueError::new_err("`target` cannot be `None` if `placeholder=False`"));
@@ -989,20 +1111,8 @@ impl Label {
                 return Err(PyValueError::new_err("`target` is a `Placeholder`, so `placeholder=False` is invalid"));
             },
 
->>>>>>> 99aa102c (wip: fix type stubs)
             (None, Some(true) | None) => {
                 Target::Placeholder(TargetPlaceholder::new("L".to_string()))
-<<<<<<< HEAD
-            }
-            (None, Some(false)) => {
-                return Err(PyValueError::new_err("missing label target"));
-            }
-||||||| parent of 99aa102c (wip: fix type stubs)
-            },
-            (None, Some(false)) => {
-                return Err(PyValueError::new_err("missing label target"));
-            },
-=======
             },
 
             // Label("name"), Label("name", placeholder=False), Label("name", placeholder=None)
@@ -1033,8 +1143,6 @@ impl Label {
             (Some(LabelTargetLike::Existing(target)), Some(true)) => {
                 target
             },
-
->>>>>>> 99aa102c (wip: fix type stubs)
         };
 
         Ok(Self { target })
@@ -1118,6 +1226,36 @@ impl MeasureCalibrationIdentifier {
     }
 }
 
+// TODO(migration-guide): `pyquil`'s `unpack_classical_reg` would convert to a `MemoryReference`
+// from a `MemoryReference`, `(str,int)`, or `[str,int]`.
+// In practice, it was likely only used to handle parameters in functions that accepted this type,
+// so we can just use a `MemoryReferenceDesignator` enum to handle this conversion in the bindings.
+//
+// This is a similar story for `unpack_qubit` vs `QubitDesignator`.
+#[derive(FromPyObject)]
+enum MemoryReferenceLike<'py> {
+    /// An existing `MemoryReference`, which we can simply use directly.
+    MemoryReference(MemoryReference),
+    /// A `DeclarationAt` object, obtained by indexing a `Declaration`.
+    DeclarationAt(Bound<'py, DeclarationAt>),
+    /// A `Declaration` object, which we can convert to a `MemoryReference` with an index of 0.
+    Declaration(Declaration),
+    /// A tuple of `(str, int)` representing a name and index.
+    Pair((String, u64)),
+}
+
+impl<'py> From<MemoryReferenceLike<'py>> for MemoryReference {
+    fn from(value: MemoryReferenceLike<'py>) -> Self {
+        match value {
+            MemoryReferenceLike::MemoryReference(memref) => memref,
+            MemoryReferenceLike::DeclarationAt(decl_at) => decl_at.get().memref(decl_at.py()),
+            MemoryReferenceLike::Declaration(decl) => decl.to_memory_reference(0),
+            MemoryReferenceLike::Pair((name, index)) => MemoryReference::new(name, index),
+        }
+    }
+}
+
+
 // We don't use [`pickleable_new!`] here because we're separating Rust's [`Measurement::new`] and
 // Python's `Measurement.new`.
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
@@ -1129,8 +1267,8 @@ impl Measurement {
     // `__getnewargs_ex__` is consistent with `__new__`!
     #[pyo3(signature = (qubit, target, *, name = None))]
     #[new]
-    fn __new__(qubit: Qubit, target: Option<MemoryReference>, name: Option<String>) -> Self {
-        Self::new(name, qubit, target)
+    fn __new__(qubit: Qubit, target: Option<MemoryReferenceLike>, name: Option<String>) -> Self {
+        Self::new(name, qubit, target.map(Into::into))
     }
 
     #[gen_stub(override_return_type(
@@ -1206,6 +1344,35 @@ impl MemoryReference {
             name: self.name.clone(),
             index,
         })
+    }
+
+    /// Return a new `Arithmetic` instruction
+    /// representing the addition of this `MemoryReference` to the given operand.
+    ///
+    /// # Example
+    ///
+    /// ```python
+    /// from quil.instructions import MemoryReference, Arithmetic
+    ///
+    /// mem_ref = MemoryReference("counter", 0)
+    /// arith = mem_ref + 5
+    /// assert isinstance(arith, Arithmetic)
+    /// assert arith.to_quil() == "ADD counter[0] 5"
+    /// ```
+    fn __add__(&self, other: ArithmeticOperand) -> Arithmetic {
+        Arithmetic { operator: ArithmeticOperator::Add, destination: self.clone(), source: other }
+    }
+
+    fn __sub__(&self, other: ArithmeticOperand) -> Arithmetic {
+        Arithmetic { operator: ArithmeticOperator::Subtract, destination: self.clone(), source: other }
+    }
+
+    fn __truediv__(&self, other: ArithmeticOperand) -> Arithmetic {
+        Arithmetic { operator: ArithmeticOperator::Divide, destination: self.clone(), source: other }
+    }
+
+    fn __mul__(&self, other: ArithmeticOperand) -> Arithmetic {
+        Arithmetic { operator: ArithmeticOperator::Multiply, destination: self.clone(), source: other }
     }
 
     // -------------------------------------------------------------------------------------
@@ -1289,6 +1456,35 @@ impl Sharing {
     #[getter]
     fn offsets(&self) -> Vec<Offset> {
         self.offsets.clone()
+    }
+}
+
+/// Allow `Target` to be extracted a number of useful Python types.
+///
+/// This table summarizes the Python types that can be converted to a `Target`:
+///
+/// | Python Type                 | Resulting `Target`   |
+/// | --------------------------- | -------------------- |
+/// | `Target`                    | `Target` (cloned)    |
+/// | `Label`                     | `Label.target`       |
+/// | `str`                       | `Target::Fixed(str)` |
+/// | `Instruction::Label(label)` | `label.target`       |
+impl<'a, 'py> FromPyObject<'a, 'py> for Target {
+    type Error = pyo3::PyErr;
+
+    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
+        if let Ok(value) = obj.cast::<Target>() {
+            Ok(value.get().clone())
+        } else if let Ok(value) = obj.cast::<Label>() {
+            Ok(value.get().target.clone())
+        } else if let Ok(value) = obj.cast::<Instruction>() {
+            match value.get() {
+                Instruction::Label(label) => Ok(label.target.clone()),
+                _ => Err(PyTypeError::new_err("not a valid Target instruction")),
+            }
+        } else {
+            Err(PyTypeError::new_err("cannot convert to Target"))
+        }
     }
 }
 
@@ -1420,9 +1616,11 @@ mod stubs {
     // There was a `QubitDesignator` type alias = `QubitPlaceholder | int | str` in PyQuil v4,
     // but now we can explicitly type parameters to accept those (or a `Qubit` itself) instead.
     // impl_stub_type!(Like<'_, '_, Qubit> = Qubit | i64 | String | QubitPlaceholder);
+
     impl_stub_type!(LabelTargetLike = String | Target);
-    type_alias!("quil.instructions", LabelTargetParameter = LabelTargetLike);
+    type_alias!("quil._quil.instructions", LabelTargetParameter = LabelTargetLike);
     impl_stub_type!(GateModifierDesignator = GateModifier | String);
+    impl_stub_type!(MemoryReferenceLike<'_> = MemoryReference | DeclarationAt | Declaration | (String, u64));
 }
 
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
