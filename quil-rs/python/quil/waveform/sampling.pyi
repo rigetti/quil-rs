@@ -29,11 +29,6 @@ class IqSamples:
         The number of samples.  The same as `sample_count`.
         """
     def __length_hint__(self) -> builtins.int: ...
-    def __repr__(self) -> builtins.str:
-        r"""
-        Implements `__repr__` for Python in terms of the Rust
-        [`Debug`](std::fmt::Debug) implementation.
-        """
     def __reversed__(self) -> IqSamplesRevIter: ...
     def count(self, value: typing.Any) -> builtins.int:
         r"""
@@ -91,21 +86,13 @@ class IqSamples:
 class IqSamplesIter:
     def __iter__(self) -> IqSamplesIter: ...
     def __next__(self) -> builtins.complex: ...
-    def __repr__(self) -> builtins.str:
-        r"""
-        Implements `__repr__` for Python in terms of the Rust
-        [`Debug`](std::fmt::Debug) implementation.
-        """
+    def __repr__(self) -> builtins.str: ...
 
 @typing.final
 class IqSamplesRevIter:
     def __iter__(self) -> IqSamplesRevIter: ...
     def __next__(self) -> builtins.complex: ...
-    def __repr__(self) -> builtins.str:
-        r"""
-        Implements `__repr__` for Python in terms of the Rust
-        [`Debug`](std::fmt::Debug) implementation.
-        """
+    def __repr__(self) -> builtins.str: ...
 
 class SamplingError(QuilError):
     r"""

@@ -1,27 +1,19 @@
 use std::convert::Infallible;
 
-use num_complex::Complex64;
-use numpy::{PyArray1, PyArrayMethods as _};
 use pyo3::{
     prelude::*,
-    types::{IntoPyDict as _, PyDict, PyTuple},
+    types::{IntoPyDict as _, PyDict},
     IntoPyObjectExt as _,
 };
-use rigetti_pyo3::{create_init_submodule, impl_repr};
+use rigetti_pyo3::create_init_submodule;
 
 #[cfg(feature = "stubs")]
-use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pymethods};
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
-use crate::{
-    instruction::WaveformInvocation, quilpy::errors, units::Cycles,
-    waveform::sampling::quilpy::PyIqSamples,
-};
+use crate::{instruction::WaveformInvocation, quilpy::errors};
 
 use super::{
-    builtin::{
-        apply_phase_and_detuning_at_index, quilpy::*, BoxcarKernel, BuiltinWaveform,
-        BuiltinWaveformParameters as _, CommonBuiltinParameters, ExplicitCommonBuiltinParameters,
-    },
+    builtin::{quilpy::*, BoxcarKernel, ExplicitCommonBuiltinParameters},
     Waveform, WaveformData,
 };
 
@@ -101,27 +93,23 @@ create_init_submodule! {
     ],
 }
 
-impl_repr! {
-    PyWaveform,
-    PyBuiltinWaveform,
-    PyCommonBuiltinParameters,
-    ExplicitCommonBuiltinParameters,
-    PyFlat,
-    PyGaussian,
-    PyDragGaussian,
-    PyErfSquare,
-    PyHermiteGaussian,
-    BoxcarKernel,
-}
-
 /// A wrapper around <code>[Py]&lt;[PyAny]&gt;</code> that exposes the simplest useful Rust traits:
 ///
-/// - [`std::fmt::Debug`], which prints out the underlying pointer
+/// - [`std::fmt::Debug`], which tries to use the Python `repr` if it can and prints out the
+///   underlying pointer if it can't.
 /// - [`PartialEq`] and [`Eq`], which compare object identity
 /// - [`Clone`], which attaches to the Python interpreter and calls [`Py::clone_ref`].
-// ASZ: the Debug is awful, it means that the Python __repr__ is unusable.  I should fix this.
-#[derive(Debug, FromPyObject, IntoPyObject)]
+#[derive(FromPyObject, IntoPyObject)]
 pub struct PyAnyRust(pub Py<PyAny>);
+
+impl std::fmt::Debug for PyAnyRust {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let Self(any) = self;
+        Python::try_attach(|py| any.bind(py).repr().ok().map(|repr| write!(f, "{repr}")))
+            .flatten()
+            .unwrap_or_else(|| f.debug_tuple("PyAnyRust").field(any).finish())
+    }
+}
 
 impl PartialEq for PyAnyRust {
     fn eq(&self, other: &Self) -> bool {
@@ -279,6 +267,20 @@ impl PyWaveform {
             .map(Self)
     }
 
+    #[gen_stub(override_return_type(type_repr = "Waveform[Real, Complex]"))]
+    #[staticmethod]
+    fn builtin(
+        #[gen_stub(override_type(type_repr = "BuiltinWaveform[Real, Complex]"))]
+        waveform: PyBuiltinWaveform,
+        #[gen_stub(override_type(type_repr = "CommonBuiltinParameters[Real, Complex]"))]
+        common_parameters: PyCommonBuiltinParameters,
+    ) -> PyResult<Self> {
+        Ok(Self(Waveform::Builtin {
+            waveform: waveform.0,
+            common_parameters: common_parameters.0,
+        }))
+    }
+
     #[staticmethod]
     fn custom(
         name: String,
@@ -349,211 +351,20 @@ impl PyWaveform {
             Waveform::Builtin { .. } => None,
         })
     }
-}
 
-#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
-#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[pymethods]
-impl PyBuiltinWaveform {
-    #[gen_stub(override_return_type(
-        type_repr = "Flat | Gaussian | DragGaussian | ErfSquare | HermiteGaussian | BoxcarKernel",
-    ))]
-    fn as_inner<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
-        Ok(
-            match self
-                .0
-                .as_ref()
-                .try_evaluate(|r| r.clone_ref_ok(py), |c| c.clone_ref_ok(py))
-                .unwrap_or_else(|never| match never {})
-            {
-                BuiltinWaveform::Flat(flat) => PyFlat(flat).into_bound_py_any(py)?,
-                BuiltinWaveform::Gaussian(gaussian) => {
-                    PyGaussian(gaussian).into_bound_py_any(py)?
-                }
-                BuiltinWaveform::DragGaussian(drag_gaussian) => {
-                    PyDragGaussian(drag_gaussian).into_bound_py_any(py)?
-                }
-                BuiltinWaveform::ErfSquare(erf_square) => {
-                    PyErfSquare(erf_square).into_bound_py_any(py)?
-                }
-                BuiltinWaveform::HermiteGaussian(hermite_gaussian) => {
-                    PyHermiteGaussian(hermite_gaussian).into_bound_py_any(py)?
-                }
-                BuiltinWaveform::BoxcarKernel(boxcar_kernel) => {
-                    boxcar_kernel.into_bound_py_any(py)?
-                }
-            },
-        )
-    }
-}
-
-#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
-#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[pymethods]
-impl PyCommonBuiltinParameters {
-    #[pyo3(signature = (*, duration, scale = None, phase = None, detuning = None))]
-    #[new]
-    fn __new__(
-        duration: f64,
-        #[gen_stub(override_type(type_repr = "typing.Optional[Real]", imports = ("typing")))]
-        scale: Option<PyAnyRust>,
-        #[gen_stub(override_type(type_repr = "typing.Optional[Real]", imports = ("typing")))]
-        phase: Option<PyAnyRust>,
-        #[gen_stub(override_type(type_repr = "typing.Optional[Real]", imports = ("typing")))]
-        detuning: Option<PyAnyRust>,
-    ) -> Self {
-        Self(CommonBuiltinParameters {
-            duration,
-            scale,
-            phase: phase.map(Cycles),
-            detuning,
-        })
-    }
-
-    fn __getnewargs_ex__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
-        let Self(CommonBuiltinParameters {
-            duration,
-            scale,
-            phase,
-            detuning,
-        }) = self;
-        let arguments = [
-            ("duration", duration.into_bound_py_any(py)?),
-            (
-                "scale",
-                scale
-                    .as_ref()
-                    .map(|scale| scale.clone_ref(py).into_bound_py_any(py))
-                    .transpose()?
-                    .into_bound_py_any(py)?,
-            ),
-            (
-                "phase",
-                phase
-                    .as_ref()
-                    .map(|Cycles(phase)| phase.clone_ref(py).into_bound_py_any(py))
-                    .transpose()?
-                    .into_bound_py_any(py)?,
-            ),
-            (
-                "detuning",
-                detuning
-                    .as_ref()
-                    .map(|detuning| detuning.clone_ref(py).into_bound_py_any(py))
-                    .transpose()?
-                    .into_bound_py_any(py)?,
-            ),
-        ]
-        .into_py_dict(py)?;
-        (PyTuple::empty(py), arguments).into_pyobject(py)
-    }
-
-    #[pyo3(name = "resolve_with_sample_rate")]
-    fn py_resolve_with_sample_rate<'py>(
-        // ASZ: expose a way to do this in the stub_gen binary
-        // #[gen_stub(override_type(
-        //     type_repr = "CommonBuiltinParameters[builtins.float, Complex]",
-        //     imports = ("builtins"))
-        // )]
-        &self,
-        py: Python<'py>,
-        sample_rate: f64,
-    ) -> PyResult<ExplicitCommonBuiltinParameters> {
-        Ok(self
-            .0
-            .as_ref()
-            .try_evaluate(|PyAnyRust(r)| r.extract(py), |PyAnyRust(c)| c.extract(py))?
-            .resolve_with_sample_rate(sample_rate)?)
-    }
-}
-
-#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[pymethods]
-impl ExplicitCommonBuiltinParameters {
-    #[pyo3(signature = (*, sample_count, scale, phase, detuning))]
-    #[new]
-    fn __new__(sample_count: u32, scale: f64, phase: f64, detuning: f64) -> Self {
-        Self {
-            sample_count,
-            scale,
-            phase: Cycles(phase),
-            detuning,
+    fn __repr__<'py>(&self, py: Python<'py>) -> PyResult<String> {
+        match &self.0 {
+            Waveform::Builtin {
+                waveform,
+                common_parameters,
+            } => Ok(format!(
+                "waveform.builtin(waveform={}, common_parameters={})",
+                waveform.py_repr(py)?,
+                common_parameters.py_repr(py)?
+            )),
+            Waveform::Custom { name, parameters } => Ok(format!(
+                "waveform.custom(name={name:?}, parameters={parameters:?})"
+            )),
         }
-    }
-
-    fn __getnewargs_ex__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
-        let Self {
-            sample_count,
-            scale,
-            phase,
-            detuning,
-        } = *self;
-        let arguments = [
-            ("sample_count", sample_count.into_bound_py_any(py)?),
-            ("scale", scale.into_bound_py_any(py)?),
-            ("phase", phase.0.into_bound_py_any(py)?),
-            ("detuning", detuning.into_bound_py_any(py)?),
-        ]
-        .into_py_dict(py)?;
-        (PyTuple::empty(py), arguments).into_pyobject(py)
-    }
-}
-
-/// Modulate and phase shift waveform IQ data in place.
-#[cfg_attr(feature = "stubs", gen_stub_pyfunction(module = "quil.waveform"))]
-#[pyfunction(name = "apply_phase_and_detuning")]
-fn py_apply_phase_and_detuning(
-    iq_values: &Bound<'_, PyArray1<Complex64>>,
-    phase: f64,
-    detuning: f64,
-    sample_rate: f64,
-) -> PyResult<()> {
-    // Though we could call the Rust version of this function and then modify the Python list,
-    // this version allows us to iterate only once and avoid allocating a new `Vec<Complex64>`.
-    for (index, value) in iq_values
-        .try_readwrite()?
-        .as_array_mut()
-        .into_iter()
-        .enumerate()
-    {
-        *value =
-            apply_phase_and_detuning_at_index(*value, Cycles(phase), detuning, sample_rate, index);
-    }
-
-    Ok(())
-}
-
-#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
-#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[pymethods]
-impl PyBuiltinWaveform {
-    #[pyo3(name = "iq_values_at_sample_rate")]
-    fn py_iq_values_at_sample_rate<'py>(
-        // ASZ: expose a way to do this in the stub_gen binary
-        // #[gen_stub(override_type(
-        //     type_repr = "BuiltinWaveform[builtins.float, builtins.complex]",
-        //     imports = ("builtins"))
-        // )]
-        &self,
-        py: Python<'py>,
-        #[gen_stub(override_type(
-            type_repr = "CommonBuiltinParameters[builtins.float, Complex]",
-            imports = ("builtins"))
-        )]
-        common: PyCommonBuiltinParameters,
-        sample_rate: f64,
-    ) -> PyResult<PyIqSamples> {
-        Ok(self
-            .0
-            .as_ref()
-            .try_evaluate(|PyAnyRust(r)| r.extract(py), |PyAnyRust(c)| c.extract(py))?
-            .iq_values_at_sample_rate(
-                common
-                    .0
-                    .as_ref()
-                    .try_evaluate(|PyAnyRust(r)| r.extract(py), |PyAnyRust(c)| c.extract(py))?,
-                sample_rate,
-            )?
-            .into())
     }
 }

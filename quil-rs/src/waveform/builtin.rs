@@ -556,6 +556,22 @@ macro_rules! maybe_clone_ref {
     };
 }
 
+/// Push Python `repr` of this field onto `$output`
+macro_rules! push_field_repr {
+    ($output:ident, $field:expr, ConcreteReal, $py:ident) => {{
+        use std::fmt::Write as _;
+        write!(&mut $output, "{}", $field).unwrap(); // Writing to a string can't fail
+    }};
+
+    ($output:ident, $field:expr, Real, $py:ident) => {
+        $output.push_str($field.0.bind($py).repr()?.to_str()?);
+    };
+
+    ($output:ident, $field:expr, Complex, $py:ident) => {
+        $output.push_str($field.0.bind($py).repr()?.to_str()?);
+    };
+}
+
 /// ASZ docs
 ///
 /// Generates either `Syntactic$name` or `Concrete$name` Python wrapper types, depending on what's
@@ -599,6 +615,10 @@ macro_rules! define_python_waveform {
                        sample_rate,
                    )?
                    .into())
+            }
+
+            pub(crate) fn __repr__(&self) -> &'static str {
+                concat!(stringify!($name), "()")
             }
         }
     };
@@ -678,9 +698,30 @@ macro_rules! define_python_waveform {
                        )?
                        .into())
                 }
+
+                fn __repr__<'py>(&self, py: Python<'py>) -> PyResult<String> {
+                    self.0.py_repr(py)
+                }
             }
 
             $(python_get_set!($name, $field, $ty);)*
+
+            impl super::$name<Pythonic> {
+                pub(crate) fn py_repr<'py>(&self, py: Python<'py>) -> PyResult<String> {
+                    let Self { $($field),+ } = self;
+                    let mut output = stringify!($name).to_owned();
+                    let mut sep = "(";
+                    $(
+                        output.push_str(sep);
+                        output.push_str(concat!(stringify!($field), "="));
+                        push_field_repr!(output, $field, $ty, py);
+                        #[allow(unused_assignments)]
+                        { sep = ", "; }
+                    )+
+                    output.push(')');
+                    Ok(output)
+                }
+            }
         }
     }
 }
@@ -920,7 +961,9 @@ macro_rules! define_waveforms {
 
                 use pyo3::{
                     marker::Python,
-                    types::{IntoPyDict as _, PyAny, PyTuple},
+                    types::{
+                        IntoPyDict as _, PyAny, PyAnyMethods as _, PyStringMethods as _, PyTuple,
+                    },
                     Bound, IntoPyObject as _, IntoPyObjectExt as _, Py, PyResult,
                 };
 

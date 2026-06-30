@@ -5,7 +5,6 @@ use pyo3::{
     prelude::*,
     types::{PySlice, PySliceIndices},
 };
-use rigetti_pyo3::impl_repr;
 
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::{
@@ -27,12 +26,6 @@ use crate::waveform::sampling::*;
 pub(crate) fn register_abcs<'py>(py: Python<'py>) -> PyResult<()> {
     pyo3::types::PySequence::register::<PyIqSamples>(py)?;
     Ok(())
-}
-
-impl_repr! {
-    PyIqSamples,
-    PyIqSamplesIter,
-    PyIqSamplesRevIter,
 }
 
 // A duplication of [`IqSamples<Complex64>`], but nongeneric so it can be exposed to Python.  It
@@ -343,6 +336,32 @@ impl PyIqSamples {
         self.get(index)?
             .ok_or_else(|| PyIndexError::new_err("sample index out of range"))
     }
+
+    fn __repr__<'py>(&self, py: Python<'py>) -> PyResult<String> {
+        // To get Python-like debug output, we have to ask Python to format our complex numbers
+        let complex_repr = |c: &Complex64| c.into_pyobject(py)?.repr();
+
+        match self {
+            Self::Flat { iq, sample_count } => Ok(format!(
+                "IqSamples.Flat(iq={iq}, sample_count={sample_count})",
+                iq = complex_repr(iq)?.to_str()?,
+            )),
+            Self::Samples { samples } => {
+                let mut output = "IqSamples.Samples([".to_owned();
+                let mut first = true;
+                for sample in samples {
+                    if first {
+                        first = false;
+                    } else {
+                        output.push_str(", ");
+                    }
+                    output.push_str(complex_repr(sample)?.to_str()?);
+                }
+                output.push_str("])");
+                Ok(output)
+            }
+        }
+    }
 }
 
 #[cfg(feature = "stubs")]
@@ -377,6 +396,10 @@ impl PyIqSamplesIter {
     pub fn iter(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
         slf
     }
+
+    fn __repr__(slf: PyRef<'_, Self>) -> String {
+        format!("<IqSamplesIter object at {:?}>", slf.as_ptr())
+    }
 }
 
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
@@ -390,5 +413,9 @@ impl PyIqSamplesRevIter {
     #[pyo3(name = "__iter__")]
     pub fn iter(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
         slf
+    }
+
+    fn __repr__(slf: PyRef<'_, Self>) -> String {
+        format!("<IqSamplesRevIter object at {:?}>", slf.as_ptr())
     }
 }
