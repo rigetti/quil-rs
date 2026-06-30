@@ -136,7 +136,9 @@ macro_rules! concrete_waveform {
     };
 }
 
-/// ASZ docs
+/// Define a Python getter and setter for the given type and field.
+///
+/// Some notes:
 ///
 /// 1. We have to define the getter all at once because using a macro in the return type fails to be
 ///    able to refer to `'py` for the purposes of the `#[pyo3::pymethods]` macro.
@@ -296,13 +298,7 @@ macro_rules! define_python_interop {
     };
 }
 
-/// ASZ docs
-///
-/// Generates either `Syntactic$name` or `Concrete$name` Python wrapper types, depending on what's
-/// provided as `$waveform_type`.  These wrapper types are thin public wrappers around
-/// `$name<$waveform_type>` and provide Python setters and getters for the fields.
-///
-/// Generate Python syntactic and concrete waveforms.
+/// Generate the Python interface to this waveform.  See the module docs for the details of the API.
 macro_rules! define_python_waveform {
     ($name:ident) => {
         // We can reuse the empty struct as the type that's exposed to Python, but even if we do we
@@ -523,7 +519,7 @@ macro_rules! add_python_waveform_convenience_constructor {
     }
 }
 
-/// ASZ docs
+/// Export one of the Python waveform wrappers under its `Py$waveform` name, if necessary.
 macro_rules! reexport_python_waveform {
     ($submodule:ident::$name:ident as $py_name:ident) => {};
 
