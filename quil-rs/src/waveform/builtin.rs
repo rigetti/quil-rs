@@ -623,7 +623,7 @@ macro_rules! define_python_waveform {
         }
     };
 
-    ($name:ident { $($field:ident: $ty:ident),+ }) => {
+    ($name:ident { $($field:ident: $ty:ident $(($ty_str:literal))?),+ }) => {
         paste::paste! {
             #[derive(Clone, PartialEq, Debug)]
             #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
@@ -641,8 +641,7 @@ macro_rules! define_python_waveform {
                 #[new]
                 fn __new__(
                     $(
-                        // ASZ #[gen_stub(override_type(type_repr = $ty))]
-                        #[gen_stub(override_type(type_repr = "typing.Any"))]
+                        $(#[gen_stub(override_type(type_repr = $ty_str))])?
                         $field: field_type!((<Pythonic as WaveformData>), $ty)
                     ),+
                 ) -> Self {
@@ -727,7 +726,7 @@ macro_rules! define_python_waveform {
 }
 
 macro_rules! add_python_waveform_convenience_constructor {
-    ($name:ident $({ $($field:ident: $ty:ident),+ })?) => {
+    ($name:ident $({ $($field:ident: $ty:ident $(($ty_str:literal))?),+ })?) => {
         paste::paste! {
             #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
             #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
@@ -773,8 +772,7 @@ macro_rules! add_python_waveform_convenience_constructor {
                     )]
                     detuning: Option<&Bound<'py, PyAny>>,
                     $($(
-                        // ASZ #[gen_stub(override_type(type_repr = $ty))]
-                        #[gen_stub(override_type(type_repr = "typing.Any"))]
+                        $(#[gen_stub(override_type(type_repr = $ty_str))])?
                         $field: field_type!((<Pythonic as WaveformData>), $ty)
                     ),+)?
                 ) -> Self {
@@ -981,8 +979,7 @@ macro_rules! define_waveforms {
                     BuiltinWaveformParameters as _,
                 };
 
-                $(define_python_waveform!($name $({ $($field: $ty),+ })?);)*
-                $(add_python_waveform_convenience_constructor!($name $({ $($field: $ty),+ })?);)*
+                $(define_python_interop!($name $({ $($field: $ty),+ })?);)*
             }
 
             paste::paste! {
@@ -1001,6 +998,72 @@ macro_rules! define_waveforms {
             )*
         }
     }
+}
+
+/// A token-muncher to associate the `Real` and `Complex` type names with the corresponding string
+/// literal, so that the `define_python_waveform!` and
+/// `add_python_waveform_convenience_constructor!` macros can use them to override type signatures.
+macro_rules! define_python_interop {
+    ($name:ident $({ $($field:ident: $ty:ident),+ })?) => {
+        define_python_interop! {
+            @parse
+                $name
+            |
+                $({ $($field: $ty),+ })?
+        }
+    };
+
+    (@parse
+         $name:ident $({ $($pfield:ident: $pty:ident $(($pty_str:literal))?,)+ })?
+     |
+         $({})?
+    ) => {
+        define_python_waveform! {
+            $name $({ $($pfield: $pty $(($pty_str))?),+ })?
+        }
+        add_python_waveform_convenience_constructor! {
+            $name $({ $($pfield: $pty $(($pty_str))?),+ })?
+        }
+    };
+
+    (@parse
+         $name:ident $({ $($pfield:ident: $pty:ident $(($pty_str:literal))?,)+ })?
+     |
+         { $field1:ident: ConcreteReal $(, $field:ident: $ty:ident)* }
+    ) => {
+        define_python_interop! {
+            @parse
+                $name { $($($pfield: $pty $(($pty_str))?,)+)? $field1: ConcreteReal, }
+            |
+                { $($field: $ty),* }
+        }
+    };
+
+    (@parse
+         $name:ident $({ $($pfield:ident: $pty:ident $(($pty_str:literal))?,)+ })?
+     |
+         { $field1:ident: Real $(, $field:ident: $ty:ident)* }
+    ) => {
+        define_python_interop! {
+            @parse
+                $name { $($($pfield: $pty $(($pty_str))?,)+)? $field1: Real ("Real"), }
+            |
+                { $($field: $ty),* }
+        }
+    };
+
+    (@parse
+         $name:ident $({ $($pfield:ident: $pty:ident $(($pty_str:literal))?,)+ })?
+     |
+         { $field1:ident: Complex $(, $field:ident: $ty:ident)* }
+    ) => {
+        define_python_interop! {
+            @parse
+                $name { $($($pfield: $pty $(($pty_str))?,)+)? $field1: Complex ("Complex"), }
+            |
+                { $($field: $ty),* }
+        }
+    };
 }
 
 define_waveforms! {
