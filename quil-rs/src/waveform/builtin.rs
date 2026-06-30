@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use statrs::function::erf::erf;
 
 #[cfg(feature = "stubs")]
-use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
+use pyo3_stub_gen::derive::gen_stub_pyclass;
 
 use crate::{
     real,
@@ -22,7 +22,7 @@ use crate::{
 use super::{
     parse,
     sampling::{IqSamples, SamplingError},
-    Concrete, Syntactic, WaveformData, WaveformParameterError,
+    Concrete, Reference, Syntactic, WaveformData, WaveformParameterError,
 };
 
 pub mod quilpy;
@@ -117,6 +117,24 @@ const _USIZE_MUST_BE_AT_LEAST_32_BITS: () =
     assert!(std::mem::size_of::<usize>() >= std::mem::size_of::<u32>());
 
 impl<S: WaveformData> CommonBuiltinParameters<S> {
+    /// Convert an owned [`CommonBuiltinParameters`] into an equivalent one whose (non-concrete)
+    /// parameters are all references.
+    pub fn as_ref(&self) -> CommonBuiltinParameters<Reference<'_, S>> {
+        let Self {
+            duration,
+            scale,
+            phase,
+            detuning,
+        } = self;
+
+        CommonBuiltinParameters {
+            duration: *duration,
+            scale: scale.as_ref(),
+            phase: phase.as_ref().map(Cycles::as_ref),
+            detuning: detuning.as_ref(),
+        }
+    }
+
     /// Convert one [`CommonBuiltinParameters`] value into another by replacing its associated data.
     ///
     /// Given two forms of waveform data, `S` and `T`, the user specifies how to evaluate `S`'s real
@@ -403,6 +421,21 @@ macro_rules! extract_type_if_generic_field {
     };
 }
 
+/// Part of the implementation of the `as_ref` function for waveforms; given a reference to a
+/// pseudo-typed field `$field_ref: $pseudo_type`, either dereference it (if it's concrete) or leave
+/// it alone (if it isn't concrete).
+macro_rules! field_referencer {
+    (ConcreteReal, $field_ref:expr) => {
+        *$field_ref
+    };
+    (Real, $field_ref:expr) => {
+        $field_ref
+    };
+    (Complex, $field_ref:expr) => {
+        $field_ref
+    };
+}
+
 /// Part of the implementation of the `try_evaluate` function for waveforms; given a pseudo-typed
 /// field `$field: $pseudo_type` and the `$real` and `$complex` evaluator parameters to
 /// `try_evaluate`, `field_evaluator!($pseudo_type, real = $real, complex = $complex, field)` will
@@ -445,58 +478,295 @@ macro_rules! concrete_waveform {
     };
 }
 
+/// ASZ docs
+///
+/// 1. We have to define the getter all at once because using a macro in the return type fails to be
+///    able to refer to `'py` for the purposes of the `#[pyo3::pymethods]` macro.
+///
+/// 2. We have to define the methods in consecutive `impl` blocks because otherwise we'd have to
+///    define just the method with a macro, and you can't use macros inside `#[pyo3::pymethods]`
+///    blocks.
+///
+/// Setters don't *need* the same treatment, since they don't need to refer to any lifetime
+/// parameters, but we define them along with the getters for simplicity.
+macro_rules! python_get_set {
+    ($ty_name:ident, $field:ident, ConcreteReal) => {
+        paste::paste! {
+            #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+            #[pyo3::pymethods]
+            impl $ty_name {
+                #[getter($field)]
+                fn [<py_get_$field>](&self) -> f64 {
+                    self.0.$field
+                }
+
+                #[setter($field)]
+                fn [<py_set_$field>](&mut self, $field: f64) {
+                    self.0.$field = $field;
+                }
+            }
+        }
+    };
+
+    ($ty_name:ident, $field:ident, Real) => {
+        python_get_set!($ty_name, $field, PyAny("Real"));
+    };
+
+    ($ty_name:ident, $field:ident, Complex) => {
+        python_get_set!($ty_name, $field, PyAny("Complex"));
+    };
+
+    ($ty_name:ident, $field:ident, PyAny($type_name:literal)) => {
+        paste::paste! {
+            #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+            #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+            #[pyo3::pymethods]
+            impl $ty_name {
+                #[getter($field)]
+                #[gen_stub(override_return_type(type_repr = $type_name))]
+                fn [<py_get_$field>]<'py>(&self, py: Python<'py>) -> &Bound<'py, PyAny> {
+                    self.0.$field.0.bind(py)
+                }
+
+                #[setter($field)]
+                fn [<py_set_$field>](
+                    &mut self,
+                    #[gen_stub(override_type(type_repr = $type_name))]
+                    $field: Py<PyAny>
+                ) {
+                    self.0.$field.0 = $field;
+                }
+            }
+        }
+    };
+}
+
+/// Clone this value if it's not a `ConcreteReal`, otherwise copy it.
+macro_rules! maybe_clone_ref {
+    ($field:expr, ConcreteReal, $py:ident) => {
+        *$field
+    };
+
+    ($field:expr, Real, $py:ident) => {
+        $field.clone_ref($py)
+    };
+
+    ($field:expr, Complex, $py:ident) => {
+        $field.clone_ref($py)
+    };
+}
+
+/// ASZ docs
+///
 /// Generates either `Syntactic$name` or `Concrete$name` Python wrapper types, depending on what's
 /// provided as `$waveform_type`.  These wrapper types are thin public wrappers around
 /// `$name<$waveform_type>` and provide Python setters and getters for the fields.
-macro_rules! define_python_waveform_wrapper {
-    (
-        $name:ident,
-        $waveform_type:ident,
-        derive($($derive:ident),*),
-        { $($field:ident: $ty:ident),+ }
-    ) => {
+///
+/// Generate Python syntactic and concrete waveforms.
+macro_rules! define_python_waveform {
+    ($name:ident) => {
+        // We can reuse the empty struct as the type that's exposed to Python, but even if we do we
+        // still need to give it its methods.
+        #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+        #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+        #[pyo3::pymethods]
+        impl super::$name {
+            #[new]
+            fn __new__() -> Self {
+                Self
+            }
+
+            #[pyo3(name = "iq_values_at_sample_rate")]
+            fn py_iq_values_at_sample_rate<'py>(
+                &self,
+                py: Python<'py>,
+                #[gen_stub(override_type(
+                    type_repr = "CommonBuiltinParameters[builtins.float, _T]",
+                    imports = ("builtins"))
+                )]
+                common: PyCommonBuiltinParameters,
+                sample_rate: f64,
+            ) -> PyResult<PyIqSamples> {
+                Ok(self
+                   .iq_values_at_sample_rate(
+                       common
+                           .0
+                           .as_ref()
+                           .try_evaluate(
+                               |PyAnyRust(r)| r.extract(py),
+                               |PyAnyRust(c)| c.extract(py),
+                           )?,
+                       sample_rate,
+                   )?
+                   .into())
+            }
+        }
+    };
+
+    ($name:ident { $($field:ident: $ty:ident),+ }) => {
         paste::paste! {
-            #[derive(Clone, PartialEq, Debug $(, $derive)*)]
+            #[derive(Clone, PartialEq, Debug)]
             #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-            #[cfg_attr(
-                feature = "python",
-                pyo3::pyclass(module = "quil.waveform", subclass, eq)
-            )]
-            pub struct [<$waveform_type $name>](pub $name<$waveform_type>);
+            #[pyo3::pyclass(module = "quil.waveform", subclass, eq)]
+            pub struct $name(pub super::$name<Pythonic>);
 
+            #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
             #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-            #[cfg(feature = "python")]
             #[pyo3::pymethods]
-            impl [<$waveform_type $name>] {
-                $(
-                    #[getter($field)]
-                    fn [<py_get_$field>](
-                        &self
-                    ) -> field_type!((<$waveform_type as WaveformData>), $ty) {
-                        self.0.$field.clone()
-                    }
+            impl $name {
+                #[pyo3(signature = (* $(, $field)+))]
+                // #[gen_stub(override_return_type(
+                //     type_repr = "$name[Real, Complex]",
+                // ))]
+                #[new]
+                fn __new__(
+                    $(
+                        // ASZ #[gen_stub(override_type(type_repr = $ty))]
+                        #[gen_stub(override_type(type_repr = "typing.Any"))]
+                        $field: field_type!((<Pythonic as WaveformData>), $ty)
+                    ),+
+                ) -> Self {
+                    Self(super::$name { $($field),+ })
+                }
 
-                    #[setter($field)]
-                    fn [<py_set_$field>](
-                        &mut self,
-                        $field: field_type!((<$waveform_type as WaveformData>), $ty),
-                    ) {
-                        self.0.$field = $field;
-                    }
-                )+
+                fn __getnewargs_ex__<'py>(
+                    &self,
+                    py: Python<'py>
+                ) -> PyResult<Bound<'py, PyTuple>> {
+                    let Self(super::$name { $($field),+ }) = self;
+                    let arguments: [(&'static str, Bound<'py, PyAny>); _] = [
+                        $((
+                            stringify!($field),
+                            maybe_clone_ref!($field, $ty, py).into_bound_py_any(py)?,
+                        )),+
+                    ];
+                    (PyTuple::empty(py), arguments.into_py_dict(py)?).into_pyobject(py)
+                }
+
+                #[pyo3(name = "iq_values_at_sample_rate")]
+                fn py_iq_values_at_sample_rate<'py>(
+                    // ASZ: expose a way to do this in the stub_gen binary
+                    // #[gen_stub(override_type(
+                    //     type_repr = "$name[builtins.float, builtins.complex]",
+                    //     imports = ("builtins"))
+                    // )]
+                    &self,
+                    py: Python<'py>,
+                    #[gen_stub(override_type(
+                        type_repr = "CommonBuiltinParameters[builtins.float, Complex]",
+                        imports = ("builtins"))
+                    )]
+                    common: PyCommonBuiltinParameters,
+                    sample_rate: f64,
+                ) -> PyResult<PyIqSamples> {
+                    Ok(self
+                       .0
+                       .as_ref()
+                       .try_evaluate::<crate::waveform::Concrete, _>(
+                           |PyAnyRust(r)| r.extract(py),
+                           |PyAnyRust(c)| c.extract(py),
+                       )?
+                       .iq_values_at_sample_rate(
+                           common
+                               .0
+                               .as_ref()
+                               .try_evaluate(
+                                   |PyAnyRust(r)| r.extract(py),
+                                   |PyAnyRust(c)| c.extract(py),
+                               )?,
+                           sample_rate,
+                       )?
+                       .into())
+                }
+            }
+
+            $(python_get_set!($name, $field, $ty);)*
+        }
+    }
+}
+
+macro_rules! add_python_waveform_convenience_constructor {
+    ($name:ident $({ $($field:ident: $ty:ident),+ })?) => {
+        paste::paste! {
+            #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+            #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+            #[pyo3::pymethods]
+            impl crate::waveform::quilpy::PyWaveform {
+                #[pyo3(
+                    name = $name:snake,
+                    signature = (
+                        *,
+                        duration, scale = None, phase = None, detuning = None,
+                        $($($field),+)?
+                    )
+                )]
+                // ASZ #[gen_stub(override_return_type(
+                //     type_repr = "$name[Real, Complex]",
+                // ))]
+                // (but only if there are fields)
+                #[staticmethod]
+                #[allow(
+                    clippy::too_many_arguments,
+                    reason = "a many-keyword-argument function is genuinely a nice interface"
+                )]
+                fn [<py_$name:snake>]<'py>(
+                    py: Python<'py>,
+                    duration: f64,
+                    #[gen_stub(override_type(
+                        type_repr = "typing.Optional[Real]",
+                        imports = ("typing"))
+                    )]
+                    #[gen_stub(override_type(
+                        type_repr = "typing.Optional[Real]",
+                        imports = ("typing"))
+                    )]
+                    scale: Option<&Bound<'py, PyAny>>,
+                    #[gen_stub(override_type(
+                        type_repr = "typing.Optional[Real]",
+                        imports = ("typing"))
+                    )]
+                    phase: Option<&Bound<'py, PyAny>>,
+                    #[gen_stub(override_type(
+                        type_repr = "typing.Optional[Real]",
+                        imports = ("typing"))
+                    )]
+                    detuning: Option<&Bound<'py, PyAny>>,
+                    $($(
+                        // ASZ #[gen_stub(override_type(type_repr = $ty))]
+                        #[gen_stub(override_type(type_repr = "typing.Any"))]
+                        $field: field_type!((<Pythonic as WaveformData>), $ty)
+                    ),+)?
+                ) -> Self {
+                    Self(crate::waveform::Waveform::Builtin {
+                        common_parameters: super::CommonBuiltinParameters {
+                            duration,
+                            scale: scale.map(|scale| {
+                                PyAnyRust(scale.as_unbound().clone_ref(py))
+                            }),
+                            phase: phase.map(|phase| {
+                                Cycles(PyAnyRust(phase.as_unbound().clone_ref(py)))
+                            }),
+                            detuning: detuning.map(|detuning| {
+                                PyAnyRust(detuning.as_unbound().clone_ref(py))
+                            }),
+                        },
+                        waveform: super::BuiltinWaveform::$name(super::$name $({
+                            $($field),+
+                        })?),
+                    })
+                }
             }
         }
     }
 }
 
-/// Generate Python syntactic and concrete waveforms.
-macro_rules! define_python_waveform {
-    ($name:ident) => {};
+/// ASZ docs
+macro_rules! reexport_python_waveform {
+    ($submodule:ident::$name:ident as $py_name:ident) => {};
 
-    ($name:ident { $($field:ident: $ty:ident),+ }) => {
-        define_python_waveform_wrapper!($name, Syntactic, derive(), { $($field: $ty),+ });
-        define_python_waveform_wrapper!($name, Concrete, derive(Copy), { $($field: $ty),+ });
-    }
+    ($submodule:ident::$name:ident { $($field:ident: $ty:ident),+ } as $py_name:ident) => {
+        pub use $submodule::$name as $py_name;
+    };
 }
 
 /// Define a single waveform, as described in the introduction to this section.  Note that we handle
@@ -561,6 +831,18 @@ macro_rules! define_waveform {
 
         impl<S: WaveformData> $name<S> {
             #[doc = concat!(
+                "Convert an owned [`", stringify!($name), "`] into an equivalent one ",
+                "whose (non-concrete) parameters are all references."
+            )]
+            pub fn as_ref(&self) -> $name<Reference<'_, S>> {
+                let Self { $($field),+ } = self;
+                $name {
+                    $($field: field_referencer!($ty, $field)),+
+                }
+            }
+
+
+            #[doc = concat!(
                 "Convert one [`", stringify!($name), "`] into another ",
                 "by replacing its associated data."
             )]
@@ -572,8 +854,8 @@ macro_rules! define_waveform {
             /// [`Expression::evaluate`][crate::expression::Expression::evaluate] to this function.
             ///
             /// For a more detailed example, see the documentation for
-            /// [`Waveform::try_evaluate`][crate::waveform::Waveform::try_evaluate], which has the same
-            /// structure as this function.
+            /// [`Waveform::try_evaluate`][crate::waveform::Waveform::try_evaluate], which has the
+            /// same structure as this function.
             #[allow(unused_variables, reason = "macro-generated code")]
             pub fn try_evaluate<T: WaveformData, E>(
                 self,
@@ -624,10 +906,47 @@ macro_rules! define_waveforms {
         )+
 
         // Exported from the `quilpy` submodule
+        #[cfg(feature = "python")]
         mod quilpy_waveforms {
             use super::*;
 
-            $(define_python_waveform!($name $({ $($field: $ty),+ })?);)*
+            // We reexport the Python waveforms from this submodule so we can give them
+            // `Py`-prefixed names; we can't do that directly because then we'd have to rename them,
+            // and we can only rename them to string literals which aren't available inside this
+            // macro.
+            mod waveform_types {
+                #[cfg(feature = "stubs")]
+                use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
+
+                use pyo3::{
+                    marker::Python,
+                    types::{IntoPyDict as _, PyAny, PyTuple},
+                    Bound, IntoPyObject as _, IntoPyObjectExt as _, Py, PyResult,
+                };
+
+                use crate::{
+                    waveform::{
+                        quilpy::{PyAnyRust, Pythonic},
+                        sampling::quilpy::PyIqSamples,
+                        WaveformData,
+                    },
+                    units::Cycles,
+                };
+
+                use super::{
+                    quilpy::PyCommonBuiltinParameters,
+                    BuiltinWaveformParameters as _,
+                };
+
+                $(define_python_waveform!($name $({ $($field: $ty),+ })?);)*
+                $(add_python_waveform_convenience_constructor!($name $({ $($field: $ty),+ })?);)*
+            }
+
+            paste::paste! {
+                $(reexport_python_waveform! {
+                    waveform_types::$name $({ $($field: $ty),+ })? as [<Py$name>]
+                })*
+            }
         }
 
         mod private {
@@ -730,6 +1049,23 @@ define_waveforms! {
 }
 
 impl<S: WaveformData> BuiltinWaveform<S> {
+    /// Convert an owned [`BuiltinWaveform`] into an equivalent one whose (non-concrete) parameters
+    /// are all references.
+    pub fn as_ref(&self) -> BuiltinWaveform<Reference<'_, S>> {
+        match self {
+            Self::Flat(flat) => BuiltinWaveform::Flat(flat.as_ref()),
+            Self::Gaussian(gaussian) => BuiltinWaveform::Gaussian(gaussian.as_ref()),
+            Self::DragGaussian(drag_gaussian) => {
+                BuiltinWaveform::DragGaussian(drag_gaussian.as_ref())
+            }
+            Self::ErfSquare(erf_square) => BuiltinWaveform::ErfSquare(erf_square.as_ref()),
+            Self::HermiteGaussian(hermite_gaussian) => {
+                BuiltinWaveform::HermiteGaussian(hermite_gaussian.as_ref())
+            }
+            Self::BoxcarKernel(boxcar_kernel) => BuiltinWaveform::BoxcarKernel(*boxcar_kernel),
+        }
+    }
+
     /// Convert one [`BuiltinWaveform`] into another by replacing its associated data.
     ///
     /// Given two forms of waveform data, `S` and `T`, the user specifies how to evaluate `S`'s real

@@ -4,6 +4,9 @@ use std::iter::{repeat_n, RepeatN};
 
 use itertools::Either;
 
+#[cfg(feature = "python")]
+pub(crate) mod quilpy;
+
 /// The result of sampling a waveform, representing a sequence of IQ value samples (of type `T`).
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum IqSamples<T> {

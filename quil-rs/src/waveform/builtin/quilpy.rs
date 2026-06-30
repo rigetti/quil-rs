@@ -1,12 +1,11 @@
+use pyo3::prelude::*;
+
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
-#[cfg(feature = "python")]
-use crate::expression::Expression;
-
 use crate::{
     units::Cycles,
-    waveform::{Concrete, Syntactic},
+    waveform::quilpy::{PyAnyRust, Pythonic},
 };
 
 use super::{BuiltinWaveform, CommonBuiltinParameters};
@@ -15,40 +14,23 @@ pub use super::quilpy_waveforms::*;
 
 #[derive(Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[cfg_attr(
-    feature = "python",
-    pyo3::pyclass(module = "quil.waveform", subclass, eq)
-)]
-pub struct SyntacticBuiltinWaveform(pub BuiltinWaveform<Syntactic>);
-
-#[derive(Clone, Copy, PartialEq, Debug)]
-#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[cfg_attr(
-    feature = "python",
-    pyo3::pyclass(module = "quil.waveform", subclass, eq)
-)]
-pub struct ConcreteBuiltinWaveform(pub BuiltinWaveform<Concrete>);
+#[pyclass(module = "quil.waveform", name = "BuiltinWaveform", subclass, eq)]
+pub struct PyBuiltinWaveform(pub BuiltinWaveform<Pythonic>);
 
 #[derive(Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[cfg_attr(
-    feature = "python",
-    pyo3::pyclass(module = "quil.waveform", subclass, eq)
+#[pyclass(
+    module = "quil.waveform",
+    name = "CommonBuiltinParameters",
+    subclass,
+    eq
 )]
-pub struct SyntacticCommonBuiltinParameters(pub CommonBuiltinParameters<Syntactic>);
+pub struct PyCommonBuiltinParameters(pub CommonBuiltinParameters<Pythonic>);
 
-#[derive(Clone, Copy, PartialEq, Debug)]
-#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[cfg_attr(
-    feature = "python",
-    pyo3::pyclass(module = "quil.waveform", subclass, eq)
-)]
-pub struct ConcreteCommonBuiltinParameters(pub CommonBuiltinParameters<Concrete>);
-
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[cfg(feature = "python")]
-#[pyo3::pymethods]
-impl SyntacticCommonBuiltinParameters {
+#[pymethods]
+impl PyCommonBuiltinParameters {
     #[getter(duration)]
     fn py_get_duration(&self) -> f64 {
         self.0.duration
@@ -60,77 +42,47 @@ impl SyntacticCommonBuiltinParameters {
     }
 
     #[getter(scale)]
-    fn py_get_scale(&self) -> Option<Expression> {
-        self.0.scale.clone()
+    #[gen_stub(override_return_type(type_repr = "typing.Optional[Real]", imports = ("typing")))]
+    fn py_get_scale<'py>(&self, py: Python<'py>) -> Option<&Bound<'py, PyAny>> {
+        self.0.scale.as_ref().map(|scale| scale.0.bind(py))
     }
 
     #[setter(scale)]
-    fn py_set_scale(&mut self, scale: Option<Expression>) {
-        self.0.scale = scale;
+    fn py_set_scale(
+        &mut self,
+        #[gen_stub(override_type(type_repr = "typing.Optional[Real]", imports = ("typing")))]
+        scale: Option<Py<PyAny>>,
+    ) {
+        self.0.scale = scale.map(PyAnyRust);
     }
 
     #[getter(phase)]
-    fn py_get_phase(&self) -> Option<Expression> {
-        self.0.phase.clone().map(|Cycles(phase)| phase)
+    #[gen_stub(override_return_type(type_repr = "typing.Optional[Real]", imports = ("typing")))]
+    fn py_get_phase<'py>(&self, py: Python<'py>) -> Option<&Bound<'py, PyAny>> {
+        self.0.phase.as_ref().map(|Cycles(phase)| phase.0.bind(py))
     }
 
     #[setter(phase)]
-    fn py_set_phase(&mut self, phase: Option<Expression>) {
-        self.0.phase = phase.map(Cycles);
+    fn py_set_phase(
+        &mut self,
+        #[gen_stub(override_type(type_repr = "typing.Optional[Real]", imports = ("typing")))]
+        phase: Option<Py<PyAny>>,
+    ) {
+        self.0.phase = phase.map(|phase| Cycles(PyAnyRust(phase)));
     }
 
     #[getter(detuning)]
-    fn py_get_detuning(&self) -> Option<Expression> {
-        self.0.detuning.clone()
+    #[gen_stub(override_return_type(type_repr = "typing.Optional[Real]", imports = ("typing")))]
+    fn py_get_detuning<'py>(&self, py: Python<'py>) -> Option<&Bound<'py, PyAny>> {
+        self.0.detuning.as_ref().map(|detuning| detuning.0.bind(py))
     }
 
     #[setter(detuning)]
-    fn py_set_detuning(&mut self, detuning: Option<Expression>) {
-        self.0.detuning = detuning;
-    }
-}
-
-#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[cfg(feature = "python")]
-#[pyo3::pymethods]
-impl ConcreteCommonBuiltinParameters {
-    #[getter(duration)]
-    fn py_get_duration(&self) -> f64 {
-        self.0.duration
-    }
-
-    #[setter(duration)]
-    fn py_set_duration(&mut self, duration: f64) {
-        self.0.duration = duration;
-    }
-
-    #[getter(scale)]
-    fn py_get_scale(&self) -> Option<f64> {
-        self.0.scale
-    }
-
-    #[setter(scale)]
-    fn py_set_scale(&mut self, scale: Option<f64>) {
-        self.0.scale = scale;
-    }
-
-    #[getter(phase)]
-    fn py_get_phase(&self) -> Option<f64> {
-        self.0.phase.map(|Cycles(phase)| phase)
-    }
-
-    #[setter(phase)]
-    fn py_set_phase(&mut self, phase: Option<f64>) {
-        self.0.phase = phase.map(Cycles);
-    }
-
-    #[getter(detuning)]
-    fn py_get_detuning(&self) -> Option<f64> {
-        self.0.detuning
-    }
-
-    #[setter(detuning)]
-    fn py_set_detuning(&mut self, detuning: Option<f64>) {
-        self.0.detuning = detuning;
+    fn py_set_detuning(
+        &mut self,
+        #[gen_stub(override_type(type_repr = "typing.Optional[Real]", imports = ("typing")))]
+        detuning: Option<Py<PyAny>>,
+    ) {
+        self.0.detuning = detuning.map(PyAnyRust);
     }
 }

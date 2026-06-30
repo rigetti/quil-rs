@@ -33,7 +33,7 @@ create_init_submodule! {
 fn init_module(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = m.py();
     init_submodule("quil", py, m)?;
-    waveform::quilpy::register_abcs(py)?;
+    waveform::sampling::quilpy::register_abcs(py)?;
     Ok(())
 }
 

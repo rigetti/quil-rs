@@ -23,6 +23,10 @@ impl<S> Cycles<S> {
     pub fn try_map<T, E>(self, f: impl FnOnce(S) -> Result<T, E>) -> Result<Cycles<T>, E> {
         Ok(Cycles(f(self.0)?))
     }
+
+    pub fn as_ref(&self) -> Cycles<&S> {
+        Cycles(&self.0)
+    }
 }
 
 #[derive(

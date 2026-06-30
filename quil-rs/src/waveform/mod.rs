@@ -1,6 +1,8 @@
 //! Waveforms that have been parsed from a bare invocation into a structured form, distinguishing
 //! [built-in waveforms][builtin].
 
+use std::marker::PhantomData;
+
 use derive_where::derive_where;
 use indexmap::IndexMap;
 use num_complex::Complex64;
@@ -62,6 +64,12 @@ pub enum Concrete {}
 #[repr(transparent)]
 pub struct Partial<T>(pub T);
 
+/// A transformer of [`WaveformData`] implementors indicating that this waveform is like another
+/// one, but has its fields taken by reference.
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+#[repr(transparent)]
+pub struct Reference<'a, T: WaveformData>(pub T, pub PhantomData<(&'a T::Real, &'a T::Complex)>);
+
 impl WaveformData for Syntactic {
     type Real = Expression;
     type Complex = Expression;
@@ -75,6 +83,11 @@ impl WaveformData for Concrete {
 impl<T: WaveformData> WaveformData for Partial<T> {
     type Real = Option<T::Real>;
     type Complex = Option<T::Complex>;
+}
+
+impl<'a, T: WaveformData> WaveformData for Reference<'a, T> {
+    type Real = &'a T::Real;
+    type Complex = &'a T::Complex;
 }
 
 /// A waveform, as specified in a [Quil-T][] [`Instruction`][crate::instruction::Instruction].
@@ -138,6 +151,29 @@ impl Waveform<Syntactic> {
 }
 
 impl<S: WaveformData> Waveform<S> {
+    /// Convert an owned [`Waveform`] into an equivalent one whose (non-concrete) parameters are all
+    /// references.  This will, however, clone the names and the mapping used in
+    /// [`Waveform::Custom`].
+    pub fn as_ref(&self) -> Waveform<Reference<'_, S>> {
+        match self {
+            Self::Builtin {
+                waveform,
+                common_parameters,
+            } => Waveform::Builtin {
+                waveform: waveform.as_ref(),
+                common_parameters: common_parameters.as_ref(),
+            },
+
+            Self::Custom { name, parameters } => Waveform::Custom {
+                name: name.clone(),
+                parameters: parameters
+                    .iter()
+                    .map(|(name, z)| (name.clone(), z))
+                    .collect(),
+            },
+        }
+    }
+
     /// Convert one [`Waveform`] into another by replacing its associated data.
     ///
     /// Given two forms of waveform data, `S` and `T`, the user specifies how to evaluate `S`'s real

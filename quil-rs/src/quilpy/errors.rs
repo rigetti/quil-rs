@@ -132,7 +132,7 @@ exception!(
 
 exception!(
     crate::waveform::sampling::SamplingError,
-    quil.waveform,
+    quil.waveform.sampling,
     SamplingError,
     QuilError,
     "Errors that may occur when sampling waveforms."
