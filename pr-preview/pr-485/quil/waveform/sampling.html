@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="generator" content="pdoc 14.7.0"/>
-    <title>quil.expression API documentation</title>
+    <title>quil.waveform.sampling API documentation</title>
 
     <style>/*! * Bootstrap Reboot v5.0.0 (https://getbootstrap.com/) * Copyright 2011-2021 The Bootstrap Authors * Copyright 2011-2021 Twitter, Inc. * Licensed under MIT (https://github.com/twbs/bootstrap/blob/main/LICENSE) * Forked from Normalize.css, licensed MIT (https://github.com/necolas/normalize.css/blob/master/LICENSE.md) */*,::after,::before{box-sizing:border-box}@media (prefers-reduced-motion:no-preference){:root{scroll-behavior:smooth}}body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans","Liberation Sans",sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji";font-size:1rem;font-weight:400;line-height:1.5;color:#212529;background-color:#fff;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}hr{margin:1rem 0;color:inherit;background-color:currentColor;border:0;opacity:.25}hr:not([size]){height:1px}h1,h2,h3,h4,h5,h6{margin-top:0;margin-bottom:.5rem;font-weight:500;line-height:1.2}h1{font-size:calc(1.375rem + 1.5vw)}@media (min-width:1200px){h1{font-size:2.5rem}}h2{font-size:calc(1.325rem + .9vw)}@media (min-width:1200px){h2{font-size:2rem}}h3{font-size:calc(1.3rem + .6vw)}@media (min-width:1200px){h3{font-size:1.75rem}}h4{font-size:calc(1.275rem + .3vw)}@media (min-width:1200px){h4{font-size:1.5rem}}h5{font-size:1.25rem}h6{font-size:1rem}p{margin-top:0;margin-bottom:1rem}abbr[data-bs-original-title],abbr[title]{-webkit-text-decoration:underline dotted;text-decoration:underline dotted;cursor:help;-webkit-text-decoration-skip-ink:none;text-decoration-skip-ink:none}address{margin-bottom:1rem;font-style:normal;line-height:inherit}ol,ul{padding-left:2rem}dl,ol,ul{margin-top:0;margin-bottom:1rem}ol ol,ol ul,ul ol,ul ul{margin-bottom:0}dt{font-weight:700}dd{margin-bottom:.5rem;margin-left:0}blockquote{margin:0 0 1rem}b,strong{font-weight:bolder}small{font-size:.875em}mark{padding:.2em;background-color:#fcf8e3}sub,sup{position:relative;font-size:.75em;line-height:0;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}a{color:#0d6efd;text-decoration:underline}a:hover{color:#0a58ca}a:not([href]):not([class]),a:not([href]):not([class]):hover{color:inherit;text-decoration:none}code,kbd,pre,samp{font-family:SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;font-size:1em;direction:ltr;unicode-bidi:bidi-override}pre{display:block;margin-top:0;margin-bottom:1rem;overflow:auto;font-size:.875em}pre code{font-size:inherit;color:inherit;word-break:normal}code{font-size:.875em;color:#d63384;word-wrap:break-word}a>code{color:inherit}kbd{padding:.2rem .4rem;font-size:.875em;color:#fff;background-color:#212529;border-radius:.2rem}kbd kbd{padding:0;font-size:1em;font-weight:700}figure{margin:0 0 1rem}img,svg{vertical-align:middle}table{caption-side:bottom;border-collapse:collapse}caption{padding-top:.5rem;padding-bottom:.5rem;color:#6c757d;text-align:left}th{text-align:inherit;text-align:-webkit-match-parent}tbody,td,tfoot,th,thead,tr{border-color:inherit;border-style:solid;border-width:0}label{display:inline-block}button{border-radius:0}button:focus:not(:focus-visible){outline:0}button,input,optgroup,select,textarea{margin:0;font-family:inherit;font-size:inherit;line-height:inherit}button,select{text-transform:none}[role=button]{cursor:pointer}select{word-wrap:normal}select:disabled{opacity:1}[list]::-webkit-calendar-picker-indicator{display:none}[type=button],[type=reset],[type=submit],button{-webkit-appearance:button}[type=button]:not(:disabled),[type=reset]:not(:disabled),[type=submit]:not(:disabled),button:not(:disabled){cursor:pointer}::-moz-focus-inner{padding:0;border-style:none}textarea{resize:vertical}fieldset{min-width:0;padding:0;margin:0;border:0}legend{float:left;width:100%;padding:0;margin-bottom:.5rem;font-size:calc(1.275rem + .3vw);line-height:inherit}@media (min-width:1200px){legend{font-size:1.5rem}}legend+*{clear:left}::-webkit-datetime-edit-day-field,::-webkit-datetime-edit-fields-wrapper,::-webkit-datetime-edit-hour-field,::-webkit-datetime-edit-minute,::-webkit-datetime-edit-month-field,::-webkit-datetime-edit-text,::-webkit-datetime-edit-year-field{padding:0}::-webkit-inner-spin-button{height:auto}[type=search]{outline-offset:-2px;-webkit-appearance:textfield}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-color-swatch-wrapper{padding:0}::file-selector-button{font:inherit}::-webkit-file-upload-button{font:inherit;-webkit-appearance:button}output{display:inline-block}iframe{border:0}summary{display:list-item;cursor:pointer}progress{vertical-align:baseline}[hidden]{display:none!important}</style>
     <style>/*! syntax-highlighting.css */pre{line-height:125%;}span.linenos{color:inherit; background-color:transparent; padding-left:5px; padding-right:20px;}.pdoc-code .hll{background-color:#ffffcc}.pdoc-code{background:#f8f8f8;}.pdoc-code .c{color:#3D7B7B; font-style:italic}.pdoc-code .err{border:1px solid #FF0000}.pdoc-code .k{color:#008000; font-weight:bold}.pdoc-code .o{color:#666666}.pdoc-code .ch{color:#3D7B7B; font-style:italic}.pdoc-code .cm{color:#3D7B7B; font-style:italic}.pdoc-code .cp{color:#9C6500}.pdoc-code .cpf{color:#3D7B7B; font-style:italic}.pdoc-code .c1{color:#3D7B7B; font-style:italic}.pdoc-code .cs{color:#3D7B7B; font-style:italic}.pdoc-code .gd{color:#A00000}.pdoc-code .ge{font-style:italic}.pdoc-code .gr{color:#E40000}.pdoc-code .gh{color:#000080; font-weight:bold}.pdoc-code .gi{color:#008400}.pdoc-code .go{color:#717171}.pdoc-code .gp{color:#000080; font-weight:bold}.pdoc-code .gs{font-weight:bold}.pdoc-code .gu{color:#800080; font-weight:bold}.pdoc-code .gt{color:#0044DD}.pdoc-code .kc{color:#008000; font-weight:bold}.pdoc-code .kd{color:#008000; font-weight:bold}.pdoc-code .kn{color:#008000; font-weight:bold}.pdoc-code .kp{color:#008000}.pdoc-code .kr{color:#008000; font-weight:bold}.pdoc-code .kt{color:#B00040}.pdoc-code .m{color:#666666}.pdoc-code .s{color:#BA2121}.pdoc-code .na{color:#687822}.pdoc-code .nb{color:#008000}.pdoc-code .nc{color:#0000FF; font-weight:bold}.pdoc-code .no{color:#880000}.pdoc-code .nd{color:#AA22FF}.pdoc-code .ni{color:#717171; font-weight:bold}.pdoc-code .ne{color:#CB3F38; font-weight:bold}.pdoc-code .nf{color:#0000FF}.pdoc-code .nl{color:#767600}.pdoc-code .nn{color:#0000FF; font-weight:bold}.pdoc-code .nt{color:#008000; font-weight:bold}.pdoc-code .nv{color:#19177C}.pdoc-code .ow{color:#AA22FF; font-weight:bold}.pdoc-code .w{color:#bbbbbb}.pdoc-code .mb{color:#666666}.pdoc-code .mf{color:#666666}.pdoc-code .mh{color:#666666}.pdoc-code .mi{color:#666666}.pdoc-code .mo{color:#666666}.pdoc-code .sa{color:#BA2121}.pdoc-code .sb{color:#BA2121}.pdoc-code .sc{color:#BA2121}.pdoc-code .dl{color:#BA2121}.pdoc-code .sd{color:#BA2121; font-style:italic}.pdoc-code .s2{color:#BA2121}.pdoc-code .se{color:#AA5D1F; font-weight:bold}.pdoc-code .sh{color:#BA2121}.pdoc-code .si{color:#A45A77; font-weight:bold}.pdoc-code .sx{color:#008000}.pdoc-code .sr{color:#A45A77}.pdoc-code .s1{color:#BA2121}.pdoc-code .ss{color:#19177C}.pdoc-code .bp{color:#008000}.pdoc-code .fm{color:#0000FF}.pdoc-code .vc{color:#19177C}.pdoc-code .vg{color:#19177C}.pdoc-code .vi{color:#19177C}.pdoc-code .vm{color:#19177C}.pdoc-code .il{color:#666666}</style>
@@ -16,11 +16,11 @@
     <nav class="pdoc">
         <label id="navtoggle" for="togglestate" class="pdoc-button"><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'><path stroke-linecap='round' stroke="currentColor" stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/></svg></label>
         <input id="togglestate" type="checkbox" aria-hidden="true" tabindex="-1">
-        <div>            <a class="pdoc-button module-list-button" href="../quil.html">
+        <div>            <a class="pdoc-button module-list-button" href="../waveform.html">
 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-box-arrow-in-left" viewBox="0 0 16 16">
   <path fill-rule="evenodd" d="M10 3.5a.5.5 0 0 0-.5-.5h-8a.5.5 0 0 0-.5.5v9a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5v-2a.5.5 0 0 1 1 0v2A1.5 1.5 0 0 1 9.5 14h-8A1.5 1.5 0 0 1 0 12.5v-9A1.5 1.5 0 0 1 1.5 2h8A1.5 1.5 0 0 1 11 3.5v2a.5.5 0 0 1-1 0v-2z"/>
   <path fill-rule="evenodd" d="M4.146 8.354a.5.5 0 0 1 0-.708l3-3a.5.5 0 1 1 .708.708L5.707 7.5H14.5a.5.5 0 0 1 0 1H5.707l2.147 2.146a.5.5 0 0 1-.708.708l-3-3z"/>
-</svg>                &nbsp;quil</a>
+</svg>                &nbsp;quil.waveform</a>
 
             <img src="https://qcs.rigetti.com/static/img/rigetti-logo.svg" class="logo" alt="project logo"/>
 
@@ -32,155 +32,53 @@
             <h2>API Documentation</h2>
                 <ul class="memberlist">
             <li>
-                    <a class="class" href="#ExpressionFunction">ExpressionFunction</a>
+                    <a class="class" href="#IqSamplesIter">IqSamplesIter</a>
                             <ul class="memberlist">
-                        <li>
-                                <a class="variable" href="#ExpressionFunction.CIS">CIS</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#ExpressionFunction.COSINE">COSINE</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#ExpressionFunction.EXPONENT">EXPONENT</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#ExpressionFunction.SINE">SINE</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#ExpressionFunction.SQUARE_ROOT">SQUARE_ROOT</a>
-                        </li>
                 </ul>
 
             </li>
             <li>
-                    <a class="class" href="#FunctionCallExpression">FunctionCallExpression</a>
+                    <a class="class" href="#IqSamplesRevIter">IqSamplesRevIter</a>
                             <ul class="memberlist">
-                        <li>
-                                <a class="variable" href="#FunctionCallExpression.function">function</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#FunctionCallExpression.expression">expression</a>
-                        </li>
                 </ul>
 
             </li>
             <li>
-                    <a class="class" href="#InfixExpression">InfixExpression</a>
+                    <a class="class" href="#IqSamples">IqSamples</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#InfixExpression.operator">operator</a>
+                                <a class="function" href="#IqSamples.count">count</a>
                         </li>
                         <li>
-                                <a class="variable" href="#InfixExpression.left">left</a>
+                                <a class="function" href="#IqSamples.index">index</a>
                         </li>
                         <li>
-                                <a class="variable" href="#InfixExpression.right">right</a>
-                        </li>
-                </ul>
-
-            </li>
-            <li>
-                    <a class="class" href="#InfixOperator">InfixOperator</a>
-                            <ul class="memberlist">
-                        <li>
-                                <a class="variable" href="#InfixOperator.CARET">CARET</a>
+                                <a class="function" href="#IqSamples.iq_values">iq_values</a>
                         </li>
                         <li>
-                                <a class="variable" href="#InfixOperator.PLUS">PLUS</a>
+                                <a class="function" href="#IqSamples.get">get</a>
                         </li>
                         <li>
-                                <a class="variable" href="#InfixOperator.MINUS">MINUS</a>
+                                <a class="variable" href="#IqSamples.sample_count">sample_count</a>
                         </li>
                         <li>
-                                <a class="variable" href="#InfixOperator.SLASH">SLASH</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#InfixOperator.STAR">STAR</a>
-                        </li>
-                </ul>
-
-            </li>
-            <li>
-                    <a class="class" href="#PrefixExpression">PrefixExpression</a>
-                            <ul class="memberlist">
-                        <li>
-                                <a class="variable" href="#PrefixExpression.expression">expression</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#PrefixExpression.operator">operator</a>
-                        </li>
-                </ul>
-
-            </li>
-            <li>
-                    <a class="class" href="#PrefixOperator">PrefixOperator</a>
-                            <ul class="memberlist">
-                        <li>
-                                <a class="variable" href="#PrefixOperator.PLUS">PLUS</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#PrefixOperator.MINUS">MINUS</a>
-                        </li>
-                </ul>
-
-            </li>
-            <li>
-                    <a class="class" href="#Expression">Expression</a>
-                            <ul class="memberlist">
-                        <li>
-                                <a class="function" href="#Expression.to_real">to_real</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Expression.into_simplified">into_simplified</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Expression.evaluate">evaluate</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Expression.substitute_variables">substitute_variables</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Expression.parse">parse</a>
-                        </li>
-                        <li>
-                                <a class="class" href="#Expression.Address">Expression.Address</a>
+                                <a class="class" href="#IqSamples.Flat">IqSamples.Flat</a>
                                         <ul class="memberlist">
+                                    <li>
+                                            <a class="variable" href="#IqSamples.Flat.iq">iq</a>
+                                    </li>
+                                    <li>
+                                            <a class="variable" href="#IqSamples.Flat.sample_count">sample_count</a>
+                                    </li>
                             </ul>
 
                         </li>
                         <li>
-                                <a class="class" href="#Expression.FunctionCall">Expression.FunctionCall</a>
+                                <a class="class" href="#IqSamples.Samples">IqSamples.Samples</a>
                                         <ul class="memberlist">
-                            </ul>
-
-                        </li>
-                        <li>
-                                <a class="class" href="#Expression.Infix">Expression.Infix</a>
-                                        <ul class="memberlist">
-                            </ul>
-
-                        </li>
-                        <li>
-                                <a class="class" href="#Expression.Number">Expression.Number</a>
-                                        <ul class="memberlist">
-                            </ul>
-
-                        </li>
-                        <li>
-                                <a class="class" href="#Expression.Pi">Expression.Pi</a>
-                                        <ul class="memberlist">
-                            </ul>
-
-                        </li>
-                        <li>
-                                <a class="class" href="#Expression.Prefix">Expression.Prefix</a>
-                                        <ul class="memberlist">
-                            </ul>
-
-                        </li>
-                        <li>
-                                <a class="class" href="#Expression.Variable">Expression.Variable</a>
-                                        <ul class="memberlist">
+                                    <li>
+                                            <a class="variable" href="#IqSamples.Samples.samples">samples</a>
+                                    </li>
                             </ul>
 
                         </li>
@@ -188,13 +86,7 @@
 
             </li>
             <li>
-                    <a class="class" href="#EvaluationError">EvaluationError</a>
-                            <ul class="memberlist">
-                </ul>
-
-            </li>
-            <li>
-                    <a class="class" href="#ParseExpressionError">ParseExpressionError</a>
+                    <a class="class" href="#SamplingError">SamplingError</a>
                             <ul class="memberlist">
                 </ul>
 
@@ -213,696 +105,235 @@
     <main class="pdoc">
             <section class="module-info">
                     <h1 class="modulename">
-<a href="./../quil.html">quil</a><wbr>.expression    </h1>
+<a href="./../../quil.html">quil</a><wbr>.<a href="./../waveform.html">waveform</a><wbr>.sampling    </h1>
 
                 
                 
                 
                 
             </section>
-                <section id="ExpressionFunction">
+                <section id="IqSamplesIter">
                     <div class="attr class">
             
     <span class="def">class</span>
-    <span class="name">ExpressionFunction</span>:
+    <span class="name">IqSamplesIter</span>:
 
         
     </div>
-    <a class="headerlink" href="#ExpressionFunction"></a>
+    <a class="headerlink" href="#IqSamplesIter"></a>
     
-            <div class="docstring"><p>A function defined within Quil syntax.</p>
+    
+
+                </section>
+                <section id="IqSamplesRevIter">
+                    <div class="attr class">
+            
+    <span class="def">class</span>
+    <span class="name">IqSamplesRevIter</span>:
+
+        
+    </div>
+    <a class="headerlink" href="#IqSamplesRevIter"></a>
+    
+    
+
+                </section>
+                <section id="IqSamples">
+                    <div class="attr class">
+            
+    <span class="def">class</span>
+    <span class="name">IqSamples</span>:
+
+        
+    </div>
+    <a class="headerlink" href="#IqSamples"></a>
+    
+            <div class="docstring"><p>The result of sampling a waveform, representing a sequence of IQ value samples.</p>
 </div>
 
 
-                            <div id="ExpressionFunction.CIS" class="classattr">
-                                <div class="attr variable">
-            <span class="name">CIS</span>        =
-<span class="default_value">Cis</span>
-
-        
-    </div>
-    <a class="headerlink" href="#ExpressionFunction.CIS"></a>
-    
-    
-
-                            </div>
-                            <div id="ExpressionFunction.COSINE" class="classattr">
-                                <div class="attr variable">
-            <span class="name">COSINE</span>        =
-<span class="default_value">Cosine</span>
-
-        
-    </div>
-    <a class="headerlink" href="#ExpressionFunction.COSINE"></a>
-    
-    
-
-                            </div>
-                            <div id="ExpressionFunction.EXPONENT" class="classattr">
-                                <div class="attr variable">
-            <span class="name">EXPONENT</span>        =
-<span class="default_value">Exponent</span>
-
-        
-    </div>
-    <a class="headerlink" href="#ExpressionFunction.EXPONENT"></a>
-    
-    
-
-                            </div>
-                            <div id="ExpressionFunction.SINE" class="classattr">
-                                <div class="attr variable">
-            <span class="name">SINE</span>        =
-<span class="default_value">Sine</span>
-
-        
-    </div>
-    <a class="headerlink" href="#ExpressionFunction.SINE"></a>
-    
-    
-
-                            </div>
-                            <div id="ExpressionFunction.SQUARE_ROOT" class="classattr">
-                                <div class="attr variable">
-            <span class="name">SQUARE_ROOT</span>        =
-<span class="default_value">SquareRoot</span>
-
-        
-    </div>
-    <a class="headerlink" href="#ExpressionFunction.SQUARE_ROOT"></a>
-    
-    
-
-                            </div>
-                </section>
-                <section id="FunctionCallExpression">
-                    <div class="attr class">
-            
-    <span class="def">class</span>
-    <span class="name">FunctionCallExpression</span>:
-
-        
-    </div>
-    <a class="headerlink" href="#FunctionCallExpression"></a>
-    
-            <div class="docstring"><p>The type of function call Quil expressions, e.g. <code>sin(e)</code>.</p>
-
-<p>Quil expressions take advantage of <em>structural sharing</em>, which is why the <code><a href="#FunctionCallExpression.expression">expression</a></code> here is
-wrapped in an [<code>ArcIntern</code>]; for more details, see the documentation for [<code><a href="#Expression">Expression</a></code>].</p>
-
-<p>Note that when comparing Quil expressions, any embedded NaNs are treated as <em>equal</em> to other
-NaNs, not unequal, in contravention of the IEEE 754 spec.</p>
-</div>
-
-
-                            <div id="FunctionCallExpression.function" class="classattr">
-                                <div class="attr variable">
-            <span class="name">function</span>
-
-        
-    </div>
-    <a class="headerlink" href="#FunctionCallExpression.function"></a>
-    
-    
-
-                            </div>
-                            <div id="FunctionCallExpression.expression" class="classattr">
-                                <div class="attr variable">
-            <span class="name">expression</span>
-
-        
-    </div>
-    <a class="headerlink" href="#FunctionCallExpression.expression"></a>
-    
-    
-
-                            </div>
-                </section>
-                <section id="InfixExpression">
-                    <div class="attr class">
-            
-    <span class="def">class</span>
-    <span class="name">InfixExpression</span>:
-
-        
-    </div>
-    <a class="headerlink" href="#InfixExpression"></a>
-    
-            <div class="docstring"><p>The type of infix Quil expressions, e.g. <code>e1 + e2</code>.</p>
-
-<p>Quil expressions take advantage of <em>structural sharing</em>, which is why the <code><a href="#InfixExpression.left">left</a></code> and <code><a href="#InfixExpression.right">right</a></code>
-expressions here are wrapped in [<code>ArcIntern</code>]s; for more details, see the documentation for
-[<code><a href="#Expression">Expression</a></code>].</p>
-
-<p>Note that when comparing Quil expressions, any embedded NaNs are treated as <em>equal</em> to other
-NaNs, not unequal, in contravention of the IEEE 754 spec.</p>
-</div>
-
-
-                            <div id="InfixExpression.operator" class="classattr">
-                                <div class="attr variable">
-            <span class="name">operator</span>
-
-        
-    </div>
-    <a class="headerlink" href="#InfixExpression.operator"></a>
-    
-    
-
-                            </div>
-                            <div id="InfixExpression.left" class="classattr">
-                                <div class="attr variable">
-            <span class="name">left</span>
-
-        
-    </div>
-    <a class="headerlink" href="#InfixExpression.left"></a>
-    
-    
-
-                            </div>
-                            <div id="InfixExpression.right" class="classattr">
-                                <div class="attr variable">
-            <span class="name">right</span>
-
-        
-    </div>
-    <a class="headerlink" href="#InfixExpression.right"></a>
-    
-    
-
-                            </div>
-                </section>
-                <section id="InfixOperator">
-                    <div class="attr class">
-            
-    <span class="def">class</span>
-    <span class="name">InfixOperator</span>:
-
-        
-    </div>
-    <a class="headerlink" href="#InfixOperator"></a>
-    
-    
-
-                            <div id="InfixOperator.CARET" class="classattr">
-                                <div class="attr variable">
-            <span class="name">CARET</span>        =
-<span class="default_value">Caret</span>
-
-        
-    </div>
-    <a class="headerlink" href="#InfixOperator.CARET"></a>
-    
-    
-
-                            </div>
-                            <div id="InfixOperator.PLUS" class="classattr">
-                                <div class="attr variable">
-            <span class="name">PLUS</span>        =
-<span class="default_value">Plus</span>
-
-        
-    </div>
-    <a class="headerlink" href="#InfixOperator.PLUS"></a>
-    
-    
-
-                            </div>
-                            <div id="InfixOperator.MINUS" class="classattr">
-                                <div class="attr variable">
-            <span class="name">MINUS</span>        =
-<span class="default_value">Minus</span>
-
-        
-    </div>
-    <a class="headerlink" href="#InfixOperator.MINUS"></a>
-    
-    
-
-                            </div>
-                            <div id="InfixOperator.SLASH" class="classattr">
-                                <div class="attr variable">
-            <span class="name">SLASH</span>        =
-<span class="default_value">Slash</span>
-
-        
-    </div>
-    <a class="headerlink" href="#InfixOperator.SLASH"></a>
-    
-    
-
-                            </div>
-                            <div id="InfixOperator.STAR" class="classattr">
-                                <div class="attr variable">
-            <span class="name">STAR</span>        =
-<span class="default_value">Star</span>
-
-        
-    </div>
-    <a class="headerlink" href="#InfixOperator.STAR"></a>
-    
-    
-
-                            </div>
-                </section>
-                <section id="PrefixExpression">
-                    <div class="attr class">
-            
-    <span class="def">class</span>
-    <span class="name">PrefixExpression</span>:
-
-        
-    </div>
-    <a class="headerlink" href="#PrefixExpression"></a>
-    
-            <div class="docstring"><p>The type of prefix Quil expressions, e.g. <code>-e</code>.</p>
-
-<p>Quil expressions take advantage of <em>structural sharing</em>, which is why the <code><a href="#PrefixExpression.expression">expression</a></code> here is
-wrapped in an [<code>ArcIntern</code>]; for more details, see the documentation for [<code><a href="#Expression">Expression</a></code>].</p>
-
-<p>Note that when comparing Quil expressions, any embedded NaNs are treated as <em>equal</em> to other
-NaNs, not unequal, in contravention of the IEEE 754 spec.</p>
-</div>
-
-
-                            <div id="PrefixExpression.expression" class="classattr">
-                                <div class="attr variable">
-            <span class="name">expression</span>
-
-        
-    </div>
-    <a class="headerlink" href="#PrefixExpression.expression"></a>
-    
-    
-
-                            </div>
-                            <div id="PrefixExpression.operator" class="classattr">
-                                <div class="attr variable">
-            <span class="name">operator</span>
-
-        
-    </div>
-    <a class="headerlink" href="#PrefixExpression.operator"></a>
-    
-    
-
-                            </div>
-                </section>
-                <section id="PrefixOperator">
-                    <div class="attr class">
-            
-    <span class="def">class</span>
-    <span class="name">PrefixOperator</span>:
-
-        
-    </div>
-    <a class="headerlink" href="#PrefixOperator"></a>
-    
-    
-
-                            <div id="PrefixOperator.PLUS" class="classattr">
-                                <div class="attr variable">
-            <span class="name">PLUS</span>        =
-<span class="default_value">Plus</span>
-
-        
-    </div>
-    <a class="headerlink" href="#PrefixOperator.PLUS"></a>
-    
-    
-
-                            </div>
-                            <div id="PrefixOperator.MINUS" class="classattr">
-                                <div class="attr variable">
-            <span class="name">MINUS</span>        =
-<span class="default_value">Minus</span>
-
-        
-    </div>
-    <a class="headerlink" href="#PrefixOperator.MINUS"></a>
-    
-    
-
-                            </div>
-                </section>
-                <section id="Expression">
-                    <div class="attr class">
-            
-    <span class="def">class</span>
-    <span class="name">Expression</span>:
-
-        
-    </div>
-    <a class="headerlink" href="#Expression"></a>
-    
-            <div class="docstring"><p>The type of Quil expressions.</p>
-
-<p>Quil expressions take advantage of <em>structural sharing</em>; if a Quil expression contains the same
-subexpression twice, such as <code>x + y</code> in <code>(x + y) * (x + y)</code>, the two children of the <code>*</code> node
-will be the <em>same pointer</em>.  This is implemented through <em>interning</em>, also known as
-<em>hash-consing</em>; the recursive references to child nodes are done via [<code>ArcIntern&lt;Expression&gt;</code>]s.
-Creating an [<code>ArcIntern</code>] from an <code><a href="#Expression">Expression</a></code> will always return the same pointer for the same
-expression.</p>
-
-<p>The structural sharing means that equality, cloning, and hashing on Quil expressions are all
-very cheap, as they do not need to be recursive: equality of [<code>ArcIntern</code>]s is a single-pointer
-comparison, cloning of [<code>ArcIntern</code>]s is a pointer copy and an atomic increment, and hashing of
-[<code>ArcIntern</code>]s hashes a single pointer.  It is also very cheap to key [<code>HashMap</code>]s by an
-[<code>ArcIntern&lt;Expression&gt;</code>], which can allow for cheap memoization of operations on <code><a href="#Expression">Expression</a></code>s.</p>
-
-<p>The structural sharing also means that Quil expressions are fundamentally <em>immutable</em>; it is
-<em>impossible</em> to get an owned or <code>&amp;mut</code> reference to the child <code><a href="#Expression">Expression</a></code>s of any <code><a href="#Expression">Expression</a></code>,
-as the use of interning means there may be multiple references to that <code><a href="#Expression">Expression</a></code> at any time.</p>
-
-<p>Note that when comparing Quil expressions, any embedded NaNs are treated as <em>equal</em> to other
-NaNs, not unequal, in contravention of the IEEE 754 spec.</p>
-</div>
-
-
-                            <div id="Expression.to_real" class="classattr">
+                            <div id="IqSamples.count" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">to_real</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+        <span class="name">count</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">value</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
-    <a class="headerlink" href="#Expression.to_real"></a>
+    <a class="headerlink" href="#IqSamples.count"></a>
     
-            <div class="docstring"><p>If this is a number with imaginary part "equal to" zero (of _small_ absolute value), return
-that number. Otherwise, error with an evaluation error of a descriptive type.</p>
+            <div class="docstring"><p>Return the number of occurrences of the specified sample.</p>
+
+<p>Part of the <code>collections.abc.Sequence</code> interface.</p>
 </div>
 
 
                             </div>
-                            <div id="Expression.into_simplified" class="classattr">
+                            <div id="IqSamples.index" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">into_simplified</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+        <span class="name">index</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">value</span>, </span><span class="param"><span class="n">start</span><span class="o">=</span><span class="mi">0</span>, </span><span class="param"><span class="n">stop</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
-    <a class="headerlink" href="#Expression.into_simplified"></a>
+    <a class="headerlink" href="#IqSamples.index"></a>
     
-            <div class="docstring"><p>Return an expression derived from this one, simplified as much as possible.</p>
+            <div class="docstring"><p>Return the first occurrences of the specified sample.  Raises <code>ValueError</code> if the value is
+not present.</p>
+
+<p>Part of the <code>collections.abc.Sequence</code> interface.</p>
 </div>
 
 
                             </div>
-                            <div id="Expression.evaluate" class="classattr">
+                            <div id="IqSamples.iq_values" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">evaluate</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">variables</span>, </span><span class="param"><span class="n">memory_references</span></span><span class="return-annotation">):</span></span>
+        <span class="name">iq_values</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
-    <a class="headerlink" href="#Expression.evaluate"></a>
+    <a class="headerlink" href="#IqSamples.iq_values"></a>
     
-            <div class="docstring"><p>Evaluate an expression, expecting that it may be fully reduced to a single complex number.</p>
+            <div class="docstring"><p>Convert this sequence of samples into an explicit numpy array.</p>
 
-<p>If it cannot be reduced to a complex number, this raises an error.</p>
+<p>The length of this array is [<code>self.sample_count()</code>][Self::sample_count], and its values are
+given by [<code>self[_]</code>][Self::get].</p>
 </div>
 
 
                             </div>
-                            <div id="Expression.substitute_variables" class="classattr">
+                            <div id="IqSamples.get" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">substitute_variables</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">variable_values</span></span><span class="return-annotation">):</span></span>
+        <span class="name">get</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">index</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
-    <a class="headerlink" href="#Expression.substitute_variables"></a>
+    <a class="headerlink" href="#IqSamples.get"></a>
     
-            <div class="docstring"><p>Substitute an expression in the place of each matching variable.</p>
+            <div class="docstring"><p>Get the nth sample.  The same as indexing, but returns <code>None</code> instead of raising an error if
+the index is out of range.</p>
 </div>
 
 
                             </div>
-                            <div id="Expression.parse" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">parse</span><span class="signature pdoc-code condensed">(<span class="param"><span class="nb">input</span></span><span class="return-annotation">):</span></span>
+                            <div id="IqSamples.sample_count" class="classattr">
+                                <div class="attr variable">
+            <span class="name">sample_count</span>
 
         
     </div>
-    <a class="headerlink" href="#Expression.parse"></a>
+    <a class="headerlink" href="#IqSamples.sample_count"></a>
     
-            <div class="docstring"><p>Parse an <code><a href="#Expression">Expression</a></code> from a string.</p>
-
-<p>Raises a <code><a href="#ParseExpressionError">ParseExpressionError</a></code> error if the string isn't a valid Quil expression.</p>
+            <div class="docstring"><p>The number of samples.  The same as <code>len</code>.</p>
 </div>
 
 
                             </div>
                 </section>
-                <section id="Expression.Address">
+                <section id="IqSamples.Flat">
                     <div class="attr class">
             
     <span class="def">class</span>
-    <span class="name">Expression.Address</span><wbr>(<span class="base"><a href="#Expression">Expression</a></span>):
+    <span class="name">IqSamples.Flat</span><wbr>(<span class="base"><a href="#IqSamples">IqSamples</a></span>):
 
         
     </div>
-    <a class="headerlink" href="#Expression.Address"></a>
+    <a class="headerlink" href="#IqSamples.Flat"></a>
     
     
 
+                            <div id="IqSamples.Flat.iq" class="classattr">
+                                <div class="attr variable">
+            <span class="name">iq</span>
+
+        
+    </div>
+    <a class="headerlink" href="#IqSamples.Flat.iq"></a>
+    
+    
+
+                            </div>
+                            <div id="IqSamples.Flat.sample_count" class="classattr">
+                                <div class="attr variable">
+            <span class="name">sample_count</span>
+
+        
+    </div>
+    <a class="headerlink" href="#IqSamples.Flat.sample_count"></a>
+    
+    
+
+                            </div>
                             <div class="inherited">
                                 <h5>Inherited Members</h5>
                                 <dl>
-                                    <div><dt><a href="#Expression">Expression</a></dt>
-                                <dd id="Expression.Address.to_real" class="function"><a href="#Expression.to_real">to_real</a></dd>
-                <dd id="Expression.Address.into_simplified" class="function"><a href="#Expression.into_simplified">into_simplified</a></dd>
-                <dd id="Expression.Address.evaluate" class="function"><a href="#Expression.evaluate">evaluate</a></dd>
-                <dd id="Expression.Address.substitute_variables" class="function"><a href="#Expression.substitute_variables">substitute_variables</a></dd>
-                <dd id="Expression.Address.parse" class="function"><a href="#Expression.parse">parse</a></dd>
-                <dd id="Expression.Address.Address" class="class"><a href="#Expression.Address">Address</a></dd>
-                <dd id="Expression.Address.FunctionCall" class="class"><a href="#Expression.FunctionCall">FunctionCall</a></dd>
-                <dd id="Expression.Address.Infix" class="class"><a href="#Expression.Infix">Infix</a></dd>
-                <dd id="Expression.Address.Number" class="class"><a href="#Expression.Number">Number</a></dd>
-                <dd id="Expression.Address.Pi" class="class"><a href="#Expression.Pi">Pi</a></dd>
-                <dd id="Expression.Address.Prefix" class="class"><a href="#Expression.Prefix">Prefix</a></dd>
-                <dd id="Expression.Address.Variable" class="class"><a href="#Expression.Variable">Variable</a></dd>
+                                    <div><dt><a href="#IqSamples">IqSamples</a></dt>
+                                <dd id="IqSamples.Flat.count" class="function"><a href="#IqSamples.count">count</a></dd>
+                <dd id="IqSamples.Flat.index" class="function"><a href="#IqSamples.index">index</a></dd>
+                <dd id="IqSamples.Flat.iq_values" class="function"><a href="#IqSamples.iq_values">iq_values</a></dd>
+                <dd id="IqSamples.Flat.get" class="function"><a href="#IqSamples.get">get</a></dd>
+                <dd id="IqSamples.Flat.Flat" class="class"><a href="#IqSamples.Flat">Flat</a></dd>
+                <dd id="IqSamples.Flat.Samples" class="class"><a href="#IqSamples.Samples">Samples</a></dd>
 
             </div>
                                 </dl>
                             </div>
                 </section>
-                <section id="Expression.FunctionCall">
+                <section id="IqSamples.Samples">
                     <div class="attr class">
             
     <span class="def">class</span>
-    <span class="name">Expression.FunctionCall</span><wbr>(<span class="base"><a href="#Expression">Expression</a></span>):
+    <span class="name">IqSamples.Samples</span><wbr>(<span class="base"><a href="#IqSamples">IqSamples</a></span>):
 
         
     </div>
-    <a class="headerlink" href="#Expression.FunctionCall"></a>
+    <a class="headerlink" href="#IqSamples.Samples"></a>
     
     
 
+                            <div id="IqSamples.Samples.samples" class="classattr">
+                                <div class="attr variable">
+            <span class="name">samples</span>
+
+        
+    </div>
+    <a class="headerlink" href="#IqSamples.Samples.samples"></a>
+    
+    
+
+                            </div>
                             <div class="inherited">
                                 <h5>Inherited Members</h5>
                                 <dl>
-                                    <div><dt><a href="#Expression">Expression</a></dt>
-                                <dd id="Expression.FunctionCall.to_real" class="function"><a href="#Expression.to_real">to_real</a></dd>
-                <dd id="Expression.FunctionCall.into_simplified" class="function"><a href="#Expression.into_simplified">into_simplified</a></dd>
-                <dd id="Expression.FunctionCall.evaluate" class="function"><a href="#Expression.evaluate">evaluate</a></dd>
-                <dd id="Expression.FunctionCall.substitute_variables" class="function"><a href="#Expression.substitute_variables">substitute_variables</a></dd>
-                <dd id="Expression.FunctionCall.parse" class="function"><a href="#Expression.parse">parse</a></dd>
-                <dd id="Expression.FunctionCall.Address" class="class"><a href="#Expression.Address">Address</a></dd>
-                <dd id="Expression.FunctionCall.FunctionCall" class="class"><a href="#Expression.FunctionCall">FunctionCall</a></dd>
-                <dd id="Expression.FunctionCall.Infix" class="class"><a href="#Expression.Infix">Infix</a></dd>
-                <dd id="Expression.FunctionCall.Number" class="class"><a href="#Expression.Number">Number</a></dd>
-                <dd id="Expression.FunctionCall.Pi" class="class"><a href="#Expression.Pi">Pi</a></dd>
-                <dd id="Expression.FunctionCall.Prefix" class="class"><a href="#Expression.Prefix">Prefix</a></dd>
-                <dd id="Expression.FunctionCall.Variable" class="class"><a href="#Expression.Variable">Variable</a></dd>
+                                    <div><dt><a href="#IqSamples">IqSamples</a></dt>
+                                <dd id="IqSamples.Samples.count" class="function"><a href="#IqSamples.count">count</a></dd>
+                <dd id="IqSamples.Samples.index" class="function"><a href="#IqSamples.index">index</a></dd>
+                <dd id="IqSamples.Samples.iq_values" class="function"><a href="#IqSamples.iq_values">iq_values</a></dd>
+                <dd id="IqSamples.Samples.get" class="function"><a href="#IqSamples.get">get</a></dd>
+                <dd id="IqSamples.Samples.sample_count" class="variable"><a href="#IqSamples.sample_count">sample_count</a></dd>
+                <dd id="IqSamples.Samples.Flat" class="class"><a href="#IqSamples.Flat">Flat</a></dd>
+                <dd id="IqSamples.Samples.Samples" class="class"><a href="#IqSamples.Samples">Samples</a></dd>
 
             </div>
                                 </dl>
                             </div>
                 </section>
-                <section id="Expression.Infix">
+                <section id="SamplingError">
                     <div class="attr class">
             
     <span class="def">class</span>
-    <span class="name">Expression.Infix</span><wbr>(<span class="base"><a href="#Expression">Expression</a></span>):
+    <span class="name">SamplingError</span><wbr>(<span class="base"><a href="../../quil.html#QuilError">quil.QuilError</a></span>):
 
         
     </div>
-    <a class="headerlink" href="#Expression.Infix"></a>
+    <a class="headerlink" href="#SamplingError"></a>
     
-    
-
-                            <div class="inherited">
-                                <h5>Inherited Members</h5>
-                                <dl>
-                                    <div><dt><a href="#Expression">Expression</a></dt>
-                                <dd id="Expression.Infix.to_real" class="function"><a href="#Expression.to_real">to_real</a></dd>
-                <dd id="Expression.Infix.into_simplified" class="function"><a href="#Expression.into_simplified">into_simplified</a></dd>
-                <dd id="Expression.Infix.evaluate" class="function"><a href="#Expression.evaluate">evaluate</a></dd>
-                <dd id="Expression.Infix.substitute_variables" class="function"><a href="#Expression.substitute_variables">substitute_variables</a></dd>
-                <dd id="Expression.Infix.parse" class="function"><a href="#Expression.parse">parse</a></dd>
-                <dd id="Expression.Infix.Address" class="class"><a href="#Expression.Address">Address</a></dd>
-                <dd id="Expression.Infix.FunctionCall" class="class"><a href="#Expression.FunctionCall">FunctionCall</a></dd>
-                <dd id="Expression.Infix.Infix" class="class"><a href="#Expression.Infix">Infix</a></dd>
-                <dd id="Expression.Infix.Number" class="class"><a href="#Expression.Number">Number</a></dd>
-                <dd id="Expression.Infix.Pi" class="class"><a href="#Expression.Pi">Pi</a></dd>
-                <dd id="Expression.Infix.Prefix" class="class"><a href="#Expression.Prefix">Prefix</a></dd>
-                <dd id="Expression.Infix.Variable" class="class"><a href="#Expression.Variable">Variable</a></dd>
-
-            </div>
-                                </dl>
-                            </div>
-                </section>
-                <section id="Expression.Number">
-                    <div class="attr class">
-            
-    <span class="def">class</span>
-    <span class="name">Expression.Number</span><wbr>(<span class="base"><a href="#Expression">Expression</a></span>):
-
-        
-    </div>
-    <a class="headerlink" href="#Expression.Number"></a>
-    
-    
-
-                            <div class="inherited">
-                                <h5>Inherited Members</h5>
-                                <dl>
-                                    <div><dt><a href="#Expression">Expression</a></dt>
-                                <dd id="Expression.Number.to_real" class="function"><a href="#Expression.to_real">to_real</a></dd>
-                <dd id="Expression.Number.into_simplified" class="function"><a href="#Expression.into_simplified">into_simplified</a></dd>
-                <dd id="Expression.Number.evaluate" class="function"><a href="#Expression.evaluate">evaluate</a></dd>
-                <dd id="Expression.Number.substitute_variables" class="function"><a href="#Expression.substitute_variables">substitute_variables</a></dd>
-                <dd id="Expression.Number.parse" class="function"><a href="#Expression.parse">parse</a></dd>
-                <dd id="Expression.Number.Address" class="class"><a href="#Expression.Address">Address</a></dd>
-                <dd id="Expression.Number.FunctionCall" class="class"><a href="#Expression.FunctionCall">FunctionCall</a></dd>
-                <dd id="Expression.Number.Infix" class="class"><a href="#Expression.Infix">Infix</a></dd>
-                <dd id="Expression.Number.Number" class="class"><a href="#Expression.Number">Number</a></dd>
-                <dd id="Expression.Number.Pi" class="class"><a href="#Expression.Pi">Pi</a></dd>
-                <dd id="Expression.Number.Prefix" class="class"><a href="#Expression.Prefix">Prefix</a></dd>
-                <dd id="Expression.Number.Variable" class="class"><a href="#Expression.Variable">Variable</a></dd>
-
-            </div>
-                                </dl>
-                            </div>
-                </section>
-                <section id="Expression.Pi">
-                    <div class="attr class">
-            
-    <span class="def">class</span>
-    <span class="name">Expression.Pi</span><wbr>(<span class="base"><a href="#Expression">Expression</a></span>):
-
-        
-    </div>
-    <a class="headerlink" href="#Expression.Pi"></a>
-    
-    
-
-                            <div class="inherited">
-                                <h5>Inherited Members</h5>
-                                <dl>
-                                    <div><dt><a href="#Expression">Expression</a></dt>
-                                <dd id="Expression.Pi.to_real" class="function"><a href="#Expression.to_real">to_real</a></dd>
-                <dd id="Expression.Pi.into_simplified" class="function"><a href="#Expression.into_simplified">into_simplified</a></dd>
-                <dd id="Expression.Pi.evaluate" class="function"><a href="#Expression.evaluate">evaluate</a></dd>
-                <dd id="Expression.Pi.substitute_variables" class="function"><a href="#Expression.substitute_variables">substitute_variables</a></dd>
-                <dd id="Expression.Pi.parse" class="function"><a href="#Expression.parse">parse</a></dd>
-                <dd id="Expression.Pi.Address" class="class"><a href="#Expression.Address">Address</a></dd>
-                <dd id="Expression.Pi.FunctionCall" class="class"><a href="#Expression.FunctionCall">FunctionCall</a></dd>
-                <dd id="Expression.Pi.Infix" class="class"><a href="#Expression.Infix">Infix</a></dd>
-                <dd id="Expression.Pi.Number" class="class"><a href="#Expression.Number">Number</a></dd>
-                <dd id="Expression.Pi.Pi" class="class"><a href="#Expression.Pi">Pi</a></dd>
-                <dd id="Expression.Pi.Prefix" class="class"><a href="#Expression.Prefix">Prefix</a></dd>
-                <dd id="Expression.Pi.Variable" class="class"><a href="#Expression.Variable">Variable</a></dd>
-
-            </div>
-                                </dl>
-                            </div>
-                </section>
-                <section id="Expression.Prefix">
-                    <div class="attr class">
-            
-    <span class="def">class</span>
-    <span class="name">Expression.Prefix</span><wbr>(<span class="base"><a href="#Expression">Expression</a></span>):
-
-        
-    </div>
-    <a class="headerlink" href="#Expression.Prefix"></a>
-    
-    
-
-                            <div class="inherited">
-                                <h5>Inherited Members</h5>
-                                <dl>
-                                    <div><dt><a href="#Expression">Expression</a></dt>
-                                <dd id="Expression.Prefix.to_real" class="function"><a href="#Expression.to_real">to_real</a></dd>
-                <dd id="Expression.Prefix.into_simplified" class="function"><a href="#Expression.into_simplified">into_simplified</a></dd>
-                <dd id="Expression.Prefix.evaluate" class="function"><a href="#Expression.evaluate">evaluate</a></dd>
-                <dd id="Expression.Prefix.substitute_variables" class="function"><a href="#Expression.substitute_variables">substitute_variables</a></dd>
-                <dd id="Expression.Prefix.parse" class="function"><a href="#Expression.parse">parse</a></dd>
-                <dd id="Expression.Prefix.Address" class="class"><a href="#Expression.Address">Address</a></dd>
-                <dd id="Expression.Prefix.FunctionCall" class="class"><a href="#Expression.FunctionCall">FunctionCall</a></dd>
-                <dd id="Expression.Prefix.Infix" class="class"><a href="#Expression.Infix">Infix</a></dd>
-                <dd id="Expression.Prefix.Number" class="class"><a href="#Expression.Number">Number</a></dd>
-                <dd id="Expression.Prefix.Pi" class="class"><a href="#Expression.Pi">Pi</a></dd>
-                <dd id="Expression.Prefix.Prefix" class="class"><a href="#Expression.Prefix">Prefix</a></dd>
-                <dd id="Expression.Prefix.Variable" class="class"><a href="#Expression.Variable">Variable</a></dd>
-
-            </div>
-                                </dl>
-                            </div>
-                </section>
-                <section id="Expression.Variable">
-                    <div class="attr class">
-            
-    <span class="def">class</span>
-    <span class="name">Expression.Variable</span><wbr>(<span class="base"><a href="#Expression">Expression</a></span>):
-
-        
-    </div>
-    <a class="headerlink" href="#Expression.Variable"></a>
-    
-    
-
-                            <div class="inherited">
-                                <h5>Inherited Members</h5>
-                                <dl>
-                                    <div><dt><a href="#Expression">Expression</a></dt>
-                                <dd id="Expression.Variable.to_real" class="function"><a href="#Expression.to_real">to_real</a></dd>
-                <dd id="Expression.Variable.into_simplified" class="function"><a href="#Expression.into_simplified">into_simplified</a></dd>
-                <dd id="Expression.Variable.evaluate" class="function"><a href="#Expression.evaluate">evaluate</a></dd>
-                <dd id="Expression.Variable.substitute_variables" class="function"><a href="#Expression.substitute_variables">substitute_variables</a></dd>
-                <dd id="Expression.Variable.parse" class="function"><a href="#Expression.parse">parse</a></dd>
-                <dd id="Expression.Variable.Address" class="class"><a href="#Expression.Address">Address</a></dd>
-                <dd id="Expression.Variable.FunctionCall" class="class"><a href="#Expression.FunctionCall">FunctionCall</a></dd>
-                <dd id="Expression.Variable.Infix" class="class"><a href="#Expression.Infix">Infix</a></dd>
-                <dd id="Expression.Variable.Number" class="class"><a href="#Expression.Number">Number</a></dd>
-                <dd id="Expression.Variable.Pi" class="class"><a href="#Expression.Pi">Pi</a></dd>
-                <dd id="Expression.Variable.Prefix" class="class"><a href="#Expression.Prefix">Prefix</a></dd>
-                <dd id="Expression.Variable.Variable" class="class"><a href="#Expression.Variable">Variable</a></dd>
-
-            </div>
-                                </dl>
-                            </div>
-                </section>
-                <section id="EvaluationError">
-                    <div class="attr class">
-            
-    <span class="def">class</span>
-    <span class="name">EvaluationError</span><wbr>(<span class="base"><a href="../quil.html#QuilError">quil.QuilError</a></span>):
-
-        
-    </div>
-    <a class="headerlink" href="#EvaluationError"></a>
-    
-            <div class="docstring"><p>Errors that may occur while evaluation an <code><a href="#Expression">Expression</a></code>.</p>
+            <div class="docstring"><p>Errors that may occur when sampling waveforms.</p>
 </div>
 
 
@@ -910,43 +341,13 @@ that number. Otherwise, error with an evaluation error of a descriptive type.</p
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt>builtins.Exception</dt>
-                                <dd id="EvaluationError.__init__" class="function">Exception</dd>
+                                <dd id="SamplingError.__init__" class="function">Exception</dd>
 
             </div>
             <div><dt>builtins.BaseException</dt>
-                                <dd id="EvaluationError.with_traceback" class="function">with_traceback</dd>
-                <dd id="EvaluationError.add_note" class="function">add_note</dd>
-                <dd id="EvaluationError.args" class="variable">args</dd>
-
-            </div>
-                                </dl>
-                            </div>
-                </section>
-                <section id="ParseExpressionError">
-                    <div class="attr class">
-            
-    <span class="def">class</span>
-    <span class="name">ParseExpressionError</span><wbr>(<span class="base"><a href="../quil.html#QuilError">quil.QuilError</a></span>):
-
-        
-    </div>
-    <a class="headerlink" href="#ParseExpressionError"></a>
-    
-            <div class="docstring"><p>Errors that may occur while parsing an <code><a href="#Expression">Expression</a></code>.</p>
-</div>
-
-
-                            <div class="inherited">
-                                <h5>Inherited Members</h5>
-                                <dl>
-                                    <div><dt>builtins.Exception</dt>
-                                <dd id="ParseExpressionError.__init__" class="function">Exception</dd>
-
-            </div>
-            <div><dt>builtins.BaseException</dt>
-                                <dd id="ParseExpressionError.with_traceback" class="function">with_traceback</dd>
-                <dd id="ParseExpressionError.add_note" class="function">add_note</dd>
-                <dd id="ParseExpressionError.args" class="variable">args</dd>
+                                <dd id="SamplingError.with_traceback" class="function">with_traceback</dd>
+                <dd id="SamplingError.add_note" class="function">add_note</dd>
+                <dd id="SamplingError.args" class="variable">args</dd>
 
             </div>
                                 </dl>
@@ -1005,7 +406,7 @@ that number. Otherwise, error with an evaluation error of a descriptive type.</p
                 script.async = true;
                 script.onload = () => resolve(window.pdocSearch);
                 script.onerror = (e) => reject(e);
-                script.src = "../search.js";
+                script.src = "../../search.js";
                 document.getElementsByTagName("head")[0].appendChild(script);
             });
         } catch (e) {
@@ -1047,7 +448,7 @@ that number. Otherwise, error with an evaluation error of a descriptive type.</p
             }
             for (let result of results.slice(0, 10)) {
                 let doc = result.doc;
-                let url = `../${doc.modulename.replaceAll(".", "/")}.html`;
+                let url = `../../${doc.modulename.replaceAll(".", "/")}.html`;
                 if (doc.qualname) {
                     url += `#${doc.qualname}`;
                 }
