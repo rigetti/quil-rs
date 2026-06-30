@@ -47,6 +47,9 @@
                     <a class="class" href="#IqSamples">IqSamples</a>
                             <ul class="memberlist">
                         <li>
+                                <a class="function" href="#IqSamples.get">get</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#IqSamples.count">count</a>
                         </li>
                         <li>
@@ -56,19 +59,16 @@
                                 <a class="function" href="#IqSamples.iq_values">iq_values</a>
                         </li>
                         <li>
-                                <a class="function" href="#IqSamples.get">get</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#IqSamples.sample_count">sample_count</a>
                         </li>
                         <li>
                                 <a class="class" href="#IqSamples.Flat">IqSamples.Flat</a>
                                         <ul class="memberlist">
                                     <li>
-                                            <a class="variable" href="#IqSamples.Flat.iq">iq</a>
+                                            <a class="variable" href="#IqSamples.Flat.sample_count">sample_count</a>
                                     </li>
                                     <li>
-                                            <a class="variable" href="#IqSamples.Flat.sample_count">sample_count</a>
+                                            <a class="variable" href="#IqSamples.Flat.iq">iq</a>
                                     </li>
                             </ul>
 
@@ -152,6 +152,22 @@
 </div>
 
 
+                            <div id="IqSamples.get" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">get</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">index</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#IqSamples.get"></a>
+    
+            <div class="docstring"><p>Get the nth sample.  The same as indexing, but returns <code>None</code> instead of raising an error if
+the index is out of range.</p>
+</div>
+
+
+                            </div>
                             <div id="IqSamples.count" class="classattr">
                                 <div class="attr function">
             
@@ -205,22 +221,6 @@ given by [<code>self[_]</code>][Self::get].</p>
 
 
                             </div>
-                            <div id="IqSamples.get" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">get</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">index</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#IqSamples.get"></a>
-    
-            <div class="docstring"><p>Get the nth sample.  The same as indexing, but returns <code>None</code> instead of raising an error if
-the index is out of range.</p>
-</div>
-
-
-                            </div>
                             <div id="IqSamples.sample_count" class="classattr">
                                 <div class="attr variable">
             <span class="name">sample_count</span>
@@ -247,17 +247,6 @@ the index is out of range.</p>
     
     
 
-                            <div id="IqSamples.Flat.iq" class="classattr">
-                                <div class="attr variable">
-            <span class="name">iq</span>
-
-        
-    </div>
-    <a class="headerlink" href="#IqSamples.Flat.iq"></a>
-    
-    
-
-                            </div>
                             <div id="IqSamples.Flat.sample_count" class="classattr">
                                 <div class="attr variable">
             <span class="name">sample_count</span>
@@ -269,14 +258,25 @@ the index is out of range.</p>
     
 
                             </div>
+                            <div id="IqSamples.Flat.iq" class="classattr">
+                                <div class="attr variable">
+            <span class="name">iq</span>
+
+        
+    </div>
+    <a class="headerlink" href="#IqSamples.Flat.iq"></a>
+    
+    
+
+                            </div>
                             <div class="inherited">
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#IqSamples">IqSamples</a></dt>
-                                <dd id="IqSamples.Flat.count" class="function"><a href="#IqSamples.count">count</a></dd>
+                                <dd id="IqSamples.Flat.get" class="function"><a href="#IqSamples.get">get</a></dd>
+                <dd id="IqSamples.Flat.count" class="function"><a href="#IqSamples.count">count</a></dd>
                 <dd id="IqSamples.Flat.index" class="function"><a href="#IqSamples.index">index</a></dd>
                 <dd id="IqSamples.Flat.iq_values" class="function"><a href="#IqSamples.iq_values">iq_values</a></dd>
-                <dd id="IqSamples.Flat.get" class="function"><a href="#IqSamples.get">get</a></dd>
                 <dd id="IqSamples.Flat.Flat" class="class"><a href="#IqSamples.Flat">Flat</a></dd>
                 <dd id="IqSamples.Flat.Samples" class="class"><a href="#IqSamples.Samples">Samples</a></dd>
 
@@ -311,10 +311,10 @@ the index is out of range.</p>
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#IqSamples">IqSamples</a></dt>
-                                <dd id="IqSamples.Samples.count" class="function"><a href="#IqSamples.count">count</a></dd>
+                                <dd id="IqSamples.Samples.get" class="function"><a href="#IqSamples.get">get</a></dd>
+                <dd id="IqSamples.Samples.count" class="function"><a href="#IqSamples.count">count</a></dd>
                 <dd id="IqSamples.Samples.index" class="function"><a href="#IqSamples.index">index</a></dd>
                 <dd id="IqSamples.Samples.iq_values" class="function"><a href="#IqSamples.iq_values">iq_values</a></dd>
-                <dd id="IqSamples.Samples.get" class="function"><a href="#IqSamples.get">get</a></dd>
                 <dd id="IqSamples.Samples.sample_count" class="variable"><a href="#IqSamples.sample_count">sample_count</a></dd>
                 <dd id="IqSamples.Samples.Flat" class="class"><a href="#IqSamples.Flat">Flat</a></dd>
                 <dd id="IqSamples.Samples.Samples" class="class"><a href="#IqSamples.Samples">Samples</a></dd>
