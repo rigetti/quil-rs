@@ -8,7 +8,7 @@
 mod main {
     use std::process::ExitCode;
 
-    fn main() -> ExitCode {
+    pub fn main() -> ExitCode {
         eprintln!("Executing this binary only makes sense with the --stubs feature enabled.");
         ExitCode::FAILURE
     }

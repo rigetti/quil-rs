@@ -149,6 +149,7 @@ macro_rules! concrete_waveform {
 ///
 /// Setters don't *need* the same treatment, since they don't need to refer to any lifetime
 /// parameters, but we define them along with the getters for simplicity.
+#[cfg(feature = "python")]
 macro_rules! python_get_set {
     ($ty_name:ident, $field:ident, ConcreteReal) => {
         paste::paste! {
@@ -202,6 +203,7 @@ macro_rules! python_get_set {
 }
 
 /// Clone this value if it's not a `ConcreteReal`, otherwise copy it.
+#[cfg(feature = "python")]
 macro_rules! maybe_clone_ref {
     ($field:expr, ConcreteReal, $py:ident) => {
         *$field
@@ -216,7 +218,8 @@ macro_rules! maybe_clone_ref {
     };
 }
 
-/// Push Python `repr` of this field onto `$output`
+/// Push the Python `repr` of this field onto `$output`
+#[cfg(feature = "python")]
 macro_rules! push_field_repr {
     ($output:ident, $field:expr, ConcreteReal, $py:ident) => {{
         use std::fmt::Write as _;
@@ -235,6 +238,7 @@ macro_rules! push_field_repr {
 /// A token-muncher to associate the `Real` and `Complex` type names with the corresponding string
 /// literal, so that the `define_python_waveform!` and
 /// `add_python_waveform_convenience_constructor!` macros can use them to override type signatures.
+#[cfg(feature = "python")]
 macro_rules! define_python_interop {
     ($name:ident $({ $($field:ident: $ty:ident),+ })?) => {
         define_python_interop! {
@@ -299,6 +303,7 @@ macro_rules! define_python_interop {
 }
 
 /// Generate the Python interface to this waveform.  See the module docs for the details of the API.
+#[cfg(feature = "python")]
 macro_rules! define_python_waveform {
     ($name:ident) => {
         // We can reuse the empty struct as the type that's exposed to Python, but even if we do we
@@ -438,6 +443,7 @@ macro_rules! define_python_waveform {
     }
 }
 
+#[cfg(feature = "python")]
 macro_rules! add_python_waveform_convenience_constructor {
     ($name:ident $({ $($field:ident: $ty:ident $(($ty_str:literal))?),+ })?) => {
         paste::paste! {
@@ -510,6 +516,7 @@ macro_rules! add_python_waveform_convenience_constructor {
 }
 
 /// Export one of the Python waveform wrappers under its `Py$waveform` name, if necessary.
+#[cfg(feature = "python")]
 macro_rules! reexport_python_waveform {
     ($submodule:ident::$name:ident as $py_name:ident) => {};
 
@@ -714,9 +721,13 @@ macro_rules! define_waveforms {
     }
 }
 
+#[cfg(feature = "python")]
 pub(crate) use {
-    add_python_waveform_convenience_constructor, concrete_waveform, define_python_interop,
-    define_python_waveform, define_waveform, define_waveforms, extract_type_if_generic_field,
-    field_evaluator, field_parser, field_referencer, field_type, maybe_clone_ref, push_field_repr,
-    python_get_set, reexport_python_waveform, waveform_source,
+    add_python_waveform_convenience_constructor, define_python_interop, define_python_waveform,
+    maybe_clone_ref, push_field_repr, python_get_set, reexport_python_waveform,
+};
+
+pub(crate) use {
+    concrete_waveform, define_waveform, define_waveforms, extract_type_if_generic_field,
+    field_evaluator, field_parser, field_referencer, field_type, waveform_source,
 };

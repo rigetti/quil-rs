@@ -25,6 +25,7 @@ use super::{
     Concrete, Reference, Syntactic, WaveformData, WaveformParameterError,
 };
 
+#[cfg(feature = "python")]
 pub mod quilpy;
 
 mod macros;
