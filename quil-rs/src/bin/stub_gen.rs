@@ -14,9 +14,10 @@ mod main {
     }
 }
 #[cfg(feature = "stubs")]
-/// Our stub generation code applies three categories of edits to the generated `.pyi` files, in
-/// order to work around the limitations of [PyO3](https://pyo3.rs/) and
-/// [`py-stub-gen`](https://github.com/Jij-Inc/pyo3-stub-gen) when it comes to generic Python types.
+/// Our stub generation code generates the `.pyi` files with
+/// [`py-stub-gen`](https://github.com/Jij-Inc/pyo3-stub-gen), and then applies four categories of
+/// edits to the generated `.pyi` files in order to work around the limitations of
+/// [PyO3](https://pyo3.rs/) and `py-stub-gen` when it comes to generic Python types.
 ///
 /// We allow specifying four kinds of edits.  Each edit operates on a single line, but they are
 /// shown on multiple lines here for clarity.
@@ -26,7 +27,7 @@ mod main {
 ///
 /// 2. Methods may be altered to have generic parameters.  For instance, this can replace
 ///
-///    ```
+///    ```text
 ///    def evaluate(
 ///        self,
 ///        real: collections.abc.Callable[[Real], OtherReal],
@@ -37,7 +38,7 @@ mod main {
 ///    
 ///    with
 ///    
-///    ```
+///    ```text
 ///    def evaluate[OtherReal, OtherComplex = OtherReal](
 ///        self,
 ///        real: collections.abc.Callable[[Real], OtherReal],
@@ -48,7 +49,7 @@ mod main {
 /// 3. Methods may have a different type annotation placed on `self`.  For instance, this can
 ///    replace
 ///
-///    ```
+///    ```text
 ///    def iq_values_at_sample_rate[_T](
 ///        self,
 ///        common: CommonBuiltinParameters[builtins.float, _T],
@@ -59,7 +60,7 @@ mod main {
 ///    
 ///    with
 ///    
-///    ```
+///    ```text
 ///    def iq_values_at_sample_rate[_T](
 ///        self: BuiltinWaveform[builtins.float, builtins.complex],
 ///        common: CommonBuiltinParameters[builtins.float, _T],
@@ -74,7 +75,7 @@ mod main {
 ///    *fully-parameterized* form of the class.  This is important for code generation from macros.
 ///    For instance, this can replace
 ///
-///    ```
+///    ```text
 ///    def __new__(
 ///        cls,
 ///        *,
@@ -88,7 +89,7 @@ mod main {
 ///
 ///    with
 ///
-///    ```
+///    ```text
 ///    def __new__(
 ///        cls,
 ///        *,
