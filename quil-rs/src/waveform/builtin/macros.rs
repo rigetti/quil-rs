@@ -355,9 +355,7 @@ macro_rules! define_python_waveform {
             #[pyo3::pymethods]
             impl $name {
                 #[pyo3(signature = (* $(, $field)+))]
-                // ASZ #[gen_stub(override_return_type(
-                //     type_repr = "$name[Real, Complex]",
-                // ))]
+                #[gen_stub(override_return_type(type_repr = "$SELF"))]
                 #[new]
                 fn __new__(
                     $(
@@ -455,10 +453,7 @@ macro_rules! add_python_waveform_convenience_constructor {
                         $($($field),+)?
                     )
                 )]
-                // ASZ #[gen_stub(override_return_type(
-                //     type_repr = "$name[Real, Complex]",
-                // ))]
-                // (but only if there are fields)
+                #[gen_stub(override_return_type(type_repr = "$SELF"))]
                 #[staticmethod]
                 #[allow(
                     clippy::too_many_arguments,

@@ -13,8 +13,92 @@ mod main {
         ExitCode::FAILURE
     }
 }
-
 #[cfg(feature = "stubs")]
+/// Our stub generation code applies three categories of edits to the generated `.pyi` files, in
+/// order to work around the limitations of [PyO3](https://pyo3.rs/) and
+/// [`py-stub-gen`](https://github.com/Jij-Inc/pyo3-stub-gen) when it comes to generic Python types.
+///
+/// We allow specifying four kinds of edits.  Each edit operates on a single line, but they are
+/// shown on multiple lines here for clarity.
+///
+/// 1. Classes may be altered to have generic parameters.  For instance, this can replace `class
+///    Waveform:` with `class Waveform[Real, Complex]:`.
+///
+/// 2. Methods may be altered to have generic parameters.  For instance, this can replace
+///
+///    ```
+///    def evaluate(
+///        self,
+///        real: collections.abc.Callable[[Real], OtherReal],
+///        complex: collections.abc.Callable[[Complex], OtherComplex]
+///    ) -> Waveform[OtherReal, OtherComplex]:
+///        ...
+///    ```
+///    
+///    with
+///    
+///    ```
+///    def evaluate[OtherReal, OtherComplex = OtherReal](
+///        self,
+///        real: collections.abc.Callable[[Real], OtherReal],
+///        complex: collections.abc.Callable[[Complex], OtherComplex]
+///    ) -> Waveform[OtherReal, OtherComplex]:
+///    ```
+///
+/// 3. Methods may have a different type annotation placed on `self`.  For instance, this can
+///    replace
+///
+///    ```
+///    def iq_values_at_sample_rate[_T](
+///        self,
+///        common: CommonBuiltinParameters[builtins.float, _T],
+///        sample_rate: builtins.float
+///    ) -> IqSamples:
+///        ...
+///    ```
+///    
+///    with
+///    
+///    ```
+///    def iq_values_at_sample_rate[_T](
+///        self: BuiltinWaveform[builtins.float, builtins.complex],
+///        common: CommonBuiltinParameters[builtins.float, _T],
+///        sample_rate: builtins.float
+///    ) -> IqSamples:
+///        ...
+///    ```
+///
+///    (Note that this function has already had a generic parameter added by the second edit.)
+///
+/// 4. Anywhere `$SELF` occurs in a class that is being edited, it is replaced with the
+///    *fully-parameterized* form of the class.  This is important for code generation from macros.
+///    For instance, this can replace
+///
+///    ```
+///    def __new__(
+///        cls,
+///        *,
+///        duration: builtins.float,
+///        scale: typing.Optional[Real] = None,
+///        phase: typing.Optional[Real] = None,
+///        detuning: typing.Optional[Real] = None
+///    ) -> $SELF:
+///        ...
+///    ```
+///
+///    with
+///
+///    ```
+///    def __new__(
+///        cls,
+///        *,
+///        duration: builtins.float,
+///        scale: typing.Optional[Real] = None,
+///        phase: typing.Optional[Real] = None,
+///        detuning: typing.Optional[Real] = None
+///    ) -> CommonBuiltinParameters[Real, Complex]:
+///        ...
+///    ```
 mod main {
     use indexmap::IndexMap;
 
@@ -70,7 +154,10 @@ mod main {
             }
         }
 
-        pub fn fmt_type_parameters(parameters: &[TypeParameter]) -> impl fmt::Display + use<'_> {
+        pub fn fmt_type_parameters_maybe_default(
+            parameters: &[TypeParameter],
+            defaults: bool,
+        ) -> impl fmt::Display + use<'_> {
             fmt::from_fn(move |f| {
                 if parameters.is_empty() {
                     return Ok(());
@@ -83,10 +170,24 @@ mod main {
                     } else {
                         write!(f, ", ")?;
                     }
-                    write!(f, "{p}")?;
+                    if defaults {
+                        write!(f, "{p}")?;
+                    } else {
+                        write!(f, "{}", p.name)?;
+                    }
                 }
                 write!(f, "]")
             })
+        }
+
+        pub fn fmt_type_parameters(parameters: &[TypeParameter]) -> impl fmt::Display + use<'_> {
+            fmt_type_parameters_maybe_default(parameters, true)
+        }
+
+        pub fn fmt_type_parameters_defaultless(
+            parameters: &[TypeParameter],
+        ) -> impl fmt::Display + use<'_> {
+            fmt_type_parameters_maybe_default(parameters, false)
         }
     }
 
@@ -242,10 +343,10 @@ mod main {
             }
 
             /// Given a line, print the resulting possibly-edited line and update this state.
-            fn update_and_output(
+            fn update_and_output<W: io::Write>(
                 &mut self,
                 context: &PyiContext<'a>,
-                mut output: impl io::Write,
+                mut output: W,
                 line: &str,
             ) -> anyhow::Result<()> {
                 let PyiContext {
@@ -282,46 +383,66 @@ mod main {
                         "class {class_name}{}:",
                         edits::fmt_type_parameters(&class.type_parameters)
                     )?;
-                } else if let Some((current_class, method_name, method, sig_no_lparen)) =
-                    current_class.as_mut().and_then(|current_class| {
-                        line.strip_prefix("    def ")
-                            .and_then(|defless| defless.split_once("("))
-                            .and_then(|(method_name, sig_no_lparen)| {
-                                let method = current_class.class.methods.get(method_name)?;
-                                Some((current_class, method_name, method, sig_no_lparen))
-                            })
-                    })
+                } else if let Some(PyiCurrentClass {
+                    class_name,
+                    class,
+                    unseen_methods,
+                }) = current_class.as_mut()
                 {
-                    let PyiCurrentClass {
-                        class_name,
-                        unseen_methods,
-                        class: _,
-                    } = current_class;
-
-                    let edits::Method {
-                        type_parameters,
-                        self_type,
-                    } = method;
-
-                    write!(
-                        output,
-                        "    def {method_name}{}(",
-                        edits::fmt_type_parameters(type_parameters)
-                    )?;
-
-                    // Duplicate methods are fine – that's what `@overload` is
-                    unseen_methods.shift_remove(method_name);
-
-                    match self_type {
-                        Some(self_type) => match sig_no_lparen.strip_prefix("self,") {
-                            Some(selfless) => {
-                                writeln!(output, "self: {self_type},{selfless}")?;
+                    let writeln_replacing_self = |output: &mut W, text: &str| {
+                        let mut first = true;
+                        for fragment in text.split("$SELF") {
+                            if first {
+                                first = false;
+                            } else {
+                                write!(
+                                    output,
+                                    "{class_name}{}",
+                                    edits::fmt_type_parameters_defaultless(&class.type_parameters)
+                                )?;
                             }
-                            None => bail!(
-                                "no self parameter for method {module_name}.{class_name}.{method_name}"
-                            ),
-                        },
-                        None => writeln!(output, "{sig_no_lparen}")?,
+                            write!(output, "{fragment}")?;
+                        }
+                        writeln!(output)
+                    };
+
+                    if let Some((method_name, method, sig_no_lparen)) = line
+                        .strip_prefix("    def ")
+                        .and_then(|defless| defless.split_once("("))
+                        .and_then(|(method_name, sig_no_lparen)| {
+                            let method = class.methods.get(method_name)?;
+                            Some((method_name, method, sig_no_lparen))
+                        })
+                    {
+                        let edits::Method {
+                            type_parameters,
+                            self_type,
+                        } = method;
+
+                        write!(
+                            output,
+                            "    def {method_name}{}(",
+                            edits::fmt_type_parameters(type_parameters)
+                        )?;
+
+                        // Duplicate methods are fine – that's what `@overload` is
+                        unseen_methods.shift_remove(method_name);
+
+                        match self_type {
+                            Some(self_type) => match sig_no_lparen.strip_prefix("self,") {
+                                Some(selfless) => {
+                                    write!(output, "self: {self_type},")?;
+                                    writeln_replacing_self(&mut output, selfless)?;
+                                }
+                                None => bail!(
+                                    "no self parameter for method \
+                                     {module_name}.{class_name}.{method_name}"
+                                ),
+                            },
+                            None => writeln_replacing_self(&mut output, sig_no_lparen)?,
+                        }
+                    } else {
+                        writeln_replacing_self(&mut output, line)?;
                     }
                 } else {
                     writeln!(output, "{line}")?;

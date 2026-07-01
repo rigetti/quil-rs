@@ -131,6 +131,7 @@ pub struct PyCommonBuiltinParameters(pub CommonBuiltinParameters<Pythonic>);
 #[pymethods]
 impl PyCommonBuiltinParameters {
     #[pyo3(signature = (*, duration, scale = None, phase = None, detuning = None))]
+    #[gen_stub(override_return_type(type_repr = "$SELF"))]
     #[new]
     fn __new__(
         duration: f64,
