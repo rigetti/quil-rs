@@ -384,15 +384,10 @@ macro_rules! define_python_waveform {
 
                 #[pyo3(name = "iq_values_at_sample_rate")]
                 fn py_iq_values_at_sample_rate<'py>(
-                    // ASZ: expose a way to do this in the stub_gen binary
-                    // #[gen_stub(override_type(
-                    //     type_repr = "$name[builtins.float, builtins.complex]",
-                    //     imports = ("builtins"))
-                    // )]
                     &self,
                     py: Python<'py>,
                     #[gen_stub(override_type(
-                        type_repr = "CommonBuiltinParameters[builtins.float, Complex]",
+                        type_repr = "CommonBuiltinParameters[builtins.float, _T]",
                         imports = ("builtins"))
                     )]
                     common: PyCommonBuiltinParameters,

@@ -244,11 +244,6 @@ impl PyCommonBuiltinParameters {
 
     #[pyo3(name = "resolve_with_sample_rate")]
     fn py_resolve_with_sample_rate<'py>(
-        // ASZ: expose a way to do this in the stub_gen binary
-        // #[gen_stub(override_type(
-        //     type_repr = "CommonBuiltinParameters[builtins.float, Complex]",
-        //     imports = ("builtins"))
-        // )]
         &self,
         py: Python<'py>,
         sample_rate: f64,
@@ -372,15 +367,10 @@ pub fn py_apply_phase_and_detuning(
 impl PyBuiltinWaveform {
     #[pyo3(name = "iq_values_at_sample_rate")]
     fn py_iq_values_at_sample_rate<'py>(
-        // ASZ: expose a way to do this in the stub_gen binary
-        // #[gen_stub(override_type(
-        //     type_repr = "BuiltinWaveform[builtins.float, builtins.complex]",
-        //     imports = ("builtins"))
-        // )]
         &self,
         py: Python<'py>,
         #[gen_stub(override_type(
-            type_repr = "CommonBuiltinParameters[builtins.float, Complex]",
+            type_repr = "CommonBuiltinParameters[builtins.float, _T]",
             imports = ("builtins"))
         )]
         common: PyCommonBuiltinParameters,
