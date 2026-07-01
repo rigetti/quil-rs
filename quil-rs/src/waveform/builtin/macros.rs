@@ -1,30 +1,30 @@
-/// Macros for generating the built-in waveform types
-///
-/// We have to declare a bunch of waveforms which all look very similar but have slightly different
-/// contents.  This is done in the `define_waveforms!` macro block below, but to get there, we have
-/// to define a number of helper macros.
-///
-/// For details on usage, see the parent module.
-///
-/// The generated Python API is as follows:
-///
-/// 1. A module `quilpy_waveforms` exporting, for every waveform that has fields, a `Py$waveform`
-///    type that wraps `$waveform<Pythonic>`; if the waveform does not have fields, then `$waveform`
-///    is exposed directly to Python.
-///
-/// 2. A Python keyword-only constructor, a Python wrapper for `iq_values_at_sample_rate`, and a
-///    custom `__repr__` that produces output that looks like Python, all defined on `Py$waveform`
-///    for normal waveforms and `$waveform` for fieldless waveforms.
-///
-/// 3. Getters and setters for all the fields of the `Py$waveform` type.
-///
-/// 4. A way to get the Python repr from Rust, defined on the underlying `$waveform` types:
-///
-///    - A `pub(crate) fn __repr__(&self) -> &'static str` function `py_repr` function on any
-///      fieldless `$waveform`
-///
-///    - A `pub(crate) fn py_repr<'py>(&self, py: Python<'py>) -> PyResult<String>` function on all
-///      other `$waveform<Pythonic>`s.
+//! Macros for generating the built-in waveform types
+//!
+//! We have to declare a bunch of waveforms which all look very similar but have slightly different
+//! contents.  This is done in the `define_waveforms!` macro block below, but to get there, we have
+//! to define a number of helper macros.
+//!
+//! For details on usage, see the parent module.
+//!
+//! The generated Python API is as follows:
+//!
+//! 1. A module `quilpy_waveforms` exporting, for every waveform that has fields, a `Py$waveform`
+//!    type that wraps `$waveform<Pythonic>`; if the waveform does not have fields, then `$waveform`
+//!    is exposed directly to Python.
+//!
+//! 2. A Python keyword-only constructor, a Python wrapper for `iq_values_at_sample_rate`, and a
+//!    custom `__repr__` that produces output that looks like Python, all defined on `Py$waveform`
+//!    for normal waveforms and `$waveform` for fieldless waveforms.
+//!
+//! 3. Getters and setters for all the fields of the `Py$waveform` type.
+//!
+//! 4. A way to get the Python repr from Rust, defined on the underlying `$waveform` types:
+//!
+//!    - A `pub(crate) fn __repr__(&self) -> &'static str` function `py_repr` function on any
+//!      fieldless `$waveform`
+//!
+//!    - A `pub(crate) fn py_repr<'py>(&self, py: Python<'py>) -> PyResult<String>` function on all
+//!      other `$waveform<Pythonic>`s.
 
 /// Return the appropriate parser for one of the field pseudo-types.  These are for use in
 /// [`parse::Extractable`] implementations.
