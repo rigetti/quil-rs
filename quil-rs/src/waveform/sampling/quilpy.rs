@@ -125,7 +125,7 @@ impl PyIqSamples {
     }
 
     #[pyo3(name = "__length_hint__")]
-    pub fn len_hint(&self) -> usize {
+    pub fn length_hint(&self) -> usize {
         self.sample_count()
     }
 

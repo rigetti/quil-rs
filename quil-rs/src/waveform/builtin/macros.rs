@@ -218,6 +218,22 @@ macro_rules! maybe_clone_ref {
     };
 }
 
+/// Compare this value using Python equality if it's not a `ConcreteReal`, otherwise use regular equality
+#[cfg(feature = "python")]
+macro_rules! python_field_eq {
+    ($field:ident, ConcreteReal, $other:ident, $py:ident) => {
+        *$field == $other.$field
+    };
+
+    ($field:ident, Real, $other:ident, $py:ident) => {
+        $field.py_eq($py, &$other.$field)?
+    };
+
+    ($field:ident, Complex, $other:ident, $py:ident) => {
+        $field.py_eq($py, &$other.$field)?
+    };
+}
+
 /// Push the Python `repr` of this field onto `$output`
 #[cfg(feature = "python")]
 macro_rules! push_field_repr {
@@ -342,6 +358,23 @@ macro_rules! define_python_waveform {
                    .into())
             }
 
+            pub(crate) fn __eq__<'py>(
+                &self,
+                #[gen_stub(override_type(type_repr = "builtins.object", imports = ("builtins")))]
+                other: Bound<'py, PyAny>,
+            ) -> bool {
+                if let Ok(Self) = other.extract() {
+                    true
+                } else if let Ok(super::quilpy::PyBuiltinWaveform(super::BuiltinWaveform::$name(
+                    Self
+                ))) = other.extract()
+                {
+                    true
+                } else {
+                    false
+                }
+            }
+
             pub(crate) fn __repr__(&self) -> &'static str {
                 concat!(stringify!($name), "()")
             }
@@ -350,10 +383,15 @@ macro_rules! define_python_waveform {
 
     ($name:ident { $($field:ident: $ty:ident $(($ty_str:literal))?),+ }) => {
         paste::paste! {
-            #[derive(Clone, PartialEq, Debug)]
+            #[derive(Clone, Debug)]
             #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-            #[pyo3::pyclass(module = "quil.waveform", subclass, eq)]
+            #[pyo3::pyclass(module = "quil.waveform", generic, subclass)]
             pub struct $name(pub super::$name<Pythonic>);
+
+            #[cfg(feature = "stubs")]
+            pyo3_stub_gen::inventory::submit! {
+                crate::waveform::quilpy::explicit_stubs::class_getitem_info::<$name>()
+            }
 
             #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
             #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
@@ -416,6 +454,15 @@ macro_rules! define_python_waveform {
                        .into())
                 }
 
+                fn __eq__<'py>(
+                    &self,
+                    py: Python<'py>,
+                    #[gen_stub(override_type(type_repr = "builtins.object", imports = ("builtins")))]
+                    other: Bound<'py, PyAny>,
+                ) -> PyResult<bool> {
+                    self.0.py_eq(py, other)
+                }
+
                 fn __repr__<'py>(&self, py: Python<'py>) -> PyResult<String> {
                     self.0.py_repr(py)
                 }
@@ -423,7 +470,48 @@ macro_rules! define_python_waveform {
 
             $(python_get_set!($name, $field, $ty);)*
 
+            impl super::$name<Reference<'_, Pythonic>> {
+                pub(crate) fn py_eq<'py>(
+                    &self,
+                    py: Python<'py>,
+                    other: Bound<'py, PyAny>,
+                ) -> PyResult<bool> {
+                    if let Ok($name(other)) = other.extract() {
+                        self.py_eq_this_type(py, other)
+                    } else if let Ok(super::quilpy::PyBuiltinWaveform(super::BuiltinWaveform::$name(
+                        other
+                    ))) = other.extract()
+                    {
+                        self.py_eq_this_type(py, other)
+                    } else {
+                        Ok(false)
+                    }
+                }
+
+                pub(crate) fn py_eq_this_type<'py>(
+                    &self,
+                    py: Python<'py>,
+                    other: super::$name<Pythonic>,
+                ) -> PyResult<bool> {
+                    let Self { $($field),+ } = self;
+                    $(
+                        if !python_field_eq!($field, $ty, other, py) {
+                            return Ok(false);
+                        }
+                    )+
+                    Ok(true)
+                }
+            }
+
             impl super::$name<Pythonic> {
+                pub(crate) fn py_eq<'py>(
+                    &self,
+                    py: Python<'py>,
+                    other: Bound<'py, PyAny>,
+                ) -> PyResult<bool> {
+                    self.as_ref().py_eq(py, other)
+                }
+
                 pub(crate) fn py_repr<'py>(&self, py: Python<'py>) -> PyResult<String> {
                     let Self { $($field),+ } = self;
                     let mut output = stringify!($name).to_owned();
@@ -536,7 +624,7 @@ macro_rules! define_waveform {
         $(#[$struct_meta])*
         #[derive(Clone, PartialEq, Debug, Copy, Serialize, Deserialize)]
         #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-        #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.waveform", subclass, eq))]
+        #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.waveform", subclass))]
         pub struct $name;
 
         #[automatically_derived]
@@ -688,7 +776,7 @@ macro_rules! define_waveforms {
                     waveform::{
                         quilpy::{PyAnyRust, Pythonic},
                         sampling::quilpy::PyIqSamples,
-                        WaveformData,
+                        Reference, WaveformData,
                     },
                     units::Cycles,
                 };
@@ -724,7 +812,7 @@ macro_rules! define_waveforms {
 #[cfg(feature = "python")]
 pub(crate) use {
     add_python_waveform_convenience_constructor, define_python_interop, define_python_waveform,
-    maybe_clone_ref, push_field_repr, python_get_set, reexport_python_waveform,
+    maybe_clone_ref, push_field_repr, python_field_eq, python_get_set, reexport_python_waveform,
 };
 
 pub(crate) use {

@@ -10,6 +10,8 @@ use pyo3::{
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pymethods};
 
+#[cfg(feature = "stubs")]
+use crate::waveform::quilpy::explicit_stubs;
 use crate::{
     units::Cycles,
     waveform::quilpy::{PyAnyRust, Pythonic},
@@ -23,10 +25,15 @@ use super::{
 
 pub use super::quilpy_waveforms::*;
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, Debug)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[pyclass(module = "quil.waveform", name = "BuiltinWaveform", subclass, eq)]
+#[pyclass(module = "quil.waveform", name = "BuiltinWaveform", generic, subclass)]
 pub struct PyBuiltinWaveform(pub BuiltinWaveform<Pythonic>);
+
+#[cfg(feature = "stubs")]
+pyo3_stub_gen::inventory::submit! {
+    explicit_stubs::class_getitem_info::<PyBuiltinWaveform>()
+}
 
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
@@ -98,12 +105,74 @@ impl PyBuiltinWaveform {
         )
     }
 
+    fn __eq__<'py>(
+        &self,
+        py: Python<'py>,
+        #[gen_stub(override_type(type_repr = "builtins.object", imports = ("builtins")))]
+        other: Bound<'py, PyAny>,
+    ) -> PyResult<bool> {
+        self.0.py_eq(py, other)
+    }
+
     fn __repr__<'py>(&self, py: Python<'py>) -> PyResult<String> {
         self.0.py_repr(py)
     }
 }
 
 impl BuiltinWaveform<Pythonic> {
+    pub(crate) fn py_eq<'py>(&self, py: Python<'py>, other: Bound<'py, PyAny>) -> PyResult<bool> {
+        match self.as_ref() {
+            BuiltinWaveform::Flat(flat) => flat.py_eq(py, other),
+            BuiltinWaveform::Gaussian(gaussian) => gaussian.py_eq(py, other),
+            BuiltinWaveform::DragGaussian(drag_gaussian) => drag_gaussian.py_eq(py, other),
+            BuiltinWaveform::ErfSquare(erf_square) => erf_square.py_eq(py, other),
+            BuiltinWaveform::HermiteGaussian(hermite_gaussian) => hermite_gaussian.py_eq(py, other),
+            BuiltinWaveform::BoxcarKernel(boxcar_kernel) => Ok(boxcar_kernel.__eq__(other)),
+        }
+    }
+
+    pub(crate) fn py_eq_this_type<'py>(&self, py: Python<'py>, other: Self) -> PyResult<bool> {
+        match (self.as_ref(), other) {
+            (BuiltinWaveform::Flat(flat1), BuiltinWaveform::Flat(flat2)) => {
+                flat1.py_eq_this_type(py, flat2)
+            }
+
+            (BuiltinWaveform::Gaussian(gaussian1), BuiltinWaveform::Gaussian(gaussian2)) => {
+                gaussian1.py_eq_this_type(py, gaussian2)
+            }
+
+            (
+                BuiltinWaveform::DragGaussian(drag_gaussian1),
+                BuiltinWaveform::DragGaussian(drag_gaussian2),
+            ) => drag_gaussian1.py_eq_this_type(py, drag_gaussian2),
+
+            (BuiltinWaveform::ErfSquare(erf_square1), BuiltinWaveform::ErfSquare(erf_square2)) => {
+                erf_square1.py_eq_this_type(py, erf_square2)
+            }
+
+            (
+                BuiltinWaveform::HermiteGaussian(hermite_gaussian1),
+                BuiltinWaveform::HermiteGaussian(hermite_gaussian2),
+            ) => hermite_gaussian1.py_eq_this_type(py, hermite_gaussian2),
+
+            (
+                BuiltinWaveform::BoxcarKernel(BoxcarKernel),
+                BuiltinWaveform::BoxcarKernel(BoxcarKernel),
+            ) => Ok(true),
+
+            // Explicit match to ensure exhaustiveness
+            (
+                BuiltinWaveform::Flat(_)
+                | BuiltinWaveform::Gaussian(_)
+                | BuiltinWaveform::DragGaussian(_)
+                | BuiltinWaveform::ErfSquare(_)
+                | BuiltinWaveform::HermiteGaussian(_)
+                | BuiltinWaveform::BoxcarKernel(_),
+                _,
+            ) => Ok(false),
+        }
+    }
+
     pub(crate) fn py_repr<'py>(&self, py: Python<'py>) -> PyResult<String> {
         match self {
             Self::Flat(flat) => flat.py_repr(py),
@@ -116,15 +185,20 @@ impl BuiltinWaveform<Pythonic> {
     }
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, Debug)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[pyclass(
     module = "quil.waveform",
     name = "CommonBuiltinParameters",
-    subclass,
-    eq
+    generic,
+    subclass
 )]
 pub struct PyCommonBuiltinParameters(pub CommonBuiltinParameters<Pythonic>);
+
+#[cfg(feature = "stubs")]
+pyo3_stub_gen::inventory::submit! {
+    explicit_stubs::class_getitem_info::<PyCommonBuiltinParameters>()
+}
 
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
@@ -256,12 +330,59 @@ impl PyCommonBuiltinParameters {
             .resolve_with_sample_rate(sample_rate)?)
     }
 
+    fn __eq__<'py>(
+        &self,
+        py: Python<'py>,
+        #[gen_stub(override_type(type_repr = "builtins.object", imports = ("builtins")))]
+        other: Bound<'py, PyAny>,
+    ) -> PyResult<bool> {
+        self.0.py_eq(py, other)
+    }
+
     fn __repr__<'py>(&self, py: Python<'py>) -> PyResult<String> {
         self.0.py_repr(py)
     }
 }
 
 impl CommonBuiltinParameters<Pythonic> {
+    pub(crate) fn py_eq<'py>(&self, py: Python<'py>, other: Bound<'py, PyAny>) -> PyResult<bool> {
+        let Ok(PyCommonBuiltinParameters(other)) = other.extract() else {
+            return Ok(false);
+        };
+
+        self.py_eq_this_type(py, other)
+    }
+
+    pub(crate) fn py_eq_this_type<'py>(&self, py: Python<'py>, other: Self) -> PyResult<bool> {
+        let CommonBuiltinParameters {
+            duration,
+            scale,
+            phase,
+            detuning,
+        } = self.as_ref();
+
+        let Self {
+            duration: other_duration,
+            scale: other_scale,
+            phase: other_phase,
+            detuning: other_detuning,
+        } = other;
+
+        let eq = |opt1: Option<&PyAnyRust>, opt2: Option<PyAnyRust>| match (opt1.as_ref(), opt2) {
+            (Some(any1), Some(any2)) => any1.py_eq(py, &any2),
+            (None, None) => Ok(true),
+            (Some(_), None) | (None, Some(_)) => Ok(false),
+        };
+
+        Ok(duration == other_duration
+            && eq(scale, other_scale)?
+            && eq(
+                phase.map(|Cycles(phase)| phase),
+                other_phase.map(|Cycles(other_phase)| other_phase),
+            )?
+            && eq(detuning, other_detuning)?)
+    }
+
     pub(crate) fn py_repr<'py>(&self, py: Python<'py>) -> PyResult<String> {
         let Self {
             duration,
