@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use pyo3::{IntoPyObjectExt, exceptions::PyNotImplementedError, prelude::*, types::{PyAnyMethods, PyTuple}};
 use numpy::{PyArray, PyArrayDescr, PyArrayDescrMethods};
 use rigetti_pyo3::{create_init_submodule, impl_repr};
@@ -6,7 +8,7 @@ use rigetti_pyo3::{create_init_submodule, impl_repr};
 use pyo3_stub_gen::derive::gen_stub_pymethods;
 
 use super::*;
-use crate::quilpy::{errors::{self, ValueError}, impl_to_quil};
+use crate::quilpy::{IntoNewArgs, NewArgs, errors::{self, ValueError}, impl_newargs, impl_to_quil};
 
 create_init_submodule! {
     classes: [
@@ -113,6 +115,9 @@ mod stubs {
     impl_stub_type!(SubstitutionResult = Expression | Complex64);
 }
 
+impl_newargs!(ExpressionArgs =
+    MemoryReference | FunctionCallExpression | InfixExpression | Complex64 | PrefixExpression | String);
+
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
@@ -122,19 +127,15 @@ impl Expression {
         expression.into()
     }
 
-    #[gen_stub(override_return_type(
-        type_repr = "builtins.tuple[instructions.MemoryReference | FunctionCallExpression | InfixExpression | builtins.complex | PrefixExpression | builtins.str]",
-        imports = ("quil._quil.instructions", "builtins")
-    ))]
-    fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+    fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<NewArgs<'py, ExpressionArgs>> {
         match self {
-            Self::Address(value) => (value.clone(),).into_pyobject(py),
-            Self::FunctionCall(value) => (value.clone(),).into_pyobject(py),
-            Self::Infix(value) => (value.clone(),).into_pyobject(py),
-            Self::Number(value) => (value,).into_pyobject(py),
-            Self::PiConstant() => (Self::PiConstant(),).into_pyobject(py),
-            Self::Prefix(value) => (value.clone(),).into_pyobject(py),
-            Self::Variable(value) => (value.clone(),).into_pyobject(py),
+            Self::Address(value) => value.clone().into_new_args(py),
+            Self::FunctionCall(value) => value.clone().into_new_args(py),
+            Self::Infix(value) => value.clone().into_new_args(py),
+            Self::Number(value) => value.into_new_args(py),
+            Self::PiConstant() => Self::PiConstant().into_new_args(py),
+            Self::Prefix(value) => value.clone().into_new_args(py),
+            Self::Variable(value) => value.into_new_args(py),
         }
     }
 
