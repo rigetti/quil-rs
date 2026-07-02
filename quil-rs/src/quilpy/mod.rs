@@ -1,10 +1,8 @@
 use std::marker::PhantomData;
 
-use pyo3::prelude::*;
-use pyo3::PyClass;
-use pyo3::PyTypeCheck;
-use pyo3::pyclass::boolean_struct::True;
-use pyo3::types::PyTuple;
+use pyo3::exceptions::PyValueError;
+use pyo3::types::PyType;
+use pyo3::{PyClass, PyTypeCheck, prelude::*, pyclass::boolean_struct::True, types::PyTuple};
 use rigetti_pyo3::create_init_submodule;
 
 use crate::expression;
@@ -39,8 +37,34 @@ fn init_module(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     waveform::sampling::quilpy::register_abcs(py)?;
 
+    let instructions = py.import("quil._quil.instructions")?;
+    instructions.add("LabelTargetParameter", union_type(&[
+        py.get_type::<pyo3::types::PyString>(),
+        py.get_type::<instruction::Target>(),
+        py.get_type::<instruction::Label>(),
+    ])?)?;
+
+    instructions.add("MemoryReferenceDesignator", union_type(&[
+        py.get_type::<instruction::MemoryReference>(),
+        py.get_type::<instruction::quilpy::DeclarationAt>(),
+        py.get_type::<instruction::Declaration>(),
+        py.get_type::<pyo3::types::PyTuple>(),
+    ])?)?;
+
+    let program = py.import("quil._quil.program")?;
+    program.add("InstructionIndex", py.get_type::<pyo3::types::PyInt>())?;
+    program.add("Seconds", py.get_type::<pyo3::types::PyFloat>())?;
+
     Ok(())
 }
+
+fn union_type<'py>(types: &[Bound<'py, PyType>]) -> PyResult<Bound<'py, PyAny>> {
+    let mut types = types.iter();
+    let first = types.next().map(Bound::as_any).cloned()
+        .ok_or_else(|| PyValueError::new_err("need at least one type to create a union"));
+    types.fold(first, |acc, ty| { acc.and_then(|union| union.bitor(ty)) })
+}
+
 
 pub(crate) mod nonzero {
     /// A simple wrapper around [`std::num::NonZeroU64`] with [`pyo3_stub_gen::PyStubType`] information.
@@ -395,6 +419,28 @@ where
     }
 }
 
+macro_rules! impl_newargs {
+    ($name:ident = $($typ:ty)|+) => {
+        pub(crate) struct $name;
+        #[cfg(feature = "stubs")]
+        pyo3_stub_gen::impl_stub_type!($name = $($typ)|+);
+    }
+}
+pub(crate) use impl_newargs;
+
+pub(crate) trait IntoNewArgs<'py, T> {
+    fn into_new_args(self, py: Python<'py>) -> PyResult<NewArgs<'py, T>>;
+}
+
+impl <'py, T, U> IntoNewArgs<'py, T> for U
+where
+    U: IntoPyObject<'py>,
+{
+    fn into_new_args(self, py: Python<'py>) -> PyResult<NewArgs<'py, T>> {
+        Ok(NewArgs((self,).into_pyobject(py)?, PhantomData))
+    }
+}
+
 pub(crate) struct NewArgs<'py, T>(Bound<'py, PyTuple>, PhantomData<T>);
 
 impl<'py, T> NewArgs<'py, T> {
@@ -415,51 +461,33 @@ impl<'py, T> IntoPyObject<'py> for NewArgs<'py, T> {
     }
 }
 
+#[cfg(feature = "stubs")]
+impl<'py, T> pyo3_stub_gen::PyStubType for NewArgs<'py, T>
+    where T: pyo3_stub_gen::PyStubType,
+{
+    fn type_output() -> pyo3_stub_gen::TypeInfo {
+        let pyo3_stub_gen::TypeInfo {
+            name,
+            mut import,
+            source_module,
+            type_refs,
+        } = <T as pyo3_stub_gen::PyStubType>::type_output();
+
+        import.insert("builtins".into());
+        pyo3_stub_gen::TypeInfo {
+            name: format!("tuple[{name}]"),
+            import,
+            source_module,
+            type_refs,
+        }
+    }
+}
+
 macro_rules! py_friendly_enum {
     (for $T:ty = $first:ty $(| $variant:ty)*) => {
         impl From<Like<'_, '_, $T>> for $T {
             fn from(like: Like<'_, '_, $T>) -> Self {
                 like.into_inner()
-            }
-        }
-
-        // Define a stub type for `NewArgs<'py, T>` as a tuple of `T`'s variants' stub types.
-        // This can be used as the output type of `__getnewargs__`.
-        #[cfg(feature = "stubs")]
-        impl<'py> pyo3_stub_gen::PyStubType for $crate::quilpy::NewArgs<'py, $T>
-        {
-            fn type_output() -> pyo3_stub_gen::TypeInfo {
-                let pyo3_stub_gen::TypeInfo {
-                    name: _, // We don't include the base class name.
-                    mut import,
-                    // TODO(rebase-main): Check if these need to be updated.
-                    source_module,
-                    type_refs,
-                } = <$T as pyo3_stub_gen::PyStubType>::type_output();
-
-                import.insert("builtins".into());
-                let mut name = "builtins.tuple[".to_string();
-
-                let type_info = <$first as pyo3_stub_gen::PyStubType>::type_output();
-                name += &type_info.name;
-                import.extend(type_info.import);
-
-                // TODO: we may need to merge the type_refs of the variants.
-                $(
-                    let type_info = <$variant as pyo3_stub_gen::PyStubType>::type_output();
-                    name += " | ";
-                    name += &type_info.name;
-                    import.extend(type_info.import);
-                )*
-
-                name += "]";
-
-                pyo3_stub_gen::TypeInfo {
-                    name,
-                    import,
-                    source_module,
-                    type_refs,
-                }
             }
         }
 

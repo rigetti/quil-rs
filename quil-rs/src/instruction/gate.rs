@@ -877,14 +877,9 @@ pub struct PauliTerm {
 
 impl PauliTerm {
     pub fn new(arguments: Vec<(PauliGate, String)>, expression: Expression) -> Self {
-        Self {
-            arguments,
-            expression,
-        }
+        Self { arguments, expression }
     }
-}
 
-impl PauliTerm {
     pub(crate) fn word(&self) -> impl Iterator<Item = &PauliGate> {
         self.arguments.iter().map(|(gate, _)| gate)
     }

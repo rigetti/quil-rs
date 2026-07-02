@@ -344,8 +344,7 @@ pub struct BasicBlockOwned {
     /// A list of the instructions in the block, in order of definition.
     ///
     /// This does not include the label or terminator instructions.
-    #[pyo3(get)]
-    instructions: Vec<Instruction>,
+    pub(crate) instructions: Vec<Instruction>,
     instruction_index_offset: usize,
     pub(crate) terminator: BasicBlockTerminatorOwned,
 }
