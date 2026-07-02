@@ -28,6 +28,7 @@ use petgraph::Graph;
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
+use crate::instruction::quilpy::AnyInstruction;
 use crate::instruction::{
     Arithmetic, ArithmeticOperand, ArithmeticOperator, Call, CircuitDefinition, Declaration,
     DefGateSequenceExpansionError, ExternError, ExternPragmaMap, ExternSignatureMap,
@@ -41,6 +42,7 @@ use crate::program::defgate_sequence_expansion::{
     ExpandedInstructionsWithSourceMap, ProgramDefGateSequenceExpander,
 };
 use crate::quil::Quil;
+use crate::quilpy::from_like;
 
 pub use self::calibration::{
     CalibrationExpansion, CalibrationExpansionOutput, CalibrationSource, Calibrations,
@@ -66,8 +68,6 @@ pub mod scheduling;
 mod source_map;
 pub mod type_check;
 
-#[cfg(not(feature = "python"))]
-use optipy::strip_pyo3;
 #[cfg(feature = "python")]
 pub(crate) mod quilpy;
 
@@ -196,7 +196,7 @@ pub struct Program {
     instructions: Vec<Instruction>,
     // private field used for caching operations
     #[pyo3(get)]
-    used_qubits: HashSet<Qubit>,
+    pub(crate) used_qubits: HashSet<Qubit>,
 }
 
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
@@ -333,6 +333,18 @@ impl Program {
     /// See [`Program::expand_calibrations_with_source_map`] for a version that returns a source mapping.
     pub fn expand_calibrations(&self) -> Result<Self> {
         self.expand_calibrations_inner(None)
+    }
+
+    /// Resolve [`LabelPlaceholder`]s and [`QubitPlaceholder`]s within the program using default resolvers.
+    ///
+    /// See [`resolve_placeholders_with_custom_resolvers`](Self::resolve_placeholders_with_custom_resolvers),
+    /// [`default_target_resolver`](Self::default_target_resolver),
+    /// and [`default_qubit_resolver`](Self::default_qubit_resolver) for more information.
+    pub fn resolve_placeholders(&mut self) {
+        self.resolve_placeholders_with_custom_resolvers(
+            self.default_target_resolver(),
+            self.default_qubit_resolver(),
+        )
     }
 
     /// Return a copy of the [`Program`] wrapped in a loop that repeats `iterations` times.

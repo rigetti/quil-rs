@@ -14,6 +14,17 @@ use rigetti_pyo3::{create_init_submodule, impl_repr};
 
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pymethods};
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pymethods};
+
+use crate::instruction::{MemoryReference, Target};
+use crate::quilpy::from_sequence;
+use pyo3_stub_gen::{
+    derive::{ gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pymethods, gen_methods_from_python },
+    inventory::submit,
+};
+
+use crate::instruction::quilpy::AnyInstruction;
+use crate::instruction::{ExternPragmaMap, Label, MemoryReference, Qubit, Target, Waveform};
 use crate::{
     instruction::{
         quilpy::OwnedGateSignature, CalibrationDefinition, Declaration, DefaultHandler,
@@ -321,32 +332,37 @@ impl Program {
         })
     }
 
+    /// Add an instruction to the end of the program.
+    ///
+    /// Note, parsing extern signatures is deferred here to maintain infallibility
+    /// of [`Program::add_instruction`]. This means that invalid `PRAGMA EXTERN`
+    /// instructions are still added to the [`Program::extern_pragma_map`];
+    /// duplicate `PRAGMA EXTERN` names are overwritten.
+    #[pyo3(name = "add_instruction")]
+    fn py_add_instruction(&mut self, instruction: AnyInstruction) {
+        self.add_instruction(instruction.into());
+    }
+
     /// Add a list of instructions to the end of the program.
     #[pyo3(name = "add_instructions", signature = (instructions, *more))]
     fn py_add_instructions(
         &mut self,
         py: Python<'_>,
-        #[gen_stub(override_type(
-            type_repr = "typing.Sequence[_quil.instructions.Instruction]",
-            imports = ("quil._quil", "typing"),
-        ))]
-        instructions: OneOrMore<Instruction>,
-        #[pyo3(from_py_with = from_sequence::<Instruction, _>)]
-        more: Vec<Instruction>,
+        instructions: OneOrMore<AnyInstruction>,
+        #[pyo3(from_py_with = from_sequence::<AnyInstruction, _>)]
+        more: Vec<AnyInstruction>,
     ) -> PyResult<()> {
         match instructions {
             OneOrMore::One(instruction) => {
-                self.add_instruction(instruction);
+                self.py_add_instruction(instruction);
             }
             OneOrMore::More(instructions) => {
                 py_deprecated!(py, c"`instructions` should no longer be wrapped in a sequence")?;
-                self.add_instructions(instructions);
+                instructions.into_iter().for_each(|i| self.py_add_instruction(i));
             }
         }
 
-        if !more.is_empty() {
-            self.add_instructions(more);
-        }
+        more.into_iter().for_each(|i| self.py_add_instruction(i));
 
         Ok(())
     }
@@ -373,8 +389,7 @@ impl Program {
 
     /// Resolve ``TargetPlaceholder``s and ``QubitPlaceholder``s within the program.
     ///
-    /// The resolved values will remain unique to that placeholder
-    /// within the scope of the program.
+    /// The resolved values will remain unique to that placeholder within the scope of the program.
     /// If you provide ``target_resolver`` and/or ``qubit_resolver``,
     /// those will be used to resolve those values respectively.
     /// If your resolver returns `None` for a particular placeholder,
@@ -544,6 +559,59 @@ impl Program {
 
     fn __iadd__(&mut self, rhs: Self) {
         *self += rhs;
+    }
+
+    // Provided for compatibility with PyQuil v4.
+    /// Return a copy of the `Program` wrapped in a loop that repeats `iterations` times.
+    ///
+    /// The loop is constructed by wrapping the body of the program in classical Quil instructions.
+    /// The given `loop_count_reference` must refer to an INTEGER memory region. The value at the
+    /// reference given will be set to `iterations` and decremented in the loop. The loop will
+    /// terminate when the reference reaches 0. For this reason your program should not itself
+    /// modify the value at the reference unless you intend to modify the remaining number of
+    /// iterations (i.e. to break the loop).
+    ///
+    /// The given `start_target` is used as a label to mark the start of the loop.
+    /// The default (`None`) will generate a `Target.Placeholder` which must be resolved
+    /// using `Program.resolve_placeholders` before you can generate Quil from the `Program`;
+    /// if you provide a `Target`, it must be unique within the `Program`.
+    ///
+    /// If `iterations` is 0, then a copy of the program is returned without any changes.
+    #[pyo3(
+        signature = (
+            num_iterations,
+            iteration_count_reference,
+            start_label,
+            *,
+            end_label=None,
+    ))]
+    fn with_loop(
+        &self,
+        py: Python<'_>,
+        num_iterations: u32,
+        #[gen_stub(override_type(
+            type_repr = "_quil.instructions.MemoryReference",
+            imports = ("quil._quil")
+        ))]
+        iteration_count_reference: MemoryReference,
+        #[gen_stub(override_type(
+            type_repr = "typing.Optional[_quil.instructions.Label]",
+            imports = ("quil._quil", "typing")
+        ))]
+        start_label: Option<&Label>,
+        #[gen_stub(override_type(
+            type_repr = "typing.Optional[_quil.instructions.Label]",
+            imports = ("quil._quil", "typing")
+        ))]
+        end_label: Option<&Label>,
+    ) -> PyResult<Self> {
+        if end_label.is_some() {
+            py_deprecated!(py, c"`end_label` is deprecated and will be ignored")?;
+        }
+        let start_label = start_label
+            .map(|label| label.target.clone())
+            .unwrap_or_else(|| Target::Placeholder(TargetPlaceholder::new("LOOPSTART".to_string())));
+        Ok(self.wrap_in_loop(iteration_count_reference, start_label, num_iterations))
     }
 
     /// This will raise an error if the program contains any unresolved
@@ -1182,18 +1250,27 @@ impl SourceMapIndexable<OwnedGateSignature> for FlatExpansionResult {
 }
 
 #[derive(FromPyObject, IntoPyObject, IntoPyObjectRef)]
-struct PyQubitResolver(Py<PyFunction>);
+struct PyQubitResolver(Py<PyAny>);
 #[derive(FromPyObject, IntoPyObject, IntoPyObjectRef)]
-struct PyTargetResolver(Py<PyFunction>);
+struct PyTargetResolver(Py<PyAny>);
 
 #[cfg(feature = "stubs")]
 mod stubs {
-    use pyo3_stub_gen::{impl_stub_type, type_alias};
+    use pyo3_stub_gen::{ImportKind, ModuleRef, PyStubType, TypeIdentifierRef, TypeInfo, impl_stub_type, type_alias};
 
-    use super::{EndTargetParam, Instruction, OneOrMore, Target};
+    use super::{
+        EndTargetParam,
+        Instruction,
+        OneOrMore,
+        PyQubitResolver,
+        PyTargetResolver,
+        QubitPlaceholder,
+        Target,
+        TargetPlaceholder,
+    };
 
     impl_stub_type!(EndTargetParam = Target | u32);
-    impl_stub_type!(OneOrMore<Instruction> = Instruction | Vec<Instruction>);
+    impl_stub_type!(OneOrMore<AnyInstruction> = AnyInstruction | Vec<AnyInstruction>);
     impl_stub_type!(super::InstructionIndex = usize);
     impl_stub_type!(super::Seconds = f64);
     type_alias!("quil.program", InstructionIndex = super::InstructionIndex);
@@ -1375,6 +1452,15 @@ impl BasicBlockOwned {
     #[getter]
     fn label(&self) -> Option<Target> {
         self.label.clone()
+    }
+
+    #[gen_stub(override_return_type(
+        type_repr = "builtins.list[_quil.instructions.Instruction]",
+        imports=("quil._quil", "builtins"),
+    ))]
+    #[getter]
+    fn instructions(&self) -> Vec<Instruction> {
+        self.instructions.clone()
     }
 
     /// The control flow terminator instruction of the block, if any.
