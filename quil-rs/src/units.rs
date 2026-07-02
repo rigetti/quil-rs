@@ -29,6 +29,18 @@ impl<S> Cycles<S> {
     }
 }
 
+impl<T> Cycles<Option<T>> {
+    pub fn transpose_option(self) -> Option<Cycles<T>> {
+        self.0.map(Cycles)
+    }
+}
+
+impl<T, E> Cycles<Result<T, E>> {
+    pub fn transpose_result(self) -> Result<Cycles<T>, E> {
+        self.0.map(Cycles)
+    }
+}
+
 #[derive(
     Clone,
     Copy,

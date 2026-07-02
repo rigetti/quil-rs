@@ -22,7 +22,7 @@ use crate::{
 use super::{
     parse,
     sampling::{IqSamples, SamplingError},
-    Concrete, Reference, Syntactic, WaveformData, WaveformParameterError,
+    Concrete, Partial, Reference, Syntactic, WaveformData, WaveformParameterError,
 };
 
 #[cfg(feature = "python")]

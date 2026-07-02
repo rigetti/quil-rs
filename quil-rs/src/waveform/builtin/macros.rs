@@ -110,6 +110,20 @@ macro_rules! field_evaluator {
     };
 }
 
+/// Part of the implementation of the `transpose` function for waveforms; properly propagates
+/// optionality for non-concrete fields and just passes the concrete ones along.
+macro_rules! field_transposer {
+    ($field:ident, ConcreteReal) => {
+        $field
+    };
+    ($field:ident, Real) => {
+        $field?
+    };
+    ($field:ident, Complex) => {
+        $field?
+    };
+}
+
 /// Constant strings documenting the origin of waveforms, powering the `#[waveform_source(...)]`
 /// attribute within [`define_waveforms!`].
 macro_rules! waveform_source {
@@ -685,7 +699,6 @@ macro_rules! define_waveform {
                 }
             }
 
-
             #[doc = concat!(
                 "Convert one [`", stringify!($name), "`] into another ",
                 "by replacing its associated data."
@@ -712,7 +725,54 @@ macro_rules! define_waveform {
                 })
             }
         }
-    }
+
+        impl<T: WaveformData> $name<Partial<T>> {
+            #[doc = concat!(
+                "Returns `None` if any of the partial [`", stringify!($name),
+                "`]'s data is missing, and returns its underlying total form, [`",
+                stringify!($name), "<T>`], otherwise."
+            )]
+            pub fn transpose(self) -> Option<$name<T>> {
+                let Self { $($field),+ } = self;
+                Some($name {
+                    $($field: field_transposer!($field, $ty)),+
+                })
+            }
+        }
+
+        impl<S: WaveformData> super::higher_kinded::WaveformParameters for $name<S> {
+            type WaveformData = S;
+
+            type WithWaveformData<T: WaveformData> = $name<T>;
+
+            #[inline(always)]
+            fn as_ref(&self) -> Self::WithWaveformData<Reference<'_, Self::WaveformData>> {
+                self.as_ref()
+            }
+
+            #[inline(always)]
+            fn try_evaluate<T: WaveformData, E>(
+                self,
+                real:
+                    impl Fn(<Self::WaveformData as WaveformData>::Real) -> Result<T::Real, E>,
+                complex:
+                    impl Fn(<Self::WaveformData as WaveformData>::Complex) -> Result<T::Complex, E>,
+            ) -> Result<Self::WithWaveformData<T>, E> {
+                self.try_evaluate(real, complex)
+            }
+        }
+
+        impl<T: WaveformData>
+            super::higher_kinded::PartialWaveformParameters for $name<Partial<T>>
+        {
+            type TotalWaveformData = T;
+
+            #[inline(always)]
+            fn transpose(self) -> Option<Self::WithWaveformData<Self::TotalWaveformData>> {
+                self.transpose()
+            }
+        }
+   }
 }
 
 /// Define a collection of waveforms, as described in the introduction to this section.  Also
@@ -817,5 +877,5 @@ pub(crate) use {
 
 pub(crate) use {
     concrete_waveform, define_waveform, define_waveforms, extract_type_if_generic_field,
-    field_evaluator, field_parser, field_referencer, field_type, waveform_source,
+    field_evaluator, field_parser, field_referencer, field_transposer, field_type, waveform_source,
 };

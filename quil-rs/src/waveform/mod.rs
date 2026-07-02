@@ -15,6 +15,7 @@ use crate::{
 use self::builtin::{BuiltinWaveform, CommonBuiltinParameters};
 
 pub mod builtin;
+pub mod higher_kinded;
 pub mod sampling;
 
 #[cfg(feature = "python")]
