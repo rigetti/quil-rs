@@ -1,6 +1,7 @@
 //! Built-in waveforms.
 
 use std::{
+    convert::{identity, Infallible},
     f64::consts::{LN_2, PI},
     iter::repeat_n,
 };
@@ -300,12 +301,20 @@ impl CommonBuiltinParameters<Concrete> {
     }
 }
 
+/// The result of sampling a [`Partial<Concrete>`] waveform: either a placeholder set of samples,
+/// carrying only the shape and the length, or a concrete set of complex IQ value samples.
+#[derive(Clone, PartialEq, Debug)]
+pub enum IqSamplesOrPlaceholder {
+    Placeholder(IqSamples<()>),
+    Samples(IqSamples<Complex64>),
+}
+
 /// A trait for all built-in waveform types.
 ///
 /// This is a closed trait, corresponding precisely to the constructors of [`BuiltinWaveform`] as
 /// well as [`BuiltinWaveform`] itself, all instantiated with [`Concrete`].
 pub trait BuiltinWaveformParameters:
-    Into<BuiltinWaveform<Concrete>> + Copy + PartialEq + std::fmt::Debug + private::Sealed
+    Into<BuiltinWaveform<Concrete>> + Copy + PartialEq + std::fmt::Debug + private::SealedConcrete
 {
     /// Sample the given waveform (with the additional common parameters) at the given sample rate
     /// (in Hz).
@@ -314,6 +323,34 @@ pub trait BuiltinWaveformParameters:
         common: CommonBuiltinParameters<Concrete>,
         sample_rate: f64,
     ) -> Result<IqSamples<Complex64>, SamplingError>;
+}
+
+/// A trait for the partial versions of all built-in waveform types.
+///
+/// This is a closed trait, corresponding precisely to the constructors of [`BuiltinWaveform`] as
+/// well as [`BuiltinWaveform`] itself, all instantiated with
+/// <code>[Partial]&lt;[Concrete]&gt;</code>.
+pub trait PartialBuiltinWaveformParameters:
+    Into<BuiltinWaveform<Partial<Concrete>>>
+    + Copy
+    + PartialEq
+    + std::fmt::Debug
+    + private::SealedPartial
+{
+    /// The concrete version of this waveform.
+    type Concrete: BuiltinWaveformParameters;
+
+    /// If this waveform has all its data specified, returns the concrete version; otherwise,
+    /// returns [`None`].
+    fn concretize(self) -> Option<Self::Concrete>;
+
+    /// Sample the given waveform (with the additional common parameters) at the given sample rate
+    /// (in Hz).
+    fn partial_iq_values_at_sample_rate(
+        self,
+        common: CommonBuiltinParameters<Partial<Concrete>>,
+        sample_rate: f64,
+    ) -> Result<IqSamplesOrPlaceholder, SamplingError>;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -582,14 +619,6 @@ impl<T: WaveformData> BuiltinWaveform<Partial<T>> {
 // IQ sample computation
 ////////////////////////////////////////////////////////////////////////////////
 
-/// The result of sampling a [`Partial<Concrete>`] waveform: either a placeholder set of samples,
-/// carrying only the shape and the length, or a concrete set of complex IQ value samples.
-#[derive(Clone, PartialEq, Debug)]
-pub enum IqSamplesOrPlaceholder {
-    Placeholder(IqSamples<()>),
-    Samples(IqSamples<Complex64>),
-}
-
 impl BuiltinWaveformParameters for BuiltinWaveform<Concrete> {
     fn iq_values_at_sample_rate(
         self,
@@ -604,116 +633,216 @@ impl BuiltinWaveformParameters for BuiltinWaveform<Concrete> {
     }
 }
 
-impl BuiltinWaveformParameters for Flat<Concrete> {
-    fn iq_values_at_sample_rate(
+impl PartialBuiltinWaveformParameters for BuiltinWaveform<Partial<Concrete>> {
+    type Concrete = BuiltinWaveform<Concrete>;
+
+    #[inline(always)]
+    fn concretize(self) -> Option<Self::Concrete> {
+        self.transpose()
+    }
+
+    fn partial_iq_values_at_sample_rate(
         self,
-        common: CommonBuiltinParameters<Concrete>,
+        common: CommonBuiltinParameters<Partial<Concrete>>,
         sample_rate: f64,
-    ) -> Result<IqSamples<Complex64>, SamplingError> {
+    ) -> Result<IqSamplesOrPlaceholder, SamplingError> {
+        builtin_waveform_match! {
+            match self {
+                waveform => waveform.partial_iq_values_at_sample_rate(common, sample_rate),
+            }
+        }
+    }
+}
+
+macro_rules! maybe_generic {
+    ($name:ident<$generic:tt = $parameter:ty>) => {
+        $name<$parameter>
+    };
+
+    ($name:ident< = $parameter:ty>) => {
+        $name
+    };
+}
+
+macro_rules! maybe_transpose {
+    ($name:ident, $generic:tt) => {
+        $name.transpose()
+    };
+
+    ($name:ident, ) => {
+        Some($name)
+    };
+}
+
+macro_rules! impl_builtin_waveform {
+    ($($ty:ident$(<$generic:tt>)?),* $(,)?) => {
+        $(
+            impl BuiltinWaveformParameters for maybe_generic!($ty<$($generic)? = Concrete>) {
+                #[inline(always)]
+                fn iq_values_at_sample_rate(
+                    self,
+                    common: CommonBuiltinParameters<Concrete>,
+                    sample_rate: f64,
+                ) -> Result<IqSamples<Complex64>, SamplingError> {
+                    self.raw_iq_values_at_sample_rate(common, sample_rate)
+                        .map(IqSamplesFor::unwrap_total)
+                }
+            }
+
+            impl PartialBuiltinWaveformParameters for maybe_generic!($ty<$($generic)? = Partial<Concrete>>) {
+                type Concrete = maybe_generic!($ty<$($generic)? = Concrete>);
+
+                #[inline(always)]
+                fn concretize(self) -> Option<Self::Concrete> {
+                    maybe_transpose!(self, $($generic)?)
+                }
+
+                #[inline(always)]
+                fn partial_iq_values_at_sample_rate(
+                    self,
+                    common: CommonBuiltinParameters<Partial<Concrete>>,
+                    sample_rate: f64,
+                ) -> Result<IqSamplesOrPlaceholder, SamplingError> {
+                    self.raw_iq_values_at_sample_rate(common, sample_rate)
+                        .map(IqSamplesFor::into_iq_samples_or_placeholder)
+                }
+            }
+        )*
+    };
+}
+
+// ASZ TODO: this could be folded into the existing macro code
+impl_builtin_waveform! {
+    Flat<_>,
+    Gaussian<_>,
+    DragGaussian<_>,
+    ErfSquare<_>,
+    HermiteGaussian<_>,
+    BoxcarKernel,
+}
+
+impl<T: Sampleable> Flat<T> {
+    fn raw_iq_values_at_sample_rate(
+        self,
+        common: CommonBuiltinParameters<T>,
+        sample_rate: f64,
+    ) -> Result<IqSamplesFor<T>, SamplingError>
+    where
+        CommonBuiltinParameters<T>: Copy,
+        Self: ConcretizableFromTo<T, Flat<Concrete>>,
+    {
+        let (waveform, explicit) = match resolve_for_flat_unless_detuned(
+            || self.concretize(),
+            common,
+            sample_rate,
+            identity,
+        )? {
+            partiality::Value::Partial(is_partial, samples) => {
+                return Ok(partiality::Value::Partial(
+                    is_partial,
+                    IqSamplesFor::placeholder(samples),
+                ))
+            }
+            partiality::Value::Total(result) => result,
+        };
+
         let ExplicitCommonBuiltinParameters {
             sample_count,
             scale,
             phase,
             detuning,
-        } = common.resolve_with_sample_rate(sample_rate)?;
-        let Self { iq } = self;
+        } = explicit;
+
+        let Flat { iq } = waveform;
 
         let sample_count = sample_count as usize;
         let scaled_iq = scale * iq;
 
-        Ok(if detuning == 0.0 {
+        Ok(IqSamplesFor::Total(if detuning == 0.0 {
             IqSamples::Flat {
-                iq: apply_phase(scaled_iq, phase),
+                iq: apply_phase(iq, phase),
                 sample_count,
             }
         } else {
-            let mut samples = vec![scaled_iq; sample_count];
+            let mut samples = vec![iq; sample_count];
             apply_phase_and_detuning(&mut samples, phase, detuning, sample_rate);
             IqSamples::Samples(samples)
-        })
+        }))
     }
 }
 
-impl BuiltinWaveformParameters for Gaussian<Concrete> {
-    fn iq_values_at_sample_rate(
+impl<T: Sampleable> Gaussian<T> {
+    fn raw_iq_values_at_sample_rate(
         self,
-        common: CommonBuiltinParameters<Concrete>,
+        common: CommonBuiltinParameters<T>,
         sample_rate: f64,
-    ) -> Result<IqSamples<Complex64>, SamplingError> {
-        let Self { fwhm, t0 } = self;
+    ) -> Result<IqSamplesFor<T>, SamplingError>
+    where
+        Self: ConcretizableFromTo<T, Gaussian<Concrete>>,
+    {
+        match concretize_and_resolve(self, common, sample_rate)? {
+            partiality::Value::Partial(is_partial, sample_count) => Ok(IqSamplesFor::Partial(
+                is_partial,
+                IqSamples::Samples(vec![(); sample_count]),
+            )),
 
-        build_samples_and_adjust_for_common_parameters(
-            SamplingParameters { sample_rate, fwhm },
-            common,
-            |SamplingInfo { time_steps, sigma }| {
-                time_steps
-                    .into_iter()
-                    .map(move |el| real!((-0.5 * (el - t0).powf(2.0) / sigma.powf(2.0)).exp()))
-            },
-        )
+            partiality::Value::Total((explicit, waveform)) => {
+                let Gaussian { fwhm, t0 } = waveform;
+
+                build_samples_and_adjust_for_common_parameters(
+                    SamplingParameters { sample_rate, fwhm },
+                    explicit,
+                    |SamplingInfo { time_steps, sigma }| {
+                        time_steps.into_iter().map(move |el| {
+                            real!((-0.5 * (el - t0).powf(2.0) / sigma.powf(2.0)).exp())
+                        })
+                    },
+                )
+            }
+        }
     }
 }
 
-impl BuiltinWaveformParameters for DragGaussian<Concrete> {
-    fn iq_values_at_sample_rate(
+impl<T: Sampleable> DragGaussian<T> {
+    fn raw_iq_values_at_sample_rate(
         self,
-        common: CommonBuiltinParameters<Concrete>,
+        common: CommonBuiltinParameters<T>,
         sample_rate: f64,
-    ) -> Result<IqSamples<Complex64>, SamplingError> {
-        let Self {
-            fwhm,
-            t0,
-            anh,
-            alpha,
-        } = self;
+    ) -> Result<IqSamplesFor<T>, SamplingError>
+    where
+        Self: ConcretizableFromTo<T, DragGaussian<Concrete>>,
+    {
+        match concretize_and_resolve(self, common, sample_rate)? {
+            partiality::Value::Partial(is_partial, sample_count) => Ok(IqSamplesFor::Partial(
+                is_partial,
+                IqSamples::Samples(vec![(); sample_count]),
+            )),
 
-        build_samples_and_adjust_for_common_parameters(
-            SamplingParameters { sample_rate, fwhm },
-            common,
-            |SamplingInfo { time_steps, sigma }| {
-                time_steps.into_iter().map(move |el| {
-                    // Generate envelope sample
-                    let env = (-0.5 * (el - t0).powf(2.0) / sigma.powf(2.0)).exp();
-                    // Generate modified envelope sample
-                    let env_mod =
-                        (alpha * (1.0 / (2.0 * PI * anh * sigma.powf(2.0)))) * (el - t0) * env;
-                    c64(env, env_mod)
-                })
-            },
-        )
-    }
-}
+            partiality::Value::Total((explicit, waveform)) => {
+                let DragGaussian {
+                    fwhm,
+                    t0,
+                    anh,
+                    alpha,
+                } = waveform;
 
-impl BuiltinWaveformParameters for ErfSquare<Concrete> {
-    fn iq_values_at_sample_rate(
-        self,
-        common: CommonBuiltinParameters<Concrete>,
-        sample_rate: f64,
-    ) -> Result<IqSamples<Complex64>, SamplingError> {
-        let Self {
-            risetime,
-            pad_left,
-            pad_right,
-        } = self;
-
-        let fwhm = 0.5 * risetime;
-        let t1 = fwhm;
-        let t2 = common.duration - fwhm;
-
-        build_samples_and_adjust_for_common_parameters(
-            SamplingParameters { sample_rate, fwhm },
-            common,
-            |SamplingInfo { time_steps, sigma }| {
-                let waveform = time_steps
-                    .into_iter()
-                    .map(move |el| real!(0.5 * (erf((el - t1) / sigma) - erf((el - t2) / sigma))));
-
-                let left_padding = repeat_n(real!(0.0), (pad_left * sample_rate).ceil() as usize);
-                let right_padding = repeat_n(real!(0.0), (pad_right * sample_rate).ceil() as usize);
-
-                left_padding.chain(waveform).chain(right_padding)
-            },
-        )
+                build_samples_and_adjust_for_common_parameters(
+                    SamplingParameters { sample_rate, fwhm },
+                    explicit,
+                    |SamplingInfo { time_steps, sigma }| {
+                        time_steps.into_iter().map(move |el| {
+                            // Generate envelope sample
+                            let env = (-0.5 * (el - t0).powf(2.0) / sigma.powf(2.0)).exp();
+                            // Generate modified envelope sample
+                            let env_mod = (alpha * (1.0 / (2.0 * PI * anh * sigma.powf(2.0))))
+                                * (el - t0)
+                                * env;
+                            c64(env, env_mod)
+                        })
+                    },
+                )
+            }
+        }
     }
 }
 
@@ -730,12 +859,12 @@ impl<T: Sampleable> ErfSquare<T> {
         let left_padding_samples = (self.pad_left * sample_rate).ceil() as usize;
         let right_padding_samples = (self.pad_right * sample_rate).ceil() as usize;
 
-        match asz_test_test_test(self, common, sample_rate)? {
+        match concretize_and_resolve(self, common, sample_rate)? {
             partiality::Value::Partial(is_partial, sample_count) => Ok(IqSamplesFor::Partial(
                 is_partial,
                 IqSamples::Samples(vec![
                     ();
-                    sample_count as usize
+                    sample_count
                         + left_padding_samples
                         + right_padding_samples
                 ]),
@@ -752,7 +881,7 @@ impl<T: Sampleable> ErfSquare<T> {
                 let t1 = fwhm;
                 let t2 = common.duration - fwhm;
 
-                let samples = asz_explicit_build_samples_and_adjust_for_common_parameters(
+                let samples = build_samples_and_adjust_for_common_parameters(
                     SamplingParameters { sample_rate, fwhm },
                     explicit,
                     |SamplingInfo { time_steps, sigma }| {
@@ -773,14 +902,189 @@ impl<T: Sampleable> ErfSquare<T> {
     }
 }
 
-fn asz_test_test_test<W: ConcretizableWaveform>(
+impl<T: Sampleable> HermiteGaussian<T> {
+    fn raw_iq_values_at_sample_rate(
+        self,
+        common: CommonBuiltinParameters<T>,
+        sample_rate: f64,
+    ) -> Result<IqSamplesFor<T>, SamplingError>
+    where
+        Self: ConcretizableFromTo<T, HermiteGaussian<Concrete>>,
+    {
+        match concretize_and_resolve(self, common, sample_rate)? {
+            partiality::Value::Partial(is_partial, sample_count) => Ok(IqSamplesFor::Partial(
+                is_partial,
+                IqSamples::Samples(vec![(); sample_count]),
+            )),
+
+            partiality::Value::Total((explicit, waveform)) => {
+                let HermiteGaussian {
+                    fwhm,
+                    t0,
+                    anh,
+                    alpha,
+                    second_order_hrm_coeff,
+                } = waveform;
+
+                build_samples_and_adjust_for_common_parameters(
+                    SamplingParameters { sample_rate, fwhm },
+                    explicit,
+                    |SamplingInfo { time_steps, sigma }| {
+                        let deriv_prefactor = -alpha / (2f64 * PI * anh);
+
+                        time_steps.into_iter().map(move |el| {
+                            let exp_t = 0.5 * (el - t0).powf(2.0) / sigma.powf(2.0);
+                            let g = (-exp_t).exp();
+                            let env = (1.0 - second_order_hrm_coeff * exp_t) * g;
+                            let env_derived = deriv_prefactor * (el - t0) / sigma.powf(2.0)
+                                * g
+                                * (second_order_hrm_coeff * (exp_t - 1.0) - 1.0);
+                            c64(env, env_derived)
+                        })
+                    },
+                )
+            }
+        }
+    }
+}
+
+impl BoxcarKernel {
+    fn raw_iq_values_at_sample_rate<T: Sampleable>(
+        self,
+        common: CommonBuiltinParameters<T>,
+        sample_rate: f64,
+    ) -> Result<IqSamplesFor<T>, SamplingError>
+    where
+        CommonBuiltinParameters<T>: Copy,
+    {
+        let (waveform, explicit) = match resolve_for_flat_unless_detuned(
+            || Ok(self),
+            common,
+            sample_rate,
+            |never: Infallible| match never {},
+        )? {
+            partiality::Value::Partial(is_partial, samples) => {
+                return Ok(partiality::Value::Partial(
+                    is_partial,
+                    IqSamplesFor::placeholder(samples),
+                ))
+            }
+            partiality::Value::Total(result) => result,
+        };
+
+        let ExplicitCommonBuiltinParameters {
+            sample_count,
+            scale,
+            phase,
+            detuning,
+        } = explicit;
+
+        let Self = waveform; // Get an error if the definition changes
+
+        let sample_count = sample_count as usize;
+
+        Ok(IqSamplesFor::Total(if detuning == 0.0 {
+            let iq = polar_to_rectangular(scale / sample_count as f64, phase);
+            IqSamples::Flat { iq, sample_count }
+        } else {
+            let samples = (0..sample_count).map(|index| {
+                polar_to_rectangular(
+                    scale / sample_count as f64,
+                    Cycles(detuning * (index as f64) / sample_rate) + phase,
+                )
+            });
+            IqSamples::Samples(samples.collect())
+        }))
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Utility functions
+////////////////////////////////////////////////////////////////////////////////
+
+/// Take a `waveform` that might or might not be partial, some `common` waveform parameters, and a
+/// sample rate, and resolve them all to concrete values if possible.  This goes further than simply
+/// concretizing the builtin parameters, and [fully discretizes
+/// them][CommonBuiltinParameters::resolve_with_sample_rate].
+///
+/// If the input data is partial, instead returns the placeholder IQ values for a flat waveform: an
+/// [`IqSamples::Flat`] if the [`CommonBuiltinParameters::detuning`] is specified to be `0.0` (or
+/// omitted), and an [`IqSamples::Samples`] otherwise.  In both cases, the sample count will be
+/// precisely the resulting [`ExplicitCommonBuiltinParameters::sample_count`].
+fn resolve_for_flat_unless_detuned<T: Sampleable, W, E>(
+    waveform: impl FnOnce() -> Result<W, E>,
+    common: CommonBuiltinParameters<T>,
+    sample_rate: f64,
+    partiality: impl FnOnce(E) -> T::IsPartial,
+) -> Result<partiality::Value<T, IqSamples<()>, (W, ExplicitCommonBuiltinParameters)>, SamplingError>
+where
+    CommonBuiltinParameters<T>: Copy,
+{
+    let placeholder = |is_partial, sample_count| {
+        Ok(partiality::Value::Partial(
+            is_partial,
+            if common
+                .detuning
+                .is_none_or(|detuning| T::eval_real(detuning) == Ok(0.0))
+            {
+                IqSamples::Flat {
+                    iq: (),
+                    sample_count,
+                }
+            } else {
+                IqSamples::Samples(vec![(); sample_count])
+            },
+        ))
+    };
+
+    let explicit = match common.raw_resolve_with_sample_rate(sample_rate)? {
+        partiality::Value::Partial(is_partial, sample_count) => {
+            return placeholder(is_partial, sample_count as usize)
+        }
+
+        partiality::Value::Total(explicit) => explicit,
+    };
+
+    let waveform = match waveform() {
+        Err(is_partial) => {
+            return placeholder(partiality(is_partial), explicit.sample_count as usize)
+        }
+
+        Ok(waveform) => waveform,
+    };
+
+    return Ok(partiality::Value::Total((waveform, explicit)));
+}
+
+/// Parameters used uniformly in every waveform generator that produces a vector of samples.
+#[derive(Clone, Copy, Debug)]
+struct SamplingParameters {
+    sample_rate: f64,
+    fwhm: f64,
+}
+
+/// Derived information used in every waveform generator that produces a vector of samples.
+#[derive(Clone, Debug)]
+struct SamplingInfo {
+    time_steps: Array1<f64>,
+    sigma: f64,
+}
+
+/// Take a `waveform` that might or might not be partial, some `common` waveform parameters, and a
+/// sample rate, and resolve them all to concrete values if possible.  This goes further than simply
+/// concretizing the builtin parameters, and [fully discretizes
+/// them][CommonBuiltinParameters::resolve_with_sample_rate].
+///
+/// If the input data *is* partial, instead returns the computed sample count (as with
+/// [`CommonBuiltinParameters::partial_resolve_with_sample_rate`]).
+fn concretize_and_resolve<W: ConcretizableWaveform>(
     waveform: W,
     common: CommonBuiltinParameters<W::WaveformData>,
     sample_rate: f64,
 ) -> Result<
     partiality::Value<
         W::WaveformData,
-        u32,
+        usize,
         (
             ExplicitCommonBuiltinParameters,
             W::WithWaveformData<Concrete>,
@@ -790,7 +1094,10 @@ fn asz_test_test_test<W: ConcretizableWaveform>(
 > {
     let explicit = match common.raw_resolve_with_sample_rate(sample_rate)? {
         partiality::Value::Partial(is_partial, sample_count) => {
-            return Ok(partiality::Value::Partial(is_partial, sample_count))
+            return Ok(partiality::Value::Partial(
+                is_partial,
+                sample_count as usize,
+            ))
         }
 
         partiality::Value::Total(explicit) => explicit,
@@ -800,7 +1107,7 @@ fn asz_test_test_test<W: ConcretizableWaveform>(
         Err(is_partial) => {
             return Ok(partiality::Value::Partial(
                 is_partial,
-                explicit.sample_count,
+                explicit.sample_count as usize,
             ))
         }
         Ok(waveform) => waveform,
@@ -809,9 +1116,12 @@ fn asz_test_test_test<W: ConcretizableWaveform>(
     return Ok(partiality::Value::Total((explicit, waveform)));
 }
 
-fn asz_explicit_build_samples_and_adjust_for_common_parameters<
-    I: IntoIterator<Item = Complex64>,
->(
+/// Encapsulates the common pattern for generating a sequence of samples for a waveform:
+/// 1. Generate information from some generally-used parameters.
+/// 2. Use that information to generate the samples.
+/// 3. Rescale those samples.
+/// 4. Apply the phase adjustment and detuning to those samples.
+fn build_samples_and_adjust_for_common_parameters<I: IntoIterator<Item = Complex64>>(
     parameters: SamplingParameters,
     common: ExplicitCommonBuiltinParameters,
     build: impl FnOnce(SamplingInfo) -> I,
@@ -841,126 +1151,6 @@ fn asz_explicit_build_samples_and_adjust_for_common_parameters<
     }
 
     IqSamples::Samples(samples)
-}
-
-impl BuiltinWaveformParameters for HermiteGaussian<Concrete> {
-    fn iq_values_at_sample_rate(
-        self,
-        common: CommonBuiltinParameters<Concrete>,
-        sample_rate: f64,
-    ) -> Result<IqSamples<Complex64>, SamplingError> {
-        let Self {
-            fwhm,
-            t0,
-            anh,
-            alpha,
-            second_order_hrm_coeff,
-        } = self;
-
-        build_samples_and_adjust_for_common_parameters(
-            SamplingParameters { sample_rate, fwhm },
-            common,
-            |SamplingInfo { time_steps, sigma }| {
-                let deriv_prefactor = -alpha / (2f64 * PI * anh);
-
-                time_steps.into_iter().map(move |el| {
-                    let exp_t = 0.5 * (el - t0).powf(2.0) / sigma.powf(2.0);
-                    let g = (-exp_t).exp();
-                    let env = (1.0 - second_order_hrm_coeff * exp_t) * g;
-                    let env_derived = deriv_prefactor * (el - t0) / sigma.powf(2.0)
-                        * g
-                        * (second_order_hrm_coeff * (exp_t - 1.0) - 1.0);
-                    c64(env, env_derived)
-                })
-            },
-        )
-    }
-}
-
-impl BuiltinWaveformParameters for BoxcarKernel {
-    fn iq_values_at_sample_rate(
-        self,
-        common: CommonBuiltinParameters<Concrete>,
-        sample_rate: f64,
-    ) -> Result<IqSamples<Complex64>, SamplingError> {
-        let ExplicitCommonBuiltinParameters {
-            sample_count,
-            scale,
-            phase,
-            detuning,
-        } = common.resolve_with_sample_rate(sample_rate)?;
-        let Self = self; // Get errors if the definition changes
-
-        let sample_count = sample_count as usize;
-
-        Ok(if detuning == 0.0 {
-            let iq = polar_to_rectangular(scale / sample_count as f64, phase);
-            IqSamples::Flat { iq, sample_count }
-        } else {
-            let samples = (0..sample_count).map(|index| {
-                polar_to_rectangular(
-                    scale / sample_count as f64,
-                    Cycles(detuning * (index as f64) / sample_rate) + phase,
-                )
-            });
-            IqSamples::Samples(samples.collect())
-        })
-    }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// Utility functions
-////////////////////////////////////////////////////////////////////////////////
-
-/// Parameters used uniformly in every waveform generator that produces a vector of samples.
-#[derive(Clone, Copy, Debug)]
-struct SamplingParameters {
-    sample_rate: f64,
-    fwhm: f64,
-}
-
-/// Derived information used in every waveform generator that produces a vector of samples.
-#[derive(Clone, Debug)]
-struct SamplingInfo {
-    time_steps: Array1<f64>,
-    sigma: f64,
-}
-
-/// Encapsulates the common pattern for generating a sequence of samples for a waveform:
-/// 1. Generate information from some generally-used parameters.
-/// 2. Use that information to generate the samples.
-/// 3. Rescale those samples.
-/// 4. Apply the phase adjustment and detuning to those samples.
-fn build_samples_and_adjust_for_common_parameters<I: IntoIterator<Item = Complex64>>(
-    parameters: SamplingParameters,
-    common: CommonBuiltinParameters<Concrete>,
-    build: impl FnOnce(SamplingInfo) -> I,
-) -> Result<IqSamples<Complex64>, SamplingError> {
-    let SamplingParameters { sample_rate, fwhm } = parameters;
-    let ExplicitCommonBuiltinParameters {
-        sample_count,
-        scale,
-        phase,
-        detuning,
-    } = common.resolve_with_sample_rate(sample_rate)?;
-
-    // It would be nice to be able to optimize `scale: 0.0` to `IqSamples::Flat`, but we'd have to
-    // figure out how to take care of the `erf_squared` padding durations.
-
-    let time_steps = Array::range(0.0, sample_count.into(), 1.0) / sample_rate;
-    let sigma = 0.5 * fwhm / (2.0 * LN_2).sqrt();
-
-    let mut samples: Vec<_> = build(SamplingInfo { time_steps, sigma })
-        .into_iter()
-        .collect();
-
-    // Like [`apply_phase_and_detuning`], but also applies the scale
-    for (index, sample) in samples.iter_mut().enumerate() {
-        *sample =
-            apply_phase_and_detuning_at_index(scale * *sample, phase, detuning, sample_rate, index);
-    }
-
-    Ok(IqSamples::Samples(samples))
 }
 
 /// Modulate and phase shift waveform IQ data in place.

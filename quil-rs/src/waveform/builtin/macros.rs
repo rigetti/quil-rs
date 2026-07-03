@@ -138,17 +138,18 @@ macro_rules! waveform_source {
     };
 }
 
-/// `concrete_waveform!($ty, ...fields of $ty...)` is effectively the same as `$ty<Concrete>`,
-/// except (a) it uses `super` because it's intended for use within a submodule, and (b) it just
-/// emits `$ty` if there are no fields, since fieldless waveforms aren't generic.
-macro_rules! concrete_waveform {
-    ($name:ident, $($field:ident)+) => {
-        super::$name<super::Concrete>
+/// `instantiated_waveform!($ty<$instantiation>, ...fields of $ty...)` is effectively the same as
+/// `$ty<$instantiation>`, except that it (a) just emits `$ty` if there are no fields since
+/// fieldless waveforms aren't generic, and (b) prefixes `$name` with `super` since this is intended
+/// for use in a submodule.
+macro_rules! instantiated_waveform {
+    ($name:ident<$parameter:ty>, $($field:ident)+) => {
+        super::$name<$parameter>
     };
-    ($name:ident,) => {
-        super::$name
-    };
-}
+    ($name:ident<$paramter:ty>,) => {
+         super::$name
+     };
+ }
 
 /// Define a Python getter and setter for the given type and field.
 ///
@@ -859,11 +860,22 @@ macro_rules! define_waveforms {
         mod private {
             use super::macros::*;
 
-            pub trait Sealed {}
-            impl Sealed for super::BuiltinWaveform<super::Concrete> {}
+            pub trait SealedConcrete {}
+            impl SealedConcrete for super::BuiltinWaveform<super::Concrete> {}
             $(
                 #[automatically_derived]
-                impl Sealed for concrete_waveform!($name, $($($field)+)?) {}
+                impl SealedConcrete for instantiated_waveform!(
+                    $name<super::Concrete>, $($($field)+)?
+                ) {}
+            )*
+
+            pub trait SealedPartial {}
+            impl SealedPartial for super::BuiltinWaveform<super::Partial<super::Concrete>> {}
+            $(
+                #[automatically_derived]
+                impl SealedPartial for instantiated_waveform!(
+                    $name<super::Partial<super::Concrete>>, $($($field)+)?
+                ) {}
             )*
         }
     }
@@ -876,6 +888,7 @@ pub(crate) use {
 };
 
 pub(crate) use {
-    concrete_waveform, define_waveform, define_waveforms, extract_type_if_generic_field,
-    field_evaluator, field_parser, field_referencer, field_transposer, field_type, waveform_source,
+    define_waveform, define_waveforms, extract_type_if_generic_field, field_evaluator,
+    field_parser, field_referencer, field_transposer, field_type, instantiated_waveform,
+    waveform_source,
 };

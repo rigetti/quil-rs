@@ -122,7 +122,7 @@ impl<S: Sampleable<IsPartial = ()>, P, T> Value<S, P, T> {
 }
 
 impl IqSamplesFor<Partial<Concrete>> {
-    pub(super) fn sampled_partial(self) -> IqSamplesOrPlaceholder {
+    pub(super) fn into_iq_samples_or_placeholder(self) -> IqSamplesOrPlaceholder {
         match self {
             Self::Partial((), placeholder) => IqSamplesOrPlaceholder::Placeholder(placeholder),
             Self::Total(samples) => IqSamplesOrPlaceholder::Samples(samples),
