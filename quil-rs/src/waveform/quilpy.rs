@@ -214,6 +214,9 @@ pub(super) mod explicit_stubs {
     /// ) -> $THIS_TYPE[OtherReal, OtherComplex]
     ///     ...
     /// ```
+    ///
+    /// except that we have to prefix all the type variables with an `_` because we support Python
+    /// versions before 3.12.
     pub const fn py_evaluate_method_info<T: Any + PyTypeInfo>() -> PyMethodsInfo {
         PyMethodsInfo {
             struct_id: any::TypeId::of::<T>,
@@ -228,7 +231,7 @@ pub(super) mod explicit_stubs {
                         kind: ParameterKind::PositionalOrKeyword,
                         type_info: || {
                             TypeInfo::with_module(
-                                "collections.abc.Callable[[Real], OtherReal]",
+                                "collections.abc.Callable[[_Real], _OtherReal]",
                                 "collections.abc".into(),
                             )
                         },
@@ -239,7 +242,7 @@ pub(super) mod explicit_stubs {
                         kind: ParameterKind::PositionalOrKeyword,
                         type_info: || {
                             TypeInfo::with_module(
-                                "collections.abc.Callable[[Complex], OtherComplex]",
+                                "collections.abc.Callable[[_Complex], _OtherComplex]",
                                 "collections.abc".into(),
                             )
                         },
@@ -247,7 +250,7 @@ pub(super) mod explicit_stubs {
                     },
                 ],
                 r#return: || TypeInfo {
-                    name: format!("{}[OtherReal, OtherComplex]", T::NAME),
+                    name: format!("{}[_OtherReal, _OtherComplex]", T::NAME),
                     import: Default::default(),
                 },
                 doc: "",
@@ -327,12 +330,12 @@ impl PyWaveform {
             .map(Self)
     }
 
-    #[gen_stub(override_return_type(type_repr = "Waveform[Real, Complex]"))]
+    #[gen_stub(override_return_type(type_repr = "Waveform[_Real, _Complex]"))]
     #[staticmethod]
     fn builtin(
-        #[gen_stub(override_type(type_repr = "BuiltinWaveform[Real, Complex]"))]
+        #[gen_stub(override_type(type_repr = "BuiltinWaveform[_Real, _Complex]"))]
         waveform: PyBuiltinWaveform,
-        #[gen_stub(override_type(type_repr = "CommonBuiltinParameters[Real, Complex]"))]
+        #[gen_stub(override_type(type_repr = "CommonBuiltinParameters[_Real, _Complex]"))]
         common_parameters: PyCommonBuiltinParameters,
     ) -> PyResult<Self> {
         Ok(Self(Waveform::Builtin {
@@ -345,7 +348,7 @@ impl PyWaveform {
     fn custom(
         name: String,
         #[gen_stub(override_type(
-            type_repr = "builtins.dict[builtins.str, Complex]",
+            type_repr = "builtins.dict[builtins.str, _Complex]",
             imports = ("builtins")
         ))]
         parameters: Bound<'_, PyDict>,
@@ -361,8 +364,8 @@ impl PyWaveform {
 
     #[gen_stub(override_return_type(
         type_repr = "typing.Optional[builtins.tuple[\
-                         BuiltinWaveform[Real, Complex], \
-                         CommonBuiltinParameters[Real, Complex]\
+                         BuiltinWaveform[_Real, _Complex], \
+                         CommonBuiltinParameters[_Real, _Complex]\
                      ]]",
         imports = ("builtins", "typing")
     ))]
@@ -395,7 +398,7 @@ impl PyWaveform {
     #[gen_stub(override_return_type(
         type_repr = "typing.Optional[builtins.tuple[\
                          builtins.str, \
-                         builtins.dict[builtins.str, Complex]]\
+                         builtins.dict[builtins.str, _Complex]]\
                      ]",
         imports = ("builtins", "typing")
     ))]

@@ -40,14 +40,14 @@ pyo3_stub_gen::inventory::submit! {
 #[pymethods]
 impl PyBuiltinWaveform {
     #[new]
-    #[gen_stub(override_return_type(type_repr = "BuiltinWaveform[Real, Complex]"))]
+    #[gen_stub(override_return_type(type_repr = "BuiltinWaveform[_Real, _Complex]"))]
     fn __new__<'py>(
         #[gen_stub(override_type(type_repr = "\
-            Flat[Real, Complex] | \
-            Gaussian[Real, Complex] | \
-            DragGaussian[Real, Complex] | \
-            ErfSquare[Real, Complex] | \
-            HermiteGaussian[Real, Complex] | \
+            Flat[_Real, _Complex] | \
+            Gaussian[_Real, _Complex] | \
+            DragGaussian[_Real, _Complex] | \
+            ErfSquare[_Real, _Complex] | \
+            HermiteGaussian[_Real, _Complex] | \
             BoxcarKernel\
         ",))]
         waveform: Bound<'py, PyAny>,
@@ -70,11 +70,11 @@ impl PyBuiltinWaveform {
     }
 
     #[gen_stub(override_return_type(type_repr = "\
-            Flat[Real, Complex] | \
-            Gaussian[Real, Complex] | \
-            DragGaussian[Real, Complex] | \
-            ErfSquare[Real, Complex] | \
-            HermiteGaussian[Real, Complex] | \
+            Flat[_Real, _Complex] | \
+            Gaussian[_Real, _Complex] | \
+            DragGaussian[_Real, _Complex] | \
+            ErfSquare[_Real, _Complex] | \
+            HermiteGaussian[_Real, _Complex] | \
             BoxcarKernel\
         ",))]
     fn as_inner<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
@@ -209,11 +209,11 @@ impl PyCommonBuiltinParameters {
     #[new]
     fn __new__(
         duration: f64,
-        #[gen_stub(override_type(type_repr = "typing.Optional[Real]", imports = ("typing")))]
+        #[gen_stub(override_type(type_repr = "typing.Optional[_Real]", imports = ("typing")))]
         scale: Option<PyAnyRust>,
-        #[gen_stub(override_type(type_repr = "typing.Optional[Real]", imports = ("typing")))]
+        #[gen_stub(override_type(type_repr = "typing.Optional[_Real]", imports = ("typing")))]
         phase: Option<PyAnyRust>,
-        #[gen_stub(override_type(type_repr = "typing.Optional[Real]", imports = ("typing")))]
+        #[gen_stub(override_type(type_repr = "typing.Optional[_Real]", imports = ("typing")))]
         detuning: Option<PyAnyRust>,
     ) -> Self {
         Self(CommonBuiltinParameters {
@@ -273,7 +273,7 @@ impl PyCommonBuiltinParameters {
     }
 
     #[getter(scale)]
-    #[gen_stub(override_return_type(type_repr = "typing.Optional[Real]", imports = ("typing")))]
+    #[gen_stub(override_return_type(type_repr = "typing.Optional[_Real]", imports = ("typing")))]
     fn py_get_scale<'py>(&self, py: Python<'py>) -> Option<&Bound<'py, PyAny>> {
         self.0.scale.as_ref().map(|scale| scale.0.bind(py))
     }
@@ -281,14 +281,14 @@ impl PyCommonBuiltinParameters {
     #[setter(scale)]
     fn py_set_scale(
         &mut self,
-        #[gen_stub(override_type(type_repr = "typing.Optional[Real]", imports = ("typing")))]
+        #[gen_stub(override_type(type_repr = "typing.Optional[_Real]", imports = ("typing")))]
         scale: Option<Py<PyAny>>,
     ) {
         self.0.scale = scale.map(PyAnyRust);
     }
 
     #[getter(phase)]
-    #[gen_stub(override_return_type(type_repr = "typing.Optional[Real]", imports = ("typing")))]
+    #[gen_stub(override_return_type(type_repr = "typing.Optional[_Real]", imports = ("typing")))]
     fn py_get_phase<'py>(&self, py: Python<'py>) -> Option<&Bound<'py, PyAny>> {
         self.0.phase.as_ref().map(|Cycles(phase)| phase.0.bind(py))
     }
@@ -296,14 +296,14 @@ impl PyCommonBuiltinParameters {
     #[setter(phase)]
     fn py_set_phase(
         &mut self,
-        #[gen_stub(override_type(type_repr = "typing.Optional[Real]", imports = ("typing")))]
+        #[gen_stub(override_type(type_repr = "typing.Optional[_Real]", imports = ("typing")))]
         phase: Option<Py<PyAny>>,
     ) {
         self.0.phase = phase.map(|phase| Cycles(PyAnyRust(phase)));
     }
 
     #[getter(detuning)]
-    #[gen_stub(override_return_type(type_repr = "typing.Optional[Real]", imports = ("typing")))]
+    #[gen_stub(override_return_type(type_repr = "typing.Optional[_Real]", imports = ("typing")))]
     fn py_get_detuning<'py>(&self, py: Python<'py>) -> Option<&Bound<'py, PyAny>> {
         self.0.detuning.as_ref().map(|detuning| detuning.0.bind(py))
     }
@@ -311,7 +311,7 @@ impl PyCommonBuiltinParameters {
     #[setter(detuning)]
     fn py_set_detuning(
         &mut self,
-        #[gen_stub(override_type(type_repr = "typing.Optional[Real]", imports = ("typing")))]
+        #[gen_stub(override_type(type_repr = "typing.Optional[_Real]", imports = ("typing")))]
         detuning: Option<Py<PyAny>>,
     ) {
         self.0.detuning = detuning.map(PyAnyRust);
@@ -492,7 +492,7 @@ impl PyBuiltinWaveform {
         &self,
         py: Python<'py>,
         #[gen_stub(override_type(
-            type_repr = "CommonBuiltinParameters[builtins.float, _T]",
+            type_repr = "CommonBuiltinParameters[builtins.float, __T]",
             imports = ("builtins"))
         )]
         common: PyCommonBuiltinParameters,

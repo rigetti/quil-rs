@@ -79,7 +79,12 @@ def common_builtin_parameters(draw: DrawFn) -> CommonBuiltinParameters[float, co
     s = draw(scale())
     phi = draw(phase())
     d = draw(detuning())
-    common = CommonBuiltinParameters(duration=t, scale=s, phase=phi, detuning=d)
+    common: CommonBuiltinParameters[float, complex] = CommonBuiltinParameters(
+        duration=t,
+        scale=s,
+        phase=phi,
+        detuning=d,
+    )
     assert type(common) == CommonBuiltinParameters
     assert common.duration == t
     assert common.scale == s
@@ -257,7 +262,7 @@ def test_parsed():
         )
     )
 
-    program_syntactic_pulses: list[Waveform[Expression]] = []
+    program_syntactic_pulses: list[Waveform[Expression, Expression]] = []
     program_concrete_pulses: list[Waveform[float, complex]] = []
 
     def evaluate_to_complex(e: Expression) -> complex:

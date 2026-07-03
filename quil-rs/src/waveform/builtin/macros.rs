@@ -185,11 +185,11 @@ macro_rules! python_get_set {
     };
 
     ($ty_name:ident, $field:ident, Real) => {
-        python_get_set!($ty_name, $field, PyAny("Real"));
+        python_get_set!($ty_name, $field, PyAny("_Real"));
     };
 
     ($ty_name:ident, $field:ident, Complex) => {
-        python_get_set!($ty_name, $field, PyAny("Complex"));
+        python_get_set!($ty_name, $field, PyAny("_Complex"));
     };
 
     ($ty_name:ident, $field:ident, PyAny($type_name:literal)) => {
@@ -313,7 +313,7 @@ macro_rules! define_python_interop {
     ) => {
         define_python_interop! {
             @parse
-                $name { $($($pfield: $pty $(($pty_str))?,)+)? $field1: Real ("Real"), }
+                $name { $($($pfield: $pty $(($pty_str))?,)+)? $field1: Real ("_Real"), }
             |
                 { $($field: $ty),* }
         }
@@ -326,7 +326,7 @@ macro_rules! define_python_interop {
     ) => {
         define_python_interop! {
             @parse
-                $name { $($($pfield: $pty $(($pty_str))?,)+)? $field1: Complex ("Complex"), }
+                $name { $($($pfield: $pty $(($pty_str))?,)+)? $field1: Complex ("_Complex"), }
             |
                 { $($field: $ty),* }
         }
@@ -353,7 +353,7 @@ macro_rules! define_python_waveform {
                 &self,
                 py: Python<'py>,
                 #[gen_stub(override_type(
-                    type_repr = "CommonBuiltinParameters[builtins.float, _T]",
+                    type_repr = "CommonBuiltinParameters[builtins.float, __T]",
                     imports = ("builtins"))
                 )]
                 common: PyCommonBuiltinParameters,
@@ -443,7 +443,7 @@ macro_rules! define_python_waveform {
                     &self,
                     py: Python<'py>,
                     #[gen_stub(override_type(
-                        type_repr = "CommonBuiltinParameters[builtins.float, _T]",
+                        type_repr = "CommonBuiltinParameters[builtins.float, __T]",
                         imports = ("builtins"))
                     )]
                     common: PyCommonBuiltinParameters,
@@ -572,21 +572,21 @@ macro_rules! add_python_waveform_convenience_constructor {
                     py: Python<'py>,
                     duration: f64,
                     #[gen_stub(override_type(
-                        type_repr = "typing.Optional[Real]",
+                        type_repr = "typing.Optional[_Real]",
                         imports = ("typing"))
                     )]
                     #[gen_stub(override_type(
-                        type_repr = "typing.Optional[Real]",
+                        type_repr = "typing.Optional[_Real]",
                         imports = ("typing"))
                     )]
                     scale: Option<&Bound<'py, PyAny>>,
                     #[gen_stub(override_type(
-                        type_repr = "typing.Optional[Real]",
+                        type_repr = "typing.Optional[_Real]",
                         imports = ("typing"))
                     )]
                     phase: Option<&Bound<'py, PyAny>>,
                     #[gen_stub(override_type(
-                        type_repr = "typing.Optional[Real]",
+                        type_repr = "typing.Optional[_Real]",
                         imports = ("typing"))
                     )]
                     detuning: Option<&Bound<'py, PyAny>>,

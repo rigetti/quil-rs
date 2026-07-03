@@ -17,15 +17,21 @@ mod main {
 /// Our stub generation code generates the `.pyi` files with
 /// [`py-stub-gen`](https://github.com/Jij-Inc/pyo3-stub-gen), and then applies four categories of
 /// edits to the generated `.pyi` files in order to work around the limitations of
-/// [PyO3](https://pyo3.rs/) and `py-stub-gen` when it comes to generic Python types.
+/// [PyO3](https://pyo3.rs/) and `py-stub-gen` when it comes to generic Python types.  The syntax
+/// used for generics is the old-style, pre-3.12 syntax, since we support Python 3.10 and 3.11.
 ///
 /// We allow specifying four kinds of edits.  Each edit operates on a single line, but they are
 /// shown on multiple lines here for clarity.
 ///
 /// 1. Classes may be altered to have generic parameters.  For instance, this can replace `class
-///    Waveform:` with `class Waveform[Real, Complex]:`.
+///    Waveform:` with `class Waveform(typing.Generic[_Real, _Complex]):`.  (In the new syntax,
+///    where we also wouldn't have to use underscores, that would be `class Waveform[Real, Complex =
+///    Real]:`.)  This currently does not support classes that have explicit superclass lists.
 ///
-/// 2. Methods may be altered to have generic parameters.  For instance, this can replace
+/// 2. Methods may be altered to have generic parameters.  This is a no-op, as we use the old Python
+///    syntax with globally-defined `TypeVar`s; nevertheless, the information about the type
+///    variables is used to generate the list of `TypeVar`s.  In the new syntax, where we also
+///    wouldn't have to use underscores, this would replace
 ///
 ///    ```text
 ///    def evaluate(
@@ -50,9 +56,9 @@ mod main {
 ///    replace
 ///
 ///    ```text
-///    def iq_values_at_sample_rate[_T](
+///    def iq_values_at_sample_rate(
 ///        self,
-///        common: CommonBuiltinParameters[builtins.float, _T],
+///        common: CommonBuiltinParameters[builtins.float, __T],
 ///        sample_rate: builtins.float
 ///    ) -> IqSamples:
 ///        ...
@@ -61,15 +67,13 @@ mod main {
 ///    with
 ///    
 ///    ```text
-///    def iq_values_at_sample_rate[_T](
+///    def iq_values_at_sample_rate(
 ///        self: BuiltinWaveform[builtins.float, builtins.complex],
-///        common: CommonBuiltinParameters[builtins.float, _T],
+///        common: CommonBuiltinParameters[builtins.float, __T],
 ///        sample_rate: builtins.float
 ///    ) -> IqSamples:
 ///        ...
 ///    ```
-///
-///    (Note that this function has already had a generic parameter added by the second edit.)
 ///
 /// 4. Anywhere `$SELF` occurs in a class that is being edited, it is replaced with the
 ///    *fully-parameterized* form of the class.  This is important for code generation from macros.
@@ -80,9 +84,9 @@ mod main {
 ///        cls,
 ///        *,
 ///        duration: builtins.float,
-///        scale: typing.Optional[Real] = None,
-///        phase: typing.Optional[Real] = None,
-///        detuning: typing.Optional[Real] = None
+///        scale: typing.Optional[_Real] = None,
+///        phase: typing.Optional[_Real] = None,
+///        detuning: typing.Optional[_Real] = None
 ///    ) -> $SELF:
 ///        ...
 ///    ```
@@ -94,18 +98,39 @@ mod main {
 ///        cls,
 ///        *,
 ///        duration: builtins.float,
-///        scale: typing.Optional[Real] = None,
-///        phase: typing.Optional[Real] = None,
-///        detuning: typing.Optional[Real] = None
-///    ) -> CommonBuiltinParameters[Real, Complex]:
+///        scale: typing.Optional[_Real] = None,
+///        phase: typing.Optional[_Real] = None,
+///        detuning: typing.Optional[_Real] = None
+///    ) -> CommonBuiltinParameters[_Real, _Complex]:
 ///        ...
 ///    ```
+///
+/// In addition to these edits, the tool will start the edited `.pyi` file with a list of `TypeVar`
+/// definitions.  These definitions support type parameter in versions of Python greater than or
+/// equal to 3.13 (the earliest this became possible for explicit `TypeVar`s).  For instance, this
+/// might look like:
+///
+/// ```text
+/// import sys
+/// if sys.version_info >= (3, 13):
+///     _Real = typing.TypeVar("_Real")
+///     _Complex = typing.TypeVar("_Complex", default=Real)
+///     __T = typing.TypeVar("__T")
+/// else:
+///     _Real = typing.TypeVar("_Real")
+///     _Complex = typing.TypeVar("_Complex")
+///     __T = typing.TypeVar("__T")
+///     ```
+///
+/// This means that **any type variables that aren't defined at runtime need to be prefixed with an
+/// underscore**.  Alas!
 mod main {
     use indexmap::IndexMap;
 
     mod edits {
         use std::fmt;
 
+        use anyhow::bail;
         use indexmap::IndexMap;
 
         pub type Modules = IndexMap<String, IndexMap<String, Class>>;
@@ -122,10 +147,10 @@ mod main {
             pub self_type: Option<String>,
         }
 
-        #[derive(Clone, Debug)]
+        #[derive(Clone, PartialEq, Eq, Hash, Debug)]
         pub struct TypeParameter {
-            name: String,
-            default: Option<String>,
+            pub name: String,
+            pub default: Option<String>,
         }
 
         impl fmt::Display for TypeParameter {
@@ -137,6 +162,51 @@ mod main {
                 }
                 Ok(())
             }
+        }
+
+        pub fn collect_all_type_parameters<'a>(
+            module: &'_ str,
+            classes: &'a IndexMap<String, Class>,
+        ) -> anyhow::Result<IndexMap<&'a str, Option<&'a str>>> {
+            let mut type_parameters_with_defaults = IndexMap::<&'a str, Option<&'a str>>::new();
+
+            let mut insert_all = |type_parameters: &'a [TypeParameter]| {
+                for TypeParameter { name, default } in type_parameters {
+                    match type_parameters_with_defaults.entry(name) {
+                        indexmap::map::Entry::Occupied(entry) => {
+                            let existing_default = *entry.get();
+                            if default.as_deref() != existing_default {
+                                bail!(
+                                    "conflicting defaults in {module} for type variable {name}: \
+                                 found both {existing_default:?} and {default:?}"
+                                )
+                            }
+                        }
+                        indexmap::map::Entry::Vacant(entry) => {
+                            entry.insert(default.as_deref());
+                        }
+                    }
+                }
+                Ok(())
+            };
+
+            for Class {
+                type_parameters,
+                methods,
+            } in classes.values()
+            {
+                insert_all(type_parameters)?;
+
+                for Method {
+                    type_parameters,
+                    self_type: _,
+                } in methods.values()
+                {
+                    insert_all(type_parameters)?;
+                }
+            }
+
+            Ok(type_parameters_with_defaults)
         }
 
         impl TypeParameter {
@@ -181,14 +251,69 @@ mod main {
             })
         }
 
-        pub fn fmt_type_parameters(parameters: &[TypeParameter]) -> impl fmt::Display + use<'_> {
-            fmt_type_parameters_maybe_default(parameters, true)
-        }
-
         pub fn fmt_type_parameters_defaultless(
             parameters: &[TypeParameter],
         ) -> impl fmt::Display + use<'_> {
             fmt_type_parameters_maybe_default(parameters, false)
+        }
+
+        fn fmt_type_var_definitions_indented_maybe_default<'a>(
+            parameters: &'a IndexMap<&str, Option<&str>>,
+            indentation: &'a str,
+            defaults: bool,
+        ) -> impl fmt::Display + use<'a> {
+            fmt::from_fn(move |f| {
+                for (name, default) in parameters {
+                    write!(f, r#"{indentation}{name} = typing.TypeVar("{name}""#)?;
+                    if defaults {
+                        if let Some(default) = default {
+                            write!(f, r", default = {default}")?;
+                        }
+                    }
+                    writeln!(f, ")")?;
+                }
+                Ok(())
+            })
+        }
+
+        pub fn fmt_type_var_definitions<'a>(
+            parameters: &'a IndexMap<&str, Option<&str>>,
+        ) -> impl fmt::Display + use<'a> {
+            fmt::from_fn(move |f| {
+                if parameters.is_empty() {
+                    return Ok(());
+                }
+
+                writeln!(f, "import sys")?;
+                writeln!(f, "if sys.version_info >= (3, 13):")?;
+                write!(
+                    f,
+                    "{}",
+                    fmt_type_var_definitions_indented_maybe_default(parameters, "    ", true)
+                )?;
+                writeln!(f, "else:")?;
+                write!(
+                    f,
+                    "{}",
+                    fmt_type_var_definitions_indented_maybe_default(parameters, "    ", false)
+                )?;
+                writeln!(f)
+            })
+        }
+
+        pub fn fmt_class_type_parameters_as_inheritance(
+            parameters: &[TypeParameter],
+        ) -> impl fmt::Display + use<'_> {
+            fmt::from_fn(move |f| {
+                if parameters.is_empty() {
+                    return Ok(());
+                }
+                write!(
+                    f,
+                    "(typing.Generic{})",
+                    fmt_type_parameters_defaultless(parameters)
+                )
+            })
         }
     }
 
@@ -267,6 +392,7 @@ mod main {
         /// The updatable state of the editor.
         #[derive(Debug)]
         struct PyiEditorState<'a> {
+            wrote_type_vars: bool,
             unseen_classes: IndexSet<&'a str>,
             current_class: Option<PyiCurrentClass<'a>>,
         }
@@ -305,6 +431,7 @@ mod main {
                         classes,
                     },
                     state: PyiEditorState {
+                        wrote_type_vars: false,
                         unseen_classes: classes.keys().map(String::as_str).collect(),
                         current_class: None,
                     },
@@ -357,9 +484,33 @@ mod main {
 
                 if line.chars().next().is_some_and(|c| !c.is_whitespace()) {
                     self.finish_class(context)?;
+
+                    // We don't need to handle this case at the end of a module – if we found no
+                    // classes, then we had no type variables to write out.
+                    #[expect(
+                        clippy::nonminimal_bool,
+                        reason = "grouping the line prefixes is clearer"
+                    )]
+                    if !self.wrote_type_vars
+                        && !(line.starts_with("import ")
+                            || line.starts_with("from ")
+                            || line.starts_with("#"))
+                    {
+                        write!(
+                            output,
+                            "{}",
+                            edits::fmt_type_var_definitions(&edits::collect_all_type_parameters(
+                                module_name,
+                                classes
+                            )?)
+                        )?;
+
+                        self.wrote_type_vars = true;
+                    }
                 }
 
                 let Self {
+                    wrote_type_vars: _,
                     unseen_classes,
                     current_class,
                 } = self;
@@ -382,7 +533,7 @@ mod main {
                     writeln!(
                         output,
                         "class {class_name}{}:",
-                        edits::fmt_type_parameters(&class.type_parameters)
+                        edits::fmt_class_type_parameters_as_inheritance(&class.type_parameters)
                     )?;
                 } else if let Some(PyiCurrentClass {
                     class_name,
@@ -416,15 +567,13 @@ mod main {
                         })
                     {
                         let edits::Method {
-                            type_parameters,
+                            // We use old-style Python with explicit type vars, so we don't get to
+                            // parameterize methods
+                            type_parameters: _,
                             self_type,
                         } = method;
 
-                        write!(
-                            output,
-                            "    def {method_name}{}(",
-                            edits::fmt_type_parameters(type_parameters)
-                        )?;
+                        write!(output, "    def {method_name}(")?;
 
                         // Duplicate methods are fine – that's what `@overload` is
                         unseen_methods.shift_remove(method_name);
@@ -504,8 +653,9 @@ mod main {
     fn pyi_edits() -> edits::Modules {
         use edits::{Class, Method, Modules, TypeParameter};
 
-        let real = TypeParameter::new("Real");
-        let complex = TypeParameter::defaulted("Complex", "Real");
+        let real = TypeParameter::new("_Real");
+        let complex = TypeParameter::defaulted("_Complex", "_Real");
+        let ignored = TypeParameter::new("__T");
 
         let evaluable_with_extras =
             |class_name: &'static str, mut methods: IndexMap<String, Method>| {
@@ -513,8 +663,8 @@ mod main {
                     "evaluate".to_owned(),
                     Method {
                         type_parameters: vec![
-                            TypeParameter::new("OtherReal"),
-                            TypeParameter::defaulted("OtherComplex", "OtherReal"),
+                            TypeParameter::new("_OtherReal"),
+                            TypeParameter::defaulted("_OtherComplex", "_OtherReal"),
                         ],
                         self_type: None,
                     },
@@ -537,7 +687,7 @@ mod main {
                 IndexMap::from([(
                     "iq_values_at_sample_rate".to_owned(),
                     Method {
-                        type_parameters: vec![TypeParameter::new("_T")],
+                        type_parameters: vec![ignored.clone()],
                         self_type: Some(format!("{name}[builtins.float, builtins.complex]")),
                     },
                 )]),
@@ -552,10 +702,11 @@ mod main {
                     IndexMap::from([(
                         "resolve_with_sample_rate".to_owned(),
                         Method {
-                            type_parameters: vec![TypeParameter::new("_T")],
-                            self_type: Some(
-                                "CommonBuiltinParameters[builtins.float, _T]".to_owned(),
-                            ),
+                            type_parameters: vec![ignored.clone()],
+                            self_type: Some(format!(
+                                "CommonBuiltinParameters[builtins.float, {}]",
+                                ignored.name
+                            )),
                         },
                     )]),
                 ),
@@ -573,7 +724,7 @@ mod main {
                         methods: IndexMap::from([(
                             "iq_values_at_sample_rate".to_owned(),
                             Method {
-                                type_parameters: vec![TypeParameter::new("_T")],
+                                type_parameters: vec![ignored.clone()],
                                 self_type: None,
                             },
                         )]),
