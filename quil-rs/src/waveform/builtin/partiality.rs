@@ -4,32 +4,34 @@ use std::convert::Infallible;
 
 use derive_where::derive_where;
 
-use crate::waveform::{Concrete, Partial, WaveformData};
+use crate::waveform::{sampling::IqSamples, Concrete, Partial, WaveformData};
+
+use super::IqSamplesOrPlaceholder;
 
 /// [`WaveformData`] that can be sampled from.
 pub(super) trait Sampleable: WaveformData {
     /// Evidence that this type is or isn't partial: [`()`] if it is partial, [`Infallible`] if it
     /// isn't.  Used to make functions that are partial for partial data and total for total data.
-    type Partial: Copy + Eq + std::fmt::Debug;
+    type IsPartial: Copy + Eq + std::fmt::Debug;
 
     /// Convert a real number to a concrete [`f64`] if the number is present.
-    fn eval_real(real: Self::Real) -> Result<f64, Self::Partial>;
+    fn eval_real(real: Self::Real) -> Result<f64, Self::IsPartial>;
 }
 
 impl Sampleable for Partial<Concrete> {
-    type Partial = ();
+    type IsPartial = ();
 
     #[inline(always)]
-    fn eval_real(real: Self::Real) -> Result<f64, Self::Partial> {
+    fn eval_real(real: Self::Real) -> Result<f64, Self::IsPartial> {
         real.ok_or(())
     }
 }
 
 impl Sampleable for Concrete {
-    type Partial = Infallible;
+    type IsPartial = Infallible;
 
     #[inline(always)]
-    fn eval_real(real: Self::Real) -> Result<f64, Self::Partial> {
+    fn eval_real(real: Self::Real) -> Result<f64, Self::IsPartial> {
         Ok(real)
     }
 }
@@ -38,15 +40,45 @@ impl Sampleable for Concrete {
 /// the partial case is impossible.
 #[derive_where(Clone, Copy, PartialEq, Eq, Debug; P, T)]
 pub(super) enum Value<S: Sampleable, P, T> {
-    Partial(S::Partial, P),
+    Partial(S::IsPartial, P),
     Total(T),
 }
 
-impl<S: Sampleable<Partial = Infallible>, P, T> Value<S, P, T> {
+/// The possibly-partial version of [`IqSamplesOrPlaceholder`].
+pub(super) type IqSamplesFor<S: Sampleable> = Value<S, IqSamples<()>, IqSamples<Complex64>>;
+
+impl<S: Sampleable<IsPartial = Infallible>, P, T> Value<S, P, T> {
     pub(super) fn unwrap_total(self) -> T {
         match self {
-            Value::Partial(never, _) => match never {},
-            Value::Total(total) => total,
+            Self::Partial(never, _) => match never {},
+            Self::Total(total) => total,
+        }
+    }
+}
+
+impl<S: Sampleable<IsPartial = ()>, T> Value<S, (), T> {
+    pub(super) fn into_option(self) -> Option<T> {
+        match self {
+            Self::Partial((), ()) => None,
+            Self::Total(total) => Some(total),
+        }
+    }
+}
+
+impl<S: Sampleable<IsPartial = ()>, P, T> Value<S, P, T> {
+    pub(super) fn into_result(self) -> Result<T, P> {
+        match self {
+            Self::Partial((), partial) => Err(partial),
+            Self::Total(total) => Ok(total),
+        }
+    }
+}
+
+impl IqSamplesFor<Partial<Concrete>> {
+    pub(super) fn sampled_partial(self) -> IqSamplesOrPlaceholder {
+        match self {
+            Self::Partial((), placeholder) => IqSamplesOrPlaceholder::Placeholder(placeholder),
+            Self::Total(samples) => IqSamplesOrPlaceholder::Samples(samples),
         }
     }
 }
