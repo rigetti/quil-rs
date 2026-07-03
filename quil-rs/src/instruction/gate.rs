@@ -1056,7 +1056,7 @@ impl<'a, T: AsRef<str>> GateSignature<'a, T> {
     }
 }
 
-#[cfg(feature = "python")]
+#[cfg(any(feature = "python", test))]
 impl<'a, T: AsRef<str>> GateSignature<'a, T> {
     pub(crate) fn try_new(
         name: &'a T,
@@ -1072,7 +1072,10 @@ impl<'a, T: AsRef<str>> GateSignature<'a, T> {
             gate_type,
         })
     }
+}
 
+#[cfg(feature = "python")]
+impl<'a, T: AsRef<str>> GateSignature<'a, T> {
     pub(crate) fn gate_parameters(&self) -> &[T] {
         self.gate_parameters
     }
