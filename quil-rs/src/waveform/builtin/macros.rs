@@ -138,18 +138,96 @@ macro_rules! waveform_source {
     };
 }
 
-/// `instantiated_waveform!($ty<$instantiation>, ...fields of $ty...)` is effectively the same as
-/// `$ty<$instantiation>`, except that it (a) just emits `$ty` if there are no fields since
-/// fieldless waveforms aren't generic, and (b) prefixes `$name` with `super` since this is intended
-/// for use in a submodule.
+/// `instantiated_waveform!($path<$instantiation>, ...fields of $path...)` is effectively the same
+/// as `$path<$instantiation>`, except that it just emits `$path` if there are no fields since
+/// fieldless waveforms aren't generic.
 macro_rules! instantiated_waveform {
-    ($name:ident<$parameter:ty>, $($field:ident)+) => {
-        super::$name<$parameter>
+    ($($path:ident)::+<$parameter:ty>, $($field:ident)+) => {
+        $($path)::+<$parameter>
     };
-    ($name:ident<$paramter:ty>,) => {
-         super::$name
+    ($($path:ident)::+<$parameter:ty>,) => {
+         $($path)::+
      };
- }
+}
+
+/// `transpose_if_generic_waveform!($value, ...fields of the type of $value...)` computes the
+/// transpose of `$value`: either `$value.transpose()` if `$value` is of generic type, or the
+/// trivial always-successful tranpose `Some($value)` if `$value` is of nongeneric type.
+macro_rules! transpose_if_generic_waveform {
+    ($value:expr, $($field:ident)+) => {
+        $value.transpose()
+    };
+    ($value:expr,) => {
+        Some($value)
+    };
+}
+
+/// `impl_builtin_waveform_traits!($name, ...fields of the type of $value...)` implements the
+/// [`super::BuiltinWaveformParameters`] trait for `$name<Concrete>` and the
+/// [`super::PartialBuiltinWaveformParameters`] trait for `$name<Partial<Concrete>>`; the
+/// implementations are trivial, but assume that the types have a `raw_iq_values_at_sample_rate`
+/// method.
+///
+/// Note that for nongeneric types, both traits are simply implemented for `$name`; this is the only
+/// reason we take the fields as a macro argument.
+macro_rules! impl_builtin_waveform_traits {
+    ($name:ident $(, $field:ident)*) => {
+        impl BuiltinWaveformParameters for instantiated_waveform!(
+            $name<Concrete>, $($field)*
+        ) {
+            #[inline(always)]
+            fn iq_values_at_sample_rate(
+                self,
+                common: CommonBuiltinParameters<Concrete>,
+                sample_rate: f64,
+            ) -> Result<IqSamples<Complex64>, SamplingError> {
+                self.raw_iq_values_at_sample_rate(common, sample_rate)
+                    .map(IqSamplesFor::unwrap_total)
+            }
+        }
+
+        impl PartialBuiltinWaveformParameters for instantiated_waveform!(
+            $name<Partial<Concrete>>, $($field)*
+        ) {
+            type Concrete = instantiated_waveform!($name<Concrete>, $($field)*);
+
+            #[inline(always)]
+            fn concretize(self) -> Option<Self::Concrete> {
+                transpose_if_generic_waveform!(self, $($field)*)
+            }
+
+            #[inline(always)]
+            fn partial_iq_values_at_sample_rate(
+                self,
+                common: CommonBuiltinParameters<Partial<Concrete>>,
+                sample_rate: f64,
+            ) -> Result<IqSamplesOrPlaceholder, SamplingError> {
+                self.raw_iq_values_at_sample_rate(common, sample_rate)
+                    .map(IqSamplesFor::into_iq_samples_or_placeholder)
+            }
+        }
+    };
+}
+
+/// This macro implements the [`super::partiality::ConcretizableWaveform`] trait for the partial and
+/// concrete variants of this waveform.
+macro_rules! impl_concretizable {
+    ($name:ident) => {
+        impl ConcretizableWaveform for $name<Partial<Concrete>> {
+            #[inline(always)]
+            fn concretize(self) -> Result<$name<Concrete>, ()> {
+                self.transpose().ok_or(())
+            }
+        }
+
+        impl ConcretizableWaveform for $name<Concrete> {
+            #[inline(always)]
+            fn concretize(self) -> Result<Self, Infallible> {
+                Ok(self)
+            }
+        }
+    };
+}
 
 /// Define a Python getter and setter for the given type and field.
 ///
@@ -650,6 +728,8 @@ macro_rules! define_waveform {
                 Ok(Self)
             }
         }
+
+        impl_builtin_waveform_traits!($name);
     };
 
     {
@@ -773,6 +853,9 @@ macro_rules! define_waveform {
                 self.transpose()
             }
         }
+
+        impl_builtin_waveform_traits!($name, $($field),+);
+        impl_concretizable!($name);
    }
 }
 
@@ -865,7 +948,7 @@ macro_rules! define_waveforms {
             $(
                 #[automatically_derived]
                 impl SealedConcrete for instantiated_waveform!(
-                    $name<super::Concrete>, $($($field)+)?
+                    super::$name<super::Concrete>, $($($field)+)?
                 ) {}
             )*
 
@@ -874,7 +957,7 @@ macro_rules! define_waveforms {
             $(
                 #[automatically_derived]
                 impl SealedPartial for instantiated_waveform!(
-                    $name<super::Partial<super::Concrete>>, $($($field)+)?
+                    super::$name<super::Partial<super::Concrete>>, $($($field)+)?
                 ) {}
             )*
         }
@@ -889,6 +972,6 @@ pub(crate) use {
 
 pub(crate) use {
     define_waveform, define_waveforms, extract_type_if_generic_field, field_evaluator,
-    field_parser, field_referencer, field_transposer, field_type, instantiated_waveform,
-    waveform_source,
+    field_parser, field_referencer, field_transposer, field_type, impl_builtin_waveform_traits,
+    impl_concretizable, instantiated_waveform, transpose_if_generic_waveform, waveform_source,
 };

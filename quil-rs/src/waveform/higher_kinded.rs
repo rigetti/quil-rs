@@ -12,6 +12,10 @@ use super::{Partial, Reference, WaveformData};
 ///
 /// For every waveform type constructor `W`, this trait should be implemented for all `W<T>` at
 /// once.
+//
+// Note for developers: Implementations of this trait are generated for all the generic built-in waveforms
+// (e.g., [`super::builtin::Flat`]) by [`crate::waveform::builtin::macros::define_waveforms`].  These
+// implementations are trivial wrappers around the inherent methods of the same name.
 pub trait WaveformParameters {
     /// The underlying generic parameter for this type.
     type WaveformData: WaveformData;
@@ -46,6 +50,10 @@ pub trait WaveformParameters {
 ///
 /// For every waveform type constructor `W`, this trait should be implemented for all
 /// `W<Partial<T>>` at once.
+//
+// Note for developers: Implementations of this trait are generated for all the generic built-in waveforms
+// (e.g., [`super::builtin::Flat`]) by [`crate::waveform::builtin::macros::define_waveforms`].  These
+// implementations are trivial wrappers around the inherent methods of the same name.
 pub trait PartialWaveformParameters:
     WaveformParameters<
     WaveformData = Partial<Self::TotalWaveformData>,
