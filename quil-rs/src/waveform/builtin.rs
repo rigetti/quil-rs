@@ -31,6 +31,9 @@ pub mod quilpy;
 mod macros;
 use macros::*;
 
+mod partiality;
+use partiality::Sampleable;
+
 ////////////////////////////////////////////////////////////////////////////////
 // General built-in waveform types
 ////////////////////////////////////////////////////////////////////////////////
@@ -212,29 +215,16 @@ impl<T: WaveformData> CommonBuiltinParameters<Partial<T>> {
     }
 }
 
-impl CommonBuiltinParameters<Concrete> {
-    /// Given a sample rate, return the corresponding [explicit
-    /// parameters][ExplicitCommonBuiltinParameters].
-    ///
-    /// For the three optional fields ([`scale`][Self::scale], [`phase`][Self::phase], and
-    /// [`detuning`][Self::detuning]), the explicit version is either their original value (if
-    /// present) or their default value (if missing).
-    ///
-    /// For the [`duration`][Self::duration], the explicit version is [the integer number of
-    /// samples][ExplicitCommonBuiltinParameters::sample_count] required to fill out the
-    /// [`Self::duration`].  If the requested duration is misaligned with respect to the sample
-    /// rate, returns an error.
-    ///
-    /// *Misalignment* means that to fill the duration would require a nonintegral number of
-    /// samples.  This function will ignore any error less than 1% – that is, if the function would
-    /// an integer number of samples plus one fractional sample of size between 99% and 101%, then
-    /// that last sample is considered another integral sample.
+impl<T: WaveformData> CommonBuiltinParameters<T> {
     #[inline]
-    pub fn resolve_with_sample_rate(
+    fn raw_resolve_with_sample_rate(
         self,
         sample_rate: f64,
-    ) -> Result<ExplicitCommonBuiltinParameters, SamplingError> {
-        let CommonBuiltinParameters {
+    ) -> Result<partiality::Value<T, u32, ExplicitCommonBuiltinParameters>, SamplingError>
+    where
+        T: Sampleable,
+    {
+        let Self {
             duration,
             scale,
             phase,
@@ -260,13 +250,53 @@ impl CommonBuiltinParameters<Concrete> {
                 max_misalignment,
             })
         } else {
-            Ok(ExplicitCommonBuiltinParameters {
-                sample_count: sample_count as u32,
-                scale: scale.unwrap_or(1.0),
-                phase: phase.unwrap_or(Cycles(0.0)),
-                detuning: detuning.unwrap_or(0.0),
+            let sample_count = sample_count as u32;
+
+            let evaluate_or =
+                |field: Option<_>, default| field.map(T::eval_real).unwrap_or(Ok(default));
+
+            // Cheap and cheerful try block
+            let result = (|| {
+                Ok(ExplicitCommonBuiltinParameters {
+                    sample_count,
+                    scale: evaluate_or(scale, 1.0)?,
+                    phase: evaluate_or(phase.map(|p| p.0), 0.0).map(Cycles)?,
+                    detuning: evaluate_or(detuning, 0.0)?,
+                })
+            })();
+
+            Ok(match result {
+                Ok(total) => partiality::Value::Total(total),
+                Err(partial) => partiality::Value::Partial(partial, sample_count),
             })
         }
+    }
+}
+
+impl CommonBuiltinParameters<Concrete> {
+    /// Given a sample rate, return the corresponding [explicit
+    /// parameters][ExplicitCommonBuiltinParameters].
+    ///
+    /// For the three optional fields ([`scale`][Self::scale], [`phase`][Self::phase], and
+    /// [`detuning`][Self::detuning]), the explicit version is either their original value (if
+    /// present) or their default value (if missing).
+    ///
+    /// For the [`duration`][Self::duration], the explicit version is [the integer number of
+    /// samples][ExplicitCommonBuiltinParameters::sample_count] required to fill out the
+    /// [`Self::duration`].  If the requested duration is misaligned with respect to the sample
+    /// rate, returns an error.
+    ///
+    /// *Misalignment* means that to fill the duration would require a nonintegral number of
+    /// samples.  This function will ignore any error less than 1% – that is, if the function would
+    /// an integer number of samples plus one fractional sample of size between 99% and 101%, then
+    /// that last sample is considered another integral sample.
+    #[inline]
+    pub fn resolve_with_sample_rate(
+        self,
+        sample_rate: f64,
+    ) -> Result<ExplicitCommonBuiltinParameters, SamplingError> {
+        self.raw_resolve_with_sample_rate(sample_rate)
+            .map(partiality::Value::unwrap_total)
     }
 }
 
@@ -444,21 +474,70 @@ define_waveforms! {
     pub struct BoxcarKernel;
 }
 
+/// Automate matching on [`BuiltinWaveform`] when it behaves uniformly on all waveforms (possibly
+/// with the exception of the non-generic [`BoxcarKernel`]).  Abstracting over this with a regular
+/// function would require us to be able to pass *polymorphic functions* as parameters, which we
+/// can't do without the very heavyweight option of creating a trait each time.
+macro_rules! builtin_waveform_match {
+    (match $outer:ident {
+        $inner:ident => $body:expr$(,)?
+    }) => {
+        builtin_waveform_match! {
+            @match $outer {
+                ($inner) => ($body),
+                (BoxcarKernel) => ($body),
+            }
+        }
+    };
+
+    (match $outer:ident {
+        $inner:ident => $body:expr,
+        BoxcarKernel => $boxcar_body:expr$(,)?
+    }) => {
+        builtin_waveform_match! {
+            @match $outer {
+                ($inner) => ($body),
+                (BoxcarKernel) => ($boxcar_body),
+            }
+        }
+    };
+
+    (match $outer:ident {
+        $inner:ident => { $($body:stmt;)* $(trailing:stmt)? }
+        BoxcarKernel => $boxcar_body:expr$(,)?
+    }) => {
+        builtin_waveform_match! {
+            @match $outer {
+                ($inner) => ({ $($body;)* $(trailing)? }),
+                (BoxcarKernel) => ($boxcar_body),
+            }
+        }
+    };
+
+    (@match $outer:ident {
+        ($inner:ident) => ($body:expr),
+        (BoxcarKernel) => ($boxcar_body:expr),
+    }) => {
+        match $outer {
+            BuiltinWaveform::Flat($inner) => $body,
+            BuiltinWaveform::Gaussian($inner) => $body,
+            BuiltinWaveform::DragGaussian($inner) => $body,
+            BuiltinWaveform::ErfSquare($inner) => $body,
+            BuiltinWaveform::HermiteGaussian($inner) => $body,
+            BuiltinWaveform::BoxcarKernel($inner @ BoxcarKernel) => $boxcar_body,
+        }
+    };
+}
+
 impl<S: WaveformData> BuiltinWaveform<S> {
     /// Convert an owned [`BuiltinWaveform`] into an equivalent one whose (non-concrete) parameters
     /// are all references.
     pub fn as_ref(&self) -> BuiltinWaveform<Reference<'_, S>> {
-        match self {
-            Self::Flat(flat) => BuiltinWaveform::Flat(flat.as_ref()),
-            Self::Gaussian(gaussian) => BuiltinWaveform::Gaussian(gaussian.as_ref()),
-            Self::DragGaussian(drag_gaussian) => {
-                BuiltinWaveform::DragGaussian(drag_gaussian.as_ref())
+        builtin_waveform_match! {
+            match self {
+                waveform => waveform.as_ref().into(),
+                BoxcarKernel => (*waveform).into(),
             }
-            Self::ErfSquare(erf_square) => BuiltinWaveform::ErfSquare(erf_square.as_ref()),
-            Self::HermiteGaussian(hermite_gaussian) => {
-                BuiltinWaveform::HermiteGaussian(hermite_gaussian.as_ref())
-            }
-            Self::BoxcarKernel(boxcar_kernel) => BuiltinWaveform::BoxcarKernel(*boxcar_kernel),
         }
     }
 
@@ -477,21 +556,11 @@ impl<S: WaveformData> BuiltinWaveform<S> {
         real: impl Fn(S::Real) -> Result<T::Real, E>,
         complex: impl Fn(S::Complex) -> Result<T::Complex, E>,
     ) -> Result<BuiltinWaveform<T>, E> {
-        match self {
-            Self::Flat(flat) => flat.try_evaluate(real, complex).map(BuiltinWaveform::Flat),
-            Self::Gaussian(gaussian) => gaussian
-                .try_evaluate(real, complex)
-                .map(BuiltinWaveform::Gaussian),
-            Self::DragGaussian(drag_gaussian) => drag_gaussian
-                .try_evaluate(real, complex)
-                .map(BuiltinWaveform::DragGaussian),
-            Self::ErfSquare(erf_square) => erf_square
-                .try_evaluate(real, complex)
-                .map(BuiltinWaveform::ErfSquare),
-            Self::HermiteGaussian(hermite_gaussian) => hermite_gaussian
-                .try_evaluate(real, complex)
-                .map(BuiltinWaveform::HermiteGaussian),
-            Self::BoxcarKernel(boxcar_kernel) => Ok(BuiltinWaveform::BoxcarKernel(boxcar_kernel)),
+        builtin_waveform_match! {
+            match self {
+                waveform => waveform.try_evaluate(real, complex).map(BuiltinWaveform::from),
+                BoxcarKernel => Ok(waveform.into()),
+            }
         }
     }
 }
@@ -500,17 +569,11 @@ impl<T: WaveformData> BuiltinWaveform<Partial<T>> {
     /// Returns `None` if any of the partial [`BuiltinWaveform`]'s data is missing, and returns its
     /// underlying total form), [`BuiltinWaveform<T>`]), otherwise.
     pub fn transpose(self) -> Option<BuiltinWaveform<T>> {
-        match self {
-            Self::Flat(flat) => flat.transpose().map(BuiltinWaveform::Flat),
-            Self::Gaussian(gaussian) => gaussian.transpose().map(BuiltinWaveform::Gaussian),
-            Self::DragGaussian(drag_gaussian) => {
-                drag_gaussian.transpose().map(BuiltinWaveform::DragGaussian)
+        builtin_waveform_match! {
+            match self {
+                waveform => waveform.transpose().map(BuiltinWaveform::from),
+                BoxcarKernel => Some(waveform.into()),
             }
-            Self::ErfSquare(erf_square) => erf_square.transpose().map(BuiltinWaveform::ErfSquare),
-            Self::HermiteGaussian(hermite_gaussian) => hermite_gaussian
-                .transpose()
-                .map(BuiltinWaveform::HermiteGaussian),
-            Self::BoxcarKernel(boxcar_kernel) => Some(BuiltinWaveform::BoxcarKernel(boxcar_kernel)),
         }
     }
 }
@@ -525,27 +588,9 @@ impl BuiltinWaveformParameters for BuiltinWaveform<Concrete> {
         common: CommonBuiltinParameters<Concrete>,
         sample_rate: f64,
     ) -> Result<IqSamples<Complex64>, SamplingError> {
-        match self {
-            BuiltinWaveform::Flat(flat) => flat.iq_values_at_sample_rate(common, sample_rate),
-
-            BuiltinWaveform::Gaussian(gaussian) => {
-                gaussian.iq_values_at_sample_rate(common, sample_rate)
-            }
-
-            BuiltinWaveform::DragGaussian(drag_gaussian) => {
-                drag_gaussian.iq_values_at_sample_rate(common, sample_rate)
-            }
-
-            BuiltinWaveform::ErfSquare(erf_square) => {
-                erf_square.iq_values_at_sample_rate(common, sample_rate)
-            }
-
-            BuiltinWaveform::HermiteGaussian(hermite_gaussian) => {
-                hermite_gaussian.iq_values_at_sample_rate(common, sample_rate)
-            }
-
-            BuiltinWaveform::BoxcarKernel(boxcar_kernel) => {
-                boxcar_kernel.iq_values_at_sample_rate(common, sample_rate)
+        builtin_waveform_match! {
+            match self {
+                waveform => waveform.iq_values_at_sample_rate(common, sample_rate),
             }
         }
     }
