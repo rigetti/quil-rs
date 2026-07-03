@@ -721,7 +721,7 @@ impl_builtin_waveform! {
     BoxcarKernel,
 }
 
-impl<T: Sampleable> Flat<T> {
+impl<T: WaveformData> Flat<T> {
     fn raw_iq_values_at_sample_rate(
         self,
         common: CommonBuiltinParameters<T>,
@@ -738,10 +738,7 @@ impl<T: Sampleable> Flat<T> {
             identity,
         )? {
             partiality::Value::Partial(is_partial, samples) => {
-                return Ok(partiality::Value::Partial(
-                    is_partial,
-                    IqSamplesFor::placeholder(samples),
-                ))
+                return Ok(partiality::Value::Partial(is_partial, samples))
             }
             partiality::Value::Total(result) => result,
         };
@@ -760,18 +757,18 @@ impl<T: Sampleable> Flat<T> {
 
         Ok(IqSamplesFor::Total(if detuning == 0.0 {
             IqSamples::Flat {
-                iq: apply_phase(iq, phase),
+                iq: apply_phase(scaled_iq, phase),
                 sample_count,
             }
         } else {
-            let mut samples = vec![iq; sample_count];
+            let mut samples = vec![scaled_iq; sample_count];
             apply_phase_and_detuning(&mut samples, phase, detuning, sample_rate);
             IqSamples::Samples(samples)
         }))
     }
 }
 
-impl<T: Sampleable> Gaussian<T> {
+impl<T: WaveformData> Gaussian<T> {
     fn raw_iq_values_at_sample_rate(
         self,
         common: CommonBuiltinParameters<T>,
@@ -789,21 +786,23 @@ impl<T: Sampleable> Gaussian<T> {
             partiality::Value::Total((explicit, waveform)) => {
                 let Gaussian { fwhm, t0 } = waveform;
 
-                build_samples_and_adjust_for_common_parameters(
-                    SamplingParameters { sample_rate, fwhm },
-                    explicit,
-                    |SamplingInfo { time_steps, sigma }| {
-                        time_steps.into_iter().map(move |el| {
-                            real!((-0.5 * (el - t0).powf(2.0) / sigma.powf(2.0)).exp())
-                        })
-                    },
-                )
+                Ok(IqSamplesFor::Total(
+                    build_samples_and_adjust_for_common_parameters(
+                        SamplingParameters { sample_rate, fwhm },
+                        explicit,
+                        |SamplingInfo { time_steps, sigma }| {
+                            time_steps.into_iter().map(move |el| {
+                                real!((-0.5 * (el - t0).powf(2.0) / sigma.powf(2.0)).exp())
+                            })
+                        },
+                    ),
+                ))
             }
         }
     }
 }
 
-impl<T: Sampleable> DragGaussian<T> {
+impl<T: WaveformData> DragGaussian<T> {
     fn raw_iq_values_at_sample_rate(
         self,
         common: CommonBuiltinParameters<T>,
@@ -826,27 +825,29 @@ impl<T: Sampleable> DragGaussian<T> {
                     alpha,
                 } = waveform;
 
-                build_samples_and_adjust_for_common_parameters(
-                    SamplingParameters { sample_rate, fwhm },
-                    explicit,
-                    |SamplingInfo { time_steps, sigma }| {
-                        time_steps.into_iter().map(move |el| {
-                            // Generate envelope sample
-                            let env = (-0.5 * (el - t0).powf(2.0) / sigma.powf(2.0)).exp();
-                            // Generate modified envelope sample
-                            let env_mod = (alpha * (1.0 / (2.0 * PI * anh * sigma.powf(2.0))))
-                                * (el - t0)
-                                * env;
-                            c64(env, env_mod)
-                        })
-                    },
-                )
+                Ok(IqSamplesFor::Total(
+                    build_samples_and_adjust_for_common_parameters(
+                        SamplingParameters { sample_rate, fwhm },
+                        explicit,
+                        |SamplingInfo { time_steps, sigma }| {
+                            time_steps.into_iter().map(move |el| {
+                                // Generate envelope sample
+                                let env = (-0.5 * (el - t0).powf(2.0) / sigma.powf(2.0)).exp();
+                                // Generate modified envelope sample
+                                let env_mod = (alpha * (1.0 / (2.0 * PI * anh * sigma.powf(2.0))))
+                                    * (el - t0)
+                                    * env;
+                                c64(env, env_mod)
+                            })
+                        },
+                    ),
+                ))
             }
         }
     }
 }
 
-impl<T: Sampleable> ErfSquare<T> {
+impl<T: WaveformData> ErfSquare<T> {
     fn raw_iq_values_at_sample_rate(
         self,
         common: CommonBuiltinParameters<T>,
@@ -881,28 +882,28 @@ impl<T: Sampleable> ErfSquare<T> {
                 let t1 = fwhm;
                 let t2 = common.duration - fwhm;
 
-                let samples = build_samples_and_adjust_for_common_parameters(
-                    SamplingParameters { sample_rate, fwhm },
-                    explicit,
-                    |SamplingInfo { time_steps, sigma }| {
-                        let waveform = time_steps.into_iter().map(move |el| {
-                            real!(0.5 * (erf((el - t1) / sigma) - erf((el - t2) / sigma)))
-                        });
+                Ok(IqSamplesFor::Total(
+                    build_samples_and_adjust_for_common_parameters(
+                        SamplingParameters { sample_rate, fwhm },
+                        explicit,
+                        |SamplingInfo { time_steps, sigma }| {
+                            let waveform = time_steps.into_iter().map(move |el| {
+                                real!(0.5 * (erf((el - t1) / sigma) - erf((el - t2) / sigma)))
+                            });
 
-                        let left_padding = repeat_n(real!(0.0), left_padding_samples);
-                        let right_padding = repeat_n(real!(0.0), right_padding_samples);
+                            let left_padding = repeat_n(real!(0.0), left_padding_samples);
+                            let right_padding = repeat_n(real!(0.0), right_padding_samples);
 
-                        left_padding.chain(waveform).chain(right_padding)
-                    },
-                );
-
-                Ok(IqSamplesFor::Total(samples))
+                            left_padding.chain(waveform).chain(right_padding)
+                        },
+                    ),
+                ))
             }
         }
     }
 }
 
-impl<T: Sampleable> HermiteGaussian<T> {
+impl<T: WaveformData> HermiteGaussian<T> {
     fn raw_iq_values_at_sample_rate(
         self,
         common: CommonBuiltinParameters<T>,
@@ -926,23 +927,25 @@ impl<T: Sampleable> HermiteGaussian<T> {
                     second_order_hrm_coeff,
                 } = waveform;
 
-                build_samples_and_adjust_for_common_parameters(
-                    SamplingParameters { sample_rate, fwhm },
-                    explicit,
-                    |SamplingInfo { time_steps, sigma }| {
-                        let deriv_prefactor = -alpha / (2f64 * PI * anh);
+                Ok(IqSamplesFor::Total(
+                    build_samples_and_adjust_for_common_parameters(
+                        SamplingParameters { sample_rate, fwhm },
+                        explicit,
+                        |SamplingInfo { time_steps, sigma }| {
+                            let deriv_prefactor = -alpha / (2f64 * PI * anh);
 
-                        time_steps.into_iter().map(move |el| {
-                            let exp_t = 0.5 * (el - t0).powf(2.0) / sigma.powf(2.0);
-                            let g = (-exp_t).exp();
-                            let env = (1.0 - second_order_hrm_coeff * exp_t) * g;
-                            let env_derived = deriv_prefactor * (el - t0) / sigma.powf(2.0)
-                                * g
-                                * (second_order_hrm_coeff * (exp_t - 1.0) - 1.0);
-                            c64(env, env_derived)
-                        })
-                    },
-                )
+                            time_steps.into_iter().map(move |el| {
+                                let exp_t = 0.5 * (el - t0).powf(2.0) / sigma.powf(2.0);
+                                let g = (-exp_t).exp();
+                                let env = (1.0 - second_order_hrm_coeff * exp_t) * g;
+                                let env_derived = deriv_prefactor * (el - t0) / sigma.powf(2.0)
+                                    * g
+                                    * (second_order_hrm_coeff * (exp_t - 1.0) - 1.0);
+                                c64(env, env_derived)
+                            })
+                        },
+                    ),
+                ))
             }
         }
     }
@@ -964,10 +967,7 @@ impl BoxcarKernel {
             |never: Infallible| match never {},
         )? {
             partiality::Value::Partial(is_partial, samples) => {
-                return Ok(partiality::Value::Partial(
-                    is_partial,
-                    IqSamplesFor::placeholder(samples),
-                ))
+                return Ok(partiality::Value::Partial(is_partial, samples))
             }
             partiality::Value::Total(result) => result,
         };
@@ -1011,6 +1011,11 @@ impl BoxcarKernel {
 /// [`IqSamples::Flat`] if the [`CommonBuiltinParameters::detuning`] is specified to be `0.0` (or
 /// omitted), and an [`IqSamples::Samples`] otherwise.  In both cases, the sample count will be
 /// precisely the resulting [`ExplicitCommonBuiltinParameters::sample_count`].
+#[expect(
+    clippy::type_complexity,
+    reason = "the complexity is not that bad, or at least not bad in a way that's resolvable by \
+              using `type` definitions"
+)]
 fn resolve_for_flat_unless_detuned<T: Sampleable, W, E>(
     waveform: impl FnOnce() -> Result<W, E>,
     common: CommonBuiltinParameters<T>,
@@ -1053,7 +1058,7 @@ where
         Ok(waveform) => waveform,
     };
 
-    return Ok(partiality::Value::Total((waveform, explicit)));
+    Ok(partiality::Value::Total((waveform, explicit)))
 }
 
 /// Parameters used uniformly in every waveform generator that produces a vector of samples.
@@ -1077,6 +1082,11 @@ struct SamplingInfo {
 ///
 /// If the input data *is* partial, instead returns the computed sample count (as with
 /// [`CommonBuiltinParameters::partial_resolve_with_sample_rate`]).
+#[expect(
+    clippy::type_complexity,
+    reason = "the complexity here is essential to the abstraction, and cannot be brushed under the \
+              rug with `type` definitions"
+)]
 fn concretize_and_resolve<W: ConcretizableWaveform>(
     waveform: W,
     common: CommonBuiltinParameters<W::WaveformData>,
@@ -1113,7 +1123,7 @@ fn concretize_and_resolve<W: ConcretizableWaveform>(
         Ok(waveform) => waveform,
     };
 
-    return Ok(partiality::Value::Total((explicit, waveform)));
+    Ok(partiality::Value::Total((explicit, waveform)))
 }
 
 /// Encapsulates the common pattern for generating a sequence of samples for a waveform:

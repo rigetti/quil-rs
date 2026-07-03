@@ -3,13 +3,14 @@
 use std::convert::Infallible;
 
 use derive_where::derive_where;
+use num_complex::Complex64;
 
 use crate::waveform::{higher_kinded, sampling::IqSamples, Concrete, Partial, WaveformData};
 
 use super::IqSamplesOrPlaceholder;
 
 /// [`WaveformData`] that can be sampled from.
-pub(super) trait Sampleable: WaveformData {
+pub(super) trait Sampleable: WaveformData<Real: Copy, Complex: Copy> {
     /// Evidence that this type is or isn't partial: [`()`] if it is partial, [`Infallible`] if it
     /// isn't.  Used to make functions that are partial for partial data and total for total data.
     type IsPartial: Copy + Eq + std::fmt::Debug;
@@ -71,12 +72,12 @@ macro_rules! impl_concretizable_waveform {
 impl_concretizable_waveform!(Flat, Gaussian, DragGaussian, ErfSquare, HermiteGaussian);
 
 /// A convenient trait alias for using [`ConcretizableWaveform`] in specific cases.
-pub(super) trait ConcretizableFromTo<T, C>:
+pub(super) trait ConcretizableFromTo<T: Sampleable, C>:
     ConcretizableWaveform<WaveformData = T, WithWaveformData<Concrete> = C>
 {
 }
 impl<
-        T: WaveformData,
+        T: Sampleable,
         C,
         W: ConcretizableWaveform<WaveformData = T, WithWaveformData<Concrete> = C>,
     > ConcretizableFromTo<T, C> for W
@@ -92,31 +93,13 @@ pub(super) enum Value<S: Sampleable, P, T> {
 }
 
 /// The possibly-partial version of [`IqSamplesOrPlaceholder`].
-pub(super) type IqSamplesFor<S: Sampleable> = Value<S, IqSamples<()>, IqSamples<Complex64>>;
+pub(super) type IqSamplesFor<S> = Value<S, IqSamples<()>, IqSamples<Complex64>>;
 
 impl<S: Sampleable<IsPartial = Infallible>, P, T> Value<S, P, T> {
     pub(super) fn unwrap_total(self) -> T {
         match self {
             Self::Partial(never, _) => match never {},
             Self::Total(total) => total,
-        }
-    }
-}
-
-impl<S: Sampleable<IsPartial = ()>, T> Value<S, (), T> {
-    pub(super) fn into_option(self) -> Option<T> {
-        match self {
-            Self::Partial((), ()) => None,
-            Self::Total(total) => Some(total),
-        }
-    }
-}
-
-impl<S: Sampleable<IsPartial = ()>, P, T> Value<S, P, T> {
-    pub(super) fn into_result(self) -> Result<T, P> {
-        match self {
-            Self::Partial((), partial) => Err(partial),
-            Self::Total(total) => Ok(total),
         }
     }
 }
