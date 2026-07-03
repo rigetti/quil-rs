@@ -725,28 +725,16 @@ impl<T: WaveformData> Gaussian<T> {
     where
         Self: ConcretizableFromTo<T, Gaussian<Concrete>>,
     {
-        match concretize_and_resolve(self, common, sample_rate)? {
-            partiality::Value::Partial(is_partial, sample_count) => Ok(IqSamplesFor::Partial(
-                is_partial,
-                IqSamples::Samples(vec![(); sample_count]),
-            )),
-
-            partiality::Value::Total((explicit, waveform)) => {
-                let Gaussian { fwhm, t0 } = waveform;
-
-                Ok(IqSamplesFor::Total(
-                    build_samples_and_adjust_for_common_parameters(
-                        SamplingParameters { sample_rate, fwhm },
-                        explicit,
-                        |SamplingInfo { time_steps, sigma }| {
-                            time_steps.into_iter().map(move |el| {
-                                real!((-0.5 * (el - t0).powf(2.0) / sigma.powf(2.0)).exp())
-                            })
-                        },
-                    ),
-                ))
-            }
-        }
+        build_sample_per_time_step_and_adjust_for_common_parameters(
+            self,
+            common,
+            sample_rate,
+            |w| w.fwhm,
+            |waveform, sigma| {
+                let Gaussian { fwhm: _, t0 } = waveform;
+                move |el| real!((-0.5 * (el - t0).powf(2.0) / sigma.powf(2.0)).exp())
+            },
+        )
     }
 }
 
@@ -759,39 +747,29 @@ impl<T: WaveformData> DragGaussian<T> {
     where
         Self: ConcretizableFromTo<T, DragGaussian<Concrete>>,
     {
-        match concretize_and_resolve(self, common, sample_rate)? {
-            partiality::Value::Partial(is_partial, sample_count) => Ok(IqSamplesFor::Partial(
-                is_partial,
-                IqSamples::Samples(vec![(); sample_count]),
-            )),
-
-            partiality::Value::Total((explicit, waveform)) => {
+        build_sample_per_time_step_and_adjust_for_common_parameters(
+            self,
+            common,
+            sample_rate,
+            |w| w.fwhm,
+            |waveform, sigma| {
                 let DragGaussian {
-                    fwhm,
+                    fwhm: _,
                     t0,
                     anh,
                     alpha,
                 } = waveform;
 
-                Ok(IqSamplesFor::Total(
-                    build_samples_and_adjust_for_common_parameters(
-                        SamplingParameters { sample_rate, fwhm },
-                        explicit,
-                        |SamplingInfo { time_steps, sigma }| {
-                            time_steps.into_iter().map(move |el| {
-                                // Generate envelope sample
-                                let env = (-0.5 * (el - t0).powf(2.0) / sigma.powf(2.0)).exp();
-                                // Generate modified envelope sample
-                                let env_mod = (alpha * (1.0 / (2.0 * PI * anh * sigma.powf(2.0))))
-                                    * (el - t0)
-                                    * env;
-                                c64(env, env_mod)
-                            })
-                        },
-                    ),
-                ))
-            }
-        }
+                move |el| {
+                    // Generate envelope sample
+                    let env = (-0.5 * (el - t0).powf(2.0) / sigma.powf(2.0)).exp();
+                    // Generate modified envelope sample
+                    let env_mod =
+                        (alpha * (1.0 / (2.0 * PI * anh * sigma.powf(2.0)))) * (el - t0) * env;
+                    c64(env, env_mod)
+                }
+            },
+        )
     }
 }
 
@@ -805,21 +783,41 @@ impl<T: WaveformData> ErfSquare<T> {
         CommonBuiltinParameters<T>: Copy,
         Self: ConcretizableFromTo<T, ErfSquare<Concrete>>,
     {
+        let scale_is_zero = common
+            .scale
+            .is_some_and(|scale| T::eval_real(scale) == Ok(0.0));
+
         let left_padding_samples = (self.pad_left * sample_rate).ceil() as usize;
         let right_padding_samples = (self.pad_right * sample_rate).ceil() as usize;
 
+        let all_zero = |sample_count| {
+            IqSamplesFor::Total(IqSamples::Flat {
+                iq: c64(0.0, 0.0),
+                sample_count: left_padding_samples + sample_count + right_padding_samples,
+            })
+        };
+
         match concretize_and_resolve(self, common, sample_rate)? {
-            partiality::Value::Partial(is_partial, sample_count) => Ok(IqSamplesFor::Partial(
-                is_partial,
-                IqSamples::Samples(vec![
-                    ();
-                    sample_count
-                        + left_padding_samples
-                        + right_padding_samples
-                ]),
-            )),
+            partiality::Value::Partial(is_partial, sample_count) => Ok(if scale_is_zero {
+                // If the scale is zero it doesn't matter *what* the parameters are!
+                all_zero(sample_count)
+            } else {
+                IqSamplesFor::Partial(
+                    is_partial,
+                    IqSamples::Samples(vec![
+                        ();
+                        left_padding_samples
+                            + sample_count
+                            + right_padding_samples
+                    ]),
+                )
+            }),
 
             partiality::Value::Total((explicit, waveform)) => {
+                if scale_is_zero {
+                    return Ok(all_zero(explicit.sample_count as usize));
+                }
+
                 let ErfSquare {
                     risetime,
                     pad_left: _,  // Used above
@@ -860,42 +858,33 @@ impl<T: WaveformData> HermiteGaussian<T> {
     where
         Self: ConcretizableFromTo<T, HermiteGaussian<Concrete>>,
     {
-        match concretize_and_resolve(self, common, sample_rate)? {
-            partiality::Value::Partial(is_partial, sample_count) => Ok(IqSamplesFor::Partial(
-                is_partial,
-                IqSamples::Samples(vec![(); sample_count]),
-            )),
-
-            partiality::Value::Total((explicit, waveform)) => {
+        build_sample_per_time_step_and_adjust_for_common_parameters(
+            self,
+            common,
+            sample_rate,
+            |w| w.fwhm,
+            |waveform, sigma| {
                 let HermiteGaussian {
-                    fwhm,
+                    fwhm: _,
                     t0,
                     anh,
                     alpha,
                     second_order_hrm_coeff,
                 } = waveform;
 
-                Ok(IqSamplesFor::Total(
-                    build_samples_and_adjust_for_common_parameters(
-                        SamplingParameters { sample_rate, fwhm },
-                        explicit,
-                        |SamplingInfo { time_steps, sigma }| {
-                            let deriv_prefactor = -alpha / (2f64 * PI * anh);
+                let deriv_prefactor = -alpha / (2f64 * PI * anh);
 
-                            time_steps.into_iter().map(move |el| {
-                                let exp_t = 0.5 * (el - t0).powf(2.0) / sigma.powf(2.0);
-                                let g = (-exp_t).exp();
-                                let env = (1.0 - second_order_hrm_coeff * exp_t) * g;
-                                let env_derived = deriv_prefactor * (el - t0) / sigma.powf(2.0)
-                                    * g
-                                    * (second_order_hrm_coeff * (exp_t - 1.0) - 1.0);
-                                c64(env, env_derived)
-                            })
-                        },
-                    ),
-                ))
-            }
-        }
+                move |el| {
+                    let exp_t = 0.5 * (el - t0).powf(2.0) / sigma.powf(2.0);
+                    let g = (-exp_t).exp();
+                    let env = (1.0 - second_order_hrm_coeff * exp_t) * g;
+                    let env_derived = deriv_prefactor * (el - t0) / sigma.powf(2.0)
+                        * g
+                        * (second_order_hrm_coeff * (exp_t - 1.0) - 1.0);
+                    c64(env, env_derived)
+                }
+            },
+        )
     }
 }
 
@@ -1075,10 +1064,14 @@ fn concretize_and_resolve<W: ConcretizableWaveform>(
 }
 
 /// Encapsulates the common pattern for generating a sequence of samples for a waveform:
+///
 /// 1. Generate information from some generally-used parameters.
 /// 2. Use that information to generate the samples.
 /// 3. Rescale those samples.
 /// 4. Apply the phase adjustment and detuning to those samples.
+///
+/// These samples are generated from a sequence of time steps ranging evenly over the half-open
+/// interval [0,1).
 fn build_samples_and_adjust_for_common_parameters<I: IntoIterator<Item = Complex64>>(
     parameters: SamplingParameters,
     common: ExplicitCommonBuiltinParameters,
@@ -1091,9 +1084,6 @@ fn build_samples_and_adjust_for_common_parameters<I: IntoIterator<Item = Complex
         phase,
         detuning,
     } = common;
-
-    // It would be nice to be able to optimize `scale: 0.0` to `IqSamples::Flat`, but we'd have to
-    // figure out how to take care of the `erf_squared` padding durations.
 
     let time_steps = Array::range(0.0, sample_count.into(), 1.0) / sample_rate;
     let sigma = 0.5 * fwhm / (2.0 * LN_2).sqrt();
@@ -1109,6 +1099,74 @@ fn build_samples_and_adjust_for_common_parameters<I: IntoIterator<Item = Complex
     }
 
     IqSamples::Samples(samples)
+}
+
+/// A wrapper around the most common usage of [`concretize_and_resolve`] and
+/// [`build_samples_and_adjust_for_common_parameters`].  It works as follows, where step (1) is
+/// [`concretize_and_resolve`] and steps 2–5 are steps 1–4 from
+/// [`build_samples_and_adjust_for_common_parameters`]:
+///
+/// 1. Concretize the waveform and discretize the common parameters.
+/// 2. Generate information from some generally-used parameters.
+/// 3. Use that information to map individual time steps to individual samples.
+/// 4. Rescale those samples.
+/// 5. Apply the phase adjustment and detuning to those samples.
+///
+/// The key difference is in step 3; this is for the specific case where each sample is generated
+/// from individual time steps and no other samples are added.  This allows for handling the partial
+/// case directly in this function and applying some optimizations based on the knowledge of the
+/// length of the final sequence of IQ samples.
+///
+/// Note that `make_sampler` is passed the concrete waveform and [`SamplingInfo::sigma`], while the
+/// *result* of `make_sampler` is passed each sample from [`SamplingInfo::time_steps`].
+fn build_sample_per_time_step_and_adjust_for_common_parameters<W: ConcretizableWaveform, Sampler>(
+    waveform: W,
+    common: CommonBuiltinParameters<W::WaveformData>,
+    sample_rate: f64,
+    fwhm: impl FnOnce(&W::WithWaveformData<Concrete>) -> f64,
+    make_sampler: impl FnOnce(W::WithWaveformData<Concrete>, f64) -> Sampler,
+) -> Result<IqSamplesFor<W::WaveformData>, SamplingError>
+where
+    Sampler: Fn(f64) -> Complex64,
+{
+    let scale_is_zero = common
+        .scale
+        .is_some_and(|scale| W::WaveformData::eval_real(scale) == Ok(0.0));
+
+    let all_zero = |sample_count| {
+        IqSamplesFor::Total(IqSamples::Flat {
+            iq: c64(0.0, 0.0),
+            sample_count,
+        })
+    };
+
+    match concretize_and_resolve(waveform, common, sample_rate)? {
+        partiality::Value::Partial(is_partial, sample_count) => Ok(if scale_is_zero {
+            // If the scale is zero it doesn't matter *what* the parameters are!
+            all_zero(sample_count)
+        } else {
+            IqSamplesFor::Partial(is_partial, IqSamples::Samples(vec![(); sample_count]))
+        }),
+
+        partiality::Value::Total((explicit, waveform)) => {
+            if scale_is_zero {
+                return Ok(all_zero(explicit.sample_count as usize));
+            }
+
+            let fwhm = fwhm(&waveform);
+
+            Ok(IqSamplesFor::Total(
+                build_samples_and_adjust_for_common_parameters(
+                    SamplingParameters { sample_rate, fwhm },
+                    explicit,
+                    |SamplingInfo { time_steps, sigma }| {
+                        let sampler = make_sampler(waveform, sigma);
+                        time_steps.into_iter().map(sampler)
+                    },
+                ),
+            ))
+        }
+    }
 }
 
 /// Modulate and phase shift waveform IQ data in place.
