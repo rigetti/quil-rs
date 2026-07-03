@@ -39,7 +39,22 @@
                     <a class="class" href="#Waveform">Waveform</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="function" href="#Waveform.evaluate">evaluate</a>
+                                <a class="function" href="#Waveform.flat">flat</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Waveform.drag_gaussian">drag_gaussian</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Waveform.hermite_gaussian">hermite_gaussian</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Waveform.gaussian">gaussian</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Waveform.boxcar_kernel">boxcar_kernel</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Waveform.erf_square">erf_square</a>
                         </li>
                         <li>
                                 <a class="function" href="#Waveform.from_quil">from_quil</a>
@@ -57,22 +72,7 @@
                                 <a class="function" href="#Waveform.as_custom">as_custom</a>
                         </li>
                         <li>
-                                <a class="function" href="#Waveform.drag_gaussian">drag_gaussian</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Waveform.gaussian">gaussian</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Waveform.erf_square">erf_square</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Waveform.flat">flat</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Waveform.hermite_gaussian">hermite_gaussian</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Waveform.boxcar_kernel">boxcar_kernel</a>
+                                <a class="function" href="#Waveform.evaluate">evaluate</a>
                         </li>
                 </ul>
 
@@ -81,13 +81,13 @@
                     <a class="class" href="#BuiltinWaveform">BuiltinWaveform</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="function" href="#BuiltinWaveform.evaluate">evaluate</a>
+                                <a class="function" href="#BuiltinWaveform.iq_values_at_sample_rate">iq_values_at_sample_rate</a>
                         </li>
                         <li>
                                 <a class="function" href="#BuiltinWaveform.as_inner">as_inner</a>
                         </li>
                         <li>
-                                <a class="function" href="#BuiltinWaveform.iq_values_at_sample_rate">iq_values_at_sample_rate</a>
+                                <a class="function" href="#BuiltinWaveform.evaluate">evaluate</a>
                         </li>
                 </ul>
 
@@ -96,22 +96,22 @@
                     <a class="class" href="#CommonBuiltinParameters">CommonBuiltinParameters</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="function" href="#CommonBuiltinParameters.evaluate">evaluate</a>
-                        </li>
-                        <li>
                                 <a class="function" href="#CommonBuiltinParameters.resolve_with_sample_rate">resolve_with_sample_rate</a>
                         </li>
                         <li>
-                                <a class="variable" href="#CommonBuiltinParameters.detuning">detuning</a>
+                                <a class="function" href="#CommonBuiltinParameters.evaluate">evaluate</a>
                         </li>
                         <li>
                                 <a class="variable" href="#CommonBuiltinParameters.phase">phase</a>
                         </li>
                         <li>
-                                <a class="variable" href="#CommonBuiltinParameters.scale">scale</a>
+                                <a class="variable" href="#CommonBuiltinParameters.duration">duration</a>
                         </li>
                         <li>
-                                <a class="variable" href="#CommonBuiltinParameters.duration">duration</a>
+                                <a class="variable" href="#CommonBuiltinParameters.detuning">detuning</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#CommonBuiltinParameters.scale">scale</a>
                         </li>
                 </ul>
 
@@ -120,16 +120,16 @@
                     <a class="class" href="#ExplicitCommonBuiltinParameters">ExplicitCommonBuiltinParameters</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#ExplicitCommonBuiltinParameters.sample_count">sample_count</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#ExplicitCommonBuiltinParameters.detuning">detuning</a>
                         </li>
                         <li>
-                                <a class="variable" href="#ExplicitCommonBuiltinParameters.phase">phase</a>
+                                <a class="variable" href="#ExplicitCommonBuiltinParameters.sample_count">sample_count</a>
                         </li>
                         <li>
                                 <a class="variable" href="#ExplicitCommonBuiltinParameters.scale">scale</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#ExplicitCommonBuiltinParameters.phase">phase</a>
                         </li>
                 </ul>
 
@@ -138,10 +138,10 @@
                     <a class="class" href="#Flat">Flat</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="function" href="#Flat.evaluate">evaluate</a>
+                                <a class="function" href="#Flat.iq_values_at_sample_rate">iq_values_at_sample_rate</a>
                         </li>
                         <li>
-                                <a class="function" href="#Flat.iq_values_at_sample_rate">iq_values_at_sample_rate</a>
+                                <a class="function" href="#Flat.evaluate">evaluate</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Flat.iq">iq</a>
@@ -153,16 +153,16 @@
                     <a class="class" href="#Gaussian">Gaussian</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="function" href="#Gaussian.evaluate">evaluate</a>
-                        </li>
-                        <li>
                                 <a class="function" href="#Gaussian.iq_values_at_sample_rate">iq_values_at_sample_rate</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Gaussian.fwhm">fwhm</a>
+                                <a class="function" href="#Gaussian.evaluate">evaluate</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Gaussian.t0">t0</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Gaussian.fwhm">fwhm</a>
                         </li>
                 </ul>
 
@@ -171,10 +171,10 @@
                     <a class="class" href="#DragGaussian">DragGaussian</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="function" href="#DragGaussian.evaluate">evaluate</a>
+                                <a class="function" href="#DragGaussian.iq_values_at_sample_rate">iq_values_at_sample_rate</a>
                         </li>
                         <li>
-                                <a class="function" href="#DragGaussian.iq_values_at_sample_rate">iq_values_at_sample_rate</a>
+                                <a class="function" href="#DragGaussian.evaluate">evaluate</a>
                         </li>
                         <li>
                                 <a class="variable" href="#DragGaussian.anh">anh</a>
@@ -195,19 +195,19 @@
                     <a class="class" href="#ErfSquare">ErfSquare</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="function" href="#ErfSquare.evaluate">evaluate</a>
-                        </li>
-                        <li>
                                 <a class="function" href="#ErfSquare.iq_values_at_sample_rate">iq_values_at_sample_rate</a>
                         </li>
                         <li>
-                                <a class="variable" href="#ErfSquare.pad_right">pad_right</a>
+                                <a class="function" href="#ErfSquare.evaluate">evaluate</a>
                         </li>
                         <li>
                                 <a class="variable" href="#ErfSquare.pad_left">pad_left</a>
                         </li>
                         <li>
                                 <a class="variable" href="#ErfSquare.risetime">risetime</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#ErfSquare.pad_right">pad_right</a>
                         </li>
                 </ul>
 
@@ -216,25 +216,25 @@
                     <a class="class" href="#HermiteGaussian">HermiteGaussian</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="function" href="#HermiteGaussian.evaluate">evaluate</a>
+                                <a class="function" href="#HermiteGaussian.iq_values_at_sample_rate">iq_values_at_sample_rate</a>
                         </li>
                         <li>
-                                <a class="function" href="#HermiteGaussian.iq_values_at_sample_rate">iq_values_at_sample_rate</a>
+                                <a class="function" href="#HermiteGaussian.evaluate">evaluate</a>
                         </li>
                         <li>
                                 <a class="variable" href="#HermiteGaussian.t0">t0</a>
                         </li>
                         <li>
-                                <a class="variable" href="#HermiteGaussian.alpha">alpha</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#HermiteGaussian.anh">anh</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#HermiteGaussian.fwhm">fwhm</a>
                         </li>
                         <li>
+                                <a class="variable" href="#HermiteGaussian.alpha">alpha</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#HermiteGaussian.second_order_hrm_coeff">second_order_hrm_coeff</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#HermiteGaussian.anh">anh</a>
                         </li>
                 </ul>
 
@@ -296,15 +296,90 @@
     
     
 
-                            <div id="Waveform.evaluate" class="classattr">
+                            <div id="Waveform.flat" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">evaluate</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">real</span>, </span><span class="param"><span class="nb">complex</span></span><span class="return-annotation">):</span></span>
+        <span class="name">flat</span><span class="signature pdoc-code condensed">(<span class="param"><span class="o">*</span>, </span><span class="param"><span class="n">duration</span>, </span><span class="param"><span class="n">scale</span><span class="o">=</span><span class="kc">None</span>, </span><span class="param"><span class="n">phase</span><span class="o">=</span><span class="kc">None</span>, </span><span class="param"><span class="n">detuning</span><span class="o">=</span><span class="kc">None</span>, </span><span class="param"><span class="n">iq</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
-    <a class="headerlink" href="#Waveform.evaluate"></a>
+    <a class="headerlink" href="#Waveform.flat"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="Waveform.drag_gaussian" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">drag_gaussian</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="o">*</span>,</span><span class="param">	<span class="n">duration</span>,</span><span class="param">	<span class="n">scale</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">phase</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">detuning</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">fwhm</span>,</span><span class="param">	<span class="n">t0</span>,</span><span class="param">	<span class="n">anh</span>,</span><span class="param">	<span class="n">alpha</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Waveform.drag_gaussian"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="Waveform.hermite_gaussian" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">hermite_gaussian</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="o">*</span>,</span><span class="param">	<span class="n">duration</span>,</span><span class="param">	<span class="n">scale</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">phase</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">detuning</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">fwhm</span>,</span><span class="param">	<span class="n">t0</span>,</span><span class="param">	<span class="n">anh</span>,</span><span class="param">	<span class="n">alpha</span>,</span><span class="param">	<span class="n">second_order_hrm_coeff</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Waveform.hermite_gaussian"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="Waveform.gaussian" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">gaussian</span><span class="signature pdoc-code condensed">(<span class="param"><span class="o">*</span>, </span><span class="param"><span class="n">duration</span>, </span><span class="param"><span class="n">scale</span><span class="o">=</span><span class="kc">None</span>, </span><span class="param"><span class="n">phase</span><span class="o">=</span><span class="kc">None</span>, </span><span class="param"><span class="n">detuning</span><span class="o">=</span><span class="kc">None</span>, </span><span class="param"><span class="n">fwhm</span>, </span><span class="param"><span class="n">t0</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Waveform.gaussian"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="Waveform.boxcar_kernel" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">boxcar_kernel</span><span class="signature pdoc-code condensed">(<span class="param"><span class="o">*</span>, </span><span class="param"><span class="n">duration</span>, </span><span class="param"><span class="n">scale</span><span class="o">=</span><span class="kc">None</span>, </span><span class="param"><span class="n">phase</span><span class="o">=</span><span class="kc">None</span>, </span><span class="param"><span class="n">detuning</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Waveform.boxcar_kernel"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="Waveform.erf_square" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">erf_square</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="o">*</span>,</span><span class="param">	<span class="n">duration</span>,</span><span class="param">	<span class="n">scale</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">phase</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">detuning</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">risetime</span>,</span><span class="param">	<span class="n">pad_left</span>,</span><span class="param">	<span class="n">pad_right</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Waveform.erf_square"></a>
     
             <div class="docstring"><p>The type of the None singleton.</p>
 </div>
@@ -386,90 +461,15 @@
 
 
                             </div>
-                            <div id="Waveform.drag_gaussian" class="classattr">
+                            <div id="Waveform.evaluate" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">drag_gaussian</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="o">*</span>,</span><span class="param">	<span class="n">duration</span>,</span><span class="param">	<span class="n">scale</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">phase</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">detuning</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">fwhm</span>,</span><span class="param">	<span class="n">t0</span>,</span><span class="param">	<span class="n">anh</span>,</span><span class="param">	<span class="n">alpha</span></span><span class="return-annotation">):</span></span>
+        <span class="name">evaluate</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">real</span>, </span><span class="param"><span class="nb">complex</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
-    <a class="headerlink" href="#Waveform.drag_gaussian"></a>
-    
-            <div class="docstring"><p>The type of the None singleton.</p>
-</div>
-
-
-                            </div>
-                            <div id="Waveform.gaussian" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">gaussian</span><span class="signature pdoc-code condensed">(<span class="param"><span class="o">*</span>, </span><span class="param"><span class="n">duration</span>, </span><span class="param"><span class="n">scale</span><span class="o">=</span><span class="kc">None</span>, </span><span class="param"><span class="n">phase</span><span class="o">=</span><span class="kc">None</span>, </span><span class="param"><span class="n">detuning</span><span class="o">=</span><span class="kc">None</span>, </span><span class="param"><span class="n">fwhm</span>, </span><span class="param"><span class="n">t0</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Waveform.gaussian"></a>
-    
-            <div class="docstring"><p>The type of the None singleton.</p>
-</div>
-
-
-                            </div>
-                            <div id="Waveform.erf_square" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">erf_square</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="o">*</span>,</span><span class="param">	<span class="n">duration</span>,</span><span class="param">	<span class="n">scale</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">phase</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">detuning</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">risetime</span>,</span><span class="param">	<span class="n">pad_left</span>,</span><span class="param">	<span class="n">pad_right</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Waveform.erf_square"></a>
-    
-            <div class="docstring"><p>The type of the None singleton.</p>
-</div>
-
-
-                            </div>
-                            <div id="Waveform.flat" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">flat</span><span class="signature pdoc-code condensed">(<span class="param"><span class="o">*</span>, </span><span class="param"><span class="n">duration</span>, </span><span class="param"><span class="n">scale</span><span class="o">=</span><span class="kc">None</span>, </span><span class="param"><span class="n">phase</span><span class="o">=</span><span class="kc">None</span>, </span><span class="param"><span class="n">detuning</span><span class="o">=</span><span class="kc">None</span>, </span><span class="param"><span class="n">iq</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Waveform.flat"></a>
-    
-            <div class="docstring"><p>The type of the None singleton.</p>
-</div>
-
-
-                            </div>
-                            <div id="Waveform.hermite_gaussian" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">hermite_gaussian</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="o">*</span>,</span><span class="param">	<span class="n">duration</span>,</span><span class="param">	<span class="n">scale</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">phase</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">detuning</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">fwhm</span>,</span><span class="param">	<span class="n">t0</span>,</span><span class="param">	<span class="n">anh</span>,</span><span class="param">	<span class="n">alpha</span>,</span><span class="param">	<span class="n">second_order_hrm_coeff</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Waveform.hermite_gaussian"></a>
-    
-            <div class="docstring"><p>The type of the None singleton.</p>
-</div>
-
-
-                            </div>
-                            <div id="Waveform.boxcar_kernel" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">boxcar_kernel</span><span class="signature pdoc-code condensed">(<span class="param"><span class="o">*</span>, </span><span class="param"><span class="n">duration</span>, </span><span class="param"><span class="n">scale</span><span class="o">=</span><span class="kc">None</span>, </span><span class="param"><span class="n">phase</span><span class="o">=</span><span class="kc">None</span>, </span><span class="param"><span class="n">detuning</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Waveform.boxcar_kernel"></a>
+    <a class="headerlink" href="#Waveform.evaluate"></a>
     
             <div class="docstring"><p>The type of the None singleton.</p>
 </div>
@@ -489,15 +489,15 @@
     
     
 
-                            <div id="BuiltinWaveform.evaluate" class="classattr">
+                            <div id="BuiltinWaveform.iq_values_at_sample_rate" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">evaluate</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">real</span>, </span><span class="param"><span class="nb">complex</span></span><span class="return-annotation">):</span></span>
+        <span class="name">iq_values_at_sample_rate</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">common</span>, </span><span class="param"><span class="n">sample_rate</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
-    <a class="headerlink" href="#BuiltinWaveform.evaluate"></a>
+    <a class="headerlink" href="#BuiltinWaveform.iq_values_at_sample_rate"></a>
     
             <div class="docstring"><p>The type of the None singleton.</p>
 </div>
@@ -519,15 +519,15 @@
 
 
                             </div>
-                            <div id="BuiltinWaveform.iq_values_at_sample_rate" class="classattr">
+                            <div id="BuiltinWaveform.evaluate" class="classattr">
                                 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">iq_values_at_sample_rate</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">common</span>, </span><span class="param"><span class="n">sample_rate</span></span><span class="return-annotation">):</span></span>
+        <span class="name">evaluate</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">real</span>, </span><span class="param"><span class="nb">complex</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
-    <a class="headerlink" href="#BuiltinWaveform.iq_values_at_sample_rate"></a>
+    <a class="headerlink" href="#BuiltinWaveform.evaluate"></a>
     
             <div class="docstring"><p>The type of the None singleton.</p>
 </div>
@@ -547,21 +547,6 @@
     
     
 
-                            <div id="CommonBuiltinParameters.evaluate" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">evaluate</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">real</span>, </span><span class="param"><span class="nb">complex</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#CommonBuiltinParameters.evaluate"></a>
-    
-            <div class="docstring"><p>The type of the None singleton.</p>
-</div>
-
-
-                            </div>
                             <div id="CommonBuiltinParameters.resolve_with_sample_rate" class="classattr">
                                 <div class="attr function">
             
@@ -577,15 +562,19 @@
 
 
                             </div>
-                            <div id="CommonBuiltinParameters.detuning" class="classattr">
-                                <div class="attr variable">
-            <span class="name">detuning</span>
+                            <div id="CommonBuiltinParameters.evaluate" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">evaluate</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">real</span>, </span><span class="param"><span class="nb">complex</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
-    <a class="headerlink" href="#CommonBuiltinParameters.detuning"></a>
+    <a class="headerlink" href="#CommonBuiltinParameters.evaluate"></a>
     
-    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
 
                             </div>
                             <div id="CommonBuiltinParameters.phase" class="classattr">
@@ -599,17 +588,6 @@
     
 
                             </div>
-                            <div id="CommonBuiltinParameters.scale" class="classattr">
-                                <div class="attr variable">
-            <span class="name">scale</span>
-
-        
-    </div>
-    <a class="headerlink" href="#CommonBuiltinParameters.scale"></a>
-    
-    
-
-                            </div>
                             <div id="CommonBuiltinParameters.duration" class="classattr">
                                 <div class="attr variable">
             <span class="name">duration</span>
@@ -617,6 +595,28 @@
         
     </div>
     <a class="headerlink" href="#CommonBuiltinParameters.duration"></a>
+    
+    
+
+                            </div>
+                            <div id="CommonBuiltinParameters.detuning" class="classattr">
+                                <div class="attr variable">
+            <span class="name">detuning</span>
+
+        
+    </div>
+    <a class="headerlink" href="#CommonBuiltinParameters.detuning"></a>
+    
+    
+
+                            </div>
+                            <div id="CommonBuiltinParameters.scale" class="classattr">
+                                <div class="attr variable">
+            <span class="name">scale</span>
+
+        
+    </div>
+    <a class="headerlink" href="#CommonBuiltinParameters.scale"></a>
     
     
 
@@ -640,21 +640,6 @@ waveforms.</p>
 </div>
 
 
-                            <div id="ExplicitCommonBuiltinParameters.sample_count" class="classattr">
-                                <div class="attr variable">
-            <span class="name">sample_count</span>
-
-        
-    </div>
-    <a class="headerlink" href="#ExplicitCommonBuiltinParameters.sample_count"></a>
-    
-            <div class="docstring"><p>Integral number of samples that should be taken of the pulse</p>
-
-<p>Corresponds to [<code>CommonBuiltinParameters::duration</code>].</p>
-</div>
-
-
-                            </div>
                             <div id="ExplicitCommonBuiltinParameters.detuning" class="classattr">
                                 <div class="attr variable">
             <span class="name">detuning</span>
@@ -668,15 +653,17 @@ waveforms.</p>
 
 
                             </div>
-                            <div id="ExplicitCommonBuiltinParameters.phase" class="classattr">
+                            <div id="ExplicitCommonBuiltinParameters.sample_count" class="classattr">
                                 <div class="attr variable">
-            <span class="name">phase</span>
+            <span class="name">sample_count</span>
 
         
     </div>
-    <a class="headerlink" href="#ExplicitCommonBuiltinParameters.phase"></a>
+    <a class="headerlink" href="#ExplicitCommonBuiltinParameters.sample_count"></a>
     
-            <div class="docstring"><p>Phase shift for the entire waveform.</p>
+            <div class="docstring"><p>Integral number of samples that should be taken of the pulse</p>
+
+<p>Corresponds to [<code>CommonBuiltinParameters::duration</code>].</p>
 </div>
 
 
@@ -694,6 +681,19 @@ waveforms.</p>
 
 
                             </div>
+                            <div id="ExplicitCommonBuiltinParameters.phase" class="classattr">
+                                <div class="attr variable">
+            <span class="name">phase</span>
+
+        
+    </div>
+    <a class="headerlink" href="#ExplicitCommonBuiltinParameters.phase"></a>
+    
+            <div class="docstring"><p>Phase shift for the entire waveform.</p>
+</div>
+
+
+                            </div>
                 </section>
                 <section id="Flat">
                     <div class="attr class">
@@ -707,21 +707,6 @@ waveforms.</p>
     
     
 
-                            <div id="Flat.evaluate" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">evaluate</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">real</span>, </span><span class="param"><span class="nb">complex</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Flat.evaluate"></a>
-    
-            <div class="docstring"><p>The type of the None singleton.</p>
-</div>
-
-
-                            </div>
                             <div id="Flat.iq_values_at_sample_rate" class="classattr">
                                 <div class="attr function">
             
@@ -731,6 +716,21 @@ waveforms.</p>
         
     </div>
     <a class="headerlink" href="#Flat.iq_values_at_sample_rate"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="Flat.evaluate" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">evaluate</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">real</span>, </span><span class="param"><span class="nb">complex</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Flat.evaluate"></a>
     
             <div class="docstring"><p>The type of the None singleton.</p>
 </div>
@@ -761,21 +761,6 @@ waveforms.</p>
     
     
 
-                            <div id="Gaussian.evaluate" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">evaluate</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">real</span>, </span><span class="param"><span class="nb">complex</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Gaussian.evaluate"></a>
-    
-            <div class="docstring"><p>The type of the None singleton.</p>
-</div>
-
-
-                            </div>
                             <div id="Gaussian.iq_values_at_sample_rate" class="classattr">
                                 <div class="attr function">
             
@@ -791,15 +776,19 @@ waveforms.</p>
 
 
                             </div>
-                            <div id="Gaussian.fwhm" class="classattr">
-                                <div class="attr variable">
-            <span class="name">fwhm</span>
+                            <div id="Gaussian.evaluate" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">evaluate</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">real</span>, </span><span class="param"><span class="nb">complex</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
-    <a class="headerlink" href="#Gaussian.fwhm"></a>
+    <a class="headerlink" href="#Gaussian.evaluate"></a>
     
-    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
 
                             </div>
                             <div id="Gaussian.t0" class="classattr">
@@ -809,6 +798,17 @@ waveforms.</p>
         
     </div>
     <a class="headerlink" href="#Gaussian.t0"></a>
+    
+    
+
+                            </div>
+                            <div id="Gaussian.fwhm" class="classattr">
+                                <div class="attr variable">
+            <span class="name">fwhm</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Gaussian.fwhm"></a>
     
     
 
@@ -826,21 +826,6 @@ waveforms.</p>
     
     
 
-                            <div id="DragGaussian.evaluate" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">evaluate</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">real</span>, </span><span class="param"><span class="nb">complex</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#DragGaussian.evaluate"></a>
-    
-            <div class="docstring"><p>The type of the None singleton.</p>
-</div>
-
-
-                            </div>
                             <div id="DragGaussian.iq_values_at_sample_rate" class="classattr">
                                 <div class="attr function">
             
@@ -850,6 +835,21 @@ waveforms.</p>
         
     </div>
     <a class="headerlink" href="#DragGaussian.iq_values_at_sample_rate"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="DragGaussian.evaluate" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">evaluate</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">real</span>, </span><span class="param"><span class="nb">complex</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#DragGaussian.evaluate"></a>
     
             <div class="docstring"><p>The type of the None singleton.</p>
 </div>
@@ -913,21 +913,6 @@ waveforms.</p>
     
     
 
-                            <div id="ErfSquare.evaluate" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">evaluate</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">real</span>, </span><span class="param"><span class="nb">complex</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#ErfSquare.evaluate"></a>
-    
-            <div class="docstring"><p>The type of the None singleton.</p>
-</div>
-
-
-                            </div>
                             <div id="ErfSquare.iq_values_at_sample_rate" class="classattr">
                                 <div class="attr function">
             
@@ -943,15 +928,19 @@ waveforms.</p>
 
 
                             </div>
-                            <div id="ErfSquare.pad_right" class="classattr">
-                                <div class="attr variable">
-            <span class="name">pad_right</span>
+                            <div id="ErfSquare.evaluate" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">evaluate</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">real</span>, </span><span class="param"><span class="nb">complex</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
-    <a class="headerlink" href="#ErfSquare.pad_right"></a>
+    <a class="headerlink" href="#ErfSquare.evaluate"></a>
     
-    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
 
                             </div>
                             <div id="ErfSquare.pad_left" class="classattr">
@@ -976,6 +965,17 @@ waveforms.</p>
     
 
                             </div>
+                            <div id="ErfSquare.pad_right" class="classattr">
+                                <div class="attr variable">
+            <span class="name">pad_right</span>
+
+        
+    </div>
+    <a class="headerlink" href="#ErfSquare.pad_right"></a>
+    
+    
+
+                            </div>
                 </section>
                 <section id="HermiteGaussian">
                     <div class="attr class">
@@ -989,21 +989,6 @@ waveforms.</p>
     
     
 
-                            <div id="HermiteGaussian.evaluate" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">evaluate</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">real</span>, </span><span class="param"><span class="nb">complex</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#HermiteGaussian.evaluate"></a>
-    
-            <div class="docstring"><p>The type of the None singleton.</p>
-</div>
-
-
-                            </div>
                             <div id="HermiteGaussian.iq_values_at_sample_rate" class="classattr">
                                 <div class="attr function">
             
@@ -1013,6 +998,21 @@ waveforms.</p>
         
     </div>
     <a class="headerlink" href="#HermiteGaussian.iq_values_at_sample_rate"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="HermiteGaussian.evaluate" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">evaluate</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">real</span>, </span><span class="param"><span class="nb">complex</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#HermiteGaussian.evaluate"></a>
     
             <div class="docstring"><p>The type of the None singleton.</p>
 </div>
@@ -1030,28 +1030,6 @@ waveforms.</p>
     
 
                             </div>
-                            <div id="HermiteGaussian.alpha" class="classattr">
-                                <div class="attr variable">
-            <span class="name">alpha</span>
-
-        
-    </div>
-    <a class="headerlink" href="#HermiteGaussian.alpha"></a>
-    
-    
-
-                            </div>
-                            <div id="HermiteGaussian.anh" class="classattr">
-                                <div class="attr variable">
-            <span class="name">anh</span>
-
-        
-    </div>
-    <a class="headerlink" href="#HermiteGaussian.anh"></a>
-    
-    
-
-                            </div>
                             <div id="HermiteGaussian.fwhm" class="classattr">
                                 <div class="attr variable">
             <span class="name">fwhm</span>
@@ -1063,6 +1041,17 @@ waveforms.</p>
     
 
                             </div>
+                            <div id="HermiteGaussian.alpha" class="classattr">
+                                <div class="attr variable">
+            <span class="name">alpha</span>
+
+        
+    </div>
+    <a class="headerlink" href="#HermiteGaussian.alpha"></a>
+    
+    
+
+                            </div>
                             <div id="HermiteGaussian.second_order_hrm_coeff" class="classattr">
                                 <div class="attr variable">
             <span class="name">second_order_hrm_coeff</span>
@@ -1070,6 +1059,17 @@ waveforms.</p>
         
     </div>
     <a class="headerlink" href="#HermiteGaussian.second_order_hrm_coeff"></a>
+    
+    
+
+                            </div>
+                            <div id="HermiteGaussian.anh" class="classattr">
+                                <div class="attr variable">
+            <span class="name">anh</span>
+
+        
+    </div>
+    <a class="headerlink" href="#HermiteGaussian.anh"></a>
     
     
 
