@@ -1,7 +1,7 @@
 //! Waveforms that have been parsed from a bare invocation into a structured form, distinguishing
 //! [built-in waveforms][builtin].
 
-use std::marker::PhantomData;
+use std::{convert::Infallible, marker::PhantomData};
 
 use derive_where::derive_where;
 use indexmap::IndexMap;
@@ -9,7 +9,7 @@ use num_complex::Complex64;
 
 use crate::{
     expression::{EvaluationError, Expression},
-    instruction::{WaveformInvocation, WaveformParameters},
+    instruction::WaveformInvocation,
 };
 
 use self::builtin::{BuiltinWaveform, CommonBuiltinParameters};
@@ -113,6 +113,64 @@ pub enum Waveform<T: WaveformData> {
     },
 }
 
+impl<T: WaveformData> Waveform<T> {
+    /// Create a new waveform from a name and a parameter map.
+    ///
+    /// If the name corresponds to one of the built-in waveforms, then this will return a
+    /// [`Waveform::BuiltinWaveform`] as long as the parameters are correct, and return an error if
+    /// they are incorrect; individual parameters are evaluted with one the three evaluator
+    /// functions (`concrete_real`, `real`, or `complex`).
+    ///
+    /// If the name doesn't name one of the built-in waveforms, then this will return a
+    /// [`Waveform::Custom`]; the parameter map is placed into its final form by the `custom`
+    /// function.
+    ///
+    /// This is a generalization of [`Waveform<Syntactic>::new`]; if you only need to handle
+    /// creating waveforms from Quil [`WaveformInvocation`]s, prefer that function instead.
+    pub fn from_parameters<P: GeneralWaveformParameters, EF64, ER, EC>(
+        name: String,
+        parameters: P,
+        concrete_real: impl FnMut(P::Value) -> Result<f64, EF64>,
+        real: impl FnMut(P::Value) -> Result<T::Real, ER>,
+        complex: impl FnMut(P::Value) -> Result<T::Complex, EC>,
+        custom: impl FnOnce(
+            P,
+        ) -> Result<
+            IndexMap<String, T::Complex>,
+            GeneralWaveformParameterError<EF64, ER, EC>,
+        >,
+    ) -> Result<Self, WaveformInvocationError<GeneralWaveformParameterError<EF64, ER, EC>>> {
+        // This can't be a closure because the type of [`BuiltinWaveform::$waveform`] is
+        // polymorphic, and it can't be a regular function because the whole point is to refer to
+        // local parameters.
+        macro_rules! parse_builtin {
+            ($waveform:ident) => {
+                self::parse::builtin(
+                    BuiltinWaveform::$waveform,
+                    parameters,
+                    concrete_real,
+                    real,
+                    complex,
+                )
+                .map_err(|error| WaveformInvocationError { name, error })
+            };
+        }
+
+        match name.as_str() {
+            "flat" => parse_builtin!(Flat),
+            "gaussian" => parse_builtin!(Gaussian),
+            "drag_gaussian" => parse_builtin!(DragGaussian),
+            "erf_square" => parse_builtin!(ErfSquare),
+            "hrm_gauss" => parse_builtin!(HermiteGaussian),
+            "boxcar_kernel" => parse_builtin!(BoxcarKernel),
+            _ => match custom(parameters) {
+                Ok(parameters) => Ok(Self::Custom { name, parameters }),
+                Err(error) => Err(WaveformInvocationError { name, error }),
+            },
+        }
+    }
+}
+
 impl Waveform<Syntactic> {
     /// Create a new [`Waveform`] from a parsed [`WaveformInvocation`].
     ///
@@ -123,31 +181,9 @@ impl Waveform<Syntactic> {
     /// If the [`WaveformInvocation`] doesn't name one of the built-in waveforms, then this will
     /// return a [`Waveform::Custom`].
     pub fn new(invocation: WaveformInvocation) -> Result<Self, WaveformInvocationError> {
-        use self::parse::builtin;
-
         let WaveformInvocation { name, parameters } = invocation;
-
-        match name.as_ref() {
-            "flat" => builtin(BuiltinWaveform::Flat, parameters)
-                .map_err(|error| WaveformInvocationError { name, error }),
-
-            "gaussian" => builtin(BuiltinWaveform::Gaussian, parameters)
-                .map_err(|error| WaveformInvocationError { name, error }),
-
-            "drag_gaussian" => builtin(BuiltinWaveform::DragGaussian, parameters)
-                .map_err(|error| WaveformInvocationError { name, error }),
-
-            "erf_square" => builtin(BuiltinWaveform::ErfSquare, parameters)
-                .map_err(|error| WaveformInvocationError { name, error }),
-
-            "hrm_gauss" => builtin(BuiltinWaveform::HermiteGaussian, parameters)
-                .map_err(|error| WaveformInvocationError { name, error }),
-
-            "boxcar_kernel" => builtin(BuiltinWaveform::BoxcarKernel, parameters)
-                .map_err(|error| WaveformInvocationError { name, error }),
-
-            _ => Ok(Self::Custom { name, parameters }),
-        }
+        Self::from_parameters(name, parameters, |expr| expr.to_real(), Ok, Ok, Ok)
+            .map_err(|error| error.map(Into::into))
     }
 }
 
@@ -310,6 +346,85 @@ impl<S: WaveformData> Waveform<S> {
     }
 }
 
+/// A trait covering types, like [`WaveformParameters]`, that are maps from strings to values
+/// that can be used to construct [`Waveform`]s.
+pub trait GeneralWaveformParameters {
+    /// The type of value contained in the map.
+    type Value;
+
+    /// If the named parameter is in the map, remove it and return its value.  Otherwise, return
+    /// [`None`].
+    fn remove_parameter(&mut self, name: &'static str) -> Option<Self::Value>;
+
+    /// Take the map and return all its parameter names.
+    fn into_keys(self) -> Vec<String>;
+}
+
+impl<V> GeneralWaveformParameters for IndexMap<String, V> {
+    type Value = V;
+
+    #[inline(always)]
+    fn remove_parameter(&mut self, name: &'static str) -> Option<Self::Value> {
+        self.shift_remove(name)
+    }
+
+    #[inline(always)]
+    fn into_keys(self) -> Vec<String> {
+        self.into_keys().collect()
+    }
+}
+
+impl<V> GeneralWaveformParameters for std::collections::HashMap<String, V> {
+    type Value = V;
+
+    #[inline(always)]
+    fn remove_parameter(&mut self, name: &'static str) -> Option<Self::Value> {
+        self.remove(name)
+    }
+
+    #[inline(always)]
+    fn into_keys(self) -> Vec<String> {
+        self.into_keys().collect()
+    }
+}
+
+impl<V> GeneralWaveformParameters for std::collections::BTreeMap<String, V> {
+    type Value = V;
+
+    #[inline(always)]
+    fn remove_parameter(&mut self, name: &'static str) -> Option<Self::Value> {
+        self.remove(name)
+    }
+
+    #[inline(always)]
+    fn into_keys(self) -> Vec<String> {
+        self.into_keys().collect()
+    }
+}
+
+/// Errors arising when trying to convert a parameter mapping to a [`Waveform::Builtin`].
+///
+/// For the case where we're specifically dealing with expressions, see [`WaveformParameterError`].
+// Note for developers: [`thiserror::Error`] couldn't handle the display implementations for a
+// generic type (it didn't insert the bounds), so we had to use [`derive_more::Display`] instead.
+#[derive(Clone, PartialEq, Eq, Debug, derive_more::Display, thiserror::Error)]
+pub enum GeneralWaveformParameterError<EF64, ER, EC> {
+    #[display("missing mandatory parameter {_0}")]
+    Missing(&'static str),
+
+    #[display("parameter {_0} must be a real number known at compile time, but {_1}")]
+    BadConcreteReal(&'static str, #[source] EF64),
+
+    #[display("parameter {_0} must be a real number, but {_1}")]
+    BadReal(&'static str, #[source] ER),
+
+    #[display("parameter {_0} must be a complex number, but {_1}")]
+    BadComplex(&'static str, #[source] EC),
+
+    #[display("extra unknown parameters: {}", _0.join(", "))]
+    Extra(Vec<String>),
+}
+
 /// Errors arising when trying to convert [`WaveformInvocation`]s to [`Waveform::Builtin`]s.
 #[derive(Clone, PartialEq, Eq, Debug, thiserror::Error)]
 pub enum WaveformParameterError {
@@ -323,13 +438,41 @@ pub enum WaveformParameterError {
     Extra(Vec<String>),
 }
 
-/// Errors arising when trying to convert a named [`WaveformInvocation`] to the corresponding
-/// [`Waveform::Builtin`]s.
+impl From<GeneralWaveformParameterError<EvaluationError, Infallible, Infallible>>
+    for WaveformParameterError
+{
+    fn from(value: GeneralWaveformParameterError<EvaluationError, Infallible, Infallible>) -> Self {
+        match value {
+            GeneralWaveformParameterError::Missing(name) => Self::Missing(name),
+            GeneralWaveformParameterError::BadConcreteReal(name, error) => {
+                Self::Nonreal(name, error)
+            }
+            GeneralWaveformParameterError::Extra(names) => Self::Extra(names),
+            GeneralWaveformParameterError::BadReal(_, never)
+            | GeneralWaveformParameterError::BadComplex(_, never) => match never {},
+        }
+    }
+}
+
+/// Errors arising when trying to convert a named [`WaveformInvocation`] or similar set of named
+/// parameters to the corresponding [`Waveform::Builtin`]s.
 #[derive(Clone, PartialEq, Eq, Debug, thiserror::Error)]
 #[error("invalid invocation of waveform {name}: {error}")]
-pub struct WaveformInvocationError {
+pub struct WaveformInvocationError<E = WaveformParameterError> {
     name: String,
-    error: WaveformParameterError,
+    #[source]
+    error: E,
+}
+
+impl<E1> WaveformInvocationError<E1> {
+    /// Transform the wrapped error
+    fn map<E2>(self, f: impl FnOnce(E1) -> E2) -> WaveformInvocationError<E2> {
+        let Self { name, error } = self;
+        WaveformInvocationError {
+            name,
+            error: f(error),
+        }
+    }
 }
 
 /// Internal code to convert [`WaveformInvocation`]s to [`Waveform::Builtin`]s.
@@ -339,61 +482,85 @@ pub struct WaveformInvocationError {
 mod parse {
     use super::*;
 
-    /// Consume and return a builtin waveform parameter that is required to be present.
-    pub(super) fn mandatory(
-        parameters: &mut WaveformParameters,
-        name: &'static str,
-    ) -> Result<Expression, WaveformParameterError> {
-        parameters
-            .shift_remove(name)
-            .ok_or(WaveformParameterError::Missing(name))
-    }
-
-    /// Consume and return a builtin waveform parameter that is required to be a real-valued
-    /// constant.
-    pub(super) fn concrete_real(
-        parameters: &mut WaveformParameters,
-        name: &'static str,
-    ) -> Result<f64, WaveformParameterError> {
-        mandatory(parameters, name)?
-            .to_real()
-            .map_err(|err| WaveformParameterError::Nonreal(name, err))
-    }
-
-    /// A trait for types that can be destructively parsed from a waveform.
-    pub(super) trait Extractable: Sized {
-        fn extract_from(
-            parameters: &mut WaveformParameters,
-        ) -> Result<Self, WaveformParameterError>;
+    /// A trait for types that can be destructively parsed from parameters into a value with
+    /// [`WaveformData`] of type `D`.
+    pub(super) trait Extractable<D: WaveformData>: Sized {
+        /// Parse a value of this type from parameters.  Because the parameter values are not
+        /// necessarily the same as the waveform's values, we also pass three evaluation functions.
+        /// If any of these evaluations returns an error, that error is paired with the name of the
+        /// field that caused the error.
+        fn extract_from<P: GeneralWaveformParameters, EF64, ER, EC>(
+            parameters: &mut P,
+            concrete_real: impl FnMut(P::Value) -> Result<f64, EF64>,
+            real: impl FnMut(P::Value) -> Result<D::Real, ER>,
+            complex: impl FnMut(P::Value) -> Result<D::Complex, EC>,
+        ) -> Result<Self, GeneralWaveformParameterError<EF64, ER, EC>>;
     }
 
     /// Parse a `T1` and then parse a `T2`.
-    impl<T1: Extractable, T2: Extractable> Extractable for (T1, T2) {
-        fn extract_from(
-            parameters: &mut WaveformParameters,
-        ) -> Result<Self, WaveformParameterError> {
-            let t1 = T1::extract_from(parameters)?;
-            let t2 = T2::extract_from(parameters)?;
+    impl<D: WaveformData, T1: Extractable<D>, T2: Extractable<D>> Extractable<D> for (T1, T2) {
+        fn extract_from<P: GeneralWaveformParameters, EF64, ER, EC>(
+            parameters: &mut P,
+            mut concrete_real: impl FnMut(P::Value) -> Result<f64, EF64>,
+            mut real: impl FnMut(P::Value) -> Result<D::Real, ER>,
+            mut complex: impl FnMut(P::Value) -> Result<D::Complex, EC>,
+        ) -> Result<Self, GeneralWaveformParameterError<EF64, ER, EC>> {
+            let t1 = T1::extract_from(parameters, &mut concrete_real, &mut real, &mut complex)?;
+            let t2 = T2::extract_from(parameters, concrete_real, real, complex)?;
             Ok((t1, t2))
         }
     }
 
+    /// Consume and return a builtin waveform parameter that is required to be present.
+    pub(super) fn mandatory<P: GeneralWaveformParameters, EF64, ER, EC, T, E>(
+        parameters: &mut P,
+        name: &'static str,
+        parse: impl FnOnce(P::Value) -> Result<T, E>,
+        value_error: impl FnOnce(&'static str, E) -> GeneralWaveformParameterError<EF64, ER, EC>,
+    ) -> Result<T, GeneralWaveformParameterError<EF64, ER, EC>> {
+        optional(parameters, name, parse, value_error)
+            .and_then(|value| value.ok_or(GeneralWaveformParameterError::Missing(name)))
+    }
+
+    /// Consume and return a builtin waveform parameter that is not required to be present.
+    pub(super) fn optional<P: GeneralWaveformParameters, EF64, ER, EC, T, E>(
+        parameters: &mut P,
+        name: &'static str,
+        parse: impl FnOnce(P::Value) -> Result<T, E>,
+        value_error: impl FnOnce(&'static str, E) -> GeneralWaveformParameterError<EF64, ER, EC>,
+    ) -> Result<Option<T>, GeneralWaveformParameterError<EF64, ER, EC>> {
+        parameters
+            .remove_parameter(name)
+            .map(|value| parse(value).map_err(|err| value_error(name, err)))
+            .transpose()
+    }
+
     /// Parse a single builtin waveform.  Checks to ensure that there are no extra parameters we
     /// haven't handled.
-    pub(super) fn builtin<T: Extractable>(
-        constructor: impl FnOnce(T) -> BuiltinWaveform<Syntactic>,
-        mut parameters: WaveformParameters,
-    ) -> Result<Waveform<Syntactic>, WaveformParameterError> {
-        let (common_parameters, builtin) = Extractable::extract_from(&mut parameters)?;
-        if parameters.is_empty() {
+    pub(super) fn builtin<
+        D: WaveformData,
+        T: Extractable<D>,
+        P: GeneralWaveformParameters,
+        EF64,
+        ER,
+        EC,
+    >(
+        constructor: impl FnOnce(T) -> BuiltinWaveform<D>,
+        mut parameters: P,
+        concrete_real: impl FnMut(P::Value) -> Result<f64, EF64>,
+        real: impl FnMut(P::Value) -> Result<D::Real, ER>,
+        complex: impl FnMut(P::Value) -> Result<D::Complex, EC>,
+    ) -> Result<Waveform<D>, GeneralWaveformParameterError<EF64, ER, EC>> {
+        let (common_parameters, builtin) =
+            Extractable::extract_from(&mut parameters, concrete_real, real, complex)?;
+        let extra_parameters = parameters.into_keys();
+        if extra_parameters.is_empty() {
             Ok(Waveform::Builtin {
                 waveform: constructor(builtin),
                 common_parameters,
             })
         } else {
-            Err(WaveformParameterError::Extra(
-                parameters.into_keys().collect(),
-            ))
+            Err(GeneralWaveformParameterError::Extra(extra_parameters))
         }
     }
 }

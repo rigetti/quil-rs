@@ -26,20 +26,6 @@
 //!    - A `pub(crate) fn py_repr<'py>(&self, py: Python<'py>) -> PyResult<String>` function on all
 //!      other `$waveform<Pythonic>`s.
 
-/// Return the appropriate parser for one of the field pseudo-types.  These are for use in
-/// [`parse::Extractable`] implementations.
-macro_rules! field_parser {
-    (ConcreteReal) => {
-        parse::concrete_real
-    };
-    (Real) => {
-        parse::mandatory
-    };
-    (Complex) => {
-        parse::mandatory
-    };
-}
-
 /// Given a [`WaveformData`] marker, convert one of the field pseudo-types into the corresponding
 /// actual Rust type.  Non-identifier types must be wrapped in parentheses because macros can't
 /// match balanced angle brackets.
@@ -721,10 +707,13 @@ macro_rules! define_waveform {
         pub struct $name;
 
         #[automatically_derived]
-        impl parse::Extractable for $name {
-            fn extract_from(
-                parameters: &mut crate::instruction::WaveformParameters
-            ) -> Result<Self, WaveformParameterError> {
+        impl<T: WaveformData> parse::Extractable<T> for $name {
+            fn extract_from<P: GeneralWaveformParameters, EF64, ER, EC>(
+                parameters: &mut P,
+                _concrete_real: impl FnMut(P::Value) -> Result<f64, EF64>,
+                _real: impl FnMut(P::Value) -> Result<T::Real, ER>,
+                _complex: impl FnMut(P::Value) -> Result<T::Complex, EC>,
+            ) -> Result<Self, GeneralWaveformParameterError<EF64, ER, EC>> {
                 Ok(Self)
             }
         }
@@ -757,13 +746,28 @@ macro_rules! define_waveform {
         }
 
         #[automatically_derived]
-        impl parse::Extractable for $name<Syntactic> {
-            fn extract_from(
-                parameters: &mut crate::instruction::WaveformParameters,
-            ) -> Result<Self, WaveformParameterError> {
-                $(
-                    let $field = field_parser!($ty)(parameters, stringify!($field))?;
-                )+
+        impl<T: WaveformData> parse::Extractable<T> for $name<T> {
+            #[allow(
+                unused_variables, unused_mut,
+                reason = "macro-generated code; not all waveforms have all three kinds of \
+                          parameters"
+            )]
+            fn extract_from<P: GeneralWaveformParameters, EF64, ER, EC>(
+                parameters: &mut P,
+                mut concrete_real: impl FnMut(P::Value) -> Result<f64, EF64>,
+                mut real: impl FnMut(P::Value) -> Result<T::Real, ER>,
+                mut complex: impl FnMut(P::Value) -> Result<T::Complex, EC>,
+            ) -> Result<Self, GeneralWaveformParameterError<EF64, ER, EC>> {
+                paste::paste! {
+                    $(
+                        let $field = parse::mandatory(
+                            parameters,
+                            stringify!($field),
+                            &mut [<$ty:snake>],
+                            GeneralWaveformParameterError::[<Bad$ty>],
+                        )?;
+                    )+
+                }
                 Ok(Self { $($field),+ })
             }
         }
@@ -972,6 +976,6 @@ pub(crate) use {
 
 pub(crate) use {
     define_waveform, define_waveforms, extract_type_if_generic_field, field_evaluator,
-    field_parser, field_referencer, field_transposer, field_type, impl_builtin_waveform_traits,
+    field_referencer, field_transposer, field_type, impl_builtin_waveform_traits,
     impl_concretizable, instantiated_waveform, transpose_if_generic_waveform, waveform_source,
 };

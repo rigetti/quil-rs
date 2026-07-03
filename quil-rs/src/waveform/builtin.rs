@@ -23,7 +23,8 @@ use crate::{
 use super::{
     parse,
     sampling::{IqSamples, SamplingError},
-    Concrete, Partial, Reference, Syntactic, WaveformData, WaveformParameterError,
+    Concrete, GeneralWaveformParameterError, GeneralWaveformParameters, Partial, Reference,
+    WaveformData,
 };
 
 #[cfg(feature = "python")]
@@ -74,20 +75,34 @@ pub struct CommonBuiltinParameters<T: WaveformData> {
     pub detuning: Option<T::Real>,
 }
 
-impl parse::Extractable for CommonBuiltinParameters<Syntactic> {
-    fn extract_from(
-        parameters: &mut crate::instruction::WaveformParameters,
-    ) -> Result<Self, WaveformParameterError> {
-        let duration = parse::concrete_real(parameters, "duration")?;
-        let scale = parameters.shift_remove("scale");
-        let phase = parameters.shift_remove("phase").map(Cycles);
-        let detuning = parameters.shift_remove("detuning");
+impl<T: WaveformData> parse::Extractable<T> for CommonBuiltinParameters<T> {
+    fn extract_from<P: GeneralWaveformParameters, EF64, ER, EC>(
+        parameters: &mut P,
+        concrete_real: impl FnMut(P::Value) -> Result<f64, EF64>,
+        mut real: impl FnMut(P::Value) -> Result<T::Real, ER>,
+        _complex: impl FnMut(P::Value) -> Result<T::Complex, EC>,
+    ) -> Result<Self, GeneralWaveformParameterError<EF64, ER, EC>> {
+        let duration = parse::mandatory(
+            parameters,
+            "duration",
+            concrete_real,
+            GeneralWaveformParameterError::BadConcreteReal,
+        )?;
+
+        let mut optional_real = |name| {
+            parse::optional(
+                parameters,
+                name,
+                &mut real,
+                GeneralWaveformParameterError::BadReal,
+            )
+        };
 
         Ok(Self {
             duration,
-            scale,
-            phase,
-            detuning,
+            scale: optional_real("scale")?,
+            phase: optional_real("phase")?.map(Cycles),
+            detuning: optional_real("detuning")?,
         })
     }
 }
