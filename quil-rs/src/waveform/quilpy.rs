@@ -320,7 +320,7 @@ define_py_evaluate! {
 impl PyWaveform {
     #[staticmethod]
     #[gen_stub(override_return_type(
-        type_repr = "Waveform[quil.expression.Expression]",
+        type_repr = "Waveform[quil.expression.Expression, quil.expression.Expression]",
         imports = ("quil.expression")
     ))]
     fn from_quil<'py>(py: Python<'py>, invocation: WaveformInvocation) -> PyResult<Self> {
