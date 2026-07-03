@@ -1,7 +1,6 @@
 //! Built-in waveforms.
 
 use std::{
-    convert::Infallible,
     f64::consts::{LN_2, PI},
     iter::repeat_n,
 };
@@ -21,7 +20,7 @@ use crate::{
 };
 
 use super::{
-    higher_kinded, parse,
+    parse,
     sampling::{IqSamples, SamplingError},
     Concrete, Partial, Reference, Syntactic, WaveformData, WaveformParameterError,
 };
@@ -33,7 +32,7 @@ mod macros;
 use macros::*;
 
 mod partiality;
-use partiality::{IqSamplesFor, Sampleable};
+use partiality::{ConcretizableFromTo, ConcretizableWaveform, IqSamplesFor, Sampleable};
 
 ////////////////////////////////////////////////////////////////////////////////
 // General built-in waveform types
@@ -603,53 +602,6 @@ impl BuiltinWaveformParameters for BuiltinWaveform<Concrete> {
             }
         }
     }
-}
-
-/// A waveform that might or might not be concrete.
-trait ConcretizableWaveform:
-    higher_kinded::WaveformParameters<WaveformData: Sampleable> + Copy
-{
-    /// The concrete version of this waveform, if the input waveform was either concrete or was
-    /// partial with all its data specified.
-    fn concretize(
-        self,
-    ) -> Result<Self::WithWaveformData<Concrete>, <Self::WaveformData as Sampleable>::IsPartial>;
-}
-
-macro_rules! impl_concretizable_waveform {
-    ($($ty:ident),* $(,)?) => {
-        $(
-            impl ConcretizableWaveform for $ty<Partial<Concrete>> {
-                #[inline(always)]
-                fn concretize(self) -> Result<$ty<Concrete>, ()> {
-                    self.transpose().ok_or(())
-                }
-            }
-
-            impl ConcretizableWaveform for $ty<Concrete> {
-                #[inline(always)]
-                fn concretize(self) -> Result<Self, Infallible> {
-                    Ok(self)
-                }
-            }
-        )*
-    };
-}
-
-// ASZ TODO: this could be folded into the existing macro code
-impl_concretizable_waveform!(Flat, Gaussian, DragGaussian, ErfSquare, HermiteGaussian);
-
-/// A convenient trait alias for using [`ConcretizableWaveform`] in specific cases.
-trait ConcretizableFromTo<T, C>:
-    ConcretizableWaveform<WaveformData = T, WithWaveformData<Concrete> = C>
-{
-}
-impl<
-        T: WaveformData,
-        C,
-        W: ConcretizableWaveform<WaveformData = T, WithWaveformData<Concrete> = C>,
-    > ConcretizableFromTo<T, C> for W
-{
 }
 
 impl BuiltinWaveformParameters for Flat<Concrete> {

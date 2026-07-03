@@ -4,7 +4,7 @@ use std::convert::Infallible;
 
 use derive_where::derive_where;
 
-use crate::waveform::{sampling::IqSamples, Concrete, Partial, WaveformData};
+use crate::waveform::{higher_kinded, sampling::IqSamples, Concrete, Partial, WaveformData};
 
 use super::IqSamplesOrPlaceholder;
 
@@ -34,6 +34,53 @@ impl Sampleable for Concrete {
     fn eval_real(real: Self::Real) -> Result<f64, Self::IsPartial> {
         Ok(real)
     }
+}
+
+/// A waveform that might or might not be concrete.
+pub(super) trait ConcretizableWaveform:
+    higher_kinded::WaveformParameters<WaveformData: Sampleable> + Copy
+{
+    /// The concrete version of this waveform, if the input waveform was either concrete or was
+    /// partial with all its data specified.
+    fn concretize(
+        self,
+    ) -> Result<Self::WithWaveformData<Concrete>, <Self::WaveformData as Sampleable>::IsPartial>;
+}
+
+macro_rules! impl_concretizable_waveform {
+    ($($ty:ident),* $(,)?) => {
+        $(
+            impl ConcretizableWaveform for super::$ty<Partial<Concrete>> {
+                #[inline(always)]
+                fn concretize(self) -> Result<super::$ty<Concrete>, ()> {
+                    self.transpose().ok_or(())
+                }
+            }
+
+            impl ConcretizableWaveform for super::$ty<Concrete> {
+                #[inline(always)]
+                fn concretize(self) -> Result<Self, Infallible> {
+                    Ok(self)
+                }
+            }
+        )*
+    };
+}
+
+// ASZ TODO: this could be folded into the existing macro code
+impl_concretizable_waveform!(Flat, Gaussian, DragGaussian, ErfSquare, HermiteGaussian);
+
+/// A convenient trait alias for using [`ConcretizableWaveform`] in specific cases.
+pub(super) trait ConcretizableFromTo<T, C>:
+    ConcretizableWaveform<WaveformData = T, WithWaveformData<Concrete> = C>
+{
+}
+impl<
+        T: WaveformData,
+        C,
+        W: ConcretizableWaveform<WaveformData = T, WithWaveformData<Concrete> = C>,
+    > ConcretizableFromTo<T, C> for W
+{
 }
 
 /// A value that depends on whether the input was partial or total.  If this is for total data, then
