@@ -173,6 +173,45 @@ impl<S: WaveformData> CommonBuiltinParameters<S> {
     }
 }
 
+impl<T: WaveformData> CommonBuiltinParameters<Partial<T>> {
+    /// Returns `None` if any of the non-[`duration`][Self::duration] parameters is specified but
+    /// missing (i.e., if any is `Some(None)`) , and returns its underlying total form
+    /// [`CommonBuiltinParameters<T>`] otherwise.
+    pub fn transpose(self) -> Option<CommonBuiltinParameters<T>> {
+        let Self {
+            duration,
+            scale,
+            phase,
+            detuning,
+        } = self;
+
+        let scale = match scale {
+            Some(None) => return None,
+            Some(Some(scale)) => Some(scale),
+            None => None,
+        };
+
+        let phase = match phase {
+            Some(Cycles(None)) => return None,
+            Some(Cycles(Some(phase))) => Some(Cycles(phase)),
+            None => None,
+        };
+
+        let detuning = match detuning {
+            Some(None) => return None,
+            Some(Some(detuning)) => Some(detuning),
+            None => None,
+        };
+
+        Some(CommonBuiltinParameters {
+            duration,
+            scale,
+            phase,
+            detuning,
+        })
+    }
+}
+
 impl CommonBuiltinParameters<Concrete> {
     /// Given a sample rate, return the corresponding [explicit
     /// parameters][ExplicitCommonBuiltinParameters].
@@ -252,8 +291,7 @@ pub trait BuiltinWaveformParameters:
 //
 // We have to declare a bunch of waveforms which all look very similar but have
 // slightly different contents.  This is done in the `define_waveforms!` macro
-// block below, but to get there, we have to define a number of helper macros.
-// A waveform definition looks like this:
+// block below.  A waveform definition looks like this:
 //
 // ```
 // /// A description of this waveform.
@@ -454,6 +492,25 @@ impl<S: WaveformData> BuiltinWaveform<S> {
                 .try_evaluate(real, complex)
                 .map(BuiltinWaveform::HermiteGaussian),
             Self::BoxcarKernel(boxcar_kernel) => Ok(BuiltinWaveform::BoxcarKernel(boxcar_kernel)),
+        }
+    }
+}
+
+impl<T: WaveformData> BuiltinWaveform<Partial<T>> {
+    /// Returns `None` if any of the partial [`BuiltinWaveform`]'s data is missing, and returns its
+    /// underlying total form), [`BuiltinWaveform<T>`]), otherwise.
+    pub fn transpose(self) -> Option<BuiltinWaveform<T>> {
+        match self {
+            Self::Flat(flat) => flat.transpose().map(BuiltinWaveform::Flat),
+            Self::Gaussian(gaussian) => gaussian.transpose().map(BuiltinWaveform::Gaussian),
+            Self::DragGaussian(drag_gaussian) => {
+                drag_gaussian.transpose().map(BuiltinWaveform::DragGaussian)
+            }
+            Self::ErfSquare(erf_square) => erf_square.transpose().map(BuiltinWaveform::ErfSquare),
+            Self::HermiteGaussian(hermite_gaussian) => hermite_gaussian
+                .transpose()
+                .map(BuiltinWaveform::HermiteGaussian),
+            Self::BoxcarKernel(boxcar_kernel) => Some(BuiltinWaveform::BoxcarKernel(boxcar_kernel)),
         }
     }
 }
