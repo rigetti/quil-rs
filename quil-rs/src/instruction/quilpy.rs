@@ -10,9 +10,14 @@ use rigetti_pyo3::{create_init_submodule, impl_repr};
 
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::{
-    inventory::submit,
-    derive::{gen_methods_from_python, gen_stub_pyclass, gen_stub_pymethods},
     impl_stub_type,
+    derive::{
+        gen_methods_from_python,
+        gen_stub_pyclass,
+        gen_stub_pyfunction,
+        gen_stub_pymethods,
+    },
+    inventory::submit
 };
 
 use super::*;
@@ -119,6 +124,10 @@ create_init_submodule! {
         errors::GateError,
         errors::ParseInstructionError,
         errors::ParseMemoryReferenceError
+    ],
+
+    funcs: [
+        unpack_classical_reg,
     ],
 }
 
@@ -826,7 +835,11 @@ impl DeclarationAt {
     /// assert arith.to_quil() == "ADD x[2] 5"
     /// ```
     fn add<'py>(&self, py: Python<'py>, other: ArithmeticOperandLike) -> Arithmetic {
-        Arithmetic { operator: ArithmeticOperator::Add, destination: self.memref(py), source: other.into() }
+        Arithmetic::new(
+            ArithmeticOperator::Add,
+            self.memref(py),
+            other.into(),
+        )
     }
 
     fn sub<'py>(&self, py: Python<'py>, other: ArithmeticOperandLike) -> Arithmetic {
@@ -1156,6 +1169,7 @@ pickleable_new! {
 ///
 /// This can be used to convert a `(str, int)` or `[str, int]` into a `MemoryReference`,
 /// or to convert a `DeclarationAt` or `Declaration` into a `MemoryReference`.
+#[cfg_attr(feature = "stubs", gen_stub_pyfunction(module = "quil._quil.instructions"))]
 #[pyfunction]
 #[pyo3(warn(message = "use `MemoryReference(...)` directly instead", category = PyDeprecationWarning))]
 fn unpack_classical_reg<'py>(obj: &Bound<'py, PyAny>) -> PyResult<MemoryReference> {
@@ -1635,7 +1649,7 @@ impl<'a, 'py> FromPyObject<'a, 'py> for ScalarType {
             // Compile-time check that we cover all variants.
             #[cfg(debug_assertions)]
             {
-                let _ = match ret {
+                match ret {
                     ScalarType::Bit => (),
                     ScalarType::Integer => (),
                     ScalarType::Real => (),
