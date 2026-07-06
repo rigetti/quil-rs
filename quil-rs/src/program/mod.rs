@@ -28,7 +28,6 @@ use petgraph::Graph;
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
-use crate::instruction::quilpy::AnyInstruction;
 use crate::instruction::{
     Arithmetic, ArithmeticOperand, ArithmeticOperator, Call, CircuitDefinition, Declaration,
     DefGateSequenceExpansionError, ExternError, ExternPragmaMap, ExternSignatureMap,
@@ -42,7 +41,6 @@ use crate::program::defgate_sequence_expansion::{
     ExpandedInstructionsWithSourceMap, ProgramDefGateSequenceExpander,
 };
 use crate::quil::Quil;
-use crate::quilpy::from_like;
 
 pub use self::calibration::{
     CalibrationExpansion, CalibrationExpansionOutput, CalibrationSource, Calibrations,
@@ -224,87 +222,6 @@ impl Program {
         }
     }
 
-    /// Add an instruction to the end of the program.
-    ///
-    /// Note, parsing extern signatures is deferred here to maintain infallibility
-    /// of [`Program::add_instruction`]. This means that invalid `PRAGMA EXTERN`
-    /// instructions are still added to the [`Program::extern_pragma_map`];
-    /// duplicate `PRAGMA EXTERN` names are overwritten.
-    pub fn add_instruction(
-        &mut self,
-        #[gen_stub(override_type(
-            type_repr = "_quil.instructions.Instruction",
-            imports = ("quil._quil"),
-        ))]
-        instruction: Instruction,
-    ) {
-        self.used_qubits
-            .extend(instruction.get_qubits().into_iter().cloned());
-
-        match instruction {
-            Instruction::CalibrationDefinition(calibration) => {
-                self.calibrations.insert_calibration(calibration);
-            }
-            Instruction::CircuitDefinition(circuit) => {
-                self.circuits.insert(circuit.name.clone(), circuit);
-            }
-            Instruction::FrameDefinition(FrameDefinition {
-                identifier,
-                attributes,
-            }) => {
-                self.frames.insert(identifier, attributes);
-            }
-            Instruction::Declaration(Declaration {
-                name,
-                size,
-                sharing,
-            }) => {
-                self.memory_regions
-                    .insert(name, MemoryRegion { size, sharing });
-            }
-            Instruction::GateDefinition(gate_definition) => {
-                self.gate_definitions
-                    .insert(gate_definition.name.clone(), gate_definition);
-            }
-            Instruction::MeasureCalibrationDefinition(calibration) => {
-                self.calibrations
-                    .insert_measurement_calibration(calibration);
-            }
-            Instruction::WaveformDefinition(WaveformDefinition { name, definition }) => {
-                self.waveforms.insert(name, definition);
-            }
-            Instruction::Gate(gate) => {
-                self.instructions.push(Instruction::Gate(gate));
-            }
-            Instruction::Measurement(measurement) => {
-                self.instructions
-                    .push(Instruction::Measurement(measurement));
-            }
-            Instruction::Reset(reset) => {
-                self.instructions.push(Instruction::Reset(reset));
-            }
-            Instruction::Delay(delay) => {
-                self.instructions.push(Instruction::Delay(delay));
-            }
-            Instruction::Fence(fence) => {
-                self.instructions.push(Instruction::Fence(fence));
-            }
-            Instruction::Capture(capture) => {
-                self.instructions.push(Instruction::Capture(capture));
-            }
-            Instruction::Pulse(pulse) => {
-                self.instructions.push(Instruction::Pulse(pulse));
-            }
-            Instruction::Pragma(pragma) if pragma.name == RESERVED_PRAGMA_EXTERN => {
-                self.extern_pragma_map.insert(pragma);
-            }
-            Instruction::RawCapture(raw_capture) => {
-                self.instructions.push(Instruction::RawCapture(raw_capture));
-            }
-            other => self.instructions.push(other),
-        }
-    }
-
     /// Creates a new conjugate transpose of the [`Program`] by reversing the order of gate
     /// instructions and applying the DAGGER modifier to each.
     ///
@@ -335,7 +252,8 @@ impl Program {
         self.expand_calibrations_inner(None)
     }
 
-    /// Resolve [`LabelPlaceholder`]s and [`QubitPlaceholder`]s within the program using default resolvers.
+    /// Resolve [`TargetPlaceholder`]s and [`QubitPlaceholder`]s within the program using default
+    /// resolvers.
     ///
     /// See [`resolve_placeholders_with_custom_resolvers`](Self::resolve_placeholders_with_custom_resolvers),
     /// [`default_target_resolver`](Self::default_target_resolver),
@@ -432,19 +350,6 @@ impl Program {
         looped_program
     }
 
-    /// Resolve [`TargetPlaceholder`]s and [`QubitPlaceholder`]s within the program using default
-    /// resolvers.
-    ///
-    /// See [`resolve_placeholders_with_custom_resolvers`](Self::resolve_placeholders_with_custom_resolvers),
-    /// [`default_target_resolver`](Self::default_target_resolver),
-    /// and [`default_qubit_resolver`](Self::default_qubit_resolver) for more information.
-    pub fn resolve_placeholders(&mut self) {
-        self.resolve_placeholders_with_custom_resolvers(
-            self.default_target_resolver(),
-            self.default_qubit_resolver(),
-        )
-    }
-
     /// Return a copy of all of the instructions which constitute this [`Program`].
     #[gen_stub(override_return_type(
         type_repr = "builtins.list[_quil.instructions.Instruction]",
@@ -509,6 +414,81 @@ impl Program {
 
         self.add_instructions(instructions);
     }
+
+    /// Add an instruction to the end of the program.
+    ///
+    /// Note, parsing extern signatures is deferred here to maintain infallibility
+    /// of [`Program::add_instruction`]. This means that invalid `PRAGMA EXTERN`
+    /// instructions are still added to the [`Program::extern_pragma_map`];
+    /// duplicate `PRAGMA EXTERN` names are overwritten.
+    pub fn add_instruction(&mut self, instruction: Instruction) {
+        self.used_qubits
+            .extend(instruction.get_qubits().into_iter().cloned());
+
+        match instruction {
+            Instruction::CalibrationDefinition(calibration) => {
+                self.calibrations.insert_calibration(calibration);
+            }
+            Instruction::CircuitDefinition(circuit) => {
+                self.circuits.insert(circuit.name.clone(), circuit);
+            }
+            Instruction::FrameDefinition(FrameDefinition {
+                identifier,
+                attributes,
+            }) => {
+                self.frames.insert(identifier, attributes);
+            }
+            Instruction::Declaration(Declaration {
+                name,
+                size,
+                sharing,
+            }) => {
+                self.memory_regions
+                    .insert(name, MemoryRegion { size, sharing });
+            }
+            Instruction::GateDefinition(gate_definition) => {
+                self.gate_definitions
+                    .insert(gate_definition.name.clone(), gate_definition);
+            }
+            Instruction::MeasureCalibrationDefinition(calibration) => {
+                self.calibrations
+                    .insert_measurement_calibration(calibration);
+            }
+            Instruction::WaveformDefinition(WaveformDefinition { name, definition }) => {
+                self.waveforms.insert(name, definition);
+            }
+            Instruction::Gate(gate) => {
+                self.instructions.push(Instruction::Gate(gate));
+            }
+            Instruction::Measurement(measurement) => {
+                self.instructions
+                    .push(Instruction::Measurement(measurement));
+            }
+            Instruction::Reset(reset) => {
+                self.instructions.push(Instruction::Reset(reset));
+            }
+            Instruction::Delay(delay) => {
+                self.instructions.push(Instruction::Delay(delay));
+            }
+            Instruction::Fence(fence) => {
+                self.instructions.push(Instruction::Fence(fence));
+            }
+            Instruction::Capture(capture) => {
+                self.instructions.push(Instruction::Capture(capture));
+            }
+            Instruction::Pulse(pulse) => {
+                self.instructions.push(Instruction::Pulse(pulse));
+            }
+            Instruction::Pragma(pragma) if pragma.name == RESERVED_PRAGMA_EXTERN => {
+                self.extern_pragma_map.insert(pragma);
+            }
+            Instruction::RawCapture(raw_capture) => {
+                self.instructions.push(Instruction::RawCapture(raw_capture));
+            }
+            other => self.instructions.push(other),
+        }
+    }
+
 
     pub fn add_instructions<I>(&mut self, instructions: I)
     where
