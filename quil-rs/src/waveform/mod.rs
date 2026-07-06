@@ -459,9 +459,9 @@ impl From<GeneralWaveformParameterError<EvaluationError, Infallible, Infallible>
 #[derive(Clone, PartialEq, Eq, Debug, thiserror::Error)]
 #[error("invalid invocation of waveform {name}: {error}")]
 pub struct WaveformInvocationError<E = WaveformParameterError> {
-    name: String,
+    pub name: String,
     #[source]
-    error: E,
+    pub error: E,
 }
 
 impl<E1> WaveformInvocationError<E1> {
