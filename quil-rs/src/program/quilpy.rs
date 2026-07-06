@@ -14,17 +14,9 @@ use rigetti_pyo3::{create_init_submodule, impl_repr};
 
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pymethods};
-use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pymethods};
 
-use crate::instruction::{MemoryReference, Target};
-use crate::quilpy::from_sequence;
-use pyo3_stub_gen::{
-    derive::{ gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pymethods, gen_methods_from_python },
-    inventory::submit,
-};
-
+use crate::instruction::Label;
 use crate::instruction::quilpy::AnyInstruction;
-use crate::instruction::{ExternPragmaMap, Label, MemoryReference, Qubit, Target, Waveform};
 use crate::{
     instruction::{
         quilpy::OwnedGateSignature, CalibrationDefinition, Declaration, DefaultHandler,
@@ -1256,25 +1248,18 @@ struct PyTargetResolver(Py<PyAny>);
 
 #[cfg(feature = "stubs")]
 mod stubs {
-    use pyo3_stub_gen::{ImportKind, ModuleRef, PyStubType, TypeIdentifierRef, TypeInfo, impl_stub_type, type_alias};
+    use pyo3_stub_gen::{impl_stub_type, type_alias};
 
-    use super::{
-        EndTargetParam,
-        Instruction,
-        OneOrMore,
-        PyQubitResolver,
-        PyTargetResolver,
-        QubitPlaceholder,
-        Target,
-        TargetPlaceholder,
-    };
+    use crate::instruction::quilpy::AnyInstruction;
+
+    use super::{EndTargetParam, OneOrMore, Target};
 
     impl_stub_type!(EndTargetParam = Target | u32);
     impl_stub_type!(OneOrMore<AnyInstruction> = AnyInstruction | Vec<AnyInstruction>);
     impl_stub_type!(super::InstructionIndex = usize);
     impl_stub_type!(super::Seconds = f64);
-    type_alias!("quil.program", InstructionIndex = super::InstructionIndex);
-    type_alias!("quil.program", Seconds = super::Seconds);
+    type_alias!("quil._quil.program", InstructionIndex = super::InstructionIndex);
+    type_alias!("quil._quil.program", Seconds = super::Seconds);
 }
 
 /// A Schedule is a ``DependencyGraph`` flattened into a linear sequence of instructions,
