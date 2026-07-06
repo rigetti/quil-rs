@@ -1210,6 +1210,8 @@ impl<'a, 'py> FromPyObject<'a, 'py> for MemoryReference {
             let MemoryReferencePair{name, index} = s.extract()?;
             Ok(MemoryReference::new(name, index))
         } else if let Ok(s) = obj.cast::<PyString>() {
+            // TODO: reconsider this case, as it makes it too easy to mistakenly extract
+            // particularly when included in another enum that derives `FromPyObject`
             let name = s.extract()
                 .map_err(|_| CastError::new(obj, MemoryReference::classinfo_object(obj.py())))?;
             Ok(MemoryReference::new(name, 0))
