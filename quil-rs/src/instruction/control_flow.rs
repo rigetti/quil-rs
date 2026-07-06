@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+#[cfg(feature = "python")]
+use crate::instruction::quilpy::PyInstruction;
 #[cfg(not(feature = "python"))]
 use optipy::strip_pyo3;
 #[cfg(feature = "stubs")]
@@ -17,6 +19,7 @@ use crate::{
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         frozen,
         hash,
@@ -160,6 +163,7 @@ impl PartialEq for TargetPlaceholder {
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         get_all,
         set_all,
@@ -195,6 +199,7 @@ pickleable_new! {
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         get_all,
         set_all,
@@ -232,6 +237,7 @@ impl Quil for JumpWhen {
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         get_all,
         set_all,

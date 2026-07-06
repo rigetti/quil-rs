@@ -1,5 +1,7 @@
 #[cfg(feature = "python")]
 use std::str::FromStr;
+#[cfg(feature = "python")]
+use crate::instruction::quilpy::PyInstruction;
 
 use nom_locate::LocatedSpan;
 
@@ -158,6 +160,7 @@ impl Quil for Offset {
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         frozen,
         hash,
@@ -320,6 +323,7 @@ impl FromStr for MemoryReference {
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         frozen,
         hash,
@@ -360,6 +364,7 @@ impl Quil for Load {
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         frozen,
         hash,

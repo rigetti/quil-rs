@@ -1,10 +1,10 @@
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::gen_stub_pyclass;
 
-use crate::{
-    pickleable_new,
-    quil::{Quil, INDENT},
-};
+use crate::{pickleable_new, quil::{INDENT, Quil}};
+
+#[cfg(feature = "python")]
+use crate::instruction::quilpy::PyInstruction;
 
 use super::Instruction;
 
@@ -14,6 +14,7 @@ use super::Instruction;
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         get_all,
         set_all,

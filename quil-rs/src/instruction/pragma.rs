@@ -1,3 +1,5 @@
+#[cfg(feature = "python")]
+use crate::instruction::quilpy::PyInstruction;
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyclass_complex_enum};
 
@@ -11,6 +13,7 @@ use super::QuotedString;
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         frozen,
         hash,
@@ -80,6 +83,7 @@ impl Quil for PragmaArgument {
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         frozen,
         hash,

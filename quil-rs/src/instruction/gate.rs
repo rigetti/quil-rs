@@ -20,6 +20,8 @@ use std::{
     collections::{HashMap, HashSet},
 };
 
+#[cfg(feature = "python")]
+use crate::instruction::quilpy::PyInstruction;
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::{
     gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pyclass_enum,
@@ -32,6 +34,7 @@ use pyo3_stub_gen::derive::{
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         frozen,
         hash,
@@ -1008,6 +1011,7 @@ impl Quil for GateSpecification {
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         frozen,
         hash,

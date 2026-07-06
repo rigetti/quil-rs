@@ -5,7 +5,11 @@ use pyo3_stub_gen::derive::{
 
 use super::MemoryReference;
 
-use crate::{floating_point_eq, pickleable_new, quil::Quil};
+use crate::{floating_point_eq,
+pickleable_new, quil::Quil};
+
+#[cfg(feature = "python")]
+use crate::instruction::quilpy::PyInstruction;
 
 #[derive(Clone, Debug, Hash, PartialEq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
@@ -14,6 +18,7 @@ use crate::{floating_point_eq, pickleable_new, quil::Quil};
     pyo3::pyclass(
         module = "quil._quil.instructions",
         eq,
+        extends = PyInstruction,
         frozen,
         hash,
         get_all,
@@ -258,6 +263,7 @@ impl Quil for BinaryOperator {
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         frozen,
         hash,
@@ -303,6 +309,7 @@ pickleable_new! {
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         frozen,
         hash,
@@ -342,6 +349,7 @@ impl Quil for Convert {
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         frozen,
         hash,
@@ -381,6 +389,7 @@ impl Quil for Move {
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         frozen,
         hash,
@@ -420,6 +429,7 @@ pickleable_new! {
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         frozen,
         hash,
@@ -591,6 +601,7 @@ impl Quil for ComparisonOperator {
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         frozen,
         hash,

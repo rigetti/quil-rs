@@ -1,5 +1,7 @@
 use indexmap::IndexMap;
 
+#[cfg(feature = "python")]
+use crate::instruction::quilpy::PyInstruction;
 #[cfg(not(feature = "python"))]
 use optipy::strip_pyo3;
 #[cfg(feature = "stubs")]
@@ -48,6 +50,7 @@ impl Waveform {
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         frozen,
         hash,
