@@ -3,8 +3,7 @@ use num_complex::Complex64;
 use numpy::{PyArray2, ToPyArray};
 use paste::paste;
 use pyo3::{
-    CastError, IntoPyObjectExt, PyClass, PyTraverseError, PyVisit, exceptions::{PyIndexError, PyTypeError, PyValueError},
-    CastError, IntoPyObjectExt, PyClass, PyTraverseError, PyTypeCheck, PyVisit, exceptions::{PyDeprecationWarning, PyIndexError, PyTypeError, PyValueError},
+    CastError, IntoPyObjectExt, PyClass, PyTraverseError, PyVisit, exceptions::{PyIndexError, PyTypeError, PyValueError}, PyTypeCheck, exceptions::PyDeprecationWarning,
     prelude::*, types::{IntoPyDict as _, PyDict, PyList, PyString, PyTuple}
 };
 use rigetti_pyo3::{create_init_submodule, impl_repr};
@@ -1158,7 +1157,7 @@ pickleable_new! {
 /// This can be used to convert a `(str, int)` or `[str, int]` into a `MemoryReference`,
 /// or to convert a `DeclarationAt` or `Declaration` into a `MemoryReference`.
 #[pyfunction]
-#[pyo3(warn(message = "use MemoryReference(...) directly instead", category = PyDeprecationWarning))]
+#[pyo3(warn(message = "use `MemoryReference(...)` directly instead", category = PyDeprecationWarning))]
 fn unpack_classical_reg<'py>(obj: &Bound<'py, PyAny>) -> PyResult<MemoryReference> {
     MemoryReference::extract(obj.as_borrowed())
 }
@@ -1577,31 +1576,28 @@ impl MemoryReference {
     // The following are deprecated PyQuil v4 methods present for backwards compatibility.
     // -------------------------------------------------------------------------------------
 
+    // TODO(migration-guide): `offset` was renamed `index`.
     #[getter]
-    #[deprecated]
-    fn offset(&self, py: Python<'_>) -> PyResult<u64> {
-        py_deprecated!(py, c"`offset` is deprecated; use `index` instead")?;
-        Ok(self.index)
+    #[pyo3(warn(message = "use `index` instead", category = PyDeprecationWarning))]
+    fn offset(&self) -> u64 {
+        self.index
     }
 
     // TODO(migration-guide): `declared_size` was only used for pretty-printing,
     // and it can't be inferred from parsing, so we're dropping that implementation.
+    #[gen_stub(override_return_type(type_repr = "None"))]
     #[getter]
-    #[deprecated]
-    fn declared_size(&self, py: Python<'_>) -> PyResult<Option<()>> {
-        py_deprecated!(py, c"`declared_size` is deprecated and only returns None")?;
-        Ok(None)
+    #[pyo3(warn(message = "`declared_size` is deprecated", category=PyDeprecationWarning))]
+    fn declared_size(&self, py: Python<'_>) -> Py<PyAny> {
+        py.None()
     }
 
     #[staticmethod]
-    fn _from_parameter_str(py: Python<'_>, memory_reference_str: &str) -> PyResult<Self> {
-        py_deprecated!(
-            py,
-            c"`_from_parameter_str` is deprecated; use `parse` instead"
-        )?;
+    #[pyo3(warn(message = "use `parse` instead", category=PyDeprecationWarning))]
+    fn _from_parameter_str(memory_reference_str: &str) -> PyResult<Self> {
         match <Expression as std::str::FromStr>::from_str(memory_reference_str)? {
             Expression::Address(addr) => Ok(addr),
-            _ => Err(PyValueError::new_err("not a memory reference")),
+            _ => Err(PyValueError::new_err("not a valid memory reference expression")),
         }
     }
 }
@@ -1907,10 +1903,9 @@ impl TargetPlaceholder {
     ///
     /// This is deprecated; use `base_label` instead.
     #[getter]
-    #[deprecated]
-    fn prefix(&self, py: Python<'_>) -> PyResult<&str> {
-        py_deprecated!(py, c"`prefix` is deprecated; use `base_label`")?;
-        Ok(self.as_inner())
+    #[pyo3(warn(message = "use `base_label` instead", category = PyDeprecationWarning))]
+    fn prefix(&self) -> &str {
+        self.as_inner()
     }
 }
 
