@@ -105,13 +105,13 @@
                                 <a class="variable" href="#CommonBuiltinParameters.duration">duration</a>
                         </li>
                         <li>
-                                <a class="variable" href="#CommonBuiltinParameters.phase">phase</a>
+                                <a class="variable" href="#CommonBuiltinParameters.detuning">detuning</a>
                         </li>
                         <li>
                                 <a class="variable" href="#CommonBuiltinParameters.scale">scale</a>
                         </li>
                         <li>
-                                <a class="variable" href="#CommonBuiltinParameters.detuning">detuning</a>
+                                <a class="variable" href="#CommonBuiltinParameters.phase">phase</a>
                         </li>
                 </ul>
 
@@ -120,16 +120,16 @@
                     <a class="class" href="#ExplicitCommonBuiltinParameters">ExplicitCommonBuiltinParameters</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#ExplicitCommonBuiltinParameters.sample_count">sample_count</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#ExplicitCommonBuiltinParameters.detuning">detuning</a>
+                                <a class="variable" href="#ExplicitCommonBuiltinParameters.scale">scale</a>
                         </li>
                         <li>
                                 <a class="variable" href="#ExplicitCommonBuiltinParameters.phase">phase</a>
                         </li>
                         <li>
-                                <a class="variable" href="#ExplicitCommonBuiltinParameters.scale">scale</a>
+                                <a class="variable" href="#ExplicitCommonBuiltinParameters.sample_count">sample_count</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#ExplicitCommonBuiltinParameters.detuning">detuning</a>
                         </li>
                 </ul>
 
@@ -183,10 +183,10 @@
                                 <a class="variable" href="#DragGaussian.anh">anh</a>
                         </li>
                         <li>
-                                <a class="variable" href="#DragGaussian.alpha">alpha</a>
+                                <a class="variable" href="#DragGaussian.t0">t0</a>
                         </li>
                         <li>
-                                <a class="variable" href="#DragGaussian.t0">t0</a>
+                                <a class="variable" href="#DragGaussian.alpha">alpha</a>
                         </li>
                 </ul>
 
@@ -201,13 +201,13 @@
                                 <a class="function" href="#ErfSquare.evaluate">evaluate</a>
                         </li>
                         <li>
+                                <a class="variable" href="#ErfSquare.risetime">risetime</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#ErfSquare.pad_left">pad_left</a>
                         </li>
                         <li>
                                 <a class="variable" href="#ErfSquare.pad_right">pad_right</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#ErfSquare.risetime">risetime</a>
                         </li>
                 </ul>
 
@@ -222,7 +222,7 @@
                                 <a class="function" href="#HermiteGaussian.evaluate">evaluate</a>
                         </li>
                         <li>
-                                <a class="variable" href="#HermiteGaussian.alpha">alpha</a>
+                                <a class="variable" href="#HermiteGaussian.anh">anh</a>
                         </li>
                         <li>
                                 <a class="variable" href="#HermiteGaussian.fwhm">fwhm</a>
@@ -231,10 +231,10 @@
                                 <a class="variable" href="#HermiteGaussian.second_order_hrm_coeff">second_order_hrm_coeff</a>
                         </li>
                         <li>
-                                <a class="variable" href="#HermiteGaussian.anh">anh</a>
+                                <a class="variable" href="#HermiteGaussian.t0">t0</a>
                         </li>
                         <li>
-                                <a class="variable" href="#HermiteGaussian.t0">t0</a>
+                                <a class="variable" href="#HermiteGaussian.alpha">alpha</a>
                         </li>
                 </ul>
 
@@ -588,13 +588,13 @@
     
 
                             </div>
-                            <div id="CommonBuiltinParameters.phase" class="classattr">
+                            <div id="CommonBuiltinParameters.detuning" class="classattr">
                                 <div class="attr variable">
-            <span class="name">phase</span>
+            <span class="name">detuning</span>
 
         
     </div>
-    <a class="headerlink" href="#CommonBuiltinParameters.phase"></a>
+    <a class="headerlink" href="#CommonBuiltinParameters.detuning"></a>
     
     
 
@@ -610,13 +610,13 @@
     
 
                             </div>
-                            <div id="CommonBuiltinParameters.detuning" class="classattr">
+                            <div id="CommonBuiltinParameters.phase" class="classattr">
                                 <div class="attr variable">
-            <span class="name">detuning</span>
+            <span class="name">phase</span>
 
         
     </div>
-    <a class="headerlink" href="#CommonBuiltinParameters.detuning"></a>
+    <a class="headerlink" href="#CommonBuiltinParameters.phase"></a>
     
     
 
@@ -640,6 +640,32 @@ waveforms.</p>
 </div>
 
 
+                            <div id="ExplicitCommonBuiltinParameters.scale" class="classattr">
+                                <div class="attr variable">
+            <span class="name">scale</span>
+
+        
+    </div>
+    <a class="headerlink" href="#ExplicitCommonBuiltinParameters.scale"></a>
+    
+            <div class="docstring"><p>Scale to apply to waveform envelope.</p>
+</div>
+
+
+                            </div>
+                            <div id="ExplicitCommonBuiltinParameters.phase" class="classattr">
+                                <div class="attr variable">
+            <span class="name">phase</span>
+
+        
+    </div>
+    <a class="headerlink" href="#ExplicitCommonBuiltinParameters.phase"></a>
+    
+            <div class="docstring"><p>Phase shift for the entire waveform.</p>
+</div>
+
+
+                            </div>
                             <div id="ExplicitCommonBuiltinParameters.sample_count" class="classattr">
                                 <div class="attr variable">
             <span class="name">sample_count</span>
@@ -664,32 +690,6 @@ waveforms.</p>
     <a class="headerlink" href="#ExplicitCommonBuiltinParameters.detuning"></a>
     
             <div class="docstring"><p>Explicit detuning to bake into IQ values.</p>
-</div>
-
-
-                            </div>
-                            <div id="ExplicitCommonBuiltinParameters.phase" class="classattr">
-                                <div class="attr variable">
-            <span class="name">phase</span>
-
-        
-    </div>
-    <a class="headerlink" href="#ExplicitCommonBuiltinParameters.phase"></a>
-    
-            <div class="docstring"><p>Phase shift for the entire waveform.</p>
-</div>
-
-
-                            </div>
-                            <div id="ExplicitCommonBuiltinParameters.scale" class="classattr">
-                                <div class="attr variable">
-            <span class="name">scale</span>
-
-        
-    </div>
-    <a class="headerlink" href="#ExplicitCommonBuiltinParameters.scale"></a>
-    
-            <div class="docstring"><p>Scale to apply to waveform envelope.</p>
 </div>
 
 
@@ -878,17 +878,6 @@ waveforms.</p>
     
 
                             </div>
-                            <div id="DragGaussian.alpha" class="classattr">
-                                <div class="attr variable">
-            <span class="name">alpha</span>
-
-        
-    </div>
-    <a class="headerlink" href="#DragGaussian.alpha"></a>
-    
-    
-
-                            </div>
                             <div id="DragGaussian.t0" class="classattr">
                                 <div class="attr variable">
             <span class="name">t0</span>
@@ -896,6 +885,17 @@ waveforms.</p>
         
     </div>
     <a class="headerlink" href="#DragGaussian.t0"></a>
+    
+    
+
+                            </div>
+                            <div id="DragGaussian.alpha" class="classattr">
+                                <div class="attr variable">
+            <span class="name">alpha</span>
+
+        
+    </div>
+    <a class="headerlink" href="#DragGaussian.alpha"></a>
     
     
 
@@ -943,6 +943,17 @@ waveforms.</p>
 
 
                             </div>
+                            <div id="ErfSquare.risetime" class="classattr">
+                                <div class="attr variable">
+            <span class="name">risetime</span>
+
+        
+    </div>
+    <a class="headerlink" href="#ErfSquare.risetime"></a>
+    
+    
+
+                            </div>
                             <div id="ErfSquare.pad_left" class="classattr">
                                 <div class="attr variable">
             <span class="name">pad_left</span>
@@ -961,17 +972,6 @@ waveforms.</p>
         
     </div>
     <a class="headerlink" href="#ErfSquare.pad_right"></a>
-    
-    
-
-                            </div>
-                            <div id="ErfSquare.risetime" class="classattr">
-                                <div class="attr variable">
-            <span class="name">risetime</span>
-
-        
-    </div>
-    <a class="headerlink" href="#ErfSquare.risetime"></a>
     
     
 
@@ -1019,13 +1019,13 @@ waveforms.</p>
 
 
                             </div>
-                            <div id="HermiteGaussian.alpha" class="classattr">
+                            <div id="HermiteGaussian.anh" class="classattr">
                                 <div class="attr variable">
-            <span class="name">alpha</span>
+            <span class="name">anh</span>
 
         
     </div>
-    <a class="headerlink" href="#HermiteGaussian.alpha"></a>
+    <a class="headerlink" href="#HermiteGaussian.anh"></a>
     
     
 
@@ -1052,17 +1052,6 @@ waveforms.</p>
     
 
                             </div>
-                            <div id="HermiteGaussian.anh" class="classattr">
-                                <div class="attr variable">
-            <span class="name">anh</span>
-
-        
-    </div>
-    <a class="headerlink" href="#HermiteGaussian.anh"></a>
-    
-    
-
-                            </div>
                             <div id="HermiteGaussian.t0" class="classattr">
                                 <div class="attr variable">
             <span class="name">t0</span>
@@ -1070,6 +1059,17 @@ waveforms.</p>
         
     </div>
     <a class="headerlink" href="#HermiteGaussian.t0"></a>
+    
+    
+
+                            </div>
+                            <div id="HermiteGaussian.alpha" class="classattr">
+                                <div class="attr variable">
+            <span class="name">alpha</span>
+
+        
+    </div>
+    <a class="headerlink" href="#HermiteGaussian.alpha"></a>
     
     
 
