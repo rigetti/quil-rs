@@ -94,6 +94,8 @@ create_init_submodule! {
         WaveformInvocation,
 
         DeclarationAt,
+
+        PyInstruction,
     ],
 
     complex_enums: [
@@ -308,7 +310,46 @@ impl_instruction!([
     WaveformInvocation,
 ]);
 
-/// Trait for things that can be converted into an `Instruction`.
+#[derive(Clone, Debug, Default, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[pyclass(module = "quil._quil.instructions", subclass, from_py_object, frozen, eq, hash)]
+pub struct PyInstruction;
+
+macro_rules! py_instruction {
+    ($T:ty) => {
+        impl From<$T> for PyClassInitializer<$T> {
+            fn from(value: $T) -> Self {
+                PyClassInitializer::from(PyInstruction).add_subclass(value)
+            }
+        }
+
+        impl<'py> IntoPyObject<'py> for $T {
+            type Target = Self;
+            type Output = Bound<'py, Self::Target>;
+            type Error = PyErr;
+
+           fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
+                Ok(Py::new(py, PyClassInitializer::from(self))?.into_bound(py))
+            }
+        }
+    };
+}
+
+/// A wrapper around an [`Instruction`] for use in Python-exposed functions and methods
+/// where we want to accept any `Instruction` variant.
+///
+/// This type correctly reports its type to the stub generator.
+#[derive(FromPyObject)]
+pub(crate) struct AnyInstruction(pub Instruction);
+
+impl From<AnyInstruction> for Instruction {
+    fn from(value: AnyInstruction) -> Self {
+        value.0
+    }
+}
+
+
+/// Trait for types that can be converted into an `Instruction`.
 trait ToInstruction {
     fn to_instruction(&self) -> Instruction;
 }
@@ -369,6 +410,8 @@ macro_rules! instruction_getnewargs {
                 }
             }
         }
+
+        $(py_instruction!($kind);)+
 
         /// Implement `ToInstruction` by wrapping it in the appropriate `Instruction` variant.
         $(
@@ -432,14 +475,6 @@ macro_rules! instruction_getnewargs {
                 })* else {
                     Err(CastError::new(obj, Instruction::classinfo_object(obj.py())))?
                 }
-            }
-        }
-
-        #[derive(FromPyObject)]
-        pub(crate) struct AnyInstruction(pub Instruction);
-        impl From<AnyInstruction> for Instruction {
-            fn from(value: AnyInstruction) -> Self {
-                value.0
             }
         }
 
