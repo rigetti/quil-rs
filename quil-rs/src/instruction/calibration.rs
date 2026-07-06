@@ -5,12 +5,8 @@ use pyo3_stub_gen::derive::gen_stub_pyclass;
 
 use crate::{
     instruction::{
-        write_expression_parameter_string, write_instruction_block, Expression, GateModifier,
-        Instruction, Qubit,
-    },
-    pickleable_new,
-    quil::{Quil, INDENT},
-    validation::identifier::{validate_identifier, IdentifierValidationError},
+        Expression, GateModifier, Instruction, Qubit, quilpy::PyInstruction, write_expression_parameter_string, write_instruction_block,
+    }, pickleable_new, quil::{INDENT, Quil}, validation::identifier::{IdentifierValidationError, validate_identifier},
 };
 
 use super::{write_qubit_parameters, Gate};
@@ -30,6 +26,7 @@ pub trait CalibrationSignature {
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         get_all,
         set_all,
@@ -230,6 +227,7 @@ impl Quil for CalibrationIdentifier {
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         get_all,
         set_all,

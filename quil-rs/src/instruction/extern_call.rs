@@ -11,6 +11,8 @@ use indexmap::IndexMap;
 use nom_locate::LocatedSpan;
 use num_complex::Complex64;
 
+#[cfg(feature = "python")]
+use crate::instruction::quilpy::PyInstruction;
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyclass_complex_enum};
 
@@ -823,6 +825,7 @@ pub enum CallError {
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         frozen,
         hash,

@@ -1,3 +1,5 @@
+#[cfg(feature = "python")]
+use crate::instruction::quilpy::PyInstruction;
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::gen_stub_pyclass;
 
@@ -10,6 +12,7 @@ use crate::{expression::Expression, pickleable_new, quil::Quil};
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         frozen,
         hash,
@@ -55,6 +58,7 @@ impl Quil for Delay {
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         frozen,
         hash,

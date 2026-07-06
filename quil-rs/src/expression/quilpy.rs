@@ -1,6 +1,4 @@
-use std::borrow::Cow;
-
-use pyo3::{IntoPyObjectExt, exceptions::PyNotImplementedError, prelude::*, types::{PyAnyMethods, PyTuple}};
+use pyo3::{IntoPyObjectExt, exceptions::PyNotImplementedError, prelude::*, types::PyAnyMethods};
 use numpy::{PyArray, PyArrayDescr, PyArrayDescrMethods};
 use rigetti_pyo3::{create_init_submodule, impl_repr};
 
