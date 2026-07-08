@@ -37,19 +37,7 @@ fn init_module(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     waveform::sampling::quilpy::register_abcs(py)?;
 
-    let instructions = py.import("quil._quil.instructions")?;
-    instructions.add("LabelTargetParameter", union_type(&[
-        py.get_type::<pyo3::types::PyString>(),
-        py.get_type::<instruction::Target>(),
-        py.get_type::<instruction::Label>(),
-    ])?)?;
-
-    instructions.add("MemoryReferenceDesignator", union_type(&[
-        py.get_type::<instruction::MemoryReference>(),
-        py.get_type::<instruction::quilpy::DeclarationAt>(),
-        py.get_type::<instruction::Declaration>(),
-        py.get_type::<pyo3::types::PyTuple>(),
-    ])?)?;
+    instruction::quilpy::post_init(m)?;
 
     let program = py.import("quil._quil.program")?;
     program.add("InstructionIndex", py.get_type::<pyo3::types::PyInt>())?;
@@ -58,13 +46,59 @@ fn init_module(m: &Bound<'_, PyModule>) -> PyResult<()> {
     Ok(())
 }
 
-fn union_type<'py>(types: &[Bound<'py, PyType>]) -> PyResult<Bound<'py, PyAny>> {
-    let mut types = types.iter();
-    let first = types.next().map(Bound::as_any).cloned()
-        .ok_or_else(|| PyValueError::new_err("need at least one type to create a union"));
-    types.fold(first, |acc, ty| { acc.and_then(|union| union.bitor(ty)) })
+/// Construct a union of Python types.
+///
+/// # Example
+///
+/// To add a runtime type alias to a module, include the following in its initializer:
+///
+/// ```
+/// use pyo3::{prelude::*, types::PyType};
+///
+/// #[pyclass]
+/// struct Type1;
+///
+/// #[pyclass]
+/// struct Type2;
+///
+/// #[pymodule]
+/// fn my_module(m: &Bound<'_, PyModule>) -> PyResult<()> {
+///     m.add_class::<Type1>()?;
+///     m.add_class::<Type2>()?;
+///
+///     m.add("SomeUnionType", quil_rs::quilpy::union_type(&[
+///         m.py().get_type::<Type1>(),
+///         m.py().get_type::<Type2>(),
+///     ])?)?;
+///
+///     Ok(())
+/// }
+/// ```
+///
+/// This is equivalent to this Python (written in 3.12+ syntax):
+///
+/// ```python
+/// class Type1: pass
+/// class Type2: pass
+/// type SomeUnionType = Type1 | Type2
+/// ```
+///
+/// # Panics
+///
+/// This panics if `types` is empty, since a union of no types is not valid;
+/// you can only encounter this if you dynamically build a list of types
+/// and pass them at runtime, as under typical usage, this is verified at compile time.
+pub(crate) fn union_type<'py, const N: usize>(types: &[Bound<'py, PyType>; N]) -> PyResult<Bound<'py, PyAny>> {
+    types[1..].iter().try_fold(types[0].clone().into_any(), |u, t| { u.bitor(t) })
 }
 
+/// Constructing a union of Python types.
+macro_rules! union {
+    ($py:ident, $($T:ty),+) => {
+        crate::quilpy::union_type(&[ $($py.get_type::<$T>()),+ ])
+    };
+}
+pub(crate) use union;
 
 pub(crate) mod nonzero {
     /// A simple wrapper around [`std::num::NonZeroU64`] with [`pyo3_stub_gen::PyStubType`] information.

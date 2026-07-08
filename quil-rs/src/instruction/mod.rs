@@ -138,11 +138,6 @@ pub enum ValidationError {
 ///         # note the `()` -- these aren't like Python's enumerations!
 /// ```
 #[derive(Clone, Debug, PartialEq)]
-#[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
-#[cfg_attr(
-    feature = "python",
-    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, skip_from_py_object)
-)]
 pub enum Instruction {
     Arithmetic(Arithmetic),
     BinaryLogic(BinaryLogic),
@@ -161,9 +156,13 @@ pub enum Instruction {
     GateDefinition(GateDefinition),
     // Developer note: In Rust, this could be just `Halt`,
     // but to be compatible with PyO3's "complex enums",
-    // it has to be an empty tuple variant.
-    // The same restriction applies `Nop` and `Wait`,
+    // it was changed to be an empty tuple variant.
+    // The same restriction applied `Nop` and `Wait`,
     // as well as those in the `Expression` enumeration.
+    // Now, we expose this as a dedicated pyclass and implement FromPyObject manually,
+    // so there is no longer a need for them to exist in this manner,
+    // but reverting it back is another breaking change for Rust users,
+    // and so it needs to be done with coordination with quil_rs consumers.
     Halt(),
     Include(Include),
     Jump(Jump),
@@ -191,8 +190,6 @@ pub enum Instruction {
     Wait(),
 }
 
-#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[cfg_attr(feature = "python", pyo3::pymethods)]
 impl Instruction {
     /// Returns true if the instruction is a Quil-T instruction.
     pub fn is_quil_t(&self) -> bool {

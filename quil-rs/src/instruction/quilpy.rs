@@ -1,10 +1,8 @@
 use indexmap::IndexMap;
 use num_complex::Complex64;
 use numpy::{PyArray2, ToPyArray};
-use paste::paste;
 use pyo3::{
-    CastError, IntoPyObjectExt, PyClass, PyTraverseError, PyVisit, exceptions::{PyIndexError, PyTypeError, PyValueError}, PyTypeCheck, exceptions::PyDeprecationWarning,
-    prelude::*, types::{IntoPyDict as _, PyDict, PyList, PyString, PyTuple}
+    CastError, IntoPyObjectExt, PyClass, PyTraverseError, PyTypeCheck, PyVisit, exceptions::{PyDeprecationWarning, PyIndexError, PyTypeError, PyValueError}, prelude::*, sync::PyOnceLock, types::{IntoPyDict as _, PyInt, PyDict, PyList, PyString, PyTuple}
 };
 use rigetti_pyo3::{create_init_submodule, impl_repr};
 
@@ -100,6 +98,9 @@ create_init_submodule! {
         DeclarationAt,
 
         PyInstruction,
+        HaltType,
+        NopType,
+        WaitType,
     ],
 
     complex_enums: [
@@ -109,7 +110,6 @@ create_init_submodule! {
         ComparisonOperand,
         ExternParameterType,
         GateSpecification,
-        Instruction,
         PragmaArgument,
         Qubit,
         Target,
@@ -129,6 +129,33 @@ create_init_submodule! {
     funcs: [
         unpack_classical_reg,
     ],
+
+    // post_init: post_init,
+}
+
+pub(crate) fn post_init(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    use crate::quilpy::union;
+
+    let py = m.py();
+
+    let instructions = py.import("quil._quil.instructions")?;
+    instructions.add("Halt", HaltType::__new__(py)?)?;
+    instructions.add("Nop", NopType::__new__(py)?)?;
+    instructions.add("Wait", WaitType::__new__(py)?)?;
+
+    instructions.add("LabelTargetParameter", union!(py, PyString, Target, Label)?)?;
+    instructions.add("QubitDesignator", union!(py, Qubit, QubitPlaceholder, PyInt, PyString)?)?;
+
+    instructions.add("MemoryReferenceDesignator",
+        union!(py,
+            MemoryReference,
+            DeclarationAt,
+            Declaration,
+            PyTuple
+        )?
+    )?;
+
+    Ok(())
 }
 
 /// Add a `parse` implementation to a `#[pyclass]` to use the type's `from_str` implementation.
@@ -275,7 +302,7 @@ impl_instruction!([
     GateSpecification,
     GateType,
     Include,
-    Instruction[repr + quil + parse],
+    // Instruction[repr + quil + parse],
     Jump,
     JumpUnless,
     JumpWhen,
@@ -318,11 +345,28 @@ impl_instruction!([
     WaveformInvocation,
 ]);
 
-#[derive(Clone, Debug, Default, Hash, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, Default, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[pyclass(module = "quil._quil.instructions", subclass, from_py_object, frozen, eq, hash)]
+#[pyclass(name = "Instruction", module = "quil._quil.instructions",
+    subclass, from_py_object, frozen, eq, hash)]
 pub struct PyInstruction;
 
+
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl PyInstruction {
+    /// Returns true if the instruction is a Quil-T instruction.
+    #[pyo3(name = "is_quil_t")]
+    fn py_is_quil_t(&self) -> bool {
+        todo!()
+    }
+}
+
+#[cfg(feature = "stubs")]
+pyo3_stub_gen::impl_stub_type!(Instruction = PyInstruction);
+
+/// Implement [IntoPyObject] for a `pyclass` that subclasses [PyInstruction].
 macro_rules! py_instruction {
     ($T:ty) => {
         impl From<$T> for PyClassInitializer<$T> {
@@ -342,6 +386,50 @@ macro_rules! py_instruction {
         }
     };
 }
+
+macro_rules! py_instruction_singleton {
+    ($name:ident, $T:ident, $cell:ident) => {
+        #[derive(Copy, Clone, Debug, Default, Hash, PartialEq, Eq)]
+        #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+        #[pyclass(module = "quil._quil.instructions", extends = PyInstruction, from_py_object, frozen, eq, hash)]
+        #[doc = concat!("The type of the `", stringify!($name), "` `Instruction`.")]
+        pub(crate) struct $T;
+
+        #[cfg(feature = "stubs")]
+    pyo3_stub_gen::module_variable!("quil._quil.instructions", stringify!($name), $T);
+
+        // Storage for a singleton instance of the type.
+        // This is populated on the first call to the `__new__` constructor,
+        // which should be called during module initialization
+        // to add the instance to the module namespace.
+        static $cell: PyOnceLock<Py<$T>> = PyOnceLock::new();
+
+        #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+        #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+        #[pymethods]
+        impl $T {
+            /// Create a new instance of this instruction type.
+            ///
+            /// Users should not call this method, but it is provided for `pickle` support.
+            #[new]
+            fn __new__(py: Python<'_>) -> PyResult<&Bound<'_, Self>> {
+                $cell.get_or_try_init(py, || {
+                    Py::new(py, PyClassInitializer::from(PyInstruction).add_subclass($T))
+                }).map(|inst| inst.bind(py))
+            }
+
+            fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+                Ok(PyTuple::empty(py))
+            }
+        }
+    };
+}
+
+py_instruction_singleton!(Halt, HaltType, PY_HALT_CELL);
+py_instruction_singleton!(Nop, NopType, PY_NOP_CELL);
+py_instruction_singleton!(Wait, WaitType, PY_WAIT_CELL);
+
+
 
 /// A wrapper around an [`Instruction`] for use in Python-exposed functions and methods
 /// where we want to accept any `Instruction` variant.
@@ -400,122 +488,92 @@ where
 // and generates the `__new__` and/or `__getnewargs__` appropriate for the type,
 // which could then replace most uses of `pickleable_new!` as well.
 macro_rules! instruction_getnewargs {
-    ($($kind:ty),* $(,)?) => { paste! {
-        #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
-        #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-        #[pymethods]
-        impl Instruction {
-            #[gen_stub(override_return_type(
-                type_repr = "builtins.tuple[()] | builtins.tuple[" $($kind)" | "* "]",
-                imports = ("builtins")
-            ))]
-            fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
-                match self {
-                    Instruction::Halt() | Instruction::Nop() | Instruction::Wait() => {
-                        Ok(PyTuple::empty(py))
-                    },
-                    $(Instruction::$kind(instr) => (instr.clone(),).into_pyobject(py),)*
-                }
-            }
-        }
-
-        $(py_instruction!($kind);)+
-
-        /// Implement `ToInstruction` by wrapping it in the appropriate `Instruction` variant.
+    ($($kind:tt $([$($args:tt)*])? ),* ,) => {
         $(
-            impl ToInstruction for $kind {
-                fn to_instruction(&self) -> Instruction {
-                    Instruction::$kind(self.clone())
-                }
-            }
+            py_instruction!($kind);
 
-            pub(crate) struct [<$kind Instruction>](pub $kind);
-            impl From<[<$kind Instruction>]> for $kind {
-                fn from(value: [<$kind Instruction>]) -> Self {
-                    value.0
-                }
-            }
+            instruction_getnewargs!(@one $kind $([$($args)*])?);
+        )+
 
-            #[cfg(feature = "stubs")]
-            impl ::pyo3_stub_gen::PyStubType for [<$kind Instruction>] {
-                fn type_output() -> ::pyo3_stub_gen::TypeInfo {
-                    $kind::type_output()
-                        | ::pyo3_stub_gen::TypeInfo::with_module(
-                            concat!("_quil.instructions.Instruction.", stringify!($kind)),
-                            "quil._quil".into()
-                        )
-                }
-            }
-
-            #[cfg(feature = "stubs")]
-            impl ::pyo3_stub_gen::runtime::PyRuntimeType for [<$kind Instruction>] {
-                fn runtime_type_object(py: ::pyo3::Python<'_>) -> ::pyo3::PyResult<::pyo3::Bound<'_, ::pyo3::PyAny>> {
-                    <$kind as ::pyo3_stub_gen::runtime::PyRuntimeType>::runtime_type_object(py)
-                }
-            }
-
-            impl<'a, 'py> pyo3::FromPyObject<'a, 'py> for [<$kind Instruction>] {
-                type Error = pyo3::PyErr;
-
-                fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
-                    if let Ok(value) = obj.cast::<$kind>() {
-                        Ok(Self(value.borrow().clone()))
-                    } else if let Ok(value) = obj.cast::<Instruction>() {
-                        match value.get() {
-                            Instruction::$kind(val) => Ok(Self(val.clone())),
-                            _ => Err(CastError::new(obj, $kind::classinfo_object(obj.py())))?,
-                        }
-                    } else {
-                        Err(CastError::new(obj, $kind::classinfo_object(obj.py())))?
-                    }
-                }
-            }
-        )*
+        instruction_getnewargs!(@into [$( $kind $([$($args)*])? ,)*] []);
 
         impl<'a, 'py> pyo3::FromPyObject<'a, 'py> for Instruction {
             type Error = pyo3::PyErr;
 
             fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
-                if let Ok(value) = obj.cast::<Instruction>() {
-                    Ok(value.borrow().clone())
+                if false {
+                    unreachable!("this makes the macro easier to write");
                 }$( else if let Ok(value) = obj.cast::<$kind>() {
-                    Ok(Instruction::$kind(value.borrow().clone()))
+                    Ok(<$kind as ToInstruction>::to_instruction(&value.borrow()))
                 })* else {
-                    Err(CastError::new(obj, Instruction::classinfo_object(obj.py())))?
+                    Err(CastError::new(obj, PyInstruction::classinfo_object(obj.py())))?
                 }
             }
         }
+    };
 
-        #[cfg(feature = "stubs")]
-        impl ::pyo3_stub_gen::PyStubType for AnyInstruction {
-            fn type_output() -> ::pyo3_stub_gen::TypeInfo {
-                ::pyo3_stub_gen::TypeInfo::with_module("_quil.instructions.Instruction", "quil._quil".into())
-            }
+    // Operate on the `ready` list once the names are processed.
+    (@into [] [$( $name:ident, )*]) => {
+        impl<'py> IntoPyObject<'py> for Instruction {
+            type Target = PyAny;
+            type Output = Bound<'py, Self::Target>;
+            type Error = PyErr;
 
-            fn type_input() -> ::pyo3_stub_gen::TypeInfo {
-                ::pyo3_stub_gen::TypeInfo::with_module("_quil.instructions.Instruction", "quil._quil".into())
-                    | ::pyo3_stub_gen::TypeInfo::with_module("_quil.instructions.Instruction.Halt", "quil._quil".into())
-                    | ::pyo3_stub_gen::TypeInfo::with_module("_quil.instructions.Instruction.Nop", "quil._quil".into())
-                    | ::pyo3_stub_gen::TypeInfo::with_module("_quil.instructions.Instruction.Wait", "quil._quil".into())
+           fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
+                match self {
+                    Instruction::Halt() =>
+                        HaltType::__new__(py)
+                        .and_then(|inst| inst.into_bound_py_any(py)),
+                    Instruction::Nop() =>
+                        NopType::__new__(py)
+                        .and_then(|inst| inst.into_bound_py_any(py)),
+                    Instruction::Wait() =>
+                        WaitType::__new__(py)
+                        .and_then(|inst| inst.into_bound_py_any(py)),
                     $(
-                        | ::pyo3_stub_gen::TypeInfo::with_module(
-                            concat!("_quil.instructions.", stringify!($kind)), "quil._quil".into()
-                        )
-                    )+
+                    Instruction::$name(value) => value.into_bound_py_any(py),
+                    )*
+                }
             }
         }
+    };
 
-        #[cfg(feature = "stubs")]
-        impl ::pyo3_stub_gen::runtime::PyRuntimeType for AnyInstruction {
-            fn runtime_type_object(py: ::pyo3::Python<'_>) -> ::pyo3::PyResult<::pyo3::Bound<'_, ::pyo3::PyAny>> {
-                <Instruction as ::pyo3_stub_gen::runtime::PyRuntimeType>::runtime_type_object(py)
+    // Ignore non-Clone variants.
+    (@into [ $_kind:tt [variant=$_name:tt - Clone], $($tail:tt)* ] [ $( $ready:ident, )* ]) => {
+        instruction_getnewargs!(@into [ $($tail)* ] [ $( $ready, )* ]);
+    };
+
+    // Append all other `name`s to `ready` list.
+    (@into [ $_kind:tt [variant=$name:tt], $($tail:tt)* ] [ $( $ready:ident, )* ]) => {
+        instruction_getnewargs!(@into [ $($tail)* ] [ $($ready,)* $name, ]);
+    };
+    (@into [ $name:ident, $($tail:tt)* ] [ $($ready:ident,)* ]) => {
+        instruction_getnewargs!(@into [ $($tail)* ] [ $($ready,)* $name, ]);
+    };
+
+
+    (@one $kind:tt) => {
+        instruction_getnewargs!(@one $kind [variant=$kind]);
+    };
+
+    (@one $kind:ty [ variant=$name:ident - Clone ]) => {
+        impl ToInstruction for $kind {
+            fn to_instruction(&self) -> Instruction {
+                Instruction::$name()
             }
         }
+    };
 
-    }};
+    (@one $kind:ty [ variant=$name:ident ]) => {
+        impl ToInstruction for $kind {
+            fn to_instruction(&self) -> Instruction {
+                Instruction::$name(self.clone())
+            }
+        }
+    };
+
 }
 
-// Note that these are just the [`Instruction`] variants that take parameters.
 instruction_getnewargs!(
     Arithmetic,
     BinaryLogic,
@@ -554,6 +612,10 @@ instruction_getnewargs!(
     SwapPhases,
     UnaryLogic,
     WaveformDefinition,
+
+    HaltType[variant=Halt - Clone],
+    NopType[variant=Nop - Clone],
+    WaitType[variant=Wait - Clone],
 );
 
 // The following types implement `__getnewargs__` manually because,
@@ -566,7 +628,7 @@ instruction_getnewargs!(
 struct ArithmeticOperandLike(ArithmeticOperand);
 #[cfg(feature = "stubs")]
 impl_stub_type!(ArithmeticOperandLike =
-    ArithmeticOperand | i64 | f64 | MemoryReference | DeclarationAt | Declaration | DeclarationInstruction);
+    ArithmeticOperand | i64 | f64 | MemoryReference | DeclarationAt | Declaration );
 
 impl<'a, 'py> FromPyObject<'a, 'py> for ArithmeticOperandLike {
     type Error = PyErr;
@@ -583,14 +645,7 @@ impl<'a, 'py> FromPyObject<'a, 'py> for ArithmeticOperandLike {
         } else if let Ok(val) = obj.cast::<MemoryReference>() {
             Ok(Self(ArithmeticOperand::MemoryReference(val.borrow().clone())))
         } else if let Ok(val) = obj.cast::<Declaration>() {
-            Ok(Self(ArithmeticOperand::MemoryReference(val.extract()?)))
-        } else if let Ok(val) = obj.cast::<Instruction>() {
-            match val.get() {
-                Instruction::Declaration(val) => {
-                    Ok(Self(ArithmeticOperand::MemoryReference(val.to_memory_reference(0))))
-                },
-                _ => Err(CastError::new(obj, MemoryReference::classinfo_object(obj.py())))?,
-            }
+            Ok(Self(ArithmeticOperand::MemoryReference(val.get().to_memory_reference(0))))
         } else {
             Err(CastError::new(obj, ArithmeticOperand::classinfo_object(obj.py())))?
         }
@@ -915,29 +970,35 @@ impl TryFrom<GateModifierDesignator> for GateModifier {
 submit! {
     gen_methods_from_python! {
         r#"
-        from typing_extensions import deprecated
-        from typing import overload
+        import typing
+        import typing_extensions
 
         from quil._quil import expression
 
         class Gate:
-            @overload
-            @deprecated("The `params` parameter is deprecated; use `parameters` instead.")
+            @typing.overload
             def __new__(
                 cls,
                 name: builtins.str,
                 parameters: pyo3_stub_gen.RustType["Vec<ExpressionLike>"],
-                qubits: pyo3_stub_gen.RustType["Qubit"],
+                qubits: pyo3_stub_gen.RustType["Vec<QubitLike>"],
                 modifiers: pyo3_stub_gen.RustType["Option<Vec<GateModifierDesignator>>"] = None,
+            ) -> Gate: ...
+            @typing.overload
+            @typing_extensions.deprecated("The `params` parameter is deprecated; use `parameters` instead.")
+            def __new__(
+                cls,
+                name: builtins.str,
                 *,
-                params: pyo3_stub_gen.RustType["Vec<ExpressionLike>"],
-            ) -> Gate:
-                """Create a new ``Gate``."""
+                qubits: pyo3_stub_gen.RustType["Vec<QubitLike>"],
+                modifiers: pyo3_stub_gen.RustType["Option<Vec<GateModifierDesignator>>"] = None,
+                params: pyo3_stub_gen.RustType["Option<Vec<ExpressionLike>>"] = None,
+            ) -> typing_extensions.NoReturn: ...
             def __new__(
                 cls,
                 name: builtins.str,
                 parameters: pyo3_stub_gen.RustType["Vec<ExpressionLike>"],
-                qubits: pyo3_stub_gen.RustType["Qubit"],
+                qubits: pyo3_stub_gen.RustType["Vec<QubitLike>"],
                 modifiers: pyo3_stub_gen.RustType["Option<Vec<GateModifierDesignator>>"] = None,
                 *,
                 params: pyo3_stub_gen.RustType["Option<Vec<ExpressionLike>>"] = None,
@@ -1191,12 +1252,6 @@ impl<'a, 'py> FromPyObject<'a, 'py> for MemoryReference {
         } else if let Ok(decl) = obj.cast::<Declaration>() {
             // Create a new `MemoryReference` from a `Declaration` assuming an index of 0.
             Ok(decl.get().to_memory_reference(0))
-        } else if let Ok(instr) = obj.cast::<Instruction>() {
-            // Like above, but borrow the declaration from an `Instruction` wrapper.
-            match instr.get() {
-                Instruction::Declaration(decl) => Ok(decl.to_memory_reference(0)),
-                _ => Err(CastError::new(obj, MemoryReference::classinfo_object(obj.py())))?,
-            }
         } else if let Ok(s) = obj.cast::<PyTuple>() {
             // Create a new `MemoryReference` from a tuple of `(str, int)` pair.
             let (name, index) = s.extract()?;
@@ -1209,13 +1264,17 @@ impl<'a, 'py> FromPyObject<'a, 'py> for MemoryReference {
             }
             let MemoryReferencePair{name, index} = s.extract()?;
             Ok(MemoryReference::new(name, index))
-        } else if let Ok(s) = obj.cast::<PyString>() {
+        }
+        /*
+        else if let Ok(s) = obj.cast::<PyString>() {
             // TODO: reconsider this case, as it makes it too easy to mistakenly extract
             // particularly when included in another enum that derives `FromPyObject`
             let name = s.extract()
                 .map_err(|_| CastError::new(obj, MemoryReference::classinfo_object(obj.py())))?;
             Ok(MemoryReference::new(name, 0))
-        } else {
+        }
+        */
+        else {
             Err(CastError::new(obj, MemoryReference::classinfo_object(obj.py())))?
         }
     }
@@ -1251,11 +1310,6 @@ impl<'a, 'py> FromPyObject<'a, 'py> for LabelTargetLike<'a>{
             Ok(LabelTargetLike::Existing(value.get()))
         } else if let Ok(value) = obj.cast::<Label>() {
             Ok(LabelTargetLike::Existing(&value.get().target))
-        } else if let Ok(value) = obj.cast::<Instruction>() {
-            match value.get() {
-                Instruction::Label(label) => Ok(LabelTargetLike::Existing(&label.target)),
-                _ => Err(PyTypeError::new_err("cannot extract a Target from a non-Label Instruction")),
-            }
         } else {
             Err(PyTypeError::new_err("cannot convert to Target"))
         }
@@ -1775,7 +1829,9 @@ impl Qubit {
 
 #[cfg(feature = "stubs")]
 mod stubs {
-    use pyo3_stub_gen::{impl_stub_type, type_alias, PyStubType};
+    use pyo3_stub_gen::impl_stub_type;
+
+    // pyo3_stub_gen::export_verbatim!("quil.instructions", "Halt");
 
     #[allow(clippy::wildcard_imports)]
     use super::*;
@@ -1785,22 +1841,15 @@ mod stubs {
     // but now we can explicitly type parameters to accept those (or a `Qubit` itself) instead.
     // impl_stub_type!(Like<'_, '_, Qubit> = Qubit | i64 | String | QubitPlaceholder);
 
-    impl PyStubType for LabelTargetLike<'_> {
-        fn type_output() -> pyo3_stub_gen::TypeInfo {
-            LabelInstruction::type_output()
-                | Target::type_output()
-                | Label::type_output()
-                | String::type_output()
-        }
-    }
+    impl_stub_type!(LabelTargetLike<'_> = String | Label | Target);
 
-    type_alias!("quil._quil.instructions", LabelTargetParameter = String | Target | Label);
     impl_stub_type!(GateModifierDesignator = GateModifier | String);
 
     impl_stub_type!(MemoryReferenceLike =
-        MemoryReference | DeclarationAt | Declaration | DeclarationInstruction | (String, u64));
-    type_alias!("quil._quil.instructions", MemoryReferenceDesignator = MemoryReferenceLike);
+        MemoryReference | DeclarationAt | Declaration | (String, u64));
 }
+
+pub(crate) type QubitLike<'a, 'py> = Like<'a, 'py, Qubit>;
 
 #[derive(FromPyObject)]
 struct MemoryReferenceLike(MemoryReference);
@@ -1844,11 +1893,6 @@ impl<'a, 'py> FromPyObject<'a, 'py> for &'a Target {
             Ok(value.get())
         } else if let Ok(value) = obj.cast::<Label>() {
             Ok(&value.get().target)
-        } else if let Ok(value) = obj.cast::<Instruction>() {
-            match value.get() {
-                Instruction::Label(label) => Ok(&label.target),
-                _ => Err(PyTypeError::new_err("cannot extract a Target from a non-Label Instruction")),
-            }
         } else {
             Err(PyTypeError::new_err("cannot convert to Target"))
         }
