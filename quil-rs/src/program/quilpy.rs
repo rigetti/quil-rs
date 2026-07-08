@@ -797,10 +797,10 @@ impl Calibrations {
     #[pyo3(name = "expand")]
     fn py_expand(
         &self,
-        instruction: &Instruction,
+        instruction: Instruction,
         previous_calibrations: Vec<Instruction>,
     ) -> Result<Option<Vec<Instruction>>> {
-        self.expand(instruction, &previous_calibrations)
+        self.expand(&instruction, &previous_calibrations)
     }
 
     /// Returns the last-specified ``MeasureCalibrationDefinition`` that matches the target
@@ -1255,7 +1255,7 @@ mod stubs {
     use super::{EndTargetParam, OneOrMore, Target};
 
     impl_stub_type!(EndTargetParam = Target | u32);
-    impl_stub_type!(OneOrMore<AnyInstruction> = AnyInstruction | Vec<AnyInstruction>);
+    impl_stub_type!(OneOrMore<Instruction> = Instruction | Vec<Instruction>);
     impl_stub_type!(super::InstructionIndex = usize);
     impl_stub_type!(super::Seconds = f64);
     type_alias!("quil._quil.program", InstructionIndex = super::InstructionIndex);
