@@ -33,13 +33,13 @@ thiserror = "1.0.56"
 indexmap = "2.10.0"
 statrs = "0.16.0"
 paste = "1.0.15"
-numpy = { version = "0.27.1", optional = true }
 derive_more = { version = "2.0.1", features = ["add", "add_assign", "display", "from", "into", "not"] }
 derive-where = { version = "1.6.0", features = ["serde"] }
 
 # Enabled with the "python" feature.
 pyo3 = { version = "0.27.2", features = ["indexmap", "num-complex", "multiple-pymethods"], optional = true }
 rigetti-pyo3 = { version = "0.5.1", optional = true }
+numpy = { version = "0.27.1", optional = true }
 
 # Enabled with the "stubs" feature.
 pyo3-stub-gen = { version = "0.17.2", features = ["numpy"], optional = true }

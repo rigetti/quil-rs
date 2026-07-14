@@ -38,38 +38,6 @@ mod sampling {
     }
 }
 
-macro_rules! just_for_the_linter {
-    ($($tt:tt)*) => {
-        // Our linter needs to see all the Python types defined explicitly.
-    };
-}
-
-just_for_the_linter! {
-    #[gen_stub_pyclass]
-    #[pyclass(module = "quil.waveform", name = "Flat")]
-    struct PyFlat;
-
-    #[gen_stub_pyclass]
-    #[pyclass(module = "quil.waveform", name = "Gaussian")]
-    struct PyGaussian;
-
-    #[gen_stub_pyclass]
-    #[pyclass(module = "quil.waveform", name = "DragGaussian")]
-    struct PyDragGaussian;
-
-    #[gen_stub_pyclass]
-    #[pyclass(module = "quil.waveform", name = "ErfSquare")]
-    struct PyErfSquare;
-
-    #[gen_stub_pyclass]
-    #[pyclass(module = "quil.waveform", name = "HermiteGaussian")]
-    struct PyHermiteGaussian;
-
-    #[gen_stub_pyclass]
-    #[pyclass(module = "quil.waveform", name = "BoxcarKernel")]
-    struct BoxcarKernel;
-}
-
 create_init_submodule! {
     classes: [
         PyWaveform,
@@ -84,8 +52,9 @@ create_init_submodule! {
         BoxcarKernel,
     ],
     errors: [
-         errors::WaveformParameterError,
-         errors::WaveformInvocationError,
+        errors::WaveformError,
+        errors::WaveformParameterError,
+        errors::WaveformInvocationError,
     ],
     funcs: [ py_apply_phase_and_detuning ],
     submodules: [

@@ -13,9 +13,12 @@ use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pyme
 #[cfg(feature = "stubs")]
 use crate::waveform::quilpy::explicit_stubs;
 use crate::{
+    quilpy::py_cast_and_clone,
     units::Cycles,
-    waveform::quilpy::{PyAnyRust, Pythonic},
-    waveform::sampling::quilpy::PyIqSamples,
+    waveform::{
+        quilpy::{PyAnyRust, Pythonic},
+        sampling::quilpy::PyIqSamples,
+    },
 };
 
 use super::{
@@ -52,17 +55,17 @@ impl PyBuiltinWaveform {
         ",))]
         waveform: Bound<'py, PyAny>,
     ) -> PyResult<Self> {
-        if let Ok(PyFlat(flat)) = waveform.extract() {
+        if let Some(PyFlat(flat)) = py_cast_and_clone(&waveform)? {
             Ok(Self(BuiltinWaveform::Flat(flat)))
-        } else if let Ok(PyGaussian(gaussian)) = waveform.extract() {
+        } else if let Some(PyGaussian(gaussian)) = py_cast_and_clone(&waveform)? {
             Ok(Self(BuiltinWaveform::Gaussian(gaussian)))
-        } else if let Ok(PyDragGaussian(drag_gaussian)) = waveform.extract() {
+        } else if let Some(PyDragGaussian(drag_gaussian)) = py_cast_and_clone(&waveform)? {
             Ok(Self(BuiltinWaveform::DragGaussian(drag_gaussian)))
-        } else if let Ok(PyErfSquare(erf_square)) = waveform.extract() {
+        } else if let Some(PyErfSquare(erf_square)) = py_cast_and_clone(&waveform)? {
             Ok(Self(BuiltinWaveform::ErfSquare(erf_square)))
-        } else if let Ok(PyHermiteGaussian(hermite_gaussian)) = waveform.extract() {
+        } else if let Some(PyHermiteGaussian(hermite_gaussian)) = py_cast_and_clone(&waveform)? {
             Ok(Self(BuiltinWaveform::HermiteGaussian(hermite_gaussian)))
-        } else if let Ok(BoxcarKernel) = waveform.extract() {
+        } else if let Some(BoxcarKernel) = py_cast_and_clone(&waveform)? {
             Ok(Self(BuiltinWaveform::BoxcarKernel(BoxcarKernel)))
         } else {
             Err(PyTypeError::new_err((waveform.unbind(),)))
@@ -127,33 +130,33 @@ impl BuiltinWaveform<Pythonic> {
             BuiltinWaveform::DragGaussian(drag_gaussian) => drag_gaussian.py_eq(py, other),
             BuiltinWaveform::ErfSquare(erf_square) => erf_square.py_eq(py, other),
             BuiltinWaveform::HermiteGaussian(hermite_gaussian) => hermite_gaussian.py_eq(py, other),
-            BuiltinWaveform::BoxcarKernel(boxcar_kernel) => Ok(boxcar_kernel.__eq__(other)),
+            BuiltinWaveform::BoxcarKernel(boxcar_kernel) => boxcar_kernel.__eq__(other),
         }
     }
 
     pub(crate) fn py_eq_this_type<'py>(&self, py: Python<'py>, other: Self) -> PyResult<bool> {
         match (self.as_ref(), other) {
             (BuiltinWaveform::Flat(flat1), BuiltinWaveform::Flat(flat2)) => {
-                flat1.py_eq_this_type(py, flat2)
+                flat1.py_eq_this_type(py, &flat2)
             }
 
             (BuiltinWaveform::Gaussian(gaussian1), BuiltinWaveform::Gaussian(gaussian2)) => {
-                gaussian1.py_eq_this_type(py, gaussian2)
+                gaussian1.py_eq_this_type(py, &gaussian2)
             }
 
             (
                 BuiltinWaveform::DragGaussian(drag_gaussian1),
                 BuiltinWaveform::DragGaussian(drag_gaussian2),
-            ) => drag_gaussian1.py_eq_this_type(py, drag_gaussian2),
+            ) => drag_gaussian1.py_eq_this_type(py, &drag_gaussian2),
 
             (BuiltinWaveform::ErfSquare(erf_square1), BuiltinWaveform::ErfSquare(erf_square2)) => {
-                erf_square1.py_eq_this_type(py, erf_square2)
+                erf_square1.py_eq_this_type(py, &erf_square2)
             }
 
             (
                 BuiltinWaveform::HermiteGaussian(hermite_gaussian1),
                 BuiltinWaveform::HermiteGaussian(hermite_gaussian2),
-            ) => hermite_gaussian1.py_eq_this_type(py, hermite_gaussian2),
+            ) => hermite_gaussian1.py_eq_this_type(py, &hermite_gaussian2),
 
             (
                 BuiltinWaveform::BoxcarKernel(BoxcarKernel),

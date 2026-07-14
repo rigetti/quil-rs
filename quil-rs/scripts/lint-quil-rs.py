@@ -7,11 +7,13 @@ Afterward, it may print some messages about potential mistakes.
 Run the script with ``--help`` to see its options.
 """
 
+import dataclasses
 import logging
 import re
+import os
 import sys
 
-logging.basicConfig(level=logging.WARNING)
+logging.basicConfig(level=os.environ.get('LINTER_LOGLEVEL', 'WARNING').upper())
 logger = logging.getLogger()
 
 from pyo3_linter import (
@@ -24,6 +26,7 @@ from pyo3_linter import (
     PackageConfig,
     Item,
     Kind,
+    Line,
     MacroContext,
     join_lines,
     iter_delim,
@@ -45,7 +48,7 @@ def main():
         default_macro_handlers()
         + [
             _impl_instruction,
-            _python_waveforms,
+            _define_waveforms,
         ],
     )
 
@@ -64,43 +67,33 @@ def main():
         sys.exit(1)
 
 
-@macro_handler(r"python_waveforms!")
-def _python_waveforms(ctx: MacroContext, module: str | None = None) -> None:
-    """Process the input to the ``python_waveforms!`` macro."""
+@macro_handler(r"define_waveforms!")
+def _define_waveforms(ctx: MacroContext, module: str | None = None) -> None:
+    """Process the input to the ``define_waveforms!`` macro."""
     logger.info("Processing waveforms")
 
     lines = join_lines(iter_delim(ctx.lines, "{}"))
-    text = lines.text.removeprefix("python_waveforms! {").removesuffix("}")
-    parts = re.finditer(r"(?P<fields>\{.+?\})|(?P<name>[^\s {]+)", text)
-    m = next(parts, None)
+    text = lines.text.removeprefix("define_waveforms! {").removesuffix("}")
+    parts = re.finditer(r"pub\s+struct\s+(?P<name>\w+)\s*(?:(?P<fields>\{.+?\})|;)", text)
 
-    while m is not None:
-        if m.lastgroup == "fields":
-            m = next(parts, None)
-            continue
-
+    waveform_module = ctx.annotated["quil.waveform"]
+    
+    while m := next(parts, None):
         name = m.group("name")
+        has_fields = m.group("fields") is not None
+        rust_wrapper_name = f"Py{name}" if has_fields else name
 
-        # If the next part is a group of fields, we add two structs with prefixes;
-        # otherwise, we just add the struct with the name given.
-        if (m := next(parts, None)) and m.lastgroup == "fields":
-            prefixes = ["Concrete", "Syntactic"]
-        else:
-            prefixes = [""]
-
-        for prefix in prefixes:
-            struct_name = f"{prefix}{name}"
-            logger.info("Found waveform: " + struct_name)
-            ctx.annotated["quil.waveform"].add(
-                Item(
-                    kind=Kind.Struct,
-                    python_name=struct_name,
-                    rust_name=struct_name,
-                    path=ctx.path,
-                    line=lines,
-                    stub_attr=StubAttr(kind=StubKind.Class),
-                )
+        logger.info(f"Found waveform {name}; exporting it from the Rust type {rust_wrapper_name}")
+        waveform_module.add(
+            Item(
+                rust_name=rust_wrapper_name,
+                python_name=name,
+                kind=Kind.Struct,
+                path=ctx.path,
+                line=lines,
+                stub_attr=StubAttr(kind=StubKind.Class),
             )
+        )
 
 
 @macro_handler(r"impl_instruction!")

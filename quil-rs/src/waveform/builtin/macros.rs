@@ -441,16 +441,16 @@ macro_rules! define_python_waveform {
                 &self,
                 #[gen_stub(override_type(type_repr = "builtins.object", imports = ("builtins")))]
                 other: Bound<'py, PyAny>,
-            ) -> bool {
-                if let Ok(Self) = other.extract() {
-                    true
-                } else if let Ok(super::quilpy::PyBuiltinWaveform(super::BuiltinWaveform::$name(
+            ) -> PyResult<bool> {
+                if let Some(Self) = py_cast_and_borrow(&other)?.as_deref() {
+                    Ok(true)
+                } else if let Some(super::quilpy::PyBuiltinWaveform(super::BuiltinWaveform::$name(
                     Self
-                ))) = other.extract()
+                ))) = py_cast_and_borrow(&other)?.as_deref()
                 {
-                    true
+                    Ok(true)
                 } else {
-                    false
+                    Ok(false)
                 }
             }
 
@@ -555,11 +555,11 @@ macro_rules! define_python_waveform {
                     py: Python<'py>,
                     other: Bound<'py, PyAny>,
                 ) -> PyResult<bool> {
-                    if let Ok($name(other)) = other.extract() {
+                    if let Some($name(other)) = py_cast_and_borrow(&other)?.as_deref() {
                         self.py_eq_this_type(py, other)
-                    } else if let Ok(super::quilpy::PyBuiltinWaveform(super::BuiltinWaveform::$name(
-                        other
-                    ))) = other.extract()
+                    } else if let Some(
+                        super::quilpy::PyBuiltinWaveform(super::BuiltinWaveform::$name(other)
+                    )) = py_cast_and_borrow(&other)?.as_deref()
                     {
                         self.py_eq_this_type(py, other)
                     } else {
@@ -570,7 +570,7 @@ macro_rules! define_python_waveform {
                 pub(crate) fn py_eq_this_type<'py>(
                     &self,
                     py: Python<'py>,
-                    other: super::$name<Pythonic>,
+                    other: &super::$name<Pythonic>,
                 ) -> PyResult<bool> {
                     let Self { $($field),+ } = self;
                     $(
@@ -866,6 +866,10 @@ macro_rules! define_waveform {
 /// Define a collection of waveforms, as described in the introduction to this section.  Also
 /// generates Python wrappers in a submodule and creates the `Sealed` trait used for
 /// [`BuiltinWaveformParameters`].
+///
+/// NOTE: To validate our Python interop, `quil-rs/scripts/lint-quil-rs.py` needs to be able to
+/// process the contents of `define_waveform!`.  Please edit the `_define_waveform` method in that
+/// file to keep it in sync with changes to the input format of this macro.
 macro_rules! define_waveforms {
     (
         $(
@@ -921,6 +925,7 @@ macro_rules! define_waveforms {
                 };
 
                 use crate::{
+                    quilpy::py_cast_and_borrow,
                     waveform::{
                         quilpy::{PyAnyRust, Pythonic},
                         sampling::quilpy::PyIqSamples,

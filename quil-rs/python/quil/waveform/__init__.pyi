@@ -260,19 +260,25 @@ class Waveform(typing.Generic[_Real, _Complex]):
     @staticmethod
     def flat(*, duration: builtins.float, scale: typing.Optional[_Real] = None, phase: typing.Optional[_Real] = None, detuning: typing.Optional[_Real] = None, iq: _Complex) -> Waveform[_Real, _Complex]: ...
     @staticmethod
-    def from_quil(invocation: WaveformInvocation) -> Waveform[quil.expression.Expression]: ...
+    def from_quil(invocation: WaveformInvocation) -> Waveform[quil.expression.Expression, quil.expression.Expression]: ...
     @staticmethod
     def gaussian(*, duration: builtins.float, scale: typing.Optional[_Real] = None, phase: typing.Optional[_Real] = None, detuning: typing.Optional[_Real] = None, fwhm: _Real, t0: _Real) -> Waveform[_Real, _Complex]: ...
     @staticmethod
     def hermite_gaussian(*, duration: builtins.float, scale: typing.Optional[_Real] = None, phase: typing.Optional[_Real] = None, detuning: typing.Optional[_Real] = None, fwhm: _Real, t0: _Real, anh: _Real, alpha: _Real, second_order_hrm_coeff: _Real) -> Waveform[_Real, _Complex]: ...
 
-class WaveformInvocationError(QuilError):
+class WaveformError(QuilError):
+    r"""
+    Base error type for errors related to waveform processing.
+    """
+    ...
+
+class WaveformInvocationError(WaveformError):
     r"""
     Errors that may occur when parsing a waveform.
     """
     ...
 
-class WaveformParameterError(QuilError):
+class WaveformParameterError(WaveformError):
     r"""
     Errors that may occur when parsing waveform parameters.
     """

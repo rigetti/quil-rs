@@ -30,7 +30,10 @@ pub(crate) fn register_abcs<'py>(py: Python<'py>) -> PyResult<()> {
 
 // A duplication of [`IqSamples<Complex64>`], but nongeneric so it can be exposed to Python.  It
 // also uses a named argument for the `Samples` constructor because that produces a nicer Python
-// interface and avoids conflicting `__getitem__` definitions.
+// interface and avoids conflicting `__getitem__` definitions.  We don't mark this type as
+// `#[pyclass(…, sequence)]`, because [`sequence` types have special
+// behavior](https://pyo3.rs/main/class/protocols#mapping--sequence-types); this could be changed in
+// the future if we're willing to handle that.
 /// The result of sampling a waveform, representing a sequence of IQ value samples.
 #[derive(Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
@@ -100,6 +103,22 @@ impl PyStubType for IqSamplesIndexed {
     }
 }
 
+#[cfg(feature = "stubs")]
+pyo3::inventory::submit! {
+    gen_methods_from_python! {r#"
+        class PyIqSamples:
+            @overload
+            def get(self, index: int) -> typing.Optional[complex]: ...
+            @overload
+            def get(self, index: slice[typing.Optional[int]]) -> list[complex]: ...
+
+            @overload
+            def __getitem__(self, index: int) -> complex: ...
+            @overload
+            def __getitem__(self, index: slice[typing.Optional[int]]) -> list[complex]: ...
+    "#}
+}
+
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
@@ -150,6 +169,111 @@ impl PyIqSamples {
         }
     }
 
+    /// Get the nth sample.  The same as indexing, but returns `None` instead of raising an error if
+    /// the index is out of range.
+    // This contains a reimplementation of [`IqSamples::get`], but handles Pythonic conventions as
+    // well.
+    #[pyo3(name = "get")]
+    pub fn get(&self, index: IqSamplesIndex<'_>) -> PyResult<Option<IqSamplesIndexed>> {
+        #[inline]
+        fn get_one(this: &PyIqSamples, mut index: isize) -> Option<Complex64> {
+            if index < 0 {
+                index = index.checked_add_unsigned(this.sample_count())?;
+            }
+            let index = usize::try_from(index).ok()?;
+            match this {
+                PyIqSamples::Flat { iq, sample_count } => (index < *sample_count).then_some(*iq),
+                PyIqSamples::Samples { samples } => samples.get(index).copied(),
+            }
+        }
+
+        match index {
+            IqSamplesIndex::Int(index) => Ok(get_one(self, index).map(IqSamplesIndexed::One)),
+
+            IqSamplesIndex::Slice(indices) => {
+                let sample_count = self.sample_count();
+                let Ok(signed_sample_count) = isize::try_from(sample_count) else {
+                    // Rust guarantees that allocated objects have size at most `isize::MAX`, so we
+                    // must be in the `Flat` case and have more than `isize::MAX` samples.  However,
+                    // `PyO3` only supports `isize` indices in `slice` (as of 0.29), and doesn't
+                    // offer a way to get the raw values out, so we have to error here.
+                    // Fortunately, this should happen approximately never.
+                    //
+                    // PyO3 docs: <https://pyo3.rs/main/doc/pyo3/types/struct.pyslice>
+
+                    return Err(PyIndexError::new_err(format!(
+                        "cannot index into an IqSamples.Flat object with >= isize::MAX ({}) \
+                         samples using a slice",
+                        isize::MAX
+                    )));
+                };
+
+                let PySliceIndices {
+                    start,
+                    stop,
+                    step,
+                    slicelength,
+                } = indices.indices(signed_sample_count)?;
+                debug_assert!(step != 0);
+                debug_assert!(slicelength <= sample_count);
+                debug_assert!(start >= 0 || (start == -1 && step < 0));
+                debug_assert!(stop >= 0 || (stop == -1 && step < 0));
+
+                let sliced_samples = match self {
+                    Self::Flat {
+                        iq,
+                        sample_count: _,
+                    } => vec![*iq; slicelength],
+
+                    Self::Samples { samples } => {
+                        if let Ok(step) = usize::try_from(step) {
+                            // Per the documentation of `PySliceIndices`
+                            // (https://pyo3.rs/main/doc/pyo3/types/struct.pysliceindices), `start`
+                            // and `stop` are nonnegative as long as the `step` is nonnegative.
+                            let start = start as usize; // Guaranteed by documentation
+                            let stop = stop as usize; // Guaranteed by documentation
+
+                            if step == 1 {
+                                samples[start..stop].to_owned()
+                            } else {
+                                let mut result = Vec::with_capacity(slicelength);
+                                let mut i = start;
+                                while i < stop {
+                                    result.push(samples[i]);
+                                    i += step;
+                                }
+                                result
+                            }
+                        } else {
+                            let mut result = Vec::with_capacity(slicelength);
+                            // Per the documentation of `PySliceIndices`
+                            // (https://pyo3.rs/main/doc/pyo3/types/struct.pysliceindices), `start`
+                            // and `stop` are no smaller than `-1`.  If `start` is `-1`, this loop
+                            // will never iterate, as `stop` is also at least `-1`.  Moreover, `i`
+                            // will never reach `-1` at all, for the same reason.  Thus, `i` will
+                            // always be an in-range `usize`.
+                            let mut i = start;
+                            while i > stop {
+                                result.push(samples[i as usize]);
+                                i += step; // Counts down, since `step < 0`
+                            }
+                            result
+                        }
+                    }
+                };
+
+                Ok(Some(IqSamplesIndexed::Many(sliced_samples)))
+            }
+        }
+    }
+
+    /// Get the nth sample.
+    #[pyo3(name = "__getitem__")]
+    pub fn getitem(&self, index: IqSamplesIndex<'_>) -> PyResult<IqSamplesIndexed> {
+        self.get(index)?
+            .ok_or_else(|| PyIndexError::new_err("sample index out of range"))
+    }
+
     /// Return the number of occurrences of the specified sample.
     ///
     /// Part of the `collections.abc.Sequence` interface.
@@ -188,27 +312,25 @@ impl PyIqSamples {
 
         let sample_count = self.sample_count();
 
-        // If this is a positive index or a legal negative index, returns `Ok(Some(_))` of the
-        // corresponding positive index.  If this is an illegal negative index, returns `Ok(None)`.
-        // If there's arithmetic overflow, returns an error.
-        let fix_negative_index = |i: isize| -> PyResult<Option<usize>> {
-            if i < 0 {
-                let i = i.checked_add_unsigned(sample_count).ok_or_else(error)?;
-                Ok(usize::try_from(i).ok())
-            } else {
-                // Positive `isize` fits in `usize`
-                Ok(Some(i as usize))
-            }
+        // Indices that are "before the beginning" (more negative than `-sample_count`) or "after
+        // the end" (greater than `sample_count`) are allowed, they're just equivalent to the
+        // beginning/end, respectively.
+        let (start, stop) = if let Ok(signed_sample_count) = isize::try_from(sample_count) {
+            // It's panic-safe to negate `signed_sample_count` here, as it must be nonnegative.
+            let signed_index = |i: isize| i.clamp(-signed_sample_count, signed_sample_count);
+            (signed_index(start), stop.map(signed_index))
+        } else {
+            // We're in the `Flat` case and `sample_count > isize::MAX`, so every `isize` index is
+            // valid.
+            (start, stop)
         };
 
-        // Starting "before the beginning" is allowed, and is the same as starting at the beginning.
-        let start = fix_negative_index(start)?.unwrap_or(0);
-        let stop = match stop {
-            Some(stop) => fix_negative_index(stop)?
-                .ok_or_else(error)? // We can't *stop* before the beginning, …
-                .min(sample_count), // … but we *can* stop "after the end", so we clamp to the count.
-            None => sample_count,
-        };
+        // We have guaranteed that `-sample_count <= start, stop <= sample_count`, so this
+        // arithmetic will always succeed at fixing our negative indices.
+        let unsigned_index =
+            |i: isize| usize::try_from(i).unwrap_or(sample_count.strict_add_signed(i));
+        let start = unsigned_index(start);
+        let stop = stop.map(unsigned_index).unwrap_or(sample_count);
 
         if start >= stop {
             // The range of indices is empty
@@ -246,96 +368,6 @@ impl PyIqSamples {
             .into_iq_values()
             .into_pyarray(py)
     }
-}
-
-// Pymethods that need manual stub generation for overloads (handled below).  Our linter doesn't
-// know about `#[gen_stub(skip)]` and gets concerned when we have a `pymethods` block without any
-// stub generation, so we have to move this to a different impl block and then lie to the linter
-// about generating stubs.
-#[cfg_attr(false, gen_stub_pymethods)]
-#[pymethods]
-impl PyIqSamples {
-    /// Get the nth sample.  The same as indexing, but returns `None` instead of raising an error if
-    /// the index is out of range.
-    // This contains a reimplementation of [`IqSamples::get`], but handles Pythonic conventions as
-    // well.
-    #[pyo3(name = "get")]
-    pub fn get(&self, index: IqSamplesIndex<'_>) -> PyResult<Option<IqSamplesIndexed>> {
-        #[inline]
-        fn get_one(this: &PyIqSamples, mut index: isize) -> Option<Complex64> {
-            if index < 0 {
-                index = index.checked_add_unsigned(this.sample_count())?;
-            }
-            let index = usize::try_from(index).ok()?;
-            match this {
-                PyIqSamples::Flat { iq, sample_count } => (index < *sample_count).then_some(*iq),
-                PyIqSamples::Samples { samples } => samples.get(index).copied(),
-            }
-        }
-
-        match index {
-            IqSamplesIndex::Int(index) => Ok(get_one(self, index).map(IqSamplesIndexed::One)),
-
-            IqSamplesIndex::Slice(indices) => {
-                let PySliceIndices {
-                    start,
-                    stop,
-                    step,
-                    slicelength,
-                } = indices.indices(self.sample_count() as isize)?;
-                debug_assert!(step != 0);
-                debug_assert!(slicelength <= self.sample_count());
-                debug_assert!(start >= 0 || (start == -1 && step < 0));
-                debug_assert!(stop >= 0 || (stop == -1 && step < 0));
-
-                let sliced_samples = match self {
-                    Self::Flat {
-                        iq,
-                        sample_count: _,
-                    } => vec![*iq; slicelength],
-
-                    Self::Samples { samples } => {
-                        if step > 0 {
-                            let start = start as usize; // Guaranteed by documentation
-                            let stop = stop as usize; // Guaranteed by documentation
-                            let step = step as usize;
-                            if step == 1 {
-                                samples[start..stop].to_owned()
-                            } else {
-                                let mut result = Vec::with_capacity(slicelength);
-                                let mut i = start;
-                                while i < stop {
-                                    result.push(samples[i]);
-                                    i += step;
-                                }
-                                result
-                            }
-                        } else {
-                            let mut result = Vec::with_capacity(slicelength);
-                            // If `start` is `-1`, this loop will never iterate, as `stop` is at
-                            // least `-1`.  Moreover, `i` will never reach `-1` at all, for the same
-                            // reason.  Thus, `i` will always be an in-range `usize`.
-                            let mut i = start;
-                            while i > stop {
-                                result.push(samples[i as usize]);
-                                i += step; // Counts down, since `step < 0`
-                            }
-                            result
-                        }
-                    }
-                };
-
-                Ok(Some(IqSamplesIndexed::Many(sliced_samples)))
-            }
-        }
-    }
-
-    /// Get the nth sample.
-    #[pyo3(name = "__getitem__")]
-    pub fn getitem(&self, index: IqSamplesIndex<'_>) -> PyResult<IqSamplesIndexed> {
-        self.get(index)?
-            .ok_or_else(|| PyIndexError::new_err("sample index out of range"))
-    }
 
     fn __repr__<'py>(&self, py: Python<'py>) -> PyResult<String> {
         // To get Python-like debug output, we have to ask Python to format our complex numbers
@@ -362,26 +394,6 @@ impl PyIqSamples {
             }
         }
     }
-}
-
-#[cfg(feature = "stubs")]
-pyo3::inventory::submit! {
-    gen_methods_from_python! {r#"
-        class PyIqSamples:
-            @overload
-            def get(self, index: int) -> typing.Optional[complex]: ...
-            @overload
-            def get(self, index: slice[typing.Optional[int]]) -> list[complex]: ...
-            @overload
-            def get(self, index: pyo3_stub_gen.RustType["IqSamplesIndex<'_>"]) -> pyo3_stub_gen.RustType["Option<IqSamplesIndexed>"]: ...
-
-            @overload
-            def __getitem__(self, index: int) -> complex: ...
-            @overload
-            def __getitem__(self, index: slice[typing.Optional[int]]) -> list[complex]: ...
-            @overload
-            def __getitem__(self, index: pyo3_stub_gen.RustType["IqSamplesIndex<'_>"]) -> pyo3_stub_gen.RustType["IqSamplesIndexed"]: ...
-    "#}
 }
 
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]

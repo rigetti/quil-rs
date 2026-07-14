@@ -5,7 +5,7 @@ import builtins
 import numpy
 import numpy.typing
 import typing
-from quil import QuilError
+from quil.waveform import WaveformError
 
 class IqSamples:
     r"""
@@ -22,13 +22,17 @@ class IqSamples:
     @typing.overload
     def __getitem__(self, index: slice[typing.Optional[int]]) -> list[complex]: ...
     @typing.overload
-    def __getitem__(self, index: builtins.int | builtins.slice[int | None]) -> builtins.complex | builtins.list[builtins.complex]: ...
+    def __getitem__(self, index: builtins.int | builtins.slice[int | None]) -> builtins.complex | builtins.list[builtins.complex]:
+        r"""
+        Get the nth sample.
+        """
     def __iter__(self) -> IqSamplesIter: ...
     def __len__(self) -> builtins.int:
         r"""
         The number of samples.  The same as `sample_count`.
         """
     def __length_hint__(self) -> builtins.int: ...
+    def __repr__(self) -> builtins.str: ...
     def __reversed__(self) -> IqSamplesRevIter: ...
     def count(self, value: typing.Any) -> builtins.int:
         r"""
@@ -41,7 +45,11 @@ class IqSamples:
     @typing.overload
     def get(self, index: slice[typing.Optional[int]]) -> list[complex]: ...
     @typing.overload
-    def get(self, index: builtins.int | builtins.slice[int | None]) -> typing.Optional[builtins.complex | builtins.list[builtins.complex]]: ...
+    def get(self, index: builtins.int | builtins.slice[int | None]) -> typing.Optional[builtins.complex | builtins.list[builtins.complex]]:
+        r"""
+        Get the nth sample.  The same as indexing, but returns `None` instead of raising an error if
+        the index is out of range.
+        """
     def index(self, value: typing.Any, start: builtins.int = 0, stop: typing.Optional[builtins.int] = None) -> builtins.int:
         r"""
         Return the first occurrences of the specified sample.  Raises `ValueError` if the value is
@@ -94,7 +102,7 @@ class IqSamplesRevIter:
     def __next__(self) -> builtins.complex: ...
     def __repr__(self) -> builtins.str: ...
 
-class SamplingError(QuilError):
+class SamplingError(WaveformError):
     r"""
     Errors that may occur when sampling waveforms.
     """
