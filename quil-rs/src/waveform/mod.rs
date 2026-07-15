@@ -117,9 +117,9 @@ impl<T: WaveformData> Waveform<T> {
     /// Create a new waveform from a name and a parameter map.
     ///
     /// If the name corresponds to one of the built-in waveforms, then this will return a
-    /// [`Waveform::BuiltinWaveform`] as long as the parameters are correct, and return an error if
-    /// they are incorrect; individual parameters are evaluted with one the three evaluator
-    /// functions (`concrete_real`, `real`, or `complex`).
+    /// [`BuiltinWaveform`] as long as the parameters are correct, and return an error if they are
+    /// incorrect; individual parameters are evaluted with one the three evaluator functions
+    /// (`concrete_real`, `real`, or `complex`).
     ///
     /// If the name doesn't name one of the built-in waveforms, then this will return a
     /// [`Waveform::Custom`]; the parameter map is placed into its final form by the `custom`
@@ -175,8 +175,8 @@ impl Waveform<Syntactic> {
     /// Create a new [`Waveform`] from a parsed [`WaveformInvocation`].
     ///
     /// If the [`WaveformInvocation`] names one of the built-in waveforms, then this will return a
-    /// [`Waveform::BuiltinWaveform`] as long as the parameters are correct, and return an error
-    /// if they are incorrect.
+    /// [`Waveform::Builtin`] as long as the parameters are correct, and return an error if they are
+    /// incorrect.
     ///
     /// If the [`WaveformInvocation`] doesn't name one of the built-in waveforms, then this will
     /// return a [`Waveform::Custom`].
@@ -346,8 +346,8 @@ impl<S: WaveformData> Waveform<S> {
     }
 }
 
-/// A trait covering types, like [`WaveformParameters]`, that are maps from strings to values
-/// that can be used to construct [`Waveform`]s.
+/// A trait covering types that are maps from strings to values that can be used to construct
+/// [`Waveform`]s, such as [`crate::instruction::WaveformParameters`].
 pub trait GeneralWaveformParameters {
     /// The type of value contained in the map.
     type Value;
@@ -477,8 +477,8 @@ impl<E1> WaveformInvocationError<E1> {
 
 /// Internal code to convert [`WaveformInvocation`]s to [`Waveform::Builtin`]s.
 ///
-/// Parsing is done by destructively mutating a [`WaveformParameters`] value, removing parameters we
-/// have already recognized.
+/// Parsing is done by destructively mutating a [`GeneralWaveformParameters`] value, removing
+/// parameters we have already recognized.
 mod parse {
     use super::*;
 

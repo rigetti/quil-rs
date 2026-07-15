@@ -124,7 +124,7 @@ pub(crate) fn parse_declare<'a>(input: ParserInput<'a>) -> InternalParserResult<
 /// Parse the contents of a `CALL` instruction.
 ///
 /// Note, the `CALL` instruction here is unresolved; it can only be resolved within the
-/// full context of a program from an [`crate::instruction::extern_call::ExternSignatureMap`].
+/// full context of a program from a [`crate::instruction::ExternSignatureMap`].
 ///
 /// Call instructions are of the form:
 ///     `CALL @ms{Identifier} @rep[:min 1]{@group{@ms{Identifier} @alt @ms{Memory Reference} @alt @ms{Complex}}}`

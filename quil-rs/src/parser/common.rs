@@ -198,9 +198,9 @@ pub(crate) fn parse_permutation<'a>(input: ParserInput<'a>) -> InternalParserRes
     )(input)
 }
 
-/// Parse a [`crate::instruction::PauliWord`]. These are a special kind of a [`Token::Identifier`]
-/// used in Pauli sum `DEFGATE` specifications where each identifier is made up of one or more
-/// `I`, `X`, `Y`, or `Z` characters (e.g. `X`, `YY`).
+/// Parse a Pauli word. These are a special kind of a [`Token::Identifier`] used in Pauli sum
+/// `DEFGATE` specifications where each identifier is made up of one or more `I`, `X`, `Y`, or `Z`
+/// characters (e.g., `X`, `YY`, or `ZXZ`); these components are represented as [`PauliGate`]s.
 fn parse_pauli_word<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Vec<PauliGate>> {
     map_res(token!(Identifier(v)), |words| {
         let mut pauli_words: Vec<PauliGate> = Vec::new();

@@ -53,29 +53,29 @@ impl<T> CalibrationSet<T>
 where
     T: CalibrationSignature,
 {
-    /// Creates an empty [`ProgramCalibrationSet`].
+    /// Creates an empty [`CalibrationSet`].
     pub fn new() -> Self {
         Self { data: Vec::new() }
     }
 
-    /// Creates a [`InnerCalibrationSet`] with the specified capacity.
+    /// Creates a [`CalibrationSet`] with the specified capacity.
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
             data: Vec::with_capacity(capacity),
         }
     }
 
-    /// Returns the capacity of the [`ProgramCalibrationSet`].
+    /// Returns the capacity of the [`CalibrationSet`].
     pub fn capacity(&self) -> usize {
         self.data.capacity()
     }
 
-    /// Returns the length of the [`ProgramCalibrationSet`].
+    /// Returns the length of the [`CalibrationSet`].
     pub fn len(&self) -> usize {
         self.data.len()
     }
 
-    /// Returns whether the [`ProgramCalibrationSet`] is empty.
+    /// Returns whether the [`CalibrationSet`] is empty.
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }

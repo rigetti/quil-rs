@@ -327,7 +327,7 @@ impl ExternPragmaMap {
     /// Extend this [`ExternPragmaMap`] with another.
     ///
     /// The behavior is similar to [`IndexMap::extend`] here. Of note,
-    /// for keys that already existed in [`self`], their value is updated
+    /// for keys that already existed in `self`, their value is updated
     /// but it keeps the existing order.
     pub fn extend(&mut self, other: Self) {
         self.0.extend(other.0);

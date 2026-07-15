@@ -61,8 +61,9 @@ pub enum BuiltinWaveform<T: WaveformData> {
 pub struct CommonBuiltinParameters<T: WaveformData> {
     /// Full duration of the pulse, in seconds.
     ///
-    /// Note that this is *always* a concrete real number, even for [`Syntactic`] parameters!  It
-    /// must be possible to know the exact duration of a waveform at all times.
+    /// Note that this is *always* a concrete real number, even for
+    /// [`Syntactic`][crate::waveform::Syntactic] parameters!  It must be possible to know the exact
+    /// duration of a waveform at all times.
     pub duration: f64,
 
     /// Scale to apply to waveform envelope (default: `1.0`).
@@ -162,8 +163,8 @@ impl<S: WaveformData> CommonBuiltinParameters<S> {
     ///
     /// Given two forms of waveform data, `S` and `T`, the user specifies how to evaluate `S`'s real
     /// numbers into `T`'s real numbers and how to evaluate `S`'s complex numbers to `T`'s complex
-    /// numbers.  For example, to convert parsed ([`Syntactic`]) parameters into sampleable
-    /// ([`Concrete`]) parameters, you can pass
+    /// numbers.  For example, to convert parsed ([`Syntactic`][crate::waveform::Syntactic])
+    /// parameters into sampleable ([`Concrete`]) parameters, you can pass
     /// [`Expression::evaluate`][crate::expression::Expression::evaluate] to this function.
     ///
     /// For a more detailed example, see the documentation for
@@ -501,15 +502,15 @@ define_waveforms! {
         /// Length of zero padding to add to beginning of pulse (s)
         ///
         /// Note that this is *always* a concrete real number, even if the waveform is
-        /// [`Syntactic`]!  It must be possible to know the exact duration of a waveform at all
-        /// times.
+        /// [`Syntactic`][crate::waveform::Syntactic]!  It must be possible to know the exact
+        /// duration of a waveform at all times.
         pub pad_left: ConcreteReal,
 
         /// Length of zero padding to add to end of pulse (s)
         ///
         /// Note that this is *always* a concrete real number, even if the waveform is
-        /// [`Syntactic`]!  It must be possible to know the exact duration of a waveform at all
-        /// times.
+        /// [`Syntactic`][crate::waveform::Syntactic]!  It must be possible to know the exact
+        /// duration of a waveform at all times.
         pub pad_right: ConcreteReal,
     }
 
@@ -612,8 +613,9 @@ impl<S: WaveformData> BuiltinWaveform<S> {
     ///
     /// Given two forms of waveform data, `S` and `T`, the user specifies how to evaluate `S`'s real
     /// numbers into `T`'s real numbers and how to evaluate `S`'s complex numbers to `T`'s complex
-    /// numbers.  For example, to convert parsed ([`Syntactic`]) parameters into sampleable
-    /// ([`Concrete`]) parameters, you can pass [`Expression::evaluate`] to this function.
+    /// numbers.  For example, to convert parsed ([`Syntactic`][crate::waveform::Syntactic])
+    /// parameters into sampleable ([`Concrete`]) parameters, you can pass
+    /// [`Expression::evaluate`][crate::expression::Expression::evaluate] to this function.
     ///
     /// For a more detailed example, see the documentation for
     /// [`Waveform::try_evaluate`][crate::waveform::Waveform::try_evaluate], which has the same
@@ -1032,8 +1034,7 @@ struct SamplingInfo {
 /// concretizing the builtin parameters, and [fully discretizes
 /// them][CommonBuiltinParameters::resolve_with_sample_rate].
 ///
-/// If the input data *is* partial, instead returns the computed sample count (as with
-/// [`CommonBuiltinParameters::partial_resolve_with_sample_rate`]).
+/// If the input data *is* partial, instead only returns the computed sample count.
 #[expect(
     clippy::type_complexity,
     reason = "the complexity here is essential to the abstraction, and cannot be brushed under the \

@@ -208,6 +208,8 @@ pub(crate) enum FrameMatchCondition<'a> {
 /// A pair of conditions to match frames within a [`crate::Program`] (or another scope).
 ///
 /// This allows for deferred evaluation of matching an instruction against available frames.
+///
+/// When matched aginst, produces a [`MatchedFrames`] value.
 pub(crate) struct FrameMatchConditions<'a> {
     /// A condition to identify which frames within a [`crate::Program`] (or another scope)
     /// are actively used by an [`Instruction`].
@@ -225,8 +227,7 @@ pub(crate) struct FrameMatchConditions<'a> {
     pub blocked: Option<FrameMatchCondition<'a>>,
 }
 
-/// The product of evaluating [`FrameMatchConditions`] in the scope of available frames (such as
-/// within a [`crate::Program`]).
+/// The result of matching some frames in a [program][crate::Program] or a similar scope.
 ///
 /// When performing this evaluation with functions from `quil-rs`, the fields will be appropriately
 /// disjoint as described in their documentation.

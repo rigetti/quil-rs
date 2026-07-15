@@ -37,8 +37,8 @@ fn init_module(m: &Bound<'_, PyModule>) -> PyResult<()> {
     Ok(())
 }
 
-/// Add Python `to_quil` and `to_quil_or_debug` methods
-/// for types that implements [`Quil`](quil_rs::quil::Quil).
+/// Add Python `to_quil` and `to_quil_or_debug` methods for types that implement
+/// [`Quil`](crate::quil::Quil).
 macro_rules! impl_to_quil {
     ($name: ident) => {
         #[cfg_attr(feature = "stubs", gen_stub_pymethods)]

@@ -11,8 +11,9 @@ use super::IqSamplesOrPlaceholder;
 
 /// [`WaveformData`] that can be sampled from.
 pub(super) trait Sampleable: WaveformData<Real: Copy, Complex: Copy> {
-    /// Evidence that this type is or isn't partial: [`()`] if it is partial, [`Infallible`] if it
-    /// isn't.  Used to make functions that are partial for partial data and total for total data.
+    /// Evidence that this type is or isn't partial: [`()`][prim@unit] if it is partial,
+    /// [`Infallible`] if it isn't.  Used to make functions that are partial for partial data and
+    /// total for total data.
     type IsPartial: Copy + Eq + std::fmt::Debug;
 
     /// Convert a real number to a concrete [`f64`] if the number is present.

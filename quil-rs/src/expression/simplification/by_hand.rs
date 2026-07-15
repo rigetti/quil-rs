@@ -151,7 +151,7 @@ impl Simplifier {
     /// case simplification functions, the ones that do all the work, don't need to decrement the
     /// limit at the top of the function.
     ///
-    /// Invariant: Never returns [`Expression::PiConstant()`].
+    /// Invariant: Never returns [`Expression::PiConstant`].
     fn simplify(&mut self, e: ArcIntern<Expression>, limit: Limit) -> ArcIntern<Expression> {
         if let Some(simplified) = self.simplify_cache.get(&e) {
             return simplified.clone();

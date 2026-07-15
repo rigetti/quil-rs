@@ -26,9 +26,9 @@
 //!    - A `pub(crate) fn py_repr<'py>(&self, py: Python<'py>) -> PyResult<String>` function on all
 //!      other `$waveform<Pythonic>`s.
 
-/// Given a [`WaveformData`] marker, convert one of the field pseudo-types into the corresponding
-/// actual Rust type.  Non-identifier types must be wrapped in parentheses because macros can't
-/// match balanced angle brackets.
+/// Given a [`super::WaveformData`] marker, convert one of the field pseudo-types into the
+/// corresponding actual Rust type.  Non-identifier types must be wrapped in parentheses because
+/// macros can't match balanced angle brackets.
 macro_rules! field_type {
     ($waveform_type:ident, $field_type:ident) => {
         field_type!(($waveform_type), $field_type)
@@ -83,7 +83,7 @@ macro_rules! field_referencer {
 /// Part of the implementation of the `try_evaluate` function for waveforms; given a pseudo-typed
 /// field `$field: $pseudo_type` and the `$real` and `$complex` evaluator parameters to
 /// `try_evaluate`, `field_evaluator!($pseudo_type, real = $real, complex = $complex, field)` will
-/// transform that `field` from one [`WaveformData`] to another.
+/// transform that `field` from one [`super::WaveformData`] to another.
 macro_rules! field_evaluator {
     (ConcreteReal, real = $real:ident, complex = $complex:ident, $field:expr) => {
         $field
@@ -788,11 +788,11 @@ macro_rules! define_waveform {
                 "Convert one [`", stringify!($name), "`] into another ",
                 "by replacing its associated data."
             )]
-            ///
             /// Given two forms of waveform data, `S` and `T`, the user specifies how to evaluate
             /// `S`'s real numbers into `T`'s real numbers and how to evaluate `S`'s complex numbers
-            /// to `T`'s complex numbers.  For example, to convert parsed ([`Syntactic`]) parameters
-            /// into sampleable ([`Concrete`]) parameters, you can pass
+            /// to `T`'s complex numbers.  For example, to convert parsed
+            /// ([`Syntactic`][crate::waveform::Syntactic]) parameters into sampleable
+            /// ([`Concrete`]) parameters, you can pass
             /// [`Expression::evaluate`][crate::expression::Expression::evaluate] to this function.
             ///
             /// For a more detailed example, see the documentation for
@@ -865,7 +865,7 @@ macro_rules! define_waveform {
 
 /// Define a collection of waveforms, as described in the introduction to this section.  Also
 /// generates Python wrappers in a submodule and creates the `Sealed` trait used for
-/// [`BuiltinWaveformParameters`].
+/// [`super::BuiltinWaveformParameters`].
 ///
 /// NOTE: To validate our Python interop, `quil-rs/scripts/lint-quil-rs.py` needs to be able to
 /// process the contents of `define_waveform!`.  Please edit the `_define_waveform` method in that

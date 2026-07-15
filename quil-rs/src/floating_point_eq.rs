@@ -4,7 +4,7 @@
 //! In particular, the functions in this module will treat `±0.0` as indistiguishable, all NaNs as
 //! indistiguishable, and all NaNs as equal only to each other.
 
-/// [`f64`] utilities.
+/// [`f64`][prim@f64] utilities.
 pub(crate) mod f64 {
     use std::hash::{Hash as _, Hasher};
 
@@ -102,7 +102,7 @@ pub(crate) mod f64 {
     }
 }
 
-/// [`Complex64`] utilities.
+/// [`Complex64`][num_complex::Complex64] utilities.
 ///
 /// Note that these functions consider the real and imaginary components of the numbers separately;
 /// `NaN + 3i` is considered equal to `NaN + 3i` but not `3 + NaN*i`, for instance.

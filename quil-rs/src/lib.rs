@@ -28,7 +28,7 @@
 //! closely follow the
 //! [changelog](https://github.com/rigetti/quil-rust/releases) when upgrading.
 //!
-//! [constructor for timing graphs]: crate::program::graph::ScheduledProgram#method.get_dot_format
+//! [constructor for timing graphs]: crate::program::scheduling::graph::ScheduledProgram#method.get_dot_format
 //! [expressions]: crate::expression::Expression
 //! [instructions]: crate::instruction::Instruction
 //! [parser]: crate::program::Program#method.from_str

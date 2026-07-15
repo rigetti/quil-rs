@@ -8,7 +8,8 @@
 use super::{Partial, Reference, WaveformData};
 
 /// A trait representing all builtin waveform parameter types that themselves take a generic
-/// `WaveformData` parameter: [`Flat`][super::Flat], [`Gaussian`][super::Gaussian`], etc.
+/// `WaveformData` parameter: [`Flat`][super::builtin::Flat],
+/// [`Gaussian`][super::builtin::Gaussian`], etc.
 ///
 /// For every waveform type constructor `W`, this trait should be implemented for all `W<T>` at
 /// once.
@@ -31,9 +32,9 @@ pub trait WaveformParameters {
     ///
     /// Given two forms of waveform data, `S` and `T`, the user specifies how to evaluate `S`'s real
     /// numbers into `T`'s real numbers and how to evaluate `S`'s complex numbers to `T`'s complex
-    /// numbers.  For example, to convert parsed ([`Syntactic`]) parameters into sampleable
-    /// ([`Concrete`]) parameters, you can pass
-    /// [`Expression::evaluate`][crate::expression::Expression::evaluate] to this function.
+    /// numbers.  For example, to convert parsed ([`Syntactic`][crate::waveform::Syntactic])
+    /// parameters into sampleable ([`Concrete`][crate::waveform::Concrete]) parameters, you can
+    /// pass [`Expression::evaluate`][crate::expression::Expression::evaluate] to this function.
     ///
     /// For a more detailed example, see the documentation for
     /// [`Waveform::try_evaluate`][crate::waveform::Waveform::try_evaluate], which has the same

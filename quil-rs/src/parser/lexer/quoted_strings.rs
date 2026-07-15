@@ -16,11 +16,10 @@ use nom::{combinator::map, Slice};
 
 use super::{InternalLexError, InternalLexResult, LexErrorKind, LexInput};
 
-/// Like [`quoted_string`], but unescapes any escaped backslashes or quotes matching those wrapping
-/// the string.
+/// Matches a double-quoted string and returns the content, unescaping any escaped backslashes or
+/// quotes matching those wrapping the string.
 ///
-/// That is, `"\'a\' \"string\""` will become `\'a\' "string"` and `'\'a\' \"string\"'` will become
-/// `'a' \"string\"`.
+/// For instance, `"\'a\' \"string\""` will become `\'a\' "string"`
 ///
 /// # Errors
 ///
