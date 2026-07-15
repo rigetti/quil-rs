@@ -639,10 +639,6 @@ macro_rules! add_python_waveform_convenience_constructor {
                         type_repr = "typing.Optional[_Real]",
                         imports = ("typing"))
                     )]
-                    #[gen_stub(override_type(
-                        type_repr = "typing.Optional[_Real]",
-                        imports = ("typing"))
-                    )]
                     scale: Option<&Bound<'py, PyAny>>,
                     #[gen_stub(override_type(
                         type_repr = "typing.Optional[_Real]",
