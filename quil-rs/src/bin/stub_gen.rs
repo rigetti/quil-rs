@@ -106,9 +106,9 @@ mod main {
 ///    ```
 ///
 /// In addition to these edits, the tool will start the edited `.pyi` file with a list of `TypeVar`
-/// definitions.  These definitions support type parameter in versions of Python greater than or
-/// equal to 3.13 (the earliest this became possible for explicit `TypeVar`s).  For instance, this
-/// might look like:
+/// definitions.  These definitions support type parameter defaults in versions of Python greater
+/// than or equal to 3.13 (the earliest this became possible for explicit `TypeVar`s).  For
+/// instance, this might look like:
 ///
 /// ```text
 /// import sys
