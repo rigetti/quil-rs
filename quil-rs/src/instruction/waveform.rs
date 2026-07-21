@@ -131,7 +131,7 @@ impl Quil for WaveformInvocation {
         key_value_pairs.sort_by_key(|(k, _)| *k);
 
         if key_value_pairs.is_empty() {
-            write!(f, "{}", self.name,)?;
+            write!(f, "{}", self.name)?;
         } else {
             write!(
                 f,

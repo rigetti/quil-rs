@@ -417,13 +417,12 @@ impl Calibrations {
                         let mut instructions = calibration.instructions.clone();
                         for instruction in instructions.iter_mut() {
                             match instruction {
-                                Instruction::Pragma(pragma) => {
+                                Instruction::Pragma(pragma)
                                     if pragma.name == "LOAD-MEMORY"
-                                        && pragma.data == calibration.identifier.target
-                                    {
-                                        if let Some(target) = &measurement.target {
-                                            pragma.data = Some(target.to_quil_or_debug())
-                                        }
+                                        && pragma.data == calibration.identifier.target =>
+                                {
+                                    if let Some(target) = &measurement.target {
+                                        pragma.data = Some(target.to_quil_or_debug())
                                     }
                                 }
                                 Instruction::Capture(capture) => {

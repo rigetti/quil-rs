@@ -26,13 +26,13 @@ use petgraph::algo::DfsSpace;
 use petgraph::Graph;
 
 #[cfg(feature = "stubs")]
-use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
+use pyo3_stub_gen::derive::{gen_methods_from_python, gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::instruction::{
     Arithmetic, ArithmeticOperand, ArithmeticOperator, Call, CircuitDefinition, Declaration,
     DefGateSequenceExpansionError, ExternError, ExternPragmaMap, ExternSignatureMap,
     FrameDefinition, FrameIdentifier, GateDefinition, GateError, GateSpecification, Instruction,
-    InstructionHandler, Jump, JumpUnless, Label, Matrix, MemoryReference, Move, Pragma, Qubit,
+    InstructionHandler, JumpWhen, Label, Matrix, MemoryReference, Move, Pragma, Qubit,
     QubitPlaceholder, ScalarType, Target, TargetPlaceholder, Vector, Waveform, WaveformDefinition,
     RESERVED_PRAGMA_EXTERN,
 };
@@ -334,20 +334,30 @@ impl Program {
     /// modify the value at the reference unless you intend to modify the remaining number of
     /// iterations (i.e. to break the loop).
     ///
-    /// The given `start_target` and `end_target` will be used as the entry and exit points for the
-    /// loop, respectively. You should provide unique [`Target`]s that won't be used elsewhere in
-    /// the program.
+    /// The given `start_target` will be used as the entry point for the loop. You should provide
+    /// [`Target::Placeholder`] or otherwise choose a unique [`Target`] that won't be used elsewhere
+    /// in the program.
     ///
-    /// If `iterations` is 0, then a copy of the program is returned without any changes.
+    /// If `iterations` is `1`, then a copy of the program is returned without any changes.
+    ///
+    /// If `iterations` is 0, then an empty program is returned – specifically, [a program with no
+    /// body instructions, but retaining all of the calibrations,
+    /// etc.][Self::clone_without_body_instructions].
+    #[pyo3(
+        name = "_wrap_in_loop",
+        warn(message = "this function is not stable; \
+                        it will replace Program.wrap_in_loop in a future release")
+    )]
     pub fn wrap_in_loop(
         &self,
         loop_count_reference: MemoryReference,
         start_target: Target,
-        end_target: Target,
         iterations: u32,
     ) -> Self {
-        if iterations == 0 {
-            return self.clone();
+        match iterations {
+            0 => return self.clone_without_body_instructions(),
+            1 => return self.clone(),
+            _ => {}
         }
 
         let mut looped_program = self.clone_without_body_instructions();
@@ -381,14 +391,10 @@ impl Program {
                     },
                     source: ArithmeticOperand::LiteralInteger(1),
                 }),
-                Instruction::JumpUnless(JumpUnless {
-                    target: end_target.clone(),
+                Instruction::JumpWhen(JumpWhen {
+                    target: start_target,
                     condition: loop_count_reference,
                 }),
-                Instruction::Jump(Jump {
-                    target: start_target,
-                }),
-                Instruction::Label(Label { target: end_target }),
             ])
             .collect::<Vec<Instruction>>(),
         );
@@ -443,6 +449,169 @@ impl Program {
         );
         instructions.extend(self.instructions.clone());
         instructions
+    }
+}
+
+#[cfg(feature = "python")]
+#[derive(pyo3::FromPyObject)]
+enum EndTargetParam {
+    #[expect(
+        dead_code,
+        reason = "the field isn't read, but we still want it type-checked"
+    )]
+    Target(Target),
+    Iterations(u32),
+}
+
+#[cfg(feature = "python")]
+#[pyo3::pymethods]
+impl Program {
+    #[pyo3(
+        name = "wrap_in_loop",
+        signature = (loop_count_reference, start_target, end_target = None, iterations = None),
+    )]
+    fn backwards_compatible_py_wrap_in_loop(
+        &self,
+        py: pyo3::Python<'_>,
+        loop_count_reference: MemoryReference,
+        start_target: Target,
+        end_target: Option<EndTargetParam>,
+        iterations: Option<u32>,
+    ) -> pyo3::PyResult<Self> {
+        use pyo3::{
+            exceptions::{PyDeprecationWarning, PyTypeError, PyValueError},
+            PyErr,
+        };
+
+        let iterations = match (end_target, iterations) {
+            // - `program.wrap_in_loop(loop_count_reference, start_target, iterations)`
+            // - `program.wrap_in_loop(loop_count_reference, start_target, iterations = iterations)`
+            (Some(EndTargetParam::Iterations(iterations)), None) | (None, Some(iterations)) => {
+                iterations
+            }
+
+            // - `program.wrap_in_loop(loop_count_reference, start_target, end_target, iterations)`
+            // - `program.wrap_in_loop(loop_count_reference, start_target, end_target, iterations = iterations)`
+            (Some(EndTargetParam::Target(_)), Some(iterations)) => {
+                PyErr::warn(
+                    py,
+                    &py.get_type::<PyDeprecationWarning>(),
+                    c"`end_target` is deprecated and will be ignored",
+                    1,
+                )?;
+                iterations
+            }
+
+            // - `program.wrap_in_loop(loop_count_reference, start_target, end_target)`
+            // - `program.wrap_in_loop(loop_count_reference, start_target)`
+            (Some(EndTargetParam::Target(_)) | None, None) => {
+                return Err(PyTypeError::new_err(
+                    "wrap_in_loop missing required positional argument: 'iterations'",
+                ));
+            }
+
+            // - `program.wrap_in_loop(loop_count_reference, start_target, iterations, iterations2)`
+            // - `program.wrap_in_loop(loop_count_reference, start_target, iterations, iterations2)`
+            (Some(EndTargetParam::Iterations(_)), Some(_)) => {
+                return Err(PyTypeError::new_err(
+                    "wrap_in_loop got multiple values for argument: 'iterations'",
+                ));
+            }
+        };
+
+        if iterations == 0 {
+            return Err(PyValueError::new_err(
+                "wrap_in_loop got a value of 0 for 'iterations'; \
+                 this will produce an empty Program in future releases",
+            ));
+        }
+
+        Ok(self.wrap_in_loop(loop_count_reference, start_target, iterations))
+    }
+}
+
+#[cfg(feature = "stubs")]
+pyo3_stub_gen::inventory::submit! {
+    // The last two overloads are just here to make `stubtest` happy
+    gen_methods_from_python! {
+        r#"
+        class Program:
+            @overload
+            def wrap_in_loop(
+                self,
+                loop_count_reference: MemoryReference,
+                start_target: Target,
+                iterations: int,
+            ):
+                r"""
+                Return a copy of the [`Program`] wrapped in a loop that repeats `iterations` times.
+
+                The loop is constructed by wrapping the body of the program in classical Quil instructions.
+                The given `loop_count_reference` must refer to an INTEGER memory region. The value at the
+                reference given will be set to `iterations` and decremented in the loop. The loop will
+                terminate when the reference reaches 0. For this reason your program should not itself
+                modify the value at the reference unless you intend to modify the remaining number of
+                iterations (i.e. to break the loop).
+
+                The given `start_target` will be used as the entry point for the loop. You should provide
+                [`Target::Placeholder`] or otherwise choose a unique [`Target`] that won't be used elsewhere
+                in the program.
+
+                If `iterations` is `1`, then a copy of the program is returned without any changes.
+
+                **Note:** For backwards compatibility with earlier releases of `quil-rs`, this function has
+                three behaviors that will change in future releases.
+
+                1. If `iterations` is 0, then an error is raised.
+
+                   - In the future, an empty program will be returned – specifically, [a program with no
+                     body instructions, but retaining all of the calibrations,
+                     etc.][Self::clone_without_body_instructions].
+
+                   - In prior releases of `quil-rs`, the input program was returned unmodified instead, as
+                     though `iterations` had been `1`.
+
+                2. This function additionally accepts an `end_target` argument either by name or
+                   positionally before `iterations`.  This argument is no longer used, and its presence will
+                   raise a `DeprecationWarning`.  In future releases, providing this argument will be an
+                   error.
+
+                   - As an edge case, it is currently possible to call this function as
+                     `program.wrap_in_loop(loop_count_reference, start_target, end_target = 3)` and get a
+                     3-iteration loop.  This behavior is not supported and will be removed without warning
+                     in a future release of Quil.
+
+                3. Either or both of the `end_target` and `iterations` parameters can be given as `None`
+                   instead of being omitted.  This is the same as being omitted, which is or is not allowed
+                   as provided above.  In future releases, `None` will not be accepted.
+                r"""
+
+            @overload
+            @deprecated("the `end_target` parameter is deprecated and will be ignored")
+            def wrap_in_loop(
+                self,
+                loop_count_reference: MemoryReference,
+                start_target: Target,
+                end_target: Target,
+                iterations: int,
+            ): ...
+            @overload
+            @deprecated("the `iterations` parameter must be provided")
+            def wrap_in_loop(
+                self,
+                loop_count_reference: MemoryReference,
+                start_target: Target,
+                end_target: None,
+                iterations: None,
+            ): ...
+            @overload
+            @deprecated("the `iterations` parameter must be provided")
+            def wrap_in_loop(
+                self,
+                loop_count_reference: MemoryReference,
+                start_target: Target,
+            ): ...
+        "#
     }
 }
 
@@ -2062,7 +2231,6 @@ I 0
                 index: 0,
             },
             Target::Fixed("loop-start".to_string()),
-            Target::Fixed("loop-end".to_string()),
             10,
         );
 

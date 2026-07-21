@@ -2,3 +2,18 @@ doc-valid-idents = [
     "..",
     "QuilT",
 ]
+
+[[disallowed-methods]]
+path = "pyo3::types::PyListMethods::iter"
+reason = "this method returns a `BoundListIterator`, whose `nth` and `nth_back` have an OOB read in PyO3 >=0.24,<0.29; we can remove this when we upgrade PyO3 to >=0.29"
+allow-invalid = false
+
+[[disallowed-methods]]
+path = "pyo3::types::PyTupleMethods::iter"
+reason = "this method returns a `BoundTupleIterator`, whose `nth` and `nth_back` have an OOB read in PyO3 >=0.24,<0.29; we can remove this when we upgrade PyO3 to >=0.29"
+allow-invalid = false
+
+[[disallowed-methods]]
+path = "pyo3::types::PyCFunction::new_closure"
+reason = "`PyCFunction::new_closure` is missing a `Sync` bound in PyO3 >=0.15,<0.29; we can remove this when we upgrade PyO3 to >=0.29"
+allow-invalid = false
