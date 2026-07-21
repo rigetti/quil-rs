@@ -67,8 +67,8 @@ fn init_module(m: &Bound<'_, PyModule>) -> PyResult<()> {
 ///     m.add_class::<Type2>()?;
 ///
 ///     m.add("SomeUnionType", quil_rs::quilpy::union_type(&[
-///         m.py().get_type::<Type1>(),
-///         m.py().get_type::<Type2>(),
+///         &m.py().get_type::<Type1>(),
+///         &m.py().get_type::<Type2>(),
 ///     ])?)?;
 ///
 ///     Ok(())
@@ -83,22 +83,42 @@ fn init_module(m: &Bound<'_, PyModule>) -> PyResult<()> {
 /// type SomeUnionType = Type1 | Type2
 /// ```
 ///
-/// # Panics
+/// # Note
 ///
-/// This panics if `types` is empty, since a union of no types is not valid;
-/// you can only encounter this if you dynamically build a list of types
-/// and pass them at runtime, as under typical usage, this is verified at compile time.
-pub(crate) fn union_type<'py, const N: usize>(types: &[Bound<'py, PyType>; N]) -> PyResult<Bound<'py, PyAny>> {
+/// This panics during compilation if `types` is empty, since a union of no types is not valid.
+pub(crate) fn union_type<'py, const N: usize>(types: &[&Bound<'py, PyType>; N]) -> PyResult<Bound<'py, PyAny>>
+where [u32; N]: Sized
+{
+    assert!(N > 0, "Cannot create a union of zero types; at least one type is required");
     types[1..].iter().try_fold(types[0].clone().into_any(), |u, t| { u.bitor(t) })
 }
 
 /// Constructing a union of Python types.
 macro_rules! union {
     ($py:ident, $($T:ty),+) => {
-        crate::quilpy::union_type(&[ $($py.get_type::<$T>()),+ ])
+        crate::quilpy::union_type(&[ $(&$py.get_type::<$T>()),+ ])
     };
 }
 pub(crate) use union;
+
+#[cfg(test)]
+mod test_union {
+    use pyo3::{prelude::*, types::{PyString, PyTuple}};
+
+    use super::union_type;
+
+    #[test]
+    fn test_union_type() {
+        Python::initialize();
+        Python::attach(|py| {
+            let type1 = py.get_type::<PyString>();
+            let type2 = py.get_type::<PyTuple>();
+            let union = union_type(&[&type1, &type2]).unwrap();
+            assert!(PyTuple::empty(py).is_instance(&union).unwrap());
+            assert!(PyString::new(py, "").is_instance(&union).unwrap());
+        });
+    }
+}
 
 pub(crate) mod nonzero {
     /// A simple wrapper around [`std::num::NonZeroU64`] with [`pyo3_stub_gen::PyStubType`] information.
