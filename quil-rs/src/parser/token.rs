@@ -67,8 +67,8 @@ where
     }
 }
 
-/// The subset of [`Token`]s which (a) do not have arguments and (b) are keywords.  Used to ensure
-/// that keyword-checking remains in sync with the definition of [`Token`].
+/// The subset of tokens which (a) do not have arguments and (b) are keywords.  Used to ensure
+/// that keyword-checking remains in sync with the definition of tokens.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, strum::Display, strum::EnumString)]
 #[strum(serialize_all = "SCREAMING-KEBAB-CASE")]
 pub enum KeywordToken {

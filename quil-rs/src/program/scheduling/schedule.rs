@@ -1,6 +1,3 @@
-//! A Schedule represents a flattening of the [`DependencyGraph`] into a linear sequence of
-//! instructions, with each instruction assigned a start time and duration.
-
 use std::collections::HashMap;
 
 use itertools::Itertools;
@@ -54,6 +51,9 @@ impl Zero for Seconds {
     }
 }
 
+/// A [`Schedule`] represents a flattening of a
+/// [`DependencyGraph`][crate::program::scheduling::DependencyGraph] into a linear sequence of
+/// instructions, with each instruction assigned a start time and duration.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Schedule<TimeUnit> {
     pub(crate) items: Vec<ComputedScheduleItem<TimeUnit>>,

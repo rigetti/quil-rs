@@ -25,8 +25,6 @@ use super::LeftoverError;
 /// The standard [`Display`](fmt::Display) implementation shows only the initial error.
 /// Use the alternative syntax (e.g., `format!("{:#}", err)` instead of `format!("{}", err)`) to
 /// see a backtrace of errors that caused this one.
-///
-/// See also [`Error`](crate::parser::Error).
 #[derive(Clone, Debug, PartialEq)]
 pub enum SyntaxError<T> {
     LexError(LexError),

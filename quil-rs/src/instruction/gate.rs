@@ -445,7 +445,9 @@ fn qubit_adjacent_lifted_gate(i: u64, matrix: &Matrix, n_qubits: u64) -> Matrix 
 
 /// Gates matrices that don't use any parameters.
 ///
-/// https://github.com/quil-lang/quil/blob/master/spec/Quil.md#standard-gates
+/// These are the non-parameterized gates defined in [§4.3, "Standard Gate Definitions", of the Quil
+/// specification](https://quil-lang.github.io/#4-3Standard-Gate-Definitions); see also
+/// [`PARAMETERIZED_GATE_MATRICES`].
 static CONSTANT_GATE_MATRICES: Lazy<HashMap<String, Matrix>> = Lazy::new(|| {
     let _0 = real!(0.0);
     let _1 = real!(1.0);
@@ -527,7 +529,9 @@ type ParameterizedMatrix = fn(Complex64) -> Matrix;
 
 /// Gates matrices that use parameters.
 ///
-/// https://github.com/quil-lang/quil/blob/master/spec/Quil.md#standard-gates
+/// These are the parameterized gates defined in [§4.3, "Standard Gate Definitions", of the Quil
+/// specification](https://quil-lang.github.io/#4-3Standard-Gate-Definitions); see also
+/// [`CONSTANT_GATE_MATRICES`].
 static PARAMETERIZED_GATE_MATRICES: Lazy<HashMap<String, ParameterizedMatrix>> = Lazy::new(|| {
     // Unfortunately, Complex::cis takes a _float_ argument.
     HashMap::from([
@@ -1056,7 +1060,7 @@ impl<'a, T: AsRef<str>> GateSignature<'a, T> {
     }
 }
 
-#[cfg(feature = "python")]
+#[cfg(any(feature = "python", test))]
 impl<'a, T: AsRef<str>> GateSignature<'a, T> {
     pub(crate) fn try_new(
         name: &'a T,
@@ -1072,7 +1076,10 @@ impl<'a, T: AsRef<str>> GateSignature<'a, T> {
             gate_type,
         })
     }
+}
 
+#[cfg(feature = "python")]
+impl<'a, T: AsRef<str>> GateSignature<'a, T> {
     pub(crate) fn gate_parameters(&self) -> &[T] {
         self.gate_parameters
     }
@@ -1231,7 +1238,7 @@ mod test_gate_definition {
     }
 }
 
-/// The type of a [`GateDefinition`] used within the [`GateSignature`].
+/// The type of a [`GateDefinition`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_enum)]
 #[cfg_attr(

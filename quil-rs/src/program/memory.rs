@@ -52,15 +52,15 @@ pub struct MemoryAccesses {
     /// All memory regions these instructions can write to from within the processor.
     ///
     /// The "within the processor" clause indicates that this covers the write to the destination of
-    /// a [`MOVE`][Instruction::Move], but not the write to the target of a
-    /// [`MEASURE`][Instruction::Measurement].
+    /// a [`MOVE`][crate::instruction::Instruction::Move], but not the write to the target of a
+    /// [`MEASURE`][crate::instruction::Instruction::Measurement].
     pub writes: HashSet<String>,
 
     /// All memory regions these instructions can write to from outside the processor.
     ///
     /// The "outside the processor" clause indicates that this covers the write to the target of a
-    /// [`MEASURE`][Instruction::Measurement], but not the write to the destination of a
-    /// [`MOVE`][Instruction::Move].
+    /// [`MEASURE`][crate::instruction::Instruction::Measurement], but not the write to the
+    /// destination of a [`MOVE`][crate::instruction::Instruction::Move].
     pub captures: HashSet<String>,
 }
 

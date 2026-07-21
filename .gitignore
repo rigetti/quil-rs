@@ -14,6 +14,7 @@ node_modules
 *.so
 __pycache__
 **./.null-ls-cache*
+.hypothesis/
 
 # quil-py documentation
 quil-rs/build

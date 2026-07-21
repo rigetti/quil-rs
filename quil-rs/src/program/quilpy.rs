@@ -729,9 +729,9 @@ impl<R: Into<FlatExpansionResult> + Clone> From<&SourceMap<InstructionIndex, Exp
     }
 }
 
-/// [`DefGateSequenceExpansion`] references data from [`quil_rs::instruction::GateDefinition`]s used to expand instructions.
-/// As such, it is incompatible with Python's memory management,
-/// so we define an owned type here.
+/// [`DefGateSequenceExpansion`] references data from [`crate::instruction::GateDefinition`]s used
+/// to expand instructions.  As such, it is incompatible with Python's memory management, so we
+/// define an owned type here.
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[pyo3::pyclass(module = "quil.program", eq)]

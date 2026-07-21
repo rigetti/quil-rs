@@ -248,7 +248,7 @@ impl Instruction {
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum InstructionRole {
     /// An instruction that is relevant to the superstructure of the program but not to
-    /// [Quil-T][]–level execution; for example, [`DECLARE`][Instruction::Declare].
+    /// [Quil-T][]–level execution; for example, [`DECLARE`][Instruction::Declaration].
     ///
     /// Note the callout of Quil-T above: the most surprising entries in this category, [by
     /// default][DefaultHandler], are *[gate application][Instruction::Gate] and
@@ -262,13 +262,13 @@ pub enum InstructionRole {
     /// [Quil-T]: https://quil-lang.github.io/#12Annex-T--Pulse-Level-Control
     ProgramComposition,
 
-    /// An instruction affecting only classical state, such as [`ADD`][Instruction:ADD`].
+    /// An instruction affecting only classical state, such as [`ADD`][Instruction::Arithmetic].
     ClassicalCompute,
 
     /// An instruction affecting the pulse level portion of the program, such as
     /// [`PULSE`][Instruction::Pulse].  The RF stands for Radio Frequency.
     ///
-    /// Unlike for [`MEASURE`][Instruction::Measurement], [`RESET`] is, [by
+    /// Unlike for [`MEASURE`][Instruction::Measurement], [`RESET`][Instruction::Reset] is, [by
     /// default][DefaultHandler], considered an RF control instruction, as it is not realized
     /// through calibration into a lower-level instruction.
     RFControl,
@@ -868,7 +868,8 @@ pub trait InstructionHandler {
     /// condition than blocking a frame.
     ///
     /// `None` is returned if the instruction does not execute in the context of a frame; this is
-    /// the case for purely classical instructions such as [`ADD`][Instruction::Add], for instance.
+    /// the case for purely classical instructions such as [`ADD`][Instruction::Arithmetic], for
+    /// instance.
     ///
     /// See [the Quil-T portion of the Quil specification (Annex T)][Quil-T] for more information.
     ///

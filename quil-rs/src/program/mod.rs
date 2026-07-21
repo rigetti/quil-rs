@@ -402,7 +402,8 @@ impl Program {
         looped_program
     }
 
-    /// Resolve [`LabelPlaceholder`]s and [`QubitPlaceholder`]s within the program using default resolvers.
+    /// Resolve [`TargetPlaceholder`]s and [`QubitPlaceholder`]s within the program using default
+    /// resolvers.
     ///
     /// See [`resolve_placeholders_with_custom_resolvers`](Self::resolve_placeholders_with_custom_resolvers),
     /// [`default_target_resolver`](Self::default_target_resolver),

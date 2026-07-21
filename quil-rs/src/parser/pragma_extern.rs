@@ -23,8 +23,9 @@ use super::{
 ///
 /// For details on the signature format, see the [Quil specification for "Extern Signature"](https://github.com/quil-lang/quil/blob/7f532c7cdde9f51eae6abe7408cc868fba9f91f6/specgen/spec/sec-other.s).
 ///
-/// Note, there are test cases for this parser in [`crate::instruction::extern_call::tests`] (via
-/// [`std::str::FromStr`] for [`crate::instruction::ExternSignature`]).
+// Note for developers: there are test cases for this parser in
+// [`crate::instruction::extern_call::tests`] (via [`std::str::FromStr`] for
+// [`crate::instruction::ExternSignature`]).
 pub(crate) fn parse_extern_signature<'a>(
     input: ParserInput<'a>,
 ) -> InternalParserResult<'a, ExternSignature> {

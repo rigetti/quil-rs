@@ -113,6 +113,38 @@ exception!(
     "Errors that may occur when validating a Quil identifier."
 );
 
+// waveform errors
+create_exception!(
+    quil.waveform,
+    WaveformError,
+    QuilError,
+    "Base error type for errors related to waveform processing."
+);
+
+exception!(
+    crate::waveform::WaveformParameterError,
+    quil.waveform,
+    WaveformParameterError,
+    WaveformError,
+    "Errors that may occur when parsing waveform parameters."
+);
+
+exception!(
+    crate::waveform::WaveformInvocationError,
+    quil.waveform,
+    WaveformInvocationError,
+    WaveformError,
+    "Errors that may occur when parsing a waveform."
+);
+
+exception!(
+    crate::waveform::sampling::SamplingError,
+    quil.waveform.sampling,
+    SamplingError,
+    WaveformError,
+    "Errors that may occur when sampling waveforms."
+);
+
 // program errors
 exception!(
     crate::program::ProgramError,

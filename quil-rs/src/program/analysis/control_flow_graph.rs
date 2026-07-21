@@ -127,7 +127,6 @@ impl<'p> BasicBlock<'p> {
 
     /// Compute the flattened schedule for this [`BasicBlock`] in terms of seconds,
     /// using a default built-in calculation for the duration of scheduled instructions.
-    /// See [`BasicBlockOwned::as_schedule`].
     ///
     /// # Arguments
     ///

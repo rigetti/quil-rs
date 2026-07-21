@@ -91,8 +91,8 @@ impl Calibrations {
 
     /// Append another [`CalibrationSet`] onto this one.
     ///
-    /// Calibrations with conflicting [`CalibrationSignature`]s are overwritten by the ones in the
-    /// given set.
+    /// Calibrations with conflicting [signatures][crate::instruction::CalibrationSignature] are
+    /// overwritten by the ones in the given set.
     pub fn extend(&mut self, other: Calibrations) {
         self.calibrations.extend(other.calibrations);
         self.measure_calibrations.extend(other.measure_calibrations);

@@ -3,7 +3,7 @@ name = "quil-rs"
 description = "Rust tooling for Quil (Quantum Instruction Language)"
 version = "0.37.0-rc.0"
 edition = "2021"
-rust-version = "1.83"
+rust-version = "1.93"
 license = "Apache-2.0"
 repository = "https://github.com/rigetti/quil-rs"
 keywords = ["Quil", "Quantum", "Rigetti"]
@@ -33,14 +33,17 @@ thiserror = "1.0.56"
 indexmap = "2.10.0"
 statrs = "0.16.0"
 paste = "1.0.15"
+derive_more = { version = "2.0.1", features = ["add", "add_assign", "display", "from", "into", "not"] }
+derive-where = { version = "1.6.0", features = ["serde"] }
 
 # Enabled with the "python" feature.
-numpy = { version = "0.27.1", optional = true }
 pyo3 = { version = "0.27.2", features = ["indexmap", "num-complex", "multiple-pymethods"], optional = true }
-rigetti-pyo3 = { version = "0.5.0", optional = true }
+rigetti-pyo3 = { version = "0.5.1", optional = true }
+numpy = { version = "0.27.1", optional = true }
 
 # Enabled with the "stubs" feature.
 pyo3-stub-gen = { version = "0.17.2", features = ["numpy"], optional = true }
+anyhow = { version = "1.0.103", optional = true }
 
 [dev-dependencies]
 clap = { workspace = true, features = ["derive", "string"] }
@@ -55,6 +58,7 @@ rasciigraph = "0.2.0"
 rstest = "0.18.2"
 
 [build-dependencies]
+# Enabled with the "python" feature.
 pyo3-build-config = { version = "0.27.2", optional = true }
 
 # These are described in the crate README.md
@@ -62,7 +66,7 @@ pyo3-build-config = { version = "0.27.2", optional = true }
 graphviz-dot = ["dep:dot-writer"]
 wasm-bindgen = []
 python = [ "dep:numpy", "dep:pyo3", "dep:pyo3-build-config", "dep:rigetti-pyo3" ]
-stubs = [ "python", "dep:pyo3-stub-gen", "rigetti-pyo3/stubs" ]
+stubs = [ "python", "dep:pyo3-stub-gen", "dep:anyhow", "rigetti-pyo3/stubs" ]
 
 [[bench]]
 name = "parser"
