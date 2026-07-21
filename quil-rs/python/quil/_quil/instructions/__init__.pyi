@@ -7,8 +7,8 @@ import numpy
 import numpy.typing
 from quil import _quil
 from quil._quil import expression
-from quil import expression
 import typing
+import typing_extensions
 __all__ = [
     "Arithmetic",
     "ArithmeticOperand",
@@ -29,6 +29,7 @@ __all__ = [
     "ComparisonOperator",
     "Convert",
     "Declaration",
+    "DeclarationAt",
     "DefGateSequence",
     "DefGateSequenceError",
     "Delay",
@@ -47,6 +48,8 @@ __all__ = [
     "GateSignature",
     "GateSpecification",
     "GateType",
+    "Halt",
+    "HaltType",
     "Include",
     "Instruction",
     "InstructionError",
@@ -60,6 +63,8 @@ __all__ = [
     "Measurement",
     "MemoryReference",
     "Move",
+    "Nop",
+    "NopType",
     "Offset",
     "ParseInstructionError",
     "ParseMemoryReferenceError",
@@ -87,12 +92,18 @@ __all__ = [
     "UnaryLogic",
     "UnaryOperator",
     "Vector",
+    "Wait",
+    "WaitType",
     "Waveform",
     "WaveformDefinition",
     "WaveformInvocation",
+    "unpack_classical_reg",
 ]
 
-class Arithmetic:
+Halt: HaltType
+Nop: NopType
+Wait: WaitType
+class Arithmetic(Instruction):
     @property
     def destination(self) -> MemoryReference: ...
     @property
@@ -176,7 +187,7 @@ class AttributeValue:
         def __new__(cls, _0: builtins.str) -> AttributeValue.String: ...
     
 
-class BinaryLogic:
+class BinaryLogic(Instruction):
     @property
     def destination(self) -> MemoryReference: ...
     @property
@@ -223,7 +234,7 @@ class BinaryOperand:
         def __new__(cls, _0: MemoryReference) -> BinaryOperand.MemoryReference: ...
     
 
-class CalibrationDefinition:
+class CalibrationDefinition(Instruction):
     @property
     def identifier(self) -> CalibrationIdentifier: ...
     @identifier.setter
@@ -326,7 +337,7 @@ class CalibrationIdentifier:
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
-class Call:
+class Call(Instruction):
     r"""
     A call instruction with a name and arguments.
     
@@ -425,7 +436,7 @@ class CallError(_quil.QuilError):
     """
     ...
 
-class Capture:
+class Capture(Instruction):
     @property
     def blocking(self) -> builtins.bool: ...
     @blocking.setter
@@ -453,7 +464,7 @@ class Capture:
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
-class CircuitDefinition:
+class CircuitDefinition(Instruction):
     @property
     def instructions(self) -> builtins.list[Instruction]: ...
     @instructions.setter
@@ -481,7 +492,7 @@ class CircuitDefinition:
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
-class Comparison:
+class Comparison(Instruction):
     @property
     def destination(self) -> MemoryReference: ...
     @property
@@ -539,7 +550,7 @@ class ComparisonOperand:
         def __new__(cls, _0: MemoryReference) -> ComparisonOperand.MemoryReference: ...
     
 
-class Convert:
+class Convert(Instruction):
     @property
     def destination(self) -> MemoryReference: ...
     @property
@@ -556,7 +567,7 @@ class Convert:
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
-class Declaration:
+class Declaration(Instruction):
     @property
     def name(self) -> builtins.str: ...
     @property
@@ -564,9 +575,18 @@ class Declaration:
     @property
     def size(self) -> Vector: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __getnewargs__(self) -> tuple[builtins.str, Vector, typing.Optional[Sharing]]: ...
+    def __getitem__(self, index: builtins.int) -> DeclarationAt:
+        r"""
+        Return a new `DeclarationAt` to this `Declaration` at the given `index`.
+        
+        The result can be used in places where a `MemoryReference` is expected,
+        but has the advantage of sharing the underlying `Declaration` object;
+        that allows it to use less memory and to validate certain memory operations
+        while constructing a `quil.program.Program`.
+        """
+    def __getnewargs__(self) -> tuple[builtins.str, ScalarType, builtins.int, typing.Optional[builtins.str], typing.Optional[builtins.list[tuple[builtins.int, ScalarType]]]]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, name: builtins.str, size: Vector, sharing: typing.Optional[Sharing]) -> Declaration: ...
+    def __new__(cls, name: builtins.str, memory_type: ScalarType  |  typing.Literal["BIT", "INTEGER", "REAL", "OCTET"], memory_size: builtins.int = 1, shared_region: typing.Optional[builtins.str] = None, offsets: typing.Optional[typing.Sequence[tuple[builtins.int, ScalarType  |  typing.Literal["BIT", "INTEGER", "REAL", "OCTET"]]]] = None) -> Declaration: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -574,6 +594,55 @@ class Declaration:
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
+
+@typing.final
+class DeclarationAt:
+    r"""
+    A wrapper around a [`Declaration`] for use in places we'd normally need a `MemoryReference`.
+    
+    You can get an instance of `DeclarationAt` by indexing a `Declaration`,
+    and you can then use it in places where a `MemoryReference` is expected.
+    The underlying objects share the same `Declaration` memory
+    and can provide additional validation on bounds-checking.
+    
+    # Example
+    
+    With use of the warlus operator, you can often write a list of instructions
+    without needing to explicitly declare `MemoryReference` objects:
+    
+    ```python
+    instructions = [
+        top := Label("top"),                                        # LABEL @top
+        counter := Declaration("counter", ScalarType.INTEGER),      # DECLARE counter INTEGER
+        counter[0].move(10),                                        # MOVE counter[0] 10
+        # additional instructions...
+        counter[0] - 1,                                             # SUB counter[0] 1
+        JumpWhen(top, counter[0]),                                  # JUMP-WHEN @top counter[0]
+    ]
+    ```
+    """
+    def add(self, other: ArithmeticOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration) -> Arithmetic:
+        r"""
+        Return a new `Arithmetic` instruction representing `ADD self other`.
+        
+        # Example
+        
+        ```python
+        from quil.instructions import Declaration, ScalarType
+        
+        x = Declaration("x", ScalarType.INTEGER, 3)
+        arith = x[2].add(5)
+        assert isinstance(arith, Arithmetic)
+        assert arith.to_quil() == "ADD x[2] 5"
+        ```
+        """
+    def div(self, other: ArithmeticOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration) -> Arithmetic: ...
+    def move(self, source: ArithmeticOperand) -> Move:
+        r"""
+        Return a new `Move` instruction representing `self = source`.
+        """
+    def mul(self, other: ArithmeticOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration) -> Arithmetic: ...
+    def sub(self, other: ArithmeticOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration) -> Arithmetic: ...
 
 class DefGateSequence:
     r"""
@@ -613,7 +682,7 @@ class DefGateSequenceError(InstructionError):
     """
     ...
 
-class Delay:
+class Delay(Instruction):
     @property
     def duration(self) -> expression.Expression: ...
     @property
@@ -632,7 +701,7 @@ class Delay:
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
-class Exchange:
+class Exchange(Instruction):
     @property
     def left(self) -> MemoryReference: ...
     @property
@@ -781,7 +850,7 @@ class ExternSignature:
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
-class Fence:
+class Fence(Instruction):
     @property
     def qubits(self) -> builtins.list[Qubit]: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
@@ -796,7 +865,7 @@ class Fence:
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
-class FrameDefinition:
+class FrameDefinition(Instruction):
     @property
     def attributes(self) -> builtins.dict[builtins.str, AttributeValue]: ...
     @attributes.setter
@@ -843,7 +912,7 @@ class FrameIdentifier:
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
-class Gate:
+class Gate(Instruction):
     r"""
     A struct encapsulating all the properties of a Quil Quantum Gate.
     """
@@ -858,7 +927,12 @@ class Gate:
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, name: builtins.str, parameters: Sequence[quil.expression.ParameterLike], qubits: Sequence[Qubit], modifiers: Sequence[GateModifierDesignator] = None) -> Self:
+    @typing.overload
+    def __new__(cls, name: builtins.str, parameters: typing.Sequence[expression.Expression  |  MemoryReference  |  builtins.int  |  builtins.float  |  builtins.complex], qubits: typing.Sequence[Qubit  |  QubitPlaceholder  |  builtins.int  |  builtins.str], modifiers: typing.Optional[typing.Sequence[GateModifier  |  builtins.str]] = None) -> Gate: ...
+    @typing.overload
+    def __new__(cls, name: builtins.str, *, qubits: typing.Sequence[Qubit  |  QubitPlaceholder  |  builtins.int  |  builtins.str], modifiers: typing.Optional[typing.Sequence[GateModifier  |  builtins.str]] = None, params: typing.Optional[typing.Sequence[expression.Expression  |  MemoryReference  |  builtins.int  |  builtins.float  |  builtins.complex]] = None) -> typing_extensions.NoReturn: ...
+    @typing.overload
+    def __new__(cls, name: builtins.str, parameters: typing.Sequence[expression.Expression  |  MemoryReference  |  builtins.int  |  builtins.float  |  builtins.complex], qubits: typing.Sequence[Qubit  |  QubitPlaceholder  |  builtins.int  |  builtins.str], modifiers: typing.Optional[typing.Sequence[GateModifier  |  builtins.str]] = None, *, params: typing.Optional[typing.Sequence[expression.Expression  |  MemoryReference  |  builtins.int  |  builtins.float  |  builtins.complex]] = None) -> Gate:
         r"""
         Create a new ``Gate``.
         """
@@ -866,6 +940,10 @@ class Gate:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
+        """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
         """
     def controlled(self, control_qubit: Qubit  |  QubitPlaceholder  |  builtins.int  |  builtins.str) -> Gate:
         r"""
@@ -881,6 +959,12 @@ class Gate:
         
         Raises a ``GateError`` if the number of provided alternate parameters
         don't equal the number of existing parameters.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -908,7 +992,7 @@ class Gate:
         other invalid input parameters may silently return an invalid result.
         """
 
-class GateDefinition:
+class GateDefinition(Instruction):
     r"""
     A struct encapsulating a quil Gate Definition
     """
@@ -1023,7 +1107,19 @@ class GateSpecification:
         def __new__(cls, _0: DefGateSequence) -> GateSpecification.Sequence: ...
     
 
-class Include:
+@typing.final
+class HaltType(Instruction):
+    def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
+    def __getnewargs__(self) -> tuple: ...
+    def __hash__(self) -> builtins.int: ...
+    def __new__(cls) -> HaltType:
+        r"""
+        Create a new instance of this instruction type.
+        
+        Users should not call this method, but it is provided for `pickle` support.
+        """
+
+class Include(Instruction):
     @property
     def filename(self) -> builtins.str: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
@@ -1039,422 +1135,12 @@ class Include:
     def to_quil_or_debug(self) -> builtins.str: ...
 
 class Instruction:
-    r"""
-    A Quil instruction.
-    
-    Each variant (for Python users, each nested subclass)
-    corresponds to a possible type of Quil instruction,
-    which is accessible as a member within the variant.
-    
-    # Python Users
-    
-    The subclasses of this class are class attributes defined on it,
-    and can be used to "wrap" instructions when they should be stored together.
-    In particular, they are *NOT* the instruction classes you'd typically create,
-    and instances of instruction classes are *NOT* subclasses of this class:
-    
-    ```python
-    >>> from quil.instructions import Instruction, Gate, Qubit
-    >>> issubclass(Instruction.Gate, Instruction)
-    True
-    >>> issubclass(Gate, Instruction)
-    False
-    >>> g = Gate("X", (), (Qubit.Fixed(0),), ())
-    >>> isinstance(g, Gate)
-    True
-    >>> isinstance(g, Instruction.Gate)
-    False
-    >>> g_instr = Instruction.Gate(g)
-    >>> isinstance(g_instr, Gate)
-    False
-    >>> isinstance(g_instr, Instruction.Gate)
-    True
-    >>> isinstance(g_instr._0, Gate)
-    True
-    >>> g_instr._0 == g
-    True
-    ```
-    
-    The point of this class is to wrap different kinds of instructions
-    when stored together in a collection, all of which are of type `Instruction`.
-    You can check for different instruction variants and destructure them using `match`:
-    
-    ```python
-    match g_instr:
-        case Instruction.Gate(gate):
-            assert isinstance(gate, Gate)
-        case Instruction.Wait() | Instruction.Nop():
-            # note the `()` -- these aren't like Python's enumerations!
-    ```
-    """
-    def __getnewargs__(self) -> builtins.tuple[()] | builtins.tuple[Arithmetic | BinaryLogic | Call | Capture | CalibrationDefinition | CircuitDefinition | Comparison | Convert | Declaration | Delay | Exchange | Fence | FrameDefinition | Gate | GateDefinition | Include | Jump | JumpUnless | JumpWhen | Label | Load | MeasureCalibrationDefinition | Measurement | Move | Pragma | Pulse | RawCapture | Reset | SetFrequency | SetPhase | SetScale | ShiftFrequency | ShiftPhase | Store | SwapPhases | UnaryLogic | WaveformDefinition]: ...
-    def __repr__(self) -> builtins.str:
-        r"""
-        Implements `__repr__` for Python in terms of the Rust
-        [`Debug`](std::fmt::Debug) implementation.
-        """
+    def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
+    def __hash__(self) -> builtins.int: ...
     def is_quil_t(self) -> builtins.bool:
         r"""
         Returns true if the instruction is a Quil-T instruction.
         """
-    @staticmethod
-    def parse(string: builtins.str) -> Instruction: ...
-    def to_quil(self) -> builtins.str: ...
-    def to_quil_or_debug(self) -> builtins.str: ...
-    @typing.final
-    class Arithmetic(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> Arithmetic: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: Arithmetic) -> Instruction.Arithmetic: ...
-    
-    @typing.final
-    class BinaryLogic(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> BinaryLogic: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: BinaryLogic) -> Instruction.BinaryLogic: ...
-    
-    @typing.final
-    class CalibrationDefinition(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> CalibrationDefinition: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: CalibrationDefinition) -> Instruction.CalibrationDefinition: ...
-    
-    @typing.final
-    class Call(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> Call: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: Call) -> Instruction.Call: ...
-    
-    @typing.final
-    class Capture(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> Capture: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: Capture) -> Instruction.Capture: ...
-    
-    @typing.final
-    class CircuitDefinition(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> CircuitDefinition: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: CircuitDefinition) -> Instruction.CircuitDefinition: ...
-    
-    @typing.final
-    class Comparison(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> Comparison: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: Comparison) -> Instruction.Comparison: ...
-    
-    @typing.final
-    class Convert(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> Convert: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: Convert) -> Instruction.Convert: ...
-    
-    @typing.final
-    class Declaration(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> Declaration: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: Declaration) -> Instruction.Declaration: ...
-    
-    @typing.final
-    class Delay(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> Delay: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: Delay) -> Instruction.Delay: ...
-    
-    @typing.final
-    class Exchange(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> Exchange: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: Exchange) -> Instruction.Exchange: ...
-    
-    @typing.final
-    class Fence(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> Fence: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: Fence) -> Instruction.Fence: ...
-    
-    @typing.final
-    class FrameDefinition(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> FrameDefinition: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: FrameDefinition) -> Instruction.FrameDefinition: ...
-    
-    @typing.final
-    class Gate(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> Gate: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: Gate) -> Instruction.Gate: ...
-    
-    @typing.final
-    class GateDefinition(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> GateDefinition: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: GateDefinition) -> Instruction.GateDefinition: ...
-    
-    @typing.final
-    class Halt(Instruction):
-        __match_args__ = ()
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls) -> Instruction.Halt: ...
-    
-    @typing.final
-    class Include(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> Include: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: Include) -> Instruction.Include: ...
-    
-    @typing.final
-    class Jump(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> Jump: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: Jump) -> Instruction.Jump: ...
-    
-    @typing.final
-    class JumpUnless(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> JumpUnless: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: JumpUnless) -> Instruction.JumpUnless: ...
-    
-    @typing.final
-    class JumpWhen(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> JumpWhen: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: JumpWhen) -> Instruction.JumpWhen: ...
-    
-    @typing.final
-    class Label(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> Label: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: Label) -> Instruction.Label: ...
-    
-    @typing.final
-    class Load(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> Load: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: Load) -> Instruction.Load: ...
-    
-    @typing.final
-    class MeasureCalibrationDefinition(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> MeasureCalibrationDefinition: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: MeasureCalibrationDefinition) -> Instruction.MeasureCalibrationDefinition: ...
-    
-    @typing.final
-    class Measurement(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> Measurement: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: Measurement) -> Instruction.Measurement: ...
-    
-    @typing.final
-    class Move(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> Move: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: Move) -> Instruction.Move: ...
-    
-    @typing.final
-    class Nop(Instruction):
-        __match_args__ = ()
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls) -> Instruction.Nop: ...
-    
-    @typing.final
-    class Pragma(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> Pragma: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: Pragma) -> Instruction.Pragma: ...
-    
-    @typing.final
-    class Pulse(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> Pulse: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: Pulse) -> Instruction.Pulse: ...
-    
-    @typing.final
-    class RawCapture(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> RawCapture: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: RawCapture) -> Instruction.RawCapture: ...
-    
-    @typing.final
-    class Reset(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> Reset: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: Reset) -> Instruction.Reset: ...
-    
-    @typing.final
-    class SetFrequency(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> SetFrequency: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: SetFrequency) -> Instruction.SetFrequency: ...
-    
-    @typing.final
-    class SetPhase(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> SetPhase: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: SetPhase) -> Instruction.SetPhase: ...
-    
-    @typing.final
-    class SetScale(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> SetScale: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: SetScale) -> Instruction.SetScale: ...
-    
-    @typing.final
-    class ShiftFrequency(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> ShiftFrequency: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: ShiftFrequency) -> Instruction.ShiftFrequency: ...
-    
-    @typing.final
-    class ShiftPhase(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> ShiftPhase: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: ShiftPhase) -> Instruction.ShiftPhase: ...
-    
-    @typing.final
-    class Store(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> Store: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: Store) -> Instruction.Store: ...
-    
-    @typing.final
-    class SwapPhases(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> SwapPhases: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: SwapPhases) -> Instruction.SwapPhases: ...
-    
-    @typing.final
-    class UnaryLogic(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> UnaryLogic: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: UnaryLogic) -> Instruction.UnaryLogic: ...
-    
-    @typing.final
-    class Wait(Instruction):
-        __match_args__ = ()
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls) -> Instruction.Wait: ...
-    
-    @typing.final
-    class WaveformDefinition(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> WaveformDefinition: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: WaveformDefinition) -> Instruction.WaveformDefinition: ...
-    
 
 class InstructionError(_quil.QuilError):
     r"""
@@ -1462,7 +1148,7 @@ class InstructionError(_quil.QuilError):
     """
     ...
 
-class Jump:
+class Jump(Instruction):
     @property
     def target(self) -> Target: ...
     @target.setter
@@ -1478,7 +1164,7 @@ class Jump:
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
-class JumpUnless:
+class JumpUnless(Instruction):
     @property
     def condition(self) -> MemoryReference: ...
     @condition.setter
@@ -1498,7 +1184,7 @@ class JumpUnless:
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
-class JumpWhen:
+class JumpWhen(Instruction):
     @property
     def condition(self) -> MemoryReference: ...
     @condition.setter
@@ -1518,7 +1204,7 @@ class JumpWhen:
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
-class Label:
+class Label(Instruction):
     @property
     def name(self) -> builtins.str:
         r"""
@@ -1531,32 +1217,34 @@ class Label:
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[Target]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, target: typing.Optional[builtins.str  |  Target] = None, *, placeholder: typing.Optional[builtins.bool] = None) -> Label:
+    def __new__(cls, target: typing.Optional[builtins.str  |  Label  |  Target] = None, *, placeholder: typing.Optional[builtins.bool] = None) -> Label:
         r"""
         Create a new `Label`.
         
-        A `Label` represents a ``LABEL`` instruction, which in Quil reads as ``LABEL @some-name``.
-        You can make a program execute from that point onward via a ``JUMP @some-name`` instruction
-        or its siblings, ``JUMP-WHEN @some-name foo[0]`` and ``JUMP-UNLESS @some-name bar[0]``.
-        The `@some-name` part of these instructions is the "target".
+        A `Label` represents a ``LABEL`` instruction, which in Quil reads as ``LABEL @target-name``.
+        Labels are used by unconditional jump instructions, e.g. ``JUMP @target-name``,
+        and its siblings, ``JUMP-WHEN @target-name foo[0]`` and ``JUMP-UNLESS @target-name bar[0]``.
+        The `@target-name` part of these instructions is this class's ``target`` attribute.
         
-        You can construct a `Label` with a fixed `target` using ``Label("some-name")``,
-        and then you can reference that point using, for example, ``Jump("some-name")``.
+        # Example Usage
         
-        When constructing a `Program` in code,
-        you can reference the `Label` object itself when creating a `Jump` instruction.
-        In fact, in this case, you don't need to give an explicit `Label` name::
+        You can use a `Label` directly as the ``target`` of a ``Jump`` instruction.
         
         ```python
-        def get_body() -> list[Instruction]:
-            return []
-        
-        top = Label()
-        prog = Program(top, *get_body(), Jump(top))
-        
-        prog.resolve_placeholders()  # Use this to automatically assign targets for Labels/Jumps.
+        prog = Program(
+            top := Label("top"),
+            counter_memory := Declaration("counter", ScalarType.INTEGER),
+            Declaration("ro", ScalarType.BIT, 2),
+            H(0),
+            Jump(top),
+        )
+        prog.resolve_placeholders()
         print(prog.to_quil())
         ```
+        
+        Use ``Program.resolve_placeholders()`` to fill in the value before outputting Quil::
+        You can construct a `Label` with a fixed `target` using ``Label("some-name")``,
+        and then you can reference that point using, for example, ``Jump("some-name")``.
         
         You can create a new `Label` from a particular `Target`,
         or you can let the constructor create the `Target` instance for you.
@@ -1566,10 +1254,11 @@ class Label:
         
         To summarize:
         
-        | Simple                           | Equivalent                                                      |
-        | `Label("A")`                     | `Label(Target::Fixed("A"))`                                     |
-        | `Label()`                        | `Label(Target::Placeholder(TargetPlaceholder(base_label="L")))` |
-        | `Label("A", placeholder=True)`   | `Label(Target::Placeholder(TargetPlaceholder(base_label="A")))` |
+        |   Simple                         |   Equivalent                                                   |
+        | -------------------------------- | -------------------------------------------------------------- |
+        | `Label("A")`                     | `Label(Target.Fixed("A"))`                                     |
+        | `Label()`                        | `Label(Target.Placeholder(TargetPlaceholder(base_label="L")))` |
+        | `Label("A", placeholder=True)`   | `Label(Target.Placeholder(TargetPlaceholder(base_label="A")))` |
         """
     def __repr__(self) -> builtins.str:
         r"""
@@ -1589,7 +1278,7 @@ class Label:
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
-class Load:
+class Load(Instruction):
     @property
     def destination(self) -> MemoryReference: ...
     @property
@@ -1608,7 +1297,7 @@ class Load:
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
-class MeasureCalibrationDefinition:
+class MeasureCalibrationDefinition(Instruction):
     @property
     def identifier(self) -> MeasureCalibrationIdentifier: ...
     @identifier.setter
@@ -1698,7 +1387,7 @@ class MeasureCalibrationIdentifier:
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
-class Measurement:
+class Measurement(Instruction):
     @property
     def name(self) -> typing.Optional[builtins.str]: ...
     @property
@@ -1725,7 +1414,7 @@ class MemoryReference:
     Representation of a reference to a classical memory address.
     """
     @property
-    def declared_size(self) -> typing.Optional[None]: ...
+    def declared_size(self) -> None: ...
     @property
     def index(self) -> builtins.int:
         r"""
@@ -1738,6 +1427,22 @@ class MemoryReference:
         """
     @property
     def offset(self) -> builtins.int: ...
+    def __add__(self, other: ArithmeticOperand) -> Arithmetic:
+        r"""
+        Return a new `Arithmetic` instruction
+        representing the addition of this `MemoryReference` to the given operand.
+        
+        # Example
+        
+        ```python
+        from quil.instructions import MemoryReference, Arithmetic
+        
+        mem_ref = MemoryReference("counter", 0)
+        arith = mem_ref + 5
+        assert isinstance(arith, Arithmetic)
+        assert arith.to_quil() == "ADD counter[0] 5"
+        ```
+        """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getitem__(self, index: builtins.int) -> MemoryReference:
         r"""
@@ -1747,6 +1452,7 @@ class MemoryReference:
         """
     def __getnewargs__(self) -> tuple[str, int, int | None]: ...
     def __hash__(self) -> builtins.int: ...
+    def __mul__(self, other: ArithmeticOperand) -> Arithmetic: ...
     def __new__(cls, name: builtins.str, index: builtins.int = 0, declared_size: typing.Optional[builtins.int] = None, *, offset: typing.Optional[builtins.int] = None) -> MemoryReference:
         r"""
         Construct a new `MemoryReference`.
@@ -1770,6 +1476,8 @@ class MemoryReference:
         r"""
         Get a Quil-like representation as a string.
         """
+    def __sub__(self, other: ArithmeticOperand) -> Arithmetic: ...
+    def __truediv__(self, other: ArithmeticOperand) -> Arithmetic: ...
     @staticmethod
     def _from_parameter_str(memory_reference_str: builtins.str) -> MemoryReference: ...
     def out(self) -> builtins.str:
@@ -1783,7 +1491,7 @@ class MemoryReference:
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
-class Move:
+class Move(Instruction):
     @property
     def destination(self) -> MemoryReference: ...
     @property
@@ -1799,6 +1507,18 @@ class Move:
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
+
+@typing.final
+class NopType(Instruction):
+    def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
+    def __getnewargs__(self) -> tuple: ...
+    def __hash__(self) -> builtins.int: ...
+    def __new__(cls) -> NopType:
+        r"""
+        Create a new instance of this instruction type.
+        
+        Users should not call this method, but it is provided for `pickle` support.
+        """
 
 class Offset:
     @property
@@ -1862,7 +1582,7 @@ class PauliTerm:
         [`Debug`](std::fmt::Debug) implementation.
         """
 
-class Pragma:
+class Pragma(Instruction):
     @property
     def arguments(self) -> builtins.list[PragmaArgument]: ...
     @property
@@ -1909,7 +1629,7 @@ class PragmaArgument:
         def __new__(cls, _0: builtins.int) -> PragmaArgument.Integer: ...
     
 
-class Pulse:
+class Pulse(Instruction):
     @property
     def blocking(self) -> builtins.bool: ...
     @blocking.setter
@@ -1998,7 +1718,7 @@ class QubitPlaceholder:
         Return a 'register' of ``n`` qubit placeholders.
         """
 
-class RawCapture:
+class RawCapture(Instruction):
     @property
     def blocking(self) -> builtins.bool: ...
     @property
@@ -2019,7 +1739,7 @@ class RawCapture:
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
-class Reset:
+class Reset(Instruction):
     @property
     def qubit(self) -> typing.Optional[Qubit]: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
@@ -2034,7 +1754,7 @@ class Reset:
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
-class SetFrequency:
+class SetFrequency(Instruction):
     @property
     def frame(self) -> FrameIdentifier: ...
     @property
@@ -2051,7 +1771,7 @@ class SetFrequency:
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
-class SetPhase:
+class SetPhase(Instruction):
     @property
     def frame(self) -> FrameIdentifier: ...
     @property
@@ -2068,7 +1788,7 @@ class SetPhase:
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
-class SetScale:
+class SetScale(Instruction):
     @property
     def frame(self) -> FrameIdentifier: ...
     @property
@@ -2100,7 +1820,7 @@ class Sharing:
         [`Debug`](std::fmt::Debug) implementation.
         """
 
-class ShiftFrequency:
+class ShiftFrequency(Instruction):
     @property
     def frame(self) -> FrameIdentifier: ...
     @property
@@ -2117,7 +1837,7 @@ class ShiftFrequency:
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
-class ShiftPhase:
+class ShiftPhase(Instruction):
     @property
     def frame(self) -> FrameIdentifier: ...
     @property
@@ -2134,7 +1854,7 @@ class ShiftPhase:
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
-class Store:
+class Store(Instruction):
     @property
     def destination(self) -> builtins.str: ...
     @property
@@ -2153,7 +1873,7 @@ class Store:
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
-class SwapPhases:
+class SwapPhases(Instruction):
     @property
     def frame_1(self) -> FrameIdentifier: ...
     @property
@@ -2237,7 +1957,7 @@ class TargetPlaceholder:
         [`Debug`](std::fmt::Debug) implementation.
         """
 
-class UnaryLogic:
+class UnaryLogic(Instruction):
     @property
     def operand(self) -> MemoryReference: ...
     @property
@@ -2271,6 +1991,18 @@ class Vector:
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
+@typing.final
+class WaitType(Instruction):
+    def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
+    def __getnewargs__(self) -> tuple: ...
+    def __hash__(self) -> builtins.int: ...
+    def __new__(cls) -> WaitType:
+        r"""
+        Create a new instance of this instruction type.
+        
+        Users should not call this method, but it is provided for `pickle` support.
+        """
+
 class Waveform:
     @property
     def matrix(self) -> builtins.list[expression.Expression]: ...
@@ -2285,7 +2017,7 @@ class Waveform:
         [`Debug`](std::fmt::Debug) implementation.
         """
 
-class WaveformDefinition:
+class WaveformDefinition(Instruction):
     @property
     def definition(self) -> Waveform: ...
     @property
@@ -2506,4 +2238,12 @@ class UnaryOperator(enum.Enum):
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
+
+def unpack_classical_reg(obj: typing.Any) -> MemoryReference:
+    r"""
+    Get the address for a classical register.
+    
+    This can be used to convert a `(str, int)` or `[str, int]` into a `MemoryReference`,
+    or to convert a `DeclarationAt` or `Declaration` into a `MemoryReference`.
+    """
 
