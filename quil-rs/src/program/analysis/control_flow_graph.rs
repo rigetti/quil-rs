@@ -248,7 +248,7 @@ impl<'p> BasicBlock<'p> {
         for (uncalibrated_instruction_index, instruction) in self.instructions.iter().enumerate() {
             let first_calibrated_instruction_index = calibrated_block_instructions.len();
             if let Some(expanded) = program.calibrations.expand(instruction, &[])? {
-                calibrated_block_instructions.extend(expanded.into_iter());
+                calibrated_block_instructions.extend(expanded);
             } else {
                 calibrated_block_instructions.push((*instruction).clone());
             }

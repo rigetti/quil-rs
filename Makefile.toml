@@ -16,4 +16,3 @@ args = ["clippy", "--workspace", "--all-targets", "--all-features", "--", "-D", 
 [tasks.check-deny]
 command = "cargo"
 args = ["deny", "--workspace", "--all-features", "check"]
-
