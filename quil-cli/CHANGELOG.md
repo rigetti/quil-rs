@@ -1,3 +1,10 @@
+## 0.14.0-rc.1 (2026-07-21)
+
+### Breaking Changes
+
+- make `wrap_in_loop` more efficient and correct (#504)
+- first-class waveform representation (#485)
+
 ## 0.14.0-rc.0 (2026-07-21)
 
 ### Breaking Changes
