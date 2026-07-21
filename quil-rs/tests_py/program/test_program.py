@@ -5,7 +5,7 @@ from typing import Optional
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from quil.instructions import Gate, Instruction, Jump, Qubit, QubitPlaceholder, Target, TargetPlaceholder
+from quil.instructions import Gate, Instruction, Jump, Qubit, QubitPlaceholder, Target, TargetPlaceholder, Measurement, Declaration, JumpWhen, ScalarType, Move, Label
 from quil.program import InstructionTarget, Program
 from quil import QuilError
 
@@ -24,6 +24,41 @@ MEASURE 1 ro[1]
     unpickled = pickle.loads(pickled)
     assert program == unpickled
 
+def test_construction():
+    def H(qubit: Qubit | str | int):
+        return Gate("H", (), (qubit,), ())
+    def CNOT(q0: Qubit | str | int, q1: Qubit | str | int):
+        return Gate("CNOT", (), (q0, q1), ())
+
+    prog = Program()
+    prog.add_instructions(
+        counter := Declaration("counter", ScalarType.INTEGER),
+        Move(counter[0], 10),
+
+        top := Label("top"),
+        ro := Declaration("ro", "BIT", 2),
+        H(0),
+        CNOT(0, 1),
+        Measurement(0, ro[0]),
+        Measurement(1, ro[1]),
+        counter[0].sub(1),
+        JumpWhen(top, counter),
+    )
+
+    prog.resolve_placeholders()
+    text = prog.to_quil()
+    assert text == r"""
+DECLARE counter INTEGER
+MOVE counter[0] 10
+LABEL @top
+DECLARE ro BIT[2]
+H 0
+CNOT 0 1
+MEASURE 0 ro[0]
+MEASURE 1 ro[1]
+SUB counter[0] 1
+JUMP-WHEN @top counter[0]
+"""
 
 def test_custom_resolver():
     qubit_placeholder = QubitPlaceholder()
