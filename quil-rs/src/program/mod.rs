@@ -344,7 +344,7 @@ impl Program {
     /// body instructions, but retaining all of the calibrations,
     /// etc.][Self::clone_without_body_instructions].
     #[pyo3(
-        name = "_new__wrap_in_loop",
+        name = "_wrap_in_loop",
         warn(message = "this function is not stable; \
                         it will replace Program.wrap_in_loop in a future release")
     )]
