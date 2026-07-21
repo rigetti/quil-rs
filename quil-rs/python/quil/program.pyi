@@ -556,7 +556,7 @@ class Program:
         [`Debug`](std::fmt::Debug) implementation.
         """
     def __setstate__(self, state: bytes) -> None: ...
-    def _new__wrap_in_loop(self, loop_count_reference: MemoryReference, start_target: Target, iterations: builtins.int) -> Program:
+    def _wrap_in_loop(self, loop_count_reference: MemoryReference, start_target: Target, iterations: builtins.int) -> Program:
         r"""
         Return a copy of the [`Program`] wrapped in a loop that repeats `iterations` times.
         
@@ -804,8 +804,8 @@ class Program:
         
         If `iterations` is `1`, then a copy of the program is returned without any changes.
         
-        **Note:** For backwards compatibility with earlier releases of `quil-rs`, this function has two
-        behaviors that will change in future releases.
+        **Note:** For backwards compatibility with earlier releases of `quil-rs`, this function has
+        three behaviors that will change in future releases.
         
         1. If `iterations` is 0, then an error is raised.
         
@@ -825,6 +825,10 @@ class Program:
              `program.wrap_in_loop(loop_count_reference, start_target, end_target = 3)` and get a
              3-iteration loop.  This behavior is not supported and will be removed without warning
              in a future release of Quil.
+        
+        3. Either or both of the `end_target` and `iterations` parameters can be given as `None`
+           instead of being omitted.  This is the same as being omitted, which is or is not allowed
+           as provided above.  In future releases, `None` will not be accepted.
         r
         """
     @typing.overload
