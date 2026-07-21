@@ -1248,14 +1248,20 @@ struct PyTargetResolver(Py<PyAny>);
 
 #[cfg(feature = "stubs")]
 mod stubs {
-    use pyo3_stub_gen::{impl_stub_type, type_alias};
-
-    use crate::instruction::quilpy::AnyInstruction;
+    use pyo3_stub_gen::{impl_stub_type, type_alias, PyStubType};
 
     use super::{EndTargetParam, OneOrMore, Target};
 
+    impl<T> PyStubType for OneOrMore<T>
+    where
+        T: PyStubType,
+    {
+        fn type_output() -> pyo3_stub_gen::TypeInfo {
+            T::type_output() | pyo3_stub_gen::TypeInfo::list_of::<T>()
+        }
+    }
+
     impl_stub_type!(EndTargetParam = Target | u32);
-    impl_stub_type!(OneOrMore<Instruction> = Instruction | Vec<Instruction>);
     impl_stub_type!(super::InstructionIndex = usize);
     impl_stub_type!(super::Seconds = f64);
     type_alias!("quil._quil.program", InstructionIndex = super::InstructionIndex);
