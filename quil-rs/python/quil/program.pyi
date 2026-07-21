@@ -122,8 +122,8 @@ class CalibrationSet:
         r"""
         Append another [`CalibrationSet`] onto this one.
         
-        Calibrations with conflicting [`CalibrationSignature`]s are overwritten by the ones in the
-        given set.
+        Calibrations with conflicting [signatures][crate::instruction::CalibrationSignature] are
+        overwritten by the ones in the given set.
         """
     def get_match_for_gate(self, gate: Gate) -> typing.Optional[CalibrationDefinition]:
         r"""
@@ -405,9 +405,9 @@ class MemoryRegion:
 @typing.final
 class OwnedDefGateSequenceExpansion:
     r"""
-    [`DefGateSequenceExpansion`] references data from [`quil_rs::instruction::GateDefinition`]s used to expand instructions.
-    As such, it is incompatible with Python's memory management,
-    so we define an owned type here.
+    [`DefGateSequenceExpansion`] references data from [`crate::instruction::GateDefinition`]s used
+    to expand instructions.  As such, it is incompatible with Python's memory management, so we
+    define an owned type here.
     """
     @property
     def range(self) -> range:
@@ -750,7 +750,8 @@ class Program:
         """
     def resolve_placeholders(self) -> None:
         r"""
-        Resolve [`LabelPlaceholder`]s and [`QubitPlaceholder`]s within the program using default resolvers.
+        Resolve [`TargetPlaceholder`]s and [`QubitPlaceholder`]s within the program using default
+        resolvers.
         
         See [`resolve_placeholders_with_custom_resolvers`](Self::resolve_placeholders_with_custom_resolvers),
         [`default_target_resolver`](Self::default_target_resolver),

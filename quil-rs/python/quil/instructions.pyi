@@ -2202,7 +2202,7 @@ class GateModifier(enum.Enum):
 @typing.final
 class GateType(enum.Enum):
     r"""
-    The type of a [`GateDefinition`] used within the [`GateSignature`].
+    The type of a [`GateDefinition`].
     """
     MATRIX = ...
     PERMUTATION = ...
