@@ -1,3 +1,9 @@
+## 0.37.0-rc.0 (2026-07-21)
+
+### Breaking Changes
+
+- make `wrap_in_loop` more efficient and correct (#504)
+
 ## 0.36.0 (2026-02-18)
 
 ### Breaking Changes
