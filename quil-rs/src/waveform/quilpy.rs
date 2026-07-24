@@ -220,7 +220,9 @@ pub(super) mod explicit_stubs {
                 ],
                 r#return: || TypeInfo {
                     name: format!("{}[_OtherReal, _OtherComplex]", T::NAME),
+                    source_module: None,
                     import: Default::default(),
+                    type_refs: Default::default(),
                 },
                 doc: "",
                 r#type: MethodType::Instance,

@@ -418,7 +418,9 @@ impl Program {
     }
 
     pub fn __setstate__(&mut self, state: &Bound<'_, PyBytes>) -> PyResult<()> {
-        *self = Self::from_str(std::str::from_utf8(state.as_bytes())?)?;
+        let quil = std::str::from_utf8(state.as_bytes())
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+        *self = Self::from_str(quil)?;
         Ok(())
     }
 }
@@ -938,16 +940,23 @@ mod stubs {
         let TypeInfo {
             name: name_a,
             mut import,
+            mut type_refs,
+            ..
         } = A::type_output();
         let TypeInfo {
             name: name_r,
             import: import_r,
+            type_refs: type_refs_r,
+            ..
         } = R::type_output();
         import.extend(import_r);
         import.insert("collections.abc".into());
+        type_refs.extend(type_refs_r);
         TypeInfo {
             name: format!("collections.abc.Callable[[{name_a}], {name_r}]"),
+            source_module: None,
             import,
+            type_refs,
         }
     }
 
