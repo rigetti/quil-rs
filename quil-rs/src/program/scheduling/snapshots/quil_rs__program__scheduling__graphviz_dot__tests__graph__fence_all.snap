@@ -11,8 +11,6 @@ digraph {
     "block_0_start" [shape=circle, label="start"];
     "block_0_start" -> "block_0_0" [label="ordering
 timing"];
-    "block_0_start" -> "block_0_end" [label="ordering
-timing"];
     "block_0_0" [shape=rectangle, label="[0] FENCE"];
     "block_0_0" -> "block_0_end" [label="ordering
 timing"];

@@ -458,6 +458,20 @@ FENCE 0
         );
 
         build_dot_format_snapshot_test_case!(
+            fence_three_frame_stagger,
+            "
+PULSE 0 \"rf\" test(duration: 1e-6)
+PULSE 1 \"rf\" test(duration: 1e-6)
+PULSE 2 \"rf\" test(duration: 1e-6)
+FENCE
+DELAY 0 100e-6
+FENCE 0 1
+FENCE 0 2
+PULSE 2 \"rf\" test(duration: 1e-6)
+"
+        );
+
+        build_dot_format_snapshot_test_case!(
             jump,
             "DECLARE ro BIT
 LABEL @first-block
