@@ -9,15 +9,7 @@ use crate::quil::{Quil, ToQuilError};
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(
-        module = "quil._quil.instructions",
-        eq,
-        frozen,
-        hash,
-        ord,
-        skip_from_py_object
-    ),
-    derive(pyo3::FromPyObject),
+    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash, ord, skip_from_py_object)
 )]
 pub enum Qubit {
     Fixed(u64),

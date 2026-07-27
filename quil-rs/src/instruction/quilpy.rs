@@ -138,11 +138,13 @@ pub(crate) fn post_init(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     let py = m.py();
 
+    // Add singleton instances of Halt, Nop, and Wait to the module namespace.
     let instructions = py.import("quil._quil.instructions")?;
     instructions.add("Halt", HaltType::__new__(py)?)?;
     instructions.add("Nop", NopType::__new__(py)?)?;
     instructions.add("Wait", WaitType::__new__(py)?)?;
 
+    // Add TypeAliases for use in annotations.
     instructions.add("LabelTargetParameter", union!(py, PyString, Target, Label)?)?;
     instructions.add("QubitDesignator", union!(py, Qubit, QubitPlaceholder, PyInt, PyString)?)?;
 
@@ -631,7 +633,7 @@ instruction_getnewargs!(
 struct ArithmeticOperandLike(ArithmeticOperand);
 #[cfg(feature = "stubs")]
 impl_stub_type!(ArithmeticOperandLike =
-    ArithmeticOperand | i64 | f64 | MemoryReference | DeclarationAt | Declaration );
+    ArithmeticOperand | i64 | f64 | MemoryReference | DeclarationAt | Declaration);
 
 impl<'a, 'py> FromPyObject<'a, 'py> for ArithmeticOperandLike {
     type Error = PyErr;
@@ -743,16 +745,19 @@ impl CalibrationDefinition {
     }
 }
 
+    // #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+    // #[pyo3::pymethods]
+//         #[new]
 pickleable_new! {
     impl CalibrationIdentifier {
         /// Builds a new calibration identifier.
         ///
         /// Raises an error if the given name isn't a valid Quil identifier.
+        #[pyo3(signature = (name, parameters = Vec::new(), qubits = Vec::new(), modifiers = Vec::new()))]
         fn __new__(
             name: String,
             #[pyo3(from_py_with = from_sequence::<ExpressionLike, _>)]
             parameters: Vec<Expression>,
-            #[pyo3(from_py_with = from_sequence::<Qubit, _>)]
             qubits: Vec<Qubit>,
             modifiers: Vec<GateModifier>,
         ) -> Result<CalibrationIdentifier, IdentifierValidationError> {
@@ -880,6 +885,29 @@ impl DeclarationAt {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl DeclarationAt {
+
+    /// Return a new `Move` instruction representing `self = value`.
+    ///
+    /// # Example
+    ///
+    /// ```python
+    /// from quil.instructions import Declaration, ScalarType, Move
+    ///
+    /// x = Declaration("x", ScalarType.INTEGER, 3)
+    /// mv = x[2].set(5)
+    /// assert isinstance(mv, Move)
+    /// assert mv.to_quil() == "MOVE x[2] 5"
+    /// ```
+    fn set<'py>(&self, py: Python<'py>, value: ArithmeticOperandLike) -> Move {
+        Move::new(self.memref(py), value.into())
+    }
+
+    // Note: These are not implemented as Python dunder arithmetic methods,
+    // because the point is to return an `Arithmetic` instruction.
+    // If we implement them as operators, the semantics are confusing:
+    // what you really want to write is something like `x[0] += 1`,
+    // but you'd have to write `x[0] + 1` instead, which is not that intuitive.
+
     /// Return a new `Arithmetic` instruction representing `ADD self other`.
     ///
     /// # Example
@@ -1201,28 +1229,10 @@ impl<'a> TryFrom<&'a OwnedGateSignature> for GateSignature<'a> {
     }
 }
 
-// TODO(migration-guide): The `FrameIdentifier` corresponds to PyQuil's `quilatom.Frame`.
-// Since this is easy to find (`rg Frame\(`), easily caught by static type checkers,
-// and will fail unambiguously at runtime, we'll just point this out in the migration guide.
-//
 // TODO(migration-guide): PyQuil v4 had a `quilatom.FormalArgument` class,
 // which corresponds to `Qubit.Variable`, which here is just backed by a `String`.
 // At best, we could create an "alias" class for it, but it probably isn't worth it,
 // since users need to update the namespace for `quilatom` anyway.
-
-pickleable_new! {
-    impl FrameIdentifier {
-        // Note: the parameter order here is swapped around
-        // for backwards compatibility with PyQuil's `quilatom.Frame`.
-        fn __new__(
-            #[pyo3(from_py_with = from_sequence::<Qubit, _>)]
-            qubits: Vec<Qubit>,
-            name: String,
-            ) -> FrameIdentifier {
-            Self::new(name, qubits)
-        }
-    }
-}
 
 // TODO(migration-guide): `pyquil`'s `unpack_classical_reg` would convert to a `MemoryReference`
 // from a `MemoryReference`, `(str,int)`, or `[str,int]`.
@@ -1813,8 +1823,26 @@ impl PragmaArgument {
 }
 
 py_friendly_enum!(
-    for Qubit = QubitPlaceholder | i64 | String
+    for Qubit = QubitPlaceholder | u64 | String
 );
+
+impl <'a, 'py> FromPyObject<'a, 'py> for Qubit {
+    type Error = PyErr;
+
+    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
+        if let Ok(obj) = obj.cast::<Qubit>() {
+            Ok(obj.get().clone())
+        } else if let Ok(obj) = obj.cast::<PyInt>() {
+            Ok(Qubit::Fixed(obj.extract::<u64>()?))
+        } else if let Ok(obj) = obj.cast::<PyString>() {
+            Ok(Qubit::Variable(obj.extract::<String>()?))
+        } else if let Ok(obj) = obj.cast::<QubitPlaceholder>() {
+            Ok(Qubit::Placeholder(obj.get().clone()))
+        } else {
+            Err(PyTypeError::new_err("expected a Qubit or one of its variants"))
+        }
+    }
+}
 
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
@@ -1887,26 +1915,21 @@ impl QubitPlaceholder {
     }
 }
 
-/// Extract `Target`s from `Target`s, `Label`s, and `Instruction::Label`s.
-impl<'a, 'py> FromPyObject<'a, 'py> for &'a Target {
-    type Error = pyo3::PyErr;
-
-    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
-        if let Ok(value) = obj.cast::<Target>() {
-            Ok(value.get())
-        } else if let Ok(value) = obj.cast::<Label>() {
-            Ok(&value.get().target)
-        } else {
-            Err(PyTypeError::new_err("cannot convert to Target"))
-        }
-    }
-}
-
 impl<'a, 'py> FromPyObject<'a, 'py> for Target {
     type Error = pyo3::PyErr;
 
     fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
-        obj.extract::<&Target>().cloned()
+        if let Ok(value) = obj.cast::<Target>() {
+            Ok(value.get().clone())
+        } else if let Ok(value) = obj.cast::<Label>() {
+            Ok(value.get().target.clone())
+        } else if let Ok(value) = obj.cast::<TargetPlaceholder>() {
+            Ok(Target::Placeholder(value.get().clone()))
+        } else if let Ok(value) = obj.cast::<PyString>() {
+            Ok(Target::Fixed(value.extract()?))
+        } else {
+            Err(PyTypeError::new_err("cannot convert to Target"))
+        }
     }
 }
 
