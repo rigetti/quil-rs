@@ -66,6 +66,17 @@ create_init_submodule! {
     ],
 }
 
+pub(crate) fn post_init(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    let py = m.py();
+
+    let module = py.import("quil._quil.program")?;
+    module.add("InstructionIndex", py.get_type::<pyo3::types::PyInt>())?;
+    module.add("Seconds", py.get_type::<pyo3::types::PyFloat>())?;
+
+    Ok(())
+}
+
+
 impl_repr!(BasicBlockOwned);
 impl_repr!(CalibrationExpansion);
 impl_repr!(Calibrations);

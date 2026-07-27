@@ -33,8 +33,7 @@ def test_construction():
     prog = Program()
     prog.add_instructions(
         counter := Declaration("counter", ScalarType.INTEGER),
-        Move(counter[0], 10),
-
+        counter[0].set(10),
         top := Label("top"),
         ro := Declaration("ro", "BIT", 2),
         H(0),
@@ -47,11 +46,10 @@ def test_construction():
 
     prog.resolve_placeholders()
     text = prog.to_quil()
-    assert text == r"""
-DECLARE counter INTEGER
+    assert text == r"""DECLARE counter INTEGER[1]
+DECLARE ro BIT[2]
 MOVE counter[0] 10
 LABEL @top
-DECLARE ro BIT[2]
 H 0
 CNOT 0 1
 MEASURE 0 ro[0]
@@ -74,10 +72,8 @@ def test_custom_resolver():
 
     program = Program()
     program.add_instructions(
-        [
-            Instruction.Gate(Gate("H", [], [Qubit.Placeholder(qubit_placeholder)], [])),
-            Instruction.Jump(Jump(Target.Placeholder(target_placeholder))),
-        ]
+        Gate("H", [], [qubit_placeholder], []),
+        Jump(target_placeholder),
     )
 
     with pytest.raises(QuilError):

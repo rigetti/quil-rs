@@ -323,7 +323,7 @@ class CalibrationIdentifier:
         """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[builtins.str, builtins.list[expression.Expression], builtins.list[Qubit], builtins.list[GateModifier]]: ...
-    def __new__(cls, name: builtins.str, parameters: typing.Sequence[expression.Expression], qubits: typing.Sequence[Qubit], modifiers: typing.Sequence[GateModifier]) -> CalibrationIdentifier:
+    def __new__(cls, name: builtins.str, parameters: typing.Sequence[expression.Expression] = [], qubits: typing.Sequence[Qubit] = [], modifiers: typing.Sequence[GateModifier] = []) -> CalibrationIdentifier:
         r"""
         Builds a new calibration identifier.
         
@@ -642,6 +642,21 @@ class DeclarationAt:
         Return a new `Move` instruction representing `self = source`.
         """
     def mul(self, other: ArithmeticOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration) -> Arithmetic: ...
+    def set(self, value: ArithmeticOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration) -> Move:
+        r"""
+        Return a new `Move` instruction representing `self = value`.
+        
+        # Example
+        
+        ```python
+        from quil.instructions import Declaration, ScalarType, Move
+        
+        x = Declaration("x", ScalarType.INTEGER, 3)
+        mv = x[2].set(5)
+        assert isinstance(mv, Move)
+        assert mv.to_quil() == "MOVE x[2] 5"
+        ```
+        """
     def sub(self, other: ArithmeticOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration) -> Arithmetic: ...
 
 class DefGateSequence:
@@ -891,9 +906,9 @@ class FrameIdentifier:
     @property
     def qubits(self) -> builtins.list[Qubit]: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __getnewargs__(self) -> tuple[builtins.list[Qubit], builtins.str]: ...
+    def __getnewargs__(self) -> tuple[builtins.str, builtins.list[Qubit]]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, qubits: typing.Sequence[Qubit], name: builtins.str) -> FrameIdentifier: ...
+    def __new__(cls, name: builtins.str, qubits: typing.Sequence[Qubit]) -> FrameIdentifier: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust

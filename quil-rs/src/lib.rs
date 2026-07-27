@@ -133,7 +133,8 @@ macro_rules! pickleable_new {
         $(#[$impl_meta:meta])*
         impl $name:ident {
             $(#[$meta:meta])*
-            $pub:vis fn $new:ident(
+            $pub:vis fn $new:ident $(<$($type_params:tt),+>)? (
+                $(py: Python<$py_life:lifetime>,)?
                 $(
                     $(#[$field_meta:meta])*
                     $field:ident: $field_type:ty$(,)?
@@ -145,7 +146,9 @@ macro_rules! pickleable_new {
             $(#[$impl_meta])*
             impl $name {
                 $(#[$meta])*
-                $pub fn $new($(
+                $pub fn $new $(<$($type_params),+>)? (
+                    $(py: Python<$py_life>,)?
+                    $(
                         $(#[$field_meta])*
                         $field: $field_type,
                     )*) -> $name {
@@ -162,7 +165,9 @@ macro_rules! pickleable_new {
         $(#[$impl_meta:meta])*
         impl $name:ident {
             $(#[$meta:meta])*
-            $pub:vis fn $new:ident( $(
+            $pub:vis fn $new:ident $(<$($type_params:tt),+>)? (
+                $(py: Python<$py_life:lifetime>,)?
+                $(
                     $(#[$field_meta:meta])*
                     $field:ident: $field_type:ty$(,)?
                 )*) -> $ret:ty {
@@ -177,7 +182,9 @@ macro_rules! pickleable_new {
         impl $name {
             $(#[$meta])*
             #[new]
-            $pub fn $new($(
+            $pub fn $new $(<$($type_params),+>)? (
+                $(py: Python<$py_life>,)?
+                $(
                     $(#[$field_meta])*
                     $field: $field_type,
                 )*) -> $ret {

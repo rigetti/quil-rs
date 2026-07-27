@@ -11,7 +11,6 @@ from quil.instructions import (
     CalibrationDefinition,
     CalibrationIdentifier,
     QubitPlaceholder,
-    Instruction,
     Delay,
     Gate,
 )
@@ -25,11 +24,11 @@ class TestPauliTerm:
 
 
 def test_calibration_getters():
-    placeholder = Qubit.Placeholder(QubitPlaceholder())
+    placeholder = Qubit(QubitPlaceholder())
 
     calibration = CalibrationDefinition(
         CalibrationIdentifier("MYCAL", [], [placeholder], []),
-        [Instruction.Delay(Delay(Expression.Number(complex(0.5)), [], [placeholder]))],
+        [Delay(Expression.Number(0.5), [], [placeholder])],
     )
 
     assert calibration.name == "MYCAL"

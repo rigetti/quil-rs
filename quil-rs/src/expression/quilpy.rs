@@ -1,4 +1,4 @@
-use pyo3::{IntoPyObjectExt, exceptions::PyNotImplementedError, prelude::*, types::PyAnyMethods};
+use pyo3::{IntoPyObjectExt, exceptions::PyNotImplementedError, prelude::*, types::{PyAnyMethods, PyComplex, PyFloat, PyInt}};
 use numpy::{PyArray, PyArrayDescr, PyArrayDescrMethods};
 use rigetti_pyo3::{create_init_submodule, impl_repr};
 
@@ -21,6 +21,28 @@ create_init_submodule! {
     errors: [ errors::EvaluationError, errors::ParseExpressionError ],
 }
 
+pub(crate) fn post_init(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    use crate::quilpy::union;
+
+    let py = m.py();
+
+    // Add singleton instances to the module. 
+    let module = py.import("quil._quil.expression")?;
+    // module.add("Pi", PiType::__new__(py)?)?;
+
+    // Add TypeAliases for use in annotations.
+    // These are mainly for PyQuil backwards-compatibility.
+    #[expect(non_snake_case)]
+    let ExpressionValueDesignator = union!(py, PyInt, PyFloat, PyComplex)?;
+    module.add("ExpressionValueDesignator", &ExpressionValueDesignator)?;
+    module.add("ExpressionDesignator",
+        py.get_type::<Expression>().bitor(&ExpressionValueDesignator)?)?;
+    module.add("ParameterDesignator",
+        union!(py, Expression, MemoryReference, PyInt, PyFloat, PyComplex)?)?;
+
+    Ok(())
+}
+
 impl_repr!(Expression);
 impl_repr!(ExpressionFunction);
 impl_repr!(FunctionCallExpression);
@@ -35,8 +57,8 @@ impl_to_quil!(Expression);
 /// for use as a parameter in methods and functions exposed through Python bindings.
 #[derive(Debug, Clone, FromPyObject)]
 pub(crate) enum ExpressionLike {
+    Variable(String),
     Expression(Expression),
-    MemoryReference(MemoryReference),
     Int(i64),
     Float(f64),
     Complex(Complex64),
@@ -45,8 +67,8 @@ pub(crate) enum ExpressionLike {
 impl From<ExpressionLike> for Expression {
     fn from(value: ExpressionLike) -> Self {
         match value {
+            ExpressionLike::Variable(name) => Expression::Variable(name),
             ExpressionLike::Expression(expr) => expr,
-            ExpressionLike::MemoryReference(memref) => Expression::Address(memref),
             ExpressionLike::Int(v) => Expression::Number(Complex64::new(v as f64, 0.0)),
             ExpressionLike::Float(v) => Expression::Number(v.into()),
             ExpressionLike::Complex(v) => Expression::Number(v),
