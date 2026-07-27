@@ -1,5 +1,5 @@
 import copy
-from typing import Any, Callable, Iterator
+from typing import Callable, Iterator
 
 import pytest
 
@@ -24,37 +24,30 @@ def qubit(request: pytest.FixtureRequest) -> Qubit:
     return request.param
 
 
-def _calibration(qubit: Qubit) -> tuple[CalibrationDefinition, Instruction]:
-    calibration = CalibrationDefinition(
+def _calibration(qubit: Qubit) -> CalibrationDefinition:
+    return CalibrationDefinition(
         CalibrationIdentifier("MYCAL", [], [qubit], []),
-        [Instruction.Delay(Delay(Expression.Number(complex(0.5)), [], [qubit]))],
+        [Delay(Expression.Number(complex(0.5)), [], [qubit])],
     )
-    return calibration, Instruction.CalibrationDefinition(calibration)
 
 
-def _pulse(qubit: Qubit) -> tuple[Pulse, Instruction]:
-    pulse = Pulse(blocking=False, frame=FrameIdentifier("frame", [qubit]), waveform=WaveformInvocation("wf", {}))
-    instr = Instruction.Pulse(pulse)
-    return (pulse, instr)
+def _pulse(qubit: Qubit) -> Pulse:
+    return Pulse(blocking=False, frame=FrameIdentifier("frame", [qubit]), waveform=WaveformInvocation("wf", {}))
 
 
 @pytest.fixture(params=(_calibration, _pulse))
-def make_instr(request: pytest.FixtureRequest) -> Iterator[Callable[[Qubit], tuple[Any, Instruction]]]:
+def make_instr(request: pytest.FixtureRequest) -> Iterator[Callable[[Qubit], Instruction]]:
     return request.param
 
 
-def test_copy(qubit: Qubit, make_instr: Callable[[Qubit], tuple[Any, Instruction]]):
-    inner, instr = make_instr(qubit)
+def test_copy(qubit: Qubit, make_instr: Callable[[Qubit], Instruction]):
+    instr = make_instr(qubit)
 
-    assert copy.copy(inner) == inner
     assert copy.copy(instr) == instr
 
     if not isinstance(qubit, Qubit.Placeholder):
-        assert copy.deepcopy(inner) == inner
         assert copy.deepcopy(instr) == instr
     else:
-        with pytest.raises(quil.PickleError, match=r"\bQubitPlaceholder\b"):
-            _ = copy.deepcopy(inner)
         with pytest.raises(quil.PickleError, match=r"\bQubitPlaceholder\b"):
             _ = copy.deepcopy(instr)
 

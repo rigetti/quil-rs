@@ -1,6 +1,5 @@
 use std::marker::PhantomData;
 
-use pyo3::exceptions::PyValueError;
 use pyo3::types::PyType;
 use pyo3::{PyClass, PyTypeCheck, prelude::*, pyclass::boolean_struct::True, types::PyTuple};
 use rigetti_pyo3::create_init_submodule;
@@ -38,10 +37,8 @@ fn init_module(m: &Bound<'_, PyModule>) -> PyResult<()> {
     waveform::sampling::quilpy::register_abcs(py)?;
 
     instruction::quilpy::post_init(m)?;
-
-    let program = py.import("quil._quil.program")?;
-    program.add("InstructionIndex", py.get_type::<pyo3::types::PyInt>())?;
-    program.add("Seconds", py.get_type::<pyo3::types::PyFloat>())?;
+    expression::quilpy::post_init(m)?;
+    program::quilpy::post_init(m)?;
 
     Ok(())
 }
@@ -93,7 +90,7 @@ where [u32; N]: Sized
     types[1..].iter().try_fold(types[0].clone().into_any(), |u, t| { u.bitor(t) })
 }
 
-/// Constructing a union of Python types.
+/// Construct a union of Python types.
 macro_rules! union {
     ($py:ident, $($T:ty),+) => {
         crate::quilpy::union_type(&[ $(&$py.get_type::<$T>()),+ ])
@@ -328,30 +325,29 @@ impl pyo3_stub_gen::PyStubType for NonZeroU64 {
 ///    "#);
 /// });
 /// ```
-pub(crate) fn from_sequence<T, U>(values: &Bound<'_, PyAny>) -> PyResult<Vec<U>>
+pub(crate) fn from_sequence<'it, 'py, T, U>(sequence: &'it Bound<'py, PyAny>) -> PyResult<Vec<U>>
     where
-        for<'a, 'py> T: FromPyObject<'a, 'py>,
-        for<'a, 'py> U: PyClass + PyTypeCheck + From<T> + ToOwned<Owned = U>,
-        for<'a, 'py> PyErr: From<<T as FromPyObject<'a, 'py>>::Error>,
+        U: PyClass + PyTypeCheck + From<T> + ToOwned<Owned = U>,
+        for<'a> T: FromPyObject<'a, 'py>,
+        for<'a> PyErr: From<<T as FromPyObject<'a, 'py>>::Error>,
 {
-    values.try_iter()?
-        .map(|i|
-            i.and_then(|obj|
-                if let Ok(obj) = obj.cast::<U>() {
-                    Ok(obj.borrow().to_owned())
-                } else {
-                    obj.extract::<T>().map(U::from).map_err(Into::into)
-                }
-            )
-        )
-        .collect()
+        let capacity = sequence.len()?;
+        let mut res = Vec::with_capacity(capacity);
+        for item in sequence.try_iter()? {
+            res.push(from_like(&item?)?);
+        }
+        Ok(res)
 }
 
-pub(crate) fn from_like<T, U>(obj: &Bound<'_, PyAny>) -> PyResult<U>
+/// Extract a Python object as a [`PyClass`] `U`, or if that fails,
+/// route through [`Bound::extract`] and `U`.
+///
+/// In either case, the value is a cloned instance of the Python object.
+pub(crate) fn from_like<'a, 'py, T, U>(obj: &'a Bound<'py, PyAny>) -> PyResult<U>
 where
-    for<'a, 'py> T: FromPyObject<'a, 'py>,
-    for<'a, 'py> U: PyClass + PyTypeCheck + From<T> + ToOwned<Owned = U>,
-    for<'a, 'py> PyErr: From<<T as FromPyObject<'a, 'py>>::Error>,
+    T: FromPyObject<'a, 'py>,
+    U: PyClass + PyTypeCheck + From<T> + ToOwned<Owned = U>,
+    PyErr: From<<T as FromPyObject<'a, 'py>>::Error>,
 {
     if let Ok(obj) = obj.cast::<U>() {
         Ok(obj.borrow().to_owned())
@@ -538,9 +534,9 @@ impl<'py, T> pyo3_stub_gen::PyStubType for NewArgs<'py, T>
 }
 
 macro_rules! py_friendly_enum {
-    (for $T:ty = $first:ty $(| $variant:ty)*) => {
-        impl From<Like<'_, '_, $T>> for $T {
-            fn from(like: Like<'_, '_, $T>) -> Self {
+    (for $T:ty = $first_ty:ty $(| $variant_ty:ty)*) => {
+        impl<'a, 'py> From<Like<'a, 'py, $T>> for $T {
+            fn from(like: Like<'a, 'py, $T>) -> Self {
                 like.into_inner()
             }
         }
@@ -555,16 +551,17 @@ macro_rules! py_friendly_enum {
         impl pyo3_stub_gen::PyStubType for Like<'_, '_, $T> {
             fn type_input() -> pyo3_stub_gen::TypeInfo {
                 <$T as pyo3_stub_gen::PyStubType>::type_input()
-                      | <$first   as pyo3_stub_gen::PyStubType>::type_input()
-                    $(| <$variant as pyo3_stub_gen::PyStubType>::type_input())*
+                      | <$first_ty   as pyo3_stub_gen::PyStubType>::type_input()
+                    $(| <$variant_ty as pyo3_stub_gen::PyStubType>::type_input())*
             }
 
             fn type_output() -> pyo3_stub_gen::TypeInfo {
-                    <$first   as pyo3_stub_gen::PyStubType>::type_output()
-                $(| <$variant as pyo3_stub_gen::PyStubType>::type_output())*
+                    <$first_ty   as pyo3_stub_gen::PyStubType>::type_output()
+                $(| <$variant_ty as pyo3_stub_gen::PyStubType>::type_output())*
             }
         }
 
+        // Implement `__new__` such that Python users can construct `T` directly from its variants.
         #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
         #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
         #[pymethods]
