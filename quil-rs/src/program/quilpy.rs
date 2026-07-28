@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::ops::Range;
 use std::str::FromStr;
 
+use indexmap::IndexMap;
 use numpy::{Complex64, PyArray2, ToPyArray};
 use pyo3::exceptions::PyUnicodeDecodeError;
 use pyo3::types::PyTuple;
@@ -14,6 +15,7 @@ use rigetti_pyo3::{create_init_submodule, impl_repr};
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pymethods};
 
+use crate::instruction::{ExternPragmaMap, Qubit, Waveform};
 use crate::{
     instruction::{
         quilpy::OwnedGateSignature, CalibrationDefinition, Declaration, DefaultHandler,
@@ -91,6 +93,47 @@ impl Program {
     #[staticmethod]
     fn parse(input: &str) -> Result<Self> {
         <Self as std::str::FromStr>::from_str(input)
+    }
+
+    // These getters/overrides are to work around mypy issues with the type names.
+    // See: https://github.com/python/mypy/issues/4146
+    #[gen_stub(override_return_type(
+        type_repr = "builtins.dict[builtins.str | None, builtins.list[_quil.instructions.Instruction]]",
+        imports = ("quil._quil"),
+    ))]
+    #[getter]
+    fn pragma_extern_map(&self) -> ExternPragmaMap {
+        self.extern_pragma_map.clone()
+    }
+
+    #[gen_stub(override_return_type(
+        type_repr = "builtins.set[_quil.instructions.Qubit]",
+        imports = ("quil._quil"),
+    ))]
+    #[getter]
+    fn used_qubits(&self) -> HashSet<Qubit> {
+        self.used_qubits.clone()
+    }
+
+    #[gen_stub(override_return_type(
+        type_repr = "builtins.dict[builtins.str, _quil.instructions.Waveform]",
+        imports = ("quil._quil"),
+    ))]
+    #[getter]
+    fn waveforms(&self) -> IndexMap<String, Waveform> {
+        self.waveforms.clone()
+    }
+
+    #[setter]
+    fn set_waveforms(
+        &mut self,
+        #[gen_stub(override_type(
+            type_repr = "typing.Mapping[builtins.str, _quil.instructions.Waveform]",
+            imports = ("quil._quil", "typing"),
+        ))]
+        waveforms: IndexMap<String, Waveform>
+        ) {
+        self.waveforms = waveforms;
     }
 
     #[getter(body_instructions)]
@@ -608,7 +651,7 @@ impl CalibrationSource {
 /// a calibration or a sequence gate definition.
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[pyclass(name = "InstructionSourceMap", module = "quil.program", frozen)]
+#[pyclass(name = "InstructionSourceMap", module = "quil._quil.program", frozen)]
 pub(crate) struct InstructionSourceMap(SourceMap<InstructionIndex, FlatExpansionResult>);
 
 /// A source map entry, mapping a range of source instructions by index to an
@@ -619,7 +662,7 @@ pub(crate) struct InstructionSourceMap(SourceMap<InstructionIndex, FlatExpansion
 /// level of expansion and *not* the original program.
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[pyclass(name = "InstructionSourceMapEntry", module = "quil.program", frozen)]
+#[pyclass(name = "InstructionSourceMapEntry", module = "quil._quil.program", frozen)]
 pub(crate) struct InstructionSourceMapEntry(SourceMapEntry<InstructionIndex, FlatExpansionResult>);
 
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
@@ -737,7 +780,7 @@ impl<R: Into<FlatExpansionResult> + Clone> From<&SourceMap<InstructionIndex, Exp
 /// define an owned type here.
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[pyo3::pyclass(module = "quil.program", eq)]
+#[pyo3::pyclass(module = "quil._quil.program", eq)]
 pub struct OwnedDefGateSequenceExpansion {
     /// The signature of the sequence gate definition which was used to expand the instruction.
     #[pyo3(get)]
@@ -812,7 +855,7 @@ impl OwnedDefGateSequenceExpansion {
 // [trait bound](https://pyo3.rs/main/trait-bounds.html) documentation.
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
-#[pyo3::pyclass(name = "InstructionTarget", module = "quil.program", eq, frozen)]
+#[pyo3::pyclass(name = "InstructionTarget", module = "quil._quil.program", eq, frozen)]
 pub enum FlatExpansionResult {
     Unmodified(InstructionIndex),
     Calibration(CalibrationExpansion),
@@ -1022,7 +1065,7 @@ mod stubs {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[pyclass(
     name = "ScheduleSeconds",
-    module = "quil.program",
+    module = "quil._quil.program",
     subclass,
     eq,
     frozen
@@ -1034,7 +1077,7 @@ pub(crate) struct PyScheduleSeconds(pub Schedule<Seconds>);
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[pyclass(
     name = "ScheduleSecondsItem",
-    module = "quil.program",
+    module = "quil._quil.program",
     subclass,
     eq,
     frozen
@@ -1046,7 +1089,7 @@ pub(crate) struct ScheduleSecondsItem(pub ComputedScheduleItem<Seconds>);
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[pyclass(
     name = "TimeSpanSeconds",
-    module = "quil.program",
+    module = "quil._quil.program",
     subclass,
     eq,
     frozen

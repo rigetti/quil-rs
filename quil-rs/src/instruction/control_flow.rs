@@ -15,7 +15,7 @@ use crate::{
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
+    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash, get_all, subclass)
 )]
 pub struct Label {
     pub target: Target,
@@ -42,7 +42,7 @@ impl Quil for Label {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash)
+    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash)
 )]
 pub enum Target {
     Fixed(String),
@@ -89,7 +89,7 @@ type TargetPlaceholderInner = Arc<String>;
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, ord, subclass)
+    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash, ord, subclass)
 )]
 pub struct TargetPlaceholder(TargetPlaceholderInner);
 
@@ -142,7 +142,7 @@ impl PartialEq for TargetPlaceholder {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil.instructions", eq, get_all, set_all, subclass)
+    pyo3::pyclass(module = "quil._quil.instructions", eq, get_all, set_all, subclass)
 )]
 pub struct Jump {
     pub target: Target,
@@ -170,7 +170,7 @@ pickleable_new! {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil.instructions", eq, get_all, set_all, subclass)
+    pyo3::pyclass(module = "quil._quil.instructions", eq, get_all, set_all, subclass)
 )]
 pub struct JumpWhen {
     pub target: Target,
@@ -200,7 +200,7 @@ impl Quil for JumpWhen {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil.instructions", eq, get_all, set_all, subclass)
+    pyo3::pyclass(module = "quil._quil.instructions", eq, get_all, set_all, subclass)
 )]
 pub struct JumpUnless {
     pub target: Target,

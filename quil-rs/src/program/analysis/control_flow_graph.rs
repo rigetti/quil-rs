@@ -64,7 +64,7 @@ impl<'p> ControlFlowGraph<'p> {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(name = "ControlFlowGraph", module = "quil.program", subclass, frozen)
+    pyo3::pyclass(name = "ControlFlowGraph", module = "quil._quil.program", subclass, frozen)
 )]
 pub struct ControlFlowGraphOwned {
     pub(crate) blocks: Vec<BasicBlockOwned>,
@@ -323,7 +323,7 @@ pub enum BasicBlockScheduleError {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(name = "BasicBlock", module = "quil.program", subclass)
+    pyo3::pyclass(name = "BasicBlock", module = "quil._quil.program", subclass)
 )]
 #[cfg_attr(not(feature = "python"), strip_pyo3)]
 pub struct BasicBlockOwned {

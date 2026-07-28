@@ -117,7 +117,7 @@ impl<T: WaveformData> parse::Extractable<T> for CommonBuiltinParameters<T> {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil.waveform", subclass, get_all, set_all, eq)
+    pyo3::pyclass(module = "quil._quil.waveform", subclass, get_all, set_all, eq)
 )]
 pub struct ExplicitCommonBuiltinParameters {
     /// Integral number of samples that should be taken of the pulse

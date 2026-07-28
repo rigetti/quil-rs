@@ -30,7 +30,7 @@ pub use super::quilpy_waveforms::*;
 
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[pyclass(module = "quil.waveform", name = "BuiltinWaveform", generic, subclass)]
+#[pyclass(module = "quil._quil.waveform", name = "BuiltinWaveform", generic, subclass)]
 pub struct PyBuiltinWaveform(pub BuiltinWaveform<Pythonic>);
 
 #[cfg(feature = "stubs")]
@@ -191,7 +191,7 @@ impl BuiltinWaveform<Pythonic> {
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[pyclass(
-    module = "quil.waveform",
+    module = "quil._quil.waveform",
     name = "CommonBuiltinParameters",
     generic,
     subclass
@@ -463,7 +463,7 @@ impl ExplicitCommonBuiltinParameters {
 }
 
 /// Modulate and phase shift waveform IQ data in place.
-#[cfg_attr(feature = "stubs", gen_stub_pyfunction(module = "quil.waveform"))]
+#[cfg_attr(feature = "stubs", gen_stub_pyfunction(module = "quil._quil.waveform"))]
 #[pyfunction(name = "apply_phase_and_detuning")]
 pub fn py_apply_phase_and_detuning(
     iq_values: &Bound<'_, PyArray1<Complex64>>,

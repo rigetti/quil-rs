@@ -45,7 +45,7 @@ use optipy::strip_pyo3;
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(name = "CalibrationSet", module = "quil.program", eq, subclass)
+    pyo3::pyclass(name = "CalibrationSet", module = "quil._quil.program", eq, subclass)
 )]
 pub struct Calibrations {
     pub calibrations: CalibrationSet<CalibrationDefinition>,
@@ -147,7 +147,7 @@ pub struct CalibrationExpansionOutput {
 /// Details about the expansion of a calibration.
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.program", eq, frozen))]
+#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil._quil.program", eq, frozen))]
 #[cfg_attr(not(feature = "python"), strip_pyo3)]
 pub struct CalibrationExpansion {
     /// The calibration used to expand the instruction.
@@ -228,7 +228,7 @@ impl SourceMapIndexable<CalibrationSource> for CalibrationExpansion {
 /// [`MeasureCalibrationIdentifier`].
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
-#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.program", eq, frozen))]
+#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil._quil.program", eq, frozen))]
 pub enum CalibrationSource {
     /// Describes a `DEFCAL` instruction
     Calibration(CalibrationIdentifier),

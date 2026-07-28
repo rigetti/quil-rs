@@ -17,7 +17,7 @@ use super::write_parameter_string;
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
+    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash, get_all, subclass)
 )]
 pub struct Waveform {
     pub matrix: Vec<Expression>,
@@ -38,7 +38,7 @@ impl Waveform {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
+    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash, get_all, subclass)
 )]
 pub struct WaveformDefinition {
     pub name: String,
@@ -104,7 +104,7 @@ pub type WaveformParameters = IndexMap<String, Expression>;
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil.instructions", eq, frozen, get_all, subclass)
+    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, get_all, subclass)
 )]
 pub struct WaveformInvocation {
     pub name: String,

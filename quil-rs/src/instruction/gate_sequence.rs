@@ -44,7 +44,7 @@ pub enum DefGateSequenceExpansionError {
 #[cfg_attr(feature = "stubs", pyo3_stub_gen::derive::gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
+    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash, get_all, subclass)
 )]
 pub struct DefGateSequence {
     /// The list of qubit variable names in the gate signature.

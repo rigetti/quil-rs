@@ -28,7 +28,7 @@ pub trait CalibrationSignature {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil.instructions", eq, get_all, set_all, subclass)
+    pyo3::pyclass(module = "quil._quil.instructions", eq, get_all, set_all, subclass)
 )]
 #[cfg_attr(not(feature = "python"), strip_pyo3)]
 pub struct CalibrationDefinition {
@@ -80,7 +80,7 @@ impl Quil for CalibrationDefinition {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil.instructions", eq, get_all, set_all, subclass)
+    pyo3::pyclass(module = "quil._quil.instructions", eq, get_all, set_all, subclass)
 )]
 pub struct CalibrationIdentifier {
     /// The modifiers applied to the gate
@@ -214,7 +214,7 @@ impl Quil for CalibrationIdentifier {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil.instructions", eq, get_all, set_all, subclass)
+    pyo3::pyclass(module = "quil._quil.instructions", eq, get_all, set_all, subclass)
 )]
 pub struct MeasureCalibrationDefinition {
     pub identifier: MeasureCalibrationIdentifier,
@@ -259,7 +259,7 @@ impl Quil for MeasureCalibrationDefinition {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil.instructions", eq, get_all, set_all, subclass)
+    pyo3::pyclass(module = "quil._quil.instructions", eq, get_all, set_all, subclass)
 )]
 pub struct MeasureCalibrationIdentifier {
     /// The Quil-T name of the measurement, if any.

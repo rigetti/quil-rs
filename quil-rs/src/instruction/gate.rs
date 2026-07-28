@@ -30,7 +30,7 @@ use pyo3_stub_gen::derive::{
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
+    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash, get_all, subclass)
 )]
 pub struct Gate {
     pub name: String,
@@ -45,7 +45,7 @@ pub struct Gate {
 #[cfg_attr(
     feature = "python",
     pyo3::pyclass(
-        module = "quil.instructions",
+        module = "quil._quil.instructions",
         eq,
         frozen,
         hash,
@@ -831,7 +831,7 @@ mod test_gate_into_matrix {
 #[cfg_attr(
     feature = "python",
     pyo3::pyclass(
-        module = "quil.instructions",
+        module = "quil._quil.instructions",
         eq,
         frozen,
         hash,
@@ -850,7 +850,7 @@ pub enum PauliGate {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
+    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash, get_all, subclass)
 )]
 pub struct PauliTerm {
     pub arguments: Vec<(PauliGate, String)>,
@@ -877,7 +877,7 @@ impl PauliTerm {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
+    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash, get_all, subclass)
 )]
 pub struct PauliSum {
     pub arguments: Vec<String>,
@@ -912,7 +912,7 @@ pickleable_new! {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash)
+    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash)
 )]
 pub enum GateSpecification {
     /// A matrix of [`Expression`]s representing a unitary operation for a [`GateType::Matrix`].
@@ -982,7 +982,7 @@ impl Quil for GateSpecification {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
+    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash, get_all, subclass)
 )]
 pub struct GateDefinition {
     pub name: String,
@@ -1244,7 +1244,7 @@ mod test_gate_definition {
 #[cfg_attr(
     feature = "python",
     pyo3::pyclass(
-        module = "quil.instructions",
+        module = "quil._quil.instructions",
         eq,
         frozen,
         hash,

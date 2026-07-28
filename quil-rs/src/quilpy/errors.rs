@@ -3,21 +3,21 @@ use pyo3::exceptions::PyException;
 use rigetti_pyo3::{create_exception, exception};
 
 create_exception!(
-    quil,
+    quil._quil,
     QuilError,
     PyException,
     "Base exception type for errors raised by this package."
 );
 
 create_exception!(
-    quil,
+    quil._quil,
     ValueError,
     QuilError,
     "Raised when an argument to a quil function has an inappropriate value."
 );
 
 create_exception!(
-    quil,
+    quil._quil,
     PickleError,
     QuilError,
     "Errors when trying to pickle or deepcopy."
@@ -25,7 +25,7 @@ create_exception!(
 
 exception!(
     crate::quil::ToQuilError,
-    quil,
+    quil._quil,
     ToQuilStringError,
     QuilError,
     "Errors which can occur when converting a Quil item to a string."
@@ -34,7 +34,7 @@ exception!(
 // expression errors
 exception!(
     crate::expression::EvaluationError,
-    quil.expression,
+    quil._quil.expression,
     EvaluationError,
     QuilError,
     "Errors that may occur while evaluation an ``Expression``."
@@ -42,7 +42,7 @@ exception!(
 
 exception!(
     crate::program::ParseProgramError<crate::expression::Expression>,
-    quil.expression,
+    quil._quil.expression,
     ParseExpressionError,
     QuilError,
     "Errors that may occur while parsing an ``Expression``."
@@ -50,7 +50,7 @@ exception!(
 
 // instruction errors
 create_exception!(
-    quil.instructions,
+    quil._quil.instructions,
     InstructionError,
     QuilError,
     "Base error type for errors related to ``Instruction`` processing."
@@ -58,7 +58,7 @@ create_exception!(
 
 exception!(
     crate::program::SyntaxError<crate::instruction::MemoryReference>,
-    quil.instructions,
+    quil._quil.instructions,
     ParseMemoryReferenceError,
     QuilError,
     "Errors that may occur while parsing a ``MemoryReference``."
@@ -66,7 +66,7 @@ exception!(
 
 exception!(
     crate::instruction::CallError,
-    quil.instructions,
+    quil._quil.instructions,
     CallError,
     QuilError,
     "Errors that may occur when initializing a ``Call``."
@@ -74,7 +74,7 @@ exception!(
 
 exception!(
     crate::instruction::ExternError,
-    quil.instructions,
+    quil._quil.instructions,
     ExternError,
     QuilError,
     "Errors that may occur when initializing or validating a ``PRAGMA EXTERN`` instruction."
@@ -82,7 +82,7 @@ exception!(
 
 exception!(
     crate::instruction::GateError,
-    quil.instructions,
+    quil._quil.instructions,
     GateError,
     QuilError,
     "Errors that may occur when performing operations on a ``Gate``."
@@ -90,7 +90,7 @@ exception!(
 
 exception!(
     crate::instruction::DefGateSequenceError,
-    quil.instructions,
+    quil._quil.instructions,
     DefGateSequenceError,
     InstructionError,
     "Errors that can occur when initializing a sequence gate definition."
@@ -98,7 +98,7 @@ exception!(
 
 exception!(
     crate::instruction::ParseInstructionError,
-    quil.instructions,
+    quil._quil.instructions,
     ParseInstructionError,
     InstructionError,
     "Errors that may occur while parsing an ``Instruction``."
@@ -107,7 +107,7 @@ exception!(
 // validation.identifier errors
 exception!(
     crate::validation::identifier::IdentifierValidationError,
-    quil.validation.identifier,
+    quil._quil.validation.identifier,
     IdentifierValidationError,
     QuilError,
     "Errors that may occur when validating a Quil identifier."
@@ -115,7 +115,7 @@ exception!(
 
 // waveform errors
 create_exception!(
-    quil.waveform,
+    quil._quil.waveform,
     WaveformError,
     QuilError,
     "Base error type for errors related to waveform processing."
@@ -123,7 +123,7 @@ create_exception!(
 
 exception!(
     crate::waveform::WaveformParameterError,
-    quil.waveform,
+    quil._quil.waveform,
     WaveformParameterError,
     WaveformError,
     "Errors that may occur when parsing waveform parameters."
@@ -131,7 +131,7 @@ exception!(
 
 exception!(
     crate::waveform::WaveformInvocationError,
-    quil.waveform,
+    quil._quil.waveform,
     WaveformInvocationError,
     WaveformError,
     "Errors that may occur when parsing a waveform."
@@ -139,7 +139,7 @@ exception!(
 
 exception!(
     crate::waveform::sampling::SamplingError,
-    quil.waveform.sampling,
+    quil._quil.waveform.sampling,
     SamplingError,
     WaveformError,
     "Errors that may occur when sampling waveforms."
@@ -148,7 +148,7 @@ exception!(
 // program errors
 exception!(
     crate::program::ProgramError,
-    quil.program,
+    quil._quil.program,
     ProgramError,
     QuilError,
     "Errors encountered related to a Program."
@@ -156,7 +156,7 @@ exception!(
 
 exception!(
     crate::program::scheduling::ComputedScheduleError,
-    quil.program,
+    quil._quil.program,
     ComputedScheduleError,
     ProgramError,
     "Error raised if the computed schedule is invalid."
@@ -164,14 +164,14 @@ exception!(
 
 exception!(
     crate::program::analysis::BasicBlockScheduleError,
-    quil.program,
+    quil._quil.program,
     BasicBlockScheduleError,
     ProgramError
 );
 
 exception!(
     crate::program::analysis::QubitGraphError,
-    quil.program,
+    quil._quil.program,
     QubitGraphError,
     ProgramError
 );

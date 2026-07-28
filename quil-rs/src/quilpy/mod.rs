@@ -32,8 +32,14 @@ create_init_submodule! {
 #[pyo3(name = "_quil")]
 fn init_module(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = m.py();
-    init_submodule("quil", py, m)?;
+    init_submodule("quil._quil", py, m)?;
+
+    instruction::quilpy::post_init(m)?;
+    expression::quilpy::post_init(m)?;
+    program::quilpy::post_init(m)?;
+
     waveform::sampling::quilpy::register_abcs(py)?;
+
     Ok(())
 }
 
@@ -59,9 +65,6 @@ macro_rules! impl_to_quil {
 
 pub(crate) use impl_to_quil;
 
-#[cfg(feature = "stubs")]
-define_stub_info_gatherer!(stub_info);
-
 /// An alternative to [`PyAnyMethods::extract`] that only fails if there are multithreaded mutable
 /// borrows; if casting would fail, it returns [`None`] instead.  This allows avoiding [the
 /// performance hit due to allocation on `extract`
@@ -84,3 +87,31 @@ pub(crate) fn py_cast_and_clone<'a, 'py, T: PyClass + FromPyObject<'a, 'py> + Cl
 ) -> PyResult<Option<T>> {
     py_cast_and_borrow(obj).map(|obj| obj.as_deref().cloned())
 }
+
+#[cfg(feature = "stubs")]
+mod stub_gen {
+    use pyo3_stub_gen::{define_stub_info_gatherer, module_doc, reexport_module_members};
+
+    reexport_module_members!("quil" from "quil._quil");
+    reexport_module_members!("quil.instructions" from "quil._quil.instructions");
+    reexport_module_members!("quil.expression" from "quil._quil.expression");
+    reexport_module_members!("quil.program" from "quil._quil.program");
+    reexport_module_members!("quil.validation" from "quil._quil.validation");
+    reexport_module_members!("quil.validation.identifier" from "quil._quil.validation.identifier");
+    reexport_module_members!("quil.waveforms" from "quil._quil.waveforms");
+
+    module_doc!("quil",
+        r#"
+        The `quil` package provides tools for constructing, manipulating,
+        parsing, and printing [Quil](https://github.com/quil-lang/quil) programs.
+
+        ⚠️ This package is still in early development
+        and breaking changes should be expected between minor versions.
+        "#
+    );
+
+    define_stub_info_gatherer!(stub_info);
+}
+
+#[cfg(feature = "stubs")]
+define_stub_info_gatherer!(stub_info);

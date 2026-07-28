@@ -88,7 +88,7 @@ pub enum EvaluationError {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil.expression", eq, frozen, hash)
+    pyo3::pyclass(module = "quil._quil.expression", eq, frozen, hash)
 )]
 #[cfg_attr(not(feature = "python"), strip_pyo3)]
 pub enum Expression {
@@ -132,7 +132,7 @@ impl proptest::prelude::Arbitrary for Expression {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil.expression", eq, frozen, hash, subclass)
+    pyo3::pyclass(module = "quil._quil.expression", eq, frozen, hash, subclass)
 )]
 #[cfg_attr(not(feature = "python"), strip_pyo3)]
 pub struct FunctionCallExpression {
@@ -162,7 +162,7 @@ impl FunctionCallExpression {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil.expression", eq, frozen, hash, subclass)
+    pyo3::pyclass(module = "quil._quil.expression", eq, frozen, hash, subclass)
 )]
 #[cfg_attr(not(feature = "python"), strip_pyo3)]
 pub struct InfixExpression {
@@ -197,7 +197,7 @@ impl InfixExpression {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil.expression", eq, frozen, hash, subclass)
+    pyo3::pyclass(module = "quil._quil.expression", eq, frozen, hash, subclass)
 )]
 #[cfg_attr(not(feature = "python"), strip_pyo3)]
 pub struct PrefixExpression {
@@ -760,7 +760,7 @@ mod test {
 #[cfg_attr(
     feature = "python",
     pyo3::pyclass(
-        module = "quil.expression",
+        module = "quil._quil.expression",
         eq,
         frozen,
         hash,
@@ -799,7 +799,7 @@ impl fmt::Display for ExpressionFunction {
 #[cfg_attr(
     feature = "python",
     pyo3::pyclass(
-        module = "quil.expression",
+        module = "quil._quil.expression",
         eq,
         frozen,
         hash,
@@ -833,7 +833,7 @@ impl fmt::Display for PrefixOperator {
 #[cfg_attr(
     feature = "python",
     pyo3::pyclass(
-        module = "quil.expression",
+        module = "quil._quil.expression",
         eq,
         frozen,
         hash,

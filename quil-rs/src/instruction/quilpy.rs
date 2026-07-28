@@ -577,7 +577,7 @@ impl GateSpecification {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[pyo3::pyclass(
-    module = "quil.instructions",
+    module = "quil._quil.instructions",
     name = "GateSignature",
     eq,
     frozen,

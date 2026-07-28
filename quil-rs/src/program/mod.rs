@@ -173,18 +173,17 @@ type Result<T> = std::result::Result<T, ProgramError>;
 /// ```
 #[derive(Clone, Debug, Default, PartialEq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.program", eq))]
+#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil._quil.program", eq))]
 #[cfg_attr(not(feature = "python"), strip_pyo3)]
 pub struct Program {
     #[pyo3(get, set)]
     pub calibrations: Calibrations,
-    #[pyo3(get, name = "pragma_extern_map")]
+    // This has a manually defined getter in the Python bindings.
     pub extern_pragma_map: ExternPragmaMap,
     #[pyo3(get, set)]
     pub frames: FrameSet,
     #[pyo3(get, set)]
     pub memory_regions: IndexMap<String, MemoryRegion>,
-    #[pyo3(get, set)]
     pub waveforms: IndexMap<String, Waveform>,
     #[pyo3(get, set)]
     pub gate_definitions: IndexMap<String, GateDefinition>,

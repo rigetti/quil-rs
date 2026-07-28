@@ -122,7 +122,7 @@ impl WaveformData for Pythonic {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil.waveform", name = "Waveform", generic, subclass, from_py_object)
+    pyo3::pyclass(module = "quil._quil.waveform", name = "Waveform", generic, subclass, from_py_object)
 )]
 pub struct PyWaveform(pub Waveform<Pythonic>);
 
