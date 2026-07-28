@@ -614,12 +614,12 @@ impl Instruction {
                 blocked: None,
             }),
             Instruction::Fence(Fence { qubits }) => Some(FrameMatchConditions {
-                used: None,
-                blocked: Some(if qubits.is_empty() {
+                used: Some(if qubits.is_empty() {
                     FrameMatchCondition::All
                 } else {
                     FrameMatchCondition::AnyOfQubits(qubits.iter().collect())
                 }),
+                blocked: None,
             }),
             Instruction::Reset(Reset { qubit }) => {
                 let qubits = match qubit {

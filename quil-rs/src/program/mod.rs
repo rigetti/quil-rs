@@ -1750,13 +1750,13 @@ DEFFRAME 0 1 \"2q\":
                 vec![r#"0 1 "2q""#],
                 vec![],
             ),
-            // A Fence with qubits specified uses and blocks all frames intersecting that qubit
-            (r#"FENCE 1"#, vec![], vec![r#"1 "c""#, r#"0 1 "2q""#]),
-            // Fence-all uses and blocks all frames declared in the program
+            // A Fence with qubits specified uses all frames intersecting that qubit
+            (r#"FENCE 1"#, vec![r#"1 "c""#, r#"0 1 "2q""#], vec![]),
+            // Fence-all uses all frames declared in the program
             (
                 r#"FENCE"#,
-                vec![],
                 vec![r#"0 "a""#, r#"0 "b""#, r#"1 "c""#, r#"0 1 "2q""#],
+                vec![],
             ),
             // Delay uses and blocks frames on exactly the given qubits and with any of the given names
             (r#"DELAY 0 1.0"#, vec![r#"0 "a""#, r#"0 "b""#], vec![]),
