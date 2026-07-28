@@ -34,10 +34,6 @@ fn init_module(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = m.py();
     init_submodule("quil._quil", py, m)?;
 
-    instruction::quilpy::post_init(m)?;
-    expression::quilpy::post_init(m)?;
-    program::quilpy::post_init(m)?;
-
     waveform::sampling::quilpy::register_abcs(py)?;
 
     Ok(())
@@ -92,13 +88,15 @@ pub(crate) fn py_cast_and_clone<'a, 'py, T: PyClass + FromPyObject<'a, 'py> + Cl
 mod stub_gen {
     use pyo3_stub_gen::{define_stub_info_gatherer, module_doc, reexport_module_members};
 
+    // TODO: do this from the submodule macro.
     reexport_module_members!("quil" from "quil._quil");
     reexport_module_members!("quil.instructions" from "quil._quil.instructions");
     reexport_module_members!("quil.expression" from "quil._quil.expression");
     reexport_module_members!("quil.program" from "quil._quil.program");
     reexport_module_members!("quil.validation" from "quil._quil.validation");
     reexport_module_members!("quil.validation.identifier" from "quil._quil.validation.identifier");
-    reexport_module_members!("quil.waveforms" from "quil._quil.waveforms");
+    reexport_module_members!("quil.waveform" from "quil._quil.waveform");
+    reexport_module_members!("quil.waveform.sampling" from "quil._quil.waveform.sampling");
 
     module_doc!("quil",
         r#"

@@ -695,7 +695,7 @@ mod main {
         };
 
         Modules::from([(
-            "quil.waveform".to_owned(),
+            "quil._quil.waveform".to_owned(),
             IndexMap::from([
                 evaluable_with_extras(
                     "CommonBuiltinParameters",
