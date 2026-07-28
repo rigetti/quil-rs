@@ -3,6 +3,7 @@ use std::ops::Range;
 use std::str::FromStr;
 
 use numpy::{Complex64, PyArray2, ToPyArray};
+use pyo3::exceptions::PyUnicodeDecodeError;
 use pyo3::types::PyTuple;
 use pyo3::{
     prelude::*,
@@ -417,9 +418,9 @@ impl Program {
         Ok(PyBytes::new(py, self.to_quil()?.as_bytes()))
     }
 
-    pub fn __setstate__(&mut self, state: &Bound<'_, PyBytes>) -> PyResult<()> {
+    pub fn __setstate__(&mut self, py: Python<'_>, state: &Bound<'_, PyBytes>) -> PyResult<()> {
         let quil = std::str::from_utf8(state.as_bytes())
-            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+            .map_err(|e| PyUnicodeDecodeError::new_err_from_utf8(py, state.as_bytes(), e))?;
         *self = Self::from_str(quil)?;
         Ok(())
     }
