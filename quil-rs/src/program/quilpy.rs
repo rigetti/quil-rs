@@ -931,35 +931,11 @@ struct PyTargetResolver(Py<PyFunction>);
 
 #[cfg(feature = "stubs")]
 mod stubs {
-    use pyo3_stub_gen::{PyStubType, TypeInfo};
+    use std::collections::HashMap;
 
-    #[allow(clippy::wildcard_imports)]
-    use super::*;
+    use pyo3_stub_gen::{ImportKind, ModuleRef, PyStubType, TypeIdentifierRef, TypeInfo};
 
-    /// Create a `Callable[[A], R]` stub.
-    fn callable_of<A: PyStubType, R: PyStubType>() -> TypeInfo {
-        let TypeInfo {
-            name: name_a,
-            mut import,
-            mut type_refs,
-            ..
-        } = A::type_output();
-        let TypeInfo {
-            name: name_r,
-            import: import_r,
-            type_refs: type_refs_r,
-            ..
-        } = R::type_output();
-        import.extend(import_r);
-        import.insert("collections.abc".into());
-        type_refs.extend(type_refs_r);
-        TypeInfo {
-            name: format!("collections.abc.Callable[[{name_a}], {name_r}]"),
-            source_module: None,
-            import,
-            type_refs,
-        }
-    }
+    use super::{InstructionIndex, PyQubitResolver, PyTargetResolver, QubitPlaceholder, Seconds, TargetPlaceholder};
 
     impl PyStubType for PyQubitResolver {
         fn type_output() -> TypeInfo {
@@ -984,6 +960,60 @@ mod stubs {
             TypeInfo::builtin("float")
         }
     }
+
+    /// Create a `Callable[[A], R]` stub.
+    fn callable_of<A: PyStubType, R: PyStubType>() -> TypeInfo {
+        // `a` and `r` are the type names of the argument and return types, respectively.
+        let TypeInfo {
+            name: name_a,
+            mut import,
+            source_module: source_module_a,
+            mut type_refs,
+        } = A::type_output();
+
+        let TypeInfo {
+            name: name_r,
+            import: import_r,
+            source_module: source_module_r,
+            type_refs: type_refs_r,
+        } = R::type_output();
+
+        // Merge their imports.
+        import.extend(import_r);
+        import.insert("collections.abc".into());
+
+        // Merge their type references.
+        type_refs.extend(type_refs_r);
+        update_type_refs(&mut type_refs, &name_a, source_module_a);
+        update_type_refs(&mut type_refs, &name_r, source_module_r);
+
+        TypeInfo {
+            name: format!("collections.abc.Callable[[{name_a}], {name_r}]"),
+            import,
+            source_module: None,
+            type_refs,
+        }
+    }
+
+    /// Updates the `type_refs` map with an entry for the given type and source module.
+    fn update_type_refs(type_refs: &mut HashMap<String, TypeIdentifierRef>, name: &str, source_module: Option<ModuleRef>) {
+        if let Some(module) = source_module.filter(|m| m.get().is_some()) {
+            type_refs.insert(
+                bare_name_of(name).to_string(),
+                TypeIdentifierRef { module, import_kind: ImportKind::Module },
+            );
+        }
+    }
+
+    /// Strips the path qualifiers and generic parameters from a type name.
+    ///
+    /// For example, `builtins.dict[tuple[str, int], list[float]]` returns `dict`,
+    /// and `collections.abc.Callable[[int], str]` returns `Callable`.
+    /// A name without either is returned unchanged, e.g. `int` returns `int`.
+    fn bare_name_of(type_name: &str) -> &str {
+        type_name.split('[').next().unwrap_or(type_name).split('.').next_back().unwrap_or(type_name)
+    }
+
 }
 
 /// A Schedule is a ``DependencyGraph`` flattened into a linear sequence of instructions,
