@@ -10,10 +10,6 @@ on:
         description: "Build and publish wheels to PyPI"
         type: boolean
         default: false
-      publishCrate:
-        description: "Publish quil-rs to crates.io"
-        type: boolean
-        default: false
 
 jobs:
   is-release:
@@ -26,15 +22,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: echo "Publishing wheels"
-  should-publish-crate:
-    if: (github.event_name == 'workflow_dispatch' && inputs.publishCrate) || (github.event_name == 'release' && !github.event.release.prerelease)
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "Publishing wheels"
 
   publish-quil-rs:
     name: Publish quil-rs
-    needs: [ is-release, should-publish-crate ]
+    needs: [ is-release ]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
