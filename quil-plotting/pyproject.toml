@@ -1,7 +1,7 @@
 [project]
 name = "quil-plotting"
 version = "0.1.0"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 description = "A Python package for visualizing Quil programs."
 documentation = "https://rigetti.github.io/quil-rs/quil.html"
 readme = "README.md"
@@ -10,16 +10,24 @@ authors = [{ name = "Rigetti Computing", email = "softapps@rigetti.com" }]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "License :: OSI Approved :: Apache Software License",
-  "Programming Language :: Python :: 3.8",
-  "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
   "Operating System :: OS Independent",
 ]
 dependencies = [
-    "numpy>=1.2.1",
+    # The waveform API this uses landed in 0.37.0-rc.3, which is currently only available by
+    # building it from the quil-rs checkout alongside this package.
+    "quil>=0.37.0rc3",
+    "numpy>=1.26",
     "plotly>=5.11",
     "kaleido==0.2.1",
-    "pandas>=2.0"
+    "pandas>=2.0",
+    # The Altair backend. `vl-convert-python` renders charts to png/svg in process, so unlike
+    # plotly's `kaleido` it does not need an installed copy of Chrome.
+    "altair>=5.5",
+    "vl-convert-python>=1.7"
 ]
 
 [project.optional-dependencies]
@@ -71,7 +79,7 @@ exclude = [
 ]
 line-length = 120
 indent-width = 4
-target-version = "py38"
+target-version = "py310"
 
 [tool.ruff.lint]
 select = ["D", "E4", "E7", "E9", "F", "I", "B", "S", "W"]
@@ -89,7 +97,7 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
     "D100", # docstrings belong in type stubs
     "D104",
 ]
-"test/**/*.py" = [
+"tests/**/*.py" = [
     "D",    # docstrings are not enforced in tests
     "S101", # asserts are allowed in tests
     "S301", # we need to test pickling
