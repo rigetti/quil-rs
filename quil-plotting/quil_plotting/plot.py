@@ -21,11 +21,11 @@ from .dataframe import Color, add_plot_metadata, program_to_dataframe
 def plot_schedule(
     program: Program,
     runners: str = "Qubit",
-    color_by: str = "Gate",
+    color_by: str = "Operation",
     runner_order: str = "Time (s)",
-    exclude_readout: bool = True,
+    exclude_readout: bool = False,
     normalize_by: Optional[str] = "Frame",
-    label_by: Optional[str] = "Gate",
+    label_by: Optional[str] = "Operation",
     slider: Optional[bool] = None,
 ) -> Figure:
     """Plot the pulse schedule of a quil program.
@@ -44,16 +44,25 @@ def plot_schedule(
     >>> fig = plot_schedule(program)
     >>> fig.show()
     """
-    # All strings are in the `title` format
-    color_by = color_by.title()
-    runner_order = runner_order.title()
-    if normalize_by is not None:
-        normalize_by = normalize_by.title()
-    if label_by is not None:
-        label_by = label_by.title()
-
     # Construc the dataframes
     df = program_to_dataframe(program)
+
+    def match_column(column: str) -> str:
+        """Resolve a column name against the dataframe, ignoring case.
+
+        Column names are in `Title Case`, but `str.title` cannot be used to normalize them: it
+        renders `Time (s)` as `Time (S)`, which matches no column at all.
+        """
+        return next((known for known in df.columns if known.lower() == column.lower()), column)
+
+    runners = match_column(runners)
+    color_by = match_column(color_by)
+    runner_order = match_column(runner_order)
+    if normalize_by is not None:
+        normalize_by = match_column(normalize_by)
+    if label_by is not None:
+        label_by = match_column(label_by)
+
     df = add_plot_metadata(
         df,
         runners=runners,
@@ -77,7 +86,7 @@ def plot_schedule_dataframe(
 
     :param df: The schedule dataframe, with the plotting metadata.
     Schedule Columns:
-    'Instruction Index': int, 'Instruction': str, 'Logical Instruction': str, 'Gate': str,
+    'Instruction Index': int, 'Instruction': str, 'Logical Instruction': str, 'Operation': str, 'Operation Type': str,
     'Qubit': int, 'Pulse': str, 'Waveform': str, 'Start Time (s)': float, 'End Time (s)': float,
     'Duration (s)': float, 'Pulse Time (s)': float, 'Frame': str, 'Channel Type': str, 'IQ': complex,
     'Time (s)': float
@@ -195,7 +204,7 @@ def plot_schedule_dataframe(
         traces.append(trace)
         traces.append(trace_I)
         # Only add the imaginary trace if some of the values are non-zero
-        if np.any(np.abs(Q)) > 1e-9:
+        if np.any(np.abs(Q) > 1e-9):
             traces.append(trace_Q)
 
     # Plotly places the final trace on top - so shift-phase traces go last
