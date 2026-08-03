@@ -1,9 +1,6 @@
 use pyo3::{prelude::*, PyClass};
 use rigetti_pyo3::create_init_submodule;
 
-#[cfg(feature = "stubs")]
-use pyo3_stub_gen::define_stub_info_gatherer;
-
 use crate::expression;
 use crate::instruction;
 use crate::program;
@@ -85,10 +82,11 @@ pub(crate) fn py_cast_and_clone<'a, 'py, T: PyClass + FromPyObject<'a, 'py> + Cl
 }
 
 #[cfg(feature = "stubs")]
-mod stub_gen {
-    use pyo3_stub_gen::{define_stub_info_gatherer, module_doc, reexport_module_members};
+pub(crate) mod stubs {
+    use pyo3_stub_gen::{module_doc, reexport_module_members};
 
-    // TODO: do this from the submodule macro.
+    // During stub generation, these `quil._quil` modules and contents
+    // will be re-exported into the `quil` module namespace.
     reexport_module_members!("quil" from "quil._quil");
     reexport_module_members!("quil.instructions" from "quil._quil.instructions");
     reexport_module_members!("quil.expression" from "quil._quil.expression");
@@ -98,7 +96,8 @@ mod stub_gen {
     reexport_module_members!("quil.waveform" from "quil._quil.waveform");
     reexport_module_members!("quil.waveform.sampling" from "quil._quil.waveform.sampling");
 
-    module_doc!("quil",
+    module_doc!(
+        "quil._quil",
         r#"
         The `quil` package provides tools for constructing, manipulating,
         parsing, and printing [Quil](https://github.com/quil-lang/quil) programs.
@@ -107,9 +106,7 @@ mod stub_gen {
         and breaking changes should be expected between minor versions.
         "#
     );
-
-    define_stub_info_gatherer!(stub_info);
 }
 
 #[cfg(feature = "stubs")]
-define_stub_info_gatherer!(stub_info);
+pyo3_stub_gen::define_stub_info_gatherer!(stub_info);

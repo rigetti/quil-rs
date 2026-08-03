@@ -3,6 +3,12 @@
 # Use it with `stubtest --allowlist stubtest-allowlist quil`.
 # You'll likely want the `--ignore-disjoint-bases` option as well.
 
+# Ignore __class_getitem__; the stubs write that the subclass `typing.Generic`,
+# but the actual runtime implementation is handled as a special slot method implemented by PyO3.
+# `stubtest` (correctly) notices that the method exists at runtime,
+# but doesn't consider the `typing.Generic` subclass as its implementation.
+quil.(_quil.)?.*__class_getitem__
+
 # Basic enums are annotated as "...", which is technically incorrect, but
 # doesn't really matter in practice, since the enum values are opaque anyway;
 # hence, we just ignore those.  If you have added new enums or constructors, you

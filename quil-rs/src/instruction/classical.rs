@@ -11,7 +11,15 @@ use crate::{floating_point_eq, pickleable_new, quil::Quil};
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash, get_all, subclass)
+    pyo3::pyclass(
+        module = "quil._quil.instructions",
+        eq,
+        frozen,
+        hash,
+        get_all,
+        subclass,
+        from_py_object
+    )
 )]
 pub struct Arithmetic {
     pub operator: ArithmeticOperator,
@@ -47,7 +55,14 @@ impl Quil for Arithmetic {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash, get_all)
+    pyo3::pyclass(
+        module = "quil._quil.instructions",
+        eq,
+        frozen,
+        hash,
+        get_all,
+        from_py_object
+    )
 )]
 pub enum ArithmeticOperand {
     LiteralInteger(i64),
@@ -111,7 +126,8 @@ impl From<MemoryReference> for ArithmeticOperand {
         eq,
         frozen,
         hash,
-        rename_all = "SCREAMING_SNAKE_CASE"
+        rename_all = "SCREAMING_SNAKE_CASE",
+        from_py_object
     )
 )]
 pub enum ArithmeticOperator {
@@ -141,7 +157,14 @@ impl Quil for ArithmeticOperator {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash, get_all)
+    pyo3::pyclass(
+        module = "quil._quil.instructions",
+        eq,
+        frozen,
+        hash,
+        get_all,
+        from_py_object
+    )
 )]
 pub enum BinaryOperand {
     LiteralInteger(i64),
@@ -172,7 +195,8 @@ impl Quil for BinaryOperand {
         eq,
         frozen,
         hash,
-        rename_all = "SCREAMING_SNAKE_CASE"
+        rename_all = "SCREAMING_SNAKE_CASE",
+        from_py_object
     )
 )]
 pub enum BinaryOperator {
@@ -230,7 +254,15 @@ impl Quil for BinaryOperator {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash, get_all, subclass)
+    pyo3::pyclass(
+        module = "quil._quil.instructions",
+        eq,
+        frozen,
+        hash,
+        get_all,
+        subclass,
+        from_py_object
+    )
 )]
 pub struct BinaryLogic {
     pub operator: BinaryOperator,
@@ -267,7 +299,15 @@ pickleable_new! {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash, get_all, subclass)
+    pyo3::pyclass(
+        module = "quil._quil.instructions",
+        eq,
+        frozen,
+        hash,
+        get_all,
+        subclass,
+        from_py_object
+    )
 )]
 pub struct Convert {
     pub destination: MemoryReference,
@@ -298,7 +338,15 @@ impl Quil for Convert {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash, get_all, subclass)
+    pyo3::pyclass(
+        module = "quil._quil.instructions",
+        eq,
+        frozen,
+        hash,
+        get_all,
+        subclass,
+        from_py_object
+    )
 )]
 pub struct Move {
     pub destination: MemoryReference,
@@ -329,7 +377,15 @@ impl Quil for Move {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash, get_all, subclass)
+    pyo3::pyclass(
+        module = "quil._quil.instructions",
+        eq,
+        frozen,
+        hash,
+        get_all,
+        subclass,
+        from_py_object
+    )
 )]
 pub struct Exchange {
     pub left: MemoryReference,
@@ -360,7 +416,15 @@ pickleable_new! {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash, get_all, subclass)
+    pyo3::pyclass(
+        module = "quil._quil.instructions",
+        eq,
+        frozen,
+        hash,
+        get_all,
+        subclass,
+        from_py_object
+    )
 )]
 pub struct Comparison {
     pub operator: ComparisonOperator,
@@ -401,7 +465,14 @@ impl Quil for Comparison {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash, get_all)
+    pyo3::pyclass(
+        module = "quil._quil.instructions",
+        eq,
+        frozen,
+        hash,
+        get_all,
+        from_py_object
+    )
 )]
 pub enum ComparisonOperand {
     LiteralInteger(i64),
@@ -483,7 +554,8 @@ classical_operands! { ArithmeticOperand, BinaryOperand, ComparisonOperand }
         eq,
         frozen,
         hash,
-        rename_all = "SCREAMING_SNAKE_CASE"
+        rename_all = "SCREAMING_SNAKE_CASE",
+        from_py_object
     )
 )]
 pub enum ComparisonOperator {
@@ -515,7 +587,15 @@ impl Quil for ComparisonOperator {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash, get_all, subclass)
+    pyo3::pyclass(
+        module = "quil._quil.instructions",
+        eq,
+        frozen,
+        hash,
+        get_all,
+        subclass,
+        from_py_object
+    )
 )]
 pub struct UnaryLogic {
     pub operator: UnaryOperator,
@@ -550,7 +630,8 @@ impl Quil for UnaryLogic {
         eq,
         frozen,
         hash,
-        rename_all = "SCREAMING_SNAKE_CASE"
+        rename_all = "SCREAMING_SNAKE_CASE",
+        from_py_object
     )
 )]
 pub enum UnaryOperator {

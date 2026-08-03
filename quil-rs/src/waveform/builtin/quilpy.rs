@@ -10,8 +10,6 @@ use pyo3::{
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pymethods};
 
-#[cfg(feature = "stubs")]
-use crate::waveform::quilpy::explicit_stubs;
 use crate::{
     quilpy::py_cast_and_clone,
     units::Cycles,
@@ -30,13 +28,14 @@ pub use super::quilpy_waveforms::*;
 
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[pyclass(module = "quil._quil.waveform", name = "BuiltinWaveform", generic, subclass)]
+#[pyclass(
+    module = "quil._quil.waveform",
+    name = "BuiltinWaveform",
+    generic,
+    subclass,
+    from_py_object
+)]
 pub struct PyBuiltinWaveform(pub BuiltinWaveform<Pythonic>);
-
-#[cfg(feature = "stubs")]
-pyo3_stub_gen::inventory::submit! {
-    explicit_stubs::class_getitem_info::<PyBuiltinWaveform>()
-}
 
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
@@ -194,14 +193,10 @@ impl BuiltinWaveform<Pythonic> {
     module = "quil._quil.waveform",
     name = "CommonBuiltinParameters",
     generic,
-    subclass
+    subclass,
+    from_py_object
 )]
 pub struct PyCommonBuiltinParameters(pub CommonBuiltinParameters<Pythonic>);
-
-#[cfg(feature = "stubs")]
-pyo3_stub_gen::inventory::submit! {
-    explicit_stubs::class_getitem_info::<PyCommonBuiltinParameters>()
-}
 
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]

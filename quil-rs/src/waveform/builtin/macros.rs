@@ -464,13 +464,8 @@ macro_rules! define_python_waveform {
         paste::paste! {
             #[derive(Clone, Debug)]
             #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-            #[pyo3::pyclass(module = "quil._quil.waveform", generic, subclass)]
+            #[pyo3::pyclass(module = "quil._quil.waveform", generic, subclass, from_py_object)]
             pub struct $name(pub super::$name<Pythonic>);
-
-            #[cfg(feature = "stubs")]
-            pyo3_stub_gen::inventory::submit! {
-                crate::waveform::quilpy::explicit_stubs::class_getitem_info::<$name>()
-            }
 
             #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
             #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
@@ -699,7 +694,7 @@ macro_rules! define_waveform {
         $(#[$struct_meta])*
         #[derive(Clone, PartialEq, Debug, Copy, Serialize, Deserialize)]
         #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-        #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil._quil.waveform", subclass))]
+        #[cfg_attr(feature = "python", pyo3::pyclass(module = "quil._quil.waveform", subclass, from_py_object))]
         pub struct $name;
 
         #[automatically_derived]

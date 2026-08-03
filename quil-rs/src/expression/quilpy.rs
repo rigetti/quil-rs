@@ -81,7 +81,8 @@ impl Expression {
     }
 
     #[gen_stub(override_return_type(
-        type_repr = "tuple[MemoryReference | FunctionCallExpression | InfixExpression | complex | PrefixExpression | str]"
+        type_repr = "builtins.tuple[instructions.MemoryReference | FunctionCallExpression | InfixExpression | builtins.complex | PrefixExpression | builtins.str]",
+        imports = ("quil._quil.instructions", "builtins")
     ))]
     fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
         match self {

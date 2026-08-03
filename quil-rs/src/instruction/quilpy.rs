@@ -38,6 +38,7 @@ create_init_submodule! {
         Convert,
         Declaration,
         Delay,
+        DefGateSequence,
         Exchange,
         ExternParameter,
         ExternSignature,
@@ -47,6 +48,7 @@ create_init_submodule! {
         Gate,
         GateDefinition,
         GateModifier,
+        GateType,
         Include,
         Jump,
         JumpUnless,
@@ -59,6 +61,7 @@ create_init_submodule! {
         MemoryReference,
         Move,
         Offset,
+        OwnedGateSignature,
         PauliGate,
         PauliTerm,
         PauliSum,
@@ -560,7 +563,8 @@ impl GateDefinition {
 #[pymethods]
 impl GateSpecification {
     #[gen_stub(override_return_type(
-        type_repr = "tuple[list[list[Expression]] | list[int] | PauliSum | DefGateSequence]"
+        type_repr = "builtins.tuple[builtins.list[builtins.list[expression.Expression]] | builtins.list[builtins.int] | PauliSum | DefGateSequence]",
+        imports = ("quil._quil.expression")
     ))]
     fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
         match self {
@@ -583,7 +587,8 @@ impl GateSpecification {
     frozen,
     hash,
     get_all,
-    subclass
+    subclass,
+    from_py_object
 )]
 pub struct OwnedGateSignature {
     name: String,
@@ -732,6 +737,7 @@ impl Offset {
     }
 }
 
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl PauliGate {
@@ -742,6 +748,34 @@ impl PauliGate {
     fn parse(input: &str) -> Result<Self, ParseInstructionError> {
         <Self as std::str::FromStr>::from_str(input)
             .map_err(|err| ParseInstructionError::Parse(err.to_string()))
+    }
+}
+
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl PauliTerm {
+    #[new]
+    fn __new__(
+        arguments: Vec<(PauliGate, String)>,
+        #[gen_stub(override_type(
+            type_repr = "_quil.expression.Expression",
+            imports = ("quil._quil.expression")
+        ))]
+        expression: Expression,
+    ) -> PauliTerm {
+        Self::new(arguments, expression)
+    }
+
+    #[gen_stub(override_return_type(
+        type_repr = "builtins.tuple[
+            builtins.list[builtins.tuple[PauliGate, builtins.str]],
+            _quil.expression.Expression
+        ]",
+        imports = ("quil._quil.expression", "builtins")
+    ))]
+    fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+        (self.arguments.clone(), self.expression.clone()).into_pyobject(py)
     }
 }
 

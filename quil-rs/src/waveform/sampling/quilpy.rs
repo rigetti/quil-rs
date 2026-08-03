@@ -37,7 +37,13 @@ pub(crate) fn register_abcs<'py>(py: Python<'py>) -> PyResult<()> {
 /// The result of sampling a waveform, representing a sequence of IQ value samples.
 #[derive(Clone, PartialEq, Debug)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
-#[pyclass(module = "quil._quil.waveform.sampling", name = "IqSamples", eq, frozen)]
+#[pyclass(
+    module = "quil._quil.waveform.sampling",
+    name = "IqSamples",
+    eq,
+    frozen,
+    from_py_object
+)]
 pub enum PyIqSamples {
     /// A flat waveform, consisting of a single IQ value repeated some number of times.
     ///
@@ -51,12 +57,20 @@ pub enum PyIqSamples {
 
 #[derive(Clone, Debug, derive_more::From, derive_more::Into)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[pyclass(module = "quil._quil.waveform.sampling", name = "IqSamplesIter")]
+#[pyclass(
+    module = "quil._quil.waveform.sampling",
+    name = "IqSamplesIter",
+    from_py_object
+)]
 pub struct PyIqSamplesIter(pub IntoIter<Complex64>);
 
 #[derive(Clone, Debug, derive_more::From, derive_more::Into)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[pyclass(module = "quil._quil.waveform.sampling", name = "IqSamplesRevIter")]
+#[pyclass(
+    module = "quil._quil.waveform.sampling",
+    name = "IqSamplesRevIter",
+    from_py_object
+)]
 pub struct PyIqSamplesRevIter(pub std::iter::Rev<IntoIter<Complex64>>);
 
 impl From<IqSamples<Complex64>> for PyIqSamples {

@@ -30,7 +30,15 @@ use pyo3_stub_gen::derive::{
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash, get_all, subclass)
+    pyo3::pyclass(
+        module = "quil._quil.instructions",
+        eq,
+        frozen,
+        hash,
+        get_all,
+        subclass,
+        from_py_object
+    )
 )]
 pub struct Gate {
     pub name: String,
@@ -49,7 +57,8 @@ pub struct Gate {
         eq,
         frozen,
         hash,
-        rename_all = "SCREAMING_SNAKE_CASE"
+        rename_all = "SCREAMING_SNAKE_CASE",
+        from_py_object
     )
 )]
 pub enum GateModifier {
@@ -835,7 +844,8 @@ mod test_gate_into_matrix {
         eq,
         frozen,
         hash,
-        rename_all = "SCREAMING_SNAKE_CASE"
+        rename_all = "SCREAMING_SNAKE_CASE",
+        from_py_object
     )
 )]
 #[strum(serialize_all = "UPPERCASE")]
@@ -850,16 +860,27 @@ pub enum PauliGate {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash, get_all, subclass)
+    pyo3::pyclass(
+        module = "quil._quil.instructions",
+        eq,
+        frozen,
+        hash,
+        get_all,
+        subclass,
+        from_py_object
+    )
 )]
 pub struct PauliTerm {
     pub arguments: Vec<(PauliGate, String)>,
     pub expression: Expression,
 }
 
-pickleable_new! {
-    impl PauliTerm {
-        pub fn new(arguments: Vec<(PauliGate, String)>, expression: Expression);
+impl PauliTerm {
+    pub fn new(arguments: Vec<(PauliGate, String)>, expression: Expression) -> Self {
+        Self {
+            arguments,
+            expression,
+        }
     }
 }
 
@@ -877,7 +898,15 @@ impl PauliTerm {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash, get_all, subclass)
+    pyo3::pyclass(
+        module = "quil._quil.instructions",
+        eq,
+        frozen,
+        hash,
+        get_all,
+        subclass,
+        from_py_object
+    )
 )]
 pub struct PauliSum {
     pub arguments: Vec<String>,
@@ -912,7 +941,7 @@ pickleable_new! {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash)
+    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash, from_py_object)
 )]
 pub enum GateSpecification {
     /// A matrix of [`Expression`]s representing a unitary operation for a [`GateType::Matrix`].
@@ -982,7 +1011,15 @@ impl Quil for GateSpecification {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash, get_all, subclass)
+    pyo3::pyclass(
+        module = "quil._quil.instructions",
+        eq,
+        frozen,
+        hash,
+        get_all,
+        subclass,
+        from_py_object
+    )
 )]
 pub struct GateDefinition {
     pub name: String,
@@ -1248,7 +1285,8 @@ mod test_gate_definition {
         eq,
         frozen,
         hash,
-        rename_all = "SCREAMING_SNAKE_CASE"
+        rename_all = "SCREAMING_SNAKE_CASE",
+        from_py_object
     )
 )]
 pub enum GateType {

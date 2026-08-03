@@ -40,13 +40,14 @@ class BasicBlock:
         This does not include the label or terminator instructions.
         """
     @property
-    def label(self) -> typing.Optional[instructions.Target]:
+    def label(self) -> _quil.instructions.Target | None:
         r"""
         The label of the block, if any.
+        
         This is used to target this block in control flow.
         """
     @property
-    def terminator(self) -> typing.Optional[instructions.Instruction]:
+    def terminator(self) -> _quil.instructions.Instruction | None:
         r"""
         The control flow terminator instruction of the block, if any.
         
@@ -199,7 +200,7 @@ class CalibrationSource:
     The source of a calibration, either a [`CalibrationIdentifier`] or a
     [`MeasureCalibrationIdentifier`].
     """
-    def __getnewargs__(self) -> tuple[CalibrationIdentifier | MeasureCalibrationIdentifier]: ...
+    def __getnewargs__(self) -> tuple[instructions.CalibrationIdentifier | instructions.MeasureCalibrationIdentifier]: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -577,7 +578,7 @@ class Program:
         [`Debug`](std::fmt::Debug) implementation.
         """
     def __setstate__(self, state: bytes) -> None: ...
-    def _wrap_in_loop(self, loop_count_reference: instructions.MemoryReference, start_target: instructions.Target, iterations: builtins.int) -> Program:
+    def _wrap_in_loop(self, loop_count_reference: _quil.instructions.MemoryReference, start_target: _quil.instructions.Target, iterations: builtins.int) -> Program:
         r"""
         Return a copy of the [`Program`] wrapped in a loop that repeats `iterations` times.
         
@@ -598,7 +599,7 @@ class Program:
         body instructions, but retaining all of the calibrations,
         etc.][Self::clone_without_body_instructions].
         """
-    def add_instruction(self, instruction: instructions.Instruction) -> None:
+    def add_instruction(self, instruction: _quil.instructions.Instruction) -> None:
         r"""
         Add an instruction to the end of the program.
         
@@ -607,7 +608,7 @@ class Program:
         instructions are still added to the [`Program::extern_pragma_map`];
         duplicate `PRAGMA EXTERN` names are overwritten.
         """
-    def add_instructions(self, instructions: typing.Sequence[instructions.Instruction]) -> None:
+    def add_instructions(self, instructions: typing.Sequence[_quil.instructions.Instruction]) -> None:
         r"""
         Add a list of instructions to the end of the program.
         """
@@ -741,7 +742,7 @@ class Program:
         
         See `expand_defgate_sequences`.
         """
-    def filter_instructions(self, predicate: collections.abc.Callable[[Instruction], bool]) -> Program:
+    def filter_instructions(self, predicate: collections.abc.Callable[[_quil.instructions.Instruction], bool]) -> Program:
         r"""
         Return a new ``Program`` containing only the instructions
         for which `predicate` returns true.
@@ -778,7 +779,7 @@ class Program:
         [`default_target_resolver`](Self::default_target_resolver),
         and [`default_qubit_resolver`](Self::default_qubit_resolver) for more information.
         """
-    def resolve_placeholders_with_custom_resolvers(self, *, target_resolver: typing.Optional[collections.abc.Callable[[instructions.TargetPlaceholder], typing.Optional[builtins.str]]] = None, qubit_resolver: typing.Optional[collections.abc.Callable[[instructions.QubitPlaceholder], typing.Optional[builtins.int]]] = None) -> None:
+    def resolve_placeholders_with_custom_resolvers(self, *, target_resolver: collections.abc.Callable[[_quil.instructions.TargetPlaceholder], builtins.str | None] | None = None, qubit_resolver: collections.abc.Callable[[_quil.instructions.QubitPlaceholder], builtins.int | None] | None = None) -> None:
         r"""
         Resolve ``TargetPlaceholder``s and ``QubitPlaceholder``s within the program.
         
@@ -794,7 +795,7 @@ class Program:
         using an auto-incrementing value (for qubit) or suffix (for target)
         while ensuring that unique value is not already in use within the program.
         """
-    def to_instructions(self) -> builtins.list[instructions.Instruction]:
+    def to_instructions(self) -> builtins.list[_quil.instructions.Instruction]:
         r"""
         Return a copy of all of the instructions which constitute this [`Program`].
         """
@@ -809,7 +810,7 @@ class Program:
         Returns an error if the program contains instructions other than `Gate`s.
         """
     @typing.overload
-    def wrap_in_loop(self, loop_count_reference: MemoryReference, start_target: Target, iterations: int) -> None:
+    def wrap_in_loop(self, loop_count_reference: _quil.instructions.MemoryReference, start_target: _quil.instructions.Target, iterations: builtins.int) -> None:
         r"""
         Return a copy of the [`Program`] wrapped in a loop that repeats `iterations` times.
         
@@ -855,13 +856,13 @@ class Program:
         """
     @typing.overload
     @typing_extensions.deprecated("the `end_target` parameter is deprecated and will be ignored")
-    def wrap_in_loop(self, loop_count_reference: MemoryReference, start_target: Target, end_target: Target, iterations: int) -> None: ...
+    def wrap_in_loop(self, loop_count_reference: _quil.instructions.MemoryReference, start_target: _quil.instructions.Target, end_target: _quil.instructions.Target, iterations: int) -> None: ...
     @typing.overload
     @typing_extensions.deprecated("the `iterations` parameter must be provided")
-    def wrap_in_loop(self, loop_count_reference: MemoryReference, start_target: Target, end_target: None, iterations: None) -> None: ...
+    def wrap_in_loop(self, loop_count_reference: _quil.instructions.MemoryReference, start_target: _quil.instructions.Target, end_target: None, iterations: None) -> None: ...
     @typing.overload
     @typing_extensions.deprecated("the `iterations` parameter must be provided")
-    def wrap_in_loop(self, loop_count_reference: MemoryReference, start_target: Target) -> None: ...
+    def wrap_in_loop(self, loop_count_reference: _quil.instructions.MemoryReference, start_target: _quil.instructions.Target) -> None: ...
 
 class ProgramError(_quil.QuilError):
     r"""

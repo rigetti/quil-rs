@@ -9,7 +9,14 @@ use crate::quil::{Quil, ToQuilError};
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash, ord)
+    pyo3::pyclass(
+        module = "quil._quil.instructions",
+        eq,
+        frozen,
+        hash,
+        ord,
+        from_py_object
+    )
 )]
 pub enum Qubit {
     Fixed(u64),
@@ -58,7 +65,15 @@ type QubitPlaceholderInner = Arc<()>;
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash, ord, subclass)
+    pyo3::pyclass(
+        module = "quil._quil.instructions",
+        eq,
+        frozen,
+        hash,
+        ord,
+        subclass,
+        from_py_object
+    )
 )]
 pub struct QubitPlaceholder(QubitPlaceholderInner);
 

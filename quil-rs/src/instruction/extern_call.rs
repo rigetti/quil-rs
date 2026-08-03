@@ -34,7 +34,7 @@ use super::{
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash)
+    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash, from_py_object)
 )]
 pub enum ExternParameterType {
     /// A scalar parameter, which may accept a memory reference or immediate value.
@@ -75,7 +75,15 @@ impl Quil for ExternParameterType {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash, get_all, subclass)
+    pyo3::pyclass(
+        module = "quil._quil.instructions",
+        eq,
+        frozen,
+        hash,
+        get_all,
+        subclass,
+        from_py_object
+    )
 )]
 pub struct ExternParameter {
     /// The name of the parameter. This must be a valid user identifier.
@@ -143,7 +151,15 @@ impl Quil for ExternParameter {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash, get_all, subclass)
+    pyo3::pyclass(
+        module = "quil._quil.instructions",
+        eq,
+        frozen,
+        hash,
+        get_all,
+        subclass,
+        from_py_object
+    )
 )]
 pub struct ExternSignature {
     /// The return type of the extern signature, if any.
@@ -433,7 +449,14 @@ pub enum CallArgumentResolutionError {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(name = "CallArgument", module = "quil._quil.instructions", eq, frozen, hash)
+    pyo3::pyclass(
+        name = "CallArgument",
+        module = "quil._quil.instructions",
+        eq,
+        frozen,
+        hash,
+        from_py_object
+    )
 )]
 pub enum UnresolvedCallArgument {
     /// A reference to a declared memory location. Note, this may be resolved to either
@@ -796,7 +819,15 @@ pub enum CallError {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash, subclass, get_all)
+    pyo3::pyclass(
+        module = "quil._quil.instructions",
+        eq,
+        frozen,
+        hash,
+        subclass,
+        get_all,
+        from_py_object
+    )
 )]
 pub struct Call {
     /// The name of the call instruction. This must be a valid user identifier.

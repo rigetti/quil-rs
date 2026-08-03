@@ -23,7 +23,8 @@ use super::ArithmeticOperand;
         eq,
         frozen,
         hash,
-        rename_all = "SCREAMING_SNAKE_CASE"
+        rename_all = "SCREAMING_SNAKE_CASE",
+        from_py_object
     )
 )]
 pub enum ScalarType {
@@ -58,7 +59,15 @@ impl Quil for ScalarType {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash, get_all, subclass)
+    pyo3::pyclass(
+        module = "quil._quil.instructions",
+        eq,
+        frozen,
+        hash,
+        get_all,
+        subclass,
+        from_py_object
+    )
 )]
 pub struct Vector {
     pub data_type: ScalarType,
@@ -86,7 +95,14 @@ impl Quil for Vector {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash, subclass)
+    pyo3::pyclass(
+        module = "quil._quil.instructions",
+        eq,
+        frozen,
+        hash,
+        subclass,
+        from_py_object
+    )
 )]
 pub struct Sharing {
     pub name: String,
@@ -103,7 +119,14 @@ pickleable_new! {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash, subclass)
+    pyo3::pyclass(
+        module = "quil._quil.instructions",
+        eq,
+        frozen,
+        hash,
+        subclass,
+        from_py_object
+    )
 )]
 pub struct Offset {
     pub offset: u64,
@@ -131,7 +154,15 @@ impl Quil for Offset {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash, get_all, subclass)
+    pyo3::pyclass(
+        module = "quil._quil.instructions",
+        eq,
+        frozen,
+        hash,
+        get_all,
+        subclass,
+        from_py_object
+    )
 )]
 pub struct Declaration {
     pub name: String,
@@ -218,7 +249,15 @@ mod test_declaration {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil._quil.instructions", get_all, eq, frozen, hash, subclass)
+    pyo3::pyclass(
+        module = "quil._quil.instructions",
+        get_all,
+        eq,
+        frozen,
+        hash,
+        subclass,
+        from_py_object
+    )
 )]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub struct MemoryReference {
@@ -268,7 +307,15 @@ impl FromStr for MemoryReference {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash, get_all, subclass)
+    pyo3::pyclass(
+        module = "quil._quil.instructions",
+        eq,
+        frozen,
+        hash,
+        get_all,
+        subclass,
+        from_py_object
+    )
 )]
 pub struct Load {
     pub destination: MemoryReference,
@@ -300,7 +347,15 @@ impl Quil for Load {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash, get_all, subclass)
+    pyo3::pyclass(
+        module = "quil._quil.instructions",
+        eq,
+        frozen,
+        hash,
+        get_all,
+        subclass,
+        from_py_object
+    )
 )]
 pub struct Store {
     pub destination: String,
