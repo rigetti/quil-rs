@@ -233,7 +233,7 @@ impl Program {
         &mut self,
         #[gen_stub(override_type(
             type_repr = "_quil.instructions.Instruction",
-            imports = ("quil._quil", "typing"),
+            imports = ("quil._quil"),
         ))]
         instruction: Instruction,
     ) {
