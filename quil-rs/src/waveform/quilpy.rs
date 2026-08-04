@@ -236,10 +236,10 @@ impl PyWaveform {
     }
 
     #[gen_stub(override_return_type(
-        type_repr = "builtins.tuple[\
+        type_repr = "builtins.Optional[builtins.tuple[\
                          BuiltinWaveform[_Real, _Complex], \
                          CommonBuiltinParameters[_Real, _Complex]\
-                     ] | None",
+                     ]]",
         imports = ("builtins")
     ))]
     fn as_builtin<'py>(
@@ -269,10 +269,10 @@ impl PyWaveform {
     }
 
     #[gen_stub(override_return_type(
-        type_repr = "builtins.tuple[\
+        type_repr = "builtins.Optional[builtins.tuple[\
                          builtins.str, \
                          builtins.dict[builtins.str, _Complex]\
-                     ] | None",
+                     ]]",
         imports = ("builtins")
     ))]
     fn as_custom<'py>(&self, py: Python<'py>) -> PyResult<Option<(String, Bound<'py, PyDict>)>> {
