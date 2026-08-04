@@ -810,7 +810,7 @@ class Program:
         Returns an error if the program contains instructions other than `Gate`s.
         """
     @typing.overload
-    def wrap_in_loop(self, loop_count_reference: _quil.instructions.MemoryReference, start_target: _quil.instructions.Target, iterations: builtins.int) -> None:
+    def wrap_in_loop(self, loop_count_reference: _quil.instructions.MemoryReference, start_target: _quil.instructions.Target, iterations: builtins.int) -> Program:
         r"""
         Return a copy of the [`Program`] wrapped in a loop that repeats `iterations` times.
         
@@ -856,13 +856,13 @@ class Program:
         """
     @typing.overload
     @typing_extensions.deprecated("the `end_target` parameter is deprecated and will be ignored")
-    def wrap_in_loop(self, loop_count_reference: _quil.instructions.MemoryReference, start_target: _quil.instructions.Target, end_target: _quil.instructions.Target, iterations: int) -> None: ...
+    def wrap_in_loop(self, loop_count_reference: _quil.instructions.MemoryReference, start_target: _quil.instructions.Target, end_target: _quil.instructions.Target, iterations: int) -> Program: ...
     @typing.overload
     @typing_extensions.deprecated("the `iterations` parameter must be provided")
-    def wrap_in_loop(self, loop_count_reference: _quil.instructions.MemoryReference, start_target: _quil.instructions.Target, end_target: None, iterations: None) -> None: ...
+    def wrap_in_loop(self, loop_count_reference: _quil.instructions.MemoryReference, start_target: _quil.instructions.Target, end_target: None, iterations: None) -> Program: ...
     @typing.overload
     @typing_extensions.deprecated("the `iterations` parameter must be provided")
-    def wrap_in_loop(self, loop_count_reference: _quil.instructions.MemoryReference, start_target: _quil.instructions.Target) -> None: ...
+    def wrap_in_loop(self, loop_count_reference: _quil.instructions.MemoryReference, start_target: _quil.instructions.Target) -> Program: ...
 
 class ProgramError(_quil.QuilError):
     r"""

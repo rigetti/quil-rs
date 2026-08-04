@@ -576,7 +576,7 @@ pyo3_stub_gen::inventory::submit! {
                 loop_count_reference: _quil.instructions.MemoryReference,
                 start_target: _quil.instructions.Target,
                 iterations: builtins.int,
-            ):
+            ) -> Program:
                 r"""
                 Return a copy of the [`Program`] wrapped in a loop that repeats `iterations` times.
 
@@ -628,7 +628,7 @@ pyo3_stub_gen::inventory::submit! {
                 start_target: _quil.instructions.Target,
                 end_target: _quil.instructions.Target,
                 iterations: int,
-            ): ...
+            ) -> Program: ...
             @overload
             @deprecated("the `iterations` parameter must be provided")
             def wrap_in_loop(
@@ -637,14 +637,14 @@ pyo3_stub_gen::inventory::submit! {
                 start_target: _quil.instructions.Target,
                 end_target: None,
                 iterations: None,
-            ): ...
+            ) -> Program: ...
             @overload
             @deprecated("the `iterations` parameter must be provided")
             def wrap_in_loop(
                 self,
                 loop_count_reference: _quil.instructions.MemoryReference,
                 start_target: _quil.instructions.Target,
-            ): ...
+            ) -> Program: ...
         "#
     }
 }
