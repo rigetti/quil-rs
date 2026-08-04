@@ -298,7 +298,8 @@ macro_rules! instruction_getnewargs {
         #[pymethods]
         impl Instruction {
             #[gen_stub(override_return_type(
-                type_repr = "tuple[()] | tuple[" $($kind)" | "* "]"
+                type_repr = "builtins.tuple[()] | builtins.tuple[" $($kind)" | "* "]",
+                imports = ("builtins")
             ))]
             fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
                 match self {
@@ -364,7 +365,7 @@ instruction_getnewargs!(
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl ArithmeticOperand {
-    #[gen_stub(override_return_type(type_repr = "tuple[int | float | MemoryReference]"))]
+    #[gen_stub(override_return_type(type_repr = "builtins.tuple[builtins.int | builtins.float | MemoryReference]", imports = ("builtins")))]
     fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
         match self {
             Self::LiteralInteger(value) => (value,).into_pyobject(py),
@@ -378,7 +379,7 @@ impl ArithmeticOperand {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl AttributeValue {
-    #[gen_stub(override_return_type(type_repr = "tuple[str | Expression]"))]
+    #[gen_stub(override_return_type(type_repr = "builtins.tuple[builtins.str | Expression]", imports = ("builtins")))]
     fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
         match self {
             Self::String(value) => (value.clone(),).into_pyobject(py),
@@ -391,7 +392,7 @@ impl AttributeValue {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl BinaryOperand {
-    #[gen_stub(override_return_type(type_repr = "tuple[int | MemoryReference]"))]
+    #[gen_stub(override_return_type(type_repr = "builtins.tuple[builtins.int | MemoryReference]", imports = ("builtins")))]
     fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
         match self {
             Self::LiteralInteger(value) => (value,).into_pyobject(py),
@@ -404,7 +405,7 @@ impl BinaryOperand {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl ComparisonOperand {
-    #[gen_stub(override_return_type(type_repr = "tuple[int | float | MemoryReference]"))]
+    #[gen_stub(override_return_type(type_repr = "builtins.tuple[builtins.int | builtins.float | MemoryReference]", imports = ("builtins")))]
     fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
         match self {
             Self::LiteralInteger(value) => (value,).into_pyobject(py),
@@ -470,7 +471,7 @@ impl pyo3_stub_gen::PyStubType for ExternPragmaMap {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl ExternParameterType {
-    #[gen_stub(override_return_type(type_repr = "tuple[ScalarType | Vector]"))]
+    #[gen_stub(override_return_type(type_repr = "builtins.tuple[ScalarType | Vector]", imports = ("builtins")))]
     fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
         match self {
             Self::Scalar(value) | Self::VariableLengthVector(value) => (*value,).into_pyobject(py),
@@ -665,7 +666,11 @@ impl MeasureCalibrationIdentifier {
     }
 
     #[gen_stub(override_return_type(
-        type_repr = "tuple[tuple[Qubit, str | None], dict[str, str | None]]"
+        type_repr = "builtins.tuple[
+            builtins.tuple[Qubit, typing.Optional[builtins.str]],
+            builtins.dict[builtins.str, typing.Optional[builtins.str]]
+        ]",
+        imports = ("builtins", "typing")
     ))]
     fn __getnewargs_ex__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
         let Self {
@@ -695,7 +700,11 @@ impl Measurement {
     }
 
     #[gen_stub(override_return_type(
-        type_repr = "tuple[tuple[Qubit, MemoryReference | None], dict[str, str | None]]"
+        type_repr = "builtins.tuple[
+            builtins.tuple[Qubit, typing.Optional[MemoryReference]],
+            builtins.dict[builtins.str, typing.Optional[builtins.str]]
+        ]",
+        imports = ("builtins", "typing")
     ))]
     fn __getnewargs_ex__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
         let Self {
@@ -783,7 +792,7 @@ impl PauliTerm {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl PragmaArgument {
-    #[gen_stub(override_return_type(type_repr = "tuple[int | str]"))]
+    #[gen_stub(override_return_type(type_repr = "builtins.tuple[builtins.int | builtins.str]", imports = ("builtins")))]
     fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
         match self {
             Self::Identifier(value) => (value.clone(),).into_pyobject(py),
@@ -796,7 +805,7 @@ impl PragmaArgument {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl Qubit {
-    #[gen_stub(override_return_type(type_repr = "tuple[int | str | QubitPlaceholder]"))]
+    #[gen_stub(override_return_type(type_repr = "builtins.tuple[builtins.int | builtins.str | QubitPlaceholder]", imports = ("builtins")))]
     fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
         match self {
             Self::Fixed(value) => (value,).into_pyobject(py),
@@ -829,7 +838,7 @@ impl QubitPlaceholder {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl Target {
-    #[gen_stub(override_return_type(type_repr = "tuple[str | TargetPlaceholder]"))]
+    #[gen_stub(override_return_type(type_repr = "builtins.tuple[builtins.str | TargetPlaceholder]", imports = ("builtins")))]
     fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
         match self {
             Self::Fixed(value) => (value,).into_pyobject(py),
@@ -842,7 +851,7 @@ impl Target {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl UnresolvedCallArgument {
-    #[gen_stub(override_return_type(type_repr = "tuple[str | MemoryReference | complex]"))]
+    #[gen_stub(override_return_type(type_repr = "builtins.tuple[builtins.str | MemoryReference | builtins.complex]", imports = ("builtins")))]
     fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
         match self {
             Self::Identifier(value) => (value.clone(),).into_pyobject(py),

@@ -40,14 +40,14 @@ class BasicBlock:
         This does not include the label or terminator instructions.
         """
     @property
-    def label(self) -> _quil.instructions.Target | None:
+    def label(self) -> typing.Optional[_quil.instructions.Target]:
         r"""
         The label of the block, if any.
         
         This is used to target this block in control flow.
         """
     @property
-    def terminator(self) -> _quil.instructions.Instruction | None:
+    def terminator(self) -> typing.Optional[_quil.instructions.Instruction]:
         r"""
         The control flow terminator instruction of the block, if any.
         
@@ -200,7 +200,7 @@ class CalibrationSource:
     The source of a calibration, either a [`CalibrationIdentifier`] or a
     [`MeasureCalibrationIdentifier`].
     """
-    def __getnewargs__(self) -> tuple[instructions.CalibrationIdentifier | instructions.MeasureCalibrationIdentifier]: ...
+    def __getnewargs__(self) -> builtins.tuple[_quil.instructions.CalibrationIdentifier | _quil.instructions.MeasureCalibrationIdentifier]: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -555,7 +555,7 @@ class Program:
     @memory_regions.setter
     def memory_regions(self, value: typing.Mapping[builtins.str, MemoryRegion]) -> None: ...
     @property
-    def pragma_extern_map(self) -> builtins.dict[builtins.str | None, builtins.list[_quil.instructions.Instruction]]: ...
+    def pragma_extern_map(self) -> builtins.dict[typing.Optional[builtins.str], builtins.list[_quil.instructions.Instruction]]: ...
     @property
     def used_qubits(self) -> builtins.set[_quil.instructions.Qubit]: ...
     @property
@@ -652,7 +652,7 @@ class Program:
         Return the expanded copy of the program
         and a source mapping describing the expansions made.
         """
-    def expand_defgate_sequences(self, predicate: collections.abc.Callable[[str], bool] | None = None) -> Program:
+    def expand_defgate_sequences(self, predicate: typing.Optional[collections.abc.Callable[[builtins.str], builtins.bool]] = None) -> Program:
         r"""
         Expand any instructions in the program which have a matching sequence gate definition, leaving
         the others unchanged.
@@ -724,7 +724,7 @@ class Program:
         >>>
         >>> assert expanded_program == expected_program
         """
-    def expand_defgate_sequences_with_source_map(self, predicate: collections.abc.Callable[[str], bool] | None = None) -> tuple[Program, InstructionSourceMap]:
+    def expand_defgate_sequences_with_source_map(self, predicate: typing.Optional[collections.abc.Callable[[builtins.str], builtins.bool]] = None) -> tuple[Program, InstructionSourceMap]:
         r"""
         Expand any instructions in the program which have a matching sequence gate definition, leaving
         the others unchanged. Note, the new program will drop any gate definitions which are no longer
@@ -742,7 +742,7 @@ class Program:
         
         See `expand_defgate_sequences`.
         """
-    def filter_instructions(self, predicate: collections.abc.Callable[[_quil.instructions.Instruction], bool]) -> Program:
+    def filter_instructions(self, predicate: collections.abc.Callable[[_quil.instructions.Instruction], builtins.bool]) -> Program:
         r"""
         Return a new ``Program`` containing only the instructions
         for which `predicate` returns true.
@@ -779,7 +779,7 @@ class Program:
         [`default_target_resolver`](Self::default_target_resolver),
         and [`default_qubit_resolver`](Self::default_qubit_resolver) for more information.
         """
-    def resolve_placeholders_with_custom_resolvers(self, *, target_resolver: collections.abc.Callable[[_quil.instructions.TargetPlaceholder], builtins.str | None] | None = None, qubit_resolver: collections.abc.Callable[[_quil.instructions.QubitPlaceholder], builtins.int | None] | None = None) -> None:
+    def resolve_placeholders_with_custom_resolvers(self, *, target_resolver: typing.Optional[collections.abc.Callable[[_quil.instructions.TargetPlaceholder], typing.Optional[builtins.str]]] = None, qubit_resolver: typing.Optional[collections.abc.Callable[[_quil.instructions.QubitPlaceholder], typing.Optional[builtins.int]]] = None) -> None:
         r"""
         Resolve ``TargetPlaceholder``s and ``QubitPlaceholder``s within the program.
         

@@ -97,9 +97,10 @@ impl Program {
 
     // These getters/overrides are to work around mypy issues with the type names.
     // See: https://github.com/python/mypy/issues/4146
+    // See: https://github.com/Jij-Inc/pyo3-stub-gen/issues/493
     #[gen_stub(override_return_type(
-        type_repr = "builtins.dict[builtins.str | None, builtins.list[_quil.instructions.Instruction]]",
-        imports = ("quil._quil"),
+        type_repr = "builtins.dict[typing.Optional[builtins.str], builtins.list[_quil.instructions.Instruction]]",
+        imports = ("quil._quil", "builtins", "typing"),
     ))]
     #[getter]
     fn pragma_extern_map(&self) -> ExternPragmaMap {
@@ -108,7 +109,7 @@ impl Program {
 
     #[gen_stub(override_return_type(
         type_repr = "builtins.set[_quil.instructions.Qubit]",
-        imports = ("quil._quil"),
+        imports = ("quil._quil", "builtins"),
     ))]
     #[getter]
     fn used_qubits(&self) -> HashSet<Qubit> {
@@ -117,7 +118,7 @@ impl Program {
 
     #[gen_stub(override_return_type(
         type_repr = "builtins.dict[builtins.str, _quil.instructions.Waveform]",
-        imports = ("quil._quil"),
+        imports = ("quil._quil", "builtins"),
     ))]
     #[getter]
     fn waveforms(&self) -> IndexMap<String, Waveform> {
@@ -206,8 +207,8 @@ impl Program {
         py: Python<'py>,
         #[gen_stub(
             override_type(
-                type_repr="collections.abc.Callable[[str], bool] | None",
-                imports=("collections.abc")
+                type_repr="typing.Optional[collections.abc.Callable[[builtins.str], builtins.bool]]",
+                imports=("collections.abc", "builtins", "typing")
             )
         )]
         predicate: Option<&Bound<'py, PyFunction>>,
@@ -301,11 +302,11 @@ impl Program {
         py: Python<'py>,
         #[gen_stub(
             override_type(
-                type_repr="collections.abc.Callable[[str], bool] | None",
-                imports=("collections.abc")
+                type_repr="typing.Optional[collections.abc.Callable[[builtins.str], builtins.bool]]",
+                imports=("collections.abc", "builtins", "typing")
             )
         )]
-        predicate: Option<&Bound<'py, PyFunction>>,
+        predicate: Option<&Bound<'py, PyAny>>,
     ) -> Result<Self> {
         self.clone().expand_defgate_sequences(|key: &str| -> bool {
             predicate.is_none_or(|f| match call_user_func(py, f, key) {
@@ -336,11 +337,11 @@ impl Program {
         py: Python<'py>,
         #[gen_stub(
             override_type(
-                type_repr="collections.abc.Callable[[_quil.instructions.Instruction], bool]",
-                imports=("quil._quil", "collections.abc")
+                type_repr="collections.abc.Callable[[_quil.instructions.Instruction], builtins.bool]",
+                imports=("quil._quil", "collections.abc", "builtins")
             )
         )]
-        predicate: &Bound<'py, PyFunction>,
+        predicate: &Bound<'py, PyAny>,
     ) -> Self {
         self.filter_instructions(|inst| match call_user_func(py, predicate, inst.clone()) {
             Ok(val) => val,
@@ -372,13 +373,13 @@ impl Program {
     fn py_resolve_placeholders_with_custom_resolvers(
         &mut self,
         #[gen_stub(override_type(
-            type_repr = "collections.abc.Callable[[_quil.instructions.TargetPlaceholder], builtins.str | None] | None",
-            imports = ("quil._quil", "collections.abc", "builtins")
+            type_repr = "typing.Optional[collections.abc.Callable[[_quil.instructions.TargetPlaceholder], typing.Optional[builtins.str]]]",
+            imports = ("quil._quil", "collections.abc", "builtins", "typing")
         ))]
         target_resolver: Option<PyTargetResolver>,
         #[gen_stub(override_type(
-            type_repr = "collections.abc.Callable[[_quil.instructions.QubitPlaceholder], builtins.int | None] | None",
-            imports = ("quil._quil", "collections.abc", "builtins")
+            type_repr = "typing.Optional[collections.abc.Callable[[_quil.instructions.QubitPlaceholder], typing.Optional[builtins.int]]]",
+            imports = ("quil._quil", "collections.abc", "builtins", "typing")
         ))]
         qubit_resolver: Option<PyQubitResolver>,
     ) {
@@ -666,7 +667,7 @@ enum UserFunctionError {
 #[inline]
 fn call_user_func<'a, 'py, T, U>(
     py: Python<'py>,
-    user_func: &'a Bound<'py, PyFunction>,
+    user_func: &'a Bound<'py, PyAny>,
     param: T,
 ) -> std::result::Result<U, UserFunctionError>
 where
@@ -812,8 +813,8 @@ impl FrameSet {
 #[pymethods]
 impl CalibrationSource {
     #[gen_stub(override_return_type(
-        type_repr = "tuple[instructions.CalibrationIdentifier | instructions.MeasureCalibrationIdentifier]",
-        imports = ("quil._quil.instructions")
+        type_repr = "builtins.tuple[_quil.instructions.CalibrationIdentifier | _quil.instructions.MeasureCalibrationIdentifier]",
+        imports = ("quil._quil.instructions", "builtins")
     ))]
     fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
         match self {
@@ -1355,8 +1356,8 @@ impl BasicBlockOwned {
     ///
     /// This is used to target this block in control flow.
     #[gen_stub(override_return_type(
-        type_repr = "_quil.instructions.Target | None",
-        imports = ("quil._quil"),
+        type_repr = "typing.Optional[_quil.instructions.Target]",
+        imports = ("quil._quil", "typing"),
     ))]
     #[getter]
     fn label(&self) -> Option<Target> {
@@ -1367,8 +1368,8 @@ impl BasicBlockOwned {
     ///
     /// If this is ``None``, the implicit behavior is to "continue" to the subsequent block.
     #[gen_stub(override_return_type(
-        type_repr = "_quil.instructions.Instruction | None",
-        imports = ("quil._quil"),
+        type_repr = "typing.Optional[_quil.instructions.Instruction]",
+        imports = ("quil._quil", "typing"),
     ))]
     #[getter]
     fn terminator(&self) -> Option<Instruction> {
