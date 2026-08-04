@@ -1315,6 +1315,7 @@ impl ControlFlowGraphOwned {
     }
 }
 
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl BasicBlockOwned {
