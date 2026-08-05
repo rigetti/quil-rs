@@ -1554,7 +1554,7 @@ mod tests {
         CommonBuiltinParameters { duration: 1e-4, scale: Some(1.0), phase: Some(Cycles(0.0)), detuning: Some(1e6)},
     )]
     #[case(
-        RaisedCosine { rolloff: 4e-5, pad_left: 0.0, pad_right: 0.0 },
+        RaisedCosine { rolloff: 0.5, pad_left: 0.0, pad_right: 0.0 },
         CommonBuiltinParameters { duration: 1e-4, scale: Some(1.0), phase: Some(Cycles(0.0)), detuning: Some(0.0)},
     )]
     #[case(
