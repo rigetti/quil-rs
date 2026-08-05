@@ -49,6 +49,7 @@ create_init_submodule! {
         PyDragGaussian,
         PyErfSquare,
         PyHermiteGaussian,
+        PyRaisedCosine,
         BoxcarKernel,
     ],
     errors: [
@@ -185,6 +186,7 @@ define_py_evaluate! {
     DragGaussian,
     ErfSquare,
     HermiteGaussian,
+    RaisedCosine,
 }
 
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]

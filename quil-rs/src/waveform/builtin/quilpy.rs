@@ -50,6 +50,7 @@ impl PyBuiltinWaveform {
             DragGaussian[_Real, _Complex] | \
             ErfSquare[_Real, _Complex] | \
             HermiteGaussian[_Real, _Complex] | \
+            RaisedCosine[_Real, _Complex] | \
             BoxcarKernel\
         ",))]
         waveform: Bound<'py, PyAny>,
@@ -64,6 +65,8 @@ impl PyBuiltinWaveform {
             Ok(Self(BuiltinWaveform::ErfSquare(erf_square)))
         } else if let Some(PyHermiteGaussian(hermite_gaussian)) = py_cast_and_clone(&waveform)? {
             Ok(Self(BuiltinWaveform::HermiteGaussian(hermite_gaussian)))
+        } else if let Some(PyRaisedCosine(raised_cosine)) = py_cast_and_clone(&waveform)? {
+            Ok(Self(BuiltinWaveform::RaisedCosine(raised_cosine)))
         } else if let Some(BoxcarKernel) = py_cast_and_clone(&waveform)? {
             Ok(Self(BuiltinWaveform::BoxcarKernel(BoxcarKernel)))
         } else {
@@ -77,6 +80,7 @@ impl PyBuiltinWaveform {
             DragGaussian[_Real, _Complex] | \
             ErfSquare[_Real, _Complex] | \
             HermiteGaussian[_Real, _Complex] | \
+            RaisedCosine[_Real, _Complex] | \
             BoxcarKernel\
         ",))]
     fn as_inner<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {

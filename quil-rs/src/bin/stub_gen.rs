@@ -717,6 +717,7 @@ mod main {
                 builtin_waveform("DragGaussian"),
                 builtin_waveform("ErfSquare"),
                 builtin_waveform("HermiteGaussian"),
+                builtin_waveform("RaisedCosine"),
                 (
                     "BoxcarKernel".to_owned(),
                     Class {
