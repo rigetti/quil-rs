@@ -1,3 +1,15 @@
+## 0.37.0 (2026-08-05)
+
+### Breaking Changes
+
+- make `wrap_in_loop` more efficient and correct (#504)
+- first-class waveform representation (#485)
+- upgrade pyo3 and pyo3_stub_gen (#513)
+
+### Fixes
+
+- publish rc crate on PR merge (#515)
+
 ## 0.37.0-rc.4 (2026-08-05)
 
 ### Breaking Changes
