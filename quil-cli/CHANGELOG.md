@@ -1,3 +1,11 @@
+## 0.14.0-rc.4 (2026-08-05)
+
+### Breaking Changes
+
+- make `wrap_in_loop` more efficient and correct (#504)
+- first-class waveform representation (#485)
+- upgrade pyo3 and pyo3_stub_gen (#513)
+
 ## 0.14.0-rc.3 (2026-07-29)
 
 ### Breaking Changes
