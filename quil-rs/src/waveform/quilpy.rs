@@ -122,14 +122,15 @@ impl WaveformData for Pythonic {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil.waveform", name = "Waveform", generic, subclass)
+    pyo3::pyclass(
+        module = "quil._quil.waveform",
+        name = "Waveform",
+        generic,
+        subclass,
+        from_py_object
+    )
 )]
 pub struct PyWaveform(pub Waveform<Pythonic>);
-
-#[cfg(feature = "stubs")]
-pyo3_stub_gen::inventory::submit! {
-    explicit_stubs::class_getitem_info::<PyWaveform>()
-}
 
 fn call_on_py_any_rust<'py>(f: &Bound<'py, PyAny>, x: &PyAnyRust) -> PyResult<PyAnyRust> {
     let PyAnyRust(x) = x;
@@ -142,134 +143,37 @@ macro_rules! define_py_evaluate {
     ($($name:ident),* $(,)?) => {
         $(
             paste::paste! {
-                #[pymethods]
+                #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+                #[cfg_attr(feature = "stubs", pyo3_stub_gen::derive::gen_stub_pymethods)]
+                #[pyo3::pymethods]
                 impl [<Py$name>] {
+                    #[gen_stub(override_return_type(
+                            type_repr = $name "[_OtherReal, _OtherComplex]")
+                    )]
                     fn evaluate<'py>(
                         &self,
+                        #[gen_stub(override_type(
+                            type_repr = "collections.abc.Callable[[_Real], _OtherReal]",
+                            imports = ("collections.abc"),
+                        ))]
                         real: &Bound<'py, PyAny>,
-                        complex: &Bound<'py, PyAny>,
-                    ) -> PyResult<[<Py$name>]> {
-                        Ok([<Py$name>](self.0.as_ref().try_evaluate(
-                            |r| call_on_py_any_rust(real, r),
-                            |c| call_on_py_any_rust(complex, c),
-                        )?))
+                        #[gen_stub(override_type(
+                            type_repr = "collections.abc.Callable[[_Complex], _OtherComplex]",
+                            imports = ("collections.abc"),
+                        ))]
+                        complex: &Bound<'py, PyAny>
+                    ) -> PyResult<Self> {
+                        Ok(Self(
+                            self.0.as_ref().try_evaluate(
+                                |r| call_on_py_any_rust(real, r),
+                                |c| call_on_py_any_rust(complex, c),
+                            )?
+                        ))
                     }
-                }
-
-                #[cfg(feature = "stubs")]
-                pyo3::inventory::submit! {
-                    explicit_stubs::py_evaluate_method_info::<[<Py$name>]>()
                 }
             }
         )*
     };
-}
-
-#[cfg(feature = "stubs")]
-pub(super) mod explicit_stubs {
-    use std::any::{self, Any};
-
-    use pyo3::type_object::PyTypeInfo;
-    use pyo3_stub_gen::{type_info::*, TypeInfo};
-
-    /// All our `evaluate` methods have the same signature, which – except for the generic
-    /// arguments, which are added later – is given by this function.  It corresponds to
-    ///
-    /// ```text
-    /// def evaluate[OtherReal, OtherComplex = OtherReal](
-    ///     self,
-    ///     real: Callable[[Real], OtherReal],
-    ///     complex: Callable[[Complex], OtherComplex
-    /// ) -> $THIS_TYPE[OtherReal, OtherComplex]
-    ///     ...
-    /// ```
-    ///
-    /// except that we have to prefix all the type variables with an `_` because we support Python
-    /// versions before 3.12.
-    pub const fn py_evaluate_method_info<T: Any + PyTypeInfo>() -> PyMethodsInfo {
-        PyMethodsInfo {
-            struct_id: any::TypeId::of::<T>,
-            attrs: &[],
-            getters: &[],
-            setters: &[],
-            methods: &[MethodInfo {
-                name: "evaluate",
-                parameters: &[
-                    ParameterInfo {
-                        name: "real",
-                        kind: ParameterKind::PositionalOrKeyword,
-                        type_info: || {
-                            TypeInfo::with_module(
-                                "collections.abc.Callable[[_Real], _OtherReal]",
-                                "collections.abc".into(),
-                            )
-                        },
-                        default: ParameterDefault::None,
-                    },
-                    ParameterInfo {
-                        name: "complex",
-                        kind: ParameterKind::PositionalOrKeyword,
-                        type_info: || {
-                            TypeInfo::with_module(
-                                "collections.abc.Callable[[_Complex], _OtherComplex]",
-                                "collections.abc".into(),
-                            )
-                        },
-                        default: ParameterDefault::None,
-                    },
-                ],
-                r#return: || TypeInfo {
-                    name: format!("{}[_OtherReal, _OtherComplex]", T::NAME),
-                    import: Default::default(),
-                },
-                doc: "",
-                r#type: MethodType::Instance,
-                is_async: false,
-                deprecated: None,
-                type_ignored: None,
-                is_overload: false,
-            }],
-            file: file!(),
-            line: line!(),
-            column: column!(),
-        }
-    }
-
-    /// `__class_getitem__` is the special method that's called when writing a generic type in
-    /// Python; this provides the signature for the version of it generated by
-    /// `#[pyclass(generic)]`, namely
-    ///
-    /// ```text
-    /// @classmethod
-    /// def __class_getitem__(cls, key: Any) -> GenericAlias: ...
-    /// ```
-    pub const fn class_getitem_info<T: Any>() -> PyMethodsInfo {
-        PyMethodsInfo {
-            struct_id: std::any::TypeId::of::<T>,
-            attrs: &[],
-            getters: &[],
-            setters: &[],
-            methods: &[MethodInfo {
-                name: "__class_getitem__",
-                parameters: &[ParameterInfo {
-                    name: "key",
-                    kind: ParameterKind::PositionalOrKeyword,
-                    type_info: || TypeInfo::with_module("typing.Any", "typing".into()),
-                    default: ParameterDefault::None,
-                }],
-                r#return: || TypeInfo::with_module("types.GenericAlias", "types".into()),
-                doc: "",
-                r#type: MethodType::Class,
-                is_async: false,
-                deprecated: None,
-                type_ignored: None,
-                is_overload: false,
-            }],
-            file: file!(),
-            line: line!(),
-            column: column!(),
-        }
-    }
 }
 
 define_py_evaluate! {
@@ -289,8 +193,8 @@ define_py_evaluate! {
 impl PyWaveform {
     #[staticmethod]
     #[gen_stub(override_return_type(
-        type_repr = "Waveform[quil.expression.Expression, quil.expression.Expression]",
-        imports = ("quil.expression")
+        type_repr = "Waveform[expression.Expression, expression.Expression]",
+        imports = ("quil._quil.expression")
     ))]
     fn from_quil<'py>(py: Python<'py>, invocation: WaveformInvocation) -> PyResult<Self> {
         let into_py_any = |expr: crate::expression::Expression| expr.into_py_any(py).map(PyAnyRust);
@@ -367,8 +271,8 @@ impl PyWaveform {
     #[gen_stub(override_return_type(
         type_repr = "typing.Optional[builtins.tuple[\
                          builtins.str, \
-                         builtins.dict[builtins.str, _Complex]]\
-                     ]",
+                         builtins.dict[builtins.str, _Complex]\
+                     ]]",
         imports = ("builtins", "typing")
     ))]
     fn as_custom<'py>(&self, py: Python<'py>) -> PyResult<Option<(String, Bound<'py, PyDict>)>> {

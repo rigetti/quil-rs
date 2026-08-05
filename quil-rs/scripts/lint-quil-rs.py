@@ -7,7 +7,6 @@ Afterward, it may print some messages about potential mistakes.
 Run the script with ``--help`` to see its options.
 """
 
-import dataclasses
 import logging
 import re
 import os
@@ -26,7 +25,6 @@ from pyo3_linter import (
     PackageConfig,
     Item,
     Kind,
-    Line,
     MacroContext,
     join_lines,
     iter_delim,
@@ -76,8 +74,8 @@ def _define_waveforms(ctx: MacroContext, module: str | None = None) -> None:
     text = lines.text.removeprefix("define_waveforms! {").removesuffix("}")
     parts = re.finditer(r"pub\s+struct\s+(?P<name>\w+)\s*(?:(?P<fields>\{.+?\})|;)", text)
 
-    waveform_module = ctx.annotated["quil.waveform"]
-    
+    waveform_module = ctx.annotated["quil._quil.waveform"]
+
     while m := next(parts, None):
         name = m.group("name")
         has_fields = m.group("fields") is not None
@@ -101,7 +99,7 @@ def _impl_instruction(ctx: MacroContext, module: str | None = None) -> None:
     """Process the input to the ``impl_instruction!`` macro."""
 
     line = join_lines(iter_delim(ctx.lines, "[]"))
-    ctx.exported["quil.instructions"].update(
+    ctx.exported["quil._quil.instructions"].update(
         Item(
             kind=Kind.Class,
             python_name=rust_name,

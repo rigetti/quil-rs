@@ -3,62 +3,59 @@
 # Use it with `stubtest --allowlist stubtest-allowlist quil`.
 # You'll likely want the `--ignore-disjoint-bases` option as well.
 
-# stubtest complains because the actual extension module has `__all__`s,
-# but pyo3_stubgen doesn't generate those in the stub files;
-# we could ignore it using the `--ignore-missing-stub` option,
-# but that's broader than necessary.
-.*\.__all__
-
-# Since pyo3_stubgen doesn't generate __all__, stubtest only notices submodules if imported;
-# unfortunately, in this case, pyo3_stubgen doesn't generate imports for the validation submodule.
-quil.validation
-quil.validation.identifier
+# Ignore __class_getitem__; the stubs write that the subclass `typing.Generic`,
+# but the actual runtime implementation is handled as a special slot method implemented by PyO3.
+# `stubtest` (correctly) notices that the method exists at runtime,
+# but doesn't consider the `typing.Generic` subclass as its implementation.
+quil.(_quil.)?.*__class_getitem__
 
 # Basic enums are annotated as "...", which is technically incorrect, but
 # doesn't really matter in practice, since the enum values are opaque anyway;
 # hence, we just ignore those.  If you have added new enums or constructors, you
 # can run `cargo make stubtest-print-missing-allowlist` from the `quil-rs`
 # directory to print out the missing items that you need to add to the following list.
-quil.expression.ExpressionFunction.CIS
-quil.expression.ExpressionFunction.COSINE
-quil.expression.ExpressionFunction.EXPONENT
-quil.expression.ExpressionFunction.SINE
-quil.expression.ExpressionFunction.SQUARE_ROOT
-quil.expression.InfixOperator.CARET
-quil.expression.InfixOperator.MINUS
-quil.expression.InfixOperator.PLUS
-quil.expression.InfixOperator.SLASH
-quil.expression.InfixOperator.STAR
-quil.expression.PrefixOperator.MINUS
-quil.expression.PrefixOperator.PLUS
-quil.instructions.ArithmeticOperator.ADD
-quil.instructions.ArithmeticOperator.DIVIDE
-quil.instructions.ArithmeticOperator.MULTIPLY
-quil.instructions.ArithmeticOperator.SUBTRACT
-quil.instructions.BinaryOperator.AND
-quil.instructions.BinaryOperator.IOR
-quil.instructions.BinaryOperator.XOR
-quil.instructions.BinaryOperator.SHL
-quil.instructions.BinaryOperator.SHR
-quil.instructions.BinaryOperator.ASHR
-quil.instructions.ComparisonOperator.EQUAL
-quil.instructions.ComparisonOperator.GREATER_THAN
-quil.instructions.ComparisonOperator.GREATER_THAN_OR_EQUAL
-quil.instructions.ComparisonOperator.LESS_THAN
-quil.instructions.ComparisonOperator.LESS_THAN_OR_EQUAL
-quil.instructions.DefGateSequence
-quil.instructions.GateModifier.CONTROLLED
-quil.instructions.GateModifier.DAGGER
-quil.instructions.GateModifier.FORKED
-quil.instructions.GateSignature
-quil.instructions.GateType
-quil.instructions.PauliGate.I
-quil.instructions.PauliGate.X
-quil.instructions.PauliGate.Y
-quil.instructions.PauliGate.Z
-quil.instructions.ScalarType.BIT
-quil.instructions.ScalarType.INTEGER
-quil.instructions.ScalarType.OCTET
-quil.instructions.ScalarType.REAL
-quil.instructions.UnaryOperator.NEG
-quil.instructions.UnaryOperator.NOT
+
+quil.(_quil.)?expression.ExpressionFunction.CIS
+quil.(_quil.)?expression.ExpressionFunction.COSINE
+quil.(_quil.)?expression.ExpressionFunction.EXPONENT
+quil.(_quil.)?expression.ExpressionFunction.SINE
+quil.(_quil.)?expression.ExpressionFunction.SQUARE_ROOT
+quil.(_quil.)?expression.InfixOperator.CARET
+quil.(_quil.)?expression.InfixOperator.MINUS
+quil.(_quil.)?expression.InfixOperator.PLUS
+quil.(_quil.)?expression.InfixOperator.SLASH
+quil.(_quil.)?expression.InfixOperator.STAR
+quil.(_quil.)?expression.PrefixOperator.MINUS
+quil.(_quil.)?expression.PrefixOperator.PLUS
+quil.(_quil.)?instructions.ArithmeticOperator.ADD
+quil.(_quil.)?instructions.ArithmeticOperator.DIVIDE
+quil.(_quil.)?instructions.ArithmeticOperator.MULTIPLY
+quil.(_quil.)?instructions.ArithmeticOperator.SUBTRACT
+quil.(_quil.)?instructions.BinaryOperator.AND
+quil.(_quil.)?instructions.BinaryOperator.ASHR
+quil.(_quil.)?instructions.BinaryOperator.IOR
+quil.(_quil.)?instructions.BinaryOperator.SHL
+quil.(_quil.)?instructions.BinaryOperator.SHR
+quil.(_quil.)?instructions.BinaryOperator.XOR
+quil.(_quil.)?instructions.ComparisonOperator.EQUAL
+quil.(_quil.)?instructions.ComparisonOperator.GREATER_THAN
+quil.(_quil.)?instructions.ComparisonOperator.GREATER_THAN_OR_EQUAL
+quil.(_quil.)?instructions.ComparisonOperator.LESS_THAN
+quil.(_quil.)?instructions.ComparisonOperator.LESS_THAN_OR_EQUAL
+quil.(_quil.)?instructions.GateModifier.CONTROLLED
+quil.(_quil.)?instructions.GateModifier.DAGGER
+quil.(_quil.)?instructions.GateModifier.FORKED
+quil.(_quil.)?instructions.GateType.MATRIX
+quil.(_quil.)?instructions.GateType.PAULI_SUM
+quil.(_quil.)?instructions.GateType.PERMUTATION
+quil.(_quil.)?instructions.GateType.SEQUENCE
+quil.(_quil.)?instructions.PauliGate.I
+quil.(_quil.)?instructions.PauliGate.X
+quil.(_quil.)?instructions.PauliGate.Y
+quil.(_quil.)?instructions.PauliGate.Z
+quil.(_quil.)?instructions.ScalarType.BIT
+quil.(_quil.)?instructions.ScalarType.INTEGER
+quil.(_quil.)?instructions.ScalarType.OCTET
+quil.(_quil.)?instructions.ScalarType.REAL
+quil.(_quil.)?instructions.UnaryOperator.NEG
+quil.(_quil.)?instructions.UnaryOperator.NOT

@@ -9,7 +9,15 @@ use super::QuotedString;
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
+    pyo3::pyclass(
+        module = "quil._quil.instructions",
+        eq,
+        frozen,
+        hash,
+        get_all,
+        subclass,
+        from_py_object
+    )
 )]
 pub struct Pragma {
     pub name: String,
@@ -45,7 +53,7 @@ impl Quil for Pragma {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash)
+    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash, from_py_object)
 )]
 pub enum PragmaArgument {
     Identifier(String),
@@ -70,7 +78,15 @@ impl Quil for PragmaArgument {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil.instructions", eq, frozen, hash, get_all, subclass)
+    pyo3::pyclass(
+        module = "quil._quil.instructions",
+        eq,
+        frozen,
+        hash,
+        get_all,
+        subclass,
+        from_py_object
+    )
 )]
 pub struct Include {
     pub filename: String,

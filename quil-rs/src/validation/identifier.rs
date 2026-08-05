@@ -28,7 +28,7 @@ static IDENTIFIER_REGEX: Lazy<Regex> =
 /// Returns an error if the given identifier is not a valid Quil Identifier.
 #[cfg_attr(
     feature = "stubs",
-    gen_stub_pyfunction(module = "quil.validation.identifier")
+    gen_stub_pyfunction(module = "quil._quil.validation.identifier")
 )]
 #[cfg_attr(feature = "python", pyo3::pyfunction)]
 pub fn validate_identifier(ident: &str) -> Result<(), IdentifierValidationError> {
@@ -41,7 +41,7 @@ pub fn validate_identifier(ident: &str) -> Result<(), IdentifierValidationError>
 /// Returns an error if the given identifier is reserved, or if it is not a valid Quil identifier
 #[cfg_attr(
     feature = "stubs",
-    gen_stub_pyfunction(module = "quil.validation.identifier")
+    gen_stub_pyfunction(module = "quil._quil.validation.identifier")
 )]
 #[cfg_attr(feature = "python", pyo3::pyfunction)]
 pub fn validate_user_identifier(ident: &str) -> Result<(), IdentifierValidationError> {

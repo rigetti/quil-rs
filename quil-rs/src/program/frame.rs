@@ -27,7 +27,10 @@ use crate::instruction::{FrameAttributes, FrameDefinition, FrameIdentifier, Inst
 /// A collection of Quil frames (`DEFFRAME` instructions) with utility methods.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[cfg_attr(feature = "python", pyo3::pyclass(module = "quil.program", eq))]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil._quil.program", eq, from_py_object)
+)]
 pub struct FrameSet {
     pub(crate) frames: HashMap<FrameIdentifier, FrameAttributes>,
 }

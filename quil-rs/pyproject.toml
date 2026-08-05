@@ -25,6 +25,9 @@ include = [ "README-py.md" ]
 python-source = "python"
 module-name = "quil._quil"
 
+[tool.pyo3-stub-gen]
+generate-init-py = true
+
 [build-system]
 requires = ["maturin>=1.9.4,<2.0.0"]
 build-backend = "maturin"

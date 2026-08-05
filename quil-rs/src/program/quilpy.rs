@@ -2,11 +2,13 @@ use std::collections::{HashMap, HashSet};
 use std::ops::Range;
 use std::str::FromStr;
 
+use indexmap::IndexMap;
 use numpy::{Complex64, PyArray2, ToPyArray};
-use pyo3::types::PyTuple;
 use pyo3::{
+    exceptions::{PyDeprecationWarning, PyTypeError, PyUnicodeDecodeError, PyValueError},
     prelude::*,
-    types::{PyBytes, PyFunction, PyRange},
+    types::{PyBytes, PyFunction, PyRange, PyTuple},
+    PyErr,
 };
 use rigetti_pyo3::{create_init_submodule, impl_repr};
 
@@ -16,10 +18,10 @@ use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen
 use crate::{
     instruction::{
         quilpy::OwnedGateSignature, CalibrationDefinition, Declaration, DefaultHandler,
-        FrameAttributes, FrameIdentifier, Gate, Instruction, MeasureCalibrationDefinition,
-        Measurement, QubitPlaceholder, TargetPlaceholder,
+        ExternPragmaMap, FrameAttributes, FrameIdentifier, Gate, Instruction,
+        MeasureCalibrationDefinition, Measurement, MemoryReference, Qubit, QubitPlaceholder,
+        Target, TargetPlaceholder, Waveform,
     },
-    program::{DefGateSequenceExpansion, ExpansionResult},
     quil::Quil,
     quilpy::{errors, impl_to_quil},
 };
@@ -30,8 +32,9 @@ use super::{
         ControlFlowGraph, ControlFlowGraphOwned, QubitGraph, QubitGraphError,
     },
     scheduling::{ComputedScheduleItem, Schedule, Seconds, TimeSpan},
-    CalibrationExpansion, CalibrationSource, Calibrations, FrameSet, InstructionIndex,
-    MemoryRegion, Program, Result, SourceMap, SourceMapEntry, SourceMapIndexable,
+    CalibrationExpansion, CalibrationSource, Calibrations, DefGateSequenceExpansion,
+    ExpansionResult, FrameSet, InstructionIndex, MemoryRegion, Program, Result, SourceMap,
+    SourceMapEntry, SourceMapIndexable,
 };
 
 create_init_submodule! {
@@ -90,6 +93,48 @@ impl Program {
     #[staticmethod]
     fn parse(input: &str) -> Result<Self> {
         <Self as std::str::FromStr>::from_str(input)
+    }
+
+    // These getters/overrides are to work around mypy issues with the type names.
+    // See: https://github.com/python/mypy/issues/4146
+    // See: https://github.com/Jij-Inc/pyo3-stub-gen/issues/493
+    #[gen_stub(override_return_type(
+        type_repr = "builtins.dict[typing.Optional[builtins.str], builtins.list[_quil.instructions.Instruction]]",
+        imports = ("quil._quil", "builtins", "typing"),
+    ))]
+    #[getter]
+    fn pragma_extern_map(&self) -> ExternPragmaMap {
+        self.extern_pragma_map.clone()
+    }
+
+    #[gen_stub(override_return_type(
+        type_repr = "builtins.set[_quil.instructions.Qubit]",
+        imports = ("quil._quil", "builtins"),
+    ))]
+    #[getter]
+    fn used_qubits(&self) -> HashSet<Qubit> {
+        self.used_qubits.clone()
+    }
+
+    #[gen_stub(override_return_type(
+        type_repr = "builtins.dict[builtins.str, _quil.instructions.Waveform]",
+        imports = ("quil._quil", "builtins"),
+    ))]
+    #[getter]
+    fn waveforms(&self) -> IndexMap<String, Waveform> {
+        self.waveforms.clone()
+    }
+
+    #[setter]
+    fn set_waveforms(
+        &mut self,
+        #[gen_stub(override_type(
+            type_repr = "typing.Mapping[builtins.str, _quil.instructions.Waveform]",
+            imports = ("quil._quil", "typing"),
+        ))]
+        waveforms: IndexMap<String, Waveform>,
+    ) {
+        self.waveforms = waveforms;
     }
 
     #[getter(body_instructions)]
@@ -162,8 +207,8 @@ impl Program {
         py: Python<'py>,
         #[gen_stub(
             override_type(
-                type_repr="collections.abc.Callable[[str], bool] | None",
-                imports=("collections.abc")
+                type_repr="typing.Optional[collections.abc.Callable[[builtins.str], builtins.bool]]",
+                imports=("collections.abc", "builtins", "typing")
             )
         )]
         predicate: Option<&Bound<'py, PyFunction>>,
@@ -257,11 +302,11 @@ impl Program {
         py: Python<'py>,
         #[gen_stub(
             override_type(
-                type_repr="collections.abc.Callable[[str], bool] | None",
-                imports=("collections.abc")
+                type_repr="typing.Optional[collections.abc.Callable[[builtins.str], builtins.bool]]",
+                imports=("collections.abc", "builtins", "typing")
             )
         )]
-        predicate: Option<&Bound<'py, PyFunction>>,
+        predicate: Option<&Bound<'py, PyAny>>,
     ) -> Result<Self> {
         self.clone().expand_defgate_sequences(|key: &str| -> bool {
             predicate.is_none_or(|f| match call_user_func(py, f, key) {
@@ -273,7 +318,14 @@ impl Program {
 
     /// Add a list of instructions to the end of the program.
     #[pyo3(name = "add_instructions")]
-    fn py_add_instructions(&mut self, instructions: Vec<Instruction>) {
+    fn py_add_instructions(
+        &mut self,
+        #[gen_stub(override_type(
+            type_repr = "typing.Sequence[_quil.instructions.Instruction]",
+            imports = ("quil._quil", "typing"),
+        ))]
+        instructions: Vec<Instruction>,
+    ) {
         self.add_instructions(instructions);
     }
 
@@ -285,11 +337,11 @@ impl Program {
         py: Python<'py>,
         #[gen_stub(
             override_type(
-                type_repr="collections.abc.Callable[[Instruction], bool]",
-                imports=("collections.abc")
+                type_repr="collections.abc.Callable[[_quil.instructions.Instruction], builtins.bool]",
+                imports=("quil._quil", "collections.abc", "builtins")
             )
         )]
-        predicate: &Bound<'py, PyFunction>,
+        predicate: &Bound<'py, PyAny>,
     ) -> Self {
         self.filter_instructions(|inst| match call_user_func(py, predicate, inst.clone()) {
             Ok(val) => val,
@@ -320,7 +372,15 @@ impl Program {
     )]
     fn py_resolve_placeholders_with_custom_resolvers(
         &mut self,
+        #[gen_stub(override_type(
+            type_repr = "typing.Optional[collections.abc.Callable[[_quil.instructions.TargetPlaceholder], typing.Optional[builtins.str]]]",
+            imports = ("quil._quil", "collections.abc", "builtins", "typing")
+        ))]
         target_resolver: Option<PyTargetResolver>,
+        #[gen_stub(override_type(
+            type_repr = "typing.Optional[collections.abc.Callable[[_quil.instructions.QubitPlaceholder], typing.Optional[builtins.int]]]",
+            imports = ("quil._quil", "collections.abc", "builtins", "typing")
+        ))]
         qubit_resolver: Option<PyQubitResolver>,
     ) {
         #[allow(clippy::type_complexity)]
@@ -401,6 +461,65 @@ impl Program {
         Ok(self.to_unitary(n_qubits)?.to_pyarray(py))
     }
 
+    #[gen_stub(skip)]
+    #[pyo3(
+        name = "wrap_in_loop",
+        signature = (loop_count_reference, start_target, end_target = None, iterations = None),
+    )]
+    fn backwards_compatible_py_wrap_in_loop(
+        &self,
+        py: pyo3::Python<'_>,
+        loop_count_reference: MemoryReference,
+        start_target: Target,
+        end_target: Option<EndTargetParam>,
+        iterations: Option<u32>,
+    ) -> pyo3::PyResult<Self> {
+        let iterations = match (end_target, iterations) {
+            // - `program.wrap_in_loop(loop_count_reference, start_target, iterations)`
+            // - `program.wrap_in_loop(loop_count_reference, start_target, iterations = iterations)`
+            (Some(EndTargetParam::Iterations(iterations)), None) | (None, Some(iterations)) => {
+                iterations
+            }
+
+            // - `program.wrap_in_loop(loop_count_reference, start_target, end_target, iterations)`
+            // - `program.wrap_in_loop(loop_count_reference, start_target, end_target, iterations = iterations)`
+            (Some(EndTargetParam::Target(_)), Some(iterations)) => {
+                PyErr::warn(
+                    py,
+                    &py.get_type::<PyDeprecationWarning>(),
+                    c"`end_target` is deprecated and will be ignored",
+                    1,
+                )?;
+                iterations
+            }
+
+            // - `program.wrap_in_loop(loop_count_reference, start_target, end_target)`
+            // - `program.wrap_in_loop(loop_count_reference, start_target)`
+            (Some(EndTargetParam::Target(_)) | None, None) => {
+                return Err(PyTypeError::new_err(
+                    "wrap_in_loop missing required positional argument: 'iterations'",
+                ));
+            }
+
+            // - `program.wrap_in_loop(loop_count_reference, start_target, iterations, iterations2)`
+            // - `program.wrap_in_loop(loop_count_reference, start_target, iterations, iterations2)`
+            (Some(EndTargetParam::Iterations(_)), Some(_)) => {
+                return Err(PyTypeError::new_err(
+                    "wrap_in_loop got multiple values for argument: 'iterations'",
+                ));
+            }
+        };
+
+        if iterations == 0 {
+            return Err(PyValueError::new_err(
+                "wrap_in_loop got a value of 0 for 'iterations'; \
+                 this will produce an empty Program in future releases",
+            ));
+        }
+
+        Ok(self.wrap_in_loop(loop_count_reference, start_target, iterations))
+    }
+
     fn __add__(&self, rhs: Self) -> Self {
         // TODO (#471): Can we reuse `rhs` to avoid an extra `clone`?
         self.clone() + rhs
@@ -417,9 +536,116 @@ impl Program {
         Ok(PyBytes::new(py, self.to_quil()?.as_bytes()))
     }
 
-    pub fn __setstate__(&mut self, state: &Bound<'_, PyBytes>) -> PyResult<()> {
-        *self = Self::from_str(std::str::from_utf8(state.as_bytes())?)?;
+    pub fn __setstate__(&mut self, py: Python<'_>, state: &Bound<'_, PyBytes>) -> PyResult<()> {
+        let quil = std::str::from_utf8(state.as_bytes())
+            .map_err(|e| PyUnicodeDecodeError::new_err_from_utf8(py, state.as_bytes(), e))?;
+        *self = Self::from_str(quil)?;
         Ok(())
+    }
+}
+
+/// Backwards-compatible trailing argument type for the `wrap_in_loop` function.
+///
+/// This is used to support the old signature of `wrap_in_loop` in Python,
+/// which previously accepted an `end_target` argument that is now deprecated and ignored.
+/// It allows it to accept either a `Target` or an `iterations` count in the same position.
+#[derive(pyo3::FromPyObject)]
+enum EndTargetParam {
+    #[expect(
+        dead_code,
+        reason = "the field isn't read, but we still want it type-checked"
+    )]
+    #[pyo3(annotation = "quil.instructions.Target")]
+    Target(Target),
+    #[pyo3(annotation = "int")]
+    Iterations(u32),
+}
+
+#[cfg(feature = "stubs")]
+pyo3_stub_gen::inventory::submit! {
+    // The last two overloads are just here to make `stubtest` happy
+    pyo3_stub_gen::derive::gen_methods_from_python! {
+        r#"
+        import builtins
+        from quil._quil import instructions
+
+        class Program:
+            @overload
+            def wrap_in_loop(
+                self,
+                loop_count_reference: _quil.instructions.MemoryReference,
+                start_target: _quil.instructions.Target,
+                iterations: builtins.int,
+            ) -> Program:
+                r"""
+                Return a copy of the [`Program`] wrapped in a loop that repeats `iterations` times.
+
+                The loop is constructed by wrapping the body of the program in classical Quil instructions.
+                The given `loop_count_reference` must refer to an INTEGER memory region. The value at the
+                reference given will be set to `iterations` and decremented in the loop. The loop will
+                terminate when the reference reaches 0. For this reason your program should not itself
+                modify the value at the reference unless you intend to modify the remaining number of
+                iterations (i.e. to break the loop).
+
+                The given `start_target` will be used as the entry point for the loop. You should provide
+                [`Target::Placeholder`] or otherwise choose a unique [`Target`] that won't be used elsewhere
+                in the program.
+
+                If `iterations` is `1`, then a copy of the program is returned without any changes.
+
+                **Note:** For backwards compatibility with earlier releases of `quil-rs`, this function has
+                three behaviors that will change in future releases.
+
+                1. If `iterations` is 0, then an error is raised.
+
+                   - In the future, an empty program will be returned – specifically, [a program with no
+                     body instructions, but retaining all of the calibrations,
+                     etc.][Self::clone_without_body_instructions].
+
+                   - In prior releases of `quil-rs`, the input program was returned unmodified instead, as
+                     though `iterations` had been `1`.
+
+                2. This function additionally accepts an `end_target` argument either by name or
+                   positionally before `iterations`.  This argument is no longer used, and its presence will
+                   raise a `DeprecationWarning`.  In future releases, providing this argument will be an
+                   error.
+
+                   - As an edge case, it is currently possible to call this function as
+                     `program.wrap_in_loop(loop_count_reference, start_target, end_target = 3)` and get a
+                     3-iteration loop.  This behavior is not supported and will be removed without warning
+                     in a future release of Quil.
+
+                3. Either or both of the `end_target` and `iterations` parameters can be given as `None`
+                   instead of being omitted.  This is the same as being omitted, which is or is not allowed
+                   as provided above.  In future releases, `None` will not be accepted.
+                r"""
+
+            @overload
+            @deprecated("the `end_target` parameter is deprecated and will be ignored")
+            def wrap_in_loop(
+                self,
+                loop_count_reference: _quil.instructions.MemoryReference,
+                start_target: _quil.instructions.Target,
+                end_target: _quil.instructions.Target,
+                iterations: int,
+            ) -> Program: ...
+            @overload
+            @deprecated("the `iterations` parameter must be provided")
+            def wrap_in_loop(
+                self,
+                loop_count_reference: _quil.instructions.MemoryReference,
+                start_target: _quil.instructions.Target,
+                end_target: None,
+                iterations: None,
+            ) -> Program: ...
+            @overload
+            @deprecated("the `iterations` parameter must be provided")
+            def wrap_in_loop(
+                self,
+                loop_count_reference: _quil.instructions.MemoryReference,
+                start_target: _quil.instructions.Target,
+            ) -> Program: ...
+        "#
     }
 }
 
@@ -441,7 +667,7 @@ enum UserFunctionError {
 #[inline]
 fn call_user_func<'a, 'py, T, U>(
     py: Python<'py>,
-    user_func: &'a Bound<'py, PyFunction>,
+    user_func: &'a Bound<'py, PyAny>,
     param: T,
 ) -> std::result::Result<U, UserFunctionError>
 where
@@ -587,7 +813,8 @@ impl FrameSet {
 #[pymethods]
 impl CalibrationSource {
     #[gen_stub(override_return_type(
-        type_repr = "tuple[CalibrationIdentifier | MeasureCalibrationIdentifier]"
+        type_repr = "builtins.tuple[_quil.instructions.CalibrationIdentifier | _quil.instructions.MeasureCalibrationIdentifier]",
+        imports = ("quil._quil.instructions", "builtins")
     ))]
     fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
         match self {
@@ -605,7 +832,12 @@ impl CalibrationSource {
 /// a calibration or a sequence gate definition.
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[pyclass(name = "InstructionSourceMap", module = "quil.program", frozen)]
+#[pyclass(
+    name = "InstructionSourceMap",
+    module = "quil._quil.program",
+    frozen,
+    from_py_object
+)]
 pub(crate) struct InstructionSourceMap(SourceMap<InstructionIndex, FlatExpansionResult>);
 
 /// A source map entry, mapping a range of source instructions by index to an
@@ -616,7 +848,12 @@ pub(crate) struct InstructionSourceMap(SourceMap<InstructionIndex, FlatExpansion
 /// level of expansion and *not* the original program.
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[pyclass(name = "InstructionSourceMapEntry", module = "quil.program", frozen)]
+#[pyclass(
+    name = "InstructionSourceMapEntry",
+    module = "quil._quil.program",
+    frozen,
+    from_py_object
+)]
 pub(crate) struct InstructionSourceMapEntry(SourceMapEntry<InstructionIndex, FlatExpansionResult>);
 
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
@@ -734,7 +971,7 @@ impl<R: Into<FlatExpansionResult> + Clone> From<&SourceMap<InstructionIndex, Exp
 /// define an owned type here.
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[pyo3::pyclass(module = "quil.program", eq)]
+#[pyo3::pyclass(module = "quil._quil.program", eq, from_py_object)]
 pub struct OwnedDefGateSequenceExpansion {
     /// The signature of the sequence gate definition which was used to expand the instruction.
     #[pyo3(get)]
@@ -809,7 +1046,13 @@ impl OwnedDefGateSequenceExpansion {
 // [trait bound](https://pyo3.rs/main/trait-bounds.html) documentation.
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
-#[pyo3::pyclass(name = "InstructionTarget", module = "quil.program", eq, frozen)]
+#[pyo3::pyclass(
+    name = "InstructionTarget",
+    module = "quil._quil.program",
+    eq,
+    frozen,
+    from_py_object
+)]
 pub enum FlatExpansionResult {
     Unmodified(InstructionIndex),
     Calibration(CalibrationExpansion),
@@ -930,38 +1173,7 @@ struct PyTargetResolver(Py<PyFunction>);
 mod stubs {
     use pyo3_stub_gen::{PyStubType, TypeInfo};
 
-    #[allow(clippy::wildcard_imports)]
-    use super::*;
-
-    /// Create a `Callable[[A], R]` stub.
-    fn callable_of<A: PyStubType, R: PyStubType>() -> TypeInfo {
-        let TypeInfo {
-            name: name_a,
-            mut import,
-        } = A::type_output();
-        let TypeInfo {
-            name: name_r,
-            import: import_r,
-        } = R::type_output();
-        import.extend(import_r);
-        import.insert("collections.abc".into());
-        TypeInfo {
-            name: format!("collections.abc.Callable[[{name_a}], {name_r}]"),
-            import,
-        }
-    }
-
-    impl PyStubType for PyQubitResolver {
-        fn type_output() -> TypeInfo {
-            callable_of::<QubitPlaceholder, Option<u64>>()
-        }
-    }
-
-    impl PyStubType for PyTargetResolver {
-        fn type_output() -> TypeInfo {
-            callable_of::<TargetPlaceholder, Option<String>>()
-        }
-    }
+    use super::{InstructionIndex, Seconds};
 
     impl PyStubType for InstructionIndex {
         fn type_output() -> TypeInfo {
@@ -982,10 +1194,11 @@ mod stubs {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[pyclass(
     name = "ScheduleSeconds",
-    module = "quil.program",
+    module = "quil._quil.program",
     subclass,
     eq,
-    frozen
+    frozen,
+    from_py_object
 )]
 pub(crate) struct PyScheduleSeconds(pub Schedule<Seconds>);
 
@@ -994,10 +1207,11 @@ pub(crate) struct PyScheduleSeconds(pub Schedule<Seconds>);
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[pyclass(
     name = "ScheduleSecondsItem",
-    module = "quil.program",
+    module = "quil._quil.program",
     subclass,
     eq,
-    frozen
+    frozen,
+    from_py_object
 )]
 pub(crate) struct ScheduleSecondsItem(pub ComputedScheduleItem<Seconds>);
 
@@ -1006,10 +1220,11 @@ pub(crate) struct ScheduleSecondsItem(pub ComputedScheduleItem<Seconds>);
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[pyclass(
     name = "TimeSpanSeconds",
-    module = "quil.program",
+    module = "quil._quil.program",
     subclass,
     eq,
-    frozen
+    frozen,
+    from_py_object
 )]
 pub(crate) struct TimeSpanSeconds(pub TimeSpan<Seconds>);
 
@@ -1100,6 +1315,7 @@ impl ControlFlowGraphOwned {
     }
 }
 
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl BasicBlockOwned {
@@ -1137,9 +1353,25 @@ impl BasicBlockOwned {
             .map(|graph| graph.gate_depth(gate_minimum_qubit_count))
     }
 
+    /// The label of the block, if any.
+    ///
+    /// This is used to target this block in control flow.
+    #[gen_stub(override_return_type(
+        type_repr = "typing.Optional[_quil.instructions.Target]",
+        imports = ("quil._quil", "typing"),
+    ))]
+    #[getter]
+    fn label(&self) -> Option<Target> {
+        self.label.clone()
+    }
+
     /// The control flow terminator instruction of the block, if any.
     ///
     /// If this is ``None``, the implicit behavior is to "continue" to the subsequent block.
+    #[gen_stub(override_return_type(
+        type_repr = "typing.Optional[_quil.instructions.Instruction]",
+        imports = ("quil._quil", "typing"),
+    ))]
     #[getter]
     fn terminator(&self) -> Option<Instruction> {
         BasicBlockTerminator::from(&self.terminator).into_instruction()

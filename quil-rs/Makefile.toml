@@ -18,19 +18,30 @@ install_crate = false
 
 [tasks.package-quil]
 description = "Build a release version of quil."
+# Note: this intentionally builds the crate twice.
+#
+# - The first time builds the `stub_gen` binary,
+# which generates the type stubs **and** the __init__.py files
+# that re-export the private `quil._quil` module contents
+# into the `quil` package namespace.
+#
+# - The second time uses `maturin` to build the extension,
+# which it then packages into the wheel with the contents above.
+# Notably, the second build only uses the `python` feature,
+# so it skips the code used just for stub production.
 dependencies = ["generate-stubs"]
 command = "poetry"
 args = ["run", "maturin", "build", "--features", "python", "--release"]
 
 [tasks.install-quil]
 description = "Build the python package and install to the active virtual environment."
-dependencies = ["install-quil-deps"]
+# This task depends on the `generate-stubs` task
+# not only because the stubs are useful during development,
+# but because the `__init__.py` files are required
+# in order to import from the public `quil` package namespace.
+dependencies = ["install-quil-deps", "generate-stubs"]
 command = "poetry"
-args = ["run", "maturin", "develop", "--features", "python"]
-
-[tasks.install-quil-with-stubs]
-description = "Install the python package with up-to-date stubs (not needed for testing)."
-dependencies = ["generate-stubs", "install-quil"]
+args = ["run", "maturin", "develop", "--features", "stubs"]
 
 [tasks.pytest]
 description = "Run python tests."
@@ -40,7 +51,7 @@ args = ["run", "pytest"]
 
 [tasks.stubtest-template]
 private = true
-dependencies = ["install-quil-with-stubs"]
+dependencies = ["install-quil"]
 cwd = "python"
 command = "poetry"
 # TODO(#475): Enable error reporting once stubtest is happy with stubgen's output.
@@ -89,12 +100,12 @@ dependencies = ["lint-quil", "stubtest", "check-api"]
 
 [tasks.check-api]
 description = "Check if quil API has breaking changes."
-dependencies = ["install-quil-with-stubs"]
+dependencies = ["install-quil"]
 script = { file = "./scripts/check-quil-api.sh" }
 
 [tasks.document-quil]
 description = "Generate quil documentation."
-dependencies = ["install-quil-with-stubs"]
+dependencies = ["install-quil"]
 command = "poetry"
 args = [
     "run",

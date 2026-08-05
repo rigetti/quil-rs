@@ -12,7 +12,14 @@ use super::Instruction;
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil.instructions", eq, get_all, set_all, subclass)
+    pyo3::pyclass(
+        module = "quil._quil.instructions",
+        eq,
+        get_all,
+        set_all,
+        subclass,
+        from_py_object
+    )
 )]
 pub struct CircuitDefinition {
     pub name: String,
