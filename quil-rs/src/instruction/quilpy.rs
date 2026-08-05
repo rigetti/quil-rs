@@ -139,16 +139,15 @@ pub(crate) fn post_init(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = m.py();
 
     // Add singleton instances of Halt, Nop, and Wait to the module namespace.
-    let instructions = py.import("quil._quil.instructions")?;
-    instructions.add("Halt", HaltType::__new__(py)?)?;
-    instructions.add("Nop", NopType::__new__(py)?)?;
-    instructions.add("Wait", WaitType::__new__(py)?)?;
+    m.add("Halt", HaltType::__new__(py)?)?;
+    m.add("Nop", NopType::__new__(py)?)?;
+    m.add("Wait", WaitType::__new__(py)?)?;
 
     // Add TypeAliases for use in annotations.
-    instructions.add("LabelTargetParameter", union!(py, PyString, Target, Label)?)?;
-    instructions.add("QubitDesignator", union!(py, Qubit, QubitPlaceholder, PyInt, PyString)?)?;
+    m.add("LabelTargetParameter", union!(py, PyString, Target, Label)?)?;
+    m.add("QubitDesignator", union!(py, Qubit, QubitPlaceholder, PyInt, PyString)?)?;
 
-    instructions.add("MemoryReferenceDesignator",
+    m.add("MemoryReferenceDesignator",
         union!(py,
             MemoryReference,
             DeclarationAt,

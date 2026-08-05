@@ -27,17 +27,16 @@ pub(crate) fn post_init(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = m.py();
 
     // Add singleton instances to the module. 
-    let module = py.import("quil._quil.expression")?;
-    // module.add("Pi", PiType::__new__(py)?)?;
+    // m.add("Pi", PiType::__new__(py)?)?;
 
     // Add TypeAliases for use in annotations.
     // These are mainly for PyQuil backwards-compatibility.
     #[expect(non_snake_case)]
     let ExpressionValueDesignator = union!(py, PyInt, PyFloat, PyComplex)?;
-    module.add("ExpressionValueDesignator", &ExpressionValueDesignator)?;
-    module.add("ExpressionDesignator",
+    m.add("ExpressionValueDesignator", &ExpressionValueDesignator)?;
+    m.add("ExpressionDesignator",
         py.get_type::<Expression>().bitor(&ExpressionValueDesignator)?)?;
-    module.add("ParameterDesignator",
+    m.add("ParameterDesignator",
         union!(py, Expression, MemoryReference, PyInt, PyFloat, PyComplex)?)?;
 
     Ok(())
