@@ -1553,6 +1553,18 @@ mod tests {
         HermiteGaussian { fwhm: 1e-5, t0: 0.0, anh: 1e6, alpha: 1.0, second_order_hrm_coeff: 0.1 },
         CommonBuiltinParameters { duration: 1e-4, scale: Some(1.0), phase: Some(Cycles(0.0)), detuning: Some(1e6)},
     )]
+    #[case(
+        RaisedCosine { rolloff: 4e-5, pad_left: 0.0, pad_right: 0.0 },
+        CommonBuiltinParameters { duration: 1e-4, scale: Some(1.0), phase: Some(Cycles(0.0)), detuning: Some(0.0)},
+    )]
+    #[case(
+        RaisedCosine { rolloff: 0.0, pad_left: 0.0, pad_right: 0.0 },
+        CommonBuiltinParameters { duration: 1e-4, scale: Some(1.0), phase: Some(Cycles(0.0)), detuning: Some(0.0)},
+    )]
+    #[case(
+        RaisedCosine { rolloff: 1.0, pad_left: 0.0, pad_right: 0.0 },
+        CommonBuiltinParameters { duration: 1e-4, scale: Some(1.0), phase: Some(Cycles(0.0)), detuning: Some(0.0)},
+    )]
     fn into_iq_values(
         #[case] parameters: impl BuiltinWaveformParameters,
         #[case] common: CommonBuiltinParameters<Concrete>,
