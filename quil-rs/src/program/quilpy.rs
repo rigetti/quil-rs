@@ -69,9 +69,8 @@ create_init_submodule! {
 pub(crate) fn post_init(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = m.py();
 
-    let module = py.import("quil._quil.program")?;
-    module.add("InstructionIndex", py.get_type::<pyo3::types::PyInt>())?;
-    module.add("Seconds", py.get_type::<pyo3::types::PyFloat>())?;
+    m.add("InstructionIndex", py.get_type::<pyo3::types::PyInt>())?;
+    m.add("Seconds", py.get_type::<pyo3::types::PyFloat>())?;
 
     Ok(())
 }

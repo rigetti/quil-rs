@@ -36,9 +36,9 @@ fn init_module(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     waveform::sampling::quilpy::register_abcs(py)?;
 
-    instruction::quilpy::post_init(m)?;
-    expression::quilpy::post_init(m)?;
-    program::quilpy::post_init(m)?;
+    instruction::quilpy::post_init(&py.import("quil._quil.instructions")?)?;
+    expression::quilpy::post_init(&py.import("quil._quil.expression")?)?;
+    program::quilpy::post_init(&py.import("quil._quil.program")?)?;
 
     Ok(())
 }
@@ -782,8 +782,6 @@ macro_rules! deprecated_param {
 pub(crate) use deprecated_param;
 pub(crate) use deprecated_or_new;
 
-// When building with the `stubs` feature,
-// this generates the entrypoint used by our `stub_gen` binary.
 #[cfg(feature = "stubs")]
 pub(crate) mod stubs {
     use pyo3_stub_gen::{module_doc, reexport_module_members};
