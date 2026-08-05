@@ -550,8 +550,8 @@ define_waveforms! {
     pub struct RaisedCosine {
         /// Interpolation parameter of the rising and falling edges.
         ///
-        /// Its value is within [0, 1], where 0.0 corresponds to a square pulse, and 1.0
-        /// corresponds to a cosine pulse.
+        /// Its value is within in open interval [0, 1], where 0.0 corresponds to a
+        /// square pulse, and 1.0 corresponds to a cosine pulse.
         pub rolloff: Real,
 
         /// Length of zero padding to add to beginning of pulse (s)
@@ -947,7 +947,95 @@ impl<T: WaveformData> RaisedCosine<T> {
     where
         Self: ConcretizableFromTo<T, RaisedCosine<Concrete>>,
     {
-        todo!()
+        let scale_is_zero = common
+            .scale
+            .is_some_and(|scale| T::eval_real(scale) == Ok(0.0));
+
+        let left_padding_samples = (self.pad_left * sample_rate).ceil() as usize;
+        let right_padding_samples = (self.pad_right * sample_rate).ceil() as usize;
+
+        let all_zero = |sample_count| {
+            IqSamplesFor::Total(IqSamples::Flat {
+                iq: c64(0.0, 0.0),
+                sample_count: left_padding_samples + sample_count + right_padding_samples,
+            })
+        };
+
+        // Cache this for later
+        let active_duration = common.duration;
+
+        match concretize_and_resolve(self, common, sample_rate)? {
+            partiality::Value::Partial(is_partial, sample_count) => Ok(if scale_is_zero {
+                // If the scale is zero it doesn't matter *what* the parameters are!
+                all_zero(sample_count)
+            } else {
+                IqSamplesFor::Partial(
+                    is_partial,
+                    IqSamples::Samples(vec![
+                        ();
+                        left_padding_samples
+                            + sample_count
+                            + right_padding_samples
+                    ]),
+                )
+            }),
+
+            partiality::Value::Total((explicit, waveform)) => {
+                if scale_is_zero {
+                    return Ok(all_zero(explicit.sample_count as usize));
+                }
+
+                let RaisedCosine {
+                    rolloff,
+                    pad_left: _,  // Used above
+                    pad_right: _, // Used above
+                } = waveform;
+
+                let square_pulse = real!(1.0);
+                let cosine_pulse = |el: f64, rolloff_factor: f64| {
+                    real!(
+                        0.5 * (1.0
+                            + f64::cos(PI + 2.0 * PI * el / (rolloff_factor * active_duration)))
+                    )
+                };
+
+                // TEMP: we do not use fwhm or sigma.
+                let fwhm = 0.0;
+
+                Ok(IqSamplesFor::Total(
+                    build_samples_and_adjust_for_common_parameters(
+                        SamplingParameters { sample_rate, fwhm },
+                        explicit,
+                        |SamplingInfo {
+                             time_steps,
+                             sigma: _,
+                         }| {
+                            let risetime = rolloff * active_duration / 2.0;
+                            let falltime = active_duration - risetime;
+
+                            let waveform = time_steps.into_iter().map(move |el| match rolloff {
+                                0.0 => square_pulse,
+                                1.0 => cosine_pulse(el, 1.0),
+                                _ => {
+                                    if el < risetime {
+                                        cosine_pulse(el, rolloff)
+                                    } else if el <= falltime {
+                                        square_pulse
+                                    } else {
+                                        cosine_pulse(el - active_duration, rolloff)
+                                    }
+                                }
+                            });
+
+                            let left_padding = repeat_n(real!(0.0), left_padding_samples);
+                            let right_padding = repeat_n(real!(0.0), right_padding_samples);
+
+                            left_padding.chain(waveform).chain(right_padding)
+                        },
+                    ),
+                ))
+            }
+        }
     }
 }
 
