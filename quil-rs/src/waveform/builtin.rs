@@ -53,6 +53,7 @@ pub enum BuiltinWaveform<T: WaveformData> {
     // Rigetti extensions
     HermiteGaussian(HermiteGaussian<T>),
     BoxcarKernel(BoxcarKernel),
+    RaisedCosine(RaisedCosine<T>),
 }
 
 /// Parameters that can be applied to all built-in waveforms.
@@ -544,6 +545,30 @@ define_waveforms! {
         pub second_order_hrm_coeff: Real,
     }
 
+    /// A waveform that interpolates between a square pulse and a cosine pulse.
+    #[waveform_source(Rigetti)]
+    pub struct RaisedCosine {
+        /// Interpolation parameter of the rising and falling edges.
+        ///
+        /// Its value is within [0, 1], where 0.0 corresponds to a square pulse, and 1.0
+        /// corresponds to a cosine pulse.
+        pub rolloff: Real,
+
+        /// Length of zero padding to add to beginning of pulse (s)
+        ///
+        /// Note that this is *always* a concrete real number, even if the waveform is
+        /// [`Syntactic`][crate::waveform::Syntactic]!  It must be possible to know the exact
+        /// duration of a waveform at all times.
+        pub pad_left: ConcreteReal,
+
+        /// Length of zero padding to add to end of pulse (s)
+        ///
+        /// Note that this is *always* a concrete real number, even if the waveform is
+        /// [`Syntactic`][crate::waveform::Syntactic]!  It must be possible to know the exact
+        /// duration of a waveform at all times.
+        pub pad_right: ConcreteReal,
+    }
+
     /// A boxcar waveform.
     #[waveform_source(Rigetti)]
     pub struct BoxcarKernel;
@@ -599,6 +624,7 @@ macro_rules! builtin_waveform_match {
             BuiltinWaveform::DragGaussian($inner) => $body,
             BuiltinWaveform::ErfSquare($inner) => $body,
             BuiltinWaveform::HermiteGaussian($inner) => $body,
+            BuiltinWaveform::RaisedCosine($inner) => $body,
             BuiltinWaveform::BoxcarKernel($inner @ BoxcarKernel) => $boxcar_body,
         }
     };
@@ -909,6 +935,19 @@ impl<T: WaveformData> HermiteGaussian<T> {
                 }
             },
         )
+    }
+}
+
+impl<T: WaveformData> RaisedCosine<T> {
+    fn raw_iq_values_at_sample_rate(
+        self,
+        common: CommonBuiltinParameters<T>,
+        sample_rate: f64,
+    ) -> Result<IqSamplesFor<T>, SamplingError>
+    where
+        Self: ConcretizableFromTo<T, RaisedCosine<Concrete>>,
+    {
+        todo!()
     }
 }
 

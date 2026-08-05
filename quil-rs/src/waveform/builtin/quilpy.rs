@@ -100,6 +100,9 @@ impl PyBuiltinWaveform {
                 BuiltinWaveform::HermiteGaussian(hermite_gaussian) => {
                     PyHermiteGaussian(hermite_gaussian).into_bound_py_any(py)?
                 }
+                BuiltinWaveform::RaisedCosine(raised_cosine) => {
+                    PyRaisedCosine(raised_cosine).into_bound_py_any(py)?
+                }
                 BuiltinWaveform::BoxcarKernel(boxcar_kernel) => {
                     boxcar_kernel.into_bound_py_any(py)?
                 }
@@ -129,6 +132,7 @@ impl BuiltinWaveform<Pythonic> {
             BuiltinWaveform::DragGaussian(drag_gaussian) => drag_gaussian.py_eq(py, other),
             BuiltinWaveform::ErfSquare(erf_square) => erf_square.py_eq(py, other),
             BuiltinWaveform::HermiteGaussian(hermite_gaussian) => hermite_gaussian.py_eq(py, other),
+            BuiltinWaveform::RaisedCosine(raised_cosine) => raised_cosine.py_eq(py, other),
             BuiltinWaveform::BoxcarKernel(boxcar_kernel) => boxcar_kernel.__eq__(other),
         }
     }
@@ -158,6 +162,11 @@ impl BuiltinWaveform<Pythonic> {
             ) => hermite_gaussian1.py_eq_this_type(py, &hermite_gaussian2),
 
             (
+                BuiltinWaveform::RaisedCosine(raised_cosine1),
+                BuiltinWaveform::RaisedCosine(raised_cosine2),
+            ) => raised_cosine1.py_eq_this_type(py, &raised_cosine2),
+
+            (
                 BuiltinWaveform::BoxcarKernel(BoxcarKernel),
                 BuiltinWaveform::BoxcarKernel(BoxcarKernel),
             ) => Ok(true),
@@ -169,6 +178,7 @@ impl BuiltinWaveform<Pythonic> {
                 | BuiltinWaveform::DragGaussian(_)
                 | BuiltinWaveform::ErfSquare(_)
                 | BuiltinWaveform::HermiteGaussian(_)
+                | BuiltinWaveform::RaisedCosine(_)
                 | BuiltinWaveform::BoxcarKernel(_),
                 _,
             ) => Ok(false),
@@ -182,6 +192,7 @@ impl BuiltinWaveform<Pythonic> {
             Self::DragGaussian(drag_gaussian) => drag_gaussian.py_repr(py),
             Self::ErfSquare(erf_square) => erf_square.py_repr(py),
             Self::HermiteGaussian(hermite_gaussian) => hermite_gaussian.py_repr(py),
+            Self::RaisedCosine(raised_cosine) => raised_cosine.py_repr(py),
             Self::BoxcarKernel(boxcar_kernel) => Ok(boxcar_kernel.__repr__().to_owned()),
         }
     }
