@@ -1,7 +1,7 @@
 #[cfg(feature = "python")]
-use std::str::FromStr;
-#[cfg(feature = "python")]
 use crate::instruction::quilpy::PyInstruction;
+#[cfg(feature = "python")]
+use std::str::FromStr;
 
 use nom_locate::LocatedSpan;
 

@@ -1,12 +1,20 @@
-use pyo3::{IntoPyObjectExt, exceptions::PyNotImplementedError, prelude::*, types::{PyAnyMethods, PyComplex, PyFloat, PyInt}};
 use numpy::{PyArray, PyArrayDescr, PyArrayDescrMethods};
+use pyo3::{
+    exceptions::PyNotImplementedError,
+    prelude::*,
+    types::{PyAnyMethods, PyComplex, PyFloat, PyInt},
+    IntoPyObjectExt,
+};
 use rigetti_pyo3::{create_init_submodule, impl_repr};
 
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::gen_stub_pymethods;
 
 use super::*;
-use crate::quilpy::{IntoNewArgs, NewArgs, errors::{self, ValueError}, impl_newargs, impl_to_quil};
+use crate::quilpy::{
+    errors::{self, ValueError},
+    impl_newargs, impl_to_quil, IntoNewArgs, NewArgs,
+};
 
 create_init_submodule! {
     classes: [
@@ -26,7 +34,7 @@ pub(crate) fn post_init(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     let py = m.py();
 
-    // Add singleton instances to the module. 
+    // Add singleton instances to the module.
     // m.add("Pi", PiType::__new__(py)?)?;
 
     // Add TypeAliases for use in annotations.
@@ -34,10 +42,15 @@ pub(crate) fn post_init(m: &Bound<'_, PyModule>) -> PyResult<()> {
     #[expect(non_snake_case)]
     let ExpressionValueDesignator = union!(py, PyInt, PyFloat, PyComplex)?;
     m.add("ExpressionValueDesignator", &ExpressionValueDesignator)?;
-    m.add("ExpressionDesignator",
-        py.get_type::<Expression>().bitor(&ExpressionValueDesignator)?)?;
-    m.add("ParameterDesignator",
-        union!(py, Expression, MemoryReference, PyInt, PyFloat, PyComplex)?)?;
+    m.add(
+        "ExpressionDesignator",
+        py.get_type::<Expression>()
+            .bitor(&ExpressionValueDesignator)?,
+    )?;
+    m.add(
+        "ParameterDesignator",
+        union!(py, Expression, MemoryReference, PyInt, PyFloat, PyComplex)?,
+    )?;
 
     Ok(())
 }
@@ -134,8 +147,14 @@ mod stubs {
     impl_stub_type!(SubstitutionResult = Expression | Complex64);
 }
 
-impl_newargs!(ExpressionArgs =
-    MemoryReference | FunctionCallExpression | InfixExpression | Complex64 | PrefixExpression | String);
+impl_newargs!(
+    ExpressionArgs = MemoryReference
+        | FunctionCallExpression
+        | InfixExpression
+        | Complex64
+        | PrefixExpression
+        | String
+);
 
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
@@ -201,8 +220,11 @@ impl Expression {
     /// :param d: Numerical substitutions for parameters or memory references.
     /// Returns a complex number (if possible) or a partially simplified `Expression`.
     #[pyo3(name = "substitute")]
-    fn py_substitute(&self, d: HashMap<SubstitutionKey, SubstitutionValue>) -> PyResult<SubstitutionResult> {
-        let mut variable= HashMap::new();
+    fn py_substitute(
+        &self,
+        d: HashMap<SubstitutionKey, SubstitutionValue>,
+    ) -> PyResult<SubstitutionResult> {
+        let mut variable = HashMap::new();
         let mut memory_reference = HashMap::new();
         for (key, value) in d {
             match (key, value) {
@@ -225,8 +247,10 @@ impl Expression {
 
         let res = match self.evaluate_partial(&variable, &memory_reference) {
             Expression::Number(n) => SubstitutionResult(Expression::Number(n)),
-            Expression::PiConstant() => SubstitutionResult(Expression::Number(Complex64::new(PI, 0.0))),
-            other => SubstitutionResult(other)
+            Expression::PiConstant() => {
+                SubstitutionResult(Expression::Number(Complex64::new(PI, 0.0)))
+            }
+            other => SubstitutionResult(other),
         };
 
         Ok(res)
@@ -273,16 +297,28 @@ impl Expression {
     // and we carry that forward here by implementing `__pow__` instead of `__xor__`.
     // Technically that means it can also be used with `pow`, which permits an optional `modulo`,
     // but that doesn't make sense here, so we raise an error if `modulo` is provided.
-    fn __pow__<'py>(&self, exponent: ExpressionLike, modulo: Option<Bound<'py, PyAny>>) -> PyResult<Self> {
+    fn __pow__<'py>(
+        &self,
+        exponent: ExpressionLike,
+        modulo: Option<Bound<'py, PyAny>>,
+    ) -> PyResult<Self> {
         if modulo.is_some() {
-            return Err(PyNotImplementedError::new_err("`modulo` is not supported for `Expression`"));
+            return Err(PyNotImplementedError::new_err(
+                "`modulo` is not supported for `Expression`",
+            ));
         }
         Ok(self.clone() ^ Expression::from(exponent))
     }
 
-    fn __rpow__<'py>(&self, base: ExpressionLike, modulo: Option<Bound<'py, PyAny>>) -> PyResult<Self> {
+    fn __rpow__<'py>(
+        &self,
+        base: ExpressionLike,
+        modulo: Option<Bound<'py, PyAny>>,
+    ) -> PyResult<Self> {
         if modulo.is_some() {
-            return Err(PyNotImplementedError::new_err("`modulo` is not supported for `Expression`"));
+            return Err(PyNotImplementedError::new_err(
+                "`modulo` is not supported for `Expression`",
+            ));
         }
         Ok(Expression::from(base) ^ self.clone())
     }
@@ -365,17 +401,17 @@ impl Expression {
                 } else {
                     to_obj_array(py, slf)
                 }
-            },
+            }
             Some(dtype) => {
                 if dtype.is_equiv_to(&PyArrayDescr::object(py)) {
                     to_obj_array(py, slf)
                 } else if dtype.is_equiv_to(&numpy::dtype::<f64>(py)) {
                     PyArray::from_owned_array(py, ndarray::array![slf.get().__float__()?])
-                            .into_any()
+                        .into_any()
                 } else {
                     PyArray::from_owned_array(py, ndarray::array![slf.get().__complex__()?])
-                            .call_method1(pyo3::intern!(py, "astype"), (dtype,))?
-                            .into_any()
+                        .call_method1(pyo3::intern!(py, "astype"), (dtype,))?
+                        .into_any()
                 }
             }
         };
