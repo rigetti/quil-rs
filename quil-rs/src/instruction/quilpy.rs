@@ -1642,7 +1642,7 @@ impl MemoryReference {
     /// if it is not `None`, it'll be used instead of `index`, regardless of how `index` is passed.
     #[new]
     #[pyo3(signature = (name, index = 0, declared_size = None, *, offset = None))]
-    fn py_new(
+    fn __new__(
         py: Python<'_>,
         name: String,
         index: u64,
