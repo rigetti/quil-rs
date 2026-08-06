@@ -445,7 +445,11 @@ py_instruction_singleton!(Wait, WaitType, PY_WAIT_CELL);
 pub(crate) struct AnyInstruction(pub Instruction);
 
 #[cfg(feature = "stubs")]
-pyo3_stub_gen::impl_stub_type!(AnyInstruction = Instruction);
+impl pyo3_stub_gen::PyStubType for AnyInstruction {
+    fn type_output() -> pyo3_stub_gen::TypeInfo {
+        pyo3_stub_gen::TypeInfo::with_module("_quil.instructions.Instruction", "quil._quil".into())
+    }
+}
 
 impl From<AnyInstruction> for Instruction {
     fn from(value: AnyInstruction) -> Self {

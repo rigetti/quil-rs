@@ -350,7 +350,7 @@ impl Program {
         &mut self,
         py: Python<'_>,
         instructions: OneOrMore<AnyInstruction>,
-        #[pyo3(from_py_with = from_sequence::<AnyInstruction, _>)] more: Vec<AnyInstruction>,
+        more: Vec<AnyInstruction>,
     ) -> PyResult<()> {
         match instructions {
             OneOrMore::One(instruction) => {
