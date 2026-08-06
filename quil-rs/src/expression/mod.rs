@@ -518,22 +518,18 @@ impl Expression {
             FunctionCall(FunctionCallExpression {
                 function,
                 expression,
-            }) => {
-                match expression.evaluate_partial(variables, memory_references) {
-                    Expression::Number(value) => {
-                        Expression::Number(calculate_function(*function, value))
-                    }
-                    Expression::PiConstant() => {
-                        Expression::Number(calculate_function(*function, Complex64::from(PI)))
-                    }
-                    other => {
-                        Expression::FunctionCall(FunctionCallExpression {
-                            function: *function,
-                            expression: ArcIntern::new(other),
-                        })
-                    }
+            }) => match expression.evaluate_partial(variables, memory_references) {
+                Expression::Number(value) => {
+                    Expression::Number(calculate_function(*function, value))
                 }
-            }
+                Expression::PiConstant() => {
+                    Expression::Number(calculate_function(*function, Complex64::from(PI)))
+                }
+                other => Expression::FunctionCall(FunctionCallExpression {
+                    function: *function,
+                    expression: ArcIntern::new(other),
+                }),
+            },
             Infix(InfixExpression {
                 left,
                 operator,
@@ -551,16 +547,14 @@ impl Expression {
                     (Expression::PiConstant(), Expression::Number(right)) => {
                         Expression::Number(calculate_infix(Complex64::from(PI), *operator, right))
                     }
-                    (Expression::PiConstant(), Expression::PiConstant()) => {
-                        Expression::Number(calculate_infix(Complex64::from(PI), *operator, Complex64::from(PI)))
-                    }
-                    (left, right) => {
-                        Expression::Infix(InfixExpression {
-                            left: ArcIntern::new(left),
-                            operator: *operator,
-                            right: ArcIntern::new(right),
-                        })
-                    }
+                    (Expression::PiConstant(), Expression::PiConstant()) => Expression::Number(
+                        calculate_infix(Complex64::from(PI), *operator, Complex64::from(PI)),
+                    ),
+                    (left, right) => Expression::Infix(InfixExpression {
+                        left: ArcIntern::new(left),
+                        operator: *operator,
+                        right: ArcIntern::new(right),
+                    }),
                 }
             }
             Prefix(PrefixExpression {
@@ -568,7 +562,10 @@ impl Expression {
                 expression,
             }) => {
                 use PrefixOperator::*;
-                match (expression.evaluate_partial(variables, memory_references), operator) {
+                match (
+                    expression.evaluate_partial(variables, memory_references),
+                    operator,
+                ) {
                     (Number(value), Plus) => Number(value),
                     (Number(value), Minus) => Number(-value),
                     // Leave positive pi as a pi constant;
@@ -584,15 +581,13 @@ impl Expression {
                 Some(&value) => Expression::Number(value),
                 None => Variable(identifier.clone()),
             },
-            Address(memory_reference) => {
-                memory_references
+            Address(memory_reference) => memory_references
                 .get(memory_reference.name.as_str())
                 .and_then(|values| {
                     let value = values.get(memory_reference.index as usize)?;
                     Some(Expression::Number(real!(*value)))
                 })
-                .unwrap_or_else(|| Expression::Address((*memory_reference).clone()))
-            },
+                .unwrap_or_else(|| Expression::Address((*memory_reference).clone())),
             PiConstant() => Expression::PiConstant(),
             Number(number) => Expression::Number(*number),
         }

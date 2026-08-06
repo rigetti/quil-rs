@@ -489,7 +489,6 @@ impl Program {
         }
     }
 
-
     pub fn add_instructions<I>(&mut self, instructions: I)
     where
         I: IntoIterator<Item = Instruction>,

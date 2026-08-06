@@ -15,8 +15,8 @@ use rigetti_pyo3::{create_init_submodule, impl_repr};
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pymethods};
 
-use crate::instruction::Label;
 use crate::instruction::quilpy::AnyInstruction;
+use crate::instruction::Label;
 use crate::{
     instruction::{
         quilpy::OwnedGateSignature, CalibrationDefinition, Declaration, DefaultHandler,
@@ -74,7 +74,6 @@ pub(crate) fn post_init(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     Ok(())
 }
-
 
 impl_repr!(BasicBlockOwned);
 impl_repr!(CalibrationExpansion);
@@ -351,16 +350,20 @@ impl Program {
         &mut self,
         py: Python<'_>,
         instructions: OneOrMore<AnyInstruction>,
-        #[pyo3(from_py_with = from_sequence::<AnyInstruction, _>)]
-        more: Vec<AnyInstruction>,
+        #[pyo3(from_py_with = from_sequence::<AnyInstruction, _>)] more: Vec<AnyInstruction>,
     ) -> PyResult<()> {
         match instructions {
             OneOrMore::One(instruction) => {
                 self.py_add_instruction(instruction);
             }
             OneOrMore::More(instructions) => {
-                py_deprecated!(py, c"`instructions` should no longer be wrapped in a sequence")?;
-                instructions.into_iter().for_each(|i| self.py_add_instruction(i));
+                py_deprecated!(
+                    py,
+                    c"`instructions` should no longer be wrapped in a sequence"
+                )?;
+                instructions
+                    .into_iter()
+                    .for_each(|i| self.py_add_instruction(i));
             }
         }
 
@@ -612,7 +615,9 @@ impl Program {
         }
         let start_label = start_label
             .map(|label| label.target.clone())
-            .unwrap_or_else(|| Target::Placeholder(TargetPlaceholder::new("LOOPSTART".to_string())));
+            .unwrap_or_else(|| {
+                Target::Placeholder(TargetPlaceholder::new("LOOPSTART".to_string()))
+            });
         Ok(self.wrap_in_loop(iteration_count_reference, start_label, num_iterations))
     }
 
@@ -1274,7 +1279,10 @@ mod stubs {
     impl_stub_type!(EndTargetParam = Target | u32);
     impl_stub_type!(super::InstructionIndex = usize);
     impl_stub_type!(super::Seconds = f64);
-    type_alias!("quil._quil.program", InstructionIndex = super::InstructionIndex);
+    type_alias!(
+        "quil._quil.program",
+        InstructionIndex = super::InstructionIndex
+    );
     type_alias!("quil._quil.program", Seconds = super::Seconds);
 }
 
