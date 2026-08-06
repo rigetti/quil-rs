@@ -5,8 +5,12 @@ use pyo3_stub_gen::derive::gen_stub_pyclass;
 
 use crate::{
     instruction::{
-        Expression, GateModifier, Instruction, Qubit, quilpy::PyInstruction, write_expression_parameter_string, write_instruction_block,
-    }, pickleable_new, quil::{INDENT, Quil}, validation::identifier::{IdentifierValidationError, validate_identifier},
+        quilpy::PyInstruction, write_expression_parameter_string, write_instruction_block,
+        Expression, GateModifier, Instruction, Qubit,
+    },
+    pickleable_new,
+    quil::{Quil, INDENT},
+    validation::identifier::{validate_identifier, IdentifierValidationError},
 };
 
 use super::{write_qubit_parameters, Gate};

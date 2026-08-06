@@ -5,8 +5,7 @@ use pyo3_stub_gen::derive::{
 
 use super::MemoryReference;
 
-use crate::{floating_point_eq,
-pickleable_new, quil::Quil};
+use crate::{floating_point_eq, pickleable_new, quil::Quil};
 
 #[cfg(feature = "python")]
 use crate::instruction::quilpy::PyInstruction;

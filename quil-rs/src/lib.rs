@@ -108,7 +108,7 @@ pub mod quilpy;
 /// pickleable_new! {
 ///     impl Foo {
 ///         // You MUST name the return type; `Self` won't be valid in the macro body.
-///         //                                  v---`Self` won't work here! 
+///         //                                  v---`Self` won't work here!
 ///         pub fn new(bar: i32, baz: &str) -> Foo {
 ///             Self {
 ///                 bar,

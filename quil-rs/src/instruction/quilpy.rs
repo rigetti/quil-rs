@@ -3,20 +3,19 @@ use num_complex::Complex64;
 use numpy::{PyArray2, ToPyArray};
 use pastey::paste;
 use pyo3::{
-    CastError, IntoPyObjectExt, PyClass, PyTraverseError, PyTypeCheck, PyVisit, exceptions::{PyDeprecationWarning, PyIndexError, PyTypeError, PyValueError}, prelude::*, sync::PyOnceLock, types::{IntoPyDict as _, PyInt, PyDict, PyList, PyString, PyTuple}
+    exceptions::{PyDeprecationWarning, PyIndexError, PyTypeError, PyValueError},
+    prelude::*,
+    sync::PyOnceLock,
+    types::{IntoPyDict as _, PyDict, PyInt, PyList, PyString, PyTuple},
+    CastError, IntoPyObjectExt, PyClass, PyTraverseError, PyTypeCheck, PyVisit,
 };
 use rigetti_pyo3::{create_init_submodule, impl_repr};
 
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::{
+    derive::{gen_methods_from_python, gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pymethods},
     impl_stub_type,
-    derive::{
-        gen_methods_from_python,
-        gen_stub_pyclass,
-        gen_stub_pyfunction,
-        gen_stub_pymethods,
-    },
-    inventory::submit
+    inventory::submit,
 };
 
 use super::*;
@@ -25,9 +24,12 @@ use crate::{
     instruction::gate::GateSignature,
     pickleable_new,
     quilpy::{
-        IntoNewArgs, Like, NewArgs, NonZeroU64, deprecated_or_new, deprecated_param, errors::{self, PickleError}, from_sequence, impl_newargs, impl_to_quil, py_deprecated, py_friendly_enum,
+        deprecated_or_new, deprecated_param,
+        errors::{self, PickleError},
+        from_sequence, impl_newargs, impl_to_quil, py_deprecated, py_friendly_enum, IntoNewArgs,
+        Like, NewArgs, NonZeroU64,
     },
-    validation::identifier::IdentifierValidationError
+    validation::identifier::IdentifierValidationError,
 };
 
 create_init_submodule! {
@@ -146,15 +148,14 @@ pub(crate) fn post_init(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     // Add TypeAliases for use in annotations.
     m.add("LabelTargetParameter", union!(py, PyString, Target, Label)?)?;
-    m.add("QubitDesignator", union!(py, Qubit, QubitPlaceholder, PyInt, PyString)?)?;
+    m.add(
+        "QubitDesignator",
+        union!(py, Qubit, QubitPlaceholder, PyInt, PyString)?,
+    )?;
 
-    m.add("MemoryReferenceDesignator",
-        union!(py,
-            MemoryReference,
-            DeclarationAt,
-            Declaration,
-            PyTuple
-        )?
+    m.add(
+        "MemoryReferenceDesignator",
+        union!(py, MemoryReference, DeclarationAt, Declaration, PyTuple)?,
     )?;
 
     Ok(())
@@ -269,7 +270,7 @@ impl_out!(
     MemoryReference,
     WaveformInvocation
 );
-    // FormatArgument / ? an arg in a DEFCIRCUIT / DEFGATE
+// FormatArgument / ? an arg in a DEFCIRCUIT / DEFGATE
 
 impl_instruction!([
     Arithmetic,
@@ -349,10 +350,16 @@ impl_instruction!([
 
 #[derive(Copy, Clone, Debug, Default, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[pyclass(name = "Instruction", module = "quil._quil.instructions",
-    subclass, from_py_object, frozen, eq, hash)]
+#[pyclass(
+    name = "Instruction",
+    module = "quil._quil.instructions",
+    subclass,
+    from_py_object,
+    frozen,
+    eq,
+    hash
+)]
 pub struct PyInstruction;
-
 
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
@@ -382,7 +389,7 @@ macro_rules! py_instruction {
             type Output = Bound<'py, Self::Target>;
             type Error = PyErr;
 
-           fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
+            fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
                 Ok(Py::new(py, PyClassInitializer::from(self))?.into_bound(py))
             }
         }
@@ -431,8 +438,6 @@ py_instruction_singleton!(Halt, HaltType, PY_HALT_CELL);
 py_instruction_singleton!(Nop, NopType, PY_NOP_CELL);
 py_instruction_singleton!(Wait, WaitType, PY_WAIT_CELL);
 
-
-
 /// A wrapper around an [`Instruction`] for use in Python-exposed functions and methods
 /// where we want to accept any `Instruction` variant.
 ///
@@ -448,7 +453,6 @@ impl From<AnyInstruction> for Instruction {
         value.0
     }
 }
-
 
 /// Trait for types that can be converted into an `Instruction`.
 trait ToInstruction {
@@ -617,10 +621,9 @@ instruction_getnewargs!(
     SwapPhases,
     UnaryLogic,
     WaveformDefinition,
-
-    HaltType[variant=Halt - Clone],
-    NopType[variant=Nop - Clone],
-    WaitType[variant=Wait - Clone],
+    HaltType[variant = Halt - Clone],
+    NopType[variant = Nop - Clone],
+    WaitType[variant = Wait - Clone],
 );
 
 // The following types implement `__getnewargs__` manually because,
@@ -632,8 +635,10 @@ instruction_getnewargs!(
 
 struct ArithmeticOperandLike(ArithmeticOperand);
 #[cfg(feature = "stubs")]
-impl_stub_type!(ArithmeticOperandLike =
-    ArithmeticOperand | i64 | f64 | MemoryReference | DeclarationAt | Declaration);
+impl_stub_type!(
+    ArithmeticOperandLike =
+        ArithmeticOperand | i64 | f64 | MemoryReference | DeclarationAt | Declaration
+);
 
 impl<'a, 'py> FromPyObject<'a, 'py> for ArithmeticOperandLike {
     type Error = PyErr;
@@ -646,13 +651,22 @@ impl<'a, 'py> FromPyObject<'a, 'py> for ArithmeticOperandLike {
         } else if let Ok(val) = obj.cast::<pyo3::types::PyFloat>() {
             Ok(Self(ArithmeticOperand::LiteralReal(val.extract()?)))
         } else if let Ok(val) = obj.cast::<DeclarationAt>() {
-            Ok(Self(ArithmeticOperand::MemoryReference(val.borrow().memref(obj.py()))))
+            Ok(Self(ArithmeticOperand::MemoryReference(
+                val.borrow().memref(obj.py()),
+            )))
         } else if let Ok(val) = obj.cast::<MemoryReference>() {
-            Ok(Self(ArithmeticOperand::MemoryReference(val.borrow().clone())))
+            Ok(Self(ArithmeticOperand::MemoryReference(
+                val.borrow().clone(),
+            )))
         } else if let Ok(val) = obj.cast::<Declaration>() {
-            Ok(Self(ArithmeticOperand::MemoryReference(val.get().to_memory_reference(0))))
+            Ok(Self(ArithmeticOperand::MemoryReference(
+                val.get().to_memory_reference(0),
+            )))
         } else {
-            Err(CastError::new(obj, ArithmeticOperand::classinfo_object(obj.py())))?
+            Err(CastError::new(
+                obj,
+                ArithmeticOperand::classinfo_object(obj.py()),
+            ))?
         }
     }
 }
@@ -745,8 +759,8 @@ impl CalibrationDefinition {
     }
 }
 
-    // #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-    // #[pyo3::pymethods]
+// #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+// #[pyo3::pymethods]
 //         #[new]
 pickleable_new! {
     impl CalibrationIdentifier {
@@ -786,7 +800,8 @@ impl Declaration {
             size: Vector::new(memory_type.0, memory_size),
             sharing: shared_region.map(|name| Sharing {
                 name,
-                offsets: offsets.unwrap_or_default()
+                offsets: offsets
+                    .unwrap_or_default()
                     .into_iter()
                     .map(|(offset, data_type)| Offset::new(offset, data_type.0))
                     .collect(),
@@ -795,13 +810,26 @@ impl Declaration {
     }
 
     #[allow(clippy::type_complexity)]
-    fn __getnewargs__(&self) -> (String, ScalarType, u64, Option<String>, Option<Vec<(u64, ScalarType)>>) {
+    fn __getnewargs__(
+        &self,
+    ) -> (
+        String,
+        ScalarType,
+        u64,
+        Option<String>,
+        Option<Vec<(u64, ScalarType)>>,
+    ) {
         let (shared_region, offsets) = match &self.sharing {
             None => (None, None),
             Some(s) => (
                 Some(s.name.clone()),
-                Some(s.offsets.iter().map(|o| (o.offset(), o.data_type())).collect::<Vec<_>>())
-            )
+                Some(
+                    s.offsets
+                        .iter()
+                        .map(|o| (o.offset(), o.data_type()))
+                        .collect::<Vec<_>>(),
+                ),
+            ),
         };
 
         (
@@ -841,7 +869,6 @@ impl Declaration {
     }
 }
 
-
 /// A wrapper around a [`Declaration`] for use in places we'd normally need a `MemoryReference`.
 ///
 /// You can get an instance of `DeclarationAt` by indexing a `Declaration`,
@@ -877,7 +904,10 @@ impl DeclarationAt {
     ///
     /// This makes a clone the `Declaration`'s name.
     fn memref<'py>(&self, py: Python<'py>) -> MemoryReference {
-        self.declaration.bind(py).get().to_memory_reference(self.index)
+        self.declaration
+            .bind(py)
+            .get()
+            .to_memory_reference(self.index)
     }
 }
 
@@ -885,7 +915,6 @@ impl DeclarationAt {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl DeclarationAt {
-
     /// Return a new `Move` instruction representing `self = value`.
     ///
     /// # Example
@@ -921,29 +950,40 @@ impl DeclarationAt {
     /// assert arith.to_quil() == "ADD x[2] 5"
     /// ```
     fn add<'py>(&self, py: Python<'py>, other: ArithmeticOperandLike) -> Arithmetic {
-        Arithmetic::new(
-            ArithmeticOperator::Add,
-            self.memref(py),
-            other.into(),
-        )
+        Arithmetic::new(ArithmeticOperator::Add, self.memref(py), other.into())
     }
 
     fn sub<'py>(&self, py: Python<'py>, other: ArithmeticOperandLike) -> Arithmetic {
-        Arithmetic { operator: ArithmeticOperator::Subtract, destination: self.memref(py), source: other.into() }
+        Arithmetic {
+            operator: ArithmeticOperator::Subtract,
+            destination: self.memref(py),
+            source: other.into(),
+        }
     }
 
     fn div<'py>(&self, py: Python<'py>, other: ArithmeticOperandLike) -> Arithmetic {
-        Arithmetic { operator: ArithmeticOperator::Divide, destination: self.memref(py), source: other.into() }
+        Arithmetic {
+            operator: ArithmeticOperator::Divide,
+            destination: self.memref(py),
+            source: other.into(),
+        }
     }
 
     fn mul<'py>(&self, py: Python<'py>, other: ArithmeticOperandLike) -> Arithmetic {
-        Arithmetic { operator: ArithmeticOperator::Multiply, destination: self.memref(py), source: other.into() }
+        Arithmetic {
+            operator: ArithmeticOperator::Multiply,
+            destination: self.memref(py),
+            source: other.into(),
+        }
     }
 
     /// Return a new `Move` instruction representing `self = source`.
     #[pyo3(name = "move")]
     fn py_move<'py>(&self, py: Python<'py>, source: ArithmeticOperand) -> Move {
-        Move { destination: self.memref(py), source }
+        Move {
+            destination: self.memref(py),
+            source,
+        }
     }
 
     // Garbage collection integration. For more information, see:
@@ -954,7 +994,6 @@ impl DeclarationAt {
         Ok(())
     }
 }
-
 
 #[cfg(feature = "stubs")]
 impl pyo3_stub_gen::PyStubType for ExternPragmaMap {
@@ -1051,13 +1090,12 @@ impl Gate {
         py: Python<'_>,
         name: String,
         parameters: Vec<ExpressionLike>,
-        #[pyo3(from_py_with = from_sequence::<Qubit, _>)]
-        qubits: Vec<Qubit>,
+        #[pyo3(from_py_with = from_sequence::<Qubit, _>)] qubits: Vec<Qubit>,
         modifiers: Option<Vec<GateModifierDesignator>>,
         // `params` is for backwards compatibility and will raise a deprecation warning if used.
         params: Option<Vec<ExpressionLike>>,
     ) -> PyResult<Gate> {
-        let parameters = deprecated_or_new!(py, new=parameters, old=params)?
+        let parameters = deprecated_or_new!(py, new = parameters, old = params)?
             .into_iter()
             .map(|p| p.into())
             .collect();
@@ -1100,7 +1138,11 @@ impl Gate {
     /// Raises a ``GateError`` if the number of provided alternate parameters
     /// don't equal the number of existing parameters.
     #[pyo3(name = "forked")]
-    fn py_forked(&self, fork_qubit: Like<Qubit>, alt_params: Vec<Expression>) -> Result<Self, GateError> {
+    fn py_forked(
+        &self,
+        fork_qubit: Like<Qubit>,
+        alt_params: Vec<Expression>,
+    ) -> Result<Self, GateError> {
         self.clone().forked(fork_qubit.into_inner(), alt_params)
     }
 
@@ -1169,7 +1211,10 @@ impl GateSpecification {
         type_repr = "builtins.tuple[builtins.list[builtins.list[expression.Expression]] | builtins.list[builtins.int] | PauliSum | DefGateSequence]",
         imports = ("quil._quil.expression")
     ))]
-    fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<NewArgs<'py, GateSpecificationArgs>> {
+    fn __getnewargs__<'py>(
+        &self,
+        py: Python<'py>,
+    ) -> PyResult<NewArgs<'py, GateSpecificationArgs>> {
         match self {
             Self::Matrix(value) => value.clone().into_new_args(py),
             Self::Permutation(value) => value.into_new_args(py),
@@ -1243,7 +1288,10 @@ impl<'a> TryFrom<&'a OwnedGateSignature> for GateSignature<'a> {
 ///
 /// This can be used to convert a `(str, int)` or `[str, int]` into a `MemoryReference`,
 /// or to convert a `DeclarationAt` or `Declaration` into a `MemoryReference`.
-#[cfg_attr(feature = "stubs", gen_stub_pyfunction(module = "quil._quil.instructions"))]
+#[cfg_attr(
+    feature = "stubs",
+    gen_stub_pyfunction(module = "quil._quil.instructions")
+)]
 #[pyfunction]
 #[pyo3(warn(message = "use `MemoryReference(...)` directly instead", category = PyDeprecationWarning))]
 fn unpack_classical_reg<'py>(obj: &Bound<'py, PyAny>) -> PyResult<MemoryReference> {
@@ -1273,9 +1321,11 @@ impl<'a, 'py> FromPyObject<'a, 'py> for MemoryReference {
             // As above, but from a list of `[str, int]` pair.
             let len = obj.len()?;
             if len != 2 {
-                return Err(PyValueError::new_err("expected list of length 2, but got list of length {len}"))?;
+                return Err(PyValueError::new_err(
+                    "expected list of length 2, but got list of length {len}",
+                ))?;
             }
-            let MemoryReferencePair{name, index} = s.extract()?;
+            let MemoryReferencePair { name, index } = s.extract()?;
             Ok(MemoryReference::new(name, index))
         }
         /*
@@ -1288,7 +1338,10 @@ impl<'a, 'py> FromPyObject<'a, 'py> for MemoryReference {
         }
         */
         else {
-            Err(CastError::new(obj, MemoryReference::classinfo_object(obj.py())))?
+            Err(CastError::new(
+                obj,
+                MemoryReference::classinfo_object(obj.py()),
+            ))?
         }
     }
 }
@@ -1313,7 +1366,7 @@ enum LabelTargetLike<'a> {
     Existing(&'a Target),
 }
 
-impl<'a, 'py> FromPyObject<'a, 'py> for LabelTargetLike<'a>{
+impl<'a, 'py> FromPyObject<'a, 'py> for LabelTargetLike<'a> {
     type Error = pyo3::PyErr;
 
     fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
@@ -1416,43 +1469,45 @@ impl Label {
         let target = match (target, placeholder) {
             // Label(target=Target.Placeholder(TargetPlaceholder()), placeholder=False)
             (Some(LabelTargetLike::Existing(Target::Placeholder(_))), Some(false)) => {
-                return Err(PyValueError::new_err("`target` is a `Placeholder`, so `placeholder=False` is invalid"));
-            },
+                return Err(PyValueError::new_err(
+                    "`target` is a `Placeholder`, so `placeholder=False` is invalid",
+                ));
+            }
 
             // Label(target=Target.Fixed(name), placeholder=True)
             (Some(LabelTargetLike::Existing(Target::Fixed(_))), Some(true)) => {
-                return Err(PyValueError::new_err("`target` is `Fixed`, so `placeholder=True` is invalid"));
-            },
+                return Err(PyValueError::new_err(
+                    "`target` is `Fixed`, so `placeholder=True` is invalid",
+                ));
+            }
 
             // Label(placeholder=False)
             (None, Some(false)) => {
-                return Err(PyValueError::new_err("`target` cannot be `None` if `placeholder=False`"));
-            },
+                return Err(PyValueError::new_err(
+                    "`target` cannot be `None` if `placeholder=False`",
+                ));
+            }
 
             // Label(), Label(target=None), Label(placeholder=True), Label(placeholder=None),
             // Label(target=None, placeholder=True), Label(target=None, placeholder=None)
             (None, Some(true) | None) => {
                 Target::Placeholder(TargetPlaceholder::new("L".to_string()))
-            },
+            }
 
             // Label("prefix", placeholder=True), Label(target="prefix", placeholder=True)
             (Some(LabelTargetLike::Str(base)), Some(true)) => {
                 Target::Placeholder(TargetPlaceholder::new(base))
-            },
+            }
 
             // Label("name"), Label("name", placeholder=False), Label("name", placeholder=None)
             // Label(target="name"), Label(target="name", placeholder=False), Label(target="name", placeholder=None)
-            (Some(LabelTargetLike::Str(label)), Some(false) | None) => {
-                Target::Fixed(label)
-            },
+            (Some(LabelTargetLike::Str(label)), Some(false) | None) => Target::Fixed(label),
 
             // (The validity of the Target relative the `placeholder` parameter is checked above.)
             // Label(t), Label(t, placeholder=None), Label(target=t, placeholder=None)
             // Label(t), Label(t, placeholder=False), Label(target=t), Label(target=t, placeholder=False)
             // Label(t, placeholder=True), Label(target=t, placeholder=True)
-            (Some(LabelTargetLike::Existing(target)), _) => {
-                target.clone()
-            },
+            (Some(LabelTargetLike::Existing(target)), _) => target.clone(),
         };
 
         Ok(Self { target })
@@ -1595,7 +1650,7 @@ impl MemoryReference {
         declared_size: Option<NonZeroU64>,
         offset: Option<u64>,
     ) -> PyResult<Self> {
-        let index = deprecated_or_new!(py, new=index, old=offset)?;
+        let index = deprecated_or_new!(py, new = index, old = offset)?;
         if declared_size.is_some() {
             py_deprecated!(py, c"`declared_size` is deprecated and no longer used")?;
         }
@@ -1640,19 +1695,35 @@ impl MemoryReference {
     /// assert arith.to_quil() == "ADD counter[0] 5"
     /// ```
     fn __add__(&self, other: ArithmeticOperand) -> Arithmetic {
-        Arithmetic { operator: ArithmeticOperator::Add, destination: self.clone(), source: other }
+        Arithmetic {
+            operator: ArithmeticOperator::Add,
+            destination: self.clone(),
+            source: other,
+        }
     }
 
     fn __sub__(&self, other: ArithmeticOperand) -> Arithmetic {
-        Arithmetic { operator: ArithmeticOperator::Subtract, destination: self.clone(), source: other }
+        Arithmetic {
+            operator: ArithmeticOperator::Subtract,
+            destination: self.clone(),
+            source: other,
+        }
     }
 
     fn __truediv__(&self, other: ArithmeticOperand) -> Arithmetic {
-        Arithmetic { operator: ArithmeticOperator::Divide, destination: self.clone(), source: other }
+        Arithmetic {
+            operator: ArithmeticOperator::Divide,
+            destination: self.clone(),
+            source: other,
+        }
     }
 
     fn __mul__(&self, other: ArithmeticOperand) -> Arithmetic {
-        Arithmetic { operator: ArithmeticOperator::Multiply, destination: self.clone(), source: other }
+        Arithmetic {
+            operator: ArithmeticOperator::Multiply,
+            destination: self.clone(),
+            source: other,
+        }
     }
 
     // -------------------------------------------------------------------------------------
@@ -1680,7 +1751,9 @@ impl MemoryReference {
     fn _from_parameter_str(memory_reference_str: &str) -> PyResult<Self> {
         match <Expression as std::str::FromStr>::from_str(memory_reference_str)? {
             Expression::Address(addr) => Ok(addr),
-            _ => Err(PyValueError::new_err("not a valid memory reference expression")),
+            _ => Err(PyValueError::new_err(
+                "not a valid memory reference expression",
+            )),
         }
     }
 }
@@ -1691,11 +1764,11 @@ struct ScalarTypeLike(ScalarType);
 #[cfg(feature = "stubs")]
 impl pyo3_stub_gen::PyStubType for ScalarTypeLike {
     fn type_output() -> pyo3_stub_gen::TypeInfo {
-        ScalarType::type_output() |
-        pyo3_stub_gen::TypeInfo::with_module(
-            r#"typing.Literal["BIT", "INTEGER", "REAL", "OCTET"]"#,
-            "typing".into(),
-        )
+        ScalarType::type_output()
+            | pyo3_stub_gen::TypeInfo::with_module(
+                r#"typing.Literal["BIT", "INTEGER", "REAL", "OCTET"]"#,
+                "typing".into(),
+            )
     }
 }
 
@@ -1712,7 +1785,11 @@ impl<'a, 'py> FromPyObject<'a, 'py> for ScalarType {
                 "INTEGER" => ScalarType::Integer,
                 "REAL" => ScalarType::Real,
                 "OCTET" => ScalarType::Octet,
-                _ => return Err(PyValueError::new_err(format!("{type_str} is not a valid ScalarType"))),
+                _ => {
+                    return Err(PyValueError::new_err(format!(
+                        "{type_str} is not a valid ScalarType"
+                    )))
+                }
             };
 
             // Compile-time check that we cover all variants.
@@ -1729,7 +1806,9 @@ impl<'a, 'py> FromPyObject<'a, 'py> for ScalarType {
             Ok(ret)
         } else {
             match obj.str() {
-                Ok(s) => Err(PyTypeError::new_err(format!("{s} is not a valid ScalarType"))),
+                Ok(s) => Err(PyTypeError::new_err(format!(
+                    "{s} is not a valid ScalarType"
+                ))),
                 Err(_) => Err(PyTypeError::new_err("object is not a valid ScalarType")),
             }
         }
@@ -1826,7 +1905,7 @@ py_friendly_enum!(
     for Qubit = QubitPlaceholder | u64 | String
 );
 
-impl <'a, 'py> FromPyObject<'a, 'py> for Qubit {
+impl<'a, 'py> FromPyObject<'a, 'py> for Qubit {
     type Error = PyErr;
 
     fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
@@ -1839,7 +1918,9 @@ impl <'a, 'py> FromPyObject<'a, 'py> for Qubit {
         } else if let Ok(obj) = obj.cast::<QubitPlaceholder>() {
             Ok(Qubit::Placeholder(obj.get().clone()))
         } else {
-            Err(PyTypeError::new_err("expected a Qubit or one of its variants"))
+            Err(PyTypeError::new_err(
+                "expected a Qubit or one of its variants",
+            ))
         }
     }
 }
@@ -1876,8 +1957,9 @@ mod stubs {
 
     impl_stub_type!(GateModifierDesignator = GateModifier | String);
 
-    impl_stub_type!(MemoryReferenceLike =
-        MemoryReference | DeclarationAt | Declaration | (String, u64));
+    impl_stub_type!(
+        MemoryReferenceLike = MemoryReference | DeclarationAt | Declaration | (String, u64)
+    );
 }
 
 pub(crate) type QubitLike<'a, 'py> = Like<'a, 'py, Qubit>;
@@ -1974,7 +2056,7 @@ impl TargetPlaceholder {
             py_deprecated!(py, c"passing a `placeholder` is deprecated")?;
             Ok(Self::new(label.as_inner().to_string()))
         } else if let Some(label) = prefix {
-            deprecated_param!(py, new=base_label, old=prefix)?;
+            deprecated_param!(py, new = base_label, old = prefix)?;
             Ok(Self::new(label))
         } else {
             Ok(Self::new(base_label.to_string()))

@@ -10,7 +10,11 @@ use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyclass_complex_enum};
 
 use super::{MemoryReference, Qubit, QuotedString, WaveformInvocation};
 use crate::{
-    expression::Expression, parser::{ParseError, common::parse_frame_identifier, lex}, pickleable_new, program::{SyntaxError, disallow_leftover}, quil::{INDENT, Quil}, 
+    expression::Expression,
+    parser::{common::parse_frame_identifier, lex, ParseError},
+    pickleable_new,
+    program::{disallow_leftover, SyntaxError},
+    quil::{Quil, INDENT},
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, strum::EnumTryAs)]

@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use pyo3::types::PyType;
-use pyo3::{PyClass, PyTypeCheck, prelude::*, pyclass::boolean_struct::True, types::PyTuple};
+use pyo3::{prelude::*, pyclass::boolean_struct::True, types::PyTuple, PyClass, PyTypeCheck};
 use rigetti_pyo3::create_init_submodule;
 
 use crate::expression;
@@ -83,11 +83,19 @@ fn init_module(m: &Bound<'_, PyModule>) -> PyResult<()> {
 /// # Note
 ///
 /// This panics during compilation if `types` is empty, since a union of no types is not valid.
-pub(crate) fn union_type<'py, const N: usize>(types: &[&Bound<'py, PyType>; N]) -> PyResult<Bound<'py, PyAny>>
-where [u32; N]: Sized
+pub(crate) fn union_type<'py, const N: usize>(
+    types: &[&Bound<'py, PyType>; N],
+) -> PyResult<Bound<'py, PyAny>>
+where
+    [u32; N]: Sized,
 {
-    assert!(N > 0, "Cannot create a union of zero types; at least one type is required");
-    types[1..].iter().try_fold(types[0].clone().into_any(), |u, t| { u.bitor(t) })
+    assert!(
+        N > 0,
+        "Cannot create a union of zero types; at least one type is required"
+    );
+    types[1..]
+        .iter()
+        .try_fold(types[0].clone().into_any(), |u, t| u.bitor(t))
 }
 
 /// Construct a union of Python types.
@@ -100,7 +108,10 @@ pub(crate) use union;
 
 #[cfg(test)]
 mod test_union {
-    use pyo3::{prelude::*, types::{PyString, PyTuple}};
+    use pyo3::{
+        prelude::*,
+        types::{PyString, PyTuple},
+    };
 
     use super::union_type;
 
@@ -326,17 +337,17 @@ impl pyo3_stub_gen::PyStubType for NonZeroU64 {
 /// });
 /// ```
 pub(crate) fn from_sequence<'it, 'py, T, U>(sequence: &'it Bound<'py, PyAny>) -> PyResult<Vec<U>>
-    where
-        U: PyClass + PyTypeCheck + From<T> + ToOwned<Owned = U>,
-        for<'a> T: FromPyObject<'a, 'py>,
-        for<'a> PyErr: From<<T as FromPyObject<'a, 'py>>::Error>,
+where
+    U: PyClass + PyTypeCheck + From<T> + ToOwned<Owned = U>,
+    for<'a> T: FromPyObject<'a, 'py>,
+    for<'a> PyErr: From<<T as FromPyObject<'a, 'py>>::Error>,
 {
-        let capacity = sequence.len()?;
-        let mut res = Vec::with_capacity(capacity);
-        for item in sequence.try_iter()? {
-            res.push(from_like(&item?)?);
-        }
-        Ok(res)
+    let capacity = sequence.len()?;
+    let mut res = Vec::with_capacity(capacity);
+    for item in sequence.try_iter()? {
+        res.push(from_like(&item?)?);
+    }
+    Ok(res)
 }
 
 /// Extract a Python object as a [`PyClass`] `U`, or if that fails,
@@ -356,11 +367,10 @@ where
     }
 }
 
-
 #[cfg(test)]
 mod wrapper_tests {
     use pyo3::prelude::*;
-    use pyo3::types::{PyString, PyInt};
+    use pyo3::types::{PyInt, PyString};
 
     use super::*;
 
@@ -415,7 +425,10 @@ mod wrapper_tests {
             assert_eq!(my_str, any_variant::<MyClass>(&py_str).unwrap());
             assert_eq!(my_int, any_variant::<MyClass>(&py_int).unwrap());
 
-            let inst_str = MyClass::Str("foo".to_string()).into_pyobject(py).unwrap().into_any();
+            let inst_str = MyClass::Str("foo".to_string())
+                .into_pyobject(py)
+                .unwrap()
+                .into_any();
             let inst_int = MyClass::Int(42).into_pyobject(py).unwrap().into_any();
             assert_eq!(my_str, any_variant::<MyClass>(&inst_str).unwrap());
             assert_eq!(my_int, any_variant::<MyClass>(&inst_int).unwrap());
@@ -442,7 +455,7 @@ mod wrapper_tests {
 pub(crate) fn any_variant<'a, 'py, T>(obj: &'a Bound<'py, PyAny>) -> PyResult<T>
 where
     T: FromPyObject<'a, 'py> + PyTypeCheck + PyClass + Clone,
-    PyErr: From<<T as FromPyObject<'a, 'py>>::Error>
+    PyErr: From<<T as FromPyObject<'a, 'py>>::Error>,
 {
     if let Ok(obj) = obj.cast::<T>() {
         Ok(obj.borrow().to_owned())
@@ -451,21 +464,22 @@ where
     }
 }
 
-
 #[derive(Debug, Copy, Clone)]
 pub(crate) enum Like<'a, 'py, T> {
     Borrowed(Borrowed<'a, 'py, T>),
     Extracted(T),
 }
 
-impl <'a, 'py, T> FromPyObject<'a, 'py> for Like<'a, 'py, T>
+impl<'a, 'py, T> FromPyObject<'a, 'py> for Like<'a, 'py, T>
 where
     T: PyClass + FromPyObject<'a, 'py>,
 {
     type Error = <T as FromPyObject<'a, 'py>>::Error;
 
     fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
-        obj.cast::<T>().map(Self::Borrowed).or_else(|_| obj.extract::<T>().map(Self::Extracted))
+        obj.cast::<T>()
+            .map(Self::Borrowed)
+            .or_else(|_| obj.extract::<T>().map(Self::Extracted))
     }
 }
 
@@ -482,7 +496,7 @@ pub(crate) trait IntoNewArgs<'py, T> {
     fn into_new_args(self, py: Python<'py>) -> PyResult<NewArgs<'py, T>>;
 }
 
-impl <'py, T, U> IntoNewArgs<'py, T> for U
+impl<'py, T, U> IntoNewArgs<'py, T> for U
 where
     U: IntoPyObject<'py>,
 {
@@ -495,7 +509,8 @@ pub(crate) struct NewArgs<'py, T>(Bound<'py, PyTuple>, PhantomData<T>);
 
 impl<'py, T> NewArgs<'py, T> {
     pub(crate) fn new<U>(py: Python<'py>, value: U) -> PyResult<Self>
-        where U: IntoPyObject<'py>
+    where
+        U: IntoPyObject<'py>,
     {
         Ok(NewArgs((value,).into_pyobject(py)?, PhantomData))
     }
@@ -513,7 +528,8 @@ impl<'py, T> IntoPyObject<'py> for NewArgs<'py, T> {
 
 #[cfg(feature = "stubs")]
 impl<'py, T> pyo3_stub_gen::PyStubType for NewArgs<'py, T>
-    where T: pyo3_stub_gen::PyStubType,
+where
+    T: pyo3_stub_gen::PyStubType,
 {
     fn type_output() -> pyo3_stub_gen::TypeInfo {
         let pyo3_stub_gen::TypeInfo {
@@ -589,7 +605,8 @@ impl<'a, 'py, T> Like<'a, 'py, T> {
     }
 
     pub(crate) fn extract<O>(self) -> Result<O, O::Error>
-        where O: FromPyObject<'a, 'py> + From<T>,
+    where
+        O: FromPyObject<'a, 'py> + From<T>,
     {
         match self {
             Self::Borrowed(b) => b.extract::<O>(),
@@ -702,7 +719,7 @@ macro_rules! py_deprecated {
             $message,
             $level,
         )
-    }
+    };
 }
 
 pub(crate) use py_deprecated;
@@ -724,12 +741,12 @@ pub(crate) use py_deprecated;
 /// ```
 macro_rules! deprecated_or_new {
     ($py: ident, old=$old_param: ident, new=$new_param: ident) => {
-        deprecated_or_new!($py, new=$new_param, old=$old_param)
+        deprecated_or_new!($py, new = $new_param, old = $old_param)
     };
 
     ($py: ident, new=$new_param: ident, old=$old_param: ident) => {
         $old_param.map_or(Ok($new_param), |old| {
-            $crate::quilpy::deprecated_param!($py, new=$new_param, old=$old_param)?;
+            $crate::quilpy::deprecated_param!($py, new = $new_param, old = $old_param)?;
             Ok::<_, ::pyo3::PyErr>(old)
         })
     };
@@ -762,16 +779,20 @@ macro_rules! deprecated_or_new {
 /// ```
 macro_rules! deprecated_param {
     ($py: ident, new=$new_param: ident, old=$old_param: ident) => {
-        $crate::quilpy::deprecated_param!($py, new=$new_param, old=$old_param, level=1)
+        $crate::quilpy::deprecated_param!($py, new = $new_param, old = $old_param, level = 1)
     };
 
     ($py: ident, new=$new_param: ident, old=$old_param: ident, level=$level: expr) => {
         $crate::quilpy::py_deprecated!(
             $py,
             ::pyo3::ffi::c_str!(concat!(
-                "`", stringify!($old_param), "`",
+                "`",
+                stringify!($old_param),
+                "`",
                 " is deprecated; use ",
-                "`", stringify!($new_param), "`",
+                "`",
+                stringify!($new_param),
+                "`",
                 " instead"
             )),
             $level
@@ -779,8 +800,8 @@ macro_rules! deprecated_param {
     };
 }
 
-pub(crate) use deprecated_param;
 pub(crate) use deprecated_or_new;
+pub(crate) use deprecated_param;
 
 #[cfg(feature = "stubs")]
 pub(crate) mod stubs {
