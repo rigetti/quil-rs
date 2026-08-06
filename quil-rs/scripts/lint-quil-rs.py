@@ -7,6 +7,7 @@ Afterward, it may print some messages about potential mistakes.
 Run the script with ``--help`` to see its options.
 """
 
+from collections import deque
 import logging
 import re
 import os
@@ -47,6 +48,8 @@ def main():
         + [
             _impl_instruction,
             _define_waveforms,
+            _py_instruction_singleton,
+            _skip_tests,
         ],
     )
 
@@ -65,10 +68,20 @@ def main():
         sys.exit(1)
 
 
+@macro_handler(r"#\[cfg\(test\)\]")
+def _skip_tests(ctx: MacroContext, module: str | None = None) -> None:
+    """Skip any code that is inside a ``#[cfg(test)]`` block."""
+
+    logger.info("Skipping #[cfg(test)] block.")
+    _ = deque(iter_delim(ctx.lines, "{}"), maxlen=0)  # consume the block
+    return
+
+
 @macro_handler(r"define_waveforms!")
 def _define_waveforms(ctx: MacroContext, module: str | None = None) -> None:
     """Process the input to the ``define_waveforms!`` macro."""
-    logger.info("Processing waveforms")
+
+    logger.info("Processing define_waveforms! macro.")
 
     lines = join_lines(iter_delim(ctx.lines, "{}"))
     text = lines.text.removeprefix("define_waveforms! {").removesuffix("}")
@@ -98,6 +111,8 @@ def _define_waveforms(ctx: MacroContext, module: str | None = None) -> None:
 def _impl_instruction(ctx: MacroContext, module: str | None = None) -> None:
     """Process the input to the ``impl_instruction!`` macro."""
 
+    logger.info("Processing impl_instruction! macro.")
+
     line = join_lines(iter_delim(ctx.lines, "[]"))
     ctx.exported["quil._quil.instructions"].update(
         Item(
@@ -111,6 +126,40 @@ def _impl_instruction(ctx: MacroContext, module: str | None = None) -> None:
         if (rust_name := name.partition("[")[0].strip()) != ""
     )
 
+
+@macro_handler(r"py_instruction_singleton!")
+def _py_instruction_singleton(ctx: MacroContext, module: str | None = None) -> None:
+    """Process the input to the ``py_instruction_singleton!`` macro."""
+
+    logger.info("Processing py_instruction_singleton! macro.")
+
+    # fmt: off
+    _macro_pattern = (
+        r"py_instruction_singleton!\s*\("
+            r"(?P<var_name>[^,]+?),\s*"
+            r"(?P<type_name>[^,]+?),\s*"
+            r"(?P<cell_name>[^,]+?),?\s*"
+        r"\)"
+    )
+    # fmt: on
+
+    line = join_lines(iter_delim(ctx.lines, "()"))
+    if not ((m := re.match(_macro_pattern, line.text)) and (name := m.group("type_name"))):
+        logger.warning(f"Could not parse name from py_instruction_singleton! macro: {line}")
+        return
+
+    name = name.strip()
+
+    ctx.annotated["quil._quil.instructions"].add(
+        Item(
+            kind=Kind.Struct,
+            python_name=name,
+            rust_name=name,
+            path=ctx.path,
+            line=line,
+            stub_attr=StubAttr(kind=StubKind.Class),
+        )
+    )
 
 if __name__ == "__main__":
     main()
