@@ -830,7 +830,6 @@ impl<T: WaveformData> ErfSquare<T> {
         sample_rate: f64,
     ) -> Result<IqSamplesFor<T>, SamplingError>
     where
-        CommonBuiltinParameters<T>: Copy,
         Self: ConcretizableFromTo<T, ErfSquare<Concrete>>,
     {
         let scale_is_zero = common
@@ -999,17 +998,11 @@ impl<T: WaveformData> RaisedCosine<T> {
                     )
                 };
 
-                // TEMP: we do not use fwhm or sigma.
-                let fwhm = 0.0;
-
                 Ok(IqSamplesFor::Total(
-                    build_samples_and_adjust_for_common_parameters(
-                        SamplingParameters { sample_rate, fwhm },
+                    build_samples_and_adjust_for_builtin_parameters(
+                        sample_rate,
                         explicit,
-                        |SamplingInfo {
-                             time_steps,
-                             sigma: _,
-                         }| {
+                        |time_steps| {
                             let risetime = rolloff * active_duration / 2.0;
                             let falltime = active_duration - risetime;
 
@@ -1213,6 +1206,25 @@ fn concretize_and_resolve<W: ConcretizableWaveform>(
     Ok(partiality::Value::Total((explicit, waveform)))
 }
 
+/// Generating a sequence of samples for a Gaussian-like waveform:
+///
+/// Like [`build_samples_and_adjust_for_builtin_parameters`] but includes
+/// Full Width at Half Maximum (FWHM) and sigma parameters, which are useful when
+/// working with Gaussians.
+fn build_samples_and_adjust_for_common_parameters<I: IntoIterator<Item = Complex64>>(
+    parameters: SamplingParameters,
+    common: ExplicitCommonBuiltinParameters,
+    build: impl FnOnce(SamplingInfo) -> I,
+) -> IqSamples<Complex64> {
+    let SamplingParameters { sample_rate, fwhm } = parameters;
+
+    let sigma = 0.5 * fwhm / (2.0 * LN_2).sqrt();
+
+    build_samples_and_adjust_for_builtin_parameters(sample_rate, common, |time_steps| {
+        build(SamplingInfo { time_steps, sigma })
+    })
+}
+
 /// Encapsulates the common pattern for generating a sequence of samples for a waveform:
 ///
 /// 1. Generate information from some generally-used parameters.
@@ -1222,12 +1234,11 @@ fn concretize_and_resolve<W: ConcretizableWaveform>(
 ///
 /// These samples are generated from a sequence of time steps ranging evenly over the half-open
 /// interval [0,1).
-fn build_samples_and_adjust_for_common_parameters<I: IntoIterator<Item = Complex64>>(
-    parameters: SamplingParameters,
+fn build_samples_and_adjust_for_builtin_parameters<I: IntoIterator<Item = Complex64>>(
+    sample_rate: f64,
     common: ExplicitCommonBuiltinParameters,
-    build: impl FnOnce(SamplingInfo) -> I,
+    build: impl FnOnce(Array1<f64>) -> I,
 ) -> IqSamples<Complex64> {
-    let SamplingParameters { sample_rate, fwhm } = parameters;
     let ExplicitCommonBuiltinParameters {
         sample_count,
         scale,
@@ -1236,11 +1247,8 @@ fn build_samples_and_adjust_for_common_parameters<I: IntoIterator<Item = Complex
     } = common;
 
     let time_steps = Array::range(0.0, sample_count.into(), 1.0) / sample_rate;
-    let sigma = 0.5 * fwhm / (2.0 * LN_2).sqrt();
 
-    let mut samples: Vec<_> = build(SamplingInfo { time_steps, sigma })
-        .into_iter()
-        .collect();
+    let mut samples: Vec<_> = build(time_steps).into_iter().collect();
 
     // Like [`apply_phase_and_detuning`], but also applies the scale
     for (index, sample) in samples.iter_mut().enumerate() {
