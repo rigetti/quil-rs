@@ -762,15 +762,13 @@ impl CalibrationDefinition {
     }
 }
 
-// #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-// #[pyo3::pymethods]
-//         #[new]
 pickleable_new! {
     impl CalibrationIdentifier {
         /// Builds a new calibration identifier.
         ///
         /// Raises an error if the given name isn't a valid Quil identifier.
         #[pyo3(signature = (name, parameters = Vec::new(), qubits = Vec::new(), modifiers = Vec::new()))]
+        #[pyo3(text_signature = "(name, parameters = [], qubits = [], modifiers = [])")]
         fn __new__(
             name: String,
             #[pyo3(from_py_with = from_sequence::<ExpressionLike, _>)]
@@ -1057,16 +1055,9 @@ submit! {
                 qubits: pyo3_stub_gen.RustType["Vec<QubitLike>"],
                 modifiers: pyo3_stub_gen.RustType["Option<Vec<GateModifierDesignator>>"] = None,
             ) -> Gate: ...
+
             @typing.overload
             @typing_extensions.deprecated("The `params` parameter is deprecated; use `parameters` instead.")
-            def __new__(
-                cls,
-                name: builtins.str,
-                *,
-                qubits: pyo3_stub_gen.RustType["Vec<QubitLike>"],
-                modifiers: pyo3_stub_gen.RustType["Option<Vec<GateModifierDesignator>>"] = None,
-                params: pyo3_stub_gen.RustType["Option<Vec<ExpressionLike>>"] = None,
-            ) -> typing_extensions.NoReturn: ...
             def __new__(
                 cls,
                 name: builtins.str,
@@ -1074,9 +1065,8 @@ submit! {
                 qubits: pyo3_stub_gen.RustType["Vec<QubitLike>"],
                 modifiers: pyo3_stub_gen.RustType["Option<Vec<GateModifierDesignator>>"] = None,
                 *,
-                params: pyo3_stub_gen.RustType["Option<Vec<ExpressionLike>>"] = None,
-            ) -> Gate:
-                """Create a new ``Gate``."""
+                params: pyo3_stub_gen.RustType["Option<Vec<ExpressionLike>>"],
+            ) -> typing_extensions.NoReturn: ...
         "#
     }
 }
@@ -1944,7 +1934,7 @@ impl Qubit {
 
 #[cfg(feature = "stubs")]
 mod stubs {
-    use pyo3_stub_gen::impl_stub_type;
+    use pyo3_stub_gen::{impl_stub_type, type_alias};
 
     // pyo3_stub_gen::export_verbatim!("quil.instructions", "Halt");
 
@@ -1963,6 +1953,10 @@ mod stubs {
     impl_stub_type!(
         MemoryReferenceLike = MemoryReference | DeclarationAt | Declaration | (String, u64)
     );
+
+    type_alias!("quil._quil.instructions", LabelTargetParameter = String | Target | Label); 
+    type_alias!("quil._quil.instructions", MemoryReferenceDesignator = MemoryReferenceLike);
+    type_alias!("quil._quil.instructions", QubitDesignator = Qubit | QubitPlaceholder | String | u64);
 }
 
 pub(crate) type QubitLike<'a, 'py> = Like<'a, 'py, Qubit>;
