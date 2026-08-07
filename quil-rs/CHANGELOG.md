@@ -1,3 +1,9 @@
+## 0.37.1-rc.0 (2026-08-07)
+
+### Features
+
+- add `RaisedCosine` builtin waveform (#517)
+
 ## 0.37.0 (2026-08-05)
 
 ### Breaking Changes
