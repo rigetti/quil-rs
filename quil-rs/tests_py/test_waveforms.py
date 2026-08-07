@@ -280,6 +280,7 @@ def test_parsed():
     PULSE 0 "tx" drag_gaussian(duration: 2.6e-7, phase: pi/2, fwhm: 0.5e-7, t0: 1e-7, anh: 1_000_000, alpha: 3)
     PULSE 0 "tx" erf_square(duration: 3e-7, detuning: 123_456_789, risetime: 12e-9, pad_left: 4e-9, pad_right: 8e-9)
     PULSE 0 "tx" hrm_gauss(duration: 4e-8, scale: 0.5, detuning: -1e8, fwhm: 1.5e-8, t0: 0.75e-8, anh: -1_000_000, alpha: -3, second_order_hrm_coeff: 0.42)
+    PULSE 0 "tx" raised_cosine(duration: 5e-7, rolloff: 0.3, pad_left: 6e-9, pad_right: 7e-9)
     PULSE 0 "tx" boxcar_kernel(duration: 6e-8, scale: 1.5, phase: pi, detuning: 987_654_321)
     PULSE 0 "tx" special(answer: 2*(21 + 0.5i))
     """
@@ -338,6 +339,12 @@ def test_parsed():
             alpha=e("-3"),
             second_order_hrm_coeff=e("0.42"),
         ),
+        Waveform.raised_cosine(
+            duration=5e-7,
+            rolloff=e("0.3"),
+            pad_left=6e-9,
+            pad_right=7e-9,
+        ),
         Waveform.boxcar_kernel(duration=6e-8, scale=e("1.5"), phase=e("pi"), detuning=e("987_654_321")),
         Waveform.custom("special", {"answer": e("2*(21 + 0.5i)")}),
     ]
@@ -362,6 +369,12 @@ def test_parsed():
             anh=-1_000_000,
             alpha=-3,
             second_order_hrm_coeff=0.42,
+        ),
+        Waveform.raised_cosine(
+            duration=5e-7,
+            rolloff=3e-1,
+            pad_left=6e-9,
+            pad_right=7e-9,
         ),
         Waveform.boxcar_kernel(duration=6e-8, scale=1.5, phase=pi, detuning=987_654_321),
         Waveform.custom("special", {"answer": 42 + 1j}),

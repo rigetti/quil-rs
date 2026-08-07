@@ -162,6 +162,7 @@ impl<T: WaveformData> Waveform<T> {
             "drag_gaussian" => parse_builtin!(DragGaussian),
             "erf_square" => parse_builtin!(ErfSquare),
             "hrm_gauss" => parse_builtin!(HermiteGaussian),
+            "raised_cosine" => parse_builtin!(RaisedCosine),
             "boxcar_kernel" => parse_builtin!(BoxcarKernel),
             _ => match custom(parameters) {
                 Ok(parameters) => Ok(Self::Custom { name, parameters }),
