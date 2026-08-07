@@ -117,6 +117,7 @@ def assert_builtin(
     waveform.DragGaussian[float, complex],
     waveform.ErfSquare[float, complex],
     waveform.HermiteGaussian[float, complex],
+    waveform.RaisedCosine[float, complex],
     waveform.BoxcarKernel,
 ]:
     wf = make_waveform(
@@ -173,9 +174,7 @@ def test_drag_gaussian(
     anh: float,
     alpha: float,
 ):
-    drag_gaussian = assert_builtin(
-        Waveform.drag_gaussian, common, fwhm=fwhm, t0=t0, anh=anh, alpha=alpha
-    )
+    drag_gaussian = assert_builtin(Waveform.drag_gaussian, common, fwhm=fwhm, t0=t0, anh=anh, alpha=alpha)
     assert type(drag_gaussian) == waveform.DragGaussian
     assert drag_gaussian.anh == anh
     assert drag_gaussian.alpha == alpha
@@ -241,6 +240,31 @@ def test_hermite_gaussian(
     assert hermite_gaussian.second_order_hrm_coeff == second_order_hrm_coeff
 
 
+@given(
+    common=common_builtin_parameters(),
+    rolloff=in_range(-1, 1),
+    pad_left=time(),
+    pad_right=time(),
+)
+def test_raised_cosine(
+    common: CommonBuiltinParameters[float, complex],
+    rolloff: float,
+    pad_left: float,
+    pad_right: float,
+):
+    raised_cosine = assert_builtin(
+        Waveform.raised_cosine,
+        common,
+        rolloff=rolloff,
+        pad_left=pad_left,
+        pad_right=pad_right,
+    )
+    assert type(raised_cosine) == waveform.RaisedCosine
+    assert raised_cosine.rolloff == rolloff
+    assert raised_cosine.pad_left == pad_left
+    assert raised_cosine.pad_right == pad_right
+
+
 @given(common=common_builtin_parameters())
 def test_boxcar_kernel(common: CommonBuiltinParameters[float, complex]):
     boxcar_kernel = assert_builtin(Waveform.boxcar_kernel, common)
@@ -288,9 +312,7 @@ def test_parsed():
     e = Expression.parse
     explicit_syntactic_pulses: list[Waveform[Expression]] = [
         Waveform.flat(duration=1e-6, iq=e("i")),
-        Waveform.gaussian(
-            duration=2e-8, scale=e("1+1"), fwhm=e("1e-8"), t0=e("0.5e-8")
-        ),
+        Waveform.gaussian(duration=2e-8, scale=e("1+1"), fwhm=e("1e-8"), t0=e("0.5e-8")),
         Waveform.drag_gaussian(
             duration=2.6e-7,
             phase=e("pi/2"),
@@ -316,18 +338,14 @@ def test_parsed():
             alpha=e("-3"),
             second_order_hrm_coeff=e("0.42"),
         ),
-        Waveform.boxcar_kernel(
-            duration=6e-8, scale=e("1.5"), phase=e("pi"), detuning=e("987_654_321")
-        ),
+        Waveform.boxcar_kernel(duration=6e-8, scale=e("1.5"), phase=e("pi"), detuning=e("987_654_321")),
         Waveform.custom("special", {"answer": e("2*(21 + 0.5i)")}),
     ]
 
     explicit_concrete_pulses: list[Waveform[float, complex]] = [
         Waveform.flat(duration=1e-6, iq=1j),
         Waveform.gaussian(duration=2e-8, scale=2, fwhm=1e-8, t0=0.5e-8),
-        Waveform.drag_gaussian(
-            duration=2.6e-7, phase=pi / 2, fwhm=0.5e-7, t0=1e-7, anh=1_000_000, alpha=3
-        ),
+        Waveform.drag_gaussian(duration=2.6e-7, phase=pi / 2, fwhm=0.5e-7, t0=1e-7, anh=1_000_000, alpha=3),
         Waveform.erf_square(
             duration=3e-7,
             detuning=123_456_789,
@@ -345,9 +363,7 @@ def test_parsed():
             alpha=-3,
             second_order_hrm_coeff=0.42,
         ),
-        Waveform.boxcar_kernel(
-            duration=6e-8, scale=1.5, phase=pi, detuning=987_654_321
-        ),
+        Waveform.boxcar_kernel(duration=6e-8, scale=1.5, phase=pi, detuning=987_654_321),
         Waveform.custom("special", {"answer": 42 + 1j}),
     ]
 
