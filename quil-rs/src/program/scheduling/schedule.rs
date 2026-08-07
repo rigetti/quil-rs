@@ -247,11 +247,11 @@ impl<'p> ScheduledBasicBlock<'p> {
                 .map(|sample_rate| sample_count as f64 / sample_rate)
                 .map(Seconds)
         } else {
-            // Per the Quil spec, all waveform templates have a "duration"
-            // parameter, and "erf_square" also has "pad_left" and "pad_right".
+            // Per the Quil spec, all waveform templates have a "duration" parameter.
+            // "erf_square" and "raised_cosine" also has "pad_left" and "pad_right".
             // We explicitly choose to be more flexible here, and allow any
             // built-in waveform templates to have "pad_*" parameters, as well
-            // as allow "erf_square" to omit them.
+            // as allowing "erf_square" and "raised_cosine" to omit them.
             let parameter = |parameter_name| {
                 parameters
                     .get(parameter_name)
