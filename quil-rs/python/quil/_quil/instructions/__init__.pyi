@@ -9,6 +9,7 @@ from quil import _quil
 from quil._quil import expression
 import typing
 import typing_extensions
+from typing import TypeAlias
 __all__ = [
     "Arithmetic",
     "ArithmeticOperand",
@@ -57,11 +58,13 @@ __all__ = [
     "JumpUnless",
     "JumpWhen",
     "Label",
+    "LabelTargetParameter",
     "Load",
     "MeasureCalibrationDefinition",
     "MeasureCalibrationIdentifier",
     "Measurement",
     "MemoryReference",
+    "MemoryReferenceDesignator",
     "Move",
     "Nop",
     "NopType",
@@ -75,6 +78,7 @@ __all__ = [
     "PragmaArgument",
     "Pulse",
     "Qubit",
+    "QubitDesignator",
     "QubitPlaceholder",
     "RawCapture",
     "Reset",
@@ -100,6 +104,9 @@ __all__ = [
     "unpack_classical_reg",
 ]
 
+LabelTargetParameter: TypeAlias = builtins.str  |  Target  |  Label
+MemoryReferenceDesignator: TypeAlias = MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]
+QubitDesignator: TypeAlias = Qubit  |  QubitPlaceholder  |  builtins.str  |  builtins.int
 Halt: HaltType
 Nop: NopType
 Wait: WaitType
@@ -945,12 +952,7 @@ class Gate(Instruction):
     @typing.overload
     def __new__(cls, name: builtins.str, parameters: typing.Sequence[expression.Expression  |  MemoryReference  |  builtins.int  |  builtins.float  |  builtins.complex], qubits: typing.Sequence[Qubit  |  QubitPlaceholder  |  builtins.int  |  builtins.str], modifiers: typing.Optional[typing.Sequence[GateModifier  |  builtins.str]] = None) -> Gate: ...
     @typing.overload
-    def __new__(cls, name: builtins.str, *, qubits: typing.Sequence[Qubit  |  QubitPlaceholder  |  builtins.int  |  builtins.str], modifiers: typing.Optional[typing.Sequence[GateModifier  |  builtins.str]] = None, params: typing.Optional[typing.Sequence[expression.Expression  |  MemoryReference  |  builtins.int  |  builtins.float  |  builtins.complex]] = None) -> typing_extensions.NoReturn: ...
-    @typing.overload
-    def __new__(cls, name: builtins.str, parameters: typing.Sequence[expression.Expression  |  MemoryReference  |  builtins.int  |  builtins.float  |  builtins.complex], qubits: typing.Sequence[Qubit  |  QubitPlaceholder  |  builtins.int  |  builtins.str], modifiers: typing.Optional[typing.Sequence[GateModifier  |  builtins.str]] = None, *, params: typing.Optional[typing.Sequence[expression.Expression  |  MemoryReference  |  builtins.int  |  builtins.float  |  builtins.complex]] = None) -> Gate:
-        r"""
-        Create a new ``Gate``.
-        """
+    def __new__(cls, name: builtins.str, parameters: typing.Sequence[expression.Expression  |  MemoryReference  |  builtins.int  |  builtins.float  |  builtins.complex], qubits: typing.Sequence[Qubit  |  QubitPlaceholder  |  builtins.int  |  builtins.str], modifiers: typing.Optional[typing.Sequence[GateModifier  |  builtins.str]] = None, *, params: typing.Optional[typing.Sequence[expression.Expression  |  MemoryReference  |  builtins.int  |  builtins.float  |  builtins.complex]]) -> typing_extensions.NoReturn: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust

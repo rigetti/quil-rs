@@ -7,18 +7,25 @@ import numpy
 from quil import _quil
 from quil._quil import instructions
 import typing
+from typing import TypeAlias
 __all__ = [
     "EvaluationError",
     "Expression",
+    "ExpressionDesignator",
     "ExpressionFunction",
+    "ExpressionValueDesignator",
     "FunctionCallExpression",
     "InfixExpression",
     "InfixOperator",
+    "ParameterDesignator",
     "ParseExpressionError",
     "PrefixExpression",
     "PrefixOperator",
 ]
 
+ExpressionDesignator: TypeAlias = Expression  |  builtins.int  |  builtins.float  |  builtins.complex
+ExpressionValueDesignator: TypeAlias = builtins.int | builtins.float | builtins.complex
+ParameterDesignator: TypeAlias = Expression  |  instructions.MemoryReference  |  builtins.int  |  builtins.float  |  builtins.complex
 class EvaluationError(_quil.QuilError):
     r"""
     Errors that may occur while evaluation an ``Expression``.
