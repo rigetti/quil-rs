@@ -136,7 +136,7 @@ impl<'py> IntoPyObject<'py> for SubstitutionResult {
 
 #[cfg(feature = "stubs")]
 mod stubs {
-    use pyo3_stub_gen::impl_stub_type;
+    use pyo3_stub_gen::{impl_stub_type, type_alias};
 
     #[allow(clippy::wildcard_imports)]
     use super::*;
@@ -145,6 +145,10 @@ mod stubs {
     impl_stub_type!(SubstitutionKey = String | MemoryReference);
     impl_stub_type!(SubstitutionValue = Complex64 | Vec<Complex64>);
     impl_stub_type!(SubstitutionResult = Expression | Complex64);
+
+    type_alias!("quil._quil.expression", ExpressionValueDesignator = i64 | f64 | Complex64);
+    type_alias!("quil._quil.expression", ExpressionDesignator = Expression | i64 | f64 | Complex64);
+    type_alias!("quil._quil.expression", ParameterDesignator = ExpressionLike);
 }
 
 impl_newargs!(
