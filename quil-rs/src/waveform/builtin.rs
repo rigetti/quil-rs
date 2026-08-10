@@ -60,7 +60,7 @@ pub enum BuiltinWaveform<T: WaveformData> {
 #[derive_where(Clone, PartialEq, Debug)]
 #[derive_where(Copy, Serialize, Deserialize; T::Real)]
 pub struct CommonBuiltinParameters<T: WaveformData> {
-    /// Full duration of the pulse, in seconds.
+    /// Full *active* duration of the pulse, in seconds.
     ///
     /// Note that this is *always* a concrete real number, even for
     /// [`Syntactic`][crate::waveform::Syntactic] parameters!  It must be possible to know the exact
@@ -75,19 +75,33 @@ pub struct CommonBuiltinParameters<T: WaveformData> {
 
     /// Explicit detuning to bake into IQ values (default: `0.0`).
     pub detuning: Option<T::Real>,
+
+    /// Length of zero padding to add to beginning of pulse (s) (default: `0.0`).
+    ///
+    /// Note that this is *always* a concrete real number, even if the waveform is
+    /// [`Syntactic`][crate::waveform::Syntactic]!  It must be possible to know the exact
+    /// duration of a waveform at all times.
+    pub pad_left: Option<f64>,
+
+    /// Length of zero padding to add to end of pulse (s) (default: `0.0`).
+    ///
+    /// Note that this is *always* a concrete real number, even if the waveform is
+    /// [`Syntactic`][crate::waveform::Syntactic]!  It must be possible to know the exact
+    /// duration of a waveform at all times.
+    pub pad_right: Option<f64>,
 }
 
 impl<T: WaveformData> parse::Extractable<T> for CommonBuiltinParameters<T> {
     fn extract_from<P: GeneralWaveformParameters, EF64, ER, EC>(
         parameters: &mut P,
-        concrete_real: impl FnMut(P::Value) -> Result<f64, EF64>,
+        mut concrete_real: impl FnMut(P::Value) -> Result<f64, EF64>,
         mut real: impl FnMut(P::Value) -> Result<T::Real, ER>,
         _complex: impl FnMut(P::Value) -> Result<T::Complex, EC>,
     ) -> Result<Self, GeneralWaveformParameterError<EF64, ER, EC>> {
         let duration = parse::mandatory(
             parameters,
             "duration",
-            concrete_real,
+            &mut concrete_real,
             GeneralWaveformParameterError::BadConcreteReal,
         )?;
 
@@ -105,6 +119,18 @@ impl<T: WaveformData> parse::Extractable<T> for CommonBuiltinParameters<T> {
             scale: optional_real("scale")?,
             phase: optional_real("phase")?.map(Cycles),
             detuning: optional_real("detuning")?,
+            pad_left: parse::optional(
+                parameters,
+                "pad_left",
+                &mut concrete_real,
+                GeneralWaveformParameterError::BadConcreteReal,
+            )?,
+            pad_right: parse::optional(
+                parameters,
+                "pad_right",
+                &mut concrete_real,
+                GeneralWaveformParameterError::BadConcreteReal,
+            )?,
         })
     }
 }
@@ -141,6 +167,12 @@ pub struct ExplicitCommonBuiltinParameters {
 
     /// Explicit detuning to bake into IQ values.
     pub detuning: f64,
+
+    /// Number of zero padding samples to add to beginning of pulse.
+    pub pad_left: u32,
+
+    /// Number of zero padding samples to add to end of pulse.
+    pub pad_right: u32,
 }
 
 /// We require this so we can cast
@@ -157,6 +189,8 @@ impl<S: WaveformData> CommonBuiltinParameters<S> {
             scale,
             phase,
             detuning,
+            pad_left,
+            pad_right,
         } = self;
 
         CommonBuiltinParameters {
@@ -164,6 +198,8 @@ impl<S: WaveformData> CommonBuiltinParameters<S> {
             scale: scale.as_ref(),
             phase: phase.as_ref().map(Cycles::as_ref),
             detuning: detuning.as_ref(),
+            pad_left: *pad_left,
+            pad_right: *pad_right,
         }
     }
 
@@ -191,12 +227,16 @@ impl<S: WaveformData> CommonBuiltinParameters<S> {
             scale,
             phase,
             detuning,
+            pad_left,
+            pad_right,
         } = self;
         Ok(CommonBuiltinParameters {
             duration,
             scale: scale.map(&real).transpose()?,
             phase: phase.map(|phase| phase.try_map(&real)).transpose()?,
             detuning: detuning.map(&real).transpose()?,
+            pad_left,
+            pad_right,
         })
     }
 }
@@ -211,6 +251,8 @@ impl<T: WaveformData> CommonBuiltinParameters<Partial<T>> {
             scale,
             phase,
             detuning,
+            pad_left,
+            pad_right,
         } = self;
 
         let scale = match scale {
@@ -236,6 +278,8 @@ impl<T: WaveformData> CommonBuiltinParameters<Partial<T>> {
             scale,
             phase,
             detuning,
+            pad_left,
+            pad_right,
         })
     }
 }
@@ -254,10 +298,21 @@ impl<T: WaveformData> CommonBuiltinParameters<T> {
             scale,
             phase,
             detuning,
+            pad_left,
+            pad_right,
         } = self;
 
         let sample_count_fract = duration * sample_rate;
         let sample_count = sample_count_fract.round();
+
+        let pad_left_sample_count_fract = pad_left.unwrap_or(0.0) * sample_rate;
+        let pad_left_sample_count = pad_left_sample_count_fract.round();
+
+        let pad_right_sample_count_fract = pad_right.unwrap_or(0.0) * sample_rate;
+        let pad_right_sample_count = pad_right_sample_count_fract.round();
+
+        // TODO: consider factoring in padding to this check here.
+
         let misalignment = sample_count_fract - sample_count;
         let max_misalignment = 1.0 / (sample_rate * 100.0);
 
@@ -276,6 +331,8 @@ impl<T: WaveformData> CommonBuiltinParameters<T> {
             })
         } else {
             let sample_count = sample_count as u32;
+            let pad_left = pad_left_sample_count as u32;
+            let pad_right = pad_right_sample_count as u32;
 
             let evaluate_or =
                 |field: Option<_>, default| field.map(T::eval_real).unwrap_or(Ok(default));
@@ -287,6 +344,8 @@ impl<T: WaveformData> CommonBuiltinParameters<T> {
                     scale: evaluate_or(scale, 1.0)?,
                     phase: evaluate_or(phase.map(|p| p.0), 0.0).map(Cycles)?,
                     detuning: evaluate_or(detuning, 0.0)?,
+                    pad_left,
+                    pad_right,
                 })
             })();
 
@@ -506,20 +565,6 @@ define_waveforms! {
     pub struct ErfSquare {
         /// Slope of erf shoulders (2x FWHM of erf in s)
         pub risetime: Real,
-
-        /// Length of zero padding to add to beginning of pulse (s)
-        ///
-        /// Note that this is *always* a concrete real number, even if the waveform is
-        /// [`Syntactic`][crate::waveform::Syntactic]!  It must be possible to know the exact
-        /// duration of a waveform at all times.
-        pub pad_left: ConcreteReal,
-
-        /// Length of zero padding to add to end of pulse (s)
-        ///
-        /// Note that this is *always* a concrete real number, even if the waveform is
-        /// [`Syntactic`][crate::waveform::Syntactic]!  It must be possible to know the exact
-        /// duration of a waveform at all times.
-        pub pad_right: ConcreteReal,
     }
 
     /// Creates a Hermite Gaussian waveform.
@@ -553,20 +598,6 @@ define_waveforms! {
         /// Its value is within in open interval [0, 1], where 0.0 corresponds to a
         /// square pulse, and 1.0 corresponds to a cosine pulse.
         pub rolloff: Real,
-
-        /// Length of zero padding to add to beginning of pulse (s)
-        ///
-        /// Note that this is *always* a concrete real number, even if the waveform is
-        /// [`Syntactic`][crate::waveform::Syntactic]!  It must be possible to know the exact
-        /// duration of a waveform at all times.
-        pub pad_left: ConcreteReal,
-
-        /// Length of zero padding to add to end of pulse (s)
-        ///
-        /// Note that this is *always* a concrete real number, even if the waveform is
-        /// [`Syntactic`][crate::waveform::Syntactic]!  It must be possible to know the exact
-        /// duration of a waveform at all times.
-        pub pad_right: ConcreteReal,
     }
 
     /// A boxcar waveform.
@@ -726,7 +757,6 @@ impl<T: WaveformData> Flat<T> {
         sample_rate: f64,
     ) -> Result<IqSamplesFor<T>, SamplingError>
     where
-        CommonBuiltinParameters<T>: Copy,
         Self: ConcretizableFromTo<T, Flat<Concrete>>,
     {
         let (waveform, explicit) = match resolve_for_flat_unless_detuned(
@@ -746,6 +776,8 @@ impl<T: WaveformData> Flat<T> {
             scale,
             phase,
             detuning,
+            pad_left,
+            pad_right,
         } = explicit;
 
         let Flat { iq } = waveform;
@@ -753,16 +785,23 @@ impl<T: WaveformData> Flat<T> {
         let sample_count = sample_count as usize;
         let scaled_iq = scale * iq;
 
-        Ok(IqSamplesFor::Total(if detuning == 0.0 {
-            IqSamples::Flat {
-                iq: apply_phase(scaled_iq, phase),
-                sample_count,
-            }
-        } else {
-            let mut samples = vec![scaled_iq; sample_count];
-            apply_phase_and_detuning(&mut samples, phase, detuning, sample_rate);
-            IqSamples::Samples(samples)
-        }))
+        Ok(IqSamplesFor::Total(
+            if detuning == 0.0 && pad_left == 0 && pad_right == 0 {
+                IqSamples::Flat {
+                    iq: apply_phase(scaled_iq, phase),
+                    sample_count,
+                }
+            } else {
+                let waveform = repeat_n(scaled_iq, sample_count);
+                let waveform = apply_phase_and_detuning(waveform, phase, detuning, sample_rate);
+
+                let samples = apply_padding(waveform, pad_left as usize, pad_right as usize)
+                    .into_iter()
+                    .collect();
+
+                IqSamples::Samples(samples)
+            },
+        ))
     }
 }
 
@@ -779,9 +818,9 @@ impl<T: WaveformData> Gaussian<T> {
             self,
             common,
             sample_rate,
-            |w| w.fwhm,
-            |waveform, sigma| {
-                let Gaussian { fwhm: _, t0 } = waveform;
+            |waveform| {
+                let Gaussian { fwhm, t0 } = waveform;
+                let sigma = fwhm_to_sigma(fwhm);
                 move |el| real!((-0.5 * (el - t0).powf(2.0) / sigma.powf(2.0)).exp())
             },
         )
@@ -801,14 +840,15 @@ impl<T: WaveformData> DragGaussian<T> {
             self,
             common,
             sample_rate,
-            |w| w.fwhm,
-            |waveform, sigma| {
+            |waveform| {
                 let DragGaussian {
-                    fwhm: _,
+                    fwhm,
                     t0,
                     anh,
                     alpha,
                 } = waveform;
+
+                let sigma = fwhm_to_sigma(fwhm);
 
                 move |el| {
                     // Generate envelope sample
@@ -832,69 +872,21 @@ impl<T: WaveformData> ErfSquare<T> {
     where
         Self: ConcretizableFromTo<T, ErfSquare<Concrete>>,
     {
-        let scale_is_zero = common
-            .scale
-            .is_some_and(|scale| T::eval_real(scale) == Ok(0.0));
-
-        let left_padding_samples = (self.pad_left * sample_rate).ceil() as usize;
-        let right_padding_samples = (self.pad_right * sample_rate).ceil() as usize;
-
-        let all_zero = |sample_count| {
-            IqSamplesFor::Total(IqSamples::Flat {
-                iq: c64(0.0, 0.0),
-                sample_count: left_padding_samples + sample_count + right_padding_samples,
-            })
-        };
-
-        match concretize_and_resolve(self, common, sample_rate)? {
-            partiality::Value::Partial(is_partial, sample_count) => Ok(if scale_is_zero {
-                // If the scale is zero it doesn't matter *what* the parameters are!
-                all_zero(sample_count)
-            } else {
-                IqSamplesFor::Partial(
-                    is_partial,
-                    IqSamples::Samples(vec![
-                        ();
-                        left_padding_samples
-                            + sample_count
-                            + right_padding_samples
-                    ]),
-                )
-            }),
-
-            partiality::Value::Total((explicit, waveform)) => {
-                if scale_is_zero {
-                    return Ok(all_zero(explicit.sample_count as usize));
-                }
-
-                let ErfSquare {
-                    risetime,
-                    pad_left: _,  // Used above
-                    pad_right: _, // Used above
-                } = waveform;
+        build_sample_per_time_step_and_adjust_for_common_parameters(
+            self,
+            common,
+            sample_rate,
+            |waveform| {
+                let ErfSquare { risetime } = waveform;
 
                 let fwhm = 0.5 * risetime;
                 let t1 = fwhm;
                 let t2 = common.duration - fwhm;
+                let sigma = fwhm_to_sigma(fwhm);
 
-                Ok(IqSamplesFor::Total(
-                    build_samples_and_adjust_for_common_parameters(
-                        SamplingParameters { sample_rate, fwhm },
-                        explicit,
-                        |SamplingInfo { time_steps, sigma }| {
-                            let waveform = time_steps.into_iter().map(move |el| {
-                                real!(0.5 * (erf((el - t1) / sigma) - erf((el - t2) / sigma)))
-                            });
-
-                            let left_padding = repeat_n(real!(0.0), left_padding_samples);
-                            let right_padding = repeat_n(real!(0.0), right_padding_samples);
-
-                            left_padding.chain(waveform).chain(right_padding)
-                        },
-                    ),
-                ))
-            }
-        }
+                move |el| real!(0.5 * (erf((el - t1) / sigma) - erf((el - t2) / sigma)))
+            },
+        )
     }
 }
 
@@ -911,10 +903,9 @@ impl<T: WaveformData> HermiteGaussian<T> {
             self,
             common,
             sample_rate,
-            |w| w.fwhm,
-            |waveform, sigma| {
+            |waveform| {
                 let HermiteGaussian {
-                    fwhm: _,
+                    fwhm,
                     t0,
                     anh,
                     alpha,
@@ -922,6 +913,7 @@ impl<T: WaveformData> HermiteGaussian<T> {
                 } = waveform;
 
                 let deriv_prefactor = -alpha / (2f64 * PI * anh);
+                let sigma = 0.5 * fwhm / (2.0 * LN_2).sqrt();
 
                 move |el| {
                     let exp_t = 0.5 * (el - t0).powf(2.0) / sigma.powf(2.0);
@@ -946,89 +938,39 @@ impl<T: WaveformData> RaisedCosine<T> {
     where
         Self: ConcretizableFromTo<T, RaisedCosine<Concrete>>,
     {
-        let scale_is_zero = common
-            .scale
-            .is_some_and(|scale| T::eval_real(scale) == Ok(0.0));
-
-        let left_padding_samples = (self.pad_left * sample_rate).ceil() as usize;
-        let right_padding_samples = (self.pad_right * sample_rate).ceil() as usize;
-
-        let all_zero = |sample_count| {
-            IqSamplesFor::Total(IqSamples::Flat {
-                iq: c64(0.0, 0.0),
-                sample_count: left_padding_samples + sample_count + right_padding_samples,
-            })
-        };
-
-        // Cache this for later
-        let active_duration = common.duration;
-
-        match concretize_and_resolve(self, common, sample_rate)? {
-            partiality::Value::Partial(is_partial, sample_count) => Ok(if scale_is_zero {
-                // If the scale is zero it doesn't matter *what* the parameters are!
-                all_zero(sample_count)
-            } else {
-                IqSamplesFor::Partial(
-                    is_partial,
-                    IqSamples::Samples(vec![
-                        ();
-                        left_padding_samples
-                            + sample_count
-                            + right_padding_samples
-                    ]),
-                )
-            }),
-
-            partiality::Value::Total((explicit, waveform)) => {
-                if scale_is_zero {
-                    return Ok(all_zero(explicit.sample_count as usize));
-                }
-
-                let RaisedCosine {
-                    rolloff,
-                    pad_left: _,  // Used above
-                    pad_right: _, // Used above
-                } = waveform;
-
+        build_sample_per_time_step_and_adjust_for_common_parameters(
+            self,
+            common,
+            sample_rate,
+            |waveform| {
                 let square_pulse = real!(1.0);
                 let cosine_pulse = |el: f64, rolloff_factor: f64| {
                     real!(
                         0.5 * (1.0
-                            + f64::cos(PI + 2.0 * PI * el / (rolloff_factor * active_duration)))
+                            + f64::cos(PI + 2.0 * PI * el / (rolloff_factor * common.duration)))
                     )
                 };
 
-                Ok(IqSamplesFor::Total(
-                    build_samples_and_adjust_for_builtin_parameters(
-                        sample_rate,
-                        explicit,
-                        |time_steps| {
-                            let risetime = rolloff * active_duration / 2.0;
-                            let falltime = active_duration - risetime;
+                let RaisedCosine { rolloff } = waveform;
 
-                            let waveform = time_steps.into_iter().map(move |el| match rolloff {
-                                0.0 => square_pulse,
-                                1.0 => cosine_pulse(el, 1.0),
-                                _ => {
-                                    if el < risetime {
-                                        cosine_pulse(el, rolloff)
-                                    } else if el <= falltime {
-                                        square_pulse
-                                    } else {
-                                        cosine_pulse(el - active_duration, rolloff)
-                                    }
-                                }
-                            });
+                let risetime = rolloff * common.duration / 2.0;
+                let falltime = common.duration - risetime;
 
-                            let left_padding = repeat_n(real!(0.0), left_padding_samples);
-                            let right_padding = repeat_n(real!(0.0), right_padding_samples);
-
-                            left_padding.chain(waveform).chain(right_padding)
-                        },
-                    ),
-                ))
-            }
-        }
+                move |el| match rolloff {
+                    0.0 => square_pulse,
+                    1.0 => cosine_pulse(el, 1.0),
+                    _ => {
+                        if el < risetime {
+                            cosine_pulse(el, rolloff)
+                        } else if el <= falltime {
+                            square_pulse
+                        } else {
+                            cosine_pulse(el - common.duration, rolloff)
+                        }
+                    }
+                }
+            },
+        )
     }
 }
 
@@ -1037,10 +979,7 @@ impl BoxcarKernel {
         self,
         common: CommonBuiltinParameters<T>,
         sample_rate: f64,
-    ) -> Result<IqSamplesFor<T>, SamplingError>
-    where
-        CommonBuiltinParameters<T>: Copy,
-    {
+    ) -> Result<IqSamplesFor<T>, SamplingError> {
         let (waveform, explicit) = match resolve_for_flat_unless_detuned(
             || Ok(self),
             common,
@@ -1058,24 +997,33 @@ impl BoxcarKernel {
             scale,
             phase,
             detuning,
+            pad_left,
+            pad_right,
         } = explicit;
 
         let Self = waveform; // Get an error if the definition changes
 
         let sample_count = sample_count as usize;
 
-        Ok(IqSamplesFor::Total(if detuning == 0.0 {
-            let iq = polar_to_rectangular(scale / sample_count as f64, phase);
-            IqSamples::Flat { iq, sample_count }
-        } else {
-            let samples = (0..sample_count).map(|index| {
-                polar_to_rectangular(
-                    scale / sample_count as f64,
-                    Cycles(detuning * (index as f64) / sample_rate) + phase,
-                )
-            });
-            IqSamples::Samples(samples.collect())
-        }))
+        Ok(IqSamplesFor::Total(
+            if detuning == 0.0 && pad_left == 0 && pad_right == 0 {
+                let iq = polar_to_rectangular(scale / sample_count as f64, phase);
+                IqSamples::Flat { iq, sample_count }
+            } else {
+                let waveform = (0..sample_count).map(|index| {
+                    polar_to_rectangular(
+                        scale / sample_count as f64,
+                        Cycles(detuning * (index as f64) / sample_rate) + phase,
+                    )
+                });
+
+                let samples = apply_padding(waveform, pad_left as usize, pad_right as usize)
+                    .into_iter()
+                    .collect();
+
+                IqSamples::Samples(samples)
+            },
+        ))
     }
 }
 
@@ -1103,8 +1051,6 @@ fn resolve_for_flat_unless_detuned<T: Sampleable, W, E>(
     sample_rate: f64,
     partiality: impl FnOnce(E) -> T::IsPartial,
 ) -> Result<partiality::Value<T, IqSamples<()>, (W, ExplicitCommonBuiltinParameters)>, SamplingError>
-where
-    CommonBuiltinParameters<T>: Copy,
 {
     let placeholder = |is_partial, sample_count| {
         Ok(partiality::Value::Partial(
@@ -1140,20 +1086,6 @@ where
     };
 
     Ok(partiality::Value::Total((waveform, explicit)))
-}
-
-/// Parameters used uniformly in every waveform generator that produces a vector of samples.
-#[derive(Clone, Copy, Debug)]
-struct SamplingParameters {
-    sample_rate: f64,
-    fwhm: f64,
-}
-
-/// Derived information used in every waveform generator that produces a vector of samples.
-#[derive(Clone, Debug)]
-struct SamplingInfo {
-    time_steps: Array1<f64>,
-    sigma: f64,
 }
 
 /// Take a `waveform` that might or might not be partial, some `common` waveform parameters, and a
@@ -1206,25 +1138,6 @@ fn concretize_and_resolve<W: ConcretizableWaveform>(
     Ok(partiality::Value::Total((explicit, waveform)))
 }
 
-/// Generating a sequence of samples for a Gaussian-like waveform:
-///
-/// Like [`build_samples_and_adjust_for_builtin_parameters`] but includes
-/// Full Width at Half Maximum (FWHM) and sigma parameters, which are useful when
-/// working with Gaussians.
-fn build_samples_and_adjust_for_common_parameters<I: IntoIterator<Item = Complex64>>(
-    parameters: SamplingParameters,
-    common: ExplicitCommonBuiltinParameters,
-    build: impl FnOnce(SamplingInfo) -> I,
-) -> IqSamples<Complex64> {
-    let SamplingParameters { sample_rate, fwhm } = parameters;
-
-    let sigma = 0.5 * fwhm / (2.0 * LN_2).sqrt();
-
-    build_samples_and_adjust_for_builtin_parameters(sample_rate, common, |time_steps| {
-        build(SamplingInfo { time_steps, sigma })
-    })
-}
-
 /// Encapsulates the common pattern for generating a sequence of samples for a waveform:
 ///
 /// 1. Generate information from some generally-used parameters.
@@ -1244,17 +1157,23 @@ fn build_samples_and_adjust_for_builtin_parameters<I: IntoIterator<Item = Comple
         scale,
         phase,
         detuning,
+        pad_left,
+        pad_right,
     } = common;
 
     let time_steps = Array::range(0.0, sample_count.into(), 1.0) / sample_rate;
 
-    let mut samples: Vec<_> = build(time_steps).into_iter().collect();
+    let waveform = build(time_steps)
+        .into_iter()
+        .enumerate()
+        .map(|(index, sample)| {
+            // Like [`apply_phase_and_detuning`], but also applies the scale
+            apply_phase_and_detuning_at_index(scale * sample, phase, detuning, sample_rate, index)
+        });
 
-    // Like [`apply_phase_and_detuning`], but also applies the scale
-    for (index, sample) in samples.iter_mut().enumerate() {
-        *sample =
-            apply_phase_and_detuning_at_index(scale * *sample, phase, detuning, sample_rate, index);
-    }
+    let samples = apply_padding(waveform, pad_left as usize, pad_right as usize)
+        .into_iter()
+        .collect();
 
     IqSamples::Samples(samples)
 }
@@ -1281,8 +1200,7 @@ fn build_sample_per_time_step_and_adjust_for_common_parameters<W: ConcretizableW
     waveform: W,
     common: CommonBuiltinParameters<W::WaveformData>,
     sample_rate: f64,
-    fwhm: impl FnOnce(&W::WithWaveformData<Concrete>) -> f64,
-    make_sampler: impl FnOnce(W::WithWaveformData<Concrete>, f64) -> Sampler,
+    make_sampler: impl FnOnce(W::WithWaveformData<Concrete>) -> Sampler,
 ) -> Result<IqSamplesFor<W::WaveformData>, SamplingError>
 where
     Sampler: Fn(f64) -> Complex64,
@@ -1298,46 +1216,47 @@ where
         })
     };
 
-    match concretize_and_resolve(waveform, common, sample_rate)? {
-        partiality::Value::Partial(is_partial, sample_count) => Ok(if scale_is_zero {
-            // If the scale is zero it doesn't matter *what* the parameters are!
-            all_zero(sample_count)
-        } else {
-            IqSamplesFor::Partial(is_partial, IqSamples::Samples(vec![(); sample_count]))
-        }),
+    let evaluated_waveform = concretize_and_resolve(waveform, common, sample_rate)?;
 
-        partiality::Value::Total((explicit, waveform)) => {
-            if scale_is_zero {
-                return Ok(all_zero(explicit.sample_count as usize));
-            }
+    if scale_is_zero {
+        // If the scale is zero it doesn't matter *what* the parameters are!
 
-            let fwhm = fwhm(&waveform);
+        let sample_count = match evaluated_waveform {
+            partiality::Value::Partial(_, sample_count) => sample_count,
+            partiality::Value::Total((explicit, _)) => explicit.sample_count as usize,
+        };
 
-            Ok(IqSamplesFor::Total(
-                build_samples_and_adjust_for_common_parameters(
-                    SamplingParameters { sample_rate, fwhm },
-                    explicit,
-                    |SamplingInfo { time_steps, sigma }| {
-                        let sampler = make_sampler(waveform, sigma);
-                        time_steps.into_iter().map(sampler)
-                    },
-                ),
-            ))
-        }
+        return Ok(all_zero(sample_count));
+    }
+
+    match evaluated_waveform {
+        partiality::Value::Partial(is_partial, sample_count) => Ok(IqSamplesFor::Partial(
+            is_partial,
+            IqSamples::Samples(vec![(); sample_count]),
+        )),
+        partiality::Value::Total((explicit, waveform)) => Ok(IqSamplesFor::Total(
+            build_samples_and_adjust_for_builtin_parameters(sample_rate, explicit, |time_steps| {
+                let sampler = make_sampler(waveform);
+                time_steps.into_iter().map(sampler)
+            }),
+        )),
     }
 }
 
-/// Modulate and phase shift waveform IQ data in place.
+/// Modulate and phase shift waveform IQ data.
 #[inline]
 pub fn apply_phase_and_detuning(
-    iq_values: &mut [Complex64],
+    iq_values: impl IntoIterator<Item = Complex64>,
     phase: Cycles<f64>,
     detuning: f64,
     sample_rate: f64,
-) {
-    for (index, value) in iq_values.iter_mut().enumerate() {
-        *value = apply_phase_and_detuning_at_index(*value, phase, detuning, sample_rate, index);
-    }
+) -> impl IntoIterator<Item = Complex64> {
+    iq_values
+        .into_iter()
+        .enumerate()
+        .map(move |(index, value)| {
+            apply_phase_and_detuning_at_index(value, phase, detuning, sample_rate, index)
+        })
 }
 
 /// Apply phase offset and detuning to a single sample.
@@ -1361,10 +1280,29 @@ fn apply_phase(iq_value: Complex64, phase: Cycles<f64>) -> Complex64 {
     iq_value * Complex64::cis(Radians::from(phase).0)
 }
 
+/// Apply left and right padding to concrete samples
+#[inline]
+fn apply_padding(
+    waveform: impl IntoIterator<Item = Complex64>,
+    pad_left: usize,
+    pad_right: usize,
+) -> impl IntoIterator<Item = Complex64> {
+    let left_padding = repeat_n(real!(0.0), pad_left);
+    let right_padding = repeat_n(real!(0.0), pad_right);
+
+    left_padding.chain(waveform).chain(right_padding)
+}
+
 /// Convert polar coordinates to rectangular coordinates.
 #[inline]
 fn polar_to_rectangular(magnitude: f64, angle: Cycles<f64>) -> Complex64 {
     Complex64::from_polar(magnitude, Radians::from(angle).0)
+}
+
+/// Convert a Full Width Half Maximum (FWHM) to a standard deviation (sigma)
+#[inline]
+fn fwhm_to_sigma(fwhm: f64) -> f64 {
+    0.5 * fwhm / (2.0 * LN_2).sqrt()
 }
 
 #[cfg(test)]
@@ -1404,6 +1342,8 @@ mod tests {
                     scale: Some(scale),
                     phase: Some(phase),
                     detuning: None,
+                    pad_left: None,
+                    pad_right: None,
                 },
                 100.0,
             )
@@ -1423,24 +1363,29 @@ mod tests {
     }
 
     #[rstest::rstest]
-    #[case(0.0, 0.0, Some(0.0))]
-    #[case(0.0, 1e9, Some(0.0))]
-    #[case(1e9, 0.0, Some(0.0))]
-    #[case(f64::EPSILON, 1.0, Some(0.0))]
-    #[case(-f64::EPSILON, 1.0, Some(0.0))]
-    #[case(0.9999999, 101.0, Some(101.0))]
-    #[case(1.0000001, 101.0, Some(101.0))]
-    #[case(0.99, 101.0, None)]
-    #[case(1.01, 101.0, None)]
-    #[case(8.800_000_000_000_001e-8, 1.0e9, Some(88.0))] // Based on a past edge case
-    #[case(0.5, 3.0, None)]
+    // TODO: add padding test cases
+    #[case(0.0, None, None, 0.0, Some(0.0))]
+    #[case(0.0, None, None, 1e9, Some(0.0))]
+    #[case(1e9, None, None, 0.0, Some(0.0))]
+    #[case(f64::EPSILON, None, None, 1.0, Some(0.0))]
+    #[case(-f64::EPSILON, None, None, 1.0, Some(0.0))]
+    #[case(0.9999999, None, None, 101.0, Some(101.0))]
+    #[case(1.0000001, None, None, 101.0, Some(101.0))]
+    #[case(0.99, None, None, 101.0, None)]
+    #[case(1.01, None, None, 101.0, None)]
+    #[case(8.800_000_000_000_001e-8, None, None, 1.0e9, Some(88.0))] // Based on a past edge case
+    #[case(0.5, None, None, 3.0, None)]
     fn sample_count(
         #[case] duration: f64,
+        #[case] pad_left: Option<f64>,
+        #[case] pad_right: Option<f64>,
         #[case] sample_rate: f64,
         #[case] expected: Option<f64>,
     ) {
         let actual = CommonBuiltinParameters {
             duration,
+            pad_left,
+            pad_right,
             scale: None,
             phase: None,
             detuning: None,
@@ -1509,69 +1454,70 @@ mod tests {
     /// are added, removed, or renamed, then this test will fail for those cases. Additionally, if the string printing
     /// of `Complex64` changes, then the IQ values snapshot will also change.
     #[rstest::rstest]
+    // TODO: add padding test cases
     #[case(
-        ErfSquare { risetime: 1e-5, pad_left: 0.0, pad_right: 0.0 },
-        CommonBuiltinParameters { duration: 1e-4, scale: Some(1.0), phase: Some(Cycles(0.0)), detuning: Some(0.0)},
+        ErfSquare { risetime: 1e-5 },
+        CommonBuiltinParameters { duration: 1e-4, scale: Some(1.0), phase: Some(Cycles(0.0)), detuning: Some(0.0), pad_left: Some(0.0), pad_right: Some(0.0)},
     )]
     #[case(
-        ErfSquare { risetime: 1e-5, pad_left: 0.0, pad_right: 0.0 },
-        CommonBuiltinParameters { duration: 1e-4, scale: Some(1.0), phase: Some(Cycles(0.5)), detuning: Some(0.0)},
+        ErfSquare { risetime: 1e-5},
+        CommonBuiltinParameters { duration: 1e-4, scale: Some(1.0), phase: Some(Cycles(0.5)), detuning: Some(0.0), pad_left: Some(0.0), pad_right: Some(0.0)},
     )]
     #[case(
-        ErfSquare { risetime: 1e-5, pad_left: 0.0, pad_right: 0.0 },
-        CommonBuiltinParameters { duration: 1e-4, scale: Some(-1.0), phase: Some(Cycles(0.0)), detuning: Some(0.0)},
+        ErfSquare { risetime: 1e-5 },
+        CommonBuiltinParameters { duration: 1e-4, scale: Some(-1.0), phase: Some(Cycles(0.0)), detuning: Some(0.0), pad_left: Some(0.0), pad_right: Some(0.0)},
     )]
     #[case(
-        ErfSquare { risetime: 1e-5, pad_left: 0.0, pad_right: 0.0 },
-        CommonBuiltinParameters { duration: 1e-4, scale: Some(0.0), phase: Some(Cycles(0.0)), detuning: Some(0.0)},
+        ErfSquare { risetime: 1e-5 },
+        CommonBuiltinParameters { duration: 1e-4, scale: Some(0.0), phase: Some(Cycles(0.0)), detuning: Some(0.0), pad_left: Some(0.0), pad_right: Some(0.0)},
     )]
     #[case(
         Gaussian { fwhm: 1e-5, t0: 0.0 },
-        CommonBuiltinParameters { duration: 1e-4, scale: Some(1.0), phase: Some(Cycles(0.0)), detuning: Some(0.0)},
+        CommonBuiltinParameters { duration: 1e-4, scale: Some(1.0), phase: Some(Cycles(0.0)), detuning: Some(0.0), pad_left: Some(0.0), pad_right: Some(0.0)},
     )]
     #[case(
         Gaussian { fwhm: 1e-5, t0: 5e-5 },
-        CommonBuiltinParameters { duration: 1e-4, scale: Some(1.0), phase: Some(Cycles(0.0)), detuning: Some(1e6)},
+        CommonBuiltinParameters { duration: 1e-4, scale: Some(1.0), phase: Some(Cycles(0.0)), detuning: Some(1e6), pad_left: Some(0.0), pad_right: Some(0.0)},
     )]
     #[case(
         Gaussian { fwhm: 2e-5, t0: 5e-5 },
-        CommonBuiltinParameters { duration: 1e-4, scale: Some(0.5), phase: Some(Cycles(0.0)), detuning: Some(0.0)},
+        CommonBuiltinParameters { duration: 1e-4, scale: Some(0.5), phase: Some(Cycles(0.0)), detuning: Some(0.0), pad_left: Some(0.0), pad_right: Some(0.0)},
     )]
     #[case(
         Gaussian { fwhm: 4e-5, t0: 5e-5 },
-        CommonBuiltinParameters { duration: 1e-4, scale: Some(0.5), phase: Some(Cycles(0.5)), detuning: Some(0.0)},
+        CommonBuiltinParameters { duration: 1e-4, scale: Some(0.5), phase: Some(Cycles(0.5)), detuning: Some(0.0), pad_left: Some(0.0), pad_right: Some(0.0)},
     )]
     #[case(
         Gaussian { fwhm: 4e-5, t0: 5e-5 },
-        CommonBuiltinParameters { duration: 1e-4, scale: Some(-1.0), phase: Some(Cycles(0.0)), detuning: Some(0.0)},
+        CommonBuiltinParameters { duration: 1e-4, scale: Some(-1.0), phase: Some(Cycles(0.0)), detuning: Some(0.0), pad_left: Some(0.0), pad_right: Some(0.0)},
     )]
     #[case(
         DragGaussian { fwhm: 1e-5, t0: 0.0, anh: 1e6, alpha: 1.0 },
-        CommonBuiltinParameters { duration: 1e-4, scale: Some(1.0), phase: Some(Cycles(0.0)), detuning: Some(0.0)},
+        CommonBuiltinParameters { duration: 1e-4, scale: Some(1.0), phase: Some(Cycles(0.0)), detuning: Some(0.0), pad_left: Some(0.0), pad_right: Some(0.0)},
     )]
     #[case(
         DragGaussian { fwhm: 1e-5, t0: 0.0, anh: 1e6, alpha: 1.0 },
-        CommonBuiltinParameters { duration: 1e-4, scale: Some(1.0), phase: Some(Cycles(0.0)), detuning: Some(1e6)},
+        CommonBuiltinParameters { duration: 1e-4, scale: Some(1.0), phase: Some(Cycles(0.0)), detuning: Some(1e6), pad_left: Some(0.0), pad_right: Some(0.0)},
     )]
     #[case(
         HermiteGaussian { fwhm: 1e-5, t0: 0.0, anh: 1e6, alpha: 1.0, second_order_hrm_coeff: 0.1 },
-        CommonBuiltinParameters { duration: 1e-4, scale: Some(1.0), phase: Some(Cycles(0.0)), detuning: Some(0.0)},
+        CommonBuiltinParameters { duration: 1e-4, scale: Some(1.0), phase: Some(Cycles(0.0)), detuning: Some(0.0), pad_left: Some(0.0), pad_right: Some(0.0)},
     )]
     #[case(
         HermiteGaussian { fwhm: 1e-5, t0: 0.0, anh: 1e6, alpha: 1.0, second_order_hrm_coeff: 0.1 },
-        CommonBuiltinParameters { duration: 1e-4, scale: Some(1.0), phase: Some(Cycles(0.0)), detuning: Some(1e6)},
+        CommonBuiltinParameters { duration: 1e-4, scale: Some(1.0), phase: Some(Cycles(0.0)), detuning: Some(1e6), pad_left: Some(0.0), pad_right: Some(0.0)},
     )]
     #[case(
-        RaisedCosine { rolloff: 0.5, pad_left: 0.0, pad_right: 0.0 },
-        CommonBuiltinParameters { duration: 1e-4, scale: Some(1.0), phase: Some(Cycles(0.0)), detuning: Some(0.0)},
+        RaisedCosine { rolloff: 0.5 },
+        CommonBuiltinParameters { duration: 1e-4, scale: Some(1.0), phase: Some(Cycles(0.0)), detuning: Some(0.0), pad_left: Some(0.0), pad_right: Some(0.0)},
     )]
     #[case(
-        RaisedCosine { rolloff: 0.0, pad_left: 0.0, pad_right: 0.0 },
-        CommonBuiltinParameters { duration: 1e-4, scale: Some(1.0), phase: Some(Cycles(0.0)), detuning: Some(0.0)},
+        RaisedCosine { rolloff: 0.0},
+        CommonBuiltinParameters { duration: 1e-4, scale: Some(1.0), phase: Some(Cycles(0.0)), detuning: Some(0.0), pad_left: Some(0.0), pad_right: Some(0.0)},
     )]
     #[case(
-        RaisedCosine { rolloff: 1.0, pad_left: 0.0, pad_right: 0.0 },
-        CommonBuiltinParameters { duration: 1e-4, scale: Some(1.0), phase: Some(Cycles(0.0)), detuning: Some(0.0)},
+        RaisedCosine { rolloff: 1.0 },
+        CommonBuiltinParameters { duration: 1e-4, scale: Some(1.0), phase: Some(Cycles(0.0)), detuning: Some(0.0), pad_left: Some(0.0), pad_right: Some(0.0)},
     )]
     fn into_iq_values(
         #[case] parameters: impl BuiltinWaveformParameters,

@@ -617,7 +617,12 @@ macro_rules! add_python_waveform_convenience_constructor {
                     name = $name:snake,
                     signature = (
                         *,
-                        duration, scale = None, phase = None, detuning = None,
+                        duration,
+                        scale = None,
+                        phase = None,
+                        detuning = None,
+                        pad_left = None,
+                        pad_right = None,
                         $($($field),+)?
                     )
                 )]
@@ -645,6 +650,8 @@ macro_rules! add_python_waveform_convenience_constructor {
                         imports = ("typing"))
                     )]
                     detuning: Option<&Bound<'py, PyAny>>,
+                    pad_left: Option<f64>,
+                    pad_right: Option<f64>,
                     $($(
                         $(#[gen_stub(override_type(type_repr = $ty_str))])?
                         $field: field_type!((<Pythonic as WaveformData>), $ty)
@@ -662,6 +669,8 @@ macro_rules! add_python_waveform_convenience_constructor {
                             detuning: detuning.map(|detuning| {
                                 PyAnyRust(detuning.as_unbound().clone_ref(py))
                             }),
+                            pad_left,
+                            pad_right,
                         },
                         waveform: super::BuiltinWaveform::$name(super::$name $({
                             $($field),+
