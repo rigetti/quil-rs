@@ -338,6 +338,26 @@ impl PyCommonBuiltinParameters {
         self.0.detuning = detuning.map(PyAnyRust);
     }
 
+    #[getter(pad_left)]
+    fn py_get_pad_left(&self) -> Option<f64> {
+        self.0.pad_left
+    }
+
+    #[setter(pad_left)]
+    fn py_set_pad_left(&mut self, pad_left: Option<f64>) {
+        self.0.pad_left = pad_left;
+    }
+
+    #[getter(pad_right)]
+    fn py_get_pad_right(&self) -> Option<f64> {
+        self.0.pad_right
+    }
+
+    #[setter(pad_right)]
+    fn py_set_pad_right(&mut self, pad_right: Option<f64>) {
+        self.0.pad_right = pad_right;
+    }
+
     #[pyo3(name = "resolve_with_sample_rate")]
     fn py_resolve_with_sample_rate<'py>(
         &self,
@@ -393,21 +413,28 @@ impl CommonBuiltinParameters<Pythonic> {
             pad_right: other_pad_right,
         } = other;
 
-        let eq = |opt1: Option<&PyAnyRust>, opt2: Option<PyAnyRust>| match (opt1.as_ref(), opt2) {
+        let eq_py = |opt1: Option<&PyAnyRust>, opt2: Option<PyAnyRust>| match (opt1.as_ref(), opt2)
+        {
             (Some(any1), Some(any2)) => any1.py_eq(py, &any2),
             (None, None) => Ok(true),
             (Some(_), None) | (None, Some(_)) => Ok(false),
         };
 
+        let eq_f64 = |opt1: Option<f64>, opt2: Option<f64>| match (opt1, opt2) {
+            (Some(float1), Some(float2)) => float1 == float2,
+            (None, None) => true,
+            (Some(_), None) | (None, Some(_)) => false,
+        };
+
         Ok(duration == other_duration
-            && eq(scale, other_scale)?
-            && eq(
+            && eq_py(scale, other_scale)?
+            && eq_py(
                 phase.map(|Cycles(phase)| phase),
                 other_phase.map(|Cycles(other_phase)| other_phase),
             )?
-            && eq(detuning, other_detuning)?
-            && pad_left == other_pad_left
-            && pad_right == other_pad_right)
+            && eq_py(detuning, other_detuning)?
+            && eq_f64(pad_left, other_pad_left)
+            && eq_f64(pad_right, other_pad_right))
     }
 
     pub(crate) fn py_repr<'py>(&self, py: Python<'py>) -> PyResult<String> {

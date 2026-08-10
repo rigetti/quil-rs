@@ -52,6 +52,11 @@ def detuning() -> SearchStrategy[Optional[float]]:
     return optional(in_range(-1e10, 1e10))
 
 
+# TODO: what bounds to put here?
+def padding() -> SearchStrategy[Optional[float]]:
+    return optional(in_range(0.0, 1e-3))
+
+
 # Strategies for waveform parameters
 
 
@@ -79,17 +84,23 @@ def common_builtin_parameters(draw: DrawFn) -> CommonBuiltinParameters[float, co
     s = draw(scale())
     phi = draw(phase())
     d = draw(detuning())
+    pl = draw(padding())
+    pr = draw(padding())
     common: CommonBuiltinParameters[float, complex] = CommonBuiltinParameters(
         duration=t,
         scale=s,
         phase=phi,
         detuning=d,
+        pad_left=pl,
+        pad_right=pr,
     )
     assert type(common) == CommonBuiltinParameters
     assert common.duration == t
     assert common.scale == s
     assert common.phase == phi
     assert common.detuning == d
+    assert common.pad_left == pl
+    assert common.pad_right == pr
     return common
 
 
@@ -105,6 +116,8 @@ def assert_builtin(
     #       scale: Optional[float],
     #       phase: Optional[float],
     #       detuning: Optional[float],
+    #       pad_left: Optional[float],
+    #       pad_right: Optional[float],
     #       **kwargs
     #     ) -> Waveform[float, complex]
     # ```
@@ -125,6 +138,8 @@ def assert_builtin(
         scale=common.scale,
         phase=common.phase,
         detuning=common.detuning,
+        pad_left=common.pad_left,
+        pad_right=common.pad_right,
         **parameters,
     )
     assert type(wf) == Waveform
@@ -185,26 +200,18 @@ def test_drag_gaussian(
 @given(
     common=common_builtin_parameters(),
     risetime=time(),
-    pad_left=time(),
-    pad_right=time(),
 )
 def test_erf_square(
     common: CommonBuiltinParameters[float, complex],
     risetime: float,
-    pad_left: float,
-    pad_right: float,
 ):
     erf_square = assert_builtin(
         Waveform.erf_square,
         common,
         risetime=risetime,
-        pad_left=pad_left,
-        pad_right=pad_right,
     )
     assert type(erf_square) == waveform.ErfSquare
     assert erf_square.risetime == risetime
-    assert erf_square.pad_left == pad_left
-    assert erf_square.pad_right == pad_right
 
 
 @given(
@@ -243,26 +250,18 @@ def test_hermite_gaussian(
 @given(
     common=common_builtin_parameters(),
     rolloff=in_range(-1, 1),
-    pad_left=time(),
-    pad_right=time(),
 )
 def test_raised_cosine(
     common: CommonBuiltinParameters[float, complex],
     rolloff: float,
-    pad_left: float,
-    pad_right: float,
 ):
     raised_cosine = assert_builtin(
         Waveform.raised_cosine,
         common,
         rolloff=rolloff,
-        pad_left=pad_left,
-        pad_right=pad_right,
     )
     assert type(raised_cosine) == waveform.RaisedCosine
     assert raised_cosine.rolloff == rolloff
-    assert raised_cosine.pad_left == pad_left
-    assert raised_cosine.pad_right == pad_right
 
 
 @given(common=common_builtin_parameters())
