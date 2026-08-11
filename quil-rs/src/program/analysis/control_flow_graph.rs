@@ -19,6 +19,7 @@ use std::{
     fmt::Debug,
 };
 
+use num_traits::Zero;
 #[cfg(not(feature = "python"))]
 use optipy::strip_pyo3;
 #[cfg(feature = "stubs")]
@@ -30,7 +31,7 @@ use crate::{
     },
     program::{
         scheduling::{
-            schedule::{ComputedScheduleError, ComputedScheduleItem, Schedule, TimeSpan, Zero},
+            schedule::{ComputedScheduleError, ComputedScheduleItem, Schedule, TimeSpan},
             ScheduleError, ScheduledBasicBlock, Seconds,
         },
         ProgramError,

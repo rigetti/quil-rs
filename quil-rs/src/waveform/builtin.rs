@@ -9,6 +9,7 @@ use std::{
 use derive_where::derive_where;
 use ndarray::{Array, Array1};
 use num_complex::{c64, Complex64};
+use num_traits::Zero;
 use serde::{Deserialize, Serialize};
 use statrs::function::erf::erf;
 
@@ -67,23 +68,23 @@ pub struct CommonBuiltinParameters<T: WaveformData> {
     /// duration of a waveform at all times.
     pub duration: f64,
 
-    /// Scale to apply to waveform envelope (default: `1.0`).
+    /// Scale to apply to waveform envelope (default: [`CommonBuiltinParameters::DEFAULT_SCALE`]).
     pub scale: Option<T::Real>,
 
-    /// Phase shift for the entire waveform (default: `0.0`).
+    /// Phase shift for the entire waveform (default: [`CommonBuiltinParameters::DEFAULT_PHASE]).
     pub phase: Option<Cycles<T::Real>>,
 
-    /// Explicit detuning to bake into IQ values (default: `0.0`).
+    /// Explicit detuning to bake into IQ values (default: [`CommonBuiltinParameters::DEFAULT_DETUNING`]).
     pub detuning: Option<T::Real>,
 
-    /// Length of zero padding to add to beginning of pulse (s) (default: `0.0`).
+    /// Length of zero padding to add to beginning of pulse (s) (default: [`CommonBuiltinParameters::DEFAULT_PADDING`]).
     ///
     /// Note that this is *always* a concrete real number, even if the waveform is
     /// [`Syntactic`][crate::waveform::Syntactic]!  It must be possible to know the exact
     /// duration of a waveform at all times.
     pub pad_left: Option<f64>,
 
-    /// Length of zero padding to add to end of pulse (s) (default: `0.0`).
+    /// Length of zero padding to add to end of pulse (s) (default: [`CommonBuiltinParameters::DEFAULT_PADDING`]).
     ///
     /// Note that this is *always* a concrete real number, even if the waveform is
     /// [`Syntactic`][crate::waveform::Syntactic]!  It must be possible to know the exact
@@ -322,6 +323,9 @@ impl<T: WaveformData> CommonBuiltinParameters<T> {
             pad_right,
         } = self;
 
+        let pad_left = pad_left.unwrap_or(Self::DEFAULT_PADDING);
+        let pad_right = pad_right.unwrap_or(Self::DEFAULT_PADDING);
+
         #[derive(Copy, Clone, derive_more::Add)]
         struct DiscretizedDuration {
             sample_count: f64,
@@ -340,8 +344,8 @@ impl<T: WaveformData> CommonBuiltinParameters<T> {
         };
 
         let sampled_duration = convert_to_samples(duration);
-        let sampled_pad_left = convert_to_samples(pad_left.unwrap_or(Self::DEFAULT_PADDING));
-        let sampled_pad_right = convert_to_samples(pad_right.unwrap_or(Self::DEFAULT_PADDING));
+        let sampled_pad_left = convert_to_samples(pad_left);
+        let sampled_pad_right = convert_to_samples(pad_right);
 
         let DiscretizedDuration {
             sample_count: total_sample_count,
@@ -353,6 +357,8 @@ impl<T: WaveformData> CommonBuiltinParameters<T> {
             _ => {
                 return Err(SamplingError::SampleCountOutOfRange {
                     duration,
+                    pad_left,
+                    pad_right,
                     sample_rate,
                     sample_count: total_sample_count,
                 })
@@ -363,6 +369,8 @@ impl<T: WaveformData> CommonBuiltinParameters<T> {
         if total_misalignment.abs() >= max_misalignment {
             Err(SamplingError::MisalignedDuration {
                 duration,
+                pad_left,
+                pad_right,
                 sample_rate,
                 misalignment: total_misalignment,
                 max_misalignment,
@@ -798,17 +806,13 @@ impl<T: WaveformData> Flat<T> {
     where
         Self: ConcretizableFromTo<T, Flat<Concrete>>,
     {
-        let (waveform, explicit) = match resolve_for_flat_unless_detuned(
-            || self.concretize(),
-            common,
-            sample_rate,
-            identity,
-        )? {
-            partiality::Value::Partial(is_partial, samples) => {
-                return Ok(partiality::Value::Partial(is_partial, samples))
-            }
-            partiality::Value::Total(result) => result,
-        };
+        let (waveform, explicit) =
+            match resolve_for_flat_unless(|| self.concretize(), common, sample_rate, identity)? {
+                partiality::Value::Partial(is_partial, samples) => {
+                    return Ok(partiality::Value::Partial(is_partial, samples))
+                }
+                partiality::Value::Total(result) => result,
+            };
 
         let ExplicitCommonBuiltinParameters {
             sample_count,
@@ -825,7 +829,7 @@ impl<T: WaveformData> Flat<T> {
         let scaled_iq = scale * iq;
 
         Ok(IqSamplesFor::Total(
-            if detuning == 0.0 && pad_left == 0 && pad_right == 0 {
+            if should_resolve_flat(detuning, pad_left, pad_right) {
                 IqSamples::Flat {
                     iq: apply_phase(scaled_iq, phase),
                     sample_count,
@@ -951,8 +955,8 @@ impl<T: WaveformData> HermiteGaussian<T> {
                     second_order_hrm_coeff,
                 } = waveform;
 
-                let deriv_prefactor = -alpha / (2f64 * PI * anh);
-                let sigma = 0.5 * fwhm / (2.0 * LN_2).sqrt();
+                let deriv_prefactor = -alpha / (2.0 * PI * anh);
+                let sigma = fwhm_to_sigma(fwhm);
 
                 move |el| {
                     let exp_t = 0.5 * (el - t0).powf(2.0) / sigma.powf(2.0);
@@ -1019,7 +1023,7 @@ impl BoxcarKernel {
         common: CommonBuiltinParameters<T>,
         sample_rate: f64,
     ) -> Result<IqSamplesFor<T>, SamplingError> {
-        let (waveform, explicit) = match resolve_for_flat_unless_detuned(
+        let (waveform, explicit) = match resolve_for_flat_unless(
             || Ok(self),
             common,
             sample_rate,
@@ -1045,14 +1049,14 @@ impl BoxcarKernel {
         let sample_count = sample_count as usize;
 
         Ok(IqSamplesFor::Total(
-            if detuning == 0.0 && pad_left == 0 && pad_right == 0 {
+            if should_resolve_flat(detuning, pad_left, pad_right) {
                 let iq = polar_to_rectangular(scale / sample_count as f64, phase);
                 IqSamples::Flat { iq, sample_count }
             } else {
                 let waveform = (0..sample_count).map(|index| {
                     polar_to_rectangular(
                         scale / sample_count as f64,
-                        Cycles(detuning * (index as f64) / sample_rate) + phase,
+                        detuning_at_index(detuning, sample_rate, index) + phase,
                     )
                 });
 
@@ -1067,7 +1071,7 @@ impl BoxcarKernel {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// Utility functions
+// Utility and functions
 ////////////////////////////////////////////////////////////////////////////////
 
 /// Take a `waveform` that might or might not be partial, some `common` waveform parameters, and a
@@ -1076,15 +1080,14 @@ impl BoxcarKernel {
 /// them][CommonBuiltinParameters::resolve_with_sample_rate].
 ///
 /// If the input data is partial, instead returns the placeholder IQ values for a flat waveform: an
-/// [`IqSamples::Flat`] if the [`CommonBuiltinParameters::detuning`] is specified to be `0.0` (or
-/// omitted), and an [`IqSamples::Samples`] otherwise.  In both cases, the sample count will be
+/// [`IqSamples::Flat`] if permitted according to [`should_resolve_flat`], and an [`IqSamples::Samples`] otherwise.  In both cases, the sample count will be
 /// precisely the resulting [`ExplicitCommonBuiltinParameters::sample_count`].
 #[expect(
     clippy::type_complexity,
     reason = "the complexity is not that bad, or at least not bad in a way that's resolvable by \
               using `type` definitions"
 )]
-fn resolve_for_flat_unless_detuned<T: Sampleable, W, E>(
+fn resolve_for_flat_unless<T: Sampleable, W, E>(
     waveform: impl FnOnce() -> Result<W, E>,
     common: CommonBuiltinParameters<T>,
     sample_rate: f64,
@@ -1092,20 +1095,31 @@ fn resolve_for_flat_unless_detuned<T: Sampleable, W, E>(
 ) -> Result<partiality::Value<T, IqSamples<()>, (W, ExplicitCommonBuiltinParameters)>, SamplingError>
 {
     let placeholder = |is_partial, sample_count| {
-        Ok(partiality::Value::Partial(
-            is_partial,
-            if common
-                .detuning
-                .is_none_or(|detuning| T::eval_real(detuning) == Ok(0.0))
-            {
-                IqSamples::Flat {
-                    iq: (),
-                    sample_count,
-                }
-            } else {
-                IqSamples::Samples(vec![(); sample_count])
+        let CommonBuiltinParameters {
+            detuning,
+            pad_left,
+            pad_right,
+            duration: _,
+            scale: _,
+            phase: _,
+        } = common;
+
+        let detuning = detuning.map_or(
+            Ok(CommonBuiltinParameters::<T>::DEFAULT_DETUNING),
+            T::eval_real,
+        );
+        let pad_left = pad_left.unwrap_or(CommonBuiltinParameters::<T>::DEFAULT_PADDING);
+        let pad_right = pad_right.unwrap_or(CommonBuiltinParameters::<T>::DEFAULT_PADDING);
+
+        let partial_value = match detuning {
+            Ok(detuning) if should_resolve_flat(detuning, pad_left, pad_right) => IqSamples::Flat {
+                iq: (),
+                sample_count,
             },
-        ))
+            _ => IqSamples::Samples(vec![(); sample_count]),
+        };
+
+        Ok(partiality::Value::Partial(is_partial, partial_value))
     };
 
     let explicit = match common.raw_resolve_with_sample_rate(sample_rate)? {
@@ -1125,6 +1139,12 @@ fn resolve_for_flat_unless_detuned<T: Sampleable, W, E>(
     };
 
     Ok(partiality::Value::Total((waveform, explicit)))
+}
+
+/// Checks if a waveform can be evaluated into [`IqSamples::Flat`].
+#[inline]
+fn should_resolve_flat(detuning: f64, pad_left: impl Zero, pad_right: impl Zero) -> bool {
+    detuning.is_zero() && pad_left.is_zero() && pad_right.is_zero()
 }
 
 /// Take a `waveform` that might or might not be partial, some `common` waveform parameters, and a
@@ -1309,8 +1329,14 @@ pub(super) fn apply_phase_and_detuning_at_index(
 ) -> Complex64 {
     apply_phase(
         iq_value,
-        Cycles(detuning * (index as f64) / sample_rate + phase.0),
+        detuning_at_index(detuning, sample_rate, index) + phase,
     )
+}
+
+/// Compute detuning for a specific sample
+#[inline]
+pub fn detuning_at_index(detuning: f64, sample_rate: f64, index: usize) -> Cycles<f64> {
+    Cycles(detuning * (index as f64) / sample_rate)
 }
 
 /// Apply a phase offset to a single sample
@@ -1523,6 +1549,22 @@ mod tests {
     /// of `Complex64` changes, then the IQ values snapshot will also change.
     #[rstest::rstest]
     #[case(
+        Flat { iq: real!(1e-3) },
+        CommonBuiltinParameters { duration: 1e-4, scale: Some(1.0), phase: Some(Cycles(0.0)), detuning: Some(0.0), pad_left: Some(0.0), pad_right: Some(0.0)},
+    )]
+    #[case(
+        Flat { iq: real!(1e-3) },
+        CommonBuiltinParameters { duration: 8e-5, scale: Some(1.0), phase: Some(Cycles(0.0)), detuning: Some(0.0), pad_left: Some(2e-5), pad_right: Some(0.0)},
+    )]
+    #[case(
+        Flat { iq: real!(1e-3) },
+        CommonBuiltinParameters { duration: 8e-5, scale: Some(1.0), phase: Some(Cycles(0.0)), detuning: Some(0.0), pad_left: Some(0.0), pad_right: Some(2e-5)},
+    )]
+    #[case(
+        Flat { iq: real!(1e-3) },
+        CommonBuiltinParameters { duration: 8e-5, scale: Some(1.0), phase: Some(Cycles(0.0)), detuning: Some(0.0), pad_left: Some(1e-5), pad_right: Some(1e-5)},
+    )]
+    #[case(
         ErfSquare { risetime: 1e-5 },
         CommonBuiltinParameters { duration: 1e-4, scale: Some(1.0), phase: Some(Cycles(0.0)), detuning: Some(0.0), pad_left: Some(0.0), pad_right: Some(0.0)},
     )]
@@ -1548,7 +1590,7 @@ mod tests {
     )]
     #[case(
         ErfSquare { risetime: 1e-5 },
-        CommonBuiltinParameters { duration: 8e-5, scale: Some(1.0), phase: Some(Cycles(0.0)), detuning: Some(0.0), pad_left: Some(2e-5), pad_right: Some(2e-5)},
+        CommonBuiltinParameters { duration: 8e-5, scale: Some(1.0), phase: Some(Cycles(0.0)), detuning: Some(0.0), pad_left: Some(1e-5), pad_right: Some(1e-5)},
     )]
     #[case(
         Gaussian { fwhm: 1e-5, t0: 0.0 },
@@ -1580,7 +1622,7 @@ mod tests {
     )]
     #[case(
         Gaussian { fwhm: 1e-5, t0: 0.0 },
-        CommonBuiltinParameters { duration: 8e-5, scale: Some(1.0), phase: Some(Cycles(0.0)), detuning: Some(0.0), pad_left: Some(2e-5), pad_right: Some(2e-5)},
+        CommonBuiltinParameters { duration: 8e-5, scale: Some(1.0), phase: Some(Cycles(0.0)), detuning: Some(0.0), pad_left: Some(1e-5), pad_right: Some(1e-5)},
     )]
     #[case(
         DragGaussian { fwhm: 1e-5, t0: 0.0, anh: 1e6, alpha: 1.0 },

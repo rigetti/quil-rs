@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use itertools::Itertools;
+use num_traits::Zero;
 use petgraph::{
     visit::{EdgeFiltered, Topo},
     Direction,
@@ -37,17 +38,14 @@ impl std::ops::Sub<Seconds> for Seconds {
     }
 }
 
-pub trait Zero: PartialEq + Sized {
-    fn zero() -> Self;
-
-    fn is_zero(&self) -> bool {
-        self == &Self::zero()
-    }
-}
-
 impl Zero for Seconds {
     fn zero() -> Self {
         Self(0.0)
+    }
+
+    fn is_zero(&self) -> bool {
+        let Seconds(seconds) = self;
+        seconds.is_zero()
     }
 }
 
