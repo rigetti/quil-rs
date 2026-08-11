@@ -136,8 +136,8 @@ DEFCAL CZ q0 q1:
     FENCE q0 q1
     SET-PHASE q0 "flux_tx_cz" 0.0
     SET-PHASE q1 "flux_tx_iswap" 0.0
-    NONBLOCKING PULSE q0 "flux_tx_cz" erf_square(duration: 6.000000000000001e-08, pad_left: 0.1e-08, pad_right: 0.1e-08)
-    NONBLOCKING PULSE q1 "flux_tx_iswap" erf_square(duration: 6.000000000000001e-08, pad_left: 0.1e-08, pad_right: 0.1e-08)
+    NONBLOCKING PULSE q0 "flux_tx_cz" erf_square(duration: 6.000000000000001e-08, pad_left: 0.1e-08, pad_right: 0.1e-08, risetime: 4e-9)
+    NONBLOCKING PULSE q1 "flux_tx_iswap" erf_square(duration: 6.000000000000001e-08, pad_left: 0.1e-08, pad_right: 0.1e-08, risetime: 4e-9)
     SHIFT-PHASE q0 "flux_tx_cz" 1.0
     SHIFT-PHASE q1 "flux_tx_iswap" 1.0
     FENCE q0 q1
@@ -399,15 +399,18 @@ def test_defgate_sequence_expansion_with_filtering():
 
     assert expanded.range == range(1, 2)
 
+
 def test_defgate_sequence_expansion_with_error_handling():
     """
     Ensure that filter function errors are handled as expected during defgate sequence expansion.
     """
+
     def filter_fn(key: str) -> bool:
         raise KeyError(f"Gate {key} not found")
+
     program = Program.parse(
         inspect.cleandoc(
-        """
+            """
         DEFGATE seq1() a AS SEQUENCE:
             H a
 
