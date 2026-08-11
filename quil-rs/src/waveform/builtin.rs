@@ -60,7 +60,7 @@ pub enum BuiltinWaveform<T: WaveformData> {
 #[derive_where(Clone, PartialEq, Debug)]
 #[derive_where(Copy, Serialize, Deserialize; T::Real)]
 pub struct CommonBuiltinParameters<T: WaveformData> {
-    /// Full *active* duration of the pulse, in seconds.
+    /// Full *active* duration of the pulse (s), not including zero padding.
     ///
     /// Note that this is *always* a concrete real number, even for
     /// [`Syntactic`][crate::waveform::Syntactic] parameters!  It must be possible to know the exact
@@ -285,6 +285,26 @@ impl<T: WaveformData> CommonBuiltinParameters<Partial<T>> {
 }
 
 impl<T: WaveformData> CommonBuiltinParameters<T> {
+    /// The longest supported duration of the pulse (s).
+    pub const MAX_DURATION: f64 = u32::MAX as f64;
+
+    /// Default value for [`CommonBuiltinParameters::scale`].
+    pub const DEFAULT_SCALE: f64 = 1.0;
+
+    /// Default value for [`CommonBuiltinParameters::phase`].
+    pub const DEFAULT_PHASE: f64 = 0.0;
+
+    /// Default value for [`CommonBuiltinParameters::detuning`].
+    pub const DEFAULT_DETUNING: f64 = 0.0;
+
+    /// Default value for [`CommonBuiltinParameters::pad_left`] and [`CommonBuiltinParameters::pad_right`].
+    pub const DEFAULT_PADDING: f64 = 0.0;
+
+    #[inline]
+    fn max_misalignment_at_sample_rate(sample_rate: f64) -> f64 {
+        1.0 / (sample_rate * 100.0)
+    }
+
     #[inline]
     fn raw_resolve_with_sample_rate(
         self,
@@ -302,37 +322,55 @@ impl<T: WaveformData> CommonBuiltinParameters<T> {
             pad_right,
         } = self;
 
-        let sample_count_fract = duration * sample_rate;
-        let sample_count = sample_count_fract.round();
+        #[derive(Copy, Clone, derive_more::Add)]
+        struct DiscretizedDuration {
+            sample_count: f64,
+            misalignment: f64,
+        }
 
-        let pad_left_sample_count_fract = pad_left.unwrap_or(0.0) * sample_rate;
-        let pad_left_sample_count = pad_left_sample_count_fract.round();
+        let convert_to_samples = |duration: f64| {
+            let sample_count_fract = duration * sample_rate;
+            let sample_count = sample_count_fract.round();
+            let misalignment = sample_count_fract - sample_count;
 
-        let pad_right_sample_count_fract = pad_right.unwrap_or(0.0) * sample_rate;
-        let pad_right_sample_count = pad_right_sample_count_fract.round();
-
-        // TODO: consider factoring in padding to this check here.
-
-        let misalignment = sample_count_fract - sample_count;
-        let max_misalignment = 1.0 / (sample_rate * 100.0);
-
-        if sample_count < 0.0 || sample_count >= f64::from(u32::MAX) {
-            Err(SamplingError::SampleCountOutOfRange {
-                duration,
-                sample_rate,
+            DiscretizedDuration {
                 sample_count,
-            })
-        } else if misalignment.abs() >= max_misalignment {
+                misalignment,
+            }
+        };
+
+        let sampled_duration = convert_to_samples(duration);
+        let sampled_pad_left = convert_to_samples(pad_left.unwrap_or(Self::DEFAULT_PADDING));
+        let sampled_pad_right = convert_to_samples(pad_right.unwrap_or(Self::DEFAULT_PADDING));
+
+        let DiscretizedDuration {
+            sample_count: total_sample_count,
+            misalignment: total_misalignment,
+        } = sampled_pad_left + sampled_duration + sampled_pad_right;
+
+        match total_sample_count {
+            0.0..Self::MAX_DURATION => {}
+            _ => {
+                return Err(SamplingError::SampleCountOutOfRange {
+                    duration,
+                    sample_rate,
+                    sample_count: total_sample_count,
+                })
+            }
+        }
+
+        let max_misalignment = Self::max_misalignment_at_sample_rate(sample_rate);
+        if total_misalignment.abs() >= max_misalignment {
             Err(SamplingError::MisalignedDuration {
                 duration,
                 sample_rate,
-                misalignment,
+                misalignment: total_misalignment,
                 max_misalignment,
             })
         } else {
-            let sample_count = sample_count as u32;
-            let pad_left = pad_left_sample_count as u32;
-            let pad_right = pad_right_sample_count as u32;
+            let sample_count = sampled_duration.sample_count as u32;
+            let pad_left = sampled_pad_left.sample_count as u32;
+            let pad_right = sampled_pad_right.sample_count as u32;
 
             let evaluate_or =
                 |field: Option<_>, default| field.map(T::eval_real).unwrap_or(Ok(default));
@@ -341,9 +379,10 @@ impl<T: WaveformData> CommonBuiltinParameters<T> {
             let result = (|| {
                 Ok(ExplicitCommonBuiltinParameters {
                     sample_count,
-                    scale: evaluate_or(scale, 1.0)?,
-                    phase: evaluate_or(phase.map(|p| p.0), 0.0).map(Cycles)?,
-                    detuning: evaluate_or(detuning, 0.0)?,
+                    scale: evaluate_or(scale, Self::DEFAULT_SCALE)?,
+                    phase: evaluate_or(phase.map(|Cycles(p)| p), Self::DEFAULT_PHASE)
+                        .map(Cycles)?,
+                    detuning: evaluate_or(detuning, Self::DEFAULT_DETUNING)?,
                     pad_left,
                     pad_right,
                 })
@@ -1363,18 +1402,29 @@ mod tests {
     }
 
     #[rstest::rstest]
-    // TODO: add padding test cases
     #[case(0.0, None, None, 0.0, Some(0.0))]
     #[case(0.0, None, None, 1e9, Some(0.0))]
     #[case(1e9, None, None, 0.0, Some(0.0))]
+    #[case(0.0, Some(1e9), None, 0.0, Some(0.0))]
+    #[case(0.0, None, Some(1e9), 0.0, Some(0.0))]
+    #[case(0.0, Some(1e9), Some(1e9), 0.0, Some(0.0))]
     #[case(f64::EPSILON, None, None, 1.0, Some(0.0))]
     #[case(-f64::EPSILON, None, None, 1.0, Some(0.0))]
+    #[case(0.0, Some(f64::EPSILON), None, 1.0, Some(0.0))]
+    #[case(0.0, Some(-f64::EPSILON), None, 1.0, Some(0.0))]
+    #[case(0.0, None, Some(f64::EPSILON), 1.0, Some(0.0))]
+    #[case(0.0, None, Some(-f64::EPSILON), 1.0, Some(0.0))]
     #[case(0.9999999, None, None, 101.0, Some(101.0))]
     #[case(1.0000001, None, None, 101.0, Some(101.0))]
     #[case(0.99, None, None, 101.0, None)]
     #[case(1.01, None, None, 101.0, None)]
     #[case(8.800_000_000_000_001e-8, None, None, 1.0e9, Some(88.0))] // Based on a past edge case
     #[case(0.5, None, None, 3.0, None)]
+    #[case(2.0, Some(2.0), Some(2.0), 1.0, Some(6.0))]
+    #[case(2.0, Some(2.0), None, 1.0, Some(4.0))]
+    #[case(2.0, None, Some(2.0), 1.0, Some(4.0))]
+    // TODO: test case where inner elements are misaligned, but add to an aligned duration
+    // TODO: test case where duration is aligned, padding is misaligned, and total duration is misaligned.
     fn sample_count(
         #[case] duration: f64,
         #[case] pad_left: Option<f64>,
@@ -1392,18 +1442,27 @@ mod tests {
         }
         .resolve_with_sample_rate(sample_rate);
 
+        let pad_left = pad_left.unwrap_or(CommonBuiltinParameters::<Concrete>::DEFAULT_PADDING);
+        let pad_right = pad_right.unwrap_or(CommonBuiltinParameters::<Concrete>::DEFAULT_PADDING);
+
         match (actual, expected) {
             (
                 Ok(ExplicitCommonBuiltinParameters {
-                    sample_count: actual,
+                    sample_count,
+                    pad_left: pad_left_sample_count,
+                    pad_right: pad_right_sample_count,
                     ..
                 }),
                 Some(expected),
             ) => {
+                let actual = pad_left_sample_count + sample_count + pad_right_sample_count;
+
                 assert_eq!(
                     expected,
                     f64::from(actual),
                     "duration = {duration} s,\n\
+                     pad_left = {pad_left} s,\n\
+                     pad_right = {pad_right} s,\n\
                      sample_rate = {sample_rate} Hz,\n\
                      expected = {expected} samples,\n\
                      actual = {actual} samples"
@@ -1412,25 +1471,34 @@ mod tests {
             (Err(_), None) => {}
             (
                 Ok(ExplicitCommonBuiltinParameters {
-                    sample_count: actual,
+                    sample_count,
+                    pad_left: pad_left_sample_count,
+                    pad_right: pad_right_sample_count,
                     ..
                 }),
                 None,
             ) => {
+                let actual = pad_left_sample_count + sample_count + pad_right_sample_count;
                 panic!(
-                    "duration = {duration} s, sample_rate = {sample_rate} Hz: \
+                    "duration = {duration} s, pad_left = {pad_left} s, \
+                     pad_right = {pad_right} s, sample_rate = {sample_rate} Hz: \
                      expected to be unable to generate a sample count, but generated {actual}",
                     duration = duration,
+                    pad_left = pad_left,
+                    pad_right = pad_right,
                     sample_rate = sample_rate,
                     actual = actual,
                 )
             }
             (Err(actual), Some(expected)) => {
                 panic!(
-                    "duration = {duration} s, sample_rate = {sample_rate} Hz: \
+                    "duration = {duration} s, pad_left = {pad_left} s, \
+                     pad_right = {pad_right} s, sample_rate = {sample_rate} Hz: \
                      expected a sample count of {expected} samples, but got the following error:\n\
                      {actual}",
                     duration = duration,
+                    pad_left = pad_left,
+                    pad_right = pad_right,
                     sample_rate = sample_rate,
                     expected = expected,
                     actual = actual,
@@ -1454,7 +1522,6 @@ mod tests {
     /// are added, removed, or renamed, then this test will fail for those cases. Additionally, if the string printing
     /// of `Complex64` changes, then the IQ values snapshot will also change.
     #[rstest::rstest]
-    // TODO: add padding test cases
     #[case(
         ErfSquare { risetime: 1e-5 },
         CommonBuiltinParameters { duration: 1e-4, scale: Some(1.0), phase: Some(Cycles(0.0)), detuning: Some(0.0), pad_left: Some(0.0), pad_right: Some(0.0)},
@@ -1470,6 +1537,18 @@ mod tests {
     #[case(
         ErfSquare { risetime: 1e-5 },
         CommonBuiltinParameters { duration: 1e-4, scale: Some(0.0), phase: Some(Cycles(0.0)), detuning: Some(0.0), pad_left: Some(0.0), pad_right: Some(0.0)},
+    )]
+    #[case(
+        ErfSquare { risetime: 1e-5 },
+        CommonBuiltinParameters { duration: 8e-5, scale: Some(1.0), phase: Some(Cycles(0.0)), detuning: Some(0.0), pad_left: Some(2e-5), pad_right: Some(0.0)},
+    )]
+    #[case(
+        ErfSquare { risetime: 1e-5 },
+        CommonBuiltinParameters { duration: 8e-5, scale: Some(1.0), phase: Some(Cycles(0.0)), detuning: Some(0.0), pad_left: Some(0.0), pad_right: Some(2e-5)},
+    )]
+    #[case(
+        ErfSquare { risetime: 1e-5 },
+        CommonBuiltinParameters { duration: 8e-5, scale: Some(1.0), phase: Some(Cycles(0.0)), detuning: Some(0.0), pad_left: Some(2e-5), pad_right: Some(2e-5)},
     )]
     #[case(
         Gaussian { fwhm: 1e-5, t0: 0.0 },
@@ -1490,6 +1569,18 @@ mod tests {
     #[case(
         Gaussian { fwhm: 4e-5, t0: 5e-5 },
         CommonBuiltinParameters { duration: 1e-4, scale: Some(-1.0), phase: Some(Cycles(0.0)), detuning: Some(0.0), pad_left: Some(0.0), pad_right: Some(0.0)},
+    )]
+    #[case(
+        Gaussian { fwhm: 1e-5, t0: 0.0 },
+        CommonBuiltinParameters { duration: 8e-5, scale: Some(1.0), phase: Some(Cycles(0.0)), detuning: Some(0.0), pad_left: Some(2e-5), pad_right: Some(0.0)},
+    )]
+    #[case(
+        Gaussian { fwhm: 1e-5, t0: 0.0 },
+        CommonBuiltinParameters { duration: 8e-5, scale: Some(1.0), phase: Some(Cycles(0.0)), detuning: Some(0.0), pad_left: Some(0.0), pad_right: Some(2e-5)},
+    )]
+    #[case(
+        Gaussian { fwhm: 1e-5, t0: 0.0 },
+        CommonBuiltinParameters { duration: 8e-5, scale: Some(1.0), phase: Some(Cycles(0.0)), detuning: Some(0.0), pad_left: Some(2e-5), pad_right: Some(2e-5)},
     )]
     #[case(
         DragGaussian { fwhm: 1e-5, t0: 0.0, anh: 1e6, alpha: 1.0 },
@@ -1513,12 +1604,24 @@ mod tests {
         CommonBuiltinParameters { duration: 1e-4, scale: Some(1.0), phase: Some(Cycles(0.0)), detuning: Some(0.0), pad_left: Some(0.0), pad_right: Some(0.0)},
     )]
     #[case(
-        RaisedCosine { rolloff: 0.0},
+        RaisedCosine { rolloff: 0.0 },
         CommonBuiltinParameters { duration: 1e-4, scale: Some(1.0), phase: Some(Cycles(0.0)), detuning: Some(0.0), pad_left: Some(0.0), pad_right: Some(0.0)},
     )]
     #[case(
         RaisedCosine { rolloff: 1.0 },
         CommonBuiltinParameters { duration: 1e-4, scale: Some(1.0), phase: Some(Cycles(0.0)), detuning: Some(0.0), pad_left: Some(0.0), pad_right: Some(0.0)},
+    )]
+    #[case(
+        RaisedCosine { rolloff: 0.5 },
+        CommonBuiltinParameters { duration: 8e-5, scale: Some(1.0), phase: Some(Cycles(0.0)), detuning: Some(0.0), pad_left: Some(2e-5), pad_right: Some(0.0)},
+    )]
+    #[case(
+        RaisedCosine { rolloff: 0.5 },
+        CommonBuiltinParameters { duration: 8e-5, scale: Some(1.0), phase: Some(Cycles(0.0)), detuning: Some(0.0), pad_left: Some(0.0), pad_right: Some(2e-5)},
+    )]
+    #[case(
+        RaisedCosine { rolloff: 0.5 },
+        CommonBuiltinParameters { duration: 8e-5, scale: Some(1.0), phase: Some(Cycles(0.0)), detuning: Some(0.0), pad_left: Some(1e-5), pad_right: Some(1e-5)},
     )]
     fn into_iq_values(
         #[case] parameters: impl BuiltinWaveformParameters,
