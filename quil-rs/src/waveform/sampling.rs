@@ -152,7 +152,6 @@ pub enum SamplingError {
          is not in the representable range \u{5B}0, 2³²)."
         // U+005B is `[` (i.e., LEFT SQUARE BRACKET), but we have to hide it with an escape so as
         // not to confuse our homegrown PyO3 linter script (`quil-rs/scripts/lint-quil-rs.py`).
-        , 
     )]
     SampleCountOutOfRange {
         duration: f64,
