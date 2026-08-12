@@ -52,11 +52,6 @@ def detuning() -> SearchStrategy[Optional[float]]:
     return optional(in_range(-1e10, 1e10))
 
 
-# TODO: what bounds to put here?
-def padding() -> SearchStrategy[Optional[float]]:
-    return optional(in_range(0.0, 1e-3))
-
-
 # Strategies for waveform parameters
 
 
@@ -84,8 +79,8 @@ def common_builtin_parameters(draw: DrawFn) -> CommonBuiltinParameters[float, co
     s = draw(scale())
     phi = draw(phase())
     d = draw(detuning())
-    pl = draw(padding())
-    pr = draw(padding())
+    pl = draw(time())
+    pr = draw(time())
     common: CommonBuiltinParameters[float, complex] = CommonBuiltinParameters(
         duration=t,
         scale=s,

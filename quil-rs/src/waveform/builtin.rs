@@ -1445,12 +1445,11 @@ mod tests {
     #[case(0.99, None, None, 101.0, None)]
     #[case(1.01, None, None, 101.0, None)]
     #[case(8.800_000_000_000_001e-8, None, None, 1.0e9, Some(88.0))] // Based on a past edge case
-    #[case(0.5, None, None, 3.0, None)]
     #[case(2.0, Some(2.0), Some(2.0), 1.0, Some(6.0))]
     #[case(2.0, Some(2.0), None, 1.0, Some(4.0))]
     #[case(2.0, None, Some(2.0), 1.0, Some(4.0))]
-    // TODO: test case where inner elements are misaligned, but add to an aligned duration
-    // TODO: test case where duration is aligned, padding is misaligned, and total duration is misaligned.
+    #[case(2.0, Some(0.5), None, 1.0, None)]
+    #[case(0.5, None, None, 3.0, None)]
     fn sample_count(
         #[case] duration: f64,
         #[case] pad_left: Option<f64>,
