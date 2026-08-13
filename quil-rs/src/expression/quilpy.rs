@@ -52,6 +52,9 @@ pub(crate) fn post_init(m: &Bound<'_, PyModule>) -> PyResult<()> {
         union!(py, Expression, MemoryReference, PyInt, PyFloat, PyComplex)?,
     )?;
 
+    // TODO
+    // ParameterSubstitutionsMapDesignator = Mapping[Expression.Variable | MemoryReference, ExpressionValueDesignator]
+
     Ok(())
 }
 
