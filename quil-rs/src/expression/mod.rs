@@ -499,6 +499,7 @@ impl Expression {
     {
         match self.evaluate_partial(variables, memory_references) {
             Expression::Number(value) => Ok(value),
+            Expression::PiConstant() => Ok(Complex64::from(PI)),
             _ => Err(EvaluationError::Incomplete),
         }
     }
