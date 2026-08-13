@@ -1,9 +1,7 @@
 use num_complex::Complex64;
-use numpy::{IntoPyArray as _, PyArray1};
+use numpy::{IntoPyArray as _, PyArray1, PyArrayDescr, PyArrayDescrMethods};
 use pyo3::{
-    exceptions::{PyIndexError, PyStopIteration, PyValueError},
-    prelude::*,
-    types::{PySlice, PySliceIndices},
+    IntoPyObjectExt, exceptions::{PyIndexError, PyStopIteration, PyValueError}, prelude::*, types::{PyComplex, PySlice, PySliceIndices},
 };
 
 #[cfg(feature = "stubs")]
@@ -15,7 +13,7 @@ use pyo3_stub_gen::{
     PyStubType, TypeInfo,
 };
 
-use crate::waveform::sampling::*;
+use crate::{quilpy::errors::ValueError, waveform::sampling::*};
 
 // The `init_submodule` occurs directly in `waveform/quilpy.rs`, as otherwise our linter is unhappy.
 
@@ -381,6 +379,44 @@ impl PyIqSamples {
         IqSamples::from(self.clone())
             .into_iq_values()
             .into_pyarray(py)
+    }
+
+    #[gen_stub(override_return_type(type_repr = "numpy.ndarray", imports = ("numpy")))]
+    #[pyo3(signature = (dtype=None, copy=None))]
+    fn __array__<'py>(
+        &self,
+        py: Python<'py>,
+        #[gen_stub(override_type(type_repr = "numpy.dtype | None", imports = ("numpy")))]
+        dtype: Option<Bound<'py, PyArrayDescr>>,
+        copy: Option<bool>,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        if let Some(false) = copy {
+            return Err(ValueError::new_err(
+                "`copy=False` is not supported for `IqSamples.__array__`",
+            ));
+        }
+
+        let arr = match dtype {
+            None => {
+                self.iq_values(py).into_any()
+            }
+            Some(dtype) => {
+                if dtype.is_equiv_to(&numpy::dtype::<Complex64>(py)) {
+                    self.iq_values(py).into_any()
+                } else if dtype.is_equiv_to(&PyArrayDescr::object(py)) {
+                    IqSamples::from(self.clone()).iter().map(|&c| c.into_py_any(py))
+                        .collect::<PyResult<Vec<Py<PyAny>>>>()?
+                        .into_pyarray(py)
+                        .into_any()
+                } else {
+                    self.iq_values(py)
+                        .call_method1(pyo3::intern!(py, "astype"), (dtype,))?
+                        .into_any()
+                }
+            }
+        };
+
+        Ok(arr)
     }
 
     fn __repr__<'py>(&self, py: Python<'py>) -> PyResult<String> {
