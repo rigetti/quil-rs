@@ -193,12 +193,32 @@ impl Expression {
     /// Evaluate an expression, expecting that it may be fully reduced to a single complex number.
     ///
     /// If it cannot be reduced to a complex number, this raises an error.
-    #[pyo3(name = "evaluate")]
+    ///
+    /// The `variables` should be a mapping of variable names to complex values,
+    /// and `memory_references` should be a mapping of memory reference names to lists of floats.
+    /// If not provided, they'll default to an empty mapping.
+    ///
+    /// # Example
+    ///
+    /// ```python
+    /// from quil.expression import Expression
+    ///
+    /// expr = Expression.parse("%beta + theta[0]")
+    /// evaluated = expr.evaluate(
+    ///     variables={"beta": 1.0+0.0j},
+    ///     memory_references={"theta": [2.0]},
+    /// )
+    ///
+    /// assert evaluated == 3.0+0.0j
+    /// ```
+    #[pyo3(name = "evaluate", signature = (variables=None, memory_references=None))]
     fn py_evaluate(
         &self,
-        variables: HashMap<String, Complex64>,
-        memory_references: HashMap<String, Vec<f64>>,
+        variables: Option<HashMap<String, Complex64>>,
+        memory_references: Option<HashMap<String, Vec<f64>>>,
     ) -> PyResult<Complex64> {
+        let variables = variables.unwrap_or_default();
+        let memory_references = memory_references.unwrap_or_default();
         Ok(self.evaluate(&variables, &memory_references)?)
     }
 
@@ -226,11 +246,12 @@ impl Expression {
     /// :param expr: The expression whose parameters or memory references are to be substituted.
     /// :param d: Numerical substitutions for parameters or memory references.
     /// Returns a complex number (if possible) or a partially simplified `Expression`.
-    #[pyo3(name = "substitute")]
+    #[pyo3(name = "substitute", signature = (d=None, /))]
     fn py_substitute(
         &self,
-        d: HashMap<SubstitutionKey, SubstitutionValue>,
+        d: Option<HashMap<SubstitutionKey, SubstitutionValue>>,
     ) -> PyResult<SubstitutionResult> {
+        let d = d.unwrap_or_default();
         let mut variable = HashMap::new();
         let mut memory_reference = HashMap::new();
         for (key, value) in d {
