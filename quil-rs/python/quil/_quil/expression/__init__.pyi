@@ -118,11 +118,29 @@ class Expression:
     def __rtruediv__(self, other: Expression  |  instructions.MemoryReference  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
     def __sub__(self, other: Expression  |  instructions.MemoryReference  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
     def __truediv__(self, other: Expression  |  instructions.MemoryReference  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
-    def evaluate(self, variables: typing.Mapping[builtins.str, builtins.complex], memory_references: typing.Mapping[builtins.str, typing.Sequence[builtins.float]]) -> builtins.complex:
+    def evaluate(self, variables: typing.Optional[typing.Mapping[builtins.str, builtins.complex]] = None, memory_references: typing.Optional[typing.Mapping[builtins.str, typing.Sequence[builtins.float]]] = None) -> builtins.complex:
         r"""
         Evaluate an expression, expecting that it may be fully reduced to a single complex number.
         
         If it cannot be reduced to a complex number, this raises an error.
+        
+        The `variables` should be a mapping of variable names to complex values,
+        and `memory_references` should be a mapping of memory reference names to lists of floats.
+        If not provided, they'll default to an empty mapping.
+        
+        # Example
+        
+        ```python
+        from quil.expression import Expression
+        
+        expr = Expression.parse("%beta + theta[0]")
+        evaluated = expr.evaluate(
+            variables={"beta": 1.0+0.0j},
+            memory_references={"theta": [2.0]},
+        )
+        
+        assert evaluated == 3.0+0.0j
+        ```
         """
     def into_simplified(self) -> Expression:
         r"""
@@ -135,7 +153,7 @@ class Expression:
         
         Raises a ``ParseExpressionError`` error if the string isn't a valid Quil expression.
         """
-    def substitute(self, d: typing.Mapping[builtins.str  |  instructions.MemoryReference, builtins.complex  |  typing.Sequence[builtins.complex]]) -> Expression  |  builtins.complex:
+    def substitute(self, d: typing.Optional[typing.Mapping[builtins.str  |  instructions.MemoryReference, builtins.complex  |  typing.Sequence[builtins.complex]]] = None, /) -> Expression  |  builtins.complex:
         r"""
         Explicitly evaluate as much of ``expr`` as possible, using substitutions from `d`.
         
