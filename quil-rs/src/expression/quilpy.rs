@@ -116,30 +116,19 @@ impl From<SubstitutionKey> for Expression {
     }
 }
 
-/// The result of `substitute`.
+/// The (potentially partial) result of evaluating an expression with substitutions.
 ///
-/// This is a wrapper around `Expression`
-/// to allow us to implement `IntoPyObject` to return an `Expression` or a `complex`
-/// depending on whether the substitution fully simplifies the expression to a number.
-pub(crate) struct SubstitutionResult(pub Expression);
-
-impl<'py> IntoPyObject<'py> for SubstitutionResult {
-    type Target = PyAny;
-    type Output = Bound<'py, Self::Target>;
-    type Error = PyErr;
-
-    fn into_pyobject(self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
-        match self.0.into_simplified() {
-            Expression::PiConstant() => Ok(Complex64::new(PI, 0.0).into_bound_py_any(py)?),
-            Expression::Number(c) => Ok(c.into_bound_py_any(py)?),
-            other => Ok(other.into_bound_py_any(py)?),
-        }
-    }
+/// This is a wrapper around `Expression` with a custom `IntoPyObject` implementation
+/// to enable returning either a `Complex64` or an `Expression` to Python.
+#[derive(IntoPyObject)]
+enum Evaluated {
+    Full(Complex64),
+    Partial(Expression),
 }
 
 #[cfg(feature = "stubs")]
 mod stubs {
-    use pyo3_stub_gen::{impl_stub_type, type_alias};
+    use pyo3_stub_gen::{derive::gen_methods_from_python, impl_stub_type, type_alias};
 
     #[allow(clippy::wildcard_imports)]
     use super::*;
@@ -147,11 +136,31 @@ mod stubs {
     impl_stub_type!(ExpressionLike = Expression | MemoryReference | i64 | f64 | Complex64);
     impl_stub_type!(SubstitutionKey = String | MemoryReference);
     impl_stub_type!(SubstitutionValue = Complex64 | Vec<Complex64>);
-    impl_stub_type!(SubstitutionResult = Expression | Complex64);
+    impl_stub_type!(Evaluated = Expression | Complex64);
 
     type_alias!("quil._quil.expression", ExpressionValueDesignator = i64 | f64 | Complex64);
     type_alias!("quil._quil.expression", ExpressionDesignator = Expression | i64 | f64 | Complex64);
     type_alias!("quil._quil.expression", ParameterDesignator = ExpressionLike);
+
+    pyo3_stub_gen::inventory::submit! {
+        gen_methods_from_python! {
+            r#"
+            import builtins
+            import typing
+
+            class Expression:
+                @overload
+                def evaluate(
+                    self,
+                    variables: typing.Optional[builtins.dict[str, complex]] = None,
+                    memory_references: typing.Optional[builtins.dict[str, list[float]]] = None,
+                    /,
+                    partial: typing.Literal[False] = False
+                ) -> complex:
+                    ...
+            "#
+        }
+    }
 }
 
 impl_newargs!(
@@ -192,34 +201,70 @@ impl Expression {
 
     /// Evaluate an expression, expecting that it may be fully reduced to a single complex number.
     ///
-    /// If it cannot be reduced to a complex number, this raises an error.
+    /// By default, if it cannot be reduced to a complex number, this raises an error;
+    /// pass the keyword-only parameter `partial=True` to allow partial evaluation,
+    /// returning an `Expression` with the applied mappings.
     ///
     /// The `variables` should be a mapping of variable names to complex values,
     /// and `memory_references` should be a mapping of memory reference names to lists of floats.
     /// If not provided, they'll default to an empty mapping.
     ///
-    /// # Example
+    /// # Examples
+    ///
+    /// If the `Expression` has no variables or memory references, no mappings are needed:
     ///
     /// ```python
     /// from quil.expression import Expression
     ///
-    /// expr = Expression.parse("%beta + theta[0]")
+    /// expr = Expression.parse("1 + 2 * 3")
+    /// assert expr.evaluate() == 7.0+0.0j
+    /// ```
+    ///
+    /// With variables and memory references, you can provide mappings to evaluate the expression:
+    ///
+    /// ```python
+    /// from quil.expression import Expression
+    ///
+    /// expr = Expression.parse("%beta + theta[0] * theta[1]")
     /// evaluated = expr.evaluate(
     ///     variables={"beta": 1.0+0.0j},
-    ///     memory_references={"theta": [2.0]},
+    ///     memory_references={"theta": [2.0, 3.0]},
     /// )
-    ///
-    /// assert evaluated == 3.0+0.0j
+    /// assert evaluated == 7.0+0.0j
     /// ```
-    #[pyo3(name = "evaluate", signature = (variables=None, memory_references=None))]
+    ///
+    /// If the expression cannot be fully evaluated, you can allow partial evaluation:
+    ///
+    /// ```python
+    /// from quil.expression import Expression
+    ///
+    /// expr = Expression.parse("%beta + theta[0] * theta[1]")
+    ///
+    /// evaluated = expr.evaluate(variables={"beta": 1.0+0.0j}, partial=True)
+    /// assert evaluated == Expression.parse("1.0 + theta[0] * theta[1]")
+    ///
+    /// evaluated = expr.evaluate(memory_references={"theta": [2.0, 3.0]}, partial=True)
+    /// assert evaluated == Expression.parse("%beta + 6")
+    /// ```
+    #[pyo3(name = "evaluate", signature = (variables=None, memory_references=None, /, partial=false))]
     fn py_evaluate(
         &self,
         variables: Option<HashMap<String, Complex64>>,
         memory_references: Option<HashMap<String, Vec<f64>>>,
-    ) -> PyResult<Complex64> {
+        partial: bool,
+    ) -> PyResult<Evaluated> {
         let variables = variables.unwrap_or_default();
         let memory_references = memory_references.unwrap_or_default();
-        Ok(self.evaluate(&variables, &memory_references)?)
+
+        match self.evaluate_partial(&variables, &memory_references) {
+            Expression::PiConstant() => Ok(Evaluated::Full(Complex64::new(PI, 0.0))),
+            Expression::Number(c) => Ok(Evaluated::Full(c)),
+            other => if partial {
+                Ok(Evaluated::Partial(other))
+            } else {
+                Err(EvaluationError::Incomplete)?
+            }
+        }
     }
 
     /// Substitute an expression in the place of each matching variable.
@@ -240,30 +285,35 @@ impl Expression {
 
     /// Explicitly evaluate as much of ``expr`` as possible, using substitutions from `d`.
     ///
+    /// This method is deprecated; use `evaluate(..., partial=True)` instead,
+    /// as it is more explicit and efficient.
+    ///
     /// This supports substitution of both parameters and memory references.
     /// Each memory reference must be individually assigned a value at each memory offset to be substituted.
     ///
-    /// :param expr: The expression whose parameters or memory references are to be substituted.
     /// :param d: Numerical substitutions for parameters or memory references.
+    ///
     /// Returns a complex number (if possible) or a partially simplified `Expression`.
     #[pyo3(name = "substitute", signature = (d=None, /))]
+    #[pyo3(warn(message = "`substitute` is deprecated; use `evaluate(..., partial=True)` instead."))]
     fn py_substitute(
         &self,
         d: Option<HashMap<SubstitutionKey, SubstitutionValue>>,
-    ) -> PyResult<SubstitutionResult> {
+    ) -> PyResult<Evaluated> {
+        // Split and validate the substitution dictionary.
         let d = d.unwrap_or_default();
-        let mut variable = HashMap::new();
-        let mut memory_reference = HashMap::new();
+        let mut variables = HashMap::new();
+        let mut memory_references = HashMap::new();
         for (key, value) in d {
             match (key, value) {
                 (SubstitutionKey::Variable(name), SubstitutionValue::Variable(value)) => {
-                    variable.insert(name, value);
+                    variables.insert(name, value);
                 }
                 (SubstitutionKey::MemoryReference(memref), SubstitutionValue::Memory(values)) => {
-                    memory_reference.insert(memref.name, values);
+                    memory_references.insert(memref.name, values);
                 }
                 (SubstitutionKey::Variable(name), SubstitutionValue::Memory(values)) => {
-                    memory_reference.insert(name, values);
+                    memory_references.insert(name, values);
                 }
                 (SubstitutionKey::MemoryReference(memref), SubstitutionValue::Variable(_)) => {
                     return Err(ValueError::new_err(format!(
@@ -273,15 +323,7 @@ impl Expression {
             }
         }
 
-        let res = match self.evaluate_partial(&variable, &memory_reference) {
-            Expression::Number(n) => SubstitutionResult(Expression::Number(n)),
-            Expression::PiConstant() => {
-                SubstitutionResult(Expression::Number(Complex64::new(PI, 0.0)))
-            }
-            other => SubstitutionResult(other),
-        };
-
-        Ok(res)
+        self.py_evaluate(Some(variables), Some(memory_references), true)
     }
 
     fn __add__(&self, other: ExpressionLike) -> Self {
